@@ -13,7 +13,9 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 - **[dev-docs/CODEBASE_OVERVIEW.md](dev-docs/CODEBASE_OVERVIEW.md)** — full architecture, data flow, all settings, classes, and functions
 - **[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md)** — exhaustive list of every feature: calculations, rendering, settings, outputs, CLI, API
 - **[dev-docs/UI_ANALYSIS.md](dev-docs/UI_ANALYSIS.md)** — current UI state and what exists today
-- **[dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md)** — comprehensive GUI implementation plan (Streamlit, phases, screen designs)
+- **[dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md)** — comprehensive NiceGUI implementation plan (phases, screen designs)
+- **[dev-docs/TABULAR_RDSR_INPUT_PLAN.md](dev-docs/TABULAR_RDSR_INPUT_PLAN.md)** — plan for CSV/TSV/XLSX exported event-table inputs
+- **[dev-docs/HARNESS_ENGINEERING.md](dev-docs/HARNESS_ENGINEERING.md)** — repository harness principles, source-of-truth map, and validation commands
 
 ## Quick orientation
 
@@ -78,12 +80,11 @@ Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, 
 
 See [dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md) for the full implementation plan. The short version:
 
-1. No standalone GUI exists yet — only Plotly plots in a browser/notebook
-2. The `--mode gui` CLI flag is defined but not implemented
-3. **Chosen path: NiceGUI app in `src/mypyskindose/gui/`** (see GUI_PLAN.md §2 for rationale)
-4. Phase 1: single-page app — upload RDSR → configure → calculate → view PSD + dose map
-5. Phase 2: multi-step app with geometry preview, full settings form, export
-6. Phase 3: PDF report generation via `reportlab`
+1. A NiceGUI app now exists in `src/mypyskindose/gui/`.
+2. The CLI supports `--mode gui` and optional `--native`; `python -m mypyskindose --mode gui` launches the GUI.
+3. Current GUI focus: refine the multi-tab workflow, validation, event-table previews, exports, and user-facing help.
+4. Next input focus: support exported event tables (`.csv`, `.tsv`, `.xlsx`) via the staged plan in `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`.
+5. Harness focus: keep `AGENTS.md` and `dev-docs/` synchronized with behavior and use the checks in `dev-docs/HARNESS_ENGINEERING.md`.
 
 ## Development setup
 
@@ -98,6 +99,11 @@ jupyter notebook docs/source/getting_started/getting_started.ipynb
 ```
 
 Example RDSR files are in `src/mypyskindose/example_data/RDSR/`.
+
+Run the GUI locally:
+```bash
+python -m mypyskindose --mode gui
+```
 
 ## Conventions
 

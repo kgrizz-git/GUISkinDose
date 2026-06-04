@@ -16,11 +16,12 @@
 * add some debug/warning if any dose events have no intersection with patient
 - download/export HTML button didn't work
     - not sure about others
-- extend code to be able to handle dose event data exported from Radimetrics or similar software
-    - these files may have more/less data than RDSR files
-    - typically a table in csv format with one row per dose event
-    - this repo may be useful https://github.com/dhen2714/PySkinDose
-    - will likely have different column names that will need to be mapped/normalized
+- [ ] Implement tabular event-table inputs (`.csv`, `.tsv`, `.xlsx`) using the staged plan in `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`.
+    - Start with normalized tabular inputs.
+    - Then add raw RDSR-like tables.
+    - Then adapt Radimetrics and DoseTrack mappings from https://github.com/dhen2714/PySkinDose after fixtures and validation are available.
+    - These files may have more/less data than DICOM RDSRs and will need explicit column mapping, unit conversion, and provenance.
+- [ ] Add a doc-freshness/harness check so stale feature-status statements are easier to catch automatically.
 - add help docs explaining what all the settings are in the GUI and how to use it
     - also use docstrings for all functions in the GUI (help button could show them)
 - [x] move Geometry tab to position 3 instead of 2

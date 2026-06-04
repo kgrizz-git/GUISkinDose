@@ -345,7 +345,7 @@ python -m mypyskindose --gui --native
 
 ## 9. Implementation phases
 
-### Phase 1 — Minimal working app (~2–3 days)
+### Phase 1 — Minimal working app (implemented, continuing refinement)
 
 Goal: upload RDSR → configure phantom → run calculation → see PSD + dose map.
 
@@ -369,6 +369,13 @@ Functionality:
 - Full settings form with validation
 - Correction factor table
 - JSON + HTML + PNG export
+
+### Phase 2b — Tabular input workflow
+
+- Extend upload acceptance from DICOM RDSR/JSON to `.csv`, `.tsv`, `.xlsx`, and `.xlsm`.
+- Add source-schema selection and Excel sheet selection.
+- Reuse the shared input adapter registry planned in `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`.
+- Show import provenance, unit conversions, missing columns, and warnings before calculation.
 
 ### Phase 3 — Report generation (~2–3 more days)
 
