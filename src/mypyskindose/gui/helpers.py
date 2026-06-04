@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import traceback
 from pathlib import Path
-from typing import Any
-
 import pydicom
 
 from mypyskindose import load_settings_example_json
@@ -63,9 +61,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         # Normalize
         df = rdsr_normalizer(data_parsed, settings=settings)
         
-        if settings.remove_invalid_rows:
-            if invalid_kvp_rows := len(df[df.kVp == 0]):
-                df = df[df.kVp != 0].reset_index(drop=True)
+        if settings.remove_invalid_rows and len(df[df.kVp == 0]):
+            df = df[df.kVp != 0].reset_index(drop=True)
 
         state.rdsr_df = df
         state.file_path = file_path
@@ -136,7 +133,6 @@ def _patch_tqdm(progress_cb, total: int):
     try:
         import tqdm as tqdm_module
 
-        original_init = tqdm_module.tqdm.__init__
         original_update = tqdm_module.tqdm.update
 
         def new_update(self, n=1):

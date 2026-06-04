@@ -9,7 +9,6 @@ or directly:
 
 from __future__ import annotations
 
-import asyncio
 import io
 import json
 import os
@@ -321,7 +320,7 @@ def index():
     # Add Material Symbols Outlined font for thin-stroke icons
     ui.add_head_html('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" />')
 
-    dark = ui.dark_mode(True)
+    ui.dark_mode(True)
 
     # ── header ────────────────────────────────────────────────────────────
     with ui.header().classes("items-center justify-between px-6 py-2 modern-header"):
@@ -905,11 +904,14 @@ def index():
                 for i in range(n):
                     def _mean(lst, i):
                         try:
-                            if not lst or i >= len(lst): return "—"
+                            if not lst or i >= len(lst):
+                                return "—"
                             v = lst[i]
-                            if hasattr(v, "__len__") and len(v): return round(float(np.mean(v)), 3)
+                            if hasattr(v, "__len__") and len(v):
+                                return round(float(np.mean(v)), 3)
                             return round(float(v), 3) if v is not None else "—"
-                        except Exception: return "—"
+                        except Exception:
+                            return "—"
 
                     rows.append({
                         "event": i + 1,
@@ -929,7 +931,7 @@ def index():
             with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
                 ui.label("Export Results").classes("text-2xl font-bold tracking-tight")
 
-                no_results_note = ui.label(
+                ui.label(
                     "Run a calculation first (tab 4) to enable exports."
                 ).classes("text-caption text-grey-6 q-mb-md").bind_visibility_from(state, "calculation_done", backward=lambda v: not v)
 
@@ -1087,7 +1089,8 @@ def _make_dosemap_fig():
         ]
 
         cmax = float(np.max(dose_map))
-        if cmax == 0: cmax = 1.0
+        if cmax == 0:
+            cmax = 1.0
 
         mesh = go.Mesh3d(
             x=r[:, 0], y=r[:, 1], z=r[:, 2],

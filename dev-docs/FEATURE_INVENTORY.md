@@ -369,15 +369,16 @@ Falls back to `settings_example.json` if nothing provided.
 ## 10. CLI (`main.py`)
 
 ```bash
-python -m mypyskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH]
+python -m mypyskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
 ```
 
 | Argument | Description |
 |----------|-------------|
 | `--mode headless` | Run calculation (default) |
-| `--mode gui` | Launch GUI (defined but **not yet implemented**) |
+| `--mode gui` | Launch the NiceGUI app |
 | `--file-path` | Path to RDSR `.dcm` file |
 | `--settings` | Path to settings JSON file |
+| `--native` | Open GUI in a native desktop window instead of a browser tab (requires `pywebview`) |
 
 Falls back to `DEVELOPMENT_PARAMETERS` from `dev_data.py` if no settings given.
 
@@ -413,7 +414,7 @@ from mypyskindose import (
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| `--mode gui` CLI flag | Defined, not wired | Constant `RUN_ARGUMENTS_MODE_GUI = "gui"` exists |
+| CSV/TSV/XLSX event-table input | Planned, not implemented | See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`; current CSV/XLSX GUI buttons are exports only |
 | PDF/Word report export | Not implemented | Planned in GUI Phase 3 |
 | Side-by-side procedure comparison | Not implemented | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |
