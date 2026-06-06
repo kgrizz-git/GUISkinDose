@@ -321,6 +321,9 @@ def index():
     ui.add_head_html('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" />')
 
     ui.dark_mode(True)
+    
+    # Import help button component
+    from .components import HelpButton
 
     # ── header ────────────────────────────────────────────────────────────
     with ui.header().classes("items-center justify-between px-6 py-2 modern-header"):
@@ -603,6 +606,12 @@ def index():
 
                 with ui.expansion("Phantom Settings", icon="person", value=True).classes("modern-card w-full"):
                     with ui.column().classes("w-full gap-4 q-pa-md"):
+                        with ui.row().classes("w-full items-center justify-between"):
+                            ui.label("Phantom model and positioning").classes("text-subtitle2")
+                            HelpButton(
+                                title="Phantom Positioning Offsets",
+                                content_path="positioning_offsets.md"
+                            )
                         with ui.row().classes("w-full gap-6"):
                             ui.select(PHANTOM_MODELS, label="Phantom model", value=state.phantom_model).bind_value(
                                 state, "phantom_model"
@@ -670,7 +679,12 @@ def index():
         # ══════════════════════════════════════════════════════════════════
         with ui.tab_panel("geometry"):
             with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
-                ui.label("Geometry Preview").classes("text-2xl font-bold tracking-tight")
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("Geometry Preview").classes("text-2xl font-bold tracking-tight")
+                    HelpButton(
+                        title="Geometry Workflow",
+                        content_path="geometry_workflow.md"
+                    )
                 
                 # controls in a row above the plot
                 with ui.row().classes("w-full items-end gap-4"):

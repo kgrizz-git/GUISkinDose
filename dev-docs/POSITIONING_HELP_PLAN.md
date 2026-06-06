@@ -22,11 +22,11 @@ Users often need to determine appropriate phantom positioning offsets (latitude,
 
 ## Implementation Plan
 
-### Phase 1: Documentation
+### Phase 1: Documentation ✅ COMPLETE
 
 Create a user-facing documentation file that explains the positioning workflow.
 
-**File:** `docs/source/user_guide/positioning_offsets.md`
+**File:** `docs/source/user_guide/positioning_offsets.md` ✅ Created
 
 **Content:**
 - Overview of the coordinate system (X=lateral, Y=longitudinal, Z=vertical)
@@ -37,15 +37,15 @@ Create a user-facing documentation file that explains the positioning workflow.
 
 **Dependencies:** None
 
-### Phase 2: Help Button Infrastructure
+### Phase 2: Help Button Infrastructure ✅ COMPLETE
 
 Add a reusable help button component to the GUI that can display markdown-formatted help content.
 
-**Location:** `src/mypyskindose/gui/components/help_button.py`
+**Location:** `src/mypyskindose/gui/components/help_button.py` ✅ Created
 
 **Design:**
 - Small `?` icon button next to section headers or in tab toolbars
-- Opens a NiceGUI `ui.dialog` or `ui.drawer` with scrollable markdown content
+- Opens a NiceGUI `ui.dialog` with scrollable markdown content
 - Content can be loaded from bundled markdown files or inline strings
 - Consistent styling across all tabs
 
@@ -58,35 +58,35 @@ HelpButton(title="Positioning Offsets", content_path="positioning_help.md")
 HelpButton(title="Positioning Offsets", content="Inline markdown text...")
 ```
 
-### Phase 3: Add Help to Settings Tab
+### Phase 3: Add Help to Settings Tab ✅ COMPLETE
 
-**Location:** `src/mypyskindose/gui/tabs/settings_tab.py`
+**Location:** `src/mypyskindose/gui/app.py` (Settings tab panel)
 
 **Placement:**
-- Help button in the "Phantom Positioning" section header
+- Help button in the "Phantom Settings" section header ✅ Added
 - Content focuses on offset parameters (latitude, longitude, rotation)
 
-**Content source:** Inline or `help/positioning_offsets.md`
+**Content source:** `help/positioning_offsets.md` ✅ Created
 
-### Phase 4: Add Help to Geometry Tab
+### Phase 4: Add Help to Geometry Tab ✅ COMPLETE
 
-**Location:** `src/mypyskindose/gui/tabs/geometry_tab.py`
+**Location:** `src/mypyskindose/gui/app.py` (Geometry tab panel)
 
 **Placement:**
-- Help button near the event controls (top of the tab)
+- Help button near the tab header ✅ Added
 - Content focuses on the iterative workflow using the Geometry tab
 
-**Content source:** Inline or `help/geometry_workflow.md`
+**Content source:** `help/geometry_workflow.md` ✅ Created
 
-### Phase 5: Help Content Files
+### Phase 5: Help Content Files ✅ COMPLETE
 
 Create markdown files for help content that can be loaded at runtime.
 
-**Directory:** `src/mypyskindose/gui/help/`
+**Directory:** `src/mypyskindose/gui/help/` ✅ Created
 
 **Files:**
-- `positioning_offsets.md` — detailed explanation of offset parameters and their effects
-- `geometry_workflow.md` — step-by-step guide for using the Geometry tab to refine positioning
+- `positioning_offsets.md` ✅ Created — detailed explanation of offset parameters and their effects
+- `geometry_workflow.md` ✅ Created — step-by-step guide for using the Geometry tab to refine positioning
 - (future) `dose_calculation.md`, `export_results.md`, etc.
 
 ### Phase 6: Integration with Main Docs
@@ -99,6 +99,8 @@ Link the in-app help content with the main documentation so they stay in sync.
 3. **Generated:** Build step copies relevant docs into the GUI package
 
 **Recommendation:** Start with option 2 for simplicity, migrate to option 1 if content grows.
+
+**Status:** Not started (lower priority)
 
 ## File Structure After Implementation
 
@@ -120,20 +122,19 @@ docs/source/user_guide/
 
 ## Priority
 
-1. **Phase 1** — Documentation (provides reference even before GUI updates)
-2. **Phase 3 & 4** — Help buttons in Settings and Geometry tabs (highest user impact)
-3. **Phase 2** — Help button component (enables 3 & 4)
-4. **Phase 5** — External help content files (cleaner, enables reuse)
+1. ~~**Phase 1** — Documentation (provides reference even before GUI updates)~~ ✅
+2. ~~**Phase 3 & 4** — Help buttons in Settings and Geometry tabs (highest user impact)~~ ✅
+3. ~~**Phase 2** — Help button component (enables 3 & 4)~~ ✅
+4. ~~**Phase 5** — External help content files (cleaner, enables reuse)~~ ✅
 5. **Phase 6** — Doc integration (maintenance concern, lower priority)
 
 ## Open Questions
 
-1. Should help content be inline strings or external markdown files?
-   - Inline: simpler, no packaging concerns
-   - External: cleaner code, easier to update, but requires `include_package_data=True`
+1. ~~Should help content be inline strings or external markdown files?~~
+   - **Decision:** External markdown files (cleaner, easier to update)
 
-2. Should the help dialog be a modal dialog or a side drawer?
-   - Modal: focuses attention, dismissible
-   - Drawer: can stay open while user interacts with controls
+2. ~~Should the help dialog be a modal dialog or a side drawer?~~
+   - **Decision:** Modal dialog (focuses attention, dismissible)
 
 3. Should we add a general "Getting Started" help section accessible from all tabs?
+   - **Status:** Future consideration

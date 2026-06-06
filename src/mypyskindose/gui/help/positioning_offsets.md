@@ -2,37 +2,44 @@
 
 These parameters control the initial position of the patient phantom relative to the X-ray table and beam.
 
+## Overview
+
+The patient offset settings (Longitudinal, Vertical, Lateral) shift the phantom position from its default location. These are **additional offsets** applied on top of the table offsets that are automatically determined from the RDSR data based on the manufacturer and model of the X-ray system.
+
+**Note:** The automatic table offsets are applied "under the hood" during normalization and account for vendor-specific coordinate system conventions. The patient offsets here let you make further adjustments to position the patient correctly on the table.
+
 ## Parameters
 
-### Latitude (X-axis)
-- **Direction**: Lateral (side-to-side)
-- **Effect**: Shifts the patient left or right relative to the beam
-- **Units**: Centimeters
+### Longitudinal
+Shifts the patient along the table (head-foot direction).
 
-### Longitude (Y-axis)
-- **Direction**: Longitudinal (head-foot)
-- **Effect**: Shifts the patient toward the head (cranial) or feet (caudal)
-- **Units**: Centimeters
+### Vertical  
+Shifts the patient up or down relative to the table surface.
 
-### Rotation
-- **Direction**: About the vertical axis
-- **Effect**: Rotates the patient's orientation on the table
-- **Units**: Degrees
+### Lateral
+Shifts the patient side-to-side.
 
-## Tips for Adjusting Offsets
+All values are in **centimeters**.
 
-1. **Start with small adjustments** (1-5 cm) and observe the effect in the Geometry tab
-2. **Check multiple events** to ensure positioning works across the entire procedure
-3. **Document working values** for your system/procedure combinations
+## Iterative Workflow
 
-## Troubleshooting
+When the correct positioning is unknown:
 
-| Problem | Try |
-|---------|-----|
-| Beam hits wrong body part | Adjust longitude offset |
-| Beam misses patient | Check for large offset errors (try ±10-20 cm) |
-| Patient appears rotated | Adjust rotation parameter |
+1. **Start in the Geometry tab** — Enter an event number and click "Single Event" to see the current beam-patient geometry
 
----
+2. **Check the beam position** — Observe where the beam intersects the patient phantom
 
-**Note:** Coordinate effects may vary by manufacturer. See the technical documentation for vendor-specific details.
+3. **Adjust offsets in Settings** — If the position doesn't look right, modify the offset values here
+
+4. **Return to Geometry** — Click "Single Event" again to see the updated position
+
+5. **Test multiple events** — Check several events across the procedure to ensure positioning works for all irradiation events
+
+6. **Repeat** until the beam intersects the expected anatomical region for the procedure type
+
+## Tips
+
+- Start with small adjustments (1-5 cm) and observe the effect
+- Check the Geometry tab frequently — it's the fastest way to verify changes
+- Document working values for your system/procedure combinations
+- Different procedure types have characteristic beam positions (cardiac → chest, neuro → head, etc.)

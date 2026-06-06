@@ -17,10 +17,30 @@ Different X-ray manufacturers define their reference coordinates differently. `r
 
 ## 3. The "Offset Issue" (Dose Projecting Incorrectly)
 
-If dose projects onto strange parts of the 3D human mesh (e.g., the beam hitting the head during a cardiac procedure), it is usually caused by an offset mismatch:
+If dose projects onto strange parts of the 3D human mesh (e.g., the beam hitting the head during a cardiac procedure), it is usually caused by an offset mismatch. There are **two separate offset systems** to understand:
 
-1. **`settings.phantom.patient_offset` (Most Common)**: In PySkinDose, the `(0, 0, 0)` isocenter of the table corresponds to the head-end of the support table. The `patient_offset` setting (`d_lon`, `d_ver`, `d_lat` in cm) physically shifts the 3D human mesh relative to this table origin. If `d_lon` is set to `0` (the default), the patient's head is flush with the top edge of the table. If the actual patient was positioned lower down, `d_lon` must be changed.
-2. **Missing/Incorrect `translation_offset`**: If `normalization_settings.json` lacks an entry for the specific scanner model (or has incorrect coordinates), the table movements will anchor around the wrong spatial origin. For instance, the Philips Allura requires an offset of `{x: -0.3, y: 105.5, z: -173.35}`, while Siemens Artis uses `{x: 0, y: 0, z: 0}`. 
+### Table Offsets (Vendor-Specific Machine Coordinates)
+
+**Purpose**: Transform manufacturer-specific coordinates into MyPySkinDose's unified coordinate system.
+
+**Applied**: Automatically during RDSR normalization via `normalization_settings.json`.
+
+**Common Issue**: If `normalization_settings.json` lacks an entry for the specific scanner model (or has incorrect coordinates), the table movements will anchor around the wrong spatial origin. For instance, the Philips Allura requires an offset of `{x: -0.3, y: 105.5, z: -173.35}`, while Siemens Artis uses `{x: 0, y: 0, z: 0}`.
+
+### Patient Offsets (User-Adjustable Positioning)
+
+**Purpose**: Position the patient mesh on the table relative to the table's coordinate system.
+
+**Applied**: During dose calculation via `settings.phantom.patient_offset`.
+
+**Common Issue**: In PySkinDose, the `(0, 0, 0)` isocenter of the table corresponds to the head-end of the support table. The `patient_offset` setting (`d_lon`, `d_ver`, `d_lat` in cm) physically shifts the 3D human mesh relative to this table origin. If `d_lon` is set to `0` (the default), the patient's head is flush with the top edge of the table. If the actual patient was positioned lower down, `d_lon` must be changed.
+
+### Which Offset to Adjust?
+
+- **Wrong scanner model detected?** → Check Table Offset in `normalization_settings.json`
+- **Patient positioned incorrectly?** → Adjust Patient Offset in Settings tab (`d_lon`, `d_ver`, `d_lat`)
+
+See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) for detailed information about vendor-specific transformations and the offset hierarchy. 
 
 ## 4. GUI Improvements for Settings Handling
 

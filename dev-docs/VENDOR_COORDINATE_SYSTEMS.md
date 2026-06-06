@@ -181,6 +181,52 @@ The normalization matching process (in `normalization_settings.py`):
    - If no match found, log warning and use "Default" entry
    - If no "Default" entry exists, raise `NotImplementedError`
 
+## The Two Offset Systems
+
+MyPySkinDose uses **two separate offset systems** that work together to position the patient correctly:
+
+### 1. Table Offsets (Vendor-Specific Machine Coordinates)
+
+**Purpose**: Transform manufacturer-specific coordinates into MyPySkinDose's unified coordinate system.
+
+**Applied**: Automatically during RDSR normalization.
+
+**Source**: `normalization_settings.json` (matched by manufacturer/model).
+
+**User Control**: Currently read-only in the GUI (shown in Results tab). Future versions may allow manual adjustment.
+
+**Example**: Philips Allura requires `{x: -0.3, y: 105.5, z: -173.35}` cm because Philips defines their isocenter at a different physical location than the unified system's origin.
+
+### 2. Patient Offsets (User-Adjustable Positioning)
+
+**Purpose**: Position the patient mesh on the table relative to the table's coordinate system.
+
+**Applied**: During dose calculation (after normalization).
+
+**Source**: `settings.phantom.patient_offset` (`d_lon`, `d_ver`, `d_lat`).
+
+**User Control**: Editable in the Settings tab (`d_lon`, `d_ver`, `d_lat` parameters).
+
+**Example**: If the patient's head should be positioned 20 cm down from the table head-end for a cardiac procedure, set `d_lon = 20`.
+
+### The Transformation Hierarchy
+
+1. **Raw RDSR coordinates** (manufacturer-specific, e.g., Philips table height = 105.5 cm)
+2. → **Table Offset applied** (normalization step: `105.5 + (-105.5) = 0` cm in unified system)
+3. → **Patient Offset applied** (calculation step: shift patient mesh by `d_lon`, `d_ver`, `d_lat`)
+4. → **Final patient position** relative to beam geometry
+
+### Why Two Systems?
+
+- **Table Offsets** are **machine-specific** and should be consistent for all procedures on the same scanner model.
+- **Patient Offsets** are **procedure-specific** and depend on how the patient was actually positioned during the exam.
+
+### GUI Display
+
+- **Settings Tab**: Shows Patient Offsets (`d_lon`, `d_ver`, `d_lat`) as editable fields
+- **Results Tab**: Shows Table Offsets (read-only, applied automatically)
+- **Future Enhancement**: Display both offset types in Settings tab, with Table Offsets shown as read-only (initially) and Patient Offsets as editable
+
 ## Common Issues and Debugging
 
 ### Dose Projects to Wrong Body Part
