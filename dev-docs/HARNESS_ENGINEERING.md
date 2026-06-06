@@ -100,7 +100,17 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 - cross-platform matrix should remain active
 - docs-only changes may run a smaller check set, but should still pass basic syntax and markdown/link sanity when such tooling exists
 
-**Current CI vs local checks:** Today `.github/workflows/ci.yml` runs `python -m compileall`, `pytest`, `ruff`, a syntax/fatal-only `flake8` pass (no style overlap with ruff), and `python scripts/check_doc_freshness.py` on Ubuntu. It does **not** yet run `python -m build` (Phase 3). Local full checks may still include `python -m build`; see `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md`.
+**Current CI vs local checks:** `.github/workflows/ci.yml` matches the **Full checks** list above on CI:
+
+| Check | Where in CI |
+|---|---|
+| `python -m compileall src/mypyskindose` | All matrix cells (`build` job) |
+| `python -m pytest` | All matrix cells |
+| `python -m ruff check src tests` | All matrix cells |
+| `python -m build` | Ubuntu `package-build` job (Python 3.12) |
+| `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
+
+Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 
 **Lint policy:** `ruff` is the primary style linter (120-column, matches `pyproject.toml`). CI `flake8` runs only `E9,F63,F7,F82` (syntax errors and undefined names).
 
@@ -120,6 +130,5 @@ Every PR should answer:
 
 Tracked in `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` with phased remediation:
 
-- CI does not yet run all checks listed under **Validation commands** (`python -m build` — Phase 3).
 - There are no automated GUI smoke tests yet (NiceGUI app exists under `src/mypyskindose/gui/`).
 - Tabular input adapters are planned but not implemented (`FEATURE_INVENTORY.md`).

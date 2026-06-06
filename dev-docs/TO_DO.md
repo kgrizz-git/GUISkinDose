@@ -14,8 +14,9 @@ Repository hygiene, documentation, semver, and CI alignment. Harness-phase tags 
 - [x] Clean this file up and apply consistent formatting and prioritization.
 - [x] Align with harness engineering principles, semver, and CI.
 - [x] Add a doc-freshness/harness check so stale feature-status statements are easier to catch automatically. **Harness Phase 1** — `python scripts/check_doc_freshness.py`
-- [ ] Institute semver. **Harness Phase 2–3**
+- [x] Institute semver. **Harness Phase 2–3**
   - [x] Add root `CHANGELOG.md` (Keep a Changelog; version from `pyproject.toml`) — **Harness Phase 2**
+  - [x] `python -m build` in CI (`package-build` job on Ubuntu) — **Harness Phase 3**
 - [ ] Institute trufflehog/gitleaks, dependabot, grype, basedpyright, etc. **Harness Phase 2–3**
   - [x] Dependabot configured for pip and GitHub Actions (2026-06-06)
 - [ ] Add coordinate system diagrams to `VENDOR_COORDINATE_SYSTEMS.md` showing:

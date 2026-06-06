@@ -15,11 +15,11 @@ MyPySkinDose already follows many harness engineering principles well:
 - ✅ Validation commands documented
 
 Key gaps to address:
-- ⚠️ CI does not yet run all checks documented in `HARNESS_ENGINEERING.md`
+- ✅ CI runs all checks documented under **Full checks** in `HARNESS_ENGINEERING.md` (Phase 3)
 - ✅ Doc-freshness script and CI link check (Phase 1; stale-pattern scan is advisory)
 - ⚠️ No structural tests for architecture enforcement
 - ⚠️ Plans lack a standardized active/completed lifecycle (see `dev-docs/plans/`)
-- ⚠️ Repository entropy (lint drift; semver partially adopted — `CHANGELOG.md` added in Phase 2)
+- ⚠️ Supply-chain tooling partially adopted (dependabot done; gitleaks/grype/basedpyright deferred)
 - ⚠️ No GUI smoke-test harness (NiceGUI exists; automated validation does not)
 
 ---
@@ -251,11 +251,11 @@ Key gaps to address:
 
 ---
 
-### 12. CI ↔ harness alignment ⚠️ PARTIAL
+### 12. CI ↔ harness alignment ✅ STRONG
 
 **OpenAI principle:** Documented validation commands and CI must tell the same story; agents trust whichever runs in CI.
 
-**Current state:**
+**Current state:** Local **Full checks** in `HARNESS_ENGINEERING.md` are mirrored in CI (see table below). Remaining CI gap: GUI smoke tests (Phase 5).
 
 | Check | `HARNESS_ENGINEERING.md` | `.github/workflows/ci.yml` |
 |---|---|---|
@@ -263,7 +263,7 @@ Key gaps to address:
 | `ruff check` | Full checks | ✅ |
 | `flake8` | Not listed locally | ✅ CI only (syntax/fatal: E9,F63,F7,F82) |
 | `python -m compileall` | Fast checks | ✅ All matrix cells (Phase 2) |
-| `python -m build` | Full checks | ❌ CI (only in `release.yml`) |
+| `python -m build` | Full checks | ✅ Ubuntu `package-build` job (Python 3.12; Phase 3) |
 | Doc-freshness / link check | `python scripts/check_doc_freshness.py` | ✅ Ubuntu job |
 | GUI smoke tests | Known gap | ❌ |
 
@@ -340,7 +340,7 @@ Execute in order. Each phase should update `HARNESS_ENGINEERING.md` known gaps w
 **Objective:** CI matches documented full checks or docs are corrected to match CI.
 
 **Tasks:**
-- [ ] Add `python -m build` to CI (one matrix cell) **or** reclassify build as release-only in `HARNESS_ENGINEERING.md`
+- [x] Add `python -m build` to CI (Ubuntu `package-build` job, Python 3.12)
 - [x] Dependabot configured for pip and GitHub Actions (2026-06-06) — `.github/dependabot.yml`
 
 **Acceptance criteria:** No undocumented gap between local full checks and CI without an explicit note in the harness doc.
