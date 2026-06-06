@@ -30,6 +30,12 @@ dependencies = [
 [project.optional-dependencies]
 gui = ["nicegui>=2.0.0", "pytest-asyncio>=0.24"]
 gui-native = ["nicegui>=2.0.0", "pywebview", "pytest-asyncio>=0.24"]
+dev = [
+    "basedpyright>=1.23",
+    "pandas-stubs>=2.2",
+    "types-Pillow",
+    "pip-audit>=2.7",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -69,6 +75,18 @@ skip_glob = ["**/__init__.py", "**/migrations", ".venv", ".venv39", ".github", "
 
 [tool.ruff]
 line-length = 120
+
+[tool.basedpyright]
+pythonVersion = "3.10"
+include = ["src/mypyskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
+exclude = [
+    "**/__pycache__",
+    "src/mypyskindose/table_data",
+    "tests/manual_tests",
+]
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+# Incremental typing: baseline file (.basedpyright/baseline.json) suppresses known issues; CI fails on new ones.
 
 [tool.black]
 line-length = 120

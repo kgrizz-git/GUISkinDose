@@ -11,14 +11,43 @@ Short-term task list for MyPySkinDose. Harness principles, validation commands, 
 
 Repository hygiene, documentation, semver, and CI alignment. Harness-phase tags reference [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md).
 
+### Completed (Harness Phases 0–5)
+
 - [x] Clean this file up and apply consistent formatting and prioritization.
 - [x] Align with harness engineering principles, semver, and CI.
-- [x] Add a doc-freshness/harness check so stale feature-status statements are easier to catch automatically. **Harness Phase 1** — `python scripts/check_doc_freshness.py`
-- [x] Institute semver. **Harness Phase 2–3**
-  - [x] Add root `CHANGELOG.md` (Keep a Changelog; version from `pyproject.toml`) — **Harness Phase 2**
-  - [x] `python -m build` in CI (`package-build` job on Ubuntu) — **Harness Phase 3**
-- [ ] Institute trufflehog/gitleaks, dependabot, grype, basedpyright, etc. **Harness Phase 2–3**
-  - [x] Dependabot configured for pip and GitHub Actions (2026-06-06)
+- [x] Doc-freshness / link check — **Phase 1** — `python scripts/check_doc_freshness.py`
+- [x] Semver and CI full-check parity — **Phases 2–3** — `CHANGELOG.md`, `compileall`, `package-build`, Actions v4/v5
+- [x] Package layering rules + structural tests — **Phase 4** — `CODEBASE_OVERVIEW.md`, `test_architecture_layers.py`
+- [x] GUI smoke tests — **Phase 5** — `tests/gui/`, `gui-smoke` CI job, `tests/scripts/launch_gui_headless.py`
+
+### CI, typing, and supply chain
+
+- [x] **Basedpyright** — CI `typecheck` job with baseline (`.basedpyright/baseline.json`); `[dev]` extra; shrink baseline as types improve (`basedpyright --writebaseline`).
+- [x] **Gitleaks** — `.github/workflows/gitleaks.yml` on push/PR (full git history).
+- [x] **pip-audit** — CI `dependency-audit` job; scans core + `[dev]` + `[gui]` extras; fails on known CVEs (see policy in `HARNESS_ENGINEERING.md`).
+- [ ] **Optional SBOM scan (grype)** — scan built wheel/sdist from `package-build` job if broader coverage is needed beyond PyPI advisories.
+- [x] **Dependabot** — weekly pip + GitHub Actions updates (`.github/dependabot.yml`).
+- [ ] **Optional hardening** (lower priority):
+  - `pre-commit` config mirroring ruff + gitleaks + doc-freshness.
+  - GitHub **code scanning** / Dependabot security alerts enabled in repo settings.
+  - SBOM artifact upload on release (syft/grype) if distributing wheels publicly.
+  - Trufflehog (redundant if gitleaks is sufficient).
+
+### Harness docs and automation (Phase 6+ / optional)
+
+- [ ] **Plan lifecycle** — **Phase 6 (optional)**
+  - Add `dev-docs/exec-plans/` template (objective, acceptance criteria, progress/decision logs).
+  - Link or migrate `dev-docs/plans/` without duplicating plan homes.
+  - Optional `tech-debt-tracker.md` for durable items moved out of this file.
+- [ ] **Doc-freshness follow-ups**
+  - Add exclude list for harness docs that intentionally mention stale-pattern words.
+  - Extend `FEATURE_INVENTORY.md` contradiction rules beyond tabular input.
+- [ ] **Architecture follow-ups**
+  - Evaluate `import-linter` if layer contracts grow beyond three pytest rules.
+  - Refactor `phantom_class` → `plotting` coupling documented in `CODEBASE_OVERVIEW.md`.
+- [ ] **GUI test depth** (beyond Phase 5 smoke)
+  - Smoke test each main tab route (Upload, Settings, Geometry, etc.).
+  - Optional Playwright/CDP tests only if user-simulation proves insufficient.
 - [ ] Add coordinate system diagrams to `VENDOR_COORDINATE_SYSTEMS.md` showing:
   - Unified internal coordinate system (axes, rotations, origin)
   - Visual comparison of Siemens vs Philips coordinate origins

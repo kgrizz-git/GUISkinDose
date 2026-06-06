@@ -39,6 +39,8 @@ Agents working in this repository should be able to answer three questions quick
 | Project packaging and tool configuration | `pyproject.toml` |
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
+| Secret scanning | `.github/workflows/gitleaks.yml` |
+| Type-check baseline | `.basedpyright/baseline.json` |
 | Release build | `.github/workflows/release.yml` |
 | Dependency and Actions updates | `.github/dependabot.yml` |
 
@@ -104,6 +106,43 @@ python tests/scripts/launch_gui_headless.py
 
 Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the `gui-smoke` job. Core matrix tests exclude `tests/gui/` (see `--ignore=tests/gui` in CI).
 
+### Type checking (optional `[dev]` extra)
+
+```bash
+pip install -e ".[dev,gui]"
+basedpyright --baselinefile .basedpyright/baseline.json
+```
+
+CI runs the same command in the `typecheck` job. Known issues are recorded in `.basedpyright/baseline.json`; **CI fails only on new type errors**. After fixing types locally, shrink the baseline:
+
+```bash
+basedpyright --baselinefile .basedpyright/baseline.json --writebaseline
+```
+
+`table_data/` offline scripts are excluded from analysis (optional `spekpy` dependency).
+
+### Secret scanning
+
+Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full repository history). Do not commit credentials; see CodeGuard hardcoded-credentials rules in `.cursor/rules/`.
+
+### Dependency vulnerability scan (optional `[dev]` extra)
+
+```bash
+pip install -e ".[dev,gui]"
+pip-audit --desc on
+```
+
+CI runs the same audit in the `dependency-audit` job (Ubuntu, Python 3.12).
+
+**Policy:**
+
+- **Scope:** PyPI-resolved packages for core dependencies plus `[dev]` and `[gui]` extras (widest maintained install surface).
+- **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (`pip-audit` default).
+- **Local editable install:** `mypyskindose` itself is skipped (not published on PyPI); this is expected.
+- **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented `--ignore-vuln` entry only after maintainer review (avoid silent ignores).
+
+Broader SBOM-style scanning (e.g. **grype** on built wheels) remains optional; see `dev-docs/TO_DO.md`.
+
 ## CI expectations
 
 CI should be treated as a blocking quality gate, not only as telemetry:
@@ -123,6 +162,9 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
+| `basedpyright --baselinefile .basedpyright/baseline.json` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
+| gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
+| `pip-audit --desc on` | Ubuntu `dependency-audit` job (requires `.[dev,gui]`) |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 

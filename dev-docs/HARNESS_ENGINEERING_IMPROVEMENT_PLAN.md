@@ -20,7 +20,7 @@ Key gaps to address:
 - ✅ Layer dependency rules documented and partially enforced in CI via structural tests (Phase 4)
 - ✅ GUI smoke tests via NiceGUI user simulation (Phase 5; `tests/gui/`, CI `gui-smoke` job)
 - ⚠️ Plans lack a standardized active/completed lifecycle (see `dev-docs/plans/`)
-- ⚠️ Supply-chain tooling partially adopted (dependabot done; gitleaks/grype/basedpyright deferred)
+- ⚠️ Supply-chain tooling partially adopted — **done:** dependabot, gitleaks, basedpyright baseline, pip-audit; **optional:** grype/SBOM on release
 
 ---
 
@@ -226,7 +226,7 @@ Key gaps to address:
 - ~~CI runs both flake8 and ruff with mismatched line-length policy (127 vs 120)~~ — Phase 2: flake8 limited to syntax/fatal; ruff is primary style linter (120 cols)
 - ~~flake8 broad pass uses `--exit-zero` (warnings do not fail CI)~~ — removed in Phase 2
 - ~~GitHub Actions uses `checkout@v2` and `setup-python@v2`~~ — upgraded to v4/v5 in Phase 2
-- `TO_DO.md` lists supply-chain tooling (dependabot, gitleaks/trufflehog, grype, basedpyright) not yet adopted
+- ~~`TO_DO.md` lists supply-chain tooling (dependabot, gitleaks/trufflehog, grype, basedpyright) not yet adopted~~ — dependabot, gitleaks, basedpyright, and pip-audit adopted (2026-06-06); grype/SBOM optional
 
 **Recommendations:**
 1. Remove tracked `egg-info` from version control; ensure `.gitignore` covers it
@@ -234,7 +234,7 @@ Key gaps to address:
 3. ~~Fix filename/reference drift (`design.md` vs `DESIGN.md`)~~ — done in Phase 0 (`design.md` → `DESIGN.md`)
 4. Consolidate lint story: ruff as primary; flake8 limited to syntax/fatal errors or remove overlap
 5. Upgrade GitHub Actions to current major versions
-6. Adopt dependabot (and optionally gitleaks/grype) in a focused hygiene PR
+6. ~~Adopt dependabot (and optionally gitleaks/grype) in a focused hygiene PR~~ — dependabot, gitleaks, basedpyright, and pip-audit done; grype/SBOM optional
 
 ---
 
@@ -253,6 +253,9 @@ Key gaps to address:
 | `python -m build` | Full checks | ✅ Ubuntu `package-build` job (Python 3.12; Phase 3) |
 | Doc-freshness / link check | `python scripts/check_doc_freshness.py` | ✅ Ubuntu job |
 | GUI smoke tests | `python -m pytest tests/gui/` | ✅ Ubuntu `gui-smoke` job (Phase 5) |
+| Basedpyright (baseline) | `basedpyright --baselinefile .basedpyright/baseline.json` | ✅ Ubuntu `typecheck` job |
+| Gitleaks | `.github/workflows/gitleaks.yml` | ✅ Separate workflow on push/PR |
+| pip-audit | `pip-audit --desc on` after `.[dev,gui]` install | ✅ Ubuntu `dependency-audit` job |
 
 **Recommendations:**
 1. Add `python -m compileall src/mypyskindose` to CI (cheap, catches syntax errors early)

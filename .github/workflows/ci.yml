@@ -50,6 +50,35 @@ jobs:
     - name: GUI smoke tests
       run: python -m pytest tests/gui/ -v --tb=short
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,gui]"
+    - name: Basedpyright (baseline — fails on new type errors)
+      run: basedpyright --baselinefile .basedpyright/baseline.json
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install dependencies and audit for CVEs
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,gui]"
+        pip-audit --desc on
+
   build:
 
     runs-on: ${{ matrix.os }}
