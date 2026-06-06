@@ -22,7 +22,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 
 | File | Purpose |
 |---|---|
-| [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, settings, classes, functions, and repository layout. |
+| [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, **package layering rules**, settings, classes, functions, and repository layout. |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | Exhaustive feature status ledger: calculations, rendering, settings, outputs, CLI, and API. |
 | [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
 

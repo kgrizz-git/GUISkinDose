@@ -68,6 +68,8 @@ python -m compileall src/mypyskindose
 python -m pytest tests/unittests
 ```
 
+Unit tests include structural layer checks in `tests/unittests/test_architecture_layers.py` (settings independence, GUI → orchestration, dose pipeline isolation). See **Package layering** in `dev-docs/CODEBASE_OVERVIEW.md`.
+
 ### Full checks
 
 ```bash

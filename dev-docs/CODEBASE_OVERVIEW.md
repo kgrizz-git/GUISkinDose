@@ -38,6 +38,68 @@ corrections.db             # SQLite database (correction factors, HVL tables)
 
 ---
 
+## Package layering and dependency rules
+
+MyPySkinDose is organized in layers so settings, dose physics, and presentation stay separable. Higher layers orchestrate lower ones; lower layers must not depend on GUI or plotting entry points.
+
+### Layer map
+
+| Layer | Modules | Role |
+|-------|---------|------|
+| **L0 — Shared** | `constants.py`, `debug.py` | String keys, debug helpers; no business logic |
+| **L1 — Settings** | `settings/` | `PyskindoseSettings` and related dataclasses; may use L0, `helpers/` |
+| **L2 — Helpers & input** | `helpers/`, `rdsr_parser.py`, `rdsr_normalizer.py` | Parsing, normalization, settings loading |
+| **L3 — Domain** | `beam_class.py`, `phantom_class.py`, `geom_calc.py`, `corrections.py`, `db_connect.py` | Geometry, phantoms, beams, correction factors |
+| **L4 — Dose pipeline** | `calculate_dose/` | Per-event dose accumulation (uses L3) |
+| **L5 — Presentation** | `plotting/`, `format_export_data.py` | Plotly plots and export formatting |
+| **L6 — Orchestration** | `analyze_data.py` | Mode dispatch: geometry plots vs dose calculation |
+| **L7 — Entry** | `main.py`, `__main__.py` | CLI and public `main()` API |
+| **L8 — GUI (optional extra)** | `gui/` | NiceGUI app; uses orchestration and input, not dose internals |
+
+```mermaid
+flowchart BT
+  GUI[L8 gui]
+  MAIN[L7 main]
+  ANALYZE[L6 analyze_data]
+  PLOT[L5 plotting / format_export]
+  DOSE[L4 calculate_dose]
+  DOMAIN[L3 domain models]
+  INPUT[L2 helpers / rdsr_*]
+  SETTINGS[L1 settings]
+  SHARED[L0 constants / debug]
+
+  GUI --> ANALYZE
+  GUI --> INPUT
+  GUI --> SETTINGS
+  GUI --> PLOT
+  MAIN --> ANALYZE
+  MAIN --> GUI
+  ANALYZE --> DOSE
+  ANALYZE --> PLOT
+  ANALYZE --> INPUT
+  DOSE --> DOMAIN
+  PLOT --> DOMAIN
+  INPUT --> SETTINGS
+  SETTINGS --> SHARED
+  DOMAIN --> SHARED
+```
+
+### Enforced rules (CI)
+
+Structural tests in `tests/unittests/test_architecture_layers.py` assert:
+
+1. **`settings/` independence** — must not import dose, plotting, GUI, orchestration, or RDSR runtime modules (may use `constants`, `helpers`, `debug`, and other `settings` submodules).
+2. **`gui/` → `calculate_dose/`** — GUI must not import the dose pipeline directly; use `analyze_data` (orchestration) instead.
+3. **`calculate_dose/` isolation** — must not import `gui/` or `plotting/` (presentation stays above dose math).
+
+These match current imports. We use pytest AST checks rather than `import-linter` to avoid an extra dev dependency; add `import-linter` later if contracts grow.
+
+### Known exceptions (documented, not enforced)
+
+- `phantom_class.py` imports `plotting.create_ploty_ijk_indices` for mesh index helpers — legacy coupling; refactor in a future cleanup PR if mesh utilities move to `helpers/`.
+
+---
+
 ## End-to-end data flow
 
 ```

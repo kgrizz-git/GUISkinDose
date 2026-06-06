@@ -17,7 +17,7 @@ MyPySkinDose already follows many harness engineering principles well:
 Key gaps to address:
 - ✅ CI runs all checks documented under **Full checks** in `HARNESS_ENGINEERING.md` (Phase 3)
 - ✅ Doc-freshness script and CI link check (Phase 1; stale-pattern scan is advisory)
-- ⚠️ No structural tests for architecture enforcement
+- ✅ Layer dependency rules documented and partially enforced in CI via structural tests (Phase 4)
 - ⚠️ Plans lack a standardized active/completed lifecycle (see `dev-docs/plans/`)
 - ⚠️ Supply-chain tooling partially adopted (dependabot done; gitleaks/grype/basedpyright deferred)
 - ⚠️ No GUI smoke-test harness (NiceGUI exists; automated validation does not)
@@ -83,27 +83,24 @@ Key gaps to address:
 
 ---
 
-### 4. Mechanical enforcement of architecture ⚠️ PARTIAL
+### 4. Mechanical enforcement of architecture ✅ PARTIAL (Phase 4)
 
 **OpenAI principle:** Enforce invariants mechanically via custom linters and structural tests. Constraints are what allow speed without decay.
 
 **Current state:**
-- CI runs ruff and flake8 linting
-- Tests run on every push/PR
-- Cross-platform matrix (Windows, macOS, Linux)
+- CI runs ruff, flake8 (syntax/fatal), pytest (including `test_architecture_layers.py`)
+- Three layer contracts enforced: settings independence, GUI must not import `calculate_dose`, dose pipeline must not import GUI/plotting
+- Layer rules documented in `dev-docs/CODEBASE_OVERVIEW.md`
 
-**Gaps:**
-- No structural tests enforcing dependency direction
-- No custom linters for domain-specific rules (e.g., clinical-data validation)
-- No file size limits or naming convention enforcement beyond standard linters
-- Golden rules are documented but not mechanically enforced
+**Remaining gaps:**
+- No custom linters for clinical-data validation rules
+- No file size limits in CI
+- Golden rules 1 and 4–6 not mechanically enforced (by design in Phase 4)
 
-**Recommendations:**
-1. Create structural tests to enforce architecture constraints
-2. Add custom ruff rules or pre-commit hooks for:
-   - Clinical-data validation requirements
-   - Documentation update requirements for code changes
-3. Add file size limit checks to CI
+**Recommendations (deferred):**
+1. Add `import-linter` if contract count grows beyond pytest AST checks
+2. Clinical-data validation ruff rules or pre-commit hooks
+3. File size limit checks to CI
 
 ---
 
@@ -192,21 +189,16 @@ Key gaps to address:
 
 ---
 
-### 9. Layered architecture enforcement ⚠️ PARTIAL
+### 9. Layered architecture enforcement ✅ STRONG (Phase 4)
 
 **OpenAI principle:** Each business domain is divided into a fixed set of layers, with strictly validated dependency directions and limited permissible edges.
 
 **Current state:**
-- Code is organized into logical modules (settings, plotting, calculate_dose, etc.)
-- No explicit layer definitions or dependency direction enforcement
-- No structural tests to prevent circular dependencies or layer violations
+- Layers L0–L8 documented in `dev-docs/CODEBASE_OVERVIEW.md` with mermaid diagram
+- CI enforces three contracts via `tests/unittests/test_architecture_layers.py`
+- Known legacy exception documented: `phantom_class` → `plotting` mesh helper
 
-**Recommendations:**
-1. Document intended layers in `dev-docs/CODEBASE_OVERVIEW.md` first (settings → parsing/normalization → geometry/dose → plotting/GUI)
-2. After layers are written down, add `import-linter` contracts for the highest-value edges:
-   - Settings must not import runtime calculation modules
-   - GUI should call public orchestration APIs (`main`, `analyze_data`) rather than deep internals where avoidable
-3. Add layer violation checks to CI only after contracts match actual imports (avoid noisy false positives)
+**Remaining:** broader contracts (e.g. plotting ↔ domain) deferred until refactors reduce legacy coupling.
 
 ---
 
@@ -352,9 +344,9 @@ Execute in order. Each phase should update `HARNESS_ENGINEERING.md` known gaps w
 **Objective:** Document and optionally enforce dependency direction.
 
 **Tasks:**
-- [ ] Add layering section to `dev-docs/CODEBASE_OVERVIEW.md`
-- [ ] Evaluate `import-linter` contracts against real imports
-- [ ] Add structural tests only for high-value invariants
+- [x] Add layering section to `dev-docs/CODEBASE_OVERVIEW.md`
+- [x] Evaluate `import-linter` contracts against real imports — pytest AST structural tests chosen (no new dependency); `import-linter` optional later
+- [x] Add structural tests for settings independence, GUI→orchestration, and dose pipeline isolation
 
 **Acceptance criteria:** Written layer rules exist; CI enforces at least one non-controversial contract.
 
