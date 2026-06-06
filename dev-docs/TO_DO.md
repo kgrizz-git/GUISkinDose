@@ -24,6 +24,15 @@
 - [ ] Add a doc-freshness/harness check so stale feature-status statements are easier to catch automatically.
 - add help docs explaining what all the settings are in the GUI and how to use it
     - also use docstrings for all functions in the GUI (help button could show them)
+    - add help menu item in GUI to access VENDOR_COORDINATE_SYSTEMS.md and other technical documentation
+    - make vendor coordinate system documentation accessible to users through GUI help system
+    - **Further develop positioning help content as we gather more vendor-specific coordinate system information**
+- [ ] Add coordinate system diagrams to VENDOR_COORDINATE_SYSTEMS.md showing:
+    - Unified internal coordinate system (axes, rotations, origin)
+    - Visual comparison of Siemens vs Philips coordinate origins
+    - Right-hand rule illustrations for rotations
+    - Table position and beam angle conventions
+    - Field size calculation geometry
 - [x] move Geometry tab to position 3 instead of 2
 - add support for multiple exams
 - [x] is the rdsr table showing values straight out of the rdsr, or have they been processed/normalized in some way?
@@ -32,9 +41,13 @@
 - institute semver
 - institute trufflehog/gitleaks, dependabot, grype, basedpyright, etc
 * allow manual interactive setting of table offsets in gui
+- collect and make available to users typical offsets for some systems - may depend on manufacturer/model but also table type - although there will probably usually be a limited number of tables commonly used with a given model
 - call it GUISkinDose?
 - reduce spacing/padding around text elements in navigation section of left pane
 - soften brutalist look? and make more sleek/modern
 * refactor app.py
 - change fonts?
 * add a light mode
+- reduce color effects in gui background slightly
+- make native window for gui launch larger
+- make 'fake-scanner' not the default initially loaded RDSR in the upload tab
