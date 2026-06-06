@@ -9,3 +9,6 @@ psutil
 pillow>=10.0.1
 kaleido
 rich
+
+[gui]
+nicegui>=2.0.0

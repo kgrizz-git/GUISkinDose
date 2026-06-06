@@ -22,6 +22,38 @@ For local development, install the project in editable mode:
 pip install -e .
 ```
 
+To include the GUI dependencies:
+
+```bash
+pip install -e ".[gui]"
+```
+
+For full development setup (linting, testing, documentation, Jupyter):
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+## Running the GUI
+
+MyPySkinDose includes a NiceGUI-based graphical interface.
+
+**Quick launch (macOS/Linux):**
+
+```bash
+chmod +x run_gui.sh   # one-time setup, enables executing the sh script
+./run_gui.sh
+```
+
+The script prompts you to run in browser mode (default) or native window mode.
+
+**Direct Python command:**
+
+```bash
+python -m mypyskindose --mode gui              # browser mode
+python -m mypyskindose --mode gui --native     # native window (requires pywebview)
+```
+
 If you only need the documentation tooling as well:
 
 ```bash

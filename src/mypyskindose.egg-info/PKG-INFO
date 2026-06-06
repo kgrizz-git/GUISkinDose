@@ -20,6 +20,8 @@ Requires-Dist: psutil
 Requires-Dist: pillow>=10.0.1
 Requires-Dist: kaleido
 Requires-Dist: rich
+Provides-Extra: gui
+Requires-Dist: nicegui>=2.0.0; extra == "gui"
 Dynamic: license-file
 
 # MyPySkinDose

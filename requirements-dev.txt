@@ -1,0 +1,18 @@
+# Install base requirements first (includes package + GUI)
+-r requirements.txt
+
+# Development tools
+black
+isort
+ruff
+pytest
+pydocstyle
+
+# Documentation (supplements docs/requirements.txt for local builds)
+sphinx
+sphinx-rtd-theme
+myst-parser
+
+# Jupyter notebook support
+ipywidgets>=7.5
+jupyterlab

@@ -1,16 +1,5 @@
-pydocstyle
-sphinx-rtd-theme
-ipywidgets>=7.5
-jupyterlab
-npm
-node
-ruff
-pytest
-sphinx
-myst-parser
-black
-isort
-pydocstyle
-streamlit>=1.35.0
+# GUI (optional, or use: pip install -e ".[gui]")
 nicegui>=2.0.0
+
+# Package itself (editable install)
 -e .

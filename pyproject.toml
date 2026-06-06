@@ -29,6 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = ["nicegui>=2.0.0"]
+gui-native = ["nicegui>=2.0.0", "pywebview"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
