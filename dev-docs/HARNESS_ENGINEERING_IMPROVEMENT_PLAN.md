@@ -18,9 +18,9 @@ Key gaps to address:
 - ✅ CI runs all checks documented under **Full checks** in `HARNESS_ENGINEERING.md` (Phase 3)
 - ✅ Doc-freshness script and CI link check (Phase 1; stale-pattern scan is advisory)
 - ✅ Layer dependency rules documented and partially enforced in CI via structural tests (Phase 4)
+- ✅ GUI smoke tests via NiceGUI user simulation (Phase 5; `tests/gui/`, CI `gui-smoke` job)
 - ⚠️ Plans lack a standardized active/completed lifecycle (see `dev-docs/plans/`)
 - ⚠️ Supply-chain tooling partially adopted (dependabot done; gitleaks/grype/basedpyright deferred)
-- ⚠️ No GUI smoke-test harness (NiceGUI exists; automated validation does not)
 
 ---
 
@@ -167,25 +167,20 @@ Key gaps to address:
 
 ---
 
-### 8. Observability for validation ⚠️ MISSING (for GUI)
+### 8. Observability for validation ✅ PARTIAL (Phase 5)
 
 **OpenAI principle:** Logs, metrics, and traces are exposed to agents via a local observability stack. Agents can query logs and metrics to validate behavior.
 
 **Current state:**
 - Core calculation code produces deterministic outputs suitable for unit testing
-- GUI has no automated testing infrastructure
-- No observability stack for GUI validation
+- GUI smoke tests in `tests/gui/` using NiceGUI user simulation; CI `gui-smoke` job on Ubuntu
+- Maintainer script: `tests/scripts/launch_gui_headless.py`
 
-**Gaps:**
-- No automated GUI browser/screenshot tests
-- No way for agents to "drive" the GUI to validate changes
-- No logging/metrics infrastructure for GUI
+**Remaining gaps:**
+- No browser/screenshot or CDP-based GUI tests
+- No logging/metrics/traces stack for GUI runtime debugging
 
-**Recommendations:**
-1. Create `tests/gui/` smoke tests that launch NiceGUI headlessly and assert key tabs/routes render (start with import/startup, then one interaction per tab)
-2. Prefer NiceGUI user-simulation or CDP-based driving over raw Selenium unless necessary
-3. Add a maintainer script (e.g. `tests/scripts/launch_gui_headless.py`) for local agent validation
-4. Defer a full observability stack (logs/metrics/traces) until basic smoke tests exist
+**Deferred:** full observability stack until tab-level interaction tests are needed.
 
 ---
 
@@ -247,7 +242,7 @@ Key gaps to address:
 
 **OpenAI principle:** Documented validation commands and CI must tell the same story; agents trust whichever runs in CI.
 
-**Current state:** Local **Full checks** in `HARNESS_ENGINEERING.md` are mirrored in CI (see table below). Remaining CI gap: GUI smoke tests (Phase 5).
+**Current state:** Local **Full checks** in `HARNESS_ENGINEERING.md` are mirrored in CI (see table below).
 
 | Check | `HARNESS_ENGINEERING.md` | `.github/workflows/ci.yml` |
 |---|---|---|
@@ -257,7 +252,7 @@ Key gaps to address:
 | `python -m compileall` | Fast checks | ✅ All matrix cells (Phase 2) |
 | `python -m build` | Full checks | ✅ Ubuntu `package-build` job (Python 3.12; Phase 3) |
 | Doc-freshness / link check | `python scripts/check_doc_freshness.py` | ✅ Ubuntu job |
-| GUI smoke tests | Known gap | ❌ |
+| GUI smoke tests | `python -m pytest tests/gui/` | ✅ Ubuntu `gui-smoke` job (Phase 5) |
 
 **Recommendations:**
 1. Add `python -m compileall src/mypyskindose` to CI (cheap, catches syntax errors early)
@@ -357,9 +352,9 @@ Execute in order. Each phase should update `HARNESS_ENGINEERING.md` known gaps w
 **Objective:** Agents and CI can verify the GUI still starts and core tabs load.
 
 **Tasks:**
-- [ ] Headless launch script under `tests/scripts/`
-- [ ] Minimal smoke tests under `tests/gui/`
-- [ ] Optional CI job (may start as manual/scheduled if flaky)
+- [x] Headless launch script under `tests/scripts/launch_gui_headless.py`
+- [x] Minimal smoke tests under `tests/gui/` (NiceGUI user simulation)
+- [x] CI `gui-smoke` job on Ubuntu with `pip install -e ".[gui]"`
 
 **Acceptance criteria:** One automated test proves GUI module imports and primary page renders without error.
 
@@ -421,7 +416,7 @@ Avoid harness bloat:
 
 - **Separate root `ARCHITECTURE.md`** — extend `CODEBASE_OVERVIEW.md` instead
 - **`CORE_BELIEFS.md` / `QUALITY_SCORE.md`** — unless golden rules + feature inventory prove insufficient
-- **Full observability stack** — until GUI smoke tests exist
+- **Full observability stack** — basic GUI smoke tests exist; defer traces/metrics until needed
 - **Automated doc-gardening agent** — until `check_doc_freshness.py` exists and manual cadence is documented
 - **Strict “every code change must touch docs” linter** — high false-positive rate; rely on PR checklist + feature inventory checks first
 

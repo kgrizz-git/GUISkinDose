@@ -93,6 +93,17 @@ The script scans `AGENTS.md`, `README.md`, optional `DESIGN.md`, and all markdow
 
 Maintainer cadence: run locally before feature/status changes; CI runs the same check on Ubuntu for every push/PR.
 
+### GUI smoke tests (optional `[gui]` extra)
+
+```bash
+pip install -e ".[gui]"
+python -m pytest tests/gui/
+# or
+python tests/scripts/launch_gui_headless.py
+```
+
+Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the `gui-smoke` job. Core matrix tests exclude `tests/gui/` (see `--ignore=tests/gui` in CI).
+
 ## CI expectations
 
 CI should be treated as a blocking quality gate, not only as telemetry:
@@ -111,6 +122,7 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 | `python -m ruff check src tests` | All matrix cells |
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
+| GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 
@@ -132,5 +144,4 @@ Every PR should answer:
 
 Tracked in `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` with phased remediation:
 
-- There are no automated GUI smoke tests yet (NiceGUI app exists under `src/mypyskindose/gui/`).
 - Tabular input adapters are planned but not implemented (`FEATURE_INVENTORY.md`).

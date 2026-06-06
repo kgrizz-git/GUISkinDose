@@ -15,6 +15,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) | Phased roadmap to close harness gaps (CI parity, doc-freshness, entropy cleanup). |
 | [TO_DO.md](TO_DO.md) | Short-term maintainer task list (GUI polish, tabular input, doc-freshness automation). |
 | [index.md](index.md) | This catalog — one-line purpose for every file under `dev-docs/`. |
+| GUI smoke tests | `tests/gui/` (requires `pip install -e '.[gui]'`); see `tests/scripts/launch_gui_headless.py` |
 
 ---
 
