@@ -212,9 +212,9 @@ pip install -r docs/requirements.txt
 python -m sphinx -b html docs/source docs/build/html
 ```
 
-Then open:
+Then open the built site locally (path exists only after the Sphinx step above):
 
-- [docs/build/html/index.html](docs/build/html/index.html)
+- `docs/build/html/index.html`
 
 ## Notes for this fork
 

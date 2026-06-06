@@ -1,5 +1,10 @@
 **/build/
+build/
+dist/
+*.egg-info/
+**/*.egg-info/
 [Vv]env/
+venv/
 logs/
 .idea/
 .vscode/

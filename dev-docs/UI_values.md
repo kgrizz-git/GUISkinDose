@@ -1,6 +1,6 @@
 # UI Values — MyPySkinDose
 
-This document maps the primary design tokens (colors, gradients, effects) used in the MyPySkinDose GUI. All values are defined in [src/mypyskindose/gui/app.py](file:///d:/MyCodes_SD/MyPySkinDose/src/mypyskindose/gui/app.py) within the `MODERN_CSS` constant.
+This document maps the primary design tokens (colors, gradients, effects) used in the MyPySkinDose GUI. All values are defined in [src/mypyskindose/gui/app.py](../src/mypyskindose/gui/app.py) within the `MODERN_CSS` constant.
 
 > **IMPORTANT:** If you modify any CSS values in `app.py`, please update this file to keep it in sync.
 

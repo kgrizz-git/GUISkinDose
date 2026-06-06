@@ -20,21 +20,34 @@ Agents working in this repository should be able to answer three questions quick
 | Topic | File |
 |---|---|
 | Agent quickstart, conventions, current development focus | `AGENTS.md` |
-| Architecture and data flow | `dev-docs/CODEBASE_OVERVIEW.md` |
+| Harness principles, validation commands, known gaps | `dev-docs/HARNESS_ENGINEERING.md` |
+| Harness improvement plan and phased roadmap | `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
+| Documentation catalog | `dev-docs/index.md` |
+| Architecture, data flow, and layering rules | `dev-docs/CODEBASE_OVERVIEW.md` |
 | Feature inventory and known missing features | `dev-docs/FEATURE_INVENTORY.md` |
+| RDSR normalization, offsets, DataFrame contract | `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` |
+| Vendor coordinate systems | `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` |
 | GUI implementation status and plan | `dev-docs/GUI_PLAN.md` |
 | GUI current-state analysis | `dev-docs/UI_ANALYSIS.md` |
+| GUI aesthetic design spec (root) | `DESIGN.md` |
+| In-app positioning help plan | `dev-docs/POSITIONING_HELP_PLAN.md` |
 | Tabular CSV/TSV/XLSX input plan | `dev-docs/TABULAR_RDSR_INPUT_PLAN.md` |
+| Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
+| Secondary plans | `dev-docs/plans/` |
+| Package install and build | `dev-docs/info/PACKAGE_INSTALL.md` |
 | Project packaging and tool configuration | `pyproject.toml` |
+| Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
+| Release build | `.github/workflows/release.yml` |
+| Dependency and Actions updates | `.github/dependabot.yml` |
 
 ## Golden rules
 
 1. **Keep docs current with behavior.**
    If a change adds, removes, or wires a feature, update `AGENTS.md` and the relevant `dev-docs/` page in the same PR.
 2. **Do not hide input transformations.**
-   RDSR parsing, tabular imports, unit conversions, and normalization offsets must be documented and tested.
+   RDSR parsing, tabular imports, unit conversions, and normalization offsets must be documented and tested — see [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md).
 3. **One internal calculation contract.**
    All input sources should feed the same normalized DataFrame contract before dose calculation.
 4. **Optional UX dependencies stay optional.**
@@ -65,13 +78,18 @@ python -m build
 
 ### Documentation freshness check
 
-Before committing a feature/status change, search for stale references:
+Run the harness doc-freshness script before feature or status PRs:
 
 ```bash
-rg -n "not implemented|not wired|TODO|planned|Phase|csv|xlsx|tsv|gui" AGENTS.md README.md dev-docs src tests
+python scripts/check_doc_freshness.py
 ```
 
-Then update any text that is no longer true.
+The script scans `AGENTS.md`, `README.md`, optional `DESIGN.md`, and all markdown under `dev-docs/`:
+
+- **CI-blocking:** broken relative markdown links; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. tabular input marked planned but claimed implemented in `AGENTS.md`).
+- **Advisory only:** stale-pattern hits (`not implemented`, `not wired`, `planned`) — printed as warnings; review and update text that is no longer true.
+
+Maintainer cadence: run locally before feature/status changes; CI runs the same check on Ubuntu for every push/PR.
 
 ## CI expectations
 
@@ -81,6 +99,10 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 - tests should fail the workflow on errors
 - cross-platform matrix should remain active
 - docs-only changes may run a smaller check set, but should still pass basic syntax and markdown/link sanity when such tooling exists
+
+**Current CI vs local checks:** Today `.github/workflows/ci.yml` runs `python -m compileall`, `pytest`, `ruff`, a syntax/fatal-only `flake8` pass (no style overlap with ruff), and `python scripts/check_doc_freshness.py` on Ubuntu. It does **not** yet run `python -m build` (Phase 3). Local full checks may still include `python -m build`; see `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md`.
+
+**Lint policy:** `ruff` is the primary style linter (120-column, matches `pyproject.toml`). CI `flake8` runs only `E9,F63,F7,F82` (syntax errors and undefined names).
 
 ## PR checklist
 
@@ -96,7 +118,8 @@ Every PR should answer:
 
 ## Known alignment gaps
 
-- The repo still has generated `src/mypyskindose.egg-info/` files tracked. Decide whether to keep them synchronized intentionally or remove them from version control in a cleanup PR.
-- There is no dedicated doc-freshness linter yet; currently this is a manual search/checklist step.
-- There are no automated GUI browser/screenshot smoke tests yet.
-- Tabular input adapters are planned but not implemented.
+Tracked in `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` with phased remediation:
+
+- CI does not yet run all checks listed under **Validation commands** (`python -m build` — Phase 3).
+- There are no automated GUI smoke tests yet (NiceGUI app exists under `src/mypyskindose/gui/`).
+- Tabular input adapters are planned but not implemented (`FEATURE_INVENTORY.md`).
