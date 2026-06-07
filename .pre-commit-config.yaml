@@ -1,0 +1,31 @@
+# Local git hooks (fast subset of CI). Install once per clone:
+#   pip install -e ".[dev]"
+#   pre-commit install
+#
+# Run manually: pre-commit run --all-files
+# CI still runs the full matrix (pytest, basedpyright, pip-audit, gui-smoke, etc.).
+
+minimum_pre_commit_version: "3.0.0"
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.16
+    hooks:
+      - id: ruff
+        name: ruff (src + tests)
+        files: ^(src|tests)/
+        args: [--fix]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: doc-freshness
+        name: documentation freshness (broken links)
+        entry: python scripts/check_doc_freshness.py
+        language: system
+        pass_filenames: false
+        always_run: true

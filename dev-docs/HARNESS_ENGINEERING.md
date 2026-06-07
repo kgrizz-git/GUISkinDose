@@ -39,6 +39,7 @@ Agents working in this repository should be able to answer three questions quick
 | Project packaging and tool configuration | `pyproject.toml` |
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
+| Local git hooks | `.pre-commit-config.yaml` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Type-check baseline | `.basedpyright/baseline.json` |
 | Release build | `.github/workflows/release.yml` |
@@ -143,6 +144,28 @@ CI runs the same audit in the `dependency-audit` job (Ubuntu, Python 3.12).
 
 Broader SBOM-style scanning (e.g. **grype** on built wheels) remains optional; see `dev-docs/TO_DO.md`.
 
+### Local git hooks (optional `[dev]` extra)
+
+Fast checks run on **`git commit`** via [pre-commit](https://pre-commit.com/) (subset of CI — not a replacement):
+
+```bash
+pip install -e ".[dev]"
+pre-commit install          # once per clone
+pre-commit run --all-files  # manual full run
+```
+
+Configured in `.pre-commit-config.yaml`:
+
+| Hook | What it runs |
+|---|---|
+| **ruff** | `ruff check --fix` on `src/` and `tests/` |
+| **gitleaks** | Secret scan on staged changes |
+| **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
+
+**Not in pre-commit** (still CI-only or manual): full pytest matrix, basedpyright, pip-audit, GUI smoke, `compileall`, `python -m build`.
+
+Hooks can be skipped for a single commit with `SKIP=gitleaks git commit ...` or `git commit --no-verify` (CI remains the blocking gate on push/PR).
+
 ## CI expectations
 
 CI should be treated as a blocking quality gate, not only as telemetry:
@@ -165,6 +188,7 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 | `basedpyright --baselinefile .basedpyright/baseline.json` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
 | `pip-audit --desc on` | Ubuntu `dependency-audit` job (requires `.[dev,gui]`) |
+| pre-commit (local) | `.pre-commit-config.yaml` — ruff, gitleaks, doc-freshness on `git commit` |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 

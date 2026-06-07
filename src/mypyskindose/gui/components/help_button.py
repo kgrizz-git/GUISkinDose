@@ -83,7 +83,7 @@ class HelpButton:
                 ui.button(icon="close", on_click=dialog.close).props("flat round size=sm")
 
             # Content (scrollable)
-            with ui.scroll_area().classes("w-full p-4") as scroll:
+            with ui.scroll_area().classes("w-full p-4"):
                 ui.markdown(self.content).classes("prose prose-sm max-w-none")
 
             # Footer

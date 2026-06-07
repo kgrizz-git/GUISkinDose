@@ -16,6 +16,6 @@ from nicegui.testing.general import prepare_simulation
 
 prepare_simulation()
 
-import mypyskindose.gui.app as gui_app
+import mypyskindose.gui.app as gui_app  # noqa: E402 — prepare_simulation() must run first
 
 importlib.reload(gui_app)

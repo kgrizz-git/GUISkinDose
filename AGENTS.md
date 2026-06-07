@@ -93,8 +93,14 @@ See [dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md) for the full implementation pla
 
 ```bash
 pip install -e .
-pip install -e ".[dev]"   # basedpyright + stubs for CI parity
+pip install -e ".[dev]"   # basedpyright, pip-audit, pre-commit + stubs for CI parity
 pip install jupyter  # for the notebook
+```
+
+Optional local git hooks (fast subset of CI):
+
+```bash
+pre-commit install
 ```
 
 Run the getting-started notebook:

@@ -27,8 +27,8 @@ Repository hygiene, documentation, semver, and CI alignment. Harness-phase tags 
 - [x] **pip-audit** — CI `dependency-audit` job; scans core + `[dev]` + `[gui]` extras; fails on known CVEs (see policy in `HARNESS_ENGINEERING.md`).
 - [ ] **Optional SBOM scan (grype)** — scan built wheel/sdist from `package-build` job if broader coverage is needed beyond PyPI advisories.
 - [x] **Dependabot** — weekly pip + GitHub Actions updates (`.github/dependabot.yml`).
+- [x] **pre-commit** — `.pre-commit-config.yaml` (ruff, gitleaks, doc-freshness on `git commit`; see `HARNESS_ENGINEERING.md`).
 - [ ] **Optional hardening** (lower priority):
-  - `pre-commit` config mirroring ruff + gitleaks + doc-freshness.
   - GitHub **code scanning** / Dependabot security alerts enabled in repo settings.
   - SBOM artifact upload on release (syft/grype) if distributing wheels publicly.
   - Trufflehog (redundant if gitleaks is sufficient).
