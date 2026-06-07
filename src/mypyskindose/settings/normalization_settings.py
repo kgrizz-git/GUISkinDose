@@ -89,9 +89,12 @@ class NormalizationSettings:
         )
         dprint("PROCESSING", f"Applied offsets: {setting.get('translation_offset')}")
 
-        self.trans_offset.update_translation_offset(offset=setting.get("translation_offset"))
-        self.trans_dir.update_translation_direction(directions=setting.get("translation_direction"))
-        self.rot_dir.update_rotation_direction(directions=setting.get("rotation_direction"))
+        if translation_offset := setting.get("translation_offset"):
+            self.trans_offset.update_translation_offset(offset=translation_offset)
+        if translation_direction := setting.get("translation_direction"):
+            self.trans_dir.update_translation_direction(directions=translation_direction)
+        if rotation_direction := setting.get("rotation_direction"):
+            self.rot_dir.update_rotation_direction(directions=rotation_direction)
         self.field_size_mode = setting[KEY_NORMALIZATION_FIELD_SIZE_MODE]
         self.detector_side_length = setting[KEY_NORMALIZATION_DETECTOR_SIDE_LENGTH]
 

@@ -59,6 +59,8 @@ def analyze_data(
     patient, output = calculate_dose(normalized_data=normalized_data, settings=settings, table=table, pad=pad)
 
     if settings.output_format in [c.RUN_ARGUMENTS_OUTPUT_DICT, c.RUN_ARGUMENTS_OUTPUT_JSON]:
+        if output is None or patient is None:
+            raise RuntimeError("Dose calculation did not produce output in calculate_dose mode.")
         dprint("PROCESSING", "Formatting analysis result for export")
         mypyskindose_output: Union[PySkinDoseOutput, dict[str, Any], str] = format_analysis_result_for_export(
             output, patient=patient, table=table, pad=pad, data_norm=normalized_data, settings=settings
@@ -67,13 +69,19 @@ def analyze_data(
         return mypyskindose_output
 
     dprint("RENDERING", "Creating dose map plot")
-    create_dose_map_plot(
-        patient=patient,
-        settings=settings,
-        dose_map=(
-            output[c.OUTPUT_KEY_DOSE_MAP] if settings.mode in (c.MODE_CALCULATE_DOSE, c.MODE_PLOT_DOSEMAP) else None
-        ),
-    )
+    dose_map = None
+    if output is not None and settings.mode in (c.MODE_CALCULATE_DOSE, c.MODE_PLOT_DOSEMAP):
+        dose_map = output[c.OUTPUT_KEY_DOSE_MAP]
+    if patient is not None and dose_map is not None:
+        create_dose_map_plot(
+            patient=patient,
+            settings=settings,
+            dose_map=dose_map,
+        )
 
     if settings.output_format == c.RUN_ARGUMENTS_OUTPUT_HTML:
+        if output is None:
+            raise RuntimeError("Expected HTML output but dose calculation returned no data.")
         return output
+
+    raise ValueError(f"Unhandled output format: {settings.output_format}")

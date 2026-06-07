@@ -11,22 +11,22 @@ from mypyskindose.settings import PyskindoseSettings
 logger = logging.getLogger(__name__)
 
 
-def read_and_normalise_rdsr_data(rdsr_filepath: str, settings: PyskindoseSettings):
+def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: PyskindoseSettings) -> pd.DataFrame:
 
-    rdsr_filepath = (
+    path: Path = (
         Path(rdsr_filepath)
         if rdsr_filepath
         else Path(__file__).parent.parent / "example_data/RDSR" / settings.rdsr_filename
     )
 
-    logger.debug(str(rdsr_filepath.absolute()))
+    logger.debug(str(path.absolute()))
 
     # If provided, load preparsed rdsr data in .json format
-    if ".json" == rdsr_filepath.suffix.lower():
-        return pd.read_json(rdsr_filepath)
+    if path.suffix.lower() == ".json":
+        return pd.read_json(path)
 
     # else load RDSR data with pydicom
-    data_raw = pydicom.dcmread(rdsr_filepath)
+    data_raw = pydicom.dcmread(path)
 
     # parse RDSR data from raw .dicom file
     data_parsed = rdsr_parser(data_raw, silence_pydicom_warnings=settings.silence_pydicom_warnings)

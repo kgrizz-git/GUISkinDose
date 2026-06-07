@@ -13,9 +13,9 @@ class TranslationDirection:
 
     """
 
-    x: Optional[int]
-    y: Optional[int]
-    z: Optional[int]
+    x: int
+    y: int
+    z: int
 
     def __init__(self, directions: Optional[Dict[str, str]] = None):
         """Initialize class attributes.
@@ -27,9 +27,9 @@ class TranslationDirection:
             Each key contains either '+' or '-'.
 
         """
-        self.x = None if directions is None else self._get_direction_as_value(directions["x"])
-        self.y = None if directions is None else self._get_direction_as_value(directions["y"])
-        self.z = None if directions is None else self._get_direction_as_value(directions["z"])
+        self.x = 1 if directions is None else self._get_direction_as_value(directions["x"])
+        self.y = 1 if directions is None else self._get_direction_as_value(directions["y"])
+        self.z = 1 if directions is None else self._get_direction_as_value(directions["z"])
 
     def update_translation_direction(self, directions: Dict[str, str]):
         self.x = self._get_direction_as_value(directions["x"]) if self.x is None else self.x

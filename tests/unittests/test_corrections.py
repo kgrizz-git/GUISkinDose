@@ -85,7 +85,7 @@ def test_fetch_correct_medium_correction_from_database():
     # sizes with filed side length in [5 to 35] cm.
     actual = calculate_k_med(
         data_norm=data_norm,
-        field_area=np.square([6, 10, 20, 22, 32]),
+        field_area=np.square([6, 10, 20, 22, 32]).tolist(),
         event=0,
         corrections_db=PATH_TO_DB,
     )

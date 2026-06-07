@@ -423,7 +423,9 @@ def index():
                         if ok:
                             state.file_name = e.name
                             file_label.set_text(e.name.upper())
-                            events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
+                            events_label.set_text(
+                                f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
+                            )
                             upload_status.set_text(f"SUCCESS: {msg.upper()}")
                             ui.notify(msg, color="positive")
                             reset_results()
@@ -455,7 +457,9 @@ def index():
                             ok, msg = await run.io_bound(load_rdsr, path, state)
                             if ok:
                                 file_label.set_text(name.upper())
-                                events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
+                                events_label.set_text(
+                                    f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
+                                )
                                 upload_status.set_text(f"SUCCESS: {msg.upper()}")
                                 ui.notify(msg, color="positive")
                                 reset_results()
@@ -484,9 +488,9 @@ def index():
                     return
                 df = state.rdsr_df
                 rows = []
-                for i, row in df.iterrows():
+                for idx, (_, row) in enumerate(df.iterrows()):
                     rows.append({
-                        "idx": i + 1,
+                        "idx": idx + 1,
                         "kVp": round(float(row.get("kVp", 0)), 1),
                         "Ap1": round(float(row.get("Ap1", 0)), 1),
                         "Ap2": round(float(row.get("Ap2", 0)), 1),
@@ -859,7 +863,7 @@ def index():
                 if state.calculation_done and state.psd is not None:
                     psd_metric.set_text(f"{state.psd:.2f} mGy")
                     kerma_metric.set_text(f"{state.air_kerma:.1f} mGy")
-                    events_metric.set_text(str(len(state.rdsr_df)))
+                    events_metric.set_text(str(len(state.rdsr_df) if state.rdsr_df is not None else 0))
 
             ui.timer(1.0, _refresh_metrics)
 
@@ -1019,7 +1023,7 @@ def index():
         file_label.set_text(state.file_name.upper())
         events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
         _refresh_event_table()
-        if hasattr(state, "active_tab") and state.active_tab:
+        if state.active_tab:
             tabs.set_value(state.active_tab)
 
 # ── figure-building helpers (called via run.io_bound) ─────────────────────
@@ -1037,6 +1041,9 @@ def _make_geometry_fig(mode: str, event_index: int):
         settings.plot.plot_event_index = event_index
         settings.plot.notebook_mode = False
         settings.plot.interactivity = True
+
+        if state.rdsr_df is None:
+            return None
 
         data_norm = calculate_rotation_matrices(state.rdsr_df.copy())
 
@@ -1183,12 +1190,14 @@ def run_gui(native: bool = False) -> None:
                 # then maybe back to False so it doesn't block other windows forever
                 # if the user prefers. But for now, let's just force it to front.
                 from nicegui import app
-                if app.native.main_window:
-                    app.native.main_window.set_on_top(True)
+                if app.native.main_window is not None:
+                    set_on_top = getattr(app.native.main_window, "set_on_top", None)
+                    if callable(set_on_top):
+                        set_on_top(True)
                     # Optional: wait a bit and set to false so it's not "sticky"
                     # ui.timer(2.0, lambda: app.native.main_window.set_on_top(False), once=True)
-            except Exception:
-                pass
+            except Exception as exc:
+                dprint("GUI", f"Native window focus failed: {exc}")
 
     # Suppress JavaScript timeout errors during shutdown
     import logging

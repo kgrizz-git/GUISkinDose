@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, cast
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ from .db_connect import db_connect
 logger = logging.getLogger(__name__)
 
 
-def calculate_k_isq(source: np.array, cells: np.array, dref: float) -> np.array:
+def calculate_k_isq(source: np.ndarray, cells: np.ndarray, dref: float) -> np.ndarray:
     """Calculate the IRP air kerma inverse-square law correction.
 
     This function corrects the X-ray fluence from the interventionl reference point
@@ -157,20 +157,21 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: List[float], event: int
     # Fetch kVp entries from table
     kvp_data = df.loc[(df["field_side_length_cm"] == fsl), "kvp_kv"]
     # Select closest tabulated kVp (strongest dependence for k_med)
-    kvp_round = min(kvp_data, key=lambda x: abs(x - kvp))
+    kvp_series = cast(pd.Series, kvp_data)
+    kvp_round = min(kvp_series.tolist(), key=lambda x: abs(x - kvp))
 
     # Fetch HVL entries from table
     hvl_data = df.loc[(df["field_side_length_cm"] == fsl) & (df["kvp_kv"] == kvp_round), "hvl_mmal"]
 
     # Select closest tabulated HVL (second strongest dependence for k_med)
-    hvl_round = min(hvl_data, key=lambda x: abs(x - hvl))
+    hvl_round = min(cast(pd.Series, hvl_data).tolist(), key=lambda x: abs(x - hvl))
 
     # Fetch corresponding k_med
     k_med = float(
-        df.loc[
+        cast(pd.Series, df.loc[
             (df["hvl_mmal"] == hvl_round) & (df["kvp_kv"] == kvp_round) & (df["field_side_length_cm"] == fsl),
             "mu_en_quotient",
-        ].iloc[0]
+        ]).iloc[0]
     )
 
     return k_med

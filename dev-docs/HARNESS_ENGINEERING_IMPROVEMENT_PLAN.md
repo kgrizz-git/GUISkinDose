@@ -253,7 +253,7 @@ Key gaps to address:
 | `python -m build` | Full checks | ✅ Ubuntu `package-build` job (Python 3.12; Phase 3) |
 | Doc-freshness / link check | `python scripts/check_doc_freshness.py` | ✅ Ubuntu job |
 | GUI smoke tests | `python -m pytest tests/gui/` | ✅ Ubuntu `gui-smoke` job (Phase 5) |
-| Basedpyright (baseline) | `basedpyright --baselinefile .basedpyright/baseline.json` | ✅ Ubuntu `typecheck` job |
+| Basedpyright (strict) | `basedpyright` | ✅ Ubuntu `typecheck` job |
 | Gitleaks | `.github/workflows/gitleaks.yml` | ✅ Separate workflow on push/PR |
 | pip-audit | `pip-audit --desc on` after `.[dev,gui]` install | ✅ Ubuntu `dependency-audit` job |
 

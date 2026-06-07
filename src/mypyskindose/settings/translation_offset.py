@@ -29,9 +29,9 @@ class TranslationOffset:
         if offset is None:
             offset = dict()
 
-        self.x: float = offset.get("x")
-        self.y: float = offset.get("y")
-        self.z: float = offset.get("z")
+        self.x: float = float(offset.get("x", 0.0) or 0.0)
+        self.y: float = float(offset.get("y", 0.0) or 0.0)
+        self.z: float = float(offset.get("z", 0.0) or 0.0)
 
     def update_translation_offset(self, offset: Dict[str, float]):
         self.x = float(offset["x"]) if self.x is None else self.x

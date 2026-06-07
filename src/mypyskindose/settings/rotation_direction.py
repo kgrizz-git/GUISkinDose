@@ -23,12 +23,12 @@ class RotationDirection:
             Each key contains either '+' or '-'.
 
         """
-        self.Ap1: Optional[int] = None if directions is None else self._get_direction_as_value(directions["Ap1"])
-        self.Ap2: Optional[int] = None if directions is None else self._get_direction_as_value(directions["Ap2"])
-        self.Ap3: Optional[int] = None if directions is None else self._get_direction_as_value(directions["Ap3"])
-        self.At1: Optional[int] = None if directions is None else self._get_direction_as_value(directions["At1"])
-        self.At2: Optional[int] = None if directions is None else self._get_direction_as_value(directions["At2"])
-        self.At3: Optional[int] = None if directions is None else self._get_direction_as_value(directions["At3"])
+        self.Ap1: int = 1 if directions is None else self._get_direction_as_value(directions["Ap1"])
+        self.Ap2: int = 1 if directions is None else self._get_direction_as_value(directions["Ap2"])
+        self.Ap3: int = 1 if directions is None else self._get_direction_as_value(directions["Ap3"])
+        self.At1: int = 1 if directions is None else self._get_direction_as_value(directions["At1"])
+        self.At2: int = 1 if directions is None else self._get_direction_as_value(directions["At2"])
+        self.At3: int = 1 if directions is None else self._get_direction_as_value(directions["At3"])
 
     def update_rotation_direction(self, directions: Dict[str, str]):
         self.Ap1 = (

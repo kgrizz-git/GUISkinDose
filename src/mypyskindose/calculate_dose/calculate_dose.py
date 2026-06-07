@@ -25,7 +25,7 @@ def calculate_dose(
     settings: PyskindoseSettings,
     table: Phantom,
     pad: Phantom,
-) -> Tuple[Phantom, Optional[Dict[str, Any]]]:
+) -> Tuple[Optional[Phantom], Optional[Dict[str, Any]]]:
     """Calculate skin dose.
 
     This function initializes the skin dose calculations.

@@ -18,6 +18,7 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 - **[dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md)** — RDSR normalization, vendor offsets, and the internal DataFrame contract
 - **[dev-docs/HARNESS_ENGINEERING.md](dev-docs/HARNESS_ENGINEERING.md)** — repository harness principles, source-of-truth map, and validation commands (includes `python scripts/check_doc_freshness.py`)
 - **[dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)
+- **[dev-docs/LICENSE_COMPLIANCE.md](dev-docs/LICENSE_COMPLIANCE.md)** — third-party license policy, audit commands, and notices workflow
 - **[CHANGELOG.md](CHANGELOG.md)** — release history; version source of truth is `pyproject.toml`
 
 ## Quick orientation
@@ -93,7 +94,7 @@ See [dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md) for the full implementation pla
 
 ```bash
 pip install -e .
-pip install -e ".[dev]"   # basedpyright, pip-audit, pre-commit + stubs for CI parity
+pip install -e ".[dev]"   # basedpyright, bandit, pip-audit, pre-commit + stubs for CI parity
 pip install jupyter  # for the notebook
 ```
 

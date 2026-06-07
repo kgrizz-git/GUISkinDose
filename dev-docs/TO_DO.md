@@ -22,7 +22,7 @@ Repository hygiene, documentation, semver, and CI alignment. Harness-phase tags 
 
 ### CI, typing, and supply chain
 
-- [x] **Basedpyright** — CI `typecheck` job with baseline (`.basedpyright/baseline.json`); `[dev]` extra; shrink baseline as types improve (`basedpyright --writebaseline`).
+- [x] **Basedpyright** — CI `typecheck` job runs strict `basedpyright` (zero errors); optional baseline via `scripts/type_baseline.sh` (see `.basedpyright/README.md`); `[dev]` extra.
 - [x] **Gitleaks** — `.github/workflows/gitleaks.yml` on push/PR (full git history).
 - [x] **pip-audit** — CI `dependency-audit` job; scans core + `[dev]` + `[gui]` extras; fails on known CVEs (see policy in `HARNESS_ENGINEERING.md`).
 - [ ] **Optional SBOM scan (grype)** — scan built wheel/sdist from `package-build` job if broader coverage is needed beyond PyPI advisories.

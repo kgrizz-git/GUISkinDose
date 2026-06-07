@@ -174,7 +174,7 @@ def _normalize_machine_parameters(
         nan_indices = data_parsed.index[data_parsed[KEY_RDSR_DISTANCE_SOURCE_DETECTOR].apply(np.isnan)]
         # Replace those nans with the corresponding value in
         # FinalDistanceSourcetoDetector
-        data_parsed.DistanceSourcetoDetector_mm = data_parsed.DistanceSourcetoDetector_mm.fillna(
+        data_parsed.loc[:, "DistanceSourcetoDetector_mm"] = data_parsed.DistanceSourcetoDetector_mm.fillna(
             data_parsed.FinalDistanceSourcetoDetector_mm[nan_indices]
         )
 

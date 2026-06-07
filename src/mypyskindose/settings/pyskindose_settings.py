@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 from rich import print
 
@@ -107,7 +107,7 @@ class PyskindoseSettings:
 
         self.normalization_settings = self._initialize_normalization_settings(normalization_settings)
 
-        self.remove_invalid_rows: bool = True if tmp.get(KEY_PARAM_REMOVE_INVALID_ROWS) else None
+        self.remove_invalid_rows: bool = bool(tmp.get(KEY_PARAM_REMOVE_INVALID_ROWS))
 
     @staticmethod
     def _initialize_output_path(output_path: Optional[Union[str, Path]], output_format: str) -> Path:
@@ -145,9 +145,10 @@ class PyskindoseSettings:
             normalization_settings = json.loads(normalization_settings)
 
         if isinstance(normalization_settings, dict):
-            if "normalization_settings" in normalization_settings:
-                normalization_settings = normalization_settings["normalization_settings"]
-            normalization_settings = NormalizationSettings(normalization_settings)
+            settings_dict = normalization_settings
+            if "normalization_settings" in settings_dict:
+                settings_dict = settings_dict["normalization_settings"]
+            normalization_settings = NormalizationSettings(cast(List[Dict[str, Any]], settings_dict))
 
         if isinstance(normalization_settings, NormalizationSettings):
             return normalization_settings

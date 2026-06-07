@@ -107,7 +107,13 @@ def plot_procedure(
         for ind in range(len(data_norm))
     ]
 
-    data = [event.get(plot_object) for plot_object in meshes[0].keys() for event in meshes]
+    data = [
+        trace
+        for plot_object in meshes[0].keys()
+        for event in meshes
+        for trace in [event.get(plot_object)]
+        if trace is not None
+    ]
 
     layout = _create_procedure_layout(
         title=title,

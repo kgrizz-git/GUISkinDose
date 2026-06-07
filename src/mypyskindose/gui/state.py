@@ -60,6 +60,9 @@ class AppState:
     procedure_fig: Any | None = None
     dosemap_fig: Any | None = None
 
+    # ── Navigation ─────────────────────────────────────────────────────────
+    active_tab: str = "input"
+
     # ── Misc ───────────────────────────────────────────────────────────────
     errors: list[str] = field(default_factory=list)
 

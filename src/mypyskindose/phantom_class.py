@@ -1,7 +1,6 @@
 import copy
 from itertools import chain
 from pathlib import Path
-from tempfile import TemporaryFile
 from typing import List, Optional, Union
 
 import numpy as np
@@ -91,7 +90,7 @@ class Phantom:
 
         self.human_model = None
 
-        self.r_ref: np.array
+        self.r_ref: np.ndarray
 
         # Save table length for all phantom in order to choose correct rotation
         # origin when applying At1, At2, and At3
@@ -254,7 +253,7 @@ class Phantom:
 
     @staticmethod
     def _get_phantom_mesh_from_tuple(
-        phantom_mesh_tuple: tuple[str, Union[mesh.Mesh, TemporaryFile, str]]
+        phantom_mesh_tuple: tuple[str, Union[mesh.Mesh, str, Path]]
     ) -> tuple[str, mesh.Mesh]:
         if not isinstance(phantom_mesh_tuple[0], str):
             raise TypeError(
@@ -279,11 +278,11 @@ class Phantom:
 
         """
         # convert degrees to radians
-        angles = np.deg2rad(angles)
+        angles_rad = np.deg2rad(angles)
 
-        x_rot = angles[0]
-        y_rot = angles[1]
-        z_rot = angles[2]
+        x_rot = angles_rad[0]
+        y_rot = angles_rad[1]
+        z_rot = angles_rad[2]
 
         # Define rotation matricies about the x, y and z axis
         Rx = np.array([[+1, +0, +0], [+0, +np.cos(x_rot), -np.sin(x_rot)], [+0, +np.sin(x_rot), +np.cos(x_rot)]])

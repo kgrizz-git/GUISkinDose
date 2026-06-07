@@ -41,7 +41,8 @@ Agents working in this repository should be able to answer three questions quick
 | CI | `.github/workflows/ci.yml` |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
-| Type-check baseline | `.basedpyright/baseline.json` |
+| Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
+| Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
 | Dependency and Actions updates | `.github/dependabot.yml` |
 
@@ -111,14 +112,20 @@ Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the
 
 ```bash
 pip install -e ".[dev,gui]"
-basedpyright --baselinefile .basedpyright/baseline.json
+basedpyright
 ```
 
-CI runs the same command in the `typecheck` job. Known issues are recorded in `.basedpyright/baseline.json`; **CI fails only on new type errors**. After fixing types locally, shrink the baseline:
+CI runs plain `basedpyright` in the `typecheck` job — **any type error fails**. Configuration lives in `[tool.basedpyright]` in `pyproject.toml`.
 
-```bash
-basedpyright --baselinefile .basedpyright/baseline.json --writebaseline
-```
+**Optional baseline (incremental typing only):** when temporarily accepting known errors, see `.basedpyright/README.md`.
+
+| Action | Command |
+|--------|---------|
+| Shrink baseline after fixes | `./scripts/type_baseline.sh shrink` (auto-removes fixed diagnostics; **do not** use `--writebaseline`) |
+| Add current errors to baseline | `./scripts/type_baseline.sh write` |
+| Re-enable baseline in CI | `basedpyright --baselinefile .basedpyright/baseline.json` (lock mode in CI; commit baseline updates with fix PRs) |
+
+Locally, `basedpyright --baselinefile .basedpyright/baseline.json` uses **auto** mode and updates the file when errors decrease. CI defaults to **lock** mode when a baseline file is used — never delete the baseline to shrink it; run `shrink` locally and commit the result.
 
 `table_data/` offline scripts are excluded from analysis (optional `spekpy` dependency).
 
@@ -144,6 +151,42 @@ CI runs the same audit in the `dependency-audit` job (Ubuntu, Python 3.12).
 
 Broader SBOM-style scanning (e.g. **grype** on built wheels) remains optional; see `dev-docs/TO_DO.md`.
 
+### License compliance
+
+Policy and workflow: [`dev-docs/LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
+
+```bash
+pip install -e ".[dev,gui]"
+python scripts/check_licenses.py
+python scripts/check_licenses.py --write-notices   # after dependency changes
+python scripts/check_licenses.py --check-notices   # verify tracked inventory
+```
+
+CI runs license checks in the same `dependency-audit` job as `pip-audit` (Ubuntu, Python 3.12).
+
+**Policy:**
+
+- **Scope:** Same install surface as vulnerability audit (core + `[dev]` + `[gui]`).
+- **Gate:** CI **fails** on forbidden strong-copyleft licenses (GPL/AGPL family).
+- **Inventory:** `dev-docs/THIRD_PARTY_NOTICES.md` is generated from the installed environment; commit updates when dependencies change.
+- **Remediation:** Replace or avoid forbidden packages; for unknown metadata, improve normalization in `scripts/check_licenses.py` or escalate for legal review.
+
+### Bandit (Python SAST, optional `[dev]` extra)
+
+```bash
+pip install -e ".[dev]"
+bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+```
+
+CI runs the same command in the Ubuntu `bandit` job (Python 3.12).
+
+**Policy:**
+
+- **Scope:** Application code under `src/mypyskindose/` and `scripts/` (not `tests/`).
+- **Config:** `[tool.bandit]` in `pyproject.toml` (excludes `table_data/`, venvs, backups).
+- **Gate:** CI **fails** on **medium or high** severity findings. Low-severity items (e.g. `B110` try/except/pass in GUI helpers) are visible with `--severity-level low` but do not block CI.
+- **Overlap:** Complements gitleaks (secrets in git) and pip-audit (dependency CVEs); does not replace either.
+
 ### Local git hooks (optional `[dev]` extra)
 
 Fast checks run on **`git commit`** via [pre-commit](https://pre-commit.com/) (subset of CI — not a replacement):
@@ -160,9 +203,11 @@ Configured in `.pre-commit-config.yaml`:
 |---|---|
 | **ruff** | `ruff check --fix` on `src/` and `tests/` |
 | **gitleaks** | Secret scan on staged changes |
+| **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
+| **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 
-**Not in pre-commit** (still CI-only or manual): full pytest matrix, basedpyright, pip-audit, GUI smoke, `compileall`, `python -m build`.
+**Not in pre-commit** (still CI-only or manual): full pytest matrix, basedpyright, pip-audit, license compliance, GUI smoke, `compileall`, `python -m build`.
 
 Hooks can be skipped for a single commit with `SKIP=gitleaks git commit ...` or `git commit --no-verify` (CI remains the blocking gate on push/PR).
 
@@ -185,10 +230,12 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
-| `basedpyright --baselinefile .basedpyright/baseline.json` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
+| `basedpyright` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
+| `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `bandit` job (requires `.[dev]`) |
 | `pip-audit --desc on` | Ubuntu `dependency-audit` job (requires `.[dev,gui]`) |
-| pre-commit (local) | `.pre-commit-config.yaml` — ruff, gitleaks, doc-freshness on `git commit` |
+| `python scripts/check_licenses.py` | Ubuntu `dependency-audit` job (forbidden licenses; `--check-notices`) |
+| pre-commit (local) | `.pre-commit-config.yaml` — ruff, gitleaks, doc-freshness, backup cleanup on `git commit` |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 

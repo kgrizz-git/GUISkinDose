@@ -296,10 +296,10 @@ class PySkinDoseOutput:
         patient: Phantom,
         table: Phantom,
         pad: Phantom,
-        dose_map: np.array,
+        dose_map: np.ndarray,
         hits: list[list[float]],
         backscatter_correction: list[list[float]],
-        inverse_square_law_correction: list[list[float]],
+        inverse_square_law_correction: list[list[float] | float],
         medium_correction: list[float],
         table_correction: list[float],
         settings: PyskindoseSettings,
@@ -393,14 +393,14 @@ class PySkinDoseOutput:
         self.Table: Phantom = table
         self.Pad: Phantom = pad
         self.PadThickness: float = settings.phantom.dimension.pad_thickness
-        self.DoseMap: np.array = dose_map
+        self.DoseMap: np.ndarray = dose_map
         self.Hits = [[ind for ind, hit in enumerate(event_hits) if hit] for event_hits in hits]
         self.BackscatterCorrection = backscatter_correction
         self.InverseSquareLawCorrection = inverse_square_law_correction
         self.MediumCorrection = medium_correction
         self.TableCorrection = table_correction
 
-    def to_dict(self) -> dict[str, Union[float, list[Union[float, int]]]]:
+    def to_dict(self) -> dict[str, Any]:
         """Converts the output data into a dict
 
         Returns
@@ -512,7 +512,7 @@ def format_analysis_result_for_export(
         inverse_square_law_correction=[
             event if isinstance(event, (list, float)) else ([] if event is None else event.tolist())
             for event in analysis_result[OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW]
-        ],
+        ],  # type: ignore[arg-type]
         medium_correction=analysis_result[OUTPUT_KEY_CORRECTION_MEDIUM],
         table_correction=analysis_result[OUTPUT_KEY_CORRECTION_TABLE],
         settings=settings,

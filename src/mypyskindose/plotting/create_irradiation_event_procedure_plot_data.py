@@ -59,13 +59,15 @@ def create_irradiation_event_procedure_plot_data(
     output = {}
 
     if include_patient:
+        if patient is None:
+            raise ValueError("patient is required when include_patient is True")
         patient.position(data_norm, event)
 
         # Create patient mesh
         output[IRRADIATION_EVENT_PROCEDURE_KEY_PATIENT] = create_mesh_3d_general(
             obj=patient,
             color=COLOR_PATIENT,
-            mesh_text=patient_text,
+            mesh_text=patient_text or [],
             lighting=dict(diffuse=0.5, ambient=0.5),
             visible_status=visible_status,
         )

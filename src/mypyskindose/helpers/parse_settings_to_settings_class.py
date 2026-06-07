@@ -1,17 +1,20 @@
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from mypyskindose.settings import PyskindoseSettings, initialize_settings
 
 logger = logging.getLogger(__name__)
 
 
-def parse_settings_to_settings_class(settings: Optional[str] = None):
-    try:
-        return initialize_settings(settings)
-    except ValueError:
-        logger.debug("Tried initializing settings without any settings")
+def parse_settings_to_settings_class(
+    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+) -> PyskindoseSettings:
+    if settings is not None:
+        try:
+            return initialize_settings(settings)
+        except ValueError:
+            logger.debug("Tried initializing settings without any settings")
 
     settings_path = Path(__file__).parent.parent / "settings.json"
 

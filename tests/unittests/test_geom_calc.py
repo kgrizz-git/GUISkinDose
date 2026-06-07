@@ -15,9 +15,9 @@ def test_triangle_check_intersection():
     Test if the intersection algoritm returns the expected output for different
     cell segment combinations.
     """
-    expected = [True, True, True, True, False, False, [True, False]]
+    expected: list[bool | list[bool]] = [True, True, True, True, False, False, [True, False]]
 
-    actual = [0] * len(expected)
+    actual: list[bool | list[bool]] = [False] * len(expected)
 
     center = np.array([0, 0, 0])
     vertex_1 = np.array([1, 0, 0])

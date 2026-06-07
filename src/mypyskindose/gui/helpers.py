@@ -108,13 +108,19 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         if progress_cb is not None:
             _patch_tqdm(progress_cb, total=event_count_from_state(state))
 
+        if state.rdsr_df is None:
+            return False, "No RDSR data loaded."
+
         # analyze_data internally calls calculate_rotation_matrices
         output = analyze_data(normalized_data=state.rdsr_df.copy(), settings=settings)
 
+        if not isinstance(output, dict):
+            return False, "Unexpected calculation output format."
+
         state.output = output
         state.calculation_done = True
-        state.psd = output["psd"]
-        state.air_kerma = output["air_kerma"]
+        state.psd = float(output["psd"])
+        state.air_kerma = float(output["air_kerma"])
         return True, f"PSD = {output['psd']:.2f} mGy"
     except Exception:
         err = traceback.format_exc()
@@ -140,9 +146,11 @@ def _patch_tqdm(progress_cb, total: int):
             if total > 0:
                 progress_cb(self.n / total, f"Event {self.n} / {total}")
 
-        tqdm_module.tqdm.update = new_update
-    except Exception:
-        pass  # progress patching is best-effort
+        tqdm_module.tqdm.update = new_update  # type: ignore[method-assign]
+    except Exception as exc:
+        from mypyskindose.debug import dprint
+
+        dprint("CALCULATION", f"tqdm progress patch skipped: {exc}")
 
 
 def get_example_rdsr_files() -> list[Path]:

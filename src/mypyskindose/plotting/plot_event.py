@@ -78,7 +78,7 @@ def plot_event(
         mode=mode,
         title=title,
         patient=patient,
-        patient_text=patient_text,
+        patient_text=patient_text or [],
         table=table,
         table_text=table_text,
         pad=pad,

@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import pandas as pd
 
@@ -16,6 +16,7 @@ from mypyskindose.constants import (
 )
 from mypyskindose.debug import dprint
 from mypyskindose.dev_data import DEVELOPMENT_PARAMETERS
+from mypyskindose.format_export_data import PySkinDoseOutput
 from mypyskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
 )
@@ -25,7 +26,10 @@ from mypyskindose.settings import PyskindoseSettings
 logger = logging.getLogger(__name__)
 
 
-def main(file_path: Optional[str] = None, settings: Union[str, dict, PyskindoseSettings] = None):
+def main(
+    file_path: Optional[str] = None,
+    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+):
     """Run PySkinDose.
 
     Copy settings_examples.json and save it as settings.json.
@@ -64,7 +68,7 @@ def analyze_normalized_data_with_custom_settings_object(
     data_norm: pd.DataFrame,
     settings: Union[PyskindoseSettings, str, dict],
     output_format: Optional[str] = RUN_ARGUMENTS_OUTPUT_JSON,
-) -> Union[str, dict]:
+) -> Union[str, dict[str, Any], PySkinDoseOutput]:
     """Run PySkinDose with custom normalized data and a custom specified settings objects.
 
     See the

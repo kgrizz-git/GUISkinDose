@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List
+from typing import Any, List, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -75,6 +75,8 @@ def calculate_field_size(field_size_mode, data_parsed, data_norm):
 
         return FS_lat, FS_long
 
+    raise ValueError(f"Unsupported field_size_mode: {field_size_mode!r}")
+
 
 def position_patient_phantom_on_table(
     patient: Phantom,
@@ -82,7 +84,7 @@ def position_patient_phantom_on_table(
     pad: Phantom,
     pad_thickness: Any,
     patient_offset: List[int],
-    patient_orientation: c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
+    patient_orientation: str,
 ) -> None:
     """Places the patient phantom upon the patient support table.
 
@@ -128,7 +130,7 @@ def position_patient_phantom_on_table(
         phantom.save_position()
 
 
-def vector(start: np.array, stop: np.array, normalization=False) -> np.array:
+def vector(start: np.ndarray, stop: np.ndarray, normalization=False) -> np.ndarray:
     """Create a vector between two points in carthesian space.
 
     This function creates a simple vector between point <start> and point
@@ -165,7 +167,7 @@ def vector(start: np.array, stop: np.array, normalization=False) -> np.array:
 
 
 def scale_field_area(
-    data_norm: pd.DataFrame, event: int, patient: Phantom, hits: List[bool], source: np.array
+    data_norm: pd.DataFrame, event: int, patient: Phantom, hits: List[bool], source: np.ndarray
 ) -> List[float]:
     """Scale X-ray field area from image detector, to phantom skin cells.
 
@@ -246,13 +248,13 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
 
     hvl = [
         float(
-            hvl_data.loc[
+            cast(pd.Series, hvl_data.loc[
                 (round(hvl_data["kvp_kv"]) == round(data_norm.kVp[event]))
                 & (round(hvl_data["filtration_inherent_mmal"], 1) == round(inherent_filtration, 1))
                 & (hvl_data["filtration_added_mmcu"] == data_norm.filter_thickness_Cu[event])
                 & (hvl_data["filtration_added_mmal"] == round(data_norm.filter_thickness_Al[event])),
                 "hvl_mmal",
-            ].iloc[0]
+            ]).iloc[0]
         )
         for event in range(len(data_norm))
     ]
@@ -323,7 +325,7 @@ class Triangle:
 
     """
 
-    def __init__(self, p: np.array, p1: np.array, p2: np.array):
+    def __init__(self, p: np.ndarray, p1: np.ndarray, p2: np.ndarray):
         """Initialize class attributes."""
         self.p = p
         self.p1 = vector(self.p, p1)
@@ -331,7 +333,7 @@ class Triangle:
         n = np.cross(self.p1, self.p2)
         self.n = n / np.sqrt(n.dot(n))
 
-    def check_intersection(self, start: np.array, stop: np.array) -> List[bool]:
+    def check_intersection(self, start: np.ndarray, stop: np.ndarray) -> Union[bool, List[bool]]:
         """Check if a 3D segment intercepts with the triangle.
 
         Check if a 3D segment intercepts with the triangle. For our purpose,
@@ -386,7 +388,7 @@ class Triangle:
         return hits.tolist()
 
 
-def check_table_hits(source: np.array, table: Phantom, beam, cells: np.array) -> List[bool]:
+def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray) -> List[bool]:
     """Check which skin cells are blocket by the patient support table.
 
     This fuctions creates two triangles covering the entire surface of the
@@ -446,7 +448,11 @@ def check_table_hits(source: np.array, table: Phantom, beam, cells: np.array) ->
 
     # If all four beam verices hits the table, all cells are blocket by the
     # table, and all cells should be corrected for table and pad attenuation.
-    if sum(hit_t_r + hit_b_l) == 4:
+    beam_vertex_hits = (
+        ([hit_t_r] if isinstance(hit_t_r, bool) else hit_t_r)
+        + ([hit_b_l] if isinstance(hit_b_l, bool) else hit_b_l)
+    )
+    if sum(beam_vertex_hits) == 4:
         if cells.ndim == 1:
             return [True]
         return [True] * cells.shape[0]

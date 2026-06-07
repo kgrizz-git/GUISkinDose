@@ -32,7 +32,7 @@ def rdsr_parser(data_raw: pydicom.FileDataset, silence_pydicom_warnings=False) -
 
     """
     if silence_pydicom_warnings:
-        pydicom.config.settings.reading_validation_mode = pydicom.config.IGNORE
+        pydicom.config.settings.reading_validation_mode = pydicom.config.IGNORE  # type: ignore[attr-defined]
 
     # create list to store rdsr content from each irradiation event
     prodcedure_dicts = []

@@ -12,10 +12,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
-- Harness CI: **basedpyright** `typecheck` job with `.basedpyright/baseline.json` (fails on new errors only); `[dev]` optional dependency.
+- Harness CI: **basedpyright** `typecheck` job (strict — any type error fails); optional baseline helpers in `scripts/type_baseline.sh`; `[dev]` optional dependency.
 - Harness CI: **gitleaks** secret scanning workflow on push/PR.
+- Harness CI: **bandit** `bandit` job (Python SAST on `src/mypyskindose` + `scripts`; medium+ severity gate).
 - Harness CI: **pip-audit** `dependency-audit` job (core + `[dev]` + `[gui]` extras; fails on known CVEs).
-- Harness local hooks: **pre-commit** config (ruff, gitleaks, doc-freshness on `git commit`).
+- Harness CI: **license compliance** — `scripts/check_licenses.py` in `dependency-audit` job; policy in `dev-docs/LICENSE_COMPLIANCE.md`; inventory in `dev-docs/THIRD_PARTY_NOTICES.md`.
+- Harness local hooks: **pre-commit** config (ruff, gitleaks, bandit, doc-freshness on `git commit`).
 - Harness Phase 5: GUI smoke tests (`tests/gui/`) with NiceGUI user simulation; `gui-smoke` CI job; `tests/scripts/launch_gui_headless.py`.
 - Harness Phase 4: package layering documented in `CODEBASE_OVERVIEW.md`; structural layer tests in `tests/unittests/test_architecture_layers.py`.
 - Harness Phase 3: `python -m build` in CI (`package-build` job on Ubuntu, Python 3.12); local full checks now match CI.
@@ -25,6 +27,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- Type checking: resolved all 147 basedpyright errors; CI now runs strict `basedpyright` (no baseline). Optional incremental baseline workflow documented in `.basedpyright/README.md` with `scripts/type_baseline.sh`.
+- Pre-commit: `cleanup-old-backups` hook removes `backups/*.bak` files last touched more than 5 commits ago; `backups/` added to `.gitignore`.
 - Harness Phase 2: stop tracking generated `src/mypyskindose.egg-info/`; `.gitignore` covers egg-info and standard Python build artifacts.
 - Harness Phase 2: CI `flake8` limited to syntax/fatal errors (`E9,F63,F7,F82`); style overlap with `ruff` (120-column) removed from CI.
 - Harness Phase 2: `.github/workflows/ci.yml` and `release.yml` use `actions/checkout@v4` and `actions/setup-python@v5`.

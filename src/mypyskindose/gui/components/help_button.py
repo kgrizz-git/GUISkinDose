@@ -40,8 +40,10 @@ class HelpButton:
         # Load content
         if content is not None:
             self.content = content
-        else:
+        elif content_path is not None:
             self.content = self._load_content(content_path)
+        else:
+            raise ValueError("Either content or content_path must be provided")
 
         # Create the button
         self._create_button()

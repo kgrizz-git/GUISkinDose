@@ -3,7 +3,7 @@
 #   pre-commit install
 #
 # Run manually: pre-commit run --all-files
-# CI still runs the full matrix (pytest, basedpyright, pip-audit, gui-smoke, etc.).
+# CI still runs the full matrix (pytest, basedpyright, bandit, pip-audit, gui-smoke, etc.).
 
 minimum_pre_commit_version: "3.0.0"
 
@@ -21,11 +21,27 @@ repos:
     hooks:
       - id: gitleaks
 
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+      - id: bandit
+        name: bandit (src + scripts, medium+ severity)
+        # Pre-commit passes staged file paths; do not use -r here (CI scans directories).
+        args: ["-c", "pyproject.toml", "--severity-level", "medium"]
+        files: ^(src/mypyskindose|scripts)/
+
   - repo: local
     hooks:
       - id: doc-freshness
         name: documentation freshness (broken links)
         entry: python scripts/check_doc_freshness.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: cleanup-old-backups
+        name: cleanup stale backups/ files (>5 commits)
+        entry: python scripts/cleanup_old_backups.py
         language: system
         pass_filenames: false
         always_run: true

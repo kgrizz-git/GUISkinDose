@@ -11,7 +11,10 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | File | Purpose |
 |---|---|
 | [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | Repository harness principles, golden rules, validation commands, CI expectations, and known gaps. |
+| [LICENSE_COMPLIANCE.md](LICENSE_COMPLIANCE.md) | Third-party license policy, `scripts/check_licenses.py`, and `THIRD_PARTY_NOTICES.md` workflow. |
+| [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken relative links, inventory contradictions, advisory stale-pattern scan. |
+| Bandit | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job and pre-commit hook (medium+ severity on `src/mypyskindose` + `scripts`). |
 | [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) | Phased roadmap to close harness gaps (CI parity, doc-freshness, entropy cleanup). |
 | [TO_DO.md](TO_DO.md) | Short-term maintainer task list (GUI polish, tabular input, doc-freshness automation). |
 | [index.md](index.md) | This catalog — one-line purpose for every file under `dev-docs/`. |

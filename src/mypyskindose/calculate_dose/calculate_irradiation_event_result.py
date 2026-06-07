@@ -31,10 +31,10 @@ def calculate_irradiation_event_result(
     back_scatter_interpolation: List[CubicSpline],
     output: Dict[str, Any],
     corrections_db: str,
-    table_hits: List[bool] = None,
-    field_area: List[float] = None,
-    k_isq: np.array = None,
-    pbar: tqdm = None,
+    table_hits: List[bool] | None = None,
+    field_area: List[float] | None = None,
+    k_isq: np.ndarray | None = None,
+    pbar: tqdm | None = None,
 ) -> Dict[str, Any]:
     """Conducts skin dose calculation.
 
@@ -88,6 +88,13 @@ def calculate_irradiation_event_result(
         Dictionary containing skin dose calculation results.
 
     """
+    if table_hits is None:
+        table_hits = []
+    if field_area is None:
+        field_area = []
+    if k_isq is None:
+        k_isq = np.array([])
+
     logger.debug(f"Calculating irradiation event {event + 1} out of {total_events}")
 
     hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
@@ -125,7 +132,8 @@ def calculate_irradiation_event_result(
     event += 1
     if event < total_events:
 
-        pbar.update()
+        if pbar is not None:
+            pbar.update()
 
         output = calculate_irradiation_event_result(
             normalized_data=normalized_data,
@@ -146,7 +154,7 @@ def calculate_irradiation_event_result(
             pbar=pbar,
         )
 
-        if event == total_events - 1:
+        if event == total_events - 1 and pbar is not None:
             pbar.update()
             pbar.refresh()
     return output

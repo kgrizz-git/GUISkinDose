@@ -24,7 +24,7 @@ def perform_calculations_for_new_geometries(
     hits: List[bool],
     table_hits: List[bool],
     field_area: List[float],
-    k_isq: np.array,
+    k_isq: np.ndarray,
 ):
     if not new_geometry:
         return hits, table_hits, field_area, k_isq
