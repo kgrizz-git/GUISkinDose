@@ -1,7 +1,6 @@
 import copy
 from itertools import chain
 from pathlib import Path
-from tempfile import TemporaryFile
 from typing import List, Optional, Union
 
 import numpy as np
@@ -91,11 +90,17 @@ class Phantom:
 
         self.human_model = None
 
-        self.r_ref: np.array
+        self.r_ref: np.ndarray
 
         # Save table length for all phantom in order to choose correct rotation
         # origin when applying At1, At2, and At3
         self.table_length = phantom_dim.table_length
+
+        # Resolution variables — assigned in the plane/cylinder branches below.
+        # The validation at __init__ time guarantees one of those branches runs
+        # before these are accessed (human mesh never uses them).
+        res_length: float | None = None
+        res_width: float | None = None
 
         # creates a plane phantom (2D grid)
         if phantom_model == "plane":
@@ -108,6 +113,8 @@ class Phantom:
                 res_length = res_width = 1.0
 
             # Linearly spaced points along the longitudinal direction
+            assert res_width is not None, "res_width must be set for plane phantom"
+            assert res_length is not None, "res_length must be set for plane phantom"
             x = np.linspace(
                 -phantom_dim.plane_width / 2, +phantom_dim.plane_width / 2, int(res_width * phantom_dim.plane_width + 1)
             )
@@ -137,6 +144,8 @@ class Phantom:
 
         # creates a cylinder phantom (elliptic)
         elif phantom_model == "cylinder":
+            assert res_width is not None, "res_width must be set for cylinder phantom"
+            assert res_length is not None, "res_length must be set for cylinder phantom"
 
             # Use a dense grid if specified by user
             if phantom_dim.cylinder_resolution.lower() == "dense":
@@ -254,7 +263,7 @@ class Phantom:
 
     @staticmethod
     def _get_phantom_mesh_from_tuple(
-        phantom_mesh_tuple: tuple[str, Union[mesh.Mesh, TemporaryFile, str]]
+        phantom_mesh_tuple: tuple[str, Union[mesh.Mesh, str, Path]]
     ) -> tuple[str, mesh.Mesh]:
         if not isinstance(phantom_mesh_tuple[0], str):
             raise TypeError(
@@ -279,11 +288,11 @@ class Phantom:
 
         """
         # convert degrees to radians
-        angles = np.deg2rad(angles)
+        angles_rad = np.deg2rad(angles)
 
-        x_rot = angles[0]
-        y_rot = angles[1]
-        z_rot = angles[2]
+        x_rot = angles_rad[0]
+        y_rot = angles_rad[1]
+        z_rot = angles_rad[2]
 
         # Define rotation matricies about the x, y and z axis
         Rx = np.array([[+1, +0, +0], [+0, +np.cos(x_rot), -np.sin(x_rot)], [+0, +np.sin(x_rot), +np.cos(x_rot)]])

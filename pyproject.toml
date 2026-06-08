@@ -86,7 +86,7 @@ exclude = [
     "src/mypyskindose/table_data",
     "tests/manual_tests",
 ]
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
 reportMissingTypeStubs = false
 # CI runs plain `basedpyright` (zero errors required). To accept temporary debt during
 # incremental typing, uncomment baselineFile, run `./scripts/type_baseline.sh write`,

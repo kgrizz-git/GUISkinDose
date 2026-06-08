@@ -96,6 +96,12 @@ class Phantom:
         # origin when applying At1, At2, and At3
         self.table_length = phantom_dim.table_length
 
+        # Resolution variables — assigned in the plane/cylinder branches below.
+        # The validation at __init__ time guarantees one of those branches runs
+        # before these are accessed (human mesh never uses them).
+        res_length: float | None = None
+        res_width: float | None = None
+
         # creates a plane phantom (2D grid)
         if phantom_model == "plane":
 
@@ -107,6 +113,8 @@ class Phantom:
                 res_length = res_width = 1.0
 
             # Linearly spaced points along the longitudinal direction
+            assert res_width is not None, "res_width must be set for plane phantom"
+            assert res_length is not None, "res_length must be set for plane phantom"
             x = np.linspace(
                 -phantom_dim.plane_width / 2, +phantom_dim.plane_width / 2, int(res_width * phantom_dim.plane_width + 1)
             )
@@ -145,6 +153,9 @@ class Phantom:
             elif phantom_dim.cylinder_resolution.lower() == "sparse":
                 res_length = 1.0
                 res_width = 0.1
+
+            assert res_width is not None, "res_width must be set for cylinder phantom"
+            assert res_length is not None, "res_length must be set for cylinder phantom"
 
             # Creates linearly spaced points along an ellipse
             #  in the lateral direction

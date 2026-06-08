@@ -178,8 +178,13 @@ def _license_from_classifiers(classifiers: list[str]) -> list[str]:
     return licenses
 
 
+def _meta_get(meta: metadata.PackageMetadata, key: str, default: str = "") -> str:
+    """Safely get a metadata field, working around basedpyright stub gaps."""
+    return meta.get(key) or default  # type: ignore[return-value]
+
+
 def _license_from_metadata(meta: metadata.PackageMetadata) -> tuple[str, tuple[str, ...]]:
-    expression = (meta.get("License-Expression") or "").strip()
+    expression = _meta_get(meta, "License-Expression").strip()
     if expression:
         if re.search(r"\sOR\s", expression, flags=re.IGNORECASE):
             operator = "OR"
@@ -200,7 +205,7 @@ def _license_from_metadata(meta: metadata.PackageMetadata) -> tuple[str, tuple[s
         operator = "OR" if len(from_classifiers) > 1 else "SINGLE"
         return operator, tuple(from_classifiers)
 
-    raw = (meta.get("License") or "").strip()
+    raw = _meta_get(meta, "License").strip()
     if raw:
         if re.search(r"\s+or\s+", raw, flags=re.IGNORECASE):
             parts = re.split(r"\s+or\s+", raw, flags=re.IGNORECASE)
@@ -214,7 +219,7 @@ def _requirement_applies(req_str: str, selected_extras: frozenset[str]) -> bool:
     req = Requirement(req_str)
     if req.marker is None:
         return True
-    env = default_environment()
+    env: dict[str, str] = {k: str(v) for k, v in default_environment().items()}
     if req.marker.evaluate(env):
         return True
     for extra in selected_extras:
@@ -229,7 +234,7 @@ def _resolve_distribution(name: str) -> metadata.Distribution:
         return metadata.distribution(name)
     except metadata.PackageNotFoundError:
         for dist in metadata.distributions():
-            dist_name = (dist.metadata.get("Name") or dist.name or "").strip()
+            dist_name = (_meta_get(dist.metadata, "Name") or dist.name or "").strip()
             if dist_name and canonicalize_name(dist_name) == canonical:
                 return dist
         raise
@@ -250,7 +255,7 @@ def project_package_names(
         except metadata.PackageNotFoundError:
             continue
 
-        dist_name = (dist.metadata.get("Name") or dist.name or pkg_name).strip()
+        dist_name = (_meta_get(dist.metadata, "Name") or dist.name or pkg_name).strip()
         canonical = canonicalize_name(dist_name)
         if canonical in visited:
             continue
@@ -276,7 +281,7 @@ def collect_package_licenses(
     packages: list[PackageLicense] = []
     for dist in metadata.distributions():
         meta = dist.metadata
-        name = (meta.get("Name") or dist.name or "").strip()
+        name = (_meta_get(meta, "Name") or dist.name or "").strip()
         if not name:
             continue
         canonical = canonicalize_name(name)
@@ -293,8 +298,8 @@ def collect_package_licenses(
                 name=name,
                 version=dist.version,
                 license_ids=license_ids,
-                raw_license=(meta.get("License") or "").strip(),
-                home_page=(meta.get("Home-page") or meta.get("Project-URL") or "").strip(),
+                raw_license=_meta_get(meta, "License"),
+                home_page=_meta_get(meta, "Home-page") or _meta_get(meta, "Project-URL"),
                 license_operator=operator,
             )
         )

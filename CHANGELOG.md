@@ -17,7 +17,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - Harness CI: **bandit** `bandit` job (Python SAST on `src/mypyskindose` + `scripts`; medium+ severity gate).
 - Harness CI: **pip-audit** `dependency-audit` job (core + `[dev]` + `[gui]` extras; fails on known CVEs).
 - Harness CI: **license compliance** — `scripts/check_licenses.py` in `dependency-audit` job; policy in `dev-docs/LICENSE_COMPLIANCE.md`; inventory in `dev-docs/THIRD_PARTY_NOTICES.md`.
-- Harness local hooks: **pre-commit** config (ruff, gitleaks, bandit, doc-freshness on `git commit`).
+- Harness local hooks: **pre-commit** config (commit: ruff, gitleaks, bandit, doc-freshness; pre-push: basedpyright).
 - Harness Phase 5: GUI smoke tests (`tests/gui/`) with NiceGUI user simulation; `gui-smoke` CI job; `tests/scripts/launch_gui_headless.py`.
 - Harness Phase 4: package layering documented in `CODEBASE_OVERVIEW.md`; structural layer tests in `tests/unittests/test_architecture_layers.py`.
 - Harness Phase 3: `python -m build` in CI (`package-build` job on Ubuntu, Python 3.12); local full checks now match CI.
@@ -32,6 +32,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - Harness Phase 2: stop tracking generated `src/mypyskindose.egg-info/`; `.gitignore` covers egg-info and standard Python build artifacts.
 - Harness Phase 2: CI `flake8` limited to syntax/fatal errors (`E9,F63,F7,F82`); style overlap with `ruff` (120-column) removed from CI.
 - Harness Phase 2: `.github/workflows/ci.yml` and `release.yml` use `actions/checkout@v4` and `actions/setup-python@v5`.
+- CI test matrix: full 3 OS × 4 Python on pull requests and `main` pushes only; other branch pushes run a single Ubuntu + Python 3.12 `build` cell (other jobs unchanged).
+- Local hooks: **basedpyright** moved to pre-push only via pre-commit (`pre-commit install --hook-type pre-push`); removed manual `scripts/pre-push.sh`.
+
+### Fixed
+
+- Normalization settings: `update_translation_offset` and `update_rotation_direction` now apply vendor overrides from JSON/settings (previously no-ops when values were already initialized).
+- Phantom: cylinder mesh resolution assertions run after resolution is assigned (basedpyright refactor had broken cylinder phantom creation).
 
 ## [25.1.1] - 2025-01-01
 

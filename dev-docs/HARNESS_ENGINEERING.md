@@ -189,15 +189,17 @@ CI runs the same command in the Ubuntu `bandit` job (Python 3.12).
 
 ### Local git hooks (optional `[dev]` extra)
 
-Fast checks run on **`git commit`** via [pre-commit](https://pre-commit.com/) (subset of CI — not a replacement):
+Fast checks run via [pre-commit](https://pre-commit.com/) (subset of CI — not a replacement):
 
 ```bash
-pip install -e ".[dev]"
-pre-commit install          # once per clone
-pre-commit run --all-files  # manual full run
+pip install -e ".[dev,gui]"
+pre-commit install                    # commit hooks (once per clone)
+pre-commit install --hook-type pre-push   # basedpyright before push
+pre-commit run --all-files            # manual full run (commit stage)
+pre-commit run --hook-stage pre-push basedpyright --all-files
 ```
 
-Configured in `.pre-commit-config.yaml`:
+**Commit hooks** (`.pre-commit-config.yaml`):
 
 | Hook | What it runs |
 |---|---|
@@ -207,9 +209,15 @@ Configured in `.pre-commit-config.yaml`:
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 
-**Not in pre-commit** (still CI-only or manual): full pytest matrix, basedpyright, pip-audit, license compliance, GUI smoke, `compileall`, `python -m build`.
+**Pre-push hook:**
 
-Hooks can be skipped for a single commit with `SKIP=gitleaks git commit ...` or `git commit --no-verify` (CI remains the blocking gate on push/PR).
+| Hook | What it runs |
+|---|---|
+| **basedpyright** | Full-project type check (matches CI `typecheck` job; requires `.[dev,gui]`) |
+
+**Not in local hooks** (CI-only or manual): full pytest matrix, pip-audit, license compliance, GUI smoke, `compileall`, `python -m build`.
+
+Hooks can be skipped with `SKIP=gitleaks git commit ...`, `git commit --no-verify`, or `git push --no-verify` (CI remains the blocking gate on push/PR).
 
 ## CI expectations
 
@@ -217,16 +225,26 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 
 - syntax/lint checks should fail the workflow on errors
 - tests should fail the workflow on errors
-- cross-platform matrix should remain active
+- full cross-platform matrix runs on **`main` pushes and pull requests**; other branch pushes use a quick Ubuntu + Python 3.12 cell only
 - docs-only changes may run a smaller check set, but should still pass basic syntax and markdown/link sanity when such tooling exists
+
+### Test matrix policy (`build` job)
+
+| Trigger | Matrix |
+|---------|--------|
+| Pull request | 12 cells — Ubuntu/macOS/Windows × Python 3.10–3.13 |
+| Push to `main` | Same full matrix |
+| Push to other branches (e.g. `WIP`) | 1 cell — Ubuntu + Python 3.12 |
+
+Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-freshness) still run on every push/PR. Workflow concurrency cancels superseded runs on the same branch/PR.
 
 **Current CI vs local checks:** `.github/workflows/ci.yml` matches the **Full checks** list above on CI:
 
 | Check | Where in CI |
 |---|---|
-| `python -m compileall src/mypyskindose` | All matrix cells (`build` job) |
-| `python -m pytest` | All matrix cells |
-| `python -m ruff check src tests` | All matrix cells |
+| `python -m compileall src/mypyskindose` | `build` job (full matrix on PR/`main`; quick cell otherwise) |
+| `python -m pytest` | `build` job (same matrix policy) |
+| `python -m ruff check src tests` | `build` job (same matrix policy) |
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
@@ -235,7 +253,7 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `bandit` job (requires `.[dev]`) |
 | `pip-audit --desc on` | Ubuntu `dependency-audit` job (requires `.[dev,gui]`) |
 | `python scripts/check_licenses.py` | Ubuntu `dependency-audit` job (forbidden licenses; `--check-notices`) |
-| pre-commit (local) | `.pre-commit-config.yaml` — ruff, gitleaks, doc-freshness, backup cleanup on `git commit` |
+| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, bandit, doc-freshness, backup cleanup; pre-push: basedpyright |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 

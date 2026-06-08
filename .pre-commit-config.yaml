@@ -1,8 +1,11 @@
 # Local git hooks (fast subset of CI). Install once per clone:
-#   pip install -e ".[dev]"
+#   pip install -e ".[dev,gui]"
 #   pre-commit install
+#   pre-commit install --hook-type pre-push
 #
-# Run manually: pre-commit run --all-files
+# Run manually:
+#   pre-commit run --all-files
+#   pre-commit run --hook-stage pre-push basedpyright --all-files
 # CI still runs the full matrix (pytest, basedpyright, bandit, pip-audit, gui-smoke, etc.).
 
 minimum_pre_commit_version: "3.0.0"
@@ -45,3 +48,11 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+      - id: basedpyright
+        name: basedpyright (type check)
+        entry: basedpyright
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
