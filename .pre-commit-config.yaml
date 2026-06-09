@@ -49,6 +49,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: license-notices
+        name: third-party notices (stale check)
+        entry: python scripts/check_licenses.py --check-notices
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
       - id: basedpyright
         name: basedpyright (type check)
         entry: basedpyright

@@ -162,7 +162,7 @@ python scripts/check_licenses.py --write-notices   # after dependency changes
 python scripts/check_licenses.py --check-notices   # verify tracked inventory
 ```
 
-CI runs license checks in the same `dependency-audit` job as `pip-audit` (Ubuntu, Python 3.12).
+A pre-commit hook (`license-notices`) runs `--check-notices` automatically on every commit, blocking if `THIRD_PARTY_NOTICES.md` is stale. This prevents forgetting to update the file after dependency changes. CI runs the same check (plus `pip-audit`) in the `dependency-audit` job.
 
 **Policy:**
 
@@ -208,6 +208,7 @@ pre-commit run --hook-stage pre-push basedpyright --all-files
 | **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
+| **license-notices** | `python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
 
 **Pre-push hook:**
 
@@ -215,7 +216,7 @@ pre-commit run --hook-stage pre-push basedpyright --all-files
 |---|---|
 | **basedpyright** | Full-project type check (matches CI `typecheck` job; requires `.[dev,gui]`) |
 
-**Not in local hooks** (CI-only or manual): full pytest matrix, pip-audit, license compliance, GUI smoke, `compileall`, `python -m build`.
+**Not in local hooks** (CI-only or manual): full pytest matrix, pip-audit, license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
 
 Hooks can be skipped with `SKIP=gitleaks git commit ...`, `git commit --no-verify`, or `git push --no-verify` (CI remains the blocking gate on push/PR).
 
