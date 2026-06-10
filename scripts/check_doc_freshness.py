@@ -3,7 +3,8 @@
 
 Purpose:
     Scan tracked markdown for broken relative links, advisory stale-language
-    patterns, and checkable contradictions against FEATURE_INVENTORY.md.
+    patterns, and checkable contradictions against FEATURE_INVENTORY.md
+    (in AGENTS.md and CHANGELOG.md).
 
 Inputs:
     Repository root (auto-detected as parent of ``scripts/``, or ``--repo-root``).
@@ -86,6 +87,7 @@ def collect_markdown_files(repo_root: Path) -> list[Path]:
     candidates: list[Path] = [
         repo_root / "AGENTS.md",
         repo_root / "README.md",
+        repo_root / "CHANGELOG.md",
         repo_root / "DESIGN.md",
     ]
     dev_docs = repo_root / "dev-docs"
@@ -183,11 +185,13 @@ def tabular_line_is_false_claim(line: str) -> bool:
     return any(pattern.search(line) for pattern in TABULAR_FALSE_CLAIM_RES)
 
 
+INVENTORY_CHECK_SOURCES = ("AGENTS.md", "CHANGELOG.md")
+
+
 def find_inventory_contradictions(repo_root: Path) -> list[InventoryContradiction]:
-    """Check AGENTS.md against FEATURE_INVENTORY 'Planned, not implemented' rows."""
+    """Check AGENTS.md and CHANGELOG.md against FEATURE_INVENTORY 'Planned, not implemented' rows."""
     feature_inventory = repo_root / "dev-docs" / "FEATURE_INVENTORY.md"
-    agents_md = repo_root / "AGENTS.md"
-    if not feature_inventory.is_file() or not agents_md.is_file():
+    if not feature_inventory.is_file():
         return []
 
     not_implemented = parse_not_implemented_features(feature_inventory)
@@ -195,19 +199,23 @@ def find_inventory_contradictions(repo_root: Path) -> list[InventoryContradictio
         return []
 
     contradictions: list[InventoryContradiction] = []
-    for line_number, line in enumerate(
-        agents_md.read_text(encoding="utf-8").splitlines(),
-        start=1,
-    ):
-        if tabular_line_is_false_claim(line):
-            contradictions.append(
-                InventoryContradiction(
-                    source=Path("AGENTS.md"),
-                    line_number=line_number,
-                    feature=TABULAR_FEATURE_KEY,
-                    line=line.rstrip(),
+    for rel_source in INVENTORY_CHECK_SOURCES:
+        source_path = repo_root / rel_source
+        if not source_path.is_file():
+            continue
+        for line_number, line in enumerate(
+            source_path.read_text(encoding="utf-8").splitlines(),
+            start=1,
+        ):
+            if tabular_line_is_false_claim(line):
+                contradictions.append(
+                    InventoryContradiction(
+                        source=Path(rel_source),
+                        line_number=line_number,
+                        feature=TABULAR_FEATURE_KEY,
+                        line=line.rstrip(),
+                    )
                 )
-            )
     return contradictions
 
 

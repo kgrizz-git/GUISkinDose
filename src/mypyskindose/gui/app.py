@@ -76,8 +76,8 @@ PHANTOM_MODELS = ["human", "cylinder", "plane"]
 ORIENTATIONS = ["head_first_supine", "feet_first_supine"]
 
 # ── sleek modern/material design ─────────────────────────────────────────────
-# IMPORTANT: If you modify any CSS values below, please update dev-docs/UI_values.md
-# to keep the documentation in sync.
+# After CSS changes, regenerate dev-docs/UI_values.md:
+#   python scripts/generate_ui_values.py
 MODERN_CSS = r"""
 :root {
     --bg-primary: #0e0e0e;

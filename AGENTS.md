@@ -12,8 +12,8 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 
 - **[dev-docs/CODEBASE_OVERVIEW.md](dev-docs/CODEBASE_OVERVIEW.md)** — full architecture, data flow, all settings, classes, and functions
 - **[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md)** — exhaustive list of every feature: calculations, rendering, settings, outputs, CLI, API
-- **[dev-docs/UI_ANALYSIS.md](dev-docs/UI_ANALYSIS.md)** — current UI state and what exists today
-- **[dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md)** — comprehensive NiceGUI implementation plan (phases, screen designs)
+- **[dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
+- **[DESIGN.md](DESIGN.md)** — GUI aesthetic intent; **[dev-docs/UI_values.md](dev-docs/UI_values.md)** — auto-generated design tokens from `app.py`
 - **[dev-docs/TABULAR_RDSR_INPUT_PLAN.md](dev-docs/TABULAR_RDSR_INPUT_PLAN.md)** — plan for CSV/TSV/XLSX exported event-table inputs
 - **[dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md)** — RDSR normalization, vendor offsets, and the internal DataFrame contract
 - **[dev-docs/HARNESS_ENGINEERING.md](dev-docs/HARNESS_ENGINEERING.md)** — repository harness principles, source-of-truth map, and validation commands (includes `python scripts/check_doc_freshness.py`)

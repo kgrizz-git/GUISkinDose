@@ -1,6 +1,6 @@
 # MyPySkinDose — Codebase Overview
 
-> See also: [UI_ANALYSIS.md](UI_ANALYSIS.md) | [AGENTS.md](../AGENTS.md)
+> See also: [GUI_PLAN.md](GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
 ## What the project does
 

@@ -62,7 +62,7 @@ The current GUI uses an "Aurora-Brutalist" aesthetic characterized by sharp edge
 - [ ] Cross-browser testing (Chrome, Firefox, Safari, Edge)
 - [ ] Verify backdrop-filter support (add fallback if needed)
 - [ ] Accessibility check (contrast ratios, keyboard nav, screen reader)
-- [x] Update `dev-docs/UI_ANALYSIS.md` with new aesthetic
+- [x] Update `dev-docs/GUI_PLAN.md` §0 with new aesthetic (supersedes retired `UI_ANALYSIS.md`)
 - [ ] Add screenshots to documentation
 - [x] Update GUI_VERSION to 1.1.0
 - [ ] Final QA testing
@@ -479,7 +479,7 @@ ui.icon("menu").props("outline style={font-weight: 300}")
     - Verify screen reader compatibility
 
 14. **Documentation update**
-    - Update `dev-docs/UI_ANALYSIS.md` with new aesthetic
+    - Update `dev-docs/GUI_PLAN.md` §0 with new aesthetic
     - Add screenshots to documentation
     - Update GUI_VERSION to 1.1.0
 
@@ -491,7 +491,7 @@ ui.icon("menu").props("outline style={font-weight: 300}")
 |------|---------|----------------------|
 | `src/mypyskindose/gui/app.py` | CSS class replacements, navigation updates | ~100 |
 | `src/mypyskindose/gui/app.py` | New CSS variables and styles | ~150 (new) |
-| `dev-docs/UI_ANALYSIS.md` | Update aesthetic description | ~20 |
+| `dev-docs/GUI_PLAN.md` | Update §0 current-state aesthetic description | ~20 |
 | `dev-docs/GUI_PLAN.md` | Note aesthetic change | ~10 |
 
 ---

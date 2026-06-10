@@ -2,7 +2,34 @@
 
 > See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
-_Last updated: 2026-04-22 — compiled from direct source code reading_
+_Last updated: 2026-06-09 — compiled from direct source code reading and harness phase completion_
+
+---
+
+## 0. Harness / CI (shipped)
+
+Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) Phases 0–5 and related supply-chain work. Maintainer-visible details are in [CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`.
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Documentation catalog (`dev-docs/index.md`) | Shipped | Phase 0 |
+| Doc-freshness checker (`scripts/check_doc_freshness.py`) | Shipped | Phase 1; CI-blocking for broken links and inventory contradictions |
+| Root `CHANGELOG.md` + semver alignment | Shipped | Phase 2 |
+| `compileall` in CI | Shipped | Phase 2 |
+| GitHub Actions v4/v5 | Shipped | Phase 2 |
+| `python -m build` in CI (`package-build` job) | Shipped | Phase 3 |
+| Dependabot (pip + Actions) | Shipped | Phase 3 |
+| Package layering docs + structural tests | Shipped | Phase 4; `test_architecture_layers.py` |
+| GUI smoke tests (`tests/gui/`) | Shipped | Phase 5; NiceGUI user simulation, `gui-smoke` CI job |
+| Basedpyright strict typecheck | Shipped | CI `typecheck` job |
+| Gitleaks secret scanning | Shipped | `.github/workflows/gitleaks.yml` |
+| pip-audit dependency scan | Shipped | CI `dependency-audit` job |
+| License compliance + `THIRD_PARTY_NOTICES.md` | Shipped | `scripts/check_licenses.py`; inventory in `dev-docs/` |
+| Bandit Python SAST | Shipped | CI `bandit` job + pre-commit |
+| pre-commit hooks (ruff, gitleaks, doc-freshness, license-notices) | Shipped | basedpyright on pre-push |
+| Stale-pattern scan (advisory) | Shipped | Warnings only; release gate before semver bump (see `HARNESS_ENGINEERING.md`) |
+| Plan lifecycle (`dev-docs/exec-plans/`) | Deferred | Closed Phase 6 — not needed at current team size |
+| `references/` external library index | Partial | `dev-docs/references/` stub; expand before next major dependency review |
 
 ---
 

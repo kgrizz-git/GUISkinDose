@@ -12,6 +12,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- Harness docs: `TO_DO.md` cleanup (pending vs open questions vs completed); `FEATURE_INVENTORY.md` §0 harness/CI shipped features; GUI doc consolidation (`GUI_PLAN.md` §0 supersedes `UI_ANALYSIS.md`); `scripts/generate_ui_values.py` for auto-generated `UI_values.md`; `dev-docs/references/` stub; Phase 6 plan lifecycle closed.
+- Harness docs: `check_doc_freshness.py` now scans `CHANGELOG.md` for `FEATURE_INVENTORY` contradictions; doc-gardening cadence documented in `HARNESS_ENGINEERING.md`.
 - Harness CI: **basedpyright** `typecheck` job (strict — any type error fails); optional baseline helpers in `scripts/type_baseline.sh`; `[dev]` optional dependency.
 - Harness CI: **gitleaks** secret scanning workflow on push/PR.
 - Harness CI: **bandit** `bandit` job (Python SAST on `src/mypyskindose` + `scripts`; medium+ severity gate).

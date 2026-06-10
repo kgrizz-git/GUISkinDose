@@ -19,7 +19,7 @@ Key gaps to address:
 - ✅ Doc-freshness script and CI link check (Phase 1; stale-pattern scan is advisory)
 - ✅ Layer dependency rules documented and partially enforced in CI via structural tests (Phase 4)
 - ✅ GUI smoke tests via NiceGUI user simulation (Phase 5; `tests/gui/`, CI `gui-smoke` job)
-- ⚠️ Plans lack a standardized active/completed lifecycle (see `dev-docs/plans/`)
+- ✅ Plan lifecycle — Phase 6 **closed** (deferred; `dev-docs/index.md` + `TO_DO.md` sufficient at current team size)
 - ⚠️ Supply-chain tooling partially adopted — **done:** dependabot, gitleaks, basedpyright baseline, pip-audit; **optional:** grype/SBOM on release
 
 ---
@@ -53,13 +53,13 @@ Key gaps to address:
 - ~~No mechanical validation of doc freshness or cross-links~~ — link/inventory checks via `scripts/check_doc_freshness.py` (Phase 1); stale-pattern scan is advisory
 - ~~No `index.md` catalog of all documentation~~ — added in Phase 0 (`dev-docs/index.md`)
 - ~~`HARNESS_ENGINEERING.md` source-of-truth map omits several existing docs~~ — expanded in Phase 0
-- Plans exist in multiple places (`GUI_PLAN.md`, `TABULAR_RDSR_INPUT_PLAN.md`, `dev-docs/plans/`) but lack a standardized active/completed lifecycle
+- Plans live in topic-specific files (`GUI_PLAN.md`, `TABULAR_RDSR_INPUT_PLAN.md`, `dev-docs/plans/`) — no separate exec-plan directory (Phase 6 closed 2026-06-09)
 
 **Recommendations:**
-1. Expand the source-of-truth map in `HARNESS_ENGINEERING.md` (Phase 0)
-2. Add `dev-docs/index.md` as a catalog of all documentation
-3. Add CI job to validate documentation structure (after doc-freshness script exists)
-4. Optionally add `dev-docs/exec-plans/` with `active/` and `completed/` subdirectories — reconcile with existing `dev-docs/plans/` rather than creating a third plan home
+1. Expand the source-of-truth map in `HARNESS_ENGINEERING.md` (Phase 0) — done
+2. Add `dev-docs/index.md` as a catalog of all documentation — done
+3. Add CI job to validate documentation structure — done (`check_doc_freshness.py`)
+4. ~~Optionally add `dev-docs/exec-plans/`~~ — **closed:** not needed at current team size; use `dev-docs/index.md`, topic plans, and `TO_DO.md`
 
 ---
 
@@ -363,22 +363,20 @@ Execute in order. Each phase should update `HARNESS_ENGINEERING.md` known gaps w
 
 ---
 
-### Phase 6 — Plan lifecycle (optional, defer)
+### Phase 6 — Plan lifecycle — CLOSED (2026-06-09)
 
-**Objective:** Standardize long-running plans without duplicating `dev-docs/plans/`.
+**Decision:** Not needed at current team size. Topic-specific plans (`GUI_PLAN.md`, `TABULAR_RDSR_INPUT_PLAN.md`, `dev-docs/plans/`) plus `dev-docs/index.md` and `TO_DO.md` are the plan homes. No `dev-docs/exec-plans/` directory.
 
-**Tasks:**
-- [ ] Plan template in `dev-docs/exec-plans/`
-- [ ] Migrate or link existing plans
-- [ ] `tech-debt-tracker.md` for durable items from `TO_DO.md`
-
-**Defer if:** Phase 0–1 index + TO_DO linking is sufficient for current team size.
+**Tasks (not proceeding):**
+- ~~Plan template in `dev-docs/exec-plans/`~~
+- ~~Migrate or link existing plans~~
+- ~~`tech-debt-tracker.md`~~ — completed harness items live in `TO_DO.md` § Completed instead
 
 ---
 
-### Phase 7 — Low priority (defer)
+### Phase 7 — Low priority (in progress)
 
-- `references/` or `LLMS.txt` for pydicom, NiceGUI, Plotly
+- `dev-docs/references/` stub for pydicom, NiceGUI, Plotly — expand before next major dependency review
 - Recurring doc-gardening agent automation
 - Full GUI observability stack
 - Per-golden-rule custom linters (start with doc-freshness + import contracts only)
@@ -436,5 +434,5 @@ Cross-reference `dev-docs/TO_DO.md`:
 
 ---
 
-_Last updated: 2026-06-06 — complements `dev-docs/HARNESS_ENGINEERING.md`._
+_Last updated: 2026-06-09 — complements `dev-docs/HARNESS_ENGINEERING.md`._
 

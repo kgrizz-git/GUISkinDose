@@ -125,3 +125,21 @@ def test_inventory_contradiction_ignores_planned_language(tmp_path: Path):
     )
 
     assert find_inventory_contradictions(repo_root) == []
+
+
+def test_inventory_contradiction_detects_false_tabular_claim_in_changelog(tmp_path: Path):
+    repo_root = tmp_path
+    dev_docs = repo_root / "dev-docs"
+    dev_docs.mkdir()
+    (dev_docs / "FEATURE_INVENTORY.md").write_text(
+        "| CSV/TSV/XLSX event-table input | Planned, not implemented | notes |\n",
+        encoding="utf-8",
+    )
+    (repo_root / "CHANGELOG.md").write_text(
+        "- Tabular CSV input is now fully supported for all vendors.\n",
+        encoding="utf-8",
+    )
+
+    contradictions = find_inventory_contradictions(repo_root)
+    assert len(contradictions) == 1
+    assert contradictions[0].source == Path("CHANGELOG.md")

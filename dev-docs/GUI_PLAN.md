@@ -1,8 +1,66 @@
 # GUI Plan — MyPySkinDose
 
-> See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [UI_ANALYSIS.md](UI_ANALYSIS.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [AGENTS.md](../AGENTS.md)
+> See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [DESIGN.md](../DESIGN.md) | [UI_values.md](UI_values.md) | [AGENTS.md](../AGENTS.md)
 
-_Last updated: 2026-04-22_
+_Last updated: 2026-06-09_
+
+**Documentation roles:** [DESIGN.md](../DESIGN.md) = aesthetic intent; [UI_values.md](UI_values.md) = auto-generated tokens from `app.py`; this file = current state + implementation plan (§0 supersedes the retired `UI_ANALYSIS.md`).
+
+---
+
+## 0. Current state
+
+What exists in the repository today (supersedes the retired `UI_ANALYSIS.md`).
+
+### 0.1 Interactive Plotly plots (notebook / HTML)
+
+The calculation engine renders interactive [Plotly](https://plotly.com/python/) 3D plots in Jupyter or as standalone HTML in `PlotOutputs/`.
+
+| Mode | Plot content |
+|------|-------------|
+| `plot_setup` | Phantom + table + pad + beam in zero-angle starting position |
+| `plot_event` | Full 3D geometry for one irradiation event |
+| `plot_procedure` | All events with a slider to step through them |
+| `calculate_dose` | 3D dose map coloured by accumulated skin dose |
+
+Interactivity: rotate/zoom/pan, hover dose values, procedure slider, dark/light mode (`settings.plot.dark_mode`), colorscale for dose map.
+
+### 0.2 Jupyter notebook
+
+`docs/source/getting_started/getting_started.ipynb` — step-by-step walkthrough (settings, phantom, RDSR load, geometry, dose calculation). Recommended starting point for Python users.
+
+### 0.3 CLI
+
+```bash
+python -m mypyskindose --mode headless|gui [--file-path PATH] [--settings PATH] [--native]
+```
+
+`--mode gui` launches the NiceGUI app; `--native` opens a desktop window via `pywebview`.
+
+### 0.4 NiceGUI web application (implemented)
+
+Location: `src/mypyskindose/gui/app.py`. Default URL: http://localhost:8765.
+
+| Aspect | Detail |
+|--------|--------|
+| Tabs | Upload, Data Table, Settings, Geometry, Calculate, Results, Export |
+| Input | RDSR drag-and-drop, example file loader, normalized/raw table toggle |
+| Settings | Phantom, physics, and visual settings form |
+| Geometry | Setup / event / procedure preview |
+| Calculation | Progress feedback, PSD / air kerma / event metrics |
+| Results | Interactive 3D dose map, correction factors table |
+| Export | JSON, HTML, PNG (PDF/Word not yet implemented) |
+| Aesthetic | Sleek modern / glassmorphism per `MODERN_CSS`; tokens in [UI_values.md](UI_values.md) |
+
+### 0.5 Rich terminal output
+
+`settings.print_parameters()` prints a colour-formatted settings summary via [Rich](https://github.com/Textualize/rich).
+
+### 0.6 Remaining gaps
+
+**End users:** no side-by-side procedure comparison; no PDF/Word report export; limited in-app help for settings and vendor coordinates.
+
+**Developers:** settings spread across JSON + dataclasses; validation errors surface deep in stack; new vendors require manual `normalization_settings.json` edits; `app.py` is monolithic (~1200 lines).
 
 ---
 

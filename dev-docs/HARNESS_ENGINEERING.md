@@ -27,9 +27,11 @@ Agents working in this repository should be able to answer three questions quick
 | Feature inventory and known missing features | `dev-docs/FEATURE_INVENTORY.md` |
 | RDSR normalization, offsets, DataFrame contract | `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` |
 | Vendor coordinate systems | `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` |
-| GUI implementation status and plan | `dev-docs/GUI_PLAN.md` |
-| GUI current-state analysis | `dev-docs/UI_ANALYSIS.md` |
+| GUI current state + implementation plan | `dev-docs/GUI_PLAN.md` (§0 current state) |
+| GUI design tokens (auto-generated) | `dev-docs/UI_values.md` via `scripts/generate_ui_values.py` |
 | GUI aesthetic design spec (root) | `DESIGN.md` |
+| Third-party license inventory | `dev-docs/THIRD_PARTY_NOTICES.md` (generated; do not move to repo root) |
+| External library reference links | `dev-docs/references/` |
 | In-app positioning help plan | `dev-docs/POSITIONING_HELP_PLAN.md` |
 | Tabular CSV/TSV/XLSX input plan | `dev-docs/TABULAR_RDSR_INPUT_PLAN.md` |
 | Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
@@ -90,12 +92,23 @@ Run the harness doc-freshness script before feature or status PRs:
 python scripts/check_doc_freshness.py
 ```
 
-The script scans `AGENTS.md`, `README.md`, optional `DESIGN.md`, and all markdown under `dev-docs/`:
+The script scans `AGENTS.md`, `README.md`, `CHANGELOG.md`, optional `DESIGN.md`, and all markdown under `dev-docs/`:
 
-- **CI-blocking:** broken relative markdown links; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. tabular input marked planned but claimed implemented in `AGENTS.md`).
+- **CI-blocking:** broken relative markdown links; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. tabular input marked planned but claimed implemented in `AGENTS.md` or `CHANGELOG.md`).
 - **Advisory only:** stale-pattern hits (`not implemented`, `not wired`, `planned`) — printed as warnings; review and update text that is no longer true.
 
-Maintainer cadence: run locally before feature/status changes; CI runs the same check on Ubuntu for every push/PR.
+### Doc-gardening cadence
+
+| When | Action |
+|------|--------|
+| Every feature/status PR | Run `python scripts/check_doc_freshness.py`; update `FEATURE_INVENTORY.md` if behavior changed |
+| After GUI CSS changes | Run `python scripts/generate_ui_values.py` (or `--check` in CI later) |
+| After dependency changes | Run `python scripts/check_licenses.py --write-notices` and commit `dev-docs/THIRD_PARTY_NOTICES.md` |
+| **Before each release** | Re-run full doc-freshness; resolve stale-pattern warnings; bump `pyproject.toml` and `CHANGELOG.md`; verify harness rows in `FEATURE_INVENTORY.md` §0 match `[Unreleased]` |
+
+**Release gate (target):** stale-pattern advisory warnings should become CI-blocking in the release workflow before the semver tag is cut. Until wired, maintainers clear warnings manually as part of release prep.
+
+CI runs doc-freshness on Ubuntu for every push/PR (links and inventory contradictions only).
 
 ### GUI smoke tests (optional `[gui]` extra)
 
