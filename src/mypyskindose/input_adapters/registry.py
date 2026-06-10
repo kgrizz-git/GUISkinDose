@@ -9,9 +9,11 @@ import pandas as pd
 
 from mypyskindose.input_adapters import generic_rdsr as generic_rdsr_adapter
 from mypyskindose.input_adapters import normalized as normalized_adapter
+from mypyskindose.input_adapters import radimetrics as radimetrics_adapter
 from mypyskindose.input_adapters.column_mapper import (
     GENERIC_RDSR_COLUMN_NAMES,
     NORMALIZED_COLUMN_NAMES,
+    RADIMETRICS_COLUMN_NAMES,
     detect_header_row,
 )
 from mypyskindose.input_adapters.models import InputAdapterResult
@@ -21,13 +23,14 @@ if TYPE_CHECKING:
     from mypyskindose.settings import PyskindoseSettings
 
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
-_SUPPORTED_SCHEMAS = ("normalized", "generic_rdsr_like", "auto")
+_SUPPORTED_SCHEMAS = ("normalized", "generic_rdsr_like", "radimetrics", "auto")
 _AUTO_MIN_MARGIN = 0.20  # required score gap between best and runner-up
 
 # Ordered list of (schema_name, known_names) used for auto-detection scoring.
 _SCHEMA_KNOWN_NAMES: list[tuple[str, frozenset[str]]] = [
     ("normalized", NORMALIZED_COLUMN_NAMES),
     ("generic_rdsr_like", GENERIC_RDSR_COLUMN_NAMES),
+    ("radimetrics", RADIMETRICS_COLUMN_NAMES),
 ]
 
 
@@ -127,6 +130,13 @@ def read_and_normalize_input(
                 "(needed by rdsr_normalizer for manufacturer/model lookup)."
             )
         result = generic_rdsr_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+    elif schema == "radimetrics":
+        if settings is None:
+            raise ValueError(
+                "settings is required for radimetrics schema "
+                "(needed by rdsr_normalizer for manufacturer/model lookup)."
+            )
+        result = radimetrics_adapter.adapt(loaded, original_filename=path.name, settings=settings)
     else:
         raise ValueError(
             f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."

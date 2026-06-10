@@ -368,3 +368,105 @@ class TestSchemaAutoDetect:
         p.write_text("col_a,col_b,col_c\n1,2,3\n4,5,6\n", encoding="utf-8")
         with pytest.raises(ValueError, match="auto-detection"):
             read_and_normalize_input(p, input_schema="auto")
+
+
+# ── radimetrics adapter ────────────────────────────────────────────────────────
+
+RADIMETRICS_FIXTURE = FIXTURES / "radimetrics_events.csv"
+
+
+class TestRadimetricsAdapter:
+    def test_csv_round_trip(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_FIXTURE,
+            input_schema="radimetrics",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "radimetrics"
+        assert len(result.normalized_data) == 5
+
+    def test_normalized_columns_present(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_FIXTURE,
+            input_schema="radimetrics",
+            settings=_default_settings(),
+        )
+        expected = {"model", "DSD", "DSI", "DID", "kVp", "K_IRP", "Ap1", "Ap2"}
+        assert expected.issubset(set(result.normalized_data.columns))
+
+    def test_unit_conversions_applied(self):
+        """DoseRP should be in Gy after /1000 conversion from mGy."""
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_FIXTURE,
+            input_schema="radimetrics",
+            settings=_default_settings(),
+        )
+        # Source: 0.030 mGy → 3e-05 Gy in K_IRP
+        assert result.provenance.unit_conversions.get("DoseRP_Gy") == "mGy → Gy"
+        assert result.provenance.unit_conversions.get("CollimatedFieldArea_m2") == "cm² → m²"
+
+    def test_kvp_numeric_and_positive(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_FIXTURE,
+            input_schema="radimetrics",
+            settings=_default_settings(),
+        )
+        assert pd.api.types.is_numeric_dtype(result.normalized_data["kVp"])
+        assert (result.normalized_data["kVp"] > 0).all()
+
+    def test_provenance_populated(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_FIXTURE,
+            input_schema="radimetrics",
+            settings=_default_settings(),
+        )
+        prov = result.provenance
+        assert prov.schema_name == "radimetrics"
+        assert prov.header_row_index == 0
+        assert "KVP_kV" in prov.column_map.values()
+        assert "DoseRP_Gy" in prov.column_map.values()
+
+    def test_missing_settings_raises(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        with pytest.raises(ValueError, match="settings is required"):
+            read_and_normalize_input(RADIMETRICS_FIXTURE, input_schema="radimetrics")
+
+    def test_missing_required_column_raises(self, tmp_path):
+        from mypyskindose.input_adapters import radimetrics as adapter
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        # CSV missing kVp kV column
+        csv_text = (
+            "Manufacturer,Device,Source To Detector Distance (RF) [mm],"
+            "Source To Isocenter Distance (RF) [mm],"
+            "Table Longitudinal Position [mm],Table Lateral Position [mm],"
+            "Table Height Position [mm],Primary Angle (RF) [°],Secondary Angle (RF) [°],"
+            "Reference Point Dose (Total) mGy\n"
+            "Siemens,AXIOM-Artis,1198.0,785.0,37.8,40.6,294.1,-0.1,-1.1,0.030\n"
+        )
+        p = tmp_path / "bad.csv"
+        p.write_text(csv_text, encoding="utf-8")
+        loaded = read_csv(p)
+        with pytest.raises(ValueError, match="Missing required"):
+            adapter.adapt(loaded, original_filename="bad.csv", settings=_default_settings())
+
+    def test_auto_detects_radimetrics(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_FIXTURE,
+            input_schema="auto",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "radimetrics"

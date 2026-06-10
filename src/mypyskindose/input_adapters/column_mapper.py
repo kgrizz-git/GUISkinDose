@@ -195,6 +195,65 @@ GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
 }
 
 
+# ── Radimetrics schema (Phase 3) ──────────────────────────────────────────────
+#
+# Lowercase versions of key Radimetrics export column headers.
+# Used by detect_header_row() for score-based header location.
+# Source: dhen2714/PySkinDose RADIMETRICS2PSD dict (dev-docs/references/).
+RADIMETRICS_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "manufacturer",
+        "device",
+        "kvp kv",
+        "dap (total) gy-cm2",
+        "reference point dose (total) mgy",
+        "primary angle (rf) [°]",
+        "secondary angle (rf) [°]",
+        "collimated field area (rf) [cm²]",
+        "source to detector distance (rf) [mm]",
+        "source to isocenter distance (rf) [mm]",
+        "table longitudinal position [mm]",
+        "table lateral position [mm]",
+        "table height position [mm]",
+    }
+)
+
+# Maps rdsr_parser() column name → Radimetrics header patterns (lowercase).
+# Keys are the exact names rdsr_normalizer() expects.
+RADIMETRICS_PATTERNS: dict[str, list[str]] = {
+    "Manufacturer": ["manufacturer", "vendor"],
+    "ManufacturerModelName": ["device", "device model", "equipment name"],
+    "AcquisitionPlane": ["acquisition plane code", "acquisition plane"],
+    "IrradiationEventType": ["irradiation event type"],
+    "PositionerPrimaryAngle_deg": ["primary angle (rf)", "primary angle"],
+    "PositionerSecondaryAngle_deg": ["secondary angle (rf)", "secondary angle"],
+    "KVP_kV": ["kvp kv", "kvp"],
+    "DoseRP_Gy": ["reference point dose (total) mgy", "reference point dose"],
+    "DoseAreaProduct_Gym2": ["dap (total) gy-cm2", "dap (total)", "dose area product"],
+    "CollimatedFieldArea_m2": ["collimated field area (rf) [cm²]", "collimated field area"],
+    "DistanceSourcetoDetector_mm": [
+        "source to detector distance (rf) [mm]",
+        "source to detector distance",
+    ],
+    "DistanceSourcetoIsocenter_mm": [
+        "source to isocenter distance (rf) [mm]",
+        "source to isocenter distance",
+    ],
+    "TableLongitudinalPosition_mm": ["table longitudinal position [mm]", "table longitudinal position"],
+    "TableLateralPosition_mm": ["table lateral position [mm]", "table lateral position"],
+    "TableHeightPosition_mm": ["table height position [mm]", "table height position"],
+    "XRayFilterMaterial": ["xray filter material codes", "filter material"],
+    "XRayFilterThicknessMinimum_mm": ["xray filter min thicknesses", "filter thickness minimum"],
+    "XRayFilterThicknessMaximum_mm": ["xray filter max thicknesses", "filter thickness maximum"],
+    "Exposure_uAs": ["mas mas", "mas"],
+    "XRayTubeCurrent_mA": ["ma (rf)", "tube current"],
+    "PulseRate_{pulse}/s": ["pulse rate (rf)", "pulse rate"],
+    "PulseWidth_ms": ["pulse width (rf)", "pulse width"],
+    "FocalSpotSize_mm": ["focal spots (rf)", "focal spot"],
+    "TargetRegion": ["target region (rf)", "target region"],
+}
+
+
 # ── Vendor-schema pattern dictionary (Phase 2+) ────────────────────────────────
 #
 # Maps normalized internal variable name → list of lowercase patterns.

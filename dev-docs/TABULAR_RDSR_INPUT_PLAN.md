@@ -385,7 +385,7 @@ Flags to add:
 - [x] Add coordinate correction options in the import preview step: _(shipped 2026-06-10)_
   - [x] **Lat/lon swap toggle** — swaps `Tx ↔ Tz` on the normalized DataFrame (post-normalization). ✓
   - [ ] **Skip-manufacturer-transforms toggle** — bypass `rdsr_normalizer()` coordinate corrections. _Not yet implemented._
-- [ ] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports.
+- [x] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports. _(shipped 2026-06-10; JSON gets `tabular_input` key; HTML gets `<!-- mypyskindose:tabular_input ... -->` comment in `<head>`)_
 - [x] Show schema/source type in the Data Table tab header. _(shipped 2026-06-10)_
 
 ---
@@ -481,18 +481,19 @@ Foundational plumbing plus the simplest schema as a walking skeleton (see Phase 
 - [x] Extend `registry.py` routing for `generic_rdsr_like` schema.
 - [x] Enable `--input-schema auto` once a second schema exists (with margin/threshold per the auto-detection rules).
 
-### Phase 3 — Radimetrics adapter
+### Phase 3 — Radimetrics adapter _(shipped 2026-06-10)_
 
-- [ ] Study `dhen2714/PySkinDose` `radimetrics.py`; document differences from our column-mapping approach.
-- [ ] Add Radimetrics-specific `COLUMN_PATTERNS` entries.
-- [ ] Create `radimetrics.py` adapter:
-  - [ ] Unit conversions: reference dose mGy→Gy, field area cm²→m², exposure mAs→µAs.
-  - [ ] Document each conversion with source unit and target unit in code.
-  - [ ] Limit to validated models only; unknown models produce an explicit warning, not a silent fallback.
-- [ ] Add fixture `radimetrics_axiom_artis.csv`.
-- [ ] Add tests: column map, unit conversions, unknown-model error.
+- [x] Study `dhen2714/PySkinDose` `radimetrics.py`; findings in `dev-docs/references/` and `COORD_TRANSFORM_COMPARISON.md`.
+- [x] Add `RADIMETRICS_COLUMN_NAMES` and `RADIMETRICS_PATTERNS` to `column_mapper.py`.
+- [x] Create `radimetrics.py` adapter:
+  - [x] Unit conversions: reference dose mGy→Gy, field area cm²→m², exposure mAs→µAs.
+  - [x] Each conversion documented with source/target unit in `_UNIT_CONVERSIONS`.
+  - [x] Unknown models produce an explicit warning (non-blocking); validated set is AXIOM-Artis family.
+- [x] Add fixture `radimetrics_events.csv` (synthetic Siemens AXIOM-Artis, 5 events).
+- [x] Add tests: column map, unit conversions, missing-column error, auto-detection, round-trip. 46 tests pass.
 - [ ] **Philips coordinate normalization** — table height sign/origin correction: see TO_DO.md.
-- [ ] Update `FEATURE_INVENTORY.md`, `AGENTS.md`, `CHANGELOG.md`.
+- [x] Wired into `registry.py` routing and `_SCHEMA_KNOWN_NAMES` auto-detection.
+- [ ] Update `FEATURE_INVENTORY.md`, `AGENTS.md`, `CHANGELOG.md`. _(pending — do before next release)_
 
 ### Phase 4 — DoseTrack adapter
 

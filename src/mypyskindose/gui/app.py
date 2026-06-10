@@ -414,7 +414,12 @@ def index():
 
                     with ui.row().classes("w-full items-end gap-4 q-mb-sm"):
                         ui.select(
-                            options={"auto": "Auto-detect schema", "normalized": "Normalized", "generic_rdsr_like": "Raw RDSR-like"},
+                            options={
+                                "auto": "Auto-detect schema",
+                                "normalized": "Normalized",
+                                "generic_rdsr_like": "Raw RDSR-like",
+                                "radimetrics": "Radimetrics CSV",
+                            },
                             label="Input schema (tabular files only)",
                             value=state.input_schema,
                         ).bind_value(state, "input_schema").classes("grow")
@@ -1085,18 +1090,36 @@ def index():
                         ui.label("Static capture of the current dose map view.").classes("text-xs text-grey-5 q-mb-md")
                         ui.button("Download PNG", icon="image", on_click=lambda: download_png()).classes("full-width modern-btn icon-outlined")
 
+                def _build_export_payload() -> dict:
+                    """Return state.output enriched with tabular provenance when applicable."""
+                    payload = dict(state.output or {})
+                    if state.import_provenance is not None:
+                        prov = state.import_provenance
+                        payload["tabular_input"] = {
+                            "source_file": state.file_name,
+                            "schema": prov.schema_name,
+                            "encoding": prov.detected_encoding,
+                            "delimiter": prov.detected_delimiter,
+                            "header_row_index": prov.header_row_index,
+                            "column_map": prov.column_map,
+                            "lat_lon_swapped": state.swap_lat_lon,
+                            "warnings": list(state.import_warnings),
+                        }
+                    return payload
+
                 def download_json():
                     if not state.calculation_done or state.output is None:
                         ui.notify("No data to export", color="warning")
                         return
                     default_name = f"psd_results_{state.file_name or 'data'}.json"
                     save_path = _get_save_path(default_name, "json")
+                    payload = _build_export_payload()
                     if save_path:
                         with open(save_path, "w") as f:
-                            json.dump(state.output, f, indent=4)
+                            json.dump(payload, f, indent=4)
                         ui.notify(f"Saved to {Path(save_path).name}", color="positive")
                     else:
-                        content = json.dumps(state.output, indent=4)
+                        content = json.dumps(payload, indent=4)
                         ui.download(content.encode(), default_name)
 
                 async def download_html():
@@ -1109,6 +1132,23 @@ def index():
                     if not content:
                         ui.notify("Failed to generate HTML", type="negative")
                         return
+                    if state.import_provenance is not None:
+                        prov = state.import_provenance
+                        meta = json.dumps({
+                            "source_file": state.file_name,
+                            "schema": prov.schema_name,
+                            "encoding": prov.detected_encoding,
+                            "delimiter": prov.detected_delimiter,
+                            "header_row_index": prov.header_row_index,
+                            "column_map": prov.column_map,
+                            "lat_lon_swapped": state.swap_lat_lon,
+                            "warnings": list(state.import_warnings),
+                        }, indent=2)
+                        content = content.replace(
+                            b"<head>",
+                            f"<head>\n<!-- mypyskindose:tabular_input {meta} -->".encode(),
+                            1,
+                        )
                     if save_path:
                         with open(save_path, "wb") as f:
                             f.write(content)
