@@ -19,6 +19,7 @@ from mypyskindose.input_adapters.column_mapper import (
     check_duplicate_mappings,
     detect_header_row,
     map_columns,
+    unmapped_columns_warning,
 )
 from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
@@ -97,6 +98,9 @@ def adapt(
     # 3. Map source column names → rdsr_parser column names
     column_map, mapping_warnings = map_columns(raw_headers, GENERIC_RDSR_PATTERNS)
     warnings.extend(mapping_warnings)
+    unmatched_msg = unmapped_columns_warning(raw_headers, column_map)
+    if unmatched_msg:
+        warnings.append(unmatched_msg)
 
     dup_errors = check_duplicate_mappings(column_map)
     if dup_errors:

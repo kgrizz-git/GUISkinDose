@@ -113,6 +113,7 @@ GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
         "manufacturer model name",
         "device model",
         "model name",
+        "device",           # Radimetrics and some custom exports use bare "Device"
     ],
     "IrradiationEventType": [
         "irradiationeventtype",
@@ -123,11 +124,13 @@ GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
     "DistanceSourcetoDetector_mm": [
         "distancesourcetodetector mm",
         "distance source to detector",
+        "source to detector distance",  # alternate word order (some custom exports)
         "source detector distance",
     ],
     "DistanceSourcetoIsocenter_mm": [
         "distancesourcetoisocenter mm",
         "distance source to isocenter",
+        "source to isocenter distance",  # alternate word order
         "source isocenter distance",
     ],
     "FinalDistanceSourcetoDetector_mm": [
@@ -180,7 +183,9 @@ GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
         "doserp gy",
         "dose rp gy",
         "reference point dose gy",
+        "reference point dose",     # without unit suffix (some custom exports)
         "air kerma gy",
+        "air kerma",
     ],
     "CollimatedFieldArea_m2": [
         "collimatedfieldarea m2",
@@ -227,16 +232,29 @@ RADIMETRICS_PATTERNS: dict[str, list[str]] = {
     "IrradiationEventType": ["irradiation event type"],
     "PositionerPrimaryAngle_deg": ["primary angle (rf)", "primary angle"],
     "PositionerSecondaryAngle_deg": ["secondary angle (rf)", "secondary angle"],
-    "KVP_kV": ["kvp kv", "kvp"],
-    "DoseRP_Gy": ["reference point dose (total) mgy", "reference point dose"],
-    "DoseAreaProduct_Gym2": ["dap (total) gy-cm2", "dap (total)", "dose area product"],
-    "CollimatedFieldArea_m2": ["collimated field area (rf) [cm²]", "collimated field area"],
+    # "kvp kv" only — bare "kvp" would also match per-plane "kVp (A) kV", "kVp (B) kV"
+    "KVP_kV": ["kvp kv"],
+    # "(total)" required — prevents matching per-plane "Reference Point Dose (A/B) mGy"
+    "DoseRP_Gy": [
+        "reference point dose (total) mgy",
+        "reference point dose (total)",
+        "air kerma (total)",
+    ],
+    # DoseAreaProduct_Gym2 intentionally omitted — both "DAP (Total)" and "Fluoro DAP (Total)"
+    # match the same pattern, causing a duplicate mapping error. Not required for dose calc.
+    "CollimatedFieldArea_m2": [
+        "collimated field area (rf) [cm²]",
+        "collimated field area (rf)",
+        "collimated field area",
+    ],
     "DistanceSourcetoDetector_mm": [
         "source to detector distance (rf) [mm]",
+        "source to detector distance (rf)",
         "source to detector distance",
     ],
     "DistanceSourcetoIsocenter_mm": [
         "source to isocenter distance (rf) [mm]",
+        "source to isocenter distance (rf)",
         "source to isocenter distance",
     ],
     "TableLongitudinalPosition_mm": ["table longitudinal position [mm]", "table longitudinal position"],
@@ -245,7 +263,8 @@ RADIMETRICS_PATTERNS: dict[str, list[str]] = {
     "XRayFilterMaterial": ["xray filter material codes", "filter material"],
     "XRayFilterThicknessMinimum_mm": ["xray filter min thicknesses", "filter thickness minimum"],
     "XRayFilterThicknessMaximum_mm": ["xray filter max thicknesses", "filter thickness maximum"],
-    "Exposure_uAs": ["mas mas", "mas"],
+    # "mas mas" only — bare "mas" matches per-plane "mAs (A) mAs" and "Max mAs mAs" variants
+    "Exposure_uAs": ["mas mas"],
     "XRayTubeCurrent_mA": ["ma (rf)", "tube current"],
     "PulseRate_{pulse}/s": ["pulse rate (rf)", "pulse rate"],
     "PulseWidth_ms": ["pulse width (rf)", "pulse width"],
@@ -283,8 +302,11 @@ COLUMN_PATTERNS: dict[str, list[str]] = {
 
 
 def _score_row(row: pd.Series, known_names: frozenset[str]) -> float:
-    """Fraction of non-empty cells whose lowercased, stripped value is in known_names."""
-    cells = [str(c).strip().lower() for c in row if pd.notna(c) and str(c).strip()]
+    """Fraction of non-empty cells whose normalized value is in known_names.
+
+    Uses _normalize_str so underscore/hyphen variants match space-separated names.
+    """
+    cells = [_normalize_str(str(c)) for c in row if pd.notna(c) and str(c).strip()]
     if not cells:
         return 0.0
     return sum(1 for c in cells if c in known_names) / len(cells)
@@ -294,12 +316,18 @@ def detect_header_row(
     raw_df: pd.DataFrame,
     known_names: frozenset[str],
     n: int = 10,
-    min_score: float = 0.25,
+    min_score: float = 0.05,
 ) -> int:
     """Return the index of the header row in *raw_df* (all rows, header=None).
 
     Scans the first *n* rows and picks the one whose cells best match *known_names*.
-    Raises ValueError if no row clears *min_score*.
+    The default min_score of 0.05 is intentionally low — it is only a sanity check
+    that the best candidate row has at least a few recognizable column names.  Do
+    NOT use this threshold as a validation gate: file-wide column coverage is
+    irrelevant when the export has many columns we don't need.  Adapter-level
+    validation should check that required columns are present *after* mapping.
+
+    Raises ValueError only if no row in the first *n* rows clears *min_score*.
     """
     best_idx = -1
     best_score = 0.0
@@ -329,14 +357,20 @@ def _normalize_str(s: str) -> str:
 
 
 def _match_score(header_norm: str, pattern: str) -> int:
-    """Return len(pattern) if *pattern* appears in *header_norm* with word boundaries, else 0.
+    """Return a coverage score if *pattern* appears in *header_norm* with word boundaries.
+
+    Score = 2 * len(pattern) - len(header_norm).  This penalises matching a short
+    pattern inside a much longer header, so "mAs mAs" scores higher than
+    "Max mAs mAs" for the pattern "mas mas".  Any match yields at least 1.
 
     Word boundary = not preceded or followed by an alphanumeric character.
     This prevents "dose a" from matching inside "dose area product".
     """
     escaped = re.escape(pattern)
     rx = r"(?<![a-z0-9])" + escaped + r"(?![a-z0-9])"
-    return len(pattern) if re.search(rx, header_norm) else 0
+    if not re.search(rx, header_norm):
+        return 0
+    return max(1, 2 * len(pattern) - len(header_norm))
 
 
 def map_columns(
@@ -345,14 +379,20 @@ def map_columns(
 ) -> tuple[dict[str, str], list[str]]:
     """Map source column headers to normalized variable names using best-match.
 
-    For each source column the variable whose matched pattern is longest wins.
-    If two variables tie with equal-length patterns, the column is skipped with
-    a warning rather than mapping ambiguously.
+    For each source column the variable whose matched pattern scores highest wins
+    (score = 2*len(pattern) - len(header), favouring full-header matches).
+    If two variables tie, the column is skipped with a warning.
+
+    When multiple source columns map to the same target variable, the one with
+    the highest coverage score is kept and the rest are dropped with a warning.
+    This handles exports that include per-plane variants (e.g. "mAs mAs" vs
+    "Max mAs mAs") alongside the total-column we actually want.
 
     Returns (column_map, warnings).
     column_map: {source_col → normalized_var}
     """
-    column_map: dict[str, str] = {}
+    # Pass 1: find the best variable for each source column, tracking score.
+    raw_map: dict[str, tuple[str, int]] = {}  # src_col → (best_var, best_score)
     warnings: list[str] = []
 
     for header in headers:
@@ -377,7 +417,28 @@ def map_columns(
                 "skipping — pass an explicit column override to resolve."
             )
         elif best_var is not None:
-            column_map[header] = best_var
+            raw_map[header] = (best_var, best_score)
+
+    # Pass 2: resolve duplicates — multiple source columns → same target variable.
+    # Keep the one with the highest score; drop the rest with a warning.
+    target_to_candidates: dict[str, list[tuple[str, int]]] = {}
+    for src, (tgt, score) in raw_map.items():
+        target_to_candidates.setdefault(tgt, []).append((src, score))
+
+    column_map: dict[str, str] = {}
+    for tgt, candidates in target_to_candidates.items():
+        if len(candidates) == 1:
+            column_map[candidates[0][0]] = tgt
+        else:
+            sorted_cands = sorted(candidates, key=lambda x: (-x[1], len(x[0])))
+            winner, _ = sorted_cands[0]
+            losers = [c[0] for c in sorted_cands[1:]]
+            column_map[winner] = tgt
+            warnings.append(
+                f"Multiple source columns mapped to {tgt!r}: "
+                f"kept {winner!r} (best coverage), dropped {losers}. "
+                "If this is wrong, pass an explicit column override."
+            )
 
     return column_map, warnings
 
@@ -396,3 +457,18 @@ def check_duplicate_mappings(column_map: dict[str, str]) -> list[str]:
                 "Pass an explicit column override to resolve."
             )
     return errors
+
+
+def unmapped_columns_warning(headers: list[str], column_map: dict[str, str]) -> str | None:
+    """Return a warning string if any source columns could not be mapped, else None.
+
+    This is informational — unmapped columns are not an error unless they contain
+    a required variable.  The caller is responsible for the required-column check.
+    """
+    unmapped = [h for h in headers if h not in column_map]
+    if not unmapped:
+        return None
+    return (
+        f"{len(unmapped)} of {len(headers)} source column(s) were not mapped to any known variable "
+        f"and will be ignored: {unmapped[:10]}{'...' if len(unmapped) > 10 else ''}."
+    )

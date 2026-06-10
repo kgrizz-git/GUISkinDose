@@ -64,8 +64,11 @@ def _detect_schema(loaded: _RawLoad) -> str:
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     best_name, best_score = sorted_scores[0]
 
-    if len(sorted_scores) > 1:
-        _, runner_up_score = sorted_scores[1]
+    # Margin check only applies when ≥2 schemas scored above zero.
+    # If only one schema scored, it wins unambiguously regardless of the absolute score.
+    non_zero = [(n, s) for n, s in sorted_scores if s > 0.0]
+    if len(non_zero) > 1:
+        _, runner_up_score = non_zero[1]
         if best_score - runner_up_score < _AUTO_MIN_MARGIN:
             raise ValueError(
                 f"Schema auto-detection is ambiguous (scores: {scores}). "

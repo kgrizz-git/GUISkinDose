@@ -21,6 +21,7 @@ from mypyskindose.input_adapters.column_mapper import (
     check_duplicate_mappings,
     detect_header_row,
     map_columns,
+    unmapped_columns_warning,
 )
 from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
@@ -102,6 +103,9 @@ def adapt(
     # 3. Map source column names → rdsr_parser column names
     column_map, mapping_warnings = map_columns(raw_headers, RADIMETRICS_PATTERNS)
     warnings.extend(mapping_warnings)
+    unmatched_msg = unmapped_columns_warning(raw_headers, column_map)
+    if unmatched_msg:
+        warnings.append(unmatched_msg)
 
     dup_errors = check_duplicate_mappings(column_map)
     if dup_errors:
@@ -139,8 +143,9 @@ def adapt(
                 data_df[col] = data_df[col] * factor
             unit_conversions[col] = description
 
-    # 7. Warn on unknown models (non-blocking)
+    # 7. Warn on unknown models and GE lat/lon swap (non-blocking)
     _KNOWN_MODELS = {"AXIOM-Artis", "Artis", "Artis Q", "Artis Zee"}
+    _GE_VARIANTS = {"ge medical systems", "ge healthcare", "ge", "gems"}
     if "ManufacturerModelName" in data_df.columns:
         seen_models = set(data_df["ManufacturerModelName"].dropna().unique())
         unknown = seen_models - _KNOWN_MODELS
@@ -149,6 +154,15 @@ def adapt(
                 f"Radimetrics adapter: unvalidated model(s) {unknown}. "
                 "Column mapping and unit conversions may not be correct. "
                 "Verify results against known-good RDSR output."
+            )
+    if "Manufacturer" in data_df.columns:
+        seen_mfrs = {str(m).strip().lower() for m in data_df["Manufacturer"].dropna().unique()}
+        if seen_mfrs & _GE_VARIANTS:
+            warnings.append(
+                "GE manufacturer detected. GE Radimetrics exports typically have lateral and "
+                "longitudinal table positions swapped relative to MyPySkinDose convention. "
+                "Enable 'Swap lateral/longitudinal axes' in the GUI import options, or pass "
+                "swap_lat_lon=True when calling load_tabular(), to correct this."
             )
 
     # 8. Ensure IrradiationEventType and AcquisitionPlane have fallback values
