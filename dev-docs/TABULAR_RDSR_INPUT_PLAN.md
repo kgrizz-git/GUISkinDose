@@ -1,10 +1,10 @@
 # Plan: tabular RDSR-derived inputs (`.csv`, `.tsv`, `.xlsx`)
 
-_Last updated: 2026-06-09_
+_Last updated: 2026-06-10_
 
 > See also: [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [TO_DO.md](TO_DO.md) | [AGENTS.md](../AGENTS.md)
 
-**Status: Phases 1 and 2 shipped. Phase 5 (GUI import workflow) is the active target.**
+**Status: Phases 1–4 shipped (Phase 4 validated against synthetic fixture; needs real DoseTrack XLSX). Phase 5 GUI import workflow partially shipped.**
 
 ---
 
@@ -495,17 +495,42 @@ Foundational plumbing plus the simplest schema as a walking skeleton (see Phase 
 - [x] Wired into `registry.py` routing and `_SCHEMA_KNOWN_NAMES` auto-detection.
 - [ ] Update `FEATURE_INVENTORY.md`, `AGENTS.md`, `CHANGELOG.md`. _(pending — do before next release)_
 
-### Phase 4 — DoseTrack adapter
+### Phase 4 — DoseTrack adapter _(shipped 2026-06-10; synthetic fixture only)_
 
-- [ ] Study `dhen2714/PySkinDose` `dosetrack.py`; document differences.
-- [ ] Create `dosetrack.py` adapter:
-  - [ ] XLSX sheet handling (auto-detect data sheet or require user selection).
-  - [ ] Filter parsing, plane-name normalization, derived collimated field area.
-  - [ ] Siemens and Philips paths validated and tested separately.
-- [ ] Add fixture `dosetrack_siemens.xlsx`.
-- [ ] Add tests: column map, sheet handling, vendor-path failures.
-- [ ] **GE lateral/longitudinal swap** — see TO_DO.md.
-- [ ] Update inventory and docs.
+- [x] Study `dhen2714/PySkinDose` `dosetrack.py`; document differences.
+- [x] Create `src/mypyskindose/input_adapters/dosetrack.py` adapter:
+  - [x] Equipment Name → Manufacturer/ManufacturerModelName inference via `MODEL2MANUF`.
+  - [x] `ffill()` for DoseTrack hierarchical row format.
+  - [x] Integer Plane Code → "Single Plane" / "Plane A" / "Plane B" normalization.
+  - [x] Unit conversions: Air Kerma mGy→Gy, DAP Gy·cm²→Gy·m², Tube Current µA→mA.
+  - [x] `CollimatedFieldArea_m2` derived from DAP formula (matches reference).
+  - [x] Siemens: `XRayFilterThicknessMaximum_mm = Minimum`.
+  - [x] Philips: semicolon-split Al;Cu filter thickness.
+  - [x] Philips lat/lon swap warning (non-blocking).
+  - [x] Wired into `registry.py` routing and `_SCHEMA_KNOWN_NAMES` auto-detection.
+- [x] Add synthetic CSV fixture `tests/fixtures/tabular_inputs/dosetrack_events.csv` (Siemens AXIOM-Artis, 5 events).
+- [x] Add 10 tests (`TestDoseTrackAdapter`): round-trip, columns, unit conversions, manufacturer inference, plane normalization, kVp, provenance, missing-settings error, missing-equipment error, auto-detection.
+- [ ] **Validate Philips path** — no real Philips DoseTrack XLSX available yet.
+- [ ] **Validate against real DoseTrack XLSX** — gated on obtaining a real export.
+- [ ] Update `FEATURE_INVENTORY.md`, `AGENTS.md`, `CHANGELOG.md`. _(pending — do before next release)_
+
+### Phase 5+ — Qaelum adapter _(placeholder — needs fixture)_
+
+No column map, reference implementation, or real export available. Do not implement until a real Qaelum export is obtained.
+
+- [ ] Obtain a Qaelum export sample and document its column headers.
+- [ ] Build column map (`QAELUM_COLUMN_NAMES`, `QAELUM_PATTERNS`) in `column_mapper.py`.
+- [ ] Create `src/mypyskindose/input_adapters/qaelum.py` using the adapter infrastructure already in place.
+- [ ] Add fixture and tests.
+
+### Phase 5+ — DoseMonitor adapter _(placeholder — needs fixture)_
+
+No column map, reference implementation, or real export available. Do not implement until a real DoseMonitor export is obtained.
+
+- [ ] Obtain a DoseMonitor export sample and document its column headers.
+- [ ] Build column map (`DOSEMONITOR_COLUMN_NAMES`, `DOSEMONITOR_PATTERNS`) in `column_mapper.py`.
+- [ ] Create `src/mypyskindose/input_adapters/dosemonitor.py` using the adapter infrastructure already in place.
+- [ ] Add fixture and tests.
 
 ### Phase 5 — GUI import workflow (partially shipped 2026-06-10)
 
@@ -517,7 +542,7 @@ See GUI changes section above for the full checklist. Key tasks:
 - [x] Block dose calculation on unresolved mapping errors.
 - [x] Add lat/lon swap and (UI-only) skip-transforms coordinate correction toggles.
 - [x] Show schema/source type in Data Table tab header.
-- [ ] Preserve provenance in exports (JSON/HTML).
+- [x] Preserve provenance in exports (JSON key `tabular_input`; HTML `<!-- mypyskindose:tabular_input -->` comment). _(shipped 2026-06-10)_
 - [ ] Sheet picker for `.xlsx`/`.xlsm` (deferred; defaults to sheet 0).
 - [ ] GUI smoke test covering CSV/XLSX upload path.
 

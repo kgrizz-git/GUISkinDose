@@ -1,0 +1,6 @@
+Equipment Name,Plane Code,Study Date,Acquisition Type,Acquisition Protocol Name,Air Kerma (mGy),DAP (Gy*cm2),Tube Voltage Peak (kV),Tube Current (uA),mAs (mAs),Positioner Primary Angle (deg),Positioner Secondary Angle (deg),Collimated Field Area (m2),Filter Type,Filter Material,Filter Thickness,Pulse Rate (pulse/s),Pulse Width (ms),Focal Spot Size (mm),Distance Source to Detector (mm),Distance Source To Isocenter (mm),Table Longitudinal Position (mm),Table Lateral Position (mm),Table Height Position (mm),Target Region
+AXIOM-Artis,1,2026-06-01,Fluoroscopy,FL - Standard,15.0,0.540,70,100000,2.5,0.0,0.0,0.01000,Copper,Cu,0.1,15.0,80.0,0.3,1000.0,750.0,0.0,0.0,290.0,Pelvis
+AXIOM-Artis,1,2026-06-01,Fluoroscopy,FL - Standard,12.0,0.432,75,80000,2.0,15.0,0.0,0.01000,Copper,Cu,0.1,15.0,80.0,0.3,1000.0,750.0,50.0,0.0,290.0,Pelvis
+AXIOM-Artis,1,2026-06-01,Fluoroscopy,FL - Standard,18.0,0.972,80,120000,3.0,30.0,0.0,0.01500,Copper,Cu,0.2,15.0,80.0,0.3,1000.0,750.0,100.0,0.0,290.0,Pelvis
+AXIOM-Artis,1,2026-06-01,Fluoroscopy,FL - Standard,10.0,0.360,70,90000,1.8,-15.0,0.0,0.01000,Copper,Cu,0.1,15.0,80.0,0.3,1000.0,750.0,150.0,0.0,290.0,Pelvis
+AXIOM-Artis,1,2026-06-01,Acquisition,Acquisit. - Standard,20.0,0.864,75,110000,2.8,0.0,20.0,0.01200,Copper,Cu,0.2,0.0,0.0,0.6,1000.0,750.0,200.0,0.0,290.0,Pelvis

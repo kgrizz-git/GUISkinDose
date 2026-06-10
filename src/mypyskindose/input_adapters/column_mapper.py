@@ -273,6 +273,73 @@ RADIMETRICS_PATTERNS: dict[str, list[str]] = {
 }
 
 
+# ── DoseTrack schema (Phase 4) ────────────────────────────────────────────────
+#
+# Lowercase versions of key DoseTrack export column headers.
+# Used by detect_header_row() for score-based header location.
+# Source: dhen2714/PySkinDose DOSETRACK2PSD dict (dev-docs/references/).
+DOSETRACK_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "plane code",
+        "air kerma (mgy)",
+        "tube voltage peak (kv)",
+        "positioner primary angle (deg)",
+        "positioner secondary angle (deg)",
+        "distance source to detector (mm)",
+        "distance source to isocenter (mm)",
+        "table longitudinal position (mm)",
+        "table lateral position (mm)",
+        "table height position (mm)",
+        "collimated field area (m2)",
+        "equipment name",
+        "filter material",
+    }
+)
+
+# Maps rdsr_parser() column name → DoseTrack header patterns (lowercase).
+# Notes:
+#  - "Equipment Name" is a special sentinel (→ _dt_equipment_name) used by the adapter
+#    to infer Manufacturer/ManufacturerModelName; it is not a real rdsr_parser column.
+#  - DAP (Gy*cm2) is not mapped to DoseAreaProduct_Gym2 here; the adapter derives
+#    CollimatedFieldArea_m2 from the DAP/dose formula and stores DAP separately.
+DOSETRACK_PATTERNS: dict[str, list[str]] = {
+    "_dt_equipment_name": ["equipment name"],
+    "AcquisitionPlane": ["plane code"],
+    "IrradiationEventType": ["acquisition type", "irradiation event type"],
+    "PositionerPrimaryAngle_deg": ["positioner primary angle (deg)", "positioner primary angle"],
+    "PositionerSecondaryAngle_deg": ["positioner secondary angle (deg)", "positioner secondary angle"],
+    # "tube voltage peak" distinguishes DoseTrack from Radimetrics "kvp kv"
+    "KVP_kV": ["tube voltage peak (kv)", "tube voltage peak", "tube voltage (kv)", "kvp kv", "kvp"],
+    # Air Kerma is in mGy in DoseTrack; the adapter divides by 1000 → Gy
+    "DoseRP_Gy": ["air kerma (mgy)", "air kerma"],
+    # Collimated Field Area is in m² in DoseTrack (no conversion needed)
+    "CollimatedFieldArea_m2": ["collimated field area (m2)", "collimated field area"],
+    # DAP is Gy*cm²; adapter divides by 10000 → Gy*m²
+    "_dt_dap": ["dap (gy*cm2)", "dap (gy cm2)", "dap", "dose area product"],
+    "DistanceSourcetoDetector_mm": [
+        "distance source to detector (mm)",
+        "distance source to detector",
+    ],
+    "DistanceSourcetoIsocenter_mm": [
+        "distance source to isocenter (mm)",
+        "distance source to isocenter",
+    ],
+    "TableLongitudinalPosition_mm": ["table longitudinal position (mm)", "table longitudinal position"],
+    "TableLateralPosition_mm": ["table lateral position (mm)", "table lateral position"],
+    "TableHeightPosition_mm": ["table height position (mm)", "table height position"],
+    "XRayFilterMaterial": ["filter material"],
+    "XRayFilterThicknessMinimum_mm": ["filter thickness"],
+    "PulseRate_{pulse}/s": ["pulse rate (pulse/s)", "pulse rate"],
+    "PulseWidth_ms": ["pulse width (ms)", "pulse width"],
+    # Tube Current in DoseTrack is µA; adapter divides by 1000 → mA
+    "XRayTubeCurrent_mA": ["tube current (ua)", "tube current"],
+    "FocalSpotSize_mm": ["focal spot size (mm)", "focal spot size"],
+    # mAs in DoseTrack; stored as-is (Exposure_uAs naming is approximate)
+    "Exposure_uAs": ["mas (mas)"],
+    "TargetRegion": ["target region"],
+}
+
+
 # ── Vendor-schema pattern dictionary (Phase 2+) ────────────────────────────────
 #
 # Maps normalized internal variable name → list of lowercase patterns.
@@ -301,36 +368,42 @@ COLUMN_PATTERNS: dict[str, list[str]] = {
 # ── Header-row detection ───────────────────────────────────────────────────────
 
 
-def _score_row(row: pd.Series, known_names: frozenset[str]) -> float:
-    """Fraction of non-empty cells whose normalized value is in known_names.
+def _score_row(row: pd.Series, known_names: frozenset[str]) -> int:
+    """Number of non-empty cells whose normalized value is in known_names.
 
-    Uses _normalize_str so underscore/hyphen variants match space-separated names.
+    Returns an absolute hit count so header detection is robust regardless of
+    how many extra columns the export contains.  Both cells and known_names are
+    normalized with _normalize_str so underscore, hyphen, and space variants all
+    compare equal (e.g. "KVP_kV", "kvp kv", "KVP kV" all normalize to "kvp kv").
     """
+    normalized_known = frozenset(_normalize_str(n) for n in known_names)
     cells = [_normalize_str(str(c)) for c in row if pd.notna(c) and str(c).strip()]
-    if not cells:
-        return 0.0
-    return sum(1 for c in cells if c in known_names) / len(cells)
+    return sum(1 for c in cells if c in normalized_known)
 
 
 def detect_header_row(
     raw_df: pd.DataFrame,
     known_names: frozenset[str],
     n: int = 10,
-    min_score: float = 0.05,
+    min_score: float = 5,
 ) -> int:
     """Return the index of the header row in *raw_df* (all rows, header=None).
 
-    Scans the first *n* rows and picks the one whose cells best match *known_names*.
-    The default min_score of 0.05 is intentionally low — it is only a sanity check
-    that the best candidate row has at least a few recognizable column names.  Do
-    NOT use this threshold as a validation gate: file-wide column coverage is
-    irrelevant when the export has many columns we don't need.  Adapter-level
-    validation should check that required columns are present *after* mapping.
+    Scans the first *n* rows and picks the one with the most cells matching
+    *known_names*.  The threshold *min_score* is an **absolute hit count** — the
+    default of 5 means the best candidate row must contain at least 5 recognized
+    column names.  Scale-independent: an export with 300 columns and 15 known
+    names scores 15 regardless of the 285 extra columns, so large exports never
+    fail here just because they carry many columns the adapter doesn't use.
 
-    Raises ValueError only if no row in the first *n* rows clears *min_score*.
+    This function only locates the header row.  Required-column validation (did
+    we find the columns the adapter actually needs?) is the adapter's
+    responsibility, performed after column mapping.
+
+    Raises ValueError only if no row in the first *n* rows reaches *min_score* hits.
     """
     best_idx = -1
-    best_score = 0.0
+    best_score = 0
 
     for i in range(min(n, len(raw_df))):
         score = _score_row(raw_df.iloc[i], known_names)
@@ -341,7 +414,7 @@ def detect_header_row(
     if best_idx == -1 or best_score < min_score:
         raise ValueError(
             f"Could not locate a header row in the first {n} rows "
-            f"(best match score {best_score:.2f}, minimum required {min_score:.2f}). "
+            f"(best row matched {best_score} known column name(s), minimum required {int(min_score)}). "
             "Verify the file contains column names matching the expected schema."
         )
 

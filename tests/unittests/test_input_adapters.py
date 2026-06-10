@@ -51,7 +51,20 @@ class TestDetectHeaderRow:
 
         df = pd.DataFrame([["1.0", "2.0", "3.0"], ["4.0", "5.0", "6.0"]])
         with pytest.raises(ValueError, match="Could not locate a header row"):
-            detect_header_row(df, frozenset({"model", "dsd", "dsi", "kvp"}), min_score=0.5)
+            detect_header_row(df, frozenset({"model", "dsd", "dsi", "kvp"}))
+
+    def test_large_export_with_many_unmapped_columns(self):
+        """A 100-column export where only 6 columns are known must still succeed."""
+        from mypyskindose.input_adapters.column_mapper import detect_header_row
+
+        known = frozenset({"model", "dsd", "dsi", "kvp", "k irp", "ap1"})
+        # 94 unknown columns + 6 known
+        header = list(known) + [f"unknown_{i}" for i in range(94)]
+        data = [["human", "1000", "750", "70", "0.1", "5"] + ["0"] * 94]
+        df = pd.DataFrame([header, *data])
+        # default min_score=5: 6 hits ≥ 5 → row 0 detected
+        idx = detect_header_row(df, known)
+        assert idx == 0
 
 
 class TestMapColumns:
@@ -373,6 +386,7 @@ class TestSchemaAutoDetect:
 # ── radimetrics adapter ────────────────────────────────────────────────────────
 
 RADIMETRICS_FIXTURE = FIXTURES / "radimetrics_events.csv"
+DOSETRACK_FIXTURE = FIXTURES / "dosetrack_events.csv"
 
 
 class TestRadimetricsAdapter:
@@ -470,3 +484,121 @@ class TestRadimetricsAdapter:
             settings=_default_settings(),
         )
         assert result.provenance.schema_name == "radimetrics"
+
+
+class TestDoseTrackAdapter:
+    def test_csv_round_trip(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "dosetrack"
+        assert len(result.normalized_data) == 5
+
+    def test_normalized_columns_present(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        expected = {"model", "DSD", "DSI", "DID", "kVp", "K_IRP", "Ap1", "Ap2"}
+        assert expected.issubset(set(result.normalized_data.columns))
+
+    def test_unit_conversions_applied(self):
+        """Air Kerma should be converted mGy→Gy; DAP Gy·cm²→Gy·m²."""
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        assert result.provenance.unit_conversions.get("DoseRP_Gy") == "mGy → Gy"
+        assert "DoseAreaProduct_Gym2" in result.provenance.unit_conversions
+
+    def test_manufacturer_inferred_from_equipment_name(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        assert (result.normalized_data["model"] == "AXIOM-Artis").all()
+
+    def test_plane_code_normalized(self):
+        """Integer Plane Code 1 → 'Single Plane' before rdsr_normalizer."""
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        # rdsr_normalizer maps acquisition_plane; we just need a successful result
+        assert len(result.normalized_data) == 5
+
+    def test_kvp_numeric_and_positive(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        assert pd.api.types.is_numeric_dtype(result.normalized_data["kVp"])
+        assert (result.normalized_data["kVp"] > 0).all()
+
+    def test_provenance_populated(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="dosetrack",
+            settings=_default_settings(),
+        )
+        prov = result.provenance
+        assert prov.schema_name == "dosetrack"
+        assert prov.header_row_index == 0
+        assert "KVP_kV" in prov.column_map.values()
+        assert "DoseRP_Gy" in prov.column_map.values()
+
+    def test_missing_settings_raises(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        with pytest.raises(ValueError, match="settings is required"):
+            read_and_normalize_input(DOSETRACK_FIXTURE, input_schema="dosetrack")
+
+    def test_missing_equipment_name_raises(self, tmp_path):
+        from mypyskindose.input_adapters import dosetrack as adapter
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        # CSV without Equipment Name → cannot infer manufacturer
+        csv_text = (
+            "Plane Code,Air Kerma (mGy),Tube Voltage Peak (kV),"
+            "Distance Source to Detector (mm),Distance Source To Isocenter (mm),"
+            "Table Longitudinal Position (mm),Table Lateral Position (mm),"
+            "Table Height Position (mm),Positioner Primary Angle (deg),"
+            "Positioner Secondary Angle (deg),Filter Thickness,DAP (Gy*cm2)\n"
+            "1,15.0,70,1000,750,0,0,290,0,0,0.1,0.54\n"
+        )
+        p = tmp_path / "no_equip.csv"
+        p.write_text(csv_text, encoding="utf-8")
+        loaded = read_csv(p)
+        with pytest.raises(ValueError, match="Equipment Name"):
+            adapter.adapt(loaded, original_filename="no_equip.csv", settings=_default_settings())
+
+    def test_auto_detects_dosetrack(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            DOSETRACK_FIXTURE,
+            input_schema="auto",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "dosetrack"

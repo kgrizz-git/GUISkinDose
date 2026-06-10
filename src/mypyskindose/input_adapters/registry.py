@@ -7,10 +7,15 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from mypyskindose.input_adapters import dosemonitor as dosemonitor_adapter
+from mypyskindose.input_adapters import dosetrack as dosetrack_adapter
+from mypyskindose.input_adapters import dosewatch as dosewatch_adapter
 from mypyskindose.input_adapters import generic_rdsr as generic_rdsr_adapter
 from mypyskindose.input_adapters import normalized as normalized_adapter
+from mypyskindose.input_adapters import qaelum as qaelum_adapter
 from mypyskindose.input_adapters import radimetrics as radimetrics_adapter
 from mypyskindose.input_adapters.column_mapper import (
+    DOSETRACK_COLUMN_NAMES,
     GENERIC_RDSR_COLUMN_NAMES,
     NORMALIZED_COLUMN_NAMES,
     RADIMETRICS_COLUMN_NAMES,
@@ -23,7 +28,18 @@ if TYPE_CHECKING:
     from mypyskindose.settings import PyskindoseSettings
 
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
-_SUPPORTED_SCHEMAS = ("normalized", "generic_rdsr_like", "radimetrics", "auto")
+# Schemas marked (stub) are wired for explicit selection but raise NotImplementedError
+# until a real export fixture is available to build the column map.
+_SUPPORTED_SCHEMAS = (
+    "normalized",
+    "generic_rdsr_like",
+    "radimetrics",
+    "dosetrack",
+    "qaelum",      # stub — needs real export fixture
+    "dosemonitor", # stub — needs real export fixture
+    "dosewatch",   # stub — needs real export fixture
+    "auto",
+)
 _AUTO_MIN_MARGIN = 0.20  # required score gap between best and runner-up
 
 # Ordered list of (schema_name, known_names) used for auto-detection scoring.
@@ -31,13 +47,14 @@ _SCHEMA_KNOWN_NAMES: list[tuple[str, frozenset[str]]] = [
     ("normalized", NORMALIZED_COLUMN_NAMES),
     ("generic_rdsr_like", GENERIC_RDSR_COLUMN_NAMES),
     ("radimetrics", RADIMETRICS_COLUMN_NAMES),
+    ("dosetrack", DOSETRACK_COLUMN_NAMES),
 ]
 
 
 def _score_schema(raw_df: pd.DataFrame, known_names: frozenset[str]) -> float:
     """Return the header-row match score for *known_names* against *raw_df*."""
     try:
-        idx = detect_header_row(raw_df, known_names, min_score=0.05)
+        idx = detect_header_row(raw_df, known_names, min_score=1)
     except ValueError:
         return 0.0
     row = raw_df.iloc[idx]
@@ -140,6 +157,21 @@ def read_and_normalize_input(
                 "(needed by rdsr_normalizer for manufacturer/model lookup)."
             )
         result = radimetrics_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+    elif schema == "dosetrack":
+        if settings is None:
+            raise ValueError(
+                "settings is required for dosetrack schema "
+                "(needed by rdsr_normalizer for manufacturer/model lookup)."
+            )
+        result = dosetrack_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+    elif schema in ("qaelum", "dosemonitor", "dosewatch"):
+        # Stub adapters — adapt() raises NotImplementedError with instructions.
+        _stubs = {
+            "qaelum": qaelum_adapter,
+            "dosemonitor": dosemonitor_adapter,
+            "dosewatch": dosewatch_adapter,
+        }
+        _stubs[schema].adapt(loaded, original_filename=path.name, settings=settings)  # type: ignore[arg-type]
     else:
         raise ValueError(
             f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."

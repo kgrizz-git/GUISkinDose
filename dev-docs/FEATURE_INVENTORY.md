@@ -444,7 +444,10 @@ from mypyskindose import (
 | CSV/TSV/XLSX event-table input (normalized schema) | Shipped — Phase 1 (2026-06-09) | Python API + CLI; `normalized` schema adapter; full test suite. See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`. |
 | CSV/TSV/XLSX event-table input (raw RDSR-like schema + auto-detect) | Shipped — Phase 2 (2026-06-09) | `generic_rdsr_like` adapter → `rdsr_normalizer()`; `--input-schema auto`. GUI import workflow is Phase 5. |
 | CSV/TSV/XLSX event-table input (Radimetrics adapter) | Shipped — Phase 3 (2026-06-10) | `radimetrics` adapter; column map + unit conversions (mGy→Gy, cm²→m², mAs→µAs); auto-detection; unknown model warning; synthetic fixture + tests. Validated against AXIOM-Artis column names only — real vendor fixture needed for production sign-off. |
-| CSV/TSV/XLSX event-table input (DoseTrack adapter) | Planned — Phase 4 | Gated on real DoseTrack XLSX fixture. Reference: `dev-docs/references/dhen2714_dosetrack.py`. |
+| CSV/TSV/XLSX event-table input (DoseTrack adapter) | Shipped — Phase 4 (2026-06-10) | `dosetrack` adapter; Equipment Name→Manufacturer inference (`MODEL2MANUF`); ffill; Plane Code normalization; unit conversions (mGy→Gy, Gy·cm²→Gy·m², µA→mA); CFA derivation from DAP formula; Siemens/Philips filter thickness paths; Philips lat/lon swap warning; synthetic AXIOM-Artis fixture + 10 tests. Philips path untested — needs real DoseTrack XLSX. |
+| CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | `qaelum.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real Qaelum export fixture. |
+| CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | `dosemonitor.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseMonitor export fixture. |
+| CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | `dosewatch.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseWatch export fixture. |
 | PDF/Word report export | Not implemented | Planned in GUI Phase 3 |
 | Side-by-side procedure comparison | Not implemented | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |
