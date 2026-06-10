@@ -39,6 +39,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
   - Start with normalized tabular inputs (Phase 1).
   - Then add raw RDSR-like tables (Phase 2).
   - Then adapt Radimetrics and DoseTrack mappings from https://github.com/dhen2714/PySkinDose after fixtures and validation are available (Phases 3–4).
+- [ ] **Column-pattern customization** (future, after Python-only implementation is stable): allow site-specific column name overrides via an editable JSON or YAML file so users with non-standard export templates can map columns without code changes. See `TABULAR_RDSR_INPUT_PLAN.md` open questions.
 - [ ] **Vendor coordinate normalization for tabular inputs** (Phase 3–4 of tabular plan, or sooner if RDSR path is also affected):
   - Philips: table height uses a different sign convention or origin — validate and apply correction in the Philips adapter.
   - GE: lateral and longitudinal axes are swapped relative to the internal model — validate and apply swap in the GE adapter.

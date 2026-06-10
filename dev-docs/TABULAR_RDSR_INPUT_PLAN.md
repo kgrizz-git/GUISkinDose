@@ -128,7 +128,7 @@ These are prototypes/references — not to be copied blindly. They use exact-nam
    Auto-detection can assist, but the API and GUI must let users select a schema explicitly when detection is ambiguous.
 
 5. **Keep core dependencies stable.**
-   CSV/TSV support relies on existing pandas. XLSX requires an Excel engine (`openpyxl`); add as `mypyskindose[excel]` optional extra unless maintainers decide XLSX is core. **Resolve this before starting Phase 1.**
+   CSV/TSV support relies on existing pandas. XLSX requires `openpyxl`, which is a **core dependency** (added to `pyproject.toml` `dependencies`).
 
 6. **Preserve provenance.**
    Outputs record source type, selected schema, original filename, detected header row, applied column map, unit conversions, and warnings so clinical users can audit the transformation.
@@ -316,9 +316,7 @@ Tests to write:
 
 ### Phase 1 — Normalized tabular input (active target)
 
-**Pre-condition:** Decide whether XLSX support is core or `[excel]` optional extra before writing any code.
-
-- [ ] Add `mypyskindose[excel]` optional extra (or document decision to keep XLSX core) in `pyproject.toml`.
+- [ ] Add `openpyxl` to core `dependencies` in `pyproject.toml`.
 - [ ] Create `src/mypyskindose/input_adapters/__init__.py`.
 - [ ] Create `models.py` with `InputAdapterResult` and `ParsedEventTable`.
 - [ ] Create `column_mapper.py`:
@@ -394,13 +392,15 @@ See GUI changes section above for the full checklist. Key tasks:
 
 ## Open questions
 
-| Question | Phase relevance | Status |
-|---|---|---|
-| Which XLSX engine — `openpyxl` as `[excel]` extra or core dependency? | Blocks Phase 1 | **Decide before starting Phase 1** |
-| Which Radimetrics export templates do intended users actually have? | Phase 3 | Unresolved — collect real samples before Phase 3 |
-| Are exported values event-local, cumulative per study, or cumulative per procedure for each source? | Phase 3–4 | Unresolved — must validate per source before writing adapters |
-| Do exports include enough geometry for all clinical use cases (table rotations, detector rotation)? | Phase 3–4 | Unresolved — likely gaps; document per source |
-| Should column-pattern overrides be Python-only or editable JSON/YAML for site customization? | Phase 3–4 | Deferred — implement Python-only first |
+All resolved.
+
+| Question | Decision |
+|---|---|
+| XLSX engine — `[excel]` extra or core dependency? | **Core.** Add `openpyxl` as a core dependency in `pyproject.toml`. No optional extra needed. |
+| Which Radimetrics export templates do intended users have? | **Deferred.** Real export samples will be provided before Phase 3 begins; do not start Phase 3 without them. |
+| Are exported values event-local or cumulative? | **Primarily event-local** (one row = one irradiation event). Some exports may include a running-total column for a handful of fields (e.g. cumulative dose). Adapters should detect and skip or ignore running-total rows/columns rather than treating them as events; document the handling per source. |
+| Do exports include enough geometry for clinical use? | **Yes, generally.** Exports from dose-management systems are expected to carry the same geometric fields as the underlying RDSR (angles, table position, field size, etc.). Gaps should be treated as data-quality issues and reported per event, not as a design limitation. |
+| Column-pattern overrides — Python-only or JSON/YAML? | **Python-only first.** JSON/YAML site-customization is tracked as a future TO_DO item. |
 
 ---
 
