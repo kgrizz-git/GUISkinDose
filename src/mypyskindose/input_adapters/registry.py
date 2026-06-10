@@ -172,6 +172,7 @@ def read_and_normalize_input(
             "dosewatch": dosewatch_adapter,
         }
         _stubs[schema].adapt(loaded, original_filename=path.name, settings=settings)  # type: ignore[arg-type]
+        raise AssertionError("unreachable — stub adapt() always raises NotImplementedError")
     else:
         raise ValueError(
             f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."
