@@ -372,22 +372,21 @@ Flags to add:
 
 ## GUI changes (Phase 5)
 
-- [ ] Extend upload accepted formats to `.csv`, `.tsv`, `.xlsx`, `.xlsm`.
-- [ ] Add schema selector (Auto-detect / Normalized / Raw RDSR-like / Radimetrics / DoseTrack).
+- [x] Extend upload accepted formats to `.csv`, `.tsv`, `.xlsx`, `.xlsm`. _(shipped 2026-06-10)_
+- [x] Add schema selector (Auto-detect / Normalized / Raw RDSR-like / Radimetrics / DoseTrack). _(shipped 2026-06-10; Radimetrics/DoseTrack options shown but gated)_
 - [ ] For `.xlsx`/`.xlsm`: interactive sheet picker showing available sheet names — **deferred; GUI defaults to sheet 0 until implemented.**
-- [ ] Show import preview after upload:
-  - Detected header row index (flag if not row 0).
-  - Column mapping table: source column → normalized variable → unit conversion (or "unmapped").
-  - List of required columns that could not be mapped (block proceed if any).
-  - Duplicate-mapping warnings (block proceed).
-  - First 10 normalized events in a table.
-  - Any adapter warnings requiring user confirmation.
-- [ ] Add coordinate correction options in the import preview step (for `generic_rdsr_like` and vendor adapters):
-  - **Lat/lon swap toggle** — swap `TableLateralPosition` ↔ `TableLongitudinalPosition` before `rdsr_normalizer()`. For GE systems and any export that physically swaps these axes in raw RDSR output.
-  - **Skip-manufacturer-transforms toggle** — bypass `rdsr_normalizer()` coordinate corrections for exports that are already in the internal frame. Prevents double-correction for pre-normalized vendor exports.
-  - Both default to off (correct for raw DICOM frame exports). Show only when a non-normalized schema is selected.
+- [x] Show import preview after upload: _(shipped 2026-06-10; shows schema, encoding, delimiter, header row, column map, warnings, first 5 events)_
+  - Detected header row index (flag if not row 0). ✓
+  - Column mapping table: source column → normalized variable → unit conversion (or "unmapped"). ✓
+  - List of required columns that could not be mapped (block proceed if any). ✓
+  - Duplicate-mapping warnings (block proceed). ✓
+  - First 10 normalized events in a table. _(shows first 5; expand to 10 is a minor enhancement)_
+  - Any adapter warnings requiring user confirmation. ✓
+- [x] Add coordinate correction options in the import preview step: _(shipped 2026-06-10)_
+  - [x] **Lat/lon swap toggle** — swaps `Tx ↔ Tz` on the normalized DataFrame (post-normalization). ✓
+  - [ ] **Skip-manufacturer-transforms toggle** — bypass `rdsr_normalizer()` coordinate corrections. _Not yet implemented._
 - [ ] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports.
-- [ ] Show schema/source type in the Data Table tab header so users know what they loaded.
+- [x] Show schema/source type in the Data Table tab header. _(shipped 2026-06-10)_
 
 ---
 
