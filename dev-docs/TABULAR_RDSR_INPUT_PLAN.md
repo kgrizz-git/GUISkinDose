@@ -2,7 +2,7 @@
 
 _Last updated: 2026-06-09_
 
-> See also: [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [TO_DO.md](TO_DO.md) | [AGENTS.md](../AGENTS.md)
+> See also: [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [TO_DO.md](TO_DO.md) | [AGENTS.md](../AGENTS.md)
 
 **Status: pre-implementation — no code written yet. Phase 1 is the active target.**
 
@@ -21,7 +21,40 @@ The goal is **not** to replace DICOM RDSR ingestion. DICOM RDSR remains the pref
 
 ---
 
+## Conceptual data flow
+
+All sources converge on the same internal contract before dose calculation. The **normalized DataFrame** (internal units, unified coordinate frame) is the contract consumed by `analyze_data()`; its columns and units are defined in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md).
+
+```text
+                                      ┌─ DICOM RDSR ──→ rdsr_parser() ─┐
+                                      │                                │
+raw vendor table (CSV/TSV/XLSX) ──→ column map ──→ unit convert ──→ vendor coordinate
+   (Radimetrics, DoseTrack, etc.)                                   normalize ──┐
+                                                                                 ▼
+                                                          raw-RDSR-like DataFrame ──→ rdsr_normalizer()
+                                                                                                 │
+already-normalized table (CSV/TSV/XLSX) ─────────────────────────────────────────┐              ▼
+   (typically produced by MyPySkinDose itself)                                    └──→ normalized DataFrame ──→ analyze_data()
+```
+
+The substantive work for real vendor data is **column mapping + unit conversion + vendor coordinate normalization** (the left/middle of the diagram). Reading an already-normalized table (bottom-left) is the trivial endpoint — few users have such files; it is primarily an internal/test contract and the target every vendor adapter produces.
+
+## Phase sequencing rationale
+
+The build order is **infrastructure-first**, then schemas from simplest to most vendor-specific. This is deliberate and partly forced by external constraints:
+
+1. **Shared infrastructure** (loader, column mapper, registry, models) is a hard prerequisite for every schema, so it lands first regardless of which schema delivers user value.
+2. **The `normalized` schema is the walking skeleton** — it exercises loader → registry → `analyze_data()` end-to-end with zero unit/coordinate complexity, de-risking the plumbing before vendor quirks are added. It is *not* a major user-facing unlock (most users lack normalized tables); it is the contract the vendor adapters target.
+3. **The first real read-and-normalize path is the generic raw RDSR-like schema** (Phase 2), which can be built now from RDSR-shaped fixtures synthesized from existing test RDSRs — no proprietary vendor exports required.
+4. **Vendor adapters (Radimetrics, DoseTrack) are gated on real export samples**, which are not yet available. We therefore build everything that does *not* need samples first, and slot vendor adapters in when samples land.
+
+In short: the order reflects dependency layering and sample availability, not a claim that normalized-table import is the priority deliverable. User value arrives with Phases 2–4.
+
+---
+
 ## Typical input file structure
+
+> **Scope note:** this section describes **raw vendor exports** (Phases 2–4). The Phase 1 `normalized` schema instead expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) — already in internal units and coordinate frame, with no `manufacturer`/`model` dependence and no vendor coordinate correction (normalization has already been applied).
 
 Tabular exports from dose-management systems (Radimetrics, DoseTrack, vendor-native exports, etc.) share a common structure:
 
@@ -49,48 +82,72 @@ Because names vary, column mapping uses **substring pattern matching** rather th
 
 ## Column mapping architecture
 
+The column mapper is a shared mechanism used by all **raw/vendor** schemas (Phases 2–4). The Phase 1 `normalized` schema uses near-exact internal column names and does **not** rely on fuzzy matching beyond case/whitespace normalization (see Phase 1).
+
 ### Header-row detection
 
-Scan the first `N` rows (default 10) of the file and score each row by how many cells match any known column pattern. The row with the highest score is used as the header. This handles metadata-row prefixes common in Excel exports.
+Scan the first `N` rows (default 10) and score each row by how many cells match the **selected schema's** column patterns (or the union of all schemas' patterns when `--input-schema auto`). The highest-scoring row is the header. This handles metadata-row prefixes common in Excel exports. If no row scores above a minimum threshold, fail with a clear "could not locate a header row" message rather than guessing row 0.
 
-### Substring pattern dictionary
+### Substring pattern dictionary and best-match resolution
 
-Each normalized internal variable maps to a list of lowercase substrings. A source column matches a normalized variable if its lowercased, stripped name contains any of the listed substrings. Example structure:
+Each normalized internal variable maps to a list of lowercase patterns. Matching is **not** naive `in` containment — that silently mismaps. The rules:
+
+1. **Word-boundary aware.** Normalize the source column (lowercase, collapse whitespace/underscores) and match patterns on token/word boundaries, so a 2-letter pattern like `kv` does not match inside unrelated words.
+2. **Best (most-specific) match wins.** When a source column matches patterns for more than one variable, assign it to the variable whose matched pattern is **longest/most specific**, not the first one tried. When a variable has several candidate columns, keep the best-scoring column.
+3. **Concrete collision to guard against:** a `Dose Area Product` (DAP/KAP) column contains the substring `dose a` and would naively mismap to `reference_dose_a` (tube A dose) — a *silent wrong result*, worse than a loud error. Word-boundary matching plus a more specific `air kerma`/`dose area product` pattern for the total-dose/KAP variable must take precedence. This case has a dedicated regression test (see testing plan).
 
 ```python
 COLUMN_PATTERNS: dict[str, list[str]] = {
     "manufacturer":       ["manufacturer", "vendor", "make"],
-    "model":              ["model", "station name"],
-    "primary_angle":      ["primary angle", "primary_angle", "positioner primary", "angle 1"],
-    "secondary_angle":    ["secondary angle", "secondary_angle", "positioner secondary", "angle 2"],
-    "table_lateral":      ["table lateral", "lateral position", "table pos lat", "isocenter y"],
-    "table_longitudinal": ["table longitudinal", "longitudinal position", "table pos long", "isocenter x"],
-    "table_height":       ["table height", "cradle height", "table pos height", "isocenter z"],
-    "kvp":                ["kvp", "kv", "tube voltage"],
-    "reference_dose_total": ["reference point dose", "air kerma", "dose (mgy)", "kap"],
-    "reference_dose_a":   ["dose a", "tube a dose", "reference dose a"],
-    "reference_dose_b":   ["dose b", "tube b dose", "reference dose b"],
+    "model":              ["model", "station name", "device model"],
+    "primary_angle":      ["primary angle", "positioner primary angle", "c-arm primary"],
+    "secondary_angle":    ["secondary angle", "positioner secondary angle", "c-arm secondary"],
+    "table_lateral":      ["table lateral", "lateral position", "table pos lat"],
+    "table_longitudinal": ["table longitudinal", "longitudinal position", "table pos long"],
+    "table_height":       ["table height", "cradle height", "table pos height"],
+    "kvp":                ["kvp", "tube voltage"],   # not bare "kv"
+    "reference_dose_total": ["reference point dose", "air kerma", "dose area product", "kap"],
+    "reference_dose_a":   ["tube a dose", "reference dose a", "dose tube a"],
+    "reference_dose_b":   ["tube b dose", "reference dose b", "dose tube b"],
     # ... extend as validated exports are seen
 }
 ```
 
 ### Duplicate mapping detection
 
-Before ingesting any file, check that no two source columns map to the same normalized variable. If duplicates are found, **fail loudly** with a message listing both source column names and the normalized variable they both matched — do not silently pick one. The user must resolve the ambiguity (e.g. via an explicit override map passed at call time).
+After best-match resolution, check that no two source columns are assigned to the same normalized variable. If duplicates remain, **fail loudly** listing both source column names and the variable — do not silently pick one. The user resolves the ambiguity via an explicit override map passed at call time.
 
 ### Unmapped required columns
 
-After mapping, verify that all required normalized columns are present. Report any missing ones by normalized name, with the list of patterns that were tried, so the user knows what column name would satisfy the requirement.
+Verify all required normalized columns are present. Report missing ones by normalized name, with the patterns that were tried, so the user knows what column name would satisfy the requirement.
+
+### Schema auto-detection (`--input-schema auto`)
+
+Auto-detection scores each candidate schema by the fraction of its **required** patterns that find a matching column, and picks the highest. It must require a **margin** over the runner-up (e.g. ≥ 0.2); if two schemas tie or no schema clears a minimum required-coverage threshold, it **errors and asks the user to pass `--input-schema` explicitly** rather than guessing. Auto-detection is **deferred past Phase 1** — Phase 1 ships with explicit schema selection only; `auto` is wired once at least two schemas exist (Phase 3+).
+
+### Source encoding, delimiter, and decimal separator
+
+Clinical exports — especially from European sites — frequently use a `;` delimiter with `,` as the decimal separator, and may carry a UTF-8 BOM or non-UTF-8 encoding. The tabular loader must:
+
+- detect/handle a BOM and fall back across common encodings (utf-8, utf-8-sig, cp1252, latin-1);
+- sniff the delimiter for `.csv` (comma vs semicolon) rather than assuming comma;
+- detect decimal-comma numeric formatting and normalize to `.` before numeric parsing.
+
+Failures here surface as garbled columns or all-string numerics, so they must be validated explicitly with fixtures.
+
+### Multiple procedures / devices in one file
+
+A tabular export can contain rows spanning several studies, patients, or devices, whereas a single RDSR is one procedure. **Phase 1 assumes a single procedure.** If the loader detects more than one distinct study/accession/device identifier (when such a column is present), it **warns and, by default, errors** asking the user to filter the export to one procedure. Multi-procedure splitting is out of scope here and tracked under the "support for multiple exams" item in [TO_DO.md](TO_DO.md).
 
 ### Vendor-specific coordinate normalization
 
-Several vendors use different coordinate conventions that require post-mapping transforms:
+Raw vendor schemas need post-mapping coordinate transforms:
 
 - **Philips** — table height uses a different sign convention or origin than the internal model.
 - **GE** — lateral and longitudinal axes are swapped relative to the internal model.
-- Other vendors likely have similar issues; these will be discovered as real exports are validated.
+- Other vendors likely have similar issues, discovered as real exports are validated.
 
-**These transforms are deferred to later phases** (Phase 3+ per vendor, or added as TO_DO items as they are discovered). The column mapper produces a raw-mapped DataFrame; coordinate normalization is a separate step applied per detected manufacturer. See [TO_DO.md](TO_DO.md) for the tracking items.
+These are a **separate step after column mapping**, applied per detected manufacturer, and are **deferred to the vendor adapter phases** (3–4) or added as TO_DO items as discovered. The Phase 1 `normalized` schema does **not** apply them (data is already normalized). See [TO_DO.md](TO_DO.md) for tracking items.
 
 ---
 
@@ -171,23 +228,30 @@ Only `models.py`, `column_mapper.py`, `tabular_loader.py`, `registry.py`, and `n
 
 ```python
 @dataclass
+class InputProvenance:
+    """Typed audit trail (preferred over a free-form dict for testability)."""
+    source_type: str                 # "csv" | "tsv" | "xlsx" | "dicom" | "json"
+    schema_name: str                 # "normalized" | "generic_rdsr_like" | "radimetrics" | ...
+    original_filename: str
+    header_row_index: int
+    detected_encoding: str
+    detected_delimiter: str | None   # None for xlsx
+    sheet_name: str | int | None     # None for non-Excel
+    column_map: dict[str, str]       # source col → normalized var
+    unit_conversions: dict[str, str] # normalized var → "source_unit → target_unit"
+    warnings: list[str]
+
+@dataclass
 class InputAdapterResult:
     normalized_data: pd.DataFrame
     raw_data: pd.DataFrame | None
-    source_type: str
-    schema_name: str
-    provenance: dict[str, Any]
+    provenance: InputProvenance
     warnings: list[str]
 
 @dataclass
 class ParsedEventTable:
     parsed_data: pd.DataFrame
-    source_type: str
-    schema_name: str
-    column_map: dict[str, str]      # source col → normalized var
-    unit_conversions: dict[str, str] # normalized var → "source_unit → target_unit"
-    header_row_index: int
-    warnings: list[str]
+    provenance: InputProvenance
 ```
 
 ### `registry.py`
@@ -249,9 +313,9 @@ python -m mypyskindose \
 ```
 
 Flags to add:
-- `--input-schema {auto,normalized,generic_rdsr_like,radimetrics,dosetrack}`
+- `--input-schema {normalized,generic_rdsr_like,radimetrics,dosetrack}` in Phase 1; `auto` added in Phase 3+ once ≥2 schemas exist.
 - `--sheet-name SHEET`
-- `--input-preview-only` — print detected header row, column map, missing required columns, and unit assumptions without calculating dose.
+- `--input-preview-only` — print detected header row, encoding/delimiter, column map, missing required columns, and unit assumptions without calculating dose.
 
 ---
 
@@ -296,49 +360,57 @@ Fixture files under `tests/fixtures/tabular_inputs/`:
 - `normalized_events.tsv`
 - `normalized_events.xlsx`
 - `normalized_events_metadata_header.xlsx` — metadata rows above the data header
+- `normalized_events_semicolon_decimalcomma.csv` — European `;`-delimited, decimal-comma
+- `normalized_events_multistudy.csv` — rows spanning >1 study/device
+- `generic_rdsr_events.csv` (Phase 2; synthesized from an existing test RDSR)
 - `radimetrics_axiom_artis.csv` (Phase 3)
 - `dosetrack_siemens.xlsx` (Phase 4)
 
 Tests to write:
-- Unit tests for header-row detection (including offset headers).
-- Unit tests for the substring pattern dictionary (each pattern maps correctly).
-- Unit tests for duplicate-mapping detection (two columns match same var → error).
-- Unit tests for missing-required-column reporting.
-- Unit tests for each schema adapter (column map, unit conversions).
-- Round-trip tests: equivalent DICOM-derived normalized JSON vs CSV/TSV/XLSX normalized input.
-- Failure tests: missing columns, wrong units, invalid numeric cells, unknown model, ambiguous schema, unsupported sheet.
-- One end-to-end smoke test via `analyze_input_file()` with a normalized fixture.
+- Header-row detection, including offset headers and the "no header found" error.
+- Column matching: word-boundary correctness; **`Dose Area Product` must map to total dose/KAP, not `reference_dose_a`** (regression test for the substring collision); best-match resolution when one column matches multiple variables.
+- Duplicate-mapping detection (two columns resolve to same var → error).
+- Missing-required-column reporting (names the variable and tried patterns).
+- Encoding/delimiter: semicolon + decimal-comma fixture parses to correct numerics; BOM handled.
+- Multi-study detection: multistudy fixture warns and errors by default.
+- Per-schema adapter tests (column map, unit conversions where applicable).
+- Round-trip: DICOM-derived normalized JSON vs CSV/TSV/XLSX normalized input; and (Phase 2) generic-RDSR CSV vs its source RDSR.
+- Schema auto-detection (Phase 3+): correct pick with margin; tie/low-coverage → error asking for explicit schema.
+- Failure tests: wrong units, invalid numeric cells, unknown model, unsupported sheet.
+- End-to-end smoke test via `analyze_input_file()` with a normalized fixture.
 - Architecture layer test: `input_adapters/` must not import L3+.
 
 ---
 
 ## Implementation phases
 
-### Phase 1 — Normalized tabular input (active target)
+### Phase 1 — Shared infrastructure + normalized schema (active target)
+
+Foundational plumbing plus the simplest schema as a walking skeleton (see Phase sequencing rationale). Builds everything that does not require vendor samples. The `normalized` schema expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) — do not invent a column list; anchor to that doc.
 
 - [ ] Add `openpyxl` to core `dependencies` in `pyproject.toml`.
 - [ ] Create `src/mypyskindose/input_adapters/__init__.py`.
-- [ ] Create `models.py` with `InputAdapterResult` and `ParsedEventTable`.
+- [ ] Create `models.py` with `InputProvenance`, `InputAdapterResult`, `ParsedEventTable`.
 - [ ] Create `column_mapper.py`:
-  - [ ] Implement `detect_header_row(df_raw, n=10) -> int`.
-  - [ ] Define initial `COLUMN_PATTERNS` dict for the normalized schema's required columns.
-  - [ ] Implement `map_columns(df, patterns) -> tuple[dict[str, str], list[str]]` (column map + warnings).
-  - [ ] Implement `check_duplicate_mappings(column_map) -> list[str]` (returns error messages).
+  - [ ] Implement `detect_header_row(df_raw, patterns, n=10) -> int` (error if no row clears the threshold).
+  - [ ] Define initial `COLUMN_PATTERNS` (for raw/vendor schemas in later phases; Phase 1 normalized schema uses near-exact internal names).
+  - [ ] Implement word-boundary, best-match `map_columns(df, patterns) -> tuple[dict[str, str], list[str]]`.
+  - [ ] Implement `check_duplicate_mappings(column_map) -> list[str]` (error messages).
 - [ ] Create `tabular_loader.py`:
-  - [ ] `read_csv(path, delimiter=',') -> pd.DataFrame` (raw, no header applied yet).
-  - [ ] `read_tsv(path, delimiter='\t') -> pd.DataFrame`.
-  - [ ] `read_excel(path, sheet_name=0) -> pd.DataFrame`.
-  - [ ] Strip column names, drop wholly-empty rows, preserve original column order in provenance.
+  - [ ] `read_csv` / `read_tsv` with **encoding fallback** (utf-8, utf-8-sig, cp1252, latin-1) and **delimiter sniffing** (comma vs semicolon).
+  - [ ] Decimal-comma detection and normalization to `.` before numeric parsing.
+  - [ ] `read_excel(path, sheet_name=0)`.
+  - [ ] Strip column names, drop wholly-empty rows, record encoding/delimiter/order in provenance.
 - [ ] Create `normalized.py` — `normalized` schema adapter:
-  - [ ] Define required and optional normalized columns with expected units.
-  - [ ] Validate all required columns present post-mapping.
-  - [ ] Validate numeric columns; collect row-level failures.
-  - [ ] Return `InputAdapterResult` with provenance dict.
-- [ ] Create `registry.py` with `read_and_normalize_input()` routing by suffix.
+  - [ ] Define required/optional columns and units **by reference to the internal contract** (`INPUT_DATA_FLOW_AND_OFFSETS.md`); no manufacturer/model dependence, no vendor coordinate correction.
+  - [ ] Validate required columns present; validate numeric columns with row-level failure reporting.
+  - [ ] Detect multiple study/accession/device IDs (if present) → warn and error by default (single-procedure assumption).
+  - [ ] Return `InputAdapterResult` with a populated `InputProvenance`.
+- [ ] Create `registry.py` with `read_and_normalize_input()` routing by suffix (explicit schema only; `auto` raises "not yet supported" in Phase 1).
 - [ ] Add `analyze_input_file()` to `src/mypyskindose/__init__.py` public API.
-- [ ] Add `--input-schema` and `--sheet-name` CLI flags to `__main__.py` / `main.py`.
-- [ ] Add `--input-preview-only` CLI flag.
-- [ ] Add fixtures: `normalized_events.csv`, `normalized_events.tsv`, `normalized_events.xlsx`, `normalized_events_metadata_header.xlsx`.
+- [ ] Add `--input-schema` (explicit values only) and `--sheet-name` CLI flags to `__main__.py` / `main.py`.
+- [ ] Add `--input-preview-only` CLI flag (prints header row, encoding/delimiter, column map, missing required columns, unit assumptions; no dose calc).
+- [ ] Add fixtures: `normalized_events.csv`, `normalized_events.tsv`, `normalized_events.xlsx`, `normalized_events_metadata_header.xlsx`, `normalized_events_semicolon_decimalcomma.csv`, `normalized_events_multistudy.csv`.
 - [ ] Write unit tests for all of the above (see testing plan).
 - [ ] Add `input_adapters/` to architecture layer test (must not import L3+).
 - [ ] Update `FEATURE_INVENTORY.md` Phase 1 row to `Shipped`.
@@ -346,11 +418,14 @@ Tests to write:
 
 ### Phase 2 — Generic raw RDSR-like tabular input
 
+**First real read-and-normalize path.** Exercises column map → `rdsr_normalizer()` with vendor-agnostic raw columns. Can be built now: synthesize RDSR-shaped fixtures from existing test RDSRs (`rdsr_parser()` output dumped to CSV) — no proprietary vendor exports required.
+
 - [ ] Add `COLUMN_PATTERNS` entries for raw `rdsr_parser()` output column names.
 - [ ] Create `generic_rdsr.py` adapter: map → `rdsr_normalizer()` → `InputAdapterResult`.
-- [ ] Add fixture `generic_rdsr_events.csv`.
-- [ ] Add tests: column map, normalization round-trip, failure cases.
+- [ ] Add fixture `generic_rdsr_events.csv` (synthesized from an existing test RDSR).
+- [ ] Add tests: column map, normalization round-trip vs the source RDSR, failure cases.
 - [ ] Extend `registry.py` routing for `generic_rdsr_like` schema.
+- [ ] Enable `--input-schema auto` once a second schema exists (with margin/threshold per the auto-detection rules).
 
 ### Phase 3 — Radimetrics adapter
 
@@ -406,13 +481,21 @@ All resolved.
 
 ## Acceptance criteria
 
-The feature is complete when:
+### Phase 1 done-bar (no vendor samples required)
 
-- Users can run a dose calculation from `.csv`, `.tsv`, and `.xlsx` normalized event tables.
-- At least one Radimetrics CSV schema and one DoseTrack XLSX schema have validated adapters, or are explicitly documented as unsupported until fixtures are available.
-- The CLI, Python API, and GUI share the same adapter registry.
-- Duplicate column mappings and missing required columns produce clear, actionable error messages.
-- Validation errors identify columns by name with actionable remediation text.
-- Output includes tabular-input provenance and adapter warnings.
-- Tests cover success and failure paths for each supported format and schema.
+- Users can run a dose calculation from `.csv`, `.tsv`, and `.xlsx` **normalized** event tables via the Python API and CLI.
+- The loader handles UTF-8/BOM/cp1252, comma and semicolon delimiters, and decimal-comma numerics.
+- Header detection finds offset headers and errors clearly when none is found.
+- Multiple-procedure files warn and error by default.
+- Column mismatches, duplicate mappings, and missing required columns produce clear, named, actionable errors.
+- Output includes a typed `InputProvenance`.
 - `input_adapters/` passes the architecture layer test (no L3+ imports).
+- The `Dose Area Product`→tube-A regression test and the encoding/multi-study tests pass.
+
+### Full-feature done-bar
+
+- At least one Radimetrics CSV schema and one DoseTrack XLSX schema have validated adapters, or are explicitly documented as unsupported until fixtures are available.
+- Vendor coordinate normalization (Philips height, GE lat/lon swap, others as found) is applied and tested per adapter.
+- `--input-schema auto` selects correctly with a margin and errors on ambiguity.
+- The CLI, Python API, and GUI share the same adapter registry, with the GUI import preview blocking on unresolved mapping errors.
+- Tests cover success and failure paths for each supported format and schema.
