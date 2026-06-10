@@ -571,7 +571,8 @@ def index():
                                 "update:model-value", lambda: _on_swap_toggle()
                             ).tooltip(
                                 "Swaps Tx ↔ Tz in the normalized output.\n"
-                                "Auto-enabled for GE Radimetrics and Philips DoseTrack exports."
+                                "Auto-enabled for GE Radimetrics exports.\n"
+                                "May also be needed for Philips DoseTrack — verify against known data."
                             )
                             ui.label("Tx ↔ Tz").classes("text-caption text-grey-5 font-mono")
 
@@ -694,13 +695,13 @@ def index():
                 if state.import_provenance is None:
                     return
                 warnings_lower = " ".join(state.import_warnings).lower()
-                schema = state.import_provenance.schema_name
 
-                # Lat/lon swap: GE Radimetrics and Philips DoseTrack need it
+                # Lat/lon swap: confirmed for GE Radimetrics exports only.
+                # Philips DoseTrack swap appears in one reference implementation
+                # but has not been verified against a real export — leave as manual.
                 needs_swap = (
                     "ge " in warnings_lower
                     or "ge manufacturer" in warnings_lower
-                    or ("philips" in warnings_lower and schema == "dosetrack")
                 )
                 state.swap_lat_lon = needs_swap
                 state.flip_ap1 = False

@@ -265,13 +265,17 @@ def adapt(
             f"Column map attempted: {column_map}."
         )
 
-    # 14. Warn on Philips lat/lon swap (non-blocking)
+    # 14. Warn on potential Philips lat/lon swap (non-blocking)
+    # One reference implementation swaps lat/lon for Philips DoseTrack, but this
+    # has not been verified against a real export. Surface as a warning so the user
+    # can enable the toggle if results look wrong.
     if is_philips:
         warnings.append(
-            "Philips manufacturer detected. Philips DoseTrack exports typically have lateral and "
-            "longitudinal table positions swapped relative to MyPySkinDose convention. "
-            "Enable 'Swap lateral/longitudinal axes' in the GUI import options, or pass "
-            "swap_lat_lon=True when calling load_tabular(), to correct this."
+            "Philips manufacturer detected. Some Philips DoseTrack exports have lateral and "
+            "longitudinal table positions swapped relative to MyPySkinDose convention — "
+            "this has not been verified against a real export. "
+            "If patient positioning looks incorrect, try enabling 'Swap lateral/longitudinal axes' "
+            "in the GUI import options."
         )
 
     # 15. Run rdsr_normalizer()
