@@ -1,80 +1,173 @@
 # Plan: tabular RDSR-derived inputs (`.csv`, `.tsv`, `.xlsx`)
 
-_Date: 2026-06-04_
+_Last updated: 2026-06-09_
+
+> See also: [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [TO_DO.md](TO_DO.md) | [AGENTS.md](../AGENTS.md)
+
+**Status: pre-implementation — no code written yet. Phase 1 is the active target.**
+
+---
 
 ## Objective
 
 Allow MyPySkinDose to run from exported irradiation-event tables in addition to current DICOM RDSR and normalized JSON inputs.
 The target formats are:
 
-- `.csv` — comma-separated event tables, such as Radimetrics exports.
-- `.tsv` — tab-separated event tables, often produced by report tools or spreadsheet exports.
-- `.xlsx` — workbook exports, such as DoseTrack-style event tables.
+- `.csv` — comma-separated event tables (e.g. Radimetrics exports)
+- `.tsv` — tab-separated event tables (report tool or spreadsheet exports)
+- `.xlsx` — workbook exports (e.g. DoseTrack-style event tables)
 
 The goal is **not** to replace DICOM RDSR ingestion. DICOM RDSR remains the preferred high-fidelity source when available. Tabular import is an adapter layer for sites where dose-management software exports one row per irradiation event but direct DICOM SR access is difficult.
 
+---
+
+## Typical input file structure
+
+Tabular exports from dose-management systems (Radimetrics, DoseTrack, vendor-native exports, etc.) share a common structure:
+
+- **One header row** containing column names, followed by **one data row per irradiation event.**
+- The header row is usually the first row, but some exports include metadata rows above it (system name, export date, filter criteria, etc.). The header must be located dynamically.
+- Column names vary significantly across vendors and software versions. Examples of the same field across sources:
+
+| Field (internal name) | Example column names seen in the wild |
+|---|---|
+| Manufacturer | `Manufacturer`, `Vendor`, `Make` |
+| Model | `Model`, `Station Name`, `Device Model` |
+| Primary angle | `Primary Angle`, `C-Arm Primary`, `Positioner Primary Angle`, `Angle 1` |
+| Secondary angle | `Secondary Angle`, `C-Arm Secondary`, `Positioner Secondary Angle`, `Angle 2` |
+| Table lateral | `Table Lateral`, `Lateral Position`, `Table Pos Lat`, `Isocenter Y` |
+| Table longitudinal | `Table Longitudinal`, `Longitudinal Position`, `Table Pos Long`, `Isocenter X` |
+| Table height | `Table Height`, `Cradle Height`, `Table Pos Height`, `Isocenter Z` |
+| kVp | `kVp`, `KVP`, `Tube Voltage` |
+| Reference dose (total) | `Reference Point Dose`, `Air Kerma`, `KAP`, `Dose (mGy)` |
+| Reference dose tube A | `Dose A`, `Tube A Dose`, `Reference Dose A` |
+| Reference dose tube B | `Dose B`, `Tube B Dose`, `Reference Dose B` |
+
+Because names vary, column mapping uses **substring pattern matching** rather than exact-name lookup (see §Column mapping architecture below).
+
+---
+
+## Column mapping architecture
+
+### Header-row detection
+
+Scan the first `N` rows (default 10) of the file and score each row by how many cells match any known column pattern. The row with the highest score is used as the header. This handles metadata-row prefixes common in Excel exports.
+
+### Substring pattern dictionary
+
+Each normalized internal variable maps to a list of lowercase substrings. A source column matches a normalized variable if its lowercased, stripped name contains any of the listed substrings. Example structure:
+
+```python
+COLUMN_PATTERNS: dict[str, list[str]] = {
+    "manufacturer":       ["manufacturer", "vendor", "make"],
+    "model":              ["model", "station name"],
+    "primary_angle":      ["primary angle", "primary_angle", "positioner primary", "angle 1"],
+    "secondary_angle":    ["secondary angle", "secondary_angle", "positioner secondary", "angle 2"],
+    "table_lateral":      ["table lateral", "lateral position", "table pos lat", "isocenter y"],
+    "table_longitudinal": ["table longitudinal", "longitudinal position", "table pos long", "isocenter x"],
+    "table_height":       ["table height", "cradle height", "table pos height", "isocenter z"],
+    "kvp":                ["kvp", "kv", "tube voltage"],
+    "reference_dose_total": ["reference point dose", "air kerma", "dose (mgy)", "kap"],
+    "reference_dose_a":   ["dose a", "tube a dose", "reference dose a"],
+    "reference_dose_b":   ["dose b", "tube b dose", "reference dose b"],
+    # ... extend as validated exports are seen
+}
+```
+
+### Duplicate mapping detection
+
+Before ingesting any file, check that no two source columns map to the same normalized variable. If duplicates are found, **fail loudly** with a message listing both source column names and the normalized variable they both matched — do not silently pick one. The user must resolve the ambiguity (e.g. via an explicit override map passed at call time).
+
+### Unmapped required columns
+
+After mapping, verify that all required normalized columns are present. Report any missing ones by normalized name, with the list of patterns that were tried, so the user knows what column name would satisfy the requirement.
+
+### Vendor-specific coordinate normalization
+
+Several vendors use different coordinate conventions that require post-mapping transforms:
+
+- **Philips** — table height uses a different sign convention or origin than the internal model.
+- **GE** — lateral and longitudinal axes are swapped relative to the internal model.
+- Other vendors likely have similar issues; these will be discovered as real exports are validated.
+
+**These transforms are deferred to later phases** (Phase 3+ per vendor, or added as TO_DO items as they are discovered). The column mapper produces a raw-mapped DataFrame; coordinate normalization is a separate step applied per detected manufacturer. See [TO_DO.md](TO_DO.md) for the tracking items.
+
+---
+
 ## Current ingestion behavior
 
-The current primary entry point accepts either a DICOM RDSR file or a pre-parsed JSON file path. The helper `read_and_normalise_rdsr_data()` treats `.json` as already parsed/normalized tabular data and sends every other suffix through `pydicom.dcmread()`, followed by `rdsr_parser()` and `rdsr_normalizer()`.
+The current primary entry point accepts either a DICOM RDSR file or a pre-parsed JSON file path. `read_and_normalise_rdsr_data()` treats `.json` as already parsed/normalized tabular data and sends every other suffix through `pydicom.dcmread()` → `rdsr_parser()` → `rdsr_normalizer()`.
 
-For callers that already have a normalized `pandas.DataFrame`, the code can bypass file parsing and call `analyze_normalized_data_with_custom_settings_object()`.
+For callers that already have a normalized `pandas.DataFrame`, the code can bypass file parsing via `analyze_normalized_data_with_custom_settings_object()`.
+
+---
 
 ## Existing fork to learn from
 
-A related PySkinDose fork exists at `https://github.com/dhen2714/PySkinDose.git` and includes two modules worth studying before implementation:
+A related PySkinDose fork at `https://github.com/dhen2714/PySkinDose.git` includes two modules worth studying before implementation:
 
-- `src/pyskindose/radimetrics.py`
-  - Defines a `RADIMETRICS2PSD` column map from Radimetrics CSV columns into PySkinDose/RDSR-like parsed columns.
-  - Reads CSV via `pd.read_csv()`.
-  - Converts units such as reference point dose from mGy to Gy, collimated field area from cm² to m², and exposure from mAs to µAs before reusing `rdsr_normalizer()`.
-- `src/pyskindose/dosetrack.py`
-  - Defines a `DOSETRACK2PSD` column map for DoseTrack Excel exports.
-  - Reads XLSX via `pd.read_excel()`.
-  - Contains vendor-specific transforms for Siemens and Philips, including filter parsing, plane-name normalization, and derived collimated field area.
+- `src/pyskindose/radimetrics.py` — `RADIMETRICS2PSD` column map; reads CSV via `pd.read_csv()`; converts units (mGy→Gy, cm²→m², mAs→µAs) before `rdsr_normalizer()`.
+- `src/pyskindose/dosetrack.py` — `DOSETRACK2PSD` column map for DoseTrack Excel exports; vendor-specific transforms for Siemens and Philips; filter parsing, plane-name normalization, derived collimated field area.
 
-These modules should be treated as a prototype/reference, not copied blindly. They are tightly coupled to specific export schemas and contain hard-coded assumptions that need validation, schema documentation, unit tests, and safer error reporting before inclusion in MyPySkinDose.
+These are prototypes/references — not to be copied blindly. They use exact-name column matching (not the substring approach described above), are tightly coupled to specific export schemas, and lack unit tests and safe error reporting.
+
+---
 
 ## Design principles
 
 1. **Normalize all paths into one internal contract.**
-   Every source should become either:
-   - a raw RDSR-like parsed DataFrame compatible with `rdsr_normalizer()`, or
-   - a fully normalized DataFrame compatible with `analyze_data()`.
+   Every source should become either a raw RDSR-like parsed DataFrame compatible with `rdsr_normalizer()`, or a fully normalized DataFrame compatible with `analyze_data()`.
 
-2. **Separate format loading from source-schema mapping.**
-   File suffix handling (`csv`/`tsv`/`xlsx`) should not be mixed with Radimetrics, DoseTrack, or future vendor mappings.
+2. **Separate format loading, column mapping, and source-schema normalization.**
+   File suffix handling (`csv`/`tsv`/`xlsx`), substring-based column mapping, and vendor coordinate transforms are three distinct steps — do not mix them.
 
 3. **Make units explicit and testable.**
-   Every adapter must document the source column unit and the internal target unit.
+   Every adapter must document the source column unit and the internal target unit in code, not just comments.
 
 4. **Prefer named schemas over guessing.**
-   Auto-detection can be helpful, but the API and GUI should let users select a schema explicitly when detection is ambiguous.
+   Auto-detection can assist, but the API and GUI must let users select a schema explicitly when detection is ambiguous.
 
 5. **Keep core dependencies stable.**
-   CSV/TSV support can rely on existing pandas. XLSX support may require an Excel engine such as `openpyxl`; if it is not already available transitively, add it as an optional extra rather than a hard core dependency unless project maintainers decide XLSX is core.
+   CSV/TSV support relies on existing pandas. XLSX requires an Excel engine (`openpyxl`); add as `mypyskindose[excel]` optional extra unless maintainers decide XLSX is core. **Resolve this before starting Phase 1.**
 
 6. **Preserve provenance.**
-   Outputs should record source type, selected schema, original filename, applied column map, unit conversions, and warnings so clinical users can audit the transformation.
+   Outputs record source type, selected schema, original filename, detected header row, applied column map, unit conversions, and warnings so clinical users can audit the transformation.
+
+7. **Fail loudly on ambiguity.**
+   Duplicate column mappings, missing required columns, and unrecognized manufacturer/model must produce clear, actionable error messages — not silent fallbacks.
+
+---
+
+## Layer placement
+
+`input_adapters/` sits at **L2 — Helpers & input** (same layer as `rdsr_parser.py` and `rdsr_normalizer.py`). It may import from:
+
+- L0 (`constants.py`, `debug.py`)
+- L1 (`settings/`)
+- L2 siblings (`helpers/`)
+
+It must **not** import from L3+ (domain models, dose pipeline, plotting, GUI, orchestration). The structural tests in `tests/unittests/test_architecture_layers.py` should be extended to assert this once the package exists.
+
+---
 
 ## Proposed architecture
-
-Create a new package:
 
 ```text
 src/mypyskindose/input_adapters/
   __init__.py
-  registry.py
-  models.py
-  tabular_loader.py
-  normalized_json.py
-  dicom_rdsr.py
-  radimetrics.py
-  dosetrack.py
+  models.py           — InputAdapterResult, ParsedEventTable dataclasses
+  column_mapper.py    — header detection, substring pattern dict, duplicate check
+  tabular_loader.py   — generic CSV / TSV / XLSX file reading
+  registry.py         — read_and_normalize_input() routing function
+  normalized.py       — 'normalized' schema adapter (Phase 1)
+  generic_rdsr.py     — 'generic_rdsr_like' schema adapter (Phase 2)
+  radimetrics.py      — Radimetrics schema adapter (Phase 3)
+  dosetrack.py        — DoseTrack schema adapter (Phase 4)
 ```
 
-### `models.py`
+Only `models.py`, `column_mapper.py`, `tabular_loader.py`, `registry.py`, and `normalized.py` are needed for Phase 1. The remaining modules are stubs or added later.
 
-Define lightweight dataclasses for adapter results:
+### `models.py`
 
 ```python
 @dataclass
@@ -85,24 +178,19 @@ class InputAdapterResult:
     schema_name: str
     provenance: dict[str, Any]
     warnings: list[str]
-```
 
-Optional intermediate model:
-
-```python
 @dataclass
 class ParsedEventTable:
     parsed_data: pd.DataFrame
     source_type: str
     schema_name: str
-    column_map: dict[str, str]
-    unit_conversions: dict[str, str]
+    column_map: dict[str, str]      # source col → normalized var
+    unit_conversions: dict[str, str] # normalized var → "source_unit → target_unit"
+    header_row_index: int
     warnings: list[str]
 ```
 
 ### `registry.py`
-
-Expose a small adapter registry:
 
 ```python
 def read_and_normalize_input(
@@ -111,78 +199,24 @@ def read_and_normalize_input(
     *,
     input_schema: str | None = None,
     sheet_name: str | int = 0,
-) -> InputAdapterResult:
-    ...
+) -> InputAdapterResult: ...
 ```
 
-Routing rules:
+Routing by suffix:
 
 | Suffix | Default route |
 |---|---|
-| `.dcm`, `.dicom`, no recognized suffix | DICOM RDSR adapter |
+| `.dcm`, `.dicom`, unrecognized | DICOM RDSR adapter |
 | `.json` | normalized JSON adapter |
-| `.csv` | tabular adapter with comma delimiter |
-| `.tsv` | tabular adapter with tab delimiter |
+| `.csv` | tabular adapter, comma delimiter |
+| `.tsv` | tabular adapter, tab delimiter |
 | `.xlsx`, `.xlsm` | tabular Excel adapter |
 
-### `tabular_loader.py`
-
-Implement generic tabular reading only:
-
-- `read_csv(path, delimiter=',')`
-- `read_tsv(path, delimiter='\t')`
-- `read_excel(path, sheet_name=0)`
-- standard cleanup: strip column names, drop entirely empty rows, preserve original column order in provenance.
-
-### Source-specific adapters
-
-Each source adapter should own:
-
-- required columns
-- optional columns
-- column aliases
-- unit conversions
-- derived columns
-- source-specific validation
-- emitted warnings
-
-Initial schemas:
-
-1. `normalized`
-   - Input already uses MyPySkinDose normalized columns (`Ap1`, `Ap2`, `DSD`, `DSI`, `K_IRP`, `kVp`, etc.).
-   - Goes straight to `analyze_data()` after validation.
-
-2. `radimetrics`
-   - Adapt from the `dhen2714/PySkinDose` prototype.
-   - Start with Siemens AXIOM-Artis support only if that is the only validated mapping.
-   - Require explicit schema selection until enough real exports exist for safe detection.
-
-3. `dosetrack`
-   - Adapt from the `dhen2714/PySkinDose` prototype.
-   - Support XLSX first; CSV/TSV can work if users export the same columns from Excel.
-   - Validate manufacturer/model mapping before normalization.
-
-4. `generic_rdsr_like`
-   - A schema for tables whose columns already match the raw parsed RDSR names used by `rdsr_normalizer()`.
+---
 
 ## Public API changes
 
-### Option A: extend `main()` minimally
-
-```python
-def main(
-    file_path: str | Path | None = None,
-    settings: str | dict | PyskindoseSettings | None = None,
-    *,
-    input_schema: str | None = None,
-    sheet_name: str | int = 0,
-):
-    ...
-```
-
-This is user-friendly but adds more responsibility to `main()`.
-
-### Option B: add a new explicit input helper
+### New helper (Option B — recommended)
 
 ```python
 def analyze_input_file(
@@ -192,25 +226,20 @@ def analyze_input_file(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     output_format: str = "dict",
-) -> dict | str | None:
-    ...
+) -> dict | str | None: ...
 ```
 
-This keeps `main()` mostly backward compatible while providing a clearer API for tabular imports.
+Keeps `main()` backward compatible. Once adapter behavior is stable, let `main()` call the same registry internally.
 
-### Recommendation
-
-Implement Option B first, then let `main()` call the same registry internally once the adapter behavior is stable.
+---
 
 ## CLI changes
-
-Add optional arguments:
 
 ```bash
 python -m mypyskindose \
   --file-path exported_events.csv \
   --settings settings.json \
-  --input-schema radimetrics
+  --input-schema normalized
 
 python -m mypyskindose \
   --file-path dose_track_export.xlsx \
@@ -219,111 +248,171 @@ python -m mypyskindose \
   --sheet-name "Event Data"
 ```
 
-Suggested flags:
-
+Flags to add:
 - `--input-schema {auto,normalized,generic_rdsr_like,radimetrics,dosetrack}`
 - `--sheet-name SHEET`
-- `--input-preview-only` to print detected columns, missing required columns, and unit assumptions without calculating dose.
+- `--input-preview-only` — print detected header row, column map, missing required columns, and unit assumptions without calculating dose.
 
-## GUI changes
+---
 
-In the upload step:
+## GUI changes (Phase 5)
 
-- Accept `.dcm`, `.json`, `.csv`, `.tsv`, `.xlsx`, `.xlsm`.
-- Add a source selector:
-  - Auto-detect
-  - Normalized MyPySkinDose table
-  - Raw RDSR-like table
-  - Radimetrics export
-  - DoseTrack export
-- For Excel, add a sheet selector after upload.
-- Show an import preview with:
-  - detected schema
-  - missing/extra columns
-  - unit conversions
-  - first 10 normalized events
-  - warnings requiring user confirmation before dose calculation.
+- [ ] Extend upload accepted formats to `.csv`, `.tsv`, `.xlsx`, `.xlsm`.
+- [ ] Add schema selector (Auto-detect / Normalized / Raw RDSR-like / Radimetrics / DoseTrack).
+- [ ] For `.xlsx`/`.xlsm`: show sheet names after upload; let user pick the data sheet.
+- [ ] Show import preview after upload:
+  - Detected header row index (flag if not row 0).
+  - Column mapping table: source column → normalized variable → unit conversion (or "unmapped").
+  - List of required columns that could not be mapped (block proceed if any).
+  - Duplicate-mapping warnings (block proceed).
+  - First 10 normalized events in a table.
+  - Any adapter warnings requiring user confirmation.
+- [ ] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports.
+- [ ] Show schema/source type in the Data Table tab header so users know what they loaded.
+
+---
 
 ## Validation requirements
 
-Every adapter must validate at least:
+Every adapter must validate:
 
-- required source columns exist
-- required internal columns exist after mapping
-- numeric columns parse cleanly or report row-level failures
-- source units are converted to PySkinDose expectations
-- distances are positive and plausible
-- `kVp` is non-negative and zero rows are handled consistently with `remove_invalid_rows`
-- `K_IRP` / reference point dose has the expected unit and scale
-- field size can be determined directly or derived with documented formulas
-- manufacturer/model can be mapped to normalization settings or a safe fallback is selected explicitly
+- [ ] Required source columns exist (post-mapping).
+- [ ] No duplicate column mappings.
+- [ ] Required internal normalized columns are present after mapping.
+- [ ] Numeric columns parse cleanly; report row-level failures with row index.
+- [ ] Source units are converted to PySkinDose internal expectations.
+- [ ] Distances are positive and within plausible clinical ranges.
+- [ ] `kVp` is non-negative; zero-kVp rows handled consistently with `remove_invalid_rows`.
+- [ ] Reference point dose has expected unit and scale.
+- [ ] Field size is present directly or derivable with a documented formula.
+- [ ] Manufacturer/model can be mapped to normalization settings, or a safe fallback is selected explicitly with a warning.
+
+---
 
 ## Testing plan
 
-1. Add small synthetic fixture files under `tests/fixtures/tabular_inputs/`:
-   - `normalized_events.csv`
-   - `normalized_events.tsv`
-   - `normalized_events.xlsx`
-   - `radimetrics_axiom_artis.csv`
-   - `dosetrack_siemens.xlsx`
-2. Unit-test every loader and schema mapper.
-3. Add round-trip tests comparing equivalent DICOM-derived normalized JSON vs CSV/TSV/XLSX normalized table inputs.
-4. Add failure tests for missing columns, wrong units, invalid numeric cells, unknown model, ambiguous schema, and unsupported sheets.
-5. Add one end-to-end smoke test using `analyze_input_file()` and a small normalized fixture.
+Fixture files under `tests/fixtures/tabular_inputs/`:
+- `normalized_events.csv`
+- `normalized_events.tsv`
+- `normalized_events.xlsx`
+- `normalized_events_metadata_header.xlsx` — metadata rows above the data header
+- `radimetrics_axiom_artis.csv` (Phase 3)
+- `dosetrack_siemens.xlsx` (Phase 4)
+
+Tests to write:
+- Unit tests for header-row detection (including offset headers).
+- Unit tests for the substring pattern dictionary (each pattern maps correctly).
+- Unit tests for duplicate-mapping detection (two columns match same var → error).
+- Unit tests for missing-required-column reporting.
+- Unit tests for each schema adapter (column map, unit conversions).
+- Round-trip tests: equivalent DICOM-derived normalized JSON vs CSV/TSV/XLSX normalized input.
+- Failure tests: missing columns, wrong units, invalid numeric cells, unknown model, ambiguous schema, unsupported sheet.
+- One end-to-end smoke test via `analyze_input_file()` with a normalized fixture.
+- Architecture layer test: `input_adapters/` must not import L3+.
+
+---
 
 ## Implementation phases
 
-### Phase 1 — normalized tabular input
+### Phase 1 — Normalized tabular input (active target)
 
-- Add generic CSV/TSV/XLSX loaders.
-- Add `normalized` schema validation.
-- Add API and CLI path for normalized tabular files.
-- Add tests and documentation.
+**Pre-condition:** Decide whether XLSX support is core or `[excel]` optional extra before writing any code.
 
-This phase unlocks users who can export/prepare MyPySkinDose-normalized event tables.
+- [ ] Add `mypyskindose[excel]` optional extra (or document decision to keep XLSX core) in `pyproject.toml`.
+- [ ] Create `src/mypyskindose/input_adapters/__init__.py`.
+- [ ] Create `models.py` with `InputAdapterResult` and `ParsedEventTable`.
+- [ ] Create `column_mapper.py`:
+  - [ ] Implement `detect_header_row(df_raw, n=10) -> int`.
+  - [ ] Define initial `COLUMN_PATTERNS` dict for the normalized schema's required columns.
+  - [ ] Implement `map_columns(df, patterns) -> tuple[dict[str, str], list[str]]` (column map + warnings).
+  - [ ] Implement `check_duplicate_mappings(column_map) -> list[str]` (returns error messages).
+- [ ] Create `tabular_loader.py`:
+  - [ ] `read_csv(path, delimiter=',') -> pd.DataFrame` (raw, no header applied yet).
+  - [ ] `read_tsv(path, delimiter='\t') -> pd.DataFrame`.
+  - [ ] `read_excel(path, sheet_name=0) -> pd.DataFrame`.
+  - [ ] Strip column names, drop wholly-empty rows, preserve original column order in provenance.
+- [ ] Create `normalized.py` — `normalized` schema adapter:
+  - [ ] Define required and optional normalized columns with expected units.
+  - [ ] Validate all required columns present post-mapping.
+  - [ ] Validate numeric columns; collect row-level failures.
+  - [ ] Return `InputAdapterResult` with provenance dict.
+- [ ] Create `registry.py` with `read_and_normalize_input()` routing by suffix.
+- [ ] Add `analyze_input_file()` to `src/mypyskindose/__init__.py` public API.
+- [ ] Add `--input-schema` and `--sheet-name` CLI flags to `__main__.py` / `main.py`.
+- [ ] Add `--input-preview-only` CLI flag.
+- [ ] Add fixtures: `normalized_events.csv`, `normalized_events.tsv`, `normalized_events.xlsx`, `normalized_events_metadata_header.xlsx`.
+- [ ] Write unit tests for all of the above (see testing plan).
+- [ ] Add `input_adapters/` to architecture layer test (must not import L3+).
+- [ ] Update `FEATURE_INVENTORY.md` Phase 1 row to `Shipped`.
+- [ ] Update `AGENTS.md` and `CHANGELOG.md`.
 
-### Phase 2 — generic raw RDSR-like tabular input
+### Phase 2 — Generic raw RDSR-like tabular input
 
-- Add schema for columns matching `rdsr_parser()` output.
-- Run through existing `rdsr_normalizer()`.
-- Add validation and fixtures.
+- [ ] Add `COLUMN_PATTERNS` entries for raw `rdsr_parser()` output column names.
+- [ ] Create `generic_rdsr.py` adapter: map → `rdsr_normalizer()` → `InputAdapterResult`.
+- [ ] Add fixture `generic_rdsr_events.csv`.
+- [ ] Add tests: column map, normalization round-trip, failure cases.
+- [ ] Extend `registry.py` routing for `generic_rdsr_like` schema.
 
 ### Phase 3 — Radimetrics adapter
 
-- Port/refactor the `RADIMETRICS2PSD` mapping from the `dhen2714/PySkinDose` fork.
-- Document all unit conversions.
-- Limit to validated models first.
-- Add fixtures and error messages tailored to Radimetrics exports.
+- [ ] Study `dhen2714/PySkinDose` `radimetrics.py`; document differences from our column-mapping approach.
+- [ ] Add Radimetrics-specific `COLUMN_PATTERNS` entries.
+- [ ] Create `radimetrics.py` adapter:
+  - [ ] Unit conversions: reference dose mGy→Gy, field area cm²→m², exposure mAs→µAs.
+  - [ ] Document each conversion with source unit and target unit in code.
+  - [ ] Limit to validated models only; unknown models produce an explicit warning, not a silent fallback.
+- [ ] Add fixture `radimetrics_axiom_artis.csv`.
+- [ ] Add tests: column map, unit conversions, unknown-model error.
+- [ ] **Philips coordinate normalization** — table height sign/origin correction: see TO_DO.md.
+- [ ] Update `FEATURE_INVENTORY.md`, `AGENTS.md`, `CHANGELOG.md`.
 
 ### Phase 4 — DoseTrack adapter
 
-- Port/refactor the `DOSETRACK2PSD` mapping from the `dhen2714/PySkinDose` fork.
-- Add XLSX sheet handling.
-- Validate Siemens and Philips paths separately.
-- Add fixtures and documentation.
+- [ ] Study `dhen2714/PySkinDose` `dosetrack.py`; document differences.
+- [ ] Create `dosetrack.py` adapter:
+  - [ ] XLSX sheet handling (auto-detect data sheet or require user selection).
+  - [ ] Filter parsing, plane-name normalization, derived collimated field area.
+  - [ ] Siemens and Philips paths validated and tested separately.
+- [ ] Add fixture `dosetrack_siemens.xlsx`.
+- [ ] Add tests: column map, sheet handling, vendor-path failures.
+- [ ] **GE lateral/longitudinal swap** — see TO_DO.md.
+- [ ] Update inventory and docs.
 
 ### Phase 5 — GUI import workflow
 
-- Extend upload accepted formats.
-- Add schema and sheet selectors.
-- Add preview/validation UI.
-- Preserve provenance in exported JSON/HTML reports.
+See GUI changes section above for the full checklist. Key tasks:
+
+- [ ] Extend upload accepted formats.
+- [ ] Add schema selector and sheet picker.
+- [ ] Implement import preview panel (column map, warnings, event sample).
+- [ ] Block dose calculation on unresolved mapping errors.
+- [ ] Preserve provenance in exports.
+- [ ] GUI smoke test covering CSV/XLSX upload path.
+
+---
 
 ## Open questions
 
-- Which Radimetrics export templates are actually used by intended users?
-- Are exported values cumulative per event, cumulative per study, or event-local for every source?
-- Do exported tables include enough geometry for all clinical use cases, especially table rotations and detector rotation?
-- Should XLSX support be a core dependency or `mypyskindose[excel]`?
-- Should adapter mappings be Python modules only, or should column maps live in editable JSON/YAML files for site customization?
+| Question | Phase relevance | Status |
+|---|---|---|
+| Which XLSX engine — `openpyxl` as `[excel]` extra or core dependency? | Blocks Phase 1 | **Decide before starting Phase 1** |
+| Which Radimetrics export templates do intended users actually have? | Phase 3 | Unresolved — collect real samples before Phase 3 |
+| Are exported values event-local, cumulative per study, or cumulative per procedure for each source? | Phase 3–4 | Unresolved — must validate per source before writing adapters |
+| Do exports include enough geometry for all clinical use cases (table rotations, detector rotation)? | Phase 3–4 | Unresolved — likely gaps; document per source |
+| Should column-pattern overrides be Python-only or editable JSON/YAML for site customization? | Phase 3–4 | Deferred — implement Python-only first |
+
+---
 
 ## Acceptance criteria
 
 The feature is complete when:
 
 - Users can run a dose calculation from `.csv`, `.tsv`, and `.xlsx` normalized event tables.
-- At least one Radimetrics CSV schema and one DoseTrack XLSX schema have validated adapters or are explicitly documented as unsupported until fixtures are available.
+- At least one Radimetrics CSV schema and one DoseTrack XLSX schema have validated adapters, or are explicitly documented as unsupported until fixtures are available.
 - The CLI, Python API, and GUI share the same adapter registry.
-- Validation errors identify missing/invalid columns by name and include actionable remediation text.
+- Duplicate column mappings and missing required columns produce clear, actionable error messages.
+- Validation errors identify columns by name with actionable remediation text.
 - Output includes tabular-input provenance and adapter warnings.
 - Tests cover success and failure paths for each supported format and schema.
+- `input_adapters/` passes the architecture layer test (no L3+ imports).

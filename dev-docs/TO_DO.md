@@ -36,9 +36,13 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Add debug/warning if any dose events have no intersection with patient.
 - [ ] Add support for multiple exams.
 - [ ] Implement tabular event-table inputs (`.csv`, `.tsv`, `.xlsx`) per [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) — **feature track** (status in `FEATURE_INVENTORY.md`):
-  - Start with normalized tabular inputs.
-  - Then add raw RDSR-like tables.
-  - Then adapt Radimetrics and DoseTrack mappings from https://github.com/dhen2714/PySkinDose after fixtures and validation are available.
+  - Start with normalized tabular inputs (Phase 1).
+  - Then add raw RDSR-like tables (Phase 2).
+  - Then adapt Radimetrics and DoseTrack mappings from https://github.com/dhen2714/PySkinDose after fixtures and validation are available (Phases 3–4).
+- [ ] **Vendor coordinate normalization for tabular inputs** (Phase 3–4 of tabular plan, or sooner if RDSR path is also affected):
+  - Philips: table height uses a different sign convention or origin — validate and apply correction in the Philips adapter.
+  - GE: lateral and longitudinal axes are swapped relative to the internal model — validate and apply swap in the GE adapter.
+  - Other vendors: document coordinate conventions as real exports are validated; add normalization steps per vendor.
 
 ### GUI / UX
 
