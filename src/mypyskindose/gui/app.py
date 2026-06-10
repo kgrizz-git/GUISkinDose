@@ -29,6 +29,7 @@ from nicegui import app, run, ui
 
 from .helpers import (
     build_settings,
+    get_excel_sheets,
     get_example_rdsr_files,
     get_human_mesh_names,
     load_rdsr,
@@ -419,6 +420,7 @@ def index():
                                 "normalized": "Normalized",
                                 "generic_rdsr_like": "Raw RDSR-like",
                                 "radimetrics": "Radimetrics CSV",
+                                "dosetrack": "DoseTrack XLSX/CSV",
                             },
                             label="Input schema (tabular files only)",
                             value=state.input_schema,
@@ -434,6 +436,15 @@ def index():
                         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                             tmp.write(e.content.read())
                             tmp_path = Path(tmp.name)
+
+                        # Reset sheet state and transform flags for every new upload
+                        state.input_sheet_name = 0
+                        state.available_sheets = []
+                        sheet_row.set_visibility(False)
+                        state.swap_lat_lon = False
+                        state.flip_ap1 = False
+                        state.flip_ap2 = False
+
                         upload_status.set_text("PARSING DATA STREAM...")
                         if suffix in _TABULAR_SUFFIXES:
                             state.input_source_type = suffix.lstrip(".")
@@ -453,6 +464,16 @@ def index():
                             _refresh_event_table()
                             if state.input_source_type != "dicom":
                                 _refresh_import_preview()
+                                _set_transform_defaults()
+                            # Populate sheet picker for multi-sheet Excel files
+                            if suffix in (".xlsx", ".xlsm"):
+                                sheets = await run.io_bound(get_excel_sheets, tmp_path)
+                                if len(sheets) > 1:
+                                    state.available_sheets = sheets
+                                    sheet_select.set_options(
+                                        {s: s for s in sheets}, value=sheets[0]
+                                    )
+                                    sheet_row.set_visibility(True)
                         else:
                             upload_status.set_text("STREAM ERROR")
                             ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
@@ -504,22 +525,82 @@ def index():
                         import_encoding_label = ui.label("Encoding: —").classes("text-caption text-grey-5")
                         import_delimiter_label = ui.label("Delimiter: —").classes("text-caption text-grey-5")
                         import_header_label = ui.label("Header row: —").classes("text-caption text-grey-5")
+                        import_sheet_label = ui.label("").classes("text-caption text-grey-5")
+
+                    # Sheet picker — only shown for multi-sheet Excel files
+                    sheet_row = ui.row().classes("w-full items-center gap-3 q-mb-xs")
+                    with sheet_row:
+                        ui.label("Sheet:").classes("text-caption text-grey-4")
+                        sheet_select = ui.select(options={}, label="").classes("grow")
+
+                        async def _on_sheet_change():
+                            if state.file_path is None:
+                                return
+                            state.input_sheet_name = sheet_select.value or 0
+                            ok, msg = await run.io_bound(load_tabular, state.file_path, state)
+                            if ok:
+                                upload_status.set_text(f"SUCCESS: {msg.upper()}")
+                                reset_results()
+                                _refresh_event_table()
+                                _refresh_import_preview()
+                            else:
+                                ui.notify(f"Sheet parse error: {msg[:200]}", type="negative", timeout=6000)
+
+                        sheet_select.on("update:model-value", _on_sheet_change)
+                    sheet_row.set_visibility(False)
 
                     # Coordinate correction options — visible for non-normalized schemas
                     with ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm q-mb-xs").bind_visibility_from(
                         state, "import_provenance",
                         backward=lambda v: v is not None and getattr(v, "schema_name", "") != "normalized",
                     ):
-                        ui.label("COORDINATE OPTIONS").classes("text-caption text-grey-4 font-bold tracking-widest q-mb-xs")
-                        with ui.row().classes("items-center gap-4 flex-wrap"):
-                            ui.switch("Swap lateral/longitudinal axes").bind_value(state, "swap_lat_lon").on(
+                        with ui.row().classes("items-center gap-3 q-mb-xs"):
+                            ui.label("COORDINATE CORRECTIONS").classes("text-caption text-grey-4 font-bold tracking-widest")
+                            coord_auto_label = ui.label("").classes("text-caption text-blue-400 italic")
+                        ui.label(
+                            "Applied after normalization. Defaults are auto-set from the detected manufacturer."
+                        ).classes("text-caption text-grey-6 q-mb-sm")
+
+                        def _coord_row(label: str, hint: str) -> None:
+                            with ui.row().classes("items-center gap-3 q-mb-xs flex-wrap"):
+                                ui.label(hint).classes("text-caption text-grey-5 w-48")
+
+                        # Row 1: swap lat/lon
+                        with ui.row().classes("items-center gap-3 q-mb-xs"):
+                            ui.switch("Swap lateral ↔ longitudinal").bind_value(state, "swap_lat_lon").on(
                                 "update:model-value", lambda: _on_swap_toggle()
                             ).tooltip(
-                                "Enable for GE scanners or DoseTrack Philips exports where "
-                                "TableLateralPosition and TableLongitudinalPosition are physically swapped. "
-                                "Swaps Tx and Tz in the normalized output."
+                                "Swaps Tx ↔ Tz in the normalized output.\n"
+                                "Auto-enabled for GE Radimetrics and Philips DoseTrack exports."
                             )
-                            ui.label("Swaps Tx ↔ Tz after normalization").classes("text-caption text-grey-5")
+                            ui.label("Tx ↔ Tz").classes("text-caption text-grey-5 font-mono")
+
+                        # Row 2: flip primary angle
+                        with ui.row().classes("items-center gap-3 q-mb-xs"):
+                            ui.switch("Flip primary angle (Ap1)").bind_value(state, "flip_ap1").on(
+                                "update:model-value", lambda: _on_flip_ap1_toggle()
+                            ).tooltip(
+                                "Negates Ap1 after normalization (e.g. RAO 30° → LAO 30°).\n"
+                                "Use when the gantry primary rotation direction is opposite to convention."
+                            )
+                            ui.label("Ap1 × −1").classes("text-caption text-grey-5 font-mono")
+
+                        # Row 3: flip secondary angle
+                        with ui.row().classes("items-center gap-3 q-mb-xs"):
+                            ui.switch("Flip secondary angle (Ap2)").bind_value(state, "flip_ap2").on(
+                                "update:model-value", lambda: _on_flip_ap2_toggle()
+                            ).tooltip(
+                                "Negates Ap2 after normalization (e.g. CRA 20° → CAU 20°).\n"
+                                "Use when the gantry secondary rotation direction is opposite to convention."
+                            )
+                            ui.label("Ap2 × −1").classes("text-caption text-grey-5 font-mono")
+
+                        ui.separator().classes("q-my-xs")
+                        ui.label(
+                            "Vendor-specific normalization (rotation directions, iso-centre offsets) "
+                            "is applied automatically from manufacturer settings. "
+                            "Per-transform overrides are planned."
+                        ).classes("text-caption text-grey-6 italic")
 
                     # Warnings
                     import_warnings_label = ui.label("").classes("text-caption text-orange-400 q-mb-xs")
@@ -580,6 +661,13 @@ def index():
                 delim = repr(prov.detected_delimiter) if prov.detected_delimiter else "N/A"
                 import_delimiter_label.set_text(f"Delimiter: {delim}")
                 import_header_label.set_text(f"Header row: {prov.header_row_index}")
+                # Sheet info (Excel only)
+                if state.available_sheets:
+                    sheet_name = state.input_sheet_name
+                    n = len(state.available_sheets)
+                    import_sheet_label.set_text(f"Sheet: {sheet_name!r} ({n} available)")
+                else:
+                    import_sheet_label.set_text("")
                 if state.import_warnings:
                     import_warnings_label.set_text("Warning: " + "; ".join(state.import_warnings[:3]))
                 else:
@@ -596,7 +684,42 @@ def index():
                     event_sample_table.rows = df.fillna("—").astype(str).to_dict("records")
                     event_sample_table.update()
 
-            def _on_swap_toggle():
+            def _set_transform_defaults() -> None:
+                """Auto-set coordinate correction toggles from import warnings.
+
+                Reads manufacturer hints from import warnings and enables the
+                appropriate toggles. Called once after initial file load, not on
+                sheet re-parse, so user overrides are preserved across sheet changes.
+                """
+                if state.import_provenance is None:
+                    return
+                warnings_lower = " ".join(state.import_warnings).lower()
+                schema = state.import_provenance.schema_name
+
+                # Lat/lon swap: GE Radimetrics and Philips DoseTrack need it
+                needs_swap = (
+                    "ge " in warnings_lower
+                    or "ge manufacturer" in warnings_lower
+                    or ("philips" in warnings_lower and schema == "dosetrack")
+                )
+                state.swap_lat_lon = needs_swap
+                state.flip_ap1 = False
+                state.flip_ap2 = False
+
+                # Apply swap if needed (load_tabular loaded with swap=False)
+                if needs_swap and state.rdsr_df is not None:
+                    if "Tx" in state.rdsr_df.columns and "Tz" in state.rdsr_df.columns:
+                        df = state.rdsr_df.copy()
+                        df["Tx"], df["Tz"] = state.rdsr_df["Tz"].copy(), state.rdsr_df["Tx"].copy()
+                        state.rdsr_df = df
+
+                # Update the auto-hint label
+                if needs_swap:
+                    coord_auto_label.set_text("· lat/lon swap auto-enabled")
+                else:
+                    coord_auto_label.set_text("")
+
+            def _on_swap_toggle() -> None:
                 if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
                     return
                 prov = state.import_provenance
@@ -605,6 +728,29 @@ def index():
                 if "Tx" in state.rdsr_df.columns and "Tz" in state.rdsr_df.columns:
                     df = state.rdsr_df.copy()
                     df["Tx"], df["Tz"] = state.rdsr_df["Tz"].copy(), state.rdsr_df["Tx"].copy()
+                    state.rdsr_df = df
+                    reset_results()
+                    _refresh_event_table()
+                    _refresh_import_preview()
+                    coord_auto_label.set_text("")
+
+            def _on_flip_ap1_toggle() -> None:
+                if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
+                    return
+                if "Ap1" in state.rdsr_df.columns:
+                    df = state.rdsr_df.copy()
+                    df["Ap1"] = -state.rdsr_df["Ap1"]
+                    state.rdsr_df = df
+                    reset_results()
+                    _refresh_event_table()
+                    _refresh_import_preview()
+
+            def _on_flip_ap2_toggle() -> None:
+                if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
+                    return
+                if "Ap2" in state.rdsr_df.columns:
+                    df = state.rdsr_df.copy()
+                    df["Ap2"] = -state.rdsr_df["Ap2"]
                     state.rdsr_df = df
                     reset_results()
                     _refresh_event_table()

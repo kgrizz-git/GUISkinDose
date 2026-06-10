@@ -34,10 +34,14 @@ class AppState:
     # Tabular import
     input_schema: str = "auto"
     input_source_type: str = ""  # "dicom" | "csv" | "tsv" | "xlsx" | ""
+    input_sheet_name: str | int = 0  # selected sheet (name or 0-based index)
+    available_sheets: list[str] = field(default_factory=list)  # all sheet names (xlsx only)
     import_provenance: Any | None = None
     import_warnings: list[str] = field(default_factory=list)
     import_has_errors: bool = False
-    swap_lat_lon: bool = False
+    swap_lat_lon: bool = False    # post-norm: swap Tx ↔ Tz
+    flip_ap1: bool = False        # post-norm: negate Ap1 (primary angle)
+    flip_ap2: bool = False        # post-norm: negate Ap2 (secondary angle)
 
     # ── Settings (raw values mirrored from UI widgets) ─────────────────────
     phantom_model: str = "human"

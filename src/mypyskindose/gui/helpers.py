@@ -89,6 +89,18 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         return False, err
 
 
+def get_excel_sheets(file_path: Path) -> list[str]:
+    """Return the sheet names from an Excel file, or [] on error."""
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+        names = wb.sheetnames
+        wb.close()
+        return names
+    except Exception:
+        return []
+
+
 def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
     """Load a tabular file (CSV/TSV/XLSX) via the input_adapters registry."""
     try:
@@ -101,6 +113,7 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
             file_path,
             input_schema=schema,
             settings=settings,
+            sheet_name=state.input_sheet_name,
         )
 
         df = result.normalized_data.copy()
@@ -108,6 +121,10 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
         if state.swap_lat_lon and result.provenance.schema_name != "normalized":
             if "Tx" in df.columns and "Tz" in df.columns:
                 df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
+        if state.flip_ap1 and "Ap1" in df.columns:
+            df["Ap1"] = -df["Ap1"]
+        if state.flip_ap2 and "Ap2" in df.columns:
+            df["Ap2"] = -df["Ap2"]
 
         state.rdsr_df = df
         state.rdsr_raw_df = result.raw_data
