@@ -105,6 +105,7 @@ def analyze_input_file(
             file_path,
             input_schema=input_schema,
             sheet_name=sheet_name,
+            settings=settings,
         )
         for w in result.warnings:
             logger.warning("tabular input: %s", w)
@@ -236,7 +237,7 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         required=False,
         default=None,
         dest="input_schema",
-        choices=("normalized",),
+        choices=("normalized", "generic_rdsr_like", "auto"),
         help="Schema adapter for tabular files (.csv/.tsv/.xlsx). Default: 'normalized'.",
     )
 

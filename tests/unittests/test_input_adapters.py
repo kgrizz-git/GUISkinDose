@@ -240,12 +240,6 @@ class TestRegistry:
         result = read_and_normalize_input(FIXTURES / "normalized_events.xlsx")
         assert len(result.normalized_data) == 2
 
-    def test_auto_schema_raises(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
-
-        with pytest.raises(ValueError, match="auto"):
-            read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="auto")
-
     def test_unknown_schema_raises(self):
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
@@ -257,3 +251,120 @@ class TestRegistry:
 
         with pytest.raises(ValueError, match="Unsupported suffix"):
             read_and_normalize_input(Path("scan.dcm"))
+
+
+# ── generic_rdsr_like adapter ─────────────────────────────────────────────────
+
+
+def _default_settings():
+    from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+    from mypyskindose.settings import PyskindoseSettings
+
+    return PyskindoseSettings(DEVELOPMENT_PARAMETERS)
+
+
+GENERIC_RDSR_FIXTURE = FIXTURES / "generic_rdsr_events.csv"
+
+
+class TestGenericRdsrAdapter:
+    def test_csv_round_trip(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            GENERIC_RDSR_FIXTURE,
+            input_schema="generic_rdsr_like",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "generic_rdsr_like"
+        assert len(result.normalized_data) == 21
+
+    def test_normalized_columns_present(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            GENERIC_RDSR_FIXTURE,
+            input_schema="generic_rdsr_like",
+            settings=_default_settings(),
+        )
+        expected = {"model", "DSD", "DSI", "DID", "DSIRP", "kVp", "K_IRP", "Ap1", "Ap2"}
+        assert expected.issubset(set(result.normalized_data.columns))
+
+    def test_kvp_numeric(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            GENERIC_RDSR_FIXTURE,
+            input_schema="generic_rdsr_like",
+            settings=_default_settings(),
+        )
+        assert pd.api.types.is_numeric_dtype(result.normalized_data["kVp"])
+        assert (result.normalized_data["kVp"] > 0).all()
+
+    def test_provenance_populated(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            GENERIC_RDSR_FIXTURE,
+            input_schema="generic_rdsr_like",
+            settings=_default_settings(),
+        )
+        prov = result.provenance
+        assert prov.schema_name == "generic_rdsr_like"
+        assert prov.header_row_index == 0
+        assert "KVP_kV" in prov.column_map.values()
+        assert "DoseRP_Gy" in prov.column_map.values()
+
+    def test_missing_settings_raises(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        with pytest.raises(ValueError, match="settings is required"):
+            read_and_normalize_input(GENERIC_RDSR_FIXTURE, input_schema="generic_rdsr_like")
+
+    def test_missing_required_column_raises(self, tmp_path):
+        from mypyskindose.input_adapters import generic_rdsr as adapter
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        # CSV missing Manufacturer column
+        csv_text = (
+            "ManufacturerModelName,IrradiationEventType,AcquisitionPlane,"
+            "DistanceSourcetoDetector_mm,DistanceSourcetoIsocenter_mm,"
+            "TableLongitudinalPosition_mm,TableLateralPosition_mm,TableHeightPosition_mm,"
+            "XRayFilterMaterial,XRayFilterThicknessMinimum_mm,XRayFilterThicknessMaximum_mm,"
+            "PositionerPrimaryAngle_deg,PositionerSecondaryAngle_deg,KVP_kV,DoseRP_Gy\n"
+            "AXIOM-Artis,Fluoroscopy,Single Plane,1198,785,37.8,40.6,294.1,"
+            "Copper or Copper compound,0.6,0.6,-0.1,-1.1,77.0,0.00003\n"
+        )
+        p = tmp_path / "bad.csv"
+        p.write_text(csv_text, encoding="utf-8")
+        loaded = read_csv(p)
+        with pytest.raises(ValueError, match="Missing required"):
+            adapter.adapt(loaded, original_filename="bad.csv", settings=_default_settings())
+
+
+# ── schema auto-detection ─────────────────────────────────────────────────────
+
+
+class TestSchemaAutoDetect:
+    def test_auto_detects_normalized(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="auto")
+        assert result.provenance.schema_name == "normalized"
+
+    def test_auto_detects_generic_rdsr(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            GENERIC_RDSR_FIXTURE,
+            input_schema="auto",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "generic_rdsr_like"
+
+    def test_auto_raises_on_no_match(self, tmp_path):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        p = tmp_path / "random.csv"
+        p.write_text("col_a,col_b,col_c\n1,2,3\n4,5,6\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="auto-detection"):
+            read_and_normalize_input(p, input_schema="auto")

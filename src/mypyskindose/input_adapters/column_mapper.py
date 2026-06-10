@@ -76,6 +76,125 @@ NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
 # clarity if optional columns are added later.
 NORMALIZED_REQUIRED_COLUMNS: frozenset[str] = NORMALIZED_COLUMN_NAMES
 
+# ── Generic raw-RDSR-like schema (Phase 2) ────────────────────────────────────
+
+# Lowercase versions of key rdsr_parser() output column names.
+# Used by detect_header_row() for score-based header location.
+GENERIC_RDSR_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "manufacturer",
+        "manufacturermodelname",
+        "acquisitionplane",
+        "irradiationeventtype",
+        "distancesourcetodetector_mm",
+        "distancesourcetoisocenter_mm",
+        "positionerprimaryangle_deg",
+        "positionersecondaryangle_deg",
+        "tablelongitudinalposition_mm",
+        "tablelateralposition_mm",
+        "tableheightposition_mm",
+        "xrayfiltermaterial",
+        "xrayfilterthicknessminimum_mm",
+        "xrayfilterthicknessmaximum_mm",
+        "kvp_kv",
+        "doserp_gy",
+        "collimatedfieldarea_m2",
+    }
+)
+
+# Maps rdsr_parser() column name → patterns that match it in source headers.
+# Keys are the exact names rdsr_normalizer() expects.
+# Patterns use _normalize_str() form (lowercase, underscores→spaces).
+# The first pattern in each list is the self-match for exact rdsr_parser export names.
+GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
+    "Manufacturer": ["manufacturer", "vendor"],
+    "ManufacturerModelName": [
+        "manufacturermodelname",
+        "manufacturer model name",
+        "device model",
+        "model name",
+    ],
+    "IrradiationEventType": [
+        "irradiationeventtype",
+        "irradiation event type",
+        "event type",
+    ],
+    "AcquisitionPlane": ["acquisitionplane", "acquisition plane"],
+    "DistanceSourcetoDetector_mm": [
+        "distancesourcetodetector mm",
+        "distance source to detector",
+        "source detector distance",
+    ],
+    "DistanceSourcetoIsocenter_mm": [
+        "distancesourcetoisocenter mm",
+        "distance source to isocenter",
+        "source isocenter distance",
+    ],
+    "FinalDistanceSourcetoDetector_mm": [
+        "finaldistancesourcetodetector mm",
+        "final distance source to detector",
+        "final dsd",
+    ],
+    "TableLongitudinalPosition_mm": [
+        "tablelongitudinalposition mm",
+        "table longitudinal position",
+        "longitudinal position",
+    ],
+    "TableLateralPosition_mm": [
+        "tablelateralposition mm",
+        "table lateral position",
+        "lateral position",
+    ],
+    "TableHeightPosition_mm": [
+        "tableheightposition mm",
+        "table height position",
+        "table height",
+    ],
+    "XRayFilterMaterial": [
+        "xrayfiltermaterial",
+        "x ray filter material",
+        "filter material",
+    ],
+    "XRayFilterThicknessMinimum_mm": [
+        "xrayfilterthicknessminimum mm",
+        "filter thickness minimum",
+        "filter min",
+    ],
+    "XRayFilterThicknessMaximum_mm": [
+        "xrayfilterthicknessmaximum mm",
+        "filter thickness maximum",
+        "filter max",
+    ],
+    "PositionerPrimaryAngle_deg": [
+        "positionerprimaryangle deg",
+        "positioner primary angle",
+        "primary angle",
+    ],
+    "PositionerSecondaryAngle_deg": [
+        "positionersecondaryangle deg",
+        "positioner secondary angle",
+        "secondary angle",
+    ],
+    "KVP_kV": ["kvp kv", "kvp", "tube voltage"],
+    "DoseRP_Gy": [
+        "doserp gy",
+        "dose rp gy",
+        "reference point dose gy",
+        "air kerma gy",
+    ],
+    "CollimatedFieldArea_m2": [
+        "collimatedfieldarea m2",
+        "collimated field area",
+        "field area",
+    ],
+    "DoseAreaProduct_Gym2": [
+        "doseareaproduct gym2",
+        "dose area product gy",
+        "dap gy",
+    ],
+}
+
+
 # ── Vendor-schema pattern dictionary (Phase 2+) ────────────────────────────────
 #
 # Maps normalized internal variable name → list of lowercase patterns.
