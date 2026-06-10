@@ -4,7 +4,7 @@ _Last updated: 2026-06-09_
 
 > See also: [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [TO_DO.md](TO_DO.md) | [AGENTS.md](../AGENTS.md)
 
-**Status: pre-implementation — no code written yet. Phase 1 is the active target.**
+**Status: Phases 1 and 2 shipped. Phase 5 (GUI import workflow) is the active target.**
 
 ---
 
@@ -141,13 +141,64 @@ A tabular export can contain rows spanning several studies, patients, or devices
 
 ### Vendor-specific coordinate normalization
 
-Raw vendor schemas need post-mapping coordinate transforms:
+#### What the existing pipeline already handles
 
-- **Philips** — table height uses a different sign convention or origin than the internal model.
-- **GE** — lateral and longitudinal axes are swapped relative to the internal model.
-- Other vendors likely have similar issues, discovered as real exports are validated.
+`rdsr_normalizer()`, driven by `normalization_settings.json`, already applies per-manufacturer corrections when input data is in the **raw DICOM coordinate frame**:
+- Translation offsets (origin alignment)
+- Axis sign conventions (direction differences)
+- Rotation direction corrections
+- Field-size calculation mode selection
 
-These are a **separate step after column mapping**, applied per detected manufacturer, and are **deferred to the vendor adapter phases** (3–4) or added as TO_DO items as discovered. The Phase 1 `normalized` schema does **not** apply them (data is already normalized). See [TO_DO.md](TO_DO.md) for tracking items.
+`normalization_settings.json` currently has validated entries for **Siemens AXIOM-Artis** (no correction needed) and **Philips Allura Clarity** (large translation offset, inverted Y and Ap2). The full values and rationale are documented in [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+
+#### The critical question for each vendor adapter: raw DICOM frame or already transformed?
+
+The answer determines which normalization path to use:
+
+| Input data frame | Normalization path | Result |
+|---|---|---|
+| Raw DICOM coordinates (like `rdsr_parser()` output) | Call `rdsr_normalizer(data_parsed, settings)` | Corrections from `normalization_settings.json` apply once — correct |
+| Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter | No corrections — correct |
+| Already transformed by vendor software (unknown convention) | **Must investigate** before writing adapter | Risk of double-correction or missed correction — wrong |
+
+**Radimetrics, DoseTrack, and similar dose-management systems** typically pass coordinate values through from the underlying RDSR verbatim — i.e., the exported values are in the same raw DICOM frame as `rdsr_parser()` output. If true, the `generic_rdsr_like` path (calling `rdsr_normalizer()`) is correct and all existing per-manufacturer corrections in `normalization_settings.json` apply as normal. **This must be confirmed per vendor** by comparing a real export against its source RDSR before writing each Phase 3/4 adapter. Do not assume; verify.
+
+#### GE lateral/longitudinal swap
+
+GE systems have a known additional quirk beyond the direction/offset mechanism: the **`TableLateralPosition` and `TableLongitudinalPosition` DICOM tags are physically swapped** relative to the internal model's axis definitions. The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap — it requires explicitly renaming the two columns before `rdsr_normalizer()` is called. This affects DICOM RDSR from GE scanners and any tabular export that passes those raw DICOM values through verbatim.
+
+The fix must be implemented as either:
+- A new `"swap_lateral_longitudinal": true` flag in `normalization_settings.json` with corresponding handling in `rdsr_normalizer()`, **or**
+- An explicit column-swap step in the GE adapter before calling `rdsr_normalizer()`
+
+The choice should be consistent with whatever approach is confirmed by the coordinate-frame investigation above. Tracked in TO_DO.md.
+
+#### Double-correction risk
+
+If a vendor export has already applied coordinate transformations before export, calling `rdsr_normalizer()` will double-apply the corrections → silently wrong geometry. Risk level:
+- **Siemens exports**: low (Siemens corrections are all zero, so double-application has no numerical effect)
+- **Philips exports**: high (large Y and Z offsets; double-application produces obviously wrong positions)
+- **GE exports with axis swap**: high if swap is applied twice
+- **Unknown vendors**: must assume high until confirmed
+
+#### User-selectable coordinate correction options (Phase 3+)
+
+To handle the diversity of export formats and let expert users override incorrect defaults, the adapter registry and GUI must support import-time options. A `TabularImportOptions` dataclass will carry:
+
+- **`swap_lateral_longitudinal: bool`** — explicitly swap `TableLateralPosition` ↔ `TableLongitudinalPosition` before normalization (for GE and any other system with this quirk)
+- **`skip_manufacturer_transforms: bool`** — pass coordinates directly to `analyze_data()` without calling `rdsr_normalizer()`'s coordinate step, for exports already in the internal frame
+- **`custom_translation_offset: dict | None`** — override the `normalization_settings.json` offset for the detected manufacturer when the auto-detected entry is wrong
+
+Default: `swap_lateral_longitudinal=False`, `skip_manufacturer_transforms=False`, `custom_translation_offset=None` — i.e., call `rdsr_normalizer()` as-is, which is correct for raw DICOM frame exports.
+
+These options are exposed via:
+- Python API: `read_and_normalize_input(..., import_options=TabularImportOptions(...))`
+- CLI: `--swap-lat-lon`, `--skip-transforms` flags
+- GUI: coordinate correction panel in the upload preview step (Phase 5)
+
+#### XLSX sheet picking
+
+Sheet selection is already wired through the API (`sheet_name` parameter) and CLI (`--sheet-name`). The GUI defaults to sheet index 0. An interactive sheet picker (showing all available sheet names) is planned but deferred — tracked in Phase 5 checklist and TO_DO.md.
 
 ---
 
@@ -323,7 +374,7 @@ Flags to add:
 
 - [ ] Extend upload accepted formats to `.csv`, `.tsv`, `.xlsx`, `.xlsm`.
 - [ ] Add schema selector (Auto-detect / Normalized / Raw RDSR-like / Radimetrics / DoseTrack).
-- [ ] For `.xlsx`/`.xlsm`: show sheet names after upload; let user pick the data sheet.
+- [ ] For `.xlsx`/`.xlsm`: interactive sheet picker showing available sheet names — **deferred; GUI defaults to sheet 0 until implemented.**
 - [ ] Show import preview after upload:
   - Detected header row index (flag if not row 0).
   - Column mapping table: source column → normalized variable → unit conversion (or "unmapped").
@@ -331,6 +382,10 @@ Flags to add:
   - Duplicate-mapping warnings (block proceed).
   - First 10 normalized events in a table.
   - Any adapter warnings requiring user confirmation.
+- [ ] Add coordinate correction options in the import preview step (for `generic_rdsr_like` and vendor adapters):
+  - **Lat/lon swap toggle** — swap `TableLateralPosition` ↔ `TableLongitudinalPosition` before `rdsr_normalizer()`. For GE systems and any export that physically swaps these axes in raw RDSR output.
+  - **Skip-manufacturer-transforms toggle** — bypass `rdsr_normalizer()` coordinate corrections for exports that are already in the internal frame. Prevents double-correction for pre-normalized vendor exports.
+  - Both default to off (correct for raw DICOM frame exports). Show only when a non-normalized schema is selected.
 - [ ] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports.
 - [ ] Show schema/source type in the Data Table tab header so users know what they loaded.
 
@@ -384,48 +439,48 @@ Tests to write:
 
 ## Implementation phases
 
-### Phase 1 — Shared infrastructure + normalized schema (active target)
+### Phase 1 — Shared infrastructure + normalized schema (shipped 2026-06-09)
 
 Foundational plumbing plus the simplest schema as a walking skeleton (see Phase sequencing rationale). Builds everything that does not require vendor samples. The `normalized` schema expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) — do not invent a column list; anchor to that doc.
 
-- [ ] Add `openpyxl` to core `dependencies` in `pyproject.toml`.
-- [ ] Create `src/mypyskindose/input_adapters/__init__.py`.
-- [ ] Create `models.py` with `InputProvenance`, `InputAdapterResult`, `ParsedEventTable`.
-- [ ] Create `column_mapper.py`:
-  - [ ] Implement `detect_header_row(df_raw, patterns, n=10) -> int` (error if no row clears the threshold).
-  - [ ] Define initial `COLUMN_PATTERNS` (for raw/vendor schemas in later phases; Phase 1 normalized schema uses near-exact internal names).
-  - [ ] Implement word-boundary, best-match `map_columns(df, patterns) -> tuple[dict[str, str], list[str]]`.
-  - [ ] Implement `check_duplicate_mappings(column_map) -> list[str]` (error messages).
-- [ ] Create `tabular_loader.py`:
-  - [ ] `read_csv` / `read_tsv` with **encoding fallback** (utf-8, utf-8-sig, cp1252, latin-1) and **delimiter sniffing** (comma vs semicolon).
-  - [ ] Decimal-comma detection and normalization to `.` before numeric parsing.
-  - [ ] `read_excel(path, sheet_name=0)`.
-  - [ ] Strip column names, drop wholly-empty rows, record encoding/delimiter/order in provenance.
-- [ ] Create `normalized.py` — `normalized` schema adapter:
-  - [ ] Define required/optional columns and units **by reference to the internal contract** (`INPUT_DATA_FLOW_AND_OFFSETS.md`); no manufacturer/model dependence, no vendor coordinate correction.
-  - [ ] Validate required columns present; validate numeric columns with row-level failure reporting.
-  - [ ] Detect multiple study/accession/device IDs (if present) → warn and error by default (single-procedure assumption).
-  - [ ] Return `InputAdapterResult` with a populated `InputProvenance`.
-- [ ] Create `registry.py` with `read_and_normalize_input()` routing by suffix (explicit schema only; `auto` raises "not yet supported" in Phase 1).
-- [ ] Add `analyze_input_file()` to `src/mypyskindose/__init__.py` public API.
-- [ ] Add `--input-schema` (explicit values only) and `--sheet-name` CLI flags to `__main__.py` / `main.py`.
-- [ ] Add `--input-preview-only` CLI flag (prints header row, encoding/delimiter, column map, missing required columns, unit assumptions; no dose calc).
-- [ ] Add fixtures: `normalized_events.csv`, `normalized_events.tsv`, `normalized_events.xlsx`, `normalized_events_metadata_header.xlsx`, `normalized_events_semicolon_decimalcomma.csv`, `normalized_events_multistudy.csv`.
-- [ ] Write unit tests for all of the above (see testing plan).
-- [ ] Add `input_adapters/` to architecture layer test (must not import L3+).
-- [ ] Update `FEATURE_INVENTORY.md` Phase 1 row to `Shipped`.
-- [ ] Update `AGENTS.md` and `CHANGELOG.md`.
+- [x] Add `openpyxl` to core `dependencies` in `pyproject.toml`.
+- [x] Create `src/mypyskindose/input_adapters/__init__.py`.
+- [x] Create `models.py` with `InputProvenance`, `InputAdapterResult`, `ParsedEventTable`.
+- [x] Create `column_mapper.py`:
+  - [x] Implement `detect_header_row(df_raw, patterns, n=10) -> int` (error if no row clears the threshold).
+  - [x] Define initial `COLUMN_PATTERNS` (for raw/vendor schemas in later phases; Phase 1 normalized schema uses near-exact internal names).
+  - [x] Implement word-boundary, best-match `map_columns(df, patterns) -> tuple[dict[str, str], list[str]]`.
+  - [x] Implement `check_duplicate_mappings(column_map) -> list[str]` (error messages).
+- [x] Create `tabular_loader.py`:
+  - [x] `read_csv` / `read_tsv` with **encoding fallback** (utf-8, utf-8-sig, cp1252, latin-1) and **delimiter sniffing** (comma vs semicolon).
+  - [x] Decimal-comma detection and normalization to `.` before numeric parsing.
+  - [x] `read_excel(path, sheet_name=0)`.
+  - [x] Strip column names, drop wholly-empty rows, record encoding/delimiter/order in provenance.
+- [x] Create `normalized.py` — `normalized` schema adapter:
+  - [x] Define required/optional columns and units **by reference to the internal contract** (`INPUT_DATA_FLOW_AND_OFFSETS.md`); no manufacturer/model dependence, no vendor coordinate correction.
+  - [x] Validate required columns present; validate numeric columns with row-level failure reporting.
+  - [x] Detect multiple study/accession/device IDs (if present) → warn and error by default (single-procedure assumption).
+  - [x] Return `InputAdapterResult` with a populated `InputProvenance`.
+- [x] Create `registry.py` with `read_and_normalize_input()` routing by suffix (explicit schema only; `auto` raises "not yet supported" in Phase 1).
+- [x] Add `analyze_input_file()` to `src/mypyskindose/__init__.py` public API.
+- [x] Add `--input-schema` (explicit values only) and `--sheet-name` CLI flags to `__main__.py` / `main.py`.
+- [x] Add `--input-preview-only` CLI flag (prints header row, encoding/delimiter, column map, missing required columns, unit assumptions; no dose calc).
+- [x] Add fixtures: `normalized_events.csv`, `normalized_events.tsv`, `normalized_events.xlsx`, `normalized_events_metadata_header.xlsx`, `normalized_events_semicolon_decimalcomma.csv`, `normalized_events_multistudy.csv`.
+- [x] Write unit tests for all of the above (see testing plan).
+- [x] Add `input_adapters/` to architecture layer test (must not import L3+).
+- [x] Update `FEATURE_INVENTORY.md` Phase 1 row to `Shipped`.
+- [x] Update `AGENTS.md` and `CHANGELOG.md`.
 
-### Phase 2 — Generic raw RDSR-like tabular input
+### Phase 2 — Generic raw RDSR-like tabular input (shipped 2026-06-09)
 
 **First real read-and-normalize path.** Exercises column map → `rdsr_normalizer()` with vendor-agnostic raw columns. Can be built now: synthesize RDSR-shaped fixtures from existing test RDSRs (`rdsr_parser()` output dumped to CSV) — no proprietary vendor exports required.
 
-- [ ] Add `COLUMN_PATTERNS` entries for raw `rdsr_parser()` output column names.
-- [ ] Create `generic_rdsr.py` adapter: map → `rdsr_normalizer()` → `InputAdapterResult`.
-- [ ] Add fixture `generic_rdsr_events.csv` (synthesized from an existing test RDSR).
-- [ ] Add tests: column map, normalization round-trip vs the source RDSR, failure cases.
-- [ ] Extend `registry.py` routing for `generic_rdsr_like` schema.
-- [ ] Enable `--input-schema auto` once a second schema exists (with margin/threshold per the auto-detection rules).
+- [x] Add `COLUMN_PATTERNS` entries for raw `rdsr_parser()` output column names.
+- [x] Create `generic_rdsr.py` adapter: map → `rdsr_normalizer()` → `InputAdapterResult`.
+- [x] Add fixture `generic_rdsr_events.csv` (synthesized from an existing test RDSR).
+- [x] Add tests: column map, normalization round-trip vs the source RDSR, failure cases.
+- [x] Extend `registry.py` routing for `generic_rdsr_like` schema.
+- [x] Enable `--input-schema auto` once a second schema exists (with margin/threshold per the auto-detection rules).
 
 ### Phase 3 — Radimetrics adapter
 
@@ -452,30 +507,32 @@ Foundational plumbing plus the simplest schema as a walking skeleton (see Phase 
 - [ ] **GE lateral/longitudinal swap** — see TO_DO.md.
 - [ ] Update inventory and docs.
 
-### Phase 5 — GUI import workflow
+### Phase 5 — GUI import workflow (partially shipped 2026-06-10)
 
 See GUI changes section above for the full checklist. Key tasks:
 
-- [ ] Extend upload accepted formats.
-- [ ] Add schema selector and sheet picker.
-- [ ] Implement import preview panel (column map, warnings, event sample).
-- [ ] Block dose calculation on unresolved mapping errors.
-- [ ] Preserve provenance in exports.
+- [x] Extend upload accepted formats (`.csv`, `.tsv`, `.xlsx`, `.xlsm`).
+- [x] Add schema selector (Auto-detect / Normalized / Raw RDSR-like).
+- [x] Implement import preview panel (column map, warnings, first 5 events).
+- [x] Block dose calculation on unresolved mapping errors.
+- [x] Add lat/lon swap and (UI-only) skip-transforms coordinate correction toggles.
+- [x] Show schema/source type in Data Table tab header.
+- [ ] Preserve provenance in exports (JSON/HTML).
+- [ ] Sheet picker for `.xlsx`/`.xlsm` (deferred; defaults to sheet 0).
 - [ ] GUI smoke test covering CSV/XLSX upload path.
 
 ---
 
 ## Open questions
 
-All resolved.
-
-| Question | Decision |
+| Question | Decision / Status |
 |---|---|
 | XLSX engine — `[excel]` extra or core dependency? | **Core.** Add `openpyxl` as a core dependency in `pyproject.toml`. No optional extra needed. |
 | Which Radimetrics export templates do intended users have? | **Deferred.** Real export samples will be provided before Phase 3 begins; do not start Phase 3 without them. |
 | Are exported values event-local or cumulative? | **Primarily event-local** (one row = one irradiation event). Some exports may include a running-total column for a handful of fields (e.g. cumulative dose). Adapters should detect and skip or ignore running-total rows/columns rather than treating them as events; document the handling per source. |
 | Do exports include enough geometry for clinical use? | **Yes, generally.** Exports from dose-management systems are expected to carry the same geometric fields as the underlying RDSR (angles, table position, field size, etc.). Gaps should be treated as data-quality issues and reported per event, not as a design limitation. |
 | Column-pattern overrides — Python-only or JSON/YAML? | **Python-only first.** JSON/YAML site-customization is tracked as a future TO_DO item. |
+| **Per-vendor export coordinate frame (raw DICOM vs pre-transformed)?** | **Open — investigation required before each Phase 3–4 adapter.** Radimetrics, DoseTrack, and similar systems are expected to pass raw DICOM coordinate values through verbatim, making the `generic_rdsr_like` path (→ `rdsr_normalizer()`) correct. But this must be confirmed by comparing a real vendor export against its source RDSR before writing each adapter. Do not assume; verify. See "Vendor-specific coordinate normalization" section for the full risk table and `TabularImportOptions` plan. |
 
 ---
 

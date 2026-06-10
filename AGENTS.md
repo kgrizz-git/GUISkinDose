@@ -87,7 +87,7 @@ See [dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md) for the full implementation pla
 1. A NiceGUI app now exists in `src/mypyskindose/gui/`.
 2. The CLI supports `--mode gui` and optional `--native`; `python -m mypyskindose --mode gui` launches the GUI.
 3. Current GUI focus: refine the multi-tab workflow, validation, event-table previews, exports, and user-facing help.
-4. Next input focus: support exported event tables (`.csv`, `.tsv`, `.xlsx`) via the staged plan in `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`.
+4. Tabular input Phases 1 and 2 are **shipped**: `input_adapters/` handles `.csv`, `.tsv`, `.xlsx` via `normalized` and `generic_rdsr_like` schemas; CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only` are wired. The GUI upload tab now accepts all tabular formats with an import preview panel, schema selector, and lat/lon swap toggle. Phase 5 GUI work is partially shipped. Phases 3–4 (Radimetrics, DoseTrack) are gated on real vendor fixtures. See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md` and `dev-docs/references/` for reference implementations.
 5. Harness focus: keep `AGENTS.md` and `dev-docs/` synchronized with behavior and use the checks in `dev-docs/HARNESS_ENGINEERING.md`.
 
 ## Development setup

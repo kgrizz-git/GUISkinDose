@@ -32,6 +32,7 @@ from .helpers import (
     get_example_rdsr_files,
     get_human_mesh_names,
     load_rdsr,
+    load_tabular,
     run_calculation,
 )
 from .state import reset_results, state
@@ -395,7 +396,7 @@ def index():
         # ══════════════════════════════════════════════════════════════════
         with ui.tab_panel("upload"):
             with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-                ui.label("Load RDSR File").classes("text-2xl font-bold tracking-tight")
+                ui.label("Load File").classes("text-2xl font-bold tracking-tight")
 
                 # Normalization warning banner
                 with ui.card().classes("modern-card w-full border-red-900 bg-red-950/20").bind_visibility_from(
@@ -408,18 +409,33 @@ def index():
                         ).classes("mono-text text-xs font-bold text-red-400")
 
                 with ui.card().classes("modern-card w-full"):
-                    ui.label("Upload RDSR file").classes("text-subtitle2 q-mb-xs")
-                    ui.label("Select a local DICOM RDSR file from your computer.").classes("text-sm text-grey-4 q-mb-md")
+                    ui.label("Upload file").classes("text-subtitle2 q-mb-xs")
+                    ui.label("DICOM RDSR (.dcm) or tabular event table (.csv, .tsv, .xlsx, .xlsm).").classes("text-sm text-grey-4 q-mb-sm")
+
+                    with ui.row().classes("w-full items-end gap-4 q-mb-sm"):
+                        ui.select(
+                            options={"auto": "Auto-detect schema", "normalized": "Normalized", "generic_rdsr_like": "Raw RDSR-like"},
+                            label="Input schema (tabular files only)",
+                            value=state.input_schema,
+                        ).bind_value(state, "input_schema").classes("grow")
 
                     upload_status = ui.label("Waiting for file...").classes("text-caption text-grey-5 q-mb-sm")
 
+                    _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
+
                     async def handle_upload(e):
                         dprint("GUI", f"Uploading file {e.name}")
-                        with tempfile.NamedTemporaryFile(suffix=".dcm", delete=False) as tmp:
+                        suffix = Path(e.name).suffix.lower() or ".dcm"
+                        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                             tmp.write(e.content.read())
                             tmp_path = Path(tmp.name)
                         upload_status.set_text("PARSING DATA STREAM...")
-                        ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
+                        if suffix in _TABULAR_SUFFIXES:
+                            state.input_source_type = suffix.lstrip(".")
+                            ok, msg = await run.io_bound(load_tabular, tmp_path, state)
+                        else:
+                            state.input_source_type = "dicom"
+                            ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
                         if ok:
                             state.file_name = e.name
                             file_label.set_text(e.name.upper())
@@ -430,12 +446,14 @@ def index():
                             ui.notify(msg, color="positive")
                             reset_results()
                             _refresh_event_table()
+                            if state.input_source_type != "dicom":
+                                _refresh_import_preview()
                         else:
                             upload_status.set_text("STREAM ERROR")
                             ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
 
-                    ui.upload(on_upload=handle_upload, label="DRAG AND DROP RDSR").props(
-                        'accept=".dcm" flat bordered color=deep-purple'
+                    ui.upload(on_upload=handle_upload, label="DRAG AND DROP FILE").props(
+                        'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple'
                     ).classes("w-full bg-black/40")
 
                 with ui.card().classes("modern-card modern-card-teal w-full"):
@@ -469,6 +487,55 @@ def index():
 
                         ui.button("LOAD", on_click=load_example).classes("modern-btn modern-btn-teal px-8")
 
+                # Import preview card — visible only for tabular files
+                with ui.card().classes("modern-card w-full").bind_visibility_from(
+                    state, "input_source_type", backward=lambda v: v not in ("", "dicom")
+                ):
+                    with ui.row().classes("items-center gap-3 q-mb-xs"):
+                        ui.label("Import preview").classes("text-subtitle2")
+                        import_schema_badge = ui.badge("—", color="blue").classes("text-xs uppercase")
+
+                    with ui.row().classes("w-full gap-6 q-mb-xs"):
+                        import_encoding_label = ui.label("Encoding: —").classes("text-caption text-grey-5")
+                        import_delimiter_label = ui.label("Delimiter: —").classes("text-caption text-grey-5")
+                        import_header_label = ui.label("Header row: —").classes("text-caption text-grey-5")
+
+                    # Coordinate correction options — visible for non-normalized schemas
+                    with ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm q-mb-xs").bind_visibility_from(
+                        state, "import_provenance",
+                        backward=lambda v: v is not None and getattr(v, "schema_name", "") != "normalized",
+                    ):
+                        ui.label("COORDINATE OPTIONS").classes("text-caption text-grey-4 font-bold tracking-widest q-mb-xs")
+                        with ui.row().classes("items-center gap-4 flex-wrap"):
+                            ui.switch("Swap lateral/longitudinal axes").bind_value(state, "swap_lat_lon").on(
+                                "update:model-value", lambda: _on_swap_toggle()
+                            ).tooltip(
+                                "Enable for GE scanners or DoseTrack Philips exports where "
+                                "TableLateralPosition and TableLongitudinalPosition are physically swapped. "
+                                "Swaps Tx and Tz in the normalized output."
+                            )
+                            ui.label("Swaps Tx ↔ Tz after normalization").classes("text-caption text-grey-5")
+
+                    # Warnings
+                    import_warnings_label = ui.label("").classes("text-caption text-orange-400 q-mb-xs")
+
+                    # Column map table
+                    ui.label("Column mapping (source → normalized)").classes("text-caption text-grey-6 q-mb-xs")
+                    col_map_table = ui.table(
+                        columns=[
+                            {"name": "source", "label": "Source column", "field": "source", "align": "left"},
+                            {"name": "mapped", "label": "Normalized variable", "field": "mapped", "align": "left"},
+                        ],
+                        rows=[],
+                        row_key="source",
+                    ).classes("w-full mono-text")
+                    col_map_table.props("dense flat")
+
+                    # Event sample
+                    ui.label("First 5 events (normalized)").classes("text-caption text-grey-6 q-mt-sm q-mb-xs")
+                    event_sample_table = ui.table(columns=[], rows=[], row_key="__idx").classes("w-full mono-text")
+                    event_sample_table.props("dense flat virtual-scroll")
+
                 # event summary table
                 ui.label("Irradiation events").classes("text-subtitle2 q-mt-md q-mb-xs")
                 event_table = ui.table(
@@ -499,6 +566,45 @@ def index():
                 event_table.rows = rows
                 event_table.update()
 
+            def _refresh_import_preview():
+                prov = state.import_provenance
+                if prov is None:
+                    return
+                import_schema_badge.set_text(prov.schema_name.upper().replace("_", " "))
+                import_encoding_label.set_text(f"Encoding: {prov.detected_encoding or '—'}")
+                delim = repr(prov.detected_delimiter) if prov.detected_delimiter else "N/A"
+                import_delimiter_label.set_text(f"Delimiter: {delim}")
+                import_header_label.set_text(f"Header row: {prov.header_row_index}")
+                if state.import_warnings:
+                    import_warnings_label.set_text("Warning: " + "; ".join(state.import_warnings[:3]))
+                else:
+                    import_warnings_label.set_text("")
+                if prov.column_map:
+                    col_map_table.rows = [{"source": k, "mapped": v} for k, v in prov.column_map.items()]
+                    col_map_table.update()
+                if state.rdsr_df is not None:
+                    df = state.rdsr_df.head(5).reset_index(drop=True)
+                    df.insert(0, "__idx", range(1, len(df) + 1))
+                    event_sample_table.columns = [
+                        {"name": c, "label": c, "field": c, "align": "left"} for c in df.columns
+                    ]
+                    event_sample_table.rows = df.fillna("—").astype(str).to_dict("records")
+                    event_sample_table.update()
+
+            def _on_swap_toggle():
+                if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
+                    return
+                prov = state.import_provenance
+                if prov and prov.schema_name == "normalized":
+                    return
+                if "Tx" in state.rdsr_df.columns and "Tz" in state.rdsr_df.columns:
+                    df = state.rdsr_df.copy()
+                    df["Tx"], df["Tz"] = state.rdsr_df["Tz"].copy(), state.rdsr_df["Tx"].copy()
+                    state.rdsr_df = df
+                    reset_results()
+                    _refresh_event_table()
+                    _refresh_import_preview()
+
         # ══════════════════════════════════════════════════════════════════
         # TAB 2 — DATA TABLE
         # ══════════════════════════════════════════════════════════════════
@@ -506,6 +612,13 @@ def index():
             with ui.column().classes("w-full gap-4"):
                 with ui.column().classes("w-full gap-2 px-4"):
                     ui.label("Irradiation Event Stream").classes("text-2xl font-bold tracking-tight")
+                    ui.label().bind_text_from(
+                        state, "import_provenance",
+                        backward=lambda v: (
+                            f"Source: {state.file_name}  ·  Schema: {v.schema_name}"
+                            if v is not None else f"Source: {state.file_name}"
+                        ),
+                    ).classes("text-caption text-grey-5").bind_visibility_from(state, "file_name", backward=bool)
                     
                     with ui.row().classes("w-full items-center gap-3 q-mb-sm"):
                         ui.label("View:").classes("text-sm opacity-60 self-center")
@@ -810,7 +923,10 @@ def index():
 
             async def do_calculate():
                 if state.rdsr_df is None:
-                    ui.notify("Load an RDSR file first (tab 1)", color="warning")
+                    ui.notify("Load a file first (tab 1)", color="warning")
+                    return
+                if state.import_has_errors:
+                    ui.notify("Fix import errors before calculating (tab 1)", color="warning")
                     return
 
                 calc_btn.disable()

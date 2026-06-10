@@ -31,6 +31,14 @@ class AppState:
     table_offset_y: float = 0.0
     table_offset_z: float = 0.0
 
+    # Tabular import
+    input_schema: str = "auto"
+    input_source_type: str = ""  # "dicom" | "csv" | "tsv" | "xlsx" | ""
+    import_provenance: Any | None = None
+    import_warnings: list[str] = field(default_factory=list)
+    import_has_errors: bool = False
+    swap_lat_lon: bool = False
+
     # ── Settings (raw values mirrored from UI widgets) ─────────────────────
     phantom_model: str = "human"
     human_mesh: str = "hudfrid"

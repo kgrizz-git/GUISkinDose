@@ -35,15 +35,14 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Run examples in JupyterLab and compare.
 - [ ] Add debug/warning if any dose events have no intersection with patient.
 - [ ] Add support for multiple exams.
-- [ ] Implement tabular event-table inputs (`.csv`, `.tsv`, `.xlsx`) per [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) — **feature track** (status in `FEATURE_INVENTORY.md`):
-  - Start with normalized tabular inputs (Phase 1).
-  - Then add raw RDSR-like tables (Phase 2).
-  - Then adapt Radimetrics and DoseTrack mappings from https://github.com/dhen2714/PySkinDose after fixtures and validation are available (Phases 3–4).
+- [x] **Tabular input Phase 1** (shipped 2026-06-09): normalized schema adapter, shared loader/mapper/registry infrastructure, CLI flags, fixtures, unit tests.
+- [x] **Tabular input Phase 2** (shipped 2026-06-09): `generic_rdsr_like` adapter (column map → `rdsr_normalizer()`), `--input-schema auto` detection.
+- [ ] **Tabular input Phases 3–4** — Radimetrics and DoseTrack adapters per [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) (gated on real vendor export fixtures; do not start without them).
+- [ ] **Tabular input Phase 5** — GUI import workflow: extend upload to accept `.csv`/`.tsv`/`.xlsx`, add schema selector, import preview panel, coordinate correction toggles.
 - [ ] **Column-pattern customization** (future, after Python-only implementation is stable): allow site-specific column name overrides via an editable JSON or YAML file so users with non-standard export templates can map columns without code changes. See `TABULAR_RDSR_INPUT_PLAN.md` open questions.
-- [ ] **Vendor coordinate normalization for tabular inputs** (Phase 3–4 of tabular plan, or sooner if RDSR path is also affected):
-  - Philips: table height uses a different sign convention or origin — validate and apply correction in the Philips adapter.
-  - GE: lateral and longitudinal axes are swapped relative to the internal model — validate and apply swap in the GE adapter.
-  - Other vendors: document coordinate conventions as real exports are validated; add normalization steps per vendor.
+- [ ] **Vendor coordinate normalization — lat/lon axis swap**: Affects GE DICOM RDSRs and also DoseTrack Philips exports (confirmed by `dhen2714/PySkinDose` `parse_philips()` which explicitly swaps these columns). The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap. Implement as a `swap_lateral_longitudinal` option applied before `rdsr_normalizer()` — either per-adapter or via the planned `TabularImportOptions`. Validate per vendor before implementing. See `VENDOR_COORDINATE_SYSTEMS.md` for details.
+- [ ] **Vendor coordinate normalization — confirm per-vendor export frame** (Phases 3–4 prerequisite): before writing each vendor adapter (Radimetrics, DoseTrack, etc.), compare a real export against its source RDSR to confirm whether values are in the raw DICOM frame (→ call `rdsr_normalizer()`) or pre-transformed (→ skip or adjust). See `VENDOR_COORDINATE_SYSTEMS.md` tabular input section and `TABULAR_RDSR_INPUT_PLAN.md` open questions for risk table and details.
+- [ ] **Vendor coordinate normalization — Philips double-correction risk**: Philips has large Y/Z offsets (~105 cm Y, ~173 cm Z). If a Philips export has already applied these offsets, calling `rdsr_normalizer()` doubles them. Confirm Radimetrics/DoseTrack Philips exports are in raw DICOM frame before writing Phase 3–4 adapters.
 
 ### GUI / UX
 

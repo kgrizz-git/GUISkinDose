@@ -441,7 +441,9 @@ from mypyskindose import (
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| CSV/TSV/XLSX event-table input | Planned, not implemented | See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`; current CSV/XLSX GUI buttons are exports only |
+| CSV/TSV/XLSX event-table input (normalized schema) | Shipped — Phase 1 (2026-06-09) | Python API + CLI; `normalized` schema adapter; full test suite. See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`. |
+| CSV/TSV/XLSX event-table input (raw RDSR-like schema + auto-detect) | Shipped — Phase 2 (2026-06-09) | `generic_rdsr_like` adapter → `rdsr_normalizer()`; `--input-schema auto`. GUI import workflow is Phase 5. |
+| CSV/TSV/XLSX event-table input (Radimetrics, DoseTrack adapters) | Planned — Phases 3–4 | Gated on real vendor export fixtures. |
 | PDF/Word report export | Not implemented | Planned in GUI Phase 3 |
 | Side-by-side procedure comparison | Not implemented | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |

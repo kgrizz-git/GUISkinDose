@@ -89,6 +89,49 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         return False, err
 
 
+def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
+    """Load a tabular file (CSV/TSV/XLSX) via the input_adapters registry."""
+    try:
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        settings = build_settings(state, mode="calculate_dose")
+        schema = state.input_schema or "auto"
+
+        result = read_and_normalize_input(
+            file_path,
+            input_schema=schema,
+            settings=settings,
+        )
+
+        df = result.normalized_data.copy()
+
+        if state.swap_lat_lon and result.provenance.schema_name != "normalized":
+            if "Tx" in df.columns and "Tz" in df.columns:
+                df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
+
+        state.rdsr_df = df
+        state.rdsr_raw_df = result.raw_data
+        state.file_path = file_path
+        state.import_provenance = result.provenance
+        state.import_warnings = list(result.warnings)
+        state.import_has_errors = False
+
+        state.manufacturer = ""
+        state.model = ""
+        state.normalization_method = "Tabular"
+        state.table_offset_x = 0.0
+        state.table_offset_y = 0.0
+        state.table_offset_z = 0.0
+        state.normalization_warnings = []
+
+        return True, f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
+    except Exception:
+        err = traceback.format_exc()
+        print(err)
+        state.import_has_errors = True
+        return False, err
+
+
 def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
     """Run the full dose calculation. Returns (success, message).
 

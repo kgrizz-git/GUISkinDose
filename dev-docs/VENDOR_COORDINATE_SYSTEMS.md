@@ -472,6 +472,61 @@ flowchart TB
 
 See `geom_calc.calculate_field_size()` for implementation details.
 
+## Tabular input coordinate handling
+
+When tabular data (CSV/TSV/XLSX) is imported via the `input_adapters/` layer, the coordinate handling depends on which schema adapter is used and what coordinate frame the exported values are in.
+
+### The core question for each vendor export
+
+Before writing a Phase 3–4 vendor adapter (Radimetrics, DoseTrack, etc.), the first thing to determine is **which coordinate frame the exported values are in**:
+
+| Export coordinate frame | Correct normalization path | Risk if wrong |
+|---|---|---|
+| Raw DICOM frame (same as `rdsr_parser()` output) | Use `generic_rdsr_like` adapter → `rdsr_normalizer()` applies corrections from `normalization_settings.json` once | None if confirmed |
+| Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter; do not call `rdsr_normalizer()` | None if confirmed |
+| Pre-transformed by vendor software (unknown convention) | Must investigate before writing adapter | Risk of double-correction or missed correction — silently wrong geometry |
+
+**Radimetrics, DoseTrack, and similar dose-management systems** are expected to pass coordinate values through from the underlying RDSR verbatim (raw DICOM frame). If so, the `generic_rdsr_like` path is correct. **Confirm this per vendor** by comparing a real export side-by-side with its source RDSR before writing each adapter.
+
+### Double-correction risk
+
+Calling `rdsr_normalizer()` on data that has already been transformed doubles the corrections — producing obviously wrong positions for Philips (large Y/Z offsets) and GE (axis swap), and no numerical effect for Siemens (all-zero offsets):
+
+| Manufacturer | Double-correction effect | Risk level |
+|---|---|---|
+| Siemens (AXIOM-Artis) | No effect (offsets are all zero) | Low |
+| Philips (Allura Clarity) | Large position error (~105 cm Y, ~173 cm Z) | High |
+| GE (if axis swap applied twice) | Lateral/longitudinal axes wrong | High |
+| Unknown/unvalidated vendor | Unknown | Assume high |
+
+### Lateral/longitudinal axis swap — GE and DoseTrack Philips
+
+The axis swap problem affects more than just GE DICOM RDSRs. It occurs whenever the **`TableLateralPosition` and `TableLongitudinalPosition` values are physically swapped** relative to the internal model's axis definitions, regardless of source:
+
+- **GE DICOM RDSRs**: the DICOM tags themselves are swapped relative to the unified system.
+- **DoseTrack Philips exports**: the `dhen2714/PySkinDose` reference implementation explicitly swaps `TableLateralPosition_mm ↔ TableLongitudinalPosition_mm` in its `parse_philips()` function — suggesting DoseTrack stores Philips data with these axes swapped.
+- Possibly other vendor/export-tool combinations: must be verified per adapter.
+
+The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap — it requires explicitly transposing the two columns before `rdsr_normalizer()` is called. Note that `normalization_settings.json` maps **Longitudinal → Tx (lateral)** and **Lateral → Tz (longitudinal)**, so calling `rdsr_normalizer()` on swapped data produces axes in entirely the wrong positions.
+
+The fix is a `swap_lateral_longitudinal` option applied before `rdsr_normalizer()` — either as a per-manufacturer flag or as an explicit step in each adapter that needs it. For the planned `TabularImportOptions` (Phase 3+), `swap_lateral_longitudinal=True` pre-swaps the columns before normalization.
+
+### User-selectable import options (`TabularImportOptions`, Phase 3+)
+
+To let expert users override incorrect defaults, `read_and_normalize_input()` will accept an optional `TabularImportOptions` dataclass:
+
+```python
+@dataclass
+class TabularImportOptions:
+    swap_lateral_longitudinal: bool = False      # swap TableLateralPosition ↔ TableLongitudinalPosition
+    skip_manufacturer_transforms: bool = False   # bypass rdsr_normalizer() coordinate step
+    custom_translation_offset: dict | None = None  # override normalization_settings.json offset
+```
+
+These options will be exposed in the GUI as toggles in the import preview step (see `TABULAR_RDSR_INPUT_PLAN.md` Phase 5 GUI changes section), and as `--swap-lat-lon` / `--skip-transforms` CLI flags.
+
+---
+
 ## Future Work
 
 - Expand coordinate system diagrams as more vendors are validated (GE, Canon, etc.)
