@@ -54,7 +54,7 @@ repos:
         entry: python scripts/check_licenses.py --check-notices
         language: system
         pass_filenames: false
-        always_run: true
+        files: ^(pyproject\.toml|dev-docs/THIRD_PARTY_NOTICES\.md)$
         stages: [pre-commit]
 
       - id: basedpyright
