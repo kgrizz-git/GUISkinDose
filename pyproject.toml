@@ -25,6 +25,7 @@ dependencies = [
     "pillow >= 10.0.1",
     "kaleido",
     "rich",
+    "openpyxl",
 ]
 
 [project.optional-dependencies]

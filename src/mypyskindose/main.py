@@ -25,6 +25,8 @@ from mypyskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
 
+_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
+
 
 def main(
     file_path: Optional[str] = None,
@@ -63,6 +65,90 @@ def main(
 
     if settings.output_format in ("dict", "json"):
         return output
+
+def analyze_input_file(
+    file_path: str | Path,
+    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+    *,
+    input_schema: Optional[str] = None,
+    sheet_name: Union[str, int] = 0,
+    output_format: str = RUN_ARGUMENTS_OUTPUT_DICT,
+) -> Any:
+    """Run PySkinDose from a tabular file (.csv, .tsv, .xlsx) or DICOM/JSON.
+
+    For tabular files the input_adapters registry handles loading and
+    column mapping. DICOM and JSON files fall through to the existing path.
+
+    Parameters
+    ----------
+    file_path:
+        Path to the input file.
+    settings:
+        Settings as a dict, JSON string, path, or PyskindoseSettings object.
+    input_schema:
+        Schema adapter name for tabular files ("normalized"). Pass None to use
+        the default. "auto" is not yet supported.
+    sheet_name:
+        Sheet name or 0-based index for Excel files (ignored otherwise).
+    output_format:
+        "dict" (default), "json", or "html".
+    """
+    settings = parse_settings_to_settings_class(settings=settings)
+    settings.output_format = output_format.casefold()
+
+    suffix = Path(file_path).suffix.lower()
+
+    if suffix in _TABULAR_SUFFIXES:
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            file_path,
+            input_schema=input_schema,
+            sheet_name=sheet_name,
+        )
+        for w in result.warnings:
+            logger.warning("tabular input: %s", w)
+        data_norm = result.normalized_data
+    else:
+        data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
+
+    return analyze_data(normalized_data=data_norm, settings=settings)
+
+
+def preview_input_file(
+    file_path: str | Path,
+    *,
+    input_schema: Optional[str] = None,
+    sheet_name: Union[str, int] = 0,
+) -> None:
+    """Print a column-mapping preview without running the dose calculation."""
+    from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+    result = read_and_normalize_input(
+        file_path,
+        input_schema=input_schema,
+        sheet_name=sheet_name,
+    )
+    prov = result.provenance
+    print(f"File:          {prov.original_filename}")
+    print(f"Schema:        {prov.schema_name}")
+    print(f"Encoding:      {prov.detected_encoding}")
+    print(f"Delimiter:     {prov.detected_delimiter!r}")
+    print(f"Header row:    {prov.header_row_index}")
+    print(f"Events loaded: {len(result.normalized_data)}")
+    print()
+    print("Column map (source → normalized):")
+    for src, norm in prov.column_map.items():
+        print(f"  {src!r:30s} → {norm}")
+    if prov.warnings:
+        print()
+        print("Warnings:")
+        for w in prov.warnings:
+            print(f"  {w}")
+    print()
+    print("First 5 normalized events:")
+    print(result.normalized_data.head(5).to_string())
+
 
 def analyze_normalized_data_with_custom_settings_object(
     data_norm: pd.DataFrame,
@@ -143,6 +229,31 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         default=False,
         dest="native",
         help="Open GUI in a native desktop window instead of a browser tab (requires pywebview)",
+    )
+
+    parser.add_argument(
+        "--input-schema",
+        required=False,
+        default=None,
+        dest="input_schema",
+        choices=("normalized",),
+        help="Schema adapter for tabular files (.csv/.tsv/.xlsx). Default: 'normalized'.",
+    )
+
+    parser.add_argument(
+        "--sheet-name",
+        required=False,
+        default=0,
+        dest="sheet_name",
+        help="Sheet name or 0-based index for Excel files (default: 0).",
+    )
+
+    parser.add_argument(
+        "--input-preview-only",
+        action="store_true",
+        default=False,
+        dest="input_preview_only",
+        help="Print column mapping and first events without running dose calculation.",
     )
 
     return parser.parse_args(arguments)

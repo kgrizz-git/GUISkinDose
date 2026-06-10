@@ -41,6 +41,21 @@ GUI_FORBIDDEN_PREFIXES = (
     "mypyskindose.calculate_dose",
 )
 
+# input_adapters is L2 — must not reach into domain, dose, GUI, or orchestration.
+INPUT_ADAPTERS_FORBIDDEN_PREFIXES = (
+    "mypyskindose.calculate_dose",
+    "mypyskindose.plotting",
+    "mypyskindose.gui",
+    "mypyskindose.analyze_data",
+    "mypyskindose.main",
+    "mypyskindose.format_export_data",
+    "mypyskindose.beam_class",
+    "mypyskindose.phantom_class",
+    "mypyskindose.geom_calc",
+    "mypyskindose.corrections",
+    "mypyskindose.db_connect",
+)
+
 
 def _python_files_under(relative_dir: str) -> list[Path]:
     root = PACKAGE_ROOT / relative_dir
@@ -88,6 +103,12 @@ def test_gui_does_not_import_calculate_dose_directly() -> None:
     """L8 GUI must call analyze_data orchestration, not dose pipeline internals."""
     violations = _violations(_python_files_under("gui"), GUI_FORBIDDEN_PREFIXES)
     assert not violations, "GUI layer imports violate architecture:\n" + "\n".join(violations)
+
+
+def test_input_adapters_does_not_import_domain_or_higher() -> None:
+    """L2 input_adapters must not depend on domain models, dose pipeline, or presentation."""
+    violations = _violations(_python_files_under("input_adapters"), INPUT_ADAPTERS_FORBIDDEN_PREFIXES)
+    assert not violations, "input_adapters layer imports violate architecture:\n" + "\n".join(violations)
 
 
 def test_calculate_dose_does_not_import_presentation_layers() -> None:

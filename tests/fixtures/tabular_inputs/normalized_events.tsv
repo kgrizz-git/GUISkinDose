@@ -1,0 +1,3 @@
+model	DSD	DSI	DID	DSIRP	acquisition_type	acquisition_plane	Tx	Ty	Tz	At1	At2	At3	filter_thickness_Cu	filter_thickness_Al	Ap1	Ap2	Ap3	DSL	FS_lat	FS_long	kVp	K_IRP
+AXIOM-Artis	107.1	78.5	28.6	63.5	Fluoroscopy	Single Plane	-8.74	13.66	106.70	0	0	0	0.6	0.0	0.2	-0.3	0	40	33.246	33.246	77.0	0.13
+AXIOM-Artis	107.1	78.5	28.6	63.5	Fluoroscopy	Single Plane	-1.63	15.41	106.75	0	0	0	0.9	0.0	0.2	-0.3	0	40	33.246	33.246	74.0	0.10

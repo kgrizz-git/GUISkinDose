@@ -1,4 +1,5 @@
 from .analyze_data import analyze_data as analyze_data
+from .main import analyze_input_file as analyze_input_file
 from .beam_class import Beam as Beam
 from .geom_calc import check_new_geometry as check_new_geometry
 from .geom_calc import fetch_and_append_hvl as fetch_and_append_hvl

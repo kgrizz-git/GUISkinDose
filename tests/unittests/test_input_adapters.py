@@ -1,0 +1,259 @@
+"""Tests for mypyskindose.input_adapters (Phase 1 — normalized schema)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "tabular_inputs"
+
+
+# ── column_mapper ──────────────────────────────────────────────────────────────
+
+
+class TestDetectHeaderRow:
+    def _make_df(self, rows: list[list[str]]) -> pd.DataFrame:
+        return pd.DataFrame(rows)
+
+    def test_header_at_row_0(self):
+        from mypyskindose.input_adapters.column_mapper import (
+            NORMALIZED_COLUMN_NAMES,
+            detect_header_row,
+        )
+
+        rows = [
+            list(NORMALIZED_COLUMN_NAMES)[:5] + ["extra"],
+            ["AXIOM-Artis", "107.1", "78.5", "28.6", "63.5", "x"],
+        ]
+        df = self._make_df(rows)
+        assert detect_header_row(df, NORMALIZED_COLUMN_NAMES) == 0
+
+    def test_header_at_row_2(self):
+        from mypyskindose.input_adapters.column_mapper import (
+            NORMALIZED_COLUMN_NAMES,
+            detect_header_row,
+        )
+
+        header = list(NORMALIZED_COLUMN_NAMES)
+        rows = [
+            ["Export date: 2026-06-09"] + [""] * (len(header) - 1),
+            ["Source: MyPySkinDose"] + [""] * (len(header) - 1),
+            header,
+            ["AXIOM-Artis"] + ["0.0"] * (len(header) - 1),
+        ]
+        df = self._make_df(rows)
+        assert detect_header_row(df, NORMALIZED_COLUMN_NAMES) == 2
+
+    def test_no_header_found_raises(self):
+        from mypyskindose.input_adapters.column_mapper import detect_header_row
+
+        df = pd.DataFrame([["1.0", "2.0", "3.0"], ["4.0", "5.0", "6.0"]])
+        with pytest.raises(ValueError, match="Could not locate a header row"):
+            detect_header_row(df, frozenset({"model", "dsd", "dsi", "kvp"}), min_score=0.5)
+
+
+class TestMapColumns:
+    def test_word_boundary_prevents_dap_to_tube_a_collision(self):
+        """'Dose Area Product' must map to total dose, NOT to reference_dose_a."""
+        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+
+        column_map, warnings = map_columns(["Dose Area Product", "Dose A"], COLUMN_PATTERNS)
+        assert column_map.get("Dose Area Product") == "reference_dose_total"
+        assert column_map.get("Dose A") == "reference_dose_a"
+        assert not warnings
+
+    def test_best_match_picks_longest_pattern(self):
+        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+
+        column_map, _ = map_columns(["Reference Dose A"], COLUMN_PATTERNS)
+        assert column_map.get("Reference Dose A") == "reference_dose_a"
+
+    def test_bare_kv_not_matched(self):
+        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+
+        column_map, _ = map_columns(["kv filter"], COLUMN_PATTERNS)
+        assert "kv filter" not in column_map
+
+    def test_kvp_matched(self):
+        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+
+        column_map, _ = map_columns(["kVp"], COLUMN_PATTERNS)
+        assert column_map.get("kVp") == "kvp"
+
+    def test_tie_skipped_with_warning(self):
+        from mypyskindose.input_adapters.column_mapper import map_columns
+
+        # Craft patterns where one column matches two vars equally
+        patterns = {"var_a": ["foo"], "var_b": ["foo"]}
+        column_map, warnings = map_columns(["foo col"], patterns)
+        assert "foo col" not in column_map
+        assert any("multiple variables" in w for w in warnings)
+
+
+class TestCheckDuplicateMappings:
+    def test_duplicate_detected(self):
+        from mypyskindose.input_adapters.column_mapper import check_duplicate_mappings
+
+        column_map = {"Col A": "kvp", "Col B": "kvp", "Col C": "model"}
+        errors = check_duplicate_mappings(column_map)
+        assert len(errors) == 1
+        assert "kvp" in errors[0]
+
+    def test_no_duplicates(self):
+        from mypyskindose.input_adapters.column_mapper import check_duplicate_mappings
+
+        column_map = {"Col A": "kvp", "Col B": "model"}
+        assert check_duplicate_mappings(column_map) == []
+
+
+# ── tabular_loader ─────────────────────────────────────────────────────────────
+
+
+class TestTabularLoader:
+    def test_read_csv_comma(self):
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        result = read_csv(FIXTURES / "normalized_events.csv")
+        assert result.delimiter == ","
+        assert "utf" in result.encoding.lower()
+        assert len(result.raw_df) == 3  # header + 2 data rows
+
+    def test_read_tsv(self):
+        from mypyskindose.input_adapters.tabular_loader import read_tsv
+
+        result = read_tsv(FIXTURES / "normalized_events.tsv")
+        assert result.delimiter == "\t"
+        assert len(result.raw_df) == 3
+
+    def test_read_excel(self):
+        from mypyskindose.input_adapters.tabular_loader import read_excel
+
+        result = read_excel(FIXTURES / "normalized_events.xlsx")
+        assert result.delimiter is None
+        assert len(result.raw_df) == 3  # header + 2 data rows
+
+    def test_read_semicolon_csv(self):
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        result = read_csv(FIXTURES / "normalized_events_semicolon_decimalcomma.csv")
+        assert result.delimiter == ";"
+
+    def test_unsupported_suffix_raises(self):
+        from mypyskindose.input_adapters.tabular_loader import load
+
+        with pytest.raises(ValueError, match="Unsupported file suffix"):
+            load(Path("data.xyz"))
+
+    def test_read_excel_metadata_header(self):
+        from mypyskindose.input_adapters.tabular_loader import read_excel
+
+        result = read_excel(FIXTURES / "normalized_events_metadata_header.xlsx")
+        assert len(result.raw_df) == 5  # 2 metadata + header + 2 data
+
+
+# ── normalized adapter ────────────────────────────────────────────────────────
+
+
+class TestNormalizedAdapter:
+    def _load_and_adapt(self, filename: str):
+        from mypyskindose.input_adapters import normalized as adapter
+        from mypyskindose.input_adapters.tabular_loader import load
+
+        loaded = load(FIXTURES / filename)
+        return adapter.adapt(loaded, original_filename=filename)
+
+    def test_csv_round_trip(self):
+        result = self._load_and_adapt("normalized_events.csv")
+        assert len(result.normalized_data) == 2
+        assert "model" in result.normalized_data.columns
+        assert "kVp" in result.normalized_data.columns
+
+    def test_tsv_round_trip(self):
+        result = self._load_and_adapt("normalized_events.tsv")
+        assert len(result.normalized_data) == 2
+
+    def test_xlsx_round_trip(self):
+        result = self._load_and_adapt("normalized_events.xlsx")
+        assert len(result.normalized_data) == 2
+
+    def test_xlsx_metadata_header(self):
+        result = self._load_and_adapt("normalized_events_metadata_header.xlsx")
+        assert result.provenance.header_row_index == 2
+        assert len(result.normalized_data) == 2
+
+    def test_decimal_comma_normalized(self):
+        result = self._load_and_adapt("normalized_events_semicolon_decimalcomma.csv")
+        assert len(result.normalized_data) == 2
+        kvp_vals = result.normalized_data["kVp"].dropna()
+        assert (kvp_vals > 0).all(), "decimal-comma kVp should parse as positive floats"
+        assert any("decimal-comma" in w for w in result.warnings)
+
+    def test_provenance_populated(self):
+        result = self._load_and_adapt("normalized_events.csv")
+        prov = result.provenance
+        assert prov.schema_name == "normalized"
+        assert prov.header_row_index == 0
+        assert prov.original_filename == "normalized_events.csv"
+        assert len(prov.column_map) == 23
+
+    def test_missing_required_column_raises(self, tmp_path):
+        from mypyskindose.input_adapters import normalized as adapter
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        # CSV missing kVp column
+        csv_text = "model,DSD,DSI,DID,DSIRP,acquisition_type,acquisition_plane\nX,1,2,3,4,Fluoro,Single\n"
+        p = tmp_path / "bad.csv"
+        p.write_text(csv_text, encoding="utf-8")
+        loaded = read_csv(p)
+        with pytest.raises(ValueError, match="Missing required"):
+            adapter.adapt(loaded, original_filename="bad.csv")
+
+    def test_multistudy_raises(self):
+        from mypyskindose.input_adapters import normalized as adapter
+        from mypyskindose.input_adapters.tabular_loader import read_csv
+
+        loaded = read_csv(FIXTURES / "normalized_events_multistudy.csv")
+        with pytest.raises(ValueError, match="multiple procedures"):
+            adapter.adapt(loaded, original_filename="normalized_events_multistudy.csv")
+
+    def test_kvp_values_are_numeric(self):
+        result = self._load_and_adapt("normalized_events.csv")
+        assert pd.api.types.is_numeric_dtype(result.normalized_data["kVp"])
+
+
+# ── registry ──────────────────────────────────────────────────────────────────
+
+
+class TestRegistry:
+    def test_csv_routes_to_normalized(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(FIXTURES / "normalized_events.csv")
+        assert result.provenance.schema_name == "normalized"
+        assert len(result.normalized_data) == 2
+
+    def test_xlsx_routes_to_normalized(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(FIXTURES / "normalized_events.xlsx")
+        assert len(result.normalized_data) == 2
+
+    def test_auto_schema_raises(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        with pytest.raises(ValueError, match="auto"):
+            read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="auto")
+
+    def test_unknown_schema_raises(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        with pytest.raises(ValueError, match="Unknown schema"):
+            read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="bogus")
+
+    def test_dicom_suffix_raises(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        with pytest.raises(ValueError, match="Unsupported suffix"):
+            read_and_normalize_input(Path("scan.dcm"))
