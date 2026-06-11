@@ -1523,9 +1523,22 @@ def run_gui(native: bool = False) -> None:
     import logging
     logging.getLogger('nicegui').setLevel(logging.ERROR)
 
+    window_size: tuple[int, int] | None = None
+    if native:
+        try:
+            import tkinter as tk
+            _root = tk.Tk()
+            _root.withdraw()
+            sw, sh = _root.winfo_screenwidth(), _root.winfo_screenheight()
+            _root.destroy()
+            window_size = (int(sw * 0.75), int(sh * 0.75))
+        except Exception as exc:
+            dprint("GUI", f"Could not detect screen size: {exc}")
+
     ui.run(
         title="MyPySkinDose",
         native=native,
+        window_size=window_size,
         reload=False,
         port=8765,
         show=True,
