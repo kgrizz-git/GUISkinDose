@@ -4,6 +4,7 @@ import logging
 import sys
 
 from mypyskindose.constants import RUN_ARGUMENTS_MODE_GUI
+from mypyskindose.debug import configure_logging
 from mypyskindose.dev_data import DEVELOPMENT_PARAMETERS
 from mypyskindose.main import analyze_input_file, get_argument_parser, main, preview_input_file
 
@@ -13,6 +14,10 @@ _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 if __name__ == "__main__":
     args = get_argument_parser(sys.argv[1:])
+
+    # Configure logging once for all entry paths. run_gui calls this again in
+    # native mode to add a file sink; the call is idempotent.
+    configure_logging()
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from mypyskindose.gui.app import run_gui

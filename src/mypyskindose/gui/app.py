@@ -38,7 +38,7 @@ from .helpers import (
     run_calculation,
 )
 from .state import reset_results, state
-from mypyskindose.debug import dprint
+from mypyskindose.debug import configure_logging, dprint
 
 GUI_VERSION = "1.1.0"
 
@@ -1536,8 +1536,15 @@ def _make_dosemap_png() -> bytes | None:
 
 def run_gui(native: bool = False) -> None:
     """Launch the MyPySkinDose NiceGUI app."""
+    # Native mode has no console; mirror logs to a file so issues are diagnosable.
+    log_file = None
+    if native:
+        log_file = Path(tempfile.gettempdir()) / "mypyskindose-gui.log"
+    configure_logging(log_file=log_file)
     dprint("GUI", f"Starting run_gui, native={native}")
-    
+    if native:
+        dprint("GUI", f"Logging to {log_file}")
+
     if native:
         @app.on_connect
         def _handle_native_focus():
