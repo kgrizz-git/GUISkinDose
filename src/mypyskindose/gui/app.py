@@ -410,23 +410,10 @@ def index():
                         ).classes("mono-text text-xs font-bold text-red-400")
 
                 with ui.card().classes("modern-card w-full"):
-                    ui.label("Upload file").classes("text-subtitle2 q-mb-xs")
-                    ui.label("DICOM RDSR (.dcm) or tabular event table (.csv, .tsv, .xlsx, .xlsm).").classes("text-sm text-grey-4 q-mb-sm")
-
-                    with ui.row().classes("w-full items-end gap-4 q-mb-sm"):
-                        ui.select(
-                            options={
-                                "auto": "Auto-detect schema",
-                                "normalized": "Normalized",
-                                "generic_rdsr_like": "Raw RDSR-like",
-                                "radimetrics": "Radimetrics CSV",
-                                "dosetrack": "DoseTrack XLSX/CSV",
-                            },
-                            label="Input schema (tabular files only)",
-                            value=state.input_schema,
-                        ).bind_value(state, "input_schema").classes("grow")
-
-                    upload_status = ui.label("Waiting for file...").classes("text-caption text-grey-5 q-mb-sm")
+                    ui.label("Load file").classes("text-subtitle2 q-mb-xs")
+                    ui.label(
+                        "DICOM RDSR (.dcm) or tabular event table (.csv, .tsv, .xlsx, .xlsm)"
+                    ).classes("text-sm text-grey-4 q-mb-sm")
 
                     _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
@@ -445,7 +432,7 @@ def index():
                         state.flip_ap1 = False
                         state.flip_ap2 = False
 
-                        upload_status.set_text("PARSING DATA STREAM...")
+                        upload_status.set_text("PARSING...")
                         if suffix in _TABULAR_SUFFIXES:
                             state.input_source_type = suffix.lstrip(".")
                             ok, msg = await run.io_bound(load_tabular, tmp_path, state)
@@ -458,7 +445,7 @@ def index():
                             events_label.set_text(
                                 f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
                             )
-                            upload_status.set_text(f"SUCCESS: {msg.upper()}")
+                            upload_status.set_text(f"OK: {msg}")
                             ui.notify(msg, color="positive")
                             reset_results()
                             _refresh_event_table()
@@ -475,20 +462,22 @@ def index():
                                     )
                                     sheet_row.set_visibility(True)
                         else:
-                            upload_status.set_text("STREAM ERROR")
+                            upload_status.set_text("ERROR — see notification")
                             ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
 
-                    ui.upload(on_upload=handle_upload, label="DRAG AND DROP FILE").props(
-                        'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple'
+                    ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
+                        'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                     ).classes("w-full bg-black/40")
 
-                with ui.card().classes("modern-card modern-card-teal w-full"):
-                    ui.label("Load example").classes("text-subtitle2 q-mb-xs")
-                    
-                    with ui.row().classes("w-full items-end gap-4"):
+                    upload_status = ui.label("No file loaded").classes("text-caption text-grey-5 q-mt-xs")
+
+                    ui.separator().classes("q-my-sm bg-zinc-800")
+
+                    ui.label("Or load a bundled example:").classes("text-caption text-grey-5 q-mb-xs")
+                    with ui.row().classes("w-full items-center gap-4"):
                         example_select = ui.select(
                             options=list(EXAMPLE_FILES.keys()),
-                            label="Available Examples",
+                            label="Example file",
                             value=list(EXAMPLE_FILES.keys())[0] if EXAMPLE_FILES else None,
                         ).classes("grow")
 
@@ -497,21 +486,42 @@ def index():
                             if not name:
                                 return
                             path = EXAMPLE_FILES[name]
-                            upload_status.set_text("PARSING EXAMPLE STREAM...")
+                            state.input_source_type = "dicom"
+                            state.swap_lat_lon = False
+                            state.flip_ap1 = False
+                            state.flip_ap2 = False
+                            upload_status.set_text("PARSING...")
                             ok, msg = await run.io_bound(load_rdsr, path, state)
                             if ok:
+                                state.file_name = name
                                 file_label.set_text(name.upper())
                                 events_label.set_text(
                                     f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
                                 )
-                                upload_status.set_text(f"SUCCESS: {msg.upper()}")
+                                upload_status.set_text(f"OK: {msg}")
                                 ui.notify(msg, color="positive")
                                 reset_results()
                                 _refresh_event_table()
                             else:
+                                upload_status.set_text("ERROR — see notification")
                                 ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
 
                         ui.button("LOAD", on_click=load_example).classes("modern-btn modern-btn-teal px-8")
+
+                    ui.separator().classes("q-my-sm bg-zinc-800")
+
+                    with ui.row().classes("w-full items-end gap-4"):
+                        ui.select(
+                            options={
+                                "auto": "Auto-detect schema",
+                                "normalized": "Normalized",
+                                "generic_rdsr_like": "Raw RDSR-like",
+                                "radimetrics": "Radimetrics CSV",
+                                "dosetrack": "DoseTrack XLSX/CSV",
+                            },
+                            label="Input schema (tabular files only)",
+                            value=state.input_schema,
+                        ).bind_value(state, "input_schema").classes("grow")
 
                 # Import preview card — visible only for tabular files
                 with ui.card().classes("modern-card w-full").bind_visibility_from(
