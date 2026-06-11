@@ -18,10 +18,8 @@ class TestDetectHeaderRow:
         return pd.DataFrame(rows)
 
     def test_header_at_row_0(self):
-        from mypyskindose.input_adapters.column_mapper import (
-            NORMALIZED_COLUMN_NAMES,
-            detect_header_row,
-        )
+        from mypyskindose.input_adapters.column_mapper import detect_header_row
+        from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
 
         rows = [
             list(NORMALIZED_COLUMN_NAMES)[:5] + ["extra"],
@@ -31,10 +29,8 @@ class TestDetectHeaderRow:
         assert detect_header_row(df, NORMALIZED_COLUMN_NAMES) == 0
 
     def test_header_at_row_2(self):
-        from mypyskindose.input_adapters.column_mapper import (
-            NORMALIZED_COLUMN_NAMES,
-            detect_header_row,
-        )
+        from mypyskindose.input_adapters.column_mapper import detect_header_row
+        from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
 
         header = list(NORMALIZED_COLUMN_NAMES)
         rows = [

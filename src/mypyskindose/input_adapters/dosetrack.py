@@ -1,34 +1,92 @@
 """Adapter for DoseTrack XLSX/CSV exports (Phase 4).
 
 Maps DoseTrack column headers to rdsr_parser()-compatible names, infers
-Manufacturer/ManufacturerModelName from the Equipment Name column,
-applies unit conversions (Air Kerma mGy→Gy, DAP Gy·cm²→Gy·m²,
-Tube Current µA→mA), derives CollimatedFieldArea_m2 from the DAP
-formula, and passes through rdsr_normalizer().
+Manufacturer/ManufacturerModelName from the Equipment Name column, applies unit
+conversions (Air Kerma mGy→Gy, DAP Gy·cm²→Gy·m², Tube Current µA→mA), derives
+CollimatedFieldArea_m2 from the DAP formula, and passes through rdsr_normalizer()
+via the shared pipeline in ``base.py``.
 
-Column map derived from dhen2714/PySkinDose DOSETRACK2PSD dict and
-dosetrack.py vendor transforms (saved in dev-docs/references/dhen2714_dosetrack.py).
-Validated against Siemens AXIOM-Artis column names. Philips path is
-implemented but untested against a real DoseTrack XLSX.
+Column map derived from dhen2714/PySkinDose DOSETRACK2PSD dict and dosetrack.py
+vendor transforms (saved in dev-docs/references/dhen2714_dosetrack.py). Validated
+against Siemens AXIOM-Artis column names. Philips path is implemented but untested
+against a real DoseTrack XLSX.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
-from mypyskindose.input_adapters.column_mapper import (
-    DOSETRACK_COLUMN_NAMES,
-    DOSETRACK_PATTERNS,
-    check_duplicate_mappings,
-    detect_header_row,
-    map_columns,
-    unmapped_columns_warning,
+from mypyskindose.input_adapters.base import (
+    AdapterContext,
+    coerce_numeric_columns,
+    run_normalizer_pipeline,
 )
-from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+from mypyskindose.input_adapters.models import InputAdapterResult
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
 from mypyskindose.settings import PyskindoseSettings
+
+# Lowercase versions of key DoseTrack export column headers (for header detection).
+# Source: dhen2714/PySkinDose DOSETRACK2PSD dict (dev-docs/references/).
+DOSETRACK_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "plane code",
+        "air kerma (mgy)",
+        "tube voltage peak (kv)",
+        "positioner primary angle (deg)",
+        "positioner secondary angle (deg)",
+        "distance source to detector (mm)",
+        "distance source to isocenter (mm)",
+        "table longitudinal position (mm)",
+        "table lateral position (mm)",
+        "table height position (mm)",
+        "collimated field area (m2)",
+        "equipment name",
+        "filter material",
+    }
+)
+
+# Maps rdsr_parser() column name → DoseTrack header patterns (lowercase).
+# Notes:
+#  - "Equipment Name" is a special sentinel (→ _dt_equipment_name) used by the adapter
+#    to infer Manufacturer/ManufacturerModelName; it is not a real rdsr_parser column.
+#  - DAP (Gy*cm2) is not mapped to DoseAreaProduct_Gym2 here; the adapter derives
+#    CollimatedFieldArea_m2 from the DAP/dose formula and stores DAP separately.
+DOSETRACK_PATTERNS: dict[str, list[str]] = {
+    "_dt_equipment_name": ["equipment name"],
+    "AcquisitionPlane": ["plane code"],
+    "IrradiationEventType": ["acquisition type", "irradiation event type"],
+    "PositionerPrimaryAngle_deg": ["positioner primary angle (deg)", "positioner primary angle"],
+    "PositionerSecondaryAngle_deg": ["positioner secondary angle (deg)", "positioner secondary angle"],
+    # "tube voltage peak" distinguishes DoseTrack from Radimetrics "kvp kv"
+    "KVP_kV": ["tube voltage peak (kv)", "tube voltage peak", "tube voltage (kv)", "kvp kv", "kvp"],
+    # Air Kerma is in mGy in DoseTrack; the adapter divides by 1000 → Gy
+    "DoseRP_Gy": ["air kerma (mgy)", "air kerma"],
+    # Collimated Field Area is in m² in DoseTrack (no conversion needed)
+    "CollimatedFieldArea_m2": ["collimated field area (m2)", "collimated field area"],
+    # DAP is Gy*cm²; adapter divides by 10000 → Gy*m²
+    "_dt_dap": ["dap (gy*cm2)", "dap (gy cm2)", "dap", "dose area product"],
+    "DistanceSourcetoDetector_mm": [
+        "distance source to detector (mm)",
+        "distance source to detector",
+    ],
+    "DistanceSourcetoIsocenter_mm": [
+        "distance source to isocenter (mm)",
+        "distance source to isocenter",
+    ],
+    "TableLongitudinalPosition_mm": ["table longitudinal position (mm)", "table longitudinal position"],
+    "TableLateralPosition_mm": ["table lateral position (mm)", "table lateral position"],
+    "TableHeightPosition_mm": ["table height position (mm)", "table height position"],
+    "XRayFilterMaterial": ["filter material"],
+    "XRayFilterThicknessMinimum_mm": ["filter thickness"],
+    "PulseRate_{pulse}/s": ["pulse rate (pulse/s)", "pulse rate"],
+    "PulseWidth_ms": ["pulse width (ms)", "pulse width"],
+    # Tube Current in DoseTrack is µA; adapter divides by 1000 → mA
+    "XRayTubeCurrent_mA": ["tube current (ua)", "tube current"],
+    "FocalSpotSize_mm": ["focal spot size (mm)", "focal spot size"],
+    # mAs in DoseTrack; stored as-is (Exposure_uAs naming is approximate)
+    "Exposure_uAs": ["mas (mas)"],
+    "TargetRegion": ["target region"],
+}
 
 # Equipment Name value → Manufacturer (from dhen2714 reference DOSETRACK2PSD).
 MODEL2MANUF: dict[str, str] = {
@@ -98,54 +156,30 @@ def _normalize_plane_code(series: pd.Series) -> pd.Series:
     return numeric.map(plane_map).fillna(series)
 
 
-def adapt(
-    loaded: _RawLoad,
-    original_filename: str,
-    settings: PyskindoseSettings,
-) -> InputAdapterResult:
-    """Convert a DoseTrack export to a normalized InputAdapterResult.
+def _parse_philips_filter(val: object) -> tuple[float, float]:
+    """Parse a Philips semicolon-separated 'Al_mm;Cu_mm' filter string."""
+    parts = str(val).split(";")
+    try:
+        if len(parts) >= 2:
+            return float(parts[0].strip()), float(parts[1].strip())
+        v = float(parts[0].strip())
+        return 0.0, v
+    except (ValueError, TypeError):
+        return float("nan"), float("nan")
 
-    Raises ValueError on blocking errors: missing Equipment Name (can't infer
-    manufacturer), missing required columns, duplicate column mappings, or
-    rdsr_normalizer() failure.
+
+def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
+    """DoseTrack-specific processing: ffill, manufacturer inference, units, CFA.
+
+    Raises ValueError on blocking errors (missing Equipment Name, bad plane codes).
     """
-    from mypyskindose.rdsr_normalizer import rdsr_normalizer
+    warnings = ctx.warnings
 
-    warnings: list[str] = []
-    raw_df = loaded.raw_df
-
-    # 1. Detect header row
-    header_idx = detect_header_row(raw_df, DOSETRACK_COLUMN_NAMES)
-
-    # 2. Extract headers and data rows
-    raw_headers = [str(c).strip() for c in raw_df.iloc[header_idx]]
-    data_df = raw_df.iloc[header_idx + 1 :].copy()
-    data_df.columns = pd.Index(raw_headers)
-    data_df = data_df.reset_index(drop=True)
-
-    # Drop wholly-empty rows
-    data_df = data_df[~data_df.apply(lambda r: r.astype(str).str.strip().eq("").all(), axis=1)]
-
-    # 3. Map column names → internal names (sentinel _dt_* keys included)
-    column_map, mapping_warnings = map_columns(raw_headers, DOSETRACK_PATTERNS)
-    warnings.extend(mapping_warnings)
-    unmatched_msg = unmapped_columns_warning(raw_headers, column_map)
-    if unmatched_msg:
-        warnings.append(unmatched_msg)
-
-    dup_errors = check_duplicate_mappings(column_map)
-    if dup_errors:
-        raise ValueError("\n".join(dup_errors))
-
-    # 4. Rename all mapped columns (sentinels get their _dt_* name temporarily)
-    rename = {src: tgt for src, tgt in column_map.items() if src in data_df.columns}
-    data_df = data_df.rename(columns=rename)
-
-    # 5. Forward-fill: DoseTrack uses hierarchical rows where parent values
-    #    are only written when they change (study/series level fields).
+    # Forward-fill: DoseTrack uses hierarchical rows where parent values are only
+    # written when they change (study/series level fields).
     data_df = data_df.ffill()
 
-    # 6. Infer Manufacturer/ManufacturerModelName from Equipment Name sentinel
+    # Infer Manufacturer/ManufacturerModelName from the Equipment Name sentinel.
     if "_dt_equipment_name" in data_df.columns:
         model_names = data_df["_dt_equipment_name"].dropna().unique()
         if len(model_names) == 0:
@@ -173,69 +207,45 @@ def adapt(
             "Column not found in the export."
         )
 
-    # 7. Normalize AcquisitionPlane from integer Plane Code values
+    # Normalize AcquisitionPlane from integer Plane Code values.
     if "AcquisitionPlane" in data_df.columns:
         try:
             data_df["AcquisitionPlane"] = _normalize_plane_code(data_df["AcquisitionPlane"])
         except ValueError as exc:
             raise ValueError(f"DoseTrack plane code normalization failed: {exc}") from exc
 
-    # 8. Coerce numeric columns
-    for col in _NUMERIC_COLUMNS:
-        if col in data_df.columns:
-            coerced = pd.to_numeric(data_df[col].astype(str).str.strip(), errors="coerce")
-            n_bad = int(coerced.isna().sum()) - int(data_df[col].isna().sum())
-            if n_bad > 0:
-                warnings.append(
-                    f"Column {col!r}: {n_bad} value(s) could not be parsed as numeric; set to NaN."
-                )
-            data_df[col] = coerced
-
-    # Coerce DAP sentinel separately
+    # Coerce numeric columns, plus the DAP sentinel.
+    coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, warnings)
     if "_dt_dap" in data_df.columns:
         data_df["_dt_dap"] = pd.to_numeric(data_df["_dt_dap"].astype(str).str.strip(), errors="coerce")
 
-    # 9. Unit conversions
-    unit_conversions: dict[str, str] = {}
+    # Unit conversions.
     if "DoseRP_Gy" in data_df.columns:
         data_df["DoseRP_Gy"] = data_df["DoseRP_Gy"] / 1000.0
-        unit_conversions["DoseRP_Gy"] = "mGy → Gy"
+        ctx.unit_conversions["DoseRP_Gy"] = "mGy → Gy"
     if "XRayTubeCurrent_mA" in data_df.columns:
         data_df["XRayTubeCurrent_mA"] = data_df["XRayTubeCurrent_mA"] / 1000.0
-        unit_conversions["XRayTubeCurrent_mA"] = "µA → mA"
+        ctx.unit_conversions["XRayTubeCurrent_mA"] = "µA → mA"
 
-    # Convert DAP Gy·cm² → Gy·m²
+    # DAP Gy·cm² → Gy·m².
     if "_dt_dap" in data_df.columns:
         data_df["DoseAreaProduct_Gym2"] = data_df["_dt_dap"] / 10000.0
-        unit_conversions["DoseAreaProduct_Gym2"] = "Gy·cm² → Gy·m² (from DAP column)"
+        ctx.unit_conversions["DoseAreaProduct_Gym2"] = "Gy·cm² → Gy·m² (from DAP column)"
         data_df = data_df.drop(columns=["_dt_dap"])
 
-    # 10. Filter thickness handling
+    # Filter thickness handling (Philips: 'Al;Cu' string; Siemens: single Cu value).
     manufacturer_val = str(data_df["Manufacturer"].dropna().iloc[0]) if "Manufacturer" in data_df.columns else ""
     is_philips = manufacturer_val.lower() == "philips"
-
     if "XRayFilterThicknessMinimum_mm" in data_df.columns:
         if is_philips:
-            # Philips: semicolon-separated "Al_mm;Cu_mm" string
-            def _parse_philips_filter(val: object) -> tuple[float, float]:
-                parts = str(val).split(";")
-                try:
-                    if len(parts) >= 2:
-                        return float(parts[0].strip()), float(parts[1].strip())
-                    v = float(parts[0].strip())
-                    return 0.0, v
-                except (ValueError, TypeError):
-                    return float("nan"), float("nan")
-
             pairs = data_df["XRayFilterThicknessMinimum_mm"].apply(_parse_philips_filter)
             data_df["XRayFilterThicknessMinimum_mm"] = pairs.apply(lambda x: x[0])  # Al
             data_df["XRayFilterThicknessMaximum_mm"] = pairs.apply(lambda x: x[1])  # Cu
-            unit_conversions["XRayFilterThicknessMinimum_mm"] = "Philips Al;Cu split → Min=Al, Max=Cu"
+            ctx.unit_conversions["XRayFilterThicknessMinimum_mm"] = "Philips Al;Cu split → Min=Al, Max=Cu"
         else:
-            # Siemens: single Cu filter value; Maximum mirrors Minimum
             data_df["XRayFilterThicknessMaximum_mm"] = data_df["XRayFilterThicknessMinimum_mm"]
 
-    # 11. Derive CollimatedFieldArea_m2 from DAP formula (matches reference implementation)
+    # Derive CollimatedFieldArea_m2 from the DAP formula (matches reference):
     #     CFA = DAP / (DoseRP * ((DSI - 150) / DSD)^2)
     if (
         "DoseAreaProduct_Gym2" in data_df.columns
@@ -249,7 +259,7 @@ def adapt(
             data_df["DoseRP_Gy"] * ((dsi - 150) / dsd) ** 2
         )
 
-    # 12. Fallback values for columns rdsr_normalizer() requires but DoseTrack may omit
+    # Fallback values for columns rdsr_normalizer() requires but DoseTrack may omit.
     if "IrradiationEventType" not in data_df.columns:
         data_df["IrradiationEventType"] = "Fluoroscopy"
         warnings.append("Column 'IrradiationEventType' not in DoseTrack export; defaulted to 'Fluoroscopy'.")
@@ -257,38 +267,27 @@ def adapt(
         data_df["XRayFilterMaterial"] = "Cu"
         warnings.append("Column 'XRayFilterMaterial' not in DoseTrack export; defaulted to 'Cu'.")
 
-    # 13. Check required columns before calling rdsr_normalizer()
-    missing = REQUIRED_COLUMNS - set(data_df.columns)
-    if missing:
-        raise ValueError(
-            f"Missing required column(s) for dosetrack schema: {sorted(missing)}. "
-            f"Column map attempted: {column_map}."
-        )
+    return data_df
 
-    # 14. Run rdsr_normalizer()
-    try:
-        normalized_df = rdsr_normalizer(data_df, settings)
-    except Exception as exc:
-        raise ValueError(f"rdsr_normalizer() failed on dosetrack input: {exc}") from exc
 
-    # 16. Build provenance (exclude _dt_* sentinel keys from public column_map)
-    public_column_map = {k: v for k, v in column_map.items() if not v.startswith("_dt_")}
-    provenance = InputProvenance(
-        source_type=Path(original_filename).suffix.lstrip(".").lower(),
+def adapt(
+    loaded: _RawLoad,
+    original_filename: str,
+    settings: PyskindoseSettings,
+) -> InputAdapterResult:
+    """Convert a DoseTrack export to a normalized InputAdapterResult.
+
+    Raises ValueError on blocking errors: missing Equipment Name (can't infer
+    manufacturer), missing required columns, duplicate column mappings, or
+    rdsr_normalizer() failure.
+    """
+    return run_normalizer_pipeline(
+        loaded,
         schema_name="dosetrack",
+        known_names=DOSETRACK_COLUMN_NAMES,
+        patterns=DOSETRACK_PATTERNS,
+        required_columns=REQUIRED_COLUMNS,
+        transform=_transform,
         original_filename=original_filename,
-        header_row_index=header_idx,
-        detected_encoding=loaded.encoding,
-        detected_delimiter=loaded.delimiter,
-        sheet_name=None,
-        column_map=public_column_map,
-        unit_conversions=unit_conversions,
-        warnings=warnings,
-    )
-
-    return InputAdapterResult(
-        normalized_data=normalized_df,
-        raw_data=raw_df,
-        provenance=provenance,
-        warnings=warnings,
+        settings=settings,
     )

@@ -1,29 +1,146 @@
 """Adapter for tables whose columns match rdsr_parser() output (raw RDSR-like schema).
 
-Calls rdsr_normalizer() to produce the 23-column normalized DataFrame consumed
-by analyze_data(). Unlike the normalized schema adapter, this requires
-PyskindoseSettings for NormalizationSettings lookup by manufacturer/model.
+Calls rdsr_normalizer() (via the shared pipeline in ``base.py``) to produce the
+23-column normalized DataFrame consumed by analyze_data(). Unlike the normalized
+schema adapter, this requires PyskindoseSettings for NormalizationSettings lookup
+by manufacturer/model.
 
 This is Phase 2 of the tabular input plan.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
-from mypyskindose.input_adapters.column_mapper import (
-    GENERIC_RDSR_COLUMN_NAMES,
-    GENERIC_RDSR_PATTERNS,
-    check_duplicate_mappings,
-    detect_header_row,
-    map_columns,
-    unmapped_columns_warning,
+from mypyskindose.input_adapters.base import (
+    AdapterContext,
+    coerce_numeric_columns,
+    run_normalizer_pipeline,
 )
-from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+from mypyskindose.input_adapters.models import InputAdapterResult
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
 from mypyskindose.settings import PyskindoseSettings
+
+# Lowercase versions of key rdsr_parser() output column names.
+# Used by detect_header_row() (via the shared pipeline) for header location.
+GENERIC_RDSR_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "manufacturer",
+        "manufacturermodelname",
+        "acquisitionplane",
+        "irradiationeventtype",
+        "distancesourcetodetector_mm",
+        "distancesourcetoisocenter_mm",
+        "positionerprimaryangle_deg",
+        "positionersecondaryangle_deg",
+        "tablelongitudinalposition_mm",
+        "tablelateralposition_mm",
+        "tableheightposition_mm",
+        "xrayfiltermaterial",
+        "xrayfilterthicknessminimum_mm",
+        "xrayfilterthicknessmaximum_mm",
+        "kvp_kv",
+        "doserp_gy",
+        "collimatedfieldarea_m2",
+    }
+)
+
+# Maps rdsr_parser() column name → patterns that match it in source headers.
+# Keys are the exact names rdsr_normalizer() expects.
+# Patterns use _normalize_str() form (lowercase, underscores→spaces).
+# The first pattern in each list is the self-match for exact rdsr_parser export names.
+GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
+    "Manufacturer": ["manufacturer", "vendor"],
+    "ManufacturerModelName": [
+        "manufacturermodelname",
+        "manufacturer model name",
+        "device model",
+        "model name",
+        "device",           # Radimetrics and some custom exports use bare "Device"
+    ],
+    "IrradiationEventType": [
+        "irradiationeventtype",
+        "irradiation event type",
+        "event type",
+    ],
+    "AcquisitionPlane": ["acquisitionplane", "acquisition plane"],
+    "DistanceSourcetoDetector_mm": [
+        "distancesourcetodetector mm",
+        "distance source to detector",
+        "source to detector distance",  # alternate word order (some custom exports)
+        "source detector distance",
+    ],
+    "DistanceSourcetoIsocenter_mm": [
+        "distancesourcetoisocenter mm",
+        "distance source to isocenter",
+        "source to isocenter distance",  # alternate word order
+        "source isocenter distance",
+    ],
+    "FinalDistanceSourcetoDetector_mm": [
+        "finaldistancesourcetodetector mm",
+        "final distance source to detector",
+        "final dsd",
+    ],
+    "TableLongitudinalPosition_mm": [
+        "tablelongitudinalposition mm",
+        "table longitudinal position",
+        "longitudinal position",
+    ],
+    "TableLateralPosition_mm": [
+        "tablelateralposition mm",
+        "table lateral position",
+        "lateral position",
+    ],
+    "TableHeightPosition_mm": [
+        "tableheightposition mm",
+        "table height position",
+        "table height",
+    ],
+    "XRayFilterMaterial": [
+        "xrayfiltermaterial",
+        "x ray filter material",
+        "filter material",
+    ],
+    "XRayFilterThicknessMinimum_mm": [
+        "xrayfilterthicknessminimum mm",
+        "filter thickness minimum",
+        "filter min",
+    ],
+    "XRayFilterThicknessMaximum_mm": [
+        "xrayfilterthicknessmaximum mm",
+        "filter thickness maximum",
+        "filter max",
+    ],
+    "PositionerPrimaryAngle_deg": [
+        "positionerprimaryangle deg",
+        "positioner primary angle",
+        "primary angle",
+    ],
+    "PositionerSecondaryAngle_deg": [
+        "positionersecondaryangle deg",
+        "positioner secondary angle",
+        "secondary angle",
+    ],
+    "KVP_kV": ["kvp kv", "kvp", "tube voltage"],
+    "DoseRP_Gy": [
+        "doserp gy",
+        "dose rp gy",
+        "reference point dose gy",
+        "reference point dose",     # without unit suffix (some custom exports)
+        "air kerma gy",
+        "air kerma",
+    ],
+    "CollimatedFieldArea_m2": [
+        "collimatedfieldarea m2",
+        "collimated field area",
+        "field area",
+    ],
+    "DoseAreaProduct_Gym2": [
+        "doseareaproduct gym2",
+        "dose area product gy",
+        "dap gy",
+    ],
+}
 
 # Columns rdsr_normalizer() always accesses, regardless of field_size_mode.
 REQUIRED_COLUMNS: frozenset[str] = frozenset(
@@ -68,6 +185,12 @@ _NUMERIC_COLUMNS: frozenset[str] = frozenset(
 )
 
 
+def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
+    """Coerce numeric columns to float (CSV reads all cells as strings)."""
+    coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, ctx.warnings)
+    return data_df
+
+
 def adapt(
     loaded: _RawLoad,
     original_filename: str,
@@ -78,79 +201,13 @@ def adapt(
     Raises ValueError on blocking errors: missing required columns, duplicate
     mappings, or rdsr_normalizer() failure (e.g. unknown manufacturer/model).
     """
-    from mypyskindose.rdsr_normalizer import rdsr_normalizer
-
-    warnings: list[str] = []
-    raw_df = loaded.raw_df
-
-    # 1. Detect header row
-    header_idx = detect_header_row(raw_df, GENERIC_RDSR_COLUMN_NAMES)
-
-    # 2. Extract headers and data rows
-    raw_headers = [str(c).strip() for c in raw_df.iloc[header_idx]]
-    data_df = raw_df.iloc[header_idx + 1 :].copy()
-    data_df.columns = pd.Index(raw_headers)
-    data_df = data_df.reset_index(drop=True)
-
-    # Drop wholly-empty rows
-    data_df = data_df[~data_df.apply(lambda r: r.astype(str).str.strip().eq("").all(), axis=1)]
-
-    # 3. Map source column names → rdsr_parser column names
-    column_map, mapping_warnings = map_columns(raw_headers, GENERIC_RDSR_PATTERNS)
-    warnings.extend(mapping_warnings)
-    unmatched_msg = unmapped_columns_warning(raw_headers, column_map)
-    if unmatched_msg:
-        warnings.append(unmatched_msg)
-
-    dup_errors = check_duplicate_mappings(column_map)
-    if dup_errors:
-        raise ValueError("\n".join(dup_errors))
-
-    # 4. Rename to rdsr_parser column names and check required set
-    rename = {src: target for src, target in column_map.items() if src in data_df.columns}
-    data_df = data_df.rename(columns=rename)
-
-    missing = REQUIRED_COLUMNS - set(data_df.columns)
-    if missing:
-        raise ValueError(
-            f"Missing required column(s) for generic_rdsr_like schema: {sorted(missing)}. "
-            f"Column map attempted: {column_map}."
-        )
-
-    # 5. Coerce numeric columns to float (CSV reads all cells as strings)
-    for col in _NUMERIC_COLUMNS:
-        if col in data_df.columns:
-            coerced = pd.to_numeric(data_df[col].astype(str).str.strip(), errors="coerce")
-            n_bad = coerced.isna().sum() - data_df[col].isna().sum()
-            if n_bad > 0:
-                warnings.append(
-                    f"Column {col!r}: {n_bad} value(s) could not be parsed as numeric; set to NaN."
-                )
-            data_df[col] = coerced
-
-    # 6. Call rdsr_normalizer() to produce the 23-column normalized DataFrame
-    try:
-        normalized_df = rdsr_normalizer(data_df, settings)
-    except Exception as exc:
-        raise ValueError(f"rdsr_normalizer() failed on generic_rdsr_like input: {exc}") from exc
-
-    # 7. Build provenance
-    provenance = InputProvenance(
-        source_type=Path(original_filename).suffix.lstrip(".").lower(),
+    return run_normalizer_pipeline(
+        loaded,
         schema_name="generic_rdsr_like",
+        known_names=GENERIC_RDSR_COLUMN_NAMES,
+        patterns=GENERIC_RDSR_PATTERNS,
+        required_columns=REQUIRED_COLUMNS,
+        transform=_transform,
         original_filename=original_filename,
-        header_row_index=header_idx,
-        detected_encoding=loaded.encoding,
-        detected_delimiter=loaded.delimiter,
-        sheet_name=None,
-        column_map=dict(column_map),
-        unit_conversions={},
-        warnings=warnings,
-    )
-
-    return InputAdapterResult(
-        normalized_data=normalized_df,
-        raw_data=raw_df,
-        provenance=provenance,
-        warnings=warnings,
+        settings=settings,
     )

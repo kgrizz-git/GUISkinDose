@@ -15,14 +15,71 @@ from pathlib import Path
 
 import pandas as pd
 
-from mypyskindose.input_adapters.column_mapper import (
-    NORMALIZED_COLUMN_CANONICAL,
-    NORMALIZED_COLUMN_NAMES,
-    NORMALIZED_REQUIRED_COLUMNS,
-    detect_header_row,
-)
+from mypyskindose.input_adapters.base import extract_table
+from mypyskindose.input_adapters.column_mapper import detect_header_row
 from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
+
+# Canonical column names produced by rdsr_normalizer(), lowercased for comparison.
+NORMALIZED_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "model",
+        "dsd",
+        "dsi",
+        "did",
+        "dsirp",
+        "acquisition_type",
+        "acquisition_plane",
+        "tx",
+        "ty",
+        "tz",
+        "at1",
+        "at2",
+        "at3",
+        "filter_thickness_cu",
+        "filter_thickness_al",
+        "ap1",
+        "ap2",
+        "ap3",
+        "dsl",
+        "fs_lat",
+        "fs_long",
+        "kvp",
+        "k_irp",
+    }
+)
+
+# Maps lowercase canonical name → proper-case name expected by analyze_data().
+# Matches the column names produced by rdsr_normalizer().
+NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
+    "model": "model",
+    "dsd": "DSD",
+    "dsi": "DSI",
+    "did": "DID",
+    "dsirp": "DSIRP",
+    "acquisition_type": "acquisition_type",
+    "acquisition_plane": "acquisition_plane",
+    "tx": "Tx",
+    "ty": "Ty",
+    "tz": "Tz",
+    "at1": "At1",
+    "at2": "At2",
+    "at3": "At3",
+    "filter_thickness_cu": "filter_thickness_Cu",
+    "filter_thickness_al": "filter_thickness_Al",
+    "ap1": "Ap1",
+    "ap2": "Ap2",
+    "ap3": "Ap3",
+    "dsl": "DSL",
+    "fs_lat": "FS_lat",
+    "fs_long": "FS_long",
+    "kvp": "kVp",
+    "k_irp": "K_IRP",
+}
+
+# All normalized columns are required; separated for clarity if optional columns
+# are added later.
+NORMALIZED_REQUIRED_COLUMNS: frozenset[str] = NORMALIZED_COLUMN_NAMES
 
 # Columns that should be numeric after loading.
 _NUMERIC_COLUMNS = frozenset(
@@ -121,14 +178,8 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult:
     # 1. Detect header row
     header_idx = detect_header_row(raw_df, NORMALIZED_COLUMN_NAMES)
 
-    # 2. Extract headers and data
-    raw_headers = [str(c).strip() for c in raw_df.iloc[header_idx]]
-    data_df = raw_df.iloc[header_idx + 1 :].copy()
-    data_df.columns = pd.Index(raw_headers)
-    data_df = data_df.reset_index(drop=True)
-
-    # Drop rows that are entirely empty
-    data_df = data_df[~data_df.apply(lambda r: r.str.strip().eq("").all(), axis=1)]
+    # 2. Extract headers and data (shared with the rdsr-normalizer pipeline)
+    raw_headers, data_df = extract_table(raw_df, header_idx)
 
     # 3. Map columns (case-insensitive exact match for normalized schema)
     column_map, errors = _build_column_map(raw_headers, warnings)

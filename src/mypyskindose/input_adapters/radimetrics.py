@@ -1,7 +1,8 @@
 """Adapter for Radimetrics CSV exports (Phase 3).
 
 Maps Radimetrics column headers to rdsr_parser()-compatible names, applies
-required unit conversions, then passes through rdsr_normalizer().
+required unit conversions, then passes through rdsr_normalizer() via the shared
+pipeline in ``base.py``.
 
 Column map and unit conversions derived from dhen2714/PySkinDose radimetrics.py
 (saved in dev-docs/references/dhen2714_radimetrics.py). Only validated against
@@ -11,21 +12,84 @@ warning but are not blocked.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
-from mypyskindose.input_adapters.column_mapper import (
-    RADIMETRICS_COLUMN_NAMES,
-    RADIMETRICS_PATTERNS,
-    check_duplicate_mappings,
-    detect_header_row,
-    map_columns,
-    unmapped_columns_warning,
+from mypyskindose.input_adapters.base import (
+    AdapterContext,
+    coerce_numeric_columns,
+    run_normalizer_pipeline,
 )
-from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+from mypyskindose.input_adapters.models import InputAdapterResult
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
 from mypyskindose.settings import PyskindoseSettings
+
+# Lowercase versions of key Radimetrics export column headers (for header detection).
+# Source: dhen2714/PySkinDose RADIMETRICS2PSD dict (dev-docs/references/).
+RADIMETRICS_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        "manufacturer",
+        "device",
+        "kvp kv",
+        "dap (total) gy-cm2",
+        "reference point dose (total) mgy",
+        "primary angle (rf) [°]",
+        "secondary angle (rf) [°]",
+        "collimated field area (rf) [cm²]",
+        "source to detector distance (rf) [mm]",
+        "source to isocenter distance (rf) [mm]",
+        "table longitudinal position [mm]",
+        "table lateral position [mm]",
+        "table height position [mm]",
+    }
+)
+
+# Maps rdsr_parser() column name → Radimetrics header patterns (lowercase).
+RADIMETRICS_PATTERNS: dict[str, list[str]] = {
+    "Manufacturer": ["manufacturer", "vendor"],
+    "ManufacturerModelName": ["device", "device model", "equipment name"],
+    "AcquisitionPlane": ["acquisition plane code", "acquisition plane"],
+    "IrradiationEventType": ["irradiation event type"],
+    "PositionerPrimaryAngle_deg": ["primary angle (rf)", "primary angle"],
+    "PositionerSecondaryAngle_deg": ["secondary angle (rf)", "secondary angle"],
+    # "kvp kv" only — bare "kvp" would also match per-plane "kVp (A) kV", "kVp (B) kV"
+    "KVP_kV": ["kvp kv"],
+    # "(total)" required — prevents matching per-plane "Reference Point Dose (A/B) mGy"
+    "DoseRP_Gy": [
+        "reference point dose (total) mgy",
+        "reference point dose (total)",
+        "air kerma (total)",
+    ],
+    # DoseAreaProduct_Gym2 intentionally omitted — both "DAP (Total)" and "Fluoro DAP (Total)"
+    # match the same pattern, causing a duplicate mapping error. Not required for dose calc.
+    "CollimatedFieldArea_m2": [
+        "collimated field area (rf) [cm²]",
+        "collimated field area (rf)",
+        "collimated field area",
+    ],
+    "DistanceSourcetoDetector_mm": [
+        "source to detector distance (rf) [mm]",
+        "source to detector distance (rf)",
+        "source to detector distance",
+    ],
+    "DistanceSourcetoIsocenter_mm": [
+        "source to isocenter distance (rf) [mm]",
+        "source to isocenter distance (rf)",
+        "source to isocenter distance",
+    ],
+    "TableLongitudinalPosition_mm": ["table longitudinal position [mm]", "table longitudinal position"],
+    "TableLateralPosition_mm": ["table lateral position [mm]", "table lateral position"],
+    "TableHeightPosition_mm": ["table height position [mm]", "table height position"],
+    "XRayFilterMaterial": ["xray filter material codes", "filter material"],
+    "XRayFilterThicknessMinimum_mm": ["xray filter min thicknesses", "filter thickness minimum"],
+    "XRayFilterThicknessMaximum_mm": ["xray filter max thicknesses", "filter thickness maximum"],
+    # "mas mas" only — bare "mas" matches per-plane "mAs (A) mAs" and "Max mAs mAs" variants
+    "Exposure_uAs": ["mas mas"],
+    "XRayTubeCurrent_mA": ["ma (rf)", "tube current"],
+    "PulseRate_{pulse}/s": ["pulse rate (rf)", "pulse rate"],
+    "PulseWidth_ms": ["pulse width (rf)", "pulse width"],
+    "FocalSpotSize_mm": ["focal spots (rf)", "focal spot"],
+    "TargetRegion": ["target region (rf)", "target region"],
+}
 
 # Columns required to proceed to rdsr_normalizer().
 REQUIRED_COLUMNS: frozenset[str] = frozenset(
@@ -64,13 +128,54 @@ _NUMERIC_COLUMNS: frozenset[str] = frozenset(
 )
 
 # Unit conversions applied after column rename.
-# Each entry: (column_name, operation, factor, description)
-# source unit → internal unit
+# Each entry: (column_name, operation, factor, description); source unit → internal unit.
 _UNIT_CONVERSIONS: list[tuple[str, str, float, str]] = [
     ("DoseRP_Gy", "divide", 1000.0, "mGy → Gy"),
     ("CollimatedFieldArea_m2", "divide", 10000.0, "cm² → m²"),
     ("Exposure_uAs", "multiply", 1000.0, "mAs → µAs"),
 ]
+
+_KNOWN_MODELS = {"AXIOM-Artis", "Artis", "Artis Q", "Artis Zee"}
+_GE_VARIANTS = {"ge medical systems", "ge healthcare", "ge", "gems"}
+
+
+def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
+    """Radimetrics-specific steps: numeric coercion, unit conversion, warnings."""
+    # Coerce numerics (CSV reads all cells as strings)
+    coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, ctx.warnings)
+
+    # Apply unit conversions
+    for col, op, factor, description in _UNIT_CONVERSIONS:
+        if col in data_df.columns:
+            data_df[col] = data_df[col] / factor if op == "divide" else data_df[col] * factor
+            ctx.unit_conversions[col] = description
+
+    # Warn on unvalidated models and GE lat/lon convention (non-blocking)
+    if "ManufacturerModelName" in data_df.columns:
+        unknown = set(data_df["ManufacturerModelName"].dropna().unique()) - _KNOWN_MODELS
+        if unknown:
+            ctx.warnings.append(
+                f"Radimetrics adapter: unvalidated model(s) {unknown}. "
+                "Column mapping and unit conversions may not be correct. "
+                "Verify results against known-good RDSR output."
+            )
+    if "Manufacturer" in data_df.columns:
+        seen_mfrs = {str(m).strip().lower() for m in data_df["Manufacturer"].dropna().unique()}
+        if seen_mfrs & _GE_VARIANTS:
+            ctx.warnings.append(
+                "GE manufacturer detected. GE equipment stores lateral and longitudinal table "
+                "positions in the opposite convention to MyPySkinDose. "
+                "Enable 'Swap lateral/longitudinal axes' in the GUI import options, or pass "
+                "swap_lat_lon=True when calling load_tabular(), to correct this."
+            )
+
+    # Radimetrics exports may omit these; rdsr_normalizer accepts the defaults.
+    for col, default in [("IrradiationEventType", "Fluoroscopy"), ("AcquisitionPlane", "Single Plane")]:
+        if col not in data_df.columns:
+            data_df[col] = default
+            ctx.warnings.append(f"Column {col!r} not found in Radimetrics export; defaulted to {default!r}.")
+
+    return data_df
 
 
 def adapt(
@@ -83,118 +188,13 @@ def adapt(
     Raises ValueError on blocking errors: missing required columns, duplicate
     mappings, or rdsr_normalizer() failure.
     """
-    from mypyskindose.rdsr_normalizer import rdsr_normalizer
-
-    warnings: list[str] = []
-    raw_df = loaded.raw_df
-
-    # 1. Detect header row
-    header_idx = detect_header_row(raw_df, RADIMETRICS_COLUMN_NAMES)
-
-    # 2. Extract headers and data rows
-    raw_headers = [str(c).strip() for c in raw_df.iloc[header_idx]]
-    data_df = raw_df.iloc[header_idx + 1 :].copy()
-    data_df.columns = pd.Index(raw_headers)
-    data_df = data_df.reset_index(drop=True)
-
-    # Drop wholly-empty rows
-    data_df = data_df[~data_df.apply(lambda r: r.astype(str).str.strip().eq("").all(), axis=1)]
-
-    # 3. Map source column names → rdsr_parser column names
-    column_map, mapping_warnings = map_columns(raw_headers, RADIMETRICS_PATTERNS)
-    warnings.extend(mapping_warnings)
-    unmatched_msg = unmapped_columns_warning(raw_headers, column_map)
-    if unmatched_msg:
-        warnings.append(unmatched_msg)
-
-    dup_errors = check_duplicate_mappings(column_map)
-    if dup_errors:
-        raise ValueError("\n".join(dup_errors))
-
-    # 4. Rename to rdsr_parser column names and check required set
-    rename = {src: target for src, target in column_map.items() if src in data_df.columns}
-    data_df = data_df.rename(columns=rename)
-
-    missing = REQUIRED_COLUMNS - set(data_df.columns)
-    if missing:
-        raise ValueError(
-            f"Missing required column(s) for radimetrics schema: {sorted(missing)}. "
-            f"Column map attempted: {column_map}."
-        )
-
-    # 5. Coerce numerics (CSV reads all cells as strings)
-    for col in _NUMERIC_COLUMNS:
-        if col in data_df.columns:
-            coerced = pd.to_numeric(data_df[col].astype(str).str.strip(), errors="coerce")
-            n_bad = int(coerced.isna().sum()) - int(data_df[col].isna().sum())
-            if n_bad > 0:
-                warnings.append(
-                    f"Column {col!r}: {n_bad} value(s) could not be parsed as numeric; set to NaN."
-                )
-            data_df[col] = coerced
-
-    # 6. Apply unit conversions
-    unit_conversions: dict[str, str] = {}
-    for col, op, factor, description in _UNIT_CONVERSIONS:
-        if col in data_df.columns:
-            if op == "divide":
-                data_df[col] = data_df[col] / factor
-            else:
-                data_df[col] = data_df[col] * factor
-            unit_conversions[col] = description
-
-    # 7. Warn on unknown models and GE lat/lon swap (non-blocking)
-    _KNOWN_MODELS = {"AXIOM-Artis", "Artis", "Artis Q", "Artis Zee"}
-    _GE_VARIANTS = {"ge medical systems", "ge healthcare", "ge", "gems"}
-    if "ManufacturerModelName" in data_df.columns:
-        seen_models = set(data_df["ManufacturerModelName"].dropna().unique())
-        unknown = seen_models - _KNOWN_MODELS
-        if unknown:
-            warnings.append(
-                f"Radimetrics adapter: unvalidated model(s) {unknown}. "
-                "Column mapping and unit conversions may not be correct. "
-                "Verify results against known-good RDSR output."
-            )
-    if "Manufacturer" in data_df.columns:
-        seen_mfrs = {str(m).strip().lower() for m in data_df["Manufacturer"].dropna().unique()}
-        if seen_mfrs & _GE_VARIANTS:
-            warnings.append(
-                "GE manufacturer detected. GE equipment stores lateral and longitudinal table "
-                "positions in the opposite convention to MyPySkinDose. "
-                "Enable 'Swap lateral/longitudinal axes' in the GUI import options, or pass "
-                "swap_lat_lon=True when calling load_tabular(), to correct this."
-            )
-
-    # 8. Ensure IrradiationEventType and AcquisitionPlane have fallback values
-    # Radimetrics exports may not include these; rdsr_normalizer accepts empty strings.
-    for col, default in [("IrradiationEventType", "Fluoroscopy"), ("AcquisitionPlane", "Single Plane")]:
-        if col not in data_df.columns:
-            data_df[col] = default
-            warnings.append(f"Column {col!r} not found in Radimetrics export; defaulted to {default!r}.")
-
-    # 9. Run rdsr_normalizer()
-    try:
-        normalized_df = rdsr_normalizer(data_df, settings)
-    except Exception as exc:
-        raise ValueError(f"rdsr_normalizer() failed on radimetrics input: {exc}") from exc
-
-    # 10. Build provenance
-    provenance = InputProvenance(
-        source_type=Path(original_filename).suffix.lstrip(".").lower(),
+    return run_normalizer_pipeline(
+        loaded,
         schema_name="radimetrics",
+        known_names=RADIMETRICS_COLUMN_NAMES,
+        patterns=RADIMETRICS_PATTERNS,
+        required_columns=REQUIRED_COLUMNS,
+        transform=_transform,
         original_filename=original_filename,
-        header_row_index=header_idx,
-        detected_encoding=loaded.encoding,
-        detected_delimiter=loaded.delimiter,
-        sheet_name=None,
-        column_map=dict(column_map),
-        unit_conversions=unit_conversions,
-        warnings=warnings,
-    )
-
-    return InputAdapterResult(
-        normalized_data=normalized_df,
-        raw_data=raw_df,
-        provenance=provenance,
-        warnings=warnings,
+        settings=settings,
     )

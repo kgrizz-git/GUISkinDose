@@ -7,21 +7,17 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from mypyskindose.input_adapters import dosemonitor as dosemonitor_adapter
 from mypyskindose.input_adapters import dosetrack as dosetrack_adapter
-from mypyskindose.input_adapters import dosewatch as dosewatch_adapter
 from mypyskindose.input_adapters import generic_rdsr as generic_rdsr_adapter
 from mypyskindose.input_adapters import normalized as normalized_adapter
-from mypyskindose.input_adapters import qaelum as qaelum_adapter
 from mypyskindose.input_adapters import radimetrics as radimetrics_adapter
-from mypyskindose.input_adapters.column_mapper import (
-    DOSETRACK_COLUMN_NAMES,
-    GENERIC_RDSR_COLUMN_NAMES,
-    NORMALIZED_COLUMN_NAMES,
-    RADIMETRICS_COLUMN_NAMES,
-    detect_header_row,
-)
+from mypyskindose.input_adapters import stubs
+from mypyskindose.input_adapters.column_mapper import detect_header_row
+from mypyskindose.input_adapters.dosetrack import DOSETRACK_COLUMN_NAMES
+from mypyskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
 from mypyskindose.input_adapters.models import InputAdapterResult
+from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
+from mypyskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
 from mypyskindose.input_adapters.tabular_loader import _RawLoad, load
 
 if TYPE_CHECKING:
@@ -164,15 +160,9 @@ def read_and_normalize_input(
                 "(needed by rdsr_normalizer for manufacturer/model lookup)."
             )
         result = dosetrack_adapter.adapt(loaded, original_filename=path.name, settings=settings)
-    elif schema in ("qaelum", "dosemonitor", "dosewatch"):
-        # Stub adapters — adapt() raises NotImplementedError with instructions.
-        _stubs = {
-            "qaelum": qaelum_adapter,
-            "dosemonitor": dosemonitor_adapter,
-            "dosewatch": dosewatch_adapter,
-        }
-        _stubs[schema].adapt(loaded, original_filename=path.name, settings=settings)  # type: ignore[arg-type]
-        raise AssertionError("unreachable — stub adapt() always raises NotImplementedError")
+    elif schema in stubs.STUB_VENDORS:
+        # Placeholder vendors — raises NotImplementedError with instructions.
+        stubs.raise_not_implemented(schema)
     else:
         raise ValueError(
             f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."

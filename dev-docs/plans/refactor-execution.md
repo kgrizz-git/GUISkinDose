@@ -56,20 +56,21 @@ These modules produce numbers, not errors — a regression is invisible. Pin the
 
 All four real adapters share steps 1–3 and 7 (assessment §3). Migrate incrementally so adapters are never collectively broken.
 
-- [ ] **2.1 Extract the shared pipeline.** Create `input_adapters/base.py` with `run_pipeline(loaded, known_names, patterns, transform_fn, original_filename, settings)` that owns: header detection, column mapping, duplicate-mapping check, and provenance/result construction. `transform_fn` is the per-adapter callback that does numeric coercion + unit conversion + vendor specifics.
+- [x] **2.1 Extract the shared pipeline.** `input_adapters/base.py` provides `run_normalizer_pipeline(loaded, *, schema_name, known_names, patterns, required_columns, transform, original_filename, settings)` owning header detection → `extract_table` → map → dup-check → rename → transform → required-check → `rdsr_normalizer` → provenance/result. The per-adapter `transform(data_df, ctx)` does numeric coercion + unit conversion + vendor specifics; `AdapterContext` carries the mutable `warnings`/`unit_conversions`. Shared helpers `extract_table` and `coerce_numeric_columns` also extracted. The sentinel `_dt_*` exclusion from the public column map is now uniform in the base.
 
-- [ ] **2.2 Migrate one adapter (`radimetrics`) onto `base`.** Leave the other three untouched.
-  - **Verify:** `pytest tests/unittests/test_input_adapters.py` green (the Radimetrics tests now exercise the shared pipeline).
+- [x] **2.2 Migrate `radimetrics` onto `base`.** Transform = numeric coercion + unit conversions + model/GE warnings + fallbacks. Required-columns check moved from "after rename" to "after transform" (safe: the transform guards every column access and adds nothing required).
+  - **Verify:** ✅ 57 adapter tests green.
 
-- [ ] **2.3 Migrate `dosetrack`, `generic_rdsr`, `normalized`** one commit each, running the adapter test suite after each.
+- [x] **2.3 Migrate `dosetrack`, `generic_rdsr`, `normalized`.** `generic_rdsr` transform is just numeric coercion; `dosetrack` transform keeps ffill/manufacturer-inference/plane-code/units/filter/CFA. `normalized` is structurally different (case-insensitive exact match, multi-procedure check, no `rdsr_normalizer`) so it does **not** use the pipeline — it shares only `extract_table`.
+  - **Verify:** ✅ 57 adapter tests green after each migration.
 
-- [ ] **2.4 Collapse the three stubs.** Replace `qaelum.py`, `dosemonitor.py`, `dosewatch.py` bodies with a single `_stub_adapter(vendor_name)` factory (in `base.py` or a `stubs.py`) that raises `NotImplementedError` with the implementation instructions. Registry wiring stays the same.
-  - **Verify:** selecting each stub schema still raises the instructive `NotImplementedError`; the existing stub tests pass.
+- [x] **2.4 Collapse the three stubs.** Deleted `qaelum.py`/`dosemonitor.py`/`dosewatch.py`; replaced with `stubs.py` (`STUB_VENDORS` map + `raise_not_implemented(schema) -> NoReturn`). Registry routes `schema in stubs.STUB_VENDORS` to it; the `NoReturn` annotation let the old `AssertionError` "unreachable" guard be removed (pyright now sees `result` is always bound).
+  - **Verify:** ✅ all three stub schemas raise the instructive `NotImplementedError`; pyright clean.
 
-- [ ] **2.5 Move per-vendor column sets out of `column_mapper.py`.** Relocate `NORMALIZED_COLUMN_NAMES`, `GENERIC_RDSR_COLUMN_NAMES`, `RADIMETRICS_COLUMN_NAMES`, `DOSETRACK_COLUMN_NAMES` (and their `*_PATTERNS`) into their adapter modules. `column_mapper.py` keeps only the generic engine (`_normalize_str`, `_score_row`, `detect_header_row`, `map_columns`, `check_duplicate_mappings`). Update `registry.py`'s `_SCHEMA_KNOWN_NAMES` imports.
-  - **Verify:** auto-detection still resolves each fixture to the right schema; full adapter suite green.
+- [x] **2.5 Move per-vendor column sets out of `column_mapper.py`.** Relocated each `*_COLUMN_NAMES`/`*_PATTERNS` (and `NORMALIZED_COLUMN_CANONICAL`/`NORMALIZED_REQUIRED_COLUMNS`) into its adapter module; `registry._SCHEMA_KNOWN_NAMES` now imports them from the adapters. `column_mapper.py` keeps only the engine + `COLUMN_PATTERNS` (a generic fixture exercised by the engine's collision tests). **547 → 226 lines.** Two test imports updated.
+  - **Verify:** ✅ auto-detection tests still resolve each fixture; 64 adapter+characterization tests green.
 
-**Phase 2 exit:** `column_mapper.py` is the generic engine only; each adapter is its own column knowledge + a thin transform fn; stubs are one file. Net line reduction expected.
+**Phase 2 exit:** ✅ `column_mapper.py` is the engine only (547→226); each adapter owns its column knowledge + a thin transform; stubs are one file. Full suite (136) + GUI smoke green; basedpyright clean.
 
 ---
 
