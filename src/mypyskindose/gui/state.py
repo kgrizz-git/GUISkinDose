@@ -72,6 +72,12 @@ class AppState:
     procedure_fig: Any | None = None
     dosemap_fig: Any | None = None
 
+    # ── Concurrency guard ──────────────────────────────────────────────────
+    # True while a load/sheet-change/calculation is in flight. Prevents a second
+    # operation from interleaving its state mutations with one already running
+    # (e.g. double-click upload, or Calculate while a coordinate swap is applied).
+    busy: bool = False
+
     # ── Navigation ─────────────────────────────────────────────────────────
     active_tab: str = "input"
 

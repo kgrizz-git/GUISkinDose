@@ -14,7 +14,9 @@ import io
 import json
 import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 # Fix for Windows SSL context loading error during shutdown
 # Prevents aiohttp from loading Windows certificate store which causes issues on Python 3.13
@@ -72,6 +74,30 @@ def _cleanup_temp_uploads() -> None:
         except OSError:
             pass
     _uploaded_temp_files.clear()
+
+
+# ── concurrency guard ─────────────────────────────────────────────────────
+# NiceGUI runs async handlers on a single event loop, but each handler awaits
+# run.io_bound(), yielding control while blocking work runs on a worker thread.
+# Two handlers can therefore be in flight at once and interleave their writes to
+# the shared `state` singleton. This guard makes the second operation bail out
+# with a notice instead. The check-and-set has no await between the read and the
+# write, so it is race-free under asyncio's cooperative scheduling.
+@contextmanager
+def _operation_guard(label: str) -> Iterator[bool]:
+    """Yield True if the operation may proceed, False if one is already running."""
+    if state.busy:
+        ui.notify(
+            f"Busy — please wait for the current operation to finish before {label}.",
+            type="warning",
+        )
+        yield False
+        return
+    state.busy = True
+    try:
+        yield True
+    finally:
+        state.busy = False
 
 
 # ── helper for file dialog ────────────────────────────────────────────────
@@ -451,55 +477,58 @@ def index():
                     _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
                     async def handle_upload(e):
-                        dprint("GUI", f"Uploading file {e.name}")
-                        suffix = Path(e.name).suffix.lower() or ".dcm"
-                        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                            tmp.write(e.content.read())
-                            tmp_path = Path(tmp.name)
-                        # Track for cleanup; deletes the previous upload's temp file.
-                        # Kept alive for the session so the XLSX sheet picker can re-read it.
-                        _register_temp_upload(tmp_path)
+                        with _operation_guard("uploading another file") as proceed:
+                            if not proceed:
+                                return
+                            dprint("GUI", f"Uploading file {e.name}")
+                            suffix = Path(e.name).suffix.lower() or ".dcm"
+                            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                                tmp.write(e.content.read())
+                                tmp_path = Path(tmp.name)
+                            # Track for cleanup; deletes the previous upload's temp file.
+                            # Kept alive for the session so the XLSX sheet picker can re-read it.
+                            _register_temp_upload(tmp_path)
 
-                        # Reset sheet state and transform flags for every new upload
-                        state.input_sheet_name = 0
-                        state.available_sheets = []
-                        sheet_row.set_visibility(False)
-                        state.swap_lat_lon = False
-                        state.flip_ap1 = False
-                        state.flip_ap2 = False
+                            # Reset sheet state and transform flags for every new upload
+                            state.input_sheet_name = 0
+                            state.available_sheets = []
+                            sheet_row.set_visibility(False)
+                            state.swap_lat_lon = False
+                            state.flip_ap1 = False
+                            state.flip_ap2 = False
 
-                        upload_status.set_text("PARSING...")
-                        if suffix in _TABULAR_SUFFIXES:
-                            state.input_source_type = suffix.lstrip(".")
-                            ok, msg = await run.io_bound(load_tabular, tmp_path, state)
-                        else:
-                            state.input_source_type = "dicom"
-                            ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
-                        if ok:
-                            state.file_name = e.name
-                            file_label.set_text(e.name.upper())
-                            events_label.set_text(
-                                f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
-                            )
-                            upload_status.set_text(f"OK: {msg}")
-                            ui.notify(msg, color="positive")
-                            reset_results()
-                            _refresh_event_table()
-                            if state.input_source_type != "dicom":
-                                _refresh_import_preview()
-                                _set_transform_defaults()
-                            # Populate sheet picker for multi-sheet Excel files
-                            if suffix in (".xlsx", ".xlsm"):
-                                sheets = await run.io_bound(get_excel_sheets, tmp_path)
-                                if len(sheets) > 1:
-                                    state.available_sheets = sheets
-                                    sheet_select.set_options(
-                                        {s: s for s in sheets}, value=sheets[0]
-                                    )
-                                    sheet_row.set_visibility(True)
-                        else:
-                            upload_status.set_text("ERROR — see notification")
-                            ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
+                            upload_status.set_text("PARSING...")
+                            if suffix in _TABULAR_SUFFIXES:
+                                state.input_source_type = suffix.lstrip(".")
+                                ok, msg = await run.io_bound(load_tabular, tmp_path, state)
+                            else:
+                                state.input_source_type = "dicom"
+                                ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
+                            if ok:
+                                state.file_name = e.name
+                                file_label.set_text(e.name.upper())
+                                events_label.set_text(
+                                    f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
+                                )
+                                upload_status.set_text(f"OK: {msg}")
+                                ui.notify(msg, color="positive")
+                                reset_results()
+                                _refresh_event_table()
+                                if state.input_source_type != "dicom":
+                                    _refresh_import_preview()
+                                    _set_transform_defaults()
+                                # Populate sheet picker for multi-sheet Excel files
+                                if suffix in (".xlsx", ".xlsm"):
+                                    sheets = await run.io_bound(get_excel_sheets, tmp_path)
+                                    if len(sheets) > 1:
+                                        state.available_sheets = sheets
+                                        sheet_select.set_options(
+                                            {s: s for s in sheets}, value=sheets[0]
+                                        )
+                                        sheet_row.set_visibility(True)
+                            else:
+                                upload_status.set_text("ERROR — see notification")
+                                ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
 
                     ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
@@ -521,26 +550,29 @@ def index():
                             name = example_select.value
                             if not name:
                                 return
-                            path = EXAMPLE_FILES[name]
-                            state.input_source_type = "dicom"
-                            state.swap_lat_lon = False
-                            state.flip_ap1 = False
-                            state.flip_ap2 = False
-                            upload_status.set_text("PARSING...")
-                            ok, msg = await run.io_bound(load_rdsr, path, state)
-                            if ok:
-                                state.file_name = name
-                                file_label.set_text(name.upper())
-                                events_label.set_text(
-                                    f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
-                                )
-                                upload_status.set_text(f"OK: {msg}")
-                                ui.notify(msg, color="positive")
-                                reset_results()
-                                _refresh_event_table()
-                            else:
-                                upload_status.set_text("ERROR — see notification")
-                                ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
+                            with _operation_guard("loading an example") as proceed:
+                                if not proceed:
+                                    return
+                                path = EXAMPLE_FILES[name]
+                                state.input_source_type = "dicom"
+                                state.swap_lat_lon = False
+                                state.flip_ap1 = False
+                                state.flip_ap2 = False
+                                upload_status.set_text("PARSING...")
+                                ok, msg = await run.io_bound(load_rdsr, path, state)
+                                if ok:
+                                    state.file_name = name
+                                    file_label.set_text(name.upper())
+                                    events_label.set_text(
+                                        f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
+                                    )
+                                    upload_status.set_text(f"OK: {msg}")
+                                    ui.notify(msg, color="positive")
+                                    reset_results()
+                                    _refresh_event_table()
+                                else:
+                                    upload_status.set_text("ERROR — see notification")
+                                    ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
 
                         ui.button("LOAD", on_click=load_example).classes("modern-btn modern-btn-teal px-8")
 
@@ -582,15 +614,18 @@ def index():
                         async def _on_sheet_change():
                             if state.file_path is None:
                                 return
-                            state.input_sheet_name = sheet_select.value or 0
-                            ok, msg = await run.io_bound(load_tabular, state.file_path, state)
-                            if ok:
-                                upload_status.set_text(f"SUCCESS: {msg.upper()}")
-                                reset_results()
-                                _refresh_event_table()
-                                _refresh_import_preview()
-                            else:
-                                ui.notify(f"Sheet parse error: {msg[:200]}", type="negative", timeout=6000)
+                            with _operation_guard("switching sheets") as proceed:
+                                if not proceed:
+                                    return
+                                state.input_sheet_name = sheet_select.value or 0
+                                ok, msg = await run.io_bound(load_tabular, state.file_path, state)
+                                if ok:
+                                    upload_status.set_text(f"SUCCESS: {msg.upper()}")
+                                    reset_results()
+                                    _refresh_event_table()
+                                    _refresh_import_preview()
+                                else:
+                                    ui.notify(f"Sheet parse error: {msg[:200]}", type="negative", timeout=6000)
 
                         sheet_select.on("update:model-value", _on_sheet_change)
                     sheet_row.set_visibility(False)
@@ -1134,30 +1169,35 @@ def index():
                     ui.notify("Fix import errors before calculating (tab 1)", color="warning")
                     return
 
-                calc_btn.disable()
-                run_btn_drawer.disable()
-                calc_progress.visible = True
-                calc_progress.set_value(0)
-                calc_status_label.set_text("Starting...")
+                with _operation_guard("starting a calculation") as proceed:
+                    if not proceed:
+                        return
 
-                def progress_cb(fraction: float, label: str):
-                    calc_progress.set_value(fraction)
-                    calc_status_label.set_text(label)
+                    calc_btn.disable()
+                    run_btn_drawer.disable()
+                    calc_progress.visible = True
+                    calc_progress.set_value(0)
+                    calc_status_label.set_text("Starting...")
 
-                ok, msg = await run.io_bound(run_calculation, state, progress_cb)
+                    def progress_cb(fraction: float, label: str):
+                        calc_progress.set_value(fraction)
+                        calc_status_label.set_text(label)
 
-                calc_progress.set_value(1.0)
-                calc_btn.enable()
-                run_btn_drawer.enable()
+                    try:
+                        ok, msg = await run.io_bound(run_calculation, state, progress_cb)
+                    finally:
+                        calc_progress.set_value(1.0)
+                        calc_btn.enable()
+                        run_btn_drawer.enable()
 
-                if ok:
-                    psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
-                    calc_status_label.set_text(f"Done — {msg}")
-                    ui.notify(f"✓ {msg}", color="positive")
-                    tabs.set_value("results")
-                else:
-                    calc_status_label.set_text("Calculation failed")
-                    ui.notify(f"Error: {msg[:300]}", type="negative", timeout=10000)
+                    if ok:
+                        psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
+                        calc_status_label.set_text(f"Done — {msg}")
+                        ui.notify(f"✓ {msg}", color="positive")
+                        tabs.set_value("results")
+                    else:
+                        calc_status_label.set_text("Calculation failed")
+                        ui.notify(f"Error: {msg[:300]}", type="negative", timeout=10000)
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 6 — RESULTS
