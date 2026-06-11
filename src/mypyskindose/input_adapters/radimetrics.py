@@ -159,8 +159,8 @@ def adapt(
         seen_mfrs = {str(m).strip().lower() for m in data_df["Manufacturer"].dropna().unique()}
         if seen_mfrs & _GE_VARIANTS:
             warnings.append(
-                "GE manufacturer detected. GE Radimetrics exports typically have lateral and "
-                "longitudinal table positions swapped relative to MyPySkinDose convention. "
+                "GE manufacturer detected. GE equipment stores lateral and longitudinal table "
+                "positions in the opposite convention to MyPySkinDose. "
                 "Enable 'Swap lateral/longitudinal axes' in the GUI import options, or pass "
                 "swap_lat_lon=True when calling load_tabular(), to correct this."
             )

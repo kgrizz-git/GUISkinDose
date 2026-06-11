@@ -685,24 +685,31 @@ def index():
                     event_sample_table.rows = df.fillna("—").astype(str).to_dict("records")
                     event_sample_table.update()
 
-            def _set_transform_defaults() -> None:
-                """Auto-set coordinate correction toggles from import warnings.
+            _GE_MANUFACTURER_VARIANTS = frozenset({
+                "ge", "ge medical systems", "ge healthcare", "general electric", "gems"
+            })
 
-                Reads manufacturer hints from import warnings and enables the
-                appropriate toggles. Called once after initial file load, not on
-                sheet re-parse, so user overrides are preserved across sheet changes.
+            def _is_ge() -> bool:
+                """Return True if the loaded data is from GE equipment."""
+                # Manufacturer field is populated for direct RDSR loads
+                if state.manufacturer.strip().lower() in _GE_MANUFACTURER_VARIANTS:
+                    return True
+                # Tabular loads (Radimetrics etc.) surface GE via import warnings
+                warnings_lower = " ".join(state.import_warnings).lower()
+                return "ge manufacturer detected" in warnings_lower
+
+            def _set_transform_defaults() -> None:
+                """Auto-set coordinate correction toggles based on detected manufacturer.
+
+                Called once after initial file load, not on sheet re-parse, so user
+                overrides are preserved across sheet changes.
                 """
                 if state.import_provenance is None:
                     return
-                warnings_lower = " ".join(state.import_warnings).lower()
 
-                # Lat/lon swap: confirmed for GE Radimetrics exports only.
-                # Philips DoseTrack swap appears in one reference implementation
-                # but has not been verified against a real export — leave as manual.
-                needs_swap = (
-                    "ge " in warnings_lower
-                    or "ge manufacturer" in warnings_lower
-                )
+                # GE equipment stores lat/lon in the opposite convention to MyPySkinDose.
+                # This is a property of GE hardware, not of any specific export format.
+                needs_swap = _is_ge()
                 state.swap_lat_lon = needs_swap
                 state.flip_ap1 = False
                 state.flip_ap2 = False
