@@ -23,8 +23,8 @@ _Last updated: 2026-06-11_
 
 Independent one-commit fixes. Do these first; none block the others.
 
-- [ ] **0.1 Fix the temp file leak.** `gui/app.py:423` writes uploads with `delete=False` and never removes them. Add a module-level list of temp paths registered with `atexit`, or delete the temp file after `run.io_bound(load_*, tmp_path, state)` returns (both loaders read the file fully before returning, so deletion is safe immediately after).
-  - **Verify:** upload a CSV, confirm parse still works; check the temp dir has no leftover `tmp*` file after the app exits.
+- [x] **0.1 Fix the temp file leak.** `gui/app.py` wrote uploads with `delete=False` and never removed them. Added a module-level registry (`_register_temp_upload` / `_cleanup_temp_uploads` / `_uploaded_temp_files`): each new upload deletes the previous upload's temp file, and an `atexit` sweep removes whatever remains. The current upload is intentionally kept alive for the session because the XLSX sheet picker re-reads `state.file_path` on every sheet change (the plan's "delete immediately after load" alternative would have broken multi-sheet XLSX). Bundled example files are never registered, so they are never deleted. Covered by `tests/unittests/test_gui_temp_uploads.py` (5 tests).
+  - **Verify:** ✅ unit tests pin the contract (new upload deletes prior, atexit sweeps, tolerant of already-deleted files); full suite (106) + GUI smoke (2) green.
 
 - [ ] **0.2 Introduce `logging`.** Replace `dprint()` call sites with `logging.getLogger(__name__)`. Keep `debug.py` as a shim that configures the root logger (level from the existing debug flag/env var) and add an optional file handler so native-mode runs leave a log on disk. Do not change log *content*, only the mechanism.
   - **Verify:** run with debug enabled, confirm the same messages appear; confirm a log file is written in native mode.

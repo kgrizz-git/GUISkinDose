@@ -9,6 +9,7 @@ or directly:
 
 from __future__ import annotations
 
+import atexit
 import io
 import json
 import os
@@ -40,6 +41,38 @@ from .state import reset_results, state
 from mypyskindose.debug import dprint
 
 GUI_VERSION = "1.1.0"
+
+# ── uploaded temp-file lifecycle ──────────────────────────────────────────
+# Uploads are written to NamedTemporaryFile(delete=False) so the parser (and the
+# XLSX sheet picker, which re-reads the path on every sheet change) can read them.
+# Without cleanup these accumulate on disk for the life of the process. We keep
+# only the current upload alive: each new upload deletes the previous one, and an
+# atexit sweep removes whatever remains at shutdown. Bundled example files are
+# never registered here, so they are never deleted.
+_uploaded_temp_files: list[Path] = []
+
+
+def _register_temp_upload(path: Path) -> None:
+    """Track a freshly written upload temp file and delete the prior one."""
+    while _uploaded_temp_files:
+        old = _uploaded_temp_files.pop()
+        try:
+            old.unlink(missing_ok=True)
+        except OSError as exc:
+            dprint("GUI", f"Could not delete old temp upload {old}: {exc}")
+    _uploaded_temp_files.append(path)
+
+
+@atexit.register
+def _cleanup_temp_uploads() -> None:
+    """Remove any remaining upload temp files at process exit."""
+    for path in _uploaded_temp_files:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    _uploaded_temp_files.clear()
+
 
 # ── helper for file dialog ────────────────────────────────────────────────
 def _get_save_path(default_name: str, extension: str) -> str | None:
@@ -423,6 +456,9 @@ def index():
                         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                             tmp.write(e.content.read())
                             tmp_path = Path(tmp.name)
+                        # Track for cleanup; deletes the previous upload's temp file.
+                        # Kept alive for the session so the XLSX sheet picker can re-read it.
+                        _register_temp_upload(tmp_path)
 
                         # Reset sheet state and transform flags for every new upload
                         state.input_sheet_name = 0
