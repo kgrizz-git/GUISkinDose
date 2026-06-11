@@ -32,6 +32,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, **package layering rules**, settings, classes, functions, and repository layout. |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | Feature status ledger: calculations, rendering, settings, outputs, CLI, API, and **harness/CI §0**. |
 | [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
+| [REFACTOR_ASSESSMENT.md](REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Plan in [plans/refactor-execution.md](plans/refactor-execution.md). |
 
 ---
 
@@ -62,6 +63,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | File | Purpose |
 |---|---|
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Secondary plan: transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
+| [plans/refactor-execution.md](plans/refactor-execution.md) | Phased execution plan for the refactor work diagnosed in [REFACTOR_ASSESSMENT.md](REFACTOR_ASSESSMENT.md). |
 
 ---
 
