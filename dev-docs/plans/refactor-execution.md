@@ -40,15 +40,15 @@ Independent one-commit fixes. Do these first; none block the others.
 
 These modules produce numbers, not errors — a regression is invisible. Pin their current behavior **before** any later phase touches them.
 
-- [ ] **1.1 `rdsr_normalizer.py` characterization tests.** Use the bundled RDSRs (`example_data/RDSR/`). For each of `siemens_axiom_artis.dcm`, `philips_allura_clarity_u104.dcm`, `philips_allura_clarity_u601.dcm`: parse → normalize → assert exact `Tx`, `Ty`, `Tz`, `Ap1`, `Ap2` for the first N events against values captured from current output. (We already verified Philips u104 gives Tx≈8.1, Tz≈-20.9 earlier — reuse that as a known-good anchor.)
-  - **Verify:** tests pass against current code; deliberately flip a `trans_dir` sign locally and confirm a test fails.
+- [x] **1.1 `rdsr_normalizer.py` characterization tests.** `tests/unittests/test_rdsr_normalizer_characterization.py` parses + normalizes all three bundled RDSRs and asserts exact `Tx/Ty/Tz/Ap1/Ap2` (+ `kVp/K_IRP`) for the first 3 rows against golden values captured 2026-06-11, plus matched model/method/row-count. Includes a dedicated `test_philips_table_positions_need_no_swap` pinning the lat/lon-swap investigation finding. Tolerance 0.01 — tight enough to catch a sign flip.
+  - **Verify:** ✅ 7 tests pass against current code. Locally flipping the `Tz` `trans_dir` sign produced 4 failures (incl. the Philips swap test); restored clean.
 
-- [ ] **1.2 `format_export_data.py` tests.** Cover JSON export structure, NaN handling, and the tabular-provenance embedding in both JSON (`tabular_input` key) and HTML (`<head>` comment). Assert round-trip: export → re-read → key fields match.
-  - **Verify:** tests pass; corrupt the HTML head-injection locally and confirm a test catches it.
+- [x] **1.2 `format_export_data.py` + export-embedding tests.** `tests/unittests/test_export_data.py` runs a real end-to-end calc (cylinder phantom, 0.1 s) and asserts the dict/JSON export has the 8 expected top-level keys, is JSON-serializable, and contains **no NaN**; plus dose-map sparsity. The GUI provenance embedding was **extracted** from the export closures into module-level pure helpers `_tabular_input_meta()` and `_inject_html_tabular_meta()` (removing the dict duplication between JSON and HTML paths that the assessment §9 flagged), and unit-tested: meta shape/serializability, head-comment insertion position, no-op without `<head>`, only-first-`<head>` annotated.
+  - **Verify:** ✅ 8 tests pass. After strengthening the position assertion, corrupting the injection anchor (`<head>`→`</head>`) is caught; restored clean. basedpyright clean.
 
-- [ ] **1.3 (optional) `rdsr_parser.py` tests.** Assert the parser extracts the expected table-position columns from each bundled RDSR. Lower priority — parser bugs tend to surface as missing-column errors rather than silent wrong numbers.
+- [ ] **1.3 (optional) `rdsr_parser.py` tests.** Assert the parser extracts the expected table-position columns from each bundled RDSR. Lower priority — parser bugs tend to surface as missing-column errors rather than silent wrong numbers. _Deferred — not blocking Phase 2._
 
-**Phase 1 exit:** new tests committed and green. These become the safety net for everything below.
+**Phase 1 exit:** ✅ characterization + export tests committed and green (136 unit + 2 smoke). These are the safety net for the Phase 2/3 refactors.
 
 ---
 

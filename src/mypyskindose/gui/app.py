@@ -100,6 +100,37 @@ def _operation_guard(label: str) -> Iterator[bool]:
         state.busy = False
 
 
+# ── tabular provenance embedding in exports ───────────────────────────────
+# Both the JSON payload and the HTML export embed the tabular import provenance
+# so a saved result records exactly how its source table was read. Kept as pure
+# module-level functions (single source of truth, unit-testable) rather than
+# duplicated inside the export closures.
+def _tabular_input_meta(file_name, provenance, swap_lat_lon, warnings) -> dict:
+    """Build the tabular-input provenance dict embedded in exports."""
+    return {
+        "source_file": file_name,
+        "schema": provenance.schema_name,
+        "encoding": provenance.detected_encoding,
+        "delimiter": provenance.detected_delimiter,
+        "header_row_index": provenance.header_row_index,
+        "column_map": provenance.column_map,
+        "lat_lon_swapped": swap_lat_lon,
+        "warnings": list(warnings),
+    }
+
+
+def _inject_html_tabular_meta(html: bytes, meta: dict) -> bytes:
+    """Insert the provenance as an HTML comment immediately after <head>.
+
+    Returns *html* unchanged if no ``<head>`` tag is present. Only the first
+    ``<head>`` is annotated.
+    """
+    if b"<head>" not in html:
+        return html
+    comment = f"<head>\n<!-- mypyskindose:tabular_input {json.dumps(meta, indent=2)} -->"
+    return html.replace(b"<head>", comment.encode(), 1)
+
+
 # ── helper for file dialog ────────────────────────────────────────────────
 def _get_save_path(default_name: str, extension: str) -> str | None:
     """Open a native Save As dialog."""
@@ -1334,17 +1365,12 @@ def index():
                     """Return state.output enriched with tabular provenance when applicable."""
                     payload = dict(state.output or {})
                     if state.import_provenance is not None:
-                        prov = state.import_provenance
-                        payload["tabular_input"] = {
-                            "source_file": state.file_name,
-                            "schema": prov.schema_name,
-                            "encoding": prov.detected_encoding,
-                            "delimiter": prov.detected_delimiter,
-                            "header_row_index": prov.header_row_index,
-                            "column_map": prov.column_map,
-                            "lat_lon_swapped": state.swap_lat_lon,
-                            "warnings": list(state.import_warnings),
-                        }
+                        payload["tabular_input"] = _tabular_input_meta(
+                            state.file_name,
+                            state.import_provenance,
+                            state.swap_lat_lon,
+                            state.import_warnings,
+                        )
                     return payload
 
                 def download_json():
@@ -1373,22 +1399,13 @@ def index():
                         ui.notify("Failed to generate HTML", type="negative")
                         return
                     if state.import_provenance is not None:
-                        prov = state.import_provenance
-                        meta = json.dumps({
-                            "source_file": state.file_name,
-                            "schema": prov.schema_name,
-                            "encoding": prov.detected_encoding,
-                            "delimiter": prov.detected_delimiter,
-                            "header_row_index": prov.header_row_index,
-                            "column_map": prov.column_map,
-                            "lat_lon_swapped": state.swap_lat_lon,
-                            "warnings": list(state.import_warnings),
-                        }, indent=2)
-                        content = content.replace(
-                            b"<head>",
-                            f"<head>\n<!-- mypyskindose:tabular_input {meta} -->".encode(),
-                            1,
+                        meta = _tabular_input_meta(
+                            state.file_name,
+                            state.import_provenance,
+                            state.swap_lat_lon,
+                            state.import_warnings,
                         )
+                        content = _inject_html_tabular_meta(content, meta)
                     if save_path:
                         with open(save_path, "wb") as f:
                             f.write(content)
