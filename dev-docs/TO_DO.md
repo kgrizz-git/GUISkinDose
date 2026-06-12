@@ -1,8 +1,8 @@
 # TO DO
 
-Short-term task list for MyPySkinDose. Harness principles, validation commands, and the phased remediation roadmap live in:
+Short-term task list for MyPySkinDose. Harness principles, validation commands, plan conventions, and the phased remediation roadmap live in:
 
-- [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md)
+- [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) — includes **Documentation conventions** (master vs execution plans)
 - [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)
 
 ---
@@ -30,19 +30,28 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
   - Optional Playwright/CDP tests only if user-simulation proves insufficient.
 - [ ] Expand coordinate system diagrams in `VENDOR_COORDINATE_SYSTEMS.md` (initial mermaid diagrams added 2026-06-06; validate against vendor data).
 
+### Documentation / plans (pending)
+
+- [ ] **Plan template** — shared header for execution plans: objective, acceptance criteria, progress log, decision log (see `HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` §6).
+- [ ] **Archive completed execution plans** — when `refactor-execution.md` / `gui-decomposition-design.md` phases finish, move or mark complete under `dev-docs/plans/archive/`.
+- [ ] **Optional `dev-docs/master-plans/` migration** — defer until a rename PR is worth the link churn; convention documented in `HARNESS_ENGINEERING.md` instead.
+- [ ] **Phase 7 harness** (low priority, from improvement plan):
+  - Expand `dev-docs/references/` before next major dependency review.
+  - Recurring doc-gardening agent automation (after stale-pattern rules are CI-blocking).
+  - Per-golden-rule custom linters (start with doc-freshness + import contracts only).
+- [ ] **Full GUI observability stack** — defer until smoke/tab tests prove insufficient (`HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` “what not to build yet”).
+
 ### Input data & calculation
 
 - [ ] Run examples in JupyterLab and compare.
+- [ ] **HVL interpolation/extrapolation for out-of-table filtration** — `geom_calc.fetch_and_append_hvl` selects each event's HVL with an **exact match** on added Cu filtration (and rounded Al), kVp, and inherent filtration against `table_data/hvl_tables/hvl_combined.csv`. If an export's filter value isn't a tabulated point, the lookup returns empty and `.iloc[0]` raises, failing the whole calculation. Replace exact match with nearest-neighbour or (bi)linear interpolation across the tabulated grid, with extrapolation guarded at the table edges. **Surface a user-facing warning/notification** whenever a value is interpolated or (especially) extrapolated — push it through the same import/calc warnings channel the GUI already shows (e.g. `state.normalization_warnings` / calc status), naming the event and the substituted HVL so the user knows the beam quality wasn't an exact table hit. Note filter thickness materially affects PSD: HVL drives backscatter `k_bs`, medium `k_med`, and (with Cu/Al directly) table transmission `k_tab` corrections.
 - [ ] Add debug/warning if any dose events have no intersection with patient.
 - [ ] Add support for multiple exams.
-- [x] **Tabular input Phase 1** (shipped 2026-06-09): normalized schema adapter, shared loader/mapper/registry infrastructure, CLI flags, fixtures, unit tests.
-- [x] **Tabular input Phase 2** (shipped 2026-06-09): `generic_rdsr_like` adapter (column map → `rdsr_normalizer()`), `--input-schema auto` detection.
-- [ ] **Tabular input Phases 3–4** — Radimetrics and DoseTrack adapters per [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) (gated on real vendor export fixtures; do not start without them).
-- [ ] **Tabular input Phase 5** — GUI import workflow: extend upload to accept `.csv`/`.tsv`/`.xlsx`, add schema selector, import preview panel, coordinate correction toggles.
+- [ ] **Tabular input Phase 5+** — Qaelum, DoseMonitor, DoseWatch adapters per [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) (gated on real vendor export fixtures; stub adapters exist).
 - [ ] **Column-pattern customization** (future, after Python-only implementation is stable): allow site-specific column name overrides via an editable JSON or YAML file so users with non-standard export templates can map columns without code changes. See `TABULAR_RDSR_INPUT_PLAN.md` open questions.
 - [ ] **Vendor coordinate normalization — lat/lon axis swap**: Confirmed for **GE equipment** (a hardware convention, not export-format specific; see `_should_swap_by_default` in `dev-docs/references/psdcalcrework_io_utils.py`). The GUI auto-enables the swap when GE is detected via `state.manufacturer` (RDSR loads) or import warnings (tabular loads). **Philips is NOT confirmed:** the bundled Philips RDSRs (`example_data/RDSR/philips_allura_clarity_*.dcm`) normalize correctly through `rdsr_normalizer()` with no swap, so `dhen2714/PySkinDose` `parse_philips()`'s swap is likely DoseTrack-export-specific and remains unverified — left as a manual toggle until a real Philips DoseTrack export can be compared against source. The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap. See `VENDOR_COORDINATE_SYSTEMS.md` for details.
-- [ ] **Vendor coordinate normalization — confirm per-vendor export frame** (Phases 3–4 prerequisite): before writing each vendor adapter (Radimetrics, DoseTrack, etc.), compare a real export against its source RDSR to confirm whether values are in the raw DICOM frame (→ call `rdsr_normalizer()`) or pre-transformed (→ skip or adjust). See `VENDOR_COORDINATE_SYSTEMS.md` tabular input section and `TABULAR_RDSR_INPUT_PLAN.md` open questions for risk table and details.
-- [ ] **Vendor coordinate normalization — Philips double-correction risk**: Philips has large Y/Z offsets (~105 cm Y, ~173 cm Z). If a Philips export has already applied these offsets, calling `rdsr_normalizer()` doubles them. Confirm Radimetrics/DoseTrack Philips exports are in raw DICOM frame before writing Phase 3–4 adapters.
+- [ ] **Vendor coordinate normalization — confirm per-vendor export frame** (Phase 5+ prerequisite): before writing Qaelum/DoseMonitor/DoseWatch adapters, compare a real export against its source RDSR to confirm whether values are in the raw DICOM frame (→ call `rdsr_normalizer()`) or pre-transformed (→ skip or adjust). See `VENDOR_COORDINATE_SYSTEMS.md` tabular input section and `TABULAR_RDSR_INPUT_PLAN.md` open questions for risk table and details.
+- [ ] **Vendor coordinate normalization — Philips double-correction risk**: Philips has large Y/Z offsets (~105 cm Y, ~173 cm Z). If a Philips export has already applied these offsets, calling `rdsr_normalizer()` doubles them. Confirm Radimetrics/DoseTrack Philips exports are in raw DICOM frame before writing Phase 5+ adapters.
 
 ### GUI / UX
 
@@ -89,15 +98,17 @@ Finished items kept for traceability. Harness phase tags reference [HARNESS_ENGI
 - [x] Package layering rules + structural tests — **Phase 4** — `CODEBASE_OVERVIEW.md`, `test_architecture_layers.py`
 - [x] GUI smoke tests — **Phase 5** — `tests/gui/`, `gui-smoke` CI job, `tests/scripts/launch_gui_headless.py`
 - [x] Harness doc catalog — **Phase 0** — `dev-docs/index.md`, expanded source-of-truth map, `DESIGN.md` rename
+- [x] **Documentation conventions** — master vs execution vs archive plans documented in `HARNESS_ENGINEERING.md`; `plans/archive/` for completed work (2026-06-12)
 
 ### CI, typing, and supply chain
 
-- [x] **Basedpyright** — CI `typecheck` job (strict); optional baseline via `scripts/type_baseline.sh`.
+- [x] **Basedpyright** — CI `typecheck` job (strict); optional baseline via `scripts/type_baseline.sh`. Plan archived at `dev-docs/plans/archive/basedpyright-fix-plan.md`.
 - [x] **Gitleaks** — `.github/workflows/gitleaks.yml` on push/PR.
 - [x] **pip-audit** — CI `dependency-audit` job (core + `[dev]` + `[gui]`).
 - [x] **License compliance** — `scripts/check_licenses.py`; inventory at `dev-docs/THIRD_PARTY_NOTICES.md`.
 - [x] **Dependabot** — weekly pip + GitHub Actions (`.github/dependabot.yml`).
 - [x] **pre-commit** — ruff, gitleaks, doc-freshness on commit; basedpyright on pre-push.
+- [x] **Repository hygiene** — untrack `dist/`, notebook checkpoints, `phantom_data/old/`, `.windsurf/`, local `debug.json`; expand `.gitignore` (2026-06-12).
 
 ### Docs and GUI milestones
 
@@ -106,3 +117,11 @@ Finished items kept for traceability. Harness phase tags reference [HARNESS_ENGI
 - [x] Redesign GUI per `DESIGN.md`.
 - [x] Geometry tab at position 3.
 - [x] Native window appears on top at launch.
+
+### Tabular input (Phases 1–5)
+
+- [x] **Phase 1** (2026-06-09): normalized schema adapter, shared loader/mapper/registry infrastructure, CLI flags, fixtures, unit tests.
+- [x] **Phase 2** (2026-06-09): `generic_rdsr_like` adapter (column map → `rdsr_normalizer()`), `--input-schema auto` detection.
+- [x] **Phase 3** (2026-06-10): Radimetrics adapter, unit conversions, synthetic fixture, GUI schema selector.
+- [x] **Phase 4** (2026-06-10): DoseTrack adapter, manufacturer inference, Philips lat/lon swap warning, synthetic fixture.
+- [x] **Phase 5** (2026-06-10): GUI tabular upload (`.csv`/`.tsv`/`.xlsx`), import preview, coordinate correction toggles, intelligent defaults, XLSX sheet picker.
