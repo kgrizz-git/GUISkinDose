@@ -392,6 +392,35 @@ class TestSchemaAutoDetect:
         with pytest.raises(SchemaDetectionError):
             read_and_normalize_input(p, input_schema="auto")
 
+    def test_auto_detect_is_scale_independent_for_wide_exports(self):
+        """A wide export (all of a schema's known names plus many unrelated
+        columns) must auto-detect that schema, not read as 'ambiguous'.
+
+        Real Radimetrics CSVs carry ~87 columns of which 13 are recognised — a
+        low precision (13/87) but a full recall (13/13). Scoring on recall keeps
+        detection scale-independent; the earlier precision score made such wide
+        files tie with any schema that matched a single stray column.
+        """
+        import pandas as pd
+
+        from mypyskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
+        from mypyskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
+        from mypyskindose.input_adapters.registry import _detect_schema
+        from mypyskindose.input_adapters.tabular_loader import _RawLoad
+
+        # Header = every radimetrics known name (full recall) + a single stray
+        # generic_rdsr column + many unrelated filler columns (drives precision down).
+        stray_generic = sorted(GENERIC_RDSR_COLUMN_NAMES)[0]
+        header = (
+            sorted(RADIMETRICS_COLUMN_NAMES)
+            + [stray_generic]
+            + [f"Unrelated Column {i}" for i in range(70)]
+        )
+        data_row = ["x"] * len(header)
+        raw_df = pd.DataFrame([header, data_row])
+
+        assert _detect_schema(_RawLoad(raw_df=raw_df, encoding="utf-8", delimiter=",")) == "radimetrics"
+
 
 # ── radimetrics adapter ────────────────────────────────────────────────────────
 

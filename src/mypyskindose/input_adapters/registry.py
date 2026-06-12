@@ -58,16 +58,25 @@ _SCHEMA_KNOWN_NAMES: list[tuple[str, frozenset[str]]] = [
 
 
 def _score_schema(raw_df: pd.DataFrame, known_names: frozenset[str]) -> float:
-    """Return the header-row match score for *known_names* against *raw_df*."""
+    """Return how well *known_names* match the best header row in *raw_df*.
+
+    Score is *recall*: the fraction of the schema's known column names that are
+    present in the header row (matched / len(known_names)) — not the fraction of
+    header cells that are known. Recall is robust to wide exports: a real
+    Radimetrics CSV has ~87 columns of which 13 are recognised, a poor precision
+    (13/87 ≈ 0.15) but a perfect recall (13/13 = 1.0). Precision scaled with file
+    width and made wide exports look ambiguous against any schema that matched a
+    single stray column; recall gives the correct schema ~1.0 and the rest ~0.
+    """
     try:
         idx = detect_header_row(raw_df, known_names, min_score=1)
     except ValueError:
         return 0.0
-    row = raw_df.iloc[idx]
-    cells = [str(c).strip().lower() for c in row if pd.notna(c) and str(c).strip()]
-    if not cells:
+    if not known_names:
         return 0.0
-    return sum(1 for c in cells if c in known_names) / len(cells)
+    row = raw_df.iloc[idx]
+    cells = {str(c).strip().lower() for c in row if pd.notna(c) and str(c).strip()}
+    return sum(1 for k in known_names if k in cells) / len(known_names)
 
 
 def _detect_schema(loaded: _RawLoad) -> str:
