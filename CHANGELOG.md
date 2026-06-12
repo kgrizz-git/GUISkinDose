@@ -39,6 +39,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- Harness docs: document master vs execution vs archive plan conventions in `HARNESS_ENGINEERING.md`; add `dev-docs/plans/archive/` (basedpyright plan); sync `TO_DO.md` with shipped tabular Phases 3–5; update `dev-docs/index.md` catalog.
+- Repository hygiene: stop tracking build artifacts (`dist/`), Jupyter checkpoint notebooks, legacy `phantom_data/old/` meshes, local `debug.json`, ad-hoc `_test_gui_import.py`, and duplicate `.windsurf/` rules; expand `.gitignore` for `PlotOutputs/`, coverage output, and local agent config.
 - Type checking: resolved all 147 basedpyright errors; CI now runs strict `basedpyright` (no baseline). Optional incremental baseline workflow documented in `.basedpyright/README.md` with `scripts/type_baseline.sh`.
 - Pre-commit: `cleanup-old-backups` hook removes `backups/*.bak` files last touched more than 5 commits ago; `backups/` added to `.gitignore`.
 - Harness Phase 2: stop tracking generated `src/mypyskindose.egg-info/`; `.gitignore` covers egg-info and standard Python build artifacts.

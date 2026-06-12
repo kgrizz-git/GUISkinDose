@@ -36,7 +36,8 @@ Agents working in this repository should be able to answer three questions quick
 | Tabular CSV/TSV/XLSX input plan | `dev-docs/TABULAR_RDSR_INPUT_PLAN.md` |
 | Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
-| Secondary plans | `dev-docs/plans/` |
+| Execution plans (phased detail) | `dev-docs/plans/` |
+| Archived completed plans | `dev-docs/plans/archive/` |
 | Package install and build | `dev-docs/info/PACKAGE_INSTALL.md` |
 | Project packaging and tool configuration | `pyproject.toml` |
 | Release history and semver notes | `CHANGELOG.md` |
@@ -47,6 +48,22 @@ Agents working in this repository should be able to answer three questions quick
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
 | Dependency and Actions updates | `.github/dependabot.yml` |
+
+## Documentation conventions
+
+Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecessary at current team size). Use this map before adding or moving plan files:
+
+| Tier | Location | When to use | Examples |
+|---|---|---|---|
+| **Master plan** | `dev-docs/*_PLAN.md` at catalog root | Long-lived topic source of truth; link from `AGENTS.md` | `GUI_PLAN.md`, `TABULAR_RDSR_INPUT_PLAN.md`, `POSITIONING_HELP_PLAN.md` |
+| **Harness meta-plan** | `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` | Repository/process improvement only — not product features | Phases 0–7 roadmap |
+| **Execution plan** | `dev-docs/plans/*.md` | Phased work derived from a diagnostic or master plan | `refactor-execution.md`, `gui-decomposition-design.md` |
+| **Archive** | `dev-docs/plans/archive/` | Completed or superseded execution plans | `basedpyright-fix-plan.md` |
+| **Scratch backlog** | `dev-docs/TO_DO.md` | Short-term actionable items; link out to plans above | Harness CI tasks, open investigations |
+
+**Naming:** keep `Topic_PLAN.md` for master plans at `dev-docs/` root. Do not add new docs under `src/` — all maintainer docs live under `dev-docs/`.
+
+**Catalog:** every new or retired doc must update `dev-docs/index.md` in the same PR.
 
 ## Golden rules
 
@@ -287,6 +304,8 @@ Every PR should answer:
 
 ## Known alignment gaps
 
-Tracked in `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` with phased remediation:
+Tracked in `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` and `dev-docs/TO_DO.md`:
 
-- Tabular input adapters are planned but not implemented (`FEATURE_INVENTORY.md`).
+- Tabular input Phases 1–5 shipped; Qaelum/DoseMonitor/DoseWatch adapters remain stubs pending real export fixtures (`TABULAR_RDSR_INPUT_PLAN.md`, `FEATURE_INVENTORY.md`).
+- Stale-pattern doc-freshness scan is advisory only (not yet CI-blocking before release).
+- Execution plan template and lifecycle partially documented; see `TO_DO.md` § Documentation / plans.

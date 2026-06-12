@@ -1,6 +1,6 @@
 # Documentation index
 
-_Date: 2026-06-09_
+_Date: 2026-06-12_
 
 Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) for agent orientation, then [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) for validation commands and the source-of-truth map.
 
@@ -10,7 +10,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 
 | File | Purpose |
 |---|---|
-| [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | Repository harness principles, golden rules, validation commands, CI expectations, doc-gardening cadence, and known gaps. |
+| [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | Repository harness principles, golden rules, **documentation conventions** (master vs execution plans), validation commands, CI expectations, doc-gardening cadence, and known gaps. |
 | [LICENSE_COMPLIANCE.md](LICENSE_COMPLIANCE.md) | Third-party license policy, `scripts/check_licenses.py`, and `THIRD_PARTY_NOTICES.md` workflow. |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
@@ -36,14 +36,25 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 
 ---
 
-## GUI
+## Master plans (`dev-docs/` root)
+
+Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) § Documentation conventions.
 
 | File | Purpose |
 |---|---|
 | [GUI_PLAN.md](GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
+| [POSITIONING_HELP_PLAN.md](POSITIONING_HELP_PLAN.md) | Plan for in-app help guiding users through phantom positioning offsets. |
+| [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
+
+---
+
+## GUI
+
+| File | Purpose |
+|---|---|
+| [GUI_PLAN.md](GUI_PLAN.md) | See **Master plans** above. |
 | [UI_values.md](UI_values.md) | Auto-generated GUI design tokens from `src/mypyskindose/gui/app.py` (`scripts/generate_ui_values.py`). |
 | [../DESIGN.md](../DESIGN.md) | Root GUI aesthetic spec (brutalist/modern design intent). |
-| [POSITIONING_HELP_PLAN.md](POSITIONING_HELP_PLAN.md) | Plan for in-app help guiding users through phantom positioning offsets. |
 
 ---
 
@@ -53,18 +64,27 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | RDSR and JSON input flow, normalization settings, patient offsets, and internal DataFrame contract. |
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor-specific coordinate conventions, normalization mapping, and Mermaid coordinate-system diagrams. |
-| [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). |
+| [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) | See **Master plans** above. |
 | [COORD_TRANSFORM_COMPARISON.md](COORD_TRANSFORM_COMPARISON.md) | Side-by-side comparison of coordinate transforms and preprocessing across MyPySkinDose, dhen2714/PySkinDose, and PSDCalcReworkTemp. |
 
 ---
 
-## Plans (`plans/`)
+## Execution plans (`plans/`)
+
+Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
-| [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Secondary plan: transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
-| [plans/refactor-execution.md](plans/refactor-execution.md) | Phased execution plan for the refactor work diagnosed in [REFACTOR_ASSESSMENT.md](REFACTOR_ASSESSMENT.md). |
+| [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
+| [plans/refactor-execution.md](plans/refactor-execution.md) | Phased execution for refactor work diagnosed in [REFACTOR_ASSESSMENT.md](REFACTOR_ASSESSMENT.md). |
 | [plans/gui-decomposition-design.md](plans/gui-decomposition-design.md) | Wiring map and safe-extraction design for splitting `gui/app.py`'s `index()` (refactor plan Phase 3). |
+
+## Archived plans (`plans/archive/`)
+
+| File | Purpose |
+|---|---|
+| [plans/archive/README.md](plans/archive/README.md) | Index of completed or superseded execution plans. |
+| [plans/archive/basedpyright-fix-plan.md](plans/archive/basedpyright-fix-plan.md) | **Completed** — strict basedpyright rollout (147 errors → 0). |
 
 ---
 

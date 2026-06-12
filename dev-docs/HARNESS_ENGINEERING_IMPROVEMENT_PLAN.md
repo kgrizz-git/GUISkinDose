@@ -136,15 +136,15 @@ Key gaps to address:
 - `dev-docs/plans/` directory for additional plans
 
 **Gaps:**
-- No standardized active/completed lifecycle for plans
-- No shared plan template with progress/decision logs
-- Backlog split across `TO_DO.md`, feature plans, and `dev-docs/plans/`
+- No standardized active/completed lifecycle for plans (partially addressed 2026-06-12: conventions in `HARNESS_ENGINEERING.md`, `plans/archive/`)
+- No shared plan template with progress/decision logs (tracked in `TO_DO.md`)
+- Backlog split across `TO_DO.md`, master plans, and `dev-docs/plans/` (intentional; see Documentation conventions)
 
 **Recommendations:**
-1. Either migrate `dev-docs/plans/` into `dev-docs/exec-plans/active/` or treat `exec-plans/` as the lifecycle wrapper and keep topical plans in place with symlinks/pointers in `dev-docs/index.md`
-2. Define a plan template with: objective, acceptance criteria, progress log, decision log
-3. Keep `TO_DO.md` as the short-term scratch list; link long-running work to exec-plan files
-4. Optionally create `dev-docs/exec-plans/tech-debt-tracker.md` for durable debt (supply chain, lint consolidation, semver)
+1. ~~Either migrate `dev-docs/plans/` into `dev-docs/exec-plans/active/`~~ — **closed** Phase 6; use master plans at `dev-docs/` root + `plans/` + `plans/archive/`
+2. Define a plan template with: objective, acceptance criteria, progress log, decision log — **open** (`TO_DO.md`)
+3. Keep `TO_DO.md` as the short-term scratch list; link long-running work to master or execution plan files — **documented**
+4. ~~Optionally create `dev-docs/exec-plans/tech-debt-tracker.md`~~ — completed harness items live in `TO_DO.md` § Completed instead
 
 ---
 
@@ -434,5 +434,5 @@ Cross-reference `dev-docs/TO_DO.md`:
 
 ---
 
-_Last updated: 2026-06-09 — complements `dev-docs/HARNESS_ENGINEERING.md`._
+_Last updated: 2026-06-12 — complements `dev-docs/HARNESS_ENGINEERING.md`._
 
