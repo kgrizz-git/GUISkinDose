@@ -8,12 +8,20 @@ venv/
 logs/
 .idea/
 .vscode/
+.claude/
+.windsurf/
+PlotOutputs/
+htmlcov/
+.coverage
+debug.json
+_test_gui_import.py
 *.html
 *.png
 !docs/**/*.png
 __pycache__/
 **/__pycache__/
 .ipynb_checkpoints
+**/.ipynb_checkpoints/
 .venv/
 
 scratch*
@@ -36,3 +44,7 @@ corrections.db
 tests/manual_tests/.ipynb_checkpoints/
 
 src/mypyskindose/.ipynb_checkpoints/
+src/mypyskindose/phantom_data/old/
+
+# Local-only sample exports (not for distribution)
+test_data_gitignored/
