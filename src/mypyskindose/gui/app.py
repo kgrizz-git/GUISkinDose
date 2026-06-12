@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import atexit
 import io
-import json
 import os
 import tempfile
 from contextlib import contextmanager
@@ -36,13 +35,10 @@ from .helpers import (
     load_tabular,
     run_calculation,
 )
-from .figures import (
-    make_dosemap_html,
-    make_dosemap_png,
-    make_geometry_fig,
-)
+from .figures import make_geometry_fig
 from .styles import MODERN_CSS
 from .page_context import PageContext
+from .tabs import export as export_tab
 from .tabs import results as results_tab
 from .state import reset_results, state
 from mypyskindose.debug import configure_logging, dprint
@@ -105,65 +101,10 @@ def _operation_guard(label: str) -> Iterator[bool]:
         state.busy = False
 
 
-# ── tabular provenance embedding in exports ───────────────────────────────
-# Both the JSON payload and the HTML export embed the tabular import provenance
-# so a saved result records exactly how its source table was read. Kept as pure
-# module-level functions (single source of truth, unit-testable) rather than
-# duplicated inside the export closures.
-def _tabular_input_meta(file_name, provenance, swap_lat_lon, warnings) -> dict:
-    """Build the tabular-input provenance dict embedded in exports."""
-    return {
-        "source_file": file_name,
-        "schema": provenance.schema_name,
-        "encoding": provenance.detected_encoding,
-        "delimiter": provenance.detected_delimiter,
-        "header_row_index": provenance.header_row_index,
-        "column_map": provenance.column_map,
-        "lat_lon_swapped": swap_lat_lon,
-        "warnings": list(warnings),
-    }
-
-
-def _inject_html_tabular_meta(html: bytes, meta: dict) -> bytes:
-    """Insert the provenance as an HTML comment immediately after <head>.
-
-    Returns *html* unchanged if no ``<head>`` tag is present. Only the first
-    ``<head>`` is annotated.
-    """
-    if b"<head>" not in html:
-        return html
-    comment = f"<head>\n<!-- mypyskindose:tabular_input {json.dumps(meta, indent=2)} -->"
-    return html.replace(b"<head>", comment.encode(), 1)
-
-
-# ── helper for file dialog ────────────────────────────────────────────────
-def _get_save_path(default_name: str, extension: str) -> str | None:
-    """Open a native Save As dialog."""
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        # map extension to filter
-        ext_map = {
-            "csv": [("CSV Files", "*.csv")],
-            "xlsx": [("Excel Files", "*.xlsx")],
-            "txt": [("Text Files", "*.txt")],
-            "json": [("JSON Files", "*.json")],
-            "html": [("HTML Files", "*.html")],
-            "png": [("PNG Images", "*.png")],
-        }
-        path = filedialog.asksaveasfilename(
-            initialfile=default_name,
-            defaultextension=f".{extension}",
-            filetypes=ext_map.get(extension, [("All Files", "*.*")])
-        )
-        root.destroy()
-        return path if path else None
-    except Exception as e:
-        dprint("GUI", f"Native dialog error: {e}")
-        return None
+# Export provenance + native save-dialog helpers now live in io_helpers.py so
+# the export tab module can import them without a circular dependency. The data
+# tab (still inline) uses _get_save_path.
+from .io_helpers import _get_save_path  # noqa: E402 — kept with related imports
 
 # ── constants ──────────────────────────────────────────────────────────────
 # Shared UI constants live in constants.py so per-tab modules can import them
@@ -1033,98 +974,7 @@ def index():
         # ══════════════════════════════════════════════════════════════════
         # TAB 7 — EXPORT
         # ══════════════════════════════════════════════════════════════════
-        with ui.tab_panel("export"):
-            with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-                ui.label("Export Results").classes("text-2xl font-bold tracking-tight")
-
-                ui.label(
-                    "Run a calculation first (tab 4) to enable exports."
-                ).classes("text-caption text-grey-6 q-mb-md").bind_visibility_from(state, "calculation_done", backward=lambda v: not v)
-
-                with ui.grid(columns=2).classes("w-full gap-6"):
-                    with ui.card().classes("modern-card"):
-                        ui.label("JSON — full results dict").classes("text-subtitle2 q-mb-sm")
-                        ui.label("Full results dictionary containing all data.").classes("text-xs text-grey-5 q-mb-md")
-                        ui.button("Download JSON", icon="download", on_click=lambda: download_json()).classes("full-width modern-btn icon-outlined")
-
-                    with ui.card().classes("modern-card modern-card-teal"):
-                        ui.label("Interactive HTML dose map").classes("text-subtitle2 q-mb-sm")
-                        ui.label("Standalone HTML file with interactive 3D map.").classes("text-xs text-grey-5 q-mb-md")
-                        ui.button("Download HTML", icon="html", on_click=lambda: download_html()).classes("full-width modern-btn icon-outlined")
-
-                    with ui.card().classes("modern-card"):
-                        ui.label("PNG dose map").classes("text-subtitle2 q-mb-sm")
-                        ui.label("Static capture of the current dose map view.").classes("text-xs text-grey-5 q-mb-md")
-                        ui.button("Download PNG", icon="image", on_click=lambda: download_png()).classes("full-width modern-btn icon-outlined")
-
-                def _build_export_payload() -> dict:
-                    """Return state.output enriched with tabular provenance when applicable."""
-                    payload = dict(state.output or {})
-                    if state.import_provenance is not None:
-                        payload["tabular_input"] = _tabular_input_meta(
-                            state.file_name,
-                            state.import_provenance,
-                            state.swap_lat_lon,
-                            state.import_warnings,
-                        )
-                    return payload
-
-                def download_json():
-                    if not state.calculation_done or state.output is None:
-                        ui.notify("No data to export", color="warning")
-                        return
-                    default_name = f"psd_results_{state.file_name or 'data'}.json"
-                    save_path = _get_save_path(default_name, "json")
-                    payload = _build_export_payload()
-                    if save_path:
-                        with open(save_path, "w") as f:
-                            json.dump(payload, f, indent=4)
-                        ui.notify(f"Saved to {Path(save_path).name}", color="positive")
-                    else:
-                        content = json.dumps(payload, indent=4)
-                        ui.download(content.encode(), default_name)
-
-                async def download_html():
-                    if not state.calculation_done:
-                        ui.notify("No data to export", color="warning")
-                        return
-                    default_name = f"dose_map_{state.file_name or 'data'}.html"
-                    save_path = _get_save_path(default_name, "html")
-                    content = await run.io_bound(make_dosemap_html)
-                    if not content:
-                        ui.notify("Failed to generate HTML", type="negative")
-                        return
-                    if state.import_provenance is not None:
-                        meta = _tabular_input_meta(
-                            state.file_name,
-                            state.import_provenance,
-                            state.swap_lat_lon,
-                            state.import_warnings,
-                        )
-                        content = _inject_html_tabular_meta(content, meta)
-                    if save_path:
-                        with open(save_path, "wb") as f:
-                            f.write(content)
-                        ui.notify(f"Saved to {Path(save_path).name}", color="positive")
-                    else:
-                        ui.download(content, default_name)
-
-                async def download_png():
-                    if not state.calculation_done:
-                        ui.notify("No data to export", color="warning")
-                        return
-                    default_name = f"dose_map_{state.file_name or 'data'}.png"
-                    save_path = _get_save_path(default_name, "png")
-                    content = await run.io_bound(make_dosemap_png)
-                    if not content:
-                        ui.notify("Failed to generate PNG (requires kaleido)", type="negative")
-                        return
-                    if save_path:
-                        with open(save_path, "wb") as f:
-                            f.write(content)
-                        ui.notify(f"Saved to {Path(save_path).name}", color="positive")
-                    else:
-                        ui.download(content, default_name)
+        export_tab.build(ctx)
 
     # ── Restore view if data already loaded ──
     if state.rdsr_df is not None:
