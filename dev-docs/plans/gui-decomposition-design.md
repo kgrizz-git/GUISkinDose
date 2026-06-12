@@ -1,0 +1,141 @@
+# Design: GUI `index()` decomposition (Phase 3.1–3.4)
+
+_Last updated: 2026-06-11_
+
+> Companion to [refactor-execution.md](refactor-execution.md) §Phase 3. That file is the checklist; this is the wiring map and the safe-extraction design it depends on. Produced by mapping `src/mypyskindose/gui/app.py` after Phase 3.0 (figures/styles already extracted; `index()` ≈ lines 181–1216, ~1035 lines).
+
+---
+
+## 1. Why `index()` resists naive extraction
+
+`index()` builds the whole page and defines ~21 nested handlers as closures. Two coupling mechanisms:
+
+1. **Closure over widget references** — handlers call `widget.set_text(...)` / `.disable()` on locals defined elsewhere in `index()`.
+2. **Cross-handler calls** — some handlers call other handlers directly.
+
+You cannot move a handler to another module until *both* are broken: its widgets and its callees must be reachable without the enclosing scope. That is what `PageContext` is for.
+
+---
+
+## 2. The wiring map (measured, not guessed)
+
+### 2.1 Refresh mechanism — the key finding
+
+Most "refresh" handlers are **timer-driven**, not call-driven. They poll `state` on a `ui.timer` and update their own widgets. They have **no cross-handler dependencies** and read only `state` + their own tab's widgets:
+
+| Handler | Wired by | Touches |
+|---|---|---|
+| `_refresh_metrics` | `ui.timer(1.0)` | `psd_metric`, `kerma_metric`, `events_metric` (results) |
+| `_refresh_corr_table` | `ui.timer(2.0)` | `corr_table` (export) |
+| `_refresh_raw_table` | `ui.timer(2.0)` + `view_toggle` | `raw_data_table` (data) |
+| `_refresh_dosemap` | `ui.timer(1.5)` + select + button | `dosemap_plot`, `dosemap_spinner` (results) |
+
+➡️ **These tabs are the easy wins** — self-contained, extract first.
+
+### 2.2 The coupling cluster — the Upload tab
+
+This is where all the cross-handler calls live:
+
+```
+handle_upload ─┬─► _refresh_event_table
+               ├─► _refresh_import_preview
+               └─► _set_transform_defaults ──► _is_ge
+load_example ────► _refresh_event_table
+_on_sheet_change ─┬─► _refresh_event_table
+                  └─► _refresh_import_preview
+_on_swap_toggle  ─┬─► _refresh_event_table       (also _on_flip_ap1/ap2_toggle)
+                  └─► _refresh_import_preview
+(restore tail) ────► _refresh_event_table
+```
+
+`_refresh_event_table` and `_refresh_import_preview` are the **shared spine** of this cluster — called from 6+ sites. They must become `ctx`-parameterized functions before any upload handler can move.
+
+### 2.3 Cross-cutting widgets (referenced outside their defining section)
+
+These are the **only** widgets that must live in `PageContext` as shared state; everything else is tab-local:
+
+| Widget | Defined in | Written by (other scopes) |
+|---|---|---|
+| `file_label`, `events_label` | drawer | upload handlers, restore tail |
+| `psd_label` | drawer | `do_calculate` |
+| `run_btn_drawer` | drawer | `do_calculate` (disable/enable) |
+| `tabs` | top | `do_calculate`, restore tail, `go()` |
+| `upload_status` | upload | `handle_upload`, `load_example`, `_on_sheet_change` |
+
+Everything else (`import_*` labels, `sheet_*`, `coord_auto_label`, `event_table`, `geom_*`, `calc_*`, `*_metric`, `dosemap_*`, `corr_table`, `raw_data_table`) is touched only within its own tab's handlers.
+
+### 2.4 Tab-local widget inventory
+
+- **drawer:** `file_label`, `events_label`, `psd_label`, `run_btn_drawer` (all cross-cutting)
+- **upload:** `upload_status`, `example_select`, `import_schema_badge`, `import_encoding/delimiter/header/sheet_label`, `sheet_row`, `sheet_select`, `coord_auto_label`, `import_warnings_label`, `col_map_table`, `event_sample_table`, `event_table`
+- **data:** `view_toggle`, `raw_data_table`
+- **settings:** (binds to `state` directly; few named widgets) `mesh_select`
+- **geometry:** `geom_event_input`, `geom_spinner`, `geom_plot`
+- **calculate:** `calc_btn`, `calc_progress`, `calc_status_label`
+- **results:** `psd_metric`, `kerma_metric`, `events_metric`, `dosemap_plot`, `dosemap_spinner`
+- **export:** `corr_table`
+
+---
+
+## 3. `PageContext` design
+
+A frozen-after-construction dataclass of widget handles, built in `index()` and passed to every extracted builder/handler. Minimum viable shape (only the cross-cutting + shared-spine members are strictly required; tab-local widgets can stay as parameters to each tab's `build()` or be added to the context for uniformity):
+
+```python
+@dataclass
+class PageContext:
+    # cross-cutting chrome
+    tabs: ui.tabs
+    file_label: ui.label
+    events_label: ui.label
+    psd_label: ui.label
+    run_btn_drawer: ui.button
+    # shared refresh callbacks (set after construction; break the call cycle)
+    refresh_event_table: Callable[[], None]
+    refresh_import_preview: Callable[[], None]
+```
+
+The two shared refreshers go in the context as **callables**, not as the widgets they touch — so an upload handler in `tabs/upload.py` calls `ctx.refresh_event_table()` without importing the function or its widgets. `index()` wires the callables after building the upload tab.
+
+> Typing note: `ui.tabs`/`ui.label` etc. are concrete NiceGUI types — annotate with them so basedpyright catches a handler referencing a field that doesn't exist (`ctx.nonexistent` is a hard error). This is the main automated safety net for the mechanical rename.
+
+---
+
+## 4. Safe extraction order
+
+Strictly easiest → hardest, so the risky cluster is done last when the pattern is proven:
+
+1. **3.1a — Introduce `PageContext` in place.** Add the dataclass; build it in `index()`; convert the **cross-cutting** widget references (drawer labels, `tabs`) and the two shared refreshers to go through `ctx`. No file split yet. Verify: flow + smoke tests green; basedpyright green (catches field typos).
+2. **3.3a — Results tab** → `tabs/results.py`. Timer-driven `_refresh_metrics`; reads `state` only. Lowest risk.
+3. **3.3b — Export tab** → `tabs/export.py`. `_refresh_corr_table` (timer) + the export helpers (`_build_export_payload`, `download_json/html/png`) which already use the extracted `_tabular_input_meta`/`_inject_html_tabular_meta`/`make_dosemap_*`. `download_*` need `ctx` only for notifications.
+4. **3.3c — Data tab** → `tabs/data.py`. `_refresh_raw_table` (timer + `view_toggle`).
+5. **3.3d — Geometry tab** → `tabs/geometry.py`. `preview_setup/event/procedure` over the already-extracted `make_geometry_fig`.
+6. **3.3e — Settings tab** → `tabs/settings.py`. Mostly `state` binds; `mesh_select` visibility.
+7. **3.3f — Calculate tab** → `tabs/calculate.py`. `do_calculate` touches drawer (`psd_label`, `run_btn_drawer`) and `tabs` — all in `ctx`.
+8. **3.3g — Upload tab (last)** → `tabs/upload.py` + `widgets/import_preview.py`. The coupling cluster. Move `_refresh_event_table`/`_refresh_import_preview` first (wire as `ctx` callables), then the handlers that call them.
+
+Commit per tab; run `pytest tests/gui/` between each.
+
+---
+
+## 5. Verification per step
+
+- **Automated net:** `tests/gui/test_gui_flows.py` (all tab headings build; example-load runs) + `test_gui_smoke.py`. basedpyright on the typed `PageContext`.
+- **Strengthen the net before 3.3g:** add a flow test that loads an example, navigates to the data tab, and asserts the event table populates — this exercises `_refresh_event_table` through the upload cluster, the part with the most cross-calls. (NiceGUI `User` can click nav buttons and `should_see` table content.)
+- **What the net does NOT cover:** real file *upload* (NiceGUI `User` can't easily simulate `ui.upload` drag-drop), and the live `ui.timer` refresh cadence. Treat those as manual-smoke items, or assert the refresher functions directly by calling them with a populated `state`.
+
+---
+
+## 6. Risks & gotchas
+
+- **Timer closures still need their widgets.** `ui.timer(1.0, _refresh_metrics)` is created in `index()`. When `_refresh_metrics` moves to `tabs/results.py`, the timer registration moves with it (inside `results.build(ctx)`), not left behind in `index()`.
+- **The restore tail** (`if state.rdsr_df is not None: ... _refresh_event_table()`) runs at page build. It depends on the upload spine — keep it in `index()` but have it call `ctx.refresh_event_table()`.
+- **`go()` / `_update_nav_classes`** mutate `nav_buttons` (drawer). Keep nav in `index()`/`layout`; expose `tabs` via `ctx`.
+- **NiceGUI test reload:** `tests/gui/nicegui_main.py` does `importlib.reload(gui_app)`. New `gui/tabs/*` modules are imported *by* `app.py`, so they reload transitively — but confirm no module-level state in a tab module caches a stale `state` reference (import the singleton, don't copy it).
+- **`HelpButton` import** is done lazily inside `index()` (`from .components import HelpButton`) — preserve that placement or move per-tab as needed.
+
+---
+
+## 7. Decision: stop point
+
+3.1a (PageContext in place) + 3.3a–3.3c (results/export/data — the timer-driven, dependency-free tabs) is a natural **first milestone**: it proves the pattern on low-risk tabs and removes ~300 lines from `index()` without touching the upload cluster. 3.3f–3.3g (calculate, upload) are the higher-risk remainder and can be a second milestone.

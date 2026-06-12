@@ -78,6 +78,8 @@ All four real adapters share steps 1–3 and 7 (assessment §3). Migrate increme
 
 The largest and least urgent item. Do it only after Phases 0–2 settle. Prerequisite is the `PageContext` change — without it the tab functions can't be extracted because they close over widget references.
 
+> **Detailed design:** [gui-decomposition-design.md](gui-decomposition-design.md) — the measured wiring map of `index()` (cross-cutting widgets, handler call graph, the timer-driven vs call-driven distinction), the `PageContext` shape, and the easiest→hardest extraction order. Read it before starting 3.1.
+
 > **Safety net first (done):** `tests/gui/test_gui_flows.py` now exercises real handler wiring (all seven tab panels build their headings; the example-load flow runs end to end). The original smoke test only checked three labels — too thin to refactor handlers against.
 
 - [x] **3.0 Extract self-contained, closure-free units.** These don't touch `index()` scope, so they move out with near-zero risk ahead of the harder `index()` split:

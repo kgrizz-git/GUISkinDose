@@ -64,6 +64,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Secondary plan: transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/refactor-execution.md](plans/refactor-execution.md) | Phased execution plan for the refactor work diagnosed in [REFACTOR_ASSESSMENT.md](REFACTOR_ASSESSMENT.md). |
+| [plans/gui-decomposition-design.md](plans/gui-decomposition-design.md) | Wiring map and safe-extraction design for splitting `gui/app.py`'s `index()` (refactor plan Phase 3). |
 
 ---
 
