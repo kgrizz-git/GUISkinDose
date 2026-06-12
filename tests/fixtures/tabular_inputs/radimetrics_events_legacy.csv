@@ -1,0 +1,5 @@
+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
+Manufacturer,Device,kVp_kV,Reference_Point_Dose,Reference_Point_Dose_(A)_mGy,Reference_Point_Dose_(B)_mGy,Source_To_Detector_Distance,Source_To_Isocenter_Distance,Table_Longitudinal_Position,Table_Lateral_Position,Table_Height_Position,Primary_Angle_(RF),Secondary_Angle,Collimated_Field_Area,Xray_Filter_Min_Thicknesses,Xray_Filter_Max_Thicknesses,Xray_Filter_Material_Codes,Irradiation_Event_Type,Acquisition_PlaneCode_(RF)
+Siemens,AXIOM-Artis,77.0,30.0,18.0,12.0,1198.0,785.0,100.0,5.0,-150.0,-0.1,-1.1,1054.4,0.6,0.6,Copper or Copper compound,Fluoroscopy,Plane A
+Siemens,AXIOM-Artis,74.0,20.0,12.0,8.0,1198.0,785.0,110.0,6.0,-150.0,30.0,20.0,1054.4,0.9,0.9,Copper or Copper compound,Fluoroscopy,Plane A
+Siemens,AXIOM-Artis,80.0,50.0,30.0,20.0,1198.0,785.0,120.0,7.0,-150.0,-30.0,-20.0,1054.4,0.3,0.3,Copper or Copper compound,Fluoroscopy,Plane A

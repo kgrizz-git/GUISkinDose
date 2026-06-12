@@ -12,7 +12,7 @@ from mypyskindose.input_adapters import generic_rdsr as generic_rdsr_adapter
 from mypyskindose.input_adapters import normalized as normalized_adapter
 from mypyskindose.input_adapters import radimetrics as radimetrics_adapter
 from mypyskindose.input_adapters import stubs
-from mypyskindose.input_adapters.column_mapper import detect_header_row
+from mypyskindose.input_adapters.column_mapper import _normalize_str, detect_header_row
 from mypyskindose.input_adapters.dosetrack import DOSETRACK_COLUMN_NAMES
 from mypyskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
 from mypyskindose.input_adapters.models import InputAdapterResult
@@ -74,9 +74,13 @@ def _score_schema(raw_df: pd.DataFrame, known_names: frozenset[str]) -> float:
         return 0.0
     if not known_names:
         return 0.0
+    # Normalize both sides with _normalize_str (the same collapse of "_"/"-"/
+    # whitespace used by detect_header_row and map_columns) so underscored older
+    # exports compare equal to their spaced counterparts.
     row = raw_df.iloc[idx]
-    cells = {str(c).strip().lower() for c in row if pd.notna(c) and str(c).strip()}
-    return sum(1 for k in known_names if k in cells) / len(known_names)
+    cells = {_normalize_str(str(c)) for c in row if pd.notna(c) and str(c).strip()}
+    known_norm = {_normalize_str(k) for k in known_names}
+    return sum(1 for k in known_norm if k in cells) / len(known_norm)
 
 
 def _detect_schema(loaded: _RawLoad) -> str:

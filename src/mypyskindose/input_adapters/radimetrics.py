@@ -25,11 +25,19 @@ from mypyskindose.settings import PyskindoseSettings
 
 # Lowercase versions of key Radimetrics export column headers (for header detection).
 # Source: dhen2714/PySkinDose RADIMETRICS2PSD dict (dev-docs/references/).
+# Header matching normalizes "_"/"-"/whitespace to a single space (see
+# column_mapper._normalize_str), so these need only cover the spacing-independent
+# spelling. They are split into the current export (unit suffixes in brackets) and
+# an older Radimetrics export that uses underscores and omits the unit suffixes
+# (e.g. "Primary_Angle_(RF)" rather than "Primary Angle (RF) [°]"). Both are listed
+# so auto-detection recognises either generation.
 RADIMETRICS_COLUMN_NAMES: frozenset[str] = frozenset(
     {
+        # shared (no unit suffix in either generation)
         "manufacturer",
         "device",
         "kvp kv",
+        # current export — unit suffixes present
         "dap (total) gy-cm2",
         "reference point dose (total) mgy",
         "primary angle (rf) [°]",
@@ -40,6 +48,17 @@ RADIMETRICS_COLUMN_NAMES: frozenset[str] = frozenset(
         "table longitudinal position [mm]",
         "table lateral position [mm]",
         "table height position [mm]",
+        # older export — underscored, no unit suffix
+        "primary angle (rf)",
+        "secondary angle",
+        "collimated field area",
+        "source to detector distance",
+        "source to isocenter distance",
+        "table longitudinal position",
+        "table lateral position",
+        "table height position",
+        "reference point dose",
+        "dap gy cm2",
     }
 )
 
@@ -53,10 +72,16 @@ RADIMETRICS_PATTERNS: dict[str, list[str]] = {
     "PositionerSecondaryAngle_deg": ["secondary angle (rf)", "secondary angle"],
     # "kvp kv" only — bare "kvp" would also match per-plane "kVp (A) kV", "kVp (B) kV"
     "KVP_kV": ["kvp kv"],
-    # "(total)" required — prevents matching per-plane "Reference Point Dose (A/B) mGy"
+    # Current exports label the total "Reference Point Dose (Total) mGy"; the older
+    # export names the total bare "Reference_Point_Dose" alongside per-plane
+    # "Reference_Point_Dose_(A/B)_mGy". The bare "reference point dose" pattern is
+    # safe against the per-plane columns: map_columns resolves the resulting
+    # duplicate by coverage (2*len(pattern) - len(header)), and the bare total
+    # header is shorter than the "(a)/(b) mgy" variants, so the total always wins.
     "DoseRP_Gy": [
         "reference point dose (total) mgy",
         "reference point dose (total)",
+        "reference point dose",
         "air kerma (total)",
     ],
     # DoseAreaProduct_Gym2 intentionally omitted — both "DAP (Total)" and "Fluoro DAP (Total)"

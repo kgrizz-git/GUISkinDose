@@ -525,6 +525,46 @@ class TestRadimetricsAdapter:
         assert result.provenance.schema_name == "radimetrics"
 
 
+# An older Radimetrics export uses underscored headers, no unit suffixes, a
+# numeric first row above the header, and a bare "Reference_Point_Dose" total
+# alongside per-plane "_(A/B)_mGy" columns. Matching normalizes separators so the
+# underscored headers map, and the bare-total pattern is disambiguated from the
+# per-plane columns by coverage.
+RADIMETRICS_LEGACY_FIXTURE = FIXTURES / "radimetrics_events_legacy.csv"
+
+
+class TestRadimetricsLegacyFormat:
+    def test_auto_detects_and_loads(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_LEGACY_FIXTURE,
+            input_schema="auto",
+            settings=_default_settings(),
+        )
+        assert result.provenance.schema_name == "radimetrics"
+        assert len(result.normalized_data) == 3
+        # header is the 2nd row (row 0 is a numeric index row)
+        assert result.provenance.header_row_index == 1
+        expected = {"model", "DSD", "DSI", "kVp", "K_IRP", "Ap1", "Ap2"}
+        assert expected.issubset(set(result.normalized_data.columns))
+
+    def test_total_reference_dose_mapped_not_per_plane(self):
+        """The bare total column maps to DoseRP_Gy; the per-plane (A)/(B) columns
+        do not. K_IRP follows the total (30/20/50), not (A) 18/12/30."""
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(
+            RADIMETRICS_LEGACY_FIXTURE,
+            input_schema="auto",
+            settings=_default_settings(),
+        )
+        col_map = result.provenance.column_map
+        dose_sources = [src for src, tgt in col_map.items() if tgt == "DoseRP_Gy"]
+        assert dose_sources == ["Reference_Point_Dose"]
+        assert result.normalized_data["K_IRP"].tolist() == [30.0, 20.0, 50.0]
+
+
 class TestDoseTrackAdapter:
     def test_csv_round_trip(self):
         from mypyskindose.input_adapters.registry import read_and_normalize_input
