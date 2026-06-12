@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate dev-docs/UI_values.md from GUI CSS tokens in app.py.
+"""Regenerate dev-docs/UI_values.md from GUI CSS tokens in styles.py.
 
 Purpose:
     Extract design tokens from the MODERN_CSS constant so UI_values.md cannot
@@ -7,7 +7,7 @@ Purpose:
 
 Inputs:
     Repository root (auto-detected as parent of ``scripts/``, or ``--repo-root``).
-    Reads ``src/mypyskindose/gui/app.py``.
+    Reads ``src/mypyskindose/gui/styles.py``.
 
 Outputs:
     Writes ``dev-docs/UI_values.md`` (or ``--check`` to verify without writing).
@@ -24,7 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-APP_REL_PATH = Path("src/mypyskindose/gui/app.py")
+APP_REL_PATH = Path("src/mypyskindose/gui/styles.py")
 OUTPUT_REL_PATH = Path("dev-docs/UI_values.md")
 
 MODERN_CSS_RE = re.compile(
@@ -89,7 +89,7 @@ def render_markdown(
         "> `python scripts/generate_ui_values.py`",
         "",
         "Design tokens extracted from `MODERN_CSS` in "
-        "[src/mypyskindose/gui/app.py](../src/mypyskindose/gui/app.py). "
+        "[src/mypyskindose/gui/styles.py](../src/mypyskindose/gui/styles.py). "
         "Aesthetic intent lives in [DESIGN.md](../DESIGN.md); "
         "implementation plan in [GUI_PLAN.md](GUI_PLAN.md).",
         "",

@@ -78,6 +78,13 @@ All four real adapters share steps 1–3 and 7 (assessment §3). Migrate increme
 
 The largest and least urgent item. Do it only after Phases 0–2 settle. Prerequisite is the `PageContext` change — without it the tab functions can't be extracted because they close over widget references.
 
+> **Safety net first (done):** `tests/gui/test_gui_flows.py` now exercises real handler wiring (all seven tab panels build their headings; the example-load flow runs end to end). The original smoke test only checked three labels — too thin to refactor handlers against.
+
+- [x] **3.0 Extract self-contained, closure-free units.** These don't touch `index()` scope, so they move out with near-zero risk ahead of the harder `index()` split:
+  - `gui/figures.py` — the four Plotly builders (`make_geometry_fig`, `make_dosemap_fig`, `make_dosemap_html`, `make_dosemap_png`), renamed public and imported back into `app.py`.
+  - `gui/styles.py` — the `MODERN_CSS` constant (~230 lines). `scripts/generate_ui_values.py` updated to read `styles.py`; `UI_values.md` and `index.md` path labels updated.
+  - **Result:** `app.py` 1646 → 1281 lines. GUI tests (4) green; basedpyright clean; `generate_ui_values.py --check` consistent.
+
 - [ ] **3.1 Introduce `PageContext`.** A dataclass holding the widget references that handlers currently close over (e.g. `sheet_row`, `sheet_select`, `coord_auto_label`, `event_table`, `upload_status`, plot handles, label handles). Built inside `index()`, passed explicitly to handlers. No file split yet — just stop relying on closure scope. This is a mechanical, behavior-preserving change done **in place** in `app.py`.
   - **Verify:** GUI smoke test (`tests/gui/`) green; manual click-through of all tabs.
 
