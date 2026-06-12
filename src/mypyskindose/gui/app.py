@@ -234,10 +234,13 @@ def index():
                         with _operation_guard("uploading another file") as proceed:
                             if not proceed:
                                 return
-                            dprint("GUI", f"Uploading file {e.name}")
-                            suffix = Path(e.name).suffix.lower() or ".dcm"
+                            # NiceGUI 3.x wraps the upload in e.file (name + async read()).
+                            file_name = e.file.name
+                            dprint("GUI", f"Uploading file {file_name}")
+                            suffix = Path(file_name).suffix.lower() or ".dcm"
+                            data = await e.file.read()
                             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                                tmp.write(e.content.read())
+                                tmp.write(data)
                                 tmp_path = Path(tmp.name)
                             # Track for cleanup; deletes the previous upload's temp file.
                             # Kept alive for the session so the XLSX sheet picker can re-read it.
@@ -259,8 +262,8 @@ def index():
                                 state.input_source_type = "dicom"
                                 ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
                             if ok:
-                                state.file_name = e.name
-                                ctx.file_label.set_text(e.name.upper())
+                                state.file_name = file_name
+                                ctx.file_label.set_text(file_name.upper())
                                 ctx.events_label.set_text(
                                     f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
                                 )
