@@ -102,8 +102,10 @@ def test_dose_map_is_sparse_positive_entries():
 
 # ── GUI provenance embedding helpers ──────────────────────────────────────
 
-nicegui = pytest.importorskip("nicegui")
-import mypyskindose.gui.app as gui_app  # noqa: E402
+pytest.importorskip("nicegui")
+# The provenance helpers were relocated from app.py to io_helpers.py (refactor
+# plan Phase 3.3b); io_helpers has no nicegui dependency of its own.
+import mypyskindose.gui.io_helpers as gui_io  # noqa: E402
 
 
 def _fake_provenance():
@@ -117,7 +119,7 @@ def _fake_provenance():
 
 
 def test_tabular_input_meta_shape_and_serializable():
-    meta = gui_app._tabular_input_meta(
+    meta = gui_io._tabular_input_meta(
         "export.csv", _fake_provenance(), swap_lat_lon=True, warnings=["w1", "w2"]
     )
     assert meta["source_file"] == "export.csv"
@@ -131,7 +133,7 @@ def test_tabular_input_meta_shape_and_serializable():
 def test_inject_html_meta_inserts_comment_after_head():
     html = b"<html><head><title>x</title></head><body>map</body></html>"
     meta = {"schema": "dosetrack", "warnings": []}
-    out = gui_app._inject_html_tabular_meta(html, meta)
+    out = gui_io._inject_html_tabular_meta(html, meta)
     assert b"dosetrack" in out
     assert b"<body>map</body>" in out  # original content preserved
     # comment appears exactly once
@@ -147,11 +149,11 @@ def test_inject_html_meta_inserts_comment_after_head():
 
 def test_inject_html_meta_noop_without_head():
     html = b"<html><body>no head here</body></html>"
-    out = gui_app._inject_html_tabular_meta(html, {"schema": "x"})
+    out = gui_io._inject_html_tabular_meta(html, {"schema": "x"})
     assert out == html  # unchanged when there is no <head>
 
 
 def test_inject_html_meta_only_first_head_annotated():
     html = b"<head>A</head><head>B</head>"
-    out = gui_app._inject_html_tabular_meta(html, {"schema": "x"})
+    out = gui_io._inject_html_tabular_meta(html, {"schema": "x"})
     assert out.count(b"mypyskindose:tabular_input") == 1
