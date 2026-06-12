@@ -342,7 +342,7 @@ def index():
                     ui.separator().classes("q-my-sm bg-zinc-800")
 
                     with ui.row().classes("w-full items-end gap-4"):
-                        ui.select(
+                        schema_select = ui.select(
                             options={
                                 "auto": "Auto-detect schema",
                                 "normalized": "Normalized",
@@ -353,6 +353,33 @@ def index():
                             label="Input schema (tabular files only)",
                             value=state.input_schema,
                         ).bind_value(state, "input_schema").classes("grow")
+
+                    async def _on_schema_change():
+                        # Re-parse the currently loaded tabular file under the newly
+                        # chosen schema, so the user doesn't have to re-upload. The
+                        # schema selector does not apply to DICOM RDSR loads.
+                        if state.file_path is None or state.input_source_type in ("", "dicom"):
+                            return
+                        with _operation_guard("changing the input schema") as proceed:
+                            if not proceed:
+                                return
+                            # Use the just-picked value directly; don't depend on the
+                            # bind_value propagation order relative to this handler.
+                            state.input_schema = schema_select.value or "auto"
+                            upload_status.set_text("RE-PARSING...")
+                            ok, msg = await run.io_bound(load_tabular, state.file_path, state)
+                            if ok:
+                                upload_status.set_text(f"OK: {msg}")
+                                ui.notify(msg, color="positive")
+                                reset_results()
+                                _refresh_event_table()
+                                _refresh_import_preview()
+                                _set_transform_defaults()
+                            else:
+                                upload_status.set_text("Could not load — see message")
+                                ui.notify(msg, type="negative", timeout=10000, multi_line=True)
+
+                    schema_select.on_value_change(lambda: _on_schema_change())
 
                 # Import preview card — visible only for tabular files
                 with ui.card().classes("modern-card w-full").bind_visibility_from(
