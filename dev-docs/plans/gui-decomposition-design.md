@@ -113,6 +113,8 @@ The two shared refreshers go in the context as **callables**, not as the widgets
 
 ## 4. Safe extraction order
 
+> **Progress (2026-06-12):** 3.1a + 3.3a–3.3c done (first milestone). `gui/page_context.py`, `gui/constants.py`, `gui/io_helpers.py`, and `gui/tabs/{results,export,data}.py` exist; `app.py` ~940 lines. Remaining: 3.3d geometry, 3.3e settings, 3.3f calculate, 3.3g upload. The §6 import strategy is decided (relocate downward).
+
 Strictly easiest → hardest, so the risky cluster is done last when the pattern is proven:
 
 1. **3.1a — Introduce `PageContext` in place.** Add the dataclass; build it in `index()`; convert the **cross-cutting** widget references (drawer labels, `tabs`) and the two shared refreshers to go through `ctx`. No file split yet. Verify: flow + smoke tests green; basedpyright green (catches field typos).
@@ -121,8 +123,8 @@ Strictly easiest → hardest, so the risky cluster is done last when the pattern
 4. **3.3c — Data tab** → `tabs/data.py`. `_refresh_raw_table` (timer + `view_toggle`) **and `_local_export`** + its CSV/XLSX/TXT buttons (`_get_save_path` dependency — see §6).
 5. **3.3d — Geometry tab** → `tabs/geometry.py`. `preview_setup/event/procedure` over the already-extracted `make_geometry_fig`. Imports `HelpButton`.
 6. **3.3e — Settings tab** → `tabs/settings.py`. Mostly `state` binds; `mesh_select` visibility via its own `_update_mesh_visibility` timer. Imports `HelpButton`.
-7. **3.3f — Calculate tab** → `tabs/calculate.py`. `do_calculate` touches drawer (`psd_label`, `run_btn_drawer`) and `tabs` — all in `ctx`; uses `_operation_guard` (§6). **The `run_btn_drawer.on("click", do_calculate)` wiring (line 965) must move into `calculate.build(ctx)`** even though the button itself is built in the drawer.
-8. **3.3g — Upload tab (last)** → `tabs/upload.py` + `widgets/import_preview.py`. The coupling cluster. Move `_refresh_event_table`/`_refresh_import_preview` first (wire as `ctx` callables), then the handlers that call them.
+7. **3.3f — Calculate tab** → `tabs/calculate.py`. First **relocate `_operation_guard`** to a shared module (per §6) since both calculate and upload use it. `do_calculate` touches drawer (`psd_label`, `run_btn_drawer`) and `tabs` — all in `ctx`. **The `run_btn_drawer.on("click", do_calculate)` wiring must move into `calculate.build(ctx)`** even though the button is built in the drawer.
+8. **3.3g — Upload tab (last)** → `tabs/upload.py` + `widgets/import_preview.py`. The coupling cluster. First **relocate the temp-file lifecycle** (`_register_temp_upload`, `_cleanup_temp_uploads`, `_uploaded_temp_files`, `atexit` hook) per §6. Move `_refresh_event_table`/`_refresh_import_preview` first (wire as `ctx` callables), then the handlers that call them. The cluster is now larger than §2.2 first recorded — handlers to move: `handle_upload` (NiceGUI 3.x `e.file` API), `load_example` (auto-loads via `on_value_change`, no button), `_on_schema_change` (schema auto-reparse), `_on_sheet_change`, `_on_swap_toggle`, `_on_flip_ap1/ap2_toggle`, plus `_set_transform_defaults`/`_is_ge`. Carry the `.mark("example-select")` on the example select — `test_gui_flows.py` finds it by that marker.
 
 Commit per tab; run `pytest tests/gui/` between each.
 
@@ -131,18 +133,14 @@ Commit per tab; run `pytest tests/gui/` between each.
 ## 5. Verification per step
 
 - **Automated net:** `tests/gui/test_gui_flows.py` (all tab headings build; example-load runs) + `test_gui_smoke.py`. basedpyright on the typed `PageContext`.
-- **Strengthen the net before 3.3g:** add a flow test that loads an example, navigates to the data tab, and asserts the event table populates — this exercises `_refresh_event_table` through the upload cluster, the part with the most cross-calls. (NiceGUI `User` can click nav buttons and `should_see` table content.)
+- **Strengthen the net before 3.3g (still pending):** `test_gui_flows.py` now drives example auto-load (open the `example-select` dropdown, click an option) and asserts the drawer event count — but it stops there. Before 3.3g, extend it to navigate to the data tab and assert the event table populates, exercising `_refresh_event_table` through the upload cluster (the part with the most cross-calls). (NiceGUI `User` can click nav buttons and `should_see` table content.)
 - **What the net does NOT cover:** real file *upload* (NiceGUI `User` can't easily simulate `ui.upload` drag-drop), and the live `ui.timer` refresh cadence. Treat those as manual-smoke items, or assert the refresher functions directly by calling them with a populated `state`.
 
 ---
 
 ## 6. Risks & gotchas
 
-- **Circular imports — the main structural risk.** The new `tabs/*` modules are imported *by* `app.py`, but several helpers they need are currently module-level *in* `app.py`: `_operation_guard` (upload + calculate), `_register_temp_upload` (upload), `_get_save_path` (data + export), `_tabular_input_meta` / `_inject_html_tabular_meta` (export). A top-level `from ..app import _get_save_path` in `tabs/export.py` while `app.py` imports `tabs.export` at module load is a circular import. Two viable strategies — pick one and apply it consistently:
-  - **(a) Relocate** these shared helpers to a non-`app` module (e.g. `gui/io_helpers.py`) before the tab splits, so both `app.py` and the tab modules import *downward* from it.
-  - **(b) Lazy-import the tab builders inside `index()`** (the same pattern already used for `HelpButton` at line 194). By the time `index()` runs, `app.py` is fully loaded, so the tab modules can import from it safely.
-
-  Strategy (b) is lower-friction and matches the existing `HelpButton` precedent; (a) is cleaner long-term. Decide this at 3.1a, not mid-extraction.
+- **Circular imports — DECIDED: strategy (a), relocate downward.** The `tabs/*` modules are imported *by* `app.py`, so a top-level `from ..app import …` in a tab module would be circular. Resolved by moving shared symbols to non-`app` modules that both `app.py` and the tab modules import *downward* from. Already done and in use: `gui/constants.py` (UI option lists) and `gui/io_helpers.py` (`_get_save_path`, `_tabular_input_meta`, `_inject_html_tabular_meta`). **Still to relocate for the remaining tabs:** `_operation_guard` (calculate + upload) and the upload temp-file lifecycle — `_register_temp_upload`, `_cleanup_temp_uploads`, the `_uploaded_temp_files` list, and its `atexit` hook. Put the guard in `gui/io_helpers.py` (or a small `gui/concurrency.py`); keep the temp-file lifecycle together (its own module or `io_helpers`) since the `atexit` registration and module-global list must move as a unit. The rejected alternative was lazy-importing tab builders inside `index()` (the `HelpButton` precedent) — lower-friction but leaves `app.py` as a dependency hub; (a) is cleaner and is what the first milestone established.
 - **Timer closures still need their widgets.** `ui.timer(1.0, _refresh_metrics)` is created in `index()`. When `_refresh_metrics` moves to `tabs/results.py`, the timer registration moves with it (inside `results.build(ctx)`), not left behind in `index()`.
 - **The restore tail** (`if state.rdsr_df is not None: ... _refresh_event_table()`) runs at page build. It depends on the upload spine — keep it in `index()` but have it call `ctx.refresh_event_table()`.
 - **`go()` / `_update_nav_classes`** mutate `nav_buttons` (drawer). Keep nav in `index()`/`layout`; expose `tabs` via `ctx`.
