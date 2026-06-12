@@ -38,6 +38,7 @@ from .tabs import data as data_tab
 from .tabs import export as export_tab
 from .tabs import geometry as geometry_tab
 from .tabs import results as results_tab
+from .tabs import settings as settings_tab
 from .state import reset_results, state
 from mypyskindose.debug import configure_logging, dprint
 
@@ -101,14 +102,9 @@ def _operation_guard(label: str) -> Iterator[bool]:
 
 # ── constants ──────────────────────────────────────────────────────────────
 # Shared UI constants live in constants.py so per-tab modules can import them
-# without a circular dependency on app.py. Re-exported here for in-module use.
-from .constants import (  # noqa: E402 — grouped with the other constants
-    COLORSCALES,
-    EXAMPLE_FILES,
-    HUMAN_MESHES,
-    ORIENTATIONS,
-    PHANTOM_MODELS,
-)
+# without a circular dependency on app.py. Only the upload tab (still inline)
+# uses one here; the rest are consumed by the extracted tab modules.
+from .constants import EXAMPLE_FILES  # noqa: E402 — grouped with the other imports
 
 # MODERN_CSS lives in styles.py. After CSS changes, regenerate dev-docs/UI_values.md:
 #   python scripts/generate_ui_values.py
@@ -126,9 +122,6 @@ def index():
     ui.add_head_html('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" />')
 
     ui.dark_mode(True)
-    
-    # Import help button component
-    from .components import HelpButton
 
     # ── header ────────────────────────────────────────────────────────────
     with ui.header().classes("items-center justify-between px-6 py-2 modern-header"):
@@ -649,79 +642,7 @@ def index():
         # ══════════════════════════════════════════════════════════════════
         # TAB 3 — SETTINGS
         # ══════════════════════════════════════════════════════════════════
-        with ui.tab_panel("settings"):
-            with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-                ui.label("Calculation Settings").classes("text-2xl font-bold tracking-tight")
-
-                with ui.expansion("Phantom Settings", icon="person", value=True).classes("modern-card w-full"):
-                    with ui.column().classes("w-full gap-4 q-pa-md"):
-                        with ui.row().classes("w-full items-center justify-between"):
-                            ui.label("Phantom model and positioning").classes("text-subtitle2")
-                            HelpButton(
-                                title="Phantom Positioning Offsets",
-                                content_path="positioning_offsets.md"
-                            )
-                        with ui.row().classes("w-full gap-6"):
-                            ui.select(PHANTOM_MODELS, label="Phantom model", value=state.phantom_model).bind_value(
-                                state, "phantom_model"
-                            ).on("update:model-value", reset_results).classes("grow")
-
-                            mesh_select = ui.select(
-                                HUMAN_MESHES, label="Human mesh", value=state.human_mesh
-                            ).bind_value(state, "human_mesh").on("update:model-value", reset_results).classes("grow")
-
-                        # show/hide mesh selector based on model
-                        def _update_mesh_visibility():
-                            mesh_select.visible = state.phantom_model == "human"
-
-                        ui.timer(0.5, _update_mesh_visibility)
-
-                        ui.select(ORIENTATIONS, label="Patient orientation", value=state.patient_orientation).bind_value(
-                            state, "patient_orientation"
-                        ).on("update:model-value", reset_results).classes("w-full")
-
-                        ui.label("Patient offset (cm)").classes("text-caption text-grey-6 q-mt-sm")
-                        with ui.row().classes("w-full gap-4"):
-                            ui.number(label="Longitudinal", value=state.d_lon, step=1.0).bind_value(
-                                state, "d_lon"
-                            ).on("update:model-value", reset_results).classes("grow")
-                            ui.number(label="Vertical", value=state.d_ver, step=1.0).bind_value(
-                                state, "d_ver"
-                            ).on("update:model-value", reset_results).classes("grow")
-                            ui.number(label="Lateral", value=state.d_lat, step=1.0).bind_value(
-                                state, "d_lat"
-                            ).on("update:model-value", reset_results).classes("grow")
-
-                with ui.expansion("Physics Settings", icon="science").classes("modern-card w-full"):
-                    with ui.column().classes("w-full gap-4 q-pa-md"):
-                        ui.checkbox("Use estimated table transmission (k_tab)", value=state.estimate_k_tab).bind_value(
-                            state, "estimate_k_tab"
-                        ).on("update:model-value", reset_results)
-
-                        with ui.column().classes("w-full gap-1"):
-                            ui.label("TRANSMISSION FACTOR (k_tab)").classes("technical-label")
-                            with ui.row().classes("items-center w-full gap-4"):
-                                ui.slider(min=0.0, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
-                                    state, "k_tab_val"
-                                ).on("update:model-value", reset_results).classes("grow")
-                                ui.label().bind_text_from(state, "k_tab_val", backward=lambda v: f"{v:.2f}").classes("mono-text font-bold")
-
-                        ui.number(
-                            label="Inherent filtration (mmAl)", value=state.inherent_filtration, min=0.0, step=0.1
-                        ).bind_value(state, "inherent_filtration").on("update:model-value", reset_results).classes("w-full")
-
-                        ui.checkbox("Remove invalid data (kVp = 0)", value=state.remove_invalid_rows).bind_value(
-                            state, "remove_invalid_rows"
-                        ).on("update:model-value", reset_results)
-
-                with ui.expansion("Visual Settings", icon="palette").classes("modern-card w-full"):
-                    with ui.column().classes("w-full gap-4 q-pa-md"):
-                        ui.checkbox("Auto-render dose map on completion", value=state.plot_dosemap).bind_value(
-                            state, "plot_dosemap"
-                        )
-                        ui.select(COLORSCALES, label="Dose map colorscale", value=state.colorscale).bind_value(
-                            state, "colorscale"
-                        ).classes("w-full")
+        settings_tab.build(ctx)
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 4 — GEOMETRY PREVIEW
