@@ -291,47 +291,51 @@ def index():
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                     ).classes("w-full bg-black/40")
 
-                    upload_status = ui.label("No file loaded").classes("text-caption text-grey-5 q-mt-xs")
-
-                    ui.separator().classes("q-my-sm bg-zinc-800")
-
-                    ui.label("Or load a bundled example:").classes("text-caption text-grey-5 q-mb-xs")
-                    with ui.row().classes("w-full items-center gap-4"):
+                    # Bundled examples live in the same card and auto-load on selection
+                    # (no separate LOAD button) so both input paths behave identically.
+                    # No preselected value, so nothing loads on page render.
+                    with ui.row().classes("w-full items-center gap-3 q-mt-sm"):
+                        ui.label("…or try a bundled example:").classes("text-caption text-grey-5")
                         example_select = ui.select(
                             options=list(EXAMPLE_FILES.keys()),
-                            label="Example file",
-                            value=list(EXAMPLE_FILES.keys())[0] if EXAMPLE_FILES else None,
-                        ).classes("grow")
+                            label="Bundled example",
+                            value=None,
+                        ).classes("grow").mark("example-select")
 
-                        async def load_example():
-                            name = example_select.value
-                            if not name:
+                    # Shared status line for both upload and example loading.
+                    upload_status = ui.label("No file loaded").classes("text-caption text-grey-5 q-mt-xs")
+
+                    async def load_example():
+                        name = example_select.value
+                        if not name:
+                            return
+                        with _operation_guard("loading an example") as proceed:
+                            if not proceed:
                                 return
-                            with _operation_guard("loading an example") as proceed:
-                                if not proceed:
-                                    return
-                                path = EXAMPLE_FILES[name]
-                                state.input_source_type = "dicom"
-                                state.swap_lat_lon = False
-                                state.flip_ap1 = False
-                                state.flip_ap2 = False
-                                upload_status.set_text("PARSING...")
-                                ok, msg = await run.io_bound(load_rdsr, path, state)
-                                if ok:
-                                    state.file_name = name
-                                    ctx.file_label.set_text(name.upper())
-                                    ctx.events_label.set_text(
-                                        f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
-                                    )
-                                    upload_status.set_text(f"OK: {msg}")
-                                    ui.notify(msg, color="positive")
-                                    reset_results()
-                                    _refresh_event_table()
-                                else:
-                                    upload_status.set_text("ERROR — see notification")
-                                    ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
+                            path = EXAMPLE_FILES[name]
+                            state.input_source_type = "dicom"
+                            state.swap_lat_lon = False
+                            state.flip_ap1 = False
+                            state.flip_ap2 = False
+                            upload_status.set_text("PARSING...")
+                            ok, msg = await run.io_bound(load_rdsr, path, state)
+                            if ok:
+                                state.file_name = name
+                                ctx.file_label.set_text(name.upper())
+                                ctx.events_label.set_text(
+                                    f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
+                                )
+                                upload_status.set_text(f"OK: {msg}")
+                                ui.notify(msg, color="positive")
+                                reset_results()
+                                _refresh_event_table()
+                            else:
+                                upload_status.set_text("ERROR — see notification")
+                                ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
 
-                        ui.button("LOAD", on_click=load_example).classes("modern-btn modern-btn-teal px-8")
+                    # Wire to the value-change (not the raw Vue event) so it fires on
+                    # any selection — and is reliably simulable in the GUI flow tests.
+                    example_select.on_value_change(lambda: load_example())
 
                     ui.separator().classes("q-my-sm bg-zinc-800")
 

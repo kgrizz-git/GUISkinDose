@@ -34,10 +34,13 @@ async def test_all_tab_headings_render(user: User) -> None:
 
 @pytest.mark.asyncio
 async def test_example_load_updates_status(user: User) -> None:
-    """Clicking LOAD on the example selector parses a bundled RDSR and updates
-    the drawer event count via the load_example handler."""
+    """Selecting a bundled example auto-loads it (no LOAD button) and updates the
+    drawer event count via the load_example handler."""
     await user.open("/")
-    user.find("LOAD").click()
+    # Open the example dropdown and pick an option, the way a user would; the
+    # select auto-loads on selection (no LOAD button).
+    user.find(marker="example-select").click()
+    user.find("philips_allura_clarity_u104.dcm").click()
     # load_example awaits run.io_bound(load_rdsr, ...); the drawer should then
     # show a non-zero event count for the bundled example.
     await user.should_see("EVENTS")
