@@ -68,5 +68,7 @@ def _get_save_path(default_name: str, extension: str) -> str | None:
         root.destroy()
         return path if path else None
     except Exception as e:
-        dprint("GUI", f"Native dialog error: {e}")
+        # Most commonly a missing Tkinter (No module named '_tkinter'); the caller
+        # falls back to a browser-style download. See README.md for how to install.
+        dprint("GUI", f"Native save dialog unavailable ({e}); falling back to download.")
         return None

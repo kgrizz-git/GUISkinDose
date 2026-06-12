@@ -54,6 +54,28 @@ python -m mypyskindose --mode gui              # browser mode
 python -m mypyskindose --mode gui --native     # native window (requires pywebview)
 ```
 
+### Optional: native Save As dialogs (Tkinter)
+
+The GUI works fully without Tkinter, but uses it for two niceties: the native
+**Save As** file dialog when exporting, and detecting your screen size to size
+the native window. If Tkinter is missing you'll see a log line like
+`No module named '_tkinter'`, exports fall back to a browser-style download, and
+the window opens at a default size — nothing crashes.
+
+Tkinter ships with Python but is only built when the Tcl/Tk libraries are present
+at build time, so it can be absent (commonly with `pyenv` builds). It is **not** a
+pip package — do not add it to `requirements.txt`. To install it:
+
+| Platform | Command |
+|---|---|
+| macOS, Homebrew Python | `brew install python-tk` (or `python-tk@3.12` for a specific version) |
+| macOS, pyenv Python | `brew install tcl-tk`, then reinstall the interpreter: `pyenv install 3.12.9` |
+| Debian / Ubuntu | `sudo apt install python3-tk` |
+| Fedora | `sudo dnf install python3-tkinter` |
+| Windows | Included with the python.org installer — keep "tcl/tk and IDLE" checked |
+
+Verify with: `python -c "import tkinter; print(tkinter.TkVersion)"`.
+
 If you only need the documentation tooling as well:
 
 ```bash

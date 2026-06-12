@@ -924,7 +924,12 @@ def run_gui(native: bool = False) -> None:
             _root.destroy()
             window_size = (int(sw * 0.75), int(sh * 0.75))
         except Exception as exc:
-            dprint("GUI", f"Could not detect screen size: {exc}")
+            dprint(
+                "GUI",
+                f"Could not detect screen size ({exc}); using default window size. "
+                "Install Tkinter for screen-size detection and native Save As dialogs "
+                "— see the 'native Save As dialogs (Tkinter)' note in README.md.",
+            )
 
     ui.run(
         title="MyPySkinDose",
