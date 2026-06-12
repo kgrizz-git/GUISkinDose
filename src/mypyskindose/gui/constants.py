@@ -11,7 +11,17 @@ from __future__ import annotations
 from .helpers import get_example_rdsr_files, get_human_mesh_names
 
 HUMAN_MESHES = get_human_mesh_names()
-EXAMPLE_FILES = {p.name: p for p in get_example_rdsr_files()}
+
+# Bundled example RDSR files, keyed by filename. The synthetic "fake_scanner.dcm"
+# is demoted to last so a real scanner is the default selection (dict insertion
+# order drives the select's default value).
+EXAMPLE_FILES = {
+    p.name: p
+    for p in sorted(
+        get_example_rdsr_files(),
+        key=lambda p: (p.name == "fake_scanner.dcm", p.name),
+    )
+}
 COLORSCALES = ["jet", "viridis", "plasma", "inferno", "magma", "turbo", "hot"]
 PHANTOM_MODELS = ["human", "cylinder", "plane"]
 ORIENTATIONS = ["head_first_supine", "feet_first_supine"]
