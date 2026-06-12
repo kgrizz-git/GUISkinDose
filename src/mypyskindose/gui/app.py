@@ -284,8 +284,10 @@ def index():
                                         )
                                         sheet_row.set_visibility(True)
                             else:
-                                upload_status.set_text("ERROR — see notification")
-                                ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
+                                # msg is already a concise, user-facing string from
+                                # the loader (not a traceback); show it in full.
+                                upload_status.set_text("Could not load — see message")
+                                ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
                     ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
@@ -330,8 +332,8 @@ def index():
                                 reset_results()
                                 _refresh_event_table()
                             else:
-                                upload_status.set_text("ERROR — see notification")
-                                ui.notify(f"Parse error: {msg[:200]}", type="negative", timeout=8000)
+                                upload_status.set_text("Could not load — see message")
+                                ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
                     # Wire to the value-change (not the raw Vue event) so it fires on
                     # any selection — and is reliably simulable in the GUI flow tests.

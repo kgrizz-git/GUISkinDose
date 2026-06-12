@@ -23,6 +23,16 @@ from mypyskindose.input_adapters.tabular_loader import _RawLoad, load
 if TYPE_CHECKING:
     from mypyskindose.settings import PyskindoseSettings
 
+class SchemaDetectionError(ValueError):
+    """Auto-detection could not pick a schema (no match, or an ambiguous tie).
+
+    Subclasses ValueError so existing ``except ValueError`` / ``pytest.raises``
+    callers keep working, while callers that want to distinguish "couldn't guess
+    the format" from a genuine parse error (e.g. the GUI, to show a friendly
+    "choose a schema" hint instead of a traceback) can catch this specifically.
+    """
+
+
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 # Schemas marked (stub) are wired for explicit selection but raise NotImplementedError
 # until a real export fixture is available to build the column map.
@@ -69,7 +79,7 @@ def _detect_schema(loaded: _RawLoad) -> str:
     scores = {name: _score_schema(loaded.raw_df, known) for name, known in _SCHEMA_KNOWN_NAMES}
 
     if max(scores.values()) == 0.0:
-        raise ValueError(
+        raise SchemaDetectionError(
             "Schema auto-detection: no schema could be matched. "
             f"Scores: {scores}. Pass --input-schema explicitly."
         )
@@ -83,7 +93,7 @@ def _detect_schema(loaded: _RawLoad) -> str:
     if len(non_zero) > 1:
         _, runner_up_score = non_zero[1]
         if best_score - runner_up_score < _AUTO_MIN_MARGIN:
-            raise ValueError(
+            raise SchemaDetectionError(
                 f"Schema auto-detection is ambiguous (scores: {scores}). "
                 "Pass --input-schema explicitly."
             )

@@ -83,10 +83,10 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             )
 
         return True, f"Loaded {len(df)} irradiation events from {file_path.name}"
-    except Exception:
-        err = traceback.format_exc()
-        print(err)
-        return False, err
+    except Exception as exc:
+        # Log the full traceback for debugging; surface a concise message to the UI.
+        print(traceback.format_exc())
+        return False, f"Could not read this DICOM RDSR file: {exc}"
 
 
 def get_excel_sheets(file_path: Path) -> list[str]:
@@ -102,10 +102,18 @@ def get_excel_sheets(file_path: Path) -> list[str]:
 
 
 def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
-    """Load a tabular file (CSV/TSV/XLSX) via the input_adapters registry."""
-    try:
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+    """Load a tabular file (CSV/TSV/XLSX) via the input_adapters registry.
 
+    Returns ``(ok, message)``. On failure the message is a concise, user-facing
+    string (not a traceback); the full traceback is still logged to the console
+    for debugging. Auto-detection failures get a specific "choose a schema" hint.
+    """
+    from mypyskindose.input_adapters.registry import (
+        SchemaDetectionError,
+        read_and_normalize_input,
+    )
+
+    try:
         settings = build_settings(state, mode="calculate_dose")
         schema = state.input_schema or "auto"
 
@@ -142,11 +150,23 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
         state.normalization_warnings = []
 
         return True, f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
-    except Exception:
-        err = traceback.format_exc()
-        print(err)
+    except SchemaDetectionError:
+        # Not a real parse error — the file just didn't clearly match a known
+        # vendor format. Guide the user to pick one explicitly instead of
+        # dumping a traceback.
+        print(traceback.format_exc())
         state.import_has_errors = True
-        return False, err
+        return False, (
+            "Couldn't auto-detect this file's format. Open the “Input schema” "
+            "selector below and choose the matching format (e.g. Radimetrics CSV, "
+            "DoseTrack, Raw RDSR-like, or Normalized), then upload the file again."
+        )
+    except Exception as exc:
+        # Genuine read/validation error: log the full traceback for debugging but
+        # surface only a concise one-line message in the UI.
+        print(traceback.format_exc())
+        state.import_has_errors = True
+        return False, f"Could not read this file: {exc}"
 
 
 def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:

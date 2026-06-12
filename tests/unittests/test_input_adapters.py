@@ -378,6 +378,20 @@ class TestSchemaAutoDetect:
         with pytest.raises(ValueError, match="auto-detection"):
             read_and_normalize_input(p, input_schema="auto")
 
+    def test_auto_failure_is_schema_detection_error(self, tmp_path):
+        """Auto-detection failures raise the specific SchemaDetectionError subclass
+        (still a ValueError) so callers like the GUI can show a "choose a schema"
+        hint instead of treating it as a parse error."""
+        from mypyskindose.input_adapters.registry import (
+            SchemaDetectionError,
+            read_and_normalize_input,
+        )
+
+        p = tmp_path / "random.csv"
+        p.write_text("col_a,col_b,col_c\n1,2,3\n4,5,6\n", encoding="utf-8")
+        with pytest.raises(SchemaDetectionError):
+            read_and_normalize_input(p, input_schema="auto")
+
 
 # ── radimetrics adapter ────────────────────────────────────────────────────────
 
