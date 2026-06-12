@@ -45,6 +45,7 @@ from .figures import (
     make_geometry_fig,
 )
 from .styles import MODERN_CSS
+from .page_context import PageContext
 from .state import reset_results, state
 from mypyskindose.debug import configure_logging, dprint
 
@@ -256,6 +257,16 @@ def index():
         ui.tab("results", label="6 · Results")
         ui.tab("export", label="7 · Export")
 
+    # All cross-cutting chrome now exists; build the shared context. The two
+    # refresher callables are wired after the upload tab defines them (below).
+    ctx = PageContext(
+        tabs=tabs,
+        file_label=file_label,
+        events_label=events_label,
+        psd_label=psd_label,
+        run_btn_drawer=run_btn_drawer,
+    )
+
     with ui.tab_panels(tabs, value="upload").classes("w-full bg-transparent"):
 
         # ══════════════════════════════════════════════════════════════════
@@ -313,8 +324,8 @@ def index():
                                 ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
                             if ok:
                                 state.file_name = e.name
-                                file_label.set_text(e.name.upper())
-                                events_label.set_text(
+                                ctx.file_label.set_text(e.name.upper())
+                                ctx.events_label.set_text(
                                     f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
                                 )
                                 upload_status.set_text(f"OK: {msg}")
@@ -369,8 +380,8 @@ def index():
                                 ok, msg = await run.io_bound(load_rdsr, path, state)
                                 if ok:
                                     state.file_name = name
-                                    file_label.set_text(name.upper())
-                                    events_label.set_text(
+                                    ctx.file_label.set_text(name.upper())
+                                    ctx.events_label.set_text(
                                         f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
                                     )
                                     upload_status.set_text(f"OK: {msg}")
@@ -651,6 +662,12 @@ def index():
                     reset_results()
                     _refresh_event_table()
                     _refresh_import_preview()
+
+            # Expose the upload spine as ctx callables so out-of-module callers
+            # (the restore tail, and future extracted tabs) reach them without
+            # importing the closures. Upload-internal callers above stay local.
+            ctx.refresh_event_table = _refresh_event_table
+            ctx.refresh_import_preview = _refresh_import_preview
 
         # ══════════════════════════════════════════════════════════════════
         # TAB 2 — DATA TABLE
@@ -962,7 +979,7 @@ def index():
                     calc_btn = ui.button("▶  Run Calculation", on_click=lambda: do_calculate(), icon="bolt").classes(
                         "modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined"
                     )
-                    run_btn_drawer.on("click", lambda: do_calculate())
+                    ctx.run_btn_drawer.on("click", lambda: do_calculate())
 
                     calc_progress = ui.linear_progress(value=0, color="indigo").classes("w-full")
                     calc_progress.visible = False
@@ -981,7 +998,7 @@ def index():
                         return
 
                     calc_btn.disable()
-                    run_btn_drawer.disable()
+                    ctx.run_btn_drawer.disable()
                     calc_progress.visible = True
                     calc_progress.set_value(0)
                     calc_status_label.set_text("Starting...")
@@ -995,13 +1012,13 @@ def index():
                     finally:
                         calc_progress.set_value(1.0)
                         calc_btn.enable()
-                        run_btn_drawer.enable()
+                        ctx.run_btn_drawer.enable()
 
                     if ok:
-                        psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
+                        ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
                         calc_status_label.set_text(f"Done — {msg}")
                         ui.notify(f"✓ {msg}", color="positive")
-                        tabs.set_value("results")
+                        ctx.tabs.set_value("results")
                     else:
                         calc_status_label.set_text("Calculation failed")
                         ui.notify(f"Error: {msg[:300]}", type="negative", timeout=10000)
@@ -1209,11 +1226,11 @@ def index():
     # ── Restore view if data already loaded ──
     if state.rdsr_df is not None:
         dprint("GUI", "Restoring UI state from loaded data")
-        file_label.set_text(state.file_name.upper())
-        events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
-        _refresh_event_table()
+        ctx.file_label.set_text(state.file_name.upper())
+        ctx.events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
+        ctx.refresh_event_table()
         if state.active_tab:
-            tabs.set_value(state.active_tab)
+            ctx.tabs.set_value(state.active_tab)
 
 # ── figure-building helpers (called via run.io_bound) ─────────────────────
 
