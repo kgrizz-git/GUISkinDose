@@ -233,6 +233,19 @@ def get_argument_parser(arguments) -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--host",
+        required=False,
+        default=None,
+        dest="host",
+        help=(
+            "Host/interface for the GUI server to bind to. Defaults to 127.0.0.1 "
+            "(localhost only). Pass '0.0.0.0' to serve on the LAN — only on a "
+            "trusted network, since the GUI has no authentication and exposes "
+            "loaded PHI-derived data."
+        ),
+    )
+
+    parser.add_argument(
         "--input-schema",
         required=False,
         default=None,
@@ -265,7 +278,7 @@ if __name__ == "__main__":
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from mypyskindose.gui.app import run_gui
-        run_gui(native=getattr(args, "native", False))
+        run_gui(native=getattr(args, "native", False), host=getattr(args, "host", None))
     else:
         if (run_settings := args.settings) is None:
             logger.warning("No settings specified. Running with development parameters")

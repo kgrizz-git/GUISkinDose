@@ -54,6 +54,19 @@ GUI_VERSION = "1.1.0"
 # never registered here, so they are never deleted.
 _uploaded_temp_files: list[Path] = []
 
+# Reject uploads larger than this. RDSR DICOM files and tabular event tables are
+# small (KB to single-digit MB); this cap bounds memory and /tmp disk use from a
+# hostile or accidental large upload, since handle_upload reads the whole file
+# into memory (e.file.read()) before spooling it to a temp file. Enforced both on
+# the uploader element (max_file_size, client-side) and server-side after the
+# read, in case a client bypasses the browser check.
+MAX_UPLOAD_BYTES = 64 * 1024 * 1024  # 64 MiB
+
+
+def _upload_exceeds_limit(num_bytes: int) -> bool:
+    """True if an upload of this size must be rejected (see MAX_UPLOAD_BYTES)."""
+    return num_bytes > MAX_UPLOAD_BYTES
+
 
 def _register_temp_upload(path: Path) -> None:
     """Track a freshly written upload temp file and delete the prior one."""
@@ -233,6 +246,18 @@ def index():
                             dprint("GUI", f"Uploading file {file_name}")
                             suffix = Path(file_name).suffix.lower() or ".dcm"
                             data = await e.file.read()
+                            # Server-side size guard — the uploader's max_file_size
+                            # is client-side and can be bypassed by a direct POST.
+                            if _upload_exceeds_limit(len(data)):
+                                upload_status.set_text("Upload rejected — file too large")
+                                ui.notify(
+                                    f"File too large ({len(data) / 1024 / 1024:.1f} MB); "
+                                    f"limit is {MAX_UPLOAD_BYTES // 1024 // 1024} MB.",
+                                    type="negative",
+                                    timeout=8000,
+                                )
+                                _uploader["el"].reset()
+                                return
                             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                                 tmp.write(data)
                                 tmp_path = Path(tmp.name)
@@ -303,7 +328,9 @@ def index():
                         uploader_container.clear()
                         with uploader_container:
                             _uploader["el"] = ui.upload(
-                                on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT"
+                                on_upload=handle_upload,
+                                label="DRAG AND DROP OR CLICK TO SELECT",
+                                max_file_size=MAX_UPLOAD_BYTES,
                             ).props(
                                 'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                             ).classes("w-full bg-black/40 uploader-no-list")
@@ -880,8 +907,16 @@ def index():
 
 # ── entry point ────────────────────────────────────────────────────────────
 
-def run_gui(native: bool = False) -> None:
-    """Launch the MyPySkinDose NiceGUI app."""
+def run_gui(native: bool = False, host: str | None = None) -> None:
+    """Launch the MyPySkinDose NiceGUI app.
+
+    Binds to 127.0.0.1 (localhost only) by default. The GUI has no authentication
+    and loads PHI-derived RDSR data into a single process-global, shared state, so
+    it must not be exposed on the network unintentionally — and NiceGUI's browser
+    mode would otherwise default to 0.0.0.0 (all interfaces). Pass an explicit
+    ``host`` (e.g. ``"0.0.0.0"``) to opt into LAN serving; only do so on a trusted
+    network and behind your own access controls.
+    """
     # Native mode has no console; mirror logs to a file so issues are diagnosable.
     log_file = None
     if native:
@@ -946,10 +981,21 @@ def run_gui(native: bool = False) -> None:
                 "— see the 'native Save As dialogs (Tkinter)' note in README.md.",
             )
 
+    # Default to localhost-only; NiceGUI browser mode would otherwise bind to
+    # 0.0.0.0. LAN serving is opt-in via an explicit host (see docstring).
+    bind_host = host or "127.0.0.1"
+    if bind_host not in ("127.0.0.1", "localhost"):
+        dprint(
+            "GUI",
+            f"Binding GUI to {bind_host} — exposed beyond localhost with no "
+            "authentication; ensure this is a trusted network.",
+        )
+
     try:
         ui.run(
             title="MyPySkinDose",
             native=native,
+            host=bind_host,
             window_size=window_size,
             reload=False,
             port=8765,

@@ -54,6 +54,23 @@ python -m mypyskindose --mode gui              # browser mode
 python -m mypyskindose --mode gui --native     # native window (requires pywebview)
 ```
 
+### Network exposure (browser mode)
+
+The GUI has **no authentication** and loads PHI-derived RDSR data into a single
+shared, process-global state. To keep that off the network, browser mode binds to
+`127.0.0.1` (localhost only) by default — reachable only from the machine it runs
+on.
+
+Serving it to other hosts is opt-in via `--host`:
+
+```bash
+python -m mypyskindose --mode gui --host 0.0.0.0   # serve on the LAN
+```
+
+Only do this on a trusted network, and behind your own access controls, since
+anyone who can reach the port can view loaded patient data, trigger exports, and
+mutate shared settings.
+
 ### Optional: native Save As dialogs (Tkinter)
 
 The GUI works fully without Tkinter, but uses it for two niceties: the native

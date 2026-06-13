@@ -22,7 +22,7 @@ if __name__ == "__main__":
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from mypyskindose.gui.app import run_gui
 
-        run_gui(native=getattr(args, "native", False))
+        run_gui(native=getattr(args, "native", False), host=getattr(args, "host", None))
     elif getattr(args, "input_preview_only", False):
         if not args.file_path:
             print("--input-preview-only requires --file-path", file=sys.stderr)

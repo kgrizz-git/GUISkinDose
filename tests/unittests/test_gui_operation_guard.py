@@ -23,6 +23,15 @@ def _reset_busy():
     state.busy = False
 
 
+@pytest.fixture(autouse=True)
+def _stub_notify(monkeypatch):
+    """The denied-entry branch calls ui.notify, which needs a live client/slot
+    context. These tests assert only the busy-flag contract, so stub it out —
+    otherwise they break depending on whether a prior GUI-simulation test has
+    cleared NiceGUI's slot stack (a test-ordering artifact, not app behavior)."""
+    monkeypatch.setattr(gui_app.ui, "notify", lambda *a, **k: None)
+
+
 def test_first_entry_proceeds_and_sets_busy():
     with gui_app._operation_guard("x") as proceed:
         assert proceed is True
