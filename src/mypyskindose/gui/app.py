@@ -283,11 +283,15 @@ def index():
                                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
                             # Keep the quasar uploader a clean drop zone — clear its
-                            # internal file list after each upload so cards don't pile
-                            # up (only the latest file is ever parsed/used). The loaded
-                            # file is shown by the controlled card below, which replaces
-                            # itself on the next load and has an explicit remove (X).
-                            uploader.reset()
+                            # internal file list so cards don't pile up (only the latest
+                            # file is ever parsed/used). The loaded file is shown by the
+                            # controlled card below. Defer the reset to a one-shot timer:
+                            # calling reset() synchronously inside on_upload aborts the
+                            # still-in-flight upload and can leave the uploader stuck in
+                            # its "uploading" state (greyed out, + button disabled).
+                            # Skip if another upload started meanwhile (state.busy) — its
+                            # own deferred reset will clear the list.
+                            ui.timer(0.5, lambda: None if state.busy else uploader.reset(), once=True)
 
                     uploader = ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
