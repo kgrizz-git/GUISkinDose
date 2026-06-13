@@ -293,6 +293,17 @@ def index():
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                     ).classes("w-full bg-black/40 uploader-no-list")
 
+                    # Always-visible recovery: resets the upload area (recovers a wedged
+                    # uploader — e.g. a 0-byte phantom from dragging out of the native
+                    # file dialog) and flushes any loaded file. Available even when no
+                    # file is loaded, unlike the loaded-file card's X below.
+                    with ui.row().classes("w-full justify-end q-mt-xs"):
+                        ui.button(
+                            "Reset upload", icon="restart_alt", on_click=lambda: clear_loaded_file()
+                        ).props("flat dense size=sm color=grey-5").classes("icon-outlined").tooltip(
+                            "Reset the upload area and unload any loaded file"
+                        )
+
                     # Currently-loaded file — a single card bound to state.file_name.
                     # It appears once a file is loaded and is replaced (text updates)
                     # when the next file loads; the X button unloads it. This replaces
