@@ -233,4 +233,12 @@ body {
     border-radius: 8px !important;
     backdrop-filter: blur(12px);
 }
+
+/* Uploader: hide quasar's internal file list. The loaded file is shown by our
+   own card below the drop zone, so quasar's per-file cards/checkmarks are
+   redundant — and were confusing (they accumulated across consecutive uploads
+   and flashed on each load). The drop-zone header (prompt) stays visible. */
+.uploader-no-list .q-uploader__list {
+    display: none;
+}
 """

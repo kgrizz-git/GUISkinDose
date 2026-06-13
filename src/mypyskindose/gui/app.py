@@ -282,20 +282,16 @@ def index():
                                 upload_status.set_text("Could not load — see message")
                                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
-                            # Keep the quasar uploader a clean drop zone — clear its
-                            # internal file list so cards don't pile up (only the latest
-                            # file is ever parsed/used). The loaded file is shown by the
-                            # controlled card below. Defer the reset to a one-shot timer:
-                            # calling reset() synchronously inside on_upload aborts the
-                            # still-in-flight upload and can leave the uploader stuck in
-                            # its "uploading" state (greyed out, + button disabled).
-                            # Skip if another upload started meanwhile (state.busy) — its
-                            # own deferred reset will clear the list.
-                            ui.timer(0.5, lambda: None if state.busy else uploader.reset(), once=True)
+                            # Clear quasar's (hidden) upload queue so File objects don't
+                            # accumulate across uploads. The visible loaded file is shown
+                            # by the controlled card below; quasar's own file list is
+                            # hidden via the .uploader-no-list CSS class, so this reset is
+                            # not visible and never flashes a per-file card.
+                            uploader.reset()
 
                     uploader = ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
-                    ).classes("w-full bg-black/40")
+                    ).classes("w-full bg-black/40 uploader-no-list")
 
                     # Currently-loaded file — a single card bound to state.file_name.
                     # It appears once a file is loaded and is replaced (text updates)
