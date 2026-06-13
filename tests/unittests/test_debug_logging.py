@@ -115,3 +115,54 @@ def test_dprint_lazily_configures(clean_logging):
     assert dbg._configured is False
     dbg.dprint("GUI", "anything")
     assert dbg._configured is True
+
+
+# ── file sink: PHI-safe level, rotation, fresh-per-session ───────────────────
+def test_file_handler_is_rotating_and_bounded(clean_logging, tmp_path):
+    from logging.handlers import RotatingFileHandler
+
+    log_file = tmp_path / "gui.log"
+    dbg.configure_logging(log_file=log_file, force=True)
+    fh = next(h for h in clean_logging.handlers if isinstance(h, logging.FileHandler))
+    assert isinstance(fh, RotatingFileHandler)
+    assert fh.maxBytes == dbg._LOG_MAX_BYTES
+    assert fh.backupCount == dbg._LOG_BACKUP_COUNT
+
+
+def test_module_debug_does_not_leak_to_file_by_default(clean_logging, tmp_path):
+    """With no debug flag set, module-logger DEBUG (e.g. a file path) must not
+    reach the file sink — the handler defaults to INFO."""
+    log_file = tmp_path / "gui.log"
+    dbg.configure_logging(log_file=log_file, force=True)
+    logging.getLogger("mypyskindose.helpers.read_and_normalize_rdsr_data").debug(
+        "SECRET /patients/Smith_MRN123.dcm"
+    )
+    logging.getLogger("mypyskindose.GUI").info("benign info")
+    for h in clean_logging.handlers:
+        h.flush()
+    contents = log_file.read_text()
+    assert "SECRET" not in contents
+    assert "benign info" in contents
+
+
+def test_enabling_flag_lets_debug_reach_file(clean_logging, tmp_path):
+    """Opting into a debug category lowers the file sink to DEBUG at runtime."""
+    log_file = tmp_path / "gui.log"
+    dbg.configure_logging(log_file=log_file, force=True)
+    dbg.set_debug_flag("CALCULATION", True)
+    dbg.dprint("CALCULATION", "calc debug detail")
+    for h in clean_logging.handlers:
+        h.flush()
+    assert "calc debug detail" in log_file.read_text()
+
+
+def test_file_sink_purged_on_new_session(clean_logging, tmp_path):
+    """Each configure_logging(log_file=...) starts a fresh file and drops backups."""
+    log_file = tmp_path / "gui.log"
+    log_file.write_text("STALE FROM A PRIOR SESSION\n")
+    (tmp_path / "gui.log.1").write_text("old rotated backup\n")
+
+    dbg.configure_logging(log_file=log_file, force=True)
+
+    assert "STALE" not in log_file.read_text()
+    assert not (tmp_path / "gui.log.1").exists()

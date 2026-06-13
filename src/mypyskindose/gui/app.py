@@ -243,9 +243,11 @@ def index():
                                 return
                             # NiceGUI 3.x wraps the upload in e.file (name + async read()).
                             file_name = e.file.name
-                            dprint("GUI", f"Uploading file {file_name}")
                             suffix = Path(file_name).suffix.lower() or ".dcm"
                             data = await e.file.read()
+                            # Log only type + size, never the name — upload filenames
+                            # can carry PHI (patient name/MRN/accession).
+                            dprint("GUI", f"Uploading {suffix} file ({len(data)} bytes)")
                             # Server-side size guard — the uploader's max_file_size
                             # is client-side and can be bypassed by a direct POST.
                             if _upload_exceeds_limit(len(data)):

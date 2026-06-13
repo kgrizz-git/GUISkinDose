@@ -19,7 +19,9 @@ def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: Pyskindose
         else Path(__file__).parent.parent / "example_data/RDSR" / settings.rdsr_filename
     )
 
-    logger.debug(str(path.absolute()))
+    # Log only the file type, never the path/name — RDSR filenames routinely
+    # contain PHI (patient name, MRN, accession) in clinical use.
+    logger.debug("Reading RDSR data from a %s file", path.suffix.lower() or "(no suffix)")
 
     # If provided, load preparsed rdsr data in .json format
     if path.suffix.lower() == ".json":

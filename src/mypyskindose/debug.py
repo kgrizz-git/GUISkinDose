@@ -21,7 +21,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+# File-sink bounds. The native-mode log is a diagnostic aid, not an audit trail:
+# it is opened fresh each session (mode="w") and rotated so it cannot grow without
+# bound or accumulate PHI-bearing lines across runs.
+_LOG_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB per file
+_LOG_BACKUP_COUNT = 3  # at most ~4 MiB total
 
 # Debug categories — each maps to a child logger ``mypyskindose.<category>``.
 DEBUG_FLAGS = {
@@ -103,27 +110,75 @@ _FORMATTER = logging.Formatter(
 )
 
 
+def _file_handler_level() -> int:
+    """DEBUG only when a debug category is explicitly enabled; INFO otherwise.
+
+    Module loggers (``logging.getLogger(__name__)``) inherit the root's DEBUG
+    level, so without this gate their DEBUG records — which can include file
+    paths/names (PHI in clinical use) — would land in the file by default. The
+    handler level keeps those out unless the operator opts into debug.
+    """
+    return logging.DEBUG if any(DEBUG_FLAGS.values()) else logging.INFO
+
+
+def _purge_log_files(target: str) -> None:
+    """Delete the log file and any rotated backups so each session starts fresh.
+
+    RotatingFileHandler ignores ``mode="w"`` once ``maxBytes>0`` (it forces append
+    so rotation works), so truncate-on-start is done by removing the files first.
+    """
+    base = Path(target)
+    candidates = [base] + [base.with_name(f"{base.name}.{i}") for i in range(1, _LOG_BACKUP_COUNT + 1)]
+    for path in candidates:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def _add_file_handler(log_file: str | Path) -> None:
-    """Attach a file handler to the root logger if not already present."""
+    """Attach a bounded, fresh-per-session file handler to the root logger.
+
+    The log is purged on attach (no cross-session accumulation) and rotation caps
+    total size at ``_LOG_MAX_BYTES * (_LOG_BACKUP_COUNT + 1)``.
+    """
     root = logging.getLogger(_LOGGER_ROOT)
-    # FileHandler stores baseFilename as os.path.abspath(filename); match that.
+    # RotatingFileHandler stores baseFilename as os.path.abspath(filename); match that.
     target = os.path.abspath(log_file)
     for h in root.handlers:
         if isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == target:
+            h.setLevel(_file_handler_level())  # keep level in sync if flags changed
             return
+    _purge_log_files(target)
     try:
-        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=_LOG_MAX_BYTES,
+            backupCount=_LOG_BACKUP_COUNT,
+            encoding="utf-8",
+        )
     except OSError as exc:
         root.warning("Could not open log file %s: %s", log_file, exc)
         return
+    file_handler.setLevel(_file_handler_level())
     file_handler.setFormatter(_FORMATTER)
     root.addHandler(file_handler)
+
+
+def _refresh_file_handler_levels() -> None:
+    """Re-apply the PHI-safe file level to any attached file handlers."""
+    level = _file_handler_level()
+    for h in logging.getLogger(_LOGGER_ROOT).handlers:
+        if isinstance(h, logging.FileHandler):
+            h.setLevel(level)
 
 
 def set_debug_flag(category: str, value: bool) -> None:
     """Enable or disable a debug category at runtime."""
     DEBUG_FLAGS[category.upper()] = bool(value)
     _category_logger(category).setLevel(logging.DEBUG if value else logging.INFO)
+    # Keep the file sink's level in sync so a runtime toggle reaches the file.
+    _refresh_file_handler_levels()
 
 
 def dprint(category: str, *args, **kwargs) -> None:

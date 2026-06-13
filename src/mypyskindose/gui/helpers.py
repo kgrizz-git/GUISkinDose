@@ -193,7 +193,8 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
 
         settings = build_settings(state, mode="calculate_dose", output_format="dict")
 
-        dprint("CALCULATION", f"Starting calculation for {state.file_name}")
+        # Don't log state.file_name — it can carry PHI (patient name/MRN).
+        dprint("CALCULATION", "Starting calculation")
         dprint("CALCULATION", f"Phantom: {state.phantom_model}, Offsets: {state.d_lon}, {state.d_ver}, {state.d_lat}")
         dprint("CALCULATION", f"Normalization: {state.normalization_method}")
 

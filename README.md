@@ -71,6 +71,30 @@ Only do this on a trusted network, and behind your own access controls, since
 anyone who can reach the port can view loaded patient data, trigger exports, and
 mutate shared settings.
 
+### Logging & privacy
+
+The CLI and browser-mode GUI log to the console only. **Native** mode has no
+console, so it also writes a diagnostic log to your system temp directory:
+
+```
+<tempdir>/mypyskindose-gui.log
+```
+
+This file is **truncated at each launch** and **size-capped** (rotating, ~4 MB
+max across `.log`/`.log.1`–`.3`), so it does not accumulate across sessions.
+
+To protect PHI, the app **does not log file names or paths** (RDSR filenames
+often contain patient name/MRN/accession) — only file type, size, and event
+counts. By default the file sink records `INFO` and above; verbose `DEBUG` output
+is opt-in per category via a `debug.json` in the working directory, e.g.:
+
+```json
+{ "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
+```
+
+Even with debug enabled, identifiers are still redacted. The log lives outside
+the repo by design (temp dir); delete it any time — it is recreated on next launch.
+
 ### Optional: native Save As dialogs (Tkinter)
 
 The GUI works fully without Tkinter, but uses it for two niceties: the native

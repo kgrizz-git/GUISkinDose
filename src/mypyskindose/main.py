@@ -55,7 +55,8 @@ def main(
     """
     settings = parse_settings_to_settings_class(settings=settings)
 
-    dprint("PROCESSING", f"Reading and normalizing RDSR data from {file_path}")
+    # Don't log file_path — RDSR paths/filenames can carry PHI.
+    dprint("PROCESSING", "Reading and normalizing RDSR data")
     data_norm = read_and_normalise_rdsr_data(rdsr_filepath=file_path, settings=settings)
     dprint("PROCESSING", f"RDSR data normalized successfully. Rows: {len(data_norm)}")
 
