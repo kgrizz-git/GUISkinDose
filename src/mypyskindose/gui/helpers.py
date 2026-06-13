@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import traceback
 from pathlib import Path
 import pydicom
@@ -12,6 +13,18 @@ from mypyskindose.rdsr_normalizer import rdsr_normalizer
 from mypyskindose.settings import PyskindoseSettings
 
 from .state import AppState
+
+
+class _CalcWarningCollector(logging.Handler):
+    """Collects WARNING+ log messages emitted during a dose calculation so the GUI
+    can surface them (e.g. how many events had their HVL snapped to the grid)."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
 
 
 def build_settings(state: AppState, mode: str = "calculate_dose", output_format: str = "dict") -> PyskindoseSettings:
@@ -191,8 +204,20 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         if state.rdsr_df is None:
             return False, "No RDSR data loaded."
 
-        # analyze_data internally calls calculate_rotation_matrices
-        output = analyze_data(normalized_data=state.rdsr_df.copy(), settings=settings)
+        # Capture WARNING+ logs from the core calc (e.g. HVL lookups snapped for
+        # out-of-range events) so they can be surfaced in the GUI, not just the
+        # console. analyze_data runs on this (worker) thread, so a temporary
+        # handler on the mypyskindose logger collects its records.
+        state.calc_warnings = []
+        _collector = _CalcWarningCollector()
+        _calc_logger = logging.getLogger("mypyskindose")
+        _calc_logger.addHandler(_collector)
+        try:
+            # analyze_data internally calls calculate_rotation_matrices
+            output = analyze_data(normalized_data=state.rdsr_df.copy(), settings=settings)
+        finally:
+            _calc_logger.removeHandler(_collector)
+        state.calc_warnings = list(_collector.messages)
 
         if not isinstance(output, dict):
             return False, "Unexpected calculation output format."

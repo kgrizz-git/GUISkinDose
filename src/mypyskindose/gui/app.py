@@ -840,9 +840,18 @@ def index():
 
                     if ok:
                         ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
-                        calc_status_label.set_text(f"Done — {msg}")
                         ui.notify(f"✓ {msg}", color="positive")
                         ctx.tabs.set_value("results")
+                        # Surface any calc warnings (e.g. HVL snapped for out-of-range
+                        # events) — not just in the console.
+                        if state.calc_warnings:
+                            calc_status_label.set_text(
+                                f"Done — {msg} · {len(state.calc_warnings)} warning(s), see notifications"
+                            )
+                            for warning in state.calc_warnings:
+                                ui.notify(warning, type="warning", timeout=12000, multi_line=True)
+                        else:
+                            calc_status_label.set_text(f"Done — {msg}")
                     else:
                         calc_status_label.set_text("Calculation failed")
                         ui.notify(f"Error: {msg[:300]}", type="negative", timeout=10000)

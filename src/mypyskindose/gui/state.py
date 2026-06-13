@@ -65,6 +65,9 @@ class AppState:
     calculation_done: bool = False
     psd: float | None = None
     air_kerma: float | None = None
+    # Warnings emitted during the last calculation (e.g. HVL lookups snapped to the
+    # nearest grid point for out-of-range events). Surfaced in the GUI after a run.
+    calc_warnings: list[str] = field(default_factory=list)
 
     # ── Geometry preview figures (Plotly Figure objects) ───────────────────
     setup_fig: Any | None = None
