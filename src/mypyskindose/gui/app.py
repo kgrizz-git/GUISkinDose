@@ -282,17 +282,67 @@ def index():
                                 upload_status.set_text("Could not load — see message")
                                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
-                            # Clear the uploader's file list so it stays a transient
-                            # drop zone. Only the latest file is ever parsed/used (each
-                            # upload overwrites state and deletes the prior temp file),
-                            # so an accumulating list with per-file remove controls is
-                            # misleading. The loaded file is shown by the drawer label
-                            # and the status line below.
+                            # Keep the quasar uploader a clean drop zone — clear its
+                            # internal file list after each upload so cards don't pile
+                            # up (only the latest file is ever parsed/used). The loaded
+                            # file is shown by the controlled card below, which replaces
+                            # itself on the next load and has an explicit remove (X).
                             uploader.reset()
 
                     uploader = ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                     ).classes("w-full bg-black/40")
+
+                    # Currently-loaded file — a single card bound to state.file_name.
+                    # It appears once a file is loaded and is replaced (text updates)
+                    # when the next file loads; the X button unloads it. This replaces
+                    # the quasar uploader's accumulating per-file cards / checkmark.
+                    with ui.row().classes(
+                        "w-full items-center gap-3 q-mt-sm modern-card q-pa-sm"
+                    ).bind_visibility_from(state, "file_name", backward=bool):
+                        ui.icon("description").classes("text-xl text-grey-4 icon-outlined")
+                        with ui.column().classes("gap-0 grow min-w-0"):
+                            ui.label().bind_text_from(state, "file_name").classes("text-sm font-bold truncate")
+                            ui.label().bind_text_from(
+                                state, "rdsr_df",
+                                backward=lambda v: f"{len(v)} events loaded" if v is not None else "loaded",
+                            ).classes("text-caption text-grey-5")
+                        ui.button(icon="close", on_click=lambda: clear_loaded_file()).props(
+                            "flat round dense color=grey-5"
+                        ).classes("icon-outlined").tooltip("Remove loaded file")
+
+                    def clear_loaded_file() -> None:
+                        """Unload the current file and reset input state (card's X button)."""
+                        state.rdsr_df = None
+                        state.rdsr_raw_df = None
+                        state.file_name = ""
+                        state.file_path = None
+                        state.input_source_type = ""
+                        state.available_sheets = []
+                        state.input_sheet_name = 0
+                        state.import_provenance = None
+                        state.import_warnings = []
+                        state.import_has_errors = False
+                        state.swap_lat_lon = False
+                        state.flip_ap1 = False
+                        state.flip_ap2 = False
+                        state.manufacturer = ""
+                        state.model = ""
+                        state.normalization_method = "Unknown"
+                        state.normalization_warnings = []
+                        state.table_offset_x = 0.0
+                        state.table_offset_y = 0.0
+                        state.table_offset_z = 0.0
+                        reset_results()
+                        sheet_row.set_visibility(False)
+                        ctx.file_label.set_text("No file loaded")
+                        ctx.events_label.set_text("0 events")
+                        ctx.psd_label.set_text("PSD: 0.00 mGy")
+                        upload_status.set_text("No file loaded")
+                        example_select.set_value(None)
+                        uploader.reset()
+                        _refresh_event_table()
+                        _refresh_import_preview()
 
                     # Bundled examples live in the same card and auto-load on selection
                     # (no separate LOAD button) so both input paths behave identically.
@@ -511,6 +561,8 @@ def index():
 
             def _refresh_event_table():
                 if state.rdsr_df is None:
+                    event_table.rows = []
+                    event_table.update()
                     return
                 df = state.rdsr_df
                 rows = []
