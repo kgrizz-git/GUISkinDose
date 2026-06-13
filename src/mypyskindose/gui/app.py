@@ -9,6 +9,7 @@ or directly:
 
 from __future__ import annotations
 
+import asyncio
 import atexit
 import os
 import tempfile
@@ -24,7 +25,7 @@ os.environ['SSL_CERT_FILE'] = ''
 # Prevents colorama from trying to reset console colors when handle is already closed
 os.environ['COLORAMA_DISABLE'] = '1'
 
-from nicegui import app, run, ui
+from nicegui import Client, app, run, ui
 
 from .helpers import (
     get_excel_sheets,
@@ -884,6 +885,23 @@ def run_gui(native: bool = False) -> None:
     import logging
     logging.getLogger('nicegui').setLevel(logging.ERROR)
 
+    if not native:
+        # Browser mode runs a standalone server that outlives the browser tab, so
+        # closing the window normally leaves the process running. For a local,
+        # single-user launch, treat closing the last window as "quit": when a
+        # client disconnects, wait a short grace period (so a page reload, which
+        # briefly drops the socket, doesn't trigger it) and shut down if no client
+        # is still connected. Native mode already exits when its window closes.
+        @app.on_disconnect
+        def _shutdown_when_last_window_closes() -> None:
+            async def _shutdown_if_idle() -> None:
+                await asyncio.sleep(4.0)
+                if not any(c.has_socket_connection for c in Client.instances.values()):
+                    dprint("GUI", "Last browser window closed; shutting down server.")
+                    app.shutdown()
+
+            asyncio.create_task(_shutdown_if_idle())
+
     window_size: tuple[int, int] | None = None
     if native:
         try:
@@ -901,16 +919,20 @@ def run_gui(native: bool = False) -> None:
                 "— see the 'native Save As dialogs (Tkinter)' note in README.md.",
             )
 
-    ui.run(
-        title="MyPySkinDose",
-        native=native,
-        window_size=window_size,
-        reload=False,
-        port=8765,
-        show=True,
-        favicon="🩻",
-        reconnect_timeout=30.0,
-    )
+    try:
+        ui.run(
+            title="MyPySkinDose",
+            native=native,
+            window_size=window_size,
+            reload=False,
+            port=8765,
+            show=True,
+            favicon="🩻",
+            reconnect_timeout=30.0,
+        )
+    except KeyboardInterrupt:
+        # Ctrl+C — exit quietly instead of dumping an asyncio CancelledError traceback.
+        dprint("GUI", "Interrupted (Ctrl+C); shutting down.")
 
 
 if __name__ == "__main__":
