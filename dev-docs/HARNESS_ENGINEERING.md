@@ -138,6 +138,15 @@ python tests/scripts/launch_gui_headless.py
 
 Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the `gui-smoke` job. Core matrix tests exclude `tests/gui/` (see `--ignore=tests/gui` in CI).
 
+#### Writing NiceGUI `User` tests — gotchas (learned the hard way)
+
+These pass locally but fail on CI if you get them wrong; `basedpyright` and the pre-push hook **cannot** catch them (they're runtime/environment behavior, not types), so a GUI test must be validated with an actual `pytest tests/gui/` run — and ideally a CI run, since CI runners are slower than local.
+
+- **Trigger handlers via `.click()` / `.trigger()`, not `element.set_value(...)`.** A direct `set_value` fires `on_value_change` *outside* the NiceGUI client context, where `nicegui.run.io_bound` short-circuits to `None` (`core.app.is_stopping` / pool down). A handler that does `ok, msg = await run.io_bound(...)` then raises `TypeError: cannot unpack non-iterable NoneType`. `UserInteraction.click()` runs the handler inside `with user.client:`, so the I/O-bound work actually executes.
+- **Wait before interacting with elements that render lazily.** Clicking a `ui.select` option immediately after opening the dropdown races the menu render and silently no-ops on slower runners. `await user.should_see("<option label>")` first, then click it.
+- **`should_see` defaults to `retries=3` (~0.3s).** An async `run.io_bound` load (e.g. parsing an RDSR) can outlast that on CI, so the assertion times out a beat before the UI updates. Pass `retries=` generously (e.g. 50) when asserting on a result that follows an awaited background task.
+- **`should_see(content=...)` is a case-sensitive substring match**, and the simulation treats the whole page as visible (no scrolling). `"EVENTS"` matches `"25 EVENTS"`; `"Events"` does not.
+
 ### Type checking (optional `[dev]` extra)
 
 ```bash

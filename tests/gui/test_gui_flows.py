@@ -4,6 +4,10 @@ The original smoke test only checked that the page renders three labels. Before
 decomposing app.py into per-tab modules, these tests exercise the real handler
 wiring — tab navigation and the example-load flow — so a broken handler or a
 mis-wired widget reference is caught, not silently shipped.
+
+NiceGUI `User`-test gotchas (trigger via .click() not set_value; wait for lazy
+elements; generous should_see retries for awaited background work) are documented
+in dev-docs/HARNESS_ENGINEERING.md → "Writing NiceGUI User tests — gotchas".
 """
 
 from __future__ import annotations
