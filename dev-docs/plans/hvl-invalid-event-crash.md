@@ -43,9 +43,11 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
 - **Done:** step 4 (surface count) — `run_calculation` captures the calc's WARNING
   logs onto `state.calc_warnings`; the calculate tab shows the count in its status
   line and each warning as a toast after a run.
-- **Remaining:** drop/zero invalid sub-floor-kVp events (step 2) — has product
-  decisions (threshold, drop-vs-zero, default); interactive user-options
-  follow-up ([[#related]]).
+- **Decided (2026-06-13):** invalid sub-floor-kVp events are **not** auto-dropped
+  — interim behavior is leave-snapped; invalid-event handling (threshold kVp < 25)
+  moves to the interactive user-options chooser ([[#related]]).
+- **Immediate scope (this plan) is complete** — crash fixed, fail-soft, count
+  surfaced. Remaining work is the interactive chooser, tracked in TO_DO.
 
 ## Fix plan
 
@@ -54,14 +56,14 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
    nearest tabulated grid value and retry (the table is a complete grid, so this
    always resolves). Nearest-snap for now; upgrade to interpolation later if
    accuracy warrants. Subsumes the existing TO_DO "HVL interpolation/extrapolation".
-2. **Handle invalid events.** Events with kVp below a physical/table floor
-   (e.g. `< 20` kV, under the 25 kV grid) are not real exposures — drop or
-   zero-dose them before the HVL/dose step, with a warning. Broaden
-   `remove_invalid_rows` from `kVp == 0` to a small threshold, and **apply it on
-   tabular loads** too (currently RDSR-only). Decide drop-vs-zero-dose.
-3. **Fail soft, not hard.** If an event's HVL still can't be resolved after
-   nearest/interpolation, skip that event's dose contribution with a per-event
-   warning instead of aborting the whole calculation.
+2. **Handle invalid events. — DEFERRED (decision 2026-06-13):** *not* auto-dropped
+   for now. The interim behavior is **leave snapped** (the guard keeps it safe;
+   the count is surfaced). Invalid-event handling moves to the interactive chooser
+   ([[#related]]) rather than a silent drop/zero. The agreed **invalid threshold is
+   kVp < 25 kV** (below the HVL table floor) — applies to that future chooser.
+3. **DONE — Fail soft, not hard.** The nearest-snap guard always resolves on the
+   complete grid (NaN fallback otherwise), so a single event can no longer abort
+   the whole calculation.
 4. **Surface warnings** through the existing import/calc channel
    (`state.normalization_warnings` / calc status). Always report **how many
    events failed the lookup** (were substituted, clamped, or skipped) — a count
@@ -80,11 +82,14 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
 - `src/mypyskindose/helpers/read_and_normalize_rdsr_data.py` — keep RDSR path consistent
 - `tests/unittests/` — regression test
 
-## Decisions to confirm before implementing
+## Decisions (2026-06-13)
 
-- Nearest-neighbour vs (bi)linear interpolation for HVL — start with nearest +
-  clamp (simplest, no crashes), upgrade to interpolation if accuracy warrants.
-- Invalid-kVp threshold (20 vs 25 kV) and drop-vs-zero-dose.
+- **Invalid-kVp threshold: `< 25 kV`** (below the HVL table floor) — for the
+  interactive chooser.
+- **Interim handling of invalid events: leave snapped** (no auto drop/zero); real
+  handling deferred to the interactive chooser ([[#related]]).
+- Nearest-neighbour vs (bi)linear interpolation for HVL — keep **nearest + snap**
+  for now; upgrade to interpolation only if accuracy warrants.
 - Whether `remove_invalid_rows` should default to `true` (silently dropping dead
   events is arguably correct, but changes existing behavior — keep opt-in but
   always guard the HVL lookup so it can't crash regardless of the toggle).
