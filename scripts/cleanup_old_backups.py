@@ -47,8 +47,35 @@ def _repo_root(explicit: Path | None) -> Path:
     return root
 
 
+def _is_tracked_in_head(repo_root: Path, relative_path: str) -> bool:
+    """Return whether ``relative_path`` is tracked in the current ``HEAD`` tree."""
+    tracked = _run_git(repo_root, "ls-tree", "--name-only", "HEAD", "--", relative_path)
+    return tracked.returncode == 0 and tracked.stdout.strip() == relative_path
+
+
+def _has_pending_changes(repo_root: Path, relative_path: str) -> bool:
+    """Return whether ``relative_path`` has staged or unstaged changes vs the index/HEAD.
+
+    A non-empty ``git status --porcelain`` line means the working-tree file differs
+    from what is committed (e.g. a freshly recreated or force-staged backup), so it
+    must not be judged stale by commit age. On any git error we assume changes are
+    pending, erring toward keeping the file.
+    """
+    status = _run_git(repo_root, "status", "--porcelain", "--", relative_path)
+    return status.returncode != 0 or bool(status.stdout.strip())
+
+
 def _commits_since_last_git_touch(repo_root: Path, relative_path: str) -> int | None:
     """Return commits on HEAD since ``relative_path`` was last changed, or None if never committed."""
+    if not _is_tracked_in_head(repo_root, relative_path):
+        return None
+
+    # A path can be tracked in HEAD yet have a brand-new working-tree file at it
+    # (recreated and/or force-staged). Stale commit history would then wrongly age
+    # out the fresh file, so defer to the mtime fallback when changes are pending.
+    if _has_pending_changes(repo_root, relative_path):
+        return None
+
     last = _run_git(repo_root, "log", "-1", "--format=%H", "--", relative_path)
     last_commit = last.stdout.strip()
     if not last_commit:
