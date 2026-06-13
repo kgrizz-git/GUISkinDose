@@ -282,7 +282,15 @@ def index():
                                 upload_status.set_text("Could not load — see message")
                                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
-                    ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
+                            # Clear the uploader's file list so it stays a transient
+                            # drop zone. Only the latest file is ever parsed/used (each
+                            # upload overwrites state and deletes the prior temp file),
+                            # so an accumulating list with per-file remove controls is
+                            # misleading. The loaded file is shown by the drawer label
+                            # and the status line below.
+                            uploader.reset()
+
+                    uploader = ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
                         'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                     ).classes("w-full bg-black/40")
 
