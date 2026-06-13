@@ -40,6 +40,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 ### Fixed
 
 - Pre-commit backup cleanup: new untracked `backups/*.bak` files are no longer deleted just because the same path was touched in older git history.
+- Pre-commit backup cleanup: a backup whose path is still tracked in `HEAD` but was recreated/force-staged (or locally modified) with new content is now protected too — commit-age deletion is skipped when the path has pending staged/unstaged changes, deferring to the mtime fallback.
 - Normalization settings: `update_translation_offset` and `update_rotation_direction` now apply vendor overrides from JSON/settings (previously no-ops when values were already initialized).
 - Phantom: cylinder mesh resolution assertions run after resolution is assigned (basedpyright refactor had broken cylinder phantom creation).
 
