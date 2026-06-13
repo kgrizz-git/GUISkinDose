@@ -47,8 +47,17 @@ def _repo_root(explicit: Path | None) -> Path:
     return root
 
 
+def _is_tracked_in_head(repo_root: Path, relative_path: str) -> bool:
+    """Return whether ``relative_path`` is tracked in the current ``HEAD`` tree."""
+    tracked = _run_git(repo_root, "ls-tree", "--name-only", "HEAD", "--", relative_path)
+    return tracked.returncode == 0 and tracked.stdout.strip() == relative_path
+
+
 def _commits_since_last_git_touch(repo_root: Path, relative_path: str) -> int | None:
     """Return commits on HEAD since ``relative_path`` was last changed, or None if never committed."""
+    if not _is_tracked_in_head(repo_root, relative_path):
+        return None
+
     last = _run_git(repo_root, "log", "-1", "--format=%H", "--", relative_path)
     last_commit = last.stdout.strip()
     if not last_commit:
