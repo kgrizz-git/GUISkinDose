@@ -9,7 +9,6 @@ mis-wired widget reference is caught, not silently shipped.
 from __future__ import annotations
 
 import pytest
-from nicegui import ui
 from nicegui.testing import User
 
 pytest.importorskip("nicegui")
@@ -38,13 +37,14 @@ async def test_example_load_updates_status(user: User) -> None:
     """Selecting a bundled example auto-loads it (no LOAD button) and updates the
     drawer event count via the load_example handler."""
     await user.open("/")
-    # Set the example select's value, which is what the dropdown does on
-    # selection; the select auto-loads via on_value_change. Driving the value
-    # directly (rather than opening the menu and clicking an option) avoids
-    # racing the dropdown render, which no-ops on slower CI runners.
-    selection = user.find(kind=ui.select, marker="example-select")
-    for element in selection.elements:
-        element.set_value("philips_allura_clarity_u104.dcm")
+    # Open the example dropdown and click an option, the way a user would; the
+    # select auto-loads on selection (no LOAD button). Clicking (not set_value)
+    # runs the handler inside the NiceGUI client context, so its run.io_bound
+    # load actually executes. Wait for the menu option to render before clicking
+    # — clicking immediately races the dropdown open and no-ops on slower CI.
+    user.find(marker="example-select").click()
+    await user.should_see("philips_allura_clarity_u104.dcm")
+    user.find("philips_allura_clarity_u104.dcm").click()
     # load_example awaits run.io_bound(load_rdsr, ...); the drawer should then
     # show a non-zero event count for the bundled example.
     await user.should_see("EVENTS")
