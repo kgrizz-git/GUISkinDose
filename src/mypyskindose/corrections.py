@@ -34,10 +34,16 @@ def calculate_k_isq(source: np.ndarray, cells: np.ndarray, dref: float) -> np.nd
         Inverse-square law correction for all cells that are hit by the beam.
 
     """
-    if len(cells) > 3:
-        return np.square(dref / np.linalg.norm(cells - source, axis=1))
-
-    return np.square(dref / np.linalg.norm(cells - source, axis=0))
+    # Discriminate by dimensionality, not cell count. A 1-D ``cells`` is a single
+    # (3,) coordinate -> scalar correction. A 2-D ``cells`` is (n_hits, 3); norm
+    # over axis=1 gives one per-cell source-to-cell distance per hit cell, for any
+    # n_hits. (A prior ``len(cells) > 3`` guard sent <=3 hits to axis=0, which
+    # collapses the cell axis to shape (3,) — crashing for 1-2 hits and silently
+    # mis-dosing exactly-3-hit events.)
+    cells = np.asarray(cells)
+    if cells.ndim == 1:
+        return np.square(dref / np.linalg.norm(cells - source))
+    return np.square(dref / np.linalg.norm(cells - source, axis=1))
 
 
 def calculate_k_bs(data_norm: pd.DataFrame) -> List[CubicSpline]:

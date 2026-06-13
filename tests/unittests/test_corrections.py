@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
 from mypyskindose.constants import (
@@ -52,6 +53,28 @@ def test_calculate_decreased_fluence_at_increased_distance():
     expected = 0.25
     actual = calculate_k_isq(source=np.array([0, 0, 0]), cells=np.array([0, 200, 0]), dref=100)
     assert actual == expected
+
+
+@pytest.mark.parametrize("n_hits", [1, 2, 3, 4, 10])
+def test_k_isq_returns_one_value_per_hit_cell(n_hits):
+    """2-D cells (n_hits, 3) must yield one ISL factor per cell for any n_hits.
+
+    Regression for the (2,)/(3,) broadcast crash: events hitting <=3 skin cells
+    previously fell to an axis=0 branch returning shape (3,)."""
+    source = np.array([0, 0, 0])
+    cells = np.tile([0, 100, 0], (n_hits, 1))  # n_hits cells, all 100 units away
+    actual = calculate_k_isq(source=source, cells=cells, dref=100)
+    assert actual.shape == (n_hits,)
+    assert np.allclose(actual, 1.0)
+
+
+def test_k_isq_per_cell_values_track_distance():
+    """Each cell's ISL factor reflects its own source distance (not collapsed)."""
+    source = np.array([0, 0, 0])
+    cells = np.array([[0, 100, 0], [0, 50, 0], [0, 200, 0]])  # 3 hits -> previously buggy
+    actual = calculate_k_isq(source=source, cells=cells, dref=100)
+    assert actual.shape == (3,)
+    assert np.allclose(actual, [1.0, 4.0, 0.25])
 
 
 def test_fetch_correct_backscatter_correction_from_database():
