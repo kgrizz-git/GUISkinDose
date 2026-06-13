@@ -50,8 +50,12 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
    nearest/interpolation, skip that event's dose contribution with a per-event
    warning instead of aborting the whole calculation.
 4. **Surface warnings** through the existing import/calc channel
-   (`state.normalization_warnings` / calc status), naming the affected events so
-   the user knows some events were substituted or skipped.
+   (`state.normalization_warnings` / calc status). Always report **how many
+   events failed the lookup** (were substituted, clamped, or skipped) — a count
+   plus the affected event indices — so the user knows the result excludes/altered
+   some events. (Future work, [[#related]]: instead of silently choosing, offer
+   the user options for below-floor-kVp events — ignore the event, enter a kVp
+   manually, or use the exam's average kVp.)
 5. **Tests.** Add a fixture/event with (a) kVp ≈ 0 and (b) off-grid filtration;
    assert the calc completes with warnings and **no `IndexError`**.
 
@@ -77,3 +81,7 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
 
 - TO_DO.md → "HVL interpolation/extrapolation for out-of-table filtration"
   (this plan subsumes/urgent-izes it).
+- TO_DO.md → "User options for below-floor / unresolvable kVp events" — the
+  interactive follow-up (ignore / manual kVp / exam-average kVp). This plan first
+  makes the calc fail soft and report the affected count; that item adds the
+  user-facing choice.
