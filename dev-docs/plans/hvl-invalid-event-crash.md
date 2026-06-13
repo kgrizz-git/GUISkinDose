@@ -38,11 +38,14 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
 
 - **Done:** step 1 (guard) — `fetch_and_append_hvl` snaps an out-of-grid event to
   the nearest tabulated point instead of `.iloc[0]`-ing an empty result; the
-  legacy CSV calc now completes (2/712 events snapped). The count is **logged**
-  (step 4, console only — not yet surfaced in the GUI). Regression test in
+  legacy CSV calc now completes (2/712 events snapped). Regression test in
   `tests/unittests/test_geom_calc.py::test_fetch_and_append_hvl_snaps_out_of_grid_events`.
-- **Remaining:** surface the count in the GUI (step 4 plumbing); drop/zero invalid
-  sub-floor-kVp events (step 2); interactive user-options follow-up ([[#related]]).
+- **Done:** step 4 (surface count) — `run_calculation` captures the calc's WARNING
+  logs onto `state.calc_warnings`; the calculate tab shows the count in its status
+  line and each warning as a toast after a run.
+- **Remaining:** drop/zero invalid sub-floor-kVp events (step 2) — has product
+  decisions (threshold, drop-vs-zero, default); interactive user-options
+  follow-up ([[#related]]).
 
 ## Fix plan
 
