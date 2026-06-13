@@ -83,3 +83,40 @@ def test_convert_measurements_from_m_to_cm():
     actual = convert_from_m_to_cm(measurement_in_m)
 
     assert actual == expected
+
+
+def test_fetch_and_append_hvl_snaps_out_of_grid_events():
+    """A below-floor-kVp event has no exact HVL grid match; it must not crash but
+    be snapped to the nearest grid point with a finite HVL.
+
+    Regression for the IndexError in fetch_and_append_hvl (`.iloc[0]` on an empty
+    exact-match lookup). See dev-docs/plans/hvl-invalid-event-crash.md.
+    """
+    import pandas as pd
+
+    from mypyskindose import load_settings_example_json
+    from mypyskindose.geom_calc import fetch_and_append_hvl
+    from mypyskindose.settings import PyskindoseSettings
+
+    base = load_settings_example_json()
+    base["mode"] = "calculate_dose"
+    settings = PyskindoseSettings(settings=base, output_format="dict")
+
+    # Event 0 is in-grid; event 1 (kVp ~ 0.003) is below the 25 kV table floor.
+    data_norm = pd.DataFrame(
+        {
+            "kVp": [70.0, 0.003],
+            "filter_thickness_Cu": [0.0, 0.0],
+            "filter_thickness_Al": [0.0, 0.0],
+        }
+    )
+
+    out = fetch_and_append_hvl(
+        data_norm=data_norm.copy(),
+        inherent_filtration=settings.inherent_filtration,
+        corrections_db=settings.corrections_db_path,
+    )
+
+    assert "HVL" in out.columns
+    assert out["HVL"].notna().all()  # both resolved — the out-of-grid one was snapped
+    assert (out["HVL"] > 0).all()

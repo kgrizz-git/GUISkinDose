@@ -246,18 +246,57 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
     # Fetch entire HVL table
     hvl_data = pd.read_sql_query("SELECT * FROM hvl_combined", conn)
 
-    hvl = [
-        float(
-            cast(pd.Series, hvl_data.loc[
-                (round(hvl_data["kvp_kv"]) == round(data_norm.kVp[event]))
-                & (round(hvl_data["filtration_inherent_mmal"], 1) == round(inherent_filtration, 1))
-                & (hvl_data["filtration_added_mmcu"] == data_norm.filter_thickness_Cu[event])
-                & (hvl_data["filtration_added_mmal"] == round(data_norm.filter_thickness_Al[event])),
-                "hvl_mmal",
-            ]).iloc[0]
+    # Available values per dimension (the table is a complete grid). Used to snap
+    # an event whose (kVp, inherent, Cu, Al) tuple has no exact tabulated row to
+    # the nearest available point. Without this guard, an out-of-range or off-grid
+    # event — e.g. a near-zero-kVp event below the table's kV floor — yields an
+    # empty lookup and the old `.iloc[0]` raised IndexError, aborting the whole
+    # calculation. See dev-docs/plans/hvl-invalid-event-crash.md.
+    kvp_grid = np.sort(hvl_data["kvp_kv"].round().unique())
+    inh_grid = np.sort(hvl_data["filtration_inherent_mmal"].round(1).unique())
+    cu_grid = np.sort(hvl_data["filtration_added_mmcu"].unique())
+    al_grid = np.sort(hvl_data["filtration_added_mmal"].unique())
+
+    def _nearest(grid: np.ndarray, value: float) -> float:
+        return float(grid[int(np.abs(grid - value).argmin())])
+
+    def _lookup(kv: float, inh: float, cu: float, al: float) -> pd.Series:
+        return cast(pd.Series, hvl_data.loc[
+            (hvl_data["kvp_kv"].round() == kv)
+            & (hvl_data["filtration_inherent_mmal"].round(1) == inh)
+            & (hvl_data["filtration_added_mmcu"] == cu)
+            & (hvl_data["filtration_added_mmal"] == al),
+            "hvl_mmal",
+        ])
+
+    inh_q = round(inherent_filtration, 1)
+    hvl: List[float] = []
+    snapped_events: List[int] = []
+    for event in range(len(data_norm)):
+        kv_q = round(data_norm.kVp[event])
+        cu_q = data_norm.filter_thickness_Cu[event]
+        al_q = round(data_norm.filter_thickness_Al[event])
+        match = _lookup(kv_q, inh_q, cu_q, al_q)
+        if len(match) == 0:
+            # No exact grid point — snap each dimension to the nearest tabulated
+            # value and retry (guaranteed to resolve on a complete grid).
+            snapped_events.append(event)
+            match = _lookup(
+                _nearest(kvp_grid, kv_q),
+                _nearest(inh_grid, inh_q),
+                _nearest(cu_grid, cu_q),
+                _nearest(al_grid, al_q),
+            )
+        hvl.append(float(match.iloc[0]) if len(match) else float("nan"))
+
+    if snapped_events:
+        logger.warning(
+            "HVL lookup: %d of %d event(s) had no exact tabulated (kVp, inherent, "
+            "Cu, Al) match and were snapped to the nearest grid point (e.g. kVp "
+            "below the %g kV table floor). Affected event index(es): %s%s.",
+            len(snapped_events), len(data_norm), float(kvp_grid.min()),
+            snapped_events[:20], " (truncated)" if len(snapped_events) > 20 else "",
         )
-        for event in range(len(data_norm))
-    ]
 
     # Append HVL data to data_norm
     data_norm["HVL"] = hvl

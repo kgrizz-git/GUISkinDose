@@ -34,13 +34,23 @@ only on the RDSR path (`gui/helpers.load_rdsr`,
 `helpers/read_and_normalize_rdsr_data`), **not** on the tabular path
 (`gui/helpers.load_tabular`). Default is `false`.
 
+## Status (2026-06-13)
+
+- **Done:** step 1 (guard) — `fetch_and_append_hvl` snaps an out-of-grid event to
+  the nearest tabulated point instead of `.iloc[0]`-ing an empty result; the
+  legacy CSV calc now completes (2/712 events snapped). The count is **logged**
+  (step 4, console only — not yet surfaced in the GUI). Regression test in
+  `tests/unittests/test_geom_calc.py::test_fetch_and_append_hvl_snaps_out_of_grid_events`.
+- **Remaining:** surface the count in the GUI (step 4 plumbing); drop/zero invalid
+  sub-floor-kVp events (step 2); interactive user-options follow-up ([[#related]]).
+
 ## Fix plan
 
-1. **Guard the lookup (stops the crash).** Never `.iloc[0]` on a possibly-empty
-   result. If no exact row matches, fall back to nearest-neighbour (or linear
-   interpolation) on the tabulated grid, clamped at the edges. This is the
-   existing TO_DO "HVL interpolation/extrapolation for out-of-table filtration" —
-   the crash makes it urgent and is the unifying fix.
+1. **DONE — Guard the lookup (stops the crash).** No longer `.iloc[0]` on a
+   possibly-empty result: if no exact row matches, snap each dimension to the
+   nearest tabulated grid value and retry (the table is a complete grid, so this
+   always resolves). Nearest-snap for now; upgrade to interpolation later if
+   accuracy warrants. Subsumes the existing TO_DO "HVL interpolation/extrapolation".
 2. **Handle invalid events.** Events with kVp below a physical/table floor
    (e.g. `< 20` kV, under the 25 kV grid) are not real exposures — drop or
    zero-dose them before the HVL/dose step, with a warning. Broaden
