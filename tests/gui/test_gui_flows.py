@@ -43,8 +43,9 @@ async def test_example_load_updates_status(user: User) -> None:
     # load actually executes. Wait for the menu option to render before clicking
     # — clicking immediately races the dropdown open and no-ops on slower CI.
     user.find(marker="example-select").click()
-    await user.should_see("philips_allura_clarity_u104.dcm")
+    await user.should_see("philips_allura_clarity_u104.dcm", retries=20)
     user.find("philips_allura_clarity_u104.dcm").click()
-    # load_example awaits run.io_bound(load_rdsr, ...); the drawer should then
-    # show a non-zero event count for the bundled example.
-    await user.should_see("EVENTS")
+    # load_example awaits run.io_bound(load_rdsr, ...); the drawer then shows a
+    # non-zero event count. should_see defaults to only 3 retries (~0.3s), which
+    # the async load can outlast on slower CI runners, so allow generous retries.
+    await user.should_see("EVENTS", retries=50)
