@@ -288,11 +288,27 @@ def index():
                             # by the controlled card below; quasar's own file list is
                             # hidden via the .uploader-no-list CSS class, so this reset is
                             # not visible and never flashes a per-file card.
-                            uploader.reset()
+                            _uploader["el"].reset()
 
-                    uploader = ui.upload(on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT").props(
-                        'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
-                    ).classes("w-full bg-black/40 uploader-no-list")
+                    # The uploader lives in a container so it can be fully rebuilt — not
+                    # just reset(). Dragging a file out of the native file-open dialog can
+                    # wedge quasar in a phantom upload (0.0B/0.00%, + disabled) that
+                    # reset() does NOT clear; recreating the element yields a fresh,
+                    # working QUploader. _uploader holds the current instance so the
+                    # upload handler and the rebuild can reach it.
+                    uploader_container = ui.column().classes("w-full gap-0")
+                    _uploader: dict[str, ui.upload] = {}
+
+                    def _build_uploader() -> None:
+                        uploader_container.clear()
+                        with uploader_container:
+                            _uploader["el"] = ui.upload(
+                                on_upload=handle_upload, label="DRAG AND DROP OR CLICK TO SELECT"
+                            ).props(
+                                'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
+                            ).classes("w-full bg-black/40 uploader-no-list")
+
+                    _build_uploader()
 
                     # Always-visible recovery: resets the upload area (recovers a wedged
                     # uploader — e.g. a 0-byte phantom from dragging out of the native
@@ -352,7 +368,9 @@ def index():
                         ctx.psd_label.set_text("PSD: 0.00 mGy")
                         upload_status.set_text("No file loaded")
                         example_select.set_value(None)
-                        uploader.reset()
+                        # Rebuild the uploader (not just reset) so a wedged/phantom
+                        # upload state is fully cleared and the + button works again.
+                        _build_uploader()
                         _refresh_event_table()
                         _refresh_import_preview()
 
