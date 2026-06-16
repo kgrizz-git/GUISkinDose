@@ -65,6 +65,11 @@ def add_corrections_and_event_dose_to_output(
     """
     event_dose = np.zeros(len(patient.r))
     if not sum(hits):
+        # Beam missed the phantom: per-hit arrays are empty; k_med is not computed
+        # (0.0 means "not applied", not a physical correction factor).
+        output[c.OUTPUT_KEY_CORRECTION_BACK_SCATTER][event] = np.array([])
+        output[c.OUTPUT_KEY_CORRECTION_MEDIUM][event] = 0.0
+        output[c.OUTPUT_KEY_CORRECTION_TABLE][event] = k_tab[event]
         output[c.OUTPUT_KEY_DOSE_MAP] += event_dose
         return output
 

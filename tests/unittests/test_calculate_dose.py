@@ -16,18 +16,25 @@ the runtime.
 
 from __future__ import annotations
 
-import inspect
 import logging
+from unittest.mock import MagicMock, patch
 
 import numpy as np
+import pandas as pd
 import pydicom
 import pytest
 
 from mypyskindose import constants as c
 from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from mypyskindose.calculate_dose.add_correction_and_event_dose_to_output import (
+    add_corrections_and_event_dose_to_output,
+)
 from mypyskindose.calculate_dose.calculate_dose import (
     _build_output_template,
     calculate_dose,
+)
+from mypyskindose.calculate_dose.perform_calculations_for_new_geometries import (
+    perform_calculations_for_new_geometries,
 )
 from mypyskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
 from mypyskindose.phantom_class import Phantom
@@ -72,15 +79,18 @@ def test_output_template_placeholder_types_match_final_slot_types():
     for key in (
         c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW,
         c.OUTPUT_KEY_CORRECTION_BACK_SCATTER,
-        c.OUTPUT_KEY_CORRECTION_MEDIUM,
     ):
         assert len(template[key]) == n
         for v in template[key]:
             assert isinstance(v, np.ndarray) and v.size == 0
 
-    assert len(template[c.OUTPUT_KEY_CORRECTION_TABLE]) == n
-    for v in template[c.OUTPUT_KEY_CORRECTION_TABLE]:
-        assert isinstance(v, float) and v == 0.0
+    for key in (
+        c.OUTPUT_KEY_CORRECTION_MEDIUM,
+        c.OUTPUT_KEY_CORRECTION_TABLE,
+    ):
+        assert len(template[key]) == n
+        for v in template[key]:
+            assert isinstance(v, float) and v == 0.0
 
     assert template[c.OUTPUT_KEY_DOSE_MAP].shape == (50,)
     assert np.all(template[c.OUTPUT_KEY_DOSE_MAP] == 0.0)
@@ -107,18 +117,179 @@ def test_output_template_mutation_is_local():
         assert template[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][ev].size == 0
 
 
-def test_calculate_dose_uses_template_builder_not_inline_literal():
-    """Pin the call site: ``calculate_dose`` must delegate to
-    ``_build_output_template`` rather than reconstructing the
-    shared-reference template inline.
-    """
-    source = inspect.getsource(calculate_dose)
-    assert "_build_output_template" in source, (
-        "calculate_dose must call _build_output_template; "
-        "the inline [[]] * N / [np.array] * N literal is the bug we are fixing"
+def test_calculate_dose_delegates_to_build_output_template():
+    """``calculate_dose`` must build the per-event output via ``_build_output_template``."""
+    settings = _settings()
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+    norm = pd.DataFrame({"kVp": [80.0]})
+
+    def _return_output_unchanged(*_args, output, **_kwargs):
+        return output
+
+    with (
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose.position_patient_phantom_on_table"
+        ),
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose.fetch_and_append_hvl",
+            side_effect=lambda data_norm, **_kw: data_norm,
+        ),
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose.check_new_geometry",
+            return_value=[True],
+        ),
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose.calculate_k_bs",
+            return_value=[MagicMock()],
+        ),
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose.calculate_k_tab",
+            return_value=[0.8],
+        ),
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose._build_output_template",
+            wraps=_build_output_template,
+        ) as build_template,
+        patch(
+            "mypyskindose.calculate_dose.calculate_dose.calculate_irradiation_event_result",
+            side_effect=_return_output_unchanged,
+        ),
+        patch("tqdm.tqdm", return_value=MagicMock()),
+    ):
+        patient, output = calculate_dose(
+            normalized_data=norm, settings=settings, table=table, pad=pad
+        )
+
+    assert patient is not None
+    assert output is not None
+    build_template.assert_called_once()
+    call_kwargs = build_template.call_args.kwargs
+    assert call_kwargs["total_number_of_events"] == 1
+    assert call_kwargs["dose_map_size"] == len(patient.r)
+
+
+# ── zero-hit edge cases ────────────────────────────────────────────────
+
+
+def test_add_corrections_zero_hit_writes_explicit_slots():
+    """Zero-hit events must not leak template placeholders into export slots."""
+    n_cells = 4
+    patient = MagicMock()
+    patient.r = np.zeros((n_cells, 3))
+    hits = [False] * n_cells
+    k_tab = [0.75]
+    output = _build_output_template(total_number_of_events=1, dose_map_size=n_cells)
+    dose_before = output[c.OUTPUT_KEY_DOSE_MAP].copy()
+
+    result = add_corrections_and_event_dose_to_output(
+        normalized_data=MagicMock(),
+        event=0,
+        hits=hits,
+        table_hits=[],
+        patient=patient,
+        back_scatter_interpolation=[MagicMock()],
+        field_area=[],
+        k_tab=k_tab,
+        corrections_db="unused",
+        output=output,
     )
-    assert "[[]] *" not in source, "inline [[]] * N literal reintroduces the shared-reference bug"
-    assert "[np.array] *" not in source, "inline [np.array] * N literal reintroduces the class-placeholder bug"
+
+    assert result[c.OUTPUT_KEY_CORRECTION_BACK_SCATTER][0].size == 0
+    assert result[c.OUTPUT_KEY_CORRECTION_MEDIUM][0] == 0.0
+    assert result[c.OUTPUT_KEY_CORRECTION_TABLE][0] == 0.75
+    assert np.array_equal(result[c.OUTPUT_KEY_DOSE_MAP], dose_before)
+
+
+def test_perform_calculations_clears_stale_geometry_on_zero_hit():
+    """New geometry with no skin hits must not reuse prior event's k_isq / field_area."""
+    stale_k_isq = np.array([1.0, 2.0, 3.0])
+    patient = MagicMock()
+    table = MagicMock()
+    pad = MagicMock()
+    beam = MagicMock()
+    beam.check_hit.return_value = [False, False, False]
+
+    with patch(
+        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
+        return_value=beam,
+    ):
+        hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
+            normalized_data=pd.DataFrame(),
+            event=0,
+            new_geometry=True,
+            patient=patient,
+            table=table,
+            pad=pad,
+            hits=[True, True],
+            table_hits=[True],
+            field_area=[10.0, 20.0],
+            k_isq=stale_k_isq,
+        )
+
+    assert hits == [False, False, False]
+    assert table_hits == []
+    assert field_area == []
+    assert k_isq.size == 0
+
+
+def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
+    """Regression: event 0 hits -> event 1 new geometry zero hits must get empty k_isq."""
+    patient = MagicMock()
+    patient.r = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+    table = MagicMock()
+    pad = MagicMock()
+
+    hit_beam = MagicMock()
+    hit_beam.check_hit.return_value = [True, False]
+    hit_beam.r = np.array([[0.0, 0.0, 100.0]])
+
+    miss_beam = MagicMock()
+    miss_beam.check_hit.return_value = [False, False]
+
+    with patch(
+        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
+        side_effect=[hit_beam, miss_beam],
+    ), patch(
+        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.check_table_hits",
+        return_value=[False],
+    ), patch(
+        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area",
+        return_value=[5.0],
+    ), patch(
+        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.calculate_k_isq",
+        return_value=np.array([0.5]),
+    ):
+        norm = pd.DataFrame({c.DATA_DS_IRP: [100.0]})
+        hits_ev0, table_hits_ev0, field_area_ev0, k_isq_ev0 = perform_calculations_for_new_geometries(
+            normalized_data=norm,
+            event=0,
+            new_geometry=True,
+            patient=patient,
+            table=table,
+            pad=pad,
+            hits=[],
+            table_hits=[],
+            field_area=[],
+            k_isq=np.array([]),
+        )
+        _, table_hits_ev1, field_area_ev1, k_isq_ev1 = perform_calculations_for_new_geometries(
+            normalized_data=norm,
+            event=1,
+            new_geometry=True,
+            patient=patient,
+            table=table,
+            pad=pad,
+            hits=hits_ev0,
+            table_hits=table_hits_ev0,
+            field_area=field_area_ev0,
+            k_isq=k_isq_ev0,
+        )
+
+    assert k_isq_ev0.shape == (1,)
+    assert k_isq_ev1.size == 0
+    assert field_area_ev1 == []
+    assert table_hits_ev1 == []
 
 
 # ── end-to-end via calculate_dose (smoke + slot-type pin) ──────────────

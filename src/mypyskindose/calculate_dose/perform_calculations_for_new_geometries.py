@@ -57,5 +57,11 @@ def perform_calculations_for_new_geometries(
             cells=patient.r[hits],
             dref=normalized_data[c.DATA_DS_IRP][0],
         )
+    else:
+        # Avoid carrying table_hits / field_area / k_isq forward from a prior event
+        # when this new-geometry event hits no skin cells.
+        table_hits = []
+        field_area = []
+        k_isq = np.array([])
 
     return hits, table_hits, field_area, k_isq

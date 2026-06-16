@@ -126,9 +126,9 @@ def _build_output_template(total_number_of_events: int, dose_map_size: int) -> D
     """Build the per-event output dictionary with type-accurate placeholders.
 
     Each per-event slot is overwritten by :func:`calculate_irradiation_event_result`
-    and :func:`add_corrections_and_event_dose_to_output` on every event, so the
-    placeholder values are never observed by callers. They are nonetheless chosen
-    to match the slot's final type and to avoid the ``[[]] * N`` /
+    and :func:`add_corrections_and_event_dose_to_output` on every event. Zero-hit
+    events are handled explicitly in the latter; placeholders are nonetheless
+    chosen to match each slot's final type and to avoid the ``[[]] * N`` /
     ``[np.array] * N`` shared-reference traps that would surface if a future
     change ever read or mutated a slot before its first assignment.
     """
@@ -139,7 +139,7 @@ def _build_output_template(total_number_of_events: int, dose_map_size: int) -> D
             np.array([]) for _ in range(total_number_of_events)
         ],
         c.OUTPUT_KEY_CORRECTION_BACK_SCATTER: [np.array([]) for _ in range(total_number_of_events)],
-        c.OUTPUT_KEY_CORRECTION_MEDIUM: [np.array([]) for _ in range(total_number_of_events)],
+        c.OUTPUT_KEY_CORRECTION_MEDIUM: [0.0] * total_number_of_events,
         c.OUTPUT_KEY_CORRECTION_TABLE: [0.0] * total_number_of_events,
         c.OUTPUT_KEY_DOSE_MAP: np.zeros(dose_map_size),
     }
