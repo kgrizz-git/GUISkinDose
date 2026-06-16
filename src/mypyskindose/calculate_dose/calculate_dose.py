@@ -99,15 +99,9 @@ def calculate_dose(
     else:
         from tqdm import tqdm as pbar
 
-    output_template = {
-        c.OUTPUT_KEY_HITS: [[]] * total_number_of_events,
-        c.OUTPUT_KEY_KERMA: [np.array] * total_number_of_events,
-        c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW: [[]] * total_number_of_events,
-        c.OUTPUT_KEY_CORRECTION_BACK_SCATTER: [[]] * total_number_of_events,
-        c.OUTPUT_KEY_CORRECTION_MEDIUM: [[]] * total_number_of_events,
-        c.OUTPUT_KEY_CORRECTION_TABLE: [[]] * total_number_of_events,
-        c.OUTPUT_KEY_DOSE_MAP: np.zeros(len(patient.r)),
-    }
+    output_template = _build_output_template(
+        total_number_of_events=total_number_of_events, dose_map_size=len(patient.r)
+    )
 
     output = calculate_irradiation_event_result(
         normalized_data=normalized_data,
@@ -126,3 +120,26 @@ def calculate_dose(
     )
 
     return patient, output
+
+
+def _build_output_template(total_number_of_events: int, dose_map_size: int) -> Dict[str, Any]:
+    """Build the per-event output dictionary with type-accurate placeholders.
+
+    Each per-event slot is overwritten by :func:`calculate_irradiation_event_result`
+    and :func:`add_corrections_and_event_dose_to_output` on every event, so the
+    placeholder values are never observed by callers. They are nonetheless chosen
+    to match the slot's final type and to avoid the ``[[]] * N`` /
+    ``[np.array] * N`` shared-reference traps that would surface if a future
+    change ever read or mutated a slot before its first assignment.
+    """
+    return {
+        c.OUTPUT_KEY_HITS: [[] for _ in range(total_number_of_events)],
+        c.OUTPUT_KEY_KERMA: [0.0] * total_number_of_events,
+        c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW: [
+            np.array([]) for _ in range(total_number_of_events)
+        ],
+        c.OUTPUT_KEY_CORRECTION_BACK_SCATTER: [np.array([]) for _ in range(total_number_of_events)],
+        c.OUTPUT_KEY_CORRECTION_MEDIUM: [np.array([]) for _ in range(total_number_of_events)],
+        c.OUTPUT_KEY_CORRECTION_TABLE: [0.0] * total_number_of_events,
+        c.OUTPUT_KEY_DOSE_MAP: np.zeros(dose_map_size),
+    }
