@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TypedDict
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -48,7 +49,17 @@ _GOLDEN_DOSE_MAP = _FIXTURES / "calculate_dose_siemens_axiom_artis_cylinder_dose
 # Golden values captured 2026-06-16 from recursive ``calculate_dose`` on
 # ``siemens_axiom_artis.dcm`` (cylinder phantom, 21 events). Any
 # recursion-to-iteration refactor must produce bit-identical output.
-_GOLDEN_SIEMENS_CYLINDER: dict[str, object] = {
+class _GoldenSiemensCylinder(TypedDict):
+    events: int
+    dose_map_len: int
+    psd_mgy: float
+    dose_sum: float
+    kerma_first3: list[float]
+    hit_counts_first3: list[int]
+    k_med_first3: list[float]
+
+
+_GOLDEN_SIEMENS_CYLINDER: _GoldenSiemensCylinder = {
     "events": 21,
     "dose_map_len": 9576,
     "psd_mgy": 1.3020214659058027,
