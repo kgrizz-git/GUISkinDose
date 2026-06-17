@@ -88,11 +88,7 @@ The adapter's `adapt()` function returns either a single `InputAdapterResult` (o
 
 **`analyze_data.py`**: Detect multi-exam input. For each exam DataFrame, call `calculate_dose()` independently. After all exams complete, sum per-exam dose maps element-wise to produce `aggregate_dose_map`.
 
-**Phantom sharing and per-exam repositioning:** The patient phantom mesh (model, topology, vertex ordering) is the same across all exams. However, `position_patient_phantom_on_table()` uses incremental `translate()` calls that mutate `patient.r` in place, then saves that state as `r_ref`. There is no reset-to-origin mechanism, so calling it a second time on the same `Phantom` instance with a different offset would compound the translations rather than replace them.
-
-The cleanest solution: **create a fresh `Phantom` instance per exam** using the same model/mesh settings. This avoids shared mutable position state. The mesh topology is deterministic and identical across instances, so `dose_map[i]` indexes the same anatomical vertex in every exam — element-wise summation remains valid. `table` and `pad` phantoms are also recreated per exam for the same reason (per-exam table offsets may differ).
-
-Alternatively, add a `reset_to_origin()` method to `Phantom` that restores `r` to its pre-positioning state (requires storing `r_origin` at construction). Either approach works; fresh-instance-per-exam is simpler.
+**Phantom sharing and per-exam repositioning:** The patient phantom (model, topology, vertex ordering) must be instantiated exactly once and shared across all exams to minimize memory usage. However, `position_patient_phantom_on_table()` uses incremental `translate()` calls that mutate `patient.r` in place. To support per-exam offsets without instantiating multiple meshes, we must add a `reset_to_origin()` method to the `Phantom` class that restores `r` to its pre-positioning state (requires storing `r_origin` at construction). `table` and `pad` phantoms are also reused and reset.
 
 **`calculate_dose/calculate_dose.py`**: Needs one change: `patient` is currently created inside `calculate_dose()` and returned. For the orchestrator to control per-exam offsets and collect per-exam `patient` references (needed to extract the dose map), patient creation must be lifted out or `calculate_dose()` must accept per-exam offset parameters directly.
 
@@ -149,6 +145,12 @@ class MultiExamResult:
 
 `format_analysis_result_for_export()` is bypassed in the multi-exam path. The orchestrator calls `calculate_dose()` directly for each exam and wraps the result in `ExamResult`, then assembles `MultiExamResult`.
 
+### Memory Management
+
+By reusing a single `Phantom` instance across exams, we avoid the memory overhead of duplicating the 3D mesh.
+- **Data:** `aggregate_dose_map` and per-exam dose maps are just lightweight 1D scalar arrays.
+- **GUI:** While the Python backend memory footprint is minimal, Plotly figures are highly memory-intensive in the browser. If we render a separate 3D Plotly figure for each exam in the GUI, it could crash the browser. A soft limit should be imposed (e.g., warn or block if > 10 exams are uploaded) to prevent browser-side memory issues.
+
 #### 4. CLI (`main.py`)
 
 ```bash
@@ -173,7 +175,8 @@ python -m mypyskindose --file-path batch.csv   # auto-split by study_id
 
 **Upload tab changes:**
 
-- File uploader already accepts multiple files (Quasar `multiple` prop is not set; add it).
+- Add the Quasar `multiple` prop to the `ui.upload` element.
+- **Temp File Lifecycle:** Modify `_register_temp_upload` and `_uploaded_temp_files` in `app.py` to allow multiple concurrent temporary files (stop deleting the previous file upon new upload). Add a "Clear All" mechanism to handle cleanup when the user resets the session.
 - On multi-file upload, each file is processed as a separate exam.
 - Show a **loaded exams list** after upload:
   - Each row: file name, schema, event count, study ID (if detected), status (OK/error).
@@ -192,10 +195,11 @@ python -m mypyskindose --file-path batch.csv   # auto-split by study_id
 **Settings tab changes:**
 
 - Global settings panel (existing).
-- Optional per-exam override section:
+- *(Phase 2)* Optional per-exam override section:
+  - *Note: Building dynamic, per-exam settings panels in NiceGUI will add significant complexity. Phase 1 will use global settings for all exams in the GUI (though the Python core API will support per-exam overrides immediately).*
   - Patient offset overrides per exam.
   - Table offset overrides per exam.
-  - Event-processing convention overrides per exam (e.g. coordinate sign conventions for different manufacturers).
+  - Event-processing convention overrides per exam.
   - "Apply global" button copies global settings to all exams.
 
 ### Prerequisite: Recursion → Iteration ✅ Complete
@@ -209,10 +213,10 @@ Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterat
 1. ✅ **Recursion → iteration refactor** — complete (`96ce63b`).
 2. **`ExamResult` and `MultiExamResult` dataclasses** — in `format_export_data.py`; include `patient_offset` on `ExamResult` and `aggregate_dose_map` on `MultiExamResult`.
 3. **Input adapter multi-study split** — `normalized.py` adapter returns list when >1 study ID detected.
-4. **`analyze_multiple_exams()` orchestrator** — in `analyze_data.py` / `main.py`; per-exam phantom instantiation (fresh `Phantom` per exam, same model/mesh settings); per-exam patient offsets passed to `position_patient_phantom_on_table()`; aggregate dose map computed as element-wise sum of per-exam dose maps after all exams complete; error handling (partial failure returns partial results with per-exam warnings).
+4. **`analyze_multiple_exams()` orchestrator** — in `analyze_data.py` / `main.py`; per-exam phantom repositioning using `reset_to_origin()` to share the single `Phantom` instance; per-exam patient offsets passed to `position_patient_phantom_on_table()`; aggregate dose map computed as element-wise sum of per-exam dose maps after all exams complete; error handling (partial failure returns partial results with per-exam warnings).
 5. **CLI multi-file support** — `--file-path nargs="+"`, glob expansion, `--output-format` blocking for `"html"`, `--input-schema` choices updated.
-6. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot.
-7. **Per-exam event-processing convention overrides** (Phase 2 — manufacturer coordinate differences).
+6. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot (using global settings).
+7. **GUI Phase 2 & Per-exam overrides** — UI panels for per-exam patient/table offsets, and per-exam event-processing convention overrides (manufacturer coordinate differences).
 8. **Tests** — unit, integration, GUI smoke.
 
 ## Testing
