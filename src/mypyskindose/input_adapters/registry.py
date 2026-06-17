@@ -135,6 +135,15 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]: ...
 
+@overload
+def read_and_normalize_input(
+    file_path: str | Path,
+    *,
+    input_schema: str | None = ...,
+    sheet_name: str | int = ...,
+    settings: PyskindoseSettings | None = ...,
+) -> InputAdapterResult | list[InputAdapterResult]: ...
+
 def read_and_normalize_input(
     file_path: str | Path,
     *,

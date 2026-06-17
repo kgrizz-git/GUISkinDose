@@ -381,12 +381,15 @@ class TestGenericRdsrAdapter:
 
 class TestSchemaAutoDetect:
     def test_auto_detects_normalized(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="auto")
+        assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "normalized"
 
     def test_auto_detects_generic_rdsr(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
@@ -394,6 +397,7 @@ class TestSchemaAutoDetect:
             input_schema="auto",
             settings=_default_settings(),
         )
+        assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "generic_rdsr_like"
 
     def test_auto_raises_on_no_match(self, tmp_path):
