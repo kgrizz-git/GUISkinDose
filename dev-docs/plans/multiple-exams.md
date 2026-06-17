@@ -27,7 +27,7 @@ Each exam produces its own dose map and PSD. The user may apply per-exam or glob
 | # | Decision | Rationale |
 |---|----------|-----------|
 | D1 | Exams are split by **study-level identifier**, not by file boundary in tabular input | A single export can contain multiple studies; splitting by study ID is the user-friendly default. File boundary splitting is the fallback for RDSR batches. |
-| D2 | Settings are **global by default** with per-exam override for phantom model/mesh and patient/table offsets | Most users run the same phantom across exams. Phantom override is needed when exams cover different body regions (e.g. head vs abdomen) where different meshes are appropriate. Patient and table offsets may differ per exam when the patient is repositioned between procedures or when exams are acquired on different equipment. |
+| D2 | Settings are **global by default** with per-exam override for patient/table offsets and event-processing conventions | Most users run the same phantom across exams. The phantom model and mesh are always shared. Per-exam overrides are needed when patient positioning changes between procedures (different offsets) or when exams come from different manufacturers whose coordinate conventions differ (e.g. different gantry angle sign conventions). |
 | D3 | Output is a list of `ExamResult` wrapped in a `MultiExamResult` | Keeps existing `PySkinDoseOutput` API intact. `MultiExamResult` adds aggregate stats and per-exam metadata. |
 | D4 | GUI shows exams as a **collapsible accordion** with per-exam result cards | Avoids overwhelming the user; each exam's dose map can be inspected independently. |
 | D5 | Recursion-to-iteration refactor is a **separate prerequisite task** | It is independently useful (fixes RecursionError on long single-exam procedures) and blocks multi-exam for >1000 total events. |
@@ -84,11 +84,11 @@ The adapter's `adapt()` function returns either a single `InputAdapterResult` (o
 
 **`analyze_data.py`**: Detect multi-exam input. For each exam DataFrame, call `calculate_dose()` independently. Phantom (patient, table, pad) is created once and shared across all exams.
 
-**`calculate_dose/calculate_dose.py`**: No changes needed — it already processes a single DataFrame. Each exam is a separate call.
+**`calculate_dose/calculate_dose.py`**: Needs one change: `patient` is currently created inside `calculate_dose()` and returned. For phantom sharing across exams, patient creation must be lifted out — either by extracting it to the orchestrator or by accepting an optional pre-built patient. `table` and `pad` are already created in `analyze_data()` and passed in, so the same pattern should apply to `patient`.
 
-**`calculate_dose/calculate_irradiation_event_result.py`**: **Recursion → iteration refactor** (see Prerequisite section below).
+**`calculate_dose/calculate_irradiation_event_result.py`**: ✅ Recursion → iteration refactor complete (shipped `96ce63b`).
 
-**Side effects**: In multi-exam headless mode, `create_geometry_plot()` and `create_dose_map_plot()` (called as side effects in `analyze_data.py` lines 56 and 76) must be skipped or gated. Otherwise the user would get N geometry plots for N exams. Plotting is disabled in multi-exam headless mode.
+**Plotting**: Each exam produces its own geometry plot and dose map plot as normal. No changes to plotting behavior — the user gets one plot per exam, which is the intended output.
 
 #### 3. Output (`format_export_data.py`)
 
@@ -179,39 +179,20 @@ python -m mypyskindose --file-path batch.csv   # auto-split by study_id
 
 - Global settings panel (existing).
 - Optional per-exam override section:
-  - Phantom model/mesh selector per exam (dropdown).
   - Patient offset overrides per exam.
   - Table offset overrides per exam.
+  - Event-processing convention overrides per exam (e.g. coordinate sign conventions for different manufacturers).
   - "Apply global" button copies global settings to all exams.
 
-### Prerequisite: Recursion → Iteration
+### Prerequisite: Recursion → Iteration ✅ Complete
 
 **Full plan:** [recursion-to-iteration.md](recursion-to-iteration.md)
 
-**File:** `src/mypyskindose/calculate_dose/calculate_irradiation_event_result.py`
-
-**Current:** `calculate_irradiation_event_result()` iterates over events in a `for` loop (shipped 2026-06-16; was per-event tail recursion, which hit Python's ~1000 frame limit on long procedures).
-
-**Plan:**
-
-1. Convert the tail recursion to a `for event in range(total_events):` loop.
-2. Carry `hits`, `table_hits`, `field_area`, `k_isq` as mutable state across iterations.
-3. Keep `pbar.update()` at each iteration.
-4. Keep the `new_geometry` check and `perform_calculations_for_new_geometries()` call.
-5. Keep `add_corrections_and_event_dose_to_output()` call.
-6. Preserve progress-bar semantics (update at each event, final update at end).
-7. Preserve new-geometry reuse (already handled by `check_new_geometry()` precomputation).
-
-**Verification:**
-- Existing tests pass.
-- Add a test with 1100 synthetic events (exceeds recursion limit).
-- Verify output is identical to the recursive version for existing inputs (deterministic).
-
-**This refactor is independent of multi-exam work and should be done first.**
+Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterative event loop`). `calculate_irradiation_event_result()` now uses a `for` loop; the ~1000-frame recursion limit no longer applies.
 
 ## Implementation Order
 
-1. **Recursion → iteration refactor** (unblocks >1000 events).
+1. ✅ **Recursion → iteration refactor** — complete (`96ce63b`).
 2. **`ExamResult` and `MultiExamResult` dataclasses** — in `format_export_data.py`.
 3. **Input adapter multi-study split** — `normalized.py` adapter returns list when >1 study ID detected.
 4. **`analyze_multiple_exams()` orchestrator** — in `analyze_data.py` / `main.py`; shared phantom; skipped plotting; error handling (partial failure returns partial results with per-exam warnings).
@@ -250,7 +231,7 @@ python -m mypyskindose --file-path batch.csv   # auto-split by study_id
 
 - **Q2:** Should the CLI support a `--aggregate` flag for a single "worst-case" PSD? → **Recommendation:** yes, `aggregate_psd` is always in the output dict. A CLI flag to print only the aggregate to stdout is convenient.
 
-- **Q3:** For tabular multi-study splitting, what is the **default study-identifier column** if none is detected? → **Recommendation:** check for `StudyInstanceUID`, `study_id`, `accession_number`, `patient_id` in that order. `StudyInstanceUID` (DICOM 0020,000D) is the most canonical identifier. If none present, keep the current error behavior (cannot determine study boundaries).
+- **Q3:** For tabular multi-study splitting, what is the **default study-identifier column** if none is detected? → **Recommendation:** check for `studyinstanceuid`, `study_id`, `accession_number`, `patient_id` in that order (matching the lowercase set already in `normalized.py:100`). `studyinstanceuid` (DICOM 0020,000D) is the most canonical identifier. If none present, keep the current error behavior (cannot determine study boundaries).
 
 - **Q4:** Should per-exam settings overrides be in the first implementation or Phase 2? → **Recommendation:** Phase 2. First version uses global settings for all exams.
 
