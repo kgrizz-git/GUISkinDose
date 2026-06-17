@@ -66,6 +66,9 @@ testpaths = ["tests"]
 pythonpath = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: long-running tests (e.g. 1000+ event dose stress); deselect with '-m \"not slow\"'",
+]
 
 [tool.isort]
 profile = "black"

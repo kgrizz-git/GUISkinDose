@@ -190,7 +190,7 @@ python -m mypyskindose --file-path batch.csv   # auto-split by study_id
 
 **File:** `src/mypyskindose/calculate_dose/calculate_irradiation_event_result.py`
 
-**Current:** `calculate_irradiation_event_result()` recurses once per event (line 138-155). Python's default recursion limit (~1000) means >990 events causes `RecursionError`.
+**Current:** `calculate_irradiation_event_result()` iterates over events in a `for` loop (shipped 2026-06-16; was per-event tail recursion, which hit Python's ~1000 frame limit on long procedures).
 
 **Plan:**
 

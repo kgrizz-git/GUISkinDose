@@ -1,28 +1,27 @@
-"""Tests for ``calculate_dose`` — pins the ``output_template`` shape.
+"""Tests for ``calculate_dose`` — template shape, edge cases, and golden baseline.
 
-The per-event slots in ``output_template`` are constructed once and then
-overwritten on every event, so the bug is latent: ``[[]] * N`` and
-``[np.array] * N`` (the previous values) produced shared references and
-the ``np.array`` *class* respectively, which would silently corrupt the
-dict on any future in-place mutation or pre-assignment read.
+The per-event slots in ``output_template`` are built by
+``_build_output_template()`` with independent list/array placeholders per event.
 
 Note on what is *not* tested here: at runtime, ``hits`` / ``k_isq`` slots
 for consecutive events with identical geometry legitimately share a list
 reference (``perform_calculations_for_new_geometries`` returns the same
 object when ``new_geometry[ev]`` is False). So a post-run "no shared
-references" assertion would be wrong; the bug is in the template, not
-the runtime.
+references" assertion would be wrong for runtime output.
 """
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
 import pydicom
 import pytest
+
+from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
 from mypyskindose import constants as c
 from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
@@ -43,6 +42,21 @@ from mypyskindose.rdsr_parser import rdsr_parser
 from mypyskindose.settings import PyskindoseSettings
 
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
+_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
+_GOLDEN_DOSE_MAP = _FIXTURES / "calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy"
+
+# Golden values captured 2026-06-16 from recursive ``calculate_dose`` on
+# ``siemens_axiom_artis.dcm`` (cylinder phantom, 21 events). Any
+# recursion-to-iteration refactor must produce bit-identical output.
+_GOLDEN_SIEMENS_CYLINDER: dict[str, object] = {
+    "events": 21,
+    "dose_map_len": 9576,
+    "psd_mgy": 1.3020214659058027,
+    "dose_sum": 47.835152878258654,
+    "kerma_first3": [0.03, 0.02, 0.01],
+    "hit_counts_first3": [96, 82, 63],
+    "k_med_first3": [1.038, 1.034, 1.034],
+}
 
 # Per-event slots whose final value type is mutable. "No shared references" and
 # "mutation is local" checks on the *template* are only meaningful for these;
@@ -295,11 +309,11 @@ def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
 # ── end-to-end via calculate_dose (smoke + slot-type pin) ──────────────
 
 
-def _settings() -> PyskindoseSettings:
+def _settings(*, phantom_model: str = "cylinder") -> PyskindoseSettings:
     base = load_settings_example_json()
     base["mode"] = "calculate_dose"
     base["silence_pydicom_warnings"] = True
-    base["phantom"]["model"] = "cylinder"
+    base["phantom"]["model"] = phantom_model
     base["plot"]["notebook_mode"] = False
     base["plot"]["plot_dosemap"] = False
     return PyskindoseSettings(settings=base)
@@ -335,3 +349,41 @@ def test_calculate_dose_runs_and_fills_per_event_slots():
     assert output[c.OUTPUT_KEY_DOSE_MAP].ndim == 1
     # non-negative dose
     assert np.all(output[c.OUTPUT_KEY_DOSE_MAP] >= 0.0)
+
+
+# ── recursion-to-iteration prep (golden baseline + stress) ─────────────
+
+
+def test_calculate_dose_golden_baseline_siemens_cylinder():
+    """Recursive output pinned; loop refactor must stay bit-identical."""
+    output = _run_calculate_dose()
+    golden = _GOLDEN_SIEMENS_CYLINDER
+    dose_map = output[c.OUTPUT_KEY_DOSE_MAP]
+
+    assert len(output[c.OUTPUT_KEY_HITS]) == golden["events"]
+    assert len(dose_map) == golden["dose_map_len"]
+    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"])
+    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"])
+
+    for ev, expected_kerma in enumerate(golden["kerma_first3"]):
+        assert output[c.OUTPUT_KEY_KERMA][ev] == pytest.approx(expected_kerma)
+        assert sum(output[c.OUTPUT_KEY_HITS][ev]) == golden["hit_counts_first3"][ev]
+        assert output[c.OUTPUT_KEY_CORRECTION_MEDIUM][ev] == pytest.approx(golden["k_med_first3"][ev])
+
+    expected_dose_map = np.load(_GOLDEN_DOSE_MAP)
+    np.testing.assert_array_equal(dose_map, expected_dose_map)
+
+
+@pytest.mark.slow
+def test_calculate_dose_handles_1100_events_without_recursion_error():
+    """Stress: >1000 events must not hit Python's recursion limit after refactor."""
+    n_events = 1100
+    settings = _settings(phantom_model="plane")
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+    norm = generate_synthetic_normalized_events(n_events)
+
+    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    assert output is not None
+    assert len(output[c.OUTPUT_KEY_HITS]) == n_events
+    assert np.any(output[c.OUTPUT_KEY_DOSE_MAP] > 0.0)

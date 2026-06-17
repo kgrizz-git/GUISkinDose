@@ -12,6 +12,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Recursion-to-iteration prep** (2026-06-16): golden baseline test and pinned `dose_map` fixture for `siemens_axiom_artis.dcm` (cylinder phantom); 1100-event stress test; `tests/calculate_dose_recursion_helpers.py` for synthetic normalized events; `slow` pytest marker. Plan in `dev-docs/plans/recursion-to-iteration.md`.
+
+### Fixed
+
+- **Per-event dose loop** (2026-06-16): `calculate_irradiation_event_result()` no longer recurses once per irradiation event; uses an iterative loop so procedures with >1000 events (and future multi-exam runs) do not hit Python's recursion limit. Output verified bit-identical to the prior implementation via golden baseline test.
+
 - **Tabular input Phase 1** (2026-06-09): `src/mypyskindose/input_adapters/` package — shared loader, column mapper, registry, `normalized` schema adapter; handles CSV/TSV/XLSX with encoding fallback (UTF-8/BOM/cp1252), delimiter sniffing, decimal-comma normalization, and offset header detection. CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only`. Python API `analyze_input_file()` and `preview_input_file()`. Architecture layer tests. Full unit test suite with six fixture variants.
 - **Tabular input Phase 2** (2026-06-09): `generic_rdsr_like` schema adapter — maps `rdsr_parser()`-style columns to `rdsr_normalizer()` input and produces the normalized DataFrame; `--input-schema auto` with ≥0.20 margin scoring. `GENERIC_RDSR_PATTERNS` and `GENERIC_RDSR_COLUMN_NAMES` in `column_mapper.py`; `NORMALIZED_COLUMN_CANONICAL` for proper-case output matching `rdsr_normalizer()`. Test fixture `generic_rdsr_events.csv` (21-event Siemens AXIOM-Artis).
 - **Tabular input Phase 3** (2026-06-10): `radimetrics` schema adapter in `input_adapters/radimetrics.py`; `RADIMETRICS_PATTERNS` and `RADIMETRICS_COLUMN_NAMES` in `column_mapper.py`; unit conversions (reference dose mGy→Gy, field area cm²→m², exposure mAs→µAs) with provenance tracking; unknown model warning (non-blocking); auto-detection support; synthetic fixture `radimetrics_events.csv` (5-event Siemens AXIOM-Artis); 8 new tests (46 total for input_adapters). GUI schema selector updated to include "Radimetrics CSV".

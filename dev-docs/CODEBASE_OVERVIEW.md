@@ -122,7 +122,7 @@ analyze_data.py         — creates Phantom objects, dispatches to mode handler
               ├─ fetch_and_append_hvl()                (geom_calc.py + corrections.db)
               ├─ calculate_k_bs()                      (corrections.py)
               ├─ calculate_k_tab()                     (corrections.py)
-              └─ calculate_irradiation_event_result()  (recursive, per-event)
+              └─ calculate_irradiation_event_result()  (iterative, per-event)
                       │
                       ├─ Beam.check_hit()              (beam_class.py)
                       ├─ scale_field_area()            (geom_calc.py)
@@ -308,7 +308,7 @@ Orchestrates the full calculation:
 3. Detects geometry changes between events (`check_new_geometry`)
 4. Pre-computes backscatter interpolation objects for all events
 5. Computes table transmission correction
-6. Calls `calculate_irradiation_event_result()` recursively for each event
+6. Calls `calculate_irradiation_event_result()` in a loop over each event
 
 ### `calculate_dose/calculate_irradiation_event_result.py`
 

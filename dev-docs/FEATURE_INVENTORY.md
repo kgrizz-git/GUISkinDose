@@ -171,7 +171,7 @@ Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file pat
 ## 5. Dose calculation pipeline
 
 ### 5.1 Overview
-`calculate_dose()` → `calculate_irradiation_event_result()` (recursive, one call per event)
+`calculate_dose()` → `calculate_irradiation_event_result()` (iterative loop over events)
 
 ### 5.2 Per-event steps
 1. Check if geometry changed since last event (`check_new_geometry`)

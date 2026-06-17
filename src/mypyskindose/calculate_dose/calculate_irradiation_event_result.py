@@ -95,66 +95,45 @@ def calculate_irradiation_event_result(
     if k_isq is None:
         k_isq = np.array([])
 
-    logger.debug(f"Calculating irradiation event {event + 1} out of {total_events}")
+    for ev in range(event, total_events):
+        logger.debug(f"Calculating irradiation event {ev + 1} out of {total_events}")
 
-    hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
-        normalized_data=normalized_data,
-        event=event,
-        new_geometry=new_geometry[event],
-        patient=patient,
-        table=table,
-        pad=pad,
-        hits=hits,
-        table_hits=table_hits,
-        field_area=field_area,
-        k_isq=k_isq,
-    )
+        hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
+            normalized_data=normalized_data,
+            event=ev,
+            new_geometry=new_geometry[ev],
+            patient=patient,
+            table=table,
+            pad=pad,
+            hits=hits,
+            table_hits=table_hits,
+            field_area=field_area,
+            k_isq=k_isq,
+        )
 
-    logger.debug("Saving event data")
+        logger.debug("Saving event data")
 
-    output[c.OUTPUT_KEY_HITS][event] = hits
-    output[c.OUTPUT_KEY_KERMA][event] = normalized_data.K_IRP[event]
-    output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][event] = k_isq
+        output[c.OUTPUT_KEY_HITS][ev] = hits
+        output[c.OUTPUT_KEY_KERMA][ev] = normalized_data.K_IRP[ev]
+        output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][ev] = k_isq
 
-    output = add_corrections_and_event_dose_to_output(
-        normalized_data=normalized_data,
-        event=event,
-        hits=hits,
-        table_hits=table_hits,
-        patient=patient,
-        back_scatter_interpolation=back_scatter_interpolation,
-        field_area=field_area,
-        k_tab=k_tab,
-        output=output,
-        corrections_db=corrections_db,
-    )
-
-    event += 1
-    if event < total_events:
+        output = add_corrections_and_event_dose_to_output(
+            normalized_data=normalized_data,
+            event=ev,
+            hits=hits,
+            table_hits=table_hits,
+            patient=patient,
+            back_scatter_interpolation=back_scatter_interpolation,
+            field_area=field_area,
+            k_tab=k_tab,
+            output=output,
+            corrections_db=corrections_db,
+        )
 
         if pbar is not None:
             pbar.update()
 
-        output = calculate_irradiation_event_result(
-            normalized_data=normalized_data,
-            event=event,
-            total_events=total_events,
-            new_geometry=new_geometry,
-            k_tab=k_tab,
-            hits=hits,
-            patient=patient,
-            table=table,
-            pad=pad,
-            back_scatter_interpolation=back_scatter_interpolation,
-            output=output,
-            corrections_db=corrections_db,
-            table_hits=table_hits,
-            field_area=field_area,
-            k_isq=k_isq,
-            pbar=pbar,
-        )
+    if pbar is not None:
+        pbar.refresh()
 
-        if event == total_events - 1 and pbar is not None:
-            pbar.update()
-            pbar.refresh()
     return output
