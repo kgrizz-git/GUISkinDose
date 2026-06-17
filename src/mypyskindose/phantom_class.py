@@ -272,9 +272,9 @@ class Phantom:
             )
 
         if isinstance(phantom_mesh_tuple[1], mesh.Mesh):
-            return phantom_mesh_tuple
+            return phantom_mesh_tuple[0], phantom_mesh_tuple[1]
 
-        return phantom_mesh_tuple[0], mesh.Mesh.from_file(phantom_mesh_tuple[1])
+        return phantom_mesh_tuple[0], mesh.Mesh.from_file(str(phantom_mesh_tuple[1]))
 
     def rotate(self, angles: List[int]) -> None:
         """Rotate the phantom about the angles specified in rotation.
