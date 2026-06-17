@@ -2,11 +2,11 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Sequence, Union
 
 import pandas as pd
 
-from mypyskindose.analyze_data import analyze_data
+from mypyskindose.analyze_data import analyze_data, analyze_multiple_exams
 from mypyskindose.constants import (
     RUN_ARGUMENTS_MODE_GUI,
     RUN_ARGUMENTS_MODE_HEADLESS,
@@ -16,7 +16,7 @@ from mypyskindose.constants import (
 )
 from mypyskindose.debug import dprint
 from mypyskindose.dev_data import DEVELOPMENT_PARAMETERS
-from mypyskindose.format_export_data import PySkinDoseOutput
+from mypyskindose.format_export_data import MultiExamResult, PySkinDoseOutput
 from mypyskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
 )
@@ -108,6 +108,11 @@ def analyze_input_file(
             sheet_name=sheet_name,
             settings=settings,
         )
+        if isinstance(result, list):
+            for exam in result:
+                for w in exam.warnings:
+                    logger.warning("tabular input (exam %s): %s", exam.study_id or "?", w)
+            return analyze_multiple_exams(result, settings)
         for w in result.warnings:
             logger.warning("tabular input: %s", w)
         data_norm = result.normalized_data
@@ -115,6 +120,77 @@ def analyze_input_file(
         data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
 
     return analyze_data(normalized_data=data_norm, settings=settings)
+
+
+def analyze_multiple_input_files(
+    file_paths: Sequence[str | Path],
+    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+    *,
+    input_schema: Optional[str] = None,
+    sheet_name: Union[str, int] = 0,
+    per_exam_offsets: list[list[float]] | None = None,
+) -> MultiExamResult:
+    """Run PySkinDose on a list of input files, treating each as a separate exam.
+
+    Tabular files that contain multiple study identifiers are automatically split
+    into per-exam inputs before processing.  RDSR / JSON files are each treated
+    as one exam.
+
+    Parameters
+    ----------
+    file_paths:
+        Paths to input files (.csv, .tsv, .xlsx, .dcm, .json). Glob patterns
+        (e.g. ``"exams/*.dcm"``) should be expanded by the caller before passing.
+    settings:
+        Global settings applied to all exams.
+    input_schema:
+        Schema adapter for tabular files. ``None`` defaults to ``"normalized"``.
+    sheet_name:
+        Sheet name or 0-based index for Excel files.
+    per_exam_offsets:
+        Optional per-exam patient offsets [[d_lon, d_ver, d_lat], ...].
+    """
+    from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+    from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+    settings_obj = parse_settings_to_settings_class(settings=settings)
+    all_exams: list[InputAdapterResult] = []
+
+    for fp in file_paths:
+        fp = Path(fp)
+        suffix = fp.suffix.lower()
+        if suffix in _TABULAR_SUFFIXES:
+            result = read_and_normalize_input(
+                fp, input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+            )
+            if isinstance(result, list):
+                all_exams.extend(result)
+            else:
+                all_exams.append(result)
+        else:
+            data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(fp), settings=settings_obj)
+            provenance = InputProvenance(
+                source_type=suffix.lstrip("."),
+                schema_name="rdsr",
+                original_filename=fp.name,
+                header_row_index=0,
+                detected_encoding="n/a",
+                detected_delimiter=None,
+                sheet_name=None,
+                column_map={},
+                unit_conversions={},
+                warnings=[],
+            )
+            all_exams.append(
+                InputAdapterResult(
+                    normalized_data=data_norm,
+                    raw_data=None,
+                    provenance=provenance,
+                    warnings=[],
+                )
+            )
+
+    return analyze_multiple_exams(all_exams, settings_obj, per_exam_offsets=per_exam_offsets)
 
 
 def preview_input_file(
@@ -126,30 +202,35 @@ def preview_input_file(
     """Print a column-mapping preview without running the dose calculation."""
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
-    result = read_and_normalize_input(
+    raw = read_and_normalize_input(
         file_path,
         input_schema=input_schema,
         sheet_name=sheet_name,
     )
-    prov = result.provenance
-    print(f"File:          {prov.original_filename}")
-    print(f"Schema:        {prov.schema_name}")
-    print(f"Encoding:      {prov.detected_encoding}")
-    print(f"Delimiter:     {prov.detected_delimiter!r}")
-    print(f"Header row:    {prov.header_row_index}")
-    print(f"Events loaded: {len(result.normalized_data)}")
-    print()
-    print("Column map (source → normalized):")
-    for src, norm in prov.column_map.items():
-        print(f"  {src!r:30s} → {norm}")
-    if prov.warnings:
+    results = raw if isinstance(raw, list) else [raw]
+    for result in results:
+        prov = result.provenance
+        print(f"File:          {prov.original_filename}")
+        if result.study_id:
+            print(f"Study ID:      {result.study_id}")
+        print(f"Schema:        {prov.schema_name}")
+        print(f"Encoding:      {prov.detected_encoding}")
+        print(f"Delimiter:     {prov.detected_delimiter!r}")
+        print(f"Header row:    {prov.header_row_index}")
+        print(f"Events loaded: {len(result.normalized_data)}")
         print()
-        print("Warnings:")
-        for w in prov.warnings:
-            print(f"  {w}")
-    print()
-    print("First 5 normalized events:")
-    print(result.normalized_data.head(5).to_string())
+        print("Column map (source → normalized):")
+        for src, norm in prov.column_map.items():
+            print(f"  {src!r:30s} → {norm}")
+        if prov.warnings:
+            print()
+            print("Warnings:")
+            for w in prov.warnings:
+                print(f"  {w}")
+        print()
+        print("First 5 normalized events:")
+        print(result.normalized_data.head(5).to_string())
+        print()
 
 
 def analyze_normalized_data_with_custom_settings_object(
@@ -211,8 +292,13 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         "--file-path",
         "-f",
         required=False,
+        nargs="+",
         dest="file_path",
-        help="Path to RDSR DICOM file (required in headless mode)",
+        help=(
+            "Path(s) to input file(s). Accepts one or more .dcm, .csv, .tsv, or .xlsx "
+            "paths. Multiple paths are processed as separate exams. A single tabular "
+            "file containing multiple study identifiers is automatically split."
+        ),
     )
 
     parser.add_argument(
@@ -251,7 +337,7 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         required=False,
         default=None,
         dest="input_schema",
-        choices=("normalized", "generic_rdsr_like", "auto"),
+        choices=("normalized", "generic_rdsr_like", "radimetrics", "dosetrack", "auto"),
         help="Schema adapter for tabular files (.csv/.tsv/.xlsx). Default: 'normalized'.",
     )
 
@@ -285,4 +371,34 @@ if __name__ == "__main__":
             logger.warning("No settings specified. Running with development parameters")
             run_settings = DEVELOPMENT_PARAMETERS
 
-        main(file_path=args.file_path, settings=run_settings)
+        file_paths: list[str] = args.file_path or []
+        if len(file_paths) > 1:
+            result = analyze_multiple_input_files(
+                file_paths,
+                settings=run_settings,
+                input_schema=getattr(args, "input_schema", None),
+                sheet_name=getattr(args, "sheet_name", 0),
+            )
+            import json as _json
+            print(_json.dumps(result.to_dict()))
+        elif len(file_paths) == 1:
+            single_path = file_paths[0]
+            suffix = Path(single_path).suffix.lower()
+            if suffix in _TABULAR_SUFFIXES:
+                if getattr(args, "input_preview_only", False):
+                    preview_input_file(
+                        single_path,
+                        input_schema=getattr(args, "input_schema", None),
+                        sheet_name=getattr(args, "sheet_name", 0),
+                    )
+                else:
+                    analyze_input_file(
+                        single_path,
+                        settings=run_settings,
+                        input_schema=getattr(args, "input_schema", None),
+                        sheet_name=getattr(args, "sheet_name", 0),
+                    )
+            else:
+                main(file_path=single_path, settings=run_settings)
+        else:
+            main(file_path=None, settings=run_settings)

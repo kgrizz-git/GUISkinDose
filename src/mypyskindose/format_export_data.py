@@ -466,6 +466,53 @@ class PySkinDoseOutput:
         return json.dumps(self.to_dict())
 
 
+@dataclass
+class ExamResult:
+    """Per-exam wrapper around PySkinDoseOutput with run metadata."""
+
+    exam_id: str
+    source_file: str
+    event_count: int
+    patient_offset: list[float]
+    settings_snapshot: dict[str, Any]
+    output: PySkinDoseOutput
+    warnings: list[str]
+
+
+@dataclass
+class MultiExamResult:
+    """Result of a multi-exam run: per-exam outputs plus an aggregate dose map."""
+
+    exams: list[ExamResult]
+    aggregate_dose_map: np.ndarray
+    aggregate_psd: float
+    total_events: int
+    warnings: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "exams": [
+                {
+                    "exam_id": e.exam_id,
+                    "source_file": e.source_file,
+                    "event_count": e.event_count,
+                    "patient_offset": e.patient_offset,
+                    "settings_snapshot": e.settings_snapshot,
+                    "warnings": e.warnings,
+                    "output": e.output.to_dict(),
+                }
+                for e in self.exams
+            ],
+            "aggregate_dose_map": self.aggregate_dose_map.tolist(),
+            "aggregate_psd": self.aggregate_psd,
+            "total_events": self.total_events,
+            "warnings": self.warnings,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
+
+
 def format_analysis_result_for_export(
     analysis_result: Dict[str, Any],
     data_norm: pd.DataFrame,

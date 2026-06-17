@@ -100,6 +100,9 @@ _STUDY_ID_COLUMNS = frozenset(
     {"study_id", "accession_number", "patient_id", "study_uid", "studyinstanceuid"}
 )
 
+# Priority order for study-identifier column detection (most canonical first).
+_STUDY_ID_PRIORITY = ("studyinstanceuid", "study_id", "accession_number", "patient_id", "study_uid")
+
 
 def _coerce_numeric(
     col_series: pd.Series,
@@ -166,11 +169,12 @@ def _build_column_map(
     return column_map, errors
 
 
-def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult:
+def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list[InputAdapterResult]:
     """Convert a raw-loaded file to a normalized InputAdapterResult.
 
-    Raises ValueError on blocking errors (missing required columns, duplicates,
-    multiple procedures detected).
+    Returns a list of InputAdapterResult when multiple study identifiers are
+    detected (one per distinct study ID, in order of first appearance).
+    Raises ValueError on blocking errors (missing required columns, duplicates).
     """
     warnings: list[str] = []
     raw_df = loaded.raw_df
@@ -194,25 +198,25 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult:
     canonical_cols = list(column_map.values())
     data_df = data_df[[c for c in canonical_cols if c in data_df.columns]]
 
-    # 4. Multi-study check (on original raw headers, case-insensitive)
+    # 4. Locate study-identifier column for multi-study split detection.
+    #    Iterate in priority order; stop at the first match.
     raw_headers_lower = {h.strip().lower() for h in raw_headers}
-    for sid_col in _STUDY_ID_COLUMNS:
-        if sid_col in raw_headers_lower:
-            actual_col = next(h for h in raw_headers if h.strip().lower() == sid_col)
-            if actual_col in data_df.columns:
-                unique_ids = data_df[actual_col].str.strip().nunique()
-            else:
-                raw_data_df = raw_df.iloc[header_idx + 1 :].copy()
-                raw_data_df.columns = pd.Index(raw_headers)
-                raw_data_df = raw_data_df.reset_index(drop=True)
-                unique_ids = raw_data_df[actual_col].str.strip().nunique()
-            if unique_ids > 1:
-                raise ValueError(
-                    f"Column {actual_col!r} contains {unique_ids} distinct values — "
-                    "this file appears to contain multiple procedures. "
-                    "Filter the export to a single procedure before loading, or "
-                    "see the 'support for multiple exams' item in TO_DO.md."
-                )
+    _sid_values: pd.Series | None = None
+    for sid_col in _STUDY_ID_PRIORITY:
+        if sid_col not in raw_headers_lower:
+            continue
+        actual_col = next(h for h in raw_headers if h.strip().lower() == sid_col)
+        if actual_col in data_df.columns:
+            _sid_values = data_df[actual_col].astype(str).str.strip()
+        else:
+            # Study-ID column was not mapped into canonical data_df.
+            # Reconstruct from raw and align to data_df's (possibly non-contiguous) index.
+            raw_data_df = raw_df.iloc[header_idx + 1 :].copy()
+            raw_data_df.columns = pd.Index(raw_headers)
+            raw_data_df = raw_data_df.reset_index(drop=True)
+            sid_all = raw_data_df[actual_col].astype(str).str.strip()
+            _sid_values = sid_all.loc[data_df.index]
+        break
 
     # 5. Coerce numeric columns
     for col in _NUMERIC_COLUMNS:
@@ -232,6 +236,36 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult:
         unit_conversions={},  # no conversions; data is already in internal units
         warnings=warnings,
     )
+
+    # 7. Multi-study split: if >1 distinct study IDs, return one result per group.
+    if _sid_values is not None and _sid_values.nunique() > 1:
+        temp_col = "__study_id__"
+        data_df = data_df.copy()
+        data_df[temp_col] = _sid_values  # index-aligned; pandas aligns by index
+        results: list[InputAdapterResult] = []
+        for study_id_val, group_df in data_df.groupby(temp_col, sort=False):
+            group_df = group_df.drop(columns=[temp_col]).reset_index(drop=True)
+            results.append(
+                InputAdapterResult(
+                    normalized_data=group_df,
+                    raw_data=None,
+                    provenance=InputProvenance(
+                        source_type=provenance.source_type,
+                        schema_name=provenance.schema_name,
+                        original_filename=provenance.original_filename,
+                        header_row_index=provenance.header_row_index,
+                        detected_encoding=provenance.detected_encoding,
+                        detected_delimiter=provenance.detected_delimiter,
+                        sheet_name=provenance.sheet_name,
+                        column_map=dict(provenance.column_map),
+                        unit_conversions=dict(provenance.unit_conversions),
+                        warnings=list(warnings),
+                    ),
+                    warnings=list(warnings),
+                    study_id=str(study_id_val),
+                )
+            )
+        return results
 
     return InputAdapterResult(
         normalized_data=data_df,

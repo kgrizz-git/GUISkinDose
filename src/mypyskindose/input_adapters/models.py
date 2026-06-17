@@ -27,6 +27,7 @@ class InputAdapterResult:
     raw_data: pd.DataFrame | None
     provenance: InputProvenance
     warnings: list[str] = field(default_factory=list)
+    study_id: str | None = field(default=None)
 
 
 @dataclass

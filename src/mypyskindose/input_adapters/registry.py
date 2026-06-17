@@ -120,8 +120,12 @@ def read_and_normalize_input(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     settings: PyskindoseSettings | None = None,
-) -> InputAdapterResult:
+) -> InputAdapterResult | list[InputAdapterResult]:
     """Load a tabular file and return a normalized InputAdapterResult.
+
+    Returns a list when the file contains multiple study identifiers and the
+    selected adapter supports splitting (currently: ``"normalized"`` schema).
+    Callers must handle both the single and list cases.
 
     Parameters
     ----------
@@ -193,6 +197,10 @@ def read_and_normalize_input(
 
     # Propagate sheet_name into provenance for Excel files
     if suffix in (".xlsx", ".xlsm"):
-        result.provenance.sheet_name = sheet_name
+        if isinstance(result, list):
+            for r in result:
+                r.provenance.sheet_name = sheet_name
+        else:
+            result.provenance.sheet_name = sheet_name
 
     return result

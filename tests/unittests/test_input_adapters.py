@@ -219,13 +219,23 @@ class TestNormalizedAdapter:
         with pytest.raises(ValueError, match="Missing required"):
             adapter.adapt(loaded, original_filename="bad.csv")
 
-    def test_multistudy_raises(self):
+    def test_multistudy_splits(self):
         from mypyskindose.input_adapters import normalized as adapter
         from mypyskindose.input_adapters.tabular_loader import read_csv
 
         loaded = read_csv(FIXTURES / "normalized_events_multistudy.csv")
-        with pytest.raises(ValueError, match="multiple procedures"):
-            adapter.adapt(loaded, original_filename="normalized_events_multistudy.csv")
+        results = adapter.adapt(loaded, original_filename="normalized_events_multistudy.csv")
+        assert isinstance(results, list), "multi-study file should return a list"
+        assert len(results) == 2, "fixture has two distinct study IDs"
+        study_ids = {r.study_id for r in results}
+        assert study_ids == {"A001", "A002"}
+        for r in results:
+            assert len(r.normalized_data) == 1
+            assert r.provenance.schema_name == "normalized"
+
+    def test_multistudy_single_study_returns_single(self):
+        result = self._load_and_adapt("normalized_events.csv")
+        assert not isinstance(result, list), "single-study file must return InputAdapterResult, not list"
 
     def test_kvp_values_are_numeric(self):
         result = self._load_and_adapt("normalized_events.csv")
@@ -248,6 +258,13 @@ class TestRegistry:
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.xlsx")
         assert len(result.normalized_data) == 2
+
+    def test_multistudy_csv_returns_list(self):
+        from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(FIXTURES / "normalized_events_multistudy.csv")
+        assert isinstance(result, list)
+        assert len(result) == 2
 
     def test_unknown_schema_raises(self):
         from mypyskindose.input_adapters.registry import read_and_normalize_input
