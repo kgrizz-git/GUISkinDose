@@ -16,10 +16,10 @@ Each exam produces its own dose map and PSD. The user may apply per-exam or glob
 
 - [ ] CLI accepts multiple file paths (`--file-path file1.dcm file2.dcm` or `--file-path *.dcm` or `--file-path batch.csv`).
 - [ ] Tabular loader splits a single file into per-exam DataFrames when a study-identifier column is present and contains >1 unique value (previously: error).
-- [ ] Each exam gets its own dose map and `PySkinDoseOutput`; phantom (patient/table/pad) is shared across exams.
-- [ ] Output contains per-exam PSDs plus an optional aggregate (max PSD across exams).
+- [ ] Each exam gets its own dose map and `PySkinDoseOutput`; phantom mesh (model, topology, vertex ordering) is shared across exams; per-exam patient offsets are supported.
+- [ ] Output contains per-exam PSDs, per-exam dose maps, and a cumulative dose map (element-wise sum across exams) plus aggregate PSD (max across exams).
 - [ ] GUI shows a list of loaded exams with per-exam metadata (file name, event count, study ID, detected schema) and per-exam results after calculation.
-- [ ] Recursion-to-iteration refactor is complete (prerequisite: >1000 events across multiple exams).
+- [ ] ✅ Recursion-to-iteration refactor is complete (`96ce63b`).
 - [ ] Full test coverage for multi-exam paths (unit + smoke).
 
 ## Decision Log
@@ -27,7 +27,7 @@ Each exam produces its own dose map and PSD. The user may apply per-exam or glob
 | # | Decision | Rationale |
 |---|----------|-----------|
 | D1 | Exams are split by **study-level identifier**, not by file boundary in tabular input | A single export can contain multiple studies; splitting by study ID is the user-friendly default. File boundary splitting is the fallback for RDSR batches. |
-| D2 | Settings are **global by default** with per-exam override for patient/table offsets and event-processing conventions | Most users run the same phantom across exams. The phantom model and mesh are always shared. Per-exam overrides are needed when patient positioning changes between procedures (different offsets) or when exams come from different manufacturers whose coordinate conventions differ (e.g. different gantry angle sign conventions). |
+| D2 | Settings are **global by default** with per-exam override for patient/table offsets and event-processing conventions | Most users run the same phantom across exams. The phantom model and mesh are always shared (same topology, same vertex count and ordering). Per-exam offsets are first-class because patient positioning routinely differs between procedures. Per-exam event-processing conventions are needed when exams come from different manufacturers with different coordinate conventions. |
 | D3 | Output is a list of `ExamResult` wrapped in a `MultiExamResult` | Keeps existing `PySkinDoseOutput` API intact. `MultiExamResult` adds aggregate stats and per-exam metadata. |
 | D4 | GUI shows exams as a **collapsible accordion** with per-exam result cards | Avoids overwhelming the user; each exam's dose map can be inspected independently. |
 | D5 | Recursion-to-iteration refactor is a **separate prerequisite task** | It is independently useful (fixes RecursionError on long single-exam procedures) and blocks multi-exam for >1000 total events. |
@@ -42,13 +42,17 @@ MultiExamResult
 │   ├── exam_id: str              # study_uid, accession, or file name
 │   ├── source_file: str          # original file path
 │   ├── event_count: int
+│   ├── patient_offset: list[float]  # per-exam offset used (d_lon, d_ver, d_lat)
 │   ├── settings_snapshot: dict   # effective settings used (PyskindoseSettings.model_dump())
-│   ├── output: PySkinDoseOutput  # per-exam result
+│   ├── output: PySkinDoseOutput  # per-exam result (includes per-exam dose_map)
 │   └── warnings: list[str]
-├── aggregate_psd: float          # max PSD across exams
+├── aggregate_dose_map: np.ndarray  # element-wise sum of per-exam dose maps (same mesh)
+├── aggregate_psd: float            # max over aggregate_dose_map (peak skin dose across all exams)
 ├── total_events: int
 └── warnings: list[str]
 ```
+
+**Why element-wise summation is valid:** all exams use the same phantom model, so `dose_map[i]` refers to the same anatomical skin vertex in every exam regardless of world-space repositioning. Summing them gives the cumulative dose received by each skin location across the full procedure series.
 
 `ExamResult` is a wrapper around `PySkinDoseOutput` that carries per-exam metadata. It lives in `format_export_data.py` alongside `MultiExamResult`.
 
@@ -82,9 +86,15 @@ The adapter's `adapt()` function returns either a single `InputAdapterResult` (o
 
 #### 2. Calculation (`analyze_data.py`, `calculate_dose/`)
 
-**`analyze_data.py`**: Detect multi-exam input. For each exam DataFrame, call `calculate_dose()` independently. Phantom (patient, table, pad) is created once and shared across all exams.
+**`analyze_data.py`**: Detect multi-exam input. For each exam DataFrame, call `calculate_dose()` independently. After all exams complete, sum per-exam dose maps element-wise to produce `aggregate_dose_map`.
 
-**`calculate_dose/calculate_dose.py`**: Needs one change: `patient` is currently created inside `calculate_dose()` and returned. For phantom sharing across exams, patient creation must be lifted out — either by extracting it to the orchestrator or by accepting an optional pre-built patient. `table` and `pad` are already created in `analyze_data()` and passed in, so the same pattern should apply to `patient`.
+**Phantom sharing and per-exam repositioning:** The patient phantom mesh (model, topology, vertex ordering) is the same across all exams. However, `position_patient_phantom_on_table()` uses incremental `translate()` calls that mutate `patient.r` in place, then saves that state as `r_ref`. There is no reset-to-origin mechanism, so calling it a second time on the same `Phantom` instance with a different offset would compound the translations rather than replace them.
+
+The cleanest solution: **create a fresh `Phantom` instance per exam** using the same model/mesh settings. This avoids shared mutable position state. The mesh topology is deterministic and identical across instances, so `dose_map[i]` indexes the same anatomical vertex in every exam — element-wise summation remains valid. `table` and `pad` phantoms are also recreated per exam for the same reason (per-exam table offsets may differ).
+
+Alternatively, add a `reset_to_origin()` method to `Phantom` that restores `r` to its pre-positioning state (requires storing `r_origin` at construction). Either approach works; fresh-instance-per-exam is simpler.
+
+**`calculate_dose/calculate_dose.py`**: Needs one change: `patient` is currently created inside `calculate_dose()` and returned. For the orchestrator to control per-exam offsets and collect per-exam `patient` references (needed to extract the dose map), patient creation must be lifted out or `calculate_dose()` must accept per-exam offset parameters directly.
 
 **`calculate_dose/calculate_irradiation_event_result.py`**: ✅ Recursion → iteration refactor complete (shipped `96ce63b`).
 
@@ -100,14 +110,16 @@ class ExamResult:
     exam_id: str
     source_file: str
     event_count: int
-    settings_snapshot: dict  # PyskindoseSettings.model_dump()
+    patient_offset: list[float]      # [d_lon, d_ver, d_lat] used for this exam
+    settings_snapshot: dict          # PyskindoseSettings.model_dump()
     output: PySkinDoseOutput
     warnings: list[str]
 
 @dataclass
 class MultiExamResult:
     exams: list[ExamResult]
-    aggregate_psd: float          # max PSD across exams
+    aggregate_dose_map: np.ndarray  # element-wise sum of per-exam dose maps
+    aggregate_psd: float            # max over aggregate_dose_map
     total_events: int
     warnings: list[str]
 
@@ -118,12 +130,14 @@ class MultiExamResult:
                     "exam_id": e.exam_id,
                     "source_file": e.source_file,
                     "event_count": e.event_count,
+                    "patient_offset": e.patient_offset,
                     "settings_snapshot": e.settings_snapshot,
                     "warnings": e.warnings,
                     "output": e.output.to_dict(),
                 }
                 for e in self.exams
             ],
+            "aggregate_dose_map": self.aggregate_dose_map.tolist(),
             "aggregate_psd": self.aggregate_psd,
             "total_events": self.total_events,
             "warnings": self.warnings,
@@ -193,12 +207,12 @@ Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterat
 ## Implementation Order
 
 1. ✅ **Recursion → iteration refactor** — complete (`96ce63b`).
-2. **`ExamResult` and `MultiExamResult` dataclasses** — in `format_export_data.py`.
+2. **`ExamResult` and `MultiExamResult` dataclasses** — in `format_export_data.py`; include `patient_offset` on `ExamResult` and `aggregate_dose_map` on `MultiExamResult`.
 3. **Input adapter multi-study split** — `normalized.py` adapter returns list when >1 study ID detected.
-4. **`analyze_multiple_exams()` orchestrator** — in `analyze_data.py` / `main.py`; shared phantom; skipped plotting; error handling (partial failure returns partial results with per-exam warnings).
+4. **`analyze_multiple_exams()` orchestrator** — in `analyze_data.py` / `main.py`; per-exam phantom instantiation (fresh `Phantom` per exam, same model/mesh settings); per-exam patient offsets passed to `position_patient_phantom_on_table()`; aggregate dose map computed as element-wise sum of per-exam dose maps after all exams complete; error handling (partial failure returns partial results with per-exam warnings).
 5. **CLI multi-file support** — `--file-path nargs="+"`, glob expansion, `--output-format` blocking for `"html"`, `--input-schema` choices updated.
-6. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results.
-7. **Per-exam settings overrides** (optional, lower priority).
+6. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot.
+7. **Per-exam event-processing convention overrides** (Phase 2 — manufacturer coordinate differences).
 8. **Tests** — unit, integration, GUI smoke.
 
 ## Testing
@@ -209,13 +223,16 @@ Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterat
 - `test_normalized_single_study_returns_single()` — single study ID → single result (no regression).
 - `test_exam_result_serialization()` — `ExamResult` fields round-trip correctly.
 - `test_multi_exam_result_serialization()` — `to_dict()` and `to_json()` round-trip.
-- `test_analyze_multiple_exams()` — orchestrator processes list of DataFrames, returns `MultiExamResult`.
-- `test_recursion_iteration_equivalence()` — recursive vs iterative output identical for 500 events.
+- `test_analyze_multiple_exams()` — orchestrator processes list of DataFrames, returns `MultiExamResult` with correct per-exam dose maps and aggregate.
+- `test_aggregate_dose_map_is_sum_of_per_exam_maps()` — `aggregate_dose_map` equals element-wise sum of `ExamResult.output.dose_map` for all exams.
+- `test_per_exam_offsets_are_independent()` — two exams with different `patient_offset` values each use the correct offset; neither affects the other's phantom positioning.
+- `test_recursion_iteration_equivalence()` — iterative output identical to reference for 500 events.
 - `test_recursion_iteration_no_crash_1100_events()` — iterative version handles >1000 events.
 
 ### Integration tests
 
-- Load two example RDSR files, verify two PSDs in output.
+- Load two example RDSR files, verify two per-exam PSDs and a cumulative dose map in output.
+- Load two exams with different `patient_offset` values; verify aggregate dose map equals sum of per-exam maps and that per-exam dose maps differ from each other.
 - Load a synthetic multi-study CSV, verify per-exam grouping.
 - Load multi-exam input where one exam fails, verify partial results with warnings.
 
@@ -227,13 +244,13 @@ Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterat
 
 ## Open Questions
 
-- **Q1:** Should multi-exam output include a **cumulative** dose map (summed across exams) or only per-exam maps? → **Recommendation:** per-exam only. Cumulative is clinically questionable (different time points, different phantom positions). Can be added later if requested.
+- **Q1:** Should multi-exam output include a **cumulative** dose map (summed across exams) or only per-exam maps? → **Decision:** both. Per-exam dose maps are included in each `ExamResult.output`. The `MultiExamResult.aggregate_dose_map` is the element-wise sum across all exams — the total dose received by each skin vertex across the full procedure series. `aggregate_psd` is the peak of that cumulative map.
 
 - **Q2:** Should the CLI support a `--aggregate` flag for a single "worst-case" PSD? → **Recommendation:** yes, `aggregate_psd` is always in the output dict. A CLI flag to print only the aggregate to stdout is convenient.
 
 - **Q3:** For tabular multi-study splitting, what is the **default study-identifier column** if none is detected? → **Recommendation:** check for `studyinstanceuid`, `study_id`, `accession_number`, `patient_id` in that order (matching the lowercase set already in `normalized.py:100`). `studyinstanceuid` (DICOM 0020,000D) is the most canonical identifier. If none present, keep the current error behavior (cannot determine study boundaries).
 
-- **Q4:** Should per-exam settings overrides be in the first implementation or Phase 2? → **Recommendation:** Phase 2. First version uses global settings for all exams.
+- **Q4:** Should per-exam settings overrides be in the first implementation or Phase 2? → **Decision:** per-exam patient/table offsets are Phase 1 (first-class requirement — patients are routinely repositioned between procedures). Per-exam event-processing convention overrides (manufacturer coordinate differences) are Phase 2.
 
 - **Q5:** How should the progress bar behave across multiple exams? → **Options:** (a) One shared bar (0–total_events across all exams), (b) Per-exam bars (reset for each exam), (c) One bar with sub-labels showing exam name. → **Recommendation:** (a) One shared bar for simplicity; the user sees continuous progress. Per-exam bars (b) are better if exams are very disparate in size (e.g. 10 events vs 5000 events).
 
