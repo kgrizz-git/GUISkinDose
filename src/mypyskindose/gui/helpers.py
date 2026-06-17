@@ -130,12 +130,21 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
         settings = build_settings(state, mode="calculate_dose")
         schema = state.input_schema or "auto"
 
-        result = read_and_normalize_input(
+        _raw = read_and_normalize_input(
             file_path,
             input_schema=schema,
             settings=settings,
             sheet_name=state.input_sheet_name,
         )
+        if isinstance(_raw, list):
+            ids = [r.study_id or "?" for r in _raw]
+            raise ValueError(
+                f"This file contains {len(_raw)} separate studies "
+                f"({', '.join(ids)}). "
+                "Use the multi-exam API (analyze_multiple_input_files) or "
+                "export a single study before loading here."
+            )
+        result = _raw
 
         df = result.normalized_data.copy()
 

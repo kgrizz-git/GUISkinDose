@@ -168,10 +168,15 @@ class TestTabularLoader:
 class TestNormalizedAdapter:
     def _load_and_adapt(self, filename: str):
         from mypyskindose.input_adapters import normalized as adapter
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.tabular_loader import load
 
         loaded = load(FIXTURES / filename)
-        return adapter.adapt(loaded, original_filename=filename)
+        result = adapter.adapt(loaded, original_filename=filename)
+        assert isinstance(result, InputAdapterResult), (
+            f"Expected single InputAdapterResult for {filename!r}, got list"
+        )
+        return result
 
     def test_csv_round_trip(self):
         result = self._load_and_adapt("normalized_events.csv")
@@ -247,16 +252,20 @@ class TestNormalizedAdapter:
 
 class TestRegistry:
     def test_csv_routes_to_normalized(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.csv")
+        assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "normalized"
         assert len(result.normalized_data) == 2
 
     def test_xlsx_routes_to_normalized(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.xlsx")
+        assert isinstance(result, InputAdapterResult)
         assert len(result.normalized_data) == 2
 
     def test_multistudy_csv_returns_list(self):
@@ -532,6 +541,7 @@ class TestRadimetricsAdapter:
             adapter.adapt(loaded, original_filename="bad.csv", settings=_default_settings())
 
     def test_auto_detects_radimetrics(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
@@ -539,6 +549,7 @@ class TestRadimetricsAdapter:
             input_schema="auto",
             settings=_default_settings(),
         )
+        assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "radimetrics"
 
 
@@ -552,6 +563,7 @@ RADIMETRICS_LEGACY_FIXTURE = FIXTURES / "radimetrics_events_legacy.csv"
 
 class TestRadimetricsLegacyFormat:
     def test_auto_detects_and_loads(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
@@ -559,6 +571,7 @@ class TestRadimetricsLegacyFormat:
             input_schema="auto",
             settings=_default_settings(),
         )
+        assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "radimetrics"
         assert len(result.normalized_data) == 3
         # header is the 2nd row (row 0 is a numeric index row)
@@ -569,6 +582,7 @@ class TestRadimetricsLegacyFormat:
     def test_total_reference_dose_mapped_not_per_plane(self):
         """The bare total column maps to DoseRP_Gy; the per-plane (A)/(B) columns
         do not. K_IRP follows the total (30/20/50), not (A) 18/12/30."""
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
@@ -576,6 +590,7 @@ class TestRadimetricsLegacyFormat:
             input_schema="auto",
             settings=_default_settings(),
         )
+        assert isinstance(result, InputAdapterResult)
         col_map = result.provenance.column_map
         dose_sources = [src for src, tgt in col_map.items() if tgt == "DoseRP_Gy"]
         assert dose_sources == ["Reference_Point_Dose"]
@@ -690,6 +705,7 @@ class TestDoseTrackAdapter:
             adapter.adapt(loaded, original_filename="no_equip.csv", settings=_default_settings())
 
     def test_auto_detects_dosetrack(self):
+        from mypyskindose.input_adapters.models import InputAdapterResult
         from mypyskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
@@ -697,4 +713,5 @@ class TestDoseTrackAdapter:
             input_schema="auto",
             settings=_default_settings(),
         )
+        assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "dosetrack"

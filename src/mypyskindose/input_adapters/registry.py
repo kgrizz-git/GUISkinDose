@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
 import pandas as pd
 
@@ -113,6 +113,27 @@ def _detect_schema(loaded: _RawLoad) -> str:
 
     return best_name
 
+
+@overload
+def read_and_normalize_input(
+    file_path: str | Path,
+    *,
+    input_schema: Literal[
+        "generic_rdsr_like", "radimetrics", "dosetrack",
+        "qaelum", "dosemonitor", "dosewatch",
+    ],
+    sheet_name: str | int = ...,
+    settings: PyskindoseSettings | None = ...,
+) -> InputAdapterResult: ...
+
+@overload
+def read_and_normalize_input(
+    file_path: str | Path,
+    *,
+    input_schema: Literal["normalized", "auto"] | None = ...,
+    sheet_name: str | int = ...,
+    settings: PyskindoseSettings | None = ...,
+) -> InputAdapterResult | list[InputAdapterResult]: ...
 
 def read_and_normalize_input(
     file_path: str | Path,
