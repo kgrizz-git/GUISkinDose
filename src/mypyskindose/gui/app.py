@@ -28,6 +28,7 @@ os.environ['COLORAMA_DISABLE'] = '1'
 from nicegui import Client, app, run, ui
 
 from .helpers import (
+    clear_multi_exam_state,
     get_excel_sheets,
     load_rdsr,
     load_tabular,
@@ -54,6 +55,13 @@ GUI_VERSION = "1.1.0"
 # never registered here, so they are never deleted.
 _uploaded_temp_files: list[Path] = []
 
+# Serialises concurrent upload handlers. ui.upload(multiple=True) fires on_upload
+# once per selected file, and NiceGUI dispatches those handlers concurrently (each
+# awaits run.io_bound and yields the event loop). Without serialisation the second
+# file hits the busy-guard and is rejected with a "still uploading" notice; the
+# lock makes them queue and load one after another.
+_upload_lock = asyncio.Lock()
+
 # Reject uploads larger than this. RDSR DICOM files and tabular event tables are
 # small (KB to single-digit MB); this cap bounds memory and /tmp disk use from a
 # hostile or accidental large upload, since handle_upload reads the whole file
@@ -69,14 +77,30 @@ def _upload_exceeds_limit(num_bytes: int) -> bool:
 
 
 def _register_temp_upload(path: Path) -> None:
-    """Track a freshly written upload temp file and delete the prior one."""
+    """Track a freshly written upload temp file (accumulating — does not delete others)."""
+    _uploaded_temp_files.append(path)
+
+
+def _remove_temp_upload(path: Path) -> None:
+    """Delete one specific temp file and deregister it (called when user removes an exam)."""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        dprint("GUI", f"Could not delete temp upload {path}: {exc}")
+    try:
+        _uploaded_temp_files.remove(path)
+    except ValueError:
+        pass
+
+
+def _clear_all_temp_uploads() -> None:
+    """Delete and deregister all accumulated upload temp files."""
     while _uploaded_temp_files:
         old = _uploaded_temp_files.pop()
         try:
             old.unlink(missing_ok=True)
-        except OSError as exc:
-            dprint("GUI", f"Could not delete old temp upload {old}: {exc}")
-    _uploaded_temp_files.append(path)
+        except OSError:
+            pass
 
 
 @atexit.register
@@ -238,6 +262,15 @@ def index():
                     _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
                     async def handle_upload(e):
+                        # ui.upload(multiple=True) fires this once per selected file,
+                        # and NiceGUI dispatches the handlers concurrently (each awaits
+                        # run.io_bound and yields the loop). Serialise them through a
+                        # lock so additional files queue and load one-by-one instead of
+                        # tripping the busy-guard with a "still uploading" notice.
+                        async with _upload_lock:
+                            await _do_upload(e)
+
+                    async def _do_upload(e):
                         with _operation_guard("uploading another file") as proceed:
                             if not proceed:
                                 return
@@ -263,17 +296,17 @@ def index():
                             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                                 tmp.write(data)
                                 tmp_path = Path(tmp.name)
-                            # Track for cleanup; deletes the previous upload's temp file.
-                            # Kept alive for the session so the XLSX sheet picker can re-read it.
+                            # Track for cleanup; kept alive so the XLSX sheet picker
+                            # can re-read the path. Now accumulating — does not delete
+                            # the previous file (see _register_temp_upload).
                             _register_temp_upload(tmp_path)
 
-                            # Reset sheet state and transform flags for every new upload
+                            # Reset sheet state for this specific upload only.
+                            # Transform flags are NOT reset globally — they are
+                            # per-exam (stored in loaded_exam_meta by the loaders).
                             state.input_sheet_name = 0
                             state.available_sheets = []
                             sheet_row.set_visibility(False)
-                            state.swap_lat_lon = False
-                            state.flip_ap1 = False
-                            state.flip_ap2 = False
 
                             upload_status.set_text("PARSING...")
                             if suffix in _TABULAR_SUFFIXES:
@@ -290,8 +323,22 @@ def index():
                                 )
                                 upload_status.set_text(f"OK: {msg}")
                                 ui.notify(msg, color="positive")
+                                # Update top-bar labels to reflect N-file count.
+                                n_exams = len(state.loaded_exams)
+                                n_events = len(state.rdsr_df) if state.rdsr_df is not None else 0
+                                ctx.file_label.set_text(
+                                    file_name.upper() if n_exams == 1
+                                    else f"{n_exams} FILES"
+                                )
+                                ctx.events_label.set_text(f"{n_events} EVENTS")
                                 if state.is_multi_exam:
-                                    ui.notify(f"Multi-exam file: {len(state.loaded_exams)} studies detected. Each will be processed separately.", color="blue")
+                                    ui.notify(
+                                        f"{len(state.loaded_exams)} exams loaded — each gets its own "
+                                        "dose map; skin doses are summed across all exams on the "
+                                        "phantom (aggregate PSD = peak of the summed map).",
+                                        color="blue",
+                                        multi_line=True,
+                                    )
                                 reset_results()
                                 _refresh_event_table()
                                 _refresh_exams_table()
@@ -336,6 +383,7 @@ def index():
                                 on_upload=handle_upload,
                                 label="DRAG AND DROP OR CLICK TO SELECT",
                                 max_file_size=MAX_UPLOAD_BYTES,
+                                multiple=True,
                             ).props(
                                 'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
                             ).classes("w-full bg-black/40 uploader-no-list")
@@ -344,36 +392,26 @@ def index():
 
                     # Always-visible recovery: resets the upload area (recovers a wedged
                     # uploader — e.g. a 0-byte phantom from dragging out of the native
-                    # file dialog) and flushes any loaded file. Available even when no
-                    # file is loaded, unlike the loaded-file card's X below.
+                    # file dialog) and flushes all loaded exams.
                     with ui.row().classes("w-full justify-end q-mt-xs"):
                         ui.button(
-                            "Reset upload", icon="restart_alt", on_click=lambda: clear_loaded_file()
+                            "Clear all", icon="restart_alt", on_click=lambda: clear_all_exams()
                         ).props("flat dense size=sm color=grey-5").classes("icon-outlined").tooltip(
-                            "Reset the upload area and unload any loaded file"
+                            "Clear all loaded exams and reset the upload area"
                         )
 
-                    # Currently-loaded file — a single card bound to state.file_name.
-                    # It appears once a file is loaded and is replaced (text updates)
-                    # when the next file loads; the X button unloads it. This replaces
-                    # the quasar uploader's accumulating per-file cards / checkmark.
-                    with ui.row().classes(
-                        "w-full items-center gap-3 q-mt-sm modern-card q-pa-sm"
-                    ).bind_visibility_from(state, "file_name", backward=bool):
-                        ui.icon("description").classes("text-xl text-grey-4 icon-outlined")
-                        with ui.column().classes("gap-0 grow min-w-0"):
-                            ui.label().bind_text_from(state, "file_name").classes("text-sm font-bold truncate")
-                            ui.label().bind_text_from(
-                                state, "rdsr_df",
-                                backward=lambda v: f"{len(v)} events loaded" if v is not None else "loaded",
-                            ).classes("text-caption text-grey-5")
-                        ui.button(icon="close", on_click=lambda: clear_loaded_file()).props(
-                            "flat round dense color=grey-5"
-                        ).classes("icon-outlined").tooltip("Remove loaded file")
+                    # Loaded files — shown directly under the drop zone so the user
+                    # can see (and remove) every accumulated exam. Visible whenever at
+                    # least one exam is loaded; rebuilt by _refresh_exams_table().
+                    exams_section_label = ui.label("Loaded files").classes("text-subtitle2 q-mt-md q-mb-xs")
+                    exams_section_label.set_visibility(False)
+                    exams_list = ui.column().classes("w-full gap-2")
+                    exams_list.set_visibility(False)
 
-                    def clear_loaded_file() -> None:
-                        """Unload the current file and reset input state (card's X button)."""
+                    def clear_all_exams() -> None:
+                        """Clear all loaded exams, temp files, and input state."""
                         from .helpers import clear_multi_exam_state
+                        _clear_all_temp_uploads()
                         clear_multi_exam_state(state)
                         state.rdsr_df = None
                         state.rdsr_raw_df = None
@@ -431,6 +469,10 @@ def index():
                             if not proceed:
                                 return
                             path = EXAMPLE_FILES[name]
+                            # Examples replace whatever is loaded (clear-then-load)
+                            # rather than accumulating onto previously uploaded files.
+                            _clear_all_temp_uploads()
+                            clear_multi_exam_state(state)
                             state.input_source_type = "dicom"
                             state.swap_lat_lon = False
                             state.flip_ap1 = False
@@ -484,7 +526,11 @@ def index():
                             # bind_value propagation order relative to this handler.
                             state.input_schema = schema_select.value or "auto"
                             upload_status.set_text("RE-PARSING...")
-                            ok, msg = await run.io_bound(load_tabular, state.file_path, state)
+                            # Re-parse in place: replace the existing entry for this
+                            # file rather than appending a duplicate exam.
+                            ok, msg = await run.io_bound(
+                                load_tabular, state.file_path, state, True
+                            )
                             if ok:
                                 upload_status.set_text(f"OK: {msg}")
                                 ui.notify(msg, color="positive")
@@ -526,7 +572,11 @@ def index():
                                 if not proceed:
                                     return
                                 state.input_sheet_name = sheet_select.value or 0
-                                ok, msg = await run.io_bound(load_tabular, state.file_path, state)
+                                # Re-parse in place: switching sheets replaces the
+                                # existing entry for this file, not append a duplicate.
+                                ok, msg = await run.io_bound(
+                                    load_tabular, state.file_path, state, True
+                                )
                                 if ok:
                                     upload_status.set_text(f"SUCCESS: {msg.upper()}")
                                     reset_results()
@@ -613,19 +663,6 @@ def index():
                     event_sample_table = ui.table(columns=[], rows=[], row_key="__idx").classes("w-full mono-text")
                     event_sample_table.props("dense flat virtual-scroll")
 
-                # exams summary table
-                ui.label("Loaded Exams").classes("text-subtitle2 q-mt-md q-mb-xs").bind_visibility_from(state, "is_multi_exam")
-                exams_table = ui.table(
-                    columns=[
-                        {"name": "idx", "label": "#", "field": "idx", "align": "right"},
-                        {"name": "study_id", "label": "Study ID", "field": "study_id", "align": "left"},
-                        {"name": "events", "label": "Events", "field": "events", "align": "right"},
-                        {"name": "status", "label": "Status", "field": "status", "align": "center"},
-                    ],
-                    rows=[],
-                    row_key="idx",
-                ).classes("w-full modern-card mono-text bg-blue-950/20").bind_visibility_from(state, "is_multi_exam")
-
                 # event summary table
                 ui.label("Irradiation events").classes("text-subtitle2 q-mt-md q-mb-xs")
                 event_table = ui.table(
@@ -658,21 +695,112 @@ def index():
                 event_table.rows = rows
                 event_table.update()
 
+            _FORMAT_BADGE_COLORS = {
+                "dicom": "purple", "dcm": "purple",
+                "csv": "teal", "tsv": "teal",
+                "xlsx": "green", "xlsm": "green",
+            }
+
             def _refresh_exams_table():
-                if not state.is_multi_exam or not state.loaded_exams:
-                    exams_table.rows = []
-                    exams_table.update()
+                exams_list.clear()
+                has_exams = bool(state.loaded_exams)
+                exams_section_label.set_visibility(has_exams)
+                exams_list.set_visibility(has_exams)
+                if not has_exams:
                     return
-                rows = []
-                for idx, exam in enumerate(state.loaded_exams):
-                    rows.append({
-                        "idx": idx + 1,
-                        "study_id": str(exam.study_id) if exam.study_id else "Unknown",
-                        "events": len(exam.normalized_data),
-                        "status": "Ready" if not state.calculation_done else "Calculated"
-                    })
-                exams_table.rows = rows
-                exams_table.update()
+                with exams_list:
+                    for idx, exam in enumerate(state.loaded_exams):
+                        meta = (
+                            state.loaded_exam_meta[idx]
+                            if idx < len(state.loaded_exam_meta) else {}
+                        )
+                        src = (meta.get("source_type") or "?").lower()
+                        schema = meta.get("schema") or getattr(
+                            getattr(exam, "provenance", None), "schema_name", "—"
+                        )
+                        study_id = str(exam.study_id) if getattr(exam, "study_id", None) else "—"
+                        warnings = meta.get("warnings") or []
+                        with ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm"):
+                            with ui.row().classes("items-center w-full gap-3 no-wrap"):
+                                ui.label(f"#{idx + 1}").classes("text-caption text-grey-5 font-bold")
+                                ui.badge(
+                                    src.upper(),
+                                    color=_FORMAT_BADGE_COLORS.get(src, "blue"),
+                                ).classes("text-xs")
+                                ui.label(meta.get("file_name", "—")).classes(
+                                    "text-caption font-mono truncate"
+                                ).style("max-width: 200px")
+                                ui.label(schema).classes("text-caption text-grey-5")
+                                ui.label(study_id).classes(
+                                    "text-caption text-grey-6 font-mono truncate"
+                                ).style("max-width: 160px")
+                                ui.label(f"{len(exam.normalized_data)} ev").classes(
+                                    "text-caption text-grey-4"
+                                )
+                                if warnings:
+                                    ui.icon("warning", color="orange").classes(
+                                        "text-sm icon-outlined"
+                                    ).tooltip("; ".join(warnings[:3]))
+                                ui.space()
+                                ui.button(
+                                    icon="close",
+                                    on_click=lambda i=idx: _remove_exam(i),
+                                ).props("flat round dense size=sm color=grey-5").classes(
+                                    "icon-outlined"
+                                ).tooltip("Remove this exam")
+
+            def _remove_exam(index: int) -> None:
+                """Remove one accumulated exam and rebuild derived state.
+
+                Deletes the backing temp file only when no other loaded exam still
+                references it (a multi-study file produces several exams that share
+                one path).
+                """
+                import pandas as pd
+
+                if not (0 <= index < len(state.loaded_exams)):
+                    return
+                meta = state.loaded_exam_meta[index] if index < len(state.loaded_exam_meta) else {}
+                file_path = meta.get("file_path")
+                state.loaded_exams.pop(index)
+                if index < len(state.loaded_exam_meta):
+                    state.loaded_exam_meta.pop(index)
+
+                if file_path is not None and all(
+                    m.get("file_path") != file_path for m in state.loaded_exam_meta
+                ):
+                    _remove_temp_upload(file_path)
+
+                if state.loaded_exams:
+                    state.rdsr_df = pd.concat(
+                        [e.normalized_data for e in state.loaded_exams], ignore_index=True
+                    )
+                else:
+                    state.rdsr_df = None
+                state.is_multi_exam = len(state.loaded_exams) > 1
+
+                n = len(state.loaded_exams)
+                n_events = len(state.rdsr_df) if state.rdsr_df is not None else 0
+                if n == 0:
+                    state.file_name = ""
+                    state.file_path = None
+                    ctx.file_label.set_text("No file loaded")
+                    ctx.events_label.set_text("0 events")
+                elif n == 1:
+                    state.file_name = state.loaded_exam_meta[0].get("file_name", "")
+                    state.file_path = state.loaded_exam_meta[0].get("file_path")
+                    ctx.file_label.set_text(state.file_name.upper())
+                    ctx.events_label.set_text(f"{n_events} EVENTS")
+                else:
+                    state.file_name = f"{n} files"
+                    ctx.file_label.set_text(f"{n} FILES")
+                    ctx.events_label.set_text(f"{n_events} EVENTS")
+
+                reset_results()
+                ctx.psd_label.set_text("PSD: 0.00 mGy")
+                _refresh_event_table()
+                _refresh_exams_table()
+                _refresh_import_preview()
 
             def _refresh_import_preview():
                 prov = state.import_provenance
@@ -726,6 +854,14 @@ def index():
                 overrides are preserved across sheet changes.
                 """
                 if state.import_provenance is None:
+                    return
+
+                # In multi-exam mode rdsr_df is only a concatenated preview; mutating
+                # it here would not reach the per-exam data used by the calculation,
+                # so transform auto-defaults are deferred to per-exam handling
+                # (Phase 2.2). Leave the global flags and preview untouched.
+                if state.is_multi_exam:
+                    coord_auto_label.set_text("")
                     return
 
                 # GE equipment stores lat/lon in the opposite convention to MyPySkinDose.
@@ -946,6 +1082,7 @@ def index():
         ctx.file_label.set_text(state.file_name.upper())
         ctx.events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
         ctx.refresh_event_table()
+        _refresh_exams_table()
         if state.active_tab:
             ctx.tabs.set_value(state.active_tab)
 

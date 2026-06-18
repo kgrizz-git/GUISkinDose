@@ -46,6 +46,7 @@ class AppState:
     # ── Multi-exam support ─────────────────────────────────────────────────
     multi_exam_result: Any | None = None
     loaded_exams: list[Any] = field(default_factory=list)  # list[InputAdapterResult]
+    loaded_exam_meta: list[dict] = field(default_factory=list)  # per-exam metadata parallel to loaded_exams
     is_multi_exam: bool = False
     active_exam_index: int | None = None
 

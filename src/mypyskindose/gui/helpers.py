@@ -60,28 +60,81 @@ def build_settings(state: AppState, mode: str = "calculate_dose", output_format:
 
 
 def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
-    """Parse and normalise an RDSR file. Returns (success, message)."""
+    """Parse and normalise an RDSR file and append it to the exam list.
+
+    Accumulating: each call adds one entry to ``state.loaded_exams`` and
+    ``state.loaded_exam_meta`` rather than replacing the previous load.
+    Returns ``(success, message)``.
+    """
+    from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+    import pandas as pd
+
     try:
         settings = build_settings(state, mode="calculate_dose")
-        
+
         # Manually parse and normalise so we can keep the raw version
         data_raw = pydicom.dcmread(str(file_path))
         data_parsed = rdsr_parser(data_raw, silence_pydicom_warnings=settings.silence_pydicom_warnings)
-        
-        # Save raw copy
+
+        # Save raw copy (last-loaded DICOM wins for the raw preview)
         state.rdsr_raw_df = data_parsed.copy()
-        
+
         # Normalize
         df = rdsr_normalizer(data_parsed, settings=settings)
-        
+
         if settings.remove_invalid_rows and len(df[df.kVp == 0]):
             df = df[df.kVp != 0].reset_index(drop=True)
 
-        state.rdsr_df = df
-        state.file_path = file_path
-        state.file_name = file_path.name
+        # Build a synthetic InputAdapterResult so DICOM and tabular exams are
+        # handled uniformly in the exam list and by analyze_multiple_exams().
+        provenance = InputProvenance(
+            source_type="dicom",
+            schema_name="dicom_rdsr",
+            original_filename=file_path.name,
+            header_row_index=0,
+            detected_encoding="N/A",
+            detected_delimiter=None,
+            sheet_name=None,
+            column_map={},
+            unit_conversions={},
+        )
+        result = InputAdapterResult(
+            normalized_data=df,
+            raw_data=data_parsed.copy(),
+            provenance=provenance,
+            warnings=[],
+            study_id=None,
+        )
 
-        # Extract metadata for the GUI
+        # ── Accumulate ────────────────────────────────────────────────────
+        state.loaded_exams.append(result)
+        state.loaded_exam_meta.append({
+            "file_name": file_path.name,
+            "file_path": file_path,
+            "source_type": "dicom",
+            "schema": "dicom_rdsr",
+            "sheet": None,
+            "provenance": provenance,
+            "warnings": [],
+            "swap_lat_lon": False,
+            "flip_ap1": False,
+            "flip_ap2": False,
+        })
+
+        # Rebuild concat event preview from all loaded exams
+        state.rdsr_df = pd.concat(
+            [e.normalized_data for e in state.loaded_exams], ignore_index=True
+        )
+        state.is_multi_exam = len(state.loaded_exams) > 1
+
+        # Update single-file-style fields so the rest of the UI is consistent
+        state.file_path = file_path
+        if len(state.loaded_exams) == 1:
+            state.file_name = file_path.name
+        else:
+            state.file_name = f"{len(state.loaded_exams)} files"
+
+        # Extract DICOM metadata for display (last-loaded wins)
         norm = settings.normalization_settings
         state.manufacturer = norm.matched_manufacturer
         state.model = norm.matched_model
@@ -114,13 +167,23 @@ def get_excel_sheets(file_path: Path) -> list[str]:
         return []
 
 
-def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
-    """Load a tabular file (CSV/TSV/XLSX) via the input_adapters registry.
+def load_tabular(
+    file_path: Path, state: AppState, replace_existing: bool = False
+) -> tuple[bool, str]:
+    """Load a tabular file (CSV/TSV/XLSX) and append exam(s) to the exam list.
 
-    Returns ``(ok, message)``. On failure the message is a concise, user-facing
-    string (not a traceback); the full traceback is still logged to the console
-    for debugging. Auto-detection failures get a specific "choose a schema" hint.
+    Accumulating: each call adds one or more entries to ``state.loaded_exams``
+    and ``state.loaded_exam_meta`` rather than replacing previous loads.
+
+    ``replace_existing`` re-parses a file already in the exam list (e.g. after a
+    schema or sheet change): any exam(s) previously loaded from ``file_path`` are
+    dropped before the freshly parsed one(s) are appended, so a re-parse updates
+    the entry in place instead of duplicating it. The drop happens only after the
+    parse succeeds, so a failed re-parse leaves the existing exam untouched.
+
+    Returns ``(ok, message)``.
     """
+    import pandas as pd
     from mypyskindose.input_adapters.registry import (
         SchemaDetectionError,
         read_and_normalize_input,
@@ -136,28 +199,43 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
             settings=settings,
             sheet_name=state.input_sheet_name,
         )
+
+        # Re-parse of an existing entry: drop the stale exam(s) for this file now
+        # that the new parse has succeeded, so the result replaces rather than
+        # duplicates them.
+        if replace_existing:
+            _drop_exams_for_path(state, file_path)
+
         if isinstance(_raw, list):
-            import pandas as pd
-            state.loaded_exams = _raw
-            state.is_multi_exam = True
-
-            # Concatenate normalized data for the UI event table preview.
-            # NOTE: coordinate transforms (swap_lat_lon, flip_ap1, flip_ap2) are
-            # intentionally NOT applied to the multi-exam concat here — they would
-            # need to be applied per-exam and are a Phase 2 feature.
-            df = pd.concat([r.normalized_data for r in _raw], ignore_index=True)
+            # Multi-study file: append all exams.
+            # NOTE: coordinate transforms are intentionally NOT applied in the
+            # multi-exam path — they must be applied per-exam (Phase 2.2).
+            new_exams = _raw
+            for exam in new_exams:
+                state.loaded_exams.append(exam)
+                state.loaded_exam_meta.append({
+                    "file_name": file_path.name,
+                    "file_path": file_path,
+                    "source_type": file_path.suffix.lstrip("."),
+                    "schema": exam.provenance.schema_name,
+                    "sheet": state.input_sheet_name,
+                    "provenance": exam.provenance,
+                    "warnings": list(exam.warnings),
+                    "swap_lat_lon": False,
+                    "flip_ap1": False,
+                    "flip_ap2": False,
+                })
             result = _raw[0]  # use first exam's provenance for UI hints
-
-            total_events = len(df)
-            msg = f"Loaded {len(_raw)} exams, {total_events} total events from {file_path.name}"
+            total_events = sum(len(e.normalized_data) for e in new_exams)
+            msg = f"Loaded {len(new_exams)} exams, {total_events} total events from {file_path.name}"
         else:
-            state.is_multi_exam = False
-            state.loaded_exams = [_raw]
+            # Single-study file: apply per-file coordinate transforms, then append.
             result = _raw
             df = result.normalized_data.copy()
-            msg = f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
 
-            # Coordinate transforms only apply to single-exam tabular loads.
+            # Coordinate transforms apply to single-exam tabular loads;
+            # use current global state flags (which _set_transform_defaults() will
+            # set correctly after this call returns).
             if state.swap_lat_lon and result.provenance.schema_name != "normalized":
                 if "Tx" in df.columns and "Tz" in df.columns:
                     df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
@@ -165,10 +243,36 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
                 df["Ap1"] = -df["Ap1"]
             if state.flip_ap2 and "Ap2" in df.columns:
                 df["Ap2"] = -df["Ap2"]
+            result.normalized_data = df
 
-        state.rdsr_df = df
+            state.loaded_exams.append(result)
+            state.loaded_exam_meta.append({
+                "file_name": file_path.name,
+                "file_path": file_path,
+                "source_type": file_path.suffix.lstrip("."),
+                "schema": result.provenance.schema_name,
+                "sheet": state.input_sheet_name,
+                "provenance": result.provenance,
+                "warnings": list(result.warnings),
+                "swap_lat_lon": state.swap_lat_lon,
+                "flip_ap1": state.flip_ap1,
+                "flip_ap2": state.flip_ap2,
+            })
+            msg = f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
+
+        # Rebuild concat event preview from all loaded exams.
+        state.rdsr_df = pd.concat(
+            [e.normalized_data for e in state.loaded_exams], ignore_index=True
+        )
+        state.is_multi_exam = len(state.loaded_exams) > 1
+
+        # Per-file state used by the import preview and schema re-parse path.
         state.rdsr_raw_df = result.raw_data
         state.file_path = file_path
+        if len(state.loaded_exams) == 1:
+            state.file_name = file_path.name
+        else:
+            state.file_name = f"{len(state.loaded_exams)} files"
         state.import_provenance = result.provenance
         state.import_warnings = list(result.warnings)
         state.import_has_errors = False
@@ -313,8 +417,28 @@ def get_human_mesh_names() -> list[str]:
 
 
 def clear_multi_exam_state(state: AppState) -> None:
-    """Clear multi-exam state from the AppState object."""
+    """Clear all exam state from AppState (called by clear_all_exams in app.py)."""
     state.loaded_exams = []
+    state.loaded_exam_meta = []
     state.is_multi_exam = False
     state.multi_exam_result = None
     state.active_exam_index = None
+
+
+def _drop_exams_for_path(state: AppState, file_path: Path) -> None:
+    """Remove every loaded exam (and its metadata) that came from ``file_path``.
+
+    Used when re-parsing a file already in the exam list — a single file may have
+    produced several exams (multi-study split), so all entries keyed to that path
+    are removed together. Does not touch the temp file on disk; the caller is
+    re-reading the same path.
+    """
+    keep_exams: list = []
+    keep_meta: list[dict] = []
+    for exam, meta in zip(state.loaded_exams, state.loaded_exam_meta):
+        if meta.get("file_path") == file_path:
+            continue
+        keep_exams.append(exam)
+        keep_meta.append(meta)
+    state.loaded_exams = keep_exams
+    state.loaded_exam_meta = keep_meta
