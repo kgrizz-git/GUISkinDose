@@ -157,42 +157,42 @@ def build(ctx: PageContext) -> None:
                         study_str = f"Exam {i+1}"
                         # In the multi-exam API, exam_res is an ExamResult containing output and optional input_result ref
                         
-                        with ui.expansion(f"{study_str}", icon="personal_video").classes("w-full modern-card bg-zinc-900/50"):
+                        with ui.expansion(f"{study_str} — {exam_res.exam_id}", icon="personal_video").classes("w-full modern-card bg-zinc-900/50"):
                             with ui.row().classes("w-full items-center justify-between"):
                                 with ui.row().classes("gap-4"):
-                                    # PSD
+                                    # PSD — exam_res.output is a PySkinDoseOutput instance
                                     with ui.column().classes("gap-0"):
                                         ui.label("PSD").classes("text-[10px] text-grey-5 font-bold tracking-widest uppercase")
-                                        ui.label(f"{exam_res.output.get('psd', 0):.2f} mGy").classes("text-aurora-purple font-bold")
+                                        ui.label(f"{exam_res.output.PSD:.2f} mGy").classes("text-aurora-purple font-bold")
                                     # Air Kerma
                                     with ui.column().classes("gap-0"):
                                         ui.label("Air Kerma").classes("text-[10px] text-grey-5 font-bold tracking-widest uppercase")
-                                        ui.label(f"{exam_res.output.get('air_kerma', 0):.1f} mGy").classes("text-white font-bold")
-                                    
+                                        ui.label(f"{exam_res.output.AirKerma:.1f} mGy").classes("text-white font-bold")
+                                    # Event count
+                                    with ui.column().classes("gap-0"):
+                                        ui.label("Events").classes("text-[10px] text-grey-5 font-bold tracking-widest uppercase")
+                                        ui.label(str(exam_res.event_count)).classes("text-white font-bold")
+
                                 with ui.button("Show Dose Map", icon="3d_rotation").classes("modern-btn modern-btn-teal size-sm") as btn:
                                     if len(res.exams) > 10:
                                         btn.disable()
                                         btn.tooltip("Dose map rendering disabled for >10 exams to save memory")
                                     else:
-                                        # Bind the click handler to this specific exam's data
+                                        # Bind the click handler to this specific exam's PySkinDoseOutput
                                         btn.on_click(lambda e, idx=i, out=exam_res.output: _show_exam_dosemap_dialog(idx, out))
 
-                # Build aggregate dose map if not built
+                # Build aggregate dose map if not built.
+                # res.aggregate_dose_map is an np.ndarray (element-wise sum of per-exam maps).
+                # Use the first exam's to_dict() output for phantom topology.
                 if state.dosemap_fig is None:
                     agg_dosemap_spinner.visible = True
-                    # Use the first exam's phantom as the topology template
-                    first_exam_patient = res.exams[0].output
-                    import numpy as np
-                    
-                    # Convert the aggregate dose map dict mapping back to an array
-                    # The length of r is the number of skin cells
-                    patient_data = first_exam_patient["patient"]["patient"]
-                    num_cells = len(patient_data["patient_skin_cells"]["x"])
-                    dose_map_array = np.zeros(num_cells)
-                    for idx, dose in res.aggregate_dose_map.items():
-                        dose_map_array[int(idx)] = dose
+                    first_exam_output_dict = res.exams[0].output.to_dict()
+                    first_exam_patient = first_exam_output_dict["patient"]
 
-                    fig = make_dosemap_fig(explicit_dose_map=dose_map_array, explicit_patient=first_exam_patient)
+                    fig = make_dosemap_fig(
+                        explicit_dose_map=res.aggregate_dose_map,
+                        explicit_patient=first_exam_patient,
+                    )
                     agg_dosemap_spinner.visible = False
                     if fig:
                         agg_dosemap_plot.update_figure(fig)
@@ -200,33 +200,41 @@ def build(ctx: PageContext) -> None:
 
             ui.timer(1.5, _refresh_multi_exam_results)
 
-            def _show_exam_dosemap_dialog(exam_idx: int, exam_output: dict):
+            def _show_exam_dosemap_dialog(exam_idx: int, exam_output):
+                """Show a per-exam dose map in a modal dialog.
+
+                exam_output is a PySkinDoseOutput instance.
+                """
+                import numpy as np
+
+                # Serialise to dict so make_dosemap_fig can read patient topology.
+                output_dict = exam_output.to_dict()
+                patient_for_fig = output_dict["patient"]
+
+                # Reconstruct dense dose map from the sparse (idx, dose) list.
+                patient_data = patient_for_fig["patient"]
+                num_cells = len(patient_data["patient_skin_cells"]["x"])
+                dose_map_array = np.zeros(num_cells)
+                for idx, dose in output_dict["dose_map"]:
+                    dose_map_array[int(idx)] = dose
+
                 with ui.dialog() as dialog, ui.card().classes("modern-card w-[80vw] max-w-[1200px] p-6"):
                     with ui.row().classes("w-full justify-between items-center mb-4"):
-                        ui.label(f"Exam {exam_idx+1} Dose Map").classes("text-xl font-bold")
+                        ui.label(f"Exam {exam_idx + 1} Dose Map").classes("text-xl font-bold")
                         ui.button(icon="close", on_click=dialog.close).props("flat round dense").classes("text-grey-4")
-                    
+
                     dialog_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
                     dialog_plot = ui.plotly({}).classes("w-full").style("height:600px")
-                    
+
                     dialog.open()
-                    
-                    # Build and render the figure asynchronously
-                    async def build_and_render():
-                        import numpy as np
-                        
-                        patient_data = exam_output["patient"]["patient"]
-                        num_cells = len(patient_data["patient_skin_cells"]["x"])
-                        dose_map_array = np.zeros(num_cells)
-                        for idx, dose in exam_output["dose_map"]:
-                            dose_map_array[int(idx)] = dose
-                            
-                        # Need to run in executor to not block UI thread
+
+                    async def _build_and_render(
+                        _dm=dose_map_array, _pat=patient_for_fig
+                    ):
                         from nicegui import run
-                        fig = await run.io_bound(make_dosemap_fig, dose_map_array, exam_output)
-                        
+                        fig = await run.io_bound(make_dosemap_fig, _dm, _pat)
                         dialog_spinner.visible = False
                         if fig:
                             dialog_plot.update_figure(fig)
-                            
-                    ui.timer(0.1, build_and_render, once=True)
+
+                    ui.timer(0.1, _build_and_render, once=True)

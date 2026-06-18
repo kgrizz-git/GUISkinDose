@@ -140,11 +140,14 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
             import pandas as pd
             state.loaded_exams = _raw
             state.is_multi_exam = True
-            
-            # Concatenate normalized data for the UI event table
+
+            # Concatenate normalized data for the UI event table preview.
+            # NOTE: coordinate transforms (swap_lat_lon, flip_ap1, flip_ap2) are
+            # intentionally NOT applied to the multi-exam concat here — they would
+            # need to be applied per-exam and are a Phase 2 feature.
             df = pd.concat([r.normalized_data for r in _raw], ignore_index=True)
             result = _raw[0]  # use first exam's provenance for UI hints
-            
+
             total_events = len(df)
             msg = f"Loaded {len(_raw)} exams, {total_events} total events from {file_path.name}"
         else:
@@ -154,15 +157,14 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
             df = result.normalized_data.copy()
             msg = f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
 
-        df = result.normalized_data.copy()
-
-        if state.swap_lat_lon and result.provenance.schema_name != "normalized":
-            if "Tx" in df.columns and "Tz" in df.columns:
-                df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
-        if state.flip_ap1 and "Ap1" in df.columns:
-            df["Ap1"] = -df["Ap1"]
-        if state.flip_ap2 and "Ap2" in df.columns:
-            df["Ap2"] = -df["Ap2"]
+            # Coordinate transforms only apply to single-exam tabular loads.
+            if state.swap_lat_lon and result.provenance.schema_name != "normalized":
+                if "Tx" in df.columns and "Tz" in df.columns:
+                    df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
+            if state.flip_ap1 and "Ap1" in df.columns:
+                df["Ap1"] = -df["Ap1"]
+            if state.flip_ap2 and "Ap2" in df.columns:
+                df["Ap2"] = -df["Ap2"]
 
         state.rdsr_df = df
         state.rdsr_raw_df = result.raw_data
