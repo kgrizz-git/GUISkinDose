@@ -48,3 +48,11 @@ src/mypyskindose/phantom_data/old/
 
 # Local-only sample exports (not for distribution)
 test_data_gitignored/
+
+# basedpyright
+.basedpyright/
+!.basedpyright/baseline.json
+
+# cursor
+.cursor/
+!.cursor/rules/
