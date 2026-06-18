@@ -25,6 +25,9 @@ __pycache__/
 .venv/
 
 scratch*
+scripts/scratch_*
+*.tmp
+debug_*
 #RDSR/clinical*
 src/mypyskindose/example_data/RDSR/clinical*
 

@@ -2,7 +2,7 @@
 
 _Last updated: 2026-06-10_
 
-> See also: [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [TO_DO.md](TO_DO.md) | [AGENTS.md](../AGENTS.md)
+> See also: [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) | [FEATURE_INVENTORY.md](../FEATURE_INVENTORY.md) | [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [TO_DO.md](../TO_DO.md) | [AGENTS.md](../../AGENTS.md)
 
 **Status: Phases 1–4 shipped (Phase 4 validated against synthetic fixture; needs real DoseTrack XLSX). Phase 5 GUI import workflow partially shipped.**
 
@@ -23,7 +23,7 @@ The goal is **not** to replace DICOM RDSR ingestion. DICOM RDSR remains the pref
 
 ## Conceptual data flow
 
-All sources converge on the same internal contract before dose calculation. The **normalized DataFrame** (internal units, unified coordinate frame) is the contract consumed by `analyze_data()`; its columns and units are defined in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md).
+All sources converge on the same internal contract before dose calculation. The **normalized DataFrame** (internal units, unified coordinate frame) is the contract consumed by `analyze_data()`; its columns and units are defined in [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md).
 
 ```text
                                       ┌─ DICOM RDSR ──→ rdsr_parser() ─┐
@@ -54,7 +54,7 @@ In short: the order reflects dependency layering and sample availability, not a 
 
 ## Typical input file structure
 
-> **Scope note:** this section describes **raw vendor exports** (Phases 2–4). The Phase 1 `normalized` schema instead expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) — already in internal units and coordinate frame, with no `manufacturer`/`model` dependence and no vendor coordinate correction (normalization has already been applied).
+> **Scope note:** this section describes **raw vendor exports** (Phases 2–4). The Phase 1 `normalized` schema instead expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) — already in internal units and coordinate frame, with no `manufacturer`/`model` dependence and no vendor coordinate correction (normalization has already been applied).
 
 Tabular exports from dose-management systems (Radimetrics, DoseTrack, vendor-native exports, etc.) share a common structure:
 
@@ -137,7 +137,7 @@ Failures here surface as garbled columns or all-string numerics, so they must be
 
 ### Multiple procedures / devices in one file
 
-A tabular export can contain rows spanning several studies, patients, or devices, whereas a single RDSR is one procedure. **Phase 1 assumes a single procedure.** If the loader detects more than one distinct study/accession/device identifier (when such a column is present), it **warns and, by default, errors** asking the user to filter the export to one procedure. Multi-procedure splitting is out of scope here and tracked under the "support for multiple exams" item in [TO_DO.md](TO_DO.md).
+A tabular export can contain rows spanning several studies, patients, or devices, whereas a single RDSR is one procedure. **Phase 1 assumes a single procedure.** If the loader detects more than one distinct study/accession/device identifier (when such a column is present), it **warns and, by default, errors** asking the user to filter the export to one procedure. Multi-procedure splitting is out of scope here and tracked under the "support for multiple exams" item in [TO_DO.md](../TO_DO.md).
 
 ### Vendor-specific coordinate normalization
 
@@ -149,7 +149,7 @@ A tabular export can contain rows spanning several studies, patients, or devices
 - Rotation direction corrections
 - Field-size calculation mode selection
 
-`normalization_settings.json` currently has validated entries for **Siemens AXIOM-Artis** (no correction needed) and **Philips Allura Clarity** (large translation offset, inverted Y and Ap2). The full values and rationale are documented in [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+`normalization_settings.json` currently has validated entries for **Siemens AXIOM-Artis** (no correction needed) and **Philips Allura Clarity** (large translation offset, inverted Y and Ap2). The full values and rationale are documented in [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md).
 
 #### The critical question for each vendor adapter: raw DICOM frame or already transformed?
 
@@ -440,7 +440,7 @@ Tests to write:
 
 ### Phase 1 — Shared infrastructure + normalized schema (shipped 2026-06-09)
 
-Foundational plumbing plus the simplest schema as a walking skeleton (see Phase sequencing rationale). Builds everything that does not require vendor samples. The `normalized` schema expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) — do not invent a column list; anchor to that doc.
+Foundational plumbing plus the simplest schema as a walking skeleton (see Phase sequencing rationale). Builds everything that does not require vendor samples. The `normalized` schema expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) — do not invent a column list; anchor to that doc.
 
 - [x] Add `openpyxl` to core `dependencies` in `pyproject.toml`.
 - [x] Create `src/mypyskindose/input_adapters/__init__.py`.

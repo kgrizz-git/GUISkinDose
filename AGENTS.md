@@ -12,13 +12,14 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 
 - **[dev-docs/CODEBASE_OVERVIEW.md](dev-docs/CODEBASE_OVERVIEW.md)** — full architecture, data flow, all settings, classes, and functions
 - **[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md)** — exhaustive list of every feature: calculations, rendering, settings, outputs, CLI, API
-- **[dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
+- **[dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
 - **[DESIGN.md](DESIGN.md)** — GUI aesthetic intent; **[dev-docs/UI_values.md](dev-docs/UI_values.md)** — auto-generated design tokens from `app.py`
-- **[dev-docs/TABULAR_RDSR_INPUT_PLAN.md](dev-docs/TABULAR_RDSR_INPUT_PLAN.md)** — plan for CSV/TSV/XLSX exported event-table inputs
+- **[dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md](dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md)** — plan for CSV/TSV/XLSX exported event-table inputs
 - **[dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md)** — RDSR normalization, vendor offsets, and the internal DataFrame contract
 - **[dev-docs/HARNESS_ENGINEERING.md](dev-docs/HARNESS_ENGINEERING.md)** — repository harness principles, source-of-truth map, and validation commands (includes `python scripts/check_doc_freshness.py`)
-- **[dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)
+- **[dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)
 - **[dev-docs/LICENSE_COMPLIANCE.md](dev-docs/LICENSE_COMPLIANCE.md)** — third-party license policy, audit commands, and notices workflow
+- **[dev-docs/assessments/](dev-docs/assessments/)** — diagnostics and assessments of code quality, refactoring, bug checks, or security
 - **[CHANGELOG.md](CHANGELOG.md)** — release history; version source of truth is `pyproject.toml`
 
 ## Quick orientation
@@ -82,12 +83,12 @@ Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, 
 
 **Goal: make the code easier to use and more user-friendly, including an intuitive GUI.**
 
-See [dev-docs/GUI_PLAN.md](dev-docs/GUI_PLAN.md) for the full implementation plan. The short version:
+See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implementation plan. The short version:
 
 1. A NiceGUI app now exists in `src/mypyskindose/gui/`.
 2. The CLI supports `--mode gui` and optional `--native`; `python -m mypyskindose --mode gui` launches the GUI.
 3. Current GUI focus: refine the multi-tab workflow, validation, event-table previews, exports, and user-facing help.
-4. Tabular input Phases 1–5 are **shipped**: `input_adapters/` handles `.csv`, `.tsv`, `.xlsx` via `normalized`, `generic_rdsr_like`, `radimetrics`, and `dosetrack` schemas. DoseTrack adapter: Equipment Name → Manufacturer inference (`MODEL2MANUF`), ffill, integer Plane Code normalization, unit conversions, CFA derivation from DAP formula, Siemens/Philips filter thickness, Philips lat/lon swap warning. CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only` are wired. GUI Phase 5: upload tab accepts all tabular formats; import preview panel; schema selector including DoseTrack; **individual coordinate correction toggles** (Tx↔Tz swap, Ap1×−1, Ap2×−1) applied live; **intelligent defaults** auto-set from detected manufacturer (GE/Philips auto-enable lat/lon swap), user-overridable; **XLSX sheet picker** for multi-sheet workbooks with re-parse on change. Qaelum, DoseMonitor, and DoseWatch are Phase 5+ placeholders (stub adapters exist; need real export fixtures). See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md` and `dev-docs/references/`.
+4. Tabular input Phases 1–5 are **shipped**: `input_adapters/` handles `.csv`, `.tsv`, `.xlsx` via `normalized`, `generic_rdsr_like`, `radimetrics`, and `dosetrack` schemas. DoseTrack adapter: Equipment Name → Manufacturer inference (`MODEL2MANUF`), ffill, integer Plane Code normalization, unit conversions, CFA derivation from DAP formula, Siemens/Philips filter thickness, Philips lat/lon swap warning. CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only` are wired. GUI Phase 5: upload tab accepts all tabular formats; import preview panel; schema selector including DoseTrack; **individual coordinate correction toggles** (Tx↔Tz swap, Ap1×−1, Ap2×−1) applied live; **intelligent defaults** auto-set from detected manufacturer (GE/Philips auto-enable lat/lon swap), user-overridable; **XLSX sheet picker** for multi-sheet workbooks with re-parse on change. Qaelum, DoseMonitor, and DoseWatch are Phase 5+ placeholders (stub adapters exist; need real export fixtures). See `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` and `dev-docs/references/`.
 5. Harness focus: keep `AGENTS.md` and `dev-docs/` synchronized with behavior and use the checks in `dev-docs/HARNESS_ENGINEERING.md`.
 
 ## Development setup
@@ -128,3 +129,7 @@ python -m mypyskindose --mode gui
 - Correction factors are dimensionless floats in range 0–1 (or slightly above 1 for backscatter)
 - The coordinate system: X = lateral, Y = longitudinal, Z = vertical
 - GUI dependencies are optional extras: `pip install mypyskindose[gui]` — do not add them to core dependencies
+- **Modularity:** Keep all Python source and Markdown documentation files under ~800 lines unless strictly unavoidable (checked in CI; outliers must be whitelisted in `scripts/check_file_sizes.py`).
+- **Plan lifecycle:** Completed or superseded execution plans must be archived under `dev-docs/plans/archive/` (always update `dev-docs/index.md` in the same PR).
+- **Assessments:** Place diagnostic reports or assessments (such as for refactoring, code quality, bug checks, etc.) under `dev-docs/assessments/` (always update `dev-docs/index.md` in the same PR).
+- **Workspace cleanliness:** Temporary scratch scripts or local output files must be kept in explicitly gitignored paths (e.g. `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse.

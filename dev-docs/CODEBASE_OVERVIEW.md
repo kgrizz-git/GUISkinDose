@@ -1,6 +1,6 @@
 # MyPySkinDose — Codebase Overview
 
-> See also: [GUI_PLAN.md](GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
+> See also: [GUI_PLAN.md](plans/GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
 ## What the project does
 

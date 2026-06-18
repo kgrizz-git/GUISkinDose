@@ -42,6 +42,20 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-file-sizes
+        name: check file sizes (<800 lines)
+        entry: python scripts/check_file_sizes.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-untracked-scratch
+        name: check for untracked scratch files
+        entry: python scripts/check_untracked_scratch.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: cleanup-old-backups
         name: cleanup stale backups/ files (>5 commits)
         entry: python scripts/cleanup_old_backups.py

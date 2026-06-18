@@ -3,7 +3,7 @@
 Short-term task list for MyPySkinDose. Harness principles, validation commands, plan conventions, and the phased remediation roadmap live in:
 
 - [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) — includes **Documentation conventions** (master vs execution plans)
-- [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)
+- [plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)
 
 ---
 
@@ -32,14 +32,16 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 
 ### Documentation / plans (pending)
 
-- [ ] **Plan template** — shared header for execution plans: objective, acceptance criteria, progress log, decision log (see `HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` §6).
+- [ ] **Plan template** — shared header for execution plans: objective, acceptance criteria, progress log, decision log (see `plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` §6).
 - [ ] **Archive completed execution plans** — when `refactor-execution.md` / `gui-decomposition-design.md` phases finish, move or mark complete under `dev-docs/plans/archive/`.
 - [ ] **Optional `dev-docs/master-plans/` migration** — defer until a rename PR is worth the link churn; convention documented in `HARNESS_ENGINEERING.md` instead.
-- [ ] **Phase 7 harness** (low priority, from improvement plan):
-  - Expand `dev-docs/references/` before next major dependency review.
-  - Recurring doc-gardening agent automation (after stale-pattern rules are CI-blocking).
-  - Per-golden-rule custom linters (start with doc-freshness + import contracts only).
-- [ ] **Full GUI observability stack** — defer until smoke/tab tests prove insufficient (`HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` “what not to build yet”).
+- [ ] **Phase 7 harness (Active / High Priority)**:
+  - [x] **7.1 Enforce File Size CI Limits**: Implement `scripts/check_file_sizes.py` (fail if any Python source or Markdown file > 800 lines, except whitelist) and add to CI/pre-commit.
+  - [x] **7.2 Establish Visible Guidance for Agents**: Update `AGENTS.md` and `HARNESS_ENGINEERING.md` with rules for keeping files under 800 lines, archiving plans, and gitignoring scratch/temp files (unless intended for reuse).
+  - [x] **7.3 Local Cleanups and Gitignore Hardening**: Strengthen `.gitignore` for scratch formats and add pre-commit checks for untracked scratch files.
+  - [ ] **Expand `dev-docs/references/` stubs** before next major dependency review.
+  - [ ] **Recurring doc-gardening agent automation** (after stale-pattern rules are CI-blocking).
+- [ ] **Full GUI observability stack** — defer until smoke/tab tests prove insufficient (`plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` “what not to build yet”).
 
 ### Input data & calculation
 
@@ -53,10 +55,10 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [x] **Convert the per-event recursion to a loop (RecursionError on long/multi-exam data)** (2026-06-16) — `calculate_irradiation_event_result` now iterates with `for ev in range(event, total_events)`; golden baseline + 1100-event stress tests in `test_calculate_dose.py`. [Plan](plans/recursion-to-iteration.md).
 - [ ] **Review rotational-acquisition handling** — confirm how rotational/spin acquisitions (rotational angiography, DSA spins, cone-beam CT runs) are modelled. Each is a single RDSR event but sweeps the gantry across a range of primary/secondary angles during the run, so treating it as one static `Ap1`/`Ap2` likely smears or mis-places the dose. Investigate whether per-frame angles (start/end + number of frames/pulses) are available and whether the dose should be distributed across the swept angles rather than deposited at one position. Affects PSD localization for cardiac/neuro spins.
 - [ ] **Biplane (tube A / tube B) support and recognition** — current normalization collapses to a single plane (the Radimetrics adapter intentionally maps only the total/`kvp kv`, and per-plane `(A)`/`(B)` columns — `kVp (A/B)`, `DAP (A/B)`, `Reference Point Dose (A/B)`, `Fluoro time (A/B)` — are dropped). Biplane systems irradiate from two tubes with independent geometry and dose; detect biplane exports/RDSR (presence of A/B columns or two acquisition planes), model each plane's geometry and dose separately, and combine for total PSD. Touches the RDSR parser/normalizer, the adapters' plane handling (`AcquisitionPlane`), `geom_calc`, and the dose-map accumulation.
-- [ ] **Tabular input Phase 5+** — Qaelum, DoseMonitor, DoseWatch adapters per [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md) (gated on real vendor export fixtures; stub adapters exist).
-- [ ] **Column-pattern customization** (future, after Python-only implementation is stable): allow site-specific column name overrides via an editable JSON or YAML file so users with non-standard export templates can map columns without code changes. See `TABULAR_RDSR_INPUT_PLAN.md` open questions.
+- [ ] **Tabular input Phase 5+** — Qaelum, DoseMonitor, DoseWatch adapters per [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) (gated on real vendor export fixtures; stub adapters exist).
+- [ ] **Column-pattern customization** (future, after Python-only implementation is stable): allow site-specific column name overrides via an editable JSON or YAML file so users with non-standard export templates can map columns without code changes. See `plans/TABULAR_RDSR_INPUT_PLAN.md` open questions.
 - [ ] **Vendor coordinate normalization — lat/lon axis swap**: Confirmed for **GE equipment** (a hardware convention, not export-format specific; see `_should_swap_by_default` in `dev-docs/references/psdcalcrework_io_utils.py`). The GUI auto-enables the swap when GE is detected via `state.manufacturer` (RDSR loads) or import warnings (tabular loads). **Philips is NOT confirmed:** the bundled Philips RDSRs (`example_data/RDSR/philips_allura_clarity_*.dcm`) normalize correctly through `rdsr_normalizer()` with no swap, so `dhen2714/PySkinDose` `parse_philips()`'s swap is likely DoseTrack-export-specific and remains unverified — left as a manual toggle until a real Philips DoseTrack export can be compared against source. The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap. See `VENDOR_COORDINATE_SYSTEMS.md` for details.
-- [ ] **Vendor coordinate normalization — confirm per-vendor export frame** (Phase 5+ prerequisite): before writing Qaelum/DoseMonitor/DoseWatch adapters, compare a real export against its source RDSR to confirm whether values are in the raw DICOM frame (→ call `rdsr_normalizer()`) or pre-transformed (→ skip or adjust). See `VENDOR_COORDINATE_SYSTEMS.md` tabular input section and `TABULAR_RDSR_INPUT_PLAN.md` open questions for risk table and details.
+- [ ] **Vendor coordinate normalization — confirm per-vendor export frame** (Phase 5+ prerequisite): before writing Qaelum/DoseMonitor/DoseWatch adapters, compare a real export against its source RDSR to confirm whether values are in the raw DICOM frame (→ call `rdsr_normalizer()`) or pre-transformed (→ skip or adjust). See `VENDOR_COORDINATE_SYSTEMS.md` tabular input section and `plans/TABULAR_RDSR_INPUT_PLAN.md` open questions for risk table and details.
 - [ ] **Vendor coordinate normalization — Philips double-correction risk**: Philips has large Y/Z offsets (~105 cm Y, ~173 cm Z). If a Philips export has already applied these offsets, calling `rdsr_normalizer()` doubles them. Confirm Radimetrics/DoseTrack Philips exports are in raw DICOM frame before writing Phase 5+ adapters.
 
 ### GUI / UX
@@ -69,7 +71,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Fix download/export HTML button (verify other export paths).
 - [ ] **Rich report exports (XLSX / DOCX / PDF)** — beyond the current JSON/HTML/PNG (export tab) and CSV/XLSX/TXT event dumps (data tab), add report-style exports that bundle: one or two **dose-plot images at different views/angles** (reuse `make_dosemap_png`, rendered from a couple of camera angles), **key input factors** (total air kerma, DAP, fluoro time, number of cine/rotational acquisitions, protocol/exam name, perhaps average SID, kVp range), and **key results** (PSD, perhaps average correction factors k_isq/k_bs/k_tab). XLSX via a summary sheet + embedded image; DOCX via python-docx; PDF via a headless render or reportlab. Keep the provenance embedding (`io_helpers._tabular_input_meta`) so reports record how the source was read. New optional deps — gate behind the `[gui]`/a `[report]` extra and license-check them.
 - [ ] Add in-app help for settings and workflow; link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
-- [ ] Complete Phase 6 of `POSITIONING_HELP_PLAN.md` — integrate positioning help with main documentation.
+- [ ] Complete Phase 6 of `plans/POSITIONING_HELP_PLAN.md` — integrate positioning help with main documentation.
 - [ ] Allow manual interactive setting of table offsets in GUI.
 - [ ] Collect typical offsets per system/model/table type for user reference.
 - [ ] Settings tab: show Table Offsets (vendor-specific, read-only initially) and Patient Offsets (user-adjustable).
@@ -97,7 +99,7 @@ Unresolved investigations — not scheduled work until answered.
 
 ## Completed
 
-Finished items kept for traceability. Harness phase tags reference [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md).
+Finished items kept for traceability. Harness phase tags reference [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md).
 
 ### Harness Phases 0–5
 

@@ -29,6 +29,8 @@ jobs:
         pip install build
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
+    - name: Check file sizes (<800 lines)
+      run: python scripts/check_file_sizes.py
     - name: Build sdist and wheel
       run: python -m build
     - name: Basedpyright (strict — any type error fails)

@@ -94,13 +94,13 @@ Key gaps to address:
 
 **Remaining gaps:**
 - No custom linters for clinical-data validation rules
-- No file size limits in CI
+- ⚠️ No file size limits in CI (active gap; to be addressed in Phase 7)
 - Golden rules 1 and 4–6 not mechanically enforced (by design in Phase 4)
 
-**Recommendations (deferred):**
+**Recommendations / Plan Actions:**
 1. Add `import-linter` if contract count grows beyond pytest AST checks
 2. Clinical-data validation ruff rules or pre-commit hooks
-3. File size limit checks to CI
+3. Implement file size limit checks in CI (Phase 7): Fail if any Python source or Markdown documentation file under `src/`, `scripts/`, or `dev-docs/` exceeds 800 lines, with explicit exceptions for documented legacy/complex outliers.
 
 ---
 
@@ -139,12 +139,14 @@ Key gaps to address:
 - No standardized active/completed lifecycle for plans (partially addressed 2026-06-12: conventions in `HARNESS_ENGINEERING.md`, `plans/archive/`)
 - No shared plan template with progress/decision logs (tracked in `TO_DO.md`)
 - Backlog split across `TO_DO.md`, master plans, and `dev-docs/plans/` (intentional; see Documentation conventions)
+- ⚠️ Lack of explicit validation or gardening to ensure completed/superseded plans are archived to `dev-docs/plans/archive/` instead of lingering in the active plans folder
 
 **Recommendations:**
 1. ~~Either migrate `dev-docs/plans/` into `dev-docs/exec-plans/active/`~~ — **closed** Phase 6; use master plans at `dev-docs/` root + `plans/` + `plans/archive/`
 2. Define a plan template with: objective, acceptance criteria, progress log, decision log — **open** (`TO_DO.md`)
 3. Keep `TO_DO.md` as the short-term scratch list; link long-running work to master or execution plan files — **documented**
 4. ~~Optionally create `dev-docs/exec-plans/tech-debt-tracker.md`~~ — completed harness items live in `TO_DO.md` § Completed instead
+5. Enforce plan archiving hygiene (Phase 7): Add checkable guidelines and warnings to `check_doc_freshness.py` or as part of releases to ensure completed execution plans are archived.
 
 ---
 
@@ -235,6 +237,7 @@ Key gaps to address:
 4. Consolidate lint story: ruff as primary; flake8 limited to syntax/fatal errors or remove overlap
 5. Upgrade GitHub Actions to current major versions
 6. ~~Adopt dependabot (and optionally gitleaks/grype) in a focused hygiene PR~~ — dependabot, gitleaks, basedpyright, and pip-audit done; grype/SBOM optional
+7. Enforce local scratch script/temp file hygiene (Phase 7): Agents and developers must not leave untracked and unignored scratch files or temp output directories in the workspace. Configure pre-commit hook/cleanups and explicit gitignore rules for local development patterns.
 
 ---
 
@@ -284,7 +287,7 @@ Execute in order. Each phase should update `HARNESS_ENGINEERING.md` known gaps w
 
 | Topic | File |
 |---|---|
-| Harness improvement plan | `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
+| Harness improvement plan | `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
 | RDSR normalization, offsets, DataFrame contract | `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` |
 | Vendor coordinate systems | `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` |
 | In-app positioning help plan | `dev-docs/POSITIONING_HELP_PLAN.md` |
@@ -374,12 +377,25 @@ Execute in order. Each phase should update `HARNESS_ENGINEERING.md` known gaps w
 
 ---
 
-### Phase 7 — Low priority (in progress)
+### Phase 7 — Active: File Size CI, Archiving, and Workspace Hygiene (High Priority)
 
-- `dev-docs/references/` stub for pydicom, NiceGUI, Plotly — expand before next major dependency review
-- Recurring doc-gardening agent automation
-- Full GUI observability stack
-- Per-golden-rule custom linters (start with doc-freshness + import contracts only)
+**Objective:** Prevent codebase erosion by enforcing modularity (file sizes), plan archiving, and local file cleanup.
+
+**Tasks:**
+- [x] **7.1 Enforce File Size CI Limits:**
+  - Create `scripts/check_file_sizes.py` that scans `src/`, `scripts/`, and `dev-docs/` and fails if any Python source or Markdown documentation file exceeds 800 lines (with documented whitelist exceptions like `gui/app.py` until decomposed).
+  - Add `check_file_sizes` to `.github/workflows/ci.yml` and pre-commit.
+- [x] **7.2 Establish Visible Guidance for Agents:**
+  - Update `AGENTS.md` and `HARNESS_ENGINEERING.md` to establish clear conventions:
+    - Keep files under ~800 lines (unless strictly unavoidable).
+    - Archive completed/superseded plans under `dev-docs/plans/archive/`.
+    - Local temp files/scratch scripts must be kept in explicitly gitignored paths or deleted (unless intended for reuse).
+- [x] **7.3 Local Cleanups and Gitignore Hardening:**
+  - Strengthen `.gitignore` to cover scratch files (e.g. `scripts/scratch_*`, `*.tmp`, `debug_*`).
+  - Add check/warning to pre-commit for untracked scratch files in non-ignored paths.
+- [ ] `dev-docs/references/` stub for pydicom, NiceGUI, Plotly — expand before next major dependency review
+- [ ] Recurring doc-gardening agent automation (after stale-pattern rules are CI-blocking)
+- [ ] Full GUI observability stack
 
 ---
 
@@ -404,7 +420,8 @@ The harness improvement effort is **done enough** when:
 | Source-of-truth map | Lists all major `dev-docs/` pages; no known doc omitted from Phase 0 table |
 | Doc-freshness | CI fails on broken internal markdown links |
 | CI parity | Documented full checks match CI or are explicitly labeled maintainer-only |
-| Entropy | `egg-info` not tracked; lint line-length consistent |
+| Entropy / Modularity | `egg-info` not tracked; lint line-length consistent; **CI enforces file size limits (< 800 lines)** |
+| Workspace Hygiene | Completed plans archived to `plans/archive/`; untracked local scripts gitignored or cleaned |
 | GUI validation | At least one automated smoke test for NiceGUI startup |
 | Golden rules | At least rules 2–3 backed by tests/docs cross-links (`INPUT_DATA_FLOW_AND_OFFSETS.md`) |
 | Plans | `TO_DO.md` harness items closed or linked to exec-plan files |

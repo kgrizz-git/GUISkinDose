@@ -1,6 +1,6 @@
 # Feature Inventory — MyPySkinDose
 
-> See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
+> See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](plans/GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
 _Last updated: 2026-06-09 — compiled from direct source code reading and harness phase completion_
 
@@ -8,7 +8,7 @@ _Last updated: 2026-06-09 — compiled from direct source code reading and harne
 
 ## 0. Harness / CI (shipped)
 
-Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) Phases 0–5 and related supply-chain work. Maintainer-visible details are in [CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`.
+Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) Phases 0–5 and related supply-chain work. Maintainer-visible details are in [CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`.
 
 | Feature | Status | Notes |
 |---------|--------|-------|

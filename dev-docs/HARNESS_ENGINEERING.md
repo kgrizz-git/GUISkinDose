@@ -21,22 +21,23 @@ Agents working in this repository should be able to answer three questions quick
 |---|---|
 | Agent quickstart, conventions, current development focus | `AGENTS.md` |
 | Harness principles, validation commands, known gaps | `dev-docs/HARNESS_ENGINEERING.md` |
-| Harness improvement plan and phased roadmap | `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
+| Harness improvement plan and phased roadmap | `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
 | Documentation catalog | `dev-docs/index.md` |
 | Architecture, data flow, and layering rules | `dev-docs/CODEBASE_OVERVIEW.md` |
 | Feature inventory and known missing features | `dev-docs/FEATURE_INVENTORY.md` |
 | RDSR normalization, offsets, DataFrame contract | `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` |
 | Vendor coordinate systems | `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` |
-| GUI current state + implementation plan | `dev-docs/GUI_PLAN.md` (§0 current state) |
+| GUI current state + implementation plan | `dev-docs/plans/GUI_PLAN.md` (§0 current state) |
 | GUI design tokens (auto-generated) | `dev-docs/UI_values.md` via `scripts/generate_ui_values.py` |
 | GUI aesthetic design spec (root) | `DESIGN.md` |
 | Third-party license inventory | `dev-docs/THIRD_PARTY_NOTICES.md` (generated; do not move to repo root) |
 | External library reference links | `dev-docs/references/` |
-| In-app positioning help plan | `dev-docs/POSITIONING_HELP_PLAN.md` |
-| Tabular CSV/TSV/XLSX input plan | `dev-docs/TABULAR_RDSR_INPUT_PLAN.md` |
+| In-app positioning help plan | `dev-docs/plans/POSITIONING_HELP_PLAN.md` |
+| Tabular CSV/TSV/XLSX input plan | `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` |
 | Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
-| Execution plans (phased detail) | `dev-docs/plans/` |
+| Diagnostics and assessments (refactoring, code quality, etc.) | `dev-docs/assessments/` |
+| Active plans folder | `dev-docs/plans/` |
 | Archived completed plans | `dev-docs/plans/archive/` |
 | Package install and build | `dev-docs/info/PACKAGE_INSTALL.md` |
 | Project packaging and tool configuration | `pyproject.toml` |
@@ -55,15 +56,18 @@ Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecess
 
 | Tier | Location | When to use | Examples |
 |---|---|---|---|
-| **Master plan** | `dev-docs/*_PLAN.md` at catalog root | Long-lived topic source of truth; link from `AGENTS.md` | `GUI_PLAN.md`, `TABULAR_RDSR_INPUT_PLAN.md`, `POSITIONING_HELP_PLAN.md` |
-| **Harness meta-plan** | `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` | Repository/process improvement only — not product features | Phases 0–7 roadmap |
+| **Master plan** | `dev-docs/plans/*_PLAN.md` | Long-lived topic source of truth; link from `AGENTS.md` | `GUI_PLAN.md`, `TABULAR_RDSR_INPUT_PLAN.md`, `POSITIONING_HELP_PLAN.md` |
+| **Harness meta-plan** | `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` | Repository/process improvement only — not product features | Phases 0–7 roadmap |
 | **Execution plan** | `dev-docs/plans/*.md` | Phased work derived from a diagnostic or master plan | `refactor-execution.md`, `gui-decomposition-design.md` |
 | **Archive** | `dev-docs/plans/archive/` | Completed or superseded execution plans | `basedpyright-fix-plan.md` |
 | **Scratch backlog** | `dev-docs/TO_DO.md` | Short-term actionable items; link out to plans above | Harness CI tasks, open investigations |
+| **Assessment** | `dev-docs/assessments/*.md` | Diagnostics and assessments of code quality, refactoring, bug checks, or security | `REFACTOR_ASSESSMENT.md` |
 
-**Naming:** keep `Topic_PLAN.md` for master plans at `dev-docs/` root. Do not add new docs under `src/` — all maintainer docs live under `dev-docs/`.
+**Naming:** keep `Topic_PLAN.md` for master plans under `dev-docs/plans/`. Do not add new docs under `src/` — all maintainer docs live under `dev-docs/`.
 
 **Catalog:** every new or retired doc must update `dev-docs/index.md` in the same PR.
+
+**Archive rules:** Once work in an execution plan is complete or superseded, move the plan file into `dev-docs/plans/archive/` and update its path in the catalog to keep the active plans directory uncluttered.
 
 ## Golden rules
 
@@ -79,6 +83,16 @@ Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecess
    Use `pathlib.Path`, avoid shell-specific path assumptions in Python code, and keep CI on Windows/macOS/Linux.
 6. **Fail loudly on clinical-data ambiguity.**
    Unknown units, missing geometry, unsupported scanner models, or ambiguous tabular schemas should produce actionable errors or explicit warnings before calculation.
+7. **Keep files to a reasonable size (Modularity).**
+   Keep all Python source files and Markdown documentation files under ~800 lines to ensure maintainability and agent legibility. Outliers must be explicitly whitelisted in `scripts/check_file_sizes.py` and scheduled for refactoring.
+8. **Archive completed or superseded plans.**
+   Always move completed or superseded execution plans from `dev-docs/plans/` to `dev-docs/plans/archive/` and update `dev-docs/index.md` catalog references.
+9. **Store diagnostics and assessments in the designated folder.**
+   Place diagnostic reports or assessments (such as for refactoring, code quality, bug checks, etc.) under `dev-docs/assessments/` and register them in `dev-docs/index.md`.
+10. **Maintain workspace cleanliness.**
+    Scratch scripts, temporary code, and local output files must be kept in explicitly gitignored paths (e.g. `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse. Do not check temp or experimental scrap into the repository.
+
+
 
 ## Validation commands
 
@@ -313,7 +327,7 @@ Every PR should answer:
 
 ## Known alignment gaps
 
-Tracked in `dev-docs/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` and `dev-docs/TO_DO.md`:
+Tracked in `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` and `dev-docs/TO_DO.md`:
 
 - Tabular input Phases 1–5 shipped; Qaelum/DoseMonitor/DoseWatch adapters remain stubs pending real export fixtures (`TABULAR_RDSR_INPUT_PLAN.md`, `FEATURE_INVENTORY.md`).
 - Stale-pattern doc-freshness scan is advisory only (not yet CI-blocking before release).

@@ -2,9 +2,9 @@
 
 _Last updated: 2026-06-11_
 
-> Companion to [REFACTOR_ASSESSMENT.md](../REFACTOR_ASSESSMENT.md) (the diagnostic). This file is the executable plan — the assessment says *what* is wrong; this says *how* to fix it, in what order, and how to verify each step.
+> Companion to [REFACTOR_ASSESSMENT.md](../assessments/REFACTOR_ASSESSMENT.md) (the diagnostic). This file is the executable plan — the assessment says *what* is wrong; this says *how* to fix it, in what order, and how to verify each step.
 
-> See also: [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](../GUI_PLAN.md) | [HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md)
+> See also: [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](GUI_PLAN.md) | [HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md)
 
 **Status: not started.**
 

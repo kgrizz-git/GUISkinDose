@@ -3,7 +3,7 @@
 > **Auto-generated** — do not edit by hand. Regenerate with:
 > `python scripts/generate_ui_values.py`
 
-Design tokens extracted from `MODERN_CSS` in [src/mypyskindose/gui/styles.py](../src/mypyskindose/gui/styles.py). Aesthetic intent lives in [DESIGN.md](../DESIGN.md); implementation plan in [GUI_PLAN.md](GUI_PLAN.md).
+Design tokens extracted from `MODERN_CSS` in [src/mypyskindose/gui/styles.py](../src/mypyskindose/gui/styles.py). Aesthetic intent lives in [DESIGN.md](../DESIGN.md); implementation plan in [GUI_PLAN.md](plans/GUI_PLAN.md).
 
 ## Color palette (CSS variables)
 

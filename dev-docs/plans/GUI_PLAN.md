@@ -1,10 +1,10 @@
 # GUI Plan — MyPySkinDose
 
-> See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | [DESIGN.md](../DESIGN.md) | [UI_values.md](UI_values.md) | [AGENTS.md](../AGENTS.md)
+> See also: [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [FEATURE_INVENTORY.md](../FEATURE_INVENTORY.md) | [DESIGN.md](../../DESIGN.md) | [UI_values.md](../UI_values.md) | [AGENTS.md](../../AGENTS.md)
 
 _Last updated: 2026-06-09_
 
-**Documentation roles:** [DESIGN.md](../DESIGN.md) = aesthetic intent; [UI_values.md](UI_values.md) = auto-generated tokens from `app.py`; this file = current state + implementation plan (§0 supersedes the retired `UI_ANALYSIS.md`).
+**Documentation roles:** [DESIGN.md](../../DESIGN.md) = aesthetic intent; [UI_values.md](../UI_values.md) = auto-generated tokens from `app.py`; this file = current state + implementation plan (§0 supersedes the retired `UI_ANALYSIS.md`).
 
 ---
 
@@ -50,7 +50,7 @@ Location: `src/mypyskindose/gui/app.py`. Default URL: http://localhost:8765.
 | Calculation | Progress feedback, PSD / air kerma / event metrics |
 | Results | Interactive 3D dose map, correction factors table |
 | Export | JSON, HTML, PNG (PDF/Word not yet implemented) |
-| Aesthetic | Sleek modern / glassmorphism per `MODERN_CSS`; tokens in [UI_values.md](UI_values.md) |
+| Aesthetic | Sleek modern / glassmorphism per `MODERN_CSS`; tokens in [UI_values.md](../UI_values.md) |
 
 ### 0.5 Rich terminal output
 
