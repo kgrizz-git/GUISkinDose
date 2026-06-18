@@ -10,27 +10,28 @@ Allow MyPySkinDose to process multiple exams (studies/procedures) in a single ru
 
 Each exam produces its own dose map and PSD. The user may apply per-exam or global settings.
 
-**Phantom sharing:** There is one phantom per run (same patient across exams). The phantom (patient, table, pad) is created once and shared across all exams. Each exam gets its own dose map and `PySkinDoseOutput`.
+**Phantom sharing:** Fresh `Phantom` instances with identical topology (same model, vertex count, and vertex ordering) are created for each exam. `dose_map[i]` therefore refers to the same anatomical skin vertex across all exams, making element-wise summation of per-exam dose maps valid for cumulative dose.
 
 ## Acceptance Criteria
 
-- [ ] CLI accepts multiple file paths (`--file-path file1.dcm file2.dcm` or `--file-path *.dcm` or `--file-path batch.csv`).
-- [ ] Tabular loader splits a single file into per-exam DataFrames when a study-identifier column is present and contains >1 unique value (previously: error).
-- [ ] Each exam gets its own dose map and `PySkinDoseOutput`; phantom mesh (model, topology, vertex ordering) is shared across exams; per-exam patient offsets are supported.
-- [ ] Output contains per-exam PSDs, per-exam dose maps, and a cumulative dose map (element-wise sum across exams) plus aggregate PSD (max across exams).
+- [x] CLI accepts multiple file paths (`--file-path file1.dcm file2.dcm` or `--file-path *.dcm` or `--file-path batch.csv`).
+- [x] Tabular loader splits a single file into per-exam DataFrames when a study-identifier column is present and contains >1 unique value (previously: error).
+- [x] Each exam gets its own dose map and `PySkinDoseOutput`; phantom mesh topology is consistent across exams (same model, vertex count, ordering); per-exam patient offsets are supported.
+- [x] Output contains per-exam PSDs, per-exam dose maps, and a cumulative dose map (element-wise sum across exams) plus aggregate PSD (max across exams).
 - [ ] GUI shows a list of loaded exams with per-exam metadata (file name, event count, study ID, detected schema) and per-exam results after calculation.
-- [ ] ✅ Recursion-to-iteration refactor is complete (`96ce63b`).
-- [ ] Full test coverage for multi-exam paths (unit + smoke).
+- [x] ✅ Recursion-to-iteration refactor is complete (`96ce63b`).
+- [x] Full test coverage for multi-exam paths (unit + smoke) — see `tests/unittests/test_multi_exam.py`.
 
 ## Decision Log
 
 | # | Decision | Rationale |
-|---|----------|-----------|
+|---|----------|-----------| 
 | D1 | Exams are split by **study-level identifier**, not by file boundary in tabular input | A single export can contain multiple studies; splitting by study ID is the user-friendly default. File boundary splitting is the fallback for RDSR batches. |
-| D2 | Settings are **global by default** with per-exam override for patient/table offsets and event-processing conventions | Most users run the same phantom across exams. The phantom model and mesh are always shared (same topology, same vertex count and ordering). Per-exam offsets are first-class because patient positioning routinely differs between procedures. Per-exam event-processing conventions are needed when exams come from different manufacturers with different coordinate conventions. |
+| D2 | Settings are **global by default** with per-exam override for patient/table offsets and event-processing conventions | Most users run the same phantom across exams. Per-exam offsets are first-class because patient positioning routinely differs between procedures. Per-exam event-processing convention overrides are Phase 2. |
 | D3 | Output is a list of `ExamResult` wrapped in a `MultiExamResult` | Keeps existing `PySkinDoseOutput` API intact. `MultiExamResult` adds aggregate stats and per-exam metadata. |
 | D4 | GUI shows exams as a **collapsible accordion** with per-exam result cards | Avoids overwhelming the user; each exam's dose map can be inspected independently. |
 | D5 | Recursion-to-iteration refactor is a **separate prerequisite task** | It is independently useful (fixes RecursionError on long single-exam procedures) and blocks multi-exam for >1000 total events. |
+| D6 | **Fresh `Phantom` instances per exam** rather than a shared instance with `reset_to_origin()` | `position_patient_phantom_on_table()` applies incremental `translate()` calls. Sharing a `Phantom` and resetting would require storing `r_origin` and adding a reset method. Creating fresh instances with the same model is simpler, correct, and topology is guaranteed identical (same mesh file, same construction path). |
 
 ## Architecture
 
@@ -42,148 +43,103 @@ MultiExamResult
 │   ├── exam_id: str              # study_uid, accession, or file name
 │   ├── source_file: str          # original file path
 │   ├── event_count: int
-│   ├── patient_offset: list[float]  # per-exam offset used (d_lon, d_ver, d_lat)
-│   ├── settings_snapshot: dict   # effective settings used (PyskindoseSettings.model_dump())
+│   ├── patient_offset: list[float]  # per-exam offset used [d_lon, d_ver, d_lat]
+│   ├── settings_snapshot: dict   # effective settings used (subset of PyskindoseSettings)
 │   ├── output: PySkinDoseOutput  # per-exam result (includes per-exam dose_map)
 │   └── warnings: list[str]
-├── aggregate_dose_map: np.ndarray  # element-wise sum of per-exam dose maps (same mesh)
+├── aggregate_dose_map: np.ndarray  # element-wise sum of per-exam dose maps (same topology)
 ├── aggregate_psd: float            # max over aggregate_dose_map (peak skin dose across all exams)
 ├── total_events: int
 └── warnings: list[str]
 ```
 
-**Why element-wise summation is valid:** all exams use the same phantom model, so `dose_map[i]` refers to the same anatomical skin vertex in every exam regardless of world-space repositioning. Summing them gives the cumulative dose received by each skin location across the full procedure series.
+**Why element-wise summation is valid:** all exams use fresh `Phantom` instances built from the same STL/model, so `dose_map[i]` refers to the same anatomical skin vertex in every exam regardless of world-space repositioning. Summing them gives the cumulative dose received by each skin location across the full procedure series.
 
-`ExamResult` is a wrapper around `PySkinDoseOutput` that carries per-exam metadata. It lives in `format_export_data.py` alongside `MultiExamResult`.
+`ExamResult` and `MultiExamResult` live in `format_export_data.py` alongside `PySkinDoseOutput`. ✅ **Shipped.**
 
-### Layer changes
+### ✅ Shipped: Python Core
 
-#### 1. Input adapters
+All Python core multi-exam work is complete.
 
-**`normalized.py`** (and other adapters): Replace the multi-study error with a split.
+#### Input adapters
 
-```python
-# Before (line 209-215):
-if unique_ids > 1:
-    raise ValueError("...multiple procedures...")
+**`normalized.py`**: When >1 distinct study identifier is detected, `adapt()` returns `list[InputAdapterResult]` (one per group), grouped by the first matched study-ID column in priority order: `studyinstanceuid` → `study_id` → `accession_number` → `patient_id` → `study_uid`. Single-study files return a single `InputAdapterResult` (no regression). Study-ID column is stripped from each group's `normalized_data`.
 
-# After:
-if unique_ids > 1:
-    # Group by the first detected study-identifier column
-    group_col = detected_col
-    groups = data_df.groupby(group_col, sort=False)
-    # Return a list of InputAdapterResult, one per group
-    return [InputAdapterResult(data=group_df, ...) for _, group_df in groups]
+**`registry.py`**: `read_and_normalize_input()` propagates the list return transparently.
+
+**`main.py`**: `analyze_input_file()` detects a list result and dispatches to `analyze_multiple_exams()`. `analyze_multiple_input_files()` accepts a `Sequence[str | Path]`, wraps RDSR files in `InputAdapterResult` with synthetic provenance, and calls `analyze_multiple_exams()`.
+
+> **Known limitation — glob expansion:** The CLI `--file-path` argument uses `nargs="+"`, which allows multiple explicit paths. Shell glob expansion (e.g. `--file-path exams/*.dcm`) works only if the pattern is **unquoted** (the shell expands it). Quoted glob patterns (e.g. `--file-path "exams/*.dcm"`) are passed as a literal string and will fail. Programmatic glob expansion via `pathlib.Path.glob()` inside `analyze_multiple_input_files()` has not been implemented.
+
+#### Calculation (`analyze_data.py`)
+
+**`analyze_multiple_exams(exams, settings, per_exam_offsets=None)`**: For each `InputAdapterResult`:
+1. Applies per-exam `patient_offset` from `per_exam_offsets` if provided; falls back to global offset.
+2. Creates fresh `table` and `pad` `Phantom` instances (not shared; see D6).
+3. Calls `calculate_rotation_matrices()`, then `calculate_dose()`, which returns `(patient, raw_output)`.
+4. Accumulates `aggregate_dose_map` as element-wise sum of per-exam dose maps.
+5. On per-exam failure: catches the exception, records it in `warnings`, and continues — partial results are returned.
+
+`calculate_dose()` already returns `(patient, raw_output)`. No changes to its signature were needed.
+
+**`calculate_dose/calculate_irradiation_event_result.py`**: ✅ Recursion → iteration refactor complete (`96ce63b`).
+
+#### Output (`format_export_data.py`)
+
+`ExamResult` and `MultiExamResult` dataclasses with `to_dict()` and `to_json()` methods. ✅ **Shipped.**
+
+`format_analysis_result_for_export()` is bypassed in the multi-exam path; `analyze_multiple_exams()` constructs `PySkinDoseOutput` directly and wraps it in `ExamResult`.
+
+> **Note — `--output-format html` in multi-exam mode:** The CLI does not currently raise an error if `--output-format html` is set for a multi-exam run. `analyze_multiple_exams()` always returns a `MultiExamResult` (not an HTML string), and the `__main__` block serializes it via `json.dumps(result.to_dict())` regardless of the output format setting. The explicit blocking with a user-facing error message described in Q7 is not yet implemented.
+
+#### CLI (`main.py`)
+
+```bash
+# Single file (existing, unchanged)
+python -m mypyskindose --file-path exam1.dcm
+
+# Multiple files (explicit; shell-expanded glob also works)
+python -m mypyskindose --file-path exam1.dcm exam2.dcm exam3.dcm
+
+# Single tabular file — auto-split by study_id
+python -m mypyskindose --file-path batch.csv
+
+# Output: JSON dict with "exams", "aggregate_dose_map", "aggregate_psd", "total_events"
 ```
 
-The adapter's `adapt()` function returns either a single `InputAdapterResult` (one procedure) or a `list[InputAdapterResult]` (multiple procedures).
+`--file-path` accepts `nargs="+"`. When >1 path is given, `analyze_multiple_input_files()` is called and output is printed as JSON. When exactly 1 path is given, existing single-exam behavior is preserved.
 
-**`registry.py`**: `read_and_normalize_input()` returns `InputAdapterResult | list[InputAdapterResult]`.
+`--input-schema` choices: `"normalized"`, `"generic_rdsr_like"`, `"radimetrics"`, `"dosetrack"`, `"auto"`. ✅ **Shipped.**
 
-**`main.py`**: `analyze_input_file()` and `main()` detect multi-result and dispatch to `analyze_multiple_exams()`.
+> **Not yet implemented:** `--aggregate` flag to print only `aggregate_psd` to stdout (Q2). `aggregate_psd` is always included in the JSON output dict.
 
-**`--input-schema` choices**: The CLI `--input-schema` argument should list all five supported schemas: `"normalized"`, `"generic_rdsr_like"`, `"radimetrics"`, `"dosetrack"`, `"auto"`.
+#### `main()` public API
 
-#### 2. Calculation (`analyze_data.py`, `calculate_dose/`)
-
-**`analyze_data.py`**: Detect multi-exam input. For each exam DataFrame, call `calculate_dose()` independently. After all exams complete, sum per-exam dose maps element-wise to produce `aggregate_dose_map`.
-
-**Phantom sharing and per-exam repositioning:** The patient phantom (model, topology, vertex ordering) must be instantiated exactly once and shared across all exams to minimize memory usage. However, `position_patient_phantom_on_table()` uses incremental `translate()` calls that mutate `patient.r` in place. To support per-exam offsets without instantiating multiple meshes, we must add a `reset_to_origin()` method to the `Phantom` class that restores `r` to its pre-positioning state (requires storing `r_origin` at construction). `table` and `pad` phantoms are also reused and reset.
-
-**`calculate_dose/calculate_dose.py`**: Needs one change: `patient` is currently created inside `calculate_dose()` and returned. For the orchestrator to control per-exam offsets and collect per-exam `patient` references (needed to extract the dose map), patient creation must be lifted out or `calculate_dose()` must accept per-exam offset parameters directly.
-
-**`calculate_dose/calculate_irradiation_event_result.py`**: ✅ Recursion → iteration refactor complete (shipped `96ce63b`).
-
-**Plotting**: Each exam produces its own geometry plot and dose map plot as normal. No changes to plotting behavior — the user gets one plot per exam, which is the intended output.
-
-#### 3. Output (`format_export_data.py`)
-
-Add `ExamResult` and `MultiExamResult`:
-
-```python
-@dataclass
-class ExamResult:
-    exam_id: str
-    source_file: str
-    event_count: int
-    patient_offset: list[float]      # [d_lon, d_ver, d_lat] used for this exam
-    settings_snapshot: dict          # PyskindoseSettings.model_dump()
-    output: PySkinDoseOutput
-    warnings: list[str]
-
-@dataclass
-class MultiExamResult:
-    exams: list[ExamResult]
-    aggregate_dose_map: np.ndarray  # element-wise sum of per-exam dose maps
-    aggregate_psd: float            # max over aggregate_dose_map
-    total_events: int
-    warnings: list[str]
-
-    def to_dict(self) -> dict:
-        return {
-            "exams": [
-                {
-                    "exam_id": e.exam_id,
-                    "source_file": e.source_file,
-                    "event_count": e.event_count,
-                    "patient_offset": e.patient_offset,
-                    "settings_snapshot": e.settings_snapshot,
-                    "warnings": e.warnings,
-                    "output": e.output.to_dict(),
-                }
-                for e in self.exams
-            ],
-            "aggregate_dose_map": self.aggregate_dose_map.tolist(),
-            "aggregate_psd": self.aggregate_psd,
-            "total_events": self.total_events,
-            "warnings": self.warnings,
-        }
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
-```
-
-`format_analysis_result_for_export()` is bypassed in the multi-exam path. The orchestrator calls `calculate_dose()` directly for each exam and wraps the result in `ExamResult`, then assembles `MultiExamResult`.
+The existing `main(file_path, settings)` is unchanged (backward compatible). The multi-file entry point is `analyze_multiple_input_files(file_paths, settings, ...)`. Adding `file_paths: list[str] | None = None` to `main()` (Q8) has not been done; `analyze_multiple_input_files()` is the intended programmatic API for multi-exam runs.
 
 ### Memory Management
 
-By reusing a single `Phantom` instance across exams, we avoid the memory overhead of duplicating the 3D mesh.
-- **Data:** `aggregate_dose_map` and per-exam dose maps are just lightweight 1D scalar arrays.
-- **GUI:** While the Python backend memory footprint is minimal, Plotly figures are highly memory-intensive in the browser. If we render a separate 3D Plotly figure for each exam in the GUI, it could crash the browser. A soft limit should be imposed (e.g., warn or block if > 10 exams are uploaded) to prevent browser-side memory issues.
+Fresh `Phantom` instances per exam are slightly less memory-efficient than a shared instance, but the overhead is negligible (a few MB per mesh) and correct by construction.
+- **Data:** `aggregate_dose_map` and per-exam dose maps are lightweight 1D scalar arrays.
+- **GUI (future):** Plotly figures are memory-intensive in the browser. A soft limit should be imposed (e.g., warn or block if >10 exams are uploaded) to prevent browser-side memory issues when rendering N dose map figures.
 
-#### 4. CLI (`main.py`)
+---
 
-```bash
-# Single file (existing)
-python -m mypyskindose --file-path exam1.dcm
+### 🚧 Not Yet Implemented: GUI
 
-# Multiple files (glob or explicit)
-python -m mypyskindose --file-path exam1.dcm exam2.dcm exam3.dcm
-python -m mypyskindose --file-path "exams/*.dcm"
-python -m mypyskindose --file-path batch.csv   # auto-split by study_id
+GUI multi-exam support is the primary remaining scope. No GUI code for multi-exam exists yet.
 
-# Output format: JSON dict with "exams" key
-```
-
-`argparse` change: `--file-path` accepts `nargs="+"` (one or more paths). If a single path is given, behavior is unchanged. If multiple paths are given, each is loaded and processed as a separate exam. Glob patterns (e.g. `"exams/*.dcm"`) are expanded via `pathlib.Path.glob()` if the path does not resolve to an existing file.
-
-**`main()` function signature**: Add an optional `file_paths: list[str] | None = None` parameter. When `file_paths` is provided, `main()` processes all files as separate exams. The existing `file_path: str | None` parameter is kept for backward compatibility; if both are provided, `file_paths` takes precedence.
-
-**`--output-format` interaction**: In multi-exam mode, `"html"` output should be blocked with a clear error message. An HTML file containing N dose maps would be prohibitively large. `"dict"` and `"json"` are the supported formats for multi-exam output.
-
-#### 5. GUI (`gui/`)
-
-**Upload tab changes:**
+#### Upload tab changes
 
 - Add the Quasar `multiple` prop to the `ui.upload` element.
-- **Temp File Lifecycle:** Modify `_register_temp_upload` and `_uploaded_temp_files` in `app.py` to allow multiple concurrent temporary files (stop deleting the previous file upon new upload). Add a "Clear All" mechanism to handle cleanup when the user resets the session.
+- **Temp File Lifecycle:** Modify `_register_temp_upload` and `_uploaded_temp_files` in `app.py` to allow multiple concurrent temporary files (stop deleting the previous file upon new upload). Add a "Clear All" mechanism for session cleanup.
 - On multi-file upload, each file is processed as a separate exam.
 - Show a **loaded exams list** after upload:
   - Each row: file name, schema, event count, study ID (if detected), status (OK/error).
   - Clicking a row highlights that exam's data in the event table preview.
   - Per-exam warning badges (e.g. "2 events snapped to nearest HVL grid").
 
-**Calculate tab changes:**
+#### Calculate tab changes
 
 - "Calculate" button processes all loaded exams.
 - Results shown as per-exam cards:
@@ -192,14 +148,14 @@ python -m mypyskindose --file-path batch.csv   # auto-split by study_id
   - Aggregate PSD banner at top (max across exams).
 - If a single exam is loaded, the UI is identical to current behavior (no visual change).
 
-**Settings tab changes:**
+#### Settings tab changes
 
 - Global settings panel (existing).
 - *(Phase 2)* Optional per-exam override section:
-  - *Note: Building dynamic, per-exam settings panels in NiceGUI will add significant complexity. Phase 1 will use global settings for all exams in the GUI (though the Python core API will support per-exam overrides immediately).*
+  - *Note: Building dynamic, per-exam settings panels in NiceGUI will add significant complexity. Phase 1 will use global settings for all exams in the GUI (though the Python core API supports per-exam overrides).*
   - Patient offset overrides per exam.
   - Table offset overrides per exam.
-  - Event-processing convention overrides per exam.
+  - Event-processing convention overrides per exam (manufacturer coordinate differences).
   - "Apply global" button copies global settings to all exams.
 
 ### Prerequisite: Recursion → Iteration ✅ Complete
@@ -211,55 +167,64 @@ Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterat
 ## Implementation Order
 
 1. ✅ **Recursion → iteration refactor** — complete (`96ce63b`).
-2. **`ExamResult` and `MultiExamResult` dataclasses** — in `format_export_data.py`; include `patient_offset` on `ExamResult` and `aggregate_dose_map` on `MultiExamResult`.
-3. **Input adapter multi-study split** — `normalized.py` adapter returns list when >1 study ID detected.
-4. **`analyze_multiple_exams()` orchestrator** — in `analyze_data.py` / `main.py`; per-exam phantom repositioning using `reset_to_origin()` to share the single `Phantom` instance; per-exam patient offsets passed to `position_patient_phantom_on_table()`; aggregate dose map computed as element-wise sum of per-exam dose maps after all exams complete; error handling (partial failure returns partial results with per-exam warnings).
-5. **CLI multi-file support** — `--file-path nargs="+"`, glob expansion, `--output-format` blocking for `"html"`, `--input-schema` choices updated.
-6. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot (using global settings).
-7. **GUI Phase 2 & Per-exam overrides** — UI panels for per-exam patient/table offsets, and per-exam event-processing convention overrides (manufacturer coordinate differences).
-8. **Tests** — unit, integration, GUI smoke.
+2. ✅ **`ExamResult` and `MultiExamResult` dataclasses** — shipped in `format_export_data.py`.
+3. ✅ **Input adapter multi-study split** — `normalized.py` returns list when >1 study ID detected.
+4. ✅ **`analyze_multiple_exams()` orchestrator** — shipped in `analyze_data.py`; fresh phantoms per exam; per-exam patient offsets; aggregate dose map as element-wise sum; partial-failure handling.
+5. ✅ **`analyze_multiple_input_files()` and CLI multi-file support** — `--file-path nargs="+"`, `analyze_multiple_input_files()` in `main.py`.
+6. ✅ **Tests** — `tests/unittests/test_multi_exam.py` covers serialization, registry split, orchestrator integration, per-exam offsets, partial failure, and dict/JSON round-trip.
+7. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot. *(Not started.)*
+8. **GUI Phase 2 & Per-exam overrides** — UI panels for per-exam patient/table offsets and per-exam event-processing convention overrides. *(Not started.)*
+9. **Minor polish (not blocking):**
+   - Explicit `--output-format html` error in multi-exam CLI path.
+   - Programmatic glob expansion in `analyze_multiple_input_files()`.
+   - `--aggregate` CLI flag to print only aggregate PSD.
+   - Multi-study split in adapters other than `normalized` (e.g. `radimetrics`, `dosetrack`).
 
 ## Testing
 
-### Unit tests
+### ✅ Existing tests (`test_multi_exam.py`)
 
-- `test_normalized_multi_study_split()` — adapter splits on `study_id` column.
-- `test_normalized_single_study_returns_single()` — single study ID → single result (no regression).
-- `test_exam_result_serialization()` — `ExamResult` fields round-trip correctly.
-- `test_multi_exam_result_serialization()` — `to_dict()` and `to_json()` round-trip.
-- `test_analyze_multiple_exams()` — orchestrator processes list of DataFrames, returns `MultiExamResult` with correct per-exam dose maps and aggregate.
-- `test_aggregate_dose_map_is_sum_of_per_exam_maps()` — `aggregate_dose_map` equals element-wise sum of `ExamResult.output.dose_map` for all exams.
-- `test_per_exam_offsets_are_independent()` — two exams with different `patient_offset` values each use the correct offset; neither affects the other's phantom positioning.
-- `test_recursion_iteration_equivalence()` — iterative output identical to reference for 500 events.
-- `test_recursion_iteration_no_crash_1100_events()` — iterative version handles >1000 events.
+- `TestExamResultSerialization.test_exam_result_fields` — `ExamResult` fields round-trip correctly.
+- `TestMultiExamResultSerialization.test_to_dict_structure` — `to_dict()` structure and keys.
+- `TestMultiExamResultSerialization.test_aggregate_psd_is_max_of_aggregate_map` — `aggregate_psd` equals `aggregate_dose_map.max()`.
+- `TestMultiExamResultSerialization.test_to_json_round_trips` — JSON round-trip.
+- `TestMultiExamResultSerialization.test_aggregate_dose_map_is_sum_of_per_exam_maps` — element-wise sum property.
+- `TestMultiStudySplitViaRegistry.*` — single-study no-regression; multi-study split; correct group sizes; provenance preserved; `__study_id__` column stripped.
+- `TestAnalyzeMultipleExams.test_two_exams_return_multi_exam_result` — orchestrator returns `MultiExamResult` with two exams.
+- `TestAnalyzeMultipleExams.test_aggregate_dose_map_equals_sum_of_per_exam_maps` — aggregate equals sum of `DoseMap` attributes.
+- `TestAnalyzeMultipleExams.test_aggregate_psd_is_max_of_aggregate_map` — aggregate PSD.
+- `TestAnalyzeMultipleExams.test_per_exam_offsets_are_independent` — different offsets produce different dose distributions.
+- `TestAnalyzeMultipleExams.test_exam_result_carries_source_file` — provenance filename preserved.
+- `TestAnalyzeMultipleExams.test_partial_failure_returns_succeeded_exams` — bad exam yields partial results with warnings.
+- `TestAnalyzeMultipleExams.test_to_dict_and_to_json_roundtrip` — full output dict/JSON.
 
-### Integration tests
+### Tests still needed
 
-- Load two example RDSR files, verify two per-exam PSDs and a cumulative dose map in output.
-- Load two exams with different `patient_offset` values; verify aggregate dose map equals sum of per-exam maps and that per-exam dose maps differ from each other.
-- Load a synthetic multi-study CSV, verify per-exam grouping.
-- Load multi-exam input where one exam fails, verify partial results with warnings.
+- `test_recursion_iteration_equivalence()` — iterative output identical to reference for 500 events. (May exist elsewhere; verify.)
+- `test_recursion_iteration_no_crash_1100_events()` — iterative version handles >1000 events without `RecursionError`. (May exist elsewhere; verify.)
+- Integration test: load two example RDSR files from disk via `analyze_multiple_input_files()` and verify `MultiExamResult` shape.
+- Integration test: load a multi-study tabular CSV and verify per-exam grouping end-to-end through `analyze_input_file()`.
 
-### GUI smoke tests
+### GUI smoke tests (future)
 
 - Upload two files, verify both appear in exam list.
 - Click Calculate, verify per-exam result cards.
 - Verify aggregate PSD shown.
 
-## Open Questions
+## Open Questions / Resolved Decisions
 
-- **Q1:** Should multi-exam output include a **cumulative** dose map (summed across exams) or only per-exam maps? → **Decision:** both. Per-exam dose maps are included in each `ExamResult.output`. The `MultiExamResult.aggregate_dose_map` is the element-wise sum across all exams — the total dose received by each skin vertex across the full procedure series. `aggregate_psd` is the peak of that cumulative map.
+- **Q1:** Should multi-exam output include a **cumulative** dose map? → **Resolved:** both. Per-exam dose maps are in `ExamResult.output.DoseMap`. `MultiExamResult.aggregate_dose_map` is the element-wise sum; `aggregate_psd` is its peak. ✅ Shipped.
 
-- **Q2:** Should the CLI support a `--aggregate` flag for a single "worst-case" PSD? → **Recommendation:** yes, `aggregate_psd` is always in the output dict. A CLI flag to print only the aggregate to stdout is convenient.
+- **Q2:** Should the CLI support a `--aggregate` flag? → **Recommendation:** yes — convenient for scripting. Not yet implemented; `aggregate_psd` is always present in the JSON output dict.
 
-- **Q3:** For tabular multi-study splitting, what is the **default study-identifier column** if none is detected? → **Recommendation:** check for `studyinstanceuid`, `study_id`, `accession_number`, `patient_id` in that order (matching the lowercase set already in `normalized.py:100`). `studyinstanceuid` (DICOM 0020,000D) is the most canonical identifier. If none present, keep the current error behavior (cannot determine study boundaries).
+- **Q3:** Default study-identifier column priority? → **Resolved:** `studyinstanceuid` → `study_id` → `accession_number` → `patient_id` → `study_uid`. If none present, current single-study behavior is preserved (no split). ✅ Shipped in `normalized.py`.
 
-- **Q4:** Should per-exam settings overrides be in the first implementation or Phase 2? → **Decision:** per-exam patient/table offsets are Phase 1 (first-class requirement — patients are routinely repositioned between procedures). Per-exam event-processing convention overrides (manufacturer coordinate differences) are Phase 2.
+- **Q4:** Per-exam settings overrides in Phase 1 or Phase 2? → **Resolved:** per-exam `patient_offset` is Phase 1 (✅ shipped via `per_exam_offsets` parameter). Per-exam event-processing convention overrides (manufacturer coordinate differences) are Phase 2.
 
-- **Q5:** How should the progress bar behave across multiple exams? → **Options:** (a) One shared bar (0–total_events across all exams), (b) Per-exam bars (reset for each exam), (c) One bar with sub-labels showing exam name. → **Recommendation:** (a) One shared bar for simplicity; the user sees continuous progress. Per-exam bars (b) are better if exams are very disparate in size (e.g. 10 events vs 5000 events).
+- **Q5:** Progress bar behavior across multiple exams? → **Pending** (GUI not yet built). Recommendation: one shared progress bar (0–total_events across all exams) for simplicity.
 
-- **Q6:** What should happen when an exam fails during multi-exam processing? → **Options:** (a) Return partial `MultiExamResult` with succeeded exams and the failed exam in `warnings`, (b) Raise immediately on first failure, (c) Skip failed exams silently. → **Recommendation:** (a) Return partial results with per-exam warnings. This is the most user-friendly: the user gets what succeeded and knows what failed.
+- **Q6:** What happens when an exam fails during multi-exam processing? → **Resolved:** partial `MultiExamResult` with succeeded exams and failed exam in `warnings`. ✅ Shipped.
 
-- **Q7:** Should `"html"` output be blocked in multi-exam mode, or produce an HTML file with all dose maps? → **Recommendation:** Block `"html"` with a clear error message. An HTML file with N dose maps would be prohibitively large. If requested later, a separate `"html_batch"` mode could generate multiple HTML files (one per exam).
+- **Q7:** Should `"html"` output be blocked in multi-exam mode? → **Partially resolved:** `analyze_multiple_exams()` always returns `MultiExamResult`; the `__main__` block always serializes via `json.dumps`. An explicit user-facing error for `--output-format html` in multi-exam CLI mode has not been added.
 
-- **Q8:** How should `main()` accept multiple files — via `file_paths` list parameter, or only through CLI and `analyze_input_file()`? → **Recommendation:** Add `file_paths: list[str] | None = None` to `main()` for API consistency. Keep `file_path` for backward compatibility.
+- **Q8:** How should `main()` accept multiple files? → **Resolved differently from recommendation:** `analyze_multiple_input_files(file_paths, ...)` is the programmatic multi-file API. The existing `main(file_path, settings)` is unchanged for backward compatibility. Adding `file_paths` to `main()` has not been done and is not planned unless there is a clear use case.
