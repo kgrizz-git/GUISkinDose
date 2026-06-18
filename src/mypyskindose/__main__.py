@@ -27,28 +27,51 @@ if __name__ == "__main__":
         if not args.file_path:
             print("--input-preview-only requires --file-path", file=sys.stderr)
             sys.exit(1)
-        preview_input_file(
-            args.file_path,
-            input_schema=getattr(args, "input_schema", None),
-            sheet_name=getattr(args, "sheet_name", 0),
-        )
+        for single_path in args.file_path:
+            preview_input_file(
+                single_path,
+                input_schema=getattr(args, "input_schema", None),
+                sheet_name=getattr(args, "sheet_name", 0),
+            )
     else:
         if (run_settings := args.settings) is None:
             logger.warning("No settings specified. Running with development parameters")
             run_settings = DEVELOPMENT_PARAMETERS
 
-        file_path = args.file_path
-        input_schema = getattr(args, "input_schema", None)
-        sheet_name = getattr(args, "sheet_name", 0)
+        file_paths_raw: list[str] = args.file_path or []
 
         from pathlib import Path
+        file_paths: list[str] = []
+        for fp in file_paths_raw:
+            p = Path(fp)
+            if not p.exists() and ("*" in str(p) or "?" in str(p)):
+                file_paths.extend([str(x) for x in sorted(p.parent.glob(p.name))])
+            else:
+                file_paths.append(fp)
 
-        if file_path and Path(file_path).suffix.lower() in _TABULAR_SUFFIXES:
-            analyze_input_file(
-                file_path,
+        if len(file_paths) > 1:
+            from mypyskindose.main import analyze_multiple_input_files
+            result = analyze_multiple_input_files(
+                file_paths,
                 settings=run_settings,
-                input_schema=input_schema,
-                sheet_name=sheet_name,
+                input_schema=getattr(args, "input_schema", None),
+                sheet_name=getattr(args, "sheet_name", 0),
             )
+            if getattr(args, "aggregate_only", False):
+                print(f"{result.aggregate_psd:.4f}")
+            else:
+                import json as _json
+                print(_json.dumps(result.to_dict()))
+        elif len(file_paths) == 1:
+            single_path = file_paths[0]
+            if Path(single_path).suffix.lower() in _TABULAR_SUFFIXES:
+                analyze_input_file(
+                    single_path,
+                    settings=run_settings,
+                    input_schema=getattr(args, "input_schema", None),
+                    sheet_name=getattr(args, "sheet_name", 0),
+                )
+            else:
+                main(file_path=single_path, settings=run_settings)
         else:
-            main(file_path=file_path, settings=run_settings)
+            main(file_path=None, settings=run_settings)

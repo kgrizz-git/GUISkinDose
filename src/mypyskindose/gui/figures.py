@@ -73,26 +73,37 @@ def make_geometry_fig(mode: str, event_index: int):
         return None
 
 
-def make_dosemap_fig():
-    """Build the dose map Plotly figure from current state.output."""
+def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
+    """Build the dose map Plotly figure. 
+    
+    If explicit_dose_map and explicit_patient are provided, uses those (e.g. for aggregate map).
+    Otherwise reads from current state.output.
+    """
     try:
         import numpy as np
         import plotly.graph_objects as go
 
-        if state.output is None:
-            return None
+        if explicit_dose_map is not None and explicit_patient is not None:
+            patient_data = explicit_patient["patient"]
+            dose_map = explicit_dose_map
+        else:
+            if state.output is None:
+                return None
+            out = state.output
+            patient_data = out["patient"]["patient"]
+            
+            # The length of r is the number of skin cells
+            num_cells = len(patient_data["patient_skin_cells"]["x"])
+            dose_map = np.zeros(num_cells)
+            for idx, dose in out["dose_map"]:
+                dose_map[int(idx)] = dose
 
-        out = state.output
-        patient_data = out["patient"]["patient"]
         r = np.array([
             patient_data["patient_skin_cells"]["x"],
             patient_data["patient_skin_cells"]["y"],
             patient_data["patient_skin_cells"]["z"],
         ]).T
         ijk_data = patient_data["triangle_vertex_indices"]
-        dose_map = np.zeros(len(r))
-        for idx, dose in out["dose_map"]:
-            dose_map[int(idx)] = dose
 
         hover = [
             f"<b>lat:</b> {r[i,2]:.2f} cm<br><b>lon:</b> {r[i,0]:.2f} cm<br>"
@@ -141,10 +152,10 @@ def make_dosemap_fig():
         return None
 
 
-def make_dosemap_html() -> bytes | None:
+def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes | None:
     """Render the dose map as a standalone interactive HTML document."""
     try:
-        fig_dict = make_dosemap_fig()
+        fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
         if fig_dict is None:
             return None
         import plotly.graph_objects as go
@@ -155,10 +166,10 @@ def make_dosemap_html() -> bytes | None:
         return None
 
 
-def make_dosemap_png() -> bytes | None:
+def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes | None:
     """Render the dose map as a static PNG (requires kaleido)."""
     try:
-        fig_dict = make_dosemap_fig()
+        fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
         if fig_dict is None:
             return None
         import plotly.graph_objects as go

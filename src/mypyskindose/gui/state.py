@@ -43,6 +43,12 @@ class AppState:
     flip_ap1: bool = False        # post-norm: negate Ap1 (primary angle)
     flip_ap2: bool = False        # post-norm: negate Ap2 (secondary angle)
 
+    # ── Multi-exam support ─────────────────────────────────────────────────
+    multi_exam_result: Any | None = None
+    loaded_exams: list[Any] = field(default_factory=list)  # list[InputAdapterResult]
+    is_multi_exam: bool = False
+    active_exam_index: int | None = None
+
     # ── Settings (raw values mirrored from UI widgets) ─────────────────────
     phantom_model: str = "human"
     human_mesh: str = "hudfrid"
@@ -95,10 +101,12 @@ state = AppState()
 def reset_results() -> None:
     """Clear calculation results when settings or file change."""
     state.output = None
+    state.multi_exam_result = None
     state.calculation_done = False
     state.psd = None
     state.air_kerma = None
     state.dosemap_fig = None
+    state.active_exam_index = None
 
 
 def is_ready_to_calculate() -> bool:

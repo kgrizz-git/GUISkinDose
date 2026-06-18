@@ -137,14 +137,22 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
             sheet_name=state.input_sheet_name,
         )
         if isinstance(_raw, list):
-            ids = [r.study_id or "?" for r in _raw]
-            raise ValueError(
-                f"This file contains {len(_raw)} separate studies "
-                f"({', '.join(ids)}). "
-                "Use the multi-exam API (analyze_multiple_input_files) or "
-                "export a single study before loading here."
-            )
-        result = _raw
+            import pandas as pd
+            state.loaded_exams = _raw
+            state.is_multi_exam = True
+            
+            # Concatenate normalized data for the UI event table
+            df = pd.concat([r.normalized_data for r in _raw], ignore_index=True)
+            result = _raw[0]  # use first exam's provenance for UI hints
+            
+            total_events = len(df)
+            msg = f"Loaded {len(_raw)} exams, {total_events} total events from {file_path.name}"
+        else:
+            state.is_multi_exam = False
+            state.loaded_exams = [_raw]
+            result = _raw
+            df = result.normalized_data.copy()
+            msg = f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
 
         df = result.normalized_data.copy()
 
@@ -171,7 +179,7 @@ def load_tabular(file_path: Path, state: AppState) -> tuple[bool, str]:
         state.table_offset_z = 0.0
         state.normalization_warnings = []
 
-        return True, f"Loaded {len(df)} events from {file_path.name} ({result.provenance.schema_name})"
+        return True, msg
     except SchemaDetectionError:
         # Not a real parse error — the file just didn't clearly match a known
         # vendor format. Guide the user to pick one explicitly instead of
@@ -222,21 +230,41 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         _collector = _CalcWarningCollector()
         _calc_logger = logging.getLogger("mypyskindose")
         _calc_logger.addHandler(_collector)
-        try:
-            # analyze_data internally calls calculate_rotation_matrices
-            output = analyze_data(normalized_data=state.rdsr_df.copy(), settings=settings)
-        finally:
-            _calc_logger.removeHandler(_collector)
-        state.calc_warnings = list(_collector.messages)
+        if state.is_multi_exam:
+            from mypyskindose.analyze_data import analyze_multiple_exams
+            
+            # analyze_multiple_exams internally handles logging and tqdm patch
+            multi_result = analyze_multiple_exams(
+                exams=state.loaded_exams,
+                settings=settings,
+            )
+            
+            state.multi_exam_result = multi_result
+            state.calculation_done = True
+            state.psd = float(multi_result.aggregate_psd)
+            # sum of air kerma across exams
+            state.air_kerma = sum(float(e.output.AirKerma) for e in multi_result.exams)
+            
+            # Surface calc warnings from the orchestrator run
+            state.calc_warnings = list(_collector.messages)
+            
+            return True, f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {len(state.loaded_exams)} exams"
+        else:
+            try:
+                # analyze_data internally calls calculate_rotation_matrices
+                output = analyze_data(normalized_data=state.rdsr_df.copy(), settings=settings)
+            finally:
+                _calc_logger.removeHandler(_collector)
+            state.calc_warnings = list(_collector.messages)
 
-        if not isinstance(output, dict):
-            return False, "Unexpected calculation output format."
+            if not isinstance(output, dict):
+                return False, "Unexpected calculation output format."
 
-        state.output = output
-        state.calculation_done = True
-        state.psd = float(output["psd"])
-        state.air_kerma = float(output["air_kerma"])
-        return True, f"PSD = {output['psd']:.2f} mGy"
+            state.output = output
+            state.calculation_done = True
+            state.psd = float(output["psd"])
+            state.air_kerma = float(output["air_kerma"])
+            return True, f"PSD = {output['psd']:.2f} mGy"
     except Exception:
         err = traceback.format_exc()
         print(err)
@@ -280,3 +308,11 @@ def get_human_mesh_names() -> list[str]:
     """Return available human mesh names (full-resolution only)."""
     phantom_dir = Path(__file__).parent.parent / "phantom_data"
     return sorted(p.stem for p in phantom_dir.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
+
+
+def clear_multi_exam_state(state: AppState) -> None:
+    """Clear multi-exam state from the AppState object."""
+    state.loaded_exams = []
+    state.is_multi_exam = False
+    state.multi_exam_result = None
+    state.active_exam_index = None

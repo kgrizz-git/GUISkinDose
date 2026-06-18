@@ -62,5 +62,6 @@ DEVELOPMENT_PARAMETERS = dict(
             c.DIMENSION_PAD_WIDTH: 45,  # Support pad width
             c.DIMENSION_PAD_THICKNESS: 4,
         },
-    ),  # Support pad thickness
+    ),
+    silence_pydicom_warnings=False,
 )

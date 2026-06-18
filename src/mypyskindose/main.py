@@ -112,6 +112,10 @@ def analyze_input_file(
             for exam in result:
                 for w in exam.warnings:
                     logger.warning("tabular input (exam %s): %s", exam.study_id or "?", w)
+            if output_format == "html":
+                logger.warning("HTML output format is not supported for multi-exam tabular runs. Forcing to dict.")
+                output_format = "dict"
+                settings.output_format = "dict"
             return analyze_multiple_exams(result, settings)
         for w in result.warnings:
             logger.warning("tabular input: %s", w)
@@ -154,9 +158,22 @@ def analyze_multiple_input_files(
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     settings_obj = parse_settings_to_settings_class(settings=settings)
+    
+    if settings_obj.output_format == "html":
+        logger.warning("HTML output format is not supported for multi-exam runs. Forcing to dict.")
+        settings_obj.output_format = "dict"
+    
     all_exams: list[InputAdapterResult] = []
 
+    resolved_paths: list[Path] = []
     for fp in file_paths:
+        p = Path(fp)
+        if not p.exists() and ("*" in str(p) or "?" in str(p)):
+            resolved_paths.extend(sorted(p.parent.glob(p.name)))
+        else:
+            resolved_paths.append(p)
+
+    for fp in resolved_paths:
         fp = Path(fp)
         suffix = fp.suffix.lower()
         if suffix in _TABULAR_SUFFIXES:
@@ -357,6 +374,14 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         help="Print column mapping and first events without running dose calculation.",
     )
 
+    parser.add_argument(
+        "--aggregate",
+        action="store_true",
+        default=False,
+        dest="aggregate_only",
+        help="In multi-exam mode: print only the aggregate PSD to stdout instead of the full JSON.",
+    )
+
     return parser.parse_args(arguments)
 
 
@@ -371,7 +396,16 @@ if __name__ == "__main__":
             logger.warning("No settings specified. Running with development parameters")
             run_settings = DEVELOPMENT_PARAMETERS
 
-        file_paths: list[str] = args.file_path or []
+        file_paths_raw: list[str] = args.file_path or []
+        from pathlib import Path
+        file_paths: list[str] = []
+        for fp in file_paths_raw:
+            p = Path(fp)
+            if not p.exists() and ("*" in str(p) or "?" in str(p)):
+                file_paths.extend([str(x) for x in sorted(p.parent.glob(p.name))])
+            else:
+                file_paths.append(fp)
+
         if len(file_paths) > 1:
             result = analyze_multiple_input_files(
                 file_paths,
@@ -379,8 +413,11 @@ if __name__ == "__main__":
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
             )
-            import json as _json
-            print(_json.dumps(result.to_dict()))
+            if getattr(args, "aggregate_only", False):
+                print(f"{result.aggregate_psd:.4f}")
+            else:
+                import json as _json
+                print(_json.dumps(result.to_dict()))
         elif len(file_paths) == 1:
             single_path = file_paths[0]
             suffix = Path(single_path).suffix.lower()

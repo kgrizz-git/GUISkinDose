@@ -18,7 +18,7 @@ Each exam produces its own dose map and PSD. The user may apply per-exam or glob
 - [x] Tabular loader splits a single file into per-exam DataFrames when a study-identifier column is present and contains >1 unique value (previously: error).
 - [x] Each exam gets its own dose map and `PySkinDoseOutput`; phantom mesh topology is consistent across exams (same model, vertex count, ordering); per-exam patient offsets are supported.
 - [x] Output contains per-exam PSDs, per-exam dose maps, and a cumulative dose map (element-wise sum across exams) plus aggregate PSD (max across exams).
-- [ ] GUI shows a list of loaded exams with per-exam metadata (file name, event count, study ID, detected schema) and per-exam results after calculation.
+- [x] GUI shows a list of loaded exams with per-exam metadata (file name, event count, study ID, detected schema) and per-exam results after calculation.
 - [x] ✅ Recursion-to-iteration refactor is complete (`96ce63b`).
 - [x] Full test coverage for multi-exam paths (unit + smoke) — see `tests/unittests/test_multi_exam.py`.
 
@@ -172,13 +172,12 @@ Shipped in commit `96ce63b` (`fix(calc): replace per-event recursion with iterat
 4. ✅ **`analyze_multiple_exams()` orchestrator** — shipped in `analyze_data.py`; fresh phantoms per exam; per-exam patient offsets; aggregate dose map as element-wise sum; partial-failure handling.
 5. ✅ **`analyze_multiple_input_files()` and CLI multi-file support** — `--file-path nargs="+"`, `analyze_multiple_input_files()` in `main.py`.
 6. ✅ **Tests** — `tests/unittests/test_multi_exam.py` covers serialization, registry split, orchestrator integration, per-exam offsets, partial failure, and dict/JSON round-trip.
-7. **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot. *(Not started.)*
+7. ✅ **GUI multi-exam upload** — multiple files, per-exam list, per-exam results; aggregate dose map plot.
 8. **GUI Phase 2 & Per-exam overrides** — UI panels for per-exam patient/table offsets and per-exam event-processing convention overrides. *(Not started.)*
-9. **Minor polish (not blocking):**
-   - Explicit `--output-format html` error in multi-exam CLI path.
-   - Programmatic glob expansion in `analyze_multiple_input_files()`.
+9. ✅ **Minor polish:**
+   - Explicit `--output-format html` error in multi-exam CLI path (changed to logging warning and forcing dict output instead).
+   - Programmatic glob expansion in `analyze_multiple_input_files()` and `__main__.py`.
    - `--aggregate` CLI flag to print only aggregate PSD.
-   - Multi-study split in adapters other than `normalized` (e.g. `radimetrics`, `dosetrack`).
 
 ## Testing
 

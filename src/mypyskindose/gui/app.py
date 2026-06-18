@@ -290,8 +290,11 @@ def index():
                                 )
                                 upload_status.set_text(f"OK: {msg}")
                                 ui.notify(msg, color="positive")
+                                if state.is_multi_exam:
+                                    ui.notify(f"Multi-exam file: {len(state.loaded_exams)} studies detected. Each will be processed separately.", color="blue")
                                 reset_results()
                                 _refresh_event_table()
+                                _refresh_exams_table()
                                 if state.input_source_type != "dicom":
                                     _refresh_import_preview()
                                     _set_transform_defaults()
@@ -370,6 +373,8 @@ def index():
 
                     def clear_loaded_file() -> None:
                         """Unload the current file and reset input state (card's X button)."""
+                        from .helpers import clear_multi_exam_state
+                        clear_multi_exam_state(state)
                         state.rdsr_df = None
                         state.rdsr_raw_df = None
                         state.file_name = ""
@@ -401,6 +406,7 @@ def index():
                         # upload state is fully cleared and the + button works again.
                         _build_uploader()
                         _refresh_event_table()
+                        _refresh_exams_table()
                         _refresh_import_preview()
 
                     # Bundled examples live in the same card and auto-load on selection
@@ -441,6 +447,7 @@ def index():
                                 ui.notify(msg, color="positive")
                                 reset_results()
                                 _refresh_event_table()
+                                _refresh_exams_table()
                             else:
                                 upload_status.set_text("Could not load — see message")
                                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
@@ -483,6 +490,7 @@ def index():
                                 ui.notify(msg, color="positive")
                                 reset_results()
                                 _refresh_event_table()
+                                _refresh_exams_table()
                                 _refresh_import_preview()
                                 _set_transform_defaults()
                             else:
@@ -523,6 +531,7 @@ def index():
                                     upload_status.set_text(f"SUCCESS: {msg.upper()}")
                                     reset_results()
                                     _refresh_event_table()
+                                    _refresh_exams_table()
                                     _refresh_import_preview()
                                 else:
                                     ui.notify(f"Sheet parse error: {msg[:200]}", type="negative", timeout=6000)
@@ -604,6 +613,19 @@ def index():
                     event_sample_table = ui.table(columns=[], rows=[], row_key="__idx").classes("w-full mono-text")
                     event_sample_table.props("dense flat virtual-scroll")
 
+                # exams summary table
+                ui.label("Loaded Exams").classes("text-subtitle2 q-mt-md q-mb-xs").bind_visibility_from(state, "is_multi_exam")
+                exams_table = ui.table(
+                    columns=[
+                        {"name": "idx", "label": "#", "field": "idx", "align": "right"},
+                        {"name": "study_id", "label": "Study ID", "field": "study_id", "align": "left"},
+                        {"name": "events", "label": "Events", "field": "events", "align": "right"},
+                        {"name": "status", "label": "Status", "field": "status", "align": "center"},
+                    ],
+                    rows=[],
+                    row_key="idx",
+                ).classes("w-full modern-card mono-text bg-blue-950/20").bind_visibility_from(state, "is_multi_exam")
+
                 # event summary table
                 ui.label("Irradiation events").classes("text-subtitle2 q-mt-md q-mb-xs")
                 event_table = ui.table(
@@ -635,6 +657,22 @@ def index():
                     })
                 event_table.rows = rows
                 event_table.update()
+
+            def _refresh_exams_table():
+                if not state.is_multi_exam or not state.loaded_exams:
+                    exams_table.rows = []
+                    exams_table.update()
+                    return
+                rows = []
+                for idx, exam in enumerate(state.loaded_exams):
+                    rows.append({
+                        "idx": idx + 1,
+                        "study_id": str(exam.study_id) if exam.study_id else "Unknown",
+                        "events": len(exam.normalized_data),
+                        "status": "Ready" if not state.calculation_done else "Calculated"
+                    })
+                exams_table.rows = rows
+                exams_table.update()
 
             def _refresh_import_preview():
                 prov = state.import_provenance
@@ -722,6 +760,7 @@ def index():
                     state.rdsr_df = df
                     reset_results()
                     _refresh_event_table()
+                    _refresh_exams_table()
                     _refresh_import_preview()
                     coord_auto_label.set_text("")
 
@@ -734,6 +773,7 @@ def index():
                     state.rdsr_df = df
                     reset_results()
                     _refresh_event_table()
+                    _refresh_exams_table()
                     _refresh_import_preview()
 
             def _on_flip_ap2_toggle() -> None:
@@ -745,6 +785,7 @@ def index():
                     state.rdsr_df = df
                     reset_results()
                     _refresh_event_table()
+                    _refresh_exams_table()
                     _refresh_import_preview()
 
             # Expose the upload spine as ctx callables so out-of-module callers
@@ -777,7 +818,11 @@ def index():
 
                 # settings summary card
                 with ui.card().classes("modern-card w-full border border-blue-100 shadow-sm"):
-                    ui.label("Current settings").classes("text-xl font-bold q-mb-md")
+                    with ui.row().classes("items-center justify-between w-full"):
+                        ui.label("Current settings").classes("text-xl font-bold q-mb-md")
+                        with ui.row().classes("items-center gap-2").bind_visibility_from(state, "is_multi_exam"):
+                            ui.badge().bind_text_from(state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS").classes("text-xs tracking-widest font-bold")
+                            ui.label("Per-exam offsets: global (Phase 2)").classes("text-caption text-grey-5 italic")
 
                     with ui.grid(columns=3).classes("w-full gap-8 mono-text text-sm"):
                         # Section 1: Input Data
