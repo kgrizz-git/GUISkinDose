@@ -4,15 +4,16 @@
 name: ci
 
 on:
-  - push
-  - pull_request
+  push:
+    branches: [ main ]
+  pull_request:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  doc-freshness:
+  static-analysis:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
@@ -20,23 +21,24 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: '3.12'
-    - name: Check documentation freshness
-      run: python scripts/check_doc_freshness.py
-
-  package-build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
-    - name: Install build backend
+        cache: 'pip'
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install -e ".[dev,gui]"
         pip install build
+    - name: Check documentation freshness
+      run: python scripts/check_doc_freshness.py
     - name: Build sdist and wheel
       run: python -m build
+    - name: Basedpyright (strict — any type error fails)
+      run: basedpyright
+    - name: Audit dependencies for CVEs and check licenses
+      run: |
+        pip-audit --desc on
+        python scripts/check_licenses.py
+    - name: Bandit (Python SAST, medium+ severity)
+      run: bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
 
   gui-smoke:
     runs-on: ubuntu-latest
@@ -46,6 +48,7 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: '3.12'
+        cache: 'pip'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -53,50 +56,6 @@ jobs:
         pip install -e ".[gui]"
     - name: GUI smoke tests
       run: python -m pytest tests/gui/ -v --tb=short
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,gui]"
-    - name: Basedpyright (strict — any type error fails)
-      run: basedpyright
-
-  dependency-audit:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
-    - name: Install dependencies and audit for CVEs
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,gui]"
-        pip-audit --desc on
-        python scripts/check_licenses.py
-
-  bandit:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
-    - name: Bandit (Python SAST, medium+ severity)
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
-        bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
 
   matrix-prep:
     runs-on: ubuntu-latest
@@ -106,7 +65,7 @@ jobs:
       - id: set-matrix
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
             CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.10"},{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"macos-latest","python-version":"3.10"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.12"},{"os":"macos-latest","python-version":"3.13"},{"os":"windows-latest","python-version":"3.10"},{"os":"windows-latest","python-version":"3.11"},{"os":"windows-latest","python-version":"3.12"},{"os":"windows-latest","python-version":"3.13"}]}'
           else
             CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.12"}]}'
@@ -126,17 +85,14 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest codecov ruff
+        pip install pytest codecov ruff
         pip install -e .
     - name: Compile check
       run: python -m compileall src/mypyskindose
-    - name: Lint with flake8
-      run: |
-        # Syntax errors and undefined names only; style is enforced by ruff (120 cols).
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Lint with ruff
       run: |
         ruff check src tests
