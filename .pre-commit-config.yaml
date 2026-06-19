@@ -78,3 +78,11 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
+      - id: check-changelog
+        name: changelog updated (src/tests changes require CHANGELOG.md entry)
+        entry: python scripts/check_changelog.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

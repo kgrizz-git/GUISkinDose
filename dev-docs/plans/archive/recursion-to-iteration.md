@@ -233,7 +233,7 @@ All tests in `tests/unittests/test_calculate_dose.py`, `test_analyze_data.py`, `
 ## Related
 
 - [Multiple Exams Plan](multiple-exams.md) — this refactor is a prerequisite (D5).
-- [TO_DO.md](../TO_DO.md) — task listed under "Input data & calculation".
+- [TO_DO.md](../../TO_DO.md) — task listed under "Input data & calculation".
 - `calculate_dose.py` — caller that invokes the function.
 - `perform_calculations_for_new_geometries.py` — helper called per event.
 - `add_corrections_and_event_dose_to_output.py` — helper called per event.

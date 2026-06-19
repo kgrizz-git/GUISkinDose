@@ -20,6 +20,7 @@ Agents working in this repository should be able to answer three questions quick
 | Topic | File |
 |---|---|
 | Agent quickstart, conventions, current development focus | `AGENTS.md` |
+| Claude Code quick-reference (plan lifecycle, doc rule, validation commands) | `CLAUDE.md` |
 | Harness principles, validation commands, known gaps | `dev-docs/HARNESS_ENGINEERING.md` |
 | Harness improvement plan and phased roadmap | `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
 | Documentation catalog | `dev-docs/index.md` |
@@ -44,6 +45,7 @@ Agents working in this repository should be able to answer three questions quick
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
 | Local git hooks | `.pre-commit-config.yaml` |
+| Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
@@ -113,6 +115,7 @@ Unit tests include structural layer checks in `tests/unittests/test_architecture
 python -m pytest
 python -m ruff check src tests
 python -m build
+python scripts/check_changelog.py   # requires origin/main to be fetched
 ```
 
 ### Documentation freshness check

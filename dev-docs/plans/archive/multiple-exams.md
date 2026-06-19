@@ -53,7 +53,7 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 | | **Table-origin offset** (`trans_offset` + `trans_dir`) | **Patient offset** (`d_lon`, `d_ver`, `d_lat`) |
 |---|---|---|
 | **What it is** | Vendor/system convention for where the table coordinate origin sits and which direction each axis runs. A property of the **scanner manufacturer/model**. | A user-chosen shift of the **patient on the table** (e.g. patient lay 5 cm cranial of isocenter). |
-| **Where applied** | At **normalization** time — [`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py) builds `Tx/Ty/Tz` from `norm.trans_offset` + `norm.trans_dir`. | At **dose-calc** time — `geom_calc.py` `patient.translate(dr=patient_offset)`. |
+| **Where applied** | At **normalization** time — [`rdsr_normalizer.py`](../../../src/mypyskindose/rdsr_normalizer.py) builds `Tx/Ty/Tz` from `norm.trans_offset` + `norm.trans_dir`. | At **dose-calc** time — `geom_calc.py` `patient.translate(dr=patient_offset)`. |
 | **Source** | `settings.normalization_settings`, **matched per file** from the DICOM manufacturer/model. | `settings.phantom.patient_offset`, set by the user. |
 | **Per-exam already?** | **Yes, by construction** — each file is normalized separately before reaching `analyze_multiple_exams()`, which consumes already-normalized `Tx/Ty/Tz`. A mixed-manufacturer batch already gets each vendor's convention correctly. | **Core-ready**: `analyze_multiple_exams(per_exam_offsets=...)` deep-copies settings per exam. GUI wiring is Phase 2.3. |
 | **Phase** | Automatic; not a Phase 2.x item. Residual fixups for tabular exports that lack convention metadata are the swap/flip toggles → **Phase 2.2**. **Manual numeric override → new Phase 2.5.** | **Phase 2.3.** |
@@ -62,7 +62,7 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 
 #### Existing per-manufacturer convention handling
 
-The conventions live in [`normalization_settings.json`](../../src/mypyskindose/normalization_settings.json), matched per file by `(manufacturer, model)` in [`normalization_settings.py`](../../src/mypyskindose/settings/normalization_settings.py) (`update_used_settings`). **The convention does vary by provider** — the shipped table shows it concretely:
+The conventions live in [`normalization_settings.json`](../../../src/mypyskindose/normalization_settings.json), matched per file by `(manufacturer, model)` in [`normalization_settings.py`](../../../src/mypyskindose/settings/normalization_settings.py) (`update_used_settings`). **The convention does vary by provider** — the shipped table shows it concretely:
 
 | Manufacturer / model | `trans_offset` (x, y, z) cm | `trans_dir` (x, y, z) | `rot_dir` (Ap1, Ap2) |
 |---|---|---|---|
@@ -73,7 +73,7 @@ The conventions live in [`normalization_settings.json`](../../src/mypyskindose/n
 So Philips inverts the **table-height axis** (`trans_dir.y = −`) and the **secondary angle** (`rot_dir.Ap2 = −`) relative to Siemens; the `Default` fallback assumes all-`+`/zero. A **misdetected** scanner therefore gets the Siemens-like all-`+` convention — which is exactly when the manual per-exam levers matter. How each convention field is reachable from the GUI:
 
 - `rot_dir.Ap1` / `rot_dir.Ap2` sign → **flip_ap1 / flip_ap2** (Phase 2.2).
-- `rot_dir.Ap3`, `rot_dir.At1`–`At3` → **no lever, and none needed**: those columns are hard-zeroed in [`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py) (`rot_dir.* × [0]`), so their sign is a no-op.
+- `rot_dir.Ap3`, `rot_dir.At1`–`At3` → **no lever, and none needed**: those columns are hard-zeroed in [`rdsr_normalizer.py`](../../../src/mypyskindose/rdsr_normalizer.py) (`rot_dir.* × [0]`), so their sign is a no-op.
 - `trans_dir.x` / `.y` / `.z` sign → **flip_tx / flip_ty / flip_tz** (Phase 2.4, below).
 - `trans_offset` (origin) → **table-origin override** (Phase 2.5).
 - axis *relabeling* (lat ↔ lon, e.g. GE exports) → **swap_lat_lon** (Phase 2.2).
@@ -387,7 +387,7 @@ the **same** engine, so the two never disagree.
 **Scope, as resolved.** Auditing the convention fields against what's reachable from the GUI showed that **rotation-direction** was already fully covered and the only genuine gap was **translation-direction sign**:
 
 - `rot_dir.Ap1` / `Ap2` → already the Phase 2.2 `flip_ap1` / `flip_ap2` toggles (the only non-zero rotation columns).
-- `rot_dir.Ap3`, `At1`–`At3` → always zero in [`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py), so overriding their sign is a no-op — nothing meaningful to expose.
+- `rot_dir.Ap3`, `At1`–`At3` → always zero in [`rdsr_normalizer.py`](../../../src/mypyskindose/rdsr_normalizer.py), so overriding their sign is a no-op — nothing meaningful to expose.
 - `trans_dir.x` / `.y` / `.z` sign → **the real gap.** Phase 2.2 could *swap* Tx↔Tz and Phase 2.5 could *shift* the origin, but nothing could *reverse* an axis (e.g. a vendor whose table-height or lateral axis runs opposite the matched/Default convention — exactly the Philips `trans_dir.y = −` case if it were misdetected as Default).
 
 So Phase 2.4 shipped as **per-exam axis-direction sign flips** (`flip_tx` / `flip_ty` / `flip_tz`), folded into the same Phase 2.2 transform engine.
@@ -411,7 +411,7 @@ So Phase 2.4 shipped as **per-exam axis-direction sign flips** (`flip_tx` / `fli
 
 > **Scope:** this is the **table-origin offset** (`trans_offset`), *not* the patient offset. See [Offset Terminology](#offset-terminology-disambiguation).
 
-**Why this exists:** table-origin offset and axis direction are normally set *automatically* per file from the matched manufacturer/model ([`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py) — `norm.trans_offset` / `norm.trans_dir`), so mixed-manufacturer batches already coordinate correctly with **no** user input. This phase is the **manual escape hatch** for the cases where automation can't help:
+**Why this exists:** table-origin offset and axis direction are normally set *automatically* per file from the matched manufacturer/model ([`rdsr_normalizer.py`](../../../src/mypyskindose/rdsr_normalizer.py) — `norm.trans_offset` / `norm.trans_dir`), so mixed-manufacturer batches already coordinate correctly with **no** user input. This phase is the **manual escape hatch** for the cases where automation can't help:
 
 - The scanner is **misdetected** (unknown model → fallback normalization with a generic/zero `trans_offset`).
 - A **tabular export** (Radimetrics/DoseTrack) carries table positions but no usable manufacturer-convention metadata, so the correct origin can't be inferred — only the swap/flip toggles (Phase 2.2) exist today, and they don't shift the origin.

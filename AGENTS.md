@@ -10,6 +10,7 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 
 ## Detailed documentation
 
+- **[CLAUDE.md](CLAUDE.md)** — Claude Code auto-loaded quick-reference: plan lifecycle steps, doc update rule, and validation commands.
 - **[dev-docs/CODEBASE_OVERVIEW.md](dev-docs/CODEBASE_OVERVIEW.md)** — full architecture, data flow, all settings, classes, and functions
 - **[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md)** — exhaustive list of every feature: calculations, rendering, settings, outputs, CLI, API
 - **[dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
