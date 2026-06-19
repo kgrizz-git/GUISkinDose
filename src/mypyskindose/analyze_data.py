@@ -99,6 +99,7 @@ def analyze_multiple_exams(
     exams: list[InputAdapterResult],
     settings: Union[str, dict, PyskindoseSettings],
     per_exam_offsets: list[list[float]] | None = None,
+    per_exam_extra_warnings: list[list[str]] | None = None,
 ) -> MultiExamResult:
     """Process a list of exams on a shared phantom mesh topology.
 
@@ -119,6 +120,11 @@ def analyze_multiple_exams(
     per_exam_offsets:
         Optional per-exam patient offsets [[d_lon, d_ver, d_lat], ...].
         If shorter than exams or None, remaining exams use the global offset.
+    per_exam_extra_warnings:
+        Optional per-exam notes [[note, ...], ...] merged into each exam's
+        warnings for auditability (e.g. a manual table-origin override applied by
+        the GUI before normalization). If shorter than exams or None, no notes are
+        added for the remaining exams.
     """
     settings = initialize_settings(settings)
 
@@ -129,6 +135,8 @@ def analyze_multiple_exams(
 
     for i, exam in enumerate(exams):
         exam_warnings: list[str] = list(exam.warnings)
+        if per_exam_extra_warnings and i < len(per_exam_extra_warnings):
+            exam_warnings.extend(per_exam_extra_warnings[i])
 
         # Determine effective patient offset for this exam.
         global_offset = [

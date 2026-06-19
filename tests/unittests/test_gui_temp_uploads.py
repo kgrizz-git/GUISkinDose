@@ -1,9 +1,11 @@
-"""Unit tests for the GUI uploaded-temp-file lifecycle (refactor plan Phase 0.1).
+"""Unit tests for the GUI uploaded-temp-file lifecycle.
 
 The GUI writes uploads to NamedTemporaryFile(delete=False) so the parser and the
-XLSX sheet picker can read them. These tests pin the cleanup contract: only the
-current upload survives, each new upload deletes the prior one, and the atexit
-sweep removes whatever remains.
+XLSX sheet picker can read them. Since multi-exam Phase 2.1 the registry is
+*accumulating*: each new upload is appended (previous files survive so multiple
+exams can be loaded at once). Individual files are removed via _remove_temp_upload
+(when an exam is removed), all at once via _clear_all_temp_uploads ("Clear all"),
+and the atexit sweep removes whatever remains.
 """
 
 from __future__ import annotations
@@ -39,15 +41,43 @@ def test_register_tracks_current_upload():
     assert path.exists()
 
 
-def test_new_upload_deletes_previous():
+def test_register_accumulates_uploads():
     first = _make_temp()
     second = _make_temp()
     gui_app._register_temp_upload(first)
     gui_app._register_temp_upload(second)
 
-    assert not first.exists(), "previous upload temp file should be deleted"
+    # Accumulating model: both files survive and both stay registered so several
+    # exams can be loaded at once.
+    assert first.exists(), "previous upload temp file should survive (accumulating)"
     assert second.exists(), "current upload temp file should survive"
+    assert gui_app._uploaded_temp_files == [first, second]
+
+
+def test_remove_temp_upload_deletes_one():
+    first = _make_temp()
+    second = _make_temp()
+    gui_app._register_temp_upload(first)
+    gui_app._register_temp_upload(second)
+
+    gui_app._remove_temp_upload(first)
+
+    assert not first.exists(), "removed exam's temp file should be deleted"
+    assert second.exists(), "other exam's temp file should be untouched"
     assert gui_app._uploaded_temp_files == [second]
+
+
+def test_clear_all_temp_uploads_removes_everything():
+    first = _make_temp()
+    second = _make_temp()
+    gui_app._register_temp_upload(first)
+    gui_app._register_temp_upload(second)
+
+    gui_app._clear_all_temp_uploads()
+
+    assert not first.exists()
+    assert not second.exists()
+    assert gui_app._uploaded_temp_files == []
 
 
 def test_atexit_sweep_removes_remaining():
@@ -71,13 +101,13 @@ def test_cleanup_tolerates_already_deleted_file():
     assert gui_app._uploaded_temp_files == []
 
 
-def test_register_tolerates_already_deleted_previous():
+def test_remove_temp_upload_tolerates_already_deleted():
     first = _make_temp()
     gui_app._register_temp_upload(first)
-    first.unlink()  # previous file vanishes before the next upload
+    first.unlink()  # file vanishes externally before the explicit removal
 
-    second = _make_temp()
-    gui_app._register_temp_upload(second)  # must not raise
+    # Must not raise even though the tracked file is already gone, and must still
+    # deregister it.
+    gui_app._remove_temp_upload(first)
 
-    assert gui_app._uploaded_temp_files == [second]
-    assert second.exists()
+    assert gui_app._uploaded_temp_files == []

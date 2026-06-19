@@ -64,6 +64,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 ### GUI / UX
 
 - [ ] Show more irradiation-event detail after load, or add an expanded RDSR browser (table lateral position, table height, collimated field area, etc.).
+- [ ] **Data Table tab — exam-number column** — in multi-exam mode the data table concatenates events from all loaded exams with no way to tell which exam a row belongs to. Add a column (exam number / study ID / source file) to differentiate them. The concatenated frame is `state.rdsr_df`; per-exam boundaries are recoverable from `state.loaded_exams[i].normalized_data` lengths (or tag each exam's rows during the `pd.concat` in `load_rdsr`/`load_tabular`).
 - [ ] Add sliders for patient offset parameters with real-time geometry preview in the Geometry tab.
   - Expose `max_events_for_patient_inclusion` as a control.
   - Consider presets (cardiac, head/neck, abdominal, etc.).

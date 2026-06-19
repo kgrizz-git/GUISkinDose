@@ -24,7 +24,10 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 | Unit tests | ✅ Complete (18 tests) |
 | GUI Phase 1 — single-file upload, auto-split, exam list, results accordion | 🔧 Bugs fixed; needs smoke test |
 | GUI Phase 2.1 — multi-file/mixed-format upload accumulation, per-exam list with remove | ✅ Complete; needs smoke test |
-| GUI Phase 2.2–2.4 — per-exam transform / offset / convention overrides | ⬜ Not started |
+| GUI Phase 2.2 — per-exam coordinate transform overrides | ✅ Complete; needs smoke test |
+| GUI Phase 2.3 — per-exam patient-offset overrides | ✅ Complete; needs smoke test |
+| GUI Phase 2.5 — manual per-exam table-origin override | ✅ Complete; needs smoke test |
+| GUI Phase 2.4 — per-exam convention overrides | ⬜ Deferred (no concrete use case) |
 
 ---
 
@@ -33,12 +36,28 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 | # | Decision |
 |---|----------|
 | D1 | Tabular multi-exam split is by **study-level identifier column** (not file boundary). File boundary is used for RDSR batches. |
-| D2 | Settings are **global** with per-exam `patient_offset` override (Phase 1). Per-exam coordinate/convention overrides are Phase 2. |
+| D2 | Settings are **global** with per-exam **patient offset** override (Phase 1 core; GUI in Phase 2.3). Per-exam coordinate/convention overrides are Phase 2. **Table-origin offset** is a separate quantity (handled per-file at normalization, see [Offset Terminology](#offset-terminology-disambiguation)); a manual override is Phase 2.5. |
 | D3 | Output: list of `ExamResult` wrapped in `MultiExamResult`. Keeps `PySkinDoseOutput` API intact; adds aggregate stats. |
 | D4 | GUI results: **collapsible accordion** with per-exam cards. Avoids information overload; each exam's dose map inspectable independently. |
 | D5 | Recursion → iteration refactor is a **separate prerequisite**. Independently fixes RecursionError on long single-exam procedures; blocks multi-exam beyond ~1000 total events. |
 | D6 | **Fresh `Phantom` per exam** (not shared with reset). `position_patient_phantom_on_table()` applies incremental translates; sharing would require storing and restoring origin. Fresh instances guarantee identical topology (same mesh file → same vertex ordering → element-wise sum is valid). |
 | D7 | **GUI Phase 1 is one-file-at-a-time**. Simplest correct design; multi-study via a single CSV works. Multi-file accumulation needs temp-file lifecycle redesign and upload widget changes — that is Phase 2. |
+
+---
+
+## Offset Terminology (disambiguation)
+
+"Offset" is overloaded in this codebase. There are **two distinct quantities**, applied at **different pipeline stages**, and the Phase 2 work touches only one of them. Keep them separate when reading or extending the phases below.
+
+| | **Table-origin offset** (`trans_offset` + `trans_dir`) | **Patient offset** (`d_lon`, `d_ver`, `d_lat`) |
+|---|---|---|
+| **What it is** | Vendor/system convention for where the table coordinate origin sits and which direction each axis runs. A property of the **scanner manufacturer/model**. | A user-chosen shift of the **patient on the table** (e.g. patient lay 5 cm cranial of isocenter). |
+| **Where applied** | At **normalization** time — [`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py) builds `Tx/Ty/Tz` from `norm.trans_offset` + `norm.trans_dir`. | At **dose-calc** time — `geom_calc.py` `patient.translate(dr=patient_offset)`. |
+| **Source** | `settings.normalization_settings`, **matched per file** from the DICOM manufacturer/model. | `settings.phantom.patient_offset`, set by the user. |
+| **Per-exam already?** | **Yes, by construction** — each file is normalized separately before reaching `analyze_multiple_exams()`, which consumes already-normalized `Tx/Ty/Tz`. A mixed-manufacturer batch already gets each vendor's convention correctly. | **Core-ready**: `analyze_multiple_exams(per_exam_offsets=...)` deep-copies settings per exam. GUI wiring is Phase 2.3. |
+| **Phase** | Automatic; not a Phase 2.x item. Residual fixups for tabular exports that lack convention metadata are the swap/flip toggles → **Phase 2.2**. **Manual numeric override → new Phase 2.5.** | **Phase 2.3.** |
+
+> **Key point:** different manufacturers' table/origin conventions are handled *automatically* by per-file normalization — you do **not** need a per-exam UI for the common case. Phase 2.5 adds a **manual** numeric override for the edge case where the scanner is misdetected (or a tabular export carries no usable convention), which today has no lever beyond the swap/flip toggles.
 
 ---
 
@@ -95,7 +114,7 @@ Element-wise summation is valid because all exams use fresh `Phantom` instances 
 
 ## Phase 2: Multi-File Upload Accumulation & Per-Exam Overrides
 
-Phase 2 brings the GUI up to the same capability as the CLI (`--file-path` with multiple mixed-format files) and exposes per-exam overrides already supported in the Python core. **Phase 2.1 (multi-file accumulation) is complete**; Phase 2.2–2.4 (per-exam transform / offset / convention overrides) are not yet started.
+Phase 2 brings the GUI up to the same capability as the CLI (`--file-path` with multiple mixed-format files) and exposes per-exam overrides already supported in the Python core. **Phase 2.1 (multi-file accumulation), 2.2 (per-exam coordinate transforms), 2.3 (per-exam patient offsets), and 2.5 (manual table-origin override) are complete**; only 2.4 (convention overrides) remains, intentionally deferred (no concrete use case). Note the two distinct offset quantities — see [Offset Terminology](#offset-terminology-disambiguation).
 
 > **Read this before implementing:** Phase 2.1 involves non-trivial coupling across `app.py`, `helpers.py`, and `state.py`. The sections below describe the exact fields and functions that must change, and the constraints to preserve.
 
@@ -244,65 +263,160 @@ Already dispatches to `analyze_multiple_exams()` when `state.is_multi_exam`. No 
 
 **Goal:** each exam in the loaded exam list has its own swap-lat-lon / flip-Ap1 / flip-Ap2 toggles, independent of other exams.
 
-#### Current state
+#### Design as shipped
 
-`state.swap_lat_lon`, `state.flip_ap1`, `state.flip_ap2` are global booleans. The toggle handlers in `app.py` (`_on_swap_toggle`, `_on_flip_ap1_toggle`, `_on_flip_ap2_toggle`) call `load_tabular()` to re-parse and then re-apply the global flags. This was scoped to single-exam in Phase 1 (Bug 1 fix); the global flags are already not applied to multi-exam concatenated data.
+Rather than re-parsing the file on every toggle (the original sketch below), each
+exam keeps a **pristine `base_data` copy** in its `loaded_exam_meta[i]` entry and
+its own `swap_lat_lon` / `flip_ap1` / `flip_ap2` flags. A single engine in
+`helpers.py` re-derives the transformed frame from the base + flags — idempotent
+(each flag is an involution) and order-independent, so no re-parse and no risk of
+double-applying. Both the single-exam global card and the per-exam toggles drive
+the **same** engine, so the two never disagree.
 
-#### Required changes
-
-1. **Store per-exam transforms in `loaded_exam_meta`** (already proposed in Phase 2.1): `{"swap_lat_lon": bool, "flip_ap1": bool, "flip_ap2": bool}`.
-2. **Move the coordinate correction card** from the global upload section into each exam list row (inline or via an expandable section per row).
-3. **Transforms are applied at load time** (not on Calculate): when a toggle changes for exam `i`, re-call `load_tabular(loaded_exam_meta[i]["file_path"], state_subset)` with the per-exam schema and sheet, apply the transforms to `loaded_exams[i].normalized_data`, then rebuild `state.rdsr_df` from all exams.
-4. **`_set_transform_defaults()`** (already exists in `app.py`) should be called per-exam with the provenance of that specific exam, writing into `loaded_exam_meta[i]` rather than global state.
-5. **Global coordinate correction card** (lines 542–620 in `app.py`) is hidden when `is_multi_exam` is True; per-exam toggles live in the exam list rows instead.
+- **`helpers.py`**
+  - `_apply_transform_flags(base, swap, flip_ap1, flip_ap2, schema_name)` → returns a
+    transformed copy; swap is skipped for the canonical `normalized` schema.
+  - `apply_exam_transforms(state, index)` → re-derives `loaded_exams[index].normalized_data`
+    from `meta["base_data"]` + flags and rebuilds the concatenated `state.rdsr_df`.
+  - `exam_supports_transforms(exam, meta)` → True only for **non-normalized tabular**
+    exams (DICOM conventions are applied at normalization; `normalized` is already canonical).
+  - `_exam_is_ge(exam)` → GE detection from the exam's import warnings, used to set
+    the **per-exam** auto lat/lon-swap default at load.
+  - `load_tabular()` stores `base_data` per exam, seeds each exam's default flags
+    (GE auto-swap for non-normalized in the multi path; global flags in the single
+    path), and **preserves** user flags across a schema/sheet re-parse.
+- **`app.py`**
+  - Per-exam **"Coordinate corrections"** expandable section per exam-list row
+    (swap / flip-Ap1 / flip-Ap2 switches), shown only for `exam_supports_transforms`
+    exams in multi-exam mode; each toggle calls `apply_exam_transforms(i)` and marks
+    results stale.
+  - Global coordinate-correction card hidden in multi-exam mode (visibility managed
+    imperatively in `_refresh_import_preview`).
+  - `_set_transform_defaults()` and the global `_on_*_toggle()` handlers rewritten to
+    write into `loaded_exam_meta[0]` and re-derive via `apply_exam_transforms(0)`
+    (single-exam only).
+  - `_remove_exam()` syncs the global flags back to the surviving exam when the list
+    returns to a single entry.
 
 #### Phase 2.2 checklist
 
-- [ ] Add `swap_lat_lon`, `flip_ap1`, `flip_ap2` fields to `loaded_exam_meta[i]` dict (part of Phase 2.1's `_append_exam_to_state`) (`app.py`)
-- [ ] Add per-exam transform toggle UI to each exam list row (inline or expandable) (`app.py`)
-- [ ] Write `_apply_exam_transforms(exam_index: int)` helper: re-applies transforms to `loaded_exams[i].normalized_data` from `loaded_exam_meta[i]` flags; rebuilds `state.rdsr_df` (`helpers.py`)
-- [ ] Update `_set_transform_defaults()` to accept an `exam_index` and write to `loaded_exam_meta[i]` (`app.py`)
-- [ ] Hide global coordinate correction card when `is_multi_exam` is True (`app.py`)
-- [ ] Remove global `_on_swap_toggle`, `_on_flip_ap1_toggle`, `_on_flip_ap2_toggle` handlers (or scope them to single-exam only) (`app.py`)
+- [x] Per-exam `swap_lat_lon` / `flip_ap1` / `flip_ap2` + pristine `base_data` stored in `loaded_exam_meta[i]` (`helpers.py`)
+- [x] Per-exam transform toggle UI (expandable section) in each exam list row, gated by `exam_supports_transforms` (`app.py`)
+- [x] `apply_exam_transforms(state, index)` engine — re-derives from base + flags, rebuilds `state.rdsr_df` (`helpers.py`)
+- [x] Per-exam GE auto-swap default at load + flag preservation across re-parse (`helpers.py`)
+- [x] `_set_transform_defaults()` writes per-exam (`loaded_exam_meta[0]`) and re-derives via the engine (`app.py`)
+- [x] Hide global coordinate correction card when `is_multi_exam` is True (`app.py`)
+- [x] Global `_on_*_toggle` handlers scoped to single-exam, routed through the per-exam engine (`app.py`)
+- [x] Tests: per-exam independence, swap reversibility from base, normalized-schema skip, concat rebuild, gating, loader stores base (`test_multi_exam.py::TestGuiPerExamTransforms`)
 
 ---
 
 ### Phase 2.3 — Per-exam patient offset overrides
 
+> **Scope:** this is the **patient offset** (shifting the patient on the table), *not* the table-origin offset. See [Offset Terminology](#offset-terminology-disambiguation). Manual table-origin override is Phase 2.5.
+
 **Goal:** the user can set independent d_lon / d_ver / d_lat for each exam. The Python core already accepts `per_exam_offsets: list[list[float]]` in `analyze_multiple_exams()`.
 
-#### Required changes
+> **Implementation note (deviation from the original sketch below):** the per-exam
+> offset is stored **inside each `loaded_exam_meta[i]` dict** (keys `d_lon`, `d_ver`,
+> `d_lat`) rather than in a separate parallel `state.per_exam_offsets` list. The
+> meta list is already kept in lockstep with `loaded_exams` across every lifecycle
+> path (append in both loaders, drop in `_drop_exams_for_path`, pop in
+> `_remove_exam`, clear in `clear_multi_exam_state`), so reusing it means the offset
+> rides along automatically — no third list to keep index-aligned, and no extra
+> reset/remove wiring. Same rationale as the inlined-append decision in Phase 2.1.
 
-1. **New state field** in `AppState`:
-   ```python
-   per_exam_offsets: list[dict[str, float]] = field(default_factory=list)
-   # e.g. [{"d_lon": 0.0, "d_ver": 0.0, "d_lat": 0.0}, ...]
-   ```
-   Default for each new exam: copy of the current global `{d_lon: state.d_lon, d_ver: state.d_ver, d_lat: state.d_lat}`.
+#### What shipped
 
-2. **UI**: add a per-exam offset row to the exam list (d_lon, d_ver, d_lat `ui.number` spinboxes, range −50 to 50 cm). These bind to `state.per_exam_offsets[i]`. Include an "Apply global to all" button that copies `state.d_lon/d_ver/d_lat` into every entry.
-
-3. **Wire into `run_calculation()`** (`helpers.py`, line 239): build `per_exam_offsets_list = [[m["d_lon"], m["d_ver"], m["d_lat"]] for m in state.per_exam_offsets]` and pass to `analyze_multiple_exams(exams=state.loaded_exams, settings=settings, per_exam_offsets=per_exam_offsets_list)`.
-
-4. **`_append_exam_to_state()`** should append a default offset dict using the current global offset.
-
-5. **`clear_all_exams()`** resets `state.per_exam_offsets = []`.
+1. **Per-exam offset storage** — each exam's meta dict gains `d_lon`/`d_ver`/`d_lat`,
+   seeded from the current global offset at load time (in `load_rdsr()` and both
+   branches of `load_tabular()`, `helpers.py`).
+2. **UI** — per-exam `d_lon`/`d_ver`/`d_lat` `ui.number` spinboxes (range −50…50 cm,
+   step 1) rendered inside each exam card by `_refresh_exams_table()` and bound
+   directly to the meta dict. An **"Apply global to all"** button copies the global
+   offset into every exam. Both are shown **only in multi-exam mode** — a single
+   exam runs through `analyze_data` with the global offset, where per-exam values
+   would have no effect, so showing them would mislead (`app.py`).
+3. **Staleness** — editing any spinbox (or pressing "Apply global to all") calls
+   `reset_results()` and clears the PSD label, so a stale result is never shown
+   against changed offsets (`app.py`).
+4. **`run_calculation()`** builds `per_exam_offsets = [[m["d_lon"], m["d_ver"],
+   m["d_lat"]] for m in state.loaded_exam_meta]` and passes it to
+   `analyze_multiple_exams(...)` (`helpers.py`).
+5. **Calculate-tab summary** label updated from "Per-exam offsets: global (Phase 2)"
+   to "Per-exam patient offsets editable in Upload tab" (`app.py`).
 
 #### Phase 2.3 checklist
 
-- [ ] Add `per_exam_offsets: list[dict[str, float]]` field to `AppState` (`state.py`)
-- [ ] Populate default entry (from global offset) in `_append_exam_to_state()` (`app.py`)
-- [ ] Add per-exam d_lon / d_ver / d_lat spinboxes to each exam list row (`app.py`)
-- [ ] Add "Apply global offset to all" button (`app.py`)
-- [ ] Reset `state.per_exam_offsets` in `clear_all_exams()` (`app.py`)
-- [ ] Remove entry in `_remove_exam(i)` alongside `loaded_exams[i]` and `loaded_exam_meta[i]` (`app.py`)
-- [ ] Wire `per_exam_offsets` into `run_calculation()` → `analyze_multiple_exams()` (`helpers.py`)
+- [x] Per-exam offset stored in `loaded_exam_meta[i]` (`d_lon`/`d_ver`/`d_lat`) — chosen over a separate `AppState.per_exam_offsets` field (see deviation note) (`state.py`/`helpers.py`)
+- [x] Populate default entry (from global offset) at load time in `load_rdsr()` / `load_tabular()` (`helpers.py`)
+- [x] Add per-exam d_lon / d_ver / d_lat spinboxes to each exam list row, bound to the meta dict (`app.py`)
+- [x] Add "Apply global offset to all" button (`app.py`)
+- [x] Reset per-exam offsets in `clear_all_exams()` — covered automatically by `clear_multi_exam_state()` zeroing `loaded_exam_meta` (`helpers.py`)
+- [x] Remove entry in `_remove_exam(i)` — covered automatically by popping `loaded_exam_meta[i]` (`app.py`)
+- [x] Wire `per_exam_offsets` into `run_calculation()` → `analyze_multiple_exams()` (`helpers.py`)
+- [x] Tests: loader seeds offset defaults from global; `run_calculation` forwards per-exam offsets (`test_multi_exam.py::TestGuiPerExamOffsets`)
 
 ---
 
 ### Phase 2.4 — Per-exam event-processing convention overrides *(low priority)*
 
 - [ ] Deferred — no concrete use case beyond Phase 2.2's coordinate transform toggles. Revisit if a vendor's RDSR uses a different rotation-direction convention than the global setting.
+
+---
+
+### Phase 2.5 — Manual per-exam table-origin offset override *(edge-case escape hatch)*
+
+> **Scope:** this is the **table-origin offset** (`trans_offset`), *not* the patient offset. See [Offset Terminology](#offset-terminology-disambiguation).
+
+**Why this exists:** table-origin offset and axis direction are normally set *automatically* per file from the matched manufacturer/model ([`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py) — `norm.trans_offset` / `norm.trans_dir`), so mixed-manufacturer batches already coordinate correctly with **no** user input. This phase is the **manual escape hatch** for the cases where automation can't help:
+
+- The scanner is **misdetected** (unknown model → fallback normalization with a generic/zero `trans_offset`).
+- A **tabular export** (Radimetrics/DoseTrack) carries table positions but no usable manufacturer-convention metadata, so the correct origin can't be inferred — only the swap/flip toggles (Phase 2.2) exist today, and they don't shift the origin.
+
+**Current limitation:** there is **no** numeric `trans_offset` override anywhere in the GUI — single- *or* multi-exam. `state.table_offset_x/y/z` are display-only (shown in the Calculate summary). This phase adds an editable override, scoped per exam.
+
+#### Design
+
+1. **State:** store an optional per-exam override in `loaded_exam_meta[i]`:
+   ```python
+   # None ⇒ use the auto-detected trans_offset from normalization (default).
+   "table_origin_override": dict | None,  # {"x": float, "y": float, "z": float} in cm
+   ```
+   Default `None` so the common path is untouched and the auto-detected value still flows through.
+
+2. **Apply point:** the override must be applied at **normalization** time (it feeds `Tx/Ty/Tz`), not at dose-calc time — unlike patient offset. Two options:
+   - **(a) Re-normalize** the exam with a settings object whose `normalization_settings.trans_offset` is replaced by the override (clean for RDSR; mirrors the schema/sheet re-parse path via `_drop_exams_for_path` + re-load).
+   - **(b) Post-adjust** the normalized frame: add `(override − detected)` to the `Tx/Ty/Tz` columns of `loaded_exams[i].normalized_data`. Cheaper, no re-parse, and works uniformly for tabular + RDSR. **Prefer (b)** unless direction (`trans_dir`) also needs overriding (then re-normalize).
+
+3. **UI:** an expandable "Advanced: table origin" section per exam-list row, hidden by default, with x/y/z `ui.number` spinboxes pre-filled from the detected `trans_offset` and a "Reset to auto-detected" button that sets the override back to `None`. Surface a small badge on the row when an override is active so it's visible that the exam is no longer using the auto value.
+
+4. **Provenance/export:** record the override in `ExamResult.settings_snapshot` (and the warnings list) so an overridden run is auditable — a manual origin shift materially changes the dose map.
+
+> **As shipped:** chose option **(b) post-adjust** — implemented inside the Phase 2.2
+> per-exam transform engine. `_apply_transform_flags()` gained `table_origin_override`
+> + `table_origin_detected` params and re-bases `Tx/Ty/Tz` by `(override − detected)`
+> **first** (in the detected, pre-swap frame) so the numeric shift composes correctly
+> with any swap/flip. `apply_exam_transforms()` always re-derives from the pristine
+> `base_data`, so an override toggles on/off cleanly. The override applies to any exam
+> with table-position columns — DICOM (misdetected scanner; `detected` = matched
+> `trans_offset`) and tabular (`detected` = 0, so the override is an absolute shift).
+> Auditability is via a per-exam warning threaded through the new
+> `analyze_multiple_exams(per_exam_extra_warnings=...)` param, which lands in
+> `ExamResult.warnings` (and thus the export) — cleaner than mutating
+> `settings_snapshot`, since the override is already baked into the data the core sees.
+
+#### Phase 2.5 checklist
+
+- [x] Add `"table_origin_override": dict | None` to the `loaded_exam_meta[i]` dict (default `None`) (`helpers.py`)
+- [x] Capture the auto-detected `trans_offset` per exam in `loaded_exam_meta[i]` (`table_origin_detected`) so the spinboxes pre-fill and "reset to auto" works — DICOM from `norm.trans_offset`, tabular = 0 (`helpers.py`)
+- [x] Apply via the per-exam engine: post-adjust `Tx/Ty/Tz` by `(override − detected)` when set; rebuild `state.rdsr_df` (`helpers.py`)
+- [x] Add the expandable "Advanced: table origin" per-exam UI (x/y/z spinboxes + "Reset to auto-detected", with a no-retrigger guard on reset) (`app.py`)
+- [x] Add an "ORIGIN" badge to the exam-list row when an override is active (`app.py`)
+- [x] Record the override in a per-exam warning for auditability via `analyze_multiple_exams(per_exam_extra_warnings=...)` → `ExamResult.warnings` (`analyze_data.py` / `helpers.py`)
+- [x] Reset overrides in `clear_all_exams()` (via `clear_multi_exam_state`) and drop the entry in `_remove_exam(i)` (covered by popping `loaded_exam_meta[i]`) (`app.py`)
+- [x] Tests: override re-bases by delta, reset restores base, support gating, audit note only when active, loader seeds defaults (`test_multi_exam.py::TestGuiTableOriginOverride`)
+- [ ] *(Stretch)* per-exam `trans_dir` (axis-direction) override via re-normalization, if a real misdetection case needs it
 
 ---
 

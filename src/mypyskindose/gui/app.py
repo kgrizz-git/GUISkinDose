@@ -28,7 +28,10 @@ os.environ['COLORAMA_DISABLE'] = '1'
 from nicegui import Client, app, run, ui
 
 from .helpers import (
+    apply_exam_transforms,
     clear_multi_exam_state,
+    exam_supports_table_origin,
+    exam_supports_transforms,
     get_excel_sheets,
     load_rdsr,
     load_tabular,
@@ -589,11 +592,13 @@ def index():
                         sheet_select.on("update:model-value", _on_sheet_change)
                     sheet_row.set_visibility(False)
 
-                    # Coordinate correction options — visible for non-normalized schemas
-                    with ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm q-mb-xs").bind_visibility_from(
-                        state, "import_provenance",
-                        backward=lambda v: v is not None and getattr(v, "schema_name", "") != "normalized",
-                    ):
+                    # Coordinate correction options — visible for non-normalized
+                    # schemas in single-exam mode only. In multi-exam mode each exam
+                    # carries its own toggles in the loaded-exam list, so this global
+                    # card is hidden (visibility managed in _refresh_import_preview).
+                    coord_card = ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm q-mb-xs")
+                    coord_card.set_visibility(False)
+                    with coord_card:
                         with ui.row().classes("items-center gap-3 q-mb-xs"):
                             ui.label("COORDINATE CORRECTIONS").classes("text-caption text-grey-4 font-bold tracking-widest")
                             coord_auto_label = ui.label("").classes("text-caption text-blue-400 italic")
@@ -701,6 +706,116 @@ def index():
                 "xlsx": "green", "xlsm": "green",
             }
 
+            def _apply_global_offset_to_all() -> None:
+                """Copy the global patient offset into every loaded exam's per-exam
+                offset, overwriting any per-exam edits. Marks results stale."""
+                for meta in state.loaded_exam_meta:
+                    meta["d_lon"] = state.d_lon
+                    meta["d_ver"] = state.d_ver
+                    meta["d_lat"] = state.d_lat
+                reset_results()
+                ctx.psd_label.set_text("PSD: 0.00 mGy")
+                _refresh_exams_table()
+                ui.notify(
+                    f"Applied global offset ({state.d_lon}, {state.d_ver}, "
+                    f"{state.d_lat} cm) to all {len(state.loaded_exam_meta)} exams.",
+                    color="blue",
+                )
+
+            def _on_exam_offset_change() -> None:
+                """A per-exam offset spinbox changed — invalidate stale results."""
+                reset_results()
+                ctx.psd_label.set_text("PSD: 0.00 mGy")
+
+            def _on_exam_transform_change(index: int, key: str, value) -> None:
+                """A per-exam coordinate-correction toggle changed: store the flag,
+                re-derive that exam's data from its base, and invalidate results."""
+                if not (0 <= index < len(state.loaded_exam_meta)):
+                    return
+                state.loaded_exam_meta[index][key] = bool(value)
+                apply_exam_transforms(state, index)
+                reset_results()
+                ctx.psd_label.set_text("PSD: 0.00 mGy")
+                _refresh_event_table()
+                _refresh_import_preview()
+
+            def _build_table_origin_section(index: int, meta: dict) -> None:
+                """Per-exam 'Advanced: table origin' override UI (Phase 2.5).
+
+                Spinboxes pre-fill from the active override (or the auto-detected
+                origin); 'Reset to auto-detected' clears the override back to None.
+                """
+                detected = meta.get("table_origin_detected") or {
+                    "x": 0.0, "y": 0.0, "z": 0.0
+                }
+                inputs: dict[str, ui.number] = {}
+                guard = {"suppress": False}
+
+                def _status_text() -> str:
+                    return (
+                        "Override active — using manual origin"
+                        if meta.get("table_origin_override") is not None
+                        else "Using auto-detected origin"
+                    )
+
+                with ui.expansion("Advanced: table origin", icon="open_with").classes(
+                    "w-full"
+                ).props("dense"):
+                    ui.label(
+                        "Override the table coordinate origin (cm) for a misdetected "
+                        "scanner or a tabular export without convention metadata. "
+                        "This changes the dose map."
+                    ).classes("text-caption text-grey-6")
+                    status_label = ui.label(_status_text()).classes(
+                        "text-caption text-amber-400 italic"
+                    )
+
+                    def _on_change(key: str, value) -> None:
+                        if guard["suppress"]:
+                            return
+                        if meta.get("table_origin_override") is None:
+                            meta["table_origin_override"] = dict(detected)
+                        meta["table_origin_override"][key] = float(value or 0.0)
+                        apply_exam_transforms(state, index)
+                        reset_results()
+                        ctx.psd_label.set_text("PSD: 0.00 mGy")
+                        _refresh_event_table()
+                        _refresh_import_preview()
+                        status_label.set_text(_status_text())
+
+                    def _on_reset() -> None:
+                        meta["table_origin_override"] = None
+                        apply_exam_transforms(state, index)
+                        # Revert spinboxes without re-triggering _on_change.
+                        guard["suppress"] = True
+                        for k, inp in inputs.items():
+                            inp.set_value(detected[k])
+                        guard["suppress"] = False
+                        reset_results()
+                        ctx.psd_label.set_text("PSD: 0.00 mGy")
+                        _refresh_event_table()
+                        _refresh_import_preview()
+                        status_label.set_text(_status_text())
+
+                    current = meta.get("table_origin_override") or detected
+                    with ui.row().classes("items-center gap-2"):
+                        for key in ("x", "y", "z"):
+                            inputs[key] = ui.number(
+                                label=key,
+                                value=current.get(key, 0.0),
+                                step=1.0,
+                                format="%.1f",
+                            ).props("dense outlined").classes("w-20").on_value_change(
+                                lambda e, k=key: _on_change(k, e.value)
+                            )
+                        ui.button(
+                            "Reset to auto-detected",
+                            icon="restart_alt",
+                            on_click=_on_reset,
+                        ).props("flat dense size=sm color=grey-5").classes(
+                            "icon-outlined"
+                        )
+
             def _refresh_exams_table():
                 exams_list.clear()
                 has_exams = bool(state.loaded_exams)
@@ -709,6 +824,26 @@ def index():
                 if not has_exams:
                     return
                 with exams_list:
+                    # Per-exam patient offsets only take effect in multi-exam mode
+                    # (analyze_multiple_exams); a single exam uses the global offset
+                    # via analyze_data, so the controls are hidden for one file.
+                    if state.is_multi_exam:
+                        with ui.row().classes("w-full items-center gap-3 q-mb-xs"):
+                            ui.label(
+                                f"Global patient offset: {state.d_lon}, "
+                                f"{state.d_ver}, {state.d_lat} cm"
+                            ).classes("text-caption text-grey-6")
+                            ui.space()
+                            ui.button(
+                                "Apply global to all",
+                                icon="content_copy",
+                                on_click=_apply_global_offset_to_all,
+                            ).props("flat dense size=sm color=grey-5").classes(
+                                "icon-outlined"
+                            ).tooltip(
+                                "Copy the global patient offset (Settings tab) into "
+                                "every exam, overwriting per-exam edits"
+                            )
                     for idx, exam in enumerate(state.loaded_exams):
                         meta = (
                             state.loaded_exam_meta[idx]
@@ -741,6 +876,10 @@ def index():
                                     ui.icon("warning", color="orange").classes(
                                         "text-sm icon-outlined"
                                     ).tooltip("; ".join(warnings[:3]))
+                                if meta.get("table_origin_override") is not None:
+                                    ui.badge("ORIGIN", color="amber").classes(
+                                        "text-xs"
+                                    ).tooltip("Manual table-origin override active")
                                 ui.space()
                                 ui.button(
                                     icon="close",
@@ -748,6 +887,73 @@ def index():
                                 ).props("flat round dense size=sm color=grey-5").classes(
                                     "icon-outlined"
                                 ).tooltip("Remove this exam")
+
+                            # Per-exam patient offset (Phase 2.3) — bound directly to
+                            # the meta dict; consumed by run_calculation in multi-exam
+                            # mode. Hidden for a single exam (global offset applies).
+                            if state.is_multi_exam and meta:
+                                with ui.row().classes("items-center gap-2 q-mt-xs"):
+                                    ui.label("Patient offset (cm):").classes(
+                                        "text-caption text-grey-5"
+                                    )
+                                    for axis, lbl in (
+                                        ("d_lon", "lon"),
+                                        ("d_ver", "ver"),
+                                        ("d_lat", "lat"),
+                                    ):
+                                        meta.setdefault(axis, 0.0)
+                                        ui.number(
+                                            label=lbl,
+                                            value=meta[axis],
+                                            min=-50,
+                                            max=50,
+                                            step=1.0,
+                                            format="%.1f",
+                                        ).props("dense outlined").classes(
+                                            "w-20"
+                                        ).bind_value(meta, axis).on_value_change(
+                                            _on_exam_offset_change
+                                        )
+
+                            # Per-exam coordinate corrections (Phase 2.2) — only for
+                            # non-normalized tabular exams; each toggle re-derives this
+                            # exam's data independently of the others.
+                            if state.is_multi_exam and exam_supports_transforms(exam, meta):
+                                with ui.expansion(
+                                    "Coordinate corrections", icon="tune"
+                                ).classes("w-full").props("dense"):
+                                    ui.switch(
+                                        "Swap lateral ↔ longitudinal (Tx ↔ Tz)",
+                                        value=meta.get("swap_lat_lon", False),
+                                    ).on_value_change(
+                                        lambda e, i=idx: _on_exam_transform_change(
+                                            i, "swap_lat_lon", e.value
+                                        )
+                                    ).tooltip(
+                                        "Auto-enabled for GE exports; verify for others."
+                                    )
+                                    ui.switch(
+                                        "Flip primary angle (Ap1 × −1)",
+                                        value=meta.get("flip_ap1", False),
+                                    ).on_value_change(
+                                        lambda e, i=idx: _on_exam_transform_change(
+                                            i, "flip_ap1", e.value
+                                        )
+                                    )
+                                    ui.switch(
+                                        "Flip secondary angle (Ap2 × −1)",
+                                        value=meta.get("flip_ap2", False),
+                                    ).on_value_change(
+                                        lambda e, i=idx: _on_exam_transform_change(
+                                            i, "flip_ap2", e.value
+                                        )
+                                    )
+
+                            # Manual table-origin override (Phase 2.5) — escape hatch
+                            # for a misdetected scanner or a tabular export with no
+                            # convention metadata. Shown for single- and multi-exam.
+                            if exam_supports_table_origin(exam, meta):
+                                _build_table_origin_section(idx, meta)
 
             def _remove_exam(index: int) -> None:
                 """Remove one accumulated exam and rebuild derived state.
@@ -787,8 +993,14 @@ def index():
                     ctx.file_label.set_text("No file loaded")
                     ctx.events_label.set_text("0 events")
                 elif n == 1:
-                    state.file_name = state.loaded_exam_meta[0].get("file_name", "")
-                    state.file_path = state.loaded_exam_meta[0].get("file_path")
+                    meta0 = state.loaded_exam_meta[0]
+                    state.file_name = meta0.get("file_name", "")
+                    state.file_path = meta0.get("file_path")
+                    # Returning to single-exam: sync the global coordinate-correction
+                    # flags to the surviving exam so the global card reflects reality.
+                    state.swap_lat_lon = meta0.get("swap_lat_lon", False)
+                    state.flip_ap1 = meta0.get("flip_ap1", False)
+                    state.flip_ap2 = meta0.get("flip_ap2", False)
                     ctx.file_label.set_text(state.file_name.upper())
                     ctx.events_label.set_text(f"{n_events} EVENTS")
                 else:
@@ -804,6 +1016,12 @@ def index():
 
             def _refresh_import_preview():
                 prov = state.import_provenance
+                # Global coordinate-correction card: single-exam, non-normalized only.
+                coord_card.set_visibility(
+                    prov is not None
+                    and getattr(prov, "schema_name", "") != "normalized"
+                    and not state.is_multi_exam
+                )
                 if prov is None:
                     return
                 import_schema_badge.set_text(prov.schema_name.upper().replace("_", " "))
@@ -850,16 +1068,16 @@ def index():
             def _set_transform_defaults() -> None:
                 """Auto-set coordinate correction toggles based on detected manufacturer.
 
-                Called once after initial file load, not on sheet re-parse, so user
-                overrides are preserved across sheet changes.
+                Single-exam only — in multi-exam mode each exam carries its own
+                defaults (set per-exam at load). Writes the GE auto-swap into the
+                first exam's meta and re-derives its data through the per-exam engine
+                so the single entry stays consistent if more files are added.
                 """
                 if state.import_provenance is None:
                     return
 
-                # In multi-exam mode rdsr_df is only a concatenated preview; mutating
-                # it here would not reach the per-exam data used by the calculation,
-                # so transform auto-defaults are deferred to per-exam handling
-                # (Phase 2.2). Leave the global flags and preview untouched.
+                # In multi-exam mode each exam owns its transforms (loaded_exam_meta);
+                # the global card is hidden and these globals are unused.
                 if state.is_multi_exam:
                     coord_auto_label.set_text("")
                     return
@@ -871,58 +1089,56 @@ def index():
                 state.flip_ap1 = False
                 state.flip_ap2 = False
 
-                # Apply swap if needed (load_tabular loaded with swap=False)
-                if needs_swap and state.rdsr_df is not None:
-                    if "Tx" in state.rdsr_df.columns and "Tz" in state.rdsr_df.columns:
-                        df = state.rdsr_df.copy()
-                        df["Tx"], df["Tz"] = state.rdsr_df["Tz"].copy(), state.rdsr_df["Tx"].copy()
-                        state.rdsr_df = df
+                # Push the defaults into the single exam's meta and re-derive its
+                # data from the pristine base (load_tabular stored base_data).
+                if state.loaded_exam_meta:
+                    meta = state.loaded_exam_meta[0]
+                    meta["swap_lat_lon"] = needs_swap
+                    meta["flip_ap1"] = False
+                    meta["flip_ap2"] = False
+                    apply_exam_transforms(state, 0)
 
-                # Update the auto-hint label
-                if needs_swap:
-                    coord_auto_label.set_text("· lat/lon swap auto-enabled")
-                else:
-                    coord_auto_label.set_text("")
+                coord_auto_label.set_text(
+                    "· lat/lon swap auto-enabled" if needs_swap else ""
+                )
 
+            # The global coordinate-correction card is single-exam only (hidden in
+            # multi-exam mode). Its toggles mirror the flag into the single exam's
+            # meta and re-derive that exam's data through the per-exam engine, so the
+            # global card and per-exam list never disagree.
             def _on_swap_toggle() -> None:
-                if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
+                if not state.loaded_exam_meta or state.input_source_type in ("", "dicom"):
                     return
                 prov = state.import_provenance
                 if prov and prov.schema_name == "normalized":
                     return
-                if "Tx" in state.rdsr_df.columns and "Tz" in state.rdsr_df.columns:
-                    df = state.rdsr_df.copy()
-                    df["Tx"], df["Tz"] = state.rdsr_df["Tz"].copy(), state.rdsr_df["Tx"].copy()
-                    state.rdsr_df = df
-                    reset_results()
-                    _refresh_event_table()
-                    _refresh_exams_table()
-                    _refresh_import_preview()
-                    coord_auto_label.set_text("")
+                state.loaded_exam_meta[0]["swap_lat_lon"] = state.swap_lat_lon
+                apply_exam_transforms(state, 0)
+                reset_results()
+                _refresh_event_table()
+                _refresh_exams_table()
+                _refresh_import_preview()
+                coord_auto_label.set_text("")
 
             def _on_flip_ap1_toggle() -> None:
-                if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
+                if not state.loaded_exam_meta or state.input_source_type in ("", "dicom"):
                     return
-                if "Ap1" in state.rdsr_df.columns:
-                    df = state.rdsr_df.copy()
-                    df["Ap1"] = -state.rdsr_df["Ap1"]
-                    state.rdsr_df = df
-                    reset_results()
-                    _refresh_event_table()
-                    _refresh_exams_table()
-                    _refresh_import_preview()
+                state.loaded_exam_meta[0]["flip_ap1"] = state.flip_ap1
+                apply_exam_transforms(state, 0)
+                reset_results()
+                _refresh_event_table()
+                _refresh_exams_table()
+                _refresh_import_preview()
 
             def _on_flip_ap2_toggle() -> None:
-                if state.rdsr_df is None or state.input_source_type in ("", "dicom"):
+                if not state.loaded_exam_meta or state.input_source_type in ("", "dicom"):
                     return
-                if "Ap2" in state.rdsr_df.columns:
-                    df = state.rdsr_df.copy()
-                    df["Ap2"] = -state.rdsr_df["Ap2"]
-                    state.rdsr_df = df
-                    reset_results()
-                    _refresh_event_table()
-                    _refresh_exams_table()
-                    _refresh_import_preview()
+                state.loaded_exam_meta[0]["flip_ap2"] = state.flip_ap2
+                apply_exam_transforms(state, 0)
+                reset_results()
+                _refresh_event_table()
+                _refresh_exams_table()
+                _refresh_import_preview()
 
             # Expose the upload spine as ctx callables so out-of-module callers
             # (the restore tail, and future extracted tabs) reach them without
@@ -958,7 +1174,7 @@ def index():
                         ui.label("Current settings").classes("text-xl font-bold q-mb-md")
                         with ui.row().classes("items-center gap-2").bind_visibility_from(state, "is_multi_exam"):
                             ui.badge().bind_text_from(state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS").classes("text-xs tracking-widest font-bold")
-                            ui.label("Per-exam offsets: global (Phase 2)").classes("text-caption text-grey-5 italic")
+                            ui.label("Per-exam patient offsets editable in Upload tab").classes("text-caption text-grey-5 italic")
 
                     with ui.grid(columns=3).classes("w-full gap-8 mono-text text-sm"):
                         # Section 1: Input Data
