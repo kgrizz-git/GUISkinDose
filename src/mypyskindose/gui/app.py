@@ -883,7 +883,7 @@ def index():
                                 ui.space()
                                 ui.button(
                                     icon="close",
-                                    on_click=lambda i=idx: _remove_exam(i),
+                                    on_click=lambda e, i=idx: _remove_exam(i),
                                 ).props("flat round dense size=sm color=grey-5").classes(
                                     "icon-outlined"
                                 ).tooltip("Remove this exam")
