@@ -12,6 +12,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Multi-exam Data Table exam column** (2026-06-19): in multi-exam mode the normalized event table (`state.rdsr_df`) now tags every row with a display-only `Exam` column (`"#<n> · <file>"`) so it is clear which loaded exam a row came from. Centralized in `gui/helpers.rebuild_rdsr_df()` (replaces four inline `pd.concat` sites); single-exam frames stay untagged and the tag is stripped before the single-exam calculation, so dose output is unchanged. Pinned first in the Data Table; included in normalized CSV/XLSX exports, omitted from raw exports. Unit tests in `tests/unittests/test_gui_rdsr_df.py`.
+
 - **Recursion-to-iteration prep** (2026-06-16): golden baseline test and pinned `dose_map` fixture for `siemens_axiom_artis.dcm` (cylinder phantom); 1100-event stress test; `tests/calculate_dose_recursion_helpers.py` for synthetic normalized events; `slow` pytest marker. Plan in `dev-docs/plans/recursion-to-iteration.md`.
 
 ### Fixed
@@ -45,6 +47,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Per-exam corrections moved to Settings tab** (2026-06-19): the editable per-exam controls (patient offsets, coordinate corrections, table-origin override, "Apply global to all") now live in a new **Settings → Per-exam corrections** section (`gui/tabs/_per_exam.py`, registered via `ctx.refresh_per_exam`) instead of the Upload tab, so each exam is edited separately and apart from the global settings. The Upload tab keeps a compact loaded-files summary (badges, event count, warnings, remove button) and points to Settings for edits. Trims `gui/app.py` by ~225 lines.
 - Harness docs: document master vs execution vs archive plan conventions in `HARNESS_ENGINEERING.md`; add `dev-docs/plans/archive/` (basedpyright plan); sync `TO_DO.md` with shipped tabular Phases 3–5; update `dev-docs/index.md` catalog.
 - Repository hygiene: stop tracking build artifacts (`dist/`), Jupyter checkpoint notebooks, legacy `phantom_data/old/` meshes, local `debug.json`, ad-hoc `_test_gui_import.py`, and duplicate `.windsurf/` rules; expand `.gitignore` for `PlotOutputs/`, coverage output, and local agent config.
 - Type checking: resolved all 147 basedpyright errors; CI now runs strict `basedpyright` (no baseline). Optional incremental baseline workflow documented in `.basedpyright/README.md` with `scripts/type_baseline.sh`.

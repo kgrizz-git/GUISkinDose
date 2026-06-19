@@ -41,3 +41,7 @@ class PageContext:
     # the upload tab is built; this breaks the cross-handler call cycle.
     refresh_event_table: Callable[[], None] = field(default=_noop)
     refresh_import_preview: Callable[[], None] = field(default=_noop)
+    # per-exam corrections section lives under the Settings tab; the upload tab's
+    # loaded-files summary calls this so loading/removing an exam re-renders the
+    # editable controls. Default no-op until the settings tab is built.
+    refresh_per_exam: Callable[[], None] = field(default=_noop)

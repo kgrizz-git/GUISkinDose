@@ -14,6 +14,7 @@ from ..components import HelpButton
 from ..constants import COLORSCALES, HUMAN_MESHES, ORIENTATIONS, PHANTOM_MODELS
 from ..page_context import PageContext
 from ..state import reset_results, state
+from ._per_exam import build_per_exam_section
 
 
 def build(ctx: PageContext) -> None:
@@ -59,6 +60,10 @@ def build(ctx: PageContext) -> None:
                         ui.number(label="Lateral", value=state.d_lat, step=1.0).bind_value(
                             state, "d_lat"
                         ).on("update:model-value", reset_results).classes("grow")
+
+            # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
+            # editable block per loaded exam; registers ctx.refresh_per_exam.
+            build_per_exam_section(ctx)
 
             with ui.expansion("Physics Settings", icon="science").classes("modern-card w-full"):
                 with ui.column().classes("w-full gap-4 q-pa-md"):

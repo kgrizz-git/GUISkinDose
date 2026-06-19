@@ -14,6 +14,12 @@ from mypyskindose.settings import PyskindoseSettings
 
 from .state import AppState
 
+# Display-only column added to the concatenated multi-exam preview frame
+# (state.rdsr_df) so the Data Table can show which exam each row came from. It is
+# never sent to the dose calculation: the single-exam calc path drops it before
+# analyze_data, and the multi-exam path reads per-exam normalized_data directly.
+EXAM_COLUMN = "Exam"
+
 
 class _CalcWarningCollector(logging.Handler):
     """Collects WARNING+ log messages emitted during a dose calculation so the GUI
@@ -67,7 +73,6 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
     Returns ``(success, message)``.
     """
     from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
-    import pandas as pd
 
     try:
         settings = build_settings(state, mode="calculate_dose")
@@ -150,9 +155,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         })
 
         # Rebuild concat event preview from all loaded exams
-        state.rdsr_df = pd.concat(
-            [e.normalized_data for e in state.loaded_exams], ignore_index=True
-        )
+        rebuild_rdsr_df(state)
         state.is_multi_exam = len(state.loaded_exams) > 1
 
         # Update single-file-style fields so the rest of the UI is consistent
@@ -210,7 +213,6 @@ def load_tabular(
 
     Returns ``(ok, message)``.
     """
-    import pandas as pd
     from mypyskindose.input_adapters.registry import (
         SchemaDetectionError,
         read_and_normalize_input,
@@ -353,9 +355,7 @@ def load_tabular(
             msg = f"Loaded {len(result.normalized_data)} events from {file_path.name} ({result.provenance.schema_name})"
 
         # Rebuild concat event preview from all loaded exams.
-        state.rdsr_df = pd.concat(
-            [e.normalized_data for e in state.loaded_exams], ignore_index=True
-        )
+        rebuild_rdsr_df(state)
         state.is_multi_exam = len(state.loaded_exams) > 1
 
         # Per-file state used by the import preview and schema re-parse path.
@@ -471,8 +471,11 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
             return True, f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {len(state.loaded_exams)} exams"
         else:
             try:
-                # analyze_data internally calls calculate_rotation_matrices
-                output = analyze_data(normalized_data=state.rdsr_df.copy(), settings=settings)
+                # analyze_data internally calls calculate_rotation_matrices.
+                # Drop the display-only exam tag if present (defensive — single-exam
+                # frames don't carry it, but never let it reach the calculation).
+                calc_df = state.rdsr_df.drop(columns=EXAM_COLUMN, errors="ignore").copy()
+                output = analyze_data(normalized_data=calc_df, settings=settings)
             finally:
                 _calc_logger.removeHandler(_collector)
             state.calc_warnings = list(_collector.messages)
@@ -664,6 +667,33 @@ def exam_supports_table_origin(exam, meta: dict) -> bool:
     return any(c in cols for c in ("Tx", "Ty", "Tz"))
 
 
+def rebuild_rdsr_df(state: AppState) -> None:
+    """Rebuild ``state.rdsr_df`` from all loaded exams' normalized data.
+
+    Single source of truth for the concatenated event preview. In multi-exam mode
+    each row is tagged with a leading :data:`EXAM_COLUMN` (``"#<n> · <file>"``) so
+    the Data Table can show which exam it came from; single-exam frames are left
+    untouched (no extra column). The tag is display/export only — see
+    :data:`EXAM_COLUMN`. No-op-safe: clears ``rdsr_df`` when no exams are loaded.
+    """
+    import pandas as pd
+
+    if not state.loaded_exams:
+        state.rdsr_df = None
+        return
+
+    multi = len(state.loaded_exams) > 1
+    frames = []
+    for i, exam in enumerate(state.loaded_exams):
+        df = exam.normalized_data
+        if multi:
+            df = df.copy()
+            meta = state.loaded_exam_meta[i] if i < len(state.loaded_exam_meta) else {}
+            df.insert(0, EXAM_COLUMN, f"#{i + 1} · {meta.get('file_name', '—')}")
+        frames.append(df)
+    state.rdsr_df = pd.concat(frames, ignore_index=True)
+
+
 def apply_exam_transforms(state: AppState, index: int) -> None:
     """Re-derive one exam's normalized_data from its base + flags; rebuild preview.
 
@@ -673,8 +703,6 @@ def apply_exam_transforms(state: AppState, index: int) -> None:
     ``state.rdsr_df`` preview from all exams. No-op if the exam has no stored base
     (e.g. a DICOM exam, which has no coordinate toggles).
     """
-    import pandas as pd
-
     if not (0 <= index < len(state.loaded_exams)):
         return
     exam = state.loaded_exams[index]
@@ -697,10 +725,7 @@ def apply_exam_transforms(state: AppState, index: int) -> None:
         flip_ty=meta.get("flip_ty", False),
         flip_tz=meta.get("flip_tz", False),
     )
-    if state.loaded_exams:
-        state.rdsr_df = pd.concat(
-            [e.normalized_data for e in state.loaded_exams], ignore_index=True
-        )
+    rebuild_rdsr_df(state)
 
 
 def _drop_exams_for_path(state: AppState, file_path: Path) -> None:
