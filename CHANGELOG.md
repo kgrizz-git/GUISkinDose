@@ -16,6 +16,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 - **Recursion-to-iteration prep** (2026-06-16): golden baseline test and pinned `dose_map` fixture for `siemens_axiom_artis.dcm` (cylinder phantom); 1100-event stress test; `tests/calculate_dose_recursion_helpers.py` for synthetic normalized events; `slow` pytest marker. Plan in `dev-docs/plans/recursion-to-iteration.md`.
 
+### Changed
+
+- **HVL lookup now interpolates off-grid filtration** (2026-06-19): `geom_calc.fetch_and_append_hvl()` replaces the exact-match-with-nearest-snap lookup with **2-D bilinear interpolation over (kVp, Cu)** on the selected `(inherent, Al)` grid slice (`scipy.interpolate.RegularGridInterpolator`, cached per slice). Off-grid copper filtration (tabulated gaps at 0.5/0.7/0.8 mmCu) is now linearly interpolated instead of snapped; out-of-range queries are **clamped** to the nearest grid edge (never extrapolated). Anode angle is **selected** (first-occurrence dedup ≈ 11° where present, else 8°), not interpolated — a discrete tube property. kVp is rounded to its nearest integer node (table is 1-kV dense), so **in-grid results are unchanged** (golden PSD identical; `test_fetch_hvl_from_database` characterization preserved). Per-event `interpolated`/`clamped` warnings flow through the `mypyskindose` logger to `state.calc_warnings` (calc-tab status line + toasts). New tests in `tests/unittests/test_geom_calc.py` (interpolation betweenness, edge clamping, on-grid silence). HVL drives `k_bs` and `k_med`. First slice of `dev-docs/plans/hvl-interpolation-and-below-floor-kvp.md`; `k_tab` guard/interpolation and below-floor-kVp user options still pending.
+
 ### Fixed
 
 - **Per-event dose loop** (2026-06-16): `calculate_irradiation_event_result()` no longer recurses once per irradiation event; uses an iterative loop so procedures with >1000 events (and future multi-exam runs) do not hit Python's recursion limit. Output verified bit-identical to the prior implementation via golden baseline test.

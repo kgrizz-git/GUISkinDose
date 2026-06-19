@@ -98,24 +98,38 @@ existing `state.calc_warnings` surfacing channel:
 `status ∈ {exact, interpolated, clamped}`. Build it once per calc (the table is
 small and static), interpolate within bounds, clamp + flag at the edges.
 
-- [ ] **Grid helper.** Add `grid_interpolate(grid_axes, grid_values, query)` (likely
-      in `geom_calc.py` or a small `table_data`/`_grid.py` helper) wrapping
-      `scipy.interpolate.RegularGridInterpolator(..., bounds_error=False)`. We
-      **never extrapolate past the grid**: detect out-of-bounds ourselves (any axis
-      query outside `[axis.min(), axis.max()]`) and **clamp the query to the nearest
-      edge before interpolating**, so the edge node's value is used and the event is
-      labelled `clamped`. An on-node query returns the tabulated value (RGI is exact
-      at nodes) → label `exact` when every axis coordinate is on a node, else
-      `interpolated`.
-- [ ] **HVL.** Rework `fetch_and_append_hvl`:
-      - Pick the anode-angle slice deterministically to match current behavior
-        (document the choice; default to the slice the old `.iloc[0]` returned — the
-        first CSV occurrence — to keep golden PSD unchanged). Reshape that slice into
-        the 4-D `(kVp, inherent, Cu, Al)` value array (axes already verified clean).
-      - For each event build the query `(round? or raw kVp, inherent, Cu, Al)` — **use
-        raw (un-rounded) kVp/Al so interpolation actually moves between nodes**;
-        rounding was only needed for exact match.
-      - Replace the snap loop with `grid_interpolate`; collect per-event status.
+- [ ] **Grid helper.** Add a small `clamped_interp(rgi, axes, query)` helper (in
+      `geom_calc.py` or a `table_data`/`_grid.py` module) wrapping a prebuilt
+      `scipy.interpolate.RegularGridInterpolator`. We **never extrapolate past the
+      grid**: detect out-of-bounds ourselves (any axis query outside
+      `[axis.min(), axis.max()]`) and **clamp the query to the nearest edge before
+      interpolating**, so the edge node's value is used and the event is labelled
+      `clamped`. An on-node query returns the tabulated value (RGI is exact at nodes)
+      → label `exact` when every axis coordinate is on a node, else `interpolated`.
+      Reused by both HVL (kVp × Cu) and k_tab (kVp × Cu per device/plane).
+- [x] **HVL.** Rework `fetch_and_append_hvl` (data shape verified 2026-06-19;
+      implemented + tested, golden PSD unchanged):
+      - **Resolve anode angle by selection, not interpolation.** Anode angle (8°/11°)
+        is a discrete tube-target property; blending slices is physically meaningless.
+        Dedup the table on `(kVp, inherent, Cu, Al)` keeping the **first occurrence**
+        — exactly what the old `.iloc[0]` returned (anode 11 where present, else 8) —
+        so in-grid events keep identical HVLs. (The two anode slices cover *different*
+        Cu/Al regions, so no single clean 4-D grid exists across anode; selecting
+        sidesteps that.)
+      - **Snap the device-fixed axes** (inherent → nearest available, Al → nearest
+        available) — these are settings, near-always exact; off-grid is rare.
+      - **2-D bilinear over (kVp, Cu)** on the chosen `(inherent, Al)` slice via
+        `RegularGridInterpolator`. *Verified:* all 62 `(inherent, Al)` slices are
+        complete `(kVp × Cu)` grids (kVp dense 25–175; Cu `{0,…,0.9}`), so RGI builds
+        directly with no gap-filling. Cache the interpolator per `(inherent, Al)`.
+      - **Round kVp to its nearest integer node, interpolate Cu (raw).** The kVp
+        axis is tabulated at a dense **1 kV step**, so rounding loses nothing
+        dosimetrically and preserves historical results (incl. the
+        `test_fetch_hvl_from_database` characterization at kVp 81.4 → 6.549).
+        Interpolation is reserved for the **sparse Cu axis** (tabulated gaps at
+        0.5/0.7/0.8 mmCu) — the actual off-grid-filtration target of this work.
+        On-node query returns the tabulated value (RGI exact at nodes) → parity.
+      - Collect per-event status (`exact`/`interpolated`/`clamped`).
       - Emit **per-event** `logger.warning` for `interpolated`/`clamped` events
         (event index, query, HVL, class), plus keep an aggregate count line. Cap the
         per-event spam (e.g. first N, then "+M more") to avoid flooding long procedures.
@@ -244,13 +258,19 @@ python scripts/check_changelog.py
 - **Default policy: `snap`** — keep current behavior unless the user opts into
   skip/manual/exam_average, so existing results don't silently change.
 - **Floor threshold: kVp < 25 kV** (HVL table floor; carried from the crash-fix plan).
-- **Anode angle** stays implicit; interpolation matches the slice the current code
-  effectively returns (parity test enforces this). Making anode angle an explicit
-  per-device input is **out of scope**.
+- **Anode angle is selected, never interpolated** (raised 2026-06-19). It is a
+  discrete tube-target property (8°/11°); blending slices is physically meaningless.
+  We keep the current implicit selection (first-occurrence dedup ≈ anode 11 where
+  present, else 8) so in-grid results are unchanged (parity test enforces this).
+  The real latent gap is that the device's anode angle isn't read from metadata —
+  making anode angle an **explicit per-device input** (selection, not interpolation)
+  is tracked as later work, **out of scope** here.
 
 ## Out of scope
 
-- Making anode angle a first-class query/device parameter.
+- Making anode angle a first-class query/device parameter (read from metadata and
+  **selected** per device). Interpolating *across* anode angle is explicitly a
+  non-goal (discrete physical property).
 - Biplane (tube A/B) handling (separate TO_DO).
 - Re-deriving the polynomial `k_bs` model — it stays continuous and simply consumes
   the improved HVL.

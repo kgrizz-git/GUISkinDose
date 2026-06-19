@@ -161,7 +161,7 @@ Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file pat
 | `scale_field_area()` | Scales field area from detector plane to each skin cell (distance-squared scaling) |
 | `check_new_geometry()` | Detects which events have changed geometry vs. previous event (avoids redundant recalculation) |
 | `check_table_hits()` | Ray-triangle intersection: determines which skin cells have beam passing through table/pad |
-| `fetch_and_append_hvl()` | Looks up HVL (mmAl) from SQLite DB by kVp + filtration, appends to DataFrame |
+| `fetch_and_append_hvl()` | HVL (mmAl) from SQLite DB by kVp + filtration; bilinear interpolation over (kVp, Cu), off-grid filtration interpolated and out-of-range clamped (warns per event); appends to DataFrame |
 | `calculate_rotation_matrices()` | Converts At1/At2/At3 angles to 3×3 rotation matrices (Rx, Ry, Rz) |
 | `vector()` | Creates a vector or unit vector between two 3D points |
 | `Triangle.check_intersection()` | Möller–Trumbore-style ray-triangle intersection test |

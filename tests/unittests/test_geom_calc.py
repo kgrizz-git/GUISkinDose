@@ -120,3 +120,78 @@ def test_fetch_and_append_hvl_snaps_out_of_grid_events():
     assert "HVL" in out.columns
     assert out["HVL"].notna().all()  # both resolved — the out-of-grid one was snapped
     assert (out["HVL"] > 0).all()
+
+
+def _hvl(kvp_list, cu_list, al_list=None):
+    """Run fetch_and_append_hvl on a tiny synthetic frame, returning (HVL series,
+    captured WARNING messages). Captures via a dedicated handler on the
+    ``mypyskindose`` logger so it is robust to suite-wide logging state (unlike
+    pytest's ``caplog``, which depends on root-logger propagation)."""
+    import logging
+
+    import pandas as pd
+
+    from mypyskindose import load_settings_example_json
+    from mypyskindose.geom_calc import fetch_and_append_hvl
+    from mypyskindose.settings import PyskindoseSettings
+
+    base = load_settings_example_json()
+    base["mode"] = "calculate_dose"
+    settings = PyskindoseSettings(settings=base, output_format="dict")
+    n = len(kvp_list)
+    data_norm = pd.DataFrame(
+        {
+            "kVp": [float(x) for x in kvp_list],
+            "filter_thickness_Cu": [float(x) for x in cu_list],
+            "filter_thickness_Al": [float(x) for x in (al_list or [0.0] * n)],
+        }
+    )
+
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("mypyskindose")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        out = fetch_and_append_hvl(
+            data_norm=data_norm,
+            inherent_filtration=settings.inherent_filtration,
+            corrections_db=settings.corrections_db_path,
+        )
+    finally:
+        logger.removeHandler(handler)
+    return out["HVL"], messages
+
+
+def test_fetch_and_append_hvl_interpolates_off_grid_cu():
+    """A Cu value between two tabulated points (0.4, 0.6) yields an HVL strictly
+    between the two node HVLs, and an 'interpolated' warning is emitted."""
+    # Bracketing on-node values plus the off-node midpoint, same kVp.
+    hvl, messages = _hvl(kvp_list=[80, 80, 80], cu_list=[0.4, 0.5, 0.6])
+
+    lo, mid, hi = float(hvl.iloc[0]), float(hvl.iloc[1]), float(hvl.iloc[2])
+    # HVL increases with added Cu; the interpolated point sits strictly between.
+    assert min(lo, hi) < mid < max(lo, hi)
+    assert any("interpolated" in m.lower() for m in messages)
+
+
+def test_fetch_and_append_hvl_clamps_out_of_range_kvp():
+    """A kVp beyond the table ceiling (175) is clamped to the edge value (no
+    extrapolation, no crash) and flagged 'clamped'."""
+    hvl, messages = _hvl(kvp_list=[175, 250], cu_list=[0.0, 0.0])
+
+    edge, beyond = float(hvl.iloc[0]), float(hvl.iloc[1])
+    assert beyond == edge  # clamped to the 175 kV edge, not extrapolated past it
+    assert any("clamped" in m.lower() for m in messages)
+
+
+def test_fetch_and_append_hvl_on_grid_emits_no_warning():
+    """An all-on-node frame interpolates to exact tabulated values and is silent."""
+    hvl, messages = _hvl(kvp_list=[70, 80], cu_list=[0.0, 0.3])
+
+    assert hvl.notna().all()
+    assert not any(("interpolated" in m.lower() or "clamped" in m.lower()) for m in messages)

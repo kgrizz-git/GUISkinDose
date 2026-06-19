@@ -359,7 +359,7 @@ Normalised DataFrame columns include: `Ap1`, `Ap2`, `Ap3` (beam angles), `At1`, 
 | `scale_field_area()` | Field area at each skin cell |
 | `check_new_geometry()` | Detects geometry changes between events |
 | `check_table_hits()` | Ray-triangle intersection: does beam pass through table? |
-| `fetch_and_append_hvl()` | Looks up HVL from database by kVp + filtration |
+| `fetch_and_append_hvl()` | HVL from database by kVp + filtration; 2-D bilinear interpolation over (kVp, Cu) per (inherent, Al) slice, clamped at grid edges |
 
 ---
 

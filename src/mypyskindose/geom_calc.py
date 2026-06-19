@@ -1,8 +1,9 @@
 import logging
-from typing import Any, List, Union, cast
+from typing import Any, List, Union
 
 import numpy as np
 import pandas as pd
+from scipy.interpolate import RegularGridInterpolator
 
 import mypyskindose.constants as c
 
@@ -245,65 +246,97 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
 
     # Fetch entire HVL table
     hvl_data = pd.read_sql_query("SELECT * FROM hvl_combined", conn)
+    conn.commit()
+    conn.close()
 
-    # Available values per dimension (the table is a complete grid). Used to snap
-    # an event whose (kVp, inherent, Cu, Al) tuple has no exact tabulated row to
-    # the nearest available point. Without this guard, an out-of-range or off-grid
-    # event — e.g. a near-zero-kVp event below the table's kV floor — yields an
-    # empty lookup and the old `.iloc[0]` raised IndexError, aborting the whole
-    # calculation. See dev-docs/plans/hvl-invalid-event-crash.md.
-    kvp_grid = np.sort(hvl_data["kvp_kv"].round().unique())
-    inh_grid = np.sort(hvl_data["filtration_inherent_mmal"].round(1).unique())
-    cu_grid = np.sort(hvl_data["filtration_added_mmcu"].unique())
-    al_grid = np.sort(hvl_data["filtration_added_mmal"].unique())
+    # The table carries two anode-angle slices (8 deg / 11 deg) that cover
+    # different (Cu, Al) regions, so there is no single clean 4-D grid across anode
+    # angle. Anode angle is a discrete tube-target property, not a continuous axis,
+    # so we *select* a slice rather than interpolate it: dedup on
+    # (kVp, inherent, Cu, Al) keeping the first occurrence — exactly the row the
+    # historical exact-match `.iloc[0]` returned (anode 11 where present, else 8) —
+    # so in-grid events keep identical HVLs. Interpolation then happens on the
+    # continuous (kVp, Cu) plane of the selected (inherent, Al) slice, every one of
+    # which is a complete kVp×Cu grid. See
+    # dev-docs/plans/hvl-interpolation-and-below-floor-kvp.md.
+    key = ["kvp_kv", "filtration_inherent_mmal", "filtration_added_mmcu", "filtration_added_mmal"]
+    table = hvl_data.drop_duplicates(subset=key, keep="first")
+
+    # Device-fixed axes — snapped to the nearest tabulated value (these are settings,
+    # near-always exact). Interpolation is reserved for the continuous (kVp, Cu) plane.
+    inh_grid = np.sort(table["filtration_inherent_mmal"].unique())
+    al_grid = np.sort(table["filtration_added_mmal"].unique())
 
     def _nearest(grid: np.ndarray, value: float) -> float:
         return float(grid[int(np.abs(grid - value).argmin())])
 
-    def _lookup(kv: float, inh: float, cu: float, al: float) -> pd.Series:
-        return cast(pd.Series, hvl_data.loc[
-            (hvl_data["kvp_kv"].round() == kv)
-            & (hvl_data["filtration_inherent_mmal"].round(1) == inh)
-            & (hvl_data["filtration_added_mmcu"] == cu)
-            & (hvl_data["filtration_added_mmal"] == al),
-            "hvl_mmal",
-        ])
+    # Build (and cache) a 2-D bilinear interpolator over (kVp, Cu) for a given
+    # (inherent, Al) slice. RegularGridInterpolator is exact at grid nodes, so
+    # on-grid events keep identical HVLs (golden PSD unchanged).
+    interp_cache: dict[tuple[float, float], tuple[RegularGridInterpolator, np.ndarray, np.ndarray]] = {}
 
-    inh_q = round(inherent_filtration, 1)
+    def _slice_interp(inh: float, al: float) -> tuple[RegularGridInterpolator, np.ndarray, np.ndarray]:
+        cached = interp_cache.get((inh, al))
+        if cached is not None:
+            return cached
+        sl = table[(table["filtration_inherent_mmal"] == inh) & (table["filtration_added_mmal"] == al)]
+        piv = sl.pivot_table(index="kvp_kv", columns="filtration_added_mmcu", values="hvl_mmal")
+        kv_axis = piv.index.to_numpy(dtype=float)
+        cu_axis = piv.columns.to_numpy(dtype=float)
+        rgi = RegularGridInterpolator((kv_axis, cu_axis), piv.to_numpy(dtype=float))
+        result = (rgi, kv_axis, cu_axis)
+        interp_cache[(inh, al)] = result
+        return result
+
+    inh_snap = _nearest(inh_grid, round(inherent_filtration, 1))
+
     hvl: List[float] = []
-    snapped_events: List[int] = []
+    interpolated_events: List[int] = []
+    clamped_events: List[int] = []
     for event in range(len(data_norm)):
-        kv_q = round(data_norm.kVp[event])
-        cu_q = data_norm.filter_thickness_Cu[event]
-        al_q = round(data_norm.filter_thickness_Al[event])
-        match = _lookup(kv_q, inh_q, cu_q, al_q)
-        if len(match) == 0:
-            # No exact grid point — snap each dimension to the nearest tabulated
-            # value and retry (guaranteed to resolve on a complete grid).
-            snapped_events.append(event)
-            match = _lookup(
-                _nearest(kvp_grid, kv_q),
-                _nearest(inh_grid, inh_q),
-                _nearest(cu_grid, cu_q),
-                _nearest(al_grid, al_q),
-            )
-        hvl.append(float(match.iloc[0]) if len(match) else float("nan"))
+        # kVp is tabulated at a dense 1 kV step, so rounding to the nearest integer
+        # node loses nothing dosimetrically and preserves historical results.
+        # Interpolation is reserved for the sparse Cu axis (tabulated gaps at e.g.
+        # 0.5/0.7/0.8 mmCu), which is where real off-grid exports land.
+        kv = float(round(float(data_norm.kVp[event])))
+        cu = float(data_norm.filter_thickness_Cu[event])
+        al_snap = _nearest(al_grid, float(data_norm.filter_thickness_Al[event]))
 
-    if snapped_events:
+        rgi, kv_axis, cu_axis = _slice_interp(inh_snap, al_snap)
+
+        # Never extrapolate: clamp out-of-range queries to the nearest grid edge.
+        kv_c = float(np.clip(kv, kv_axis[0], kv_axis[-1]))
+        cu_c = float(np.clip(cu, cu_axis[0], cu_axis[-1]))
+        was_clamped = kv_c != kv or cu_c != cu
+
+        hvl.append(float(rgi((kv_c, cu_c))))
+
+        on_node = bool(np.any(np.isclose(kv_axis, kv_c)) and np.any(np.isclose(cu_axis, cu_c)))
+        if was_clamped:
+            clamped_events.append(event)
+        elif not on_node:
+            interpolated_events.append(event)
+
+    def _fmt(idx: List[int]) -> str:
+        extra = f" (+{len(idx) - 20} more)" if len(idx) > 20 else ""
+        return f"{idx[:20]}{extra}"
+
+    if interpolated_events:
         logger.warning(
-            "HVL lookup: %d of %d event(s) had no exact tabulated (kVp, inherent, "
-            "Cu, Al) match and were snapped to the nearest grid point (e.g. kVp "
-            "below the %g kV table floor). Affected event index(es): %s%s.",
-            len(snapped_events), len(data_norm), float(kvp_grid.min()),
-            snapped_events[:20], " (truncated)" if len(snapped_events) > 20 else "",
+            "HVL: %d of %d event(s) had a beam quality between tabulated grid points "
+            "and were linearly interpolated (kVp × Cu). Affected event index(es): %s.",
+            len(interpolated_events), len(data_norm), _fmt(interpolated_events),
+        )
+    if clamped_events:
+        logger.warning(
+            "HVL: %d of %d event(s) fell outside the tabulated grid and were clamped "
+            "to the nearest edge (e.g. kVp below the %g kV table floor, or filtration "
+            "beyond the tabulated range). Affected event index(es): %s.",
+            len(clamped_events), len(data_norm), float(table["kvp_kv"].min()), _fmt(clamped_events),
         )
 
     # Append HVL data to data_norm
     data_norm["HVL"] = hvl
-
-    # close database connection
-    conn.commit()
-    conn.close()
 
     return data_norm
 
