@@ -327,7 +327,7 @@ Per-event processing:
 | `k_isq` | `calculate_k_isq()` | Inverse-square-law: `(d_ref / d_skin)²` |
 | `k_bs` | `calculate_k_bs()` | Backscatter (Benmakhlouf et al., field size + kVp) |
 | `k_med` | `calculate_k_med()` | Medium correction (air kerma → tissue dose) |
-| `k_tab` | `calculate_k_tab()` | Table/pad attenuation (measured or estimated) |
+| `k_tab` | `calculate_k_tab()` | Table/pad attenuation (measured or estimated; (kVp, Cu) interpolation + edge clamping, fail-soft to 1.0 for unknown device/plane) |
 
 ---
 

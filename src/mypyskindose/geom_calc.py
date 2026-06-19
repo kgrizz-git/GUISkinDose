@@ -8,6 +8,7 @@ from scipy.interpolate import RegularGridInterpolator
 import mypyskindose.constants as c
 
 from .db_connect import db_connect
+from .grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED, clamped_rgi_lookup
 from .phantom_class import Phantom
 
 logger = logging.getLogger(__name__)
@@ -294,27 +295,15 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
     interpolated_events: List[int] = []
     clamped_events: List[int] = []
     for event in range(len(data_norm)):
-        # kVp is tabulated at a dense 1 kV step, so rounding to the nearest integer
-        # node loses nothing dosimetrically and preserves historical results.
-        # Interpolation is reserved for the sparse Cu axis (tabulated gaps at e.g.
-        # 0.5/0.7/0.8 mmCu), which is where real off-grid exports land.
-        kv = float(round(float(data_norm.kVp[event])))
         cu = float(data_norm.filter_thickness_Cu[event])
         al_snap = _nearest(al_grid, float(data_norm.filter_thickness_Al[event]))
 
         rgi, kv_axis, cu_axis = _slice_interp(inh_snap, al_snap)
-
-        # Never extrapolate: clamp out-of-range queries to the nearest grid edge.
-        kv_c = float(np.clip(kv, kv_axis[0], kv_axis[-1]))
-        cu_c = float(np.clip(cu, cu_axis[0], cu_axis[-1]))
-        was_clamped = kv_c != kv or cu_c != cu
-
-        hvl.append(float(rgi((kv_c, cu_c))))
-
-        on_node = bool(np.any(np.isclose(kv_axis, kv_c)) and np.any(np.isclose(cu_axis, cu_c)))
-        if was_clamped:
+        value, status = clamped_rgi_lookup(rgi, kv_axis, cu_axis, float(data_norm.kVp[event]), cu)
+        hvl.append(value)
+        if status == STATUS_CLAMPED:
             clamped_events.append(event)
-        elif not on_node:
+        elif status == STATUS_INTERPOLATED:
             interpolated_events.append(event)
 
     def _fmt(idx: List[int]) -> str:

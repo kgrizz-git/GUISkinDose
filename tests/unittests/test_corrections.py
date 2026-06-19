@@ -158,3 +158,62 @@ def test_fetch_correct_table_correction_from_database_when_machine_model_has_ext
 
     # Assert
     assert actual == expected
+
+
+def _k_tab(kvp, cu, al, model, plane):
+    """Run calculate_k_tab on a one-row frame, capturing WARNING messages via a
+    dedicated handler (robust to suite-wide logging state, unlike caplog)."""
+    import logging
+
+    data_norm = pd.DataFrame(
+        data={
+            KEY_NORMALIZATION_KVP: [kvp],
+            KEY_NORMALIZATION_FILTER_SIZE_COPPER: [cu],
+            KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [al],
+            KEY_NORMALIZATION_MODEL_NAME: [model],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: [plane],
+        }
+    )
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("mypyskindose")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        result = calculate_k_tab(
+            data_norm=data_norm, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+    finally:
+        logger.removeHandler(handler)
+    return result[0], messages
+
+
+def test_calculate_k_tab_unknown_device_fails_soft():
+    """An unknown device/plane has no measured correction: fall back to k_tab=1.0
+    and warn — never raise (regression for the `None[0]` TypeError crash)."""
+    value, messages = _k_tab(kvp=80, cu=0.3, al=0, model="GE Innova", plane="Single Plane")
+    assert value == 1.0
+    assert any("no table-attenuation" in m.lower() for m in messages)
+
+
+def test_calculate_k_tab_interpolates_off_grid_cu():
+    """A Cu between two tabulated points interpolates strictly between the bracketing
+    k_tab values for the same device/plane, and warns 'interpolated'."""
+    lo, _ = _k_tab(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+    hi, _ = _k_tab(kvp=80, cu=0.6, al=0, model="AXIOM-Artis", plane="Single Plane")
+    mid, messages = _k_tab(kvp=80, cu=0.45, al=0, model="AXIOM-Artis", plane="Single Plane")
+    assert min(lo, hi) < mid < max(lo, hi)
+    assert any("interpolated" in m.lower() for m in messages)
+
+
+def test_calculate_k_tab_clamps_out_of_range_kvp():
+    """A kVp beyond the table ceiling (125) is clamped to the edge value (no crash,
+    no extrapolation) and flagged 'clamped'."""
+    edge, _ = _k_tab(kvp=125, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+    beyond, messages = _k_tab(kvp=200, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+    assert beyond == edge
+    assert any("clamped" in m.lower() for m in messages)

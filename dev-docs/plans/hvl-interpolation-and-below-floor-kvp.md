@@ -98,7 +98,7 @@ existing `state.calc_warnings` surfacing channel:
 `status ∈ {exact, interpolated, clamped}`. Build it once per calc (the table is
 small and static), interpolate within bounds, clamp + flag at the edges.
 
-- [ ] **Grid helper.** Add a small `clamped_interp(rgi, axes, query)` helper (in
+- [x] **Grid helper.** Add a small `clamped_interp(rgi, axes, query)` helper (in
       `geom_calc.py` or a `table_data`/`_grid.py` module) wrapping a prebuilt
       `scipy.interpolate.RegularGridInterpolator`. We **never extrapolate past the
       grid**: detect out-of-bounds ourselves (any axis query outside
@@ -107,6 +107,8 @@ small and static), interpolate within bounds, clamp + flag at the edges.
       `clamped`. An on-node query returns the tabulated value (RGI is exact at nodes)
       → label `exact` when every axis coordinate is on a node, else `interpolated`.
       Reused by both HVL (kVp × Cu) and k_tab (kVp × Cu per device/plane).
+      *Implemented as `src/mypyskindose/grid_interp.py` (`clamped_rgi_lookup` +
+      `format_event_indices`); both call sites build/cache their own RGI.*
 - [x] **HVL.** Rework `fetch_and_append_hvl` (data shape verified 2026-06-19;
       implemented + tested, golden PSD unchanged):
       - **Resolve anode angle by selection, not interpolation.** Anode angle (8°/11°)
@@ -133,21 +135,24 @@ small and static), interpolate within bounds, clamp + flag at the edges.
       - Emit **per-event** `logger.warning` for `interpolated`/`clamped` events
         (event index, query, HVL, class), plus keep an aggregate count line. Cap the
         per-event spam (e.g. first N, then "+M more") to avoid flooding long procedures.
-- [ ] **k_tab guard + interpolation.** In `calculate_k_tab`, replace the unguarded
-      `c.fetchone()[0]`:
-      - Load the `correction_table_and_pad_attenuation` rows for the event's
-        `(model, plane)` once; if none, fall back to `k_tab=1.0` (or the estimated
-        value) and warn — never crash.
-      - Within a `(model, plane)` build the `(kVp, Cu, Al)` grid and interpolate /
-        clamp exactly like HVL; flag + warn per event. If that device/plane grid is
-        ragged (not a clean product), fall back to `scipy.interpolate.griddata`
-        (`method="linear"`, then `"nearest"` for points outside the convex hull) and
-        flag those as `clamped`.
-- [ ] **k_med (optional).** Only if cheap given the helper exists: swap the two
-      `min(..., key=abs)` nearest selections for interpolation on
-      `(kVp, HVL)` at the chosen field size. Otherwise leave as-is and note in the
-      changelog that k_med remains nearest-tabulated (negligible <1% field-size
-      dependence already documented in-code).
+- [x] **k_tab guard + interpolation.** In `calculate_k_tab`, replace the unguarded
+      `c.fetchone()[0]` (implemented + tested):
+      - Load `correction_table_and_pad_attenuation` once; filter to the event's
+        `(model, plane)` (model or its de-spaced form, matching the old SQL). If no
+        rows → fall back to `k_tab=1.0` and warn — never crash. **This is the real
+        remaining crash fix** (unknown/other-vendor devices, e.g. GE).
+      - **Exact match first** (round kVp, Cu, Al) → bit-for-bit parity with the old
+        lookup (existing `test_fetch_correct_table_correction_*` tests preserved).
+      - On miss: snap Al to the nearest measured value, then 2-D interpolate over
+        `(kVp, Cu)` with edge clamping via the shared helper. *Verified:* every
+        `(model, plane, Al)` subgrid is a complete `(kVp × Cu)` grid — no ragged
+        `griddata` fallback needed. Single-Cu-column slices (AlluraClarity/Al=0) use
+        the column value at the clamped kVp node.
+      - Per-event `interpolated`/`clamped`/`no-device` warnings to `state.calc_warnings`.
+- [~] **k_med (optional) — deferred.** Left as nearest-tabulated: it already
+      selects the closest kVp/HVL (cannot crash), and its field-size dependence is
+      documented in-code as <1%. Noted in the changelog; revisit only if accuracy
+      warrants.
 - [ ] **Tests** (`tests/unittests/test_geom_calc.py`, `test_corrections.py`):
       - In-grid event → interpolated value **==** old exact value (parity / golden).
       - Off-grid-in-bounds event (e.g. Cu 0.5, between 0.4 and 0.6) → value strictly
