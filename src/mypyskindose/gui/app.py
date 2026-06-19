@@ -948,6 +948,37 @@ def index():
                                             i, "flip_ap2", e.value
                                         )
                                     )
+                                    # Axis-direction sign flips (Phase 2.4) — reverse
+                                    # the direction of a table axis when this export's
+                                    # convention runs opposite the global/auto one.
+                                    ui.separator().props("dense")
+                                    ui.label(
+                                        "Axis directions (reverse table motion):"
+                                    ).classes("text-caption text-grey-6")
+                                    ui.switch(
+                                        "Reverse longitudinal (Tx × −1)",
+                                        value=meta.get("flip_tx", False),
+                                    ).on_value_change(
+                                        lambda e, i=idx: _on_exam_transform_change(
+                                            i, "flip_tx", e.value
+                                        )
+                                    )
+                                    ui.switch(
+                                        "Reverse height (Ty × −1)",
+                                        value=meta.get("flip_ty", False),
+                                    ).on_value_change(
+                                        lambda e, i=idx: _on_exam_transform_change(
+                                            i, "flip_ty", e.value
+                                        )
+                                    )
+                                    ui.switch(
+                                        "Reverse lateral (Tz × −1)",
+                                        value=meta.get("flip_tz", False),
+                                    ).on_value_change(
+                                        lambda e, i=idx: _on_exam_transform_change(
+                                            i, "flip_tz", e.value
+                                        )
+                                    )
 
                             # Manual table-origin override (Phase 2.5) — escape hatch
                             # for a misdetected scanner or a tabular export with no

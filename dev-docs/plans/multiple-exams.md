@@ -27,7 +27,8 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 | GUI Phase 2.2 — per-exam coordinate transform overrides | ✅ Complete; needs smoke test |
 | GUI Phase 2.3 — per-exam patient-offset overrides | ✅ Complete; needs smoke test |
 | GUI Phase 2.5 — manual per-exam table-origin override | ✅ Complete; needs smoke test |
-| GUI Phase 2.4 — per-exam convention overrides | ⬜ Deferred (no concrete use case) |
+| GUI Phase 2.4 — per-exam convention overrides (axis-direction sign flips) | ✅ Complete; needs smoke test |
+| Integration tests — multi-file / mixed-format / multi-study end-to-end | ✅ Complete |
 
 ---
 
@@ -58,6 +59,26 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 | **Phase** | Automatic; not a Phase 2.x item. Residual fixups for tabular exports that lack convention metadata are the swap/flip toggles → **Phase 2.2**. **Manual numeric override → new Phase 2.5.** | **Phase 2.3.** |
 
 > **Key point:** different manufacturers' table/origin conventions are handled *automatically* by per-file normalization — you do **not** need a per-exam UI for the common case. Phase 2.5 adds a **manual** numeric override for the edge case where the scanner is misdetected (or a tabular export carries no usable convention), which today has no lever beyond the swap/flip toggles.
+
+#### Existing per-manufacturer convention handling
+
+The conventions live in [`normalization_settings.json`](../../src/mypyskindose/normalization_settings.json), matched per file by `(manufacturer, model)` in [`normalization_settings.py`](../../src/mypyskindose/settings/normalization_settings.py) (`update_used_settings`). **The convention does vary by provider** — the shipped table shows it concretely:
+
+| Manufacturer / model | `trans_offset` (x, y, z) cm | `trans_dir` (x, y, z) | `rot_dir` (Ap1, Ap2) |
+|---|---|---|---|
+| Siemens AXIOM-Artis | (0, 0, 0) | (+, +, +) | (+, +) |
+| Philips Allura Clarity | (−0.3, 105.5, −173.35) | (+, **−**, +) | (+, **−**) |
+| **Default** (fallback for unmatched) | (0, 0, 0) | (+, +, +) | (+, +) |
+
+So Philips inverts the **table-height axis** (`trans_dir.y = −`) and the **secondary angle** (`rot_dir.Ap2 = −`) relative to Siemens; the `Default` fallback assumes all-`+`/zero. A **misdetected** scanner therefore gets the Siemens-like all-`+` convention — which is exactly when the manual per-exam levers matter. How each convention field is reachable from the GUI:
+
+- `rot_dir.Ap1` / `rot_dir.Ap2` sign → **flip_ap1 / flip_ap2** (Phase 2.2).
+- `rot_dir.Ap3`, `rot_dir.At1`–`At3` → **no lever, and none needed**: those columns are hard-zeroed in [`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py) (`rot_dir.* × [0]`), so their sign is a no-op.
+- `trans_dir.x` / `.y` / `.z` sign → **flip_tx / flip_ty / flip_tz** (Phase 2.4, below).
+- `trans_offset` (origin) → **table-origin override** (Phase 2.5).
+- axis *relabeling* (lat ↔ lon, e.g. GE exports) → **swap_lat_lon** (Phase 2.2).
+
+Together these cover every non-zero convention field per exam. All per-exam levers **default off / auto** (matching `trans_dir`/`rot_dir` defaulting to `+`), so the common auto-matched path is unchanged.
 
 ---
 
@@ -114,7 +135,7 @@ Element-wise summation is valid because all exams use fresh `Phantom` instances 
 
 ## Phase 2: Multi-File Upload Accumulation & Per-Exam Overrides
 
-Phase 2 brings the GUI up to the same capability as the CLI (`--file-path` with multiple mixed-format files) and exposes per-exam overrides already supported in the Python core. **Phase 2.1 (multi-file accumulation), 2.2 (per-exam coordinate transforms), 2.3 (per-exam patient offsets), and 2.5 (manual table-origin override) are complete**; only 2.4 (convention overrides) remains, intentionally deferred (no concrete use case). Note the two distinct offset quantities — see [Offset Terminology](#offset-terminology-disambiguation).
+Phase 2 brings the GUI up to the same capability as the CLI (`--file-path` with multiple mixed-format files) and exposes per-exam overrides already supported in the Python core. **All of Phase 2 is complete** — 2.1 (multi-file accumulation), 2.2 (per-exam coordinate transforms), 2.3 (per-exam patient offsets), 2.4 (per-exam axis-direction sign flips), and 2.5 (manual table-origin override). Note the two distinct offset quantities — see [Offset Terminology](#offset-terminology-disambiguation).
 
 > **Read this before implementing:** Phase 2.1 involves non-trivial coupling across `app.py`, `helpers.py`, and `state.py`. The sections below describe the exact fields and functions that must change, and the constraints to preserve.
 
@@ -359,9 +380,30 @@ the **same** engine, so the two never disagree.
 
 ---
 
-### Phase 2.4 — Per-exam event-processing convention overrides *(low priority)*
+### Phase 2.4 — Per-exam event-processing convention overrides
 
-- [ ] Deferred — no concrete use case beyond Phase 2.2's coordinate transform toggles. Revisit if a vendor's RDSR uses a different rotation-direction convention than the global setting.
+> **What "event-processing convention" means:** the per-manufacturer sign/axis conventions baked in at normalization — `rot_dir` (sign of each rotation angle) and `trans_dir` (sign/direction of each table axis). See the [per-manufacturer table](#existing-per-manufacturer-convention-handling) above. These are matched automatically per file; this phase is the *manual* per-exam override for when the auto-match is wrong.
+
+**Scope, as resolved.** Auditing the convention fields against what's reachable from the GUI showed that **rotation-direction** was already fully covered and the only genuine gap was **translation-direction sign**:
+
+- `rot_dir.Ap1` / `Ap2` → already the Phase 2.2 `flip_ap1` / `flip_ap2` toggles (the only non-zero rotation columns).
+- `rot_dir.Ap3`, `At1`–`At3` → always zero in [`rdsr_normalizer.py`](../../src/mypyskindose/rdsr_normalizer.py), so overriding their sign is a no-op — nothing meaningful to expose.
+- `trans_dir.x` / `.y` / `.z` sign → **the real gap.** Phase 2.2 could *swap* Tx↔Tz and Phase 2.5 could *shift* the origin, but nothing could *reverse* an axis (e.g. a vendor whose table-height or lateral axis runs opposite the matched/Default convention — exactly the Philips `trans_dir.y = −` case if it were misdetected as Default).
+
+So Phase 2.4 shipped as **per-exam axis-direction sign flips** (`flip_tx` / `flip_ty` / `flip_tz`), folded into the same Phase 2.2 transform engine.
+
+#### Design as shipped
+
+- **`helpers.py`** — `_apply_transform_flags()` gained `flip_tx` / `flip_ty` / `flip_tz`. Each reverses a table axis **about the auto-detected origin** (`col → 2·detected − col`), mirroring a `trans_dir` of `−` applied at normalization: it reverses the table *motion* without moving the origin. For tabular exports (`detected` = 0) this is a plain negation. Applied **first**, in the detected (pre-swap) frame, so the documented composition order is: axis-direction flips → table-origin re-base → lat/lon swap → angle flips. All three are involutions, so toggling re-derives cleanly from `base_data`. Skipped for the canonical `normalized` schema (like the swap). Flags default **off** (matching `trans_dir` defaulting to `+`), seeded in both loaders and preserved across a schema/sheet re-parse.
+- **`app.py`** — three switches ("Reverse longitudinal / height / lateral (T_ × −1)") in the existing per-exam **"Coordinate corrections"** expansion, under an "Axis directions" sub-label, gated by `exam_supports_transforms` (non-normalized tabular, multi-exam). Each routes through the same `_on_exam_transform_change()` → `apply_exam_transforms()` path and marks results stale. **Not** exposed for DICOM — its `trans_dir` convention is matched at normalization, and a misdetected DICOM already has the Phase 2.5 table-origin override as its escape hatch.
+
+#### Phase 2.4 checklist
+
+- [x] Document existing per-manufacturer convention handling (which fields vary by provider, and which GUI lever reaches each) — see [table above](#existing-per-manufacturer-convention-handling)
+- [x] Per-exam `flip_tx` / `flip_ty` / `flip_tz` (default off) in `loaded_exam_meta[i]`, seeded in `load_rdsr()` / both `load_tabular()` paths, preserved across re-parse (`helpers.py`)
+- [x] `_apply_transform_flags()` reverses each axis about the detected origin, applied first; gated to skip `normalized`; threaded through `apply_exam_transforms()` (`helpers.py`)
+- [x] Per-exam axis-direction switches in the "Coordinate corrections" expansion, gated by `exam_supports_transforms` (`app.py`)
+- [x] Tests: single-axis negation + per-exam isolation, reversibility from base, pivot about non-zero detected origin, normalized-schema skip, compose-with-swap, compose-with-origin-override, loader seeds flags off (`test_multi_exam.py::TestGuiAxisDirectionFlips`)
 
 ---
 
@@ -441,10 +483,10 @@ the **same** engine, so the two never disagree.
 - [ ] Verify or add: iterative output identical to reference for 500 events
 - [ ] Verify or add: iterative version handles >1000 events without `RecursionError`
 
-- [ ] Integration test: two example RDSR files via `analyze_multiple_input_files()` → correct `MultiExamResult`
-- [ ] Integration test: mixed-format run (1 DICOM + 1 CSV) via `analyze_multiple_input_files()`
-- [ ] Integration test: multi-study tabular CSV end-to-end through `analyze_input_file()`
-- [ ] GUI smoke test: multi-study CSV upload → exam list → calculate → accordion + aggregate map render
+- [x] Integration test: two example RDSR files via `analyze_multiple_input_files()` → correct `MultiExamResult` (aggregate = element-wise sum; PSD = max) (`test_multi_exam.py::TestMultiExamIntegration`)
+- [x] Integration test: mixed-format run (1 DICOM + 1 CSV) via `analyze_multiple_input_files()` (`test_multi_exam.py::TestMultiExamIntegration`)
+- [x] Integration test: multi-study tabular CSV end-to-end through `analyze_input_file()` (auto-split → `MultiExamResult`; `total_events` = Σ per-exam) (`test_multi_exam.py::TestMultiExamIntegration`)
+- [ ] GUI smoke test: multi-study CSV upload → exam list → calculate → accordion + aggregate map render *(manual; not automatable without the NiceGUI runtime)*
 
 ---
 

@@ -127,6 +127,12 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             "swap_lat_lon": False,
             "flip_ap1": False,
             "flip_ap2": False,
+            # Axis-direction sign flips (Phase 2.4) — not exposed for DICOM (its
+            # trans_dir convention is matched at normalization); seeded False so the
+            # meta schema is uniform across exam types.
+            "flip_tx": False,
+            "flip_ty": False,
+            "flip_tz": False,
             # Auto-detected table origin (from manufacturer/model matching) that a
             # manual override would replace; None override = use auto (Phase 2.5).
             "table_origin_detected": {
@@ -232,6 +238,9 @@ def load_tabular(
                     "swap_lat_lon": m.get("swap_lat_lon", False),
                     "flip_ap1": m.get("flip_ap1", False),
                     "flip_ap2": m.get("flip_ap2", False),
+                    "flip_tx": m.get("flip_tx", False),
+                    "flip_ty": m.get("flip_ty", False),
+                    "flip_tz": m.get("flip_tz", False),
                 }
                 for m in state.loaded_exam_meta
                 if m.get("file_path") == file_path
@@ -254,10 +263,16 @@ def load_tabular(
                         "swap_lat_lon": schema_name != "normalized" and _exam_is_ge(exam),
                         "flip_ap1": False,
                         "flip_ap2": False,
+                        "flip_tx": False,
+                        "flip_ty": False,
+                        "flip_tz": False,
                     }
                 exam.normalized_data = _apply_transform_flags(
                     base, flags["swap_lat_lon"], flags["flip_ap1"],
                     flags["flip_ap2"], schema_name,
+                    flip_tx=flags.get("flip_tx", False),
+                    flip_ty=flags.get("flip_ty", False),
+                    flip_tz=flags.get("flip_tz", False),
                 )
                 state.loaded_exams.append(exam)
                 state.loaded_exam_meta.append({
@@ -272,6 +287,9 @@ def load_tabular(
                     "swap_lat_lon": flags["swap_lat_lon"],
                     "flip_ap1": flags["flip_ap1"],
                     "flip_ap2": flags["flip_ap2"],
+                    "flip_tx": flags.get("flip_tx", False),
+                    "flip_ty": flags.get("flip_ty", False),
+                    "flip_tz": flags.get("flip_tz", False),
                     # Tabular exports carry no normalization trans_offset, so the
                     # auto-detected origin is zero; a manual override (Phase 2.5) is
                     # then an absolute table-origin shift.
@@ -299,10 +317,16 @@ def load_tabular(
                     "swap_lat_lon": state.swap_lat_lon,
                     "flip_ap1": state.flip_ap1,
                     "flip_ap2": state.flip_ap2,
+                    "flip_tx": False,
+                    "flip_ty": False,
+                    "flip_tz": False,
                 }
             result.normalized_data = _apply_transform_flags(
                 base, flags["swap_lat_lon"], flags["flip_ap1"],
                 flags["flip_ap2"], result.provenance.schema_name,
+                flip_tx=flags.get("flip_tx", False),
+                flip_ty=flags.get("flip_ty", False),
+                flip_tz=flags.get("flip_tz", False),
             )
             state.loaded_exams.append(result)
             state.loaded_exam_meta.append({
@@ -317,6 +341,9 @@ def load_tabular(
                 "swap_lat_lon": flags["swap_lat_lon"],
                 "flip_ap1": flags["flip_ap1"],
                 "flip_ap2": flags["flip_ap2"],
+                "flip_tx": flags.get("flip_tx", False),
+                "flip_ty": flags.get("flip_ty", False),
+                "flip_tz": flags.get("flip_tz", False),
                 "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
                 "table_origin_override": None,
                 "d_lon": state.d_lon,
@@ -534,22 +561,42 @@ def _apply_transform_flags(
     schema_name,
     table_origin_override=None,
     table_origin_detected=None,
+    flip_tx=False,
+    flip_ty=False,
+    flip_tz=False,
 ):
     """Return a copy of ``base`` with the coordinate-correction flags applied.
 
     Always derives from the pristine ``base`` frame, so applying is idempotent and
-    order-independent (each flag is an involution). The lat/lon swap is skipped for
-    the already-canonical ``normalized`` schema.
+    order-independent (each flag is an involution). The lat/lon swap and the
+    axis-direction sign flips are skipped for the already-canonical ``normalized``
+    schema.
+
+    ``flip_tx`` / ``flip_ty`` / ``flip_tz`` (Phase 2.4): reverse the sign
+    (direction) of a table-position axis, mirroring a per-manufacturer
+    ``trans_dir`` of ``-`` at normalization. The reversal pivots about the
+    auto-detected origin (``col → 2·detected − col``), so it reverses the table
+    *motion* without moving the origin; for tabular exports (``detected`` = 0) this
+    is a plain negation. Applied first, in the detected (pre-swap) frame.
 
     ``table_origin_override`` (Phase 2.5): when set (a ``{"x","y","z"}`` cm dict),
-    re-bases the table position columns by ``(override − detected)``, applied first
-    in the detected (pre-swap) frame so the numeric origin shift composes correctly
+    re-bases the table position columns by ``(override − detected)``, applied in
+    the detected (pre-swap) frame so the numeric origin shift composes correctly
     with any swap/flip. ``table_origin_detected`` is the auto-detected origin the
     override replaces (defaults to zero per axis).
     """
     df = base.copy()
+    detected = table_origin_detected or {"x": 0.0, "y": 0.0, "z": 0.0}
+    if schema_name != "normalized":
+        for flip, col, key in (
+            (flip_tx, "Tx", "x"),
+            (flip_ty, "Ty", "y"),
+            (flip_tz, "Tz", "z"),
+        ):
+            if flip and col in df.columns:
+                pivot = float(detected.get(key, 0.0))
+                df[col] = 2.0 * pivot - df[col]
     if table_origin_override is not None:
-        detected = table_origin_detected or {"x": 0.0, "y": 0.0, "z": 0.0}
         for col, key in (("Tx", "x"), ("Ty", "y"), ("Tz", "z")):
             if col in df.columns:
                 delta = float(table_origin_override.get(key, 0.0)) - float(
@@ -646,6 +693,9 @@ def apply_exam_transforms(state: AppState, index: int) -> None:
         schema_name,
         table_origin_override=meta.get("table_origin_override"),
         table_origin_detected=meta.get("table_origin_detected"),
+        flip_tx=meta.get("flip_tx", False),
+        flip_ty=meta.get("flip_ty", False),
+        flip_tz=meta.get("flip_tz", False),
     )
     if state.loaded_exams:
         state.rdsr_df = pd.concat(

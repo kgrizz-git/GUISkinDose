@@ -602,3 +602,206 @@ class TestGuiTableOriginOverride:
         for meta in st.loaded_exam_meta:
             assert meta["table_origin_override"] is None
             assert meta["table_origin_detected"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+
+
+# ── GUI per-exam axis-direction sign flips (Phase 2.4) ────────────────────
+
+
+class TestGuiAxisDirectionFlips:
+    """Per-exam trans_dir sign flips (flip_tx/ty/tz) reverse a table axis about its
+    auto-detected origin, default off, and compose with swap and origin override."""
+
+    def _state_with_two_exams(self, schema="radimetrics", detected=None):
+        import pandas as pd
+        from types import SimpleNamespace
+
+        from mypyskindose.gui.state import AppState
+
+        st = AppState()
+
+        def _mk(tx, ty, tz):
+            df = pd.DataFrame(
+                {"Tx": [tx], "Ty": [ty], "Tz": [tz], "Ap1": [10.0], "Ap2": [5.0]}
+            )
+            exam = SimpleNamespace(
+                normalized_data=df.copy(),
+                provenance=SimpleNamespace(schema_name=schema),
+                warnings=[],
+            )
+            meta = {
+                "file_path": Path("a.csv"),
+                "source_type": "csv",
+                "schema": schema,
+                "base_data": df.copy(),
+                "swap_lat_lon": False,
+                "flip_ap1": False,
+                "flip_ap2": False,
+                "flip_tx": False,
+                "flip_ty": False,
+                "flip_tz": False,
+                "table_origin_detected": dict(detected or {"x": 0.0, "y": 0.0, "z": 0.0}),
+                "table_origin_override": None,
+            }
+            return exam, meta
+
+        e0, m0 = _mk(1.0, 5.0, 2.0)
+        e1, m1 = _mk(3.0, 7.0, 4.0)
+        st.loaded_exams = [e0, e1]
+        st.loaded_exam_meta = [m0, m1]
+        st.is_multi_exam = True
+        return st
+
+    def test_flip_tx_negates_one_axis_one_exam(self):
+        from mypyskindose.gui.helpers import apply_exam_transforms
+
+        st = self._state_with_two_exams()
+        st.loaded_exam_meta[0]["flip_tx"] = True
+        apply_exam_transforms(st, 0)
+
+        # detected origin is 0 → plain negation of Tx only.
+        assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == -1.0
+        assert st.loaded_exams[0].normalized_data["Ty"].iloc[0] == 5.0
+        assert st.loaded_exams[0].normalized_data["Tz"].iloc[0] == 2.0
+        # Second exam untouched.
+        assert st.loaded_exams[1].normalized_data["Tx"].iloc[0] == 3.0
+
+    def test_flip_is_reversible_from_base(self):
+        from mypyskindose.gui.helpers import apply_exam_transforms
+
+        st = self._state_with_two_exams()
+        st.loaded_exam_meta[0]["flip_ty"] = True
+        apply_exam_transforms(st, 0)
+        st.loaded_exam_meta[0]["flip_ty"] = False
+        apply_exam_transforms(st, 0)
+
+        assert st.loaded_exams[0].normalized_data["Ty"].iloc[0] == 5.0
+
+    def test_flip_pivots_about_detected_origin(self):
+        from mypyskindose.gui.helpers import apply_exam_transforms
+
+        # Non-zero detected origin (DICOM-like): col → 2·detected − col.
+        st = self._state_with_two_exams(detected={"x": 10.0, "y": 0.0, "z": 0.0})
+        st.loaded_exam_meta[0]["flip_tx"] = True
+        apply_exam_transforms(st, 0)
+
+        assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == 19.0  # 2*10 - 1
+
+    def test_normalized_schema_skips_flip(self):
+        from mypyskindose.gui.helpers import apply_exam_transforms
+
+        st = self._state_with_two_exams(schema="normalized")
+        st.loaded_exam_meta[0]["flip_tx"] = True
+        apply_exam_transforms(st, 0)
+
+        # No-op for the already-canonical normalized schema.
+        assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == 1.0
+
+    def test_flip_then_swap_compose(self):
+        from mypyskindose.gui.helpers import apply_exam_transforms
+
+        # flip_tx applied first (Tx → −1), then swap Tx ↔ Tz.
+        st = self._state_with_two_exams()
+        st.loaded_exam_meta[0]["flip_tx"] = True
+        st.loaded_exam_meta[0]["swap_lat_lon"] = True
+        apply_exam_transforms(st, 0)
+
+        df = st.loaded_exams[0].normalized_data
+        assert df["Tx"].iloc[0] == 2.0   # Tz value moved in
+        assert df["Tz"].iloc[0] == -1.0  # flipped Tx value moved out
+
+    def test_flip_then_origin_override_compose(self):
+        from mypyskindose.gui.helpers import apply_exam_transforms
+
+        # detected x=1, base Tx=1: flip about detected → 2*1-1 = 1; then
+        # override x=4 adds (4-1)=+3 → 4.
+        st = self._state_with_two_exams(detected={"x": 1.0, "y": 0.0, "z": 0.0})
+        st.loaded_exam_meta[0]["flip_tx"] = True
+        st.loaded_exam_meta[0]["table_origin_override"] = {"x": 4.0, "y": 0.0, "z": 0.0}
+        apply_exam_transforms(st, 0)
+
+        assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == 4.0
+
+    def test_loader_seeds_axis_flags_off(self):
+        from mypyskindose.gui.helpers import load_tabular
+        from mypyskindose.gui.state import AppState
+
+        st = AppState()
+        st.input_schema = "auto"
+        ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
+        assert ok
+        for meta in st.loaded_exam_meta:
+            assert meta["flip_tx"] is False
+            assert meta["flip_ty"] is False
+            assert meta["flip_tz"] is False
+
+
+# ── End-to-end multi-file / multi-study integration ──────────────────────
+
+
+class TestMultiExamIntegration:
+    """End-to-end runs through the public main.py entry points with real example
+    data and plot side-effects suppressed."""
+
+    @pytest.mark.usefixtures("_suppress_plots")
+    def test_two_rdsr_files_via_analyze_multiple_input_files(self):
+        from mypyskindose import get_path_to_example_rdsr_files
+        from mypyskindose.format_export_data import MultiExamResult
+        from mypyskindose.main import analyze_multiple_input_files
+
+        rdsr = get_path_to_example_rdsr_files()
+        files = [
+            rdsr / "siemens_axiom_artis.dcm",
+            rdsr / "philips_allura_clarity_u104.dcm",
+        ]
+        result = analyze_multiple_input_files(files, settings=_make_settings())
+
+        assert isinstance(result, MultiExamResult)
+        assert len(result.exams) == 2
+        assert {e.source_file for e in result.exams} == {
+            "siemens_axiom_artis.dcm",
+            "philips_allura_clarity_u104.dcm",
+        }
+        assert result.aggregate_psd > 0
+        # Aggregate is the element-wise sum across exams.
+        summed = sum(np.asarray(e.output.DoseMap) for e in result.exams)
+        assert np.allclose(result.aggregate_dose_map, summed)
+        assert result.aggregate_psd == pytest.approx(float(np.max(summed)))
+
+    @pytest.mark.usefixtures("_suppress_plots")
+    def test_mixed_format_dicom_plus_csv(self):
+        from mypyskindose import get_path_to_example_rdsr_files
+        from mypyskindose.format_export_data import MultiExamResult
+        from mypyskindose.main import analyze_multiple_input_files
+
+        rdsr = get_path_to_example_rdsr_files()
+        files = [
+            rdsr / "siemens_axiom_artis.dcm",
+            _FIXTURES / "normalized_events.csv",
+        ]
+        result = analyze_multiple_input_files(
+            files, settings=_make_settings(), input_schema="normalized"
+        )
+
+        assert isinstance(result, MultiExamResult)
+        assert len(result.exams) == 2
+        sources = {e.source_file for e in result.exams}
+        assert "siemens_axiom_artis.dcm" in sources
+        assert "normalized_events.csv" in sources
+        assert result.aggregate_psd > 0
+
+    @pytest.mark.usefixtures("_suppress_plots")
+    def test_multistudy_csv_via_analyze_input_file(self):
+        from mypyskindose.format_export_data import MultiExamResult
+        from mypyskindose.main import analyze_input_file
+
+        result = analyze_input_file(
+            _FIXTURES / "normalized_events_multistudy.csv",
+            settings=_make_settings(),
+            input_schema="normalized",
+        )
+
+        assert isinstance(result, MultiExamResult)
+        # The fixture spans more than one study → auto-split into multiple exams.
+        assert len(result.exams) >= 2
+        assert result.total_events == sum(e.event_count for e in result.exams)
+        assert result.aggregate_psd > 0
