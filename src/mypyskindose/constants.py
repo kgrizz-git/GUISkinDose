@@ -35,6 +35,24 @@ KEY_PARAM_HUMAN_MESH = "human_mesh"
 KEY_PARAM_INHERENT_FILTRATION = "inherent_filtration"
 KEY_PARAM_REMOVE_INVALID_ROWS = "remove_invalid_rows"
 KEY_PARAM_SILENCE_PYDICOM_WARNINGS = "silence_pydicom_warnings"
+KEY_PARAM_BELOW_FLOOR_KVP_POLICY = "below_floor_kvp_policy"
+KEY_PARAM_BELOW_FLOOR_KVP_MANUAL = "below_floor_kvp_manual"
+
+# Below-floor kVp handling — events with kVp below the lowest tabulated HVL kVp
+# (the table floor) have no tabulated beam quality. HVL_KVP_FLOOR is that floor;
+# the policy selects how such events are handled before the HVL lookup. See
+# dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md.
+HVL_KVP_FLOOR = 25.0
+BELOW_FLOOR_KVP_POLICY_SNAP = "snap"
+BELOW_FLOOR_KVP_POLICY_SKIP = "skip"
+BELOW_FLOOR_KVP_POLICY_MANUAL = "manual"
+BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE = "exam_average"
+BELOW_FLOOR_KVP_POLICIES = (
+    BELOW_FLOOR_KVP_POLICY_SNAP,
+    BELOW_FLOOR_KVP_POLICY_SKIP,
+    BELOW_FLOOR_KVP_POLICY_MANUAL,
+    BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE,
+)
 
 DIMENSION_PLANE_LENGTH = "plane_length"
 DIMENSION_PLANE_RESOLUTION = "plane_resolution"

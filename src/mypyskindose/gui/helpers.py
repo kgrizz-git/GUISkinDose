@@ -42,6 +42,8 @@ def build_settings(state: AppState, mode: str = "calculate_dose", output_format:
     base["k_tab_val"] = state.k_tab_val
     base["inherent_filtration"] = state.inherent_filtration
     base["remove_invalid_rows"] = state.remove_invalid_rows
+    base["below_floor_kvp_policy"] = state.below_floor_kvp_policy
+    base["below_floor_kvp_manual"] = state.below_floor_kvp_manual
     base["silence_pydicom_warnings"] = True
 
     base["phantom"]["model"] = state.phantom_model
@@ -498,6 +500,23 @@ def event_count_from_state(state: AppState) -> int:
     if state.rdsr_df is None:
         return 0
     return len(state.rdsr_df)
+
+
+def below_floor_event_count(state: AppState) -> int:
+    """Total events across all loaded exams with kVp below the HVL table floor.
+
+    Drives the pre-calc prompt: the floor policy is applied per exam inside
+    ``calculate_dose``, so this mirrors that by summing each exam's normalized
+    frame. Returns 0 when nothing is loaded.
+    """
+    from mypyskindose.geom_calc import count_below_floor_events
+
+    total = 0
+    for exam in state.loaded_exams:
+        df = getattr(exam, "normalized_data", None)
+        if df is not None:
+            total += len(count_below_floor_events(df))
+    return total
 
 
 def _patch_tqdm(progress_cb, total: int):

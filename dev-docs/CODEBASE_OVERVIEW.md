@@ -119,6 +119,7 @@ analyze_data.py         — creates Phantom objects, dispatches to mode handler
       └─► calculate_dose/           (mode: calculate_dose)
               │
               ├─ position_patient_phantom_on_table()   (geom_calc.py)
+              ├─ apply_below_floor_kvp_policy()        (geom_calc.py — snap/skip/manual/exam_average)
               ├─ fetch_and_append_hvl()                (geom_calc.py + corrections.db)
               ├─ calculate_k_bs()                      (corrections.py)
               ├─ calculate_k_tab()                     (corrections.py)
@@ -189,6 +190,8 @@ Top-level settings object. Key attributes:
 | `k_tab_val` | `float` | `0.8` | Table transmission factor (0–1) when estimating |
 | `inherent_filtration` | `float` | `3.1` | X-ray tube inherent filtration in mmAl |
 | `remove_invalid_rows` | `bool` | `False` | Drop RDSR rows with missing/invalid data |
+| `below_floor_kvp_policy` | `str` | `"snap"` | Handle events with kVp < 25 kV HVL floor: `snap`/`skip`/`manual`/`exam_average` |
+| `below_floor_kvp_manual` | `float` | `70.0` | Substituted kVp when `below_floor_kvp_policy="manual"` |
 | `silence_pydicom_warnings` | `bool` | `True` | Suppress pydicom warnings |
 | `output_format` | `str` | `"html"` | `"html"`, `"dict"`, or `"json"` |
 | `corrections_db_path` | `str` | `"corrections.db"` | Path to SQLite corrections database |

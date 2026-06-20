@@ -86,7 +86,6 @@ Phased detail derived from diagnostics or master plans.
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/refactor-execution.md](plans/refactor-execution.md) | Phased execution for refactor work diagnosed in [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md). |
 | [plans/gui-decomposition-design.md](plans/gui-decomposition-design.md) | Wiring map and safe-extraction design for splitting `gui/app.py`'s `index()` (refactor plan Phase 3). |
-| [plans/hvl-interpolation-and-below-floor-kvp.md](plans/hvl-interpolation-and-below-floor-kvp.md) | HVL linear N-D interpolation (+ k_tab guard) with per-event exact/interpolated/clamped flags; user policy (skip/manual/exam-average) for below-floor kVp events. |
 
 ## Archived plans (`plans/archive/`)
 
@@ -99,6 +98,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/hvl-invalid-event-crash.md](plans/archive/hvl-invalid-event-crash.md) | **Completed** — Fix HVL-lookup crash on out-of-grid kVp events; nearest-grid snap + GUI warning. |
 | [plans/archive/multiple-exams.md](plans/archive/multiple-exams.md) | **Completed** — Multi-exam support: core, CLI, GUI Phases 1–2.5. GUI smoke check pending. |
 | [plans/archive/multi-exam-data-table-and-settings.md](plans/archive/multi-exam-data-table-and-settings.md) | **Completed** — Data Table `Exam` tag column; per-exam corrections moved to the Settings tab. |
+| [plans/archive/hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md) | **Completed** — HVL/`k_tab` interpolation + clamping with per-event flags; below-floor kVp policy (snap/skip/manual/exam-average) with Settings control + pre-calc prompt. |
 
 ---
 

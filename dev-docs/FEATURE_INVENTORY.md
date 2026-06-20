@@ -162,6 +162,8 @@ Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file pat
 | `check_new_geometry()` | Detects which events have changed geometry vs. previous event (avoids redundant recalculation) |
 | `check_table_hits()` | Ray-triangle intersection: determines which skin cells have beam passing through table/pad |
 | `fetch_and_append_hvl()` | HVL (mmAl) from SQLite DB by kVp + filtration; bilinear interpolation over (kVp, Cu), off-grid filtration interpolated and out-of-range clamped (warns per event); appends to DataFrame |
+| `apply_below_floor_kvp_policy()` | Resolves events with kVp below the 25 kV HVL floor per policy (`snap`/`skip`/`manual`/`exam_average`) before the HVL lookup; warns per event |
+| `count_below_floor_events()` | Positional indices of events with kVp below the HVL floor (drives the policy warnings + GUI pre-calc prompt) |
 | `calculate_rotation_matrices()` | Converts At1/At2/At3 angles to 3×3 rotation matrices (Rx, Ry, Rz) |
 | `vector()` | Creates a vector or unit vector between two 3D points |
 | `Triangle.check_intersection()` | Möller–Trumbore-style ray-triangle intersection test |
@@ -355,6 +357,8 @@ Falls back to `settings_example.json` if nothing provided.
 | `k_tab_val` | float | `0.8` | Estimated table transmission (0–1) |
 | `inherent_filtration` | float | `3.1` | X-ray tube inherent filtration (mmAl) |
 | `remove_invalid_rows` | bool | `False` | Drop events with kVp = 0 |
+| `below_floor_kvp_policy` | str | `"snap"` | Below-floor (kVp < 25) handling: `snap`/`skip`/`manual`/`exam_average` |
+| `below_floor_kvp_manual` | float | `70.0` | Substituted kVp for `below_floor_kvp_policy="manual"` |
 | `silence_pydicom_warnings` | bool | `True` | Suppress pydicom warnings |
 | `output_format` | str | `"html"` | `"html"`, `"dict"`, or `"json"` |
 | `corrections_db_path` | str | `"corrections.db"` | Path to SQLite DB |

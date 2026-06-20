@@ -29,6 +29,7 @@ from nicegui import Client, app, run, ui
 
 from .helpers import (
     apply_exam_transforms,
+    below_floor_event_count,
     clear_multi_exam_state,
     get_excel_sheets,
     load_rdsr,
@@ -148,6 +149,54 @@ from .constants import EXAMPLE_FILES  # noqa: E402 — grouped with the other im
 
 # MODERN_CSS lives in styles.py. After CSS changes, regenerate dev-docs/UI_values.md:
 #   python scripts/generate_ui_values.py
+
+from .tabs.settings import BELOW_FLOOR_KVP_OPTIONS  # noqa: E402 — grouped with imports
+
+
+async def _below_floor_prompt(n_below: int) -> bool:
+    """Confirm below-floor kVp handling before a calculation.
+
+    Shows the count of sub-floor events and the policy choice (pre-filled from the
+    Settings default). Writes the chosen policy (and manual kVp) back to ``state``
+    so the run — and optionally the persistent default — uses it. Returns ``True``
+    to proceed with the calculation, ``False`` if the user cancels.
+    """
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
+        ui.label("Events below the 25 kV HVL floor").classes("text-lg font-bold")
+        ui.label(
+            f"{n_below} loaded event(s) have a kVp below the 25 kV HVL table floor. "
+            "Choose how to handle them for this calculation."
+        ).classes("text-sm text-grey-7")
+
+        policy_select = ui.select(
+            BELOW_FLOOR_KVP_OPTIONS,
+            label="Handling policy",
+            value=state.below_floor_kvp_policy,
+        ).classes("w-full")
+
+        manual_kvp = ui.number(
+            label="Manual kVp", value=state.below_floor_kvp_manual, min=25.0, max=175.0, step=1.0
+        ).classes("w-full")
+        manual_kvp.bind_visibility_from(policy_select, "value", backward=lambda v: v == "manual")
+
+        dont_ask = ui.checkbox("Don't ask again this session")
+
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Run", on_click=lambda: dialog.submit("run")).classes("modern-btn modern-btn-teal")
+
+    result = await dialog
+    if result != "run":
+        return False
+
+    # The dialog's selection becomes the session policy: state is the single source
+    # of truth that both build_settings (this run) and the Settings tab read, so
+    # writing it here both applies and "remembers" the choice for the session.
+    state.below_floor_kvp_policy = policy_select.value
+    state.below_floor_kvp_manual = float(manual_kvp.value or state.below_floor_kvp_manual)
+    if dont_ask.value:
+        state.below_floor_prompt_suppressed = True
+    return True
 
 
 # ── page ───────────────────────────────────────────────────────────────────
@@ -1048,6 +1097,14 @@ def index():
                 if state.import_has_errors:
                     ui.notify("Fix import errors before calculating (tab 1)", color="warning")
                     return
+
+                # Below-floor kVp pre-calc prompt (Phase 2): if any loaded event is
+                # below the 25 kV HVL floor and the user hasn't suppressed the prompt,
+                # confirm the handling policy for this run before launching the calc.
+                if not state.below_floor_prompt_suppressed:
+                    n_below = below_floor_event_count(state)
+                    if n_below > 0 and not await _below_floor_prompt(n_below):
+                        return
 
                 with _operation_guard("starting a calculation") as proceed:
                     if not proceed:

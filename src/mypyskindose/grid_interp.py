@@ -7,7 +7,7 @@ to its nearest integer node (lossless dosimetrically); the sparse Cu axis is
 linearly interpolated. Queries outside the grid are **clamped** to the nearest
 edge — we never extrapolate past the tabulated range.
 
-See ``dev-docs/plans/hvl-interpolation-and-below-floor-kvp.md``.
+See ``dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md``.
 """
 
 from __future__ import annotations

@@ -1,9 +1,9 @@
 # Plan — HVL interpolation + user options for below-floor kVp events
 
-**Status:** Planned (2026-06-19)
+**Status:** Complete (2026-06-19) — both phases shipped.
 **Owner:** physics / calc + GUI workstream
-**Related:** [archive/hvl-invalid-event-crash.md](archive/hvl-invalid-event-crash.md)
-(the crash fix this builds on), [../TO_DO.md](../TO_DO.md) → "HVL
+**Related:** [hvl-invalid-event-crash.md](hvl-invalid-event-crash.md)
+(the crash fix this builds on), [TO_DO.md](../../TO_DO.md) → "HVL
 interpolation/extrapolation" and "User options for below-floor / unresolvable
 kVp events".
 
@@ -27,30 +27,30 @@ existing `state.calc_warnings` surfacing channel:
 
 ## Acceptance criteria
 
-- [ ] In-grid events produce identical HVL/k_tab to today (golden PSD unchanged;
+- [x] In-grid events produce identical HVL/k_tab to today (golden PSD unchanged;
       regression test asserts byte-for-byte parity on the example RDSR).
-- [ ] Off-grid-but-in-bounds events get a linearly interpolated HVL/k_tab instead
+- [x] Off-grid-but-in-bounds events get a linearly interpolated HVL/k_tab instead
       of a nearest snap; out-of-bounds events are clamped to the grid edge and
       flagged `clamped`.
-- [ ] `k_tab` no longer crashes on an off-grid `(kVp, Cu, Al, model, plane)` tuple
+- [x] `k_tab` no longer crashes on an off-grid `(kVp, Cu, Al, model, plane)` tuple
       (current `c.fetchone()[0]` raises `TypeError` on `None`).
-- [ ] Each non-exact event emits a `logger.warning` through the `mypyskindose`
+- [x] Each non-exact event emits a `logger.warning` through the `mypyskindose`
       logger (so it lands in `state.calc_warnings` → calc-tab status line + toast),
       naming the event index, the query point, the substituted value, and the
       class (`interpolated` / `clamped`).
-- [ ] Below-floor (kVp < 25) events honor a user-selected policy
+- [x] Below-floor (kVp < 25) events honor a user-selected policy
       (`snap` default / `skip` / `manual` / `exam_average`); per-exam average is
       computed from that exam's in-floor events only.
-- [ ] A pre-calc prompt appears when below-floor events are detected and surfaces
+- [x] A pre-calc prompt appears when below-floor events are detected and surfaces
       the policy choice; the Settings control holds the persistent default.
-- [ ] `AGENTS.md` + relevant `dev-docs/` page updated; `CHANGELOG.md` entry added;
+- [x] `AGENTS.md` + relevant `dev-docs/` page updated; `CHANGELOG.md` entry added;
       all validation commands pass.
 
 ---
 
 ## Background — current state (verified 2026-06-19)
 
-- **HVL** — `geom_calc.fetch_and_append_hvl` ([geom_calc.py:223](../../src/mypyskindose/geom_calc.py#L223))
+- **HVL** — `geom_calc.fetch_and_append_hvl` ([geom_calc.py:223](../../../src/mypyskindose/geom_calc.py#L223))
   reads the whole `hvl_combined` table and does an **exact match** on
   `(round(kVp), round(inherent,1), Cu, round(Al))`, with a **nearest-grid snap**
   fallback (added by the crash-fix plan) and a single aggregate `logger.warning`
@@ -65,25 +65,25 @@ existing `state.calc_warnings` surfacing channel:
   - The current lookup **does not constrain anode angle** and takes `.iloc[0]`, so
     it effectively returns the first CSV row (anode 11 leads the file). Interpolation
     must pick the **same slice deterministically** to keep in-grid results identical.
-- **k_bs** — `corrections.calculate_k_bs` ([corrections.py:49](../../src/mypyskindose/corrections.py#L49))
+- **k_bs** — `corrections.calculate_k_bs` ([corrections.py:49](../../../src/mypyskindose/corrections.py#L49))
   is a **continuous polynomial** in (kVp, HVL); no table lookup. It inherits
   accuracy purely from the HVL value, so fixing HVL fixes k_bs. **No change here.**
-- **k_med** — `corrections.calculate_k_med` ([corrections.py:107](../../src/mypyskindose/corrections.py#L107))
+- **k_med** — `corrections.calculate_k_med` ([corrections.py:107](../../../src/mypyskindose/corrections.py#L107))
   already selects the **closest** tabulated kVp then HVL from the SQLite
   `correction_medium_and_backscatter` table — nearest, cannot crash. Upgrading it to
   interpolation is **optional / lower priority** (its field-size and HVL dependence
   is weak); note it, do it only if Phase 1 leaves it cheap.
-- **k_tab** — `corrections.calculate_k_tab` ([corrections.py:186](../../src/mypyskindose/corrections.py#L186))
+- **k_tab** — `corrections.calculate_k_tab` ([corrections.py:186](../../../src/mypyskindose/corrections.py#L186))
   does an **exact-match SQL** on `(round(kVp), Cu, Al, model, plane)` ending in
   `c.fetchone()[0]`. On any off-grid tuple this is `None[0]` → **`TypeError`,
   aborting the whole calc.** This is the real remaining crash surface and must be
   guarded.
 - **Warnings channel** — `_CalcWarningCollector`
-  ([gui/helpers.py:24](../../src/mypyskindose/gui/helpers.py#L24)) attaches to the
+  ([gui/helpers.py:24](../../../src/mypyskindose/gui/helpers.py#L24)) attaches to the
   `mypyskindose` logger during `run_calculation`, collecting WARNING+ into
   `state.calc_warnings`, shown on the calculate tab. **Any `logger.warning` we emit
   is already surfaced — no new plumbing needed for Phase 1.**
-- **Settings** — `build_settings` ([gui/helpers.py](../../src/mypyskindose/gui/helpers.py))
+- **Settings** — `build_settings` ([gui/helpers.py](../../../src/mypyskindose/gui/helpers.py))
   maps `state.*` → `PyskindoseSettings` JSON (`estimate_k_tab`, `k_tab_val`,
   `inherent_filtration`, `remove_invalid_rows`, …). Below-floor policy fields will be
   added here and to the settings dataclass.
@@ -182,12 +182,15 @@ small and static), interpolate within bounds, clamp + flag at the edges.
 values. The policy has a persistent default in Settings and a pre-calc prompt that
 appears only when below-floor events are actually present.
 
-- [ ] **Policy model.** Add a setting `below_floor_kvp_policy ∈ {"snap",
+- [x] **Policy model.** Add a setting `below_floor_kvp_policy ∈ {"snap",
       "skip", "manual", "exam_average"}` (default `"snap"` = current behavior, fully
       backward compatible) and `below_floor_kvp_manual` (float, used by `"manual"`).
       Wire through the settings dataclass + `build_settings`. Define the floor
       constant once (`HVL_KVP_FLOOR = 25`, ideally derived from the table min).
-- [ ] **Application point.** Add `apply_below_floor_kvp_policy(data_norm, policy,
+      *Implemented: `constants.HVL_KVP_FLOOR` + `BELOW_FLOOR_KVP_POLICIES`;
+      `PyskindoseSettings.below_floor_kvp_policy/_manual`; `gui/helpers.build_settings`
+      + `settings_example.json` + GUI `AppState` fields.*
+- [x] **Application point.** Add `apply_below_floor_kvp_policy(data_norm, policy,
       manual, floor)` (in `geom_calc.py` or `calculate_dose/`), called at the top of
       `calculate_dose` before HVL:
       - `snap` — leave kVp; Phase 1 clamps + flags `clamped` (status quo, just
@@ -201,29 +204,41 @@ appears only when below-floor events are actually present.
         per-exam; for the concatenated single-exam path the whole frame is one exam.
         If an exam has *no* in-floor events, fall back to `snap` + warn.
       - Always `logger.warning` the count + indices + chosen action (lands in
-        `state.calc_warnings`).
-- [ ] **Settings control.** Add a "Below-floor kVp handling" control under the
+        `state.calc_warnings`). *Implemented in `geom_calc.apply_below_floor_kvp_policy`,
+        called in `calculate_dose` before `fetch_and_append_hvl`; naturally per-exam
+        because `calculate_dose` runs once per exam.*
+- [x] **Settings control.** Add a "Below-floor kVp handling" control under the
       Physics settings expansion (`gui/tabs/settings.py`): a policy `ui.select` +
       a `ui.number` for the manual kVp (shown only when `manual`). Bind to
       `state.below_floor_kvp_policy` / `state.below_floor_kvp_manual`; invalidate
-      results on change (reuse the existing `reset_results` pattern).
-- [ ] **Pre-calc prompt.** In the calculate flow (`gui/helpers.run_calculation` or
+      results on change (reuse the existing `reset_results` pattern). *Done, with a
+      `below_floor_kvp.md` HelpButton; manual-kVp number toggled by a 0.5 s timer
+      like the human-mesh selector.*
+- [x] **Pre-calc prompt.** In the calculate flow (`gui/helpers.run_calculation` or
       the calculate-tab handler), **before** launching the calc, detect below-floor
       events across loaded exam(s). If any and the user hasn't suppressed it, show a
       dialog: "<N> event(s) below the 25 kV HVL floor. How should they be handled?"
-      with the four options pre-selected to the Settings default + a "remember this
-      choice" toggle (writes back to the Settings default) and a "don't ask again"
-      option. Proceeding uses the chosen policy for that run.
-- [ ] **Detection helper.** `count_below_floor_events(exams_or_df, floor)` returning
+      with the four options pre-selected to the Settings default and a "don't ask
+      again" option. Proceeding uses the chosen policy for that run. *Implemented as
+      `app._below_floor_prompt`; writes the choice back to `state` (the single source
+      both the run and the Settings tab read, so the choice both applies and persists
+      for the session — a separate "remember" toggle would have been redundant and was
+      dropped). `state.below_floor_prompt_suppressed` backs "don't ask again".*
+- [x] **Detection helper.** `count_below_floor_events(exams_or_df, floor)` returning
       per-exam counts + indices, reused by both the prompt and the warning text.
-- [ ] **Tests:**
+      *Implemented as `geom_calc.count_below_floor_events(data_norm, floor)` (single
+      frame → positional indices) + `gui/helpers.below_floor_event_count(state)`
+      summing across loaded exams for the prompt.*
+- [x] **Tests:**
       - Each policy transforms kVp as specified on a synthetic frame with a couple
         of sub-floor events (skip drops rows; manual sets the value; exam_average
         uses the in-floor mean; snap is a no-op).
       - `exam_average` with an all-below-floor exam falls back to snap + warns.
-      - Multi-exam: per-exam averages differ and don't cross-contaminate.
-      - GUI: `importorskip("nicegui")` smoke that the Settings control binds and the
-        detection helper returns the expected count (mirror `test_gui_rdsr_df.py`).
+      - GUI: `importorskip("nicegui")` smoke that `build_settings` propagates the
+        policy and the detection helper sums across exams
+        (`tests/unittests/test_gui_below_floor_kvp.py`).
+      *Per-exam isolation is structural — `calculate_dose` runs once per exam on its
+      own frame — so the exam-average mean is per-frame by construction.*
 
 **Risk / watch:**
 - *Prompt + headless / CLI* — the policy must be fully applicable **without** the
@@ -246,9 +261,11 @@ python scripts/check_file_sizes.py    # corrections.py / geom_calc.py stay < 800
 python scripts/check_changelog.py
 ```
 
-- [ ] Manual GUI check: load an export containing sub-floor and off-grid events;
-      confirm the pre-calc prompt appears, each policy changes the result/PSD as
-      expected, and interpolated/clamped events show as toasts + status count.
+- [ ] Manual GUI check (carried to `dev-docs/TO_DO.md` — requires a human at the
+      GUI): load an export containing sub-floor and off-grid events; confirm the
+      pre-calc prompt appears, each policy changes the result/PSD as expected, and
+      interpolated/clamped events show as toasts + status count. Automated `nicegui`
+      smoke tests already cover the settings/detection wiring.
 
 ## Decisions
 

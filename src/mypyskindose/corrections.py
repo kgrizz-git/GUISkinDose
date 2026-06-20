@@ -225,7 +225,7 @@ def calculate_k_tab(
     # calculation on any off-grid (kVp, Cu, Al) tuple or unknown device/plane
     # (e.g. a non-Siemens/Philips export). We keep exact match as the primary path
     # (so in-table events are unchanged) but fail soft and interpolate otherwise.
-    # See dev-docs/plans/hvl-interpolation-and-below-floor-kvp.md.
+    # See dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md.
     conn = db_connect(db_name=corrections_db)[0]
     tab = pd.read_sql_query("SELECT * FROM correction_table_and_pad_attenuation", conn)
     conn.commit()

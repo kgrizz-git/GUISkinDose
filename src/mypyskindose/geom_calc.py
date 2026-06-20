@@ -8,7 +8,7 @@ from scipy.interpolate import RegularGridInterpolator
 import mypyskindose.constants as c
 
 from .db_connect import db_connect
-from .grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED, clamped_rgi_lookup
+from .grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED, clamped_rgi_lookup, format_event_indices
 from .phantom_class import Phantom
 
 logger = logging.getLogger(__name__)
@@ -222,6 +222,130 @@ def scale_field_area(
     return field_area
 
 
+def count_below_floor_events(data_norm: pd.DataFrame, floor: float = c.HVL_KVP_FLOOR) -> List[int]:
+    """Return the positional indices of events with kVp below the HVL table floor.
+
+    Events below ``floor`` kV have no tabulated beam quality; without an explicit
+    policy ``fetch_and_append_hvl`` clamps them to the lowest tabulated kVp. The
+    returned indices (and their count) drive both the below-floor warnings and the
+    GUI pre-calc prompt.
+
+    Parameters
+    ----------
+    data_norm : pd.DataFrame
+        Normalized RDSR data (one row per irradiation event).
+    floor : float
+        Lowest tabulated HVL kVp. Defaults to :data:`constants.HVL_KVP_FLOOR`.
+
+    Returns
+    -------
+    List[int]
+        0-based positional indices of the below-floor events (empty if none, or if
+        the frame has no kVp column).
+    """
+    if c.KEY_NORMALIZATION_KVP not in data_norm.columns:
+        return []
+    kvp = pd.to_numeric(data_norm[c.KEY_NORMALIZATION_KVP], errors="coerce").to_numpy()
+    return [int(i) for i in np.flatnonzero(kvp < floor)]
+
+
+def apply_below_floor_kvp_policy(
+    data_norm: pd.DataFrame,
+    policy: str = c.BELOW_FLOOR_KVP_POLICY_SNAP,
+    manual_kvp: float = c.HVL_KVP_FLOOR,
+    floor: float = c.HVL_KVP_FLOOR,
+) -> pd.DataFrame:
+    """Apply the user-selected handling for events with kVp below the HVL floor.
+
+    Runs *before* :func:`fetch_and_append_hvl` so the HVL lookup then sees only
+    in-/near-grid beam qualities. Policies:
+
+    - ``snap`` (default): leave kVp unchanged — ``fetch_and_append_hvl`` clamps the
+      event to the lowest tabulated kVp and flags it ``clamped`` (status quo).
+    - ``skip``: drop the below-floor rows (frame is reindexed) so they contribute
+      no dose.
+    - ``manual``: set every below-floor kVp to ``manual_kvp``.
+    - ``exam_average``: set every below-floor kVp to the mean kVp of *this frame's*
+      in-floor events. ``calculate_dose`` runs once per exam, so the mean is
+      naturally per-exam. If the frame has no in-floor event, fall back to ``snap``
+      and warn.
+
+    Always returns a frame with a clean ``0..N-1`` index. Emits a
+    ``logger.warning`` (surfaced via ``state.calc_warnings``) naming the action and
+    the affected events whenever it changes anything.
+
+    Parameters
+    ----------
+    data_norm : pd.DataFrame
+        Normalized RDSR data (one row per irradiation event).
+    policy : str
+        One of :data:`constants.BELOW_FLOOR_KVP_POLICIES`.
+    manual_kvp : float
+        kVp substituted for below-floor events under the ``manual`` policy.
+    floor : float
+        Lowest tabulated HVL kVp. Defaults to :data:`constants.HVL_KVP_FLOOR`.
+
+    Returns
+    -------
+    pd.DataFrame
+        The (possibly modified) normalized data with a clean index.
+    """
+    indices = count_below_floor_events(data_norm, floor)
+    if policy == c.BELOW_FLOOR_KVP_POLICY_SNAP or not indices:
+        return data_norm
+
+    n = len(indices)
+    affected = format_event_indices(indices)
+    col = c.KEY_NORMALIZATION_KVP
+
+    if policy == c.BELOW_FLOOR_KVP_POLICY_SKIP:
+        kept = data_norm.drop(index=data_norm.index[indices]).reset_index(drop=True)
+        logger.warning(
+            "Below-floor kVp policy 'skip': dropped %d event(s) with kVp below the "
+            "%g kV HVL floor. Affected event index(es): %s.",
+            n, floor, affected,
+        )
+        return kept
+
+    df = data_norm.copy()
+    col_pos = df.columns.get_loc(col)
+
+    if policy == c.BELOW_FLOOR_KVP_POLICY_MANUAL:
+        df.iloc[indices, col_pos] = float(manual_kvp)
+        logger.warning(
+            "Below-floor kVp policy 'manual': set %d event(s) below the %g kV HVL "
+            "floor to %g kV. Affected event index(es): %s.",
+            n, floor, float(manual_kvp), affected,
+        )
+        return df.reset_index(drop=True)
+
+    if policy == c.BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE:
+        kvp = pd.to_numeric(df[col], errors="coerce")
+        in_floor = kvp[kvp >= floor]
+        if in_floor.empty:
+            logger.warning(
+                "Below-floor kVp policy 'exam_average': all %d event(s) are below the "
+                "%g kV HVL floor, so there is no in-floor average to substitute; "
+                "falling back to 'snap' (clamp to grid edge).",
+                n, floor,
+            )
+            return data_norm
+        avg = float(in_floor.mean())
+        df.iloc[indices, col_pos] = avg
+        logger.warning(
+            "Below-floor kVp policy 'exam_average': set %d event(s) below the %g kV "
+            "HVL floor to the exam mean kVp %.1f kV. Affected event index(es): %s.",
+            n, floor, avg, affected,
+        )
+        return df.reset_index(drop=True)
+
+    logger.warning(
+        "Unknown below-floor kVp policy %r; leaving kVp unchanged (treated as 'snap').",
+        policy,
+    )
+    return data_norm
+
+
 def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, corrections_db: str) -> pd.DataFrame:
     """Add event HVL to RDSR event data from database.
 
@@ -259,7 +383,7 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
     # so in-grid events keep identical HVLs. Interpolation then happens on the
     # continuous (kVp, Cu) plane of the selected (inherent, Al) slice, every one of
     # which is a complete kVp×Cu grid. See
-    # dev-docs/plans/hvl-interpolation-and-below-floor-kvp.md.
+    # dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md.
     key = ["kvp_kv", "filtration_inherent_mmal", "filtration_added_mmcu", "filtration_added_mmal"]
     table = hvl_data.drop_duplicates(subset=key, keep="first")
 

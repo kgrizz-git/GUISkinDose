@@ -16,6 +16,15 @@ from ..page_context import PageContext
 from ..state import reset_results, state
 from ._per_exam import build_per_exam_section
 
+# Below-floor kVp policy → human-readable labels for the Settings select. Values
+# match mypyskindose.constants.BELOW_FLOOR_KVP_POLICIES.
+BELOW_FLOOR_KVP_OPTIONS = {
+    "snap": "Snap to grid edge (default)",
+    "skip": "Skip (drop the events)",
+    "manual": "Substitute a manual kVp",
+    "exam_average": "Substitute the exam-average kVp",
+}
+
 
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("settings"):
@@ -86,6 +95,32 @@ def build(ctx: PageContext) -> None:
                     ui.checkbox("Remove invalid data (kVp = 0)", value=state.remove_invalid_rows).bind_value(
                         state, "remove_invalid_rows"
                     ).on("update:model-value", reset_results)
+
+                    with ui.column().classes("w-full gap-2"):
+                        with ui.row().classes("w-full items-center justify-between"):
+                            ui.label("Below-floor kVp handling (< 25 kV)").classes("text-subtitle2")
+                            HelpButton(
+                                title="Below-floor kVp handling",
+                                content_path="below_floor_kvp.md",
+                            )
+                        ui.select(
+                            BELOW_FLOOR_KVP_OPTIONS,
+                            label="Policy for events below the HVL table floor",
+                            value=state.below_floor_kvp_policy,
+                        ).bind_value(state, "below_floor_kvp_policy").on(
+                            "update:model-value", reset_results
+                        ).classes("w-full")
+
+                        manual_kvp = ui.number(
+                            label="Manual kVp", value=state.below_floor_kvp_manual, min=25.0, max=175.0, step=1.0
+                        ).bind_value(state, "below_floor_kvp_manual").on(
+                            "update:model-value", reset_results
+                        ).classes("w-full")
+
+                        def _update_manual_kvp_visibility():
+                            manual_kvp.visible = state.below_floor_kvp_policy == "manual"
+
+                        ui.timer(0.5, _update_manual_kvp_visibility)
 
             with ui.expansion("Visual Settings", icon="palette").classes("modern-card w-full"):
                 with ui.column().classes("w-full gap-4 q-pa-md"):

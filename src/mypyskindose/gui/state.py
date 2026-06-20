@@ -63,6 +63,14 @@ class AppState:
     inherent_filtration: float = 3.1
     remove_invalid_rows: bool = False
 
+    # Below-floor kVp handling (events with kVp < 25 kV HVL table floor): policy is
+    # "snap" (default) / "skip" / "manual" / "exam_average"; manual value used only
+    # by "manual". below_floor_prompt_suppressed silences the pre-calc prompt once
+    # the user picks "don't ask again".
+    below_floor_kvp_policy: str = "snap"
+    below_floor_kvp_manual: float = 70.0
+    below_floor_prompt_suppressed: bool = False
+
     plot_dosemap: bool = True
     dark_mode: bool = True
     colorscale: str = "jet"

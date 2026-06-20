@@ -10,6 +10,7 @@ from mypyskindose.calculate_dose.calculate_irradiation_event_result import (
 )
 from mypyskindose.corrections import calculate_k_bs, calculate_k_tab
 from mypyskindose.geom_calc import (
+    apply_below_floor_kvp_policy,
     check_new_geometry,
     fetch_and_append_hvl,
     position_patient_phantom_on_table,
@@ -70,6 +71,16 @@ def calculate_dose(
             settings.phantom.patient_offset.d_lat,
         ],
         patient_orientation=settings.phantom.patient_orientation,
+    )
+
+    # Resolve events with kVp below the HVL table floor per the user's policy
+    # (skip / manual / exam_average), before the HVL lookup sees them. Default
+    # 'snap' is a no-op here — fetch_and_append_hvl clamps + flags such events.
+    # calculate_dose runs once per exam, so 'exam_average' is naturally per-exam.
+    normalized_data = apply_below_floor_kvp_policy(
+        data_norm=normalized_data,
+        policy=settings.below_floor_kvp_policy,
+        manual_kvp=settings.below_floor_kvp_manual,
     )
 
     normalized_data = fetch_and_append_hvl(

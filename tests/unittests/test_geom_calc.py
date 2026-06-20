@@ -195,3 +195,90 @@ def test_fetch_and_append_hvl_on_grid_emits_no_warning():
 
     assert hvl.notna().all()
     assert not any(("interpolated" in m.lower() or "clamped" in m.lower()) for m in messages)
+
+
+# ── Below-floor kVp policy (Phase 2) ─────────────────────────────────────────
+
+
+def _apply_policy(kvp_list, policy, manual_kvp=70.0):
+    """Run apply_below_floor_kvp_policy on a synthetic frame, returning
+    (resulting kVp list, captured WARNING messages). Captures via a dedicated
+    handler on the ``mypyskindose`` logger (robust to suite-wide logging state)."""
+    import logging
+
+    import pandas as pd
+
+    from mypyskindose.geom_calc import apply_below_floor_kvp_policy
+
+    data_norm = pd.DataFrame(
+        {
+            "kVp": [float(x) for x in kvp_list],
+            "filter_thickness_Cu": [0.0] * len(kvp_list),
+            "filter_thickness_Al": [0.0] * len(kvp_list),
+        }
+    )
+
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("mypyskindose")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        out = apply_below_floor_kvp_policy(
+            data_norm=data_norm, policy=policy, manual_kvp=manual_kvp
+        )
+    finally:
+        logger.removeHandler(handler)
+    return [float(x) for x in out["kVp"].tolist()], messages
+
+
+def test_count_below_floor_events_returns_indices():
+    """count_below_floor_events flags exactly the sub-25 kV rows by position."""
+    import pandas as pd
+
+    from mypyskindose.geom_calc import count_below_floor_events
+
+    df = pd.DataFrame({"kVp": [70.0, 10.0, 25.0, 0.003, 24.9]})
+    # 25.0 is on the floor (not below); 10, 0.003, 24.9 are below.
+    assert count_below_floor_events(df) == [1, 3, 4]
+
+
+def test_below_floor_policy_snap_is_noop():
+    """'snap' leaves kVp untouched and emits no warning (status quo)."""
+    out, messages = _apply_policy([70.0, 10.0], policy="snap")
+    assert out == [70.0, 10.0]
+    assert messages == []
+
+
+def test_below_floor_policy_skip_drops_rows():
+    """'skip' drops the below-floor rows and reindexes, warning about the drop."""
+    out, messages = _apply_policy([70.0, 10.0, 80.0], policy="skip")
+    assert out == [70.0, 80.0]
+    assert any("skip" in m.lower() and "dropped" in m.lower() for m in messages)
+
+
+def test_below_floor_policy_manual_substitutes_value():
+    """'manual' replaces every below-floor kVp with the manual value, in place."""
+    out, messages = _apply_policy([70.0, 10.0, 5.0], policy="manual", manual_kvp=66.0)
+    assert out == [70.0, 66.0, 66.0]
+    assert any("manual" in m.lower() and "66" in m for m in messages)
+
+
+def test_below_floor_policy_exam_average_uses_in_floor_mean():
+    """'exam_average' replaces below-floor kVp with the mean of the in-floor events."""
+    # In-floor events: 60, 80 → mean 70. Below-floor: 10.
+    out, messages = _apply_policy([60.0, 10.0, 80.0], policy="exam_average")
+    assert out == [60.0, 70.0, 80.0]
+    assert any("exam_average" in m.lower() or "exam mean" in m.lower() for m in messages)
+
+
+def test_below_floor_policy_exam_average_all_below_falls_back_to_snap():
+    """An all-below-floor frame has no in-floor mean → fall back to snap + warn,
+    leaving kVp unchanged so Phase 1 clamps it."""
+    out, messages = _apply_policy([10.0, 5.0], policy="exam_average")
+    assert out == [10.0, 5.0]
+    assert any("fall" in m.lower() and "snap" in m.lower() for m in messages)
