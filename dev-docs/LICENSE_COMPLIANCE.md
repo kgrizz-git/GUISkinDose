@@ -4,13 +4,17 @@ MyPySkinDose is distributed under the **MIT License** (see [`LICENSE`](../LICENS
 
 ## Scope
 
-License checks apply to packages installed with the widest maintained surface:
+License checks apply to the **full declared dependency set** (all extras), pinned by `uv.lock`:
 
 ```bash
-pip install -e ".[dev,gui]"
+uv sync --all-extras
 ```
 
-That includes core runtime dependencies, GUI extras, and dev/CI tooling (`basedpyright`, `pip-audit`, etc.).
+That includes core runtime dependencies, GUI extras (`gui`, `gui-native`), dev/CI tooling
+(`dev`: `basedpyright`, `pip-audit`, etc.), and the docs + notebook toolchains (`docs`, `notebooks`).
+Syncing from the lockfile makes the inventory reproducible regardless of which extras a given
+developer installed — the previous `pip install -e ".[dev,gui]"` surface drifted whenever a venv
+also carried the docs/notebook packages.
 
 ## Policy
 

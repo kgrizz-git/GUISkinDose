@@ -28,10 +28,12 @@ To include the GUI dependencies:
 pip install -e ".[gui]"
 ```
 
-For full development setup (linting, testing, documentation, Jupyter):
+For full development setup (linting, testing, docs, Jupyter), install the
+optional extras you need:
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -e ".[dev,gui]"             # lint/type/test toolchain + GUI
+pip install -e ".[dev,gui,docs,notebooks]"   # everything (docs + JupyterLab)
 ```
 
 ## Running the GUI
@@ -105,7 +107,7 @@ the window opens at a default size — nothing crashes.
 
 Tkinter ships with Python but is only built when the Tcl/Tk libraries are present
 at build time, so it can be absent (commonly with `pyenv` builds). It is **not** a
-pip package — do not add it to `requirements.txt`. To install it:
+pip package — do not add it to the project dependencies. To install it:
 
 | Platform | Command |
 |---|---|
@@ -120,7 +122,7 @@ Verify with: `python -c "import tkinter; print(tkinter.TkVersion)"`.
 If you only need the documentation tooling as well:
 
 ```bash
-pip install -r docs/requirements.txt
+pip install -e ".[docs]"
 ```
 
 ## What this code is for

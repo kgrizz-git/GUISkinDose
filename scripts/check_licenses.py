@@ -7,8 +7,9 @@ Purpose:
     third-party notices file.
 
 Inputs:
-    Active Python environment with project dependencies installed, e.g.:
-        pip install -e ".[dev,gui]"
+    Active Python environment with the full declared dependency set installed.
+    For a reproducible inventory, sync from the lockfile so versions are pinned:
+        uv sync --all-extras
 
 Outputs:
     Exit code 0 when policy passes; 1 when forbidden or (with --strict)
@@ -38,7 +39,10 @@ from packaging.utils import canonicalize_name
 
 PROJECT_NAME = "mypyskindose"
 NOTICES_PATH = Path("dev-docs/THIRD_PARTY_NOTICES.md")
-SELECTED_EXTRAS = frozenset({"dev", "gui"})
+# Inventory the full declared dependency set so the notices file is reproducible
+# regardless of which extras a given developer happened to install. Keep in sync
+# with the [project.optional-dependencies] keys in pyproject.toml.
+SELECTED_EXTRAS = frozenset({"dev", "gui", "gui-native", "docs", "notebooks"})
 BOOTSTRAP_PACKAGES = frozenset(
     {
         "pip",
@@ -311,10 +315,11 @@ def render_notices(packages: list[PackageLicense], root: Path) -> str:
     lines = [
         "# Third-party notices",
         "",
-        "Auto-generated inventory of Python packages resolved when installing:",
+        "Auto-generated inventory of Python packages resolved when installing the",
+        "full declared dependency set (all extras), pinned by `uv.lock`:",
         "",
         "```bash",
-        'pip install -e ".[dev,gui]"',
+        "uv sync --all-extras",
         "```",
         "",
         f"Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: {today}).",

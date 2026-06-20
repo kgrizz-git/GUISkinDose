@@ -31,6 +31,24 @@ dependencies = [
 [project.optional-dependencies]
 gui = ["nicegui>=2.0.0", "pytest-asyncio>=0.24"]
 gui-native = ["nicegui>=2.0.0", "pywebview", "pytest-asyncio>=0.24"]
+# Sphinx site (docs/source/conf.py); nbsphinx executes the getting-started
+# notebook, so it needs a kernel + ipywidgets at build time. Used by
+# .readthedocs.yml (extra_requirements: [docs]).
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+    "nbsphinx",
+    "ipykernel",
+    "ipywidgets",
+    "pandoc",
+]
+# Interactive notebook editing (JupyterLab); the docs build does not need this.
+notebooks = [
+    "jupyterlab",
+    "ipykernel",
+    "ipywidgets",
+]
 dev = [
     "basedpyright>=1.23",
     "pandas-stubs>=2.2",
@@ -38,6 +56,8 @@ dev = [
     "pip-audit>=2.7",
     "bandit>=1.8",
     "pre-commit>=4.0",
+    "pytest>=7.0",
+    "ruff>=0.15",
 ]
 
 [tool.setuptools]
@@ -70,15 +90,6 @@ markers = [
     "slow: long-running tests (e.g. 1000+ event dose stress); deselect with '-m \"not slow\"'",
 ]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-wrap_length = 79
-known_first_party = ["mypyskindose"]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-src_paths = ["src", "tests"]
-skip_glob = ["**/__init__.py", "**/migrations", ".venv", ".venv39", ".github", ".pytest_cache"]
-
 [tool.ruff]
 line-length = 120
 
@@ -110,31 +121,3 @@ exclude_dirs = [
 ]
 # Application code only; tests excluded above. CI fails on medium+ severity (see HARNESS_ENGINEERING.md).
 skips = ["B101"]
-
-[tool.black]
-line-length = 120
-include = '\.pyi?$'
-exclude = '''
-
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.vscode
-    | \.idea
-    | \.github
-    | \.venv
-    | \.venv39
-    | venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | tools
-    | pytest_cache
-  )/
-)
-'''

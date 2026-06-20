@@ -1,5 +1,0 @@
-# GUI (optional, or use: pip install -e ".[gui]")
-nicegui>=2.0.0
-
-# Package itself (editable install)
--e .

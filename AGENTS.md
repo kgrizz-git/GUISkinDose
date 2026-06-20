@@ -97,9 +97,13 @@ See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implem
 
 ```bash
 pip install -e .
-pip install -e ".[dev,gui]"   # basedpyright, bandit, pip-audit, pre-commit + stubs (matches CI typecheck)
-pip install jupyter  # for the notebook
+pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, pre-commit + stubs (matches CI)
+pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-started notebook
 ```
+
+Extras live in `pyproject.toml` (`gui`, `gui-native`, `dev`, `docs`, `notebooks`) — the single
+source of truth for dependencies; there are no `requirements*.txt` files. `uv.lock` pins exact
+versions (`uv sync --all-extras`).
 
 Optional local git hooks (fast subset of CI):
 
@@ -125,7 +129,7 @@ python -m mypyskindose --mode gui
 
 - Python 3.10+
 - **Cross-platform: Windows, macOS, Linux** — always use `pathlib.Path` for file paths, never string concatenation with `/` or `\`
-- Line length: 120 (ruff/black)
+- Line length: 120 (ruff)
 - All units in **cm** unless otherwise noted
 - Settings always passed as `PyskindoseSettings` object internally; JSON/dict accepted at the boundary
 - Correction factors are dimensionless floats in range 0–1 (or slightly above 1 for backscatter)
