@@ -75,6 +75,8 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | File | Purpose |
 |---|---|
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
+| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
+| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |
 
 ---
 

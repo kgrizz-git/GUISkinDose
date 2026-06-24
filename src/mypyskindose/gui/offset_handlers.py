@@ -39,6 +39,52 @@ def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:
         m["d_lat"] = app_state.d_lat
 
 
+def active_exam_index_for_offsets(app_state: AppState) -> int:
+    """0-based exam index used for Geometry patient-offset read/write."""
+    if app_state.is_multi_exam and app_state.active_exam_index is not None:
+        return app_state.active_exam_index
+    return 0
+
+
+def read_patient_offset_value(
+    app_state: AppState,
+    attr: str,
+    active_index: int | None = None,
+) -> float:
+    """Read one patient-offset axis from per-exam meta (multi) or globals (single)."""
+    idx = active_index if active_index is not None else active_exam_index_for_offsets(app_state)
+    if app_state.is_multi_exam and idx < len(app_state.loaded_exam_meta):
+        return float(app_state.loaded_exam_meta[idx].get(attr, 0.0))
+    return float(getattr(app_state, attr))
+
+
+def apply_patient_offset_slider_tick(app_state: AppState, attr: str, value: float) -> None:
+    """Geometry slider tick: write meta[active] in multi-exam, globals + meta[0] in single."""
+    if app_state.is_multi_exam:
+        idx = active_exam_index_for_offsets(app_state)
+        if idx < len(app_state.loaded_exam_meta):
+            app_state.loaded_exam_meta[idx][attr] = float(value)
+    else:
+        setattr(app_state, attr, float(value))
+        sync_global_patient_offset_to_single_exam_meta(app_state)
+
+
+def reset_patient_offset_for_active(app_state: AppState) -> None:
+    """Zero patient offset for the active exam (multi) or globals + meta[0] (single)."""
+    if app_state.is_multi_exam:
+        idx = active_exam_index_for_offsets(app_state)
+        if idx < len(app_state.loaded_exam_meta):
+            m = app_state.loaded_exam_meta[idx]
+            m["d_lon"] = 0.0
+            m["d_ver"] = 0.0
+            m["d_lat"] = 0.0
+    else:
+        app_state.d_lon = 0.0
+        app_state.d_ver = 0.0
+        app_state.d_lat = 0.0
+        sync_global_patient_offset_to_single_exam_meta(app_state)
+
+
 def on_global_patient_offset_scrub(ctx: PageContext) -> None:
     sync_global_patient_offset_to_single_exam_meta(state)
 

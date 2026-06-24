@@ -97,3 +97,72 @@ def preview_event_count(
         composite=composite,
     )
     return len(df) if df is not None else 0
+
+
+def resolve_composite_for_render(
+    *,
+    composite_preview: bool,
+    last_table_origin_scrub: bool,
+) -> bool:
+    """Whether the Geometry preview should include all exams' events."""
+    if last_table_origin_scrub:
+        return True
+    return composite_preview
+
+
+def composite_preview_after_exam_mode_change(
+    was_multi_exam: bool,
+    is_multi_exam: bool,
+    current_composite_preview: bool,
+) -> bool:
+    """Reset composite toggle when transitioning multi-exam → single-exam (T28)."""
+    if was_multi_exam and not is_multi_exam:
+        return False
+    return current_composite_preview
+
+
+_C4_TABLE_ORIGIN_PREVIEW_CAPTION = (
+    "Table shift applies to the selected exam. Preview shows all exams; "
+    "you will see this exam's table move relative to the others."
+)
+
+
+def geometry_preview_caption(
+    state: AppState,
+    *,
+    composite_preview: bool,
+    last_table_origin_scrub: bool,
+) -> str:
+    """User-facing preview caption for multi-exam Geometry (C3 / C4)."""
+    if not state.is_multi_exam:
+        return ""
+    exam_num = (state.active_exam_index or 0) + 1
+    if last_table_origin_scrub:
+        return _C4_TABLE_ORIGIN_PREVIEW_CAPTION
+    if composite_preview:
+        return (
+            f"Preview: all exams' events; phantom position is exam #{exam_num} only — "
+            "other exams use their own offsets at Calculate."
+        )
+    return f"Preview: exam #{exam_num} events only, phantom at this exam's offset."
+
+
+def composite_live_preview_paused(
+    state: AppState,
+    *,
+    last_preview_mode: str | None,
+    composite_preview: bool,
+    last_table_origin_scrub: bool,
+    pause_threshold: int = 30,
+) -> bool:
+    """True when plot_procedure live preview should show PAUSED (T8, T27)."""
+    if last_preview_mode != "plot_procedure" or not state.is_multi_exam:
+        return False
+    composite = resolve_composite_for_render(
+        composite_preview=composite_preview,
+        last_table_origin_scrub=last_table_origin_scrub,
+    )
+    if not composite:
+        return False
+    active_idx = state.active_exam_index
+    return preview_event_count(state, active_exam_index=active_idx, composite=True) > pause_threshold

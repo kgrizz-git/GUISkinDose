@@ -16,13 +16,21 @@ from ..constants import (
     TABLE_ORIGIN_SLIDER_MIN,
 )
 from ..figures import make_geometry_fig
-from ..geometry_preview import preview_event_count
+from ..geometry_preview import (
+    composite_live_preview_paused,
+    composite_preview_after_exam_mode_change,
+    geometry_preview_caption,
+    preview_event_count,
+    resolve_composite_for_render,
+)
 from ..helpers import (
+    apply_patient_offset_slider_tick,
     commit_table_origin_transform,
     effective_table_origin,
     exam_supports_table_origin,
     on_global_patient_offset_change,
-    on_global_patient_offset_scrub,
+    read_patient_offset_value,
+    reset_patient_offset_for_active,
     stage_table_origin_axis,
 )
 from ..page_context import PageContext
@@ -37,6 +45,26 @@ _C1_BANNER = (
 )
 
 
+_C4_TABLE_ORIGIN_CAPTION = (
+    "Table shift applies to the selected exam. Preview shows all exams; "
+    "you will see this exam's table move relative to the others."
+)
+
+
+def _table_origin_card_visible() -> bool:
+    """Whether the Geometry table-origin card should show for the active exam."""
+    if not state.loaded_exam_meta or not state.loaded_exams:
+        return False
+    if state.is_multi_exam:
+        idx = state.active_exam_index
+        if idx is None or idx >= len(state.loaded_exams):
+            return False
+        return exam_supports_table_origin(state.loaded_exams[idx], state.loaded_exam_meta[idx])
+    if len(state.loaded_exams) != 1:
+        return False
+    return exam_supports_table_origin(state.loaded_exams[0], state.loaded_exam_meta[0])
+
+
 def build(ctx: PageContext) -> None:
     slider_timer = None
     last_preview_mode: str | None = None
@@ -48,6 +76,11 @@ def build(ctx: PageContext) -> None:
     was_multi_exam = state.is_multi_exam
     exam_selector_guard = {"suppress": False}  # same pattern as table_guard below
     patient_guard = {"suppress": False}
+
+    def _active_exam_index() -> int:
+        if state.is_multi_exam and state.active_exam_index is not None:
+            return state.active_exam_index
+        return 0
 
     with ui.tab_panel("geometry"):
         with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
@@ -76,18 +109,26 @@ def build(ctx: PageContext) -> None:
                 exam_select = ui.select(
                     options=_exam_selector_options(),
                     value=state.active_exam_index if state.active_exam_index is not None else 0,
-                    label="Editing exam",
+                    label="Selected exam",
                 ).classes("w-full")
 
+            preview_controls = ui.column().classes("w-full gap-2")
+            preview_controls.bind_visibility_from(state, "is_multi_exam")
+
+            with preview_controls:
+                composite_checkbox = ui.checkbox(
+                    "Show all exams in preview",
+                    value=False,
+                ).classes("text-caption")
+                preview_caption = ui.label("").classes("text-caption text-grey-5 italic")
+
             offset_controls = ui.column().classes("w-full gap-4")
-            offset_controls.bind_visibility_from(
-                state,
-                "rdsr_df",
-                backward=lambda v: v is not None and not state.is_multi_exam,
-            )
+            offset_controls.bind_visibility_from(state, "rdsr_df", backward=lambda v: v is not None)
 
             with offset_controls:
-                with ui.card().classes("modern-card w-full q-pa-md"):
+                patient_offset_card = ui.card().classes("modern-card w-full q-pa-md")
+
+                with patient_offset_card:
                     ui.label("Patient offset (cm)").classes("text-subtitle2")
                     paused_badge = ui.badge("PAUSED").props("color=amber")
                     paused_badge.set_visibility(False)
@@ -105,6 +146,7 @@ def build(ctx: PageContext) -> None:
                     stale_caption.set_visibility(False)
 
                     patient_sliders: dict[str, ui.slider] = {}
+                    patient_val_labels: dict[str, ui.label] = {}
                     with ui.row().classes("w-full gap-4 items-center"):
                         for axis, lbl, attr in (
                             ("lon", "Longitudinal", "d_lon"),
@@ -113,18 +155,27 @@ def build(ctx: PageContext) -> None:
                         ):
                             with ui.column().classes("grow gap-1"):
                                 ui.label(lbl).classes("text-caption text-grey-6")
+                                initial = read_patient_offset_value(state, attr)
                                 slider = ui.slider(
                                     min=-PATIENT_OFFSET_SLIDER_RANGE_CM,
                                     max=PATIENT_OFFSET_SLIDER_RANGE_CM,
                                     step=0.5,
-                                    value=getattr(state, attr),
+                                    value=initial,
                                 ).classes("w-full")
-                                slider.bind_value(state, attr)
-                                val_label = ui.label().classes("text-caption mono-text")
-                                val_label.bind_text_from(
-                                    state, attr, backward=lambda v, a=attr: f"{getattr(state, a):.1f} cm"
-                                )
+                                val_label = ui.label(f"{initial:.1f} cm").classes("text-caption mono-text")
                                 patient_sliders[attr] = slider
+                                patient_val_labels[attr] = val_label
+
+                    def _sync_patient_sliders_from_meta(active_index: int | None = None) -> None:
+                        idx = active_index if active_index is not None else _active_exam_index()
+                        if idx >= len(state.loaded_exam_meta):
+                            return
+                        patient_guard["suppress"] = True
+                        for attr, slider in patient_sliders.items():
+                            val = read_patient_offset_value(state, attr, active_index=idx)
+                            slider.set_value(val)
+                            patient_val_labels[attr].set_text(f"{val:.1f} cm")
+                        patient_guard["suppress"] = False
 
                     ui.button(
                         "Reset patient offset to 0",
@@ -134,39 +185,48 @@ def build(ctx: PageContext) -> None:
 
                 table_origin_card = ui.card().classes("modern-card w-full q-pa-md")
                 table_origin_card.bind_visibility_from(
-                    state,
-                    "loaded_exams",
-                    backward=lambda exams: (
-                        len(exams) == 1
-                        and bool(state.loaded_exam_meta)
-                        and exam_supports_table_origin(
-                            exams[0],
-                            state.loaded_exam_meta[0],
-                        )
-                    ),
+                    state, "loaded_exams", backward=lambda _exams: _table_origin_card_visible()
+                )
+                table_origin_card.bind_visibility_from(
+                    state, "active_exam_index", backward=lambda _idx: _table_origin_card_visible()
                 )
 
                 with table_origin_card:
                     ui.label("Table origin override (cm)").classes("text-subtitle2")
+                    table_origin_hint = ui.label(_C4_TABLE_ORIGIN_CAPTION).classes(
+                        "text-caption text-grey-5 italic"
+                    )
+                    table_origin_hint.bind_visibility_from(state, "is_multi_exam")
                     override_caption = ui.label("Override active").classes(
                         "text-caption text-amber-6 italic"
                     )
+
+                    def _override_active_for_active_exam(_m) -> bool:
+                        idx = _active_exam_index()
+                        if idx >= len(state.loaded_exam_meta):
+                            return False
+                        return state.loaded_exam_meta[idx].get("table_origin_override") is not None
+
                     override_caption.bind_visibility_from(
-                        state,
-                        "loaded_exam_meta",
-                        backward=lambda _m: (
-                            bool(state.loaded_exam_meta)
-                            and state.loaded_exam_meta[0].get("table_origin_override") is not None
-                        ),
+                        state, "loaded_exam_meta", backward=_override_active_for_active_exam
+                    )
+                    override_caption.bind_visibility_from(
+                        state, "active_exam_index", backward=lambda _i: _override_active_for_active_exam(None)
                     )
 
                     table_sliders: dict[str, ui.slider] = {}
                     table_guard = {"suppress": False}  # see exam_selector_guard above
 
-                    def _active_exam_index() -> int:
-                        if state.is_multi_exam and state.active_exam_index is not None:
-                            return state.active_exam_index
-                        return 0
+                    def _table_slider_limits(detected: dict, key: str) -> tuple[float, float]:
+                        lo = min(
+                            TABLE_ORIGIN_SLIDER_MIN,
+                            float(detected.get(key, 0.0)) - 50,
+                        )
+                        hi = max(
+                            TABLE_ORIGIN_SLIDER_MAX,
+                            float(detected.get(key, 0.0)) + 50,
+                        )
+                        return lo, hi
 
                     def _sync_table_sliders_from_meta(active_index: int | None = None) -> None:
                         idx = active_index if active_index is not None else _active_exam_index()
@@ -178,45 +238,39 @@ def build(ctx: PageContext) -> None:
                             meta,
                         ):
                             return
+                        detected = meta.get("table_origin_detected") or {
+                            "x": 0.0,
+                            "y": 0.0,
+                            "z": 0.0,
+                        }
                         origin = effective_table_origin(meta)
                         table_guard["suppress"] = True
                         for key, slider in table_sliders.items():
+                            lo, hi = _table_slider_limits(detected, key)
+                            slider._props["min"] = lo
+                            slider._props["max"] = hi
+                            slider.update()
                             slider.set_value(origin[key])
                         table_guard["suppress"] = False
 
-                    def _sync_patient_sliders_from_meta(active_index: int | None = None) -> None:
-                        if state.is_multi_exam:
-                            return
-                        idx = active_index if active_index is not None else _active_exam_index()
-                        if idx >= len(state.loaded_exam_meta):
-                            return
-                        patient_guard["suppress"] = True
-                        for attr, slider in patient_sliders.items():
-                            slider.set_value(getattr(state, attr))
-                        patient_guard["suppress"] = False
-
                     with ui.row().classes("w-full gap-4 items-center"):
+                        idx0 = _active_exam_index()
+                        meta0 = (
+                            state.loaded_exam_meta[idx0]
+                            if idx0 < len(state.loaded_exam_meta)
+                            else {}
+                        )
+                        detected0 = meta0.get("table_origin_detected") or {
+                            "x": 0.0,
+                            "y": 0.0,
+                            "z": 0.0,
+                        }
+                        origin0 = effective_table_origin(meta0) if meta0 else detected0
                         for key in ("x", "y", "z"):
                             with ui.column().classes("grow gap-1"):
                                 ui.label(key.upper()).classes("text-caption text-grey-6")
-                                detected = (
-                                    state.loaded_exam_meta[0].get("table_origin_detected")
-                                    if state.loaded_exam_meta
-                                    else {"x": 0.0, "y": 0.0, "z": 0.0}
-                                ) or {"x": 0.0, "y": 0.0, "z": 0.0}
-                                lo = min(
-                                    TABLE_ORIGIN_SLIDER_MIN,
-                                    float(detected.get(key, 0.0)) - 50,
-                                )
-                                hi = max(
-                                    TABLE_ORIGIN_SLIDER_MAX,
-                                    float(detected.get(key, 0.0)) + 50,
-                                )
-                                initial = (
-                                    effective_table_origin(state.loaded_exam_meta[0])[key]
-                                    if state.loaded_exam_meta
-                                    else 0.0
-                                )
+                                lo, hi = _table_slider_limits(detected0, key)
+                                initial = float(origin0.get(key, 0.0))
                                 slider = ui.slider(
                                     min=lo,
                                     max=hi,
@@ -240,6 +294,7 @@ def build(ctx: PageContext) -> None:
                                     last_table_origin_scrub = True
                                     offset_changed_since_calc = True
                                     _update_stale_caption()
+                                    _update_preview_caption()
                                     _schedule_debounced_render()
 
                                 slider.on_value_change(_on_table_slider)
@@ -275,18 +330,30 @@ def build(ctx: PageContext) -> None:
                 geom_plot = ui.plotly({}).classes("w-full").style("height:700px")
 
     def _resolve_composite_for_render() -> bool:
-        if last_table_origin_scrub:
-            return True
-        return composite_preview
+        return resolve_composite_for_render(
+            composite_preview=composite_preview,
+            last_table_origin_scrub=last_table_origin_scrub,
+        )
+
+    def _update_preview_caption() -> None:
+        preview_caption.set_text(
+            geometry_preview_caption(
+                state,
+                composite_preview=composite_preview,
+                last_table_origin_scrub=last_table_origin_scrub,
+            )
+        )
 
     def live_preview_allowed() -> bool:
         if state.busy:
             return False
-        if last_preview_mode == "plot_procedure":
-            if state.is_multi_exam and _resolve_composite_for_render():
-                active_idx = state.active_exam_index
-                if preview_event_count(state, active_exam_index=active_idx, composite=True) > 30:
-                    return False
+        if composite_live_preview_paused(
+            state,
+            last_preview_mode=last_preview_mode,
+            composite_preview=composite_preview,
+            last_table_origin_scrub=last_table_origin_scrub,
+        ):
+            return False
         return True
 
     def _update_paused_badge() -> None:
@@ -310,6 +377,7 @@ def build(ctx: PageContext) -> None:
             last_table_origin_scrub = False
             reset_results()
         ctx.refresh_per_exam()
+        _update_preview_caption()
         if live_preview_requested and live_preview_allowed() and last_preview_mode:
             await _render_preview(last_preview_mode)
         live_preview_requested = False
@@ -347,38 +415,52 @@ def build(ctx: PageContext) -> None:
         else:
             geom_plot.update_figure({})
 
-    def _on_patient_slider_change() -> None:
+    def _on_patient_slider_change(attr: str, slider: ui.slider) -> None:
         nonlocal offset_changed_since_calc, last_table_origin_scrub
+        if patient_guard["suppress"]:
+            return
+        apply_patient_offset_slider_tick(state, attr, float(slider.value or 0.0))
+        patient_val_labels[attr].set_text(f"{float(slider.value or 0.0):.1f} cm")
         last_table_origin_scrub = False
-        on_global_patient_offset_scrub(ctx)
         offset_changed_since_calc = True
         _update_stale_caption()
+        _update_preview_caption()
         _schedule_debounced_render()
 
-    for slider in patient_sliders.values():
-        slider.on_value_change(lambda _e: _on_patient_slider_change())
+    for attr, slider in patient_sliders.items():
+        slider.on_value_change(lambda _e, a=attr, s=slider: _on_patient_slider_change(a, s))
 
     def _reset_patient_offset() -> None:
-        state.d_lon = 0.0
-        state.d_ver = 0.0
-        state.d_lat = 0.0
-        on_global_patient_offset_change(ctx)
+        nonlocal offset_changed_since_calc
+        reset_patient_offset_for_active(state)
+        if not state.is_multi_exam:
+            on_global_patient_offset_change(ctx)
+        else:
+            reset_results()
+            ctx.refresh_per_exam()
+        _sync_patient_sliders_from_meta()
+        offset_changed_since_calc = True
+        _update_stale_caption()
         geom_plot.update_figure({})
         ui.notify("Patient offset reset to 0", color="info")
 
     def _reset_table_origin() -> None:
-        nonlocal table_origin_pending, offset_changed_since_calc
+        nonlocal table_origin_pending, offset_changed_since_calc, last_table_origin_scrub
         if not state.loaded_exam_meta:
             return
-        meta = state.loaded_exam_meta[0]
+        idx = state.active_exam_index if state.is_multi_exam else 0
+        if idx is None or idx >= len(state.loaded_exam_meta):
+            return
+        meta = state.loaded_exam_meta[idx]
         meta["table_origin_override"] = None
-        commit_table_origin_transform(state, 0)
+        commit_table_origin_transform(state, idx)
         reset_results()
         ctx.refresh_per_exam()
         table_origin_pending = False
+        last_table_origin_scrub = False
         offset_changed_since_calc = True
         _update_stale_caption()
-        _sync_table_sliders_from_meta()
+        _sync_table_sliders_from_meta(idx)
         geom_plot.update_figure({})
         ui.notify("Table origin reset to auto-detected", color="info")
 
@@ -450,21 +532,39 @@ def build(ctx: PageContext) -> None:
         last_table_origin_scrub = False
         _sync_table_sliders_from_meta(new_index)
         _sync_patient_sliders_from_meta(new_index)
+        _update_preview_caption()
         if last_preview_mode:
             live_preview_requested = True
             _schedule_debounced_render()
 
     exam_select.on_value_change(_on_exam_select_change)
 
+    def _on_composite_toggle(e) -> None:
+        nonlocal composite_preview, live_preview_requested
+        composite_preview = bool(e.value)
+        _update_preview_caption()
+        _update_paused_badge()
+        if last_preview_mode:
+            live_preview_requested = True
+            _schedule_debounced_render()
+
+    composite_checkbox.on_value_change(_on_composite_toggle)
+
     def _refresh_geometry_sliders() -> None:
         nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
+        composite_preview = composite_preview_after_exam_mode_change(
+            was_multi_exam,
+            state.is_multi_exam,
+            composite_preview,
+        )
         if was_multi_exam and not state.is_multi_exam:
-            composite_preview = False
             last_table_origin_scrub = False
+            composite_checkbox.set_value(False)
         was_multi_exam = state.is_multi_exam
         _rebuild_exam_selector()
         _sync_table_sliders_from_meta()
         _sync_patient_sliders_from_meta()
+        _update_preview_caption()
 
     original_refresh_per_exam = ctx.refresh_per_exam
 
@@ -473,3 +573,4 @@ def build(ctx: PageContext) -> None:
         _refresh_geometry_sliders()
 
     ctx.refresh_per_exam = _refresh_per_exam_with_sliders
+    _update_preview_caption()

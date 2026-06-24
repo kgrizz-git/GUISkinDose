@@ -2,13 +2,17 @@
 
 > **Prerequisite:** [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) Phases 0–2b (single-exam Geometry sliders shipped in WIP).
 
-**Execution order:** **Part I (commit)** → **Part II (Phase 0)** → **Part III (Phase 1)** → **Part IV (Phase 2)** + **Part V (cross-cutting)**. Grep **Appendix A (T-items)** while coding. **Checklist** and **Appendix B (testing)** are exit gates. Part VI is optional polish.
+**Execution order:** **Part I (commit)** → **Part II (Phase 0)** → **Part III (Phase 1)** → **Part IV-a (patient math)** → **Part IV-b (preview UX)** → **Part V (cross-cutting)**. Grep **Appendix A (T-items)** while coding. **Checklist** and **Appendix B (testing)** are exit gates. Part VI is optional polish.
+
+**Plan status (2026-06-24):** Parts **I–IV (a + b) shipped** and verified in source (Round 8). **Part V** is the remaining user-facing payoff before archive. Latest reviews: [Round 7](../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) · [Round 8](../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md).
+
+**Terminology:** In this plan, **scrub** = slider tick path (each value change). **Debounced render** = `_schedule_debounced_render` trigger; **live preview** = `live_preview_allowed` gate + render. **Composite** = all exams' **events** in the Geometry preview (not the multi-exam dose map).
 
 ---
 
 ## Goal
 
-In multi-exam mode, show Geometry offset sliders bound to **`loaded_exam_meta[active]`** (not globals), with an **Editing exam** selector and honest preview captions.
+In multi-exam mode, show Geometry offset sliders bound to **`loaded_exam_meta[active]`** (not globals), with an **Editing exam** selector and honest preview captions. **Critical path:** Part IV-a (patient slider write-back) — table-origin (Part III) alone does not satisfy the goal row for patient offsets.
 
 | Control | Single-exam (today) | Multi-exam (this plan) |
 |---------|---------------------|-------------------------|
@@ -26,7 +30,7 @@ Two independent axes — do not use one `composite` flag for both:
 | **Events** | Patient: active exam only (toggle off). Table-origin: all exams **only while scrubbing** (`last_table_origin_scrub=True`); otherwise follows patient toggle | Patient: `composite_preview` toggle (default off). Table-origin scrub: `last_table_origin_scrub = True` → `_resolve_composite_for_render()` is `True` |
 | **Phantom** | `meta[active]` patient offset | Always active exam |
 
-Closure vars in `geometry.build`: `composite_preview` (user toggle, persists across exam switches); `last_table_origin_scrub` (set `True` on table-origin tick, `False` on patient tick / after debounced render); derive render flag via `_resolve_composite_for_render()` → passed to `make_geometry_fig` (see T8, T12, T27):
+**Local variables in `geometry.build`** (not `AppState` fields): `composite_preview` (user toggle, persists across exam switches); `last_table_origin_scrub` (set `True` on table-origin tick, `False` on patient tick / after debounced render); `was_multi_exam` tracks multi→single transitions. Derive render flag via `_resolve_composite_for_render()` → passed to `make_geometry_fig` (see T8, T12, T27). In this codebase **"scrub"** means the slider **tick path** (each value change), not necessarily a drag-in-progress gesture — see `offset_handlers.py`.
 
 ```python
 def _resolve_composite_for_render() -> bool:
@@ -169,7 +173,9 @@ def _sync_patient_sliders_from_meta(active_index=None):
 
 ---
 
-## Part III — Phase 1: Multi-exam table-origin sliders
+## Part III — Phase 1: Multi-exam table-origin sliders ✅
+
+**Status:** Completed 2026-06-24.
 
 **Files:** `geometry.py`. **Prerequisite:** Part II.
 
@@ -181,56 +187,102 @@ def _sync_patient_sliders_from_meta(active_index=None):
 - `_sync_table_sliders_from_meta`: on exam switch, update each slider `_props["min"]`/`["max"]` + `update()` from active exam's `table_origin_detected`, then `set_value` (T3, T17); skip when active exam does not support table-origin.
 - Sliders → `meta[active]` via `stage_table_origin_axis` + debounced `commit_table_origin_transform(state, active_index)`.
 - Table-origin tick: `last_table_origin_scrub = True`; preview uses `composite=True` via `_resolve_composite_for_render()`.
-- `_reset_table_origin` (T5, R4): `idx = active_exam_index if is_multi_exam else 0`; clear `meta[idx].table_origin_override`; `commit_table_origin_transform(state, idx)`; sync sliders.
+- `_reset_table_origin` (T5a, R4): `idx = active_exam_index if is_multi_exam else 0`; clear `meta[idx].table_origin_override`; `commit_table_origin_transform(state, idx)`; sync sliders.
 
 ---
 
-## Part IV — Phase 2: Multi-exam patient-offset sliders
+## Part IV — Phase 2: Multi-exam patient-offset sliders ✅
 
-**Files:** `geometry.py`. **Prerequisite:** Parts II–III.
+**Status:** Completed 2026-06-24 (IV-a + IV-b).
 
-Multi-exam sliders edit **`meta[active].d_*` only** (not globals). Same fields as Settings per-exam spinboxes (`bind_value` on meta there); Geometry uses explicit write-back — no `bind_value` / `bind_text_from` on globals (T4, R2).
+**Files:** `geometry.py`, `offset_handlers.py`, `geometry_preview.py`. **Prerequisite:** Parts II–III.
 
-- Remove `slider.bind_value(state, attr)` and `val_label.bind_text_from(state, attr, …)` in multi-exam mode. Use `patient_guard`; `val_labels: dict[str, ui.label]` updated in tick and `_sync_patient_sliders_from_meta` from `meta[active].d_*` (T31).
-- Multi-exam tick → `meta[active][attr] = float(slider.value)`; update matching `val_labels[attr].set_text`; `last_table_origin_scrub = False`. Single-exam → globals + `sync_global_patient_offset_to_single_exam_meta`.
-- **`composite_preview` checkbox (R1, C4):** `ui.checkbox("Show all exams in preview", …)` visible when `is_multi_exam`; `on_change` sets `composite_preview` and schedules render (T29). Closure var exists from Part II; UI not yet wired.
-- **`preview_caption` label (R1):** dynamic label below toggle; updates when `composite_preview`, `last_table_origin_scrub`, or `active_exam_index` changes — shows Appendix B C3 (default vs all-exams) or C4 table-origin caption when scrubbing.
-- Preview buttons: pass `_resolve_composite_for_render()` before render (T16 — shipped).
-- `_reset_patient_offset` (T5, R3): multi → zero `meta[active].d_*`; single → globals + `meta[0]`; then `_sync_patient_sliders_from_meta()` and `ctx.refresh_per_exam()`.
-- C2 already in exam-selector area; C3/C4 via `preview_caption` above.
+### Part IV-a — Patient slider write-back ✅
+
+1. **Show patient card in multi-exam** — same card, conditional write path; hidden only when `rdsr_df` is None (parent `offset_controls`). *(shipped)*
+2. **`val_labels` + `patient_guard`** — no `bind_value` / `bind_text_from` on globals; `apply_patient_offset_slider_tick` / `read_patient_offset_value` in `offset_handlers.py`. *(shipped)*
+3. **`_sync_patient_sliders_from_meta`** — multi + single; exam switch and `ctx.refresh_per_exam`. *(shipped)*
+4. **`_reset_patient_offset` (T5b)** — `reset_patient_offset_for_active`; multi zeros `meta[active].d_*` only. *(shipped)*
+
+**IV-a tests:** *(shipped in `test_gui_multi_exam_geometry_offsets.py`)* — `test_apply_patient_offset_slider_tick_writes_meta_not_globals`, `test_read_patient_offset_value_uses_active_meta_in_multi_exam`, `test_reset_patient_offset_for_active_zeros_meta_in_multi_exam`.
+
+### Part IV-b — Preview UX ✅
+
+1. **`composite_preview` checkbox** + **`preview_caption`** (`geometry_preview_caption` helper). *(shipped)*
+2. Phantom stays at **`meta[active]`** when composite events are on (acceptance criterion). *(shipped)*
+3. Selector label **"Selected exam"** (matches C1). *(shipped)*
+
+**IV-b tests:** *(shipped)* — `test_geometry_preview_caption_modes`, `test_composite_preview_reset_on_multi_to_single`, `test_composite_live_preview_paused_only_for_large_composite_procedure`, `test_resolve_composite_for_render_table_scrub_wins`.
 
 ---
 
-## Part V — Cross-cutting (ship with Parts II–IV)
+## Part V — Cross-cutting (remaining work)
+
+**Status:** Not started (Round 8). Parts I–IV verified shipped; this part is the archive gate.
+
+### Recommended execution order (Round 8)
+
+| # | Item | Notes |
+|---|------|-------|
+| 1 | Part V formatter unit tests (write first) | `test_format_patient_offsets_multi_exam`, `test_format_table_offset_line_multi_exam`, refresh-trigger test; assert **lon/ver/lat** labels |
+| 2 | **N4** fix + test | Add `ctx.refresh_per_exam()` to `_on_exam_transform_change` (`_per_exam.py`); clamp `geom_event_input` in `_refresh_geometry_sliders` |
+| 3 | Axis vocabulary | **lon/ver/lat** in Calculate formatter (matches Geometry sliders); help/docs sweep in step 11 — do not change `figures.py` axis labels in Part V unless explicitly scoped |
+| 4 | `per_exam_offsets_version` on `AppState` | Bump in `apply_patient_offset_slider_tick`, per-exam spinbox on-change, patient reset; `bind_text_from(state, "per_exam_offsets_version", …)` for Calculate summary |
+| 5 | `_format_patient_offsets` + `_format_table_offset_line` multi-exam branches | See spec below |
+| 6 | Phantom Settings: hide row + label + `offset_range_hint`; show C6 caption | See spec below |
+| 7 | `calculate.py:78` string | XS — do not reformat the `N EXAMS` badge |
+| 8 | Table offset UX decision | **Default (a):** same `"Per-exam: see Per-exam corrections below."` in Calculate + Settings via shared `_format_table_offset_line`. **(b)** per-exam table in Calculate is out of scope unless explicitly added |
+| 9 | `bind_text_from(state, "is_multi_exam", …)` on table-offset labels | Settings + Calculate `table_offset_summary` |
+| 10 | **VI-A + VI-B** *(optional polish, pair with docs)* | Upload exam card → Geometry tab; highlight active exam card in Settings |
+| 11–15 | Docs sweep | See **Docs** row below + `geometry_workflow.md` |
+| 16 | TO_DO cross-links | Out-of-scope items already tracked (event stepping, dose-map toggles, export audit) |
+| 17 | Manual matrix rerun | Part V exit gate |
+| 18 | Harness checks | `check_doc_freshness`, `check_doc_pruning`, `check_file_sizes` |
+| 19–20 | Archive plan | `dev-docs/index.md`, `plans/archive/README.md`, `TO_DO.md` |
+
+### Part V specification
 
 | Location | Fix |
 |----------|-----|
-| `calculate.py:78` | Replace `"Per-exam patient offsets editable in Upload tab"` → `"…in Geometry and Settings tabs"`. Surrounding `bind_visibility_from(state, "is_multi_exam")` is correct — no change (W4). |
-| `calculate.py` `_format_patient_offsets()` | When `is_multi_exam`: multi-line per-exam summary, e.g. `Exam #1: X=…, Y=…, Z=… cm` per loaded exam; truncate after 3 with `"and N more"` (R6, T10) |
-| `settings.py` `_format_table_offset_line()` | When `is_multi_exam`: `"Per-exam: see Per-exam corrections below."` — global `table_offset_*` reflects last load only (R6, T10) |
-| `settings.py` Phantom offsets | Hide global spinboxes when multi-exam; caption C6 |
-| `upload.py` | T23: `adjust_active_exam_index_after_remove` after `pop(index)` *(shipped `upload.py:378`)*; `load_example` / `clear_all_exams` / `_remove_exam` → `ctx.refresh_per_exam()` via `_refresh_exams_table` |
-| **Settings → Geometry** | When `apply_exam_transforms` fires from Settings (`_per_exam.py`), `rebuild_rdsr_df` replaces `state.rdsr_df`; if Geometry tab is active, re-clamp event index and call `_refresh_geometry_sliders` (or schedule debounced re-render) so preview slice stays valid (N4) |
-| **Docs** | `AGENTS.md`, `CHANGELOG.md`, `TO_DO.md`, `docs/source/gui_help/positioning_offsets.md` (+ `sync_gui_help.py`), `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/plans/GUI_PLAN.md` §0, `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` (multi-exam `meta[i].d_*` vs globals; `geometry_preview.py`) |
+| `calculate.py:78` | Replace `"Per-exam patient offsets editable in Upload tab"` → `"Per-exam patient offsets editable in Geometry and Settings tabs"`. Row `bind_visibility_from(state, "is_multi_exam")` unchanged. **Do not** change the `N EXAMS` badge (binds `loaded_exams`, not copy). IV-a acceptance verified by `test_apply_patient_offset_slider_tick_writes_meta_not_globals`. |
+| `calculate.py` `_format_patient_offsets()` | **Single-exam:** keep one line; use **lon/ver/lat** (not X/Y/Z) for consistency with Geometry sliders. **Multi-exam:** `Exam #1: lon=…, ver=…, lat=… cm` segments on **one line**; truncate after 3: `…, and N more`. Cases: 0 exams → `"—"`; 1 exam in multi → single-exam branch; 2–3 full; 4+ truncate. **Refresh:** add `state.per_exam_offsets_version: int` (default 0); bump at every `meta[i].d_*` write (`apply_patient_offset_slider_tick`, `_per_exam` spinbox, patient reset); `bind_text_from(state, "per_exam_offsets_version", backward=lambda _v: _format_patient_offsets())` — do not keep binds on `d_lon/d_ver/d_lat` alone. |
+| `settings.py` `_format_table_offset_line()` | **Multi-exam:** `"Per-exam: see Per-exam corrections below."` (same string in Calculate tab — shared import). **Single-exam / tabular / unknown branches unchanged.** Add `bind_text_from(state, "is_multi_exam", backward=lambda _v: _format_table_offset_line())` on Settings `table_offset_label` and Calculate `table_offset_summary` (in addition to or replacing global-only binds). |
+| `settings.py` Phantom offsets | **Multi-exam:** hide `ui.label("Patient Offsets (adjustable, cm)")`, the global spinbox `ui.row`, and `offset_range_hint` (`bind_visibility_from(state, "is_multi_exam", backward=lambda v: not v)`). Show **C6** caption when `is_multi_exam`. C6 must mention **Geometry tab** and **Settings → Per-exam corrections** (where "Apply global to all" lives — not only "below" from Phantom expansion). **Single-exam:** unchanged row + hint. |
+| `upload.py` | T23 *(shipped)* |
+| **Settings → Geometry (N4)** | **Gap (Round 8):** `_on_exam_transform_change` (`_per_exam.py`) calls `refresh_event_table` / `refresh_import_preview` but **not** `ctx.refresh_per_exam()` — add after `_invalidate()` (match `_on_exam_offset_change`). **Owner:** `geometry.py` `_refresh_geometry_sliders`: clamp `geom_event_input` to active slice `preview_event_count(..., composite=False) - 1` (always clamp; re-render only if `last_preview_mode` set). |
+| **Docs** | **Canonical help:** edit `docs/source/gui_help/positioning_offsets.md`, then `python scripts/sync_gui_help.py` → `src/mypyskindose/gui/help/` — never edit mirror directly. Also update `docs/source/gui_help/geometry_workflow.md` (exam selector, composite toggle). **Dev docs:** add multi-exam Geometry paragraph to `CODEBASE_OVERVIEW.md` + `FEATURE_INVENTORY.md` (exam selector, composite toggle, `meta[active]`, `composite_live_preview_paused` 30/100). Update `AGENTS.md`, `CHANGELOG.md` (suggested Part V line below), `TO_DO.md`, `GUI_PLAN.md` §0, `INPUT_DATA_FLOW_AND_OFFSETS.md`. **Cross-check only:** `VENDOR_COORDINATE_SYSTEMS.md`, `MYPYSKINDOSE_MIGRATION_STATUS.md` (upstream single global vs per-exam). |
+
+**Suggested `CHANGELOG.md` Part V entry:** *Multi-exam Geometry cross-cutting updates — Calculate per-exam patient-offset summary; Settings hides global Phantom spinboxes in multi-exam; Settings transform handler triggers Geometry refresh; event index re-clamp; help/docs updated.*
 
 ---
 
-## Part VI — Cross-tab sync (optional)
+## Part VI — Cross-tab sync
 
-**Cross-tab refresh plumbing (DONE):** `ctx.refresh_per_exam` → `_refresh_geometry_sliders` wires Settings edits to Geometry slider sync (`geometry.py`).
+**Plumbing (DONE):** `ctx.refresh_per_exam` → `_refresh_geometry_sliders` (`geometry.py`).
 
-**Deferred (not started):**
-- **VI-A:** Upload exam card click → set active index, `refresh_per_exam`, switch to Geometry tab.
-- **VI-B:** Settings per-exam card highlight for `active_exam_index`.
-- **VI-C:** Disambiguate duplicate selector labels with `study_id` / `sheet`.
+| Item | Status | Notes |
+|------|--------|-------|
+| **VI-A** Upload card → Geometry | **Recommend Part V** | ~5 lines: set `active_exam_index`, `refresh_per_exam`, switch tab |
+| **VI-B** Settings active-exam highlight | **Recommend Part V** | ~3 lines: amber border on `active_exam_index` card in `_build_exam_card` |
+| **VI-C** `study_id` / sheet labels | **Deferred** | Needs DICOM study UID + sheet-aware labels; keep in TO_DO |
 
 ---
 
 ## Out of scope
 
-Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) Phase 3 — after this plan); per-exam dose map toggles; persisting Geometry UI across reload (session-only); export `table_origin_override` in `data.py`; incremental table-origin preview; per-exam event stepping ([TO_DO.md](../TO_DO.md)).
+Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) Phase 3 — after this plan); per-exam dose map toggles; persisting Geometry UI across reload (session-only); incremental table-origin preview. **Already in [TO_DO.md](../TO_DO.md):** per-exam event stepping, per-exam dose-map toggles, export `table_origin_override` in `data.py`. Copy remaining out-of-scope bullets to TO_DO when archiving.
 
 **Performance:** Multi-exam composite only (`is_multi_exam and _resolve_composite_for_render()`): pause when `preview_event_count(..., composite=True) > 30`; spinner when `> 100`. Single-exam `plot_procedure`: no pause (R12).
+
+### Edge cases (Round 7)
+
+| Case | Handling |
+|------|----------|
+| **0 exams** | After IV-a: patient card hidden with `offset_controls` (`rdsr_df` None). Table-origin already uses `_table_origin_card_visible()`. |
+| **1→2 exams via load** | `on_exams_loaded` clamps index; IV-a must sync patient sliders from `meta[active].d_*`. New exam meta seeded from pre-reset globals (B1 `exam_loaders.py`) — verify on `load_tabular` with `replace_existing=False`. |
+| **`was_multi_exam` desync** | Only `_refresh_geometry_sliders` resets `composite_preview` on multi→single. **`ctx.refresh_per_exam` is the canonical entry point** — any future path that flips `is_multi_exam` must call it. |
+| **Composite "all exams" phantom** | One phantom at `meta[active]` (documented in IV-b acceptance). |
+| **CLI `make_geometry_fig`** | No caller outside GUI should pass `composite=True` accidentally (`grep make_geometry_fig src/` before ship). |
 
 ---
 
@@ -240,16 +292,17 @@ Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFF
 |------|-----------|
 | **I** | ✅ B1–B4 fixed; module split; `helpers.py` <800; tests green; **committed** |
 | **II** | ✅ `geometry_preview.py` helpers; `EXAM_INDEX_COLUMN`; C1 banner + exam selector; `make_geometry_fig` args; T2, T7, T13, T23, T26, T28, T30 |
-| **III** | Table-origin visible in multi-exam; T3 limits on switch; T5 reset (R4, R5) |
-| **IV** | Patient T4/T31; composite checkbox + captions (R1); T5 reset (R3); depends on III |
-| **V** | T10 formatters; `calculate.py:78`; C5–C6; docs + `CHANGELOG.md` |
-| **VI** | *(optional)* |
+| **III** | ✅ Table-origin visible in multi-exam; T3 limits on switch; T5a reset (R4, R5) |
+| **IV-a** | ✅ Patient T4/T31 write-back; show card in multi-exam; T5b reset (R3); IV-a tests |
+| **IV-b** | ✅ Composite checkbox + `preview_caption` (R1, T29); C3/C4 copy alignment |
+| **V** | T10 formatters; `calculate.py:78`; C5–C6; N4 re-clamp + `refresh_per_exam` on transform; `per_exam_offsets_version`; docs + `CHANGELOG.md`; manual matrix; optional VI-A/B |
+| **VI** | VI-C deferred; VI-A/B optional in Part V |
 
 ---
 
 ## Exit criteria
 
-Part I committed; Parts II–V complete; Appendix B tests + manual matrix pass; `python scripts/check_doc_freshness.py`; `python scripts/check_file_sizes.py` (W8). Archive plan; update `dev-docs/index.md`, `plans/archive/README.md`, `TO_DO.md`.
+Part I committed; Parts II–III committed; Parts IV-a/b + V complete; Appendix B tests + manual matrix pass; `python scripts/check_doc_freshness.py`; `python scripts/check_file_sizes.py` (W8). Archive plan; update `dev-docs/index.md`, `plans/archive/README.md`, `TO_DO.md`.
 
 ## Related
 
@@ -259,27 +312,28 @@ Part I committed; Parts II–V complete; Appendix B tests + manual matrix pass; 
 
 ## Appendix A — Technical constraints (T1–T31)
 
-Grep while implementing Parts III–V. **Status:** DONE = shipped in Part I/II; TODO = Parts III–V.
+Grep while implementing Parts IV–V. **Status:** DONE = shipped; TODO = remaining; PARTIAL = partly shipped.
 
 | # | Status | Issue | Fix |
 |---|--------|--------|-----|
 | T1 | DONE | Filtered preview keeps concat row indices | `.reset_index(drop=True)` after slice |
 | T2 | DONE | `reset_results()` clears `active_exam_index` | Remove `state.py:118` line |
-| T3 | TODO | Table-origin limits fixed at build | On exam switch: `_props["min"]`/`["max"]` + `update()` |
-| T4 | TODO | `bind_value` leaks globals | `patient_guard`; no `bind_value`/`bind_text_from` in multi-exam |
-| T5 | TODO | `_reset_*` hardcoded to `meta[0]` | Use `active_exam_index` when multi-exam |
+| T3 | DONE | Table-origin limits fixed at build | On exam switch: `_props["min"]`/`["max"]` + `update()` |
+| T4 | DONE | `bind_value` leaks globals | Remove `bind_value`/`bind_text_from`; `patient_guard` + explicit write-back (IV-a) |
+| T5a | DONE | `_reset_table_origin` hardcoded to `meta[0]` | Use `active_exam_index` when multi-exam (Part III) |
+| T5b | DONE | `_reset_patient_offset` uses globals only | Zero `meta[active].d_*` in multi-exam (IV-a) |
 | T6 | DONE | Preview frame invisible to `make_geometry_fig` | Optional kwargs through `run.io_bound`; CLI defaults unchanged |
 | T7 | DONE | Event index out of range | Clamp in UI and `make_geometry_fig` |
 | T8 | DONE | PAUSED/spinner use full `event_count()` | `preview_event_count(...)` only when `is_multi_exam and composite` |
 | T9 | DONE | Selector programmatic update re-fires | `exam_selector_guard["suppress"]` |
-| T10 | TODO | Stale Calculate/Settings summaries | Per-exam formatter branches when `is_multi_exam` |
+| T10 | TODO | Stale Calculate/Settings summaries | Per-exam formatter branches when `is_multi_exam` (Part V) |
 | T11 | DONE | Preview frame includes tag columns | Drop in `rdsr_df_for_geometry_preview` |
 | T12 | DONE | Patient vs table-origin composite differ | `last_table_origin_scrub` + `_resolve_composite_for_render()` |
 | T13 | DONE | `make_geometry_fig` returns `None` | `geom_plot.update_figure({})` |
 | T14 | DONE | Worker reads mutable `active_exam_index` | Pass index into preview helpers |
 | T15 | DONE | Exam switch while `table_origin_pending` | Commit `old_index` in selector handler |
 | T16 | DONE | Preview buttons stale composite flag | Pass `_resolve_composite_for_render()` before render |
-| T17 | TODO | `set_value` before limit update | Limits + `update()` first (with T3) |
+| T17 | DONE | `set_value` before limit update | `_sync_table_sliders_from_meta`: limits + `update()` then `set_value` (Part III) |
 | T18 | DONE | Display-tag slice collision | Superseded by T30 — no action |
 | T19 | DONE | Sync helpers IndexError | Guard `idx >= len(loaded_exam_meta)` |
 | T20 | DONE | Loader zeros globals before meta | Capture `prev_d_*` before reset; seed meta (B1) |
@@ -287,13 +341,13 @@ Grep while implementing Parts III–V. **Status:** DONE = shipped in Part I/II; 
 | T22 | DONE | `EXAM_COLUMN` circular import | `exam_transforms.py`; lazy in `geometry_preview` |
 | T23 | DONE | Multi→single loses offsets / stale index | `adjust_active_exam_index_after_remove`; refresh chain |
 | T24 | DONE | Import cycles | `settings_builder`; `exam_transforms` not `helpers` |
-| T25 | DONE | Settings spinboxes don't refresh Geometry | `ctx.refresh_per_exam()` after `_invalidate()` (B3) |
-| T26 | DONE | Composite untested | Manual 0c + unit test |
+| T25 | DONE | Settings spinboxes don't refresh Geometry | `ctx.refresh_per_exam()` after offset change (B3). **Transform path:** add same call in `_on_exam_transform_change` (N4, Part V) |
+| T26 | DONE | Composite untested | `test_rdsr_df_for_geometry_preview_slices_by_exam_index` |
 | T27 | DONE | Wrong count for PAUSED | Composite-only thresholds |
 | T28 | DONE | `composite_preview` sticks after multi→single | Reset when `is_multi_exam` → `False` |
-| T29 | PARTIAL | Toggle change after slider tick | Closure shipped; **checkbox UI** in Part IV |
+| T29 | DONE | Composite toggle UI | Checkbox + `preview_caption` in IV-b |
 | T30 | DONE | `EXAM_COLUMN` prefix slice fragile | `EXAM_INDEX_COLUMN` int slice |
-| T31 | TODO | Patient val_labels read globals | `val_labels` show `meta[active].d_*` in multi-exam (R2) |
+| T31 | DONE | Patient val_labels read globals | `val_labels` from `meta[active].d_*` (IV-a) |
 
 ---
 
@@ -310,23 +364,30 @@ Grep while implementing Parts III–V. **Status:** DONE = shipped in Part I/II; 
 | C4 | Toggle | **Show all exams in preview** — *Shows every exam's beam/table geometry together. Patient phantom stays at the selected exam's offset.* |
 | C4 | Table-origin | **Table shift applies to the selected exam. Preview shows all exams; you will see this exam's table move relative to the others.** |
 | C5 | Help | **Multiple exams** subsection in `docs/source/gui_help/positioning_offsets.md` |
-| C6 | Settings Phantom | **Patient offsets are managed per-exam in multi-exam mode. Adjust them in the Geometry tab or Per-exam corrections section below.** |
+| C6 | Settings Phantom | **Patient offsets are managed per-exam in multi-exam mode. Adjust them in the Geometry tab or the Per-exam corrections section in Settings** (including *Apply global to all* when seeding new exams). |
 | — | PAUSED (composite) | *Live preview may pause for large multi-exam composite views.* |
 
 ### Unit tests
 
-**New:** `tests/unittests/test_gui_multi_exam_geometry_offsets.py` — lifecycle, slice helpers, table-origin commit index. **Part IV add:** patient slider write-back to `meta[active]`; globals unchanged in multi-exam (T4, T31).
+**Shipped** (`test_gui_multi_exam_geometry_offsets.py`, 15 tests): Parts II–IV — lifecycle, slice helpers, table-origin commit index, patient write-back, preview captions, composite pause/reset.
 
-**Also:** `test_format_patient_offsets_multi_exam`, `test_format_table_offset_line_multi_exam` (T10); `test_per_exam_offset_change_calls_refresh_per_exam` (T25); `test_remove_exam_invokes_refresh_per_exam` (T23).
+**Part V add (write before formatter code):**
+- `test_format_patient_offsets_multi_exam` — 0 / 1 / 2–3 / 4+ exams; assert **lon/ver/lat** labels (not X/Y/Z)
+- `test_format_table_offset_line_multi_exam` — multi branch + single/tabular/unknown unchanged
+- `test_format_patient_offsets_refreshes_on_per_exam_offsets_version` — bind strategy lock-in
+- `test_settings_per_exam_transform_triggers_geometry_refresh` — mock `ctx`; N4
+- `test_clamp_geometry_event_input_after_transform` — slice shrink → `geom_event_input` clamped
 
-**Regression (Part I):** `test_loader_seeds_offset_defaults_from_global`, `test_remove_exam_restores_global_patient_offset_from_meta`, offset-reset patch tests (B4).
+**Still open:** `test_per_exam_offset_change_calls_refresh_per_exam` (T25); `test_remove_exam_invokes_refresh_per_exam` (T23); `test_make_geometry_fig_clamps_event_index_in_multi_exam` (T7).
+
+**Manual matrix:** re-run as **Part V exit gate**. Rows 0d, 0k, 0l, 2a–2e **pass** after IV-b; 10a–10d need Part V.
 
 ### Manual matrix
 
 | ID | Assert |
 |----|--------|
 | 0a | Selector default/clamp; slice by `EXAM_INDEX_COLUMN`; drop tag columns (T1, T11, T30, T19) |
-| 0b | Event clamp + slider limits on exam switch (T3, T7, T17) — **fails until T3** (W6) |
+| 0b | Event clamp + table slider limits on exam switch (T3, T7, T17) |
 | 0c | Composite preview smoke (T6, T14, T26) |
 | 0h | 0 exams: no selector/sliders; empty plot |
 | 0d | PAUSED/spinner composite-only (`is_multi_exam and composite`; T8, T27) |
@@ -334,11 +395,11 @@ Grep while implementing Parts III–V. **Status:** DONE = shipped in Part I/II; 
 | 0f | None plot cleared (T13) |
 | 0g | Remove exam → globals + slider chain (T23) |
 | 0i | `adjust_active_exam_index_after_remove`: remove before / at / after active |
-| 0j | Table slider limits + values after exam switch — **fails until T3** |
+| 0j | Table slider limits + values after exam switch (Part III) |
 | 0k | Patient sliders sync from Settings spinbox edit (N5) |
-| 0l | `composite_preview` toggle vs debounced render (T29) — **needs Part IV checkbox** (R1) |
+| 0l | `composite_preview` toggle vs debounced render (T29) |
 | 0m | `composite_preview` reset on multi→single (T28) |
-| 1a–1b | Table-origin per active exam |
-| 2a–2e | Patient `meta[active]` write-back (T4, T31); checkbox + captions (R1); preview modes (T12, T16) |
-| 10a–10d | T10 formatters; T25 sync |
-| C1–C6 | Copy checklist |
+| 1a–1b | Table-origin per active exam (Part III) |
+| 2a–2e | Patient `meta[active]`; checkbox + captions; preview modes (Parts IV-a/b) |
+| 10a–10d | T10 formatters; T25/N4 transform refresh (Part V) |
+| C1–C6 | Copy checklist (Part V docs) |
