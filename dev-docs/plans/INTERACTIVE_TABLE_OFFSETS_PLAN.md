@@ -1,307 +1,319 @@
 # Interactive Table Offsets & Settings Display Plan
 
-> **Filename note:** The plan file name predates scope refinement. **Phase 1** surfaces auto-detected **table** offsets (read-only). **Phase 2** adds interactive **patient** offset sliders in the Geometry tab. Manual **table-origin** override already ships in Settings → Per-exam corrections (`_per_exam.py`); this plan does not replace that control.
+> **Filename note:** Phase 1 = read-only **auto-detected** table offsets. Phase 2 = interactive **patient** sliders. **Phase 2b** = interactive **table-origin** override in Geometry (writes `table_origin_override` in per-exam meta). Settings → Per-exam corrections spinboxes remain; Geometry is the 3D workflow.
 
 ## Overview
 
-Two `TO_DO.md` items address gaps in how offsets are exposed and adjusted in the GUI:
+Two `TO_DO.md` items:
 
-1. **Interactive offset adjustment in Geometry tab** (`TO_DO`: “Allow manual interactive setting of table offsets in GUI”) — historically worded “table offsets,” but the actionable gap is **patient** positioning (`d_lon` / `d_ver` / `d_lat`). Table offsets stay vendor-normalized and read-only; users adjust patient placement interactively in the 3D view instead of only via Settings spinboxes.
-2. **Settings tab: show Table Offsets (read-only) and Patient Offsets (adjustable)** — display auto-detected table-offset values and distinguish them from user-adjustable patient offsets.
+1. **Interactive offset adjustment in Geometry tab** — **patient** positioning (`d_lon` / `d_ver` / `d_lat`) **and table-origin override** (`table_origin_override` x/y/z in `loaded_exam_meta`) with live 3D preview.
+2. **Settings tab: Table Offsets (read-only) + Patient Offsets (adjustable).**
 
-Both features share `state.table_offset_*` (auto-detected, last-loaded exam in multi-exam) and `state.d_lon/ver/lat` (global patient offsets).
+| Concept | Storage | User can change? |
+|---------|---------|------------------|
+| Auto-detected table offset | `state.table_offset_*`, `meta.table_origin_detected` | Read-only display (Phase 1) |
+| Table-origin override | `meta.table_origin_override` | Phase 2b Geometry sliders + Settings → Advanced: table origin |
+| Patient offset | `state.d_lon/ver/lat`, `meta.d_*` | Phase 2 Geometry sliders + Settings spinboxes |
 
-### Scope notes (added after assessment review)
+### Scope notes
 
-- **Phase 2 multi-exam slider binding is deferred.** `state.active_exam_index` is a stub — defined in `state.py:51` and only ever set to `None` (`state.py:118`, `helpers.py:561` in `clear_multi_exam_state`). No UI element or handler sets it to a meaningful value, and there is no exam selector in the Geometry tab. Implementing “active-exam slider re-binding” requires a new exam selector widget plus explicit unbind/rebind logic (NiceGUI's `bind_value` is to a specific dict reference, not a key path). To keep Phase 2 shippable, **Phase 2 sliders bind to the global `state.d_lon/ver/lat` only** (single-exam workflow). Multi-exam slider support is deferred to a later phase that adds the `active_exam_index` infrastructure. For multi-exam offset editing, the per-exam spinboxes in `_per_exam.py:155-166` remain the supported path.
-- **Offset reset on file load is a Phase 0 prerequisite.** Neither `load_rdsr` nor `load_tabular` currently resets `state.d_lon/ver/lat` when a new file is loaded; only `state.table_offset_x/y/z` is overwritten. Without a reset, user-adjusted offsets “leak” from one file to the next. Phase 0.1 commits to adding the global reset in both load functions and in `clear_all_exams`. The newly-appended per-exam entry inherits the zeroed global automatically; per-exam meta for already-loaded exams is **not** touched (user edits are preserved across new loads). **`load_tabular(..., replace_existing=True)`** (schema/sheet re-parse) must **not** zero globals — only fresh appends and `clear_all_exams` reset.
-- **`build_settings` per-exam offset is a Phase 0 prerequisite.** The geometry preview reads the **global** offset via `build_settings` (`helpers.py:52-54`), but `run_calculation` reads **per-exam** offsets from `state.loaded_exam_meta` in multi-exam mode (`helpers.py:440-447`). Single-exam mode already uses the global offset for both paths. Phase 0.2 adds an explicit `patient_offset` parameter and a small `effective_patient_offset_for_preview(state)` helper so preview logic is centralized; **multi-exam preview still uses the global offset until `active_exam_index` exists** (documented limitation, not a silent bug).
+- **Multi-exam Geometry sliders deferred** until `active_exam_index` has a setter UI (patient offsets **and** table-origin). Per-exam editing today: `_per_exam.py`.
+- **Multi-exam preview vs dose:** Geometry preview is a **composite** of all loaded exams (global patient offset + each exam’s rebased frames). Dose uses `loaded_exam_meta[i]` per exam. Phase 2 banner states this.
+- **Phase 0 resets** globals on new load (`load_rdsr`, `load_tabular` when `not replace_existing`, `clear_all_exams`). `_remove_exam` multi→single restores globals from surviving exam meta. `load_example` → `load_rdsr`.
 
----
+### Pre-existing bugs (fix in this plan)
 
-## Current State
+- **Calculate tab** (`calculate.py:125-127`, `129-136`): patient and table offset summaries each bind only one axis (`d_lon` / `table_offset_x`); y/z stale.
+- **Per-exam global label** (`_per_exam.py:235-237`): static f-string; stale after global offset edits.
 
-### Existing
+### State ownership (implementers)
 
-- **Table offsets:** computed by `rdsr_normalizer()`, stored in `state.table_offset_x/y/z` (`helpers.load_rdsr:174-176`). Values from vendor scanner convention (`normalization_settings.trans_offset`). In multi-exam mode these globals reflect the **last-loaded** DICOM exam only (`load_rdsr` / `load_tabular` overwrite them on each load).
-- **Patient offsets:** global spinboxes in Settings tab (`settings.py:61-71`); changes call `reset_results()`.
-- **Per-exam patient offsets:** `state.loaded_exam_meta[*][d_lon/ver/lat]` in `_per_exam.py` (visible only when `state.is_multi_exam`).
-- **Table-origin override:** `_per_exam.py` “Advanced: table origin” — per-axis spinboxes that re-base table positions (single- and multi-exam). Phase 1's read-only table offset display complements this existing override (not a replacement).
-- **Geometry tab:** renders 3D views but has no offset controls.
-- **Help:** `docs/source/gui_help/positioning_offsets.md` (mirrored to `src/mypyskindose/gui/help/`) explains offset semantics; step 3 still says “Adjust offsets in Settings” — update when Phase 2 ships.
-
-### Missing
-
-- Table offsets visible only during Data tab export (`data.py:62-64`), not in Settings or Geometry.
-- No interactive patient-offset adjustment from Geometry tab.
-- Settings tab conflates table offsets and patient offsets visually.
-- No visual offset indicator in Geometry 3D view.
-- Patient offsets persist across file loads (no reset in `load_rdsr`, `load_tabular`, or `clear_all_exams`).
-- Geometry preview and dose map read offsets from different sources in **multi-exam** mode (preview: global `state.d_lon/ver/lat`; dose: per-exam `loaded_exam_meta[i][d_lon/ver/lat]`). Single-exam mode is already aligned.
+After first load, single-exam **coordinate flags**, **patient offsets**, and **table-origin override** live in `loaded_exam_meta[0]`; Import Preview and Per-exam corrections both read/write that dict.
 
 ---
 
-## Phase 0: Prerequisites (must precede Phase 1/2)
+## Phase 0: Prerequisites
 
-Two changes that the rest of the plan depends on. Implement and ship first.
+Ship 0.1–0.3 together.
 
-### 0.1 Reset patient offsets on file load and clear
+### 0.1 Reset on file load / clear
 
-- **`helpers.load_rdsr` (`helpers.py:70-187`):** immediately after `try:`, before `build_settings(...)` (currently ~line 80), set `state.d_lon = state.d_ver = state.d_lat = 0.0`. The new entry appended to `state.loaded_exam_meta` later (`:122-157`) copies these values into its `meta[d_lon/ver/lat]`, so the new exam starts at zero **automatically — do not also reset the meta dicts of already-loaded exams.** Those represent user edits that should survive a new load.
-- **`helpers.load_tabular` (`helpers.py:202-399`):** same zeroing at the top of the `try` block, **before** `build_settings` and **before** the `replace_existing` branch — but only for **new** loads (`replace_existing=False`). When `replace_existing=True`, preserve the current global offset (user may be switching schema/sheet only).
-- **`clear_all_exams` in `tabs/upload.py:185-218`:** add the same zeroing (currently resets `table_offset_x/y/z` but not patient offsets). Per-exam meta is cleared by `clear_multi_exam_state` so no separate action is needed there.
+**Patient offsets** — zero `state.d_lon/ver/lat` before `build_settings` in `load_rdsr`; in `load_tabular` only when `not replace_existing` (parser does not mutate globals; meta appended later copies current values). `clear_all_exams` zeros globals.
 
-Place all three resets **before** any other state mutation in the function (so partial-failure doesn't leave mixed state).
+**Coordinate flags** — on new loads only (`load_rdsr`; `load_tabular` when `not replace_existing`), also reset `state.swap_lat_lon`, `flip_ap1`, `flip_ap2` to `False`. Preserve on `replace_existing`.
 
-### 0.2 Fix `build_settings` to accept an explicit patient offset
+**`_remove_exam` multi→single** (`upload.py:386-394`): when `n == 1` after removing an exam, restore globals from `meta0` (today only `swap_lat_lon`/`flip_ap*` are restored):
 
-Add an optional `patient_offset: tuple[float, float, float] | None = None` parameter to `build_settings` (`helpers.py:36`). When `None`, fall back to the current global `state.d_lon/ver/lat` (preserves existing callers). When provided, use it directly for `phantom.patient_offset`.
+```python
+state.d_lon = float(meta0.get("d_lon", 0.0))
+state.d_ver = float(meta0.get("d_ver", 0.0))
+state.d_lat = float(meta0.get("d_lat", 0.0))
+```
 
-Add a helper in `helpers.py`:
+### 0.2 `build_settings` explicit `patient_offset`
+
+Add `patient_offset: tuple[float, float, float] | None = None` as the **last** parameter (after `output_format`). Grep `build_settings(` before merge.
+
+Add seam helper in `helpers.py`:
 
 ```python
 def effective_patient_offset_for_preview(state: AppState) -> tuple[float, float, float]:
-    """Offset used by the Geometry tab preview.
-
-    Single-exam: global (matches analyze_data).
-    Multi-exam: global until active_exam_index is wired; per-exam preview is deferred.
-    """
+    # Single-exam: global. Multi-exam: global until active_exam_index ships.
     return (state.d_lon, state.d_ver, state.d_lat)
 ```
 
-Update `figures.make_geometry_fig` (`figures.py:29`) to pass `patient_offset=effective_patient_offset_for_preview(state)`. When multi-exam active-exam preview ships later, only this helper (and the Geometry tab caller) need to change.
+`make_geometry_fig` → `build_settings(..., patient_offset=effective_patient_offset_for_preview(state))`. `create_geometry_plot` already reads `settings.phantom.patient_offset`.
 
-Update `tests/unittests/test_gui_below_floor_kvp.py` if the `build_settings` signature change requires explicit kwargs in tests.
+### 0.3 Global offset handlers + meta sync
 
-This change is small but is the **only** way to guarantee single-exam geometry preview matches the dose map and to centralize multi-exam preview policy.
+```python
+def sync_global_patient_offset_to_single_exam_meta(state: AppState) -> None:
+    if len(state.loaded_exams) == 1 and state.loaded_exam_meta:
+        m = state.loaded_exam_meta[0]
+        m["d_lon"], m["d_ver"], m["d_lat"] = state.d_lon, state.d_ver, state.d_lat
 
-### Files changed
+def on_global_patient_offset_scrub(ctx: PageContext) -> None:
+    sync_global_patient_offset_to_single_exam_meta(state)
 
-- `src/mypyskindose/gui/helpers.py` (0.1, 0.2)
-- `src/mypyskindose/gui/tabs/upload.py` (0.1)
-- `src/mypyskindose/gui/figures.py` (0.2 — call-site update)
-- `tests/unittests/test_gui_below_floor_kvp.py` (0.2 — only if signature change breaks tests)
-
----
-
-## Phase 1: Display Table Offsets in Settings Tab
-
-**Goal:** Show auto-detected table offset values in Settings → Phantom Settings.
-
-### Changes
-
-1. **Add read-only “Table Offsets (auto-detected)” display** in Phantom Settings expansion, above patient offset spinboxes.
-   - Three read-only labels: `table_offset_x`, `table_offset_y`, `table_offset_z` with units (cm).
-   - Info icon/tooltip: “Vendor-specific table coordinate origin from RDSR normalization. Read-only; adjust patient offsets below. For a wrong scanner match, use Per-exam corrections → Advanced: table origin.”
-   - **Fallback badge:** Show amber warning if `state.normalization_method == "Fallback"`. Use the same condition as the existing upload tab warning (`tabs/upload.py:59-60`); do not re-implement detection logic. (`state.normalization_warnings` is also currently equivalent — populated only when `normalization_method == "Fallback"` in `helpers.load_rdsr:177-181` — but the existing pattern uses `normalization_method` directly, so prefer that for consistency.)
-   - **Multi-exam caveat (inline caption):** When `state.is_multi_exam`, note “Values shown are from the most recently loaded DICOM exam” (tabular loads zero these globals).
-   - **Table-origin override summary:** When any `loaded_exam_meta[i].table_origin_override` is non-`None`, show an amber caption: “Manual table-origin override active on N exam(s) — see Per-exam corrections below.” (Per-exam cards already show an `ORIGIN` badge at `_per_exam.py:144-147`; this is an aggregate heads-up in Phantom Settings.)
-   - Location: `settings.py`, Phantom Settings expansion, after “Phantom model and positioning” row, before patient offset spinboxes.
-
-2. **Rename label** above existing spinboxes to “Patient Offsets (adjustable, cm)”.
-
-### Layout
-
-```
-settings.py (Phantom Settings expansion):
-
-  [HelpButton "Phantom Positioning Offsets"]
-
-  [Phantom model] [Human mesh]
-  [Patient orientation]
-
-  ── Table Offsets (auto-detected) ───────────────────────  NEW
-      X: 12.3 cm   Y: 105.0 cm   Z: 173.0 cm              NEW
-      [?] tooltip: "Vendor-specific table coordinate origin
-                   from RDSR normalization. Read-only; adjust
-                   patient offsets below."
-      [⚠ Fallback: scanner model not matched]              NEW (conditional on state.normalization_method == "Fallback")
-      [Multi-exam: values from last loaded DICOM exam]   NEW (conditional on state.is_multi_exam)
-      [N exam(s): manual table-origin override active]   NEW (conditional on any override)
-
-  ── Patient Offsets (adjustable, cm) ────────────────────  Renamed
-      [Longitudinal] [Vertical] [Lateral]
+def on_global_patient_offset_change(ctx: PageContext) -> None:
+    on_global_patient_offset_scrub(ctx)
+    reset_results()
+    ctx.refresh_per_exam()  # unconditional — default is no-op until upload tab wires it
 ```
 
-### Files changed
+- **Settings spinboxes:** `on_global_patient_offset_change(ctx)`.
+- **Geometry sliders:** tick wrapper in `geometry.py` calls `on_global_patient_offset_scrub(ctx)` then `offset_changed_since_calc = True` (`nonlocal`); **`ctx.refresh_per_exam()` only in debounced callback**.
 
-- `src/mypyskindose/gui/tabs/settings.py`
+**Stale-dose caption (Phase 2 / 2b):** closure flag `offset_changed_since_calc` — set in Geometry tick wrappers (patient + table-origin); clear when `reset_results()` runs **or** when a dose calculation completes successfully. Caption visible when `state.calculation_done and offset_changed_since_calc`.
 
-### Decisions
-
-- Display always visible but compact (no expansion).
-- Tabular / no DICOM normalization: when `state.normalization_method == "Tabular"` (or all loaded exams are tabular), show `(0, 0, 0)` with note “Tabular input — no vendor normalization; table offsets are zero. Use Per-exam corrections → Advanced: table origin if needed.”
+**Files:** `helpers.py`, `upload.py` (`clear_all_exams` + `_remove_exam`), `settings.py`, `figures.py`, `tests/unittests/test_gui_offset_reset.py` (new).
 
 ---
 
-## Phase 2: Interactive Offset Adjustment in Geometry Tab (single-exam)
+## Phase 1: Table offsets in Settings
 
-**Goal:** Adjust **patient** offsets from the Geometry 3D view with live preview. Eliminates Settings → Geometry round-trip. **Single-exam workflow only** — see “Multi-exam scope” below.
+1. **Table Offsets (auto-detected)** — three `bind_text_from` labels (`X: … cm`, `Y: …`, `Z: …`); caption when override active: “Manual table origin in use — adjust in Geometry or Per-exam corrections.”
+2. Patient header → “Patient Offsets (adjustable, cm)”.
+3. **Calculate tab:** same three-binding pattern for patient and table offsets; same axis-prefixed format as Settings.
+4. **Display by `normalization_method`:** `Unknown` → “—”; `Tabular` → zeros + note; `Fallback` → amber badge; `Matched` → show values. (`"None"` from `rdsr_normalizer` raises before GUI — never displayed.)
 
-**Prerequisites:** Phase 0.1 (offset reset on file load) and Phase 0.2 (`build_settings` accepts explicit `patient_offset`) must be shipped first.
+   Store `"normalization_method"` on each `loaded_exam_meta` dict in `helpers.py`:
+   - `load_rdsr`: meta literal ~122–157 → `norm.normalization_method`
+   - `load_tabular` single-study meta ~332–355 → `"Tabular"`
+   - `load_tabular` multi-study meta ~282–305 → `"Tabular"`
 
-### Approach
+   Multi-exam caption when any meta has `Fallback`: “N exam(s) used fallback normalization”.
+5. Caption when any `table_origin_override` active.
 
-Three sliders in Geometry tab, directly bound to the global `state.d_lon/ver/lat`. NiceGUI reactive binding — no “Apply” step. Same backing values as the Settings tab Patient Offsets spinboxes (`settings.py:63-71`); writing either surface updates both.
+Visible when Phantom Settings expansion is open (no nested sub-expansion).
 
-Track the **last rendered preview mode** (`plot_setup` | `plot_event` | `plot_procedure`) and the last event index so debounced live preview re-invokes the same view the user was looking at.
-
-### Layout
-
-```
-geometry.py (controls row, after existing):
-
-  [Event #]  [Setup]  [Single event]  [Full procedure]
-
-  ── Interactive offset (cm) ─────────────────────────────  NEW (single-exam only)
-      [Longitudinal slider: -50 ───●──── 50]               NEW
-      [Vertical slider:    -50 ───●──── 50]               NEW
-      [Lateral slider:     -50 ───●──── 50]               NEW
-      [Reset] [Live preview ☑]                             NEW
-```
-
-### Behavior
-
-- Sliders directly bound to `state.d_lon/ver/lat`.
-- Value text next to each slider (mono font, same pattern as the k_tab slider label in `settings.py:89`).
-- Range: ±50 cm (matches `_per_exam.py:160-161`).
-- **Do not** attach `reset_results` to slider `on_value_change` — live scrubbing is exploratory; stale PSD until the user recalculates is acceptable.
-- **Reset button:** set all three globals to `0.0` **and** call `reset_results()` (match Settings spinbox semantics for an intentional offset clear).
-- **Live preview checkbox:** when checked, slider changes trigger geometry re-render via debounced handler (see below). When unchecked, no re-render — user must click “Single event” or “Full procedure”.
-- **Debounce:** slider `on_value_change` handler uses a module-level timer variable + `ui.timer(0.25, callback=render, once=True)`, stopping any previous in-flight timer before starting a new one. Prevents flooding the render pipeline with ±50 cm × 100 steps per slider. **Do not** use `ui.timer(0.25, render)` alone — that creates a **recurring** timer (one per change), not a one-shot debounce. The codebase already uses the `once=True` form elsewhere (`tabs/results.py:240`).
-- **No dose recalculation.** Sliders trigger only the last-used preview function (`preview_setup` / `preview_event` / `preview_procedure`), never `run_calculation()`.
-- Sliders affect the **currently displayed plot mode** (Setup/Single/Full), not a specific button.
-- `make_geometry_fig()` uses `effective_patient_offset_for_preview(state)` via `build_settings(..., patient_offset=...)`. In single-exam mode, preview and dose map always agree.
-
-### Multi-exam scope
-
-In multi-exam mode (`state.is_multi_exam`), the Geometry tab sliders are **hidden** (or shown disabled with a tooltip: “Multi-exam: edit per-exam offsets in Settings → Per-exam corrections”). Per-exam offset editing in multi-exam mode stays the responsibility of the existing `_per_exam.py:155-166` spinboxes. Geometry preview in multi-exam continues to use the **global** offset (Phase 0.2 helper); per-exam preview alignment is deferred until `active_exam_index` exists.
-
-### Files changed
-
-- `src/mypyskindose/gui/tabs/geometry.py`
-
-### Decisions
-
-- Range: ±50 cm (matches existing per-exam range).
-- Value text: yes, mono font next to each slider.
-- Affects all plot modes, not just “Single event”.
-- Sliders hidden in multi-exam mode (per-exam editing handled by `_per_exam.py`).
-- Multi-exam slider support deferred (requires `active_exam_index` infrastructure).
+**Files:** `settings.py`, `calculate.py`, `helpers.py` (meta field on load)
 
 ---
 
-## Phase 3: Visual Feedback — Offset Arrow in Geometry View (deferred)
+## Phase 2: Geometry — patient offset sliders (single-exam)
 
-**Goal:** Show patient offset as visual indicator in 3D plot (arrow or marker).
+**Prerequisites:** Phase 0.
 
-### Future implementation
+### Closure inside `build(ctx)`
 
-1. In `make_geometry_fig`, after building the figure, when `effective_patient_offset_for_preview(state)` is non-zero, add a `go.Scatter3d` arrow trace from phantom origin to offset position (reuse offset already passed into `build_settings` — no second offset parameter).
-2. Label: “Δlon=5, Δver=0, Δlat=3 cm”.
+Closure vars (all `nonlocal` where reassigned): `slider_timer`, `last_preview_mode`, `live_preview_requested`, `offset_changed_since_calc`, `table_origin_pending`.
 
-### Files changed (future)
+**Debounce** (`results.py:240` precedent — cancel prior timer before scheduling):
 
-- `src/mypyskindose/gui/figures.py`
-- `src/mypyskindose/gui/tabs/geometry.py` (checkbox)
-
-### Decisions
-
-- Toggleable via “Show offset arrow” checkbox.
-- Deferred until Phase 1–2 interaction model is validated.
-
----
-
-## File Structure
-
-```
-src/mypyskindose/gui/
-├── tabs/
-│   ├── settings.py          # Phase 1: table offset display, label rename
-│   ├── geometry.py          # Phase 2: interactive offset sliders
-│   ├── upload.py            # Phase 0.1: clear_all_exams offset reset
-│   └── _per_exam.py         # (existing) no changes needed
-├── helpers.py               # Phase 0.1 (load functions) + Phase 0.2 (build_settings + preview helper)
-├── figures.py               # Phase 0.2 (call-site update) + Phase 3 (deferred arrow)
-└── state.py                 # (existing) no changes needed
-
-docs/source/gui_help/
-└── positioning_offsets.md   # Phase 2: mention Geometry sliders (sync via scripts/sync_gui_help.py)
+```python
+def _schedule_debounced_render():
+    nonlocal slider_timer
+    if slider_timer is not None:
+        slider_timer.cancel()
+    slider_timer = ui.timer(0.25, _do_debounced_render, once=True)
 ```
 
+**`_do_debounced_render`:**
+
+1. If `table_origin_pending`: `commit_table_origin_transform(state, 0)`; `table_origin_pending = False`; `reset_results()`  
+   *(index `0` valid while Phase 2b is single-exam only; use `active_exam_index` when multi-exam sliders ship)*
+2. `refresh_per_exam()` + re-render last mode (`plot_event` uses live `geom_event_input.value`)
+
+`live_preview_allowed()` → false when `state.busy`, or procedure mode with `event_count() > 30`. Render when `live_preview_requested and live_preview_allowed()`. **PAUSED** badge when blocked.
+
+**Sliders:** hidden when `state.rdsr_df is None` or `state.is_multi_exam`. ±150 cm (`PATIENT_OFFSET_SLIDER_RANGE_CM`); tooltip if `|value| > 150`. Tick → update state + `on_global_patient_offset_scrub(ctx)` + `offset_changed_since_calc = True` + `_schedule_debounced_render()`. `geom_spinner` when `event_count() > 100`. Patient scrub does **not** call `reset_results`. Amber caption when `calculation_done and offset_changed_since_calc`: *“Offset changed — run Calculate again for an updated dose map.”*
+
+**Multi-exam:** hide sliders; banner: *“Composite preview of all loaded exams (table positions and global patient offset). Dose uses per-exam offsets and table-origin overrides from Settings → Per-exam corrections.”*
+
+**Reset:** zero → `on_global_patient_offset_change(ctx)` → clear plot → `ui.notify("Patient offset reset to 0", color="info")`.
+
+**Files:** `geometry.py`, `gui/constants.py`, `docs/source/gui_help/positioning_offsets.md` (+ sync)
+
 ---
 
-## Documentation & changelog (per PR)
+## Phase 2b: Geometry — table-origin sliders (single-exam)
 
-When shipping each phase (or the full plan in one PR):
+**Goal:** Interactively override vendor table origin in the 3D view. Writes `loaded_exam_meta[0].table_origin_override` — same dict as Settings → Advanced: table origin (`_per_exam.py:93-116`).
 
-- Add a `CHANGELOG.md` entry under **Unreleased** (GUI / offsets).
-- Update `docs/source/gui_help/positioning_offsets.md` for Phase 2 (Geometry sliders workflow); run `scripts/sync_gui_help.py` — do not edit the mirror under `src/mypyskindose/gui/help/` directly.
-- No `AGENTS.md` change required unless behavior crosses a bullet already listed there; optional one-line mention under GUI focus when Phase 2 ships.
+**Prerequisites:** Phase 0, Phase 2 (shared closure debounce).
+
+### Data model
+
+- **Detected:** `meta["table_origin_detected"]` (from `norm.trans_offset` or zeros for tabular).
+- **Override:** `None` or `{"x","y","z"}` absolute cm. **Apply:** `apply_exam_transforms` → `rebuild_rdsr_df` (O(n) — **not per tick**).
+
+Shared helpers in `helpers.py`:
+
+```python
+def effective_table_origin(meta: dict) -> dict[str, float]:
+    detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
+    ov = meta.get("table_origin_override")
+    if ov is not None:
+        return {k: float(ov.get(k, detected[k])) for k in ("x", "y", "z")}
+    return {k: float(detected[k]) for k in ("x", "y", "z")}
+
+def stage_table_origin_axis(meta: dict, axis: str, value: float) -> None:
+    """Tick path: update meta only (lazy-create override from detected). No apply_exam_transforms."""
+    detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
+    if meta.get("table_origin_override") is None:
+        meta["table_origin_override"] = dict(detected)
+    meta["table_origin_override"][axis] = float(value)
+
+def commit_table_origin_transform(state: AppState, exam_index: int) -> None:
+    apply_exam_transforms(state, exam_index)
+```
+
+*Pattern: `stage_*` = O(1) meta/dict writes; `commit_*` = O(n) `apply_exam_transforms`. Spinboxes commit immediately; sliders commit in debounced callback.*
+
+**Scrub (Geometry):** `stage_table_origin_axis(meta, axis, value)` + `nonlocal table_origin_pending, offset_changed_since_calc`; set both `True`; `_schedule_debounced_render()`. Preview lags slider ~250 ms — acceptable.
+
+**Settings `_per_exam.py`:** refactor `_on_change` (lines 93-99) to `stage_table_origin_axis` + `commit_table_origin_transform` immediately (spinbox = discrete commit). Preserve `guard["suppress"]` on reset (lines 108-112).
+
+**Reset:** `table_origin_override = None` → `commit_table_origin_transform` → `reset_results()` → `refresh_per_exam()`. **Geometry sliders:** set values from `effective_table_origin(meta)` inside `guard` (same pattern as `_on_reset`) — do not bind directly to override dict (KeyError when `None`).
+
+### UI
+
+- Section below patient sliders; visible when `len(loaded_exams)==1`, `exam_supports_table_origin`, not `is_multi_exam`, `rdsr_df` loaded.
+- Sliders x/y/z, range `TABLE_ORIGIN_SLIDER_MIN/MAX` (−250…250). **PAUSED** / stale-dose captions shared with Phase 2.
+
+**Files:** `helpers.py`, `geometry.py`, `_per_exam.py`, `gui/constants.py`, help doc
 
 ---
 
-## TO_DO.md Items Linked
+## Phase 3: Offset arrow (deferred)
 
-- [ ] Allow manual interactive setting of table offsets in GUI — **Phase 2 (patient offsets in Geometry tab; rename/clarify TO_DO wording when closing)**.
-- [ ] Settings tab: show Table Offsets (read-only) and Patient Offsets (adjustable) — **Phase 1**.
-
----
-
-## Priority
-
-1. **Phase 0** — Prerequisites: offset reset on file load + `build_settings` accepts `patient_offset`. Required for Phases 1 and 2 to behave correctly.
-2. **Phase 1** — Display table offsets (highest impact, zero UX risk).
-3. **Phase 2** — Interactive single-exam sliders (solves round-trip problem, moderate complexity).
-4. **Phase 3** — Offset arrow (nice-to-have, deferred).
+Toggleable arrow trace when offset non-zero; reuses `effective_patient_offset_for_preview`.
 
 ---
 
 ## Testing
 
-- **Unit tests (recommended for Phase 0):** Add cases in `tests/unittests/test_multi_exam.py` or a small `test_gui_offset_reset.py` — load twice / `clear_all_exams` / `replace_existing=True` does not zero globals. GUI smoke (`tests/gui/test_gui_smoke.py`) unchanged unless new labels are asserted.
-- **Phase 0 prerequisites:**
-  - 0a. Load RDSR, adjust offsets in the Settings spinboxes, then load a second RDSR → the **global** offsets (Settings spinboxes) snap to 0. (Per-exam meta for exam A is preserved; see 0d.)
-  - 0b. Load RDSR, adjust offsets, then “Clear all” → offsets snap to 0.
-  - 0c. Load RDSR, then load tabular (or vice versa) → offsets snap to 0 on each **new** load.
-  - 0d. In multi-exam mode, adjust per-exam offsets on exam A, then load exam B → A's per-exam `meta[d_lon/ver/lat]` is **preserved**, and B's per-exam offsets default to 0.0 (the new global value).
-  - 0e. **Single-exam:** geometry preview matches dose map for the same offset values (adjust global offset, preview, calculate, compare phantom placement to dose accumulation).
-  - 0f. **Multi-exam (known limitation):** geometry preview uses global offset; per-exam dose uses `loaded_exam_meta` — document until `active_exam_index` ships. No false pass on 0e for multi-exam.
-  - 0g. Re-parse same tabular file with `replace_existing` (schema/sheet change) → global patient offsets **unchanged**.
-- **Phase 1 manual tests:**
-  1. Load RDSR → table offsets displayed in Settings with correct values.
-  2. Load tabular file → offsets show (0, 0, 0) with tabular note.
-  3. Load RDSR with fallback normalization → warning badge appears.
-  4. Multi-exam: load two DICOM files → caption notes values are from last load.
-  5. **Regression:** Data tab export → table offsets still in metadata.
-- **Phase 2 manual tests (single-exam workflow):**
-  6. Adjust Geometry sliders → live preview updates plot (debounced), same mode as last preview button.
-  7. Adjust Settings spinboxes → Geometry sliders update (shared `state.d_lon/ver/lat`); Settings still calls `reset_results`.
-  8. Reset button → sliders zero **and** results cleared (`reset_results`).
-  9. Slider scrubbing alone → no `reset_results` / no auto dose run.
-  10. Live preview off → slider changes don't update plot; manual mode switch does.
-  11. In multi-exam mode, Geometry sliders are hidden (or disabled with tooltip).
-  12. Single-exam: geometry preview matches dose map for same offsets (extends 0e).
+**Unit (`tests/unittests/test_gui_offset_reset.py`):**
+- `test_load_rdsr_resets_global_patient_offset`
+- `test_load_tabular_resets_global_patient_offset`
+- `test_load_tabular_replace_existing_preserves_global_patient_offset`
+- `test_clear_all_exams_resets_global_patient_offset`
+- `test_new_load_resets_coordinate_flags_not_replace_existing`
+- `test_sync_global_patient_offset_to_single_exam_meta`
+- `test_sync_does_not_touch_meta_when_multi_exam`
+- `test_build_settings_propagates_explicit_patient_offset`
+- `test_on_global_patient_offset_change_invokes_refresh_per_exam`
+
+- `test_remove_exam_restores_global_patient_offset_from_meta`
+- `test_stage_table_origin_axis_does_not_call_apply`
+- `test_commit_table_origin_transform_rebuilds_rdsr_df`
+
+**Manual matrix:**
+| ID | Assert |
+|----|--------|
+| 0a | Second RDSR load zeros global offsets; exam A per-exam meta preserved |
+| 0b | Clear all zeros globals |
+| 0c | New load (RDSR ↔ tabular) zeros globals |
+| 0d | Multi-exam: per-exam offsets on A preserved when B loaded |
+| 0e | Single-exam: preview offset matches dose map |
+| 0f | Multi-exam: composite-preview banner visible; dose uses per-exam meta |
+| 0g | Tabular re-parse (`replace_existing`) preserves globals |
+| 0h | Single exam: Settings edit mirrors `meta[0]`; survives adding exam 2 |
+| 0i | Remove exam B (multi→single): `d_lon/ver/lat` restored from remaining exam meta |
+| 1a | RDSR table offsets in Settings (three bindings) |
+| 1b | Tabular → zeros + note |
+| 1c | Change only `d_ver` → Calculate patient summary updates |
+| 1d | Change only `table_offset_y` → Calculate table summary updates |
+| 1e | `Unknown` / `Fallback` / multi-exam fallback count caption |
+| 1f | Multi-exam: Settings global offset edit refreshes per-exam global label |
+| 1g | Data export metadata unchanged (`data.py:62-64`) |
+| 2a | Sliders hidden single-exam only; multi-exam banner |
+| 2b | Debounced scrub → one render after ~250 ms; table-origin preview lags until commit |
+| 2c | Procedure >30 events → PAUSED; Setup/Single still live |
+| 2d | Settings offset >150 → slider tooltip, value not clamped |
+| 2e | Reset → notify + plot cleared + results invalidated |
+| 2f | No data loaded → slider row hidden |
+| 2g | After calc, patient slider scrub → stale-dose caption |
+| 2h | Release table-origin slider; wait ≥300 ms; preview + Data table `Tx/Ty/Tz` reflect new origin |
+| 2i | Table-origin Reset → override `None`, matches auto-detected; Settings spinboxes sync |
+| 2j | Table-origin scrub after calc → results invalidated (PSD cleared) |
 
 ---
 
-## Dependencies
+## Checklist
 
-- Depends on: `state.d_lon/ver/lat`, `state.table_offset_x/y/z`, `make_geometry_fig`, `rdsr_normalizer()` table offset computation.
-- **Phase 1 and Phase 2 depend on Phase 0** (offset reset on file load + `build_settings` accepts `patient_offset`).
-- Blocks nothing (additive UX, non-breaking for existing workflows).
+**Phase 0**
+- [ ] Patient-offset + coordinate-flag reset on new load (`load_rdsr`, `load_tabular` when `not replace_existing`, `clear_all_exams`)
+- [ ] `_remove_exam` multi→single restores `d_lon/ver/lat` from meta
+- [ ] `patient_offset` last on `build_settings`; grep all callers
+- [ ] `effective_patient_offset_for_preview`; sync helper; `_per_exam.py` global-label fix (three bindings)
+
+**Phase 1**
+- [ ] Three bindings per offset display (Settings + Calculate)
+- [ ] `normalization_method` per exam in meta at three `helpers.py` insertion points (`Unknown` / `Tabular` / `Fallback` / `Matched`)
+
+**Phase 2 / 2b**
+- [ ] Closure: `nonlocal` on reassigned vars; `_schedule_debounced_render` cancel-reschedule
+- [ ] Geometry tick sets `offset_changed_since_calc`; table-origin tick sets `table_origin_pending`
+- [ ] `stage_table_origin_axis` / `commit_table_origin_transform` / `effective_table_origin`; `_per_exam.py` delegates; reset uses `guard["suppress"]`
+- [ ] Table-origin scrub stages meta only; `apply_exam_transforms` in debounced callback only
+
+**Cross-cutting**
+- [ ] `CHANGELOG.md` — **Fixed:** Calculate patient/table stale bindings; per-exam global label stale; offset + coordinate-flag leak on load; `_remove_exam` offset restore. **Added:** read-only table offsets; Geometry patient + table-origin sliders; reset buttons. Link plan.
+- [ ] `docs/source/gui_help/positioning_offsets.md` + `sync_gui_help.py` (Phase 2)
+- [ ] `TO_DO.md` items checked; clarify “table offsets” wording
 
 ---
 
-## Exit criteria (plan lifecycle)
+## Open questions (resolved)
 
-Archive to `dev-docs/plans/archive/` when Phases 0–2 are shipped and manual tests pass. Phase 3 may remain deferred. On archive: update `dev-docs/index.md`, `dev-docs/plans/archive/README.md`, and `TO_DO.md` (check off items, clarify “table offsets” TO_DO wording).
+| # | Decision |
+|---|----------|
+| 1 | **Yes** — Geometry scrub shows stale-dose caption when `calculation_done` (see Phase 2). |
+| 2 | Settings spinbox soft limits (±150)? **No** — unbounded; slider tooltip. |
+| 3 | Rename Data export columns? **No** this phase. |
+| 4 | Data tab inline table-offset block? **Defer**. |
+| 5 | Partial `refresh_per_exam`? **No** — full rebuild in debounce. |
+| 6 | Phase 2b scrub cost? **Debounce** `apply_exam_transforms` (stage meta on tick). |
+| 7 | Table-origin reset slider sync? **Explicit set** from `effective_table_origin` + `guard["suppress"]` (mirror `_per_exam._on_reset`). |
+| 8 | `offset_changed_since_calc` setter? **Geometry tick wrappers** (`nonlocal`), not `helpers.py` scrub handler. |
+| 9 | `effective_table_origin` body in plan? **Yes** — full implementation in Phase 2b. |
+| 10 | `normalization_method` `"None"` branch? **Dead code** — omit from UI mapping. |
 
 ---
 
-## Future Considerations
+## Optional follow-up (out of scope)
 
-- **Multi-exam slider support in Geometry tab.** Requires (a) a real exam selector widget (dropdown or radio) that drives `state.active_exam_index`, (b) `effective_patient_offset_for_preview` reading `loaded_exam_meta[active]`, and (c) explicit unbind/rebind logic in the slider handler on exam switch (NiceGUI's `bind_value` is to a specific dict reference, not a key path).
-- Extend interactive adjustment to **table-origin override** (currently per-exam only). “Set table origin from click” in Geometry.
-- **Preset offset profiles** (cardiac, head/neck, abdominal) as dropdown in Settings.
-- **Offset snapping** to clinical positions (gantry angle zero, table mid-position).
+- Data tab inline table-offset display
+- Settings spinbox soft limits aligned with slider range
+- Export `table_origin_override` in `data.py` metadata (today only auto-detected origin at `data.py:62-64`)
+- Incremental table-origin preview without full `apply_exam_transforms` per commit
+- Offset presets
+
+---
+
+## Exit criteria
+
+Archive when Phases 0–**2b** ship and manual matrix passes. Run `python scripts/check_doc_freshness.py`. Update `dev-docs/index.md`, `dev-docs/plans/archive/README.md`, `TO_DO.md`.
+
+## Future
+
+- Exam-selector UI + `active_exam_index` before multi-exam Geometry sliders (patient **and** table-origin).
+- Partial per-exam refresh API if full `refresh_per_exam` proves too heavy.
+- Hint when Settings offset `|value| > 150` (slider range) without clamping.
+
+## TO_DO.md
+
+- [ ] Allow manual interactive setting of table offsets in GUI → Phase **2b** (table-origin override) + Phase 2 (patient offsets)
+- [ ] Settings tab: Table Offsets read-only + Patient Offsets adjustable → Phase 1
