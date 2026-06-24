@@ -16,7 +16,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Single-exam Geometry preview pause regression** (2026-06-24) — `live_preview_allowed` no longer pauses single-exam `plot_procedure` at >30 events; composite multi-exam pause threshold unchanged (R12).
 - **GUI offset display and state leaks** (2026-06-24) — Calculate tab patient/table offset summaries now update when any axis changes; per-exam corrections global-offset label refreshes after Settings edits; patient offsets and coordinate-correction flags reset on new file load; `_remove_exam` multi→single restores globals from surviving exam meta.
+- **Dose map figure exports** (2026-06-24) — restore `make_dosemap_fig` / `make_dosemap_html` / `make_dosemap_png` in `gui/figures.py` (accidentally dropped during Part II `make_geometry_fig` refactor).
 
 ### Changed
 

@@ -35,7 +35,8 @@ def adjust_active_exam_index_after_remove(state: AppState, removed_index: int) -
         state.active_exam_index = active - 1
     elif removed_index == active:
         state.active_exam_index = max(0, active - 1)
-    state.active_exam_index = min(state.active_exam_index, n - 1)
+    idx = state.active_exam_index if state.active_exam_index is not None else 0
+    state.active_exam_index = min(idx, n - 1)
 
 
 def on_exams_loaded(state: AppState) -> None:

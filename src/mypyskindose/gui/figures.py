@@ -91,3 +91,111 @@ def make_geometry_fig(
     except Exception:
         dprint("RENDERING", traceback.format_exc())
         return None
+
+
+def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
+    """Build the dose map Plotly figure.
+
+    If explicit_dose_map and explicit_patient are provided, uses those (e.g. for aggregate map).
+    Otherwise reads from current state.output.
+    """
+    try:
+        import numpy as np
+        import plotly.graph_objects as go
+
+        if explicit_dose_map is not None and explicit_patient is not None:
+            patient_data = explicit_patient["patient"]
+            dose_map = explicit_dose_map
+        else:
+            if state.output is None:
+                return None
+            out = state.output
+            patient_data = out["patient"]["patient"]
+
+            # The length of r is the number of skin cells
+            num_cells = len(patient_data["patient_skin_cells"]["x"])
+            dose_map = np.zeros(num_cells)
+            for idx, dose in out["dose_map"]:
+                dose_map[int(idx)] = dose
+
+        r = np.array([
+            patient_data["patient_skin_cells"]["x"],
+            patient_data["patient_skin_cells"]["y"],
+            patient_data["patient_skin_cells"]["z"],
+        ]).T
+        ijk_data = patient_data["triangle_vertex_indices"]
+
+        hover = [
+            f"<b>lat:</b> {r[i,2]:.2f} cm<br><b>lon:</b> {r[i,0]:.2f} cm<br>"
+            f"<b>ver:</b> {r[i,1]:.2f} cm<br><b>dose:</b> {dose_map[i]:.2f} mGy"
+            for i in range(len(r))
+        ]
+
+        cmax = float(np.max(dose_map))
+        if cmax == 0:
+            cmax = 1.0
+
+        mesh = go.Mesh3d(
+            x=r[:, 0], y=r[:, 1], z=r[:, 2],
+            i=ijk_data["i"], j=ijk_data["j"], k=ijk_data["k"],
+            intensity=dose_map,
+            intensitymode="vertex",
+            colorscale=state.colorscale,
+            cmin=0.0,
+            cmax=cmax,
+            showscale=True,
+            hoverinfo="text",
+            text=hover,
+            colorbar=dict(title=dict(text="Skin dose [mGy]", font=dict(size=12))),
+        )
+
+        bg = "rgb(5,5,5)"  # Deep Black
+        txt = "#F8FAFC"
+
+        layout = go.Layout(
+            paper_bgcolor=bg,
+            plot_bgcolor=bg,
+            font=dict(color=txt, family="Inter, sans-serif"),
+            margin=dict(l=0, r=0, b=40, t=40),
+            scene=dict(
+                aspectmode="data",
+                xaxis=dict(title="X - LON [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
+                yaxis=dict(title="Y - VER [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
+                zaxis=dict(title="Z - LAT [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
+            ),
+        )
+        fig = go.Figure(data=[mesh], layout=layout)
+        state.dosemap_fig = fig
+        return fig.to_dict()
+    except Exception:
+        dprint("RENDERING", traceback.format_exc())
+        return None
+
+
+def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes | None:
+    """Render the dose map as a standalone interactive HTML document."""
+    try:
+        fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
+        if fig_dict is None:
+            return None
+        import plotly.graph_objects as go
+
+        fig = go.Figure(fig_dict)
+        return fig.to_html(full_html=True).encode()
+    except Exception:
+        return None
+
+
+def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes | None:
+    """Render the dose map as a static PNG (requires kaleido)."""
+    try:
+        fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
+        if fig_dict is None:
+            return None
+        import plotly.graph_objects as go
+
+        fig = go.Figure(fig_dict)
+        fig.update_layout(scene_camera=dict(eye=dict(x=-2.5, y=1.5, z=0)))
+        return fig.to_image(format="png")
+    except Exception:
+        return None

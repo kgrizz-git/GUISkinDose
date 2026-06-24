@@ -287,8 +287,6 @@ def build(ctx: PageContext) -> None:
                 active_idx = state.active_exam_index
                 if preview_event_count(state, active_exam_index=active_idx, composite=True) > 30:
                     return False
-            elif not state.is_multi_exam and event_count() > 30:
-                return False
         return True
 
     def _update_paused_badge() -> None:
