@@ -15,6 +15,11 @@ from ..page_context import PageContext
 from ..state import state
 
 
+def multi_exam_results_ui_stale(last_run_id: int | None, calc_run_id: int) -> bool:
+    """True when the per-exam Results accordion must be rebuilt."""
+    return last_run_id != calc_run_id
+
+
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("results"):
         with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
@@ -137,81 +142,112 @@ def build(ctx: PageContext) -> None:
                 agg_dosemap_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
                 agg_dosemap_spinner.visible = False
 
+            last_rendered_run_id: int | None = None
+            last_agg_map_run_id: int | None = None
+
+            def _clear_multi_exam_accordion() -> None:
+                multi_exam_accordion_container.clear()
+
+            def _build_multi_exam_accordion(res) -> None:
+                with multi_exam_accordion_container:
+                    for i, exam_res in enumerate(res.exams):
+                        study_str = f"Exam {i + 1}"
+
+                        with ui.expansion(
+                            f"{study_str} — {exam_res.exam_id}", icon="personal_video"
+                        ).classes("w-full modern-card bg-zinc-900/50"):
+                            with ui.row().classes("w-full items-center justify-between"):
+                                with ui.row().classes("gap-4"):
+                                    with ui.column().classes("gap-0"):
+                                        ui.label("PSD").classes(
+                                            "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
+                                        )
+                                        ui.label(f"{exam_res.output.PSD:.2f} mGy").classes(
+                                            "text-aurora-purple font-bold"
+                                        )
+                                    with ui.column().classes("gap-0"):
+                                        ui.label("Air Kerma").classes(
+                                            "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
+                                        )
+                                        ui.label(f"{exam_res.output.AirKerma:.1f} mGy").classes(
+                                            "text-white font-bold"
+                                        )
+                                    with ui.column().classes("gap-0"):
+                                        ui.label("Events").classes(
+                                            "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
+                                        )
+                                        ui.label(str(exam_res.event_count)).classes("text-white font-bold")
+
+                                with ui.button(
+                                    "Show Dose Map", icon="3d_rotation"
+                                ).classes("modern-btn modern-btn-teal size-sm") as btn:
+                                    if len(res.exams) > 10:
+                                        btn.disable()
+                                        btn.tooltip(
+                                            "Dose map rendering disabled for >10 exams to save memory"
+                                        )
+                                    else:
+                                        btn.on_click(lambda _e, idx=i: _show_exam_dosemap_dialog(idx))
+
+            def _refresh_aggregate_dosemap(res) -> None:
+                nonlocal last_agg_map_run_id
+                if not res.exams:
+                    agg_dosemap_plot.update_figure({})
+                    last_agg_map_run_id = state.calc_run_id
+                    return
+
+                agg_dosemap_spinner.visible = True
+                first_exam_output_dict = res.exams[0].output.to_dict()
+                first_exam_patient = first_exam_output_dict["patient"]
+
+                fig = make_dosemap_fig(
+                    explicit_dose_map=res.aggregate_dose_map,
+                    explicit_patient=first_exam_patient,
+                )
+                agg_dosemap_spinner.visible = False
+                if fig:
+                    agg_dosemap_plot.update_figure(fig)
+                    state.dosemap_fig = fig
+                last_agg_map_run_id = state.calc_run_id
+
             def _refresh_multi_exam_results():
+                nonlocal last_rendered_run_id, last_agg_map_run_id
+
                 if not state.is_multi_exam or not state.calculation_done or state.multi_exam_result is None:
+                    if last_rendered_run_id is not None:
+                        _clear_multi_exam_accordion()
+                        last_rendered_run_id = None
+                        last_agg_map_run_id = None
+                        agg_dosemap_plot.update_figure({})
                     return
 
                 res = state.multi_exam_result
                 agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
                 agg_events_metric.set_text(f"across {len(res.exams)} exams")
 
-                # If we've already built the accordion for this calculation, don't rebuild it
-                # We can check this by seeing if the container has children
-                if len(multi_exam_accordion_container.default_slot.children) > 0:
-                    return
+                if multi_exam_results_ui_stale(last_rendered_run_id, state.calc_run_id):
+                    _clear_multi_exam_accordion()
+                    _build_multi_exam_accordion(res)
+                    last_rendered_run_id = state.calc_run_id
 
-                # Build the accordion
-                with multi_exam_accordion_container:
-                    for i, exam_res in enumerate(res.exams):
-                        # Default title string if we don't have study_id metadata mapped here
-                        study_str = f"Exam {i+1}"
-                        # In the multi-exam API, exam_res is an ExamResult containing output and optional input_result ref
-                        
-                        with ui.expansion(f"{study_str} — {exam_res.exam_id}", icon="personal_video").classes("w-full modern-card bg-zinc-900/50"):
-                            with ui.row().classes("w-full items-center justify-between"):
-                                with ui.row().classes("gap-4"):
-                                    # PSD — exam_res.output is a PySkinDoseOutput instance
-                                    with ui.column().classes("gap-0"):
-                                        ui.label("PSD").classes("text-[10px] text-grey-5 font-bold tracking-widest uppercase")
-                                        ui.label(f"{exam_res.output.PSD:.2f} mGy").classes("text-aurora-purple font-bold")
-                                    # Air Kerma
-                                    with ui.column().classes("gap-0"):
-                                        ui.label("Air Kerma").classes("text-[10px] text-grey-5 font-bold tracking-widest uppercase")
-                                        ui.label(f"{exam_res.output.AirKerma:.1f} mGy").classes("text-white font-bold")
-                                    # Event count
-                                    with ui.column().classes("gap-0"):
-                                        ui.label("Events").classes("text-[10px] text-grey-5 font-bold tracking-widest uppercase")
-                                        ui.label(str(exam_res.event_count)).classes("text-white font-bold")
-
-                                with ui.button("Show Dose Map", icon="3d_rotation").classes("modern-btn modern-btn-teal size-sm") as btn:
-                                    if len(res.exams) > 10:
-                                        btn.disable()
-                                        btn.tooltip("Dose map rendering disabled for >10 exams to save memory")
-                                    else:
-                                        # Bind the click handler to this specific exam's PySkinDoseOutput
-                                        btn.on_click(lambda e, idx=i, out=exam_res.output: _show_exam_dosemap_dialog(idx, out))
-
-                # Build aggregate dose map if not built.
-                # res.aggregate_dose_map is an np.ndarray (element-wise sum of per-exam maps).
-                # Use the first exam's to_dict() output for phantom topology.
-                if state.dosemap_fig is None:
-                    agg_dosemap_spinner.visible = True
-                    first_exam_output_dict = res.exams[0].output.to_dict()
-                    first_exam_patient = first_exam_output_dict["patient"]
-
-                    fig = make_dosemap_fig(
-                        explicit_dose_map=res.aggregate_dose_map,
-                        explicit_patient=first_exam_patient,
-                    )
-                    agg_dosemap_spinner.visible = False
-                    if fig:
-                        agg_dosemap_plot.update_figure(fig)
-                        state.dosemap_fig = fig  # flag that it's built
+                if multi_exam_results_ui_stale(last_agg_map_run_id, state.calc_run_id):
+                    _refresh_aggregate_dosemap(res)
 
             ui.timer(1.5, _refresh_multi_exam_results)
 
-            def _show_exam_dosemap_dialog(exam_idx: int, exam_output):
-                """Show a per-exam dose map in a modal dialog.
-
-                exam_output is a PySkinDoseOutput instance.
-                """
+            def _show_exam_dosemap_dialog(exam_idx: int):
+                """Show a per-exam dose map in a modal dialog (reads latest calc output)."""
                 import numpy as np
 
-                # Serialise to dict so make_dosemap_fig can read patient topology.
+                res = state.multi_exam_result
+                if res is None or exam_idx < 0 or exam_idx >= len(res.exams):
+                    ui.notify("No dose map for this exam", color="warning")
+                    return
+
+                exam_output = res.exams[exam_idx].output
                 output_dict = exam_output.to_dict()
                 patient_for_fig = output_dict["patient"]
 
-                # Reconstruct dense dose map from the sparse (idx, dose) list.
                 patient_data = patient_for_fig["patient"]
                 num_cells = len(patient_data["patient_skin_cells"]["x"])
                 dose_map_array = np.zeros(num_cells)
@@ -221,7 +257,9 @@ def build(ctx: PageContext) -> None:
                 with ui.dialog() as dialog, ui.card().classes("modern-card w-[80vw] max-w-[1200px] p-6"):
                     with ui.row().classes("w-full justify-between items-center mb-4"):
                         ui.label(f"Exam {exam_idx + 1} Dose Map").classes("text-xl font-bold")
-                        ui.button(icon="close", on_click=dialog.close).props("flat round dense").classes("text-grey-4")
+                        ui.button(icon="close", on_click=dialog.close).props("flat round dense").classes(
+                            "text-grey-4"
+                        )
 
                     dialog_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
                     dialog_plot = ui.plotly({}).classes("w-full").style("height:600px")
@@ -232,6 +270,7 @@ def build(ctx: PageContext) -> None:
                         _dm=dose_map_array, _pat=patient_for_fig
                     ):
                         from nicegui import run
+
                         fig = await run.io_bound(make_dosemap_fig, _dm, _pat)
                         dialog_spinner.visible = False
                         if fig:

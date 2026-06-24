@@ -381,6 +381,8 @@ class TestGuiPerExamOffsets:
             ok, _ = run_calculation(st)
 
         assert ok
+        assert st.calc_run_id == 1
+        assert st.dosemap_fig is None
         assert captured["per_exam_offsets"] == [[5.0, 0.0, 0.0], [0.0, 0.0, -4.0]]
 
 

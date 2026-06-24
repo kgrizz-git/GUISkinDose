@@ -81,6 +81,9 @@ class AppState:
     # ── Calculation results ────────────────────────────────────────────────
     output: dict[str, Any] | None = None
     calculation_done: bool = False
+    # Incremented on each successful dose run so Results UI can rebuild when
+    # multi_exam_result is replaced (offsets changed, then recalculated).
+    calc_run_id: int = 0
     psd: float | None = None
     air_kerma: float | None = None
     # Warnings emitted during the last calculation (e.g. HVL lookups snapped to the

@@ -176,8 +176,10 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 per_exam_extra_warnings=per_exam_extra_warnings,
             )
 
+            state.dosemap_fig = None
             state.multi_exam_result = multi_result
             state.calculation_done = True
+            state.calc_run_id += 1
             state.psd = float(multi_result.aggregate_psd)
             # sum of air kerma across exams
             state.air_kerma = sum(float(e.output.AirKerma) for e in multi_result.exams)
@@ -202,8 +204,10 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
             if not isinstance(output, dict):
                 return False, "Unexpected calculation output format."
 
+            state.dosemap_fig = None
             state.output = output
             state.calculation_done = True
+            state.calc_run_id += 1
             state.psd = float(output["psd"])
             state.air_kerma = float(output["air_kerma"])
             return True, f"PSD = {output['psd']:.2f} mGy"
