@@ -15,6 +15,7 @@ from mypyskindose.gui.geometry_preview import (
     composite_live_preview_paused,
     composite_preview_after_exam_mode_change,
     effective_patient_offset_for_preview,
+    exam_select_value,
     geometry_preview_caption,
     preview_event_count,
     resolve_composite_for_render,
@@ -48,6 +49,17 @@ def _multi_exam_state() -> AppState:
     st.is_multi_exam = True
     st.active_exam_index = 1
     return st
+
+
+def test_exam_select_value_empty_options():
+    assert exam_select_value(0, set()) is None
+    assert exam_select_value(None, set()) is None
+
+
+def test_exam_select_value_clamps_to_valid_option():
+    assert exam_select_value(99, {0, 1}) == 0
+    assert exam_select_value(1, {0, 1}) == 1
+    assert exam_select_value(None, {0, 1}) == 0
 
 
 def test_clamp_active_exam_index_defaults_and_clamps():

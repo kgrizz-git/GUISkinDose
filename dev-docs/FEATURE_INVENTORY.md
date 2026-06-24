@@ -393,8 +393,17 @@ Falls back to `settings_example.json` if nothing provided.
 - `field_size_mode`: `"CFA"` or `"ASD"`
 - `detector_side_length`: active detector area side length (cm)
 
-### 9.3 Settings printing
-`settings.print_parameters()` — prints colour-formatted summary of all settings to terminal using Rich.
+### 9.4 Multi-exam GUI patient offsets
+
+| Surface | Behavior |
+|---------|----------|
+| **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); PAUSED when composite `plot_procedure` > 30 events |
+| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections |
+| **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
+| **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections |
+| **Upload tab** | Click exam card → set active index and open Geometry tab |
+
+Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_event_index`), `offset_handlers.py` (`apply_patient_offset_slider_tick`, `per_exam_offsets_version`), `summary_formatters.py`.
 
 ---
 

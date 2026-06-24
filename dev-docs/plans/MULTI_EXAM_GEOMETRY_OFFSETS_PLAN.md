@@ -216,9 +216,9 @@ def _sync_patient_sliders_from_meta(active_index=None):
 
 ---
 
-## Part V — Cross-cutting (remaining work)
+## Part V — Cross-cutting ✅
 
-**Status:** Not started (Round 8). Parts I–IV verified shipped; this part is the archive gate.
+**Status:** Completed 2026-06-24. Formatters, Phantom hide + C6, N4 re-clamp, VI-A/B polish, docs.
 
 ### Recommended execution order (Round 8)
 
@@ -262,8 +262,8 @@ def _sync_patient_sliders_from_meta(active_index=None):
 
 | Item | Status | Notes |
 |------|--------|-------|
-| **VI-A** Upload card → Geometry | **Recommend Part V** | ~5 lines: set `active_exam_index`, `refresh_per_exam`, switch tab |
-| **VI-B** Settings active-exam highlight | **Recommend Part V** | ~3 lines: amber border on `active_exam_index` card in `_build_exam_card` |
+| **VI-A** Upload card → Geometry | ✅ | Click exam card → active index + Geometry tab |
+| **VI-B** Settings active-exam highlight | ✅ | Amber border on active per-exam card |
 | **VI-C** `study_id` / sheet labels | **Deferred** | Needs DICOM study UID + sheet-aware labels; keep in TO_DO |
 
 ---
@@ -295,7 +295,7 @@ Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFF
 | **III** | ✅ Table-origin visible in multi-exam; T3 limits on switch; T5a reset (R4, R5) |
 | **IV-a** | ✅ Patient T4/T31 write-back; show card in multi-exam; T5b reset (R3); IV-a tests |
 | **IV-b** | ✅ Composite checkbox + `preview_caption` (R1, T29); C3/C4 copy alignment |
-| **V** | T10 formatters; `calculate.py:78`; C5–C6; N4 re-clamp + `refresh_per_exam` on transform; `per_exam_offsets_version`; docs + `CHANGELOG.md`; manual matrix; optional VI-A/B |
+| **V** | ✅ T10 formatters; `calculate.py:78`; C5–C6; N4 re-clamp; `per_exam_offsets_version`; docs; VI-A/B; manual matrix pending |
 | **VI** | VI-C deferred; VI-A/B optional in Part V |
 
 ---
@@ -326,7 +326,7 @@ Grep while implementing Parts IV–V. **Status:** DONE = shipped; TODO = remaini
 | T7 | DONE | Event index out of range | Clamp in UI and `make_geometry_fig` |
 | T8 | DONE | PAUSED/spinner use full `event_count()` | `preview_event_count(...)` only when `is_multi_exam and composite` |
 | T9 | DONE | Selector programmatic update re-fires | `exam_selector_guard["suppress"]` |
-| T10 | TODO | Stale Calculate/Settings summaries | Per-exam formatter branches when `is_multi_exam` (Part V) |
+| T10 | DONE | Stale Calculate/Settings summaries | `summary_formatters.py`; `per_exam_offsets_version` (Part V) |
 | T11 | DONE | Preview frame includes tag columns | Drop in `rdsr_df_for_geometry_preview` |
 | T12 | DONE | Patient vs table-origin composite differ | `last_table_origin_scrub` + `_resolve_composite_for_render()` |
 | T13 | DONE | `make_geometry_fig` returns `None` | `geom_plot.update_figure({})` |
@@ -371,7 +371,7 @@ Grep while implementing Parts IV–V. **Status:** DONE = shipped; TODO = remaini
 
 **Shipped** (`test_gui_multi_exam_geometry_offsets.py`, 15 tests): Parts II–IV — lifecycle, slice helpers, table-origin commit index, patient write-back, preview captions, composite pause/reset.
 
-**Part V add (write before formatter code):**
+**Part V add (shipped in `test_gui_part_v_formatters.py`):**
 - `test_format_patient_offsets_multi_exam` — 0 / 1 / 2–3 / 4+ exams; assert **lon/ver/lat** labels (not X/Y/Z)
 - `test_format_table_offset_line_multi_exam` — multi branch + single/tabular/unknown unchanged
 - `test_format_patient_offsets_refreshes_on_per_exam_offsets_version` — bind strategy lock-in

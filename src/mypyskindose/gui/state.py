@@ -57,6 +57,9 @@ class AppState:
     d_lon: float = 0.0
     d_ver: float = 0.0
     d_lat: float = 0.0
+    # Bumped when any per-exam or global patient offset changes so Calculate summary
+    # labels bound to d_lon/d_ver/d_lat alone refresh in multi-exam mode.
+    per_exam_offsets_version: int = 0
 
     estimate_k_tab: bool = True
     k_tab_val: float = 0.8

@@ -20,6 +20,7 @@ from nicegui import ui
 
 from ..helpers import (
     apply_exam_transforms,
+    bump_per_exam_offsets_version,
     commit_table_origin_transform,
     exam_supports_table_origin,
     exam_supports_transforms,
@@ -44,6 +45,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
             meta["d_lon"] = state.d_lon
             meta["d_ver"] = state.d_ver
             meta["d_lat"] = state.d_lat
+        bump_per_exam_offsets_version(state)
         _invalidate()
         refresh()
         ui.notify(
@@ -54,6 +56,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
 
     def _on_exam_offset_change() -> None:
         """A per-exam offset spinbox changed — invalidate stale results."""
+        bump_per_exam_offsets_version(state)
         _invalidate()
         ctx.refresh_per_exam()
 
@@ -67,6 +70,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
         _invalidate()
         ctx.refresh_event_table()
         ctx.refresh_import_preview()
+        ctx.refresh_per_exam()
 
     def _build_table_origin_section(index: int, meta: dict) -> None:
         """Per-exam 'Advanced: table origin' override UI (Phase 2.5).
@@ -135,7 +139,10 @@ def build_per_exam_section(ctx: PageContext) -> None:
 
     def _build_exam_card(idx: int, exam, meta: dict) -> None:
         src = (meta.get("source_type") or "?").lower()
-        with ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm"):
+        card_classes = "modern-card w-full bg-blue-950/20 q-pa-sm"
+        if state.is_multi_exam and state.active_exam_index == idx:
+            card_classes += " border-2 border-amber-6"
+        with ui.card().classes(card_classes):
             with ui.row().classes("items-center w-full gap-3 no-wrap"):
                 ui.label(f"#{idx + 1}").classes("text-caption text-grey-5 font-bold")
                 ui.label(meta.get("file_name", "—")).classes(

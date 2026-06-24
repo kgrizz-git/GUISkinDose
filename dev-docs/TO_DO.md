@@ -80,7 +80,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Add sliders for patient offset parameters with real-time geometry preview in the Geometry tab.
   - Expose `max_events_for_patient_inclusion` as a control.
   - Consider presets (cardiac, head/neck, abdominal, etc.).
-- [ ] **Multi-exam Geometry offset sliders + exam selector** — Parts I–IV shipped (exam selector, per-exam patient/table-origin sliders, composite preview toggle). **Remaining:** Part V formatters/docs. → [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md).
+- [x] **Multi-exam Geometry offset sliders + exam selector** — Parts I–V shipped. Optional: manual matrix + plan archive. → [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md).
 - [ ] **Export audit trail for `table_origin_override`** — per-exam overrides editable in Settings / Geometry are not recorded in normalized data export metadata (`data.py`). Follow-up from multi-exam geometry plan out-of-scope.
 - [x] **Confirm the uploader-wedge fix and resolve** — **done** (confirmed 2026-06-13): dragging a file *out of the native file-open dialog* onto the drop zone wedged quasar in a phantom upload (`0.0B/0.00%`, `+` disabled); `uploader.reset()` did **not** recover it, so the "Reset upload" button / card X now **rebuild** the uploader element (commit `37019e1`). Manually verified the **Reset upload** button recovers a wedged uploader and the `+` works again.
 - [ ] Fix download/export HTML button (verify other export paths).

@@ -17,8 +17,10 @@ from ..constants import (
 )
 from ..figures import make_geometry_fig
 from ..geometry_preview import (
+    clamp_geometry_event_index,
     composite_live_preview_paused,
     composite_preview_after_exam_mode_change,
+    exam_select_value,
     geometry_preview_caption,
     preview_event_count,
     resolve_composite_for_render,
@@ -106,9 +108,17 @@ def build(ctx: PageContext) -> None:
                         for i, meta in enumerate(state.loaded_exam_meta)
                     }
 
+                def _exam_select_value(options: dict[int, str] | None = None) -> int | None:
+                    opts = options if options is not None else _exam_selector_options()
+                    return exam_select_value(
+                        state.active_exam_index,
+                        set(opts.keys()),
+                    )
+
+                _initial_exam_options = _exam_selector_options()
                 exam_select = ui.select(
-                    options=_exam_selector_options(),
-                    value=state.active_exam_index if state.active_exam_index is not None else 0,
+                    options=_initial_exam_options,
+                    value=_exam_select_value(_initial_exam_options),
                     label="Selected exam",
                 ).classes("w-full")
 
@@ -511,9 +521,9 @@ def build(ctx: PageContext) -> None:
         if not state.is_multi_exam:
             return
         exam_selector_guard["suppress"] = True
-        exam_select.set_options(_exam_selector_options())
-        idx = state.active_exam_index if state.active_exam_index is not None else 0
-        exam_select.set_value(idx)
+        opts = _exam_selector_options()
+        exam_select.set_options(opts)
+        exam_select.set_value(_exam_select_value(opts))
         exam_selector_guard["suppress"] = False
 
     def _on_exam_select_change(_e) -> None:
@@ -530,9 +540,8 @@ def build(ctx: PageContext) -> None:
         new_index = int(exam_select.value or 0)
         state.active_exam_index = new_index
         last_table_origin_scrub = False
-        _sync_table_sliders_from_meta(new_index)
-        _sync_patient_sliders_from_meta(new_index)
         _update_preview_caption()
+        ctx.refresh_per_exam()
         if last_preview_mode:
             live_preview_requested = True
             _schedule_debounced_render()
@@ -551,7 +560,7 @@ def build(ctx: PageContext) -> None:
     composite_checkbox.on_value_change(_on_composite_toggle)
 
     def _refresh_geometry_sliders() -> None:
-        nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
+        nonlocal composite_preview, last_table_origin_scrub, was_multi_exam, live_preview_requested
         composite_preview = composite_preview_after_exam_mode_change(
             was_multi_exam,
             state.is_multi_exam,
@@ -565,6 +574,18 @@ def build(ctx: PageContext) -> None:
         _sync_table_sliders_from_meta()
         _sync_patient_sliders_from_meta()
         _update_preview_caption()
+        active_idx = state.active_exam_index if state.is_multi_exam else None
+        composite = _resolve_composite_for_render() if state.is_multi_exam else False
+        clamped = clamp_geometry_event_index(
+            state,
+            int(geom_event_input.value or 0),
+            active_exam_index=active_idx,
+            composite=composite,
+        )
+        geom_event_input.set_value(clamped)
+        if last_preview_mode:
+            live_preview_requested = True
+            _schedule_debounced_render()
 
     original_refresh_per_exam = ctx.refresh_per_exam
 

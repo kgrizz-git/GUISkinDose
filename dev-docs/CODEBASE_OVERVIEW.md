@@ -56,6 +56,8 @@ MyPySkinDose is organized in layers so settings, dose physics, and presentation 
 | **L7 — Entry** | `main.py`, `__main__.py` | CLI and public `main()` API |
 | **L8 — GUI (optional extra)** | `gui/` | NiceGUI app; uses orchestration and input, not dose internals |
 
+**Multi-exam Geometry (GUI):** `gui/tabs/geometry.py` binds offset sliders to `loaded_exam_meta[active_exam_index]`; `gui/geometry_preview.py` slices `rdsr_df` via `EXAM_INDEX_COLUMN`; composite preview pauses at >30 events (`composite_live_preview_paused`). Calculate/Settings summaries use `gui/summary_formatters.py` and `per_exam_offsets_version` on `AppState`.
+
 ```mermaid
 flowchart BT
   GUI[L8 gui]

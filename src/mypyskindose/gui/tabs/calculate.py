@@ -12,12 +12,13 @@ from nicegui import run, ui
 from ..concurrency import operation_guard
 from ..helpers import below_floor_event_count, run_calculation
 from ..page_context import PageContext
+from ..summary_formatters import format_patient_offsets
 from ..state import state
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
 
 def _format_patient_offsets() -> str:
-    return f"X: {state.d_lon:.1f}, Y: {state.d_ver:.1f}, Z: {state.d_lat:.1f} cm"
+    return format_patient_offsets(state)
 
 
 async def below_floor_prompt(n_below: int) -> bool:
@@ -75,7 +76,7 @@ def build(ctx: PageContext) -> None:
                         ui.badge().bind_text_from(
                             state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS"
                         ).classes("text-xs tracking-widest font-bold")
-                        ui.label("Per-exam patient offsets editable in Upload tab").classes(
+                        ui.label("Per-exam patient offsets editable in Geometry and Settings tabs").classes(
                             "text-caption text-grey-5 italic"
                         )
 
@@ -130,13 +131,12 @@ def build(ctx: PageContext) -> None:
                                     "font-bold text-[13px]"
                                 )
                                 patient_offset_summary.bind_text_from(
-                                    state, "d_lon", backward=lambda _v: _format_patient_offsets()
+                                    state,
+                                    "per_exam_offsets_version",
+                                    backward=lambda _v: _format_patient_offsets(),
                                 )
                                 patient_offset_summary.bind_text_from(
-                                    state, "d_ver", backward=lambda _v: _format_patient_offsets()
-                                )
-                                patient_offset_summary.bind_text_from(
-                                    state, "d_lat", backward=lambda _v: _format_patient_offsets()
+                                    state, "is_multi_exam", backward=lambda _v: _format_patient_offsets()
                                 )
                             with ui.column().classes("gap-0"):
                                 ui.label("Table Offsets:").classes(
@@ -156,6 +156,9 @@ def build(ctx: PageContext) -> None:
                                 )
                                 table_offset_summary.bind_text_from(
                                     state, "normalization_method", backward=lambda _v: _format_table_offset_line()
+                                )
+                                table_offset_summary.bind_text_from(
+                                    state, "is_multi_exam", backward=lambda _v: _format_table_offset_line()
                                 )
 
                     with ui.column().classes("gap-2"):

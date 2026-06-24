@@ -46,7 +46,7 @@ Location: `src/mypyskindose/gui/app.py`. Default URL: http://localhost:8765.
 | Tabs | Upload, Data Table, Settings, Geometry, Calculate, Results, Export |
 | Input | RDSR drag-and-drop, example file loader, normalized/raw table toggle |
 | Settings | Phantom, physics, and visual settings form |
-| Geometry | Setup / event / procedure preview |
+| Geometry | Setup / event / procedure preview; **multi-exam:** selected-exam dropdown, per-exam patient/table-origin sliders (`meta[active]`), composite preview toggle, `geometry_preview.py` slice helpers |
 | Calculation | Progress feedback, PSD / air kerma / event metrics |
 | Results | Interactive 3D dose map, correction factors table |
 | Export | JSON, HTML, PNG (PDF/Word not yet implemented) |

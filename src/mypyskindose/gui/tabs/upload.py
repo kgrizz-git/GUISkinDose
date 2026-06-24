@@ -308,6 +308,13 @@ def build(ctx: PageContext) -> None:
             import_preview = build_import_preview(ctx, upload_status)
             event_table = build_event_table()
 
+            def _select_exam_for_geometry(index: int) -> None:
+                if not (0 <= index < len(state.loaded_exams)):
+                    return
+                state.active_exam_index = index
+                ctx.refresh_per_exam()
+                ctx.tabs.set_value("geometry")
+
             def _refresh_exams_table():
                 exams_list.clear()
                 has_exams = bool(state.loaded_exams)
@@ -326,7 +333,9 @@ def build(ctx: PageContext) -> None:
                             )
                             study_id = str(exam.study_id) if getattr(exam, "study_id", None) else "—"
                             warnings = meta.get("warnings") or []
-                            with ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm"):
+                            with ui.card().classes(
+                                "modern-card w-full bg-blue-950/20 q-pa-sm cursor-pointer"
+                            ).on("click", lambda _e, i=idx: _select_exam_for_geometry(i)):
                                 with ui.row().classes("items-center w-full gap-3 no-wrap"):
                                     ui.label(f"#{idx + 1}").classes("text-caption text-grey-5 font-bold")
                                     ui.badge(
@@ -352,10 +361,13 @@ def build(ctx: PageContext) -> None:
                                             "text-xs"
                                         ).tooltip("Manual table-origin override active")
                                     ui.space()
+                                    def _remove_exam_click(_e, i=idx) -> None:
+                                        _remove_exam(i)
+
                                     ui.button(
                                         icon="close",
-                                        on_click=lambda e, i=idx: _remove_exam(i),
-                                    ).props("flat round dense size=sm color=grey-5").classes(
+                                        on_click=_remove_exam_click,
+                                    ).props("flat round dense size=sm color=grey-5 @click.stop").classes(
                                         "icon-outlined"
                                     ).tooltip("Remove this exam")
                         if state.is_multi_exam:

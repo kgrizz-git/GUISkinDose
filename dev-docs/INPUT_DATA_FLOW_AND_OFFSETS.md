@@ -38,7 +38,7 @@ If dose projects onto strange parts of the 3D human mesh (e.g., the beam hitting
 ### Which Offset to Adjust?
 
 - **Wrong scanner model detected?** → Check Table Offset in `normalization_settings.json`
-- **Patient positioned incorrectly?** → Adjust Patient Offset in Settings tab (`d_lon`, `d_ver`, `d_lat`)
+- **Patient positioned incorrectly?** → Adjust patient offset in the **Geometry** tab (sliders + live preview) or **Settings** (`d_lon`, `d_ver`, `d_lat` on Phantom in single-exam mode; **Per-exam corrections** in multi-exam — each exam has its own `meta[i].d_*`, while globals are not used for dose in multi-exam mode).
 
 See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) for detailed information about vendor-specific transformations and the offset hierarchy. 
 

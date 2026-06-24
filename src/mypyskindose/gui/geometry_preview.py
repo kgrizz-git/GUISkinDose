@@ -48,6 +48,17 @@ def on_exams_loaded(state: AppState) -> None:
         clamp_active_exam_index(state)
 
 
+def exam_select_value(
+    active_exam_index: int | None,
+    option_indices: set[int] | frozenset[int],
+) -> int | None:
+    """NiceGUI select value: None when empty; else active index if valid, else first option."""
+    if not option_indices:
+        return None
+    idx = active_exam_index if active_exam_index is not None else 0
+    return idx if idx in option_indices else min(option_indices)
+
+
 def effective_patient_offset_for_preview(
     state: AppState,
     active_exam_index: int | None = None,
@@ -145,6 +156,26 @@ def geometry_preview_caption(
             "other exams use their own offsets at Calculate."
         )
     return f"Preview: exam #{exam_num} events only, phantom at this exam's offset."
+
+
+def clamp_geometry_event_index(
+    state: AppState,
+    current_index: int,
+    *,
+    active_exam_index: int | None = None,
+    composite: bool = False,
+) -> int:
+    """Clamp a Geometry event index to the current preview slice (N4)."""
+    if state.rdsr_df is None:
+        return 0
+    slice_count = preview_event_count(
+        state,
+        active_exam_index=active_exam_index,
+        composite=composite,
+    )
+    if slice_count <= 0:
+        return 0
+    return min(max(0, current_index), slice_count - 1)
 
 
 def composite_live_preview_paused(

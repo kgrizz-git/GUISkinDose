@@ -5,20 +5,21 @@ The Geometry tab lets you visualize beam-patient geometry and verify positioning
 ## Workflow for Positioning Verification
 
 ### Step 1: Select an Event
-1. Enter an event number in the **Event Number** field
-2. Events are numbered from 1 to the total number of irradiation events in the RDSR
+1. Enter an event number in the **Event selection** field (0-based index into the current preview slice)
+2. For a single exam, this indexes all events in the file. In **multi-exam** mode, the default slice is the **selected exam** only unless **Show all exams in preview** is enabled.
 
 ### Step 2: Visualize Single Event
-1. Click **Single Event** to render the beam and patient for that event
+1. Click **Single event** to render the beam and patient for that event
 2. Observe:
    - Where the beam intersects the patient
    - The beam angle and direction
    - The patient position on the table
 
 ### Step 3: Adjust Settings (if needed)
-1. If positioning looks incorrect, go to the **Settings** tab
-2. Adjust phantom positioning offsets
-3. Return to Geometry tab and click **Single Event** again
+1. If positioning looks incorrect, adjust patient offsets:
+   - **Single exam:** Geometry tab sliders or **Settings → Phantom Settings**
+   - **Multiple exams:** pick **Selected exam** on the Geometry tab (or click an exam card on the Upload tab), then use Geometry sliders or **Settings → Per-exam corrections**
+2. Return to Geometry and click **Single event** again (sliders debounce ~250 ms)
 
 ### Step 4: Check Multiple Events
 1. Test several events across the procedure
@@ -27,17 +28,27 @@ The Geometry tab lets you visualize beam-patient geometry and verify positioning
    - **Neurovascular**: Beams should cluster around head
    - **Abdominal**: Beams should cluster around torso
 
+## Multi-exam mode
+
+| Control | Behavior |
+|---------|----------|
+| **Selected exam** | Patient-offset and table-origin sliders edit this exam's `meta` entry |
+| **Show all exams in preview** | Preview draws all exams' events; phantom stays at the selected exam's offset |
+| **Table-origin scrub** | While adjusting table origin, preview temporarily shows all exams so you can see relative table motion |
+
+Live preview may **pause** when a composite full-procedure view exceeds 30 events (performance guard).
+
 ## Controls
 
 | Button | Action |
 |--------|--------|
-| **Single Event** | Render one specific irradiation event |
-| **All Events** | Render all events (may be slow for large procedures) |
-| **Clear Plot** | Reset the visualization |
+| **Setup view** | Phantom and table in starting orientation |
+| **Single event** | Render one specific irradiation event |
+| **Full procedure** | Render all events in the current preview slice (may pause when large in multi-exam composite mode) |
 
 ## Tips
 
-- Use **Single Event** for quick positioning checks
+- Use **Single event** for quick positioning checks
 - Start with early events, then check middle and late events
 - The patient phantom appears as a mesh; the beam is shown as a cone
 - Zoom and rotate the plot to see the geometry from different angles

@@ -37,13 +37,22 @@ When the correct positioning is unknown:
 
 2. **Check the beam position** — Observe where the beam intersects the patient phantom
 
-3. **Adjust offsets** — Use the **Geometry** tab sliders for live 3D preview (single-exam), or edit values under **Settings → Phantom Settings → Patient Offsets**. Table offsets from vendor normalization are shown read-only; override the table origin in Geometry or **Per-exam corrections → Advanced: table origin** when auto-detection is wrong.
+3. **Adjust offsets** — Use the **Geometry** tab sliders for live 3D preview. In **multi-exam** mode, pick the **Selected exam** in the Geometry tab (or click an exam on the Upload tab) and use **Show all exams in preview** when you need to see every exam's beams together. Edit values under **Settings → Per-exam corrections** for per-exam offsets, or **Settings → Phantom Settings** for single-exam global offsets. Table offsets from vendor normalization are shown read-only; override the table origin in Geometry or **Per-exam corrections → Advanced: table origin** when auto-detection is wrong.
 
 4. **Return to Geometry** — Click "Single Event" again to see the updated position (slider moves debounce ~250 ms)
 
 5. **Test multiple events** — Check several events across the procedure to ensure positioning works for all irradiation events
 
 6. **Repeat** until the beam intersects the expected anatomical region for the procedure type
+
+## Multiple exams
+
+When more than one exam is loaded:
+
+- **Selected exam** — Geometry sliders and the 3D preview phantom use the exam chosen in the **Selected exam** dropdown.
+- **Per-exam offsets** — Each exam keeps its own patient offset (`lon` / `ver` / `lat`). Calculate uses every exam's settings; the Calculate tab summarizes offsets per exam.
+- **Composite preview** — Enable **Show all exams in preview** to draw all exams' events together while the phantom stays at the selected exam's offset (positioning only).
+- **Settings** — Global Phantom patient spinboxes are hidden in multi-exam mode; use Geometry or **Settings → Per-exam corrections** instead.
 
 ## Troubleshooting
 

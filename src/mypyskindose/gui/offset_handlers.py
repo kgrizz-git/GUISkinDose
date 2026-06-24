@@ -58,6 +58,11 @@ def read_patient_offset_value(
     return float(getattr(app_state, attr))
 
 
+def bump_per_exam_offsets_version(app_state: AppState) -> None:
+    """Invalidate Calculate/Settings summaries that depend on per-exam offset meta."""
+    app_state.per_exam_offsets_version += 1
+
+
 def apply_patient_offset_slider_tick(app_state: AppState, attr: str, value: float) -> None:
     """Geometry slider tick: write meta[active] in multi-exam, globals + meta[0] in single."""
     if app_state.is_multi_exam:
@@ -67,6 +72,7 @@ def apply_patient_offset_slider_tick(app_state: AppState, attr: str, value: floa
     else:
         setattr(app_state, attr, float(value))
         sync_global_patient_offset_to_single_exam_meta(app_state)
+    bump_per_exam_offsets_version(app_state)
 
 
 def reset_patient_offset_for_active(app_state: AppState) -> None:
@@ -83,10 +89,12 @@ def reset_patient_offset_for_active(app_state: AppState) -> None:
         app_state.d_ver = 0.0
         app_state.d_lat = 0.0
         sync_global_patient_offset_to_single_exam_meta(app_state)
+    bump_per_exam_offsets_version(app_state)
 
 
 def on_global_patient_offset_scrub(ctx: PageContext) -> None:
     sync_global_patient_offset_to_single_exam_meta(state)
+    bump_per_exam_offsets_version(state)
 
 
 def on_global_patient_offset_change(ctx: PageContext) -> None:

@@ -24,6 +24,7 @@ from ..helpers import (
     on_global_patient_offset_change,
 )
 from ..page_context import PageContext
+from ..summary_formatters import format_table_offset_line, multi_exam_phantom_offset_caption
 from ..state import reset_results, state
 from ._per_exam import build_per_exam_section
 
@@ -38,15 +39,7 @@ BELOW_FLOOR_KVP_OPTIONS = {
 
 
 def _format_table_offset_line() -> str:
-    method = state.normalization_method
-    if method == "Unknown":
-        return "—"
-    if method == "Tabular":
-        return "X: 0.0, Y: 0.0, Z: 0.0 cm (tabular — no auto-detected origin)"
-    return (
-        f"X: {state.table_offset_x:.1f}, Y: {state.table_offset_y:.1f}, "
-        f"Z: {state.table_offset_z:.1f} cm"
-    )
+    return format_table_offset_line(state)
 
 
 def build(ctx: PageContext) -> None:
@@ -89,6 +82,9 @@ def build(ctx: PageContext) -> None:
                     table_offset_label.bind_text_from(
                         state, "normalization_method", backward=lambda _v: _format_table_offset_line()
                     )
+                    table_offset_label.bind_text_from(
+                        state, "is_multi_exam", backward=lambda _v: _format_table_offset_line()
+                    )
 
                     fallback_badge = ui.badge("Fallback normalization").props("color=amber")
                     fallback_badge.bind_visibility_from(
@@ -119,36 +115,47 @@ def build(ctx: PageContext) -> None:
                         backward=lambda _m: any_table_origin_override(state),
                     )
 
-                    ui.label("Patient Offsets (adjustable, cm)").classes("text-caption text-grey-6 q-mt-sm")
+                    patient_offset_single = ui.column().classes("w-full gap-1")
+                    patient_offset_single.bind_visibility_from(
+                        state, "is_multi_exam", backward=lambda v: not v
+                    )
 
-                    offset_range_hint = ui.label("").classes("text-caption text-grey-5 italic")
+                    with patient_offset_single:
+                        ui.label("Patient Offsets (adjustable, cm)").classes("text-caption text-grey-6 q-mt-sm")
 
-                    def _update_offset_range_hint() -> None:
-                        mx = max(abs(state.d_lon), abs(state.d_ver), abs(state.d_lat))
-                        if mx > PATIENT_OFFSET_SLIDER_RANGE_CM:
-                            offset_range_hint.set_text(
-                                f"One or more offsets exceed the Geometry slider range "
-                                f"(±{PATIENT_OFFSET_SLIDER_RANGE_CM} cm)"
-                            )
-                        else:
-                            offset_range_hint.set_text("")
+                        offset_range_hint = ui.label("").classes("text-caption text-grey-5 italic")
 
-                    def _on_patient_offset_change() -> None:
-                        on_global_patient_offset_change(ctx)
+                        def _update_offset_range_hint() -> None:
+                            mx = max(abs(state.d_lon), abs(state.d_ver), abs(state.d_lat))
+                            if mx > PATIENT_OFFSET_SLIDER_RANGE_CM:
+                                offset_range_hint.set_text(
+                                    f"One or more offsets exceed the Geometry slider range "
+                                    f"(±{PATIENT_OFFSET_SLIDER_RANGE_CM} cm)"
+                                )
+                            else:
+                                offset_range_hint.set_text("")
+
+                        def _on_patient_offset_change() -> None:
+                            on_global_patient_offset_change(ctx)
+                            _update_offset_range_hint()
+
+                        with ui.row().classes("w-full gap-4"):
+                            ui.number(label="Longitudinal", value=state.d_lon, step=1.0).bind_value(
+                                state, "d_lon"
+                            ).on("update:model-value", _on_patient_offset_change).classes("grow")
+                            ui.number(label="Vertical", value=state.d_ver, step=1.0).bind_value(
+                                state, "d_ver"
+                            ).on("update:model-value", _on_patient_offset_change).classes("grow")
+                            ui.number(label="Lateral", value=state.d_lat, step=1.0).bind_value(
+                                state, "d_lat"
+                            ).on("update:model-value", _on_patient_offset_change).classes("grow")
+
                         _update_offset_range_hint()
 
-                    with ui.row().classes("w-full gap-4"):
-                        ui.number(label="Longitudinal", value=state.d_lon, step=1.0).bind_value(
-                            state, "d_lon"
-                        ).on("update:model-value", _on_patient_offset_change).classes("grow")
-                        ui.number(label="Vertical", value=state.d_ver, step=1.0).bind_value(
-                            state, "d_ver"
-                        ).on("update:model-value", _on_patient_offset_change).classes("grow")
-                        ui.number(label="Lateral", value=state.d_lat, step=1.0).bind_value(
-                            state, "d_lat"
-                        ).on("update:model-value", _on_patient_offset_change).classes("grow")
-
-                    _update_offset_range_hint()
+                    multi_exam_phantom_caption = ui.label(multi_exam_phantom_offset_caption()).classes(
+                        "text-caption text-grey-5 italic q-mt-sm"
+                    )
+                    multi_exam_phantom_caption.bind_visibility_from(state, "is_multi_exam")
 
             # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
             # editable block per loaded exam; registers ctx.refresh_per_exam.
