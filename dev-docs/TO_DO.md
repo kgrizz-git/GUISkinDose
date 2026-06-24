@@ -33,7 +33,6 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 
 ### Documentation / plans (pending)
 
-- [ ] **Audit wiki image deletions — confirm nothing was lost** — commit `e856ccd` (2026-06-24) removed 10 tracked `wiki/*.png` illustrations (`backscatter_*`, `beam_path_through_table_*`, `collimator_shutters_dark`, `distance_scaling_dark`, `human`, `isq_dark`, `mu_en_surface_dark`) when they were untracked via `.gitignore` (`*.png`, with only `docs/**/*.png` exempted). **Verify:** (1) each file still exists somewhere durable — e.g. `docs/source/` (preferred home for Sphinx), an external wiki/readthedocs asset path, or recoverable from git history (`git show e856ccd^:wiki/<file>`); (2) no broken image references in `docs/`, `dev-docs/`, or published help; (3) no other `wiki/` or `docs/` files were dropped in the same cleanup (`tmp/` assessments and `.basedpyright/README.md` were also removed). If the illustrations are still needed, restore from `e856ccd^` into `docs/source/user/figures/` (or another tracked path) and update any links; if obsolete, document that decision and delete local `wiki/` copies to avoid confusion.
 - [ ] **Plan template** — shared header for execution plans: objective, acceptance criteria, progress log, decision log (see `plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` §6).
 - [x] **Archive completed execution plans** — `refactor-execution.md` and `gui-decomposition-design.md` archived under `dev-docs/plans/archive/` (2026-06-23).
 - [ ] **Optional `dev-docs/master-plans/` migration** — defer until a rename PR is worth the link churn; convention documented in `HARNESS_ENGINEERING.md` instead.
@@ -148,6 +147,7 @@ Finished items kept for traceability. Harness phase tags reference [HARNESS_ENGI
 
 ### Docs and GUI milestones
 
+- [x] **Audit wiki PNG removals** (2026-06-24) — commit `e856ccd` dropped 10 `wiki/*.png` illustrations from git when `*.png` (with only `!docs/**/*.png`) made them trackable-but-ignored; all 10 restored from `e856ccd^` and still present on disk. No `docs/` files were removed in that commit; only `dev-docs/plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md` was edited. `tmp/` assessments and `.basedpyright/README.md` were intentionally untracked per `.gitignore`. Recurrence guard: advisory pre-commit hook `scripts/check_ignored_asset_files.py` warns on untracked/gitignored PNG/HTML outside `PlotOutputs/`.
 - [x] TO_DO.md cleanup — separate open questions from implementation tasks.
 - [x] RDSR data table shows **normalized** data (parsed, scaled, mm→cm, coordinate alignment) — not raw DICOM tags.
 - [x] Redesign GUI per `DESIGN.md`.

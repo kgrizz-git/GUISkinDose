@@ -125,11 +125,17 @@ python scripts/check_changelog.py   # requires origin/main to be fetched
 
 ```bash
 python scripts/check_untracked_scratch.py
+python scripts/check_ignored_asset_files.py
+python scripts/check_ignored_asset_files.py --strict   # optional release/maintenance gate
 python scripts/check_doc_pruning.py
 python scripts/check_doc_pruning.py --strict   # optional release/maintenance gate
 ```
 
 `check_untracked_scratch.py` blocks untracked scratch/temp files, including anything under `tmp/`.
+`check_ignored_asset_files.py` is advisory by default. It warns when `.png` or `.html` files
+outside `PlotOutputs/` (and other build/output trees) are untracked or gitignored — including
+tracked-but-ignored assets that can be dropped by `git rm --cached` while `*.png` / `*.html`
+remain in `.gitignore` (only `!docs/**/*.png` is exempted today).
 `check_doc_pruning.py` is advisory by default. It reports direct active execution plans under
 `dev-docs/plans/*.md` (excluding master `*_PLAN.md` files) and assessments under
 `dev-docs/assessments/*.md` once both thresholds are met: **30 days** and **10 commits** since
@@ -281,6 +287,7 @@ pre-commit run --hook-stage pre-push basedpyright --all-files
 | **gitleaks** | Secret scan on staged changes |
 | **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
+| **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 | **license-notices** | `python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
 
