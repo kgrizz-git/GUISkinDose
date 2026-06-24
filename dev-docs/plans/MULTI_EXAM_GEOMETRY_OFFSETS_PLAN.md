@@ -23,10 +23,17 @@ Two independent axes — do not use one `composite` flag for both:
 
 | Axis | Default | Render param |
 |------|---------|--------------|
-| **Events** | Patient: active exam only; table-origin: **all exams** always | Patient: `composite_preview` toggle (default off). Table-origin scrub: `composite_for_render = True` |
+| **Events** | Patient: active exam only; table-origin: **all exams** always | Patient: `composite_preview` toggle (default off). Table-origin scrub: `last_table_origin_scrub = True` → `_resolve_composite_for_render()` is `True` |
 | **Phantom** | `meta[active]` patient offset | Always active exam |
 
-Closure vars in `geometry.build`: `composite_preview` (user toggle, persists across exam switches); `composite_for_render` (passed to `make_geometry_fig`; see T8, T12, T27).
+Closure vars in `geometry.build`: `composite_preview` (user toggle, persists across exam switches); `last_table_origin_scrub` (set `True` on table-origin tick, `False` on patient tick / after debounced render); derive render flag via `_resolve_composite_for_render()` → passed to `make_geometry_fig` (see T8, T12, T27):
+
+```python
+def _resolve_composite_for_render() -> bool:
+    if last_table_origin_scrub:
+        return True
+    return composite_preview
+```
 
 ---
 
@@ -39,7 +46,7 @@ Closure vars in `geometry.build`: `composite_preview` (user toggle, persists acr
 | # | Issue | Action |
 |---|--------|--------|
 | B1 | T20 — `test_loader_seeds_offset_defaults_from_global` **failing** | Capture `prev_d_lon/ver/lat` before `reset_global_offsets_on_new_load` in `load_rdsr` / `load_tabular` |
-| B2 | T21 — `helpers.py` **803 lines**; CI + pre-commit blocked | Module split below |
+| B2 | T21 — `helpers.py` **803 → 235 lines** after Part I split; CI passing | Module split below *(done)* |
 | B3 | T25 — `_on_exam_offset_change` missing `ctx.refresh_per_exam()` | One line in `_per_exam.py` |
 | B4 | 2 `test_gui_offset_reset.py` failures on patch target | Patch `mypyskindose.gui.offset_handlers.state`, not `helpers.state` |
 
@@ -48,7 +55,7 @@ Closure vars in `geometry.build`: `composite_preview` (user toggle, persists acr
 | Module | Owns |
 |--------|------|
 | `gui/settings_builder.py` | `build_settings`, `fallback_normalization_exam_count` |
-| `gui/exam_transforms.py` | `EXAM_COLUMN`, `rebuild_rdsr_df`, `apply_exam_transforms`, transform helpers, `clear_multi_exam_state` |
+| `gui/exam_transforms.py` | `EXAM_COLUMN`, `EXAM_INDEX_COLUMN`, `rebuild_rdsr_df`, `apply_exam_transforms`, transform helpers, `clear_multi_exam_state` |
 | `gui/exam_loaders.py` | `load_rdsr`, `load_tabular`, `get_excel_sheets`, `_drop_exams_for_path` (with B1 fix) |
 | `gui/offset_handlers.py` | Global offset reset/sync, table-origin stage/commit (already in WIP) |
 | `gui/geometry_preview.py` | **Stub only** — helpers added in Part II |
@@ -104,8 +111,8 @@ def adjust_active_exam_index_after_remove(state: AppState, removed_index: int) -
     state.active_exam_index = min(state.active_exam_index, n - 1)
 ```
 
-- After `load_rdsr` / `load_tabular`: `len==1` → `active_exam_index=0`; else `clamp_active_exam_index`. When `is_multi_exam` flips: set `composite_for_render = composite_preview` and `composite_preview = False` if flipping to single-exam (T28).
-- `_remove_exam`: `adjust_active_exam_index_after_remove`; when `n==1`, `restore_globals_from_exam_meta` (T23). Preserve chain: `_remove_exam` → `_refresh_exams_table` → `ctx.refresh_per_exam` → `_refresh_geometry_sliders`.
+- After `load_rdsr` / `load_tabular`: `len==1` → `active_exam_index=0`; else `clamp_active_exam_index`. When `is_multi_exam` flips: reset `composite_preview = False` if flipping to single-exam (T28). Loaders already seed `meta[i].d_lon/ver/lat` from pre-reset globals (Part I B1, `exam_loaders.py`); slider edits update meta in-place; `run_calculation` reads per-exam meta.
+- `_remove_exam`: `adjust_active_exam_index_after_remove`; when `n==1`, `restore_globals_from_exam_meta` (T23). Preserve chain: `_remove_exam` → `_refresh_exams_table` → `ctx.refresh_per_exam` → `_refresh_geometry_sliders` (table + patient sync).
 - `reset_results()`: do **not** clear `active_exam_index` (T2).
 
 Also implement in `geometry_preview.py` (re-export from `helpers`):
@@ -121,8 +128,9 @@ def effective_patient_offset_for_preview(
     return (state.d_lon, state.d_ver, state.d_lat)
 
 def rdsr_df_for_geometry_preview(state, *, active_exam_index=None, composite=False):
-  # slice by EXAM_COLUMN prefix; .reset_index(drop=True); drop EXAM_COLUMN (T1, T11, T18)
-  # from .exam_transforms import EXAM_COLUMN  (Part I must be committed)
+  # slice by EXAM_INDEX_COLUMN (int, 0-based) — not string prefix on EXAM_COLUMN (T18, T30)
+  # .reset_index(drop=True); drop EXAM_INDEX_COLUMN + EXAM_COLUMN before plot (T1, T11)
+  # from .exam_transforms import EXAM_COLUMN, EXAM_INDEX_COLUMN
 
 def preview_event_count(state, *, active_exam_index=None, composite=False) -> int:
     df = rdsr_df_for_geometry_preview(state, active_exam_index=active_exam_index, composite=composite)
@@ -131,15 +139,17 @@ def preview_event_count(state, *, active_exam_index=None, composite=False) -> in
 
 ### 0.2 Exam selector + banner (`geometry.py`, multi-exam only)
 
-- Replace existing multi-exam banner with **Appendix B C1** (ships here, not Part III).
-- `ui.select` below banner; options `{i: f"#{i+1} · {file}"}`; rebuild under `exam_selector_guard` (T9).
-- Handler: capture `old_index`; cancel pending debounce; if `table_origin_pending` → `commit_table_origin_transform(state, old_index)` (T15); set index; clamp; `composite_for_render = composite_preview`; sync sliders; schedule render if `last_preview_mode` set.
+- Replace existing multi-exam banner with **Appendix B C1** (ships here, not Part III). Banner + exam selector: `visible iff is_multi_exam` (same parent column; collapse when 0 or 1 exam). Put selector inside banner block or share `bind_visibility_from(state, "is_multi_exam")`.
+- `ui.select` below banner; options `{i: f"#{i+1} · {file}"}`; rebuild under `exam_selector_guard` (T9 — same `{"suppress": False}` pattern as `table_guard`; add one-line comment cross-referencing other guards).
+- Handler: capture `old_index`; cancel pending debounce; if `table_origin_pending` → `commit_table_origin_transform(state, old_index)` (T15); set index; clamp; `last_table_origin_scrub = False`; sync sliders; schedule render if `last_preview_mode` set.
 - **Empty state:** with 0 exams (`rdsr_df` None), no selector, no sliders; plot area empty — manual 0h.
 
 ### 0.3 Preview wiring (`figures.py` + `geometry.py`)
 
-- `make_geometry_fig(mode, event_index, active_exam_index=None, composite=False)` — `rdsr_df_for_geometry_preview` + `effective_patient_offset_for_preview`; clamp events (T7); clear plot on `None` (T13).
-- `live_preview_allowed` / spinner: `preview_event_count(..., composite=composite_for_render)` (T8, T27). **Single-exam:** keep today — no PAUSED for `plot_procedure` (existing `event_count()` threshold). **Multi-exam composite only:** pause when `preview_event_count > 30`; spinner when `> 100`.
+- `make_geometry_fig(mode, event_index, *, active_exam_index=None, composite=False)` — optional kwargs default so CLI `main()` path unchanged (N1); uses `rdsr_df_for_geometry_preview` + `effective_patient_offset_for_preview`; clamp events (T7); clear plot on `None` (T13). Thread args through all three `run.io_bound(make_geometry_fig, …)` call sites in `geometry.py`.
+- `live_preview_allowed` / spinner: only when `is_multi_exam and _resolve_composite_for_render()` apply `preview_event_count(..., composite=True) > 30` pause and `> 100` spinner (T8, T27, N11). Single-exam and multi-exam non-composite: unchanged (no new pause).
+- `_refresh_geometry_sliders`: call **both** `_sync_table_sliders_from_meta()` and `_sync_patient_sliders_from_meta()` so Settings per-exam spinbox edits refresh Geometry slider positions (N5, N7).
+- `rebuild_rdsr_df` (`exam_transforms.py`): in multi-exam mode insert `EXAM_INDEX_COLUMN` (int, 0-based) for slicing; keep `EXAM_COLUMN` display string `"#<n> · <file>"` for Data Table only (T30).
 - Composite smoke: 2 exams, toggle on, no traceback (T26).
 
 **Slider sync stubs** (used in Parts III–IV; T17, T19):
@@ -166,7 +176,7 @@ def _sync_patient_sliders_from_meta(active_index=None):
 - Table-origin card: `bind_visibility_from` → `exam_supports_table_origin(exam, meta)` for active exam (WIP `helpers.py`: `True` when `base_data` has `Tx`/`Ty`/`Tz`; tabular without those columns → card hidden).
 - `_sync_table_sliders_from_meta`: skip when active exam does not support table-origin.
 - Sliders → `meta[active]` via `stage_table_origin_axis` + debounced `commit_table_origin_transform(state, active_index)`.
-- Table-origin tick: `composite_for_render = True`; preview uses `composite=True`.
+- Table-origin tick: `last_table_origin_scrub = True`; preview uses `composite=True` via `_resolve_composite_for_render()`.
 - `_reset_table_origin`: use `active_exam_index` when multi-exam (T5).
 
 ---
@@ -175,12 +185,12 @@ def _sync_patient_sliders_from_meta(active_index=None):
 
 **Files:** `geometry.py`. **Prerequisite:** Parts II–III.
 
-Multi-exam sliders edit **`meta[active].d_*` only** (not globals). Same fields as Settings per-exam spinboxes; B3/T25 keeps tabs in sync.
+Multi-exam sliders edit **`meta[active].d_*` only** (not globals). Same fields as Settings per-exam spinboxes (`bind_value` on meta there); Geometry uses explicit write-back `meta[active][attr] = float(slider.value)` on tick — no `bind_value` (T4, N10). B3/T25 + `_refresh_geometry_sliders` keep tabs in sync.
 
-- No `bind_value` / `bind_text_from` (T4); `patient_guard`; `val_labels` dict.
-- Multi-exam tick → `meta[active]`; single-exam → globals + `sync_global_patient_offset_to_single_exam_meta`.
-- `composite_preview` checkbox; `on_change` sets `composite_for_render` immediately (T29); patient tick also sets `composite_for_render = composite_preview`.
-- Preview buttons: reset `composite_for_render = composite_preview` before render (T16).
+- No `bind_value` / `bind_text_from` on Geometry patient sliders (T4); `patient_guard`; `val_labels` dict.
+- Multi-exam tick → `meta[active][attr] = float(value)`; `last_table_origin_scrub = False`; single-exam → globals + `sync_global_patient_offset_to_single_exam_meta`.
+- `composite_preview` checkbox; `on_change` calls `_resolve_composite_for_render()` path immediately (T29).
+- Preview buttons: pass `_resolve_composite_for_render()` before render (T16).
 - `_reset_patient_offset`: use `active_exam_index` when multi-exam (T5); multi → `meta[idx]=0`; single → globals + `meta[0]`.
 - Captions: **Appendix B** C2–C4.
 
@@ -194,7 +204,8 @@ Multi-exam sliders edit **`meta[active].d_*` only** (not globals). Same fields a
 | `calculate.py` `_format_patient_offsets()` | `is_multi_exam` → **Per-exam (various)** (T10) |
 | `settings.py` `_format_table_offset_line()` | Same branch (imported by Calculate) |
 | `settings.py` Phantom offsets | Hide global spinboxes when multi-exam; caption C6 |
-| `upload.py` | T23 chain; `load_example` → `ctx.refresh_per_exam()` |
+| `upload.py` | T23 chain: `load_example`, `clear_all_exams`, `_remove_exam` → `ctx.refresh_per_exam()` |
+| **Settings → Geometry** | When `apply_exam_transforms` fires from Settings (`_per_exam.py`), `rebuild_rdsr_df` replaces `state.rdsr_df`; if Geometry tab is active, re-clamp event index and call `_refresh_geometry_sliders` (or schedule debounced re-render) so preview slice stays valid (N4) |
 | **Docs** | `AGENTS.md`, `CHANGELOG.md`, `TO_DO.md`, `docs/source/gui_help/positioning_offsets.md` (+ `sync_gui_help.py`), `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/plans/GUI_PLAN.md` §0, `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` (multi-exam `meta[i].d_*` vs globals; `geometry_preview.py`) |
 
 ---
@@ -211,7 +222,7 @@ Multi-exam sliders edit **`meta[active].d_*` only** (not globals). Same fields a
 
 Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) Phase 3 — after this plan); per-exam dose map toggles; persisting Geometry UI across reload (session-only); export `table_origin_override` in `data.py`; incremental table-origin preview; per-exam event stepping ([TO_DO.md](../TO_DO.md)).
 
-**Performance:** Single-exam `plot_procedure` unchanged (no new pause). Multi-exam **composite** preview: pause when `preview_event_count > 30`; spinner when `> 100`.
+**Performance:** Single-exam `plot_procedure` unchanged (no new pause). Multi-exam composite preview only (`is_multi_exam and _resolve_composite_for_render()`): pause when `preview_event_count(..., composite=True) > 30`; spinner when `> 100`.
 
 ---
 
@@ -220,7 +231,7 @@ Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFF
 | Part | Done when |
 |------|-----------|
 | **I** | ✅ B1–B4 fixed; module split; `helpers.py` <800; tests green; **committed** |
-| **II** | `geometry_preview.py` helpers; C1 banner + exam selector; `make_geometry_fig` args; T2, T7, T13, T23, T26, T28 |
+| **II** | `geometry_preview.py` helpers; `EXAM_INDEX_COLUMN`; C1 banner + exam selector; `make_geometry_fig` args; T2, T7, T13, T23, T26, T28, T30 |
 | **III** | Table-origin bound to active exam; T5 reset |
 | **IV** | Patient sliders T4; composite toggle T29; T5 reset; C2–C4 |
 | **V** | T10 formatters; `calculate.py:78`; C5–C6; docs + `CHANGELOG.md` |
@@ -238,7 +249,7 @@ Part I committed; Parts II–V complete; Appendix B tests + manual matrix pass; 
 
 ---
 
-## Appendix A — Technical constraints (T1–T27)
+## Appendix A — Technical constraints (T1–T30)
 
 Grep while implementing Parts II–V.
 
@@ -249,19 +260,19 @@ Grep while implementing Parts II–V.
 | T3 | Table-origin limits fixed at build | On exam switch: `_props["min"]`/`["max"]` + `update()` |
 | T4 | `bind_value` leaks globals | `patient_guard`; no `bind_value`/`bind_text_from` in multi-exam |
 | T5 | `_reset_*` hardcoded to `meta[0]` | Use `active_exam_index` when multi-exam |
-| T6 | Preview frame invisible to `make_geometry_fig` | Args `active_exam_index`, `composite` through `run.io_bound` |
+| T6 | Preview frame invisible to `make_geometry_fig` | Optional kwargs `active_exam_index`, `composite` through `run.io_bound`; CLI defaults unchanged |
 | T7 | Event index out of range | Clamp in UI and `make_geometry_fig` |
-| T8 | PAUSED/spinner use full `event_count()` | `preview_event_count(...)` |
+| T8 | PAUSED/spinner use full `event_count()` | `preview_event_count(...)` only when `is_multi_exam and composite` |
 | T9 | Selector programmatic update re-fires | `exam_selector_guard["suppress"]` |
 | T10 | Stale Calculate/Settings summaries | **Per-exam (various)** when `is_multi_exam` |
 | T11 | Preview frame includes `EXAM_COLUMN` | Drop in `rdsr_df_for_geometry_preview` |
-| T12 | Patient vs table-origin composite differ | `composite_for_render` closure |
+| T12 | Patient vs table-origin composite differ | `last_table_origin_scrub` + `_resolve_composite_for_render()` |
 | T13 | `make_geometry_fig` returns `None` | `geom_plot.update_figure({})` |
 | T14 | Worker reads mutable `active_exam_index` | Pass index into preview helpers |
 | T15 | Exam switch while `table_origin_pending` | Commit `old_index` in selector handler |
-| T16 | Preview buttons stale `composite_for_render` | Reset before render |
+| T16 | Preview buttons stale composite flag | Pass `_resolve_composite_for_render()` before render |
 | T17 | `set_value` before limit update | Limits + `update()` first |
-| T18 | Exam tag exact match | `str.startswith(f"#{idx+1} ·")` |
+| T18 | Exam slice by display tag collides with filenames | **Superseded by T30** — do not slice on `EXAM_COLUMN` string prefix |
 | T19 | Sync helpers IndexError | Guard `idx >= len(loaded_exam_meta)` |
 | T20 | Loader zeros globals before meta | Capture `prev_d_*` before reset; seed meta (B1) |
 | T21 | `helpers.py` >800 lines | Module split (B2) |
@@ -270,9 +281,10 @@ Grep while implementing Parts II–V.
 | T24 | Import cycles | `settings_builder`; `exam_transforms` not `helpers` |
 | T25 | Settings spinboxes don't refresh Geometry | `ctx.refresh_per_exam()` after `_invalidate()` (B3) |
 | T26 | Composite untested | Manual 0c + unit test |
-| T27 | Wrong count for PAUSED | `preview_event_count` sliced; composite-only pause/spinner thresholds |
+| T27 | Wrong count for PAUSED | `preview_event_count` sliced; thresholds only when `is_multi_exam and composite` |
 | T28 | `composite_preview` sticks after multi→single | Reset `composite_preview = False` when `is_multi_exam` → `False` |
-| T29 | Toggle change after slider tick | `composite_preview` `on_change` sets `composite_for_render` immediately |
+| T29 | Toggle change after slider tick | `composite_preview` `on_change` re-derives composite via `_resolve_composite_for_render()` |
+| T30 | `EXAM_COLUMN` prefix slice fragile | Add `EXAM_INDEX_COLUMN` (int) in `rebuild_rdsr_df`; slice preview by index equality |
 
 ---
 
@@ -282,7 +294,7 @@ Grep while implementing Parts II–V.
 
 | ID | Context | Text |
 |----|---------|------|
-| C1 | Multi-exam banner | **Multiple exams loaded.** Sliders edit the **selected exam** below. **Calculate** uses each exam's own patient offset and table-origin settings. The 3D preview is for positioning only — it may not show every exam at once. |
+| C1 | Multi-exam banner | **Multiple exams loaded.** Sliders edit the **selected exam** below. **Calculate** uses each exam's own patient offset and table-origin settings. The 3D preview is for positioning only — it may not show every exam at once. Geometry and Settings → Per-exam corrections edit the **same per-exam data**; Geometry is the interactive 3D surface. |
 | C2 | Exam selector | **Patient and table-origin sliders apply to this exam.** |
 | C3 | Patient preview (default) | **Preview: exam #{n} events only, phantom at this exam's offset.** |
 | C3 | Patient preview (all exams) | **Preview: all exams' events; phantom position is exam #{n} only — other exams use their own offsets at Calculate.** |
@@ -294,7 +306,7 @@ Grep while implementing Parts II–V.
 
 ### Unit tests
 
-**New:** `tests/unittests/test_gui_multi_exam_geometry_offsets.py` — lifecycle, `rdsr_df_for_geometry_preview`, `preview_event_count`, table-origin commit index.
+**New:** `tests/unittests/test_gui_multi_exam_geometry_offsets.py` — lifecycle, `rdsr_df_for_geometry_preview` (slice by `EXAM_INDEX_COLUMN`), `preview_event_count`, table-origin commit index, patient slider write-back to meta (N10).
 
 **Also:** `test_format_patient_offsets_multi_exam`, `test_format_table_offset_line_multi_exam` (T10); `test_per_exam_offset_change_calls_refresh_per_exam` (T25); `test_remove_exam_invokes_refresh_per_exam` (T23).
 
@@ -304,15 +316,20 @@ Grep while implementing Parts II–V.
 
 | ID | Assert |
 |----|--------|
-| 0a | Selector default/clamp; slice + drop `EXAM_COLUMN` (T1, T11, T18, T19) |
+| 0a | Selector default/clamp; slice by `EXAM_INDEX_COLUMN`; drop tag columns (T1, T11, T30, T19) |
 | 0b | Event clamp + slider limits on exam switch (T3, T7, T17) |
 | 0c | Composite preview smoke (T6, T14, T26) |
 | 0h | 0 exams: no selector/sliders; empty plot |
-| 0d | PAUSED/spinner composite-only (T8, T27); single-exam unchanged |
+| 0d | PAUSED/spinner composite-only (`is_multi_exam and composite`; T8, T27) |
 | 0e | Selector guard; table-origin commit on switch (T9, T15) |
 | 0f | None plot cleared (T13) |
 | 0g | Remove exam → globals + slider chain (T23) |
+| 0i | `adjust_active_exam_index_after_remove`: remove before / at / after active |
+| 0j | Table slider limits + values after exam switch |
+| 0k | Patient sliders sync from Settings spinbox edit (N5) |
+| 0l | `composite_preview` toggle vs debounced render (T29, N3) |
+| 0m | `composite_preview` reset on multi→single (T28) |
 | 1a–1b | Table-origin per active exam |
-| 2a–2e | Patient `meta[active]`; toggle `on_change` (T29); preview modes (T4, T12, T16) |
+| 2a–2e | Patient `meta[active]` write-back; toggle `on_change` (T29); preview modes (T4, T12, T16) |
 | 10a–10d | T10 formatters; T25 sync |
 | C1–C6 | Copy checklist |
