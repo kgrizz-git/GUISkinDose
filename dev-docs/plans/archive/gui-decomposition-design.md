@@ -8,6 +8,8 @@ _Last updated: 2026-06-11_
 
 > Companion to [refactor-execution.md](refactor-execution.md) §Phase 3. That file is the checklist; this is the wiring map and the safe-extraction design it depends on. Produced by mapping `src/mypyskindose/gui/app.py` after Phase 3.0 (figures/styles already extracted; `index()` ≈ lines 181–1216, ~1035 lines).
 
+**Status: completed (2026-06-23).** All extraction steps (3.1a + 3.3a–g) shipped; `app.py` is 245 lines.
+
 ---
 
 ## 1. Why `index()` resists naive extraction
@@ -113,7 +115,7 @@ The two shared refreshers go in the context as **callables**, not as the widgets
 
 ## 4. Safe extraction order
 
-> **Progress (2026-06-12):** 3.1a + 3.3a–3.3c done (first milestone). `gui/page_context.py`, `gui/constants.py`, `gui/io_helpers.py`, and `gui/tabs/{results,export,data}.py` exist; `app.py` ~940 lines. Remaining: 3.3d geometry, 3.3e settings, 3.3f calculate, 3.3g upload. The §6 import strategy is decided (relocate downward).
+> **Progress (2026-06-23):** All steps complete. `gui/page_context.py`, `gui/concurrency.py`, `gui/upload_temp_files.py`, `gui/widgets/{import_preview,event_table}.py`, and `gui/tabs/{upload,data,settings,geometry,calculate,results,export}.py` exist; `app.py` ~245 lines.
 
 Strictly easiest → hardest, so the risky cluster is done last when the pattern is proven:
 

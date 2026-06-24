@@ -4,7 +4,7 @@
 **Scope:** `src/mypyskindose/`, `scripts/`, `tests/`  
 **Excluded:** `.venv/`, `backups/`, `*.egg-info`, dev-docs
 
-> This is the diagnostic. The executable, phased plan derived from it lives in [plans/refactor-execution.md](../plans/refactor-execution.md).
+> This is the diagnostic. The executable, phased plan derived from it lives in [plans/archive/refactor-execution.md](../plans/archive/refactor-execution.md) (**completed** 2026-06-23).
 
 ---
 

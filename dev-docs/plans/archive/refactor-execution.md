@@ -2,11 +2,11 @@
 
 _Last updated: 2026-06-11_
 
-> Companion to [REFACTOR_ASSESSMENT.md](../assessments/REFACTOR_ASSESSMENT.md) (the diagnostic). This file is the executable plan — the assessment says *what* is wrong; this says *how* to fix it, in what order, and how to verify each step.
+> Companion to [REFACTOR_ASSESSMENT.md](../../assessments/REFACTOR_ASSESSMENT.md) (the diagnostic). This file is the executable plan — the assessment says *what* is wrong; this says *how* to fix it, in what order, and how to verify each step.
 
-> See also: [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](GUI_PLAN.md) | [HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md)
+> See also: [CODEBASE_OVERVIEW.md](../../CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](../GUI_PLAN.md) | [HARNESS_ENGINEERING.md](../../HARNESS_ENGINEERING.md)
 
-**Status: not started.**
+**Status: Phases 0–3 complete (2026-06-23).** Phase 4 remains opportunistic.
 
 ---
 
@@ -78,7 +78,7 @@ All four real adapters share steps 1–3 and 7 (assessment §3). Migrate increme
 
 The largest and least urgent item. Do it only after Phases 0–2 settle. Prerequisite is the `PageContext` change — without it the tab functions can't be extracted because they close over widget references.
 
-> **Detailed design:** [gui-decomposition-design.md](gui-decomposition-design.md) — the measured wiring map of `index()` (cross-cutting widgets, handler call graph, the timer-driven vs call-driven distinction), the `PageContext` shape, and the easiest→hardest extraction order. Read it before starting 3.1.
+> **Detailed design:** [gui-decomposition-design.md](gui-decomposition-design.md) — the measured wiring map of `index()` (cross-cutting widgets, handler call graph, the timer-driven vs call-driven distinction), the `PageContext` shape, and the easiest→hardest extraction order.
 
 > **Safety net first (done):** `tests/gui/test_gui_flows.py` now exercises real handler wiring (all seven tab panels build their headings; the example-load flow runs end to end). The original smoke test only checked three labels — too thin to refactor handlers against.
 
@@ -87,17 +87,18 @@ The largest and least urgent item. Do it only after Phases 0–2 settle. Prerequ
   - `gui/styles.py` — the `MODERN_CSS` constant (~230 lines). `scripts/generate_ui_values.py` updated to read `styles.py`; `UI_values.md` and `index.md` path labels updated.
   - **Result:** `app.py` 1646 → 1281 lines. GUI tests (4) green; basedpyright clean; `generate_ui_values.py --check` consistent.
 
-- [ ] **3.1 Introduce `PageContext`.** A dataclass holding the widget references that handlers currently close over (e.g. `sheet_row`, `sheet_select`, `coord_auto_label`, `event_table`, `upload_status`, plot handles, label handles). Built inside `index()`, passed explicitly to handlers. No file split yet — just stop relying on closure scope. This is a mechanical, behavior-preserving change done **in place** in `app.py`.
-  - **Verify:** GUI smoke test (`tests/gui/`) green; manual click-through of all tabs.
+- [x] **3.1 Introduce `PageContext`.** `gui/page_context.py` holds cross-cutting chrome (`tabs`, drawer labels, `run_btn_drawer`) plus shared refresh callbacks (`refresh_event_table`, `refresh_import_preview`, `refresh_per_exam`, `refresh_exams_table`) wired after the upload/settings tabs build. Tab-local widgets stay in their tab modules.
+  - **Verify:** ✅ GUI flow + smoke tests green; basedpyright catches missing `ctx` fields.
 
-- [ ] **3.2 Extract widget components.** Move the import-preview card (preview + sheet picker + coordinate toggles) into `gui/widgets/import_preview.py` as a builder taking `(state, ctx)`. Move the event table into `gui/widgets/event_table.py`.
-  - **Verify:** smoke test green after each extraction.
+- [x] **3.2 Extract widget components.** `gui/widgets/import_preview.py` (preview card, sheet picker, coordinate toggles, `_refresh_import_preview` / `_set_transform_defaults`) and `gui/widgets/event_table.py` (irradiation-event summary table + refresh).
+  - **Verify:** ✅ smoke + flow tests green.
 
-- [ ] **3.3 Extract tabs one at a time** into `gui/tabs/{upload,data,settings,geometry,calculate,results,export}.py`. Each exports a `build(state, ctx)` function called from a slimmed `index()`. Order: start with the most self-contained (`settings`, `data`) before the most entangled (`geometry`, `export`). Commit per tab, smoke test between.
+- [x] **3.3 Extract tabs one at a time** into `gui/tabs/{upload,data,settings,geometry,calculate,results,export}.py`. Shared helpers relocated downward: `gui/concurrency.py` (`operation_guard`, `upload_lock`), `gui/upload_temp_files.py` (temp-file registry + atexit), `gui/io_helpers.py` and `gui/constants.py` (already in place). Upload tab extracted last (3.3g coupling cluster).
+  - **Verify:** ✅ full suite (255) + GUI smoke green; basedpyright clean.
 
-- [ ] **3.4 Final `app.py` shape:** `index()` builds layout + `PageContext`, then calls each tab's `build()`. `run_gui()` and `ui.run()` stay. Target < 250 lines.
+- [x] **3.4 Final `app.py` shape:** `index()` builds header/drawer/tabs + `PageContext`, then calls each tab's `build(ctx)`. `run_gui()` and `ui.run()` stay. **`app.py` 1275 → 245 lines.** `scripts/check_file_sizes.py` whitelist removed.
 
-**Phase 3 exit:** `app.py` < 250 lines; each tab is an independently readable module; GUI smoke test green.
+**Phase 3 exit:** ✅ `app.py` 245 lines; each tab is an independently readable module; GUI smoke test green.
 
 ---
 

@@ -98,10 +98,11 @@ Link the in-app help content with the main documentation so they stay in sync.
 2. **Duplicate content:** Separate files for docs and in-app help (risk of divergence)
 3. **Generated:** Build step copies relevant docs into the GUI package
 
-**Recommendation:** Start with option 2 for simplicity, migrate to option 1 if content grows.
+**Recommendation:** We have selected option 1.
 
-**Status:** Not started (lower priority)
+**Detailed Plan:** See [PHASE_6_DOC_INTEGRATION_PLAN.md](PHASE_6_DOC_INTEGRATION_PLAN.md) for the detailed implementation plan.
 
+**Status:** Planned
 ## File Structure After Implementation
 
 ```

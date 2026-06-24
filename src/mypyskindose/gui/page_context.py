@@ -45,3 +45,5 @@ class PageContext:
     # loaded-files summary calls this so loading/removing an exam re-renders the
     # editable controls. Default no-op until the settings tab is built.
     refresh_per_exam: Callable[[], None] = field(default=_noop)
+    # loaded-files summary card in the upload tab; restore tail calls this too.
+    refresh_exams_table: Callable[[], None] = field(default=_noop)

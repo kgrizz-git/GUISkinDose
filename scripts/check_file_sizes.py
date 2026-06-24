@@ -8,9 +8,7 @@ MAX_LINES = 800
 # Files that are currently allowed to exceed the limit.
 # These must be relative paths from the repository root.
 # Outliers should be documented and eventually decomposed/refactored.
-WHITELIST = {
-    "src/mypyskindose/gui/app.py",  # ~1550 lines, GUI monolith scheduled for decomposition in Phase 3
-}
+WHITELIST: set[str] = set()
 
 def check_file_sizes(repo_root: Path | None = None) -> bool:
     if repo_root is None:

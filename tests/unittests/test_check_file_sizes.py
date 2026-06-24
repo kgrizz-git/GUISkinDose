@@ -35,14 +35,9 @@ def test_check_file_sizes_ignores_unsupported_extensions(tmp_path: Path):
     
     assert check_file_sizes(repo_root=tmp_path) is True
 
-def test_check_file_sizes_whitelist_exceptions(tmp_path: Path):
-    # Make a mock repo structure that matches a whitelisted path
-    # Whitelist is: "src/mypyskindose/gui/app.py"
+def test_check_file_sizes_no_whitelist_exceptions(tmp_path: Path):
+    """No file-size outliers are whitelisted — every scanned file must respect MAX_LINES."""
     app_path = tmp_path / "src" / "mypyskindose" / "gui" / "app.py"
     app_path.parent.mkdir(parents=True)
-    
-    # Write whitelisted file exceeding limit
     app_path.write_text("\n" * (MAX_LINES + 50), encoding="utf-8")
-    
-    # Result should be True since it is whitelisted
-    assert check_file_sizes(repo_root=tmp_path) is True
+    assert check_file_sizes(repo_root=tmp_path) is False
