@@ -17,7 +17,11 @@ from mypyskindose.debug import dprint
 # Both the JSON payload and the HTML export embed the tabular import provenance
 # so a saved result records exactly how its source table was read.
 def _tabular_input_meta(file_name, provenance, swap_lat_lon, warnings) -> dict:
-    """Build the tabular-input provenance dict embedded in exports."""
+    """Build the tabular-input provenance dict embedded in exports.
+
+    Downstream consumers should read the top-level ``schema_version`` on the
+    export payload before parsing nested calculation fields.
+    """
     return {
         "source_file": file_name,
         "schema": provenance.schema_name,

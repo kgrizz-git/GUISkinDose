@@ -83,6 +83,7 @@ class TestMultiExamResultSerialization:
     def test_to_dict_structure(self):
         mr = self._make_multi()
         d = mr.to_dict()
+        assert d["schema_version"] == 1
         assert "exams" in d
         assert len(d["exams"]) == 2
         assert "aggregate_dose_map" in d

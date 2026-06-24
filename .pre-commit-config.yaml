@@ -42,6 +42,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: sync-gui-help
+        name: GUI help sync (docs/source/gui_help -> src/mypyskindose/gui/help)
+        entry: python scripts/sync_gui_help.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-file-sizes
         name: check file sizes (<800 lines)
         entry: python scripts/check_file_sizes.py
@@ -52,6 +59,13 @@ repos:
       - id: check-untracked-scratch
         name: check for untracked scratch files
         entry: python scripts/check_untracked_scratch.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-doc-pruning
+        name: doc pruning candidates (advisory)
+        entry: python scripts/check_doc_pruning.py
         language: system
         pass_filenames: false
         always_run: true

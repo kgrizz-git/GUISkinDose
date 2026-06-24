@@ -421,7 +421,8 @@ All visualisation uses [Plotly](https://plotly.com/python/) for interactive 3D r
 | `create_wireframes.py` | Beam and detector wireframe traces |
 | `create_plot_and_save_to_file.py` | Saves plots as HTML or PNG |
 | `get_camera_view.py` | Camera presets (AP, LAT, etc.) |
-| `plot_settings.py` | Plot-level layout constants |
+| `plot_settings.py` | Plot-level color/size/margin fetchers |
+| `plot_layout.py` | Shared Plotly `go.Layout` builders for geometry, procedure, and dose-map plots |
 
 ---
 

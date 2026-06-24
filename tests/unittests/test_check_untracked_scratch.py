@@ -25,6 +25,10 @@ def test_check_untracked_scratch_detects_temp_file():
     )
     assert check_untracked_scratch(mock_git_output=git_output) is False
 
+def test_check_untracked_scratch_detects_tmp_directory_file():
+    git_output = "?? tmp/assessment.md\n"
+    assert check_untracked_scratch(mock_git_output=git_output) is False
+
 def test_check_untracked_scratch_excludes_self():
     # Mock git output containing the script itself
     git_output = (

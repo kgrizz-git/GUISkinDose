@@ -26,6 +26,7 @@ Any change that adds, removes, or wires a feature must update `AGENTS.md` and th
 
 ```bash
 python scripts/check_doc_freshness.py    # broken links + inventory contradictions
+python scripts/check_doc_pruning.py      # advisory stale plan/assessment review
 python scripts/check_file_sizes.py       # enforce <800 lines per file
 python scripts/check_changelog.py        # CHANGELOG.md updated when src/tests changed
 pre-commit run --all-files               # ruff, gitleaks, bandit, doc + size checks

@@ -110,6 +110,8 @@ Not scheduled as a batch. **4.2** and **4.3** have detailed checklists below (al
 
 ### 4.2 — Shared figure-style helper (`plotting/` only)
 
+**Status: complete (2026-06-23).** Implemented in `plotting/plot_layout.py`; see `tests/unittests/test_plot_layout.py`.
+
 **Goal:** One place to change fonts, margins, axis styling, and dark/light canvas defaults for **CLI / notebook / HTML** Plotly outputs. Do **not** merge with `gui/figures.py` or `gui/styles.py` in the first pass — those serve the NiceGUI app and already diverge intentionally.
 
 **Current state (2026-06-23):**
@@ -149,6 +151,8 @@ Not scheduled as a batch. **4.2** and **4.3** have detailed checklists below (al
 ---
 
 ### 4.3 — `schema_version` on JSON / dict export
+
+**Status: complete (2026-06-23).** `EXPORT_SCHEMA_VERSION = 1` in `format_export_data.py`; pinned by `tests/unittests/test_export_data.py`.
 
 **Goal:** Downstream consumers (scripts, archival tools, future report exporters) can detect export format changes without parsing package version from the environment. **Additive only** — existing keys unchanged.
 

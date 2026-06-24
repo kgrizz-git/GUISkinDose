@@ -24,6 +24,12 @@ from mypyskindose.constants import (
 )
 from mypyskindose.settings import PyskindoseSettings
 
+# Export JSON schema version — increment when ``PySkinDoseOutput.to_dict()`` (or
+# ``MultiExamResult.to_dict()``) changes incompatibly: field removed, renamed, or
+# type changed. Not tied to package semver; downstream consumers should read this
+# before parsing nested fields.
+EXPORT_SCHEMA_VERSION = 1
+
 
 @dataclass
 class Position:
@@ -410,6 +416,7 @@ class PySkinDoseOutput:
             been made sparse in order to save space.
         """
         return {
+            "schema_version": EXPORT_SCHEMA_VERSION,
             "psd": self.PSD,
             "air_kerma": self.AirKerma,
             "patient": {
@@ -491,6 +498,7 @@ class MultiExamResult:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "schema_version": EXPORT_SCHEMA_VERSION,
             "exams": [
                 {
                     "exam_id": e.exam_id,

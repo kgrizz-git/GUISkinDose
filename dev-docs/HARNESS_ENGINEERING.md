@@ -46,6 +46,7 @@ Agents working in this repository should be able to answer three questions quick
 | CI | `.github/workflows/ci.yml` |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
+| Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
@@ -93,6 +94,8 @@ Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecess
    Place diagnostic reports or assessments (such as for refactoring, code quality, bug checks, etc.) under `dev-docs/assessments/` and register them in `dev-docs/index.md`.
 10. **Maintain workspace cleanliness.**
     Scratch scripts, temporary code, and local output files must be kept in explicitly gitignored paths (e.g. `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse. Do not check temp or experimental scrap into the repository.
+11. **Review stale docs before deleting them.**
+    `scripts/check_doc_pruning.py` reports active execution plans and assessments that have not been touched for at least 30 days and 10 commits. Treat this as a review queue: archive completed/superseded plans, keep still-useful assessments, and delete only when intentionally obsolete.
 
 
 
@@ -118,6 +121,20 @@ python -m build
 python scripts/check_changelog.py   # requires origin/main to be fetched
 ```
 
+### Repository hygiene checks
+
+```bash
+python scripts/check_untracked_scratch.py
+python scripts/check_doc_pruning.py
+python scripts/check_doc_pruning.py --strict   # optional release/maintenance gate
+```
+
+`check_untracked_scratch.py` blocks untracked scratch/temp files, including anything under `tmp/`.
+`check_doc_pruning.py` is advisory by default. It reports direct active execution plans under
+`dev-docs/plans/*.md` (excluding master `*_PLAN.md` files) and assessments under
+`dev-docs/assessments/*.md` once both thresholds are met: **30 days** and **10 commits** since
+last git touch. It does not auto-delete documentation.
+
 ### Documentation freshness check
 
 Run the harness doc-freshness script before feature or status PRs:
@@ -138,6 +155,7 @@ The script scans `AGENTS.md`, `README.md`, `CHANGELOG.md`, optional `DESIGN.md`,
 | Every feature/status PR | Run `python scripts/check_doc_freshness.py`; update `FEATURE_INVENTORY.md` if behavior changed |
 | After GUI CSS changes | Run `python scripts/generate_ui_values.py` (or `--check` in CI later) |
 | After dependency changes | Run `python scripts/check_licenses.py --write-notices` and commit `dev-docs/THIRD_PARTY_NOTICES.md` |
+| Monthly / before release | Run `python scripts/check_doc_pruning.py`; archive or intentionally keep stale candidates |
 | **Before each release** | Re-run full doc-freshness; resolve stale-pattern warnings; bump `pyproject.toml` and `CHANGELOG.md`; verify harness rows in `FEATURE_INVENTORY.md` §0 match `[Unreleased]` |
 
 **Release gate (target):** stale-pattern advisory warnings should become CI-blocking in the release workflow before the semver tag is cut. Until wired, maintainers clear warnings manually as part of release prep.

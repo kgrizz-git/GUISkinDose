@@ -16,6 +16,7 @@ from nicegui import ui
 from nicegui.testing import User
 
 import mypyskindose.gui.app as gui_app
+from mypyskindose.gui.tabs.upload import MAX_UPLOAD_BYTES, upload_exceeds_limit
 
 pytest.importorskip("nicegui")
 
@@ -42,10 +43,10 @@ def test_run_gui_host_is_opt_in(monkeypatch) -> None:
 # ── 2. upload size cap ──────────────────────────────────────────────────────
 def test_upload_size_guard_boundary() -> None:
     """The server-side guard rejects only payloads strictly over the limit."""
-    limit = gui_app.MAX_UPLOAD_BYTES
-    assert gui_app._upload_exceeds_limit(0) is False
-    assert gui_app._upload_exceeds_limit(limit) is False
-    assert gui_app._upload_exceeds_limit(limit + 1) is True
+    limit = MAX_UPLOAD_BYTES
+    assert upload_exceeds_limit(0) is False
+    assert upload_exceeds_limit(limit) is False
+    assert upload_exceeds_limit(limit + 1) is True
 
 
 @pytest.mark.asyncio
@@ -55,5 +56,5 @@ async def test_uploader_has_max_file_size(user: User) -> None:
     uploads = list(user.find(ui.upload).elements)
     assert uploads, "no ui.upload element rendered on the upload tab"
     assert any(
-        u._props.get("max-file-size") == gui_app.MAX_UPLOAD_BYTES for u in uploads
+        u._props.get("max-file-size") == MAX_UPLOAD_BYTES for u in uploads
     ), "uploader is missing the MAX_UPLOAD_BYTES max-file-size prop"

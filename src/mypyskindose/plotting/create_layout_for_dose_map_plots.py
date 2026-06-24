@@ -1,16 +1,6 @@
-import logging
+"""Backward-compatible wrapper — layout logic lives in ``plot_layout.default_dosemap_layout``."""
 
-import plotly.graph_objects as go
-
-from ..constants import (
-    PLOT_ASPECTMODE_PLOT_DOSEMAP,
-    PLOT_FONT_FAMILY,
-    PLOT_FONT_SIZE,
-    PLOT_HOVERLABEL_FONT_FAMILY,
-    PLOT_HOVERLABEL_FONT_SIZE,
-)
-
-logger = logging.getLogger(__name__)
+from .plot_layout import default_dosemap_layout
 
 
 def create_layout_for_dose_map_plots(
@@ -20,39 +10,11 @@ def create_layout_for_dose_map_plots(
     COLOR_PLOT_TEXT,
     COLOR_CANVAS,
 ):
-
-    layout = go.Layout(
-        height=PLOT_HEIGHT,
-        width=PLOT_WIDTH,
-        margin=PLOT_MARGINS,
-        font=dict(family=PLOT_FONT_FAMILY, color=COLOR_PLOT_TEXT, size=PLOT_FONT_SIZE),
-        hoverlabel=dict(font=dict(family=PLOT_HOVERLABEL_FONT_FAMILY, size=PLOT_HOVERLABEL_FONT_SIZE)),
-        title=dict(font=dict(family=PLOT_FONT_FAMILY, size=PLOT_FONT_SIZE, color=COLOR_PLOT_TEXT)),
-        paper_bgcolor=COLOR_CANVAS,
-        scene=dict(
-            aspectmode=PLOT_ASPECTMODE_PLOT_DOSEMAP,
-            xaxis=dict(
-                title="",
-                backgroundcolor=COLOR_CANVAS,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-            ),
-            yaxis=dict(
-                title="",
-                backgroundcolor=COLOR_CANVAS,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-            ),
-            zaxis=dict(
-                title="",
-                backgroundcolor=COLOR_CANVAS,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-            ),
-        ),
+    """Build dose-map layout using explicit theme values (legacy call signature)."""
+    return default_dosemap_layout(
+        color_plot_text=COLOR_PLOT_TEXT,
+        color_canvas=COLOR_CANVAS,
+        plot_height=PLOT_HEIGHT,
+        plot_width=PLOT_WIDTH,
+        plot_margin=PLOT_MARGINS,
     )
-
-    return layout

@@ -9,6 +9,9 @@ Welcome to MyPySkinDose's documentation!
    user/description.md
    user/install.md
    user/user_guide.md
+   gui_help/positioning_offsets.md
+   gui_help/geometry_workflow.md
+   gui_help/below_floor_kvp.md
    getting_started/getting_started
    user/contribute.md
 

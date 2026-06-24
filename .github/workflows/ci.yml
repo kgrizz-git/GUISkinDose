@@ -34,6 +34,8 @@ jobs:
         python scripts/check_changelog.py
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
+    - name: Check GUI help sync
+      run: python scripts/sync_gui_help.py --check
     - name: Check file sizes (<800 lines)
       run: python scripts/check_file_sizes.py
     - name: Build sdist and wheel

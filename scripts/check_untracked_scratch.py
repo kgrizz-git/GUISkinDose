@@ -5,6 +5,7 @@ from pathlib import Path
 
 # Patterns in filenames that suggest they are scratch/temporary files
 SCRATCH_PATTERNS = ["scratch", "temp", "tmp", "debug_"]
+SCRATCH_DIRS = {"tmp", "temp", "scratch"}
 
 def check_untracked_scratch(mock_git_output: str | None = None) -> bool:
     repo_root = Path(__file__).resolve().parent.parent
@@ -45,11 +46,13 @@ def check_untracked_scratch(mock_git_output: str | None = None) -> bool:
     for file_str in untracked_files:
         path = Path(file_str)
         name_lower = path.name.lower()
-        
+        parts_lower = {part.lower() for part in path.parts}
+
         # Check if the filename contains scratch patterns
         matches_pattern = any(pat in name_lower for pat in SCRATCH_PATTERNS)
-        
-        if matches_pattern:
+        in_scratch_dir = bool(parts_lower & SCRATCH_DIRS)
+
+        if matches_pattern or in_scratch_dir:
             print(
                 f"ERROR: Found untracked scratch/temp file in non-ignored path: {file_str}\n"
                 f"       Please delete this file, or rename/move it so it is gitignored (e.g., prefixing with 'scratch_').",

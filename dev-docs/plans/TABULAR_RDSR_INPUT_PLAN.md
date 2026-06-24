@@ -386,6 +386,7 @@ Flags to add:
   - [x] **Lat/lon swap toggle** — swaps `Tx ↔ Tz` on the normalized DataFrame (post-normalization). ✓
   - [ ] **Skip-manufacturer-transforms toggle** — bypass `rdsr_normalizer()` coordinate corrections. _Not yet implemented._
 - [x] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports. _(shipped 2026-06-10; JSON gets `tabular_input` key; HTML gets `<!-- mypyskindose:tabular_input ... -->` comment in `<head>`)_
+- [x] Core calculation exports include top-level `schema_version` (shipped 2026-06-23; see `format_export_data.EXPORT_SCHEMA_VERSION`).
 - [x] Show schema/source type in the Data Table tab header. _(shipped 2026-06-10)_
 
 ---

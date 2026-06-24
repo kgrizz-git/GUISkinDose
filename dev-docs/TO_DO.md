@@ -22,6 +22,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
   - Add exclude list for harness docs that intentionally mention stale-pattern words.
   - Extend `FEATURE_INVENTORY.md` contradiction rules beyond tabular input.
   - Make stale-pattern warnings CI-blocking before each release (see doc-gardening cadence in `HARNESS_ENGINEERING.md`).
+- [ ] **Optional doc-pruning release gate** — once the team is comfortable with the retention policy, run `python scripts/check_doc_pruning.py --strict` before release to require review of active execution plans and assessments older than 30 days and 10 commits.
 - [ ] **Architecture follow-ups**
   - Evaluate `import-linter` if layer contracts grow beyond three pytest rules.
   - Refactor `phantom_class` → `plotting` coupling documented in `CODEBASE_OVERVIEW.md`.
@@ -39,17 +40,17 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
   - [x] **7.1 Enforce File Size CI Limits**: Implement `scripts/check_file_sizes.py` (fail if any Python source or Markdown file > 800 lines, except whitelist) and add to CI/pre-commit.
   - [x] **7.2 Establish Visible Guidance for Agents**: Update `AGENTS.md` and `HARNESS_ENGINEERING.md` with rules for keeping files under 800 lines, archiving plans, and gitignoring scratch/temp files (unless intended for reuse).
   - [x] **7.3 Local Cleanups and Gitignore Hardening**: Strengthen `.gitignore` for scratch formats and add pre-commit checks for untracked scratch files.
+  - [x] **7.4 Doc pruning advisory check**: `scripts/check_doc_pruning.py` reports active execution plans and assessments older than 30 days and 10 commits; wired into pre-commit as advisory.
   - [ ] **Expand `dev-docs/references/` stubs** before next major dependency review.
   - [ ] **Recurring doc-gardening agent automation** (after stale-pattern rules are CI-blocking).
 - [ ] **Full GUI observability stack** — defer until smoke/tab tests prove insufficient (`plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` “what not to build yet”).
 
-### Refactor Phase 4 (from [refactor-execution.md](plans/archive/refactor-execution.md))
-
-- [ ] **4.3 — `schema_version` on JSON/dict export** (recommended next) — detailed checklist in [refactor-execution.md §4.3](plans/archive/refactor-execution.md#43--schema_version-on-json--dict-export). Small additive change; update `PySkinDoseOutput.to_dict()`, `test_export_data.py`, docs.
-- [ ] **4.2 — Shared Plotly layout helper (`plotting/` only)** — detailed checklist in [refactor-execution.md §4.2](plans/archive/refactor-execution.md#42--shared-figure-style-helper-plotting-only). Do when next changing plot aesthetics; do **not** merge with `gui/figures.py` in v1.
+- [x] **4.3 — `schema_version` on JSON/dict export** — **done** (2026-06-23): `EXPORT_SCHEMA_VERSION` in `format_export_data.py`; `PySkinDoseOutput.to_dict()` and `MultiExamResult.to_dict()` emit top-level `schema_version`. Tests in `test_export_data.py`.
+- [x] **4.2 — Shared Plotly layout helper (`plotting/` only)** — **done** (2026-06-23): `plotting/plot_layout.py` (`default_geometry_layout`, `default_procedure_layout`, `default_dosemap_layout`); refactored `create_setup_and_event_plot.py`, `plot_procedure.py`, `create_layout_for_dose_map_plots.py`. Tests in `test_plot_layout.py`.
 
 ### Input data & calculation
 
+- [ ] **Explore simplified calculation using only DICOM data** — investigate whether a reasonable dose estimate can be produced without the full phantom-mesh intersection pipeline, by reading key DICOM fields directly (kVp, mA, exposure time, SID, field size, DAP, fluoroscopy time, pulse rate, anode angle, beam rotation angles, etc.) and applying simplified geometry + correction factors. Could serve as a fast pre-scan estimate or a fallback when the mesh pipeline is too heavy or unavailable.
 - [ ] Run examples in JupyterLab and compare.
 - [x] **HVL-lookup crash on invalid / out-of-grid events** — **done** ([hvl-invalid-event-crash.md](plans/archive/hvl-invalid-event-crash.md)): crash fixed (nearest-grid snap + regression test), fail-soft, and snapped-event count surfaced in the GUI (calculate-tab status line + toast via `state.calc_warnings`). Decided 2026-06-13: invalid sub-floor-kVp events are **not** auto-dropped (interim = leave snapped); their handling moves to the interactive chooser below.
 - [x] **User options for below-floor / unresolvable kVp events** — **done** ([hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md), Phase 2, 2026-06-19): events with **kVp < 25 kV** now honor a user-selectable policy `below_floor_kvp_policy ∈ {snap (default), skip, manual, exam_average}` (+ `below_floor_kvp_manual`), applied per exam in `geom_calc.apply_below_floor_kvp_policy` before the HVL lookup. `snap` keeps the status quo (clamp + flag); `skip` drops the events; `manual` substitutes a fixed kVp; `exam_average` substitutes that exam's mean in-floor kVp (falls back to `snap` + warns if all-below). Settings control under Physics + a pre-calc prompt (`gui/tabs/calculate.py`) that fires only when sub-floor events are detected; affected-count always reported via `state.calc_warnings`. Remaining: manual GUI smoke check (load a sub-floor export, exercise each policy).
@@ -82,7 +83,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Fix download/export HTML button (verify other export paths).
 - [ ] **Rich report exports (XLSX / DOCX / PDF)** — beyond the current JSON/HTML/PNG (export tab) and CSV/XLSX/TXT event dumps (data tab), add report-style exports that bundle: one or two **dose-plot images at different views/angles** (reuse `make_dosemap_png`, rendered from a couple of camera angles), **key input factors** (total air kerma, DAP, fluoro time, number of cine/rotational acquisitions, protocol/exam name, perhaps average SID, kVp range), and **key results** (PSD, perhaps average correction factors k_isq/k_bs/k_tab). XLSX via a summary sheet + embedded image; DOCX via python-docx; PDF via a headless render or reportlab. Keep the provenance embedding (`io_helpers._tabular_input_meta`) so reports record how the source was read. New optional deps — gate behind the `[gui]`/a `[report]` extra and license-check them.
 - [ ] Add in-app help for settings and workflow; link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
-- [ ] Complete Phase 6 of `plans/POSITIONING_HELP_PLAN.md` — integrate positioning help with main documentation.
+- [x] **Complete Phase 6 of `plans/POSITIONING_HELP_PLAN.md`** — **done** (2026-06-24): `docs/source/gui_help/` is now the single source of truth; `scripts/sync_gui_help.py` mirrors to `src/mypyskindose/gui/help/` (enforced by pre-commit + CI). `positioning_offsets.md` merged (Overview + 6-step workflow + Tips from GUI; Coordinate System, Troubleshooting, Getting More Help from docs; 4-row Quick Reference with MyST footnote). `geometry_workflow.md` and `below_floor_kvp.md` relocated unchanged. Plans archived.
 - [ ] Allow manual interactive setting of table offsets in GUI.
 - [ ] Collect typical offsets per system/model/table type for user reference.
 - [ ] Settings tab: show Table Offsets (vendor-specific, read-only initially) and Patient Offsets (user-adjustable).

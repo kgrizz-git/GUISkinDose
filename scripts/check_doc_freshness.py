@@ -93,6 +93,9 @@ def collect_markdown_files(repo_root: Path) -> list[Path]:
     dev_docs = repo_root / "dev-docs"
     if dev_docs.is_dir():
         candidates.extend(sorted(dev_docs.rglob("*.md")))
+    gui_help = repo_root / "docs" / "source" / "gui_help"
+    if gui_help.is_dir():
+        candidates.extend(sorted(gui_help.rglob("*.md")))
 
     return [path for path in candidates if path.is_file()]
 

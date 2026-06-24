@@ -292,6 +292,7 @@ When `interactivity=False`:
 
 ```
 {
+  "schema_version": int,           # Export JSON schema (increment on incompatible shape changes)
   "psd": float,                    # Peak skin dose in mGy
   "air_kerma": float,              # Total IRP air kerma in mGy
   "patient": {

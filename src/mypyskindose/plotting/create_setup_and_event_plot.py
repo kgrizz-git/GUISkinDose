@@ -13,29 +13,16 @@ from ..constants import (
     COLOR_TABLE,
     MESH_NAME_PAD,
     MESH_OPACITY_BEAM,
-    PLOT_ASPECTMODE_SETUP_AND_EVENT,
-    PLOT_AXIS_TITLE_X,
-    PLOT_AXIS_TITLE_Y,
-    PLOT_AXIS_TITLE_Z,
-    PLOT_DRAGMODE,
-    PLOT_FONT_FAMILY,
-    PLOT_FONT_SIZE,
-    PLOT_HOVERLABEL_FONT_FAMILY,
-    PLOT_HOVERLABEL_FONT_SIZE,
     PLOT_LIGHTNING_AMBIENT,
     PLOT_LIGHTNING_DIFFUSE,
     PLOT_SOURCE_SIZE,
-    PLOT_TITLE_FONT_FAMILY,
-    PLOT_TITLE_FONT_SIZE,
     PLOT_WIREFRAME_LINE_WIDTH,
-    PLOT_ZERO_LINE_WIDTH,
 )
 from ..phantom_class import Phantom
 from .create_mesh3d import create_mesh_3d_general
 from .create_plot_and_save_to_file import create_plot_and_save_to_file
 from .create_wireframes import create_wireframes
-from .get_camera_view import get_camera_view
-from .plot_settings import fetch_plot_colors, fetch_plot_margin, fetch_plot_size
+from .plot_layout import default_geometry_layout
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +45,6 @@ def create_setup_and_event_plot(
 ):
 
     logger.debug("Creating meshes for plot")
-
-    COLOR_CANVAS, COLOR_PLOT_TEXT, COLOR_GRID, COLOR_ZERO_LINE = fetch_plot_colors(dark_mode=dark_mode)
-
-    PLOT_WIDTH, PLOT_HEIGHT = fetch_plot_size(notebook_mode=notebook_mode)
-
-    PLOT_MARGIN = fetch_plot_margin(notebook_mode=notebook_mode)
 
     patient_mesh = create_mesh_3d_general(
         obj=patient,
@@ -100,57 +81,10 @@ def create_setup_and_event_plot(
     )
 
     logger.debug("Setting up plot layout settings")
-    layout = go.Layout(
-        height=PLOT_HEIGHT,
-        width=PLOT_WIDTH,
-        margin=PLOT_MARGIN,
-        font=dict(family=PLOT_FONT_FAMILY, size=PLOT_FONT_SIZE, color=COLOR_PLOT_TEXT),
-        title=dict(
-            font=dict(
-                family=PLOT_TITLE_FONT_FAMILY,
-                size=PLOT_TITLE_FONT_SIZE,
-                color=COLOR_PLOT_TEXT,
-            ),
-            text=title,
-        ),
-        hoverlabel=dict(
-            font=dict(
-                family=PLOT_HOVERLABEL_FONT_FAMILY,
-                size=PLOT_HOVERLABEL_FONT_SIZE,
-                color=COLOR_PLOT_TEXT,
-            )
-        ),
-        paper_bgcolor=COLOR_CANVAS,
-        showlegend=False,
-        dragmode=PLOT_DRAGMODE,
-        scene=dict(
-            aspectmode=PLOT_ASPECTMODE_SETUP_AND_EVENT,
-            camera=get_camera_view(),
-            xaxis=dict(
-                title=PLOT_AXIS_TITLE_X,
-                backgroundcolor=COLOR_CANVAS,
-                gridcolor=COLOR_GRID,
-                linecolor=COLOR_GRID,
-                zerolinecolor=COLOR_ZERO_LINE,
-                zerolinewidth=PLOT_ZERO_LINE_WIDTH,
-            ),
-            yaxis=dict(
-                title=PLOT_AXIS_TITLE_Y,
-                gridcolor=COLOR_GRID,
-                linecolor=COLOR_GRID,
-                backgroundcolor=COLOR_CANVAS,
-                zerolinecolor=COLOR_ZERO_LINE,
-                zerolinewidth=PLOT_ZERO_LINE_WIDTH,
-            ),
-            zaxis=dict(
-                title=PLOT_AXIS_TITLE_Z,
-                gridcolor=COLOR_GRID,
-                linecolor=COLOR_GRID,
-                backgroundcolor=COLOR_CANVAS,
-                zerolinecolor=COLOR_ZERO_LINE,
-                zerolinewidth=PLOT_ZERO_LINE_WIDTH,
-            ),
-        ),
+    layout = default_geometry_layout(
+        title=title,
+        dark_mode=dark_mode,
+        notebook_mode=notebook_mode,
     )
 
     data = [

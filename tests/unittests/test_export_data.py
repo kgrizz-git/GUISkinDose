@@ -22,13 +22,22 @@ import pytest
 
 from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
 from mypyskindose.analyze_data import analyze_data
+from mypyskindose.format_export_data import EXPORT_SCHEMA_VERSION
 from mypyskindose.rdsr_normalizer import rdsr_normalizer
 from mypyskindose.rdsr_parser import rdsr_parser
 from mypyskindose.settings import PyskindoseSettings
 
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 _EXPECTED_TOP_KEYS = {
-    "psd", "air_kerma", "patient", "table", "pad", "dose_map", "corrections", "events"
+    "schema_version",
+    "psd",
+    "air_kerma",
+    "patient",
+    "table",
+    "pad",
+    "dose_map",
+    "corrections",
+    "events",
 }
 
 
@@ -73,6 +82,8 @@ def test_dict_export_has_expected_structure():
     out = _run("dict")
     assert isinstance(out, dict)
     assert set(out.keys()) == _EXPECTED_TOP_KEYS
+    assert out["schema_version"] == EXPORT_SCHEMA_VERSION
+    assert isinstance(out["schema_version"], int)
     assert isinstance(out["psd"], float) and out["psd"] > 0
     assert isinstance(out["air_kerma"], float) and out["air_kerma"] > 0
 
@@ -88,6 +99,7 @@ def test_json_export_parses_back_to_same_keys():
     assert isinstance(out_json, str)
     parsed = json.loads(out_json)
     assert set(parsed.keys()) == _EXPECTED_TOP_KEYS
+    assert parsed["schema_version"] == EXPORT_SCHEMA_VERSION
     assert parsed["psd"] > 0
 
 

@@ -100,25 +100,21 @@ Link the in-app help content with the main documentation so they stay in sync.
 
 **Recommendation:** We have selected option 1.
 
-**Detailed Plan:** See [PHASE_6_DOC_INTEGRATION_PLAN.md](PHASE_6_DOC_INTEGRATION_PLAN.md) for the detailed implementation plan.
+**Detailed Plan:** See [phase-6-doc-integration.md](phase-6-doc-integration.md) for the detailed implementation plan.
 
-**Status:** Planned
+**Status:** Complete (2026-06-24)
 ## File Structure After Implementation
 
 ```
-src/mypyskindose/gui/
-├── components/
-│   └── help_button.py          # Reusable help dialog component
-├── help/
-│   ├── positioning_offsets.md  # Offset parameter explanations
-│   └── geometry_workflow.md    # Iterative positioning workflow
-├── tabs/
-│   ├── settings_tab.py         # Updated with help button
-│   └── geometry_tab.py         # Updated with help button
-└── ...
+docs/source/gui_help/
+├── positioning_offsets.md    # Merged help content (single source of truth)
+├── geometry_workflow.md      # Geometry tab workflow
+└── below_floor_kvp.md        # Below-floor kVp policy explanation
 
-docs/source/user_guide/
-└── positioning_offsets.md      # Full user guide (optional, links to in-app help)
+src/mypyskindose/gui/help/
+├── positioning_offsets.md    # Mirrored from docs/source/gui_help/
+├── geometry_workflow.md      # Mirrored from docs/source/gui_help/
+└── below_floor_kvp.md        # Mirrored from docs/source/gui_help/
 ```
 
 ## Priority
@@ -127,7 +123,7 @@ docs/source/user_guide/
 2. ~~**Phase 3 & 4** — Help buttons in Settings and Geometry tabs (highest user impact)~~ ✅
 3. ~~**Phase 2** — Help button component (enables 3 & 4)~~ ✅
 4. ~~**Phase 5** — External help content files (cleaner, enables reuse)~~ ✅
-5. **Phase 6** — Doc integration (maintenance concern, lower priority)
+5. ~~**Phase 6** — Doc integration (maintenance concern, lower priority)~~ ✅
 
 ## Open Questions
 
