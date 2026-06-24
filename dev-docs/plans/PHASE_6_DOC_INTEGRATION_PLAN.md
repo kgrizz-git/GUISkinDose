@@ -1,34 +1,42 @@
 # Phase 6: Integration with Main Docs (Option 1)
 
 ## Objective
-Implement Option 1 from `POSITIONING_HELP_PLAN.md`: "Single source of truth: Help content lives in `docs/source/` and is bundled into the package." This ensures that the online documentation (via Sphinx/ReadTheDocs) and the in-app NiceGUI help dialogs use the exact same markdown files, preventing divergence.
+Implement Option 1 from `POSITIONING_HELP_PLAN.md`: "Single source of truth: Help content lives in `docs/source/` and is bundled into the package." This ensures the online documentation and the in-app NiceGUI help dialogs use the exact same markdown files, preventing divergence.
 
 ## Rationale
-By making `docs/source/user_guide/` the single source of truth, documentation authors can write standard Sphinx/MyST markdown without needing to know about the GUI package structure. We then bundle these specific help files into the python wheel so the GUI can access them at runtime via `importlib.resources` (or `pathlib`).
+By making `docs/source/gui_help/` the single source of truth, documentation authors can write standard Sphinx/MyST markdown. We then use a pre-commit sync script to mirror these files into the python package directory (`src/mypyskindose/gui/help/`). This approach keeps the source of truth in `docs/` while avoiding complex setuptools configurations or runtime package-data lookup changes.
 
-## Step-by-Step Plan
+## Implementation Steps (Ordered)
 
-### 1. Relocate Help Content to `docs/`
-- Move existing markdown files from `src/mypyskindose/gui/help/` to a new directory `docs/source/user_guide/gui_help/`.
-- Ensure these files are linked in the main Sphinx `index.rst` (or `user_guide/index.rst`) so they appear in the web documentation.
-- Update internal markdown links or image references to work in the Sphinx environment.
+### 1. Relocate and Merge Help Content
+- Create directory: `docs/source/gui_help/`.
+- Move the three GUI help files (`positioning_offsets.md`, `geometry_workflow.md`, `below_floor_kvp.md`) from `src/mypyskindose/gui/help/` to `docs/source/gui_help/`.
+- **Merge Conflict Resolution:** A longer `positioning_offsets.md` already exists at `docs/source/user_guide/positioning_offsets.md`. Merge the concise GUI version and the detailed Sphinx version into a single unified file at `docs/source/gui_help/positioning_offsets.md`. Remove the old `user_guide` version.
+- Ensure any relative markdown links within the merged files (e.g., links to `dev-docs/`) are correct relative to `docs/source/gui_help/`.
 
-### 2. Implement the Bundling Mechanism
-Since `pyproject.toml` uses `setuptools` with `src/` as the package directory, files outside `src/` are not automatically included in the wheel.
-- **Approach:** Create a pre-build sync script (e.g., `scripts/sync_gui_help.py`) that copies the markdown files from `docs/source/user_guide/gui_help/` into `src/mypyskindose/gui/help/`.
-- **Git integration:** Use a pre-commit hook (e.g., via `pre-commit`) to ensure the files in `src/` are always perfectly mirrored from `docs/` and tracked in version control. Tracking them is often easier for local development without requiring a build step, and ensures the code works immediately after a `git clone`.
-- **Build integration:** Alternatively, add `src/mypyskindose/gui/help/*.md` to `.gitignore` and run the sync script as part of the CI/CD release workflow before building the wheel.
+### 2. Implement the Sync Mechanism
+- Create a sync script `scripts/sync_gui_help.py` that copies `docs/source/gui_help/*.md` to `src/mypyskindose/gui/help/`.
+- Run the script so the files exist in `src/mypyskindose/gui/help/` and ensure they are **tracked in git**. 
+- Because the files remain in `src/` and are tracked, `pyproject.toml`'s existing `include-package-data = true` will automatically include them in the `.whl` package. No changes to `pyproject.toml` or `MANIFEST.in` are required.
+- Because the files are mirrored into `src/`, `src/mypyskindose/gui/components/help_button.py` can continue using `Path(__file__).parent / "help"` exactly as it does now. No code changes to the runtime pathing are needed.
 
-### 3. Update the GUI Pathing
-- Verify `src/mypyskindose/gui/app.py` or the help button instantiations load the markdown files from the correct bundled location.
-- Since we are mirroring them into `src/mypyskindose/gui/help/`, the runtime path logic in the GUI (`Path(__file__).parent / "help" / "positioning_offsets.md"`) will largely remain the same, but we should verify it resolves correctly when installed via `pip install .`.
+### 3. Add Pre-commit Hook
+- Update `.pre-commit-config.yaml` to run `scripts/sync_gui_help.py` automatically before commits, ensuring the `src/` copies are never out of sync with the `docs/` source of truth.
 
-### 4. Update the Harness Checks
-- Add a step to the repository harness (`dev-docs/HARNESS_ENGINEERING.md`) or the existing `check_doc_freshness.py` script to verify that the files in `docs/source/user_guide/gui_help/` match the copies in `src/mypyskindose/gui/help/`.
+### 4. Update Sphinx `index.rst`
+- Modify `docs/source/index.rst` to add the three new files to the `toctree` so they render in the online documentation:
+  - `gui_help/positioning_offsets`
+  - `gui_help/geometry_workflow`
+  - `gui_help/below_floor_kvp`
+
+### 5. Update Harness Checks
+- Modify `scripts/check_doc_freshness.py` to scan `docs/source/gui_help/*.md`.
+- Note: expanding the scan scope to `docs/source/` may require ensuring that inter-doc references from these Sphinx files resolve correctly in the custom regex checker.
 
 ## Acceptance Criteria
-- [ ] `positioning_offsets.md` and `geometry_workflow.md` source files exist in `docs/source/user_guide/gui_help/`.
-- [ ] The Sphinx documentation builds successfully and includes the help content.
-- [ ] Running `pip install .` correctly packages the help files so the GUI can read them at runtime.
-- [ ] A sync mechanism or script is documented and active.
-- [ ] Modifying the file in `docs/` correctly updates the GUI help text after a sync/build.
+- [ ] The files `positioning_offsets.md`, `geometry_workflow.md`, and `below_floor_kvp.md` exist as the single source of truth in `docs/source/gui_help/`.
+- [ ] `docs/source/index.rst` includes the three files in its toctree.
+- [ ] Running `python scripts/sync_gui_help.py` copies changes from `docs/source/gui_help/` to `src/mypyskindose/gui/help/` successfully.
+- [ ] Modifying a file in `docs/source/gui_help/` and running `git commit` triggers the pre-commit hook and auto-syncs the changes to `src/`.
+- [ ] The Sphinx documentation builds successfully without warnings.
+- [ ] `scripts/check_doc_freshness.py` scans the new files without throwing false positive link errors.

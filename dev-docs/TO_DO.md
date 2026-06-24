@@ -43,6 +43,11 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
   - [ ] **Recurring doc-gardening agent automation** (after stale-pattern rules are CI-blocking).
 - [ ] **Full GUI observability stack** — defer until smoke/tab tests prove insufficient (`plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` “what not to build yet”).
 
+### Refactor Phase 4 (from [refactor-execution.md](plans/archive/refactor-execution.md))
+
+- [ ] **4.3 — `schema_version` on JSON/dict export** (recommended next) — detailed checklist in [refactor-execution.md §4.3](plans/archive/refactor-execution.md#43--schema_version-on-json--dict-export). Small additive change; update `PySkinDoseOutput.to_dict()`, `test_export_data.py`, docs.
+- [ ] **4.2 — Shared Plotly layout helper (`plotting/` only)** — detailed checklist in [refactor-execution.md §4.2](plans/archive/refactor-execution.md#42--shared-figure-style-helper-plotting-only). Do when next changing plot aesthetics; do **not** merge with `gui/figures.py` in v1.
+
 ### Input data & calculation
 
 - [ ] Run examples in JupyterLab and compare.
@@ -83,7 +88,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Settings tab: show Table Offsets (vendor-specific, read-only initially) and Patient Offsets (user-adjustable).
 - [ ] Reduce spacing/padding in navigation section of left pane.
 - [ ] Soften brutalist look; refine sleek/modern aesthetic per [DESIGN.md](../DESIGN.md).
-- [ ] Refactor `app.py`.
+- [x] Refactor `app.py` — **done** (2026-06-23); see [refactor-execution.md](plans/archive/refactor-execution.md) Phase 3 (`app.py` 245 lines, per-tab modules).
 - [ ] Change fonts; add light mode; tune background color effects.
 - [ ] Make native window larger on launch.
 - [ ] Change default example RDSR in Upload tab (not `fake-scanner`).
@@ -91,6 +96,18 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 ### Backlog / research
 
 - [ ] Call it GUISkinDose?
+
+---
+
+## Deferred
+
+Items intentionally postponed — low ROI or high churn unless a concrete pain point appears. Full context in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md) Phase 4.
+
+### Refactor Phase 4 — deferred
+
+- [ ] **4.1 — Split `constants.py`** — `src/mypyskindose/constants.py` is ~270 lines (well under the 800-line CI limit) and mixes plot colors, DICOM tag keys, phantom dimension keys, physics floors (`HVL_KVP_FLOOR`), and output key strings. **Defer until** the file grows hard to navigate or you are already adding a large new constant block. **If undertaken:** split into `physics_constants.py` + `lookup_tables.py` (or `dicom_keys.py` + `plot_constants.py` — decide split axes first); add thin re-exports from `constants.py` for one release to avoid a mass import churn; grep the repo for `from mypyskindose.constants import` and migrate incrementally; run full `pytest` + `basedpyright`.
+
+- [ ] **4.4 — Narrow broad `except Exception`** — ~17 `except Exception` sites repo-wide; many are appropriate at I/O boundaries (`gui/io_helpers._get_save_path`, upload temp-file cleanup, `tabular_loader` encoding fallbacks). **Do not** repo-wide sweep. **Cherry-pick when:** a broad catch masked a real bug, or you are editing the function anyway. **Keep broad catches at:** user-facing boundaries (GUI notify + fallback download), `atexit`/cleanup, and optional native dialog paths. **Prefer specific types in:** adapter transform internals, geometry math, and parser normalization — e.g. `ValueError`, `KeyError`, `pd.errors.ParserError`, `sqlite3.Error`. Add a test per narrowed site where feasible.
 
 ---
 

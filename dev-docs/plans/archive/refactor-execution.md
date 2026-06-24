@@ -104,12 +104,89 @@ The largest and least urgent item. Do it only after Phases 0–2 settle. Prerequ
 
 ## Phase 4 — Lower-priority cleanups (opportunistic)
 
-Not scheduled; pick up when touching the relevant area.
+Not scheduled as a batch. **4.2** and **4.3** have detailed checklists below (also tracked in [TO_DO.md](../../TO_DO.md)). **4.1** and **4.4** are deferred — see TO_DO **Deferred** section.
 
-- [ ] **4.1** Split `constants.py` into `physics_constants.py` + `lookup_tables.py`.
-- [ ] **4.2** Add a shared figure-style helper for the `plotting/` modules (colors, fonts, layout defaults) so style changes touch one file.
-- [ ] **4.3** Add a `schema_version` field to JSON export output for downstream consumers.
-- [ ] **4.4** Replace lower-level broad `except Exception` in adapter/geometry internals with specific exception types (keep broad catches only at I/O boundaries).
+---
+
+### 4.2 — Shared figure-style helper (`plotting/` only)
+
+**Goal:** One place to change fonts, margins, axis styling, and dark/light canvas defaults for **CLI / notebook / HTML** Plotly outputs. Do **not** merge with `gui/figures.py` or `gui/styles.py` in the first pass — those serve the NiceGUI app and already diverge intentionally.
+
+**Current state (2026-06-23):**
+
+| Module | What it duplicates |
+|---|---|
+| `plotting/plot_settings.py` | `fetch_plot_colors`, `fetch_slider_colors`, `fetch_plot_size` — color/size only |
+| `plotting/plot_procedure.py` | `_create_procedure_layout()` — full `go.Layout` + slider styling |
+| `plotting/create_setup_and_event_plot.py` | Inline `go.Layout` for setup/event geometry plots |
+| `plotting/create_layout_for_dose_map_plots.py` | Dose-map-specific `go.Layout` (scene axes hidden) |
+| `gui/figures.py` | Separate Plotly builders for the GUI — **out of scope for 4.2** |
+
+**Design decisions (lock before coding):**
+
+- [ ] **D1 — Module location:** Add `plotting/plot_layout.py` (or extend `plot_settings.py` if it stays under ~200 lines). Prefer a new file if `plot_settings.py` would mix “fetch tuples” with “build Layout objects”.
+- [ ] **D2 — API shape:** Expose builders, not a single mega-function:
+  - `default_geometry_layout(*, dark_mode, notebook_mode, title=None, show_slider=False) -> go.Layout`
+  - `default_dosemap_layout(*, dark_mode, notebook_mode) -> go.Layout` (may wrap/refactor existing `create_layout_for_dose_map_plots`)
+  - Optional: `default_slider_step(*, dark_mode) -> dict` for procedure slider dict fragments
+- [ ] **D3 — Parameters:** All builders take `dark_mode: bool` and `notebook_mode: bool`; sizes/margins come from existing `fetch_plot_size` / `fetch_plot_margins` in `plot_settings.py`.
+- [ ] **D4 — Non-goals:** No change to trace colors (`COLOR_BEAM`, mesh colors in `constants.py`), camera presets (`get_camera_view.py`), or GUI figure code.
+
+**Implementation checklist:**
+
+- [ ] **4.2.1 Inventory** — List every `go.Layout(` call site under `src/mypyskindose/plotting/`; note per-plot overrides (title text, slider presence, scene `aspectmode`).
+- [ ] **4.2.2 Implement `default_geometry_layout`** — Consolidate shared fields from `create_setup_and_event_plot.py` and `plot_procedure._create_procedure_layout` (font family/size, `paper_bgcolor`, hoverlabel, scene axis grid/zeroline colors). Keep plot-specific title strings at the call site via `title=` kwarg.
+- [ ] **4.2.3 Refactor `create_setup_and_event_plot.py`** — Replace inline layout with `default_geometry_layout(...)`; behavior-preserving (visual diff optional: save one HTML before/after from `plot_setup` mode).
+- [ ] **4.2.4 Refactor `plot_procedure.py`** — Use `default_geometry_layout` + extracted slider helper; delete duplicated font/margin blocks.
+- [ ] **4.2.5 Refactor dose-map layout** — Either move `create_layout_for_dose_map_plots` into `plot_layout.py` as `default_dosemap_layout`, or make it a thin wrapper that calls the shared helper for font/margin/canvas and only adds dose-map scene overrides.
+- [ ] **4.2.6 Tests** — Add `tests/unittests/test_plot_layout.py`: assert returned objects are `go.Layout`, key fields match current constants (`PLOT_FONT_FAMILY`, margins), dark vs light `paper_bgcolor` differs. No pixel/visual regression required.
+- [ ] **4.2.7 Docs** — One paragraph in `dev-docs/CODEBASE_OVERVIEW.md` under plotting: “layout defaults live in `plotting/plot_layout.py`”.
+
+**Verify:** `python -m pytest tests/unittests/test_plot_layout.py tests/unittests/test_export_data.py -q` (export untouched but quick sanity); `basedpyright`; manual `settings.mode = plot_setup` / `plot_procedure` smoke on one bundled RDSR.
+
+**Exit:** All `go.Layout` construction in `plotting/` goes through ≤2 public helpers; `gui/figures.py` unchanged.
+
+---
+
+### 4.3 — `schema_version` on JSON / dict export
+
+**Goal:** Downstream consumers (scripts, archival tools, future report exporters) can detect export format changes without parsing package version from the environment. **Additive only** — existing keys unchanged.
+
+**Current state:**
+
+- Core payload: `PySkinDoseOutput.to_dict()` in `format_export_data.py` (8 top-level keys pinned by `tests/unittests/test_export_data.py`).
+- GUI export: `gui/tabs/export.py` `_build_export_payload()` copies `state.output` and may add `tabular_input`.
+- Multi-exam GUI path stores `state.multi_exam_result` — confirm whether JSON export covers multi-exam yet; if not, scope `schema_version` to the single-exam dict path first and note multi-exam in D4.
+
+**Design decisions:**
+
+- [ ] **D1 — Version value:** Use an integer **export schema version** (start at `1`), **not** the package semver from `pyproject.toml`. Bump only when the export JSON shape changes incompatibly (field removed/renamed/type changed). Document in a module constant `EXPORT_SCHEMA_VERSION = 1` in `format_export_data.py`.
+- [ ] **D2 — Field placement:** Top-level sibling of `psd`, `events`, etc.: `"schema_version": 1`. Same for GUI payload after `_build_export_payload`.
+- [ ] **D3 — `tabular_input`:** Leave as optional sibling; it is provenance metadata, not part of the core schema version bump unless its shape changes (track separately if needed later).
+- [ ] **D4 — Multi-exam:** If GUI JSON export does not yet serialize `multi_exam_result`, add `schema_version` only where `to_dict()` is used today; file a follow-up in TO_DO if multi-exam export is missing.
+
+**Implementation checklist:**
+
+- [ ] **4.3.1 Constant** — `EXPORT_SCHEMA_VERSION = 1` in `format_export_data.py` (module docstring: when to increment).
+- [ ] **4.3.2 Core export** — Add `"schema_version": EXPORT_SCHEMA_VERSION` as the **first** key in `PySkinDoseOutput.to_dict()` (stable ordering helps human diffing).
+- [ ] **4.3.3 GUI export** — Ensure `state.output` already includes `schema_version` via step 4.3.2 (preferred: single source in `to_dict()`, not duplicated in `export.py`). If multi-exam builds a dict manually, add the field there too.
+- [ ] **4.3.4 Tests** — Update `_EXPECTED_TOP_KEYS` in `test_export_data.py` to include `schema_version`; assert `out["schema_version"] == 1` and JSON round-trip preserves it. Add test that `schema_version` is an `int`.
+- [ ] **4.3.5 Docs** — `FEATURE_INVENTORY.md` export row; `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` export section (one line: core export includes `schema_version`); `CHANGELOG.md` under `[Unreleased]`.
+- [ ] **4.3.6 Consumer note** — Short comment in `format_export_data.py` and `gui/io_helpers._tabular_input_meta` docstrings: consumers should check `schema_version` before reading nested fields.
+
+**Verify:** `python -m pytest tests/unittests/test_export_data.py -q`; `basedpyright`; GUI manual: run calc → Export JSON → confirm `"schema_version": 1` at top level.
+
+**Exit:** Every programmatic JSON/dict export path includes `schema_version`; tests pin value `1`.
+
+---
+
+### 4.1 — Split `constants.py` (deferred)
+
+See [TO_DO.md § Deferred](../../TO_DO.md#deferred).
+
+### 4.4 — Narrow broad `except Exception` (deferred)
+
+See [TO_DO.md § Deferred](../../TO_DO.md#deferred).
 
 ---
 
