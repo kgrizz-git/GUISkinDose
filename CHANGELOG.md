@@ -83,6 +83,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - Pre-commit backup cleanup: a backup whose path is still tracked in `HEAD` but was recreated/force-staged (or locally modified) with new content is now protected too — commit-age deletion is skipped when the path has pending staged/unstaged changes, deferring to the mtime fallback.
 - Normalization settings: `update_translation_offset` and `update_rotation_direction` now apply vendor overrides from JSON/settings (previously no-ops when values were already initialized).
 - Phantom: cylinder mesh resolution assertions run after resolution is assigned (basedpyright refactor had broken cylinder phantom creation).
+- Type-check fixes for unit tests (2026-06-24): resolved 10 basedpyright errors blocking the pre-push type check. `tests/unittests/test_check_doc_pruning.py` now passes a structural lambda matching the `GitAgeProvider` protocol's `relative_path` parameter (and wrapping `dict.get`) instead of binding the `dict.get` bound method directly; `tests/unittests/test_plot_layout.py` reads margin values through `to_plotly_json()` to avoid basedpyright's spurious `tuple[Unknown, ...] | None` inference for the untyped plotly `Layout.margin` property. No behavior change.
 
 ## [25.1.1] - 2025-01-01
 
