@@ -11,6 +11,8 @@ from .state import AppState
 # never sent to the dose calculation: the single-exam calc path drops it before
 # analyze_data, and the multi-exam path reads per-exam normalized_data directly.
 EXAM_COLUMN = "Exam"
+# Internal 0-based exam index for preview slicing (not shown in Data Table exports).
+EXAM_INDEX_COLUMN = "__exam_index__"
 
 _GE_MANUFACTURER_WARNING = "ge manufacturer detected"
 
@@ -168,7 +170,8 @@ def rebuild_rdsr_df(state: AppState) -> None:
         if multi:
             df = df.copy()
             meta = state.loaded_exam_meta[i] if i < len(state.loaded_exam_meta) else {}
-            df.insert(0, EXAM_COLUMN, f"#{i + 1} · {meta.get('file_name', '—')}")
+            df.insert(0, EXAM_INDEX_COLUMN, i)
+            df.insert(1, EXAM_COLUMN, f"#{i + 1} · {meta.get('file_name', '—')}")
         frames.append(df)
     state.rdsr_df = pd.concat(frames, ignore_index=True)
 

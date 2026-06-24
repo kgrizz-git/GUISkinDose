@@ -16,6 +16,7 @@ from .exam_transforms import (
     _exam_is_ge,
     rebuild_rdsr_df,
 )
+from .geometry_preview import on_exams_loaded
 from .offset_handlers import reset_global_offsets_on_new_load
 from .settings_builder import build_settings
 from .state import AppState
@@ -118,6 +119,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
 
         # Rebuild concat event preview from all loaded exams
         rebuild_rdsr_df(state)
+        on_exams_loaded(state)
         state.is_multi_exam = len(state.loaded_exams) > 1
 
         # Update single-file-style fields so the rest of the UI is consistent
@@ -326,6 +328,7 @@ def load_tabular(
 
         # Rebuild concat event preview from all loaded exams.
         rebuild_rdsr_df(state)
+        on_exams_loaded(state)
         state.is_multi_exam = len(state.loaded_exams) > 1
 
         # Per-file state used by the import preview and schema re-parse path.

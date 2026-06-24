@@ -16,7 +16,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.helpers import EXAM_COLUMN, rebuild_rdsr_df
+from mypyskindose.gui.helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN, rebuild_rdsr_df
 from mypyskindose.gui.state import AppState
 
 
@@ -46,7 +46,9 @@ def test_multi_exam_tags_each_row_with_its_source():
     rebuild_rdsr_df(st)
 
     assert st.rdsr_df is not None
-    assert list(st.rdsr_df.columns)[0] == EXAM_COLUMN  # tag is inserted first
+    assert list(st.rdsr_df.columns)[0] == EXAM_INDEX_COLUMN
+    assert st.rdsr_df.columns[1] == EXAM_COLUMN
+    assert st.rdsr_df[EXAM_INDEX_COLUMN].tolist() == [0, 0, 1, 1, 1]
     assert st.rdsr_df[EXAM_COLUMN].tolist() == ["#1 · a.dcm"] * 2 + ["#2 · b.csv"] * 3
     # original per-exam frames are untouched (tag added on a copy)
     assert EXAM_COLUMN not in st.loaded_exams[0].normalized_data.columns

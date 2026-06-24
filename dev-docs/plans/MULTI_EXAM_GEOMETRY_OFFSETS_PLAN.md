@@ -75,9 +75,9 @@ pre-commit run --all-files
 
 ---
 
-## Part II — Phase 0: Active exam index + preview helpers
+## Part II — Phase 0: Active exam index + preview helpers ✅
 
-**Prerequisite:** Part I committed. Ship 0.1–0.3 together.
+**Status:** Completed 2026-06-24. Ship 0.1–0.3 together.
 
 **Files:** `state.py`, `geometry_preview.py`, `helpers.py` (re-exports), `figures.py`, `geometry.py`, `upload.py`.
 
@@ -231,7 +231,7 @@ Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFF
 | Part | Done when |
 |------|-----------|
 | **I** | ✅ B1–B4 fixed; module split; `helpers.py` <800; tests green; **committed** |
-| **II** | `geometry_preview.py` helpers; `EXAM_INDEX_COLUMN`; C1 banner + exam selector; `make_geometry_fig` args; T2, T7, T13, T23, T26, T28, T30 |
+| **II** | ✅ `geometry_preview.py` helpers; `EXAM_INDEX_COLUMN`; C1 banner + exam selector; `make_geometry_fig` args; T2, T7, T13, T23, T26, T28, T30 |
 | **III** | Table-origin bound to active exam; T5 reset |
 | **IV** | Patient sliders T4; composite toggle T29; T5 reset; C2–C4 |
 | **V** | T10 formatters; `calculate.py:78`; C5–C6; docs + `CHANGELOG.md` |

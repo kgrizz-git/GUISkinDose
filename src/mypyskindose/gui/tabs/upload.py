@@ -15,6 +15,7 @@ from nicegui import run, ui
 from ..concurrency import operation_guard, upload_lock
 from ..constants import EXAMPLE_FILES
 from ..helpers import (
+    adjust_active_exam_index_after_remove,
     clear_multi_exam_state,
     get_excel_sheets,
     load_rdsr,
@@ -220,6 +221,7 @@ def build(ctx: PageContext) -> None:
                     event_table.refresh()
                     _refresh_exams_table()
                     import_preview.refresh()
+                    ctx.refresh_per_exam()
 
                 with ui.row().classes("w-full items-center gap-3 q-mt-sm"):
                     ui.label("…or try a bundled example:").classes("text-caption text-grey-5")
@@ -258,6 +260,7 @@ def build(ctx: PageContext) -> None:
                             reset_results()
                             event_table.refresh()
                             _refresh_exams_table()
+                            ctx.refresh_per_exam()
                         else:
                             upload_status.set_text("Could not load — see message")
                             ui.notify(msg, type="negative", timeout=10000, multi_line=True)
@@ -372,13 +375,14 @@ def build(ctx: PageContext) -> None:
                 if index < len(state.loaded_exam_meta):
                     state.loaded_exam_meta.pop(index)
 
+                adjust_active_exam_index_after_remove(state, index)
+
                 if file_path is not None and all(
                     m.get("file_path") != file_path for m in state.loaded_exam_meta
                 ):
                     remove_temp_upload(file_path)
 
                 rebuild_rdsr_df(state)
-                state.is_multi_exam = len(state.loaded_exams) > 1
 
                 n = len(state.loaded_exams)
                 n_events = len(state.rdsr_df) if state.rdsr_df is not None else 0

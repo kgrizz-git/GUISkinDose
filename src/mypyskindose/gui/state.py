@@ -115,7 +115,6 @@ def reset_results() -> None:
     state.psd = None
     state.air_kerma = None
     state.dosemap_fig = None
-    state.active_exam_index = None
 
 
 def is_ready_to_calculate() -> bool:

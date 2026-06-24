@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from nicegui import ui
 
-from ..helpers import EXAM_COLUMN
+from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from ..io_helpers import _get_save_path
 from ..page_context import PageContext
 from ..state import state
@@ -118,7 +118,7 @@ def build(ctx: PageContext) -> None:
 
                 df = df_to_show.reset_index()
                 # create columns from df; pin the exam tag (multi-exam only) first
-                ordered = list(df.columns)
+                ordered = [c for c in df.columns if c != EXAM_INDEX_COLUMN]
                 if EXAM_COLUMN in ordered:
                     ordered.insert(0, ordered.pop(ordered.index(EXAM_COLUMN)))
                 cols = [{"name": c, "label": c, "field": c, "sortable": True, "align": "left"} for c in ordered]

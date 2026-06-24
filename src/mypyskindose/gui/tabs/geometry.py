@@ -1,7 +1,7 @@
 """Geometry preview tab — setup / single-event / full-procedure 3D views.
 
 Interactive patient-offset and table-origin sliders (single-exam) with debounced
-live preview. Multi-exam mode shows a composite-preview banner only.
+live preview. Multi-exam mode: exam selector, C1 banner, and sliced/composite preview.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from ..constants import (
     TABLE_ORIGIN_SLIDER_MIN,
 )
 from ..figures import make_geometry_fig
+from ..geometry_preview import preview_event_count
 from ..helpers import (
     commit_table_origin_transform,
     effective_table_origin,
@@ -27,6 +28,14 @@ from ..helpers import (
 from ..page_context import PageContext
 from ..state import event_count, reset_results, state
 
+_C1_BANNER = (
+    "Multiple exams loaded. Sliders edit the selected exam below. "
+    "Calculate uses each exam's own patient offset and table-origin settings. "
+    "The 3D preview is for positioning only — it may not show every exam at once. "
+    "Geometry and Settings → Per-exam corrections edit the same per-exam data; "
+    "Geometry is the interactive 3D surface."
+)
+
 
 def build(ctx: PageContext) -> None:
     slider_timer = None
@@ -34,6 +43,11 @@ def build(ctx: PageContext) -> None:
     live_preview_requested = False
     offset_changed_since_calc = False
     table_origin_pending = False
+    composite_preview = False
+    last_table_origin_scrub = False
+    was_multi_exam = state.is_multi_exam
+    exam_selector_guard = {"suppress": False}  # same pattern as table_guard below
+    patient_guard = {"suppress": False}
 
     with ui.tab_panel("geometry"):
         with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
@@ -44,12 +58,26 @@ def build(ctx: PageContext) -> None:
                     content_path="geometry_workflow.md",
                 )
 
-            multi_exam_banner = ui.label(
-                "Composite preview of all loaded exams (table positions and global patient "
-                "offset). Dose uses per-exam offsets and table-origin overrides from "
-                "Settings → Per-exam corrections."
-            ).classes("text-caption text-amber-6 italic q-pa-sm modern-card w-full")
-            multi_exam_banner.bind_visibility_from(state, "is_multi_exam")
+            multi_exam_header = ui.column().classes("w-full gap-2")
+            multi_exam_header.bind_visibility_from(state, "is_multi_exam")
+
+            with multi_exam_header:
+                ui.label(_C1_BANNER).classes("text-caption text-amber-6 italic q-pa-sm modern-card w-full")
+                ui.label("Patient and table-origin sliders apply to this exam.").classes(
+                    "text-caption text-grey-5"
+                )
+
+                def _exam_selector_options() -> dict[int, str]:
+                    return {
+                        i: f"#{i + 1} · {meta.get('file_name', '—')}"
+                        for i, meta in enumerate(state.loaded_exam_meta)
+                    }
+
+                exam_select = ui.select(
+                    options=_exam_selector_options(),
+                    value=state.active_exam_index if state.active_exam_index is not None else 0,
+                    label="Editing exam",
+                ).classes("w-full")
 
             offset_controls = ui.column().classes("w-full gap-4")
             offset_controls.bind_visibility_from(
@@ -133,16 +161,39 @@ def build(ctx: PageContext) -> None:
                     )
 
                     table_sliders: dict[str, ui.slider] = {}
-                    table_guard = {"suppress": False}
+                    table_guard = {"suppress": False}  # see exam_selector_guard above
 
-                    def _sync_table_sliders_from_meta() -> None:
-                        if not state.loaded_exam_meta:
+                    def _active_exam_index() -> int:
+                        if state.is_multi_exam and state.active_exam_index is not None:
+                            return state.active_exam_index
+                        return 0
+
+                    def _sync_table_sliders_from_meta(active_index: int | None = None) -> None:
+                        idx = active_index if active_index is not None else _active_exam_index()
+                        if idx >= len(state.loaded_exam_meta):
                             return
-                        origin = effective_table_origin(state.loaded_exam_meta[0])
+                        meta = state.loaded_exam_meta[idx]
+                        if not exam_supports_table_origin(
+                            state.loaded_exams[idx] if idx < len(state.loaded_exams) else None,
+                            meta,
+                        ):
+                            return
+                        origin = effective_table_origin(meta)
                         table_guard["suppress"] = True
                         for key, slider in table_sliders.items():
                             slider.set_value(origin[key])
                         table_guard["suppress"] = False
+
+                    def _sync_patient_sliders_from_meta(active_index: int | None = None) -> None:
+                        if state.is_multi_exam:
+                            return
+                        idx = active_index if active_index is not None else _active_exam_index()
+                        if idx >= len(state.loaded_exam_meta):
+                            return
+                        patient_guard["suppress"] = True
+                        for attr, slider in patient_sliders.items():
+                            slider.set_value(getattr(state, attr))
+                        patient_guard["suppress"] = False
 
                     with ui.row().classes("w-full gap-4 items-center"):
                         for key in ("x", "y", "z"):
@@ -174,15 +225,19 @@ def build(ctx: PageContext) -> None:
                                 ).classes("w-full")
 
                                 def _on_table_slider(e, k=key, s=slider) -> None:
-                                    nonlocal table_origin_pending, offset_changed_since_calc
+                                    nonlocal table_origin_pending, offset_changed_since_calc, last_table_origin_scrub
                                     if table_guard["suppress"] or not state.loaded_exam_meta:
                                         return
+                                    idx = _active_exam_index()
+                                    if idx >= len(state.loaded_exam_meta):
+                                        return
                                     stage_table_origin_axis(
-                                        state.loaded_exam_meta[0],
+                                        state.loaded_exam_meta[idx],
                                         k,
                                         float(s.value or 0.0),
                                     )
                                     table_origin_pending = True
+                                    last_table_origin_scrub = True
                                     offset_changed_since_calc = True
                                     _update_stale_caption()
                                     _schedule_debounced_render()
@@ -219,11 +274,21 @@ def build(ctx: PageContext) -> None:
             with ui.card().classes("w-full modern-card p-0 overflow-hidden"):
                 geom_plot = ui.plotly({}).classes("w-full").style("height:700px")
 
+    def _resolve_composite_for_render() -> bool:
+        if last_table_origin_scrub:
+            return True
+        return composite_preview
+
     def live_preview_allowed() -> bool:
         if state.busy:
             return False
-        if last_preview_mode == "plot_procedure" and event_count() > 30:
-            return False
+        if last_preview_mode == "plot_procedure":
+            if state.is_multi_exam and _resolve_composite_for_render():
+                active_idx = state.active_exam_index
+                if preview_event_count(state, active_exam_index=active_idx, composite=True) > 30:
+                    return False
+            elif not state.is_multi_exam and event_count() > 30:
+                return False
         return True
 
     def _update_paused_badge() -> None:
@@ -239,11 +304,12 @@ def build(ctx: PageContext) -> None:
         slider_timer = ui.timer(GEOMETRY_DEBOUNCE_SEC, _do_debounced_render, once=True)
 
     async def _do_debounced_render() -> None:
-        nonlocal slider_timer, table_origin_pending, live_preview_requested
+        nonlocal slider_timer, table_origin_pending, live_preview_requested, last_table_origin_scrub
         slider_timer = None
         if table_origin_pending:
-            commit_table_origin_transform(state, 0)
+            commit_table_origin_transform(state, _active_exam_index())
             table_origin_pending = False
+            last_table_origin_scrub = False
             reset_results()
         ctx.refresh_per_exam()
         if live_preview_requested and live_preview_allowed() and last_preview_mode:
@@ -253,16 +319,39 @@ def build(ctx: PageContext) -> None:
 
     async def _render_preview(mode: str) -> None:
         if state.rdsr_df is None:
+            geom_plot.update_figure({})
             return
-        geom_spinner.visible = event_count() > 100
+        active_idx = state.active_exam_index if state.is_multi_exam else None
+        composite = _resolve_composite_for_render() if state.is_multi_exam else False
+        if state.is_multi_exam and composite:
+            count = preview_event_count(state, active_exam_index=active_idx, composite=True)
+            geom_spinner.visible = count > 100
+        else:
+            geom_spinner.visible = event_count() > 100
         event_idx = int(geom_event_input.value or 0) if mode == "plot_event" else 0
-        fig = await run.io_bound(make_geometry_fig, mode, event_idx)
+        slice_count = (
+            preview_event_count(state, active_exam_index=active_idx, composite=composite)
+            if state.is_multi_exam
+            else event_count()
+        )
+        if mode == "plot_event" and slice_count > 0:
+            event_idx = min(max(0, event_idx), slice_count - 1)
+        fig = await run.io_bound(
+            make_geometry_fig,
+            mode,
+            event_idx,
+            active_exam_index=active_idx,
+            composite=composite,
+        )
         geom_spinner.visible = False
         if fig:
             geom_plot.update_figure(fig)
+        else:
+            geom_plot.update_figure({})
 
     def _on_patient_slider_change() -> None:
-        nonlocal offset_changed_since_calc
+        nonlocal offset_changed_since_calc, last_table_origin_scrub
+        last_table_origin_scrub = False
         on_global_patient_offset_scrub(ctx)
         offset_changed_since_calc = True
         _update_stale_caption()
@@ -338,8 +427,46 @@ def build(ctx: PageContext) -> None:
         else:
             _update_paused_badge()
 
+    def _rebuild_exam_selector() -> None:
+        if not state.is_multi_exam:
+            return
+        exam_selector_guard["suppress"] = True
+        exam_select.set_options(_exam_selector_options())
+        idx = state.active_exam_index if state.active_exam_index is not None else 0
+        exam_select.set_value(idx)
+        exam_selector_guard["suppress"] = False
+
+    def _on_exam_select_change(_e) -> None:
+        nonlocal last_table_origin_scrub, slider_timer, live_preview_requested, table_origin_pending
+        if exam_selector_guard["suppress"]:
+            return
+        old_index = state.active_exam_index
+        if slider_timer is not None:
+            slider_timer.cancel()
+            slider_timer = None
+        if table_origin_pending and old_index is not None:
+            commit_table_origin_transform(state, old_index)
+            table_origin_pending = False
+        new_index = int(exam_select.value or 0)
+        state.active_exam_index = new_index
+        last_table_origin_scrub = False
+        _sync_table_sliders_from_meta(new_index)
+        _sync_patient_sliders_from_meta(new_index)
+        if last_preview_mode:
+            live_preview_requested = True
+            _schedule_debounced_render()
+
+    exam_select.on_value_change(_on_exam_select_change)
+
     def _refresh_geometry_sliders() -> None:
+        nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
+        if was_multi_exam and not state.is_multi_exam:
+            composite_preview = False
+            last_table_origin_scrub = False
+        was_multi_exam = state.is_multi_exam
+        _rebuild_exam_selector()
         _sync_table_sliders_from_meta()
+        _sync_patient_sliders_from_meta()
 
     original_refresh_per_exam = ctx.refresh_per_exam
 

@@ -14,6 +14,7 @@ from pathlib import Path
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
     EXAM_COLUMN,
+    EXAM_INDEX_COLUMN,
     _table_origin_override_note,  # noqa: F401 — tests import via helpers
     apply_exam_transforms,
     clear_multi_exam_state,
@@ -32,15 +33,26 @@ from .offset_handlers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
+from .geometry_preview import (
+    adjust_active_exam_index_after_remove,
+    clamp_active_exam_index,
+    effective_patient_offset_for_preview,
+    on_exams_loaded,
+    preview_event_count,
+    rdsr_df_for_geometry_preview,
+)
 from .settings_builder import build_settings, fallback_normalization_exam_count
 from .state import AppState
 
 __all__ = [
     "EXAM_COLUMN",
+    "EXAM_INDEX_COLUMN",
+    "adjust_active_exam_index_after_remove",
     "any_table_origin_override",
     "apply_exam_transforms",
     "below_floor_event_count",
     "build_settings",
+    "clamp_active_exam_index",
     "clear_multi_exam_state",
     "commit_table_origin_transform",
     "effective_patient_offset_for_preview",
@@ -54,8 +66,11 @@ __all__ = [
     "get_human_mesh_names",
     "load_rdsr",
     "load_tabular",
+    "on_exams_loaded",
     "on_global_patient_offset_change",
     "on_global_patient_offset_scrub",
+    "preview_event_count",
+    "rdsr_df_for_geometry_preview",
     "rebuild_rdsr_df",
     "reset_global_offsets_on_new_load",
     "restore_globals_from_exam_meta",
@@ -75,11 +90,6 @@ class _CalcWarningCollector(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         self.messages.append(record.getMessage())
-
-
-def effective_patient_offset_for_preview(app_state: AppState) -> tuple[float, float, float]:
-    """Patient offset used by the Geometry preview (global until active_exam_index ships)."""
-    return (app_state.d_lon, app_state.d_ver, app_state.d_lat)
 
 
 def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
@@ -159,7 +169,9 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 # analyze_data internally calls calculate_rotation_matrices.
                 # Drop the display-only exam tag if present (defensive — single-exam
                 # frames don't carry it, but never let it reach the calculation).
-                calc_df = state.rdsr_df.drop(columns=EXAM_COLUMN, errors="ignore").copy()
+                calc_df = state.rdsr_df.drop(
+                    columns=[EXAM_COLUMN, EXAM_INDEX_COLUMN], errors="ignore"
+                ).copy()
                 output = analyze_data(normalized_data=calc_df, settings=settings)
             finally:
                 _calc_logger.removeHandler(_collector)
