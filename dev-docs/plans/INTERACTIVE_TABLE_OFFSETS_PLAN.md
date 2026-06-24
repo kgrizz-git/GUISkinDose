@@ -40,7 +40,7 @@ Both share `state.table_offset_*` (auto-detected) and `state.d_lon/ver/lat` (pat
 1. **Add read-only "Table Offsets (auto-detected)" display** in Phantom Settings expansion, above patient offset spinboxes.
    - Three read-only labels: `table_offset_x`, `table_offset_y`, `table_offset_z` with units (cm).
    - Info icon/tooltip: "Vendor-specific table coordinate origin from RDSR normalization. Read-only; adjust patient offsets below."
-   - **Fallback badge:** Show amber warning if `state.normalization_warnings` is non-empty (same condition as `helpers.load_rdsr:178-181`: `state.normalization_method == "Fallback"`). Do not re-implement detection logic.
+   - **Fallback badge:** Show amber warning if `state.normalization_method == "Fallback"`. Use the same condition as the existing upload tab warning (`tabs/upload.py:60`); do not re-implement detection logic. (`state.normalization_warnings` is also currently equivalent — populated only when `normalization_method == "Fallback"` in `helpers.load_rdsr:177-181` — but the existing pattern uses `normalization_method` directly, so prefer that for consistency.)
    - Location: `settings.py`, Phantom Settings expansion, after "Phantom model and positioning" row, before patient offset spinboxes.
 
 2. **Rename label** above existing spinboxes to "Patient Offsets (adjustable, cm)".
@@ -85,7 +85,7 @@ settings.py (Phantom Settings expansion):
 
 ### Approach
 
-Three sliders in Geometry tab, directly bound to `state.d_lon/ver/lat`. NiceGUI reactive binding — no "Apply" step.
+Three sliders in Geometry tab. In single-exam mode they bind to the global `state.d_lon/ver/lat`; in multi-exam mode they bind to the active exam's per-exam offsets (see "Multi-exam behavior" below). NiceGUI reactive binding — no "Apply" step.
 
 ### Layout
 
@@ -107,19 +107,28 @@ geometry.py (controls row, after existing):
 - Value text next to each slider (mono font, like `settings.py:89`).
 - Range: ±50 cm (matches `_per_exam.py:161`).
 - **Live preview checkbox:** when checked, slider changes trigger geometry re-render via debounced handler (see below). When unchecked, no re-render — user must click "Single event" or "Full procedure".
-- **Debounce:** slider `on_value_change` handler uses `ui.timer(0.25, ...)` to debounce re-renders at ~250ms. Prevents flooding the render pipeline with ±50 cm × 100 steps per slider.
+- **Debounce:** slider `on_value_change` handler uses a module-level timer variable + `ui.timer(0.25, callback=render, once=True)`, stopping any previous in-flight timer before starting a new one. Prevents flooding the render pipeline with ±50 cm × 100 steps per slider. **Do not** use `ui.timer(0.25, render)` alone — that creates a **recurring** timer (one per change), not a one-shot debounce. The codebase already uses the `once=True` form elsewhere (`tabs/results.py:240`).
 - **No dose recalculation.** Sliders trigger only `preview_event()` (geometry re-render), never `reset_results()`. Dose recalculates only on Calculate tab navigation or explicit request.
 - **Reset** sets all sliders to zero.
 - Sliders affect the **currently displayed plot mode** (Setup/Single/Full), not a specific button.
-- `preview_event()` internally calls `build_settings(state, ...)` which reads current `state.d_lon/ver/lat`, so offset changes propagate to the plot.
+- `preview_event()` calls `make_geometry_fig()`, which internally calls `build_settings(state, ...)`. `build_settings` reads the current offset from `state` (or, in multi-exam mode, the per-exam dict — see "Known limitation" below), so offset changes propagate to the plot.
 
 ### Multi-exam behavior
 
-Sliders bind to **per-exam** offsets (`state.loaded_exam_meta[state.active_exam_index][d_lon/ver/lat]`) in multi-exam mode, matching `_per_exam.py` behavior.
+Sliders bind to **per-exam** offsets (`state.loaded_exam_meta[state.active_exam_index][d_lon/ver/lat]`) in multi-exam mode.
 
 - On exam switch (event selection or exam selector), sliders re-bind to the new exam's per-exam values.
 - Uninitialized per-exam offsets default to **0.0** (matches `_per_exam.py:156` `meta.setdefault(axis, 0.0)`). This is distinct from the global `state.d_lon/ver/lat`.
 - Per-exam offsets stored in `loaded_exam_meta[i][d_lon/ver/lat]` (same dict as `_per_exam.py`).
+
+**Redundancy note (per-exam spinboxes).** In multi-exam mode, `_per_exam.py:155-166` already renders per-exam offset spinboxes bound to the same `meta[axis]` dict/keys. The Phase 2 sliders in the Geometry tab will be a second edit surface for the same values. Both edits propagate via NiceGUI binding (last write wins). Implementation may either keep both (different surface, same backing dict) or hide the sliders when an exam card is focused — defer the final UX to implementation. An "Apply global to all" button (`_per_exam.py:240-246` already exists) covers the bulk-set case.
+
+**Known limitation: geometry preview shows global offset, not per-exam (pre-existing).** `make_geometry_fig` → `build_settings` reads the **global** `state.d_lon/ver/lat` (`helpers.py:52-54`), not the per-exam `meta[d_lon/ver/lat]`. In contrast, `run_calculation` reads per-exam offsets from `state.loaded_exam_meta` (`helpers.py:440-447`). Result: when a user adjusts the per-exam offset via either the Geometry slider or the `_per_exam.py` spinbox, the geometry preview will not visibly change in multi-exam mode, but the calculated dose map will. Two acceptable resolutions:
+
+1. **Fix `build_settings` to take a per-exam offset** (preferred): add an optional `patient_offset: tuple[float, float, float] | None = None` parameter, defaulting to the global `state.d_lon/ver/lat`. `make_geometry_fig` resolves which offset to pass (per-exam in multi-exam mode, global otherwise) before calling `build_settings`. This keeps dose and preview consistent.
+2. **Document as a known limitation** in the UI: show a small note on the Geometry tab in multi-exam mode ("Preview uses the global offset; per-exam offsets apply to the dose map only"). Cheaper, but leaves the UX inconsistent.
+
+Recommend (1) if scope allows; (2) is the fallback.
 
 ### Files changed
 

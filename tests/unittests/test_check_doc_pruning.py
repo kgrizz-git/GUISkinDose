@@ -36,7 +36,7 @@ def test_collect_pruning_candidates_requires_days_and_commits(tmp_path: Path) ->
         "dev-docs/plans/low-commit-plan.md": GitAge(days_since_touch=31, commits_since_touch=2),
     }
 
-    stale = collect_pruning_candidates(repo_root, age_provider=ages.get)
+    stale = collect_pruning_candidates(repo_root, age_provider=lambda relative_path: ages.get(relative_path))
 
     assert [candidate.path.as_posix() for candidate in stale] == ["dev-docs/plans/old-plan.md"]
 
@@ -47,4 +47,4 @@ def test_collect_pruning_candidates_ignores_untracked_docs(tmp_path: Path) -> No
     assessments.mkdir(parents=True)
     (assessments / "new.md").write_text("# new\n", encoding="utf-8")
 
-    assert collect_pruning_candidates(repo_root, age_provider=lambda _path: None) == []
+    assert collect_pruning_candidates(repo_root, age_provider=lambda relative_path: None) == []

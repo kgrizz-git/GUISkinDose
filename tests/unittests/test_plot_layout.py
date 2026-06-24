@@ -87,10 +87,11 @@ def test_create_layout_for_dose_map_plots_preserves_explicit_dimensions():
     assert isinstance(layout, go.Layout)
     assert layout.height == custom_height
     assert layout.width == custom_width
-    assert layout.margin.l == custom_margin["l"]
-    assert layout.margin.r == custom_margin["r"]
-    assert layout.margin.b == custom_margin["b"]
-    assert layout.margin.t == custom_margin["t"]
     assert layout.paper_bgcolor == COLOR_CANVAS_DARK
     layout_dict = layout.to_plotly_json()
+    margin_dict = layout_dict["margin"]
+    assert margin_dict["l"] == custom_margin["l"]
+    assert margin_dict["r"] == custom_margin["r"]
+    assert margin_dict["b"] == custom_margin["b"]
+    assert margin_dict["t"] == custom_margin["t"]
     assert layout_dict["font"]["color"] == COLOR_PLOT_TEXT_DARK
