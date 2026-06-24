@@ -13,7 +13,11 @@ from ..concurrency import operation_guard
 from ..helpers import below_floor_event_count, run_calculation
 from ..page_context import PageContext
 from ..state import state
-from .settings import BELOW_FLOOR_KVP_OPTIONS
+from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
+
+
+def _format_patient_offsets() -> str:
+    return f"X: {state.d_lon:.1f}, Y: {state.d_ver:.1f}, Z: {state.d_lat:.1f} cm"
 
 
 async def below_floor_prompt(n_below: int) -> bool:
@@ -103,7 +107,7 @@ def build(ctx: PageContext) -> None:
                                     state, "manufacturer", backward=lambda v: f"{v} {state.model}"
                                 ).classes("font-bold text-[13px]")
                                 ui.label().bind_text_from(
-                                    state, "normalization_method", backward=lambda v: f"({v} Matched)"
+                                    state, "normalization_method", backward=lambda v: f"({v})"
                                 ).classes("text-[10px] opacity-40 italic")
 
                     with ui.column().classes("gap-2"):
@@ -122,18 +126,37 @@ def build(ctx: PageContext) -> None:
                                 ui.label("Patient Offsets:").classes(
                                     "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
                                 )
-                                ui.label().bind_text_from(
-                                    state, "d_lon", backward=lambda v: f"{v}, {state.d_ver}, {state.d_lat} cm"
-                                ).classes("font-bold text-[13px]")
+                                patient_offset_summary = ui.label(_format_patient_offsets()).classes(
+                                    "font-bold text-[13px]"
+                                )
+                                patient_offset_summary.bind_text_from(
+                                    state, "d_lon", backward=lambda _v: _format_patient_offsets()
+                                )
+                                patient_offset_summary.bind_text_from(
+                                    state, "d_ver", backward=lambda _v: _format_patient_offsets()
+                                )
+                                patient_offset_summary.bind_text_from(
+                                    state, "d_lat", backward=lambda _v: _format_patient_offsets()
+                                )
                             with ui.column().classes("gap-0"):
                                 ui.label("Table Offsets:").classes(
                                     "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
                                 )
-                                ui.label().bind_text_from(
-                                    state,
-                                    "table_offset_x",
-                                    backward=lambda v: f"{v}, {state.table_offset_y}, {state.table_offset_z} cm",
-                                ).classes("font-bold text-[13px]")
+                                table_offset_summary = ui.label(_format_table_offset_line()).classes(
+                                    "font-bold text-[13px]"
+                                )
+                                table_offset_summary.bind_text_from(
+                                    state, "table_offset_x", backward=lambda _v: _format_table_offset_line()
+                                )
+                                table_offset_summary.bind_text_from(
+                                    state, "table_offset_y", backward=lambda _v: _format_table_offset_line()
+                                )
+                                table_offset_summary.bind_text_from(
+                                    state, "table_offset_z", backward=lambda _v: _format_table_offset_line()
+                                )
+                                table_offset_summary.bind_text_from(
+                                    state, "normalization_method", backward=lambda _v: _format_table_offset_line()
+                                )
 
                     with ui.column().classes("gap-2"):
                         ui.label("PHYSICS PARAMETERS").classes(
@@ -201,6 +224,7 @@ def build(ctx: PageContext) -> None:
 
                 if ok:
                     ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
+                    ctx.clear_offset_stale_caption()
                     ui.notify(f"✓ {msg}", color="positive")
                     ctx.tabs.set_value("results")
                     if state.calc_warnings:

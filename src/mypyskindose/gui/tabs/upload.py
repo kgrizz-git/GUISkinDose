@@ -20,6 +20,7 @@ from ..helpers import (
     load_rdsr,
     load_tabular,
     rebuild_rdsr_df,
+    restore_globals_from_exam_meta,
 )
 from ..page_context import PageContext
 from ..state import reset_results, state
@@ -205,6 +206,9 @@ def build(ctx: PageContext) -> None:
                     state.table_offset_x = 0.0
                     state.table_offset_y = 0.0
                     state.table_offset_z = 0.0
+                    state.d_lon = 0.0
+                    state.d_ver = 0.0
+                    state.d_lat = 0.0
                     reset_results()
                     import_preview.sheet_row.set_visibility(False)
                     ctx.file_label.set_text("No file loaded")
@@ -387,9 +391,7 @@ def build(ctx: PageContext) -> None:
                     meta0 = state.loaded_exam_meta[0]
                     state.file_name = meta0.get("file_name", "")
                     state.file_path = meta0.get("file_path")
-                    state.swap_lat_lon = meta0.get("swap_lat_lon", False)
-                    state.flip_ap1 = meta0.get("flip_ap1", False)
-                    state.flip_ap2 = meta0.get("flip_ap2", False)
+                    restore_globals_from_exam_meta(state, meta0)
                     ctx.file_label.set_text(state.file_name.upper())
                     ctx.events_label.set_text(f"{n_events} EVENTS")
                 else:

@@ -47,3 +47,5 @@ class PageContext:
     refresh_per_exam: Callable[[], None] = field(default=_noop)
     # loaded-files summary card in the upload tab; restore tail calls this too.
     refresh_exams_table: Callable[[], None] = field(default=_noop)
+    # Geometry tab registers this to clear the stale-dose caption after a successful calc.
+    clear_offset_stale_caption: Callable[[], None] = field(default=_noop)

@@ -17,14 +17,15 @@ Two `TO_DO.md` items:
 
 ### Scope notes
 
-- **Multi-exam Geometry sliders deferred** until `active_exam_index` has a setter UI (patient offsets **and** table-origin). Per-exam editing today: `_per_exam.py`.
+- **Multi-exam Geometry sliders deferred** until this plan ships: [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md). Today: sliders hidden when `is_multi_exam`; composite-preview banner only.
 - **Multi-exam preview vs dose:** Geometry preview is a **composite** of all loaded exams (global patient offset + each exam’s rebased frames). Dose uses `loaded_exam_meta[i]` per exam. Phase 2 banner states this.
-- **Phase 0 resets** globals on new load (`load_rdsr`, `load_tabular` when `not replace_existing`, `clear_all_exams`). `_remove_exam` multi→single restores globals from surviving exam meta. `load_example` → `load_rdsr`.
+- **Phase 0 resets** globals on new load (`load_rdsr`, `load_tabular` when `not replace_existing`, `clear_all_exams`). New exam meta still **inherits pre-reset globals** as default `d_*` (§0.1). `_remove_exam` multi→single restores globals from surviving exam meta. `load_example` → `load_rdsr`.
 
 ### Pre-existing bugs (fix in this plan)
 
 - **Calculate tab** (`calculate.py:125-127`, `129-136`): patient and table offset summaries each bind only one axis (`d_lon` / `table_offset_x`); y/z stale.
 - **Per-exam global label** (`_per_exam.py:235-237`): static f-string; stale after global offset edits.
+- **Loader meta seeding vs global reset:** `reset_global_offsets_on_new_load()` zeroes globals before `loaded_exam_meta` is built, so new exams seed `d_*` as `0.0` instead of the pre-load globals. Breaks `test_multi_exam.py::TestGuiPerExamOffsets::test_loader_seeds_offset_defaults_from_global` (passes on committed `HEAD`; fails once Phase 0 reset lands in WIP). Fix in §0.1 — capture globals before reset, seed meta from captured values.
 
 ### State ownership (implementers)
 
@@ -38,7 +39,18 @@ Ship 0.1–0.3 together.
 
 ### 0.1 Reset on file load / clear
 
-**Patient offsets** — zero `state.d_lon/ver/lat` before `build_settings` in `load_rdsr`; in `load_tabular` only when `not replace_existing` (parser does not mutate globals; meta appended later copies current values). `clear_all_exams` zeros globals.
+**Patient offsets** — on fresh load, zero globals for the *session* UI, but seed each new `loaded_exam_meta` entry from the values **before** reset:
+
+```python
+prev_d_lon, prev_d_ver, prev_d_lat = state.d_lon, state.d_ver, state.d_lat
+reset_global_offsets_on_new_load(state)  # load_rdsr: always; load_tabular: when not replace_existing
+# ... build meta dicts ...
+"d_lon": prev_d_lon,
+"d_ver": prev_d_ver,
+"d_lat": prev_d_lat,
+```
+
+Apply in **every** `loaded_exam_meta` append site in `load_rdsr` and `load_tabular` (single-study, multi-study, and tabular re-parse paths). `clear_all_exams` zeros globals only (no new meta).
 
 **Coordinate flags** — on new loads only (`load_rdsr`; `load_tabular` when `not replace_existing`), also reset `state.swap_lat_lon`, `flip_ap1`, `flip_ap2` to `False`. Preserve on `replace_existing`.
 
@@ -219,6 +231,9 @@ Toggleable arrow trace when offset non-zero; reuses `effective_patient_offset_fo
 - `test_stage_table_origin_axis_does_not_call_apply`
 - `test_commit_table_origin_transform_rebuilds_rdsr_df`
 
+**Regression (loader meta seeding — also in [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) Phase 0):**
+`pytest tests/unittests/test_multi_exam.py::TestGuiPerExamOffsets::test_loader_seeds_offset_defaults_from_global`
+
 **Manual matrix:**
 | ID | Assert |
 |----|--------|
@@ -226,6 +241,7 @@ Toggleable arrow trace when offset non-zero; reuses `effective_patient_offset_fo
 | 0b | Clear all zeros globals |
 | 0c | New load (RDSR ↔ tabular) zeros globals |
 | 0d | Multi-exam: per-exam offsets on A preserved when B loaded |
+| 0d2 | Load multi-study with globals `(3, -2, 1)` → each new `meta[i].d_*` matches pre-load globals; globals themselves are `0` after load |
 | 0e | Single-exam: preview offset matches dose map |
 | 0f | Multi-exam: composite-preview banner visible; dose uses per-exam meta |
 | 0g | Tabular re-parse (`replace_existing`) preserves globals |
@@ -255,6 +271,7 @@ Toggleable arrow trace when offset non-zero; reuses `effective_patient_offset_fo
 
 **Phase 0**
 - [ ] Patient-offset + coordinate-flag reset on new load (`load_rdsr`, `load_tabular` when `not replace_existing`, `clear_all_exams`)
+- [ ] Capture `prev_d_lon/ver/lat` before reset; seed all new `loaded_exam_meta` from captured values (`test_loader_seeds_offset_defaults_from_global`)
 - [ ] `_remove_exam` multi→single restores `d_lon/ver/lat` from meta
 - [ ] `patient_offset` last on `build_settings`; grep all callers
 - [ ] `effective_patient_offset_for_preview`; sync helper; `_per_exam.py` global-label fix (three bindings)
@@ -270,7 +287,7 @@ Toggleable arrow trace when offset non-zero; reuses `effective_patient_offset_fo
 - [ ] Table-origin scrub stages meta only; `apply_exam_transforms` in debounced callback only
 
 **Cross-cutting**
-- [ ] `CHANGELOG.md` — **Fixed:** Calculate patient/table stale bindings; per-exam global label stale; offset + coordinate-flag leak on load; `_remove_exam` offset restore. **Added:** read-only table offsets; Geometry patient + table-origin sliders; reset buttons. Link plan.
+- [ ] `CHANGELOG.md` — **Fixed:** Calculate patient/table stale bindings; per-exam global label stale; offset + coordinate-flag leak on load; loader meta seeding after global reset; `_remove_exam` offset restore. **Added:** read-only table offsets; Geometry patient + table-origin sliders; reset buttons. Link plan.
 - [ ] `docs/source/gui_help/positioning_offsets.md` + `sync_gui_help.py` (Phase 2)
 - [ ] `TO_DO.md` items checked; clarify “table offsets” wording
 
@@ -290,6 +307,7 @@ Toggleable arrow trace when offset non-zero; reuses `effective_patient_offset_fo
 | 8 | `offset_changed_since_calc` setter? **Geometry tick wrappers** (`nonlocal`), not `helpers.py` scrub handler. |
 | 9 | `effective_table_origin` body in plan? **Yes** — full implementation in Phase 2b. |
 | 10 | `normalization_method` `"None"` branch? **Dead code** — omit from UI mapping. |
+| 11 | Reset globals but seed meta from pre-load values? **Yes** — capture `prev_d_*` before `reset_global_offsets_on_new_load` (§0.1). |
 
 ---
 
@@ -309,9 +327,11 @@ Archive when Phases 0–**2b** ship and manual matrix passes. Run `python script
 
 ## Future
 
-- Exam-selector UI + `active_exam_index` before multi-exam Geometry sliders (patient **and** table-origin).
+- **Multi-exam Geometry sliders + exam selector** → [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) (do not extend this plan).
+- Offset arrow (deferred Phase 3 in this file).
 - Partial per-exam refresh API if full `refresh_per_exam` proves too heavy.
 - Hint when Settings offset `|value| > 150` (slider range) without clamping.
+- Export `table_origin_override` in `data.py`; incremental table-origin preview (see optional follow-up above).
 
 ## TO_DO.md
 

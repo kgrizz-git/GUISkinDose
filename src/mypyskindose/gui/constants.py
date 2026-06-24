@@ -25,3 +25,9 @@ EXAMPLE_FILES = {
 COLORSCALES = ["jet", "viridis", "plasma", "inferno", "magma", "turbo", "hot"]
 PHANTOM_MODELS = ["human", "cylinder", "plane"]
 ORIENTATIONS = ["head_first_supine", "feet_first_supine"]
+
+# Geometry offset sliders (interactive table offsets plan Phase 2 / 2b)
+PATIENT_OFFSET_SLIDER_RANGE_CM = 150
+TABLE_ORIGIN_SLIDER_MIN = -250
+TABLE_ORIGIN_SLIDER_MAX = 250
+GEOMETRY_DEBOUNCE_SEC = 0.25

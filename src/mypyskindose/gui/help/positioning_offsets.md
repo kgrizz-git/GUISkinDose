@@ -37,9 +37,9 @@ When the correct positioning is unknown:
 
 2. **Check the beam position** — Observe where the beam intersects the patient phantom
 
-3. **Adjust offsets in Settings** — If the position doesn't look right, modify the offset values here
+3. **Adjust offsets** — Use the **Geometry** tab sliders for live 3D preview (single-exam), or edit values under **Settings → Phantom Settings → Patient Offsets**. Table offsets from vendor normalization are shown read-only; override the table origin in Geometry or **Per-exam corrections → Advanced: table origin** when auto-detection is wrong.
 
-4. **Return to Geometry** — Click "Single Event" again to see the updated position
+4. **Return to Geometry** — Click "Single Event" again to see the updated position (slider moves debounce ~250 ms)
 
 5. **Test multiple events** — Check several events across the procedure to ensure positioning works for all irradiation events
 

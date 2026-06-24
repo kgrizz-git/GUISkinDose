@@ -10,8 +10,17 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Added
+
+- **Interactive Geometry offset sliders** (2026-06-24) — single-exam **patient offset** sliders and **table-origin override** sliders in the Geometry tab with debounced live 3D preview; read-only auto-detected table offsets in Settings and Calculate tabs; reset buttons. Plan: `dev-docs/plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
+
+### Fixed
+
+- **GUI offset display and state leaks** (2026-06-24) — Calculate tab patient/table offset summaries now update when any axis changes; per-exam corrections global-offset label refreshes after Settings edits; patient offsets and coordinate-correction flags reset on new file load; `_remove_exam` multi→single restores globals from surviving exam meta.
+
 ### Changed
 
+- **GUI module split for multi-exam geometry prep** (2026-06-24) — Part I of `MULTI_EXAM_GEOMETRY_OFFSETS_PLAN`: split `gui/helpers.py` into `settings_builder`, `exam_loaders`, `exam_transforms`, and `geometry_preview` (stub); `helpers.py` is now a thin facade under the CI line cap. Loader seeds per-exam `d_*` from globals before reset (T20); Settings per-exam offset edits refresh Geometry sliders (T25).
 - **GUI decomposition (refactor plan Phase 3, 2026-06-23):** `gui/app.py` slimmed from ~1275 to 245 lines — `index()` now orchestrates layout + `PageContext` and delegates to per-tab `build(ctx)` modules (`gui/tabs/{upload,data,settings,geometry,calculate,results,export}.py`). Shared upload widgets in `gui/widgets/{import_preview,event_table}.py`; concurrency guard and upload temp-file lifecycle in `gui/concurrency.py` and `gui/upload_temp_files.py`. Below-floor kVp pre-calc prompt moved to `gui/tabs/calculate.py`. `app.py` removed from the file-size CI whitelist. Plan archived as `dev-docs/plans/archive/refactor-execution.md`.
 - **Export `schema_version` (refactor plan Phase 4.3, 2026-06-23):** JSON/dict exports from `PySkinDoseOutput.to_dict()` and `MultiExamResult.to_dict()` now include top-level `schema_version` (currently `1`) so downstream consumers can detect format changes without relying on package semver.
 - **Plotly layout helpers (refactor plan Phase 4.2, 2026-06-23):** `plotting/plot_layout.py` centralizes shared `go.Layout` builders for CLI/notebook geometry, procedure, and dose-map plots; `create_setup_and_event_plot`, `plot_procedure`, and `create_layout_for_dose_map_plots` delegate to it (`gui/figures.py` unchanged).

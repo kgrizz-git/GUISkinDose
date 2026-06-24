@@ -33,6 +33,7 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 
 ### Documentation / plans (pending)
 
+- [ ] **Check documentation completeness and accuracy** — verify that `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `AGENTS.md`, and `HARNESS_ENGINEERING.md` are current with the latest code changes (GUI tabs, tabular input adapters, HVL interpolation, grid_interp.py, multi-exam support, interactive offsets). Cross-reference settings names, class/function names, file paths, and feature claims against the actual codebase. Flag stale references, missing features, or outdated instructions.
 - [ ] **Plan template** — shared header for execution plans: objective, acceptance criteria, progress log, decision log (see `plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` §6).
 - [x] **Archive completed execution plans** — `refactor-execution.md` and `gui-decomposition-design.md` archived under `dev-docs/plans/archive/` (2026-06-23).
 - [ ] **Optional `dev-docs/master-plans/` migration** — defer until a rename PR is worth the link churn; convention documented in `HARNESS_ENGINEERING.md` instead.
@@ -79,14 +80,15 @@ Actionable work items only. Completed harness phases (0–5) and other finished 
 - [ ] Add sliders for patient offset parameters with real-time geometry preview in the Geometry tab.
   - Expose `max_events_for_patient_inclusion` as a control.
   - Consider presets (cardiac, head/neck, abdominal, etc.).
+- [ ] **Multi-exam Geometry offset sliders + exam selector** — show patient-offset and table-origin sliders when multiple exams are loaded; active-exam picker, honest preview semantics, bind to `loaded_exam_meta[active]`. Single-exam shipped in [INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md). → [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md).
 - [x] **Confirm the uploader-wedge fix and resolve** — **done** (confirmed 2026-06-13): dragging a file *out of the native file-open dialog* onto the drop zone wedged quasar in a phantom upload (`0.0B/0.00%`, `+` disabled); `uploader.reset()` did **not** recover it, so the "Reset upload" button / card X now **rebuild** the uploader element (commit `37019e1`). Manually verified the **Reset upload** button recovers a wedged uploader and the `+` works again.
 - [ ] Fix download/export HTML button (verify other export paths).
 - [ ] **Rich report exports (XLSX / DOCX / PDF)** — beyond the current JSON/HTML/PNG (export tab) and CSV/XLSX/TXT event dumps (data tab), add report-style exports that bundle: one or two **dose-plot images at different views/angles** (reuse `make_dosemap_png`, rendered from a couple of camera angles), **key input factors** (total air kerma, DAP, fluoro time, number of cine/rotational acquisitions, protocol/exam name, perhaps average SID, kVp range), and **key results** (PSD, perhaps average correction factors k_isq/k_bs/k_tab). XLSX via a summary sheet + embedded image; DOCX via python-docx; PDF via a headless render or reportlab. Keep the provenance embedding (`io_helpers._tabular_input_meta`) so reports record how the source was read. New optional deps — gate behind the `[gui]`/a `[report]` extra and license-check them.
 - [ ] Add in-app help for settings and workflow; link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [x] **Complete Phase 6 of `plans/POSITIONING_HELP_PLAN.md`** — **done** (2026-06-24): `docs/source/gui_help/` is now the single source of truth; `scripts/sync_gui_help.py` mirrors to `src/mypyskindose/gui/help/` (enforced by pre-commit + CI). `positioning_offsets.md` merged (Overview + 6-step workflow + Tips from GUI; Coordinate System, Troubleshooting, Getting More Help from docs; 4-row Quick Reference with MyST footnote). `geometry_workflow.md` and `below_floor_kvp.md` relocated unchanged. Plans archived.
-- [ ] Allow manual interactive setting of table offsets in GUI.
+- [x] Allow manual interactive setting of table offsets in GUI. (2026-06-24) — Geometry tab patient-offset sliders + table-origin override sliders (single-exam); see [plan](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md).
 - [ ] Collect typical offsets per system/model/table type for user reference.
-- [ ] Settings tab: show Table Offsets (vendor-specific, read-only initially) and Patient Offsets (user-adjustable).
+- [x] Settings tab: show Table Offsets (vendor-specific, read-only initially) and Patient Offsets (user-adjustable). (2026-06-24) — Settings + Calculate tab display; see [plan](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md).
 - [ ] Reduce spacing/padding in navigation section of left pane.
 - [ ] Soften brutalist look; refine sleek/modern aesthetic per [DESIGN.md](../DESIGN.md).
 - [x] Refactor `app.py` — **done** (2026-06-23); see [refactor-execution.md](plans/archive/refactor-execution.md) Phase 3 (`app.py` 245 lines, per-tab modules).

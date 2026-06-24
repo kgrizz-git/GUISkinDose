@@ -20,8 +20,10 @@ from nicegui import ui
 
 from ..helpers import (
     apply_exam_transforms,
+    commit_table_origin_transform,
     exam_supports_table_origin,
     exam_supports_transforms,
+    stage_table_origin_axis,
 )
 from ..page_context import PageContext
 from ..state import reset_results, state
@@ -53,6 +55,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
     def _on_exam_offset_change() -> None:
         """A per-exam offset spinbox changed — invalidate stale results."""
         _invalidate()
+        ctx.refresh_per_exam()
 
     def _on_exam_transform_change(index: int, key: str, value) -> None:
         """A per-exam coordinate-correction toggle changed: store the flag,
@@ -93,10 +96,8 @@ def build_per_exam_section(ctx: PageContext) -> None:
             def _on_change(key: str, value) -> None:
                 if guard["suppress"]:
                     return
-                if meta.get("table_origin_override") is None:
-                    meta["table_origin_override"] = dict(detected)
-                meta["table_origin_override"][key] = float(value or 0.0)
-                apply_exam_transforms(state, index)
+                stage_table_origin_axis(meta, key, float(value or 0.0))
+                commit_table_origin_transform(state, index)
                 _invalidate()
                 ctx.refresh_event_table()
                 ctx.refresh_import_preview()
@@ -104,7 +105,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
 
             def _on_reset() -> None:
                 meta["table_origin_override"] = None
-                apply_exam_transforms(state, index)
+                commit_table_origin_transform(state, index)
                 # Revert spinboxes without re-triggering _on_change.
                 guard["suppress"] = True
                 for k, inp in inputs.items():
@@ -232,9 +233,24 @@ def build_per_exam_section(ctx: PageContext) -> None:
             # analyze_data, so the global-copy control is hidden for one file.
             if state.is_multi_exam:
                 with ui.row().classes("w-full items-center gap-3 q-mb-xs"):
-                    ui.label(
-                        f"Global patient offset: {state.d_lon}, {state.d_ver}, {state.d_lat} cm"
-                    ).classes("text-caption text-grey-6")
+                    global_offset_label = ui.label("").classes("text-caption text-grey-6")
+
+                    def _global_offset_text() -> str:
+                        return (
+                            f"Global patient offset: {state.d_lon}, "
+                            f"{state.d_ver}, {state.d_lat} cm"
+                        )
+
+                    global_offset_label.set_text(_global_offset_text())
+                    global_offset_label.bind_text_from(
+                        state, "d_lon", backward=lambda _v: _global_offset_text()
+                    )
+                    global_offset_label.bind_text_from(
+                        state, "d_ver", backward=lambda _v: _global_offset_text()
+                    )
+                    global_offset_label.bind_text_from(
+                        state, "d_lat", backward=lambda _v: _global_offset_text()
+                    )
                     ui.space()
                     ui.button(
                         "Apply global to all",

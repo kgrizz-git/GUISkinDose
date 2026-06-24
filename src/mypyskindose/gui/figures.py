@@ -12,7 +12,7 @@ import traceback
 
 from mypyskindose.debug import dprint
 
-from .helpers import build_settings
+from .helpers import build_settings, effective_patient_offset_for_preview
 from .state import state
 
 
@@ -26,7 +26,12 @@ def make_geometry_fig(mode: str, event_index: int):
         from mypyskindose.phantom_class import Phantom
         from mypyskindose.plotting.create_geometry_plot import create_geometry_plot
 
-        settings = build_settings(state, mode=mode, output_format="dict")
+        settings = build_settings(
+            state,
+            mode=mode,
+            output_format="dict",
+            patient_offset=effective_patient_offset_for_preview(state),
+        )
         settings.plot.plot_event_index = event_index
         settings.plot.notebook_mode = False
         settings.plot.interactivity = True
