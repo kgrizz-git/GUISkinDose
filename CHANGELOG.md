@@ -26,6 +26,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Geometry tab render loop** (2026-06-25) — stop Plotly re-rendering on a 0.25 s timer after slider drags or external refresh; break the cycle with an `_in_render_chain` closure flag. Plan: `dev-docs/plans/GEO_TAB_SPINNING_WHEEL_PLAN.md`.
 - **`_CalcWarningCollector` handler leak in GUI** (2026-06-24) — multi-exam `run_calculation` branch in `gui/helpers.py` never removed the temporary log handler, causing exponentially duplicated toasts across runs. Fixed by widening the `try/finally` to wrap both single-exam and multi-exam branches. (Phase 0 of no-patient-intersection warning plan.)
 - **Single-exam Geometry preview pause regression** (2026-06-24) — `live_preview_allowed` no longer pauses single-exam `plot_procedure` at >30 events; composite multi-exam pause threshold unchanged (R12).
 - **GUI offset display and state leaks** (2026-06-24) — Calculate tab patient/table offset summaries now update when any axis changes; per-exam corrections global-offset label refreshes after Settings edits; patient offsets and coordinate-correction flags reset on new file load; `_remove_exam` multi→single restores globals from surviving exam meta.

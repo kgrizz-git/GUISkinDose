@@ -69,6 +69,7 @@ def _table_origin_card_visible() -> bool:
 
 def build(ctx: PageContext) -> None:
     slider_timer = None
+    _in_render_chain = False
     last_preview_mode: str | None = None
     live_preview_requested = False
     offset_changed_since_calc = False
@@ -171,7 +172,7 @@ def build(ctx: PageContext) -> None:
                                     max=PATIENT_OFFSET_SLIDER_RANGE_CM,
                                     step=0.5,
                                     value=initial,
-                                ).classes("w-full")
+                                ).classes("w-full").mark(f"patient-slider-{axis}")
                                 val_label = ui.label(f"{initial:.1f} cm").classes("text-caption mono-text")
                                 patient_sliders[attr] = slider
                                 patient_val_labels[attr] = val_label
@@ -286,7 +287,7 @@ def build(ctx: PageContext) -> None:
                                     max=hi,
                                     step=0.5,
                                     value=initial,
-                                ).classes("w-full")
+                                ).classes("w-full").mark(f"table-slider-{key}")
 
                                 def _on_table_slider(e, k=key, s=slider) -> None:
                                     nonlocal table_origin_pending, offset_changed_since_calc, last_table_origin_scrub
@@ -385,14 +386,19 @@ def build(ctx: PageContext) -> None:
     ctx.refresh_geometry_preview = _request_geometry_preview_refresh
 
     async def _do_debounced_render() -> None:
-        nonlocal slider_timer, table_origin_pending, live_preview_requested, last_table_origin_scrub
+        nonlocal slider_timer, table_origin_pending, live_preview_requested
+        nonlocal last_table_origin_scrub, _in_render_chain
         slider_timer = None
         if table_origin_pending:
             commit_table_origin_transform(state, _active_exam_index())
             table_origin_pending = False
             last_table_origin_scrub = False
             reset_results()
-        ctx.refresh_per_exam()
+        _in_render_chain = True
+        try:
+            ctx.refresh_per_exam()
+        finally:
+            _in_render_chain = False
         _update_preview_caption()
         if live_preview_requested and live_preview_allowed() and last_preview_mode:
             await _render_preview(last_preview_mode)
@@ -533,7 +539,7 @@ def build(ctx: PageContext) -> None:
         exam_selector_guard["suppress"] = False
 
     def _on_exam_select_change(_e) -> None:
-        nonlocal last_table_origin_scrub, slider_timer, live_preview_requested, table_origin_pending
+        nonlocal last_table_origin_scrub, slider_timer, table_origin_pending
         if exam_selector_guard["suppress"]:
             return
         old_index = state.active_exam_index
@@ -548,9 +554,6 @@ def build(ctx: PageContext) -> None:
         last_table_origin_scrub = False
         _update_preview_caption()
         ctx.refresh_per_exam()
-        if last_preview_mode:
-            live_preview_requested = True
-            _schedule_debounced_render()
 
     exam_select.on_value_change(_on_exam_select_change)
 
@@ -566,7 +569,8 @@ def build(ctx: PageContext) -> None:
     composite_checkbox.on_value_change(_on_composite_toggle)
 
     def _refresh_geometry_sliders() -> None:
-        nonlocal composite_preview, last_table_origin_scrub, was_multi_exam, live_preview_requested
+        nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
+        nonlocal live_preview_requested, _in_render_chain
         composite_preview = composite_preview_after_exam_mode_change(
             was_multi_exam,
             state.is_multi_exam,
@@ -589,7 +593,7 @@ def build(ctx: PageContext) -> None:
             composite=composite,
         )
         geom_event_input.set_value(clamped)
-        if last_preview_mode:
+        if last_preview_mode and not _in_render_chain:
             live_preview_requested = True
             _schedule_debounced_render()
 

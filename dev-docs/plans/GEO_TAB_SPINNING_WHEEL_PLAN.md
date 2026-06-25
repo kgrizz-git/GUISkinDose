@@ -223,9 +223,10 @@ async def test_geometry_table_slider_no_render_loop(user: User, monkeypatch) -> 
 
 **Test constraints**
 
-- Use `trigger("update:model-value", …)` only — not `slider.value` / `set_value`
-  (see HARNESS_ENGINEERING.md User-test gotchas).
-- Phase 1 Steps 5–6 markers required; `user.find(ui.slider)` matches all six sliders.
+- Use `_set_slider_value()` (`set_value` inside `user.client`) — not bare `slider.value`
+  or `user.find(marker=...).trigger(...)`. `user.find` uses `only_visible=True` and
+  misses sliders under bind-hidden ancestors; see HARNESS_ENGINEERING.md.
+- Phase 1 Steps 5–6 markers required for `_slider_by_marker()`.
 - If a test flakes on CI, check which `should_see` timed out; bump `retries` or
   inspect `user.client.elements` — type checkers cannot catch harness timing issues.
 - Run `pytest tests/gui/` locally before marking complete.
@@ -266,9 +267,10 @@ spinning wheel returning.
 | 2026-06-25 | Regression tests: `trigger("update:model-value", …)` + slider `.mark()`; tab settle via `should_see("Setup view")`. |
 | 2026-06-25 | Phase 2 expanded: parametrized patient sliders + `table-slider-x` test. |
 | 2026-06-25 | Fourth review (`tmp/GEO_TAB_SPINNING_WHEEL_PLAN_ASSESSMENT_20260625T061048Z.md`): top-of-file imports only; numbered Phase 1 steps; split load helpers; `PHILIPS_EXAMPLE` constant; table-origin evidence cited; `retries=50`; total-render assertions; Phase 3 `git diff --stat` + pre-commit note. |
+| 2026-06-25 | Implemented. GUI tests use `_slider_by_marker` + `set_value` in `user.client` because `user.find(marker=…)` skips bind-hidden sliders. |
 
 ## Progress log
 
 - 2026-06-25 — Plan written; reviewed against assessment and codebase.
 - 2026-06-25 — Phase 2 expanded; fourth review feedback incorporated.
-- (implementation not started)
+- 2026-06-25 — Implemented: `_in_render_chain` fix, slider markers, regression tests, CHANGELOG.

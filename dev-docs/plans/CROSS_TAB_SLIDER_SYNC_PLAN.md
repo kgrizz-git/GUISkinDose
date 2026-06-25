@@ -37,10 +37,11 @@ In `src/mypyskindose/gui/page_context.py`:
 ### 3. Register the callback in Geometry Tab
 
 In `src/mypyskindose/gui/tabs/geometry.py`:
-- At the end of `build(ctx: PageContext)` (near line 602, next to `ctx.refresh_per_exam = ...`), register the local `_refresh_geometry_sliders` closure:
+- At the end of `build(ctx: PageContext)` (currently at line 607, immediately after `ctx.refresh_per_exam = _refresh_per_exam_with_sliders`), register the local `_refresh_geometry_sliders` closure:
   ```python
   ctx.refresh_geometry_tab = _refresh_geometry_sliders
   ```
+- **Interaction with `GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md`:** once that plan ships, `_sync_table_sliders_from_meta` (called inside `_refresh_geometry_sliders`) will also update `table_val_labels[key]`. Because step 3 of this plan hooks `_refresh_geometry_sliders` to the tab-change pull, the value labels will refresh on tab entry *for free* — no additional change needed in this plan. This is the reason the plan's blocker on the value-labels plan exists: the cross-tab pull would otherwise re-render the figure but leave the value labels stale.
 
 ### 4. Trigger pull synchronization on tab change & nav drawer
 
@@ -92,6 +93,7 @@ In `src/mypyskindose/gui/app.py`:
 
 - **Unit Tests:**
   - Add a small pytest regression test using a `MagicMock` PageContext and a stub `tabs` object. Assert that `ctx.refresh_geometry_tab` and `ctx.refresh_geometry_preview` are called when `state.active_tab` transitions to `"geometry"`, and are **not** called when transitioning to any other tab.
+  - **Interaction with shipped `GEO_TAB_SPINNING_WHEEL_PLAN.md` regression tests:** the `_in_render_chain` guard in `_refresh_geometry_sliders` (geometry.py:596) means a tab-entry call to `ctx.refresh_geometry_tab()` will schedule **at most one** debounced render even if the entry fires repeatedly (e.g. tab strip clicks while already on Geometry are no-ops; multi-event tab navigation does not stack timers). The shipped `test_geometry_patient_slider_no_render_loop` and `test_geometry_table_slider_no_render_loop` provide indirect coverage — if this plan's tab-entry refresh ever introduced a render loop, those tests would fail under the same conditions. No new render-loop test is needed in this plan.
 
 - **Manual Verification:**
   1. Load an RDSR file.

@@ -105,6 +105,23 @@ the four that already manage slider state (`_sync_table_sliders_from_meta`,
 `_on_table_slider`, `_reset_table_origin` via the sync function, and `_refresh_geometry_sliders`
 via the sync function).
 
+## Interaction with other plans
+
+- **`dev-docs/plans/GEO_TAB_SPINNING_WHEEL_PLAN.md` (shipped 2026-06-25)** — adds
+  `_in_render_chain` guard around the re-schedule at the end of `_refresh_geometry_sliders`,
+  adds `.mark(...)` to both patient and table-origin sliders, and removes the redundant
+  local schedule block in `_on_exam_select_change`. None of those changes touch the four
+  edit sites in this plan, so no functional updates are required. Two minor consequences:
+  1. The acceptance-criterion rationale for "labels update when exam selector changes"
+     becomes stronger: with the redundant local block gone, the only path for value
+     labels to refresh on exam change is `ctx.refresh_per_exam()` → `_refresh_geometry_sliders()`
+     → `_sync_table_sliders_from_meta()`. This is exactly the path step 3 covers, so
+     step 3 is the **sole** guarantee for that acceptance criterion.
+  2. Line numbers verified against the current 607-line file: `_on_table_slider` is
+     still defined starting at line 291, `slider.on_value_change(_on_table_slider)` is
+     now at line 311 (was 310), and `_reset_table_origin` is still at line 463. The
+     small +4 line offset is consistent across the file.
+
 Gaps and nits addressed in this revision:
 
 1. The original step 5 said `_reset_table_origin` is at "near line 479" — that is actually
@@ -128,4 +145,6 @@ initialization are correct as written.
 
 - [x] Plan written
 - [x] Review (2026-06-25)
+- [x] Cross-check against `GEO_TAB_SPINNING_WHEEL_PLAN.md` (shipped) — no functional
+      updates needed; interaction notes added.
 - [ ] Implementation
