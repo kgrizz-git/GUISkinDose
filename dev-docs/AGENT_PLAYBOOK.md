@@ -25,6 +25,9 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
 
 ## While Editing
 
+- Keep changes **cross-platform** (Windows, macOS, Linux): portable Python in `src/`, guarded fallbacks instead of
+  platform-only code paths, and CI-safe tests without optional GUI extras unless the test is explicitly skipped or
+  lives under `tests/gui/`. See `AGENTS.md` → Conventions → Cross-platform.
 - Keep Python source and Markdown docs under the 800-line limit enforced by `scripts/check_file_sizes.py`.
 - Update `AGENTS.md` and the relevant `dev-docs/` page when a change adds, removes, or wires behavior.
 - Edit GUI help source under `docs/source/gui_help/`; mirrored files under `src/mypyskindose/gui/help/` are generated.

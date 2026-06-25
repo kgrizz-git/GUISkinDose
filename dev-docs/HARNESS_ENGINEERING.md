@@ -87,7 +87,9 @@ Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecess
 4. **Optional UX dependencies stay optional.**
    GUI and Excel-specific dependencies should remain extras unless maintainers intentionally promote them to core.
 5. **Cross-platform by default.**
-   Use `pathlib.Path`, avoid shell-specific path assumptions in Python code, and keep CI on Windows/macOS/Linux.
+   Target Windows, macOS, and Linux for user-facing behavior. Use `pathlib.Path` and `Path.replace()` for paths and
+   atomic writes; avoid `sys.platform` branches unless unavoidable with fallbacks. Keep `gui` / `gui-native` optional
+   and CI unit tests passing without `gui-native`. See `AGENTS.md` → Conventions → Cross-platform.
 6. **Fail loudly on clinical-data ambiguity.**
    Unknown units, missing geometry, unsupported scanner models, or ambiguous tabular schemas should produce actionable errors or explicit warnings before calculation.
 7. **Keep files to a reasonable size (Modularity).**

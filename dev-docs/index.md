@@ -79,6 +79,8 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |
+| [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md) | Round 1 API review: shutdown timing, multi-monitor validation; NiceGUI proxy/event APIs confirmed. |
+| [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md) | Round 2 gap review: restore-from-maximize, title-bar validation, maximized event filtering, debounce lifecycle, CI-safe tests, `Path.replace`. |
 
 ---
 

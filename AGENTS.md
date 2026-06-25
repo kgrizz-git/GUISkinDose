@@ -133,7 +133,16 @@ python -m mypyskindose --mode gui
 ## Conventions
 
 - Python 3.10+
-- **Cross-platform: Windows, macOS, Linux** — always use `pathlib.Path` for file paths, never string concatenation with `/` or `\`
+
+### Cross-platform (Windows, macOS, Linux)
+
+- Target all three OSes for user-facing behavior; browser-mode GUI must work everywhere.
+- Use `pathlib.Path` for file paths; never concatenate paths with `/` or `\`. For atomic config writes, use `Path.replace()`, not `os.rename`.
+- Avoid `sys.platform` / `platform.system()` branches unless unavoidable; prefer portable libraries, try/except, and fallbacks (not platform-native APIs from the NiceGUI main process).
+- Keep `gui` and `gui-native` as optional extras; CI unit tests must pass without `gui-native`.
+- `run_gui.sh` and `run_gui.bat` may be OS-specific launchers; application logic under `src/` must not be.
+- Native or OS-sensitive GUI work (pywebview, window geometry, file dialogs): note Windows manual smoke in the PR or test plan when behavior may differ by OS.
+
 - Line length: 120 (ruff)
 - All units in **cm** unless otherwise noted
 - Settings always passed as `PyskindoseSettings` object internally; JSON/dict accepted at the boundary

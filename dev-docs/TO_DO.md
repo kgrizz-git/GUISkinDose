@@ -41,6 +41,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ### GUI / UX
 
+- [ ] **Geometry plot spinning wheel / continuous reload** — plot appears to continuously refresh, preventing
+  effective rotation; investigate the cause and fix so the plot stabilizes during interaction.
 - [ ] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z.
 - [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
   a clear in-app note and axis legend.
