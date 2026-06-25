@@ -56,6 +56,10 @@ python -m mypyskindose --mode gui              # browser mode
 python -m mypyskindose --mode gui --native     # native window (requires pywebview)
 ```
 
+Native window mode remembers the last window size, position, and maximized state in
+`~/.mypyskindose/gui.json` (first launch opens maximized; Restore returns to the saved
+normal size).
+
 ### Network exposure (browser mode)
 
 The GUI has **no authentication** and loads PHI-derived RDSR data into a single

@@ -1,6 +1,6 @@
 # Native Window Geometry Persistence Plan
 
-**STATUS: Ready for implementation**
+**STATUS: Shipped**
 
 ## Objective
 

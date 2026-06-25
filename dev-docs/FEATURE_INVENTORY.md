@@ -433,6 +433,15 @@ python -m mypyskindose.main [--mode headless|gui] [--file-path PATH] [--settings
 | `--settings` | Path to settings JSON file |
 | `--native` | Open GUI in a native desktop window instead of a browser tab (requires `pywebview`) |
 
+### 10.1 Native window geometry persistence
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Restore last size/position/maximized | Shipped | `~/.mypyskindose/gui.json`; first run maximized with 75% centered normal bounds |
+| Event-driven save | Shipped | Debounced commits on `resized`/`moved`; flush on native `closed` |
+
+Implementation: `gui/window_prefs.py`, wired in `gui/app.py` when `native=True`.
+
 Falls back to `DEVELOPMENT_PARAMETERS` from `dev_data.py` if no settings given.
 
 ---

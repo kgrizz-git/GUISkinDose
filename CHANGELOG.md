@@ -12,6 +12,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Native window geometry persistence** (2026-06-25) — `--native` mode restores window size,
+  position, and maximized state from `~/.mypyskindose/gui.json`. First launch starts maximized
+  with normal bounds at 75% of the primary screen (centered). Plan:
+  `dev-docs/plans/NATIVE_WINDOW_GEOMETRY_PLAN.md`.
 - **Agent guidance playbook and advisory check** (2026-06-25): added `dev-docs/AGENT_PLAYBOOK.md`,
   thin `GEMINI.md` / `QWEN.md` pointer files, and `scripts/check_agent_guidance.py` (pre-commit advisory;
   `--strict` available) to flag duplicated or drifting agent instructions, overgrown `TO_DO.md`, and

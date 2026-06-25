@@ -42,8 +42,9 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 ### GUI / UX
 
 - [ ] **Geometry plot spinning wheel / continuous reload** — plot appears to continuously refresh, preventing
-  effective rotation; investigate the cause and fix so the plot stabilizes during interaction.
-- [ ] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z.
+  effective rotation; see [assessment](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) for root cause analysis
+  and [plan](plans/GEO_TAB_SPINNING_WHEEL_PLAN.md) for the implementation (revised fix uses an `_in_render_chain` flag).
+- [ ] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z. See [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
 - [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
   a clear in-app note and axis legend.
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
@@ -54,7 +55,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).
-- [ ] **Native window geometry persistence** — remember last native window size/position/maximized state; see [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md).
+- [x] **Native window geometry persistence** — remember last native window size/position/maximized state; see [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md).
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
 
 ### Harness / Repo Hygiene
