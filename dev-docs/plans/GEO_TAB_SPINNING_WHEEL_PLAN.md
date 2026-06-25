@@ -18,8 +18,8 @@ to schedule a re-render.
 | Area | Change |
 |------|--------|
 | `geometry.py` | `_in_render_chain` flag; guard re-schedule at 592–594; remove redundant `if last_preview_mode:` block in `_on_exam_select_change`; add `.mark(...)` on patient and table-origin sliders (testability only) |
-| `tests/gui/test_gui_flows.py` | Parametrized patient-slider test (lon/ver/lat) + table-origin X test; shared load helper |
-| `CHANGELOG.md` | One-line Unreleased entry when shipped |
+| `tests/gui/test_gui_flows.py` | Parametrized patient-slider test (lon/ver/lat) + table-origin X test; shared load helpers |
+| `CHANGELOG.md` | One-line Unreleased entry under `### Fixed` when shipped |
 
 **Out of scope**
 
@@ -35,17 +35,18 @@ to schedule a re-render.
 - [ ] Settings → Phantom Settings → Body habitus scaling still refreshes Geometry (`ctx.refresh_geometry_preview()`).
 - [ ] `test_geometry_patient_slider_no_render_loop` (parametrized lon/ver/lat) and
       `test_geometry_table_slider_no_render_loop` pass locally and on CI.
-- [ ] `CHANGELOG.md` Unreleased entry added.
+- [ ] `CHANGELOG.md` Unreleased entry added under `### Fixed`.
+- [ ] Pre-commit: `git diff --stat` shows only `geometry.py`, `test_gui_flows.py`, and `CHANGELOG.md`.
 
 ## Phase 1 — `geometry.py`
 
-Add `_in_render_chain = False` in `build()` (line 70) alongside `slider_timer`, etc.
+**Step 1.** Add `_in_render_chain = False` in `build()` (line 70) alongside `slider_timer`, etc.
 
-**`_do_debounced_render()` (387–400)** — add `_in_render_chain` to `nonlocal`. Keep
-`if table_origin_pending:` **outside** the `try/finally`. Set the flag only around
-the synchronous `ctx.refresh_per_exam()`; do **not** wrap `await _render_preview(...)`.
-If the flag stayed `True` across the await, a concurrent `refresh_per_exam()` would
-be swallowed by the guard and leave the plot stale.
+**Step 2.** `_do_debounced_render()` (387–400) — add `_in_render_chain` to `nonlocal`. Keep
+`if table_origin_pending:` **outside** the `try/finally`. Set the flag only around the
+synchronous `ctx.refresh_per_exam()`; do **not** wrap `await _render_preview(...)`.
+If the flag stayed `True` across the await, a concurrent `refresh_per_exam()` would be
+swallowed by the guard and leave the plot stale.
 
 ```python
 async def _do_debounced_render() -> None:
@@ -69,7 +70,7 @@ async def _do_debounced_render() -> None:
     _update_paused_badge()
 ```
 
-**`_refresh_geometry_sliders()` (568–594)** — add `_in_render_chain` to `nonlocal`.
+**Step 3.** `_refresh_geometry_sliders()` (568–594) — add `_in_render_chain` to `nonlocal`.
 Guard the re-schedule:
 
 ```python
@@ -78,11 +79,11 @@ if last_preview_mode and not _in_render_chain:
     _schedule_debounced_render()
 ```
 
-**`_on_exam_select_change()` (535–553)** — remove `live_preview_requested` from
+**Step 4.** `_on_exam_select_change()` (535–553) — remove `live_preview_requested` from
 `nonlocal`; delete the entire `if last_preview_mode:` block (551–553). Wrapped
 `ctx.refresh_per_exam()` already schedules via `_refresh_geometry_sliders()`.
 
-**Patient sliders (158–177)** — add markers for the regression test:
+**Step 5.** Patient sliders (158–177) — add markers for the regression tests:
 
 ```python
 slider = ui.slider(
@@ -95,85 +96,163 @@ slider = ui.slider(
 
 Markers: `patient-slider-lon`, `patient-slider-ver`, `patient-slider-lat`.
 
-## Phase 2 — Regression test
-
-Add to `tests/gui/test_gui_flows.py` (inherits module `pytestmark`). Import
-`GEOMETRY_DEBOUNCE_SEC` at the top of the test file with the other constants.
+**Step 6.** Table-origin sliders (279–311) — same pattern:
 
 ```python
+slider = ui.slider(
+    min=lo,
+    max=hi,
+    step=0.5,
+    value=initial,
+).classes("w-full").mark(f"table-slider-{key}")
+```
+
+Markers: `table-slider-x`, `table-slider-y`, `table-slider-z`.
+
+**Table test fixture:** `philips_allura_clarity_u104.dcm` is valid for the table-origin
+test because `load_rdsr` stores `"base_data": df.copy()` (`exam_loaders.py:93`) and
+`exam_supports_table_origin()` returns True when `base_data` has Tx/Ty/Tz columns
+(`exam_transforms.py:137–148`). The Geometry card label is `"Table origin override (cm)"`
+at `geometry.py:205` — assert substring `"Table origin override"` in Test 2 only.
+
+## Phase 2 — Regression tests
+
+Add to `tests/gui/test_gui_flows.py` at **module level** (below existing imports,
+above test functions; inherits module `pytestmark`).
+
+**Top-of-file imports** (single block — no inline imports in test bodies):
+
+```python
+import asyncio
+from collections.abc import Callable
+
+import mypyskindose.gui.tabs.geometry as geometry_tab
 from mypyskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
+```
+
+**Constants and helpers** (module level, above tests):
+
+```python
+PHILIPS_EXAMPLE = "philips_allura_clarity_u104.dcm"
 
 
-@pytest.mark.asyncio
-async def test_geometry_slider_no_render_loop(user: User, monkeypatch) -> None:
-    """One debounced render per patient-slider move; no timer loop while idle."""
-    import asyncio
-    import mypyskindose.gui.tabs.geometry as geometry_tab
-
+async def _load_philips_example(user: User) -> None:
     await user.open("/")
     user.find(marker="example-select").click()
-    await user.should_see("philips_allura_clarity_u104.dcm", retries=20)
-    user.find("philips_allura_clarity_u104.dcm").click()
+    await user.should_see(PHILIPS_EXAMPLE, retries=20)
+    user.find(PHILIPS_EXAMPLE).click()
     await user.should_see("EVENTS", retries=50)
 
-    user.find("4 · Geometry").click()
-    await user.should_see("Setup view", retries=20)
 
-    call_count = 0
-    original_make_fig = geometry_tab.make_geometry_fig
+async def _open_geometry_tab(user: User) -> None:
+    user.find("4 · Geometry").click()
+    await user.should_see("Setup view", retries=50)
+
+
+def _install_make_fig_counter(monkeypatch) -> Callable[[], int]:
+    """Monkeypatch make_geometry_fig; return a getter for the call count."""
+    count = 0
+    original = geometry_tab.make_geometry_fig
 
     def mock_make_fig(*args, **kwargs):
-        nonlocal call_count
-        call_count += 1
-        return original_make_fig(*args, **kwargs)
+        nonlocal count
+        count += 1
+        return original(*args, **kwargs)
 
     monkeypatch.setattr(geometry_tab, "make_geometry_fig", mock_make_fig)
+    return lambda: count
+```
 
+Split load vs Geometry navigation so the patient test is not coupled to the
+table-origin card. Use `retries=50` on `should_see` (same as the existing
+`EVENTS` assertion) to reduce CI flake.
+
+**Trigger value `5.0`:** within patient range `±150` (`constants.py:30`) and table
+range `±250` (`constants.py:31–32`). NiceGUI's `update:model-value` handler calls
+`set_value`, so `_on_patient_slider_change` / `_on_table_slider` read the updated
+`slider.value`.
+
+**Test 1 — patient sliders (parametrized):**
+
+```python
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "slider_marker",
+    ["patient-slider-lon", "patient-slider-ver", "patient-slider-lat"],
+)
+async def test_geometry_patient_slider_no_render_loop(
+    user: User, monkeypatch, slider_marker: str,
+) -> None:
+    await _load_philips_example(user)
+    await _open_geometry_tab(user)
+    get_calls = _install_make_fig_counter(monkeypatch)
     user.find("Setup view").click()
     await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)
-    assert call_count == 1, f"Initial render should run once, got {call_count}"
-    call_count = 0
+    assert get_calls() == 1, f"Initial render should run once, got {get_calls()}"
 
-    # trigger() runs inside user.client (see HARNESS_ENGINEERING.md User-test gotchas).
-    # Requires Phase 1 markers — user.find(ui.slider) matches all six sliders.
-    user.find(marker="patient-slider-lon").trigger("update:model-value", 5.0)
-
+    user.find(marker=slider_marker).trigger("update:model-value", 5.0)
     await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)
-    assert call_count == 1, (
-        f"Expected 1 render after slider move, got {call_count} (loop detected)"
-    )
-
+    assert get_calls() == 2, f"Expected 2 total renders after {slider_marker}, got {get_calls()}"
     await asyncio.sleep(1.0)
-    assert call_count == 1, f"Plot re-rendered while idle, count={call_count}"
+    assert get_calls() == 2, f"Plot re-rendered while idle, count={get_calls()}"
+```
+
+Count total renders (initial + slider) instead of resetting — avoids mutable-state
+reset mistakes.
+
+**Test 2 — table-origin X:**
+
+```python
+@pytest.mark.asyncio
+async def test_geometry_table_slider_no_render_loop(user: User, monkeypatch) -> None:
+    await _load_philips_example(user)
+    await _open_geometry_tab(user)
+    await user.should_see("Table origin override", retries=50)
+
+    get_calls = _install_make_fig_counter(monkeypatch)
+    user.find("Setup view").click()
+    await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)
+    assert get_calls() == 1, f"Initial render should run once, got {get_calls()}"
+
+    user.find(marker="table-slider-x").trigger("update:model-value", 5.0)
+    await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)
+    assert get_calls() == 2, f"Expected 2 total renders after table-slider-x, got {get_calls()}"
+    await asyncio.sleep(1.0)
+    assert get_calls() == 2, f"Plot re-rendered while idle, count={get_calls()}"
 ```
 
 **Test constraints**
 
-- Do **not** assign `slider.value` or call `slider.set_value()` — handlers run
-  outside the client context and `ui.timer` / `run.io_bound` short-circuit.
-- Validate with `pytest tests/gui/` locally before marking complete (not caught
-  by type checkers).
-- Optional follow-up: parameterized test for `patient-slider-ver` / `-lat`.
+- Use `trigger("update:model-value", …)` only — not `slider.value` / `set_value`
+  (see HARNESS_ENGINEERING.md User-test gotchas).
+- Phase 1 Steps 5–6 markers required; `user.find(ui.slider)` matches all six sliders.
+- If a test flakes on CI, check which `should_see` timed out; bump `retries` or
+  inspect `user.client.elements` — type checkers cannot catch harness timing issues.
+- Run `pytest tests/gui/` locally before marking complete.
 
 ## Phase 3 — Validate and smoke
 
 ```bash
-pytest tests/gui/test_gui_flows.py::test_geometry_slider_no_render_loop -v
+pytest tests/gui/test_gui_flows.py::test_geometry_patient_slider_no_render_loop -v
+pytest tests/gui/test_gui_flows.py::test_geometry_table_slider_no_render_loop -v
 pytest tests/gui/ -v
 ruff check src/mypyskindose/gui/tabs/geometry.py tests/gui/test_gui_flows.py
 basedpyright src/mypyskindose/gui/tabs/geometry.py tests/gui/test_gui_flows.py
+git diff --stat   # expect only geometry.py, test_gui_flows.py, CHANGELOG.md
 ```
+
+Pre-commit / pre-push hooks run ruff, basedpyright, file-size, and doc-freshness
+checks automatically; the explicit `pytest` commands above are the additional gate.
 
 Manual (`python -m mypyskindose --mode gui`): drag patient and table-origin
 sliders; switch exams; toggle composite; load new example; change per-exam
 toggle in Settings; change phantom scale in Settings; rotate plot 5 s without
 spinning wheel returning.
 
-**CHANGELOG** (Unreleased):
+**CHANGELOG** — under `## [Unreleased]` → `### Fixed` (match existing bullet style):
 
 ```markdown
-- Fix Geometry tab plot re-rendering on a 0.25 s timer loop after slider drags,
-  exam changes, or external data refresh (`_in_render_chain` closure flag).
+- **Geometry tab render loop** (2026-06-25) — stop Plotly re-rendering on a 0.25 s timer after slider drags or external refresh; break the cycle with an `_in_render_chain` closure flag. Plan: `dev-docs/plans/GEO_TAB_SPINNING_WHEEL_PLAN.md`.
 ```
 
 ## Decision log
@@ -184,10 +263,12 @@ spinning wheel returning.
 | 2026-06-25 | Drop `_render_in_progress` guard — sequential `ui.timer` does not break the loop. |
 | 2026-06-25 | Scope `try/finally` to sync `ctx.refresh_per_exam()` only; drop flag before `await _render_preview`. |
 | 2026-06-25 | Remove entire redundant `if last_preview_mode:` block in `_on_exam_select_change`. |
-| 2026-06-25 | Regression test: `trigger("update:model-value", …)` + patient-slider `.mark()`; tab settle via `should_see("Setup view")`. |
-| 2026-06-25 | Plan condensed; test import order fixed (`GEOMETRY_DEBOUNCE_SEC` before use). |
+| 2026-06-25 | Regression tests: `trigger("update:model-value", …)` + slider `.mark()`; tab settle via `should_see("Setup view")`. |
+| 2026-06-25 | Phase 2 expanded: parametrized patient sliders + `table-slider-x` test. |
+| 2026-06-25 | Fourth review (`tmp/GEO_TAB_SPINNING_WHEEL_PLAN_ASSESSMENT_20260625T061048Z.md`): top-of-file imports only; numbered Phase 1 steps; split load helpers; `PHILIPS_EXAMPLE` constant; table-origin evidence cited; `retries=50`; total-render assertions; Phase 3 `git diff --stat` + pre-commit note. |
 
 ## Progress log
 
-- 2026-06-25 — Plan written; reviewed against assessment and codebase (three review passes).
+- 2026-06-25 — Plan written; reviewed against assessment and codebase.
+- 2026-06-25 — Phase 2 expanded; fourth review feedback incorporated.
 - (implementation not started)
