@@ -12,10 +12,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Beam-miss warnings** (2026-06-24) — when an irradiation event deposits zero dose (beam does not intersect the patient phantom), a per-event `WARNING` identifies the event index, kVp, filtration, and field area. Configurable via `beam_miss_warn` setting (`"per_event"` / `"summary"` / `"off"`; CLI default `"per_event"`, GUI default `"summary"`); an all-miss sentinel always fires. Multi-exam auto-downgrades per-event to `"summary"`. GUI toast throttle at 5 messages (`_MAX_TOASTS`). Plan: `dev-docs/plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md`.
 - **Interactive Geometry offset sliders** (2026-06-24) — single-exam **patient offset** sliders and **table-origin override** sliders in the Geometry tab with debounced live 3D preview; read-only auto-detected table offsets in Settings and Calculate tabs; reset buttons. Plan: `dev-docs/plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
 
 ### Fixed
 
+- **`_CalcWarningCollector` handler leak in GUI** (2026-06-24) — multi-exam `run_calculation` branch in `gui/helpers.py` never removed the temporary log handler, causing exponentially duplicated toasts across runs. Fixed by widening the `try/finally` to wrap both single-exam and multi-exam branches. (Phase 0 of no-patient-intersection warning plan.)
 - **Single-exam Geometry preview pause regression** (2026-06-24) — `live_preview_allowed` no longer pauses single-exam `plot_procedure` at >30 events; composite multi-exam pause threshold unchanged (R12).
 - **GUI offset display and state leaks** (2026-06-24) — Calculate tab patient/table offset summaries now update when any axis changes; per-exam corrections global-offset label refreshes after Settings edits; patient offsets and coordinate-correction flags reset on new file load; `_remove_exam` multi→single restores globals from surviving exam meta.
 - **Dose map figure exports** (2026-06-24) — restore `make_dosemap_fig` / `make_dosemap_html` / `make_dosemap_png` in `gui/figures.py` (accidentally dropped during Part II `make_geometry_fig` refactor).

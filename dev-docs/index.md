@@ -89,7 +89,6 @@ Phased detail derived from diagnostics or master plans.
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
-| [plans/NO_PATIENT_INTERSECTION_WARNING_PLAN.md](plans/NO_PATIENT_INTERSECTION_WARNING_PLAN.md) | Warn when an irradiation event deposits zero dose (beam misses the patient phantom). **Reviewed 2026-06-24 — ready for implementation.** |
 
 ## Archived plans (`plans/archive/`)
 
@@ -107,6 +106,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/gui-decomposition-design.md](plans/archive/gui-decomposition-design.md) | **Completed** — Wiring map and extraction design for GUI Phase 3 split. |
 | [plans/archive/positioning-help.md](plans/archive/positioning-help.md) | **Completed** — In-app help for phantom positioning; integrated with main docs as single source of truth. |
 | [plans/archive/phase-6-doc-integration.md](plans/archive/phase-6-doc-integration.md) | **Completed** — Sync mechanism for `docs/source/gui_help/` -> `src/mypyskindose/gui/help/` with pre-commit + CI enforcement. |
+| [plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md](plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md) | **Completed** (2026-06-24) — Beam-miss warnings: per-event WARNING + all-miss sentinel + `beam_miss_warn` dial + GUI toast throttle + handler leak fix. |
 
 ---
 

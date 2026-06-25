@@ -58,6 +58,14 @@ Important corrections from review:
 
 **File: `src/mypyskindose/settings/phantom_settings.py`**
 
+Add module logging before using warnings in validation:
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+```
+
 Add fields in `PhantomSettings.__init__` using `dict.get(...)` for backward compatibility:
 
 ```python
@@ -202,6 +210,8 @@ def _recompute_human_normals_from_triangles(self) -> None:
 
 Confirm the recomputed normal direction matches the existing STL normal orientation at `scale == 1.0`; if the cross-product order is reversed for these meshes, swap the cross-product operands.
 
+The existing `numpy-stl` normals are not guaranteed to be unit length; for example, `hudfrid.stl` has varying original normal magnitudes. This is acceptable because `Beam.check_hit()` uses only the sign of the source-to-cell dot product with `patient.n`. Tests should verify same direction/sign behavior and unit length for recomputed nonzero normals, not equality to the original normal magnitudes.
+
 ### 5.5 Constructor Call Sites
 
 Pass `human_scale=(settings.phantom.scale_lat, settings.phantom.scale_ap, settings.phantom.scale_lon)` anywhere a human patient phantom is constructed from settings:
@@ -288,4 +298,5 @@ This future work is complementary to scaling and should not block the scaling im
 |------|--------|
 | 2026-06-24 | Plan authored |
 | 2026-06-25 | Review completed; implementation hazards and test requirements folded into plan |
+| 2026-06-25 | External assessment reviewed; logger setup and normal-magnitude test guidance added |
 | -- | Implementation pending |
