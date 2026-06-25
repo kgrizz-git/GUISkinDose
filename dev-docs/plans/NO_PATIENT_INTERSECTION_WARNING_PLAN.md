@@ -102,6 +102,8 @@ Two new optional kwargs: `settings: PyskindoseSettings | None = None` and `exam_
         f"{normalized_data.filter_thickness_Al.iloc[ev]:g} mm Al"
     )
     # float() wraps guard against NaN in corrupted data (rare but defensive)
+    # Note: float(np.nan) → nan, which displays as "field nan cm²" — acceptable
+    # in a warning context; the value won't crash the format string.
     field_area_cm2 = (
         float(normalized_data.FS_lat.iloc[ev])
         * float(normalized_data.FS_long.iloc[ev])
@@ -117,7 +119,7 @@ Two new optional kwargs: `settings: PyskindoseSettings | None = None` and `exam_
         logger.warning(msg)
     ```
     The `settings is not None` guard is **mandatory** — without it, a `None` `settings` (unit tests, legacy paths) raises `AttributeError`. The conditional `exam_str` keeps single-exam messages clean ("exam" appears only when there is an id).
-3. **Per-run summary (only in `"summary"` mode)** — after the loop, if `settings is not None and settings.beam_miss_warn == "summary" and 0 < len(missed_event_indices) < total_events`, emit one `logger.warning` using the existing `format_event_indices` helper from `mypyskindose.grid_interp` (which returns `"[1, 2, 3] (+5 more)"` for overflow, or just `"[1, 2, 3]"` when within limit): `f"Run {total_events} events; {K} event(s) missed the patient phantom: {format_event_indices(missed_event_indices)}."` The `0 < K < N` predicate excludes the trivial K == 0 case and the all-miss case (handled by the sentinel).
+3. **Per-run summary (only in `"summary"` mode)** — after the loop, if `settings is not None and settings.beam_miss_warn == "summary" and 0 < K < total_events` where `K = len(missed_event_indices)`, emit one `logger.warning` using the existing `format_event_indices` helper from `mypyskindose.grid_interp` (which returns `"[1, 2, 3] (+5 more)"` for overflow, or just `"[1, 2, 3]"` when within limit): `f"Run {total_events} events; {K} event(s) missed the patient phantom: {format_event_indices(missed_event_indices)}."` The `0 < K < N` predicate excludes the trivial K == 0 case and the all-miss case (handled by the sentinel).
 4. **All-miss sentinel (always-on)** — if `total_events > 0 and len(missed_event_indices) == total_events`, emit `"All {total_events} events missed the patient phantom — dose map is all zeros; check patient offsets and vendor coordinate frame."` The `total_events > 0` guard prevents the sentinel from firing on a degenerate empty dataset. **Not gated on `settings`** — must fire even if the caller didn't pass settings, because an all-miss run is always a bug.
 5. **Export** — `output["missed_event_indices"] = missed_event_indices` so the GUI / export can show the count without re-parsing logs. Indices are 0-based (Python convention); consumers converting to user-facing labels should add 1.
 
@@ -132,7 +134,7 @@ Two new optional kwargs: `settings: PyskindoseSettings | None = None` and `exam_
 
 In `analyze_multiple_exams` (`analyze_data.py:174`), **do not call `logger.warning`** for the same condition as `calculate_irradiation_event_result` — that would double-fire on the GUI's collector. The orchestrator's job is limited to:
 
-- After each `calculate_dose(...)` call, if `raw_output["missed_event_indices"]` is non-empty, **build a string in memory** of the form `f"Exam {i} ({exam.study_id or exam.provenance.original_filename}): {len(missed)} of {len(data_norm)} event(s) missed the patient phantom."` and `.append(...)` it to `exam_warnings` (the existing per-exam warnings bag, surfaced in `ExamResult.warnings` and the Results-tab accordion).
+- After each `calculate_dose(...)` call, if `raw_output["missed_event_indices"]` is non-empty, **build a string in memory** of the form `f"Exam {i} ({exam.study_id or exam.provenance.original_filename}): {len(missed)} of {len(data_norm)} event(s) missed the patient phantom."` and `.append(...)` it to `exam_warnings` (the existing per-exam warnings bag, surfaced in `ExamResult.warnings` and the Results-tab accordion). `data_norm` is the local variable holding the post-`calculate_rotation_matrices` DataFrame for the current exam (existing at `analyze_data.py:162`).
 - If `len(missed) == len(data_norm) > 0`, also append a per-exam all-miss string: `f"Exam {i} ({id}): all {len(data_norm)} event(s) missed the patient phantom — dose map for this exam is all zeros; check patient offsets and vendor coordinate frame."` The "all N events missed" phrase mirrors the §4.2 step 4 sentinel so the toast and the per-exam accordion recognisably describe the same condition.
 
 The actual `logger.warning(...)` calls happen inside `calculate_irradiation_event_result`, which the multi-exam override runs with `beam_miss_warn="summary"` (next section) — the collector sees each message exactly once.

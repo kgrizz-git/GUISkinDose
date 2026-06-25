@@ -1,85 +1,105 @@
-# NEEDS REVIEW
-
-> **Status:** Awaiting reviewer sign-off.
-
 # Patient-Size / Body-Habitus Scaling Plan
+
+> **Status:** Reviewed and ready for implementation.
+> **Last reviewed:** 2026-06-25.
 
 Plan for `TO_DO.md` item: *"More patient sizes / phantom body-habitus scaling."*
 
 ## 1. Objective
 
-Let users **directionally scale** the current human-mesh phantoms along lateral (X), AP (Y), and longitudinal (Z) axes so that a single mesh can cover a wider range of body sizes without needing additional STL files. Body size changes skin-to-source distance and beam intersection, so scaling materially affects PSD.
+Let users directionally scale the current human-mesh phantoms along lateral/width, AP/vertical thickness, and longitudinal/head-foot axes so that a single mesh can cover a wider range of body sizes without needing additional STL files. Body size changes skin-to-source distance and beam intersection, so scaling materially affects PSD.
 
 Two approaches were considered:
 
-- **(a) Generate or source additional meshes** for under-represented body types (e.g. obese) — **deferred for now**. This remains a valid future direction. Additional meshes would follow the existing full-res + `_reduced_1000t` pairing convention and be wired into `get_human_mesh_names()`.
-- **(b) Directional scaling of current phantoms** — **this plan**. The user stretches a mesh along lateral / AP / longitudinal axes via controls in the Settings → Phantom section. Scaling is applied in `phantom_class.py` before dose mapping. Scaled geometry is validated in the Geometry tab.
+- **(a) Generate or source additional meshes** for under-represented body types, such as obese or large-habitus patients. This is deferred for now. Additional meshes remain a valid future direction and should follow the existing full-res + `_reduced_1000t` pairing convention.
+- **(b) Directional scaling of current phantoms**. This plan. The user stretches a mesh via controls in Settings -> Phantom Settings. Scaling is applied when the `Phantom` is constructed, before table placement, event positioning, beam intersection, and dose accumulation.
 
-Rationale for choosing (b) first: it can be implemented against the existing mesh files without sourcing new STL assets, and it gives immediate value for users who know their patient's approximate anthropometric dimensions. Option (a) can be added later as a complementary path.
+Rationale for choosing (b) first: it can be implemented against the existing mesh files without sourcing new STL assets, and it gives immediate value for users who know approximate anthropometric dimensions.
 
-## 2. Background & relevant code
+## 2. Reviewed Implementation Notes
 
-- **Phantom meshes** — `phantom_class.py` loads STL files via `pyvista` (or `trimesh`). Mesh names come from `helpers.get_human_mesh_names()`, which reads `phantom_data/`. Each mesh has a full-res + `_reduced_1000t` variant.
-- **Phantom placement** — `phantom_class.py` positions the mesh on the table/pad using `position_patient_phantom_on_table()`. The mesh vertices are transformed into the global coordinate frame where beam intersection is computed.
-- **Beam intersection** — `beam_class.py:181` (`Beam.check_hit`) tests whether beam polygons intersect patient skin cells. Scaling the mesh changes which cells are in the beam path and their distance from the source.
-- **Dose accumulation** — `calculate_dose/` accumulates dose to skin cells. The `k_isq` inverse-square correction depends on source-to-skin distance, which scaling changes.
-- **Settings** — `PyskindoseSettings.phantom` is a `PhantomSettings` instance (`settings/phantom_settings.py`). GUI mirrors settings in `gui/state.py` (e.g. `phantom_model`, `human_mesh`, `patient_orientation`).
-- **GUI Settings tab** — `gui/tabs/settings.py` has a "Phantom Settings" expansion with model selector, mesh selector, orientation, table offsets, and patient offset sliders.
-- **Geometry preview** — `gui/figures.make_geometry_fig()` calls `build_settings()` then `create_geometry_plot()`, which constructs the phantom and renders it.
-- **GUI helpers** — `gui/settings_builder.py.build_settings()` assembles the `PyskindoseSettings` object from `state` for the calculation pipeline.
+Important corrections from review:
 
-## 3. Acceptance criteria
+- `phantom_class.py` currently uses `numpy-stl` (`stl.mesh.Mesh`), not PyVista or trimesh. Plan code should operate on `numpy` arrays after STL vectors are flattened into `Phantom.r`.
+- `Phantom` does not currently receive `PyskindoseSettings` or `PhantomSettings`; it receives `phantom_model`, `phantom_dim`, and `human_mesh`. Add explicit constructor arguments such as `human_scale=(1.0, 1.0, 1.0)` instead of referring to `self.settings`.
+- Use the local `Phantom.r` coordinate columns for implementation: column 0 = lateral/width, column 1 = AP/vertical thickness, column 2 = longitudinal/head-foot. Some docs and labels use different axis wording; tests should lock the behavior to these array columns.
+- Do not scale human mesh points about the full mesh centroid. Existing positioning assumes human meshes have no positive longitudinal `z` values, with the head/top origin at `max(z) == 0`. Centroid-relative longitudinal scaling can create positive `z` values and break positioning/orientation tests. Scaling must preserve the existing local alignment anchors.
+- Non-uniform scaling changes surface normals. `Beam.check_hit()` uses `patient.n` to distinguish entrance from exit skin cells, so normals must be recomputed or transformed after scaling.
 
-1. **Three new phantom settings** — `scale_lat` (lateral/X), `scale_ap` (AP/Y), and `scale_lon` (longitudinal/Z), each defaulting to `1.0`. Stored in `PhantomSettings` and mirrored in `gui/state.py`.
-2. **Directional scaling in `phantom_class.py`** — before any positioning or beam intersection, the mesh vertices are scaled relative to the mesh centroid along each axis: `v' = centroid + (v - centroid) * scale_factor`. Scaling is applied once at load/position time, not per-event.
-3. **GUI controls** — three sliders (range `0.5` to `2.0`, step `0.05`, default `1.0`) in **Settings → Phantom Settings**, below the patient offset section. Each slider shows its current value. The sliders are visible only when `phantom_model == "human"`.
-4. **Reset on setting change** — changing any scale slider calls `reset_results()` and refreshes the geometry preview.
-5. **Geometry tab validation** — the scaled mesh is rendered correctly in the Geometry tab preview. The mesh should look proportionally stretched/compressed along the expected axis.
-6. **Settings build** — `gui/settings_builder.py.build_settings()` passes the scale values into `PhantomSettings` so the calculation pipeline receives them.
-7. **Settings JSON** — `settings_example.json` includes the three scale fields. `PyskindoseSettings` round-trips them through JSON/dict.
-8. **Physics correctness** — scaled mesh vertices are used for all downstream calculations (beam intersection, inverse-square correction, dose accumulation). The `k_isq` factor automatically accounts for changed source-to-skin distance because it uses the actual vertex positions.
-9. **Bounds validation** — if any scale factor falls outside `[0.5, 2.0]`, a warning is emitted (CLI: `logger.warning`; GUI: `state.calc_warnings`). Values are clamped in the GUI slider.
-10. **Tests** — unit tests verifying: (a) centroid-relative scaling produces correct vertex positions; (b) a `scale_lat=2.0` mesh has twice the lateral extent; (c) beam intersection changes with scaling; (d) golden baseline PSD is unchanged at `scale=1.0`.
-11. **Docs** — one-line note in `FEATURE_INVENTORY.md` (Settings / Phantoms). `AGENTS.md` updated with the new settings. `dev-docs/TO_DO.md` link updated.
+## 3. Background & Relevant Code
 
-## 4. Implementation outline
+- **Phantom meshes**: `src/mypyskindose/phantom_class.py` loads STL files with `mesh.Mesh.from_file(...)`. Human mesh triangle vertices are flattened into `self.r`; STL triangle normals are repeated into `self.n`.
+- **Phantom placement**: `geom_calc.position_patient_phantom_on_table()` positions the already-constructed phantom and saves `r_ref`. Scaling must happen before this function is called.
+- **Event positioning**: `Phantom.position()` starts each event from `r_ref`, applies table rotation, then applies table translation. Scaling should therefore be part of the saved reference geometry, not a per-event mutation.
+- **Beam intersection**: `beam_class.py::Beam.check_hit()` tests whether patient points are inside the beam and uses `patient.n` for entrance-surface filtering.
+- **Dose accumulation**: `calculate_dose/` accumulates dose to skin cells. `calculate_k_isq()` uses actual source-to-cell distances, so inverse-square correction will automatically reflect the scaled geometry.
+- **Settings**: `PyskindoseSettings.phantom` is built from `PhantomSettings` in `src/mypyskindose/settings/phantom_settings.py`. This class is a plain initializer, not a dataclass.
+- **GUI state/settings**: `src/mypyskindose/gui/state.py` stores UI values; `src/mypyskindose/gui/settings_builder.py::build_settings()` writes them into the settings dict before constructing `PyskindoseSettings`.
+- **GUI controls**: `src/mypyskindose/gui/tabs/settings.py` owns the Settings -> Phantom Settings expansion.
+- **Geometry preview**: `src/mypyskindose/gui/figures.py::make_geometry_fig()` builds settings and calls `create_geometry_plot()`.
 
-### 4.1 Settings model
+## 4. Acceptance Criteria
+
+1. **Three new phantom settings**: `scale_lat`, `scale_ap`, and `scale_lon`, each defaulting to `1.0`, are stored in `PhantomSettings`, mirrored in `gui/state.py`, included in `settings_example.json`, and round-trip through JSON/dict settings.
+2. **Backward compatibility**: Existing settings files that omit the new fields still load with all scale factors set to `1.0`.
+3. **Validation**: Scale values must be numeric and constrained to `[0.5, 2.0]`. GUI sliders naturally clamp. Non-GUI settings should clamp with a warning or raise a clear `ValueError`; choose one behavior and test it. If clamping is chosen, emit a core logger warning without importing GUI state into settings code.
+4. **Constructor plumbing**: Every human `Phantom(...)` construction path that affects geometry or dose passes the scale tuple from `settings.phantom`. Table, pad, plane, and cylinder phantoms remain unchanged unless future work intentionally extends scaling to mathematical phantoms.
+5. **Anchored directional scaling**: Scaling is applied once during human phantom construction after STL vertices are loaded and before `position_patient_phantom_on_table()`. The implementation preserves local alignment anchors, especially `max(r[:, 2]) <= 0` / head-origin behavior, rather than using the full mesh centroid for all axes.
+6. **Normals correctness**: Surface normals are recomputed from the scaled triangle vertices or transformed by the inverse-transpose of the non-uniform scale matrix and re-normalized. `patient.n` length remains equal to `len(patient.r)`.
+7. **Geometry preview**: The scaled mesh renders correctly in the Geometry tab, and changing a scale control invalidates old calculation results and requests a preview refresh through the same debounced preview mechanism used for geometry controls.
+8. **Physics correctness**: Scaled mesh vertices and updated normals are used for beam intersection, inverse-square correction, and dose accumulation. At `scale_lat == scale_ap == scale_lon == 1.0`, baseline PSD and hit maps are unchanged.
+9. **GUI controls**: Settings -> Phantom Settings shows three human-only controls: Lateral/width, AP/vertical thickness, and Longitudinal/head-foot. Each shows its current value and updates state.
+10. **Docs**: Update `FEATURE_INVENTORY.md`, `AGENTS.md`, and `dev-docs/TO_DO.md` as part of the implementation PR. Add user-facing GUI help only if the controls need explanation beyond their labels.
+11. **Tests**: Add focused unit/integration tests for settings defaults/validation, anchored scaling, normals, unchanged scale-1 behavior, and at least one beam/dose behavior change under non-default scaling.
+
+## 5. Implementation Outline
+
+### 5.1 Settings Model
 
 **File: `src/mypyskindose/settings/phantom_settings.py`**
 
-Add three fields to `PhantomSettings`:
+Add fields in `PhantomSettings.__init__` using `dict.get(...)` for backward compatibility:
 
 ```python
-scale_lat: float = 1.0   # lateral (X-axis) scaling factor
-scale_ap: float = 1.0    # AP (Y-axis) scaling factor
-scale_lon: float = 1.0   # longitudinal (Z-axis) scaling factor
+self.scale_lat = _validate_scale(ptm_dim.get("scale_lat", 1.0), "scale_lat")
+self.scale_ap = _validate_scale(ptm_dim.get("scale_ap", 1.0), "scale_ap")
+self.scale_lon = _validate_scale(ptm_dim.get("scale_lon", 1.0), "scale_lon")
 ```
 
-Clamp to `[0.5, 2.0]` in `__post_init__` or a validator. Add to `to_printable_string()` output.
+Add a small module-level helper, for example:
+
+```python
+def _validate_scale(value: object, name: str) -> float:
+    scale = float(value)
+    if not 0.5 <= scale <= 2.0:
+        logger.warning("%s=%s outside [0.5, 2.0]; clamping", name, scale)
+        return min(2.0, max(0.5, scale))
+    return scale
+```
+
+If the implementation chooses raising instead of clamping for non-GUI settings, update acceptance criteria and tests accordingly. Whichever behavior is chosen, keep it in the core settings layer and do not reference GUI state from this file.
+
+Add the scale values to `to_printable_string()`.
 
 **File: `src/mypyskindose/settings_example.json`**
 
-Add the three fields under the `phantom` section:
+Add the fields under the `phantom` section:
 
 ```json
-"phantom": {
-    ...
-    "scale_lat": 1.0,
-    "scale_ap": 1.0,
-    "scale_lon": 1.0
-}
+"scale_lat": 1.0,
+"scale_ap": 1.0,
+"scale_lon": 1.0
 ```
 
 **File: `src/mypyskindose/settings/pyskindose_settings.py`**
 
-No changes needed — `PhantomSettings` is already deserialized from the `phantom` dict. The new fields will be picked up automatically if they exist in JSON, or default to `1.0` if absent (backward compatible).
+No direct parsing changes should be required because `PhantomSettings(ptm_dim=tmp["phantom"])` owns these fields. Update docstrings if useful.
 
-### 4.2 GUI state
+### 5.2 GUI State and Settings Builder
 
 **File: `src/mypyskindose/gui/state.py`**
 
-Add to `AppState`:
+Add:
 
 ```python
 phantom_scale_lat: float = 1.0
@@ -87,156 +107,185 @@ phantom_scale_ap: float = 1.0
 phantom_scale_lon: float = 1.0
 ```
 
-### 4.3 GUI controls
+**File: `src/mypyskindose/gui/settings_builder.py`**
+
+Write the UI state into `base["phantom"]` before constructing `PyskindoseSettings`:
+
+```python
+base["phantom"]["scale_lat"] = app_state.phantom_scale_lat
+base["phantom"]["scale_ap"] = app_state.phantom_scale_ap
+base["phantom"]["scale_lon"] = app_state.phantom_scale_lon
+```
+
+Do not add these keys to `phantom.dimension`; they are human phantom settings, not mathematical phantom dimensions.
+
+### 5.3 GUI Controls
 
 **File: `src/mypyskindose/gui/tabs/settings.py`**
 
-Add three sliders inside the "Phantom Settings" expansion, after the patient offset section and before the closing of the expansion:
+Add controls inside the existing "Phantom Settings" expansion after the patient offset section. Keep the controls visible only when `state.phantom_model == "human"`.
+
+Prefer three compact rows or columns with explicit labels, using the existing UI style:
 
 ```python
-with ui.column().classes("w-full gap-1").bind_visibility_from(
-    state, "phantom_model", backward=lambda v: v == "human"
-) as scale_section:
-    ui.label("Body habitus scaling (relative to base mesh)").classes("text-subtitle2")
-    
-    with ui.row().classes("w-full gap-4"):
-        ui.slider(min=0.5, max=2.0, step=0.05, value=state.phantom_scale_lat
-        ).bind_value(state, "phantom_scale_lat").on(
-            "update:model-value", reset_results
-        ).classes("grow")
-        ui.label().bind_text_from(state, "phantom_scale_lat",
-            backward=lambda v: f"{v:.2f}"
-        ).classes("mono-text")
-        
-        ui.slider(min=0.5, max=2.0, step=0.05, value=state.phantom_scale_ap
-        ).bind_value(state, "phantom_scale_ap").on(
-            "update:model-value", reset_results
-        ).classes("grow")
-        ui.label().bind_text_from(state, "phantom_scale_ap",
-            backward=lambda v: f"{v:.2f}"
-        ).classes("mono-text")
-        
-        ui.slider(min=0.5, max=2.0, step=0.05, value=state.phantom_scale_lon
-        ).bind_value(state, "phantom_scale_lon").on(
-            "update:model-value", reset_results
-        ).classes("grow")
-        ui.label().bind_text_from(state, "phantom_scale_lon",
-            backward=lambda v: f"{v:.2f}"
-        ).classes("mono-text")
+scale_section = ui.column().classes("w-full gap-2 q-mt-sm")
+scale_section.bind_visibility_from(state, "phantom_model", backward=lambda v: v == "human")
+
+with scale_section:
+    ui.label("Body habitus scaling").classes("text-caption text-grey-6")
+    for label, attr in (
+        ("Lateral / width", "phantom_scale_lat"),
+        ("AP / vertical thickness", "phantom_scale_ap"),
+        ("Longitudinal / head-foot", "phantom_scale_lon"),
+    ):
+        with ui.row().classes("w-full gap-4 items-center"):
+            ui.label(label).classes("w-48 text-caption")
+            ui.slider(min=0.5, max=2.0, step=0.05, value=getattr(state, attr)).bind_value(
+                state, attr
+            ).on("update:model-value", _on_phantom_scale_change).classes("grow")
+            ui.label().bind_text_from(state, attr, backward=lambda v: f"{float(v):.2f}x").classes("mono-text")
 ```
 
-Labels for the sliders: "Lateral (X)", "AP (Y)", "Longitudinal (Z)" — use `ui.number` with slider props or three separate rows for clarity.
+Define `_on_phantom_scale_change()` near the other handlers. It should call `reset_results()` and request/mark a geometry preview refresh if the tab has a refresh hook available. If no hook exists yet, add one to `PageContext` rather than relying on `reset_results()` alone.
 
-### 4.4 Scaling in phantom_class.py
+### 5.4 Human Phantom Scaling
 
 **File: `src/mypyskindose/phantom_class.py`**
 
-In the `PatientPhantom` class (or wherever the mesh is loaded and positioned), apply directional scaling to the vertices **after loading the STL but before positioning**:
+Extend `Phantom.__init__` with an optional scale argument:
 
 ```python
-def _apply_scale(self, mesh: pv.DataSet) -> pv.DataSet:
-    """Scale mesh vertices relative to centroid along each axis."""
-    scale = self.settings.phantom.scale_lat, self.settings.phantom.scale_ap, self.settings.phantom.scale_lon
-    
-    # Check if any scaling is needed
-    if all(s == 1.0 for s in scale):
-        return mesh
-    
-    centroid = mesh.centroid
-    points = mesh.points.copy()
-    
-    # Scale each axis relative to centroid
-    points[:, 0] = centroid[0] + (points[:, 0] - centroid[0]) * scale[0]  # X (lateral)
-    points[:, 1] = centroid[1] + (points[:, 1] - centroid[1]) * scale[1]  # Y (AP)
-    points[:, 2] = centroid[2] + (points[:, 2] - centroid[2]) * scale[2]  # Z (longitudinal)
-    
-    mesh.points = points
-    return mesh
+def __init__(
+    self,
+    phantom_model: str,
+    phantom_dim: PhantomDimensions,
+    human_mesh: Optional[Union[str, tuple[str, mesh.Mesh]]] = None,
+    human_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
+):
 ```
 
-Call this method after loading the STL and before `position_patient_phantom_on_table()`.
+For `phantom_model == "human"`, after flattening STL vectors into `self.r`, apply scaling and then update `self.n`.
 
-### 4.5 Settings builder
+Avoid centroid-relative scaling for every axis. Use an anchor policy that preserves current local alignment assumptions:
 
-**File: `src/mypyskindose/gui/settings_builder.py`**
+- lateral/width (`r[:, 0]`): scale around the lateral midpoint of the mesh bounds;
+- AP/vertical thickness (`r[:, 1]`): preserve the existing bound used for table placement; start with `max(r[:, 1])` because the mathematical phantoms use `max(y) == 0`, and verify this against all shipped human meshes;
+- longitudinal/head-foot (`r[:, 2]`): preserve `max(r[:, 2])`, keeping the head-origin/no-positive-z invariant.
 
-In `build_settings()`, pass the scale values to `PhantomSettings`:
+Sketch:
 
 ```python
-# When constructing PhantomSettings or the ptm_dim dict:
-ptm_dim["scale_lat"] = state.phantom_scale_lat
-ptm_dim["scale_ap"] = state.phantom_scale_ap
-ptm_dim["scale_lon"] = state.phantom_scale_lon
+def _apply_human_scale(self, scale: tuple[float, float, float]) -> None:
+    if np.allclose(scale, (1.0, 1.0, 1.0)):
+        return
+
+    sx, sy, sz = scale
+    anchor = np.array([
+        (self.r[:, 0].min() + self.r[:, 0].max()) / 2.0,
+        self.r[:, 1].max(),
+        self.r[:, 2].max(),
+    ])
+    self.r = anchor + (self.r - anchor) * np.array([sx, sy, sz])
+    self._recompute_human_normals_from_triangles()
 ```
 
-Check how `PhantomSettings` is instantiated from `ptm_dim` in the settings builder to ensure the new keys flow through.
+Because `self.r` is flattened in groups of three vertices per triangle, normals can be recomputed from each scaled triangle:
 
-### 4.6 Geometry preview
-
-The geometry preview in `gui/figures.make_geometry_fig()` already calls `build_settings()` and constructs the phantom from settings. Since the scaling is applied inside `phantom_class.py` during phantom construction, the preview will automatically show the scaled mesh — no changes needed to the plotting pipeline.
-
-### 4.7 Validation in geometry tab
-
-The Geometry tab already renders the phantom. After scaling, the user can visually verify the mesh is proportionally changed. No new UI is needed — the existing preview suffices. Optionally, a small caption could appear showing the current scale factors:
-
-```
-Scale: Lateral 1.00x · AP 1.00x · Longitudinal 1.00x
+```python
+def _recompute_human_normals_from_triangles(self) -> None:
+    triangles = self.r.reshape(-1, 3, 3)
+    normals = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
+    lengths = np.linalg.norm(normals, axis=1)
+    normals[lengths > 0] = normals[lengths > 0] / lengths[lengths > 0, None]
+    self.n = np.repeat(normals, 3, axis=0)
 ```
 
-This could be added as a label in the Geometry tab that binds to the scale state values.
+Confirm the recomputed normal direction matches the existing STL normal orientation at `scale == 1.0`; if the cross-product order is reversed for these meshes, swap the cross-product operands.
 
-## 5. Test plan
+### 5.5 Constructor Call Sites
 
-### 5.1 Unit tests
+Pass `human_scale=(settings.phantom.scale_lat, settings.phantom.scale_ap, settings.phantom.scale_lon)` anywhere a human patient phantom is constructed from settings:
 
-**File: `tests/unittests/test_phantom_class.py`** (or append to existing)
+- `src/mypyskindose/calculate_dose/calculate_dose.py`
+- `src/mypyskindose/plotting/create_geometry_plot.py`
+- any plotting or export path that reconstructs a patient phantom from settings, including the plane fallback in `create_dose_map_plot.py` if it is extended beyond plane-only behavior.
 
-- **test_scaling_centroid_relative**: Verify that scaling by `(2.0, 1.0, 1.0)` doubles the lateral extent while keeping the centroid fixed.
-- **test_scaling_no_change_at_one**: Verify that `(1.0, 1.0, 1.0)` produces vertices identical to the unscaled mesh (bitwise or within tolerance).
-- **test_scaling_applied_before_positioning**: Verify that scaling happens before table positioning, so the scaled mesh is correctly placed on the table.
-- **test_phantom_settings_defaults**: Verify `PhantomSettings` defaults are `1.0` for all three scales.
-- **test_phantom_settings_clamp**: Verify values outside `[0.5, 2.0]` are clamped.
-- **test_golden_baseline_unchanged**: Existing golden-baseline PSD tests continue to pass (scales default to `1.0`).
+Table and pad constructors do not need scale arguments.
 
-### 5.2 Integration tests
+Also check tests and manual-test helpers that instantiate human `Phantom(...)` directly. Existing tests should continue to work through the default `(1.0, 1.0, 1.0)`.
 
-- **test_scaled_beam_intersection**: A phantom scaled laterally by `2.0` should have more cells intersected by a beam of fixed width.
-- **test_scaled_inverse_square**: The `k_isq` correction should differ for a scaled phantom because source-to-skin distance changes.
+### 5.6 Geometry Preview
 
-### 5.3 GUI smoke test
+The Geometry preview already calls `build_settings()` and creates the patient phantom through `create_geometry_plot()`, so scaled geometry will appear after settings and constructor plumbing are complete.
 
-- Load an RDSR, open Settings → Phantom, drag a scale slider, verify the Geometry tab preview updates.
-- Verify `reset_results()` clears any previous dose map when a scale changes.
-- Verify the scale values appear in the exported settings JSON.
+Do not assume `reset_results()` redraws the preview. The implementation should explicitly request a preview refresh or reuse the debounced refresh mechanism used by Geometry tab sliders.
 
-## 6. Future work (option a — deferred)
+Optionally show a compact read-only caption in the Geometry tab:
 
-When additional meshes are needed (e.g. obese body type):
+```text
+Scale: lateral 1.00x | AP 1.00x | longitudinal 1.00x
+```
+
+Keep this caption secondary; the controls belong in Settings.
+
+## 6. Test Plan
+
+### 6.1 Unit Tests
+
+Add or extend tests under `tests/unittests/`.
+
+- **Settings defaults**: Existing `settings_example.json` and minimal old-style settings load with all scale factors equal to `1.0`.
+- **Settings validation**: Out-of-range and non-numeric values follow the selected validation behavior.
+- **No-op scale**: A human phantom with default scale has identical `r` values to the current unscaled baseline within floating-point tolerance.
+- **Anchored longitudinal scaling**: Scaling `scale_lon=2.0` increases longitudinal extent while preserving the invariant that no human mesh point has positive `r[:, 2]`.
+- **Lateral scaling**: Scaling `scale_lat=2.0` doubles lateral extent around the selected lateral midpoint.
+- **AP scaling**: Scaling `scale_ap=2.0` changes vertical/AP extent while preserving the chosen table-placement anchor.
+- **Normals shape and unit length**: `len(patient.n) == len(patient.r)` and nonzero normals are unit length after non-uniform scaling.
+- **Normals orientation**: At scale `1.0`, recomputed normals match existing STL normals or intentionally preserve the same entrance/exit behavior.
+- **Positioning**: Scaling happens before `position_patient_phantom_on_table()`, and `r_ref` contains the scaled geometry.
+
+### 6.2 Integration Tests
+
+- **Beam intersection changes**: For a synthetic geometry, a laterally scaled human phantom changes hit count or hit identity under a fixed beam.
+- **Inverse-square changes**: A scale that changes source-to-skin distance changes `k_isq` for at least one hit cell.
+- **Golden baseline unchanged**: Existing golden PSD/hit-map tests remain unchanged at default scale.
+
+### 6.3 GUI Smoke Tests
+
+- Settings -> Phantom Settings shows scale controls only for the human model.
+- Changing a scale control updates `AppState`, clears prior calculation results, and triggers/requires a Geometry preview refresh.
+- Exported settings JSON includes `scale_lat`, `scale_ap`, and `scale_lon`.
+
+## 7. Future Work
+
+When additional meshes are needed:
 
 1. Generate or source STL files for the new body type.
-2. Create `_reduced_1000t` variants using the existing mesh-reduction pipeline.
+2. Create `_reduced_1000t` variants using the existing mesh-reduction process.
 3. Place them in `phantom_data/` alongside existing meshes.
-4. `get_human_mesh_names()` will auto-discover them (it scans the directory).
-5. Add a note in `FEATURE_INVENTORY.md` listing the new mesh.
-6. Consider whether the scaling controls should have presets (e.g. "obese" = `scale_lat=1.4, scale_ap=1.3`).
+4. Confirm `get_human_mesh_names()` discovers them.
+5. Add notes in `FEATURE_INVENTORY.md` and `AGENTS.md`.
+6. Consider presets such as "large habitus" only after real-world dimensions and clinical expectations are agreed.
 
-This plan does not implement option (a) — it is left as a future enhancement that can be added at any time without breaking the scaling infrastructure.
+This future work is complementary to scaling and should not block the scaling implementation.
 
-## 7. Decision log
+## 8. Decision Log
 
 | Decision | Rationale |
 |----------|-----------|
-| Scale relative to mesh centroid | Keeps the mesh centered in its local frame, avoiding unintended translation when scaling. Positioning happens after scaling. |
-| Range [0.5, 2.0] | Covers roughly half-size to double-size, which encompasses realistic anthropometric variation without producing degenerate geometries. |
-| Step 0.05 | Fine enough for meaningful adjustment without overwhelming the user. |
-| Directional (not uniform) scaling | Different body dimensions vary independently (e.g. a wider but not taller patient). Uniform scaling would be less useful. |
-| Apply scaling in `phantom_class.py` | Centralizes the geometry transformation where the mesh is already loaded, before any positioning or beam intersection logic. |
-| No new settings class | The three scale factors fit naturally into `PhantomSettings` alongside existing phantom parameters. |
-| Option (a) deferred | Sourcing/generating new STL meshes is a separate effort with different dependencies (3D scanning, mesh generation, licensing). Scaling provides immediate value. |
+| Start with directional scaling | Uses existing mesh assets and delivers value without a separate mesh-sourcing/licensing effort. |
+| Keep settings on `PhantomSettings` | The scale factors are phantom geometry parameters and fit next to `model`, `human_mesh`, and `patient_orientation`. |
+| Pass scale explicitly into `Phantom` | `Phantom` does not own the full settings object; explicit constructor data keeps dependencies narrow. |
+| Preserve alignment anchors, not full centroid | Existing positioning assumes a head-origin/no-positive-z convention; centroid scaling can break that invariant. |
+| Recompute or transform normals | Non-uniform scaling invalidates STL normals, and hit filtering depends on normal vectors. |
+| Range `[0.5, 2.0]` | Broad enough for exploratory patient-size adjustment while reducing the chance of extreme degenerate geometry. |
+| GUI controls are human-only | Plane and cylinder dimensions already have separate mathematical size settings; this plan targets STL human meshes. |
+| Additional meshes deferred | New body-type assets are useful but require separate data, mesh generation, and licensing decisions. |
 
-## 8. Progress log
+## 9. Progress Log
 
 | Date | Status |
 |------|--------|
 | 2026-06-24 | Plan authored |
-| — | Implementation pending |
+| 2026-06-25 | Review completed; implementation hazards and test requirements folded into plan |
+| -- | Implementation pending |
