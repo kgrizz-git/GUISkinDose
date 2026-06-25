@@ -45,6 +45,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   effective rotation; see [assessment](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) for root cause analysis
   and [plan](plans/GEO_TAB_SPINNING_WHEEL_PLAN.md) for the implementation (revised fix uses an `_in_render_chain` flag).
 - [ ] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z. See [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
+- [ ] **Fix cross-tab offset/origin slider synchronization** — ensure Geometry tab sliders/labels sync when modified via Settings tab spinboxes, without causing destructive focus loss. See [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/CROSS_TAB_SLIDER_SYNC_PLAN.md).
 - [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
   a clear in-app note and axis legend.
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized

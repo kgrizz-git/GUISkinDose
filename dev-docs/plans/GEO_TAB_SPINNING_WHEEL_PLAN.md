@@ -1,172 +1,124 @@
 # Geometry Tab Spinning Wheel Fix Plan
 
-> **Source assessment:** [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](../assessments/GEO_TAB_SPINNING_WHEEL_20260625.md)
-> contains the full root-cause analysis and the review of the originally proposed
-> fix. This plan implements the **revised** recommendation (§10.1 of the
-> assessment): keep the re-schedule in `_refresh_geometry_sliders()` for external
-> callers, and break the self-reinforcing cycle with an `_in_render_chain` flag.
+> **Background:** [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](../assessments/GEO_TAB_SPINNING_WHEEL_20260625.md)
+> — root cause, why deleting lines 592–594 regresses seven external callers, and
+> the §10.1 `_in_render_chain` recommendation this plan implements.
 
 ## Objective
 
-Stop the Geometry tab's Plotly plot from re-rendering on a 0.25 s timer loop
-after any slider drag, exam-selection change, or external `ctx.refresh_per_exam()`
-call, while preserving every existing refresh path that depends on
-`_refresh_geometry_sliders()` to schedule the re-render.
+Stop the Geometry tab Plotly plot from re-rendering on a 0.25 s timer loop after
+slider drags, exam-selection changes, or external `ctx.refresh_per_exam()` calls,
+while preserving every refresh path that depends on `_refresh_geometry_sliders()`
+to schedule a re-render.
 
 ## Scope
 
-In scope:
+**In scope**
 
-- `src/mypyskindose/gui/tabs/geometry.py` — add `_in_render_chain` closure flag
-  and guard the re-schedule at lines 592-594; remove the redundant
-  `_schedule_debounced_render()` in `_on_exam_select_change()` at line 553.
-- `tests/gui/` — add a regression test that asserts no second render is
-  scheduled after the first debounced render settles.
+| Area | Change |
+|------|--------|
+| `geometry.py` | `_in_render_chain` flag; guard re-schedule at 592–594; remove redundant `if last_preview_mode:` block in `_on_exam_select_change`; add `.mark(...)` on patient and table-origin sliders (testability only) |
+| `tests/gui/test_gui_flows.py` | Parametrized patient-slider test (lon/ver/lat) + table-origin X test; shared load helper |
+| `CHANGELOG.md` | One-line Unreleased entry when shipped |
 
-Out of scope:
+**Out of scope**
 
-- Any change to the debounce timing (`GEOMETRY_DEBOUNCE_SEC`).
-- The re-entrancy guard (`_render_in_progress`) from the assessment's tertiary
-  fix — it is defensive only and does not address the bug.
-- The large-figure rendering speed concern (§Contributing factor #4 in the
-  assessment) — separate issue.
+- Debounce timing (`GEOMETRY_DEBOUNCE_SEC`), `_render_in_progress` guard, large-figure render speed.
+- Any other file (`figures.py`, `upload.py`, `_per_exam.py`, `offset_handlers.py`, `app.py`, …) — external `ctx.refresh_per_exam()` paths keep working because lines 592–594 remain, now guarded.
 
 ## Acceptance criteria
 
-- [ ] After dragging a patient or table-origin slider, the Geometry plot
-      re-renders at most once per 0.25 s burst (no continuous timer chain).
-- [ ] After releasing the slider, the plot is stable long enough for the user
-      to rotate/zoom it with the mouse (no Plotly spinning-wheel).
-- [ ] The 3D `make_geometry_fig` is not invoked on a periodic timer; it is
-      invoked only by user actions (slider drag, exam selection, composite
-      toggle, preview button) or by an external `ctx.refresh_per_exam()` call.
-- [ ] Loading a new file, removing an exam, switching the active exam, changing
-      a per-exam correction in Settings, or changing a per-exam coordinate
-      toggle in Settings all still cause the Geometry plot to redraw.
-- [ ] Removing the manual `_schedule_debounced_render()` in
-      `_on_exam_select_change()` does not regress the exam-selection render.
-- [ ] A new or extended GUI smoke test in `tests/gui/` covers the regression
-      ("sliding a patient offset does not produce a render loop").
+- [ ] Patient or table-origin slider drag: at most one render per 0.25 s burst; plot stable for mouse rotate/zoom after release.
+- [ ] `make_geometry_fig` not invoked on a periodic timer — only user actions or external `ctx.refresh_per_exam()`.
+- [ ] External refreshes still redraw: new file, remove exam, switch exam, per-exam correction/toggle in Settings.
+- [ ] Exam-selector change still redraws after removing the redundant local schedule block.
+- [ ] Settings → Phantom Settings → Body habitus scaling still refreshes Geometry (`ctx.refresh_geometry_preview()`).
+- [ ] `test_geometry_patient_slider_no_render_loop` (parametrized lon/ver/lat) and
+      `test_geometry_table_slider_no_render_loop` pass locally and on CI.
+- [ ] `CHANGELOG.md` Unreleased entry added.
 
-## Phases
+## Phase 1 — `geometry.py`
 
-### Phase 1 — Break the render cycle in `geometry.py`
+Add `_in_render_chain = False` in `build()` (line 70) alongside `slider_timer`, etc.
 
-1. In `build()` (geometry.py:70), add `_in_render_chain = False` to the
-   closure-local flags (next to `slider_timer`, `live_preview_requested`, etc.).
-2. In `_do_debounced_render()` (geometry.py:387-400):
-   - Add `_in_render_chain` to the `nonlocal` declaration.
-   - Keep the existing `if table_origin_pending:` commit block **outside**
-     the `try/finally` (it is synchronous and unrelated to the render chain).
-   - Set `_in_render_chain = True` **only** around the synchronous
-     `ctx.refresh_per_exam()` call. The `try/finally` must **not** wrap the
-     `await _render_preview(...)` call — if it did, the flag would stay
-     `True` while the await yields the event loop, and a user interaction
-     (e.g., exam-selector change) that fires `ctx.refresh_per_exam()` during
-     that window would be silently swallowed by the
-     `not _in_render_chain` guard in `_refresh_geometry_sliders()`, leaving
-     the plot stuck on the old state.
-   - Final shape:
-     ```python
-     async def _do_debounced_render() -> None:
-         nonlocal slider_timer, table_origin_pending, live_preview_requested
-         nonlocal last_table_origin_scrub, _in_render_chain
-         slider_timer = None
-         if table_origin_pending:
-             commit_table_origin_transform(state, _active_exam_index())
-             table_origin_pending = False
-             last_table_origin_scrub = False
-             reset_results()
-         _in_render_chain = True
-         try:
-             ctx.refresh_per_exam()  # _refresh_geometry_sliders() sees the flag
-         finally:
-             _in_render_chain = False
-         _update_preview_caption()
-         if live_preview_requested and live_preview_allowed() and last_preview_mode:
-             await _render_preview(last_preview_mode)
-         live_preview_requested = False
-         _update_paused_badge()
-     ```
-3. In `_refresh_geometry_sliders()` (geometry.py:568-594):
-   - Add `_in_render_chain` to the `nonlocal` declaration alongside the
-     other closure variables it reads. The variable is only read in this
-     function (in the guard at step 3b), so `nonlocal` is not strictly
-     required for read-only access, but declaring it explicitly documents
-     the closure relationship and silences any linter warnings about
-     implicit closure capture if a future edit adds an assignment.
-   - Change the re-schedule block at lines 592-594 from:
-     ```python
-     if last_preview_mode:
-         live_preview_requested = True
-         _schedule_debounced_render()
-     ```
-     to:
-     ```python
-     if last_preview_mode and not _in_render_chain:
-         live_preview_requested = True
-         _schedule_debounced_render()
-     ```
-4. In `_on_exam_select_change()` (geometry.py:535-553):
-   - Remove `live_preview_requested` from the `nonlocal` declaration at
-     line 536 — after the next step it is no longer read or assigned in
-     this function.
-   - Remove the **entire** `if last_preview_mode:` block at lines 551-553.
-     With the previous steps in place, `ctx.refresh_per_exam()` on line 550
-     already reaches `_refresh_geometry_sliders()` (via the wrapped callback
-     at lines 598-602), which sets `live_preview_requested = True` and
-     calls `_schedule_debounced_render()` for us. The local block is fully
-     redundant.
-   - Final shape of the tail of `_on_exam_select_change`:
-     ```python
-     def _on_exam_select_change(_e) -> None:
-         nonlocal last_table_origin_scrub, slider_timer, table_origin_pending
-         if exam_selector_guard["suppress"]:
-             return
-         old_index = state.active_exam_index
-         if slider_timer is not None:
-             slider_timer.cancel()
-             slider_timer = None
-         if table_origin_pending and old_index is not None:
-             commit_table_origin_transform(state, old_index)
-             table_origin_pending = False
-         new_index = int(exam_select.value or 0)
-         state.active_exam_index = new_index
-         last_table_origin_scrub = False
-         _update_preview_caption()
-         ctx.refresh_per_exam()
-     ```
-
-Files touched: `src/mypyskindose/gui/tabs/geometry.py`.
-
-### Phase 2 — Regression test
-
-Add a regression test to `tests/gui/test_gui_flows.py` (alongside the
-existing example-load and tab-heading tests). The test uses NiceGUI's
-`User` simulation harness — no manual server start, no
-`launch_gui_headless.py` invocation. The test module already declares
-`pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")`,
-which the new test must inherit.
+**`_do_debounced_render()` (387–400)** — add `_in_render_chain` to `nonlocal`. Keep
+`if table_origin_pending:` **outside** the `try/finally`. Set the flag only around
+the synchronous `ctx.refresh_per_exam()`; do **not** wrap `await _render_preview(...)`.
+If the flag stayed `True` across the await, a concurrent `refresh_per_exam()` would
+be swallowed by the guard and leave the plot stale.
 
 ```python
+async def _do_debounced_render() -> None:
+    nonlocal slider_timer, table_origin_pending, live_preview_requested
+    nonlocal last_table_origin_scrub, _in_render_chain
+    slider_timer = None
+    if table_origin_pending:
+        commit_table_origin_transform(state, _active_exam_index())
+        table_origin_pending = False
+        last_table_origin_scrub = False
+        reset_results()
+    _in_render_chain = True
+    try:
+        ctx.refresh_per_exam()
+    finally:
+        _in_render_chain = False
+    _update_preview_caption()
+    if live_preview_requested and live_preview_allowed() and last_preview_mode:
+        await _render_preview(last_preview_mode)
+    live_preview_requested = False
+    _update_paused_badge()
+```
+
+**`_refresh_geometry_sliders()` (568–594)** — add `_in_render_chain` to `nonlocal`.
+Guard the re-schedule:
+
+```python
+if last_preview_mode and not _in_render_chain:
+    live_preview_requested = True
+    _schedule_debounced_render()
+```
+
+**`_on_exam_select_change()` (535–553)** — remove `live_preview_requested` from
+`nonlocal`; delete the entire `if last_preview_mode:` block (551–553). Wrapped
+`ctx.refresh_per_exam()` already schedules via `_refresh_geometry_sliders()`.
+
+**Patient sliders (158–177)** — add markers for the regression test:
+
+```python
+slider = ui.slider(
+    min=-PATIENT_OFFSET_SLIDER_RANGE_CM,
+    max=PATIENT_OFFSET_SLIDER_RANGE_CM,
+    step=0.5,
+    value=initial,
+).classes("w-full").mark(f"patient-slider-{axis}")
+```
+
+Markers: `patient-slider-lon`, `patient-slider-ver`, `patient-slider-lat`.
+
+## Phase 2 — Regression test
+
+Add to `tests/gui/test_gui_flows.py` (inherits module `pytestmark`). Import
+`GEOMETRY_DEBOUNCE_SEC` at the top of the test file with the other constants.
+
+```python
+from mypyskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
+
+
 @pytest.mark.asyncio
 async def test_geometry_slider_no_render_loop(user: User, monkeypatch) -> None:
-    """Moving a patient slider triggers exactly one debounced render, not an infinite loop."""
+    """One debounced render per patient-slider move; no timer loop while idle."""
     import asyncio
     import mypyskindose.gui.tabs.geometry as geometry_tab
-    from mypyskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC, PATIENT_OFFSET_SLIDER_RANGE_CM
 
-    # 1. Load a bundled example RDSR.
     await user.open("/")
     user.find(marker="example-select").click()
     await user.should_see("philips_allura_clarity_u104.dcm", retries=20)
     user.find("philips_allura_clarity_u104.dcm").click()
     await user.should_see("EVENTS", retries=50)
 
-    # 2. Switch to the Geometry tab.
     user.find("4 · Geometry").click()
+    await user.should_see("Setup view", retries=20)
 
-    # 3. Wrap make_geometry_fig with a counter that still runs the real figure.
     call_count = 0
     original_make_fig = geometry_tab.make_geometry_fig
 
@@ -177,114 +129,65 @@ async def test_geometry_slider_no_render_loop(user: User, monkeypatch) -> None:
 
     monkeypatch.setattr(geometry_tab, "make_geometry_fig", mock_make_fig)
 
-    # 4. Trigger an initial Setup view render so the plot is in a settled state.
     user.find("Setup view").click()
     await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)
-    assert call_count == 1, f"Initial render should run exactly once, got {call_count}"
-    call_count = 0  # isolate the slider behavior.
+    assert call_count == 1, f"Initial render should run once, got {call_count}"
+    call_count = 0
 
-    # 5. Locate a patient-offset slider (range ±PATIENT_OFFSET_SLIDER_RANGE_CM).
-    sliders = [e for e in user.client.elements.values() if isinstance(e, ui.slider)]
-    patient_sliders = [
-        s for s in sliders
-        if s._props.get("min") == -PATIENT_OFFSET_SLIDER_RANGE_CM
-        and s._props.get("max") == PATIENT_OFFSET_SLIDER_RANGE_CM
-    ]
-    assert patient_sliders, "Could not find patient offset sliders on Geometry tab"
-    slider = patient_sliders[0]
+    # trigger() runs inside user.client (see HARNESS_ENGINEERING.md User-test gotchas).
+    # Requires Phase 1 markers — user.find(ui.slider) matches all six sliders.
+    user.find(marker="patient-slider-lon").trigger("update:model-value", 5.0)
 
-    # 6. Programmatically move the slider inside the NiceGUI client context.
-    with user.client:
-        slider.value = 5.0
-
-    # 7. Wait for the debounce + render to settle, then assert exactly one render.
     await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)
     assert call_count == 1, (
-        f"Expected exactly 1 render after slider move, got {call_count} "
-        f"(infinite render loop detected)"
+        f"Expected 1 render after slider move, got {call_count} (loop detected)"
     )
 
-    # 8. Verify no further renders fire while idle.
     await asyncio.sleep(1.0)
-    assert call_count == 1, f"Plot re-rendered while idle, count is {call_count}"
+    assert call_count == 1, f"Plot re-rendered while idle, count={call_count}"
 ```
 
-Notes:
+**Test constraints**
 
-- `ui` must be imported in the test module (`from nicegui import ui`).
-- `User` is already imported in `test_gui_flows.py`.
-- The slider range is `±150` (`PATIENT_OFFSET_SLIDER_RANGE_CM = 150` in
-  `src/mypyskindose/gui/constants.py:30`) — do **not** hard-code `100`.
-- The `user.client` context manager is the NiceGUI fixture for mutating
-  widget state from a test (mirrors the pattern in `test_gui_security.py`).
-- `tests/scripts/launch_gui_headless.py` is a developer-facing wrapper that
-  runs `pytest tests/gui/`; the test itself does not call it.
+- Do **not** assign `slider.value` or call `slider.set_value()` — handlers run
+  outside the client context and `ui.timer` / `run.io_bound` short-circuit.
+- Validate with `pytest tests/gui/` locally before marking complete (not caught
+  by type checkers).
+- Optional follow-up: parameterized test for `patient-slider-ver` / `-lat`.
 
-### Phase 3 — Manual smoke
-
-Run the GUI locally and verify the visual symptom is gone:
+## Phase 3 — Validate and smoke
 
 ```bash
-python -m mypyskindose --mode gui
+pytest tests/gui/test_gui_flows.py::test_geometry_slider_no_render_loop -v
+pytest tests/gui/ -v
+ruff check src/mypyskindose/gui/tabs/geometry.py tests/gui/test_gui_flows.py
+basedpyright src/mypyskindose/gui/tabs/geometry.py tests/gui/test_gui_flows.py
 ```
 
-Then in the browser:
+Manual (`python -m mypyskindose --mode gui`): drag patient and table-origin
+sliders; switch exams; toggle composite; load new example; change per-exam
+toggle in Settings; change phantom scale in Settings; rotate plot 5 s without
+spinning wheel returning.
 
-- Drag a patient offset slider — plot updates after ~0.25 s, then stops.
-- Drag a table-origin slider — same.
-- Switch exams in the multi-exam selector — plot updates, then stops.
-- Toggle the composite checkbox — plot updates, then stops.
-- Load a new example RDSR — plot updates, then stops.
-- Change a per-exam coordinate toggle in Settings → Per-exam corrections —
-  Geometry plot updates, then stops.
-- After release, rotate the 3D plot with the mouse for at least 5 s without
-  the spinning wheel returning.
+**CHANGELOG** (Unreleased):
+
+```markdown
+- Fix Geometry tab plot re-rendering on a 0.25 s timer loop after slider drags,
+  exam changes, or external data refresh (`_in_render_chain` closure flag).
+```
 
 ## Decision log
 
-- **2026-06-25** — Original assessment proposed removing lines 592-594 of
-  `_refresh_geometry_sliders()`. Review found this would break seven external
-  `ctx.refresh_per_exam()` callers that rely on those lines to re-render the
-  plot. Revised to the `_in_render_chain` flag approach.
-- **2026-06-25** — Dropped the `_render_in_progress` re-entrancy guard: NiceGUI
-  timers fire sequentially, not concurrently, so it never short-circuits the
-  loop. The `_in_render_chain` flag breaks the loop instead.
-- **2026-06-25** — Confirmed: removing the redundant
-  `_schedule_debounced_render()` at `_on_exam_select_change()` line 553 is safe
-  because `ctx.refresh_per_exam()` on line 550 reaches
-  `_refresh_geometry_sliders()` which schedules the render.
-- **2026-06-25 (review of plan)** — Plan-review found a race condition: the
-  initial `try/finally` wrapped `await _render_preview()`, leaving
-  `_in_render_chain = True` while the event loop yielded. A user interaction
-  (e.g., exam-selector change) that fired `ctx.refresh_per_exam()` during
-  that await would hit the `not _in_render_chain` guard in
-  `_refresh_geometry_sliders()` and be silently dropped, leaving the plot
-  stuck. Fix: scope the `try/finally` to the synchronous `ctx.refresh_per_exam()`
-  call only; drop the flag to `False` **before** the await.
-- **2026-06-25 (review of plan)** — Plan-review also noted that the
-  `live_preview_requested = True` line in `_on_exam_select_change()` is
-  redundant with the new `_refresh_geometry_sliders()` behavior. Drop the
-  whole `if last_preview_mode:` block, not just the
-  `_schedule_debounced_render()` call.
-- **2026-06-25 (second review of plan)** — Plan-review found three minor
-  refinements:
-  1. After dropping the `if last_preview_mode:` block,
-     `live_preview_requested` is no longer read or assigned in
-     `_on_exam_select_change()`. Remove it from the `nonlocal`
-     declaration at line 536 to keep the closure surface honest.
-  2. Add `_in_render_chain` to the `nonlocal` declaration of
-     `_refresh_geometry_sliders()`. The variable is only read there
-     today, but explicit declaration documents the closure relationship
-     and future-proofs the function against linter warnings if a future
-     edit adds an assignment.
-  3. Phase 2's regression test was written as if the test file invokes
-     `tests/scripts/launch_gui_headless.py`. That script is a developer
-     CLI wrapper around `pytest tests/gui/`; tests do not call it. The
-     rewritten test uses NiceGUI's `user: User` fixture and the existing
-     `pytestmark = pytest.mark.nicegui_main_file(...)` pattern, and
-     uses the correct `±150` slider range from
-     `PATIENT_OFFSET_SLIDER_RANGE_CM`.
+| Date | Decision |
+|------|----------|
+| 2026-06-25 | Keep lines 592–594; guard with `_in_render_chain` instead of deleting (seven external `ctx.refresh_per_exam()` callers need the re-schedule). |
+| 2026-06-25 | Drop `_render_in_progress` guard — sequential `ui.timer` does not break the loop. |
+| 2026-06-25 | Scope `try/finally` to sync `ctx.refresh_per_exam()` only; drop flag before `await _render_preview`. |
+| 2026-06-25 | Remove entire redundant `if last_preview_mode:` block in `_on_exam_select_change`. |
+| 2026-06-25 | Regression test: `trigger("update:model-value", …)` + patient-slider `.mark()`; tab settle via `should_see("Setup view")`. |
+| 2026-06-25 | Plan condensed; test import order fixed (`GEOMETRY_DEBOUNCE_SEC` before use). |
 
 ## Progress log
 
-(none yet — plan just created)
+- 2026-06-25 — Plan written; reviewed against assessment and codebase (three review passes).
+- (implementation not started)
