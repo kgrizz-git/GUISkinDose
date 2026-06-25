@@ -164,8 +164,8 @@ python scripts/check_doc_freshness.py
 
 The script scans `AGENTS.md`, `README.md`, `CHANGELOG.md`, optional `DESIGN.md`, and all markdown under `dev-docs/`:
 
-- **CI-blocking:** broken relative markdown links; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. tabular input marked planned but claimed implemented in `AGENTS.md` or `CHANGELOG.md`).
-- **Advisory only:** stale-pattern hits (`not implemented`, `not wired`, `planned`) — printed as warnings; review and update text that is no longer true.
+- **CI-blocking:** broken relative markdown links; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. one document says a feature is roadmap-only while another says it has shipped).
+- **Advisory only:** stale-keyword hits — printed as warnings; review and update text that is no longer true.
 
 ### Doc-gardening cadence
 

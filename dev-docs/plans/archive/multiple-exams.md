@@ -465,7 +465,7 @@ So Phase 2.4 shipped as **per-exam axis-direction sign flips** (`flip_tx` / `fli
 ## Open Questions
 
 - **Q5 — Progress bar across exams:** GUI Phase 1 uses one tqdm-patched bar across all total events. Per-exam progress segmentation is Phase 2.
-- **Q8 — `main()` multi-file API:** `analyze_multiple_input_files(file_paths, settings)` is the programmatic entry point. `main(file_path, settings)` is unchanged for backward compatibility. Adding `file_paths` to `main()` is not planned unless there is a concrete use case.
+- **Q8 — `main()` multi-file API:** `analyze_multiple_input_files(file_paths, settings)` is the programmatic entry point. `main(file_path, settings)` is unchanged for backward compatibility. Adding `file_paths` to `main()` remains out of current scope unless there is a concrete use case.
 
 ---
 

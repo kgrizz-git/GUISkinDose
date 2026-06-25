@@ -13,6 +13,7 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
+from textwrap import dedent
 
 # Fix for Windows SSL context loading error during shutdown
 os.environ["SSL_CERT_FILE"] = ""
@@ -25,6 +26,7 @@ from nicegui.events import NativeEventArguments
 
 from mypyskindose.debug import configure_logging, dprint
 
+from .onboarding import dismiss_onboarding, is_onboarding_dismissed
 from .page_context import PageContext
 from .styles import MODERN_CSS
 from .state import state
@@ -154,6 +156,49 @@ def index():
         ctx.refresh_exams_table()
         if state.active_tab:
             ctx.tabs.set_value(state.active_tab)
+
+    if not is_onboarding_dismissed():
+        with ui.dialog().props("persistent") as dialog, ui.card().classes(
+            "modern-card w-full max-w-md max-h-[80vh] p-6"
+        ):
+            with ui.row().classes("w-full justify-between items-center q-mb-sm"):
+                ui.label("Welcome to MyPySkinDose").classes("text-h5")
+
+            with ui.scroll_area().classes("w-full"):
+                ui.markdown(
+                    dedent(
+                        """
+                        MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
+
+                        **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
+                        CSV/TSV/XLSX data.
+
+                        **2. Settings** — Choose a phantom model and adjust physics parameters
+                        (defaults usually work).
+
+                        **3. Geometry** — Preview beam geometry before calculating.
+
+                        **4. Calculate** — Run the dose calculation.
+
+                        **5. Results** — View the 3D dose map and peak skin dose (PSD).
+
+                        **6. Export** — Download results as JSON, HTML, or PNG.
+
+                        All processing runs locally. No data leaves your machine.
+                        """
+                    ).strip()
+                )
+            dont_show = ui.checkbox("Don't show this again").classes("q-mt-md")
+
+            def on_ok() -> None:
+                if dont_show.value:
+                    dismiss_onboarding()
+                dialog.close()
+
+            with ui.row().classes("justify-end q-mt-md w-full"):
+                ui.button("Got it", on_click=on_ok).classes("modern-btn-primary text-white")
+
+        ui.timer(0.1, dialog.open, once=True)
 
 
 # ── native window geometry ───────────────────────────────────────────────────

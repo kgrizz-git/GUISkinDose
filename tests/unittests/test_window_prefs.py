@@ -8,14 +8,17 @@ import pytest
 
 pytest.importorskip("nicegui")
 
+import mypyskindose.gui.window_prefs as window_prefs
 from mypyskindose.gui.window_prefs import (
     NativeWindowPrefs,
     ScreenBounds,
     config_path,
     default_normal_bounds,
     geometry_looks_maximized,
+    load_gui_config,
     load_native_window_prefs,
     primary_screen,
+    save_gui_config,
     save_native_window_prefs,
     title_bar_accessible_on_any_screen,
     validate_prefs,
@@ -27,7 +30,8 @@ SECONDARY = ScreenBounds(1920, 0, 1280, 720)
 
 def test_load_missing_file_returns_none(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "mypyskindose.gui.window_prefs.config_path",
+        window_prefs,
+        "config_path",
         lambda: tmp_path / "missing" / "gui.json",
     )
     assert load_native_window_prefs() is None
@@ -36,8 +40,73 @@ def test_load_missing_file_returns_none(tmp_path, monkeypatch):
 def test_load_corrupt_json_returns_none(tmp_path, monkeypatch):
     path = tmp_path / "gui.json"
     path.write_text("{not json", encoding="utf-8")
-    monkeypatch.setattr("mypyskindose.gui.window_prefs.config_path", lambda: path)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: path)
     assert load_native_window_prefs() is None
+
+
+def test_load_gui_config_missing_file_returns_empty_dict(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        window_prefs,
+        "config_path",
+        lambda: tmp_path / "missing" / "gui.json",
+    )
+    assert load_gui_config() == {}
+
+
+def test_load_gui_config_corrupt_json_returns_empty_dict_and_backs_up(tmp_path, monkeypatch):
+    path = tmp_path / "gui.json"
+    path.write_text("{not json", encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: path)
+
+    assert load_gui_config() == {}
+    assert not path.exists()
+    assert path.with_suffix(".json.corrupt").read_text(encoding="utf-8") == "{not json"
+
+
+def test_load_gui_config_non_object_json_returns_empty_dict_and_backs_up(tmp_path, monkeypatch):
+    path = tmp_path / "gui.json"
+    path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: path)
+
+    assert load_gui_config() == {}
+    assert not path.exists()
+    assert path.with_suffix(".json.corrupt").read_text(encoding="utf-8") == "[]"
+
+
+def test_load_gui_config_backup_failure_still_returns_empty_dict(tmp_path, monkeypatch):
+    path = tmp_path / "gui.json"
+    path.write_text("{not json", encoding="utf-8")
+    path.with_suffix(".json.corrupt").mkdir()
+    monkeypatch.setattr(window_prefs, "config_path", lambda: path)
+
+    assert load_gui_config() == {}
+    assert path.exists()
+
+
+def test_save_gui_config_round_trip_preserves_arbitrary_keys(tmp_path, monkeypatch):
+    target = tmp_path / "nested" / "gui.json"
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    payload = {
+        "schema_version": 1,
+        "native_window": {"maximized": False, "width": 800, "height": 600, "x": 10, "y": 20},
+        "onboardingDismissed": True,
+    }
+
+    save_gui_config(payload)
+
+    assert load_gui_config() == payload
+
+
+def test_save_gui_config_failure_leaves_existing_config_and_cleans_temp(tmp_path, monkeypatch):
+    target = tmp_path / "gui.json"
+    target.write_text('{"existing": true}', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+
+    with pytest.raises(TypeError):
+        save_gui_config({"bad": object()})
+
+    assert json.loads(target.read_text(encoding="utf-8")) == {"existing": True}
+    assert list(tmp_path.glob("*.tmp")) == []
 
 
 def test_load_wrong_schema_returns_none(tmp_path, monkeypatch):
@@ -46,12 +115,12 @@ def test_load_wrong_schema_returns_none(tmp_path, monkeypatch):
         json.dumps({"schema_version": 2, "native_window": {"maximized": False}}),
         encoding="utf-8",
     )
-    monkeypatch.setattr("mypyskindose.gui.window_prefs.config_path", lambda: path)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: path)
     assert load_native_window_prefs() is None
 
 
 def test_load_save_round_trip(tmp_path, monkeypatch):
-    monkeypatch.setattr("mypyskindose.gui.window_prefs.config_path", lambda: tmp_path / "gui.json")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: tmp_path / "gui.json")
     prefs = NativeWindowPrefs(maximized=True, width=1200, height=800, x=100, y=50)
     save_native_window_prefs(prefs)
     loaded = load_native_window_prefs()
@@ -60,9 +129,28 @@ def test_load_save_round_trip(tmp_path, monkeypatch):
 
 def test_save_creates_parent_directory(tmp_path, monkeypatch):
     target = tmp_path / "nested" / "gui.json"
-    monkeypatch.setattr("mypyskindose.gui.window_prefs.config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
     save_native_window_prefs(NativeWindowPrefs(False, 800, 600, 0, 0))
     assert target.is_file()
+
+
+def test_save_native_window_prefs_preserves_onboarding_flag(tmp_path, monkeypatch):
+    target = tmp_path / "gui.json"
+    target.write_text(json.dumps({"onboardingDismissed": True}), encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+
+    save_native_window_prefs(NativeWindowPrefs(False, 800, 600, 0, 0))
+
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    assert loaded["onboardingDismissed"] is True
+    assert loaded["schema_version"] == 1
+    assert loaded["native_window"] == {
+        "maximized": False,
+        "width": 800,
+        "height": 600,
+        "x": 0,
+        "y": 0,
+    }
 
 
 def test_screen_bounds_coerces_floats():

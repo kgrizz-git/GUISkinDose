@@ -509,7 +509,7 @@ The axis swap problem affects more than just GE DICOM RDSRs. It occurs whenever 
 
 The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap — it requires explicitly transposing the two columns before `rdsr_normalizer()` is called. Note that `normalization_settings.json` maps **Longitudinal → Tx (lateral)** and **Lateral → Tz (longitudinal)**, so calling `rdsr_normalizer()` on swapped data produces axes in entirely the wrong positions.
 
-The fix is a `swap_lateral_longitudinal` option applied before `rdsr_normalizer()` — either as a per-manufacturer flag or as an explicit step in each adapter that needs it. For the planned `TabularImportOptions` (Phase 3+), `swap_lateral_longitudinal=True` pre-swaps the columns before normalization.
+The fix is a `swap_lateral_longitudinal` option applied before `rdsr_normalizer()` — either as a per-manufacturer flag or as an explicit step in each adapter that needs it. The shipped `TabularImportOptions` path uses `swap_lateral_longitudinal=True` to pre-swap the columns before normalization.
 
 ### User-selectable import options (`TabularImportOptions`, Phase 3+)
 

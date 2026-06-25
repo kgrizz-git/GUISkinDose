@@ -62,8 +62,8 @@ none of it is in the source tree.
    code (lines 142–145) inlines the label and binds it to the global. The dict
    refactor is required by T31 (line 298) and is still TODO in the appendix.
 
-4. **`composite_preview` checkbox UI not wired (T29 PARTIAL)** — Plan line 198
-   says: "Closure var exists from Part II; **UI not yet wired**." The
+4. **`composite_preview` checkbox UI gap (T29 PARTIAL)** — Plan line 198
+   says: "Closure var exists from Part II; **UI connection still absent**." The
    appendix (line 296) marks this PARTIAL. The code has the closure var
    (line 66) and the reset on multi→single (lines 502–505), but no
    `ui.checkbox` for the user to flip it.
@@ -223,7 +223,7 @@ Plan (line 210): replace
 `bind_visibility_from(state, "is_multi_exam")` so the row only shows
 in multi-exam. The new copy is correct only if both tabs really do
 edit the same per-exam data — which they do (per `_per_exam.py` and
-the planned Part IV). Make this an explicit acceptance criterion.
+the Part IV scope described in the plan). Make this an explicit acceptance criterion.
 
 ### 3.5 Settings → Geometry cross-tab invalidation (N4)
 

@@ -115,6 +115,9 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md](plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md) | **Completed** (2026-06-24) — Beam-miss warnings: per-event WARNING + all-miss sentinel + `beam_miss_warn` dial + GUI toast throttle + handler leak fix. |
 | [plans/archive/PATIENT_SIZE_SCALING_PLAN.md](plans/archive/PATIENT_SIZE_SCALING_PLAN.md) | **Completed** (2026-06-25) — Human STL body-habitus scaling with `scale_lat`/`scale_ap`/`scale_lon`, recomputed normals, Settings sliders, and geometry/dose plumbing. |
 | [plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md) | **Completed** (2026-06-25) — Geometry tab render loop: `_in_render_chain` flag, slider `.mark(...)` markers, parametrized regression tests (patient lon/ver/lat + table-origin X). |
+| [plans/archive/FIRST_RUN_ONBOARDING_PLAN.md](plans/archive/FIRST_RUN_ONBOARDING_PLAN.md) | **Completed** (2026-06-25) — First-run GUI onboarding modal with local `gui.json` dismissal preference. |
+| [plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md) | **Completed** (2026-06-25) — Geometry table-origin slider value labels mirror patient-offset labels. |
+| [plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md) | **Completed** (2026-06-25) — Settings edits refresh Geometry sliders, labels, and preview on tab entry. |
 
 ---
 

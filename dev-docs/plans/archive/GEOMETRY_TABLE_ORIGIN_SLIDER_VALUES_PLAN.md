@@ -148,6 +148,6 @@ initialization are correct as written.
 - [x] Cross-check against `GEO_TAB_SPINNING_WHEEL_PLAN.md` (shipped) — no functional
       updates needed; interaction notes added.
 - [x] Implementation (2026-06-25) — `table_val_labels` dict, initial labels, and
-      `set_text` calls added at the four planned sites in `geometry.py`. ruff,
+      `set_text` calls added at the four specified sites in `geometry.py`. ruff,
       basedpyright, `scripts/check_file_sizes.py`, and the 13-test GUI suite all pass.
       `dev-docs/TO_DO.md` line 47 marked done.

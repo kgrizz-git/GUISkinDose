@@ -110,7 +110,7 @@ Key gaps to address:
 
 **Current state:**
 - `scripts/check_doc_freshness.py` validates relative links and checkable `FEATURE_INVENTORY.md` contradictions; CI runs it on Ubuntu
-- Advisory stale-pattern scan flags `not implemented`, `not wired`, `planned`, etc. (warnings only)
+- Advisory stale-keyword scan flags roadmap/status language for human review (warnings only)
 - No recurring doc-gardening agent yet
 
 **Gaps:**
@@ -121,7 +121,7 @@ Key gaps to address:
 1. Create `scripts/check_doc_freshness.py` (cross-ref `TO_DO.md` item: doc-freshness/harness check) that:
    - Validates relative markdown links under `AGENTS.md`, `README.md`, and `dev-docs/`
    - Flags contradictions against `FEATURE_INVENTORY.md` status tables where checkable
-   - Reports (does not fail on) stale-pattern hits: `not implemented`, `not wired`, `planned`, etc.
+   - Reports (does not fail on) stale-keyword hits for roadmap/status language.
 2. Add a CI job to run doc-freshness checks (link rot and inventory contradictions should fail; pattern scan may warn initially)
 3. Document a manual doc-gardening cadence (per-release minimum; weekly optional) before automating a recurring agent
 
@@ -452,4 +452,3 @@ Cross-reference `dev-docs/TO_DO.md`:
 ---
 
 _Last updated: 2026-06-12 — complements `dev-docs/HARNESS_ENGINEERING.md`._
-

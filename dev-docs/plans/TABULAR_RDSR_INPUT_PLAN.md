@@ -198,7 +198,7 @@ These options are exposed via:
 
 #### XLSX sheet picking
 
-Sheet selection is already wired through the API (`sheet_name` parameter) and CLI (`--sheet-name`). The GUI defaults to sheet index 0. An interactive sheet picker (showing all available sheet names) is planned but deferred — tracked in Phase 5 checklist and TO_DO.md.
+Sheet selection is wired through the API (`sheet_name` parameter), CLI (`--sheet-name`), and GUI. The upload tab shows an XLSX sheet picker for multi-sheet workbooks and re-parses when the user changes the selected sheet.
 
 ---
 

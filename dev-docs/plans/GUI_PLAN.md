@@ -432,7 +432,7 @@ Functionality:
 
 - Extend upload acceptance from DICOM RDSR/JSON to `.csv`, `.tsv`, `.xlsx`, and `.xlsm`.
 - Add source-schema selection and Excel sheet selection.
-- Reuse the shared input adapter registry planned in `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`.
+- Reuse the shared input adapter registry described in `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md`.
 - Show import provenance, unit conversions, missing columns, and warnings before calculation.
 
 ### Phase 3 — Report generation (~2–3 more days)

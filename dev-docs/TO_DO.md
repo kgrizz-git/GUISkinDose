@@ -41,11 +41,6 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ### GUI / UX
 
-- [x] **Geometry plot spinning wheel / continuous reload** — plot appears to continuously refresh, preventing
-  effective rotation; see [assessment](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) for root cause analysis
-  and [plan](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md) for the implementation (revised fix uses an `_in_render_chain` flag).
-- [x] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z. See [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
-- [x] **Fix cross-tab offset/origin slider synchronization** — ensure Geometry tab sliders/labels sync when modified via Settings tab spinboxes, without causing destructive focus loss. See [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/CROSS_TAB_SLIDER_SYNC_PLAN.md).
 - [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
   a clear in-app note and axis legend.
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
@@ -56,9 +51,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).
-- [x] **Native window geometry persistence** — remember last native window size/position/maximized state; see [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md).
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
-- [ ] **First-run onboarding popup** — on first launch show a modal explaining basic usage (supported file types, how to load data, how to run calculations); persist a "don't show again" choice in local storage (otherwise show on every launch until the user checks the box). See [FIRST_RUN_ONBOARDING_PLAN.md](plans/FIRST_RUN_ONBOARDING_PLAN.md).
 - [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
 
 ### Harness / Repo Hygiene
@@ -104,6 +97,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Recently Completed
 
+- [x] First-run onboarding popup — archived in
+  [FIRST_RUN_ONBOARDING_PLAN.md](plans/archive/FIRST_RUN_ONBOARDING_PLAN.md).
 - [x] Human phantom body-habitus scaling — archived in
   [PATIENT_SIZE_SCALING_PLAN.md](plans/archive/PATIENT_SIZE_SCALING_PLAN.md).
 - [x] Beam-miss warnings — archived in
@@ -116,6 +111,6 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [x] Geometry plot spinning wheel / continuous reload — archived in
   [GEO_TAB_SPINNING_WHEEL_PLAN.md](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md).
 - [x] Show Geometry table-origin slider values — source plan:
-  [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
+  [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
 - [x] Cross-tab offset/origin slider synchronization — source plan:
-  [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/CROSS_TAB_SLIDER_SYNC_PLAN.md).
+  [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md).

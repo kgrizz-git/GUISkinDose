@@ -113,8 +113,8 @@ SQLite database (`corrections.db`), varying with kVp, field size, filter thickne
 - `Exposure_mAs *= 1000` (s → ms)
 - Then calls `rdsr_normalizer()` directly — treats the result as a raw DICOM-frame DataFrame
 
-Our planned `radimetrics` adapter (Phase 3) will reproduce this column mapping and unit
-conversion before handing off to `rdsr_normalizer()`.
+MyPySkinDose's shipped `radimetrics` adapter (Phase 3, 2026-06-10) follows this column
+mapping and unit conversion before handing off to `rdsr_normalizer()`.
 
 ### DoseTrack XLSX (dhen2714 reference)
 
@@ -158,17 +158,17 @@ The table below covers every axis of comparison across the three repos.
 | **Philips double-correction risk** | Documented; user warned at import | Avoided by handling in `parse_philips()` | N/A |
 | **Tabular input architecture** | Layered `input_adapters/` package (L2) | Ad-hoc `parse_*()` functions mixed with analysis | Standalone `io_utils.py` |
 | **Column matching tolerance** | Regex patterns (`GENERIC_RDSR_PATTERNS`) | Exact string rename dict | `_normalize_header()` strips punctuation/spaces |
-| **Radimetrics CSV support** | Planned — Phase 3 | Implemented (`parse_axiom_artis()`) | Not applicable |
-| **DoseTrack XLSX support** | Planned — Phase 4 | Implemented (`parse_philips()`) | Implemented (XLSX reader) |
+| **Radimetrics CSV support** | Shipped — Phase 3 | Implemented (`parse_axiom_artis()`) | Not applicable |
+| **DoseTrack XLSX support** | Shipped — Phase 4 | Implemented (`parse_philips()`) | Implemented (XLSX reader) |
 | **Field area (CFA) source** | Direct RDSR column | Direct RDSR column (Radimetrics); derived from DAP formula (DoseTrack) | Not tracked separately |
 | **Forward-fill for missing rows** | Not yet implemented | Used in `parse_philips()` | `ffill()` in XLSX reader |
 
 ### What this means for future work
 
-- **Phases 3–4 adapters**: dhen2714's column maps (`RADIMETRICS2PSD`, `DOSETRACK2PSD`) and unit
-  conversions are the ground-truth reference — use them directly when building the Phase 3/4
-  adapters. The `CollimatedFieldArea_m2` derivation for DoseTrack is the trickiest part (no direct
-  column; must be computed from DAP, DoseRP, and geometry).
+- **Shipped Phases 3–4 adapters**: dhen2714's column maps (`RADIMETRICS2PSD`, `DOSETRACK2PSD`) and
+  unit conversions remain the ground-truth reference for future fixture validation. The
+  `CollimatedFieldArea_m2` derivation for DoseTrack is the trickiest part (no direct column; must
+  be computed from DAP, DoseRP, and geometry).
 - **Lat/lon swap automation**: PSDCalcReworkTemp shows that auto-detecting the swap from a
   `Manufacturer` column is feasible. Phase 5+ could auto-set the toggle when `Manufacturer`
   contains "GE" and schema is `generic_rdsr_like`.

@@ -1,7 +1,7 @@
 # Plan: Cross-tab Offset/Origin Slider Synchronization
 
 > **Status:** COMPLETED (2026-06-25)
-> **Blocker:** ~~Must wait for completion of `dev-docs/plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md` before implementation (to ensure table-origin value labels exist).~~ (resolved — value labels shipped separately)
+> **Blocker:** ~~Must wait for completion of `dev-docs/plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md` before implementation (to ensure table-origin value labels exist).~~ (resolved — value labels shipped separately)
 >
 > **Objective:** Fix the cross-tab synchronization limitation where editing table origin or patient offsets via spinboxes on Tab 3 (Settings) does not reliably update the corresponding sliders and value labels on Tab 4 (Geometry).
 >
@@ -87,7 +87,7 @@ In `src/mypyskindose/gui/app.py`:
 ### 5. Update Changelog
 
 - Add a one-line note in `CHANGELOG.md` under the `## [Unreleased]` → `### Fixed` subsection (currently contains the `_CalcWarningCollector` handler leak entry) documenting the fix for cross-tab slider synchronization. Example:
-  - **`Cross-tab slider sync in GUI`** (2026-06-25) — table-origin spinbox changes in Settings → Per-exam corrections now refresh Geometry sliders; switching to the Geometry tab (via the tab strip or the left nav drawer) refreshes sliders, value labels, and the live preview figure. Plan: `dev-docs/plans/CROSS_TAB_SLIDER_SYNC_PLAN.md`.
+  - **`Cross-tab slider sync in GUI`** (2026-06-25) — table-origin spinbox changes in Settings → Per-exam corrections now refresh Geometry sliders; switching to the Geometry tab (via the tab strip or the left nav drawer) refreshes sliders, value labels, and the live preview figure. Plan: `dev-docs/plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md`.
 
 ## Test coverage
 

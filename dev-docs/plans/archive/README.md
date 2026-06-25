@@ -16,5 +16,8 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | [NO_PATIENT_INTERSECTION_WARNING_PLAN.md](NO_PATIENT_INTERSECTION_WARNING_PLAN.md) | **Completed** (2026-06-24) | Beam-miss warnings: per-event WARNING when beam does not intersect patient phantom; `beam_miss_warn` setting (off/summary/per_event); all-miss sentinel; GUI toast throttle; handler leak fix. |
 | [PATIENT_SIZE_SCALING_PLAN.md](PATIENT_SIZE_SCALING_PLAN.md) | **Completed** (2026-06-25) | Human STL body-habitus scaling: `scale_lat`/`scale_ap`/`scale_lon`, anchored mesh scaling, recomputed normals, Settings sliders, and geometry/dose plumbing. |
 | [GEO_TAB_SPINNING_WHEEL_PLAN.md](GEO_TAB_SPINNING_WHEEL_PLAN.md) | **Completed** (2026-06-25) | Break the self-reinforcing render cycle in the Geometry tab with an `_in_render_chain` closure flag; preserves external `ctx.refresh_per_exam()` paths; adds parametrized regression tests for patient and table-origin sliders. |
+| [FIRST_RUN_ONBOARDING_PLAN.md](FIRST_RUN_ONBOARDING_PLAN.md) | **Completed** (2026-06-25) | First-run GUI onboarding modal with persistent "Don't show again" preference in `~/.mypyskindose/gui.json`. |
+| [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md) | **Completed** (2026-06-25) | Geometry table-origin slider value labels mirror patient-offset labels. |
+| [CROSS_TAB_SLIDER_SYNC_PLAN.md](CROSS_TAB_SLIDER_SYNC_PLAN.md) | **Completed** (2026-06-25) | Settings edits refresh Geometry sliders, labels, and preview on tab entry. |
 
 For active work, see [TO_DO.md](../../TO_DO.md) and execution plans in [../](../).

@@ -64,6 +64,57 @@ def config_path() -> Path:
     return Path.home() / ".mypyskindose" / "gui.json"
 
 
+def _backup_bad_gui_config(path: Path) -> None:
+    """Best-effort backup for invalid config files."""
+    if not path.exists():
+        return
+    target = path.with_suffix(".json.corrupt")
+    try:
+        path.replace(target)
+    except Exception as exc:
+        logger.debug("Could not back up bad gui config from %s to %s: %s", path, target, exc)
+
+
+def load_gui_config() -> dict[str, Any]:
+    """Load the raw GUI config dict, defaulting safely on missing/invalid files."""
+    path = config_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except Exception as exc:
+        logger.debug("Could not load gui config from %s: %s", path, exc)
+        _backup_bad_gui_config(path)
+        return {}
+    if not isinstance(data, dict):
+        logger.debug("Ignoring non-object gui config from %s", path)
+        _backup_bad_gui_config(path)
+        return {}
+    return data
+
+
+def save_gui_config(data: dict[str, Any]) -> None:
+    """Atomically write the raw GUI config dict."""
+    path = config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            delete=False,
+            suffix=".tmp",
+        ) as tmp:
+            tmp_path = Path(tmp.name)
+            json.dump(data, tmp, indent=2)
+        tmp_path.replace(path)
+    except Exception:
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise
+
+
 def primary_screen(screens: list[ScreenBounds]) -> ScreenBounds | None:
     if not screens:
         return None
@@ -195,40 +246,20 @@ def _parse_native_window(data: dict[str, Any]) -> NativeWindowPrefs | None:
 
 
 def load_native_window_prefs() -> NativeWindowPrefs | None:
-    path = config_path()
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return None
-    except Exception as exc:
-        logger.debug("Could not load native window prefs from %s: %s", path, exc)
-        return None
+    raw = load_gui_config()
     if not isinstance(raw, dict):
         return None
     return _parse_native_window(raw)
 
 
 def save_native_window_prefs(prefs: NativeWindowPrefs) -> None:
-    path = config_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "schema_version": SCHEMA_VERSION,
-        "native_window": {
-            "maximized": prefs.maximized,
-            "width": prefs.width,
-            "height": prefs.height,
-            "x": prefs.x,
-            "y": prefs.y,
-        },
+    data = load_gui_config()
+    data["schema_version"] = SCHEMA_VERSION
+    data["native_window"] = {
+        "maximized": prefs.maximized,
+        "width": prefs.width,
+        "height": prefs.height,
+        "x": prefs.x,
+        "y": prefs.y,
     }
-    directory = path.parent
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        dir=directory,
-        delete=False,
-        suffix=".tmp",
-    ) as tmp:
-        json.dump(payload, tmp, indent=2)
-        tmp_path = Path(tmp.name)
-    tmp_path.replace(path)
+    save_gui_config(data)

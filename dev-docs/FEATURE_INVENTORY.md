@@ -472,7 +472,7 @@ from mypyskindose import (
 
 ---
 
-## 12. Features NOT yet implemented
+## 12. Open product backlog / deferred capabilities
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -483,10 +483,10 @@ from mypyskindose import (
 | CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | `qaelum.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real Qaelum export fixture. |
 | CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | `dosemonitor.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseMonitor export fixture. |
 | CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | `dosewatch.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseWatch export fixture. |
-| PDF/Word report export | Not implemented | Planned in GUI Phase 3 |
-| Side-by-side procedure comparison | Not implemented | — |
+| PDF/Word report export | Open backlog | GUI report-generation phase |
+| Side-by-side procedure comparison | Open backlog | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |
 | New vendor RDSR support | Manual JSON edit required | No UI for adding vendors |
-| Dose map colorscale selector at runtime | Not implemented | Hardcoded to `jet` |
+| Dose map colorscale selector at runtime | Open backlog | Current runtime colorscale is fixed to `jet` |
 | Table At1/At2/At3 rotation from RDSR | Hardcoded to 0 | `data_norm["At1"] = [0]*len` |
 | Ap3 (detector rotation) from RDSR | Hardcoded to 0 | `data_norm["Ap3"] = [0]*len` |
