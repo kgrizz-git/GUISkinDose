@@ -58,6 +58,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   per [DESIGN.md](../DESIGN.md).
 - [x] **Native window geometry persistence** — remember last native window size/position/maximized state; see [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md).
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
+- [ ] **First-run onboarding popup** — on first launch show a modal explaining basic usage (supported file types, how to load data, how to run calculations); persist a "don't show again" choice in local storage (otherwise show on every launch until the user checks the box).
+- [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
 
 ### Harness / Repo Hygiene
 
