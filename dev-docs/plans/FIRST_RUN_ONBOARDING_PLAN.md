@@ -1,11 +1,5 @@
 # First-Run Onboarding Popup Plan
 
-> **IN REVIEW**
->
-> Review findings: [FIRST_RUN_ONBOARDING_PLAN_REVIEW_20260625T070012Z.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/tmp/FIRST_RUN_ONBOARDING_PLAN_REVIEW_20260625T070012Z.md)
-
-**STATUS: Planned**
-
 ## Objective
 
 On first launch of the GUI, show a modal dialog explaining basic usage: supported file types, how to load data, how to run calculations, and how to view/export results. The user can dismiss it permanently via a "Don't show again" checkbox. If unchecked, the popup reappears on every launch until the user checks it.
@@ -14,14 +8,17 @@ The preference is persisted in `~/.mypyskindose/gui.json` (the same config file 
 
 ## Acceptance criteria
 
-- [ ] On first launch (no prior preference): show onboarding modal after the main page renders.
+- [ ] On every page render where `gui.json` lacks or has `onboardingDismissed: false`, the modal opens after the main page renders (the flag is read from disk on each render, so the modal reappears on relaunch until dismissed).
 - [ ] Modal explains: file types accepted (RDSR `.dcm`, CSV, TSV, XLSX), how to upload (drag-and-drop or path input), how to run calculation (Settings → Calculate), and where to find results/export.
 - [ ] "Don't show again" checkbox persists to `gui.json` (`onboardingDismissed: true`).
 - [ ] When dismissed, never show again on any future launch.
 - [ ] If unchecked, shows on every subsequent launch.
 - [ ] Works in both browser and native modes.
 - [ ] Does not block page navigation — user can close the modal without checking the box and still use the app.
-- [ ] Modal is dismissible via a "Got it" button, clicking outside the modal, or pressing Escape — the "Don't show again" preference is captured regardless of how the dialog is dismissed.
+- [ ] Modal is dismissible via a "Got it" button, clicking outside the modal, or pressing Escape.
+- [ ] The "Don't show again" preference is persisted when the user checks the box and clicks "Got it." If the user checks the box and dismisses via backdrop click or Escape (without clicking "Got it"), the preference is **not** persisted — the user must click "Got it" for the choice to take effect.
+- [ ] Plan is registered in `dev-docs/index.md` under **Execution plans (`plans/`)**.
+- [ ] Feature entry added to `CHANGELOG.md` under `[Unreleased] → Added`.
 
 ## Design
 
@@ -71,11 +68,13 @@ Reuse `gui.json` under `~/.mypyskindose/`:
 
 The `onboardingDismissed` flag is a top-level boolean. When loading, if the key is absent or `false`, show the modal. When saving, set it to `true`.
 
+**Corrupt-json safe default:** If `gui.json` is unparseable (truncated, invalid JSON), `load_gui_config()` returns `None`, which `is_onboarding_dismissed()` treats as "not dismissed" — the modal shows. This is the safe default: a corrupt config file never blocks the user from seeing onboarding.
+
 ### Concurrency, Races, and I/O Considerations
 
-- **Synchronous Disk I/O**: `is_onboarding_dismissed()` calls `load_gui_config()`, which performs synchronous disk reads on the event loop. Given the small size of `gui.json` (under 1 KB) and local-only serving, this introduces negligible latency (< 1 ms), matching the existing pattern for window preference loading.
-- **Merge/Save Race in Native Mode**: On first native launch, the native geometry tracker registers and writes to `gui.json` on resize/move. Since `load_gui_config()` and `save_gui_config()` read/write the full JSON dictionary atomically using `Path.replace()`, the two concurrent writers will merge keys (last-writer-wins but without key loss, as both load the current file before updating). The race is minor, best-effort, and acceptable for this state.
-- **Multi-Tab Browser Mode**: NiceGUI's `@ui.page("/")` creates a new page tree and modal dialog instance per client connection. If a user opens multiple tabs, each tab independently reads `gui.json`. The user can dismiss the modal in any tab, and the state will persist correctly, but already-open tabs will not close the modal automatically until reloaded.
+- **Synchronous Disk I/O**: `is_onboarding_dismissed()` calls `load_gui_config()`, which reads `gui.json` synchronously on the event loop. At under 1 KB on local disk, this is sub-millisecond and matches the existing `load_native_window_prefs()` pattern.
+- **Merge/Save Race in Native Mode**: After the refactor, both `save_native_window_prefs()` and `dismiss_onboarding()` funnel through `save_gui_config()` (the single I/O path), so concurrent writers load-then-save the full dict and merge keys (last-writer-wins per key, no key loss). The race is best-effort and acceptable.
+- **Multi-Tab Browser Mode**: `@ui.page("/")` creates a new page tree per client connection. Each tab reads `gui.json` independently; dismissing in any tab persists correctly, but already-open tabs do not auto-close their modal. Native mode is a single webview window, so multi-tab concerns do not apply there.
 
 ## Implementation
 
@@ -99,7 +98,11 @@ def load_gui_config() -> dict | None:
 
 
 def save_gui_config(data: dict) -> None:
-    """Atomically write gui.json using tempfile + replace (cross-platform safe)."""
+    """Atomically write gui.json using tempfile + replace (cross-platform safe).
+
+    On Windows, Path.replace cannot move across volumes but the NamedTemporaryFile is
+    created in the same directory, so it always stays on the same volume. On POSIX the
+    replace is a rename (atomic by filesystem guarantee)."""
     path = config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     directory = path.parent
@@ -177,57 +180,51 @@ def reset_onboarding() -> None:
 
 After the page layout is built, check the dismissal flag and show the modal if needed. Quasar's `q-dialog` (wrapped by `ui.dialog`) provides its own backdrop; click-outside and Escape-to-dismiss are handled automatically.
 
-A `value-change` listener on the dialog captures the "Don't show again" preference regardless of how the dialog is closed (button, backdrop click, or Escape key):
+The "Don't show again" preference is persisted in `on_ok()` — the button's `on_click` handler. This avoids the fragility of listening for `update:model-value` transitions on the dialog (which can fire spuriously from open/close animation events). The listener on the dialog is therefore **not used** for persistence; backdrop and Escape simply close the dialog without persisting the preference.
+
+#### Module-level import
+
+Add this import at the top of `app.py` with the other local imports:
 
 ```python
-# Add this import at the top of app.py with the other local imports:
 from .onboarding import is_onboarding_dismissed, dismiss_onboarding
+```
 
-# ...
+#### Page handler addition
 
-@ui.page("/")
-def index():
-    # ... existing layout code ...
+Inside `index()`, after the existing layout code, add:
 
+```python
     # ── onboarding modal ─────────────────────────────────────────────────
     if not is_onboarding_dismissed():
-        with ui.dialog() as dialog, ui.card().classes("modern-card w-full max-w-md p-6"):
+        with ui.dialog() as dialog, ui.card().classes("modern-card w-full max-w-md max-h-[80vh] p-6"):
             ui.label("Welcome to MyPySkinDose").classes("text-h5 q-mb-sm")
-            ui.markdown("""
-            MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
+            with ui.scroll_area().classes("w-full"):
+                ui.markdown("""
+                MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
 
-            **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
-            CSV/TSV/XLSX data.
+                **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
+                CSV/TSV/XLSX data.
 
-            **2. Settings** — Choose a phantom model and adjust physics parameters
-            (defaults usually work).
+                **2. Settings** — Choose a phantom model and adjust physics parameters
+                (defaults usually work).
 
-            **3. Geometry** — Preview beam geometry before calculating.
+                **3. Geometry** — Preview beam geometry before calculating.
 
-            **4. Calculate** — Run the dose calculation.
+                **4. Calculate** — Run the dose calculation.
 
-            **5. Results** — View the 3D dose map and peak skin dose (PSD).
+                **5. Results** — View the 3D dose map and peak skin dose (PSD).
 
-            **6. Export** — Download results as JSON, HTML, or PNG.
+                **6. Export** — Download results as JSON, HTML, or PNG.
 
-            All processing runs locally. No data leaves your machine.
-            """)
+                All processing runs locally. No data leaves your machine.
+                """)
             dont_show = ui.checkbox("Don't show this again").classes("q-mt-md")
 
-            opened = False
-
             def on_ok():
+                if dont_show.value:
+                    dismiss_onboarding()
                 dialog.close()
-
-            def on_value_change(e):
-                nonlocal opened
-                if e.value:
-                    opened = True
-                elif opened and not e.value:
-                    if dont_show.value:
-                        dismiss_onboarding()
-
-            dialog.on("value-change", on_value_change)
 
             with ui.row().classes("justify-end q-mt-md"):
                 ui.button("Got it", on_click=on_ok).classes("modern-btn-primary text-white")
@@ -237,49 +234,70 @@ def index():
 
 ### 4. State integration (optional future enhancement)
 
-If the user dismisses the popup, the `state.onboardingDismissed` flag could be set so other parts of the app (e.g. a "Show onboarding" button in Help) can check it. This is out of scope for v1.
-
-A "Reset onboarding" button or hidden gesture (e.g. triple-click the app title) can be added later for power users who accidentally dismissed it. The `reset_onboarding()` function in `onboarding.py` is ready for this.
+If a future "Show onboarding" button (e.g. in Help) needs to check the flag in-process, an `onboardingDismissed: bool = False` field would need to be added to `AppState` in `state.py`. This is out of scope for v1 — the flag currently lives only in `gui.json`. A "Reset onboarding" button or hidden gesture (e.g. triple-click the app title) can also be added later for power users who accidentally dismissed it; the `reset_onboarding()` helper in `onboarding.py` is ready for this.
 
 ### 5. Documentation & Indexing
 
-- Register `FIRST_RUN_ONBOARDING_PLAN.md` under **Execution plans (`plans/`)** in [dev-docs/index.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/dev-docs/index.md).
-- Add the first-run onboarding popup feature entry to [CHANGELOG.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/CHANGELOG.md) under the unreleased changes.
-
-## Help menu (separate item)
-
-The central Help menu/item is tracked as a separate TO DO item. It is **not** part of this plan.
+- Register `FIRST_RUN_ONBOARDING_PLAN.md` under **Execution plans (`plans/`)** in [dev-docs/index.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/dev-docs/index.md) — **promoted to acceptance criterion**.
+- Add the first-run onboarding popup feature entry to [CHANGELOG.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/CHANGELOG.md) under `[Unreleased] → Added` — **promoted to acceptance criterion**.
 
 ## Testing
 
-- Unit: `tests/unittests/test_onboarding.py`
-  - `is_onboarding_dismissed()` → `False` when file missing / no key / key is `false`.
-  - `is_onboarding_dismissed()` → `True` when key is `true`.
-  - `dismiss_onboarding()` writes `gui.json` with `onboardingDismissed: true`.
-  - `reset_onboarding()` writes `gui.json` with `onboardingDismissed: false`.
-  - Corrupt `gui.json` → `is_onboarding_dismissed()` returns `False` (safe default: show onboarding).
-- Unit: `tests/unittests/test_window_prefs.py` (additions)
-  - `load_gui_config()` returns `None` for missing/corrupt file.
-  - `save_gui_config()` writes valid JSON that `load_gui_config()` can read back.
-  - `save_gui_config()` preserves existing keys (e.g. `schema_version`, `native_window`) when updating.
-  - `save_native_window_prefs()` preserves `onboardingDismissed` when called after `dismiss_onboarding()`.
-  - `save_gui_config()` uses atomic write (no partial file left on crash).
-- Manual:
+### `tests/unittests/test_window_prefs.py` (additions)
+
+Follow the existing monkeypatch pattern (e.g. `test_load_missing_file_returns_none` at `test_window_prefs.py:28`):
+
+- `load_gui_config()` returns `None` for missing file.
+- `load_gui_config()` returns `None` for corrupt JSON file.
+- `load_gui_config()` → `save_gui_config()` round-trip: writes valid JSON that loads back with the same keys and values.
+- `save_gui_config()` uses atomic write (no partial file left on crash).
+- `save_native_window_prefs()` preserves the `onboardingDismissed` key when it exists in the config (regression test: without this, future code changes could silently wipe the onboarding flag).
+
+Fixture pattern — monkeypatch `mypyskindose.gui.window_prefs.config_path`:
+
+```python
+def test_save_native_window_prefs_preserves_onboarding_flag(tmp_path, monkeypatch):
+    target = tmp_path / "gui.json"
+    target.write_text(json.dumps({"onboardingDismissed": True}), encoding="utf-8")
+    monkeypatch.setattr("mypyskindose.gui.window_prefs.config_path", lambda: target)
+    save_native_window_prefs(NativeWindowPrefs(False, 800, 600, 0, 0))
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    assert loaded.get("onboardingDismissed") is True
+    assert "native_window" in loaded
+    assert "schema_version" in loaded
+```
+
+### `tests/unittests/test_onboarding.py` (new file, uses same monkeypatch pattern)
+
+Mock `mypyskindose.gui.window_prefs.config_path` to point to a `tmp_path` config, then test:
+
+- `is_onboarding_dismissed()` → `False` when file missing / no key / key is `false`.
+- `is_onboarding_dismissed()` → `True` when key is `true`.
+- `dismiss_onboarding()` writes `gui.json` with `onboardingDismissed: true`, preserving any pre-existing keys.
+- `reset_onboarding()` writes `gui.json` with `onboardingDismissed: false`, preserving any pre-existing keys.
+- Corrupt `gui.json` → `is_onboarding_dismissed()` returns `False` (safe default: show onboarding).
+- Regression: `save_native_window_prefs()` after `dismiss_onboarding()` preserves `onboardingDismissed: true` (this test exercises the cross-module contract — `onboarding.py` writes the flag, `window_prefs.py` must not overwrite it).
+
+**Import safety:** Neither `onboarding.py` nor `test_onboarding.py` imports `nicegui`, so no `pytest.importorskip("nicegui")` guard is needed.
+
+### Manual tests
+
   1. Delete `gui.json` → launch → modal appears. Click "Got it" without checking → modal appears again. Verify that the key `onboardingDismissed` is either absent or set to `false` in `gui.json`.
   2. Same flow, check "Don't show again" → modal never appears again. Verify that `onboardingDismissed: true` is saved in `gui.json`.
-  3. Check "Don't show again" and dismiss via backdrop click → preference is saved (modal never appears again).
-  4. Check "Don't show again" and dismiss via Escape key → preference is saved.
+  3. Check "Don't show again" → click "Got it" → preference is saved (modal never appears again).
+  4. Check "Don't show again" and dismiss via backdrop click or Escape → preference is **not** saved (only "Got it" persists). This is by design.
   5. Launch in native mode → modal appears.
   6. Launch in browser mode → modal appears.
   7. Corrupt `gui.json` → app launches, modal appears (safe default).
   8. After dismissing, manually set `onboardingDismissed: false` in `gui.json` → modal reappears on next launch.
-  9. Launch native → dismiss onboarding → resize window → quit → relaunch → onboarding does not appear (no data loss from `save_native_window_prefs`).
+  9. Launch native → dismiss onboarding → resize window → **wait ≥ 1.5 s** (native geometry save is debounced 1.0 s; see `app.py:246-258`) → quit → relaunch → onboarding does not appear (no data loss from `save_native_window_prefs`).
   10. Run validation scripts: verify that `python scripts/check_doc_freshness.py` executes successfully and reports zero issues/broken links.
 
 ## Out of scope
 
 - Multi-language/localization support.
 - Per-tab contextual help (tracked separately).
-- Help menu / dedicated Help tab (tracked as a separate TO DO item).
+- Help menu / dedicated Help tab — tracked as a separate TO DO item in
+  [dev-docs/TO_DO.md](../TO_DO.md); a "Show onboarding" gesture can land alongside it.
 - Interactive walkthrough / tooltips on first use.
 - Onboarding content changes based on user role or prior experience.
