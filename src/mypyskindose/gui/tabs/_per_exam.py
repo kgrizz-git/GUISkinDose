@@ -106,6 +106,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 ctx.refresh_event_table()
                 ctx.refresh_import_preview()
                 status_label.set_text(_status_text())
+                ctx.refresh_geometry_tab()
 
             def _on_reset() -> None:
                 meta["table_origin_override"] = None
@@ -119,6 +120,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 ctx.refresh_event_table()
                 ctx.refresh_import_preview()
                 status_label.set_text(_status_text())
+                ctx.refresh_geometry_tab()
 
             current = meta.get("table_origin_override") or detected
             with ui.row().classes("items-center gap-2"):

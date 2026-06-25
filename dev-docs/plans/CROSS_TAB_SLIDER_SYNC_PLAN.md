@@ -1,7 +1,7 @@
 # Plan: Cross-tab Offset/Origin Slider Synchronization
 
-> **Status:** NEEDS REVIEW
-> **Blocker:** Must wait for completion of `dev-docs/plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md` before implementation (to ensure table-origin value labels exist).
+> **Status:** COMPLETED (2026-06-25)
+> **Blocker:** ~~Must wait for completion of `dev-docs/plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md` before implementation (to ensure table-origin value labels exist).~~ (resolved — value labels shipped separately)
 >
 > **Objective:** Fix the cross-tab synchronization limitation where editing table origin or patient offsets via spinboxes on Tab 3 (Settings) does not reliably update the corresponding sliders and value labels on Tab 4 (Geometry).
 >

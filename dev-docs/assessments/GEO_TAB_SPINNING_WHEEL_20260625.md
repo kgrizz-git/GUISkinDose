@@ -233,4 +233,4 @@ re-schedule path is what breaks the loop while preserving responsiveness.
   user interactions during the await will be silently swallowed.
 
 A full implementation plan is at
-[plans/GEO_TAB_SPINNING_WHEEL_PLAN.md](../plans/GEO_TAB_SPINNING_WHEEL_PLAN.md).
+[plans/GEO_TAB_SPINNING_WHEEL_PLAN.md](../plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md).

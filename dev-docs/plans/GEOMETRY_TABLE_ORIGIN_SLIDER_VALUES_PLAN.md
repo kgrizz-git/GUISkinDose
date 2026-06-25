@@ -107,7 +107,7 @@ via the sync function).
 
 ## Interaction with other plans
 
-- **`dev-docs/plans/GEO_TAB_SPINNING_WHEEL_PLAN.md` (shipped 2026-06-25)** — adds
+- **`dev-docs/plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md` (shipped 2026-06-25)** — adds
   `_in_render_chain` guard around the re-schedule at the end of `_refresh_geometry_sliders`,
   adds `.mark(...)` to both patient and table-origin sliders, and removes the redundant
   local schedule block in `_on_exam_select_change`. None of those changes touch the four
@@ -147,4 +147,7 @@ initialization are correct as written.
 - [x] Review (2026-06-25)
 - [x] Cross-check against `GEO_TAB_SPINNING_WHEEL_PLAN.md` (shipped) — no functional
       updates needed; interaction notes added.
-- [ ] Implementation
+- [x] Implementation (2026-06-25) — `table_val_labels` dict, initial labels, and
+      `set_text` calls added at the four planned sites in `geometry.py`. ruff,
+      basedpyright, `scripts/check_file_sizes.py`, and the 13-test GUI suite all pass.
+      `dev-docs/TO_DO.md` line 47 marked done.

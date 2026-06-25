@@ -41,11 +41,11 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ### GUI / UX
 
-- [ ] **Geometry plot spinning wheel / continuous reload** — plot appears to continuously refresh, preventing
+- [x] **Geometry plot spinning wheel / continuous reload** — plot appears to continuously refresh, preventing
   effective rotation; see [assessment](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) for root cause analysis
-  and [plan](plans/GEO_TAB_SPINNING_WHEEL_PLAN.md) for the implementation (revised fix uses an `_in_render_chain` flag).
-- [ ] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z. See [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
-- [ ] **Fix cross-tab offset/origin slider synchronization** — ensure Geometry tab sliders/labels sync when modified via Settings tab spinboxes, without causing destructive focus loss. See [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/CROSS_TAB_SLIDER_SYNC_PLAN.md).
+  and [plan](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md) for the implementation (revised fix uses an `_in_render_chain` flag).
+- [x] **Show Geometry table-origin slider values** — mirror patient-offset value labels for table-origin X/Y/Z. See [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
+- [x] **Fix cross-tab offset/origin slider synchronization** — ensure Geometry tab sliders/labels sync when modified via Settings tab spinboxes, without causing destructive focus loss. See [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/CROSS_TAB_SLIDER_SYNC_PLAN.md).
 - [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
   a clear in-app note and axis legend.
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
@@ -58,7 +58,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   per [DESIGN.md](../DESIGN.md).
 - [x] **Native window geometry persistence** — remember last native window size/position/maximized state; see [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md).
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
-- [ ] **First-run onboarding popup** — on first launch show a modal explaining basic usage (supported file types, how to load data, how to run calculations); persist a "don't show again" choice in local storage (otherwise show on every launch until the user checks the box).
+- [ ] **First-run onboarding popup** — on first launch show a modal explaining basic usage (supported file types, how to load data, how to run calculations); persist a "don't show again" choice in local storage (otherwise show on every launch until the user checks the box). See [FIRST_RUN_ONBOARDING_PLAN.md](plans/FIRST_RUN_ONBOARDING_PLAN.md).
 - [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
 
 ### Harness / Repo Hygiene
@@ -68,6 +68,12 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   Trufflehog only if needed beyond gitleaks.
 - [ ] **Doc-freshness follow-ups** — add intentional stale-word excludes, extend inventory contradiction rules, and
   consider release-only strict stale-pattern checks.
+- [ ] **Detect stale paths in backtick code spans and prose** — `scripts/check_doc_freshness.py` only inspects
+  `\[text\]\(url\)` markdown links; backtick-wrapped paths (e.g. CHANGELOG entries like
+  `` Plan: `dev-docs/plans/.../FOO.md` ``) and bare path mentions in prose are missed. Extend the
+  checker (or add a sibling scan) to flag stale relative paths in any of these forms so that
+  plan-archive moves don't leave dangling references. See `scripts/check_doc_freshness.py:31`
+  (`MARKDOWN_LINK_RE`) and the 2026-06-25 Spinning-Wheel archive incident for the trigger case.
 - [ ] **Optional doc-pruning release gate** — run `python scripts/check_doc_pruning.py --strict` before releases
   once the team is comfortable with the advisory workflow.
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
@@ -107,3 +113,9 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [x] GUI decomposition — archived in [refactor-execution.md](plans/archive/refactor-execution.md).
 - [x] Tabular input Phases 1-5 — source plan:
   [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
+- [x] Geometry plot spinning wheel / continuous reload — archived in
+  [GEO_TAB_SPINNING_WHEEL_PLAN.md](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md).
+- [x] Show Geometry table-origin slider values — source plan:
+  [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
+- [x] Cross-tab offset/origin slider synchronization — source plan:
+  [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/CROSS_TAB_SLIDER_SYNC_PLAN.md).

@@ -1,6 +1,7 @@
 # Geometry Tab Spinning Wheel Fix Plan
 
-> **Background:** [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](../assessments/GEO_TAB_SPINNING_WHEEL_20260625.md)
+> **Status:** Completed and archived (2026-06-25).
+> **Background:** [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](../../assessments/GEO_TAB_SPINNING_WHEEL_20260625.md)
 > — root cause, why deleting lines 592–594 regresses seven external callers, and
 > the §10.1 `_in_render_chain` recommendation this plan implements.
 
@@ -28,15 +29,15 @@ to schedule a re-render.
 
 ## Acceptance criteria
 
-- [ ] Patient or table-origin slider drag: at most one render per 0.25 s burst; plot stable for mouse rotate/zoom after release.
-- [ ] `make_geometry_fig` not invoked on a periodic timer — only user actions or external `ctx.refresh_per_exam()`.
-- [ ] External refreshes still redraw: new file, remove exam, switch exam, per-exam correction/toggle in Settings.
-- [ ] Exam-selector change still redraws after removing the redundant local schedule block.
-- [ ] Settings → Phantom Settings → Body habitus scaling still refreshes Geometry (`ctx.refresh_geometry_preview()`).
-- [ ] `test_geometry_patient_slider_no_render_loop` (parametrized lon/ver/lat) and
+- [x] Patient or table-origin slider drag: at most one render per 0.25 s burst; plot stable for mouse rotate/zoom after release.
+- [x] `make_geometry_fig` not invoked on a periodic timer — only user actions or external `ctx.refresh_per_exam()`.
+- [x] External refreshes still redraw: new file, remove exam, switch exam, per-exam correction/toggle in Settings.
+- [x] Exam-selector change still redraws after removing the redundant local schedule block.
+- [x] Settings → Phantom Settings → Body habitus scaling still refreshes Geometry (`ctx.refresh_geometry_preview()`).
+- [x] `test_geometry_patient_slider_no_render_loop` (parametrized lon/ver/lat) and
       `test_geometry_table_slider_no_render_loop` pass locally and on CI.
-- [ ] `CHANGELOG.md` Unreleased entry added under `### Fixed`.
-- [ ] Pre-commit: `git diff --stat` shows only `geometry.py`, `test_gui_flows.py`, and `CHANGELOG.md`.
+- [x] `CHANGELOG.md` Unreleased entry added under `### Fixed`.
+- [x] Pre-commit: `git diff --stat` shows only `geometry.py`, `test_gui_flows.py`, and `CHANGELOG.md`.
 
 ## Phase 1 — `geometry.py`
 

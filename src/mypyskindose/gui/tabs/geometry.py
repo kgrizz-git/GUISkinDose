@@ -226,6 +226,7 @@ def build(ctx: PageContext) -> None:
                     )
 
                     table_sliders: dict[str, ui.slider] = {}
+                    table_val_labels: dict[str, ui.label] = {}
                     table_guard = {"suppress": False}  # see exam_selector_guard above
 
                     def _table_slider_limits(detected: dict, key: str) -> tuple[float, float]:
@@ -262,6 +263,7 @@ def build(ctx: PageContext) -> None:
                             slider._props["max"] = hi
                             slider.update()
                             slider.set_value(origin[key])
+                            table_val_labels[key].set_text(f"{origin[key]:.1f} cm")
                         table_guard["suppress"] = False
 
                     with ui.row().classes("w-full gap-4 items-center"):
@@ -288,6 +290,8 @@ def build(ctx: PageContext) -> None:
                                     step=0.5,
                                     value=initial,
                                 ).classes("w-full").mark(f"table-slider-{key}")
+                                val_label = ui.label(f"{initial:.1f} cm").classes("text-caption mono-text")
+                                table_val_labels[key] = val_label
 
                                 def _on_table_slider(e, k=key, s=slider) -> None:
                                     nonlocal table_origin_pending, offset_changed_since_calc, last_table_origin_scrub
@@ -306,6 +310,7 @@ def build(ctx: PageContext) -> None:
                                     offset_changed_since_calc = True
                                     _update_stale_caption()
                                     _update_preview_caption()
+                                    table_val_labels[k].set_text(f"{float(s.value or 0.0):.1f} cm")
                                     _schedule_debounced_render()
 
                                 slider.on_value_change(_on_table_slider)
@@ -604,4 +609,5 @@ def build(ctx: PageContext) -> None:
         _refresh_geometry_sliders()
 
     ctx.refresh_per_exam = _refresh_per_exam_with_sliders
+    ctx.refresh_geometry_tab = _refresh_geometry_sliders
     _update_preview_caption()

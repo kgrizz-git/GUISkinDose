@@ -71,6 +71,15 @@ def index():
                 "flat round color=white"
             ).classes("icon-outlined")
 
+    nav_buttons: list[tuple[ui.button, str]] = []
+
+    def _update_nav_classes():
+        for btn, target in nav_buttons:
+            if state.active_tab == target:
+                btn.classes(add="active", remove="text-grey-4")
+            else:
+                btn.classes(remove="active", add="text-grey-4")
+
     with ui.left_drawer(fixed=True).classes("q-pa-md") as left_drawer:
         ui.label("Status").classes("text-caption text-grey-6 q-mb-xs")
         with ui.column().classes("gap-0 q-mb-sm"):
@@ -82,17 +91,6 @@ def index():
 
         def go(name: str):
             tabs.set_value(name)
-            state.active_tab = name
-            _update_nav_classes()
-
-        def _update_nav_classes():
-            for btn, target in nav_buttons:
-                if state.active_tab == target:
-                    btn.classes(add="active", remove="text-grey-4")
-                else:
-                    btn.classes(remove="active", add="text-grey-4")
-
-        nav_buttons: list[tuple[ui.button, str]] = []
 
         def nav_btn(label: str, target: str) -> ui.button:
             btn = ui.button(label, on_click=lambda: go(target)).props(
@@ -113,8 +111,15 @@ def index():
             "full-width modern-btn icon-outlined"
         )
 
+    def _on_tab_changed(tab_name: str) -> None:
+        state.active_tab = tab_name
+        _update_nav_classes()
+        if tab_name == "geometry":
+            ctx.refresh_geometry_tab()
+            ctx.refresh_geometry_preview()
+
     with ui.tabs().classes("w-full").on(
-        "update:model-value", lambda e: setattr(state, "active_tab", e.args)
+        "update:model-value", lambda e: _on_tab_changed(e.args)
     ) as tabs:
         ui.tab("upload", label="1 · Upload")
         ui.tab("data", label="2 · Data Table")
