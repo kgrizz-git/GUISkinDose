@@ -120,14 +120,14 @@ def clamp_title_bar_on_screen(
     del height  # width drives horizontal clamp; height unused for title-bar strip
     y_min = screen.y
     y_max = screen.y + screen.height - title_bar_height
-    clamped_y = min(max(int(y), y_min), y_max)
+    clamped_y = int(min(max(int(y), y_min), y_max))
 
     if width < min_horizontal_overlap:
-        clamped_x = screen.x + (screen.width - width) // 2
+        clamped_x = int(screen.x + (screen.width - width) // 2)
     else:
         x_min = screen.x + min_horizontal_overlap - width
         x_max = screen.x + screen.width - min_horizontal_overlap
-        clamped_x = min(max(int(x), x_min), x_max)
+        clamped_x = int(min(max(int(x), x_min), x_max))
     return clamped_x, clamped_y
 
 
@@ -145,7 +145,9 @@ def default_normal_bounds(screens: list[ScreenBounds]) -> NativeWindowPrefs:
     height = max(MIN_HEIGHT, int(screen.height * 0.75))
     x = screen.x + (screen.width - width) // 2
     y = screen.y + (screen.height - height) // 2
-    return NativeWindowPrefs(maximized=False, width=width, height=height, x=x, y=y)
+    return NativeWindowPrefs(
+        maximized=False, width=width, height=height, x=int(x), y=int(y),
+    )
 
 
 def validate_prefs(prefs: NativeWindowPrefs, screens: list[ScreenBounds]) -> NativeWindowPrefs:
