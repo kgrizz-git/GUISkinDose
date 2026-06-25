@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -7,6 +7,7 @@ from scipy.interpolate import CubicSpline
 from tqdm import tqdm
 
 from mypyskindose import constants as c
+from mypyskindose.grid_interp import format_event_indices
 from mypyskindose.phantom_class import Phantom
 from mypyskindose.calculate_dose.add_correction_and_event_dose_to_output import (
     add_corrections_and_event_dose_to_output,
@@ -14,6 +15,9 @@ from mypyskindose.calculate_dose.add_correction_and_event_dose_to_output import 
 from mypyskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
+
+if TYPE_CHECKING:
+    from mypyskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,8 @@ def calculate_irradiation_event_result(
     field_area: List[float] | None = None,
     k_isq: np.ndarray | None = None,
     pbar: tqdm | None = None,
+    settings: "PyskindoseSettings | None" = None,
+    exam_id: str | None = None,
 ) -> Dict[str, Any]:
     """Conducts skin dose calculation.
 
@@ -95,6 +101,8 @@ def calculate_irradiation_event_result(
     if k_isq is None:
         k_isq = np.array([])
 
+    missed_event_indices: list[int] = []
+
     for ev in range(event, total_events):
         logger.debug(f"Calculating irradiation event {ev + 1} out of {total_events}")
 
@@ -110,6 +118,33 @@ def calculate_irradiation_event_result(
             field_area=field_area,
             k_isq=k_isq,
         )
+
+        if not any(hits):
+            missed_event_indices.append(ev)
+
+            # positional .iloc — safer than label-based [ev] (redundant given
+            # rdsr_normalizer's guaranteed RangeIndex, but defensive for warnings)
+            kVp = float(normalized_data[c.KEY_NORMALIZATION_KVP].iloc[ev])
+            filter_desc = (
+                f"{normalized_data.filter_thickness_Cu.iloc[ev]:g} mm Cu + "
+                f"{normalized_data.filter_thickness_Al.iloc[ev]:g} mm Al"
+            )
+            # float() wraps guard against NaN in corrupted data (rare but defensive)
+            # Note: float(np.nan) → nan, which displays as "field nan cm²" — acceptable
+            # in a warning context; the value won't crash the format string.
+            field_area_cm2 = (
+                float(normalized_data.FS_lat.iloc[ev])
+                * float(normalized_data.FS_long.iloc[ev])
+            )
+
+            exam_str = f"exam {exam_id}, " if exam_id else ""
+            msg = (
+                f"Event {ev + 1}/{total_events} ({exam_str}{kVp:.0f} kVp, "
+                f"{filter_desc}, field {field_area_cm2:.1f} cm²): "
+                f"beam does not intersect patient — check patient offsets and vendor coordinate frame."
+            )
+            if settings is not None and settings.beam_miss_warn == "per_event":
+                logger.warning(msg)
 
         logger.debug("Saving event data")
 
@@ -135,5 +170,23 @@ def calculate_irradiation_event_result(
 
     if pbar is not None:
         pbar.refresh()
+
+    # Post-loop diagnostics
+    K = len(missed_event_indices)
+    if total_events > 0 and K == total_events:
+        logger.warning(
+            "All %d events missed the patient phantom — "
+            "dose map is all zeros; check patient offsets and vendor coordinate frame.",
+            total_events,
+        )
+    elif settings is not None and settings.beam_miss_warn == "summary" and 0 < K < total_events:
+        logger.warning(
+            "Run %d events; %d event(s) missed the patient phantom: %s.",
+            total_events,
+            K,
+            format_event_indices(missed_event_indices),
+        )
+
+    output["missed_event_indices"] = missed_event_indices
 
     return output

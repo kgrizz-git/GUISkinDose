@@ -64,7 +64,7 @@ def analyze_data(
     create_geometry_plot(normalized_data=normalized_data, table=table, pad=pad, settings=settings)
 
     dprint("CALCULATION", "Calculating dose")
-    patient, output = calculate_dose(normalized_data=normalized_data, settings=settings, table=table, pad=pad)
+    patient, output = calculate_dose(normalized_data=normalized_data, settings=settings, table=table, pad=pad, exam_id=None)
 
     if settings.output_format in [c.RUN_ARGUMENTS_OUTPUT_DICT, c.RUN_ARGUMENTS_OUTPUT_JSON]:
         if output is None or patient is None:
@@ -133,6 +133,13 @@ def analyze_multiple_exams(
     aggregate_dose_map: np.ndarray | None = None
     total_events = 0
 
+    _downgraded = False
+    if settings.beam_miss_warn == "per_event":
+        logger.info(
+            "beam_miss_warn downgraded from 'per_event' to 'summary' for multi-exam run."
+        )
+        _downgraded = True
+
     for i, exam in enumerate(exams):
         exam_warnings: list[str] = list(exam.warnings)
         if per_exam_extra_warnings and i < len(per_exam_extra_warnings):
@@ -149,12 +156,15 @@ def analyze_multiple_exams(
         else:
             effective_offset = global_offset
 
-        # Build per-exam settings (deepcopy only when offset differs).
-        if effective_offset != global_offset:
+        # Build per-exam settings (deepcopy when offset differs or beam_miss_warn downgraded).
+        if effective_offset != global_offset or _downgraded:
             exam_settings = copy.deepcopy(settings)
-            exam_settings.phantom.patient_offset.d_lon = effective_offset[0]
-            exam_settings.phantom.patient_offset.d_ver = effective_offset[1]
-            exam_settings.phantom.patient_offset.d_lat = effective_offset[2]
+            if effective_offset != global_offset:
+                exam_settings.phantom.patient_offset.d_lon = effective_offset[0]
+                exam_settings.phantom.patient_offset.d_ver = effective_offset[1]
+                exam_settings.phantom.patient_offset.d_lat = effective_offset[2]
+            if _downgraded:
+                exam_settings.beam_miss_warn = "summary"
         else:
             exam_settings = settings
 
@@ -171,8 +181,9 @@ def analyze_multiple_exams(
             create_geometry_plot(normalized_data=data_norm, table=table, pad=pad, settings=exam_settings)
 
             dprint("CALCULATION", f"Exam {i}: calculating dose")
+            exam_id = exam.study_id or exam.provenance.original_filename
             patient, raw_output = calculate_dose(
-                normalized_data=data_norm, settings=exam_settings, table=table, pad=pad
+                normalized_data=data_norm, settings=exam_settings, table=table, pad=pad, exam_id=exam_id
             )
 
             if raw_output is None or patient is None:
@@ -180,6 +191,21 @@ def analyze_multiple_exams(
                 exam_warnings.append(msg)
                 run_warnings.append(msg)
                 continue
+
+            # Per-exam missed-event summary (in memory, not via logger — avoids
+            # double-firing with calculate_irradiation_event_result's own warnings).
+            missed = raw_output.get("missed_event_indices", [])
+            if missed:
+                exam_warnings.append(
+                    f"Exam {i} ({exam_id}): {len(missed)} of {len(data_norm)} "
+                    f"event(s) missed the patient phantom."
+                )
+                if len(missed) == len(data_norm) > 0:
+                    exam_warnings.append(
+                        f"Exam {i} ({exam_id}): all {len(data_norm)} event(s) missed "
+                        f"the patient phantom — dose map for this exam is all zeros; "
+                        f"check patient offsets and vendor coordinate frame."
+                    )
 
             exam_dose_map: np.ndarray = raw_output[c.OUTPUT_KEY_DOSE_MAP]
 
@@ -218,7 +244,7 @@ def analyze_multiple_exams(
 
             exam_results.append(
                 ExamResult(
-                    exam_id=exam.study_id or exam.provenance.original_filename,
+                    exam_id=exam_id,
                     source_file=exam.provenance.original_filename,
                     event_count=len(data_norm),
                     patient_offset=effective_offset,

@@ -7,6 +7,7 @@ from rich import print
 from mypyskindose.constants import (
     BELOW_FLOOR_KVP_POLICY_SNAP,
     HVL_KVP_FLOOR,
+    KEY_PARAM_BEAM_MISS_WARN,
     KEY_PARAM_BELOW_FLOOR_KVP_MANUAL,
     KEY_PARAM_BELOW_FLOOR_KVP_POLICY,
     KEY_PARAM_ESTIMATE_K_TAB,
@@ -130,6 +131,8 @@ class PyskindoseSettings:
         self.below_floor_kvp_manual: float = float(
             tmp.get(KEY_PARAM_BELOW_FLOOR_KVP_MANUAL, HVL_KVP_FLOOR)
         )
+
+        self.beam_miss_warn: str = tmp.get(KEY_PARAM_BEAM_MISS_WARN, "per_event")
 
     @staticmethod
     def _initialize_output_path(output_path: Optional[Union[str, Path]], output_format: str) -> Path:

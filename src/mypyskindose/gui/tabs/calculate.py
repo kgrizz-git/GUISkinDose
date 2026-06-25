@@ -16,6 +16,8 @@ from ..summary_formatters import format_patient_offsets
 from ..state import state
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
+_MAX_TOASTS: int = 5
+
 
 def _format_patient_offsets() -> str:
     return format_patient_offsets(state)
@@ -230,12 +232,23 @@ def build(ctx: PageContext) -> None:
                     ctx.clear_offset_stale_caption()
                     ui.notify(f"✓ {msg}", color="positive")
                     ctx.tabs.set_value("results")
+
                     if state.calc_warnings:
-                        calc_status_label.set_text(
+                        _status = (
                             f"Done — {msg} · {len(state.calc_warnings)} warning(s), see notifications"
                         )
-                        for warning in state.calc_warnings:
-                            ui.notify(warning, type="warning", timeout=12000, multi_line=True)
+                        calc_status_label.set_text(_status)
+                        for i, warning in enumerate(state.calc_warnings):
+                            if i < _MAX_TOASTS:
+                                ui.notify(warning, type="warning", timeout=12000, multi_line=True)
+                            else:
+                                ui.notify(
+                                    f"... and {len(state.calc_warnings) - _MAX_TOASTS} more warnings. "
+                                    f"See Results tab for the full list.",
+                                    type="warning",
+                                    timeout=12000,
+                                )
+                                break
                     else:
                         calc_status_label.set_text(f"Done — {msg}")
                 else:

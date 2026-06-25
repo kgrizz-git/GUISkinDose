@@ -201,6 +201,9 @@ Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file pat
 ### 5.5 Progress reporting
 - `tqdm` progress bar during calculation (terminal or notebook variant)
 
+### 5.6 Diagnostics
+- Beam-miss warnings: when an irradiation event deposits zero dose (beam does not intersect the patient phantom), a per-event WARNING identifies the event index, kVp, filtration, and field area. Configurable via `beam_miss_warn` setting (`"per_event"` / `"summary"` / `"off"`); an all-miss sentinel always fires.
+
 ---
 
 ## 6. Database (`corrections.db` + `db_connect.py`)

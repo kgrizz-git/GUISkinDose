@@ -37,6 +37,12 @@ BELOW_FLOOR_KVP_OPTIONS = {
     "exam_average": "Substitute the exam-average kVp",
 }
 
+BEAM_MISS_WARN_OPTIONS = {
+    "per_event": "Per event (one warning per missed event)",
+    "summary": "Summary (one warning per run)",
+    "off": "Off (only all-miss sentinel)",
+}
+
 
 def _format_table_offset_line() -> str:
     return format_table_offset_line(state)
@@ -208,6 +214,14 @@ def build(ctx: PageContext) -> None:
                             manual_kvp.visible = state.below_floor_kvp_policy == "manual"
 
                         ui.timer(0.5, _update_manual_kvp_visibility)
+
+                    ui.select(
+                        BEAM_MISS_WARN_OPTIONS,
+                        label="Beam-miss warning verbosity",
+                        value=state.beam_miss_warn,
+                    ).bind_value(state, "beam_miss_warn").on(
+                        "update:model-value", reset_results
+                    ).classes("w-full")
 
             with ui.expansion("Visual Settings", icon="palette").classes("modern-card w-full"):
                 with ui.column().classes("w-full gap-4 q-pa-md"):

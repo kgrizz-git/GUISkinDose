@@ -8,6 +8,7 @@
     "remove_invalid_rows": false,
     "below_floor_kvp_policy": "snap",
     "below_floor_kvp_manual": 70.0,
+    "beam_miss_warn": "per_event",
     "silence_pydicom_warnings": true,
     "plot": {
         "interactivity": true,

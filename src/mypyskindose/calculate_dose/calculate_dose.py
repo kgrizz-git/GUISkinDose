@@ -26,6 +26,7 @@ def calculate_dose(
     settings: PyskindoseSettings,
     table: Phantom,
     pad: Phantom,
+    exam_id: str | None = None,
 ) -> Tuple[Optional[Phantom], Optional[Dict[str, Any]]]:
     """Calculate skin dose.
 
@@ -128,6 +129,8 @@ def calculate_dose(
         output=output_template,
         pbar=pbar(total=total_number_of_events, leave=False, desc="calculating skindose"),
         corrections_db=settings.corrections_db_path,
+        settings=settings,
+        exam_id=exam_id,
     )
 
     return patient, output

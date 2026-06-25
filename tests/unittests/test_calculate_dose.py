@@ -398,3 +398,122 @@ def test_calculate_dose_handles_1100_events_without_recursion_error():
     assert output is not None
     assert len(output[c.OUTPUT_KEY_HITS]) == n_events
     assert np.any(output[c.OUTPUT_KEY_DOSE_MAP] > 0.0)
+
+
+# ── beam-miss warnings ─────────────────────────────────────────────────
+
+
+def _run_calculate_dose_with_offset(d_lon: float = 0.0, d_ver: float = 0.0, d_lat: float = 0.0) -> dict:
+    """Run ``calculate_dose`` with a custom patient offset on the Siemens dataset."""
+    settings = _settings()
+    settings.phantom.patient_offset.d_lon = d_lon
+    settings.phantom.patient_offset.d_ver = d_ver
+    settings.phantom.patient_offset.d_lat = d_lat
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+    parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
+    norm = rdsr_normalizer(parsed, settings=settings)
+    norm = calculate_rotation_matrices(norm)
+    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    assert output is not None
+    return output
+
+
+def _capture_mypyskindose_warnings() -> tuple[logging.Logger, logging.Handler, list[str]]:
+    """Install a WARNING-level capture handler on the ``mypyskindose`` logger.
+
+    Returns ``(logger, handler, messages)``. Caller must ``removeHandler`` in a
+    ``finally`` block. Captures via a dedicated handler so it is robust to
+    suite-wide logging state (unlike pytest's ``caplog``).
+    """
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("mypyskindose")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    return logger, handler, messages
+
+
+def test_beam_miss_per_event_warning():
+    """All 21 events miss → 21 per-event warnings plus all-miss sentinel."""
+    logger, handler, messages = _capture_mypyskindose_warnings()
+    try:
+        output = _run_calculate_dose_with_offset(d_lon=500.0)
+    finally:
+        logger.removeHandler(handler)
+
+    assert output is not None
+    missed = output["missed_event_indices"]
+    assert len(missed) == 21
+
+    beam_miss_msgs = [m for m in messages if "beam does not intersect patient" in m]
+    assert len(beam_miss_msgs) == 21
+
+    sentinel_msgs = [m for m in messages if "All" in m and "events missed" in m]
+    assert len(sentinel_msgs) == 1
+    assert "All 21 events missed" in sentinel_msgs[0]
+
+
+def test_beam_miss_off_dial_suppresses_per_event_but_not_sentinel():
+    """``beam_miss_warn='off'`` → no per-event warnings; all-miss sentinel still fires."""
+    settings = _settings()
+    settings.beam_miss_warn = "off"
+    settings.phantom.patient_offset.d_lon = 500.0
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+    parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
+    norm = rdsr_normalizer(parsed, settings=settings)
+    norm = calculate_rotation_matrices(norm)
+
+    logger, handler, messages = _capture_mypyskindose_warnings()
+    try:
+        _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    finally:
+        logger.removeHandler(handler)
+    assert output is not None
+
+    beam_miss_msgs = [m for m in messages if "beam does not intersect patient" in m]
+    assert len(beam_miss_msgs) == 0
+    assert any("All" in m and "events missed" in m for m in messages)
+
+
+def test_beam_miss_summary_mode():
+    """``beam_miss_warn='summary'`` → no per-event warnings; all-miss sentinel overshadows summary."""
+    settings = _settings()
+    settings.beam_miss_warn = "summary"
+    settings.phantom.patient_offset.d_lon = 500.0
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+    parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
+    norm = rdsr_normalizer(parsed, settings=settings)
+    norm = calculate_rotation_matrices(norm)
+
+    logger, handler, messages = _capture_mypyskindose_warnings()
+    try:
+        _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    finally:
+        logger.removeHandler(handler)
+    assert output is not None
+
+    beam_miss_msgs = [m for m in messages if "beam does not intersect patient" in m]
+    assert len(beam_miss_msgs) == 0
+    assert any("All" in m and "events missed" in m for m in messages)
+
+
+def test_beam_miss_output_includes_indices():
+    """``output['missed_event_indices']`` contains 0-based indices of missed events."""
+    output = _run_calculate_dose_with_offset(d_lon=500.0)
+    assert "missed_event_indices" in output
+    assert len(output["missed_event_indices"]) == 21
+    assert output["missed_event_indices"] == list(range(21))
+
+
+def test_golden_baseline_unaffected_by_beam_miss_changes():
+    """Golden baseline still passes — default 'per_event' dial, all events hit."""
+    output = _run_calculate_dose()
+    assert "missed_event_indices" in output
+    assert output["missed_event_indices"] == []

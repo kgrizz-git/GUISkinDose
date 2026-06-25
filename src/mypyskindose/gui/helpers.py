@@ -145,51 +145,51 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         _collector = _CalcWarningCollector()
         _calc_logger = logging.getLogger("mypyskindose")
         _calc_logger.addHandler(_collector)
-        if state.is_multi_exam:
-            from mypyskindose.analyze_data import analyze_multiple_exams
+        try:
+            if state.is_multi_exam:
+                from mypyskindose.analyze_data import analyze_multiple_exams
 
-            # Per-exam patient offsets (Phase 2.3). Each exam's offset is stored in
-            # its loaded_exam_meta entry (defaulting to the global offset at load
-            # time, editable in the upload tab). Fall back to the global offset for
-            # any exam whose meta is missing a value.
-            per_exam_offsets = [
-                [
-                    float(m.get("d_lon", state.d_lon)),
-                    float(m.get("d_ver", state.d_ver)),
-                    float(m.get("d_lat", state.d_lat)),
+                # Per-exam patient offsets (Phase 2.3). Each exam's offset is stored in
+                # its loaded_exam_meta entry (defaulting to the global offset at load
+                # time, editable in the upload tab). Fall back to the global offset for
+                # any exam whose meta is missing a value.
+                per_exam_offsets = [
+                    [
+                        float(m.get("d_lon", state.d_lon)),
+                        float(m.get("d_ver", state.d_ver)),
+                        float(m.get("d_lat", state.d_lat)),
+                    ]
+                    for m in state.loaded_exam_meta
                 ]
-                for m in state.loaded_exam_meta
-            ]
 
-            # Audit note (Phase 2.5): a manual table-origin override materially
-            # changes the dose map, so record it per exam (lands in
-            # ExamResult.warnings → export) for any exam with an active override.
-            per_exam_extra_warnings = [
-                _table_origin_override_note(m) for m in state.loaded_exam_meta
-            ]
+                # Audit note (Phase 2.5): a manual table-origin override materially
+                # changes the dose map, so record it per exam (lands in
+                # ExamResult.warnings → export) for any exam with an active override.
+                per_exam_extra_warnings = [
+                    _table_origin_override_note(m) for m in state.loaded_exam_meta
+                ]
 
-            # analyze_multiple_exams internally handles logging and tqdm patch
-            multi_result = analyze_multiple_exams(
-                exams=state.loaded_exams,
-                settings=settings,
-                per_exam_offsets=per_exam_offsets,
-                per_exam_extra_warnings=per_exam_extra_warnings,
-            )
+                # analyze_multiple_exams internally handles logging and tqdm patch
+                multi_result = analyze_multiple_exams(
+                    exams=state.loaded_exams,
+                    settings=settings,
+                    per_exam_offsets=per_exam_offsets,
+                    per_exam_extra_warnings=per_exam_extra_warnings,
+                )
 
-            state.dosemap_fig = None
-            state.multi_exam_result = multi_result
-            state.calculation_done = True
-            state.calc_run_id += 1
-            state.psd = float(multi_result.aggregate_psd)
-            # sum of air kerma across exams
-            state.air_kerma = sum(float(e.output.AirKerma) for e in multi_result.exams)
+                state.dosemap_fig = None
+                state.multi_exam_result = multi_result
+                state.calculation_done = True
+                state.calc_run_id += 1
+                state.psd = float(multi_result.aggregate_psd)
+                # sum of air kerma across exams
+                state.air_kerma = sum(float(e.output.AirKerma) for e in multi_result.exams)
 
-            # Surface calc warnings from the orchestrator run
-            state.calc_warnings = list(_collector.messages)
+                # Surface calc warnings from the orchestrator run
+                state.calc_warnings = list(_collector.messages)
 
-            return True, f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {len(state.loaded_exams)} exams"
-        else:
-            try:
+                return True, f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {len(state.loaded_exams)} exams"
+            else:
                 # analyze_data internally calls calculate_rotation_matrices.
                 # Drop the display-only exam tag if present (defensive — single-exam
                 # frames don't carry it, but never let it reach the calculation).
@@ -197,20 +197,21 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                     columns=[EXAM_COLUMN, EXAM_INDEX_COLUMN], errors="ignore"
                 ).copy()
                 output = analyze_data(normalized_data=calc_df, settings=settings)
-            finally:
-                _calc_logger.removeHandler(_collector)
-            state.calc_warnings = list(_collector.messages)
 
-            if not isinstance(output, dict):
-                return False, "Unexpected calculation output format."
+                state.calc_warnings = list(_collector.messages)
 
-            state.dosemap_fig = None
-            state.output = output
-            state.calculation_done = True
-            state.calc_run_id += 1
-            state.psd = float(output["psd"])
-            state.air_kerma = float(output["air_kerma"])
-            return True, f"PSD = {output['psd']:.2f} mGy"
+                if not isinstance(output, dict):
+                    return False, "Unexpected calculation output format."
+
+                state.dosemap_fig = None
+                state.output = output
+                state.calculation_done = True
+                state.calc_run_id += 1
+                state.psd = float(output["psd"])
+                state.air_kerma = float(output["air_kerma"])
+                return True, f"PSD = {output['psd']:.2f} mGy"
+        finally:
+            _calc_logger.removeHandler(_collector)
     except Exception:
         err = traceback.format_exc()
         print(err)

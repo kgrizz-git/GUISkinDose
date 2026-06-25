@@ -73,6 +73,7 @@ class AppState:
     below_floor_kvp_policy: str = "snap"
     below_floor_kvp_manual: float = 70.0
     below_floor_prompt_suppressed: bool = False
+    beam_miss_warn: str = "summary"
 
     plot_dosemap: bool = True
     dark_mode: bool = True

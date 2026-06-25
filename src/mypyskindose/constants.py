@@ -37,6 +37,7 @@ KEY_PARAM_REMOVE_INVALID_ROWS = "remove_invalid_rows"
 KEY_PARAM_SILENCE_PYDICOM_WARNINGS = "silence_pydicom_warnings"
 KEY_PARAM_BELOW_FLOOR_KVP_POLICY = "below_floor_kvp_policy"
 KEY_PARAM_BELOW_FLOOR_KVP_MANUAL = "below_floor_kvp_manual"
+KEY_PARAM_BEAM_MISS_WARN = "beam_miss_warn"
 
 # Below-floor kVp handling — events with kVp below the lowest tabulated HVL kVp
 # (the table floor) have no tabulated beam quality. HVL_KVP_FLOOR is that floor;

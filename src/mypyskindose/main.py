@@ -296,6 +296,12 @@ def get_argument_parser(arguments) -> argparse.Namespace:
             " skin dose (PSD) estimations from fluoroscopic procedures in"
             " interventional radiology."
         ),
+        epilog=(
+            "Beam-miss warnings: events that deposit zero dose because the beam does "
+            "not intersect the patient phantom are reported at WARNING level. "
+            "In multi-exam mode, the per-event dial is downgraded to 'summary' "
+            "(one summary per exam) with an INFO log on stderr."
+        ),
     )
     parser.add_argument(
         "--mode",
