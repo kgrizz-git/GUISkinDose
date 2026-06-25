@@ -57,6 +57,7 @@ class Phantom:
         phantom_model: str,
         phantom_dim: PhantomDimensions,
         human_mesh: Optional[Union[str, tuple[str, mesh.Mesh]]] = None,
+        human_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
     ):
         """Create the phantom of choice.
 
@@ -220,6 +221,7 @@ class Phantom:
 
             self.r = np.asarray([el for el_list in r for el in el_list])
             self.n = np.asarray([x for pair in zip(n, n, n) for x in pair])
+            self._apply_human_scale(human_scale)
 
             # Create index vectors for plotly mesh3d plotting
             self.ijk = np.column_stack(
@@ -275,6 +277,29 @@ class Phantom:
             return phantom_mesh_tuple[0], phantom_mesh_tuple[1]
 
         return phantom_mesh_tuple[0], mesh.Mesh.from_file(str(phantom_mesh_tuple[1]))
+
+    def _apply_human_scale(self, scale: tuple[float, float, float]) -> None:
+        if np.allclose(scale, (1.0, 1.0, 1.0)):
+            return
+
+        scale_array = np.asarray(scale, dtype=float)
+        anchor = np.array(
+            [
+                (self.r[:, 0].min() + self.r[:, 0].max()) / 2.0,
+                self.r[:, 1].max(),
+                self.r[:, 2].max(),
+            ]
+        )
+        self.r = anchor + (self.r - anchor) * scale_array
+        self._recompute_human_normals_from_triangles()
+
+    def _recompute_human_normals_from_triangles(self) -> None:
+        triangles = self.r.reshape(-1, 3, 3)
+        normals = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
+        lengths = np.linalg.norm(normals, axis=1)
+        nonzero = lengths > 0
+        normals[nonzero] = normals[nonzero] / lengths[nonzero, None]
+        self.n = np.repeat(normals, 3, axis=0)
 
     def rotate(self, angles: List[int]) -> None:
         """Rotate the phantom about the angles specified in rotation.

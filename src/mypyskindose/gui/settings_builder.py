@@ -35,6 +35,9 @@ def build_settings(
 
     base["phantom"]["model"] = app_state.phantom_model
     base["phantom"]["human_mesh"] = app_state.human_mesh
+    base["phantom"]["scale_lat"] = app_state.phantom_scale_lat
+    base["phantom"]["scale_ap"] = app_state.phantom_scale_ap
+    base["phantom"]["scale_lon"] = app_state.phantom_scale_lon
     base["phantom"]["patient_orientation"] = app_state.patient_orientation
     if patient_offset is not None:
         d_lon, d_ver, d_lat = patient_offset

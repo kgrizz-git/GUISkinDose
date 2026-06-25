@@ -76,7 +76,7 @@ def test_find_broken_links_resolves_sibling_paths(tmp_path: Path):
     assert broken[0].target == "nope.md"
 
 
-def test_collect_markdown_files_includes_optional_design(tmp_path: Path):
+def test_collect_markdown_files_includes_optional_root_guidance(tmp_path: Path):
     repo_root = tmp_path
     (repo_root / "AGENTS.md").write_text("# agents\n", encoding="utf-8")
     (repo_root / "README.md").write_text("# readme\n", encoding="utf-8")
@@ -92,6 +92,14 @@ def test_collect_markdown_files_includes_optional_design(tmp_path: Path):
     (repo_root / "DESIGN.md").write_text("# design\n", encoding="utf-8")
     with_design = collect_markdown_files(repo_root)
     assert (repo_root / "DESIGN.md") in with_design
+
+    (repo_root / "CLAUDE.md").write_text("# claude\n", encoding="utf-8")
+    (repo_root / "GEMINI.md").write_text("# gemini\n", encoding="utf-8")
+    (repo_root / "QWEN.md").write_text("# qwen\n", encoding="utf-8")
+    with_agent_pointers = collect_markdown_files(repo_root)
+    assert (repo_root / "CLAUDE.md") in with_agent_pointers
+    assert (repo_root / "GEMINI.md") in with_agent_pointers
+    assert (repo_root / "QWEN.md") in with_agent_pointers
 
 
 def test_inventory_contradiction_detects_false_tabular_claim(tmp_path: Path):

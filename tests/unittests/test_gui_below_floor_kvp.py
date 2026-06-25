@@ -58,5 +58,18 @@ def test_build_settings_default_policy_is_snap():
     assert settings.below_floor_kvp_policy == "snap"
 
 
+def test_build_settings_propagates_phantom_scale_values():
+    st = AppState()
+    st.phantom_scale_lat = 1.25
+    st.phantom_scale_ap = 0.85
+    st.phantom_scale_lon = 1.5
+
+    settings = build_settings(st)
+
+    assert settings.phantom.scale_lat == pytest.approx(1.25)
+    assert settings.phantom.scale_ap == pytest.approx(0.85)
+    assert settings.phantom.scale_lon == pytest.approx(1.5)
+
+
 def test_settings_options_match_constant_policies():
     assert tuple(BELOW_FLOOR_KVP_OPTIONS.keys()) == BELOW_FLOOR_KVP_POLICIES

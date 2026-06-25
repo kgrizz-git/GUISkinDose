@@ -37,6 +37,15 @@ async def test_all_tab_headings_render(user: User) -> None:
 
 
 @pytest.mark.asyncio
+async def test_phantom_scale_controls_render_for_default_human_model(user: User) -> None:
+    await user.open("/")
+    await user.should_see("Body habitus scaling")
+    await user.should_see("Lateral / width")
+    await user.should_see("AP / vertical thickness")
+    await user.should_see("Longitudinal / head-foot")
+
+
+@pytest.mark.asyncio
 async def test_example_load_updates_status(user: User) -> None:
     """Selecting a bundled example auto-loads it (no LOAD button) and updates the
     drawer event count via the load_example handler."""

@@ -107,6 +107,12 @@ Located in `src/mypyskindose/phantom_data/`:
 
 Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file path.
 
+Human STL meshes support body-habitus scaling via `phantom.scale_lat`,
+`phantom.scale_ap`, and `phantom.scale_lon` (defaults `1.0`, clamped to
+`0.5–2.0`). Scaling is applied to the human mesh before patient/table
+positioning; non-uniform scaling recomputes surface normals so beam
+entrance/exit filtering uses the scaled geometry.
+
 ### 2.3 Support objects
 
 | Model | Description |
@@ -373,6 +379,9 @@ Falls back to `settings_example.json` if nothing provided.
 |---------|------|---------|-------------|
 | `phantom.model` | str | — | `"plane"`, `"cylinder"`, `"human"` |
 | `phantom.human_mesh` | str/tuple | — | STL name or `(name, mesh.Mesh)` |
+| `phantom.scale_lat` | float | `1.0` | Human STL lateral/width scale (`0.5–2.0`) |
+| `phantom.scale_ap` | float | `1.0` | Human STL AP/vertical-thickness scale (`0.5–2.0`) |
+| `phantom.scale_lon` | float | `1.0` | Human STL longitudinal/head-foot scale (`0.5–2.0`) |
 | `phantom.patient_orientation` | str | — | `"head_first_supine"` or `"feet_first_supine"` |
 | `phantom.patient_offset.d_lon` | float | 0 | Longitudinal offset (cm) |
 | `phantom.patient_offset.d_ver` | float | 0 | Vertical offset (cm) |
@@ -401,7 +410,7 @@ Falls back to `settings_example.json` if nothing provided.
 | Surface | Behavior |
 |---------|----------|
 | **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); PAUSED when composite `plot_procedure` > 30 events |
-| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections |
+| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview |
 | **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
 | **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections |
 | **Upload tab** | Click exam card → set active index and open Geometry tab |

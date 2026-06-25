@@ -1,7 +1,20 @@
+import logging
+from typing import Any
+
 from mypyskindose.constants import KEY_PARAM_HUMAN_MESH, KEY_PARAM_PHANTOM_MODEL
 from mypyskindose.helpers.create_attributes_string import create_attributes_string
 from mypyskindose.settings.patient_offset import PatientOffset
 from mypyskindose.settings.phantom_dimensions import PhantomDimensions
+
+logger = logging.getLogger(__name__)
+
+
+def _validate_scale(value: Any, name: str) -> float:
+    scale = float(value)
+    if not 0.5 <= scale <= 2.0:
+        logger.warning("%s=%s outside [0.5, 2.0]; clamping", name, scale)
+        return min(2.0, max(0.5, scale))
+    return scale
 
 
 class PhantomSettings:
@@ -43,6 +56,9 @@ class PhantomSettings:
         """
         self.model = ptm_dim[KEY_PARAM_PHANTOM_MODEL]
         self.human_mesh = ptm_dim[KEY_PARAM_HUMAN_MESH]
+        self.scale_lat = _validate_scale(ptm_dim.get("scale_lat", 1.0), "scale_lat")
+        self.scale_ap = _validate_scale(ptm_dim.get("scale_ap", 1.0), "scale_ap")
+        self.scale_lon = _validate_scale(ptm_dim.get("scale_lon", 1.0), "scale_lon")
         self.patient_orientation = ptm_dim["patient_orientation"]
         self.patient_offset = PatientOffset(offset=ptm_dim["patient_offset"])
         self.dimension = PhantomDimensions(ptm_dim=ptm_dim["dimension"])
@@ -56,6 +72,10 @@ class PhantomSettings:
         return (
             f"[bold {color}]Phantom settings[/bold {color}]\n"
             f"\t[{color}]model: {self.model}[/{color}]\n"
+            f"\t[{color}]human_mesh: {self.human_mesh}[/{color}]\n"
+            f"\t[{color}]scale_lat: {self.scale_lat}[/{color}]\n"
+            f"\t[{color}]scale_ap: {self.scale_ap}[/{color}]\n"
+            f"\t[{color}]scale_lon: {self.scale_lon}[/{color}]\n"
             f"\t[{color}]patient_offset:[/{color}]\n"
             f"\t\t[{color}]d_lat: {self.patient_offset.d_lat}[/{color}]\n"
             f"\t\t[{color}]d_ver: {self.patient_offset.d_ver}[/{color}]\n"

@@ -58,6 +58,7 @@ def calculate_dose(
         phantom_model=settings.phantom.model,
         phantom_dim=settings.phantom.dimension,
         human_mesh=settings.phantom.human_mesh,
+        human_scale=(settings.phantom.scale_lat, settings.phantom.scale_ap, settings.phantom.scale_lon),
     )
 
     # position objects in starting position

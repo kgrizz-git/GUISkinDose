@@ -77,6 +77,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-agent-guidance
+        name: agent guidance consistency (advisory)
+        entry: python scripts/check_agent_guidance.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: cleanup-old-backups
         name: cleanup stale backups/ files (>5 commits)
         entry: python scripts/cleanup_old_backups.py

@@ -378,6 +378,12 @@ def build(ctx: PageContext) -> None:
             slider_timer.cancel()
         slider_timer = ui.timer(GEOMETRY_DEBOUNCE_SEC, _do_debounced_render, once=True)
 
+    def _request_geometry_preview_refresh() -> None:
+        if last_preview_mode:
+            _schedule_debounced_render()
+
+    ctx.refresh_geometry_preview = _request_geometry_preview_refresh
+
     async def _do_debounced_render() -> None:
         nonlocal slider_timer, table_origin_pending, live_preview_requested, last_table_origin_scrub
         slider_timer = None

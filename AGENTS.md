@@ -10,7 +10,7 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 
 ## Detailed documentation
 
-- **[CLAUDE.md](CLAUDE.md)** — Claude Code auto-loaded quick-reference: plan lifecycle steps, doc update rule, and validation commands.
+- **[dev-docs/AGENT_PLAYBOOK.md](dev-docs/AGENT_PLAYBOOK.md)** — shared workflow rules for coding agents; `CLAUDE.md`, `GEMINI.md`, and `QWEN.md` are thin pointers to this guidance.
 - **[dev-docs/CODEBASE_OVERVIEW.md](dev-docs/CODEBASE_OVERVIEW.md)** — full architecture, data flow, all settings, classes, and functions
 - **[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md)** — exhaustive list of every feature: calculations, rendering, settings, outputs, CLI, API
 - **[dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
@@ -80,6 +80,11 @@ Set `settings.output_format` to:
 
 Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`
 
+Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `scale_ap`, and
+`scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in
+**Settings → Phantom Settings → Body habitus scaling** and geometry/dose calculations use the
+scaled STL vertices and recomputed normals.
+
 ## Current development focus
 
 **Goal: make the code easier to use and more user-friendly, including an intuitive GUI.**
@@ -140,3 +145,4 @@ python -m mypyskindose --mode gui
 - **GUI help files:** The canonical source for in-app help markdown is `docs/source/gui_help/`. These files are mirrored to `src/mypyskindose/gui/help/` by `scripts/sync_gui_help.py` (enforced by pre-commit + CI). Edit the source under `docs/`, never the mirrored copies under `src/`.
 - **Assessments:** Place diagnostic reports or assessments (such as for refactoring, code quality, bug checks, etc.) under `dev-docs/assessments/` (always update `dev-docs/index.md` in the same PR).
 - **Workspace cleanliness:** Temporary scratch scripts or local output files must be kept in explicitly gitignored paths (e.g. `tmp/`, `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse. Run `python scripts/check_doc_pruning.py` during doc-gardening to review stale active plans/assessments (30 days + 10 commits by default).
+- **Agent guidance:** Keep shared instructions in `AGENTS.md` and `dev-docs/AGENT_PLAYBOOK.md`. Tool-specific files (`CLAUDE.md`, `GEMINI.md`, `QWEN.md`) should stay short and point back to the shared guidance. Run `python scripts/check_agent_guidance.py` to review drift; it is advisory unless `--strict` is used.

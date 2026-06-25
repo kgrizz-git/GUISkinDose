@@ -20,7 +20,10 @@ Agents working in this repository should be able to answer three questions quick
 | Topic | File |
 |---|---|
 | Agent quickstart, conventions, current development focus | `AGENTS.md` |
-| Claude Code quick-reference (plan lifecycle, doc rule, validation commands) | `CLAUDE.md` |
+| Shared coding-agent playbook | `dev-docs/AGENT_PLAYBOOK.md` |
+| Claude Code pointer file | `CLAUDE.md` |
+| Gemini CLI pointer file | `GEMINI.md` |
+| Qwen Code pointer file | `QWEN.md` |
 | Harness principles, validation commands, known gaps | `dev-docs/HARNESS_ENGINEERING.md` |
 | Harness improvement plan and phased roadmap | `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
 | Documentation catalog | `dev-docs/index.md` |
@@ -46,6 +49,7 @@ Agents working in this repository should be able to answer three questions quick
 | CI | `.github/workflows/ci.yml` |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
+| Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
@@ -96,6 +100,8 @@ Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecess
     Scratch scripts, temporary code, and local output files must be kept in explicitly gitignored paths (e.g. `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse. Do not check temp or experimental scrap into the repository.
 11. **Review stale docs before deleting them.**
     `scripts/check_doc_pruning.py` reports active execution plans and assessments that have not been touched for at least 30 days and 10 commits. Treat this as a review queue: archive completed/superseded plans, keep still-useful assessments, and delete only when intentionally obsolete.
+12. **Keep agent guidance shared and short.**
+    `AGENTS.md` is the project entry point and `dev-docs/AGENT_PLAYBOOK.md` holds shared workflow rules. Tool-specific files such as `CLAUDE.md`, `GEMINI.md`, and `QWEN.md` should be short pointers unless the tool needs a documented local override.
 
 
 
@@ -127,6 +133,8 @@ python scripts/check_changelog.py   # requires origin/main to be fetched
 python scripts/check_untracked_scratch.py
 python scripts/check_ignored_asset_files.py
 python scripts/check_ignored_asset_files.py --strict   # optional release/maintenance gate
+python scripts/check_agent_guidance.py
+python scripts/check_agent_guidance.py --strict   # optional release/maintenance gate
 python scripts/check_doc_pruning.py
 python scripts/check_doc_pruning.py --strict   # optional release/maintenance gate
 ```
@@ -140,6 +148,9 @@ remain in `.gitignore` (only `!docs/**/*.png` is exempted today).
 `dev-docs/plans/*.md` (excluding master `*_PLAN.md` files) and assessments under
 `dev-docs/assessments/*.md` once both thresholds are met: **30 days** and **10 commits** since
 last git touch. It does not auto-delete documentation.
+`check_agent_guidance.py` is advisory by default. It warns when tool-specific agent files do not
+point back to `AGENTS.md`, when `TO_DO.md` is drifting back into a historical ledger, or when
+active execution plans appear complete but have not been archived.
 
 ### Documentation freshness check
 

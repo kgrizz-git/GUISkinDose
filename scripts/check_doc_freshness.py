@@ -86,6 +86,9 @@ def collect_markdown_files(repo_root: Path) -> list[Path]:
     """Return markdown files under the harness doc scan roots."""
     candidates: list[Path] = [
         repo_root / "AGENTS.md",
+        repo_root / "CLAUDE.md",
+        repo_root / "GEMINI.md",
+        repo_root / "QWEN.md",
         repo_root / "README.md",
         repo_root / "CHANGELOG.md",
         repo_root / "DESIGN.md",

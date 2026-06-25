@@ -49,6 +49,10 @@ def _format_table_offset_line() -> str:
 
 
 def build(ctx: PageContext) -> None:
+    def _on_phantom_scale_change() -> None:
+        reset_results()
+        ctx.refresh_geometry_preview()
+
     with ui.tab_panel("settings"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
             ui.label("Calculation Settings").classes("text-2xl font-bold tracking-tight")
@@ -162,6 +166,33 @@ def build(ctx: PageContext) -> None:
                         "text-caption text-grey-5 italic q-mt-sm"
                     )
                     multi_exam_phantom_caption.bind_visibility_from(state, "is_multi_exam")
+
+                    scale_section = ui.column().classes("w-full gap-2 q-mt-sm")
+                    scale_section.bind_visibility_from(
+                        state, "phantom_model", backward=lambda v: v == "human"
+                    )
+                    with scale_section:
+                        ui.label("Body habitus scaling").classes("text-caption text-grey-6")
+                        for label, attr in (
+                            ("Lateral / width", "phantom_scale_lat"),
+                            ("AP / vertical thickness", "phantom_scale_ap"),
+                            ("Longitudinal / head-foot", "phantom_scale_lon"),
+                        ):
+                            with ui.row().classes("w-full gap-4 items-center"):
+                                ui.label(label).classes("w-48 text-caption")
+                                ui.slider(
+                                    min=0.5,
+                                    max=2.0,
+                                    step=0.05,
+                                    value=getattr(state, attr),
+                                ).bind_value(state, attr).on(
+                                    "update:model-value", _on_phantom_scale_change
+                                ).classes("grow")
+                                ui.label().bind_text_from(
+                                    state,
+                                    attr,
+                                    backward=lambda v: f"{float(v):.2f}x",
+                                ).classes("mono-text")
 
             # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
             # editable block per loaded exam; registers ctx.refresh_per_exam.

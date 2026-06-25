@@ -14,5 +14,6 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | [refactor-execution.md](refactor-execution.md) | **Completed** (2026-06-23) | Phased refactor from [REFACTOR_ASSESSMENT.md](../../assessments/REFACTOR_ASSESSMENT.md): Phases 0–3 (temp uploads, logging, busy guard, adapter consolidation, GUI decomposition). `app.py` 1275→245 lines; Phase 4 opportunistic. Companion: [gui-decomposition-design.md](gui-decomposition-design.md). |
 | [gui-decomposition-design.md](gui-decomposition-design.md) | **Completed** (2026-06-23) | Wiring map and extraction design for Phase 3 GUI split; archived with refactor-execution. |
 | [NO_PATIENT_INTERSECTION_WARNING_PLAN.md](NO_PATIENT_INTERSECTION_WARNING_PLAN.md) | **Completed** (2026-06-24) | Beam-miss warnings: per-event WARNING when beam does not intersect patient phantom; `beam_miss_warn` setting (off/summary/per_event); all-miss sentinel; GUI toast throttle; handler leak fix. |
+| [PATIENT_SIZE_SCALING_PLAN.md](PATIENT_SIZE_SCALING_PLAN.md) | **Completed** (2026-06-25) | Human STL body-habitus scaling: `scale_lat`/`scale_ap`/`scale_lon`, anchored mesh scaling, recomputed normals, Settings sliders, and geometry/dose plumbing. |
 
 For active work, see [TO_DO.md](../../TO_DO.md) and execution plans in [../](../).

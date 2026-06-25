@@ -12,8 +12,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Agent guidance playbook and advisory check** (2026-06-25): added `dev-docs/AGENT_PLAYBOOK.md`,
+  thin `GEMINI.md` / `QWEN.md` pointer files, and `scripts/check_agent_guidance.py` (pre-commit advisory;
+  `--strict` available) to flag duplicated or drifting agent instructions, overgrown `TO_DO.md`, and
+  completed-looking active execution plans.
 - **Beam-miss warnings** (2026-06-24) — when an irradiation event deposits zero dose (beam does not intersect the patient phantom), a per-event `WARNING` identifies the event index, kVp, filtration, and field area. Configurable via `beam_miss_warn` setting (`"per_event"` / `"summary"` / `"off"`; CLI default `"per_event"`, GUI default `"summary"`); an all-miss sentinel always fires. Multi-exam auto-downgrades per-event to `"summary"`. GUI toast throttle at 5 messages (`_MAX_TOASTS`). Plan: `dev-docs/plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md`.
 - **Interactive Geometry offset sliders** (2026-06-24) — single-exam **patient offset** sliders and **table-origin override** sliders in the Geometry tab with debounced live 3D preview; read-only auto-detected table offsets in Settings and Calculate tabs; reset buttons. Plan: `dev-docs/plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
+- **Human phantom body-habitus scaling** (2026-06-25) — human STL phantoms can be directionally scaled with `phantom.scale_lat`, `phantom.scale_ap`, and `phantom.scale_lon` (defaults `1.0`, clamped to `0.5–2.0`). Scaling is applied before patient/table positioning, non-uniform scaling recomputes normals, and Settings → Phantom exposes human-only sliders that refresh Geometry preview and invalidate prior results. Plan: `dev-docs/plans/archive/PATIENT_SIZE_SCALING_PLAN.md`.
 
 ### Fixed
 
@@ -24,6 +29,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Agent and backlog docs** (2026-06-25): `CLAUDE.md` now imports `AGENTS.md` and points to
+  `dev-docs/AGENT_PLAYBOOK.md`; `dev-docs/TO_DO.md` is trimmed to an active backlog with completed history
+  redirected to `CHANGELOG.md` and archived plans.
 - **GUI module split for multi-exam geometry prep** (2026-06-24) — Part I of `MULTI_EXAM_GEOMETRY_OFFSETS_PLAN`: split `gui/helpers.py` into `settings_builder`, `exam_loaders`, `exam_transforms`, and `geometry_preview` (stub); `helpers.py` is now a thin facade under the CI line cap. Loader seeds per-exam `d_*` from globals before reset (T20); Settings per-exam offset edits refresh Geometry sliders (T25).
 - **Multi-exam Geometry Phase 0** (2026-06-24) — Part II: `geometry_preview.py` lifecycle/slice helpers, `EXAM_INDEX_COLUMN` for stable preview slicing, C1 banner + exam selector, `make_geometry_fig` active-exam/composite args; `reset_results` no longer clears `active_exam_index` (T2).
 - **Multi-exam table-origin sliders (Geometry)** (2026-06-24) — Part III: table-origin card visible per active exam in multi-exam mode; slider limits refresh on exam switch; reset commits `meta[active]` (T3, T5a).

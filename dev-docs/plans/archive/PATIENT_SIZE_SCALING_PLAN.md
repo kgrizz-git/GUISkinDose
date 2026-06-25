@@ -1,6 +1,6 @@
 # Patient-Size / Body-Habitus Scaling Plan
 
-> **Status:** Reviewed and ready for implementation.
+> **Status:** Completed and archived.
 > **Last reviewed:** 2026-06-25.
 
 Plan for `TO_DO.md` item: *"More patient sizes / phantom body-habitus scaling."*
@@ -299,4 +299,4 @@ This future work is complementary to scaling and should not block the scaling im
 | 2026-06-24 | Plan authored |
 | 2026-06-25 | Review completed; implementation hazards and test requirements folded into plan |
 | 2026-06-25 | External assessment reviewed; logger setup and normal-magnitude test guidance added |
-| -- | Implementation pending |
+| 2026-06-25 | Implementation shipped; plan archived |

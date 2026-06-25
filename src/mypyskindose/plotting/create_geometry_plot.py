@@ -48,6 +48,7 @@ def create_geometry_plot(
             if isinstance(settings.phantom.human_mesh, tuple)
             else f"{settings.phantom.human_mesh}{c.PHANTOM_HUMAN_MESH_SPARSE_MODEL_ENDING if settings.mode == c.MODE_PLOT_PROCEDURE and settings.phantom.model == c.PHANTOM_MODEL_HUMAN else ''}"
         ),  # override dense .stl phantoms in plot_procedure .html plotting
+        human_scale=(settings.phantom.scale_lat, settings.phantom.scale_ap, settings.phantom.scale_lon),
     )
 
     # position objects in starting position

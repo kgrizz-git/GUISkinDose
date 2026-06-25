@@ -49,3 +49,6 @@ class PageContext:
     refresh_exams_table: Callable[[], None] = field(default=_noop)
     # Geometry tab registers this to clear the stale-dose caption after a successful calc.
     clear_offset_stale_caption: Callable[[], None] = field(default=_noop)
+    # Geometry tab registers this so Settings changes that affect phantom geometry
+    # can request the same debounced preview refresh used by Geometry controls.
+    refresh_geometry_preview: Callable[[], None] = field(default=_noop)
