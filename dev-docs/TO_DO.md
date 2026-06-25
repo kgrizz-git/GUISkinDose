@@ -37,12 +37,12 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
-  source RDSRs before expanding vendor adapters.
+  source RDSRs before expanding vendor adapters. Plan: [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) (Phase 2).
 
 ### GUI / UX
 
 - [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
-  a clear in-app note and axis legend.
+  a clear in-app note and axis legend. Plan: [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.

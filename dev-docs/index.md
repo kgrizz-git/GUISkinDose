@@ -93,6 +93,7 @@ Phased detail derived from diagnostics or master plans.
 |---|---|
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
+| [plans/VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) | Clarify current `X/LON`, `Y/VER`, `Z/LAT` plot labels, Data tab aliases, vendor-coordinate validation, and GUI warnings. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |
 
