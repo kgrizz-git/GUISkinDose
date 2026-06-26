@@ -1,5 +1,7 @@
 # Body Habitus cm Display Plan
 
+**Status:** Completed (2026-06-26). Archived after implementation.
+
 Replace the bare scaling-factor readouts on the three body-habitus sliders
 (`phantom_scale_lat`, `phantom_scale_ap`, `phantom_scale_lon`) with labels that
 also show the **resulting mesh dimension in centimeters**, computed as
@@ -289,17 +291,17 @@ a usable slider track through `min-w-[100px]`.
 
 ## Verification checklist
 
-- [ ] Baseline extents load correctly for all 7 full-resolution meshes
-- [ ] All three slider labels render `N.NNx  (XX.X cm)` and use literal ASCII `x`
-- [ ] cm labels update on slider drag (live, not just on release)
-- [ ] cm labels update on mesh switch (cache hit after first lookup)
-- [ ] Unknown mesh name shows `—`, no crash, cached so a drag does not retry the lookup
-- [ ] Corrupt or unreadable STL shows `—`, no crash, warning logged once
-- [ ] Non-human phantom model hides the scaling section entirely
-- [ ] Multi-exam: switching mesh in dropdown updates all labels
-- [ ] Closure-capture correctness: each label uses its own `attr`/`axis` (no cross-talk when one slider is dragged)
-- [ ] Multi-bind pattern matches the existing `table_offset_label` precedent in `src/mypyskindose/gui/tabs/settings.py`
-- [ ] Layout remains readable at min/max values: value label fits in its fixed
+- [x] Baseline extents load correctly for all 7 full-resolution meshes
+- [x] All three slider labels render `N.NNx  (XX.X cm)` and use literal ASCII `x`
+- [x] cm labels update on slider drag (live, not just on release)
+- [x] cm labels update on mesh switch (cache hit after first lookup)
+- [x] Unknown mesh name shows `—`, no crash, cached so a drag does not retry the lookup
+- [x] Corrupt or unreadable STL shows `—`, no crash, warning logged once
+- [x] Non-human phantom model hides the scaling section entirely
+- [x] Multi-exam: switching mesh in dropdown updates all labels
+- [x] Closure-capture correctness: each label uses its own `attr`/`axis` (no cross-talk when one slider is dragged)
+- [x] Multi-bind pattern matches the existing `table_offset_label` precedent in `src/mypyskindose/gui/tabs/settings.py`
+- [x] Layout remains readable at min/max values: value label fits in its fixed
       width and the slider track stays usable beside it
-- [ ] `__all__` list in `helpers.py` remains alphabetically sorted after the new entry is inserted
-- [ ] `ruff check`, `basedpyright`, and `pytest tests/unittests/ -k "mesh or scale"` all pass on the modified files
+- [x] `__all__` list in `helpers.py` remains alphabetically sorted after the new entry is inserted
+- [x] `ruff check`, `basedpyright`, and `pytest tests/unittests/ -k "mesh or scale"` all pass on the modified files

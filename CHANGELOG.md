@@ -12,6 +12,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Body-habitus cm readouts** (2026-06-26) — Settings → Phantom body-habitus
+  sliders now show the scaled human-mesh dimension in centimeters beside the
+  scale factor, update on slider drag and mesh switch, and fail soft to `—` for
+  unknown or unreadable STL meshes. Plan:
+  `dev-docs/plans/archive/BODY_HABITUS_CM_DISPLAY_PLAN.md`.
 - **First-run GUI onboarding** (2026-06-25) — first GUI page render shows a persistent onboarding
   modal explaining accepted input files, workflow steps, local-only processing, and result exports.
   Users can persist "Don't show this again" in `~/.mypyskindose/gui.json`; native window geometry
@@ -31,6 +36,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Geometry slider label placement** (2026-06-26) — Geometry tab slider value
+  labels now sit adjacent to their sliders instead of wrapping to the following
+  row. Plan: `dev-docs/plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md`.
 - **Cross-tab slider sync in GUI** (2026-06-25) — table-origin spinbox changes in Settings → Per-exam corrections now refresh Geometry sliders; switching to the Geometry tab (via the tab strip or the left nav drawer) refreshes sliders, value labels, and the live preview figure. Plan: `dev-docs/plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md`.
 - **Geometry tab render loop** (2026-06-25) — stop Plotly re-rendering on a 0.25 s timer after slider drags or external refresh; break the cycle with an `_in_render_chain` closure flag. Plan: `dev-docs/plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md`.
 - **`_CalcWarningCollector` handler leak in GUI** (2026-06-24) — multi-exam `run_calculation` branch in `gui/helpers.py` never removed the temporary log handler, causing exponentially duplicated toasts across runs. Fixed by widening the `try/finally` to wrap both single-exam and multi-exam branches. (Phase 0 of no-patient-intersection warning plan.)
