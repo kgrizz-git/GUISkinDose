@@ -96,6 +96,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) | Clarify current `X/LON`, `Y/VER`, `Z/LAT` plot labels, Data tab aliases, vendor-coordinate validation, and GUI warnings. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |
+| [plans/BODY_HABITUS_CM_DISPLAY_PLAN.md](plans/BODY_HABITUS_CM_DISPLAY_PLAN.md) | Show actual cm dimensions on body-habitus scaling sliders instead of raw factors. |
 
 ## Archived plans (`plans/archive/`)
 

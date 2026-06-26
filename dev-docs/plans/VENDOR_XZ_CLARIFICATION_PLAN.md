@@ -147,6 +147,7 @@ This accepts the 2026-06-25 assessment's state-frame concern while preserving th
    - Geometry and Per-exam table-origin controls always operate in the final plotted frame after vendor corrections
    - manual table-origin overrides are stored in source/import coordinates internally, then mapped to the plotted frame for display and editing
    - `VENDOR_COORDINATE_SYSTEMS.md` documents the anatomical/internal-coordinate discussion for developers
+   - `AGENTS.md` and shared agent/developer guidance must not keep the stale shorthand `X = lateral, Y = longitudinal, Z = vertical` without also warning that the current plotted PySkinDose display frame is `X/LON`, `Y/VER`, `Z/LAT`. If this plan leaves the deeper anatomical-coordinate contradiction unresolved, update the guidance to point readers here and to `VENDOR_COORDINATE_SYSTEMS.md` instead of presenting the stale shorthand as settled behavior.
 
 6. **Geometry slider labels** — make one consistent naming pass in `src/mypyskindose/gui/tabs/geometry.py`:
    - patient offset labels: `Longitudinal (X/LON)`, `Vertical (Y/VER)`, `Lateral (Z/LAT)`
@@ -183,7 +184,7 @@ This accepts the 2026-06-25 assessment's state-frame concern while preserving th
 | DICOM RDSR Philips examples | real DICOM examples exist in `src/mypyskindose/example_data/RDSR/` | characterize large offset behavior and sign handling |
 | DICOM RDSR GE examples | no bundled GE DICOM fixture currently exists | obtain a real GE RDSR or matched de-identified fixture; characterize whether `Tx`/`Tz` need swapping and keep golden values stable |
 | `generic_rdsr_like` | synthetic RDSR-shaped fixture exists | confirm round-trip against source RDSR parser output |
-| `radimetrics` | synthetic Siemens fixture only | mark real matched export + source RDSR as missing until obtained |
+| `radimetrics` | synthetic Siemens fixture exists; gitignored local GE Radimetrics-style exports exist in `test_data_gitignored/` | characterize the local GE exports as private validation inputs for schema detection, GE warning behavior, and `swap_lat_lon` UI behavior; still mark real matched export + source RDSR as missing until obtained |
 | `dosetrack` | synthetic Siemens fixture only; real Philips XLSX missing | mark Philips swap path and real XLSX validation as unvalidated until obtained |
 | `qaelum` | stub adapter exists; no real export fixture | mark adapter unimplemented and coordinate frame unvalidated until a matched export + source RDSR is obtained |
 | `dosemonitor` | stub adapter exists; no real export fixture | mark adapter unimplemented and coordinate frame unvalidated until a matched export + source RDSR is obtained |
@@ -236,10 +237,12 @@ Phase 3 depends on Phase 2's validation matrix.
 | Data tab display aliases | `gui.tabs.data` | Mount or isolate the column-building helper and assert `Tx (X/LON)`, `Ty (Y/VER)`, `Tz (Z/LAT)` labels. |
 | Data export column stability | `gui.tabs.data` | Export a small DataFrame and assert raw column names remain `Tx`, `Ty`, `Tz`. |
 | Help source/mirror sync | docs + script | Edit `docs/source/gui_help/geometry_workflow.md`; run `python scripts/sync_gui_help.py`; assert mirrored file matches. |
+| Agent/developer guidance consistency | docs | Assert `AGENTS.md` / shared guidance no longer present stale anatomical shorthand as the active plotted-frame convention without the PySkinDose display-frame caveat. |
 | Geometry slider labels | `gui.tabs.geometry` | GUI test or text assertion confirming patient and table-origin labels include the same `X/LON`, `Y/VER`, `Z/LAT` frame. |
 | GE / swapped table-origin behavior | `gui.exam_transforms` / `gui.offset_handlers` | With `swap_lat_lon=True`, call `stage_table_origin_axis(meta, "x", final_detected_x + 10)` and assert final plotted `Tx` changes by 10 while final `Tz` does not receive that X delta. Repeat the inverse for Z. |
 | Toggle-after-override behavior | `gui.exam_transforms` / `gui.offset_handlers` | Set a source-frame table-origin override with `swap_lat_lon=False`, then toggle `swap_lat_lon=True`; assert `effective_table_origin(meta)` transposes the displayed X/Z values and the stored source-frame override still composes correctly through `_apply_transform_flags()`. |
 | Cross-tab table-origin synchronization | `gui.tabs.geometry` / `gui.tabs._per_exam` | Exercise or isolate the refresh callbacks so Geometry edits refresh Per-exam controls, Per-exam edits refresh Geometry controls, and toggling `swap_lat_lon` refreshes both final-frame displays. |
+| Local GE tabular characterization | `test_data_gitignored/` + `radimetrics` adapter | When available locally, run the gitignored GE Radimetrics-style exports through schema detection/normalization and record non-sensitive aggregate coordinate ranges plus warnings; do not commit private exports. |
 | Vendor validation matrix | docs | Grep `VENDOR_COORDINATE_SYSTEMS.md` for each shipped adapter and its validation status. |
 | Optional axis label toggle | Geometry / figures | Toggle from `"pyskindose"` to `"derived"` and assert axis titles update without changing plotted coordinates. |
 
@@ -261,15 +264,17 @@ Add focused GUI/plot tests for any new helpers introduced by Phase 1 or Phase 3.
 4. Geometry and dose-map plots include a concise explanation that ties `X/Y/Z`, `Tx/Ty/Tz`, and `LON/VER/LAT` together.
 5. Data tab column headers show `Tx (X/LON)`, `Ty (Y/VER)`, and `Tz (Z/LAT)` without changing exported DataFrame column names.
 6. Geometry help content explains the coordinate labels and is edited from `docs/source/gui_help/`, with the mirrored GUI help file synced.
-7. Geometry patient-offset, table-origin, Per-exam table-origin, and body-habitus controls use one visible naming frame.
-8. The vendor-coordinate document records validation status for DICOM Siemens, Philips, and GE examples, `generic_rdsr_like`, `radimetrics`, `dosetrack`, `qaelum`, `dosemonitor`, `dosewatch`, and `normalized`.
-9. Unknown or fallback manufacturer handling is visible in the GUI before users run dose calculations and explicitly names `Tx`/`Tz` swap or large-offset double-correction risks when relevant.
-10. Any optional axis-label toggle defaults to the current PySkinDose display alias mode and never defaults to anatomical relabeling.
+7. `AGENTS.md` and shared agent/developer guidance no longer present the stale anatomical shorthand as the active plotted-frame convention without the PySkinDose display-frame caveat.
+8. Geometry patient-offset, table-origin, Per-exam table-origin, and body-habitus controls use one visible naming frame.
+9. The vendor-coordinate document records validation status for DICOM Siemens, Philips, and GE examples, `generic_rdsr_like`, `radimetrics`, `dosetrack`, `qaelum`, `dosemonitor`, `dosewatch`, and `normalized`.
+10. Unknown or fallback manufacturer handling is visible in the GUI before users run dose calculations and explicitly names `Tx`/`Tz` swap or large-offset double-correction risks when relevant.
+11. Any optional axis-label toggle defaults to the current PySkinDose display alias mode and never defaults to anatomical relabeling.
 
 ## 9. Open Questions
 
 - Should `VENDOR_COORDINATE_SYSTEMS.md` be revised in the same PR to clarify the difference between the anatomical documentation frame and the current PySkinDose display aliases? This plan should at least add a warning note if it leaves the deeper doc contradiction unresolved.
 - When real Radimetrics and DoseTrack matched export/source-RDSR fixtures become available, should they live under `tests/fixtures/tabular_inputs/` or a separate restricted-data fixture path?
+- Can any local gitignored GE Radimetrics-style export be paired with its original de-identified DICOM RDSR? Without that matched source, it helps characterize the tabular adapter and GE UI swap path, but it cannot fully validate the DICOM GE convention.
 - Should `--validate-coordinates` be its own plan after Phase 2 documents the validation matrix? Current recommendation: yes.
 
 ## 10. 18:04 Assessment Disposition

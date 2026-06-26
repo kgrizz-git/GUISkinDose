@@ -53,6 +53,12 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   per [DESIGN.md](../DESIGN.md).
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
 - [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
+- [ ] **Verify body habitus scaling correctness** — ensure scaling is applied only in the appropriate dimensions,
+  visible on the geometry/dose plot, and factored into dose calculations.
+- [ ] **Show body habitus scaling in cm** — update the scaling sliders to display actual cm values instead of
+  raw scaling factors. Plan: [BODY_HABITUS_CM_DISPLAY_PLAN.md](plans/BODY_HABITUS_CM_DISPLAY_PLAN.md).
+- [ ] **Reposition slider labels closer to sliders** — move slider number labels so they sit adjacent to their
+  slider rather than one row below. Plan: [SLIDER_LABEL_REPOSITION_PLAN.md](plans/SLIDER_LABEL_REPOSITION_PLAN.md).
 
 ### Harness / Repo Hygiene
 
