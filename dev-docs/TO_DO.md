@@ -57,8 +57,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   visible on the geometry/dose plot, and factored into dose calculations.
 - [ ] **Show body habitus scaling in cm** — update the scaling sliders to display actual cm values instead of
   raw scaling factors. Plan: [BODY_HABITUS_CM_DISPLAY_PLAN.md](plans/BODY_HABITUS_CM_DISPLAY_PLAN.md).
-- [ ] **Reposition slider labels closer to sliders** — move slider number labels so they sit adjacent to their
-  slider rather than one row below. Plan: [SLIDER_LABEL_REPOSITION_PLAN.md](plans/SLIDER_LABEL_REPOSITION_PLAN.md).
+- [x] **Reposition slider labels closer to sliders** — move slider number labels so they sit adjacent to their
+  slider rather than one row below. Plan: [SLIDER_LABEL_REPOSITION_PLAN.md](plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md).
 
 ### Harness / Repo Hygiene
 

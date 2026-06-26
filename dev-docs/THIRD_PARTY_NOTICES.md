@@ -7,7 +7,7 @@ full declared dependency set (all extras), pinned by `uv.lock`:
 uv sync --all-extras
 ```
 
-Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-06-24).
+Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-06-26).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -54,6 +54,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | fonttools | 4.62.1 | MIT | http://github.com/fonttools/fonttools |
 | frozenlist | 1.8.0 | Apache-2.0 | https://github.com/aio-libs/frozenlist |
 | fsspec | 2026.4.0 | BSD-3-Clause | Changelog, https://filesystem-spec.readthedocs.io/en/latest/changelog.html |
+| greenlet | 3.5.3 | MIT, PSF-2.0 | Homepage, https://greenlet.readthedocs.io |
 | h11 | 0.16.0 | MIT | https://github.com/python-hyper/h11 |
 | httpcore | 1.0.9 | BSD-3-Clause | Documentation, https://www.encode.io/httpcore |
 | httpx | 0.28.1 | BSD-3-Clause | Changelog, https://github.com/encode/httpx/blob/master/CHANGELOG.md |
@@ -121,6 +122,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pip-requirements-parser | 32.0.1 | MIT | https://github.com/nexB/pip-requirements-parser |
 | pip_audit | 2.10.0 | Apache-2.0 | Homepage, https://pypi.org/project/pip-audit/ |
 | platformdirs | 4.10.0 | MIT | Changelog, https://platformdirs.readthedocs.io/en/latest/changelog.html |
+| playwright | 1.60.0 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
 | plotly | 6.8.0 | MIT | Homepage, https://plotly.com/python/ |
 | pluggy | 1.6.0 | MIT | MIT |
 | plumbum | 2.0.1 | MIT | Homepage, https://github.com/tomerfiliba/plumbum |
@@ -135,15 +137,19 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pydantic | 2.13.4 | MIT | Homepage, https://github.com/pydantic/pydantic |
 | pydantic_core | 2.46.4 | MIT | https://github.com/pydantic/pydantic |
 | pydicom | 3.0.2 | MIT | documentation, https://pydicom.github.io/pydicom |
+| pyee | 13.0.1 | MIT | Repository, https://github.com/jfhbrook/pyee |
 | Pygments | 2.20.0 | BSD-2-Clause | Homepage, https://pygments.org |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
 | pytest | 9.0.3 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
 | pytest-asyncio | 1.4.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
+| pytest-base-url | 2.1.0 | MPL-2.0 | Homepage, https://github.com/pytest-dev/pytest-base-url |
+| pytest-playwright | 0.8.0 | Apache-2.0 | homepage, https://github.com/microsoft/playwright-pytest |
 | python-dateutil | 2.9.0.post0 | BSD-3-Clause, Apache-2.0 | https://github.com/dateutil/dateutil |
 | python-discovery | 1.4.0 | MIT | Changelog, https://github.com/tox-dev/python-discovery/releases |
 | python-dotenv | 1.2.2 | BSD-3-Clause | Source, https://github.com/theskumar/python-dotenv |
 | python-engineio | 4.13.2 | MIT | Homepage, https://github.com/miguelgrinberg/python-engineio |
 | python-multipart | 0.0.32 | Apache-2.0 | Homepage, https://github.com/Kludex/python-multipart |
+| python-slugify | 8.0.4 | MIT | https://github.com/un33k/python-slugify |
 | python-socketio | 5.16.2 | MIT | Homepage, https://github.com/miguelgrinberg/python-socketio |
 | python-utils | 3.9.1 | BSD-3-Clause | https://github.com/WoLpH/python-utils |
 | PyYAML | 6.0.3 | MIT | https://pyyaml.org/ |
@@ -174,6 +180,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | stack-data | 0.6.3 | MIT | http://github.com/alexmojaki/stack_data |
 | starlette | 0.50.0 | BSD-3-Clause | Homepage, https://github.com/Kludex/starlette |
 | stevedore | 5.8.0 | Apache-2.0 | Homepage, https://docs.openstack.org/stevedore |
+| text-unidecode | 1.3 | UNKNOWN, GPL-2.0-or-later, GPL-2.0-or-later | https://github.com/kmike/text-unidecode/ |
 | tifffile | 2026.3.3 | BSD-3-Clause | https://www.cgohlke.com |
 | tinycss2 | 1.5.1 | BSD-3-Clause | Changelog, https://github.com/Kozea/tinycss2/releases |
 | tomli | 2.4.1 | MIT | Homepage, https://github.com/hukkin/tomli |

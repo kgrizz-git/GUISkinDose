@@ -1,6 +1,6 @@
 # Slider Label Reposition Plan
 
-**Source:** [`dev-docs/TO_DO.md`](../TO_DO.md), line 60–61.
+**Source:** [`dev-docs/TO_DO.md`](../../TO_DO.md), line 60–61.
 
 ---
 
@@ -89,13 +89,25 @@ Note: because the inner container changes from `with ui.column():` to `with ui.r
 
 `patient_offset_card`, `table_origin_card`, their visibility bindings, badges, captions, and reset buttons are not modified. `_table_origin_card_visible()` is unaffected.
 
-### Step 3 — Add index entry (follow-up)
+### Step 3 — Documentation bookkeeping (follow-up)
 
-Add a row to the `## Execution plans` table in `dev-docs/index.md`. The link target (relative to `dev-docs/index.md`) is `plans/SLIDER_LABEL_REPOSITION_PLAN.md` and the description is "Reposition slider value labels adjacent to the slider on the Geometry tab." Wrap the path as a markdown link using the same format as the other rows in that table (e.g. the `plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md` row above).
+Two files need updating after the code change:
 
-Without this, `python scripts/check_doc_freshness.py` and `scripts/check_agent_guidance.py` won't see the new plan.
+**`dev-docs/index.md`** — add a row to the `## Execution plans` table. The link target (relative to `dev-docs/index.md`) is `plans/SLIDER_LABEL_REPOSITION_PLAN.md` and the description is "Reposition slider value labels adjacent to the slider on the Geometry tab." Wrap the path as a markdown link using the same format as the other rows in that table (e.g. the `plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md` row above). Without this, `python scripts/check_doc_freshness.py` and `scripts/check_agent_guidance.py` won't see the new plan.
 
-> **Note on the code block:** the verbatim index row cannot be embedded in this plan as a markdown code block — `scripts/check_doc_freshness.py` scans all lines (including fenced code blocks) for relative links, and any such link inside the plan would resolve against the plan's own path and trigger a broken-link error. Describe the entry textually instead, as above.
+**`dev-docs/TO_DO.md`** — mark the corresponding item done by changing `[ ]` to `[x]` on the "Reposition slider labels closer to sliders" bullet (around line 60–61).
+
+> **Note on code blocks:** verbatim index/TO_DO rows cannot be embedded as markdown code blocks — `scripts/check_doc_freshness.py` scans all lines (including fenced code blocks) for relative links, and any such link inside the plan would resolve against the plan's own path and trigger a broken-link error. Describe the entries textually instead, as above.
+
+### Step 4 — Archive this plan (follow-up)
+
+Per project conventions, completed execution plans are moved to `dev-docs/plans/archive/`. After Steps 1–3 are committed:
+
+1. Move `dev-docs/plans/SLIDER_LABEL_REPOSITION_PLAN.md` → `dev-docs/plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md`.
+2. In `dev-docs/index.md`, move the row from `## Execution plans` to `## Archived plans` and prefix the description with `**Completed** (date) —`.
+3. Add a row to `dev-docs/plans/archive/README.md` with status `**Completed**` and a brief note.
+
+Run `python scripts/check_doc_freshness.py` after archiving to confirm all links resolve.
 
 ## Value update code — no structural change needed
 

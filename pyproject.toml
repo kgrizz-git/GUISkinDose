@@ -58,6 +58,8 @@ dev = [
     "pre-commit>=4.0",
     "pytest>=7.0",
     "ruff>=0.15",
+    "playwright>=1.40",
+    "pytest-playwright>=0.4",
 ]
 
 [tool.setuptools]

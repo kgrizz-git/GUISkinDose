@@ -158,24 +158,23 @@ def build(ctx: PageContext) -> None:
 
                     patient_sliders: dict[str, ui.slider] = {}
                     patient_val_labels: dict[str, ui.label] = {}
-                    with ui.row().classes("w-full gap-4 items-center"):
-                        for axis, lbl, attr in (
-                            ("lon", "Longitudinal", "d_lon"),
-                            ("ver", "Vertical", "d_ver"),
-                            ("lat", "Lateral", "d_lat"),
-                        ):
-                            with ui.column().classes("grow gap-1"):
-                                ui.label(lbl).classes("text-caption text-grey-6")
-                                initial = read_patient_offset_value(state, attr)
-                                slider = ui.slider(
-                                    min=-PATIENT_OFFSET_SLIDER_RANGE_CM,
-                                    max=PATIENT_OFFSET_SLIDER_RANGE_CM,
-                                    step=0.5,
-                                    value=initial,
-                                ).classes("w-full").mark(f"patient-slider-{axis}")
-                                val_label = ui.label(f"{initial:.1f} cm").classes("text-caption mono-text")
-                                patient_sliders[attr] = slider
-                                patient_val_labels[attr] = val_label
+                    for axis, lbl, attr in (
+                        ("lon", "Longitudinal", "d_lon"),
+                        ("ver", "Vertical", "d_ver"),
+                        ("lat", "Lateral", "d_lat"),
+                    ):
+                        with ui.row().classes("w-full gap-2 items-center flex-nowrap"):
+                            ui.label(lbl).classes("w-24 text-caption text-grey-6")
+                            initial = read_patient_offset_value(state, attr)
+                            slider = ui.slider(
+                                min=-PATIENT_OFFSET_SLIDER_RANGE_CM,
+                                max=PATIENT_OFFSET_SLIDER_RANGE_CM,
+                                step=0.5,
+                                value=initial,
+                            ).classes("grow min-w-[100px]").mark(f"patient-slider-{axis}")
+                            val_label = ui.label(f"{initial:.1f} cm").classes("w-20 text-caption mono-text text-right")
+                            patient_sliders[attr] = slider
+                            patient_val_labels[attr] = val_label
 
                     def _sync_patient_sliders_from_meta(active_index: int | None = None) -> None:
                         idx = active_index if active_index is not None else _active_exam_index()
@@ -266,55 +265,54 @@ def build(ctx: PageContext) -> None:
                             table_val_labels[key].set_text(f"{origin[key]:.1f} cm")
                         table_guard["suppress"] = False
 
-                    with ui.row().classes("w-full gap-4 items-center"):
-                        idx0 = _active_exam_index()
-                        meta0 = (
-                            state.loaded_exam_meta[idx0]
-                            if idx0 < len(state.loaded_exam_meta)
-                            else {}
-                        )
-                        detected0 = meta0.get("table_origin_detected") or {
-                            "x": 0.0,
-                            "y": 0.0,
-                            "z": 0.0,
-                        }
-                        origin0 = effective_table_origin(meta0) if meta0 else detected0
-                        for key in ("x", "y", "z"):
-                            with ui.column().classes("grow gap-1"):
-                                ui.label(key.upper()).classes("text-caption text-grey-6")
-                                lo, hi = _table_slider_limits(detected0, key)
-                                initial = float(origin0.get(key, 0.0))
-                                slider = ui.slider(
-                                    min=lo,
-                                    max=hi,
-                                    step=0.5,
-                                    value=initial,
-                                ).classes("w-full").mark(f"table-slider-{key}")
-                                val_label = ui.label(f"{initial:.1f} cm").classes("text-caption mono-text")
-                                table_val_labels[key] = val_label
+                    idx0 = _active_exam_index()
+                    meta0 = (
+                        state.loaded_exam_meta[idx0]
+                        if idx0 < len(state.loaded_exam_meta)
+                        else {}
+                    )
+                    detected0 = meta0.get("table_origin_detected") or {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                    }
+                    origin0 = effective_table_origin(meta0) if meta0 else detected0
+                    for key in ("x", "y", "z"):
+                        with ui.row().classes("w-full gap-2 items-center flex-nowrap"):
+                            ui.label(key.upper()).classes("w-24 text-caption text-grey-6")
+                            lo, hi = _table_slider_limits(detected0, key)
+                            initial = float(origin0.get(key, 0.0))
+                            slider = ui.slider(
+                                min=lo,
+                                max=hi,
+                                step=0.5,
+                                value=initial,
+                            ).classes("grow min-w-[100px]").mark(f"table-slider-{key}")
+                            val_label = ui.label(f"{initial:.1f} cm").classes("w-20 text-caption mono-text text-right")
+                            table_val_labels[key] = val_label
 
-                                def _on_table_slider(e, k=key, s=slider) -> None:
-                                    nonlocal table_origin_pending, offset_changed_since_calc, last_table_origin_scrub
-                                    if table_guard["suppress"] or not state.loaded_exam_meta:
-                                        return
-                                    idx = _active_exam_index()
-                                    if idx >= len(state.loaded_exam_meta):
-                                        return
-                                    stage_table_origin_axis(
-                                        state.loaded_exam_meta[idx],
-                                        k,
-                                        float(s.value or 0.0),
-                                    )
-                                    table_origin_pending = True
-                                    last_table_origin_scrub = True
-                                    offset_changed_since_calc = True
-                                    _update_stale_caption()
-                                    _update_preview_caption()
-                                    table_val_labels[k].set_text(f"{float(s.value or 0.0):.1f} cm")
-                                    _schedule_debounced_render()
+                            def _on_table_slider(e, k=key, s=slider) -> None:
+                                nonlocal table_origin_pending, offset_changed_since_calc, last_table_origin_scrub
+                                if table_guard["suppress"] or not state.loaded_exam_meta:
+                                    return
+                                idx = _active_exam_index()
+                                if idx >= len(state.loaded_exam_meta):
+                                    return
+                                stage_table_origin_axis(
+                                    state.loaded_exam_meta[idx],
+                                    k,
+                                    float(s.value or 0.0),
+                                )
+                                table_origin_pending = True
+                                last_table_origin_scrub = True
+                                offset_changed_since_calc = True
+                                _update_stale_caption()
+                                _update_preview_caption()
+                                table_val_labels[k].set_text(f"{float(s.value or 0.0):.1f} cm")
+                                _schedule_debounced_render()
 
-                                slider.on_value_change(_on_table_slider)
-                                table_sliders[key] = slider
+                            slider.on_value_change(_on_table_slider)
+                            table_sliders[key] = slider
 
                     ui.button(
                         "Reset to auto-detected",

@@ -120,6 +120,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/FIRST_RUN_ONBOARDING_PLAN.md](plans/archive/FIRST_RUN_ONBOARDING_PLAN.md) | **Completed** (2026-06-25) — First-run GUI onboarding modal with local `gui.json` dismissal preference. |
 | [plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md) | **Completed** (2026-06-25) — Geometry table-origin slider value labels mirror patient-offset labels. |
 | [plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md) | **Completed** (2026-06-25) — Settings edits refresh Geometry sliders, labels, and preview on tab entry. |
+| [plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md](plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md) | **Completed** (2026-06-26) — Geometry tab slider value labels repositioned adjacent to sliders (per-axis `ui.row` replacing outer column layout). |
 
 ---
 
