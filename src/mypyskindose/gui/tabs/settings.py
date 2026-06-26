@@ -21,10 +21,11 @@ from ..constants import (
 from ..helpers import (
     any_table_origin_override,
     fallback_normalization_exam_count,
+    get_mesh_baseline_extents,
     on_global_patient_offset_change,
 )
 from ..page_context import PageContext
-from ..summary_formatters import format_table_offset_line, multi_exam_phantom_offset_caption
+from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..state import reset_results, state
 from ._per_exam import build_per_exam_section
 
@@ -46,6 +47,11 @@ BEAM_MISS_WARN_OPTIONS = {
 
 def _format_table_offset_line() -> str:
     return format_table_offset_line(state)
+
+
+def _format_scale_cm(scale_factor: float, axis: int) -> str:
+    extents = get_mesh_baseline_extents(state.human_mesh)
+    return format_scale_cm_label(scale_factor, axis, extents)
 
 
 def build(ctx: PageContext) -> None:
@@ -173,10 +179,10 @@ def build(ctx: PageContext) -> None:
                     )
                     with scale_section:
                         ui.label("Body habitus scaling").classes("text-caption text-grey-6")
-                        for label, attr in (
-                            ("Lateral / width", "phantom_scale_lat"),
-                            ("AP / vertical thickness", "phantom_scale_ap"),
-                            ("Longitudinal / head-foot", "phantom_scale_lon"),
+                        for label, attr, axis in (
+                            ("Lateral / width", "phantom_scale_lat", 0),
+                            ("AP / vertical thickness", "phantom_scale_ap", 1),
+                            ("Longitudinal / head-foot", "phantom_scale_lon", 2),
                         ):
                             with ui.row().classes("w-full gap-4 items-center"):
                                 ui.label(label).classes("w-48 text-caption")
@@ -187,12 +193,18 @@ def build(ctx: PageContext) -> None:
                                     value=getattr(state, attr),
                                 ).bind_value(state, attr).on(
                                     "update:model-value", _on_phantom_scale_change
-                                ).classes("grow")
-                                ui.label().bind_text_from(
+                                ).classes("grow min-w-[100px]")
+                                scale_label = ui.label().classes("w-40 shrink-0 text-caption mono-text text-right")
+                                scale_label.bind_text_from(
                                     state,
                                     attr,
-                                    backward=lambda v: f"{float(v):.2f}x",
-                                ).classes("mono-text")
+                                    backward=lambda v, a=axis: _format_scale_cm(float(v), a),
+                                )
+                                scale_label.bind_text_from(
+                                    state,
+                                    "human_mesh",
+                                    backward=lambda _v, a=attr, x=axis: _format_scale_cm(float(getattr(state, a)), x),
+                                )
 
             # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
             # editable block per loaded exam; registers ctx.refresh_per_exam.

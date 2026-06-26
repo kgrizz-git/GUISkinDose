@@ -1,6 +1,6 @@
 import csv
 import os
-from typing import List, Dict, Any, Optional, Tuple, Iterable
+from typing import List, Dict, Any, Optional, Tuple
 
 
 _ALIASES = {

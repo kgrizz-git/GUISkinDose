@@ -11,6 +11,8 @@ import logging
 import traceback
 from pathlib import Path
 
+from stl import mesh as stl_mesh
+
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
     EXAM_COLUMN,
@@ -55,6 +57,10 @@ from .geometry_preview import (
 from .settings_builder import build_settings, fallback_normalization_exam_count
 from .state import AppState
 
+_PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
+_MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
+_gui_logger = logging.getLogger("mypyskindose.gui.helpers")
+
 __all__ = [
     "EXAM_COLUMN",
     "EXAM_INDEX_COLUMN",
@@ -83,6 +89,7 @@ __all__ = [
     "get_example_rdsr_files",
     "get_excel_sheets",
     "get_human_mesh_names",
+    "get_mesh_baseline_extents",
     "load_rdsr",
     "load_tabular",
     "on_exams_loaded",
@@ -270,5 +277,45 @@ def get_example_rdsr_files() -> list[Path]:
 
 def get_human_mesh_names() -> list[str]:
     """Return available human mesh names (full-resolution only)."""
-    phantom_dir = Path(__file__).parent.parent / "phantom_data"
-    return sorted(p.stem for p in phantom_dir.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
+    return sorted(p.stem for p in _PHANTOM_DATA_DIR.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
+
+
+def get_mesh_baseline_extents(mesh_name: str) -> tuple[float, float, float]:
+    """Return (lat_extent, ap_extent, lon_extent) in cm for the unscaled mesh.
+
+    Each extent is ``max - min`` along axis 0/1/2 of the STL vertex array,
+    matching the column order used by ``_apply_human_scale`` in
+    ``phantom_class.py`` and the archived PATIENT_SIZE_SCALING_PLAN.
+
+    Results are cached per mesh name. Corrupt or unreadable STLs are cached as
+    ``(0.0, 0.0, 0.0)`` so the GUI can render ``—`` and avoid retrying a
+    broken read on every render.
+    """
+    if mesh_name in _MESH_EXTENT_CACHE:
+        return _MESH_EXTENT_CACHE[mesh_name]
+
+    phantom_path = _PHANTOM_DATA_DIR / f"{mesh_name}.stl"
+    if not phantom_path.exists():
+        _MESH_EXTENT_CACHE[mesh_name] = (0.0, 0.0, 0.0)
+        return _MESH_EXTENT_CACHE[mesh_name]
+
+    try:
+        mesh_data = stl_mesh.Mesh.from_file(str(phantom_path))
+        verts = mesh_data.vectors.reshape(-1, 3)
+        if verts.size == 0:
+            raise ValueError("STL contains no triangles")
+        extents = (
+            float(verts[:, 0].max() - verts[:, 0].min()),
+            float(verts[:, 1].max() - verts[:, 1].min()),
+            float(verts[:, 2].max() - verts[:, 2].min()),
+        )
+    except Exception as exc:
+        _gui_logger.warning(
+            "Could not read baseline extents for human mesh %r (%s); rendering cm display as '—'.",
+            mesh_name,
+            exc,
+        )
+        extents = (0.0, 0.0, 0.0)
+
+    _MESH_EXTENT_CACHE[mesh_name] = extents
+    return extents

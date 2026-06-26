@@ -18,8 +18,8 @@ unscaled STL vertices along the slider's axis. Example: `1.00x` becomes
   adult values. The display shows the **actual STL
   extent**, which is what the scaling math is anchored against.
 - **Axis convention.** `col 0 = lateral, col 1 = AP, col 2 = longitudinal` —
-  this is the convention used by `_apply_human_scale` in
-  `src/mypyskindose/phantom_class.py:281-294` and the archived
+  this is the convention used by `_apply_human_scale` in the human-mesh scaling
+  branch of `src/mypyskindose/phantom_class.py` and the archived
   `dev-docs/plans/archive/PATIENT_SIZE_SCALING_PLAN.md` §2. The display is
   consistent with existing scaling logic, not with the `(LON, VER, LAT)`
   hover-label convention in `figures.py` / `create_geometry_plot_texts.py`
@@ -56,6 +56,9 @@ unscaled STL vertices along the slider's axis. Example: `1.00x` becomes
    already imported in `helpers.py`. Do **not** add `numpy`; it is unnecessary
    for this helper and would be unused in the proposed implementation.
 7. Existing scaling behaviour is unchanged — this is **display-only**.
+8. The longer cm labels do not squeeze the slider track or overflow their row;
+   use a fixed-width, non-shrinking value label and a slider min-width, matching
+   the layout guard used by the archived Geometry slider-label reposition work.
 
 ---
 
@@ -203,9 +206,9 @@ for label, attr, axis in (
             value=getattr(state, attr),
         ).bind_value(state, attr).on(
             "update:model-value", _on_phantom_scale_change
-        ).classes("grow")
+        ).classes("grow min-w-[100px]")
 
-        _lbl = ui.label().classes("mono-text")
+        _lbl = ui.label().classes("w-40 shrink-0 text-caption mono-text text-right")
         _lbl.bind_text_from(
             state, attr,
             backward=lambda v, a=axis: _format_scale_cm(v, a),
@@ -222,6 +225,9 @@ for label, attr, axis in (
 handler need no changes — the multi-bind on the label is reactive. Keep the
 initial label text empty (`ui.label()`) because the first bind populates it
 when the element is created, matching the existing slider labels in this file.
+The fixed `w-40` value-label width comfortably fits the longest expected label
+(`2.00x  (365.5 cm)` for the widest current mesh at max scale) while preserving
+a usable slider track through `min-w-[100px]`.
 
 ## Edge cases
 
@@ -240,7 +246,7 @@ when the element is created, matching the existing slider labels in this file.
 |------|--------|
 | `src/mypyskindose/gui/helpers.py` | Add `from stl import mesh as stl_mesh`, `_PHANTOM_DATA_DIR`, `_gui_logger`, `_MESH_EXTENT_CACHE`, and `get_mesh_baseline_extents()` near the mesh helpers; refactor `get_human_mesh_names()` to read its path from `_PHANTOM_DATA_DIR` (behavior-preserving: same return type, same sorting, same `_reduced_1000t` filter); add `"get_mesh_baseline_extents"` to `__all__` between `"get_human_mesh_names"` and `"load_rdsr"` |
 | `src/mypyskindose/gui/summary_formatters.py` | Add `format_scale_cm_label()` (pure, takes extents explicitly) |
-| `src/mypyskindose/gui/tabs/settings.py` | Add `get_mesh_baseline_extents` and `format_scale_cm_label` to existing grouped imports; add `_format_scale_cm()` between `_format_table_offset_line` and `build`; replace the current `phantom_scale_*` label `bind_text_from` with the multi-bind in the slider loop |
+| `src/mypyskindose/gui/tabs/settings.py` | Add `get_mesh_baseline_extents` and `format_scale_cm_label` to existing grouped imports; add `_format_scale_cm()` between `_format_table_offset_line` and `build`; replace the current `phantom_scale_*` label `bind_text_from` with the multi-bind in the slider loop; give the longer value label a fixed width and the slider a minimum width |
 | `src/mypyskindose/gui/state.py` | No changes; labels are computed from existing state in `bind_text_from` callbacks |
 
 ---
@@ -293,5 +299,7 @@ when the element is created, matching the existing slider labels in this file.
 - [ ] Multi-exam: switching mesh in dropdown updates all labels
 - [ ] Closure-capture correctness: each label uses its own `attr`/`axis` (no cross-talk when one slider is dragged)
 - [ ] Multi-bind pattern matches the existing `table_offset_label` precedent in `src/mypyskindose/gui/tabs/settings.py`
+- [ ] Layout remains readable at min/max values: value label fits in its fixed
+      width and the slider track stays usable beside it
 - [ ] `__all__` list in `helpers.py` remains alphabetically sorted after the new entry is inserted
 - [ ] `ruff check`, `basedpyright`, and `pytest tests/unittests/ -k "mesh or scale"` all pass on the modified files

@@ -82,7 +82,6 @@ def sync(
 
     source_basenames = {path.name for path in sources}
     target_paths = list(target_dir.glob("*.md"))
-    target_basenames = {path.name for path in target_paths}
 
     drift: list[str] = []
     actions: list[str] = []

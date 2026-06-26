@@ -21,6 +21,7 @@ from nicegui.testing import User
 
 import mypyskindose.gui.tabs.geometry as geometry_tab
 from mypyskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
+from mypyskindose.gui.state import state
 
 pytest.importorskip("nicegui")
 
@@ -90,11 +91,20 @@ async def test_all_tab_headings_render(user: User) -> None:
 
 @pytest.mark.asyncio
 async def test_phantom_scale_controls_render_for_default_human_model(user: User) -> None:
-    await user.open("/")
-    await user.should_see("Body habitus scaling")
-    await user.should_see("Lateral / width")
-    await user.should_see("AP / vertical thickness")
-    await user.should_see("Longitudinal / head-foot")
+    old_model = state.phantom_model
+    old_mesh = state.human_mesh
+    try:
+        state.phantom_model = "human"
+        state.human_mesh = "hudfrid"
+        await user.open("/")
+        await user.should_see("Body habitus scaling")
+        await user.should_see("Lateral / width")
+        await user.should_see("AP / vertical thickness")
+        await user.should_see("Longitudinal / head-foot")
+        await user.should_see("cm")
+    finally:
+        state.phantom_model = old_model
+        state.human_mesh = old_mesh
 
 
 @pytest.mark.asyncio

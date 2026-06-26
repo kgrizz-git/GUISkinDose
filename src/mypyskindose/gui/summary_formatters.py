@@ -51,6 +51,14 @@ def format_table_offset_line(app_state: AppState) -> str:
     )
 
 
+def format_scale_cm_label(scale_factor: float, axis: int, extents: tuple[float, float, float]) -> str:
+    """Format the scale factor and scaled mesh extent for a body-habitus slider."""
+    if extents[axis] == 0.0:
+        return f"{scale_factor:.2f}x  (—)"
+    cm = scale_factor * extents[axis]
+    return f"{scale_factor:.2f}x  ({cm:.1f} cm)"
+
+
 def multi_exam_phantom_offset_caption() -> str:
     """Settings Phantom expansion caption when global spinboxes are hidden (C6)."""
     return _C6_MULTI_EXAM_PHANTOM
