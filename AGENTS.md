@@ -78,7 +78,7 @@ Set `settings.output_format` to:
 | `"cylinder"` | Elliptic cylinder |
 | `"human"` | STL mesh (set `settings.phantom.human_mesh`) |
 
-Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`
+Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`, `senior_male`, `senior_female`
 
 Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `scale_ap`, and
 `scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in

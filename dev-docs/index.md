@@ -1,6 +1,6 @@
 # Documentation index
 
-_Date: 2026-06-12_
+_Date: 2026-06-26_
 
 Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) for agent orientation, then [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) for validation commands and the source-of-truth map.
 
@@ -82,6 +82,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md) | Round 1 API review: shutdown timing, multi-monitor validation; NiceGUI proxy/event APIs confirmed. |
 | [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) | Geometry tab render-cycle root cause; review of the original fix (regression in 7 external `ctx.refresh_per_exam()` callers); revised fix uses an `_in_render_chain` flag. |
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md) | Round 2 gap review: restore-from-maximize, title-bar validation, maximized event filtering, debounce lifecycle, CI-safe tests, `Path.replace`. |
+| [assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md](assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md) | Audit of coordinate naming contradictions: physical geometry, DICOM attribute names, and historical PySkinDose plot aliases differ; current recommendation is documentation/comment cleanup plus fixture-backed validation before behavior changes. |
 
 ---
 
@@ -93,6 +94,7 @@ Phased detail derived from diagnostics or master plans.
 |---|---|
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
+| [plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | Centralizes coordinate terminology across physical axes, DICOM table-coordinate attributes, PySkinDose plot aliases, vendor conventions, GE validation, GUI help, and agent guidance. |
 | [plans/VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) | Clarify current `X/LON`, `Y/VER`, `Z/LAT` plot labels, Data tab aliases, vendor-coordinate validation, and GUI warnings. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |

@@ -23,6 +23,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ### Input Data And Calculation
 
+- [ ] **Explore additional phantoms** — investigate and add support for new anthropomorphic phantoms. See [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) for potential sources.
 - [ ] **Simplified DICOM-only estimate** — investigate a fast pre-scan/fallback estimate from DICOM fields without
   the full phantom-mesh pipeline.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
@@ -36,8 +37,17 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
+- [ ] **Coordinate conventions cleanup** — centralize physical axes, DICOM table-coordinate definitions,
+  PySkinDose plot aliases, vendor normalization signs, GE confirmed table-travel convention, and tabular
+  `Tx`/`Tz` correction behavior. Plan: [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md).
+  Assessment: [YZ_AXIS_INCONSISTENCY_ASSESSMENT.md](assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md).
+  Validation still needed: one matched GE DICOM RDSR plus tabular export.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
-  source RDSRs before expanding vendor adapters. Plan: [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) (Phase 2).
+  source RDSRs before expanding vendor adapters. Covered by
+  [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7 and
+  [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) Phase 2.
+- [ ] **Patient orientation support (head-first vs feet-first, prone vs supine)** — investigate whether the code and GUI allow choosing patient orientation (head-first / feet-first) and positioning (prone / supine). See [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
+
 
 ### GUI / UX
 
