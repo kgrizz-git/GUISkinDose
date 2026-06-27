@@ -98,6 +98,10 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 ## Research Ideas
 
 - [ ] Call it GUISkinDose?
+- [ ] **OWASP principles**
+  - [ ] Investigate and research OWASP Top 10 and relevant security principles for the project
+  - [ ] Summarize findings with links to OWASP resources and project-specific guidance
+  - [ ] Look into security-analysis tools (e.g., bandit, semgrep, safety) or adding custom analysis / CI integration
 
 ## Open Questions
 
