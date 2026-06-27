@@ -6,6 +6,7 @@
 # Run manually:
 #   pre-commit run --all-files
 #   pre-commit run --hook-stage pre-push basedpyright --all-files
+#   pre-commit run --hook-stage pre-push semgrep --all-files
 # CI still runs the full matrix (pytest, basedpyright, bandit, pip-audit, gui-smoke, etc.).
 
 minimum_pre_commit_version: "3.0.0"
@@ -102,6 +103,14 @@ repos:
       - id: basedpyright
         name: basedpyright (type check)
         entry: basedpyright
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: semgrep
+        name: semgrep (OWASP Top 10 SAST)
+        entry: semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts
         language: system
         pass_filenames: false
         always_run: true

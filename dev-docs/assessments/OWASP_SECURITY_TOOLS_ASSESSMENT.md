@@ -56,28 +56,31 @@ Multi-language SAST with dataflow analysis and [official OWASP Top 10 rule packs
 - name: Semgrep OWASP Top 10
   uses: semgrep/semgrep-action@v1
   with:
-    config: p/owasp-top-10
+    config: p/owasp-top-ten
     audit_on: push
 ```
 
 Or run locally:
 ```bash
 pip install semgrep safety
-semgrep --config=p/owasp-top-10 --error src/mypyskindose
+semgrep --config=p/owasp-top-ten --error src/mypyskindose
 safety scan
 ```
 
-### 2. safety (medium priority)
+### 2. safety (medium priority — CI optional)
 
 Alternative/complement to pip-audit. Checks against Safety DB's broader advisory feed
 (not just PyPI). Catches some CVEs pip-audit misses (and vice versa — both is ideal).
 
-> **API key required:** Safety >=3.0 requires authentication (`safety auth` or
+> **API key required for `safety scan`:** Safety >=3.0 requires authentication (`safety auth` or
 > `SAFETY_API_KEY` env var). Free tier available at [safetycli.com](https://safetycli.com).
+> CI skips the step when the secret is unset; `pip-audit` remains the no-key dependency gate.
+> See [SECURITY_TOOLS_CI_PLAN.md](../plans/SECURITY_TOOLS_CI_PLAN.md).
 
 ```bash
 pip install safety
-safety scan
+export SAFETY_API_KEY=...   # or safety auth locally
+safety scan --detailed-output
 ```
 
 ### 3. grype (medium priority)
@@ -112,11 +115,11 @@ existing coverage.
 
 ## Recommendation summary
 
-| Action | Effort | Impact | Priority |
-|--------|--------|--------|----------|
-| Add **semgrep** (OWASP Top 10 rules) to CI `static-analysis` job | Low | High (fills biggest SAST gap) | **High** |
-| Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium |
-| Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low |
+| Action | Effort | Impact | Priority | Status |
+|--------|--------|--------|----------|--------|
+| Add **semgrep** (OWASP Top 10 rules) to CI `static-analysis` job | Low | High (fills biggest SAST gap) | **High** | **Shipped** (CI + pre-push) |
+| Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium | **Shipped** (CI; skipped without `SAFETY_API_KEY`) |
+| Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low | Planned |
 
 ### Quick start (local)
 
@@ -127,6 +130,6 @@ pip-audit --desc on
 
 # To add (pip install):
 pip install semgrep safety
-semgrep --config=p/owasp-top-10 --error src/mypyskindose
+semgrep --config=p/owasp-top-ten --error src/mypyskindose
 safety scan
 ```

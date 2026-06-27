@@ -102,7 +102,7 @@ See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implem
 
 ```bash
 pip install -e .
-pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, pre-commit + stubs (matches CI)
+pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, safety, pre-commit + stubs (matches CI)
 pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-started notebook
 ```
 
@@ -117,6 +117,11 @@ pip install -e ".[dev,gui]"
 pre-commit install
 pre-commit install --hook-type pre-push
 ```
+
+The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
+needs network access (offline pushes will fail). On Windows, semgrep runs natively (beta)
+but may need `PYTHONUTF8=1` in the environment; treat the local pre-push hook as
+best-effort on Windows — CI runs semgrep on Ubuntu.
 
 Run the getting-started notebook:
 ```bash

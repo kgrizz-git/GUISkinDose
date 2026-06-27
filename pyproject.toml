@@ -55,6 +55,8 @@ dev = [
     "types-Pillow",
     "pip-audit>=2.7",
     "bandit>=1.8",
+    "semgrep>=1.100",
+    "safety>=3.0",
     "pre-commit>=4.0",
     "pytest>=7.0",
     "ruff>=0.15",

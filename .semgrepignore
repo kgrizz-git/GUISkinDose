@@ -1,0 +1,6 @@
+tests/
+.venv/
+venv/
+build/
+dist/
+backups/

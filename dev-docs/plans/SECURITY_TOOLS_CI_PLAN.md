@@ -19,9 +19,12 @@ Plan reviewed against the live config (`pyproject.toml`, `.pre-commit-config.yam
   The supported pattern is a **job-level** `env:` mapping the secret, then
   `if: env.SAFETY_API_KEY != ''` on the step (step-level `env:` is not reliably visible
   to that same step's `if:`).
-- **semgrep network + metrics.** `--config=p/owasp-top-10` is fetched from the Semgrep
-  registry, so pre-push/CI need internet (offline pushes fail). Add `--metrics=off`
-  to avoid sending anonymized telemetry.
+- **semgrep rule pack name.** Registry pack is `p/owasp-top-ten` (not `p/owasp-top-10`, which 404s).
+- **semgrep scan scope.** Pre-push and CI limit targets to `src/mypyskindose scripts` so workflow YAML
+  shell-injection rules do not block on existing `.github/workflows/` patterns.
+- **semgrep network + metrics.** `--config=p/owasp-top-ten` is fetched from the Semgrep registry,
+  so pre-push/CI need internet (offline pushes fail). Add `--metrics=off` to avoid sending
+  anonymized telemetry.
 - **semgrep on Windows.** Native Windows support shipped (Fall 2025) but is beta and
   needs `PYTHONUTF8=1`. The pre-push hook should be documented as best-effort on
   Windows; CI runs on ubuntu so the gate itself is unaffected.
@@ -38,8 +41,8 @@ Plan reviewed against the live config (`pyproject.toml`, `.pre-commit-config.yam
 | bandit | `pre-commit` stage | — | `static-analysis` job |
 | pip-audit | — | — | `static-analysis` job |
 | gitleaks | `pre-commit` stage | — | `.github/workflows/gitleaks.yml` |
-| semgrep | — | — | — |
-| safety | — | — | — |
+| semgrep | — | pre-push | `static-analysis` job |
+| safety | — | — | `static-analysis` job (skipped without `SAFETY_API_KEY`) |
 
 ---
 
@@ -62,13 +65,13 @@ pre-commit) and a CI job alongside bandit.
    ```yaml
    - id: semgrep
      name: semgrep (OWASP Top 10 SAST)
-     entry: semgrep --config=p/owasp-top-10 --error --metrics=off
+     entry: semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts
      language: system
      pass_filenames: false
      always_run: true
      stages: [pre-push]
    ```
-   > **Network + platform notes:** `--config=p/owasp-top-10` is fetched from the Semgrep
+   > **Network + platform notes:** `--config=p/owasp-top-ten` is fetched from the Semgrep
    > registry, so the hook needs internet (offline pushes will fail). `--metrics=off`
    > disables anonymized telemetry. semgrep runs natively on Windows (beta, Fall 2025)
    > but expects `PYTHONUTF8=1`; treat the Windows pre-push hook as best-effort and note
@@ -77,7 +80,7 @@ pre-commit) and a CI job alongside bandit.
 3. **Add CI step** in `.github/workflows/ci.yml` under `static-analysis`:
    ```yaml
    - name: Semgrep (OWASP Top 10 SAST)
-     run: semgrep --config=p/owasp-top-10 --error --metrics=off src/mypyskindose scripts
+     run: semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts
    ```
    Install is already handled by `pip install -e ".[dev,gui]"`. CI runs on
    `ubuntu-latest`, so the registry fetch and POSIX behavior are reliable there.
@@ -153,12 +156,12 @@ No changes needed.
 
 ## Acceptance criteria
 
-- [ ] `pip install -e ".[dev]"` installs semgrep and safety without errors
-- [ ] `pre-commit run --hook-stage pre-push semgrep --all-files` passes on current code
-- [ ] `semgrep --config=p/owasp-top-10 --error --metrics=off src/mypyskindose scripts` passes in CI
-- [ ] **No key yet:** with `SAFETY_API_KEY` unset, the safety step is *skipped* and CI stays green (verify the step shows as skipped, not failed)
+- [x] `pip install -e ".[dev]"` installs semgrep and safety without errors
+- [x] `pre-commit run --hook-stage pre-push semgrep --all-files` passes on current code
+- [x] `semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts` passes in CI
+- [x] **No key yet:** with `SAFETY_API_KEY` unset, the safety step is *skipped* and CI stays green (verify the step shows as skipped, not failed)
 - [ ] **When a key exists (later):** set `SAFETY_API_KEY` in GitHub secrets; `safety scan --detailed-output` runs and passes (or known-ignores documented in a safety policy file)
-- [ ] Gitleaks already green in CI (verify current workflow passes)
+- [x] Gitleaks already green in CI (verify current workflow passes)
 
 ---
 

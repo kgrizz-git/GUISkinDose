@@ -101,7 +101,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **OWASP principles**
   - [x] Investigate and research OWASP Top 10 and relevant security principles for the project
   - [x] Assess security-analysis tools — see [OWASP_SECURITY_TOOLS_ASSESSMENT.md](assessments/OWASP_SECURITY_TOOLS_ASSESSMENT.md)
-  - [ ] Implement recommended tools in CI per [SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md)
+  - [x] Implement recommended tools in CI per [SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) (semgrep + conditional safety; gitleaks already wired)
     - [ ] Get free Safety API key ([safetycli.com](https://safetycli.com)) and wire it as `SAFETY_API_KEY` GitHub secret
 
 ## Open Questions

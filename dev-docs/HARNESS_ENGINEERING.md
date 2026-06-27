@@ -309,8 +309,10 @@ pre-commit run --hook-stage pre-push basedpyright --all-files
 | Hook | What it runs |
 |---|---|
 | **basedpyright** | Full-project type check (matches CI `typecheck` job; requires `.[dev,gui]`) |
+| **semgrep** | OWASP Top 10 SAST (`p/owasp-top-ten`; needs network to fetch rules; `--metrics=off`) |
+| **check-changelog** | `python scripts/check_changelog.py` when `src/` or `tests/` change |
 
-**Not in local hooks** (CI-only or manual): full pytest matrix, pip-audit, license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
+**Not in local hooks** (CI-only or manual): full pytest matrix, pip-audit, safety (CI when `SAFETY_API_KEY` set), license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
 
 Hooks can be skipped with `SKIP=gitleaks git commit ...`, `git commit --no-verify`, or `git push --no-verify` (CI remains the blocking gate on push/PR).
 
@@ -345,10 +347,12 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
-| `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `bandit` job (requires `.[dev]`) |
-| `pip-audit --desc on` | Ubuntu `dependency-audit` job (requires `.[dev,gui]`) |
-| `python scripts/check_licenses.py` | Ubuntu `dependency-audit` job (forbidden licenses; `--check-notices`) |
-| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, bandit, doc-freshness, backup cleanup; pre-push: basedpyright |
+| `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `pip-audit --desc on` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
+| `safety scan --detailed-output` | Ubuntu `static-analysis` job when `SAFETY_API_KEY` secret is set (skipped otherwise) |
+| `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
+| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, bandit, doc-freshness, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 
