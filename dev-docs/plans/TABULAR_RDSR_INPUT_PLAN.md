@@ -161,20 +161,20 @@ The answer determines which normalization path to use:
 | Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter | No corrections — correct |
 | Already transformed by vendor software (unknown convention) | **Must investigate** before writing adapter | Risk of double-correction or missed correction — wrong |
 
-**Radimetrics** is expected to pass coordinate values through from the underlying RDSR verbatim and mainly change field names/units. If true, the `generic_rdsr_like`/Radimetrics path (calling `rdsr_normalizer()`) is correct and all existing per-manufacturer corrections in `normalization_settings.json` apply exactly once. Keep one matched source-RDSR/export comparison as the validation standard.
+**Radimetrics** is expected to pass coordinate values through from the underlying RDSR verbatim and mainly change field names/units. The `generic_rdsr_like`/Radimetrics path (calling `rdsr_normalizer()`) is therefore correct and all existing per-manufacturer corrections in `normalization_settings.json` apply exactly once. Keep one matched source-RDSR/export comparison as deferred fixture confirmation, not as a current reason to suspect a coordinate-frame transform.
 
 **DoseTrack and similar dose-management systems** may have vendor-specific export behavior, so verify each adapter against a source RDSR before adding coordinate transforms.
 
 #### GE lateral/longitudinal swap
 
-GE systems have a known additional quirk beyond the direction/offset mechanism: the **`TableLateralPosition` and `TableLongitudinalPosition` DICOM tags are physically swapped** relative to the internal model's axis definitions. User inspection confirmed the GE table-travel convention: positive lateral = patient left, positive longitudinal = cranial, and positive height = down for head-first positioning. Treat this as a high-confidence RDSR-level convention, not an export-path-specific quirk.
+GE systems have a known additional quirk beyond the direction/offset mechanism: the **`TableLateralPosition` and `TableLongitudinalPosition` DICOM tags are physically swapped** relative to the internal model's axis definitions. User inspection of a tabular export confirmed the GE table-travel convention: positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. Treat this as an established RDSR-level convention, not an export-path-specific quirk.
 
 Implemented approach:
 - A `"swap_lateral_longitudinal": true` flag in `normalization_settings.json` with corresponding handling in `rdsr_normalizer()`.
 - A GE manufacturer wildcard so `GE Healthcare`, `GE Medical Systems`, `GEMS`, and equivalent aliases take the same path unless a future more-specific model entry overrides it.
 - GUI tabular `Tx ↔ Tz` swap remains a manual expert override only; do not auto-enable it for GE after normalization.
 
-Open validation: inspect one matched GE DICOM RDSR and one tabular export from the same case to pin exact raw/normalized fixture values and confirm the export preserves the same RDSR-level frame.
+Deferred fixture confirmation: inspect one matched GE DICOM RDSR and one tabular export from the same case to pin exact raw/normalized regression values.
 
 #### Double-correction risk
 
@@ -561,7 +561,7 @@ See GUI changes section above for the full checklist. Key tasks:
 | Are exported values event-local or cumulative? | **Primarily event-local** (one row = one irradiation event). Some exports may include a running-total column for a handful of fields (e.g. cumulative dose). Adapters should detect and skip or ignore running-total rows/columns rather than treating them as events; document the handling per source. |
 | Do exports include enough geometry for clinical use? | **Yes, generally.** Exports from dose-management systems are expected to carry the same geometric fields as the underlying RDSR (angles, table position, field size, etc.). Gaps should be treated as data-quality issues and reported per event, not as a design limitation. |
 | Column-pattern overrides — Python-only or JSON/YAML? | **Python-only first.** JSON/YAML site-customization is tracked as a future TO_DO item. |
-| **Per-vendor export coordinate frame (raw DICOM vs pre-transformed)?** | **Open — investigation required before each Phase 3–4 adapter.** Radimetrics, DoseTrack, and similar systems are expected to pass raw DICOM coordinate values through verbatim, making the `generic_rdsr_like` path (→ `rdsr_normalizer()`) correct. But this must be confirmed by comparing a real vendor export against its source RDSR before writing each adapter. Do not assume; verify. See "Vendor-specific coordinate normalization" section for the full risk table and `TabularImportOptions` plan. |
+| **Per-vendor export coordinate frame (raw DICOM vs pre-transformed)?** | **Radimetrics: treat as raw DICOM pass-through unless a fixture proves otherwise.** DoseTrack and future export systems should still be checked before adding adapter-specific coordinate transforms. Matched source-RDSR/export pairs are the preferred regression fixtures. See "Vendor-specific coordinate normalization" section for the full risk table and `TabularImportOptions` plan. |
 
 ---
 

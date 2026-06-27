@@ -60,7 +60,7 @@ in a frame that is swapped relative to what `rdsr_normalizer()` currently expect
 
 | Vendor / export format | Repo | How the swap is applied |
 |---|---|---|
-| GE DICOM RDSR | PSDCalcReworkTemp | `_should_swap_by_default("ge") → True`; MyPySkinDose should treat this as a high-confidence RDSR-level convention and validate exact values against a matched GE DICOM/export case |
+| GE DICOM RDSR | PSDCalcReworkTemp | `_should_swap_by_default("ge") → True`; MyPySkinDose treats this as an established RDSR-level convention; matched GE DICOM/export comparison is deferred fixture confirmation |
 | DoseTrack Philips XLSX | dhen2714/PySkinDose | `parse_philips()` renames `TableLateralPosition_mm ↔ TableLongitudinalPosition_mm` before calling `rdsr_normalizer()` |
 | Any tabular import | MyPySkinDose GUI | User-selectable toggle ("Swap lateral/longitudinal axes") swaps `Tx ↔ Tz` **after** normalization |
 

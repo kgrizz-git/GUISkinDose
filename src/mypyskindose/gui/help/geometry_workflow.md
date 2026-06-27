@@ -6,7 +6,7 @@ The Geometry tab lets you visualize beam-patient geometry and verify positioning
 
 Geometry plots currently use historical PySkinDose axis aliases: `X - LON`, `Y - VER`, and `Z - LAT`. These labels identify the plotted calculation frame, not every physical or DICOM naming convention. Vendor normalization and import correction toggles are applied before the Geometry preview is drawn.
 
-For GE inputs, the lateral/longitudinal swap is handled during normalization. The GUI `Tx ↔ Tz` swap is a manual expert override only. GE table travel has been confirmed by inspection as positive lateral = patient left, positive longitudinal = cranial, and positive height = down for head-first positioning. A matched GE DICOM RDSR plus tabular export is still needed to pin fixture values and tabular parity.
+For GE inputs, the lateral/longitudinal swap is handled during normalization. The GUI `Tx ↔ Tz` swap is a manual expert override only. GE table travel has been confirmed from tabular export inspection as positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. A matched GE DICOM RDSR plus tabular export would be useful later only to pin exact regression fixture values.
 
 ## Workflow for Positioning Verification
 

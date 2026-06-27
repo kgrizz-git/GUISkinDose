@@ -245,18 +245,20 @@ This is a category error — the DICOM attribute is named "Longitudinal" but mea
 
 #### 7.2.4 The GE/Philips vendor convention
 
-Update after GE inspection: the GE lateral/longitudinal issue should be treated
-as a high-confidence RDSR-level convention, not as a tabular export-only quirk.
-GE table travel has been confirmed by inspection as positive lateral = patient
-left, positive longitudinal = cranial, and positive height = down for
-head-first positioning. MyPySkinDose now handles this through the
+Update after GE tabular export inspection: the GE lateral/longitudinal issue
+should be treated as an established RDSR-level convention, not as a tabular
+export-only quirk. For head-first supine positioning, GE table travel has been
+confirmed as positive lateral = patient left, positive longitudinal = patient
+superior/cranial, and positive height = down. This is a consistent
+right-handed coordinate convention when patient left is `+x`, down is `+y`, and
+superior/cranial is `+z`. MyPySkinDose now handles this through the
 normalization-layer `swap_lateral_longitudinal` setting for the GE manufacturer
 wildcard, before deriving `Tx` and `Tz`.
 
 The GUI `swap_lat_lon` mechanism remains useful, but it is now a manual expert
 override for tabular imports rather than the default GE architecture. A matched
-GE DICOM RDSR plus tabular export from the same case is still needed to pin
-exact fixture values and confirm tabular parity.
+GE DICOM RDSR plus tabular export from the same case is deferred fixture
+confirmation only; it is not an open live question about the GE convention.
 
 ### 7.3 Revised assessment of AGENTS.md
 

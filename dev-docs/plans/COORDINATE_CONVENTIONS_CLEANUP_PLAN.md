@@ -22,13 +22,13 @@ The current repo has three overlapping coordinate descriptions:
 | Normalized DataFrame | `Tx`, `Ty`, `Tz` are consumed directly by geometry and dose code. | Characterize current behavior with tests before editing comments/docs. |
 | GUI tabular corrections | `swap_lat_lon` swaps `Tx <-> Tz` after normalization for tabular imports. | Keep as a manual expert override only; GE is handled in normalization to avoid double-correction. |
 
-GE convention confirmed by inspection for head-first positioning:
+GE convention confirmed from tabular export inspection for head-first supine positioning:
 
 - positive GE lateral table travel means patient left
-- positive GE longitudinal table travel means cranial
+- positive GE longitudinal table travel means patient superior/cranial
 - positive GE height table travel means down
 
-High-confidence implementation assumption: GE lateral/longitudinal handling is baked in at the RDSR level, so GE needs a `Tx <-> Tz` correction before or inside normalization. Keep one validation gap open: compare a matched GE DICOM RDSR and GE tabular export from the same case to pin exact fixture values and confirm whether the export preserves the same RDSR-level frame.
+Established implementation assumption: GE lateral/longitudinal handling is baked in at the RDSR level, so GE needs a `Tx <-> Tz` correction before or inside normalization. A matched GE DICOM RDSR and GE tabular export from the same case remains useful as deferred fixture confirmation to pin exact regression values, but the GE convention itself is not an open live question.
 
 ## File Structure
 
@@ -205,17 +205,17 @@ Add this under the vendor-specific section:
 ```markdown
 ### GE Healthcare
 
-Status: convention confirmed by inspection; matched DICOM/export validation still pending.
+Status: convention confirmed from tabular export inspection; matched DICOM/export comparison deferred for fixture confirmation.
 
-For head-first positioning, confirmed GE table-travel convention:
+For head-first supine positioning, confirmed GE table-travel convention:
 
 | GE table travel | Positive direction |
 |---|---|
 | Lateral | Patient left |
-| Longitudinal | Cranial |
+| Longitudinal | Patient superior / cranial |
 | Height | Down |
 
-GE RDSR-level lateral/longitudinal handling is high-confidence: GE appears to encode table lateral/longitudinal values in the opposite convention from the current `rdsr_normalizer()` mapping and therefore needs a `Tx <-> Tz` correction at, or before, normalization. Open validation item: inspect one matched GE DICOM RDSR and one tabular export from the same case to pin exact raw values and confirm whether the tabular export preserves the same RDSR-level frame.
+GE RDSR-level lateral/longitudinal handling is established: GE encodes table lateral/longitudinal values in the opposite convention from the current `rdsr_normalizer()` mapping and therefore needs a `Tx <-> Tz` correction at, or before, normalization. Deferred fixture item: inspect one matched GE DICOM RDSR and one tabular export from the same case to pin exact raw values.
 ```
 
 - [ ] **Step 3: Replace stale GE swap wording**
@@ -223,7 +223,7 @@ GE RDSR-level lateral/longitudinal handling is high-confidence: GE appears to en
 Find any text claiming GE swap handling is only export-path dependent. Replace it with:
 
 ```markdown
-GE DICOM RDSR lateral/longitudinal handling is a high-confidence RDSR-level convention: GE needs a `Tx <-> Tz` correction before or inside normalization. GE tabular exports are expected to inherit that frame unless the export tool transforms coordinates. The current GUI post-normalization `swap_lat_lon` toggle is a tabular workaround, not the final GE DICOM architecture.
+GE DICOM RDSR lateral/longitudinal handling is an established RDSR-level convention: GE needs a `Tx <-> Tz` correction before or inside normalization. GE tabular exports are expected to preserve that frame; Radimetrics in particular is expected to pass coordinates through while changing field names/units. The current GUI post-normalization `swap_lat_lon` toggle is a manual expert override, not the final GE DICOM architecture.
 ```
 
 - [ ] **Step 4: Run doc freshness**
@@ -327,7 +327,7 @@ Add a short section:
 
 Geometry plots currently use historical PySkinDose axis aliases: `X - LON`, `Y - VER`, and `Z - LAT`. These labels identify the plotted calculation frame, not every physical/DICOM naming convention. Vendor normalization and import correction toggles are applied before the Geometry preview is drawn.
 
-For GE inputs, the lateral/longitudinal swap is expected at the RDSR level and is handled during normalization. The GUI `Tx <-> Tz` swap is a manual expert override only. GE table travel has been confirmed by inspection as positive lateral = patient left, positive longitudinal = cranial, and positive height = down for head-first positioning. A matched GE DICOM RDSR plus tabular export is still needed to pin fixture values and tabular parity.
+For GE inputs, the lateral/longitudinal swap is expected at the RDSR level and is handled during normalization. The GUI `Tx <-> Tz` swap is a manual expert override only. GE table travel has been confirmed from tabular export inspection as positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. A matched GE DICOM RDSR plus tabular export would be useful later only to pin exact regression fixture values.
 ```
 
 - [ ] **Step 3: Sync mirrored GUI help**
@@ -412,7 +412,7 @@ git commit -m "docs: clarify coordinate comments"
 Replace the current Y/Z item with:
 
 ```markdown
-- [ ] **Coordinate conventions cleanup** — centralize physical axes, DICOM table-coordinate definitions, PySkinDose plot aliases, vendor normalization signs, GE confirmed table-travel convention, and tabular `Tx <-> Tz` correction behavior. Plan: `plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md`. Assessment: `assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md`. Validation still needed: one matched GE DICOM RDSR plus tabular export.
+- [ ] **Coordinate conventions cleanup** — centralize physical axes, DICOM table-coordinate definitions, PySkinDose plot aliases, vendor normalization signs, GE confirmed table-travel convention, and tabular `Tx <-> Tz` correction behavior. Plan: `plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md`. Assessment: `assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md`. Deferred fixture confirmation: one matched GE DICOM RDSR plus tabular export would pin exact regression values.
 ```
 
 Keep the separate vendor-coordinate-validation item if it points to fixture validation. If both items become redundant, make the vendor item a sub-bullet under coordinate cleanup instead of leaving two competing sources of truth.
@@ -483,7 +483,7 @@ For head-first positioning:
 
 ## Matched Case Validation
 
-Status: pending matched GE DICOM RDSR plus tabular export from the same case.
+Status: deferred fixture confirmation. GE convention is confirmed from tabular export inspection; a matched GE DICOM RDSR plus tabular export from the same case would pin exact regression values.
 
 When available, record only de-identified aggregate values:
 
@@ -494,8 +494,8 @@ When available, record only de-identified aggregate values:
 
 Validation questions:
 
-1. What exact raw DICOM table-position values appear in a known GE motion direction?
-2. Does the tabular export preserve the same RDSR-level frame or transform the coordinates?
+1. What exact raw DICOM table-position values correspond to the confirmed GE tabular values?
+2. Does the tabular export match the RDSR values byte-for-byte or only after trivial field-name/unit formatting?
 3. Does the implemented normalizer-level GE `Tx <-> Tz` correction produce the expected Geometry preview?
 4. Does applying a second GUI `Tx <-> Tz` correction produce an obviously wrong Geometry preview?
 ```
@@ -505,7 +505,7 @@ Validation questions:
 Add a row to `VENDOR_COORDINATE_SYSTEMS.md`:
 
 ```markdown
-| GE DICOM RDSR plus matched tabular export | pending matched fixture | GE positive lateral=patient left, longitudinal=cranial, height=down confirmed by inspection; RDSR-level `Tx`/`Tz` correction expected; exact fixture values and tabular parity still pending |
+| GE DICOM RDSR plus matched tabular export | deferred fixture confirmation | GE positive lateral=patient left, longitudinal=superior/cranial, height=down confirmed from tabular export inspection; RDSR-level `Tx`/`Tz` correction expected; matched pair would pin exact fixture values |
 ```
 
 - [ ] **Step 4: Commit docs only**
@@ -520,8 +520,8 @@ git commit -m "docs: track GE coordinate validation"
 - `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` is the only canonical coordinate terminology reference.
 - `AGENTS.md`, GUI help, and secondary dev docs point to the canonical doc instead of restating stale shorthand.
 - Documentation distinguishes physical axes, DICOM attribute names, normalized `Tx/Ty/Tz`, historical plot aliases, and tabular import corrections.
-- The confirmed GE convention is recorded exactly: positive lateral is patient left, positive longitudinal is cranial, positive height is down for head-first positioning.
-- GE matched-case validation remains explicitly open until one DICOM RDSR and one tabular export from the same case are inspected.
+- The confirmed GE convention is recorded exactly: positive lateral is patient left, positive longitudinal is patient superior/cranial, positive height is down for head-first supine positioning.
+- GE matched-case comparison remains a deferred fixture-confirmation item, not an open live question about the convention.
 - Characterization tests protect the current normalizer mapping and current plot-axis titles before any comment or label edits.
 - No calculation behavior changes in this plan unless a later fixture-backed plan proves a mismatch.
 - `dev-docs/TO_DO.md` and `dev-docs/index.md` point to this plan and no longer describe the issue as a settled severe geometry bug.

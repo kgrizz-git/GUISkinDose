@@ -41,12 +41,14 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   PySkinDose plot aliases, vendor normalization signs, GE normalization-level `Tx`/`Tz` correction, and
   manual tabular coordinate-override behavior. Plan: [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md).
   Assessment: [YZ_AXIS_INCONSISTENCY_ASSESSMENT.md](assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md).
-  Validation still needed: one matched GE DICOM RDSR plus tabular export to pin fixture values and tabular parity.
+  Deferred fixture confirmation: one matched GE DICOM RDSR plus tabular export would pin exact regression values;
+  GE table-travel directions are already confirmed from tabular export inspection.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
   source RDSRs before expanding vendor adapters. Covered by
   [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7 and
   [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) Phase 2.
 - [ ] **Patient orientation support (head-first vs feet-first, prone vs supine)** — investigate whether the code and GUI allow choosing patient orientation (head-first / feet-first) and positioning (prone / supine). See [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
+- [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
 
 
 ### GUI / UX
@@ -63,6 +65,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   per [DESIGN.md](../DESIGN.md).
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
 - [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
+- [ ] **Make offsets more visible and configurable for the user** — surface table-origin and coordinate offsets prominently in the GUI (e.g. per-exam offset summary, inline hints on the Geometry tab) and allow easy override without digging into nested settings.
 - [ ] **Verify body habitus scaling correctness** — ensure scaling is applied only in the appropriate dimensions,
   visible on the geometry/dose plot, and factored into dose calculations.
 ### Harness / Repo Hygiene

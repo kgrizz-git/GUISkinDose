@@ -223,24 +223,28 @@ Table rotations are currently always set to 0 (not extracted from RDSR data yet)
 ## Additional Vendor Status
 
 ### GE Healthcare
-**Status**: Convention confirmed by inspection; matched DICOM/export validation
-still pending. GE is handled by a manufacturer wildcard entry in
+**Status**: Convention confirmed from tabular export inspection. Matched
+DICOM/export comparison is deferred fixture confirmation, not an open question
+about the GE convention. GE is handled by a manufacturer wildcard entry in
 `normalization_settings.json` with `swap_lateral_longitudinal: true`.
 
-For head-first positioning, confirmed GE table-travel convention:
+For head-first supine positioning, the confirmed GE table-travel convention is:
 
 | GE table travel | Positive direction |
 |---|---|
 | Lateral | Patient left |
-| Longitudinal | Cranial |
+| Longitudinal | Patient superior / cranial |
 | Height | Down |
 
-GE RDSR-level lateral/longitudinal handling is high-confidence: GE appears to
-encode table lateral/longitudinal values in the opposite convention from the
+This is a consistent right-handed patient coordinate convention when left is
+`+x`, down is `+y`, and superior/cranial is `+z`.
+
+GE RDSR-level lateral/longitudinal handling should be treated as established:
+GE uses table lateral/longitudinal values in the opposite convention from the
 default `rdsr_normalizer()` mapping and therefore uses the normalizer-level
-`swap_lateral_longitudinal` correction. Open validation item: inspect one
-matched GE DICOM RDSR and one tabular export from the same case to confirm exact
-raw values and whether the tabular export preserves the same RDSR-level frame.
+`swap_lateral_longitudinal` correction. Deferred fixture item: inspect one
+matched GE DICOM RDSR and one tabular export from the same case to pin exact
+raw values and create regression fixtures.
 See [GE coordinate validation notes](references/ge_coordinate_validation.md).
 
 If a GE RDSR is loaded today, the wildcard GE entry applies zero offsets/signs
@@ -249,7 +253,7 @@ or signs if future validated GE fixtures show scanner-family differences.
 
 | Validation item | Status | Notes |
 |---|---|---|
-| GE DICOM RDSR plus matched tabular export | Pending matched fixture | GE positive lateral=patient left, longitudinal=cranial, height=down confirmed by inspection; RDSR-level `Tx`/`Tz` correction implemented; exact fixture values and tabular parity still pending |
+| GE DICOM RDSR plus matched tabular export | Deferred fixture confirmation | GE positive lateral=patient left, longitudinal=superior/cranial, height=down confirmed from tabular export inspection; RDSR-level `Tx`/`Tz` correction implemented; matched pair would pin exact fixture values |
 
 ### Canon (formerly Toshiba)
 **Status**: Not currently in the normalization database.
@@ -583,7 +587,15 @@ Before writing a Phase 3–4 vendor adapter (Radimetrics, DoseTrack, etc.), the 
 | Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter; do not call `rdsr_normalizer()` | None if confirmed |
 | Pre-transformed by vendor software (unknown convention) | Must investigate before writing adapter | Risk of double-correction or missed correction — silently wrong geometry |
 
-**Radimetrics, DoseTrack, and similar dose-management systems** are expected to pass coordinate values through from the underlying RDSR verbatim (raw DICOM frame). If so, the `generic_rdsr_like` path is correct. **Confirm this per vendor** by comparing a real export side-by-side with its source RDSR before writing each adapter.
+**Radimetrics** is expected to pass coordinate values through from the underlying
+RDSR verbatim, changing field names/units rather than the coordinate frame. The
+`radimetrics`/`generic_rdsr_like` paths should therefore call
+`rdsr_normalizer()` exactly once. A matched source-RDSR/export comparison is
+useful fixture confirmation, not a current reason to suspect a Radimetrics
+coordinate swap.
+
+**DoseTrack and other export systems** should still be checked individually
+before adding adapter-specific coordinate transforms.
 
 ### Double-correction risk
 
@@ -601,20 +613,19 @@ Calling `rdsr_normalizer()` on data that has already been transformed doubles th
 The axis swap problem can occur whenever table-position values are in a
 different frame than the normalized calculation columns.
 
-- **GE DICOM RDSRs**: high-confidence finding from inspection is that the
-  lateral/longitudinal convention is swapped relative to the default
-  `rdsr_normalizer()` mapping. MyPySkinDose handles this with the
-  normalizer-level `swap_lateral_longitudinal` flag on the GE manufacturer
-  wildcard entry.
-- **GE tabular exports**: expected to inherit the same RDSR-level convention
-  unless the export tool transforms coordinates. The GUI no longer auto-enables
-  an additional post-normalization `Tx`/`Tz` swap for GE; use the manual toggle
-  only for a site-specific export proven to need an extra correction.
-- **Radimetrics exports**: working assumption is that Radimetrics passes table
+- **GE DICOM RDSRs and tabular exports**: confirmed GE table travel is positive
+  lateral = patient left, positive longitudinal = patient superior/cranial, and
+  positive height = down for head-first supine positioning. MyPySkinDose handles
+  the resulting lateral/longitudinal convention with the normalizer-level
+  `swap_lateral_longitudinal` flag on the GE manufacturer wildcard entry. The
+  GUI no longer auto-enables an additional post-normalization `Tx`/`Tz` swap for
+  GE; use the manual toggle only for a site-specific export proven to need an
+  extra correction.
+- **Radimetrics exports**: operating assumption is that Radimetrics passes table
   coordinates through from the source RDSR and mainly changes field names/units.
-  Therefore Radimetrics inputs should generally use the normalizer once rather
-  than adapter-specific coordinate transforms. Keep matched source-RDSR/export
-  comparison as the validation standard.
+  Therefore Radimetrics inputs should use the normalizer once rather than
+  adapter-specific coordinate transforms. Matched source-RDSR/export comparison
+  is deferred fixture confirmation.
 - **DoseTrack Philips exports**: the `dhen2714/PySkinDose` reference implementation explicitly swaps `TableLateralPosition_mm ↔ TableLongitudinalPosition_mm` in its `parse_philips()` function — suggesting DoseTrack stores Philips data with these axes swapped.
 - Possibly other vendor/export-tool combinations: must be verified per adapter.
 
@@ -624,10 +635,12 @@ swap. GE DICOM RDSR handling uses a normalizer-level
 post-normalization and should be treated as a manual expert override, not the
 default GE architecture.
 
-GE convention confirmed by inspection: positive lateral table travel is patient
-left, positive longitudinal travel is cranial, and positive height travel is
-down for head-first positioning. Matched GE DICOM RDSR plus tabular export
-validation remains open to pin fixture values and tabular parity.
+GE convention confirmed from tabular export inspection: positive lateral table
+travel is patient left, positive longitudinal travel is patient
+superior/cranial, and positive height travel is down for head-first supine
+positioning. Matched GE DICOM RDSR plus tabular export comparison is deferred
+fixture confirmation to pin exact values, not an open live question about the
+convention.
 
 ### User-selectable import options (`TabularImportOptions`, Phase 3+)
 
