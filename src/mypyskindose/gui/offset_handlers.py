@@ -103,20 +103,51 @@ def on_global_patient_offset_change(ctx: PageContext) -> None:
     ctx.refresh_per_exam()
 
 
-def effective_table_origin(meta: dict) -> dict[str, float]:
+_TABLE_ORIGIN_AXES = ("x", "y", "z")
+
+
+def _origin_source_to_final(meta: dict, origin: dict) -> dict[str, float]:
+    """Map stored GUI transform-source table-origin values to final plotted axes."""
+    source = {k: float(origin.get(k, 0.0)) for k in _TABLE_ORIGIN_AXES}
+    if meta.get("swap_lat_lon", False):
+        source["x"], source["z"] = source["z"], source["x"]
+    return source
+
+
+def _final_axis_to_source_axis(meta: dict, axis: str) -> str:
+    if axis not in _TABLE_ORIGIN_AXES:
+        raise KeyError(f"Unknown table-origin axis {axis!r}")
+    if meta.get("swap_lat_lon", False) and axis in ("x", "z"):
+        return "z" if axis == "x" else "x"
+    return axis
+
+
+def _table_origin_source_values(meta: dict) -> dict[str, float]:
     detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
     ov = meta.get("table_origin_override")
     if ov is not None:
-        return {k: float(ov.get(k, detected[k])) for k in ("x", "y", "z")}
-    return {k: float(detected[k]) for k in ("x", "y", "z")}
+        return {k: float(ov.get(k, detected.get(k, 0.0))) for k in _TABLE_ORIGIN_AXES}
+    return {k: float(detected.get(k, 0.0)) for k in _TABLE_ORIGIN_AXES}
+
+
+def detected_table_origin(meta: dict) -> dict[str, float]:
+    """Return the auto-detected table origin in final plotted-frame axes."""
+    detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
+    return _origin_source_to_final(meta, detected)
+
+
+def effective_table_origin(meta: dict) -> dict[str, float]:
+    """Return the active table origin in final plotted-frame axes."""
+    return _origin_source_to_final(meta, _table_origin_source_values(meta))
 
 
 def stage_table_origin_axis(meta: dict, axis: str, value: float) -> None:
-    """Tick path: update per-exam table-origin override meta only (O(1), no DataFrame work)."""
+    """Tick path: update one final-frame table-origin axis without DataFrame work."""
     detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
     if meta.get("table_origin_override") is None:
         meta["table_origin_override"] = dict(detected)
-    meta["table_origin_override"][axis] = float(value)
+    source_axis = _final_axis_to_source_axis(meta, axis)
+    meta["table_origin_override"][source_axis] = float(value)
 
 
 def commit_table_origin_transform(app_state: AppState, exam_index: int) -> None:

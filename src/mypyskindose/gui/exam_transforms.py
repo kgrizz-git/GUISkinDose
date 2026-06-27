@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .offset_handlers import detected_table_origin, effective_table_origin
 from .state import AppState
 
 # Display-only column added to the concatenated multi-exam preview frame
@@ -120,12 +121,23 @@ def _table_origin_override_note(meta: dict) -> list[str]:
     if override is None:
         return []
     detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
-    return [
-        "Manual table-origin override applied: "
+    source_note = (
+        "Manual table-origin override applied in GUI transform source frame: "
         f"({override.get('x', 0.0)}, {override.get('y', 0.0)}, "
         f"{override.get('z', 0.0)}) cm "
         f"(auto-detected was ({detected.get('x', 0.0)}, "
         f"{detected.get('y', 0.0)}, {detected.get('z', 0.0)}) cm)."
+    )
+    if not meta.get("swap_lat_lon", False):
+        return [source_note]
+    final = effective_table_origin(meta)
+    final_detected = detected_table_origin(meta)
+    return [
+        source_note
+        + " Final plotted-frame origin after manual Tx/Tz swap: "
+        f"({final['x']}, {final['y']}, {final['z']}) cm "
+        f"(auto-detected ({final_detected['x']}, {final_detected['y']}, "
+        f"{final_detected['z']}) cm)."
     ]
 
 

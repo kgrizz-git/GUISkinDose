@@ -28,6 +28,7 @@ from ..geometry_preview import (
 from ..helpers import (
     apply_patient_offset_slider_tick,
     commit_table_origin_transform,
+    detected_table_origin,
     effective_table_origin,
     exam_supports_table_origin,
     on_global_patient_offset_change,
@@ -51,6 +52,43 @@ _C4_TABLE_ORIGIN_CAPTION = (
     "Table shift applies to the selected exam. Preview shows all exams; "
     "you will see this exam's table move relative to the others."
 )
+
+_GE_WARNING_TOKEN = "ge manufacturer detected"
+
+
+def geometry_vendor_notice(
+    meta: dict,
+    *,
+    manufacturer: str = "",
+    model: str = "",
+    normalization_method: str = "",
+) -> str:
+    """Return a compact active-exam coordinate-convention notice for Geometry."""
+    warnings = " ".join(meta.get("warnings", []) or []).lower()
+    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
+    mdl = (model or meta.get("model") or "").strip()
+    schema = (meta.get("schema") or "").strip()
+    source = (meta.get("source_type") or "").strip().upper()
+    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    parts: list[str] = []
+    if mfr or mdl or method or schema:
+        subject = " / ".join(s for s in (mfr, mdl) if s)
+        details = " · ".join(s for s in (source, schema, method) if s)
+        parts.append("Active exam: " + " · ".join(s for s in (subject, details) if s))
+    if method == "Fallback":
+        parts.append("Default normalization in use; verify Tx/Tz axes and table signs before calculation.")
+    if _GE_WARNING_TOKEN in warnings or "ge" in mfr.lower():
+        if meta.get("swap_lat_lon", False):
+            parts.append("GE handling is already normalized; manual Tx/Tz swap is active and may double-correct.")
+        else:
+            parts.append("GE lateral/longitudinal handling is already applied during normalization.")
+    elif "philips" in mfr.lower():
+        parts.append("Philips large table offsets make missed or double normalization visibly wrong.")
+    elif meta.get("swap_lat_lon", False):
+        parts.append("Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps.")
+    if any(meta.get(k, False) for k in ("flip_tx", "flip_ty", "flip_tz")):
+        parts.append("Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually.")
+    return " ".join(parts)
 
 
 def _table_origin_card_visible() -> bool:
@@ -93,6 +131,8 @@ def build(ctx: PageContext) -> None:
                     title="Geometry Workflow",
                     content_path="geometry_workflow.md",
                 )
+            vendor_notice = ui.label("").classes("text-caption text-amber-6 italic q-pa-sm modern-card w-full")
+            vendor_notice.bind_visibility_from(state, "rdsr_df", backward=lambda v: v is not None)
 
             multi_exam_header = ui.column().classes("w-full gap-2")
             multi_exam_header.bind_visibility_from(state, "is_multi_exam")
@@ -159,12 +199,12 @@ def build(ctx: PageContext) -> None:
                     patient_sliders: dict[str, ui.slider] = {}
                     patient_val_labels: dict[str, ui.label] = {}
                     for axis, lbl, attr in (
-                        ("lon", "Longitudinal", "d_lon"),
-                        ("ver", "Vertical", "d_ver"),
-                        ("lat", "Lateral", "d_lat"),
+                        ("lon", "Longitudinal (X/LON)", "d_lon"),
+                        ("ver", "Vertical (Y/VER)", "d_ver"),
+                        ("lat", "Lateral (Z/LAT)", "d_lat"),
                     ):
                         with ui.row().classes("w-full gap-2 items-center flex-nowrap"):
-                            ui.label(lbl).classes("w-24 text-caption text-grey-6")
+                            ui.label(lbl).classes("w-40 text-caption text-grey-6")
                             initial = read_patient_offset_value(state, attr)
                             slider = ui.slider(
                                 min=-PATIENT_OFFSET_SLIDER_RANGE_CM,
@@ -249,11 +289,7 @@ def build(ctx: PageContext) -> None:
                             meta,
                         ):
                             return
-                        detected = meta.get("table_origin_detected") or {
-                            "x": 0.0,
-                            "y": 0.0,
-                            "z": 0.0,
-                        }
+                        detected = detected_table_origin(meta)
                         origin = effective_table_origin(meta)
                         table_guard["suppress"] = True
                         for key, slider in table_sliders.items():
@@ -271,7 +307,7 @@ def build(ctx: PageContext) -> None:
                         if idx0 < len(state.loaded_exam_meta)
                         else {}
                     )
-                    detected0 = meta0.get("table_origin_detected") or {
+                    detected0 = detected_table_origin(meta0) if meta0 else {
                         "x": 0.0,
                         "y": 0.0,
                         "z": 0.0,
@@ -279,7 +315,12 @@ def build(ctx: PageContext) -> None:
                     origin0 = effective_table_origin(meta0) if meta0 else detected0
                     for key in ("x", "y", "z"):
                         with ui.row().classes("w-full gap-2 items-center flex-nowrap"):
-                            ui.label(key.upper()).classes("w-24 text-caption text-grey-6")
+                            axis_label = {
+                                "x": "Table Origin Longitudinal (X/LON)",
+                                "y": "Table Origin Vertical (Y/VER)",
+                                "z": "Table Origin Lateral (Z/LAT)",
+                            }[key]
+                            ui.label(axis_label).classes("w-56 text-caption text-grey-6")
                             lo, hi = _table_slider_limits(detected0, key)
                             initial = float(origin0.get(key, 0.0))
                             slider = ui.slider(
@@ -355,6 +396,16 @@ def build(ctx: PageContext) -> None:
                 state,
                 composite_preview=composite_preview,
                 last_table_origin_scrub=last_table_origin_scrub,
+            )
+        )
+        idx = _active_exam_index()
+        meta = state.loaded_exam_meta[idx] if idx < len(state.loaded_exam_meta) else {}
+        vendor_notice.set_text(
+            geometry_vendor_notice(
+                meta,
+                manufacturer=state.manufacturer,
+                model=state.model,
+                normalization_method=state.normalization_method,
             )
         )
 

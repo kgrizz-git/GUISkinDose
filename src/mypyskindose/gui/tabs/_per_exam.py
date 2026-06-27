@@ -22,6 +22,8 @@ from ..helpers import (
     apply_exam_transforms,
     bump_per_exam_offsets_version,
     commit_table_origin_transform,
+    detected_table_origin,
+    effective_table_origin,
     exam_supports_table_origin,
     exam_supports_transforms,
     stage_table_origin_axis,
@@ -71,6 +73,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
         ctx.refresh_event_table()
         ctx.refresh_import_preview()
         ctx.refresh_per_exam()
+        ctx.refresh_geometry_tab()
 
     def _build_table_origin_section(index: int, meta: dict) -> None:
         """Per-exam 'Advanced: table origin' override UI (Phase 2.5).
@@ -78,7 +81,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
         Spinboxes pre-fill from the active override (or the auto-detected
         origin); 'Reset to auto-detected' clears the override back to None.
         """
-        detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
+        detected = detected_table_origin(meta)
         inputs: dict[str, ui.number] = {}
         guard = {"suppress": False}
 
@@ -122,15 +125,20 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 status_label.set_text(_status_text())
                 ctx.refresh_geometry_tab()
 
-            current = meta.get("table_origin_override") or detected
+            current = effective_table_origin(meta)
             with ui.row().classes("items-center gap-2"):
                 for key in ("x", "y", "z"):
+                    axis_label = {
+                        "x": "Table Origin Longitudinal (X/LON)",
+                        "y": "Table Origin Vertical (Y/VER)",
+                        "z": "Table Origin Lateral (Z/LAT)",
+                    }[key]
                     inputs[key] = ui.number(
-                        label=key,
+                        label=axis_label,
                         value=current.get(key, 0.0),
                         step=1.0,
                         format="%.1f",
-                    ).props("dense outlined").classes("w-20").on_value_change(
+                    ).props("dense outlined").classes("w-52").on_value_change(
                         lambda e, k=key: _on_change(k, e.value)
                     )
                 ui.button(

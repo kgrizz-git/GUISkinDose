@@ -18,6 +18,7 @@ from mypyskindose.plotting.create_layout_for_dose_map_plots import (
     create_layout_for_dose_map_plots,
 )
 from mypyskindose.plotting.plot_layout import (
+    COORDINATE_FRAME_NOTE,
     default_dosemap_layout,
     default_geometry_layout,
     default_procedure_layout,
@@ -30,6 +31,7 @@ def test_default_geometry_layout_is_plotly_layout_with_shared_font():
     layout_dict = layout.to_plotly_json()
     assert layout_dict["font"]["family"] == PLOT_FONT_FAMILY
     assert layout_dict["scene"]["aspectmode"] == PLOT_ASPECTMODE_SETUP_AND_EVENT
+    assert COORDINATE_FRAME_NOTE in layout_dict["annotations"][0]["text"]
     assert layout.paper_bgcolor == COLOR_CANVAS_DARK
 
 
@@ -52,6 +54,7 @@ def test_default_procedure_layout_includes_slider_and_procedure_aspect():
     layout_dict = layout.to_plotly_json()
     assert layout_dict["scene"]["aspectmode"] == PLOT_ASPECTMODE_PLOT_PROCEDURE
     assert layout_dict["sliders"] is not None
+    assert COORDINATE_FRAME_NOTE in layout_dict["annotations"][0]["text"]
     assert len(layout_dict["sliders"]) == 1
     assert len(layout_dict["sliders"][0]["steps"]) == 3
 

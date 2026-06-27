@@ -171,6 +171,8 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
         ctx.refresh_event_table()
         ctx.refresh_exams_table()
         _refresh_import_preview()
+        ctx.refresh_per_exam()
+        ctx.refresh_geometry_tab()
         coord_auto_label.set_text("")
 
     def _on_flip_ap1_toggle() -> None:
@@ -182,6 +184,8 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
         ctx.refresh_event_table()
         ctx.refresh_exams_table()
         _refresh_import_preview()
+        ctx.refresh_per_exam()
+        ctx.refresh_geometry_tab()
 
     def _on_flip_ap2_toggle() -> None:
         if not state.loaded_exam_meta or state.input_source_type in ("", "dicom"):
@@ -192,6 +196,8 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
         ctx.refresh_event_table()
         ctx.refresh_exams_table()
         _refresh_import_preview()
+        ctx.refresh_per_exam()
+        ctx.refresh_geometry_tab()
 
     def _refresh_import_preview():
         prov = state.import_provenance

@@ -11,6 +11,7 @@ from __future__ import annotations
 import traceback
 
 from mypyskindose.debug import dprint
+from mypyskindose.plotting.plot_layout import coordinate_frame_annotation
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
 from .helpers import build_settings
@@ -157,6 +158,7 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
             plot_bgcolor=bg,
             font=dict(color=txt, family="Inter, sans-serif"),
             margin=dict(l=0, r=0, b=40, t=40),
+            annotations=[coordinate_frame_annotation(txt)],
             scene=dict(
                 aspectmode="data",
                 xaxis=dict(title="X - LON [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),

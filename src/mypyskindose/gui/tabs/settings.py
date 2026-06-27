@@ -180,9 +180,9 @@ def build(ctx: PageContext) -> None:
                     with scale_section:
                         ui.label("Body habitus scaling").classes("text-caption text-grey-6")
                         for label, attr, axis in (
-                            ("Lateral / width", "phantom_scale_lat", 0),
-                            ("AP / vertical thickness", "phantom_scale_ap", 1),
-                            ("Longitudinal / head-foot", "phantom_scale_lon", 2),
+                            ("Lateral / width (Z/LAT)", "phantom_scale_lat", 0),
+                            ("AP / vertical thickness (Y/VER)", "phantom_scale_ap", 1),
+                            ("Longitudinal / head-foot (X/LON)", "phantom_scale_lon", 2),
                         ):
                             with ui.row().classes("w-full gap-4 items-center"):
                                 ui.label(label).classes("w-48 text-caption")

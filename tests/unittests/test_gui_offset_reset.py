@@ -15,6 +15,7 @@ from mypyskindose import get_path_to_example_rdsr_files
 from mypyskindose.gui.helpers import (
     build_settings,
     commit_table_origin_transform,
+    detected_table_origin,
     effective_patient_offset_for_preview,
     effective_table_origin,
     load_rdsr,
@@ -26,6 +27,7 @@ from mypyskindose.gui.helpers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
+from mypyskindose.gui.tabs.geometry import geometry_vendor_notice
 from mypyskindose.gui.page_context import PageContext
 from mypyskindose.gui.state import AppState
 
@@ -164,6 +166,87 @@ def test_stage_table_origin_axis_does_not_call_apply():
         stage_table_origin_axis(meta, "x", 5.0)
     mock_apply.assert_not_called()
     assert meta["table_origin_override"]["x"] == 5.0
+
+
+def test_table_origin_display_uses_final_frame_after_manual_swap():
+    meta = {
+        "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+        "table_origin_override": {"x": 5.0, "y": 2.0, "z": 7.0},
+        "swap_lat_lon": True,
+    }
+    assert detected_table_origin(meta) == {"x": 3.0, "y": 2.0, "z": 1.0}
+    assert effective_table_origin(meta) == {"x": 7.0, "y": 2.0, "z": 5.0}
+
+
+def test_stage_table_origin_axis_inverse_maps_final_axis_after_manual_swap():
+    meta = {
+        "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+        "table_origin_override": None,
+        "swap_lat_lon": True,
+    }
+    stage_table_origin_axis(meta, "x", 9.0)
+    assert meta["table_origin_override"] == {"x": 1.0, "y": 2.0, "z": 9.0}
+    assert effective_table_origin(meta)["x"] == 9.0
+
+
+def test_staged_final_x_changes_plotted_tx_after_manual_swap():
+    st = AppState()
+    base = pd.DataFrame({"kVp": [70.0], "Tx": [1.0], "Ty": [0.0], "Tz": [2.0]})
+    st.loaded_exams = [SimpleNamespace(normalized_data=base.copy())]
+    meta = {
+        "base_data": base,
+        "schema": "generic_rdsr_like",
+        "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "table_origin_override": None,
+        "swap_lat_lon": True,
+        "flip_ap1": False,
+        "flip_ap2": False,
+    }
+    st.loaded_exam_meta = [meta]
+    stage_table_origin_axis(meta, "x", 10.0)
+    commit_table_origin_transform(st, 0)
+
+    df = st.loaded_exams[0].normalized_data
+    assert float(df["Tx"].iloc[0]) == pytest.approx(12.0)
+    assert float(df["Tz"].iloc[0]) == pytest.approx(1.0)
+
+
+def test_geometry_vendor_notice_warns_when_ge_manual_swap_is_active():
+    notice = geometry_vendor_notice(
+        {
+            "warnings": ["GE manufacturer detected."],
+            "swap_lat_lon": True,
+            "schema": "radimetrics",
+            "source_type": "csv",
+            "normalization_method": "Tabular",
+        },
+        manufacturer="GE Healthcare",
+    )
+    assert "GE handling is already normalized" in notice
+    assert "may double-correct" in notice
+
+
+def test_geometry_vendor_notice_warns_for_fallback_and_manual_swap():
+    notice = geometry_vendor_notice(
+        {
+            "swap_lat_lon": True,
+            "flip_tx": True,
+            "schema": "generic_rdsr_like",
+            "source_type": "csv",
+            "normalization_method": "Fallback",
+        }
+    )
+    assert "Default normalization in use" in notice
+    assert "Manual Tx/Tz swap is active" in notice
+    assert "Axis-direction flip reverses table motion" in notice
+
+
+def test_geometry_vendor_notice_warns_for_philips_large_offset_risk():
+    notice = geometry_vendor_notice(
+        {"normalization_method": "Matched", "schema": "dicom_rdsr"},
+        manufacturer="Philips Medical Systems",
+    )
+    assert "Philips large table offsets" in notice
 
 
 def test_commit_table_origin_transform_rebuilds_rdsr_df():

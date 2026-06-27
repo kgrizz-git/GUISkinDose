@@ -18,6 +18,16 @@ from ..io_helpers import _get_save_path
 from ..page_context import PageContext
 from ..state import state
 
+COLUMN_LABEL_ALIASES = {
+    "Tx": "Tx (X/LON)",
+    "Ty": "Ty (Y/VER)",
+    "Tz": "Tz (Z/LAT)",
+}
+
+
+def display_column_label(column: str) -> str:
+    return COLUMN_LABEL_ALIASES.get(column, column)
+
 
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("data"):
@@ -121,7 +131,16 @@ def build(ctx: PageContext) -> None:
                 ordered = [c for c in df.columns if c != EXAM_INDEX_COLUMN]
                 if EXAM_COLUMN in ordered:
                     ordered.insert(0, ordered.pop(ordered.index(EXAM_COLUMN)))
-                cols = [{"name": c, "label": c, "field": c, "sortable": True, "align": "left"} for c in ordered]
+                cols = [
+                    {
+                        "name": c,
+                        "label": display_column_label(c),
+                        "field": c,
+                        "sortable": True,
+                        "align": "left",
+                    }
+                    for c in ordered
+                ]
                 raw_data_table.columns = cols
                 raw_data_table.rows = df.to_dict("records")
                 raw_data_table.update()

@@ -46,6 +46,30 @@ from .plot_settings import (
     fetch_slider_padding,
 )
 
+COORDINATE_FRAME_NOTE = (
+    "X (Tx / LON) = DICOM TableLongitudinalPosition<br>"
+    "Y (Ty / VER) = DICOM TableHeightPosition<br>"
+    "Z (Tz / LAT) = DICOM TableLateralPosition"
+)
+
+
+def coordinate_frame_annotation(color_plot_text: str) -> dict[str, Any]:
+    """Plotly paper annotation explaining the current PySkinDose display frame."""
+    return {
+        "text": COORDINATE_FRAME_NOTE,
+        "xref": "paper",
+        "yref": "paper",
+        "x": 0.01,
+        "y": 0.01,
+        "xanchor": "left",
+        "yanchor": "bottom",
+        "align": "left",
+        "showarrow": False,
+        "font": {"family": PLOT_FONT_FAMILY, "size": 11, "color": color_plot_text},
+        "bgcolor": "rgba(0,0,0,0.35)",
+        "borderpad": 4,
+    }
+
 
 def _geometry_scene_axis(
     title: str,
@@ -149,6 +173,7 @@ def default_geometry_layout(
             )
         ),
         paper_bgcolor=color_canvas,
+        annotations=[coordinate_frame_annotation(color_plot_text)],
         showlegend=False,
         dragmode=PLOT_DRAGMODE,
         scene=dict(
@@ -208,6 +233,7 @@ def default_procedure_layout(
             ),
         ),
         paper_bgcolor=color_canvas,
+        annotations=[coordinate_frame_annotation(color_plot_text)],
         scene=dict(
             aspectmode=PLOT_ASPECTMODE_PLOT_PROCEDURE,
             camera=get_camera_view(),
