@@ -1,0 +1,132 @@
+# OWASP security tools — assessment and recommendations
+
+_Date: 2026-06-27_
+
+Investigates SAST, dependency-scanning, and secret-detection tools for OWASP Top 10
+compliance, evaluating what is already in place and what would add the most value.
+
+---
+
+## Current tooling
+
+| Tool | Type | Scope | CI | Pre-commit | Notes |
+|------|------|-------|----|-----------|-------|
+| **bandit** | SAST (AST-level) | Python code | `ci.yml` `static-analysis` job | Yes | `--severity-level medium` on `src/mypyskindose` + `scripts`; configured in `pyproject.toml` |
+| **pip-audit** | Dependency vuln scan | Python packages | `ci.yml` `static-analysis` job | — | `--desc on`; checks against PyPI advisory feed |
+| **gitleaks** | Secret detection | Git history | `.github/workflows/gitleaks.yml` on push/PR | Yes (pre-commit stage) | Wired in both pre-commit and CI |
+
+### OWASP Top 10 (2021) coverage gap
+
+| Category | Bandit | pip-audit | Gap |
+|----------|--------|-----------|-----|
+| A01: Broken Access Control | Partial (hardcoded perms) | — | Logic-level access control not detected |
+| A02: Cryptographic Failures | Partial (weak crypto) | — | Protocol-level issues |
+| A03: Injection | Partial (SQL, shell) | — | No template/SSTI, no OS-command flow analysis |
+| A04: Insecure Design | — | — | **Not covered** by bandit's AST-only approach |
+| A05: Security Misconfiguration | Partial | — | Flask/Django config not checked |
+| A06: Vulnerable Components | — | Yes | pip-audit covers this |
+| A07: Auth Failures | — | — | **Not covered** |
+| A08: Data Integrity Failures | — | — | Deserialization, supply-chain not checked |
+| A09: Logging & Monitoring | — | — | **Not covered** |
+| A10: SSRF | — | — | **Not covered** |
+
+Bandit's AST-only approach cannot catch logic-level flaws, injection paths through
+multiple functions, or configuration issues — gaps that a dataflow-capable SAST can fill.
+
+---
+
+## Recommended additions
+
+### 1. semgrep (high priority)
+
+Multi-language SAST with dataflow analysis and [official OWASP Top 10 rule packs](https://semgrep.dev/rule-lists). Catches most of what bandit misses.
+
+**Pros:**
+- OWASP Top 10, CWE, and Python-specific rulesets available out of the box
+- Dataflow tracking (A01, A03, A10)
+- Runs locally (`pip install semgrep`) and in CI
+- Suppress-per-finding with code comments; no noisy baseline needed
+
+**Cons:**
+- Slower than bandit (100–200 files takes ~5–10s)
+- ~30 MB install; optional `[dev]` dependency
+
+**Suggested CI config:**
+```yaml
+- name: Semgrep OWASP Top 10
+  uses: semgrep/semgrep-action@v1
+  with:
+    config: p/owasp-top-10
+    audit_on: push
+```
+
+Or run locally:
+```bash
+pip install semgrep safety
+semgrep --config=p/owasp-top-10 --error src/mypyskindose
+safety scan
+```
+
+### 2. safety (medium priority)
+
+Alternative/complement to pip-audit. Checks against Safety DB's broader advisory feed
+(not just PyPI). Catches some CVEs pip-audit misses (and vice versa — both is ideal).
+
+> **API key required:** Safety >=3.0 requires authentication (`safety auth` or
+> `SAFETY_API_KEY` env var). Free tier available at [safetycli.com](https://safetycli.com).
+
+```bash
+pip install safety
+safety scan
+```
+
+### 3. grype (medium priority)
+
+SBOM-based vulnerability scanner (Anchore). Already flagged in TO_DO line 70.
+Scans the built wheel/sdist rather than the source tree — catches dependency issues
+at release time. Integrates via `grype <file>.whl` or `grype dir:.<path>`.
+
+```bash
+pip install grype  # or brew install grype
+grype dist/*.whl
+```
+
+### 4. OWASP Dependency-Check (low priority)
+
+Most useful for Java/.NET projects. The Python support (`pip install dependency-check`)
+is a community plugin with less coverage than pip-audit or safety. Not recommended given
+existing coverage.
+
+---
+
+## Secret detection
+
+| Tool | Pros | Cons | Status |
+|------|------|------|--------|
+| **gitleaks** | Fast, zero-config, pre-commit native | Git-history only | **Wired** (pre-commit + CI) |
+| **Trufflehog** | Filesystem + Git + S3; entropy detection | Slower, heavier | Not evaluated |
+
+**Recommendation:** Gitleaks is already wired in pre-commit and CI. No action needed.
+
+---
+
+## Recommendation summary
+
+| Action | Effort | Impact | Priority |
+|--------|--------|--------|----------|
+| Add **semgrep** (OWASP Top 10 rules) to CI `static-analysis` job | Low | High (fills biggest SAST gap) | **High** |
+| Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium |
+| Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low |
+
+### Quick start (local)
+
+```bash
+# Already installed (dev deps):
+bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+pip-audit --desc on
+
+# To add (pip install):
+pip install semgrep safety
+semgrep --config=p/owasp-top-10 --error src/mypyskindose
+safety scan
+```
