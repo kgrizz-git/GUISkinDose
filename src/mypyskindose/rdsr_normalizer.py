@@ -62,23 +62,21 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
                 plane used for image acquisition. Either 'single plane',
                 'plane a', or 'plane b'.
             - Tx (float)
-                Table offset in x-direction (longitudinal direction) from the
-                machine isocenter. At Tx = 0, the patient support table is
-                centered about the isocenter x-axis. With patient lying in
-                head-first supine position (default settings), Tx increases in
-                patient left lateral direction.
+                Normalized table translation column in cm. It is populated from
+                DICOM TableLongitudinalPosition_mm after vendor offset/sign and
+                optional lateral/longitudinal swap handling. In DICOM table
+                coordinates this value corresponds to table X motion; for
+                head-first supine positioning this is physical lateral motion.
             - Ty (float)
-                Table offset in y-direction (vertical direction) from the
-                machine isocenter. At Ty = 0, the patient support table is
-                entered about the isocenter y-axis. Ty is increasing downwards,
-                i.e. along the force of gravity.
+                Normalized table height translation column in cm, populated from
+                DICOM TableHeightPosition_mm after vendor offset/sign handling.
             - Tz (float)
-                Table offset in z-direction (lateral direction) from the
-                machine isocenter. At Tz = 0, the head end of the patient
-                support tables are located at the zero coordinate of the
-                z-axis. With patient lying in head-first supine position
-                (default settings), Tz increases in the patients cranial
-                direction.
+                Normalized table translation column in cm. It is populated from
+                DICOM TableLateralPosition_mm after vendor offset/sign and
+                optional lateral/longitudinal swap handling. In DICOM table
+                coordinates this value corresponds to table Z motion; for
+                head-first supine positioning this is physical longitudinal
+                motion.
 
                 .. image:: user/figures/table/table_translate.svg
 
@@ -192,12 +190,17 @@ def _normalize_table_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
 
+    table_longitudinal_mm = data_parsed.TableLongitudinalPosition_mm
+    table_lateral_mm = data_parsed.TableLateralPosition_mm
+    if norm.swap_lateral_longitudinal:
+        table_longitudinal_mm, table_lateral_mm = table_lateral_mm, table_longitudinal_mm
+
     # Table translations
-    data_norm["Tx"] = norm.trans_offset.x + norm.trans_dir.x * data_parsed.TableLongitudinalPosition_mm / 10
+    data_norm["Tx"] = norm.trans_offset.x + norm.trans_dir.x * table_longitudinal_mm / 10
 
     data_norm["Ty"] = norm.trans_offset.y + norm.trans_dir.y * data_parsed.TableHeightPosition_mm / 10
 
-    data_norm["Tz"] = norm.trans_offset.z + norm.trans_dir.z * data_parsed.TableLateralPosition_mm / 10
+    data_norm["Tz"] = norm.trans_offset.z + norm.trans_dir.z * table_lateral_mm / 10
 
     # Table rotations
     data_norm["At1"] = norm.rot_dir.At1 * [0] * len(data_norm)

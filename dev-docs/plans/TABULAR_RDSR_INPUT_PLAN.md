@@ -161,31 +161,34 @@ The answer determines which normalization path to use:
 | Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter | No corrections — correct |
 | Already transformed by vendor software (unknown convention) | **Must investigate** before writing adapter | Risk of double-correction or missed correction — wrong |
 
-**Radimetrics, DoseTrack, and similar dose-management systems** typically pass coordinate values through from the underlying RDSR verbatim — i.e., the exported values are in the same raw DICOM frame as `rdsr_parser()` output. If true, the `generic_rdsr_like` path (calling `rdsr_normalizer()`) is correct and all existing per-manufacturer corrections in `normalization_settings.json` apply as normal. **This must be confirmed per vendor** by comparing a real export against its source RDSR before writing each Phase 3/4 adapter. Do not assume; verify.
+**Radimetrics** is expected to pass coordinate values through from the underlying RDSR verbatim and mainly change field names/units. If true, the `generic_rdsr_like`/Radimetrics path (calling `rdsr_normalizer()`) is correct and all existing per-manufacturer corrections in `normalization_settings.json` apply exactly once. Keep one matched source-RDSR/export comparison as the validation standard.
+
+**DoseTrack and similar dose-management systems** may have vendor-specific export behavior, so verify each adapter against a source RDSR before adding coordinate transforms.
 
 #### GE lateral/longitudinal swap
 
-GE systems have a known additional quirk beyond the direction/offset mechanism: the **`TableLateralPosition` and `TableLongitudinalPosition` DICOM tags are physically swapped** relative to the internal model's axis definitions. The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap — it requires explicitly renaming the two columns before `rdsr_normalizer()` is called. This affects DICOM RDSR from GE scanners and any tabular export that passes those raw DICOM values through verbatim.
+GE systems have a known additional quirk beyond the direction/offset mechanism: the **`TableLateralPosition` and `TableLongitudinalPosition` DICOM tags are physically swapped** relative to the internal model's axis definitions. User inspection confirmed the GE table-travel convention: positive lateral = patient left, positive longitudinal = cranial, and positive height = down for head-first positioning. Treat this as a high-confidence RDSR-level convention, not an export-path-specific quirk.
 
-The fix must be implemented as either:
-- A new `"swap_lateral_longitudinal": true` flag in `normalization_settings.json` with corresponding handling in `rdsr_normalizer()`, **or**
-- An explicit column-swap step in the GE adapter before calling `rdsr_normalizer()`
+Implemented approach:
+- A `"swap_lateral_longitudinal": true` flag in `normalization_settings.json` with corresponding handling in `rdsr_normalizer()`.
+- A GE manufacturer wildcard so `GE Healthcare`, `GE Medical Systems`, `GEMS`, and equivalent aliases take the same path unless a future more-specific model entry overrides it.
+- GUI tabular `Tx ↔ Tz` swap remains a manual expert override only; do not auto-enable it for GE after normalization.
 
-The choice should be consistent with whatever approach is confirmed by the coordinate-frame investigation above. Tracked in TO_DO.md.
+Open validation: inspect one matched GE DICOM RDSR and one tabular export from the same case to pin exact raw/normalized fixture values and confirm the export preserves the same RDSR-level frame.
 
 #### Double-correction risk
 
 If a vendor export has already applied coordinate transformations before export, calling `rdsr_normalizer()` will double-apply the corrections → silently wrong geometry. Risk level:
 - **Siemens exports**: low (Siemens corrections are all zero, so double-application has no numerical effect)
 - **Philips exports**: high (large Y and Z offsets; double-application produces obviously wrong positions)
-- **GE exports with axis swap**: high if swap is applied twice
+- **GE exports with axis swap**: high if the normalization-level swap is missed or if an additional GUI/manual swap is applied after normalization
 - **Unknown vendors**: must assume high until confirmed
 
 #### User-selectable coordinate correction options (Phase 3+)
 
 To handle the diversity of export formats and let expert users override incorrect defaults, the adapter registry and GUI must support import-time options. A `TabularImportOptions` dataclass will carry:
 
-- **`swap_lateral_longitudinal: bool`** — explicitly swap `TableLateralPosition` ↔ `TableLongitudinalPosition` before normalization (for GE and any other system with this quirk)
+- **`swap_lateral_longitudinal: bool`** — optional manual post-normalization `Tx ↔ Tz` swap for tabular imports that have already been exported in an unexpected frame. GE should not require this because the normalizer handles the GE RDSR-level convention.
 - **`skip_manufacturer_transforms: bool`** — pass coordinates directly to `analyze_data()` without calling `rdsr_normalizer()`'s coordinate step, for exports already in the internal frame
 - **`custom_translation_offset: dict | None`** — override the `normalization_settings.json` offset for the detected manufacturer when the auto-detected entry is wrong
 
@@ -578,7 +581,7 @@ See GUI changes section above for the full checklist. Key tasks:
 ### Full-feature done-bar
 
 - At least one Radimetrics CSV schema and one DoseTrack XLSX schema have validated adapters, or are explicitly documented as unsupported until fixtures are available.
-- Vendor coordinate normalization (Philips height, GE lat/lon swap, others as found) is applied and tested per adapter.
+- Vendor coordinate normalization (Philips height, GE normalizer-level lat/lon swap, others as found) is applied and tested without adapter-specific double-correction.
 - `--input-schema auto` selects correctly with a margin and errors on ambiguity.
 - The CLI, Python API, and GUI share the same adapter registry, with the GUI import preview blocking on unresolved mapping errors.
 - Tests cover success and failure paths for each supported format and schema.

@@ -12,6 +12,8 @@ from typing import Callable
 
 from nicegui import run, ui
 
+from mypyskindose.settings.normalization_settings import normalize_manufacturer_key
+
 from ..concurrency import operation_guard
 from ..helpers import apply_exam_transforms, load_tabular
 from ..page_context import PageContext
@@ -78,7 +80,7 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
                 ui.label("COORDINATE CORRECTIONS").classes("text-caption text-grey-4 font-bold tracking-widest")
                 coord_auto_label = ui.label("").classes("text-caption text-blue-400 italic")
             ui.label(
-                "Applied after normalization. Defaults are auto-set from the detected manufacturer."
+                "Applied after normalization. Use only for manual source/export corrections."
             ).classes("text-caption text-grey-6 q-mb-sm")
 
             with ui.row().classes("items-center gap-3 q-mb-xs"):
@@ -86,8 +88,8 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
                     "update:model-value", lambda: _on_swap_toggle()
                 ).tooltip(
                     "Swaps Tx ↔ Tz in the normalized output.\n"
-                    "Auto-enabled for GE Radimetrics exports.\n"
-                    "May also be needed for Philips DoseTrack — verify against known data."
+                    "GE RDSR-level correction is handled during normalization.\n"
+                    "Use only when a site-specific export is known to need an extra swap."
                 )
                 ui.label("Tx ↔ Tz").classes("text-caption text-grey-5 font-mono")
 
@@ -134,7 +136,7 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
         event_sample_table.props("dense flat virtual-scroll")
 
     def _is_ge() -> bool:
-        if state.manufacturer.strip().lower() in _GE_MANUFACTURER_VARIANTS:
+        if normalize_manufacturer_key(state.manufacturer) in _GE_MANUFACTURER_VARIANTS:
             return True
         warnings_lower = " ".join(state.import_warnings).lower()
         return "ge manufacturer detected" in warnings_lower
@@ -145,17 +147,17 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
         if state.is_multi_exam:
             coord_auto_label.set_text("")
             return
-        needs_swap = _is_ge()
-        state.swap_lat_lon = needs_swap
+        is_ge = _is_ge()
+        state.swap_lat_lon = False
         state.flip_ap1 = False
         state.flip_ap2 = False
         if state.loaded_exam_meta:
             meta = state.loaded_exam_meta[0]
-            meta["swap_lat_lon"] = needs_swap
+            meta["swap_lat_lon"] = False
             meta["flip_ap1"] = False
             meta["flip_ap2"] = False
             apply_exam_transforms(state, 0)
-        coord_auto_label.set_text("· lat/lon swap auto-enabled" if needs_swap else "")
+        coord_auto_label.set_text("· GE lat/lon handled in normalization" if is_ge else "")
 
     def _on_swap_toggle() -> None:
         if not state.loaded_exam_meta or state.input_source_type in ("", "dicom"):

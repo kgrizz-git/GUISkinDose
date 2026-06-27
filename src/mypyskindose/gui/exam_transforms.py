@@ -27,12 +27,7 @@ def clear_multi_exam_state(state: AppState) -> None:
 
 
 def _exam_is_ge(exam) -> bool:
-    """True if a tabular exam's import warnings flag GE equipment.
-
-    GE stores lat/lon in the opposite convention to MyPySkinDose, so GE exports
-    need a Tx ↔ Tz swap. Tabular adapters surface the detected manufacturer as a
-    warning; DICOM conventions are handled at normalization, not here.
-    """
+    """True if a tabular exam's import warnings flag GE equipment."""
     warnings_lower = " ".join(getattr(exam, "warnings", []) or []).lower()
     return _GE_MANUFACTURER_WARNING in warnings_lower
 

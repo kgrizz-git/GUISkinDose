@@ -231,13 +231,13 @@ class Phantom:
 
         # Creates the vertices of the patient support table
         elif phantom_model == "table":
-            # Longitudinal position of the vertices
+            # Physical lateral/across-table positions of the vertices.
             x_tab = [index * phantom_dim.table_width for index in [+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, -0.5]]
 
             # Vertical position of the vertices
             y_tab = [index * phantom_dim.table_thickness for index in [0, 0, 0, 0, +1, +1, +1, +1]]
 
-            # Lateral position of the vertices
+            # Physical longitudinal/along-table positions of the vertices.
             z_tab = [index * phantom_dim.table_length for index in [0, -1, -1, 0, 0, -1, -1, 0]]
 
             # Create index vectors for plotly mesh3d plotting
@@ -249,13 +249,13 @@ class Phantom:
         # Creates the vertices of the patient support table
         elif phantom_model == "pad":
 
-            # Longitudinal position of the vertices
+            # Physical lateral/across-table positions of the vertices.
             x_pad = [index * phantom_dim.pad_width for index in [+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, -0.5]]
 
             # Vertical position of the vertices
             y_pad = [index * phantom_dim.pad_thickness for index in [0, 0, 0, 0, -1, -1, -1, -1]]
 
-            # Lateral position of the vertices
+            # Physical longitudinal/along-table positions of the vertices.
             z_pad = [index * phantom_dim.pad_length for index in [0, -1, -1, 0, 0, -1, -1, 0]]
 
             # Create index vectors for plotly mesh3d plotting

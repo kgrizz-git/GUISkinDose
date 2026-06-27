@@ -58,12 +58,12 @@ class Beam:
             # Fetch rotation angles of the X-ray tube
 
             # Positioner isocenter primary angle (Ap1)
-            # i.e. rotation of the X-ray beam and detector about the z
-            # axis (LAT)
+            # i.e. rotation of the X-ray beam and detector about the z axis.
+            # Historical plot alias: LAT.
             ap1 = np.deg2rad(data_norm.Ap1[event])
             # Positioner isocenter secondary angle (Ap2)
-            # i.e. rotation of the X-ray beam and detector about the x axis
-            # (LON)
+            # i.e. rotation of the X-ray beam and detector about the x axis.
+            # Historical plot alias: LON.
             ap2 = np.deg2rad(data_norm.Ap2[event])
             # Positioner isocenter detector rotation angle (Ap3)
             # i.e. rotation of the X-ray detector about the y axis (VERT)
@@ -113,8 +113,10 @@ class Beam:
             ]
         )
         r[1:, 1] *= data_norm.DSD[event]
-        r[1:, 0] *= data_norm.FS_long[event]  # Append longitudinal collimation
-        r[1:, 2] *= data_norm.FS_lat[event]  # Append lateral collimation
+        # Field-size names follow the historical PySkinDose/DICOM-derived
+        # aliases; see dev-docs/VENDOR_COORDINATE_SYSTEMS.md before relabeling.
+        r[1:, 0] *= data_norm.FS_long[event]
+        r[1:, 2] *= data_norm.FS_lat[event]
 
         # Transform the beam from the positioner coordinate system to the
         # isocenter coordinate system. Note! The transpose operations are

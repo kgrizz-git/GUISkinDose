@@ -3,13 +3,16 @@
 Compares how MyPySkinDose, dhen2714/PySkinDose (public fork), and kgrizz-git/PSDCalcReworkTemp
 (private rework) handle geometry, coordinate axes, and preprocessing.
 
+This comparison is historical and diagnostic. The canonical coordinate terminology is
+[VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+
 ## Axis conventions
 
-| Repo | X | Y | Z |
-|------|---|---|---|
-| MyPySkinDose | Lateral | Longitudinal | Vertical | 
-| dhen2714/PySkinDose | Lateral | Longitudinal | Vertical (same — identical normalizer) |
-| PSDCalcReworkTemp | `focal_x` = lateral | `focal_y` = height | `focal_z` = longitudinal |
+| Repo | Physical X | Physical Y | Physical Z | Plot/display aliases |
+|------|------------|------------|------------|----------------------|
+| MyPySkinDose | Lateral | Vertical | Longitudinal | `X - LON`, `Y - VER`, `Z - LAT` (historical PySkinDose aliases) |
+| dhen2714/PySkinDose | Lateral | Vertical | Longitudinal | Same inherited normalizer/display convention |
+| PSDCalcReworkTemp | `focal_x` = lateral | `focal_y` = height | `focal_z` = longitudinal | Different transform path |
 
 **Note**: In the DICOM RDSR tags, `TableLongitudinalPosition_mm` maps to the X (lateral) axis
 and `TableLateralPosition_mm` maps to the Z (longitudinal) axis in MyPySkinDose / dhen2714.
@@ -40,7 +43,7 @@ Differences are limited to package name and import paths. No algorithmic diverge
 |---|---|---|---|---|
 | Siemens | 0 | 0 | +1 | All offsets zero; lat/lon swap not needed for DICOM RDSR |
 | Philips | ~105 cm | ~173 cm | −1 | Large physical offsets; must **not** apply twice |
-| GE | 0 | 0 | +1 | DICOM tags have lat/lon swapped vs physical reality |
+| GE | 0 | 0 | +1 | High-confidence RDSR-level `Tx`/`Tz` correction expected; confirmed convention is positive lateral=patient left, longitudinal=cranial, height=down; matched DICOM/export validation still pending |
 
 **dhen2714/PySkinDose**: Same `normalization_settings.json` structure (fork source); identical
 offset values.
@@ -52,12 +55,12 @@ recomputed inside `intercept_ell()` using the raw table position columns.
 
 ## Lateral/longitudinal axis swap
 
-Some vendor exports (and some DICOM RDSRs) have `TableLateralPosition_mm` and
-`TableLongitudinalPosition_mm` physically swapped relative to what `rdsr_normalizer()` expects.
+Some vendor data have `TableLateralPosition_mm` and `TableLongitudinalPosition_mm`
+in a frame that is swapped relative to what `rdsr_normalizer()` currently expects.
 
 | Vendor / export format | Repo | How the swap is applied |
 |---|---|---|
-| GE DICOM RDSR | PSDCalcReworkTemp | `_should_swap_by_default("ge") → True`; swaps `Table_Lateral_Position ↔ Table_Longitudinal_Position` before passing to calculation |
+| GE DICOM RDSR | PSDCalcReworkTemp | `_should_swap_by_default("ge") → True`; MyPySkinDose should treat this as a high-confidence RDSR-level convention and validate exact values against a matched GE DICOM/export case |
 | DoseTrack Philips XLSX | dhen2714/PySkinDose | `parse_philips()` renames `TableLateralPosition_mm ↔ TableLongitudinalPosition_mm` before calling `rdsr_normalizer()` |
 | Any tabular import | MyPySkinDose GUI | User-selectable toggle ("Swap lateral/longitudinal axes") swaps `Tx ↔ Tz` **after** normalization |
 
@@ -133,8 +136,10 @@ mapping and unit conversion before handing off to `rdsr_normalizer()`.
 tolerant of spacing/punctuation variants than our current column mapper. Our
 `GENERIC_RDSR_PATTERNS` use regex; tolerance is comparable but implementation differs.
 
-GE swap is manufacturer-keyed (`_should_swap_by_default()`); ours is a user toggle.
-Automating the swap from `Manufacturer` column is a potential Phase 3/4 improvement.
+GE swap is manufacturer-keyed in both PSDCalcReworkTemp (`_should_swap_by_default()`)
+and MyPySkinDose (`normalization_settings.json` wildcard entry with
+`swap_lateral_longitudinal: true`). The MyPySkinDose GUI swap remains a manual
+post-normalization override for site-specific exports.
 
 ---
 
@@ -147,13 +152,13 @@ The table below covers every axis of comparison across the three repos.
 |---|---|---|---|
 | **Phantom geometry** | STL mesh (human / cylinder / plane) | STL mesh — identical to MyPySkinDose | Parametric ellipsoid (`intercept_ell()`) |
 | **`rdsr_normalizer()` logic** | Reference implementation | Byte-for-byte identical fork | Not used |
-| **Axis convention** | X=lateral, Y=longitudinal, Z=vertical | Identical | focal_x=lateral, focal_y=height, focal_z=longitudinal |
+| **Axis convention** | Physical X=lateral, Y=vertical, Z=longitudinal; plot aliases `X/LON`, `Y/VER`, `Z/LAT` | Identical inherited convention | focal_x=lateral, focal_y=height, focal_z=longitudinal |
 | **X / Z sign convention** | +X right, +Z up (DICOM-derived) | Identical | −focal_x, −focal_z (mirrored) |
 | **Phi angle sign** | Standard | Identical | Negated (`phi = −phi`) |
 | **Rotation order** | Ry @ Rx | Identical | Rz @ Rx |
 | **Vendor offsets** | `normalization_settings.json` per model | Same JSON structure and values | No equivalent — raw positions used |
 | **Correction factors** | Per-event, from SQLite (`corrections.db`) | Per-event, DB-driven — identical | Three global scalars applied after accumulation (F=1.06, T=0.8, BSF=1.3) |
-| **Lat/lon axis swap — GE** | User toggle in GUI | Not explicitly handled for GE DICOM | Auto-detected from `Manufacturer` column |
+| **Lat/lon axis swap — GE** | Normalizer-level `swap_lateral_longitudinal` via GE manufacturer wildcard; GUI toggle is manual only | Not explicitly handled for GE DICOM | Auto-detected from `Manufacturer` column |
 | **Lat/lon axis swap — DoseTrack Philips** | User toggle in GUI | Hardcoded in `parse_philips()` (pre-normalizer) | Not applicable (different architecture) |
 | **Philips double-correction risk** | Documented; user warned at import | Avoided by handling in `parse_philips()` | N/A |
 | **Tabular input architecture** | Layered `input_adapters/` package (L2) | Ad-hoc `parse_*()` functions mixed with analysis | Standalone `io_utils.py` |
@@ -169,9 +174,9 @@ The table below covers every axis of comparison across the three repos.
   unit conversions remain the ground-truth reference for future fixture validation. The
   `CollimatedFieldArea_m2` derivation for DoseTrack is the trickiest part (no direct column; must
   be computed from DAP, DoseRP, and geometry).
-- **Lat/lon swap automation**: PSDCalcReworkTemp shows that auto-detecting the swap from a
-  `Manufacturer` column is feasible. Phase 5+ could auto-set the toggle when `Manufacturer`
-  contains "GE" and schema is `generic_rdsr_like`.
+- **Lat/lon swap automation**: GE is now handled in MyPySkinDose normalization via manufacturer
+  wildcard matching and `swap_lateral_longitudinal`. Keep the GUI `Tx↔Tz` toggle manual to avoid
+  double-correcting GE inputs already handled by normalization.
 - **Correction factor approach**: PSDCalcReworkTemp's global scalars are simpler but less accurate.
   MyPySkinDose's per-event DB approach is physically correct and should be preserved.
 - **Sign convention (PSDCalcReworkTemp)**: Results from that repo are **not directly comparable**

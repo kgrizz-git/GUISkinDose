@@ -245,9 +245,18 @@ This is a category error — the DICOM attribute is named "Longitudinal" but mea
 
 #### 7.2.4 The GE/Philips vendor convention
 
-The user correctly notes that some vendors (like GE) define "latitude" and "longitude" oppositely from other vendors. The code handles this through the `swap_lat_lon` flag in `gui/exam_transforms.py:91-97`, which swaps `Tx ↔ Tz` at the DataFrame level for tabular (non-DICOM) inputs. For DICOM RDSR files, the DICOM standard is consistent across vendors — the Table Coordinate System is defined the same way for all isocenter-based equipment — so no swap is needed at the normalizer level. The vendor differences manifest primarily in *tabular exports* where column names use human-readable conventions rather than DICOM concept codes.
+Update after GE inspection: the GE lateral/longitudinal issue should be treated
+as a high-confidence RDSR-level convention, not as a tabular export-only quirk.
+GE table travel has been confirmed by inspection as positive lateral = patient
+left, positive longitudinal = cranial, and positive height = down for
+head-first positioning. MyPySkinDose now handles this through the
+normalization-layer `swap_lateral_longitudinal` setting for the GE manufacturer
+wildcard, before deriving `Tx` and `Tz`.
 
-The `swap_lat_lon` mechanism exists in the GUI for exactly this reason (`gui/widgets/import_preview.py:85-88`), auto-detecting GE manufacturer and enabling the toggle. For non-GE tabular inputs that need the swap, the user can manually enable it. This is documented in `VENDOR_XZ_CLARIFICATION_PLAN.md`.
+The GUI `swap_lat_lon` mechanism remains useful, but it is now a manual expert
+override for tabular imports rather than the default GE architecture. A matched
+GE DICOM RDSR plus tabular export from the same case is still needed to pin
+exact fixture values and confirm tabular parity.
 
 ### 7.3 Revised assessment of AGENTS.md
 

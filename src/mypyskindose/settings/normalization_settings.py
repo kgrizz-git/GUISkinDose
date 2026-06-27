@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -15,6 +16,59 @@ from mypyskindose.settings.rotation_direction import RotationDirection
 from mypyskindose.settings.translation_direction import TranslationDirection
 from mypyskindose.settings.translation_offset import TranslationOffset
 from mypyskindose.debug import dprint
+
+_GE_MANUFACTURER_ALIASES = frozenset(
+    {
+        "ge",
+        "gehealthcare",
+        "ge healthcare",
+        "ge medical systems",
+        "general electric",
+        "gems",
+    }
+)
+
+_MANUFACTURER_ALIASES_BY_SETTINGS_KEY = {
+    "ge healthcare": _GE_MANUFACTURER_ALIASES,
+    "siemens": frozenset(
+        {
+            "siemens",
+            "siemens healthcare",
+            "siemens healthineers",
+            "siemens medical solutions",
+            "siemens ag",
+        }
+    ),
+    "philips": frozenset(
+        {
+            "philips",
+            "philips healthcare",
+            "philips medical systems",
+            "philips medical systems nederland b v",
+            "philips medical systems nederland bv",
+        }
+    ),
+}
+
+
+def normalize_manufacturer_key(manufacturer: object) -> str:
+    """Canonical manufacturer key for settings lookup and vendor detection."""
+    key = re.sub(r"[^0-9a-z]+", " ", str(manufacturer).casefold()).strip()
+    return " ".join(key.split())
+
+
+def normalize_model_key(model: object) -> str:
+    """Canonical model key for settings lookup."""
+    if str(model).strip() == "*":
+        return "*"
+    key = re.sub(r"[^0-9a-z]+", " ", str(model).casefold()).strip()
+    return " ".join(key.split())
+
+
+def _manufacturer_matches(input_manufacturer: str, settings_manufacturer: str) -> bool:
+    if input_manufacturer == settings_manufacturer:
+        return True
+    return input_manufacturer in _MANUFACTURER_ALIASES_BY_SETTINGS_KEY.get(settings_manufacturer, frozenset())
 
 
 class NormalizationSettings:
@@ -34,6 +88,10 @@ class NormalizationSettings:
         distance). For more info, see calculate_field_size in geom_calc.py.
     detector_side_length : str
         side length of active image receptor area in cm.
+    swap_lateral_longitudinal : bool
+        If true, swap raw TableLongitudinalPosition and TableLateralPosition
+        values before deriving Tx/Tz. Used for GE's high-confidence RDSR-level
+        lateral/longitudinal convention.
 
     """
 
@@ -48,19 +106,33 @@ class NormalizationSettings:
         self.normalization_method: str = "Unknown"
         self.matched_manufacturer: str = ""
         self.matched_model: str = ""
+        self.swap_lateral_longitudinal: bool = False
 
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="normalization", indent_level=0)
 
     def update_used_settings(self, data_parsed: pd.DataFrame):
-        manufacturer = data_parsed[KEY_RDSR_MANUFACTURER][0].casefold()
-        model = data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0].casefold()
+        manufacturer = normalize_manufacturer_key(data_parsed[KEY_RDSR_MANUFACTURER][0])
+        model = normalize_model_key(data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0])
 
-        setting = [
+        manufacturer_settings = [
             setting
             for setting in self.normalization_settings_list
-            if manufacturer == setting[KEY_NORMALIZATION_MANUFACTURER].casefold()
-            and model in [mod.casefold() for mod in setting[KEY_NORMALIZATION_MODELS]]
+            if _manufacturer_matches(
+                manufacturer,
+                normalize_manufacturer_key(setting[KEY_NORMALIZATION_MANUFACTURER]),
+            )
         ]
+        setting = [
+            setting
+            for setting in manufacturer_settings
+            if model in [normalize_model_key(mod) for mod in setting[KEY_NORMALIZATION_MODELS]]
+        ]
+        if not setting:
+            setting = [
+                setting
+                for setting in manufacturer_settings
+                if "*" in [normalize_model_key(mod) for mod in setting[KEY_NORMALIZATION_MODELS]]
+            ]
 
         if not setting:
             dprint("PROCESSING", f"No specific match for {manufacturer} {model}. Looking for 'Default'...")
@@ -97,6 +169,7 @@ class NormalizationSettings:
             self.rot_dir.update_rotation_direction(directions=rotation_direction)
         self.field_size_mode = setting[KEY_NORMALIZATION_FIELD_SIZE_MODE]
         self.detector_side_length = setting[KEY_NORMALIZATION_DETECTOR_SIDE_LENGTH]
+        self.swap_lateral_longitudinal = bool(setting.get("swap_lateral_longitudinal", False))
 
         self.update_attrs_str()
 
@@ -123,4 +196,5 @@ class NormalizationSettings:
             f"\t\t[{color}]At3:{self.rot_dir.At3}[/{color}]\n"
             f"\t[{color}]field_size_mode: {self.field_size_mode}[/{color}]\n"
             f"\t[{color}]detector_side_length: {self.detector_side_length}[/{color}]\n"
+            f"\t[{color}]swap_lateral_longitudinal: {self.swap_lateral_longitudinal}[/{color}]\n"
         )

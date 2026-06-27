@@ -13,7 +13,6 @@ from mypyskindose.rdsr_normalizer import rdsr_normalizer
 from .exam_transforms import (
     _apply_transform_flags,
     _drop_exams_for_path,
-    _exam_is_ge,
     rebuild_rdsr_df,
 )
 from .geometry_preview import on_exams_loaded
@@ -221,9 +220,8 @@ def load_tabular(
 
         if isinstance(_raw, list):
             # Multi-study file: append all exams. Coordinate transforms are applied
-            # per-exam (Phase 2.2): each exam keeps a pristine ``base_data`` copy and
-            # its own swap/flip flags, defaulting to an auto GE lat/lon swap for
-            # non-normalized exports (preserved across a re-parse).
+            # per-exam (Phase 2.2): each exam keeps a pristine ``base_data`` copy
+            # and its own manual swap/flip flags (preserved across a re-parse).
             new_exams = _raw
             for j, exam in enumerate(new_exams):
                 schema_name = exam.provenance.schema_name
@@ -232,7 +230,7 @@ def load_tabular(
                     flags = preserved_flags[j]
                 else:
                     flags = {
-                        "swap_lat_lon": schema_name != "normalized" and _exam_is_ge(exam),
+                        "swap_lat_lon": False,
                         "flip_ap1": False,
                         "flip_ap2": False,
                         "flip_tx": False,

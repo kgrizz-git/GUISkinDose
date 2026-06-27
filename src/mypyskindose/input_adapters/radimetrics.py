@@ -22,6 +22,7 @@ from mypyskindose.input_adapters.base import (
 from mypyskindose.input_adapters.models import InputAdapterResult
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
 from mypyskindose.settings import PyskindoseSettings
+from mypyskindose.settings.normalization_settings import normalize_manufacturer_key
 
 # Lowercase versions of key Radimetrics export column headers (for header detection).
 # Source: dhen2714/PySkinDose RADIMETRICS2PSD dict (dev-docs/references/).
@@ -161,7 +162,7 @@ _UNIT_CONVERSIONS: list[tuple[str, str, float, str]] = [
 ]
 
 _KNOWN_MODELS = {"AXIOM-Artis", "Artis", "Artis Q", "Artis Zee"}
-_GE_VARIANTS = {"ge medical systems", "ge healthcare", "ge", "gems"}
+_GE_VARIANTS = {"ge medical systems", "ge healthcare", "general electric", "ge", "gems"}
 
 
 def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
@@ -185,13 +186,13 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
                 "Verify results against known-good RDSR output."
             )
     if "Manufacturer" in data_df.columns:
-        seen_mfrs = {str(m).strip().lower() for m in data_df["Manufacturer"].dropna().unique()}
+        seen_mfrs = {normalize_manufacturer_key(m) for m in data_df["Manufacturer"].dropna().unique()}
         if seen_mfrs & _GE_VARIANTS:
             ctx.warnings.append(
                 "GE manufacturer detected. GE equipment stores lateral and longitudinal table "
                 "positions in the opposite convention to MyPySkinDose. "
-                "Enable 'Swap lateral/longitudinal axes' in the GUI import options, or pass "
-                "swap_lat_lon=True when calling load_tabular(), to correct this."
+                "The normalization layer applies the GE lateral/longitudinal correction; "
+                "do not also enable the GUI swap unless validating a site-specific export."
             )
 
     # Radimetrics exports may omit these; rdsr_normalizer accepts the defaults.

@@ -38,10 +38,10 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
 - [ ] **Coordinate conventions cleanup** — centralize physical axes, DICOM table-coordinate definitions,
-  PySkinDose plot aliases, vendor normalization signs, GE confirmed table-travel convention, and tabular
-  `Tx`/`Tz` correction behavior. Plan: [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md).
+  PySkinDose plot aliases, vendor normalization signs, GE normalization-level `Tx`/`Tz` correction, and
+  manual tabular coordinate-override behavior. Plan: [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md).
   Assessment: [YZ_AXIS_INCONSISTENCY_ASSESSMENT.md](assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md).
-  Validation still needed: one matched GE DICOM RDSR plus tabular export.
+  Validation still needed: one matched GE DICOM RDSR plus tabular export to pin fixture values and tabular parity.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
   source RDSRs before expanding vendor adapters. Covered by
   [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7 and

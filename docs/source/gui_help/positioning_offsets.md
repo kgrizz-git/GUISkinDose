@@ -10,20 +10,18 @@ The patient offset settings (Longitudinal, Vertical, Lateral) shift the phantom 
 
 ## Coordinate System
 
-MyPySkinDose uses a unified internal coordinate system. For detailed vendor-specific coordinate transformations, see the technical documentation on <a href="../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md" target="_blank">Vendor Coordinate Systems</a>.
+MyPySkinDose uses a normalized calculation frame plus historical PySkinDose plot aliases. For detailed vendor-specific coordinate transformations, see the technical documentation on <a href="../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md" target="_blank">Vendor Coordinate Systems</a>.
 
 ### Quick Reference
 
-| Parameter | Direction | Effect of Positive Values |
-|-----------|-----------|---------------------------|
-| Lateral (X) | Side-to-side | Moves patient left relative to beam |
-| Longitudinal (Y) | Head-foot | Moves patient toward head (cranial) |
-| Vertical (Z) | Up-down | Moves patient up (away from table surface) |
-| Rotation | About vertical axis | Rotates patient clockwise (when viewed from above) |
+| Control | Calculation field | Existing plot alias | Physical effect for head-first supine |
+|---|---|---|---|
+| Lateral | `d_lat` / `Tz`-related patient placement | `Z - LAT` | Side-to-side placement after normalized geometry is built |
+| Longitudinal | `d_lon` / `Tx`-related patient placement | `X - LON` | Head-foot placement after normalized geometry is built |
+| Vertical | `d_ver` / `Ty`-related patient placement | `Y - VER` | Up-down placement |
+| Rotation | patient rotation setting | about vertical axis | Rotates patient around the table-height axis |
 
-Coordinate axes (X→Lateral, Y→Longitudinal, Z→Vertical) match the technical documentation.[^coord]
-
-[^coord]: X→Lateral, Y→Longitudinal, Z→Vertical.
+The `LON` and `LAT` plot aliases are historical PySkinDose labels. For developer-level details, including the DICOM attribute-name mismatch and GE lateral/longitudinal handling, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
 
 All values are in **centimeters**.
 

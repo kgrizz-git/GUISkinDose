@@ -92,7 +92,7 @@ Practical guidance for the resulting STL:
 - `src/mypyskindose/phantom_class.py:281` — `_apply_human_scale` is the existing scaling hook; the GUI sliders write into it.
 - `src/mypyskindose/phantom_class.py:296` — `_recompute_human_normals_from_triangles` should be the documented normal-derivation path for any new phantom.
 - `src/mypyskindose/gui/helpers.py:280` — `get_available_phantom_meshes()` is the GUI's discovery of `phantom_data/*.stl`; any new file dropped there shows up automatically (the function explicitly excludes `*_reduced_1000t`).
-- `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` and the body-habitus plans in `dev-docs/plans/` cover the coordinate-frame side of the problem this doc doesn't touch.
+- `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`, `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md`, and the body-habitus plans in `dev-docs/plans/` cover the coordinate-frame side of the problem this doc doesn't touch.
 
 
 ## Added by Deepseek V4 Pro
@@ -103,7 +103,7 @@ The Minimax M3 section above is substantially accurate and well-researched. I ve
 
 ### Corrections and clarifications
 
-- **Coordinate system documentation vs. code reality.** AGENTS.md states "X = lateral, Y = longitudinal, Z = vertical," but the code itself uses Y as the vertical (up-from-table) axis and Z as longitudinal. Evidence: `position_patient_phantom_on_table` lowers the patient in Y (`dr=[0, -pad_thickness, 0]`) onto the pad, and `Phantom.position()` rotates around Z (`self.r[:, 2] += table_length/2`). The Minimax section's advice to anchor at `y=0` for the table contact plane is correct for the *actual* code convention, but conflicts with the documented convention. The AGENTS.md should be updated or the codebase should adopt a single unambiguous convention.
+- **Coordinate system documentation vs. code reality.** `VENDOR_COORDINATE_SYSTEMS.md` is the canonical coordinate reference. Physical mesh geometry uses X as lateral/across-table, Y as vertical, and Z as longitudinal/along-table for head-first supine positioning, while historical PySkinDose plot aliases still show `X - LON`, `Y - VER`, and `Z - LAT`. Evidence: `position_patient_phantom_on_table` lowers the patient in Y (`dr=[0, -pad_thickness, 0]`) onto the pad, and `Phantom.position()` rotates around Z (`self.r[:, 2] += table_length/2`). The Minimax section's advice to anchor at `y=0` for the table contact plane is correct for the physical mesh convention.
 
 - **Table-hit test normal dependency is overstated.** Minimax claims `geom_calc.py:521` "assumes the triangle's normal points 'upward (negative y direction).'" The docstring at line 509 does say this, but the intersection algorithm at `check_intersection` (lines 546–573) is Möller-Trumbore-like barycentric: the normal sign cancels out of the ray-plane distance `k` (both numerator and denominator flip), and the barycentric check is purely geometric and orientation-independent. The normal direction matters only for the source-above-triangle filter (line 603: "Start points above triangle returns False"), which is a guard, not the core hit-test. A watertight mesh with inverted normals would still produce correct hit/miss results in this code path; the Minimax paragraph overstates the severity.
 

@@ -274,7 +274,7 @@ Add focused GUI/plot tests for any new helpers introduced by Phase 1 or Phase 3.
 
 - Should `VENDOR_COORDINATE_SYSTEMS.md` be revised in the same PR to clarify the difference between the anatomical documentation frame and the current PySkinDose display aliases? This plan should at least add a warning note if it leaves the deeper doc contradiction unresolved.
 - When real Radimetrics and DoseTrack matched export/source-RDSR fixtures become available, should they live under `tests/fixtures/tabular_inputs/` or a separate restricted-data fixture path?
-- Can any local gitignored GE Radimetrics-style export be paired with its original de-identified DICOM RDSR? Without that matched source, it helps characterize the tabular adapter and GE UI swap path, but it cannot fully validate the DICOM GE convention.
+- Can any local gitignored GE Radimetrics-style export be paired with its original de-identified DICOM RDSR? Without that matched source, it helps characterize the tabular adapter and manual correction override behavior, but it cannot fully validate the DICOM GE convention.
 - Should `--validate-coordinates` be its own plan after Phase 2 documents the validation matrix? Current recommendation: yes.
 
 ## 10. 18:04 Assessment Disposition

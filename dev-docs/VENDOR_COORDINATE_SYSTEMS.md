@@ -12,14 +12,57 @@ Different X-ray equipment manufacturers (Siemens, Philips, GE, Canon, etc.) use 
 
 To ensure accurate dose calculations, MyPySkinDose normalizes all vendor-specific RDSR data into a **unified coordinate system** through the normalization pipeline (`rdsr_normalizer.py` + `normalization_settings.json`).
 
-## Unified Internal Coordinate System
+## Coordinate Frames And Names
 
-MyPySkinDose uses the following coordinate conventions internally:
+This document is the canonical coordinate reference for MyPySkinDose. The same
+numbers are described by several naming systems, so avoid using `X`, `LON`,
+`LAT`, or a DICOM table-position attribute name without saying which frame you
+mean.
 
-### Axes
-- **X-axis (Tx)**: Lateral (side-to-side), positive toward patient's left
-- **Y-axis (Ty)**: Vertical (up-down), positive downward (gravity direction)
-- **Z-axis (Tz)**: Longitudinal (head-foot), positive toward patient's head (cranial)
+### Physical world geometry
+
+For the default head-first supine patient orientation:
+
+| World axis | Physical direction | Positive direction |
+|---|---|---|
+| X | Lateral, across the table | Patient left |
+| Y | Vertical / table height | Vendor-normalized `Ty`; GE confirmed positive height travel is down |
+| Z | Longitudinal, along the table | Cranial / toward patient head |
+
+The table mesh width is along X and table length is along Z.
+
+### DICOM table coordinate attributes
+
+DICOM RDSR table-position concept names are easy to misread:
+
+| DICOM attribute | DICOM table axis | Physical direction for HFS |
+|---|---|---|
+| `(0018,9329) Table Longitudinal Position` | X | Lateral |
+| `(0018,932A) Table Lateral Position` | Z | Longitudinal |
+| `(0018,9328) Table Height Position` | Y | Vertical |
+
+The attribute names are not the same thing as the physical direction labels
+used in the mesh.
+
+### Normalized DataFrame columns
+
+`rdsr_normalizer.py` maps raw parsed RDSR values into centimeters:
+
+```python
+Tx = offset.x + direction.x * TableLongitudinalPosition_mm / 10
+Ty = offset.y + direction.y * TableHeightPosition_mm / 10
+Tz = offset.z + direction.z * TableLateralPosition_mm / 10
+```
+
+`Tx`, `Ty`, and `Tz` are calculation columns. They should not be renamed
+without a separate fixture-backed refactor.
+
+### PySkinDose display aliases
+
+Existing plots label axes as `X - LON`, `Y - VER`, and `Z - LAT`. These are
+historical PySkinDose display aliases tied to normalized table-position names.
+They are not a reliable statement of physical direction. When precision
+matters, write both forms, for example `Tx / X display axis / physical lateral`.
 
 ### Origin
 - The `(0, 0, 0)` isocenter corresponds to the **head-end of the patient support table** at its default height and lateral center position
@@ -89,6 +132,30 @@ The normalization system applies vendor-specific parameters to transform manufac
 **What This Means:**
 Philips systems define their isocenter at a significantly different physical location than Siemens. The large Y and Z offsets shift the Philips coordinate origin to match the unified system's table head-end reference.
 
+### GE Healthcare (wildcard)
+
+```json
+{
+    "manufacturer": "GE Healthcare",
+    "models": ["*"],
+    "translation_offset": {"x": 0.0, "y": 0.0, "z": 0.0},
+    "translation_direction": {"x": "+", "y": "+", "z": "+"},
+    "rotation_direction": {
+        "Ap1": "+", "Ap2": "+", "Ap3": "+",
+        "At1": "+", "At2": "+", "At3": "+"
+    },
+    "field_size_mode": "CFA",
+    "detector_side_length": 40,
+    "swap_lateral_longitudinal": true
+}
+```
+
+**Key Points:**
+- Matches any GE Healthcare model until model-specific offsets are validated
+- Applies zero offsets and positive translation/rotation signs
+- Applies `swap_lateral_longitudinal` before table translations are normalized
+- Confirmed GE convention for head-first positioning: positive lateral = patient left, positive longitudinal = cranial, positive height = down
+
 ### Default (Fallback)
 
 ```json
@@ -116,15 +183,21 @@ The normalization happens in `rdsr_normalizer.py`. Here's how the transformation
 
 ### Table Position (Translation)
 ```python
-data_norm["Tx"] = norm.trans_offset.x + norm.trans_dir.x * data_parsed.TableLongitudinalPosition_mm / 10
+table_longitudinal_mm = data_parsed.TableLongitudinalPosition_mm
+table_lateral_mm = data_parsed.TableLateralPosition_mm
+if norm.swap_lateral_longitudinal:
+    table_longitudinal_mm, table_lateral_mm = table_lateral_mm, table_longitudinal_mm
+
+data_norm["Tx"] = norm.trans_offset.x + norm.trans_dir.x * table_longitudinal_mm / 10
 data_norm["Ty"] = norm.trans_offset.y + norm.trans_dir.y * data_parsed.TableHeightPosition_mm / 10
-data_norm["Tz"] = norm.trans_offset.z + norm.trans_dir.z * data_parsed.TableLateralPosition_mm / 10
+data_norm["Tz"] = norm.trans_offset.z + norm.trans_dir.z * table_lateral_mm / 10
 ```
 
 **Process:**
-1. Convert mm to cm (divide by 10)
-2. Apply direction sign (`+1` or `-1`)
-3. Add translation offset
+1. Optionally swap lateral/longitudinal source values for vendors such as GE
+2. Convert mm to cm (divide by 10)
+3. Apply direction sign (`+1` or `-1`)
+4. Add translation offset
 
 ### Beam Angles (Rotation)
 ```python
@@ -147,19 +220,41 @@ data_norm["At3"] = norm.rot_dir.At3 * [0] * len(data_norm)
 **Current State:**
 Table rotations are currently always set to 0 (not extracted from RDSR data yet).
 
-## Unsupported Vendors
+## Additional Vendor Status
 
 ### GE Healthcare
-**Status**: Not currently in the normalization database.
+**Status**: Convention confirmed by inspection; matched DICOM/export validation
+still pending. GE is handled by a manufacturer wildcard entry in
+`normalization_settings.json` with `swap_lateral_longitudinal: true`.
 
-If a GE RDSR is loaded, the system will fall back to "Default" settings (Siemens-like conventions). This **may produce incorrect dose projections** if GE uses different coordinate conventions.
+For head-first positioning, confirmed GE table-travel convention:
 
-**Risk**: High for incorrect dose localization if GE conventions differ significantly.
+| GE table travel | Positive direction |
+|---|---|
+| Lateral | Patient left |
+| Longitudinal | Cranial |
+| Height | Down |
+
+GE RDSR-level lateral/longitudinal handling is high-confidence: GE appears to
+encode table lateral/longitudinal values in the opposite convention from the
+default `rdsr_normalizer()` mapping and therefore uses the normalizer-level
+`swap_lateral_longitudinal` correction. Open validation item: inspect one
+matched GE DICOM RDSR and one tabular export from the same case to confirm exact
+raw values and whether the tabular export preserves the same RDSR-level frame.
+See [GE coordinate validation notes](references/ge_coordinate_validation.md).
+
+If a GE RDSR is loaded today, the wildcard GE entry applies zero offsets/signs
+plus the lateral/longitudinal swap. This may still need model-specific offsets
+or signs if future validated GE fixtures show scanner-family differences.
+
+| Validation item | Status | Notes |
+|---|---|---|
+| GE DICOM RDSR plus matched tabular export | Pending matched fixture | GE positive lateral=patient left, longitudinal=cranial, height=down confirmed by inspection; RDSR-level `Tx`/`Tz` correction implemented; exact fixture values and tabular parity still pending |
 
 ### Canon (formerly Toshiba)
 **Status**: Not currently in the normalization database.
 
-Same fallback behavior as GE.
+Canon still falls back to "Default" settings.
 
 ### Other Vendors
 Any vendor not explicitly listed will use the "Default" settings, which assume Siemens-like coordinate conventions.
@@ -172,10 +267,12 @@ The normalization matching process (in `normalization_settings.py`):
    - `Manufacturer` DICOM tag (e.g., "Philips")
    - `ManufacturerModelName` DICOM tag (e.g., "Allura Clarity")
 
-2. **Case-insensitive matching**:
-   - Convert both RDSR values and normalization entries to lowercase
-   - Match `manufacturer` exactly
-   - Match `model` against list of known models
+2. **Canonical manufacturer/model matching**:
+   - Casefold values and collapse punctuation, underscores, hyphens, and repeated whitespace
+   - Match manufacturer against the canonical settings name plus explicit aliases
+   - Current manufacturer aliases cover common GE, Siemens, and Philips spellings
+   - Match model against the known model list using the same separator-insensitive canonicalization
+   - If no model match exists, match a manufacturer entry whose model list contains `"*"`
 
 3. **Fallback to Default**:
    - If no match found, log warning and use "Default" entry
@@ -490,26 +587,47 @@ Before writing a Phase 3–4 vendor adapter (Radimetrics, DoseTrack, etc.), the 
 
 ### Double-correction risk
 
-Calling `rdsr_normalizer()` on data that has already been transformed doubles the corrections — producing obviously wrong positions for Philips (large Y/Z offsets) and GE (axis swap), and no numerical effect for Siemens (all-zero offsets):
+Calling `rdsr_normalizer()` on data that has already been transformed doubles the corrections — producing obviously wrong positions for Philips (large Y/Z offsets), GE `Tx`/`Tz` swap errors, and no numerical effect for Siemens (all-zero offsets):
 
 | Manufacturer | Double-correction effect | Risk level |
 |---|---|---|
 | Siemens (AXIOM-Artis) | No effect (offsets are all zero) | Low |
 | Philips (Allura Clarity) | Large position error (~105 cm Y, ~173 cm Z) | High |
-| GE (if axis swap applied twice) | Lateral/longitudinal axes wrong | High |
+| GE (RDSR-level `Tx`/`Tz` correction expected) | Lateral/longitudinal axes wrong if missed or applied twice | High |
 | Unknown/unvalidated vendor | Unknown | Assume high |
 
-### Lateral/longitudinal axis swap — GE and DoseTrack Philips
+### Lateral/longitudinal axis swap — GE RDSR and tabular exports
 
-The axis swap problem affects more than just GE DICOM RDSRs. It occurs whenever the **`TableLateralPosition` and `TableLongitudinalPosition` values are physically swapped** relative to the internal model's axis definitions, regardless of source:
+The axis swap problem can occur whenever table-position values are in a
+different frame than the normalized calculation columns.
 
-- **GE DICOM RDSRs**: the DICOM tags themselves are swapped relative to the unified system.
+- **GE DICOM RDSRs**: high-confidence finding from inspection is that the
+  lateral/longitudinal convention is swapped relative to the default
+  `rdsr_normalizer()` mapping. MyPySkinDose handles this with the
+  normalizer-level `swap_lateral_longitudinal` flag on the GE manufacturer
+  wildcard entry.
+- **GE tabular exports**: expected to inherit the same RDSR-level convention
+  unless the export tool transforms coordinates. The GUI no longer auto-enables
+  an additional post-normalization `Tx`/`Tz` swap for GE; use the manual toggle
+  only for a site-specific export proven to need an extra correction.
+- **Radimetrics exports**: working assumption is that Radimetrics passes table
+  coordinates through from the source RDSR and mainly changes field names/units.
+  Therefore Radimetrics inputs should generally use the normalizer once rather
+  than adapter-specific coordinate transforms. Keep matched source-RDSR/export
+  comparison as the validation standard.
 - **DoseTrack Philips exports**: the `dhen2714/PySkinDose` reference implementation explicitly swaps `TableLateralPosition_mm ↔ TableLongitudinalPosition_mm` in its `parse_philips()` function — suggesting DoseTrack stores Philips data with these axes swapped.
 - Possibly other vendor/export-tool combinations: must be verified per adapter.
 
-The `normalization_settings.json` offset/direction mechanism cannot fix an axis swap — it requires explicitly transposing the two columns before `rdsr_normalizer()` is called. Note that `normalization_settings.json` maps **Longitudinal → Tx (lateral)** and **Lateral → Tz (longitudinal)**, so calling `rdsr_normalizer()` on swapped data produces axes in entirely the wrong positions.
+The `normalization_settings.json` offset/direction mechanism cannot fix an axis
+swap. GE DICOM RDSR handling uses a normalizer-level
+`swap_lateral_longitudinal` flag. The GUI correction toggle is
+post-normalization and should be treated as a manual expert override, not the
+default GE architecture.
 
-The fix is a `swap_lateral_longitudinal` option applied before `rdsr_normalizer()` — either as a per-manufacturer flag or as an explicit step in each adapter that needs it. The shipped `TabularImportOptions` path uses `swap_lateral_longitudinal=True` to pre-swap the columns before normalization.
+GE convention confirmed by inspection: positive lateral table travel is patient
+left, positive longitudinal travel is cranial, and positive height travel is
+down for head-first positioning. Matched GE DICOM RDSR plus tabular export
+validation remains open to pin fixture values and tabular parity.
 
 ### User-selectable import options (`TabularImportOptions`, Phase 3+)
 

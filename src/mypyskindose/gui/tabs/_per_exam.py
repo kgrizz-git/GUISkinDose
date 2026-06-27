@@ -184,7 +184,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                         value=meta.get("swap_lat_lon", False),
                     ).on_value_change(
                         lambda e, i=idx: _on_exam_transform_change(i, "swap_lat_lon", e.value)
-                    ).tooltip("Auto-enabled for GE exports; verify for others.")
+                    ).tooltip("Manual extra swap only; GE RDSR-level correction is handled during normalization.")
                     ui.switch(
                         "Flip primary angle (Ap1 × −1)",
                         value=meta.get("flip_ap1", False),
