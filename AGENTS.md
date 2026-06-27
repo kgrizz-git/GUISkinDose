@@ -102,7 +102,7 @@ See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implem
 
 ```bash
 pip install -e .
-pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, safety, pre-commit + stubs (matches CI)
+pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, safety, shellcheck-py, pre-commit + stubs (matches CI)
 pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-started notebook
 ```
 

@@ -23,12 +23,12 @@ case "$ACTION" in
       exit 1
     fi
     basedpyright --baselinefile "$BASELINE"
-    echo "If basedpyright updated the baseline, commit: ${BASELINE#$ROOT/}"
+    echo "If basedpyright updated the baseline, commit: ${BASELINE#"$ROOT"/}"
     ;;
   write)
     mkdir -p "$(dirname "$BASELINE")"
     basedpyright --baselinefile "$BASELINE" --writebaseline
-    echo "Wrote baseline to ${BASELINE#$ROOT/}. Review and commit if intentional."
+    echo "Wrote baseline to ${BASELINE#"$ROOT"/}. Review and commit if intentional."
     ;;
   *)
     echo "Usage: $0 [shrink|write]" >&2

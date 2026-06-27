@@ -31,8 +31,10 @@ jobs:
         pip install build
     - name: Check changelog updated (PR only)
       if: github.event_name == 'pull_request'
+      env:
+        BASE_REF: ${{ github.base_ref }}
       run: |
-        git fetch --depth=1 origin ${{ github.base_ref }}
+        git fetch --depth=1 origin "$BASE_REF"
         python scripts/check_changelog.py
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
@@ -50,8 +52,10 @@ jobs:
         python scripts/check_licenses.py
     - name: Bandit (Python SAST, medium+ severity)
       run: bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+    - name: ShellCheck (shell script lint)
+      run: shellcheck run_gui.sh scripts/type_baseline.sh
     - name: Semgrep (OWASP Top 10 SAST)
-      run: semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts
+      run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
     - name: Safety (dependency vulnerability scan — skipped without key)
       if: env.SAFETY_API_KEY != ''
       run: safety scan --detailed-output
@@ -80,8 +84,11 @@ jobs:
     steps:
       - id: set-matrix
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "$EVENT_NAME" == "push" && "$REF" == "refs/heads/main" ]]; then
             CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.10"},{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"macos-latest","python-version":"3.10"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.12"},{"os":"macos-latest","python-version":"3.13"},{"os":"windows-latest","python-version":"3.10"},{"os":"windows-latest","python-version":"3.11"},{"os":"windows-latest","python-version":"3.12"},{"os":"windows-latest","python-version":"3.13"}]}'
           else
             CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.12"}]}'

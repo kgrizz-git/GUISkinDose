@@ -20,8 +20,15 @@ Plan reviewed against the live config (`pyproject.toml`, `.pre-commit-config.yam
   `if: env.SAFETY_API_KEY != ''` on the step (step-level `env:` is not reliably visible
   to that same step's `if:`).
 - **semgrep rule pack name.** Registry pack is `p/owasp-top-ten` (not `p/owasp-top-10`, which 404s).
-- **semgrep scan scope.** Pre-push and CI limit targets to `src/mypyskindose scripts` so workflow YAML
-  shell-injection rules do not block on existing `.github/workflows/` patterns.
+- **semgrep scan scope.** Pre-push and CI scan `src scripts .github/workflows docs/source/conf.py`.
+  The OWASP pack's `run-shell-injection` rule flagged `${{ github.* }}` interpolated directly
+  into `run:` steps in `ci.yml`; these were fixed with env-var indirection (map the context to
+  a job/step `env:` var, then reference `"$VAR"` in the shell) rather than excluded.
+- **shellcheck (shell linting).** Added via the `shellcheck-py` pip wrapper — cross-platform,
+  no Docker. Pre-commit hook (`shellcheck-py` repo, auto-detects shell files) + CI step on
+  `run_gui.sh` and `scripts/type_baseline.sh`. `.bat` launchers are not covered (no mature
+  batch linter). Fixing the initial findings also repaired latent `set -e` bugs in `run_gui.sh`
+  where error handlers after bare commands were unreachable.
 - **semgrep network + metrics.** `--config=p/owasp-top-ten` is fetched from the Semgrep registry,
   so pre-push/CI need internet (offline pushes fail). Add `--metrics=off` to avoid sending
   anonymized telemetry.
@@ -43,6 +50,7 @@ Plan reviewed against the live config (`pyproject.toml`, `.pre-commit-config.yam
 | gitleaks | `pre-commit` stage | — | `.github/workflows/gitleaks.yml` |
 | semgrep | — | pre-push | `static-analysis` job |
 | safety | — | — | `static-analysis` job (skipped without `SAFETY_API_KEY`) |
+| shellcheck | `pre-commit` stage | — | `static-analysis` job |
 
 ---
 
@@ -65,7 +73,7 @@ pre-commit) and a CI job alongside bandit.
    ```yaml
    - id: semgrep
      name: semgrep (OWASP Top 10 SAST)
-     entry: semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts
+     entry: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
      language: system
      pass_filenames: false
      always_run: true
@@ -80,7 +88,7 @@ pre-commit) and a CI job alongside bandit.
 3. **Add CI step** in `.github/workflows/ci.yml` under `static-analysis`:
    ```yaml
    - name: Semgrep (OWASP Top 10 SAST)
-     run: semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts
+     run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
    ```
    Install is already handled by `pip install -e ".[dev,gui]"`. CI runs on
    `ubuntu-latest`, so the registry fetch and POSIX behavior are reliable there.
@@ -158,7 +166,7 @@ No changes needed.
 
 - [x] `pip install -e ".[dev]"` installs semgrep and safety without errors
 - [x] `pre-commit run --hook-stage pre-push semgrep --all-files` passes on current code
-- [x] `semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts` passes in CI
+- [x] `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` passes in CI (workflow shell-injection findings fixed via env-var indirection)
 - [x] **No key yet:** with `SAFETY_API_KEY` unset, the safety step is *skipped* and CI stays green (verify the step shows as skipped, not failed)
 - [ ] **When a key exists (later):** set `SAFETY_API_KEY` in GitHub secrets; `safety scan --detailed-output` runs and passes (or known-ignores documented in a safety policy file)
 - [x] Gitleaks already green in CI (verify current workflow passes)
@@ -169,9 +177,10 @@ No changes needed.
 
 | File | Change |
 |------|--------|
-| `pyproject.toml` | Add `semgrep>=1.100`, `safety>=3.0` to `[project.optional-dependencies] dev` |
-| `.pre-commit-config.yaml` | Add semgrep pre-push hook (under `repo: local`) with `--metrics=off` |
-| `.github/workflows/ci.yml` | Add semgrep step + job-level `env: SAFETY_API_KEY` + conditional safety step to `static-analysis` |
+| `pyproject.toml` | Add `semgrep>=1.100`, `safety>=3.0`, `shellcheck-py>=0.11` to `[project.optional-dependencies] dev` |
+| `.pre-commit-config.yaml` | Add semgrep pre-push hook (under `repo: local`) with `--metrics=off`; add `shellcheck-py` hook |
+| `.github/workflows/ci.yml` | Add semgrep + shellcheck steps + job-level `env: SAFETY_API_KEY` + conditional safety step to `static-analysis` |
+| `run_gui.sh`, `scripts/type_baseline.sh` | Fix shellcheck findings (quoting, `read -r`, `set -e` error handling) |
 | `.semgrepignore` | **Create** with test/build exclude patterns |
 | GitHub repo secrets | **Optional / deferred:** add `SAFETY_API_KEY` (free tier) later to activate the safety step. Not required for this plan — the step skips cleanly without it. |
 | `AGENTS.md` | Note semgrep pre-push needs network + `PYTHONUTF8=1` on Windows |

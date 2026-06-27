@@ -47,10 +47,10 @@ check_python() {
     fi
     
     PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
-    PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
-    PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
+    PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+    PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
     
-    if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]); then
+    if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]; }; then
         echo -e "${RED}[ERROR] Python 3.10+ required. Found: $PYTHON_VERSION${NC}"
         exit 1
     fi
@@ -80,7 +80,7 @@ setup_venv() {
     
     echo ""
     echo -e "${YELLOW}No virtual environment found.${NC}"
-    read -p "Would you like to create one at .venv? [Y/n]: " create_venv
+    read -r -p "Would you like to create one at .venv? [Y/n]: " create_venv
     
     if [[ "$create_venv" =~ ^[Nn]$ ]]; then
         echo "Proceeding without virtual environment..."
@@ -88,9 +88,7 @@ setup_venv() {
     fi
     
     echo "Creating virtual environment..."
-    $PYTHON_CMD -m venv .venv
-    
-    if [ $? -ne 0 ]; then
+    if ! $PYTHON_CMD -m venv .venv; then
         echo -e "${RED}[ERROR] Failed to create virtual environment.${NC}"
         return 1
     fi
@@ -124,12 +122,13 @@ setup_dependencies() {
     echo "  [2] Core + GUI + Native window     - pip install -e \".[gui-native]\""
     echo "  [3] Skip (install manually later)"
     echo ""
-    read -p "Select option [1/2/3, default=1]: " install_choice
+    read -r -p "Select option [1/2/3, default=1]: " install_choice
     
+    local install_status=0
     case "$install_choice" in
         2)
             echo "Installing mypyskindose with GUI and native window support..."
-            $PYTHON -m pip install -e ".[gui-native]"
+            $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
         3)
             echo "Skipping. Install manually with: pip install -e \".[gui]\""
@@ -137,11 +136,11 @@ setup_dependencies() {
             ;;
         *)
             echo "Installing mypyskindose with GUI..."
-            $PYTHON -m pip install -e ".[gui]"
+            $PYTHON -m pip install -e ".[gui]" || install_status=$?
             ;;
     esac
     
-    if [ $? -ne 0 ]; then
+    if [ "$install_status" -ne 0 ]; then
         echo -e "${RED}[ERROR] Installation failed.${NC}"
         return 1
     fi
@@ -187,7 +186,7 @@ setup_pywebview() {
     
     echo ""
     echo -e "${YELLOW}pywebview not installed (required for native window mode).${NC}"
-    read -p "Would you like to install it? [Y/n]: " install_pywebview
+    read -r -p "Would you like to install it? [Y/n]: " install_pywebview
     
     if [[ "$install_pywebview" =~ ^[Nn]$ ]]; then
         echo "Switching to browser mode instead..."
@@ -195,9 +194,7 @@ setup_pywebview() {
     fi
     
     echo "Installing pywebview..."
-    $PYTHON -m pip install pywebview
-    
-    if [ $? -ne 0 ]; then
+    if ! $PYTHON -m pip install pywebview; then
         echo -e "${RED}[ERROR] Failed to install pywebview.${NC}"
         echo "Switching to browser mode instead..."
         return 1
@@ -213,7 +210,7 @@ echo "How would you like to run the GUI?"
 echo "[1] Browser (Standard)"
 echo "[2] Native Window (Requires pywebview)"
 echo ""
-read -p "Enter your choice (1 or 2, default is 1): " choice
+read -r -p "Enter your choice (1 or 2, default is 1): " choice
 
 if [ "$choice" == "2" ]; then
     # Check for pywebview before launching native mode
@@ -225,19 +222,22 @@ if [ "$choice" == "2" ]; then
     fi
 fi
 
+# Capture the launch exit status so the error handler below is reached even
+# under `set -e` (a bare non-zero command would otherwise exit immediately).
+launch_status=0
 if [ "$choice" == "2" ]; then
     echo ""
     echo "Starting MyPySkinDose in Native Window mode..."
-    $PYTHON -m mypyskindose --mode gui --native
+    $PYTHON -m mypyskindose --mode gui --native || launch_status=$?
 else
     echo ""
     echo "Starting MyPySkinDose in Browser mode..."
-    $PYTHON -m mypyskindose --mode gui
+    $PYTHON -m mypyskindose --mode gui || launch_status=$?
 fi
 
-if [ $? -ne 0 ]; then
+if [ "$launch_status" -ne 0 ]; then
     echo ""
     echo -e "${RED}[ERROR] The application failed to start.${NC}"
     echo "Try installing dependencies: pip install -e \".[gui]\""
-    read -p "Press Enter to exit..."
+    read -r -p "Press Enter to exit..."
 fi

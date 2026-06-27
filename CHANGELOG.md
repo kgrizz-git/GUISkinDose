@@ -13,8 +13,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 ### Added
 
 - **Security tooling in CI and pre-push** (2026-06-27) — semgrep (OWASP Top 10 SAST) in
-  the `static-analysis` CI job and as a pre-push hook; safety dependency scan in CI
-  (skipped when `SAFETY_API_KEY` is unset; `pip-audit` remains the no-key gate). Plan:
+  the `static-analysis` CI job and as a pre-push hook, scanning `src`, `scripts`,
+  `.github/workflows`, and `docs/source/conf.py`; safety dependency scan in CI (skipped when
+  `SAFETY_API_KEY` is unset; `pip-audit` remains the no-key gate); shellcheck (`shellcheck-py`)
+  pre-commit hook + CI step for shell scripts. Hardened `ci.yml` to avoid `${{ github.* }}`
+  shell-injection by passing context through `env:` variables, and fixed latent `set -e`
+  error-handling bugs in `run_gui.sh` surfaced by shellcheck. Plan:
   `dev-docs/plans/SECURITY_TOOLS_CI_PLAN.md`.
 - **Body-habitus cm readouts** (2026-06-26) — Settings → Phantom body-habitus
   sliders now show the scaled human-mesh dimension in centimeters beside the

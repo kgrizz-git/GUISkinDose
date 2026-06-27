@@ -53,6 +53,8 @@ Agents working in this repository should be able to answer three questions quick
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
+| OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI `static-analysis` job + pre-push hook |
+| Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
 | Dependency and Actions updates | `.github/dependabot.yml` |
@@ -298,6 +300,7 @@ pre-commit run --hook-stage pre-push basedpyright --all-files
 |---|---|
 | **ruff** | `ruff check --fix` on `src/` and `tests/` |
 | **gitleaks** | Secret scan on staged changes |
+| **shellcheck** | Shell-script lint (auto-detects `*.sh` + shell shebangs) |
 | **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
 | **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
@@ -348,11 +351,12 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `basedpyright` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
-| `semgrep --config=p/owasp-top-ten --error --metrics=off src/mypyskindose scripts` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `pip-audit --desc on` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | `safety scan --detailed-output` | Ubuntu `static-analysis` job when `SAFETY_API_KEY` secret is set (skipped otherwise) |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
-| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, bandit, doc-freshness, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
+| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc-freshness, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 

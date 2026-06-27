@@ -120,6 +120,7 @@ existing coverage.
 | Add **semgrep** (OWASP Top 10 rules) to CI `static-analysis` job | Low | High (fills biggest SAST gap) | **High** | **Shipped** (CI + pre-push) |
 | Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium | **Shipped** (CI; skipped without `SAFETY_API_KEY`) |
 | Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low | Planned |
+| Add **shellcheck** (`shellcheck-py`) for shell scripts | Low | Medium (catches quoting/`set -e` bugs) | Medium | **Shipped** (pre-commit + CI) |
 
 ### Quick start (local)
 
