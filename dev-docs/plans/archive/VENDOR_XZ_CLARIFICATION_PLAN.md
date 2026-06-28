@@ -1,5 +1,11 @@
 # Vendor X/Z Clarification Plan
 
+> **Status:** Completed and archived (2026-06-28). Implemented the vendor-invariant
+> Geometry/Per-exam table-origin control mapping, explicit GUI/plot/Data labels,
+> Geometry and Calculate help, vendor warnings, and coordinate documentation updates.
+> Remaining matched-fixture and broader vendor-validation work stays active under
+> `COORDINATE_CONVENTIONS_CLEANUP_PLAN.md` and `dev-docs/TO_DO.md`.
+>
 > Covers two `TO_DO.md` items:
 > 1. **GUI / UX** — Clarify vendor-specific X/Z on Geometry plot: either convert display axes to one semantic frame or add a clear in-app note and axis legend.
 > 2. **Input Data And Calculation** — Vendor coordinate validation: confirm per-vendor export frames and Philips double-correction risk against source RDSRs before expanding vendor adapters.

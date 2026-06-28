@@ -183,7 +183,7 @@ No file was found using the AGENTS.md documented convention (X=lateral, Y=longit
 
 ## 6. Related
 
-- `dev-docs/plans/VENDOR_XZ_CLARIFICATION_PLAN.md` — proposes explicit axis labels in the GUI
+- `dev-docs/plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md` — completed explicit axis-label work in the GUI
 - `dev-docs/ADDITIONAL_PHANTOMS.md` § "Corrections and clarifications" — first flag of this inconsistency
 - `dev-docs/TO_DO.md` — tracking item (linked to this assessment)
 

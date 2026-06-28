@@ -12,6 +12,31 @@ import subprocess
 import sys
 from pathlib import Path
 
+
+def _load_audit_ignores(repo_root: Path) -> list[str]:
+    """Return tracked advisory suppressions from ``[tool.uv.audit]`` in pyproject.toml.
+
+    ``uv audit`` reads this section natively, but ``pip-audit`` has no pyproject
+    config, so the fallback path mirrors the same IDs via ``--ignore-vuln`` to keep a
+    single source of truth. Combines ``ignore`` and ``ignore-until-fixed``. Degrades to
+    an empty list if tomllib is unavailable (Python < 3.11) or the file cannot be parsed.
+    """
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        return []
+    try:
+        with open(repo_root / "pyproject.toml", "rb") as fh:
+            data = tomllib.load(fh)
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    audit = data.get("tool", {}).get("uv", {}).get("audit", {})
+    ids: list[str] = []
+    for key in ("ignore", "ignore-until-fixed"):
+        ids.extend(str(v) for v in audit.get(key, []))
+    return ids
+
+
 def main():
     repo_root = Path(__file__).resolve().parent.parent
     
@@ -109,6 +134,14 @@ def main():
         cmd = ["pip-audit"]
         if not any(arg.startswith("--desc") for arg in extra_args):
             cmd.extend(["--desc", "on"])
+        # Mirror the tracked [tool.uv.audit] suppressions onto pip-audit (which has no
+        # pyproject config) so both audit paths honor the same documented policy.
+        tracked_ignores = _load_audit_ignores(repo_root)
+        if tracked_ignores:
+            print(f"INFO: applying tracked audit suppressions from [tool.uv.audit]: {', '.join(tracked_ignores)}")
+            sys.stdout.flush()
+            for vuln_id in tracked_ignores:
+                cmd.extend(["--ignore-vuln", vuln_id])
         cmd.extend(extra_args)
         
         result = subprocess.run(cmd, cwd=repo_root)

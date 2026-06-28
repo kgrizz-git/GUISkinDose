@@ -126,3 +126,19 @@ exclude_dirs = [
 ]
 # Application code only; tests excluded above. CI fails on medium+ severity (see HARNESS_ENGINEERING.md).
 skips = ["B101"]
+
+[tool.uv.audit]
+# Tracked dependency-audit suppressions (read natively by `uv audit`; the
+# scripts/audit_dependencies.py wrapper mirrors these IDs to `pip-audit --ignore-vuln`
+# on its fallback path). Every entry MUST have a documented reason and be revisited
+# (see the "Re-check ignored dependency advisories" item in dev-docs/TO_DO.md).
+#
+# `ignore-until-fixed` suppresses a finding ONLY while no patched release exists, so the
+# audit automatically fails again once an upstream fix is published.
+#
+# GHSA-p4gq-832x-fm9v (nltk 3.9.4): URL-encoded path traversal in nltk.data.load(); no fix
+#   released. Reachability: nltk is a transitive dependency of the dev-only `safety` scanner;
+#   it is never imported by mypyskindose and never shipped to users, and the vulnerable
+#   nltk.data.load() path is not invoked anywhere in this project. Drop this entry and bump
+#   nltk once a patched release exists.
+ignore-until-fixed = ["GHSA-p4gq-832x-fm9v"]

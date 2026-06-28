@@ -241,6 +241,36 @@ def test_main_uv_audit_exec_filenotfound_fallback(ad):
         assert called_cmd[0] == "pip-audit"
 
 
+def test_load_audit_ignores_reads_pyproject(ad):
+    """The tracked nltk suppression in [tool.uv.audit] should be discoverable."""
+    pytest.importorskip("tomllib")
+    ids = ad._load_audit_ignores(ROOT)
+    assert "GHSA-p4gq-832x-fm9v" in ids
+
+
+def test_pip_audit_fallback_mirrors_tracked_ignores(ad):
+    """The pip-audit fallback should inject --ignore-vuln for each tracked suppression."""
+    with patch("shutil.which", return_value=None), \
+         patch.object(ad, "_load_audit_ignores", return_value=["GHSA-TEST-0001"]), \
+         patch("subprocess.run") as mock_run:
+
+        mock_audit = MagicMock()
+        mock_audit.returncode = 0
+        mock_run.return_value = mock_audit
+
+        with pytest.raises(SystemExit) as excinfo:
+            ad.main()
+
+        assert excinfo.value.code == 0
+        called_cmd = mock_run.call_args[0][0]
+        assert called_cmd[0] == "pip-audit"
+        assert "--ignore-vuln" in called_cmd
+        assert "GHSA-TEST-0001" in called_cmd
+        # flag and value should be adjacent
+        idx = called_cmd.index("--ignore-vuln")
+        assert called_cmd[idx + 1] == "GHSA-TEST-0001"
+
+
 def test_main_pip_audit_missing_error(ad):
     """Test that if pip-audit is missing, FileNotFoundError is caught, prints error, and exits with 1."""
     with patch("shutil.which", return_value=None), \

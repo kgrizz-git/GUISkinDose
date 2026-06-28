@@ -12,11 +12,17 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Vendor X/Z coordinate clarification** (2026-06-28) — Geometry and dose-map plots now label the
+  normalized frame as `X - LON / PT L-R`, `Y - VER / PT A-P`, and `Z - LAT / PT S-I`;
+  Data tab and Geometry/Per-exam controls use the same frame; Geometry and Calculate help explain
+  Siemens/Philips DICOM/operator naming versus GE patient-anatomy raw naming. Plan:
+  `dev-docs/plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md`.
 - **Lockfile-based dependency auditing** (2026-06-28) — `scripts/audit_dependencies.py` wraps
   `uv audit` on `uv.lock` (requires `uv` >= 0.11.19; `--frozen` locally, `--locked` in CI) with
   fallback to `pip-audit` on the active environment. Pre-push hook and CI `static-analysis` job now
-  call the wrapper; CI installs `uv` via `astral-sh/setup-uv@v8.2.0`. Plan:
-  `dev-docs/plans/DEPENDENCY_AUDIT_PLAN.md`.
+  call the wrapper; CI installs `uv` via `astral-sh/setup-uv@v8.2.0`. Tracked suppressions live in
+  `[tool.uv.audit]` (`ignore-until-fixed` for dev-only `nltk` via `safety`, GHSA-p4gq-832x-fm9v).
+  Plan: `dev-docs/plans/DEPENDENCY_AUDIT_PLAN.md`.
 - **One-command hook installer** (2026-06-27) — `scripts/setup-dev.sh` (macOS/Linux)
   and `scripts/setup-dev.bat` (Windows) run both `pre-commit install` and
   `pre-commit install --hook-type pre-push` in one step, ensuring all pre-push hooks

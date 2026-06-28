@@ -45,16 +45,13 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   GE table-travel directions are already confirmed from tabular export inspection.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
   source RDSRs before expanding vendor adapters. Covered by
-  [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7 and
-  [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md) Phase 2.
+  [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
 - [ ] **Patient orientation support (head-first vs feet-first, prone vs supine)** — investigate whether the code and GUI allow choosing patient orientation (head-first / feet-first) and positioning (prone / supine). See [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
 - [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
 
 
 ### GUI / UX
 
-- [ ] **Clarify vendor-specific X/Z on Geometry plot** — either convert display axes to one semantic frame or add
-  a clear in-app note and axis legend. Plan: [VENDOR_XZ_CLARIFICATION_PLAN.md](plans/VENDOR_XZ_CLARIFICATION_PLAN.md).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
@@ -70,6 +67,11 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   visible on the geometry/dose plot, and factored into dose calculations.
 ### Harness / Repo Hygiene
 
+- [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
+  `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
+  Drop `GHSA-p4gq-832x-fm9v` once `nltk` ships a fix (currently dev-only via `safety`, no
+  in-project use of `nltk.data.load()`). `ignore-until-fixed` should auto-fail the audit again
+  when a patched `nltk` release appears in the lockfile.
 - [ ] **Optional SBOM scan** — evaluate grype on built wheel/sdist if PyPI advisories are not enough.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.
@@ -122,11 +124,6 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   [PATIENT_SIZE_SCALING_PLAN.md](plans/archive/PATIENT_SIZE_SCALING_PLAN.md).
 - [x] Beam-miss warnings — archived in
   [NO_PATIENT_INTERSECTION_WARNING_PLAN.md](plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md).
-- [x] GUI help single source of truth — archived in
-  [phase-6-doc-integration.md](plans/archive/phase-6-doc-integration.md).
-- [x] GUI decomposition — archived in [refactor-execution.md](plans/archive/refactor-execution.md).
-- [x] Tabular input Phases 1-5 — source plan:
-  [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [x] Geometry plot spinning wheel / continuous reload — archived in
   [GEO_TAB_SPINNING_WHEEL_PLAN.md](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md).
 - [x] Show Geometry table-origin slider values — source plan:

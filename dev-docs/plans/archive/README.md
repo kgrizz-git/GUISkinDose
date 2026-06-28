@@ -21,5 +21,6 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | [CROSS_TAB_SLIDER_SYNC_PLAN.md](CROSS_TAB_SLIDER_SYNC_PLAN.md) | **Completed** (2026-06-25) | Settings edits refresh Geometry sliders, labels, and preview on tab entry. |
 | [BODY_HABITUS_CM_DISPLAY_PLAN.md](BODY_HABITUS_CM_DISPLAY_PLAN.md) | **Completed** (2026-06-26) | Body-habitus scaling sliders display scaled mesh dimensions in cm. |
 | [SLIDER_LABEL_REPOSITION_PLAN.md](SLIDER_LABEL_REPOSITION_PLAN.md) | **Completed** (2026-06-26) | Geometry tab slider value labels repositioned adjacent to sliders (per-axis `ui.row` replacing outer column layout). |
+| [VENDOR_XZ_CLARIFICATION_PLAN.md](VENDOR_XZ_CLARIFICATION_PLAN.md) | **Completed** (2026-06-28) | Vendor-invariant Geometry/Per-exam table-origin controls, explicit `X/LON/PT L-R` labels, plot annotations, Calculate/Geometry help, and vendor warnings. Remaining matched-fixture validation stays in active coordinate-conventions backlog. |
 
 For active work, see [TO_DO.md](../../TO_DO.md) and execution plans in [../](../).

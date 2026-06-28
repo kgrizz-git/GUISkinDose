@@ -244,7 +244,11 @@ CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed).
 - **Scope:** PyPI-resolved packages for core dependencies plus `[dev]` and `[gui]` extras (widest maintained install surface).
 - **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (via `uv audit` when `uv` is available, otherwise `pip-audit`).
 - **Local editable install:** `mypyskindose` itself is skipped (not published on PyPI); this is expected.
-- **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented `--ignore-vuln` entry only after maintainer review (avoid silent ignores).
+- **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented entry under
+  `[tool.uv.audit]` in `pyproject.toml` only after maintainer review (avoid silent ignores). Use
+  `ignore-until-fixed` when no patched release exists yet so the audit re-fails automatically once
+  upstream ships a fix. The wrapper mirrors those IDs to `pip-audit --ignore-vuln` on its fallback
+  path. Revisit suppressions quarterly or before releases (see `dev-docs/TO_DO.md`).
 
 Broader SBOM-style scanning (e.g. **grype** on built wheels) remains optional; see `dev-docs/TO_DO.md`.
 
