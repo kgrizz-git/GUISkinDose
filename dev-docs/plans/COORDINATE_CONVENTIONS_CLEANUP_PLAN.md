@@ -121,9 +121,9 @@ def test_dicom_table_position_attributes_map_to_tx_ty_tz_without_axis_relabeling
 def test_current_plot_axis_titles_are_historical_pyskindose_aliases():
     from mypyskindose.constants import PLOT_AXIS_TITLE_X, PLOT_AXIS_TITLE_Y, PLOT_AXIS_TITLE_Z
 
-    assert PLOT_AXIS_TITLE_X == "X - LON [cm]"
-    assert PLOT_AXIS_TITLE_Y == "Y - VER [cm]"
-    assert PLOT_AXIS_TITLE_Z == "Z - LAT [cm]"
+    assert PLOT_AXIS_TITLE_X == "X - LON / PT L-R [cm]"
+    assert PLOT_AXIS_TITLE_Y == "Y - VER / PT A-P [cm]"
+    assert PLOT_AXIS_TITLE_Z == "Z - LAT / PT S-I [cm]"
 ```
 
 - [ ] **Step 2: Run tests to verify the current behavior**
@@ -195,7 +195,7 @@ Tz = offset.z + direction.z * TableLateralPosition_mm / 10
 
 ### PySkinDose display aliases
 
-Existing plots label axes as `X - LON`, `Y - VER`, and `Z - LAT`. These are historical PySkinDose display aliases tied to normalized table-position names. They are not a reliable statement of physical direction. When precision matters, write both forms, for example `Tx / X display axis / physical lateral`.
+Existing plots label axes as `X - LON / PT L-R`, `Y - VER / PT A-P`, and `Z - LAT / PT S-I`. `LON`, `VER`, and `LAT` are historical PySkinDose display aliases tied to normalized DICOM/operator table-position names; the `PT` suffixes show patient-anatomy directions for head-first supine. When precision matters, write both forms, for example `Tx / X display axis / patient left-right`.
 ```
 
 - [ ] **Step 2: Add the GE convention subsection**
@@ -306,9 +306,9 @@ Use this table:
 ```markdown
 | Control | Calculation field | Existing plot alias | Physical effect for HFS |
 |---|---|---|---|
-| Lateral | `d_lat` / `Tz`-related patient placement | `Z - LAT` | Side-to-side placement after normalized geometry is built |
-| Longitudinal | `d_lon` / `Tx`-related patient placement | `X - LON` | Head-foot placement after normalized geometry is built |
-| Vertical | `d_ver` / `Ty`-related patient placement | `Y - VER` | Up-down placement |
+| Lateral | `d_lat` / patient scale | `X - LON / PT L-R` | Side-to-side placement after normalized geometry is built |
+| Longitudinal | `d_lon` / patient scale | `Z - LAT / PT S-I` | Head-foot placement after normalized geometry is built |
+| Vertical | `d_ver` / patient scale | `Y - VER / PT A-P` | Up-down placement |
 | Rotation | patient rotation setting | about vertical axis | Rotates patient around the table-height axis |
 ```
 
@@ -325,7 +325,7 @@ Add a short section:
 ```markdown
 ## Coordinate Legend
 
-Geometry plots currently use historical PySkinDose axis aliases: `X - LON`, `Y - VER`, and `Z - LAT`. These labels identify the plotted calculation frame, not every physical/DICOM naming convention. Vendor normalization and import correction toggles are applied before the Geometry preview is drawn.
+Geometry plots currently use PySkinDose axis labels: `X - LON / PT L-R`, `Y - VER / PT A-P`, and `Z - LAT / PT S-I`. These labels identify the plotted calculation frame after vendor normalization. Vendor normalization and import correction toggles are applied before the Geometry preview is drawn.
 
 For GE inputs, the lateral/longitudinal swap is expected at the RDSR level and is handled during normalization. The GUI `Tx <-> Tz` swap is a manual expert override only. GE table travel has been confirmed from tabular export inspection as positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. A matched GE DICOM RDSR plus tabular export would be useful later only to pin exact regression fixture values.
 ```

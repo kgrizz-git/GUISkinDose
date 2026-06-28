@@ -27,3 +27,6 @@ def test_make_dosemap_fig_includes_coordinate_frame_annotation():
 
     assert fig is not None
     assert COORDINATE_FRAME_NOTE in fig["layout"]["annotations"][0]["text"]
+    assert fig["layout"]["scene"]["xaxis"]["title"]["text"] == "X - LON / PT L-R [cm]"
+    assert fig["layout"]["scene"]["yaxis"]["title"]["text"] == "Y - VER / PT A-P [cm]"
+    assert fig["layout"]["scene"]["zaxis"]["title"]["text"] == "Z - LAT / PT S-I [cm]"

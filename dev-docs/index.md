@@ -101,6 +101,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
+| [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
 
 ## Archived plans (`plans/archive/`)
 
@@ -126,6 +127,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md) | **Completed** (2026-06-25) — Settings edits refresh Geometry sliders, labels, and preview on tab entry. |
 | [plans/archive/BODY_HABITUS_CM_DISPLAY_PLAN.md](plans/archive/BODY_HABITUS_CM_DISPLAY_PLAN.md) | **Completed** (2026-06-26) — Body-habitus scaling sliders display scaled mesh dimensions in cm. |
 | [plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md](plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md) | **Completed** (2026-06-26) — Geometry tab slider value labels repositioned adjacent to sliders (per-axis `ui.row` replacing outer column layout). |
+| [plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md](plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md) | **Completed** (2026-06-27) — `setup-dev.sh`/`.bat` one-command hook installer; `pip-audit` added as pre-push hook; CI shellcheck expanded; `AGENTS.md` and `HARNESS_ENGINEERING.md` updated. |
 
 ---
 

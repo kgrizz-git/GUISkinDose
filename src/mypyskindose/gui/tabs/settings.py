@@ -180,12 +180,12 @@ def build(ctx: PageContext) -> None:
                     with scale_section:
                         ui.label("Body habitus scaling").classes("text-caption text-grey-6")
                         for label, attr, axis in (
-                            ("Lateral / width (Z/LAT)", "phantom_scale_lat", 0),
-                            ("AP / vertical thickness (Y/VER)", "phantom_scale_ap", 1),
-                            ("Longitudinal / head-foot (X/LON)", "phantom_scale_lon", 2),
+                            ("Patient lateral / width (display X/LON, PT L-R)", "phantom_scale_lat", 0),
+                            ("Patient AP / vertical thickness (display Y/VER, PT A-P)", "phantom_scale_ap", 1),
+                            ("Patient longitudinal / head-foot (display Z/LAT, PT S-I)", "phantom_scale_lon", 2),
                         ):
                             with ui.row().classes("w-full gap-4 items-center"):
-                                ui.label(label).classes("w-48 text-caption")
+                                ui.label(label).classes("w-72 text-caption")
                                 ui.slider(
                                     min=0.5,
                                     max=2.0,

@@ -4,24 +4,24 @@ This guide explains how to use the Settings and Geometry tabs to position the pa
 
 ## Overview
 
-The patient offset settings (Longitudinal, Vertical, Lateral) shift the phantom position from its default location. These are **additional offsets** applied on top of the table offsets that are automatically determined from the RDSR data based on the manufacturer and model of the X-ray system.
+The patient offset settings shift the phantom position from its default location. These are **additional offsets** applied on top of the table offsets that are automatically determined from the RDSR data based on the manufacturer and model of the X-ray system.
 
 **Note:** The automatic table offsets are applied "under the hood" during normalization and account for vendor-specific coordinate system conventions. The patient offsets here let you make further adjustments to position the patient correctly on the table.
 
 ## Coordinate System
 
-MyPySkinDose uses a normalized calculation frame plus historical PySkinDose plot aliases. For detailed vendor-specific coordinate transformations, see the technical documentation on <a href="../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md" target="_blank">Vendor Coordinate Systems</a>.
+MyPySkinDose uses a normalized calculation frame plus historical PySkinDose/DICOM table-position aliases. RDSRs name the source fields `TableLongitudinalPosition`, `TableHeightPosition`, and `TableLateralPosition`; they do not call those fields `X`, `Y`, or `Z`. For detailed vendor-specific coordinate transformations, see the technical documentation on <a href="../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md" target="_blank">Vendor Coordinate Systems</a>.
 
 ### Quick Reference
 
 | Control | Calculation field | Existing plot alias | Physical effect for head-first supine |
 |---|---|---|---|
-| Lateral | `d_lat` / `Tz`-related patient placement | `Z - LAT` | Side-to-side placement after normalized geometry is built |
-| Longitudinal | `d_lon` / `Tx`-related patient placement | `X - LON` | Head-foot placement after normalized geometry is built |
-| Vertical | `d_ver` / `Ty`-related patient placement | `Y - VER` | Up-down placement |
+| Patient lateral / width | `d_lat` / patient scale | `X - LON / PT L-R` | Side-to-side placement after normalized geometry is built |
+| Patient longitudinal / head-foot | `d_lon` / patient scale | `Z - LAT / PT S-I` | Head-foot placement after normalized geometry is built |
+| Patient AP / vertical | `d_ver` / patient scale | `Y - VER / PT A-P` | Up-down placement |
 | Rotation | patient rotation setting | about vertical axis | Rotates patient around the table-height axis |
 
-The `LON` and `LAT` plot aliases are historical PySkinDose labels. For developer-level details, including the DICOM attribute-name mismatch and GE lateral/longitudinal handling, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
+The `LON`, `VER`, and `LAT` plot aliases are historical PySkinDose labels inherited from DICOM/operator table-coordinate names after vendor normalization. Siemens and Philips use that DICOM/operator convention. GE raw data uses patient-anatomy longitudinal and lateral naming instead; MyPySkinDose swaps GE raw lateral/longitudinal into the common plotted frame during normalization. For developer-level details, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
 
 All values are in **centimeters**.
 

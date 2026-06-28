@@ -32,6 +32,8 @@ def test_default_geometry_layout_is_plotly_layout_with_shared_font():
     assert layout_dict["font"]["family"] == PLOT_FONT_FAMILY
     assert layout_dict["scene"]["aspectmode"] == PLOT_ASPECTMODE_SETUP_AND_EVENT
     assert COORDINATE_FRAME_NOTE in layout_dict["annotations"][0]["text"]
+    assert "Siemens/Philips" in layout_dict["annotations"][0]["text"]
+    assert "GE raw LON/LAT" in layout_dict["annotations"][0]["text"]
     assert layout.paper_bgcolor == COLOR_CANVAS_DARK
 
 

@@ -108,14 +108,24 @@ pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-
 
 Extras live in `pyproject.toml` (`gui`, `gui-native`, `dev`, `docs`, `notebooks`) — the single
 source of truth for dependencies; there are no `requirements*.txt` files. `uv.lock` pins exact
-versions (`uv sync --all-extras`).
+versions (`uv sync --all-extras`). Installing and using **`uv`** is recommended for package
+management and local development (it runs dependency audits and environment syncing much faster).
 
 Optional local git hooks (fast subset of CI):
 
 ```bash
-pip install -e ".[dev,gui]"
-pre-commit install
-pre-commit install --hook-type pre-push
+# macOS / Linux
+bash scripts/setup-dev.sh
+
+# Windows
+scripts\setup-dev.bat
+```
+
+To run hooks manually:
+
+```bash
+pre-commit run --all-files                           # pre-commit stage hooks
+pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, audit_dependencies, basedpyright, changelog)
 ```
 
 The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
@@ -152,7 +162,7 @@ python -m mypyskindose --mode gui
 - All units in **cm** unless otherwise noted
 - Settings always passed as `PyskindoseSettings` object internally; JSON/dict accepted at the boundary
 - Correction factors are dimensionless floats in range 0–1 (or slightly above 1 for backscatter)
-- Coordinate conventions are nuanced: physical world geometry uses X=lateral, Y=vertical, Z=longitudinal for head-first supine positioning, while historical PySkinDose plot aliases show `X - LON`, `Y - VER`, `Z - LAT`. DICOM table-position attribute names are misleading; see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` before changing normalization, plotting labels, or vendor coordinate handling.
+- Coordinate conventions are nuanced: physical world geometry uses X=lateral, Y=vertical/AP, Z=longitudinal for head-first supine positioning, while PySkinDose plot labels show `X - LON / PT L-R`, `Y - VER / PT A-P`, `Z - LAT / PT S-I`. RDSRs use table-position names, not x/y/z; Siemens/Philips use the DICOM/operator table convention, while GE raw data uses patient-anatomy longitudinal/lateral naming and is normalized by swapping raw long/lat into the common plotted frame. See `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` before changing normalization, plotting labels, or vendor coordinate handling.
 - GUI dependencies are optional extras: `pip install mypyskindose[gui]` — do not add them to core dependencies
 - **Modularity:** Keep all Python source and Markdown documentation files under ~800 lines unless strictly unavoidable (checked in CI; outliers must be whitelisted in `scripts/check_file_sizes.py`).
 - **Plan lifecycle:** Completed or superseded execution plans must be archived under `dev-docs/plans/archive/` (always update `dev-docs/index.md` in the same PR).

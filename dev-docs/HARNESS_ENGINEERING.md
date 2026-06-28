@@ -232,15 +232,17 @@ Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full reposi
 
 ```bash
 pip install -e ".[dev,gui]"
-pip-audit --desc on
+python scripts/audit_dependencies.py
 ```
 
-CI runs the same audit in the `dependency-audit` job (Ubuntu, Python 3.12).
+Auditing is orchestrated by a wrapper script [scripts/audit_dependencies.py](../scripts/audit_dependencies.py) which checks locked dependencies using `uv audit` when `uv` (>= 0.11.19) is installed and a `uv.lock` is present. Locally the wrapper passes `--frozen` (audit the committed lockfile without relocking or downloading an interpreter); in CI it passes `--locked` so a stale `uv.lock` fails loudly. Otherwise, it falls back to auditing the active environment using `pip-audit --desc on`.
+
+CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed).
 
 **Policy:**
 
 - **Scope:** PyPI-resolved packages for core dependencies plus `[dev]` and `[gui]` extras (widest maintained install surface).
-- **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (`pip-audit` default).
+- **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (via `uv audit` when `uv` is available, otherwise `pip-audit`).
 - **Local editable install:** `mypyskindose` itself is skipped (not published on PyPI); this is expected.
 - **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented `--ignore-vuln` entry only after maintainer review (avoid silent ignores).
 
@@ -257,7 +259,7 @@ python scripts/check_licenses.py --write-notices   # after dependency changes
 python scripts/check_licenses.py --check-notices   # verify tracked inventory
 ```
 
-A pre-commit hook (`license-notices`) runs `--check-notices` automatically on every commit, blocking if `THIRD_PARTY_NOTICES.md` is stale. This prevents forgetting to update the file after dependency changes. CI runs the same check (plus `pip-audit`) in the `dependency-audit` job.
+A pre-commit hook (`license-notices`) runs `--check-notices` automatically on every commit, blocking if `THIRD_PARTY_NOTICES.md` is stale. This prevents forgetting to update the file after dependency changes. CI runs the same check (plus `python scripts/audit_dependencies.py`) in the `static-analysis` job.
 
 **Policy:**
 
@@ -287,11 +289,15 @@ CI runs the same command in the Ubuntu `bandit` job (Python 3.12).
 Fast checks run via [pre-commit](https://pre-commit.com/) (subset of CI — not a replacement):
 
 ```bash
-pip install -e ".[dev,gui]"
-pre-commit install                    # commit hooks (once per clone)
-pre-commit install --hook-type pre-push   # basedpyright before push
-pre-commit run --all-files            # manual full run (commit stage)
-pre-commit run --hook-stage pre-push basedpyright --all-files
+# macOS / Linux
+bash scripts/setup-dev.sh
+
+# Windows
+scripts\setup-dev.bat
+
+# Manual runs
+pre-commit run --all-files                       # commit-stage hooks
+pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-audit, basedpyright, changelog)
 ```
 
 **Commit hooks** (`.pre-commit-config.yaml`):
@@ -313,9 +319,10 @@ pre-commit run --hook-stage pre-push basedpyright --all-files
 |---|---|
 | **basedpyright** | Full-project type check (matches CI `typecheck` job; requires `.[dev,gui]`) |
 | **semgrep** | OWASP Top 10 SAST (`p/owasp-top-ten`; needs network to fetch rules; `--metrics=off`) |
+| **pip-audit** | Dependency vulnerability scan (`python scripts/audit_dependencies.py`; `uv audit` on `uv.lock` when `uv` >= 0.11.19 is available) |
 | **check-changelog** | `python scripts/check_changelog.py` when `src/` or `tests/` change |
 
-**Not in local hooks** (CI-only or manual): full pytest matrix, pip-audit, safety (CI when `SAFETY_API_KEY` set), license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
+**Not in local hooks** (CI-only or manual): full pytest matrix, safety (CI when `SAFETY_API_KEY` set), license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
 
 Hooks can be skipped with `SKIP=gitleaks git commit ...`, `git commit --no-verify`, or `git push --no-verify` (CI remains the blocking gate on push/PR).
 
@@ -353,7 +360,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` | Ubuntu `static-analysis` job (requires `.[dev]`) |
-| `pip-audit --desc on` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
+| `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | `safety scan --detailed-output` | Ubuntu `static-analysis` job when `SAFETY_API_KEY` secret is set (skipped otherwise) |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc-freshness, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |

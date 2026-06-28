@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from nicegui import run, ui
 
+from ..components import HelpButton
 from ..concurrency import operation_guard
 from ..helpers import below_floor_event_count, run_calculation
 from ..page_context import PageContext
@@ -69,7 +70,12 @@ async def below_floor_prompt(n_below: int) -> bool:
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("calculate"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            ui.label("Run Dose Calculation").classes("text-2xl font-bold tracking-tight")
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Run Dose Calculation").classes("text-2xl font-bold tracking-tight")
+                HelpButton(
+                    title="Calculation Workflow",
+                    content_path="calculation_workflow.md",
+                )
 
             with ui.card().classes("modern-card w-full border border-blue-100 shadow-sm"):
                 with ui.row().classes("items-center justify-between w-full"):

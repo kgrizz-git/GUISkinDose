@@ -199,12 +199,12 @@ def build(ctx: PageContext) -> None:
                     patient_sliders: dict[str, ui.slider] = {}
                     patient_val_labels: dict[str, ui.label] = {}
                     for axis, lbl, attr in (
-                        ("lon", "Longitudinal (X/LON)", "d_lon"),
-                        ("ver", "Vertical (Y/VER)", "d_ver"),
-                        ("lat", "Lateral (Z/LAT)", "d_lat"),
+                        ("lon", "Patient offset X (DICOM LON, PT L-R)", "d_lon"),
+                        ("ver", "Patient offset Y (DICOM VER, PT A-P)", "d_ver"),
+                        ("lat", "Patient offset Z (DICOM LAT, PT S-I)", "d_lat"),
                     ):
                         with ui.row().classes("w-full gap-2 items-center flex-nowrap"):
-                            ui.label(lbl).classes("w-40 text-caption text-grey-6")
+                            ui.label(lbl).classes("w-72 text-caption text-grey-6")
                             initial = read_patient_offset_value(state, attr)
                             slider = ui.slider(
                                 min=-PATIENT_OFFSET_SLIDER_RANGE_CM,
@@ -316,11 +316,11 @@ def build(ctx: PageContext) -> None:
                     for key in ("x", "y", "z"):
                         with ui.row().classes("w-full gap-2 items-center flex-nowrap"):
                             axis_label = {
-                                "x": "Table Origin Longitudinal (X/LON)",
-                                "y": "Table Origin Vertical (Y/VER)",
-                                "z": "Table Origin Lateral (Z/LAT)",
+                                "x": "Table origin X (DICOM LON, PT L-R)",
+                                "y": "Table origin Y (DICOM VER, PT A-P)",
+                                "z": "Table origin Z (DICOM LAT, PT S-I)",
                             }[key]
-                            ui.label(axis_label).classes("w-56 text-caption text-grey-6")
+                            ui.label(axis_label).classes("w-72 text-caption text-grey-6")
                             lo, hi = _table_slider_limits(detected0, key)
                             initial = float(origin0.get(key, 0.0))
                             slider = ui.slider(

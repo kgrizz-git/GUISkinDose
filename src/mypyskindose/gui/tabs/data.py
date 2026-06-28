@@ -19,9 +19,9 @@ from ..page_context import PageContext
 from ..state import state
 
 COLUMN_LABEL_ALIASES = {
-    "Tx": "Tx (X/LON)",
-    "Ty": "Ty (Y/VER)",
-    "Tz": "Tz (Z/LAT)",
+    "Tx": "Tx (X, DICOM LON, PT L-R)",
+    "Ty": "Ty (Y, DICOM VER, PT A-P)",
+    "Tz": "Tz (Z, DICOM LAT, PT S-I)",
 }
 
 

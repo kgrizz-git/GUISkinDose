@@ -46,9 +46,9 @@ Plan reviewed against the live config (`pyproject.toml`, `.pre-commit-config.yam
 | Tool | Pre-commit | Pre-push | CI |
 |------|-----------|----------|----|
 | bandit | `pre-commit` stage | — | `static-analysis` job |
-| pip-audit | — | — | `static-analysis` job |
+| pip-audit | — | ✅ (via `setup-dev.sh`) | `static-analysis` job |
 | gitleaks | `pre-commit` stage | — | `.github/workflows/gitleaks.yml` |
-| semgrep | — | pre-push | `static-analysis` job |
+| semgrep | — | ✅ (via `setup-dev.sh`) | `static-analysis` job |
 | safety | — | — | `static-analysis` job (skipped without `SAFETY_API_KEY`) |
 | shellcheck | `pre-commit` stage | — | `static-analysis` job |
 

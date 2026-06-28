@@ -1,13 +1,13 @@
 # Local git hooks (fast subset of CI). Install once per clone:
 #   pip install -e ".[dev,gui]"
-#   pre-commit install
-#   pre-commit install --hook-type pre-push
+#   bash scripts/setup-dev.sh          # macOS/Linux
+#   scripts\setup-dev.bat              # Windows
 #
 # Run manually:
 #   pre-commit run --all-files
-#   pre-commit run --hook-stage pre-push basedpyright --all-files
-#   pre-commit run --hook-stage pre-push semgrep --all-files
-# CI still runs the full matrix (pytest, basedpyright, bandit, pip-audit, gui-smoke, etc.).
+#   pre-commit run --hook-stage pre-push --all-files
+#
+# CI runs the full matrix (pytest, basedpyright, bandit, pip-audit, gui-smoke, etc.).
 
 minimum_pre_commit_version: "3.0.0"
 
@@ -105,6 +105,14 @@ repos:
         pass_filenames: false
         files: ^(pyproject\.toml|uv\.lock|dev-docs/THIRD_PARTY_NOTICES\.md)$
         stages: [pre-commit]
+
+      - id: pip-audit
+        name: pip-audit (dependency vulnerabilities)
+        entry: python scripts/audit_dependencies.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
 
       - id: basedpyright
         name: basedpyright (type check)

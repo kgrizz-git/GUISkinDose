@@ -12,6 +12,19 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Lockfile-based dependency auditing** (2026-06-28) — `scripts/audit_dependencies.py` wraps
+  `uv audit` on `uv.lock` (requires `uv` >= 0.11.19; `--frozen` locally, `--locked` in CI) with
+  fallback to `pip-audit` on the active environment. Pre-push hook and CI `static-analysis` job now
+  call the wrapper; CI installs `uv` via `astral-sh/setup-uv@v8.2.0`. Plan:
+  `dev-docs/plans/DEPENDENCY_AUDIT_PLAN.md`.
+- **One-command hook installer** (2026-06-27) — `scripts/setup-dev.sh` (macOS/Linux)
+  and `scripts/setup-dev.bat` (Windows) run both `pre-commit install` and
+  `pre-commit install --hook-type pre-push` in one step, ensuring all pre-push hooks
+  (semgrep, pip-audit, basedpyright, check-changelog) fire automatically on `git push`.
+  Added `pip-audit --desc on` as a pre-push hook in `.pre-commit-config.yaml` to match the
+  existing CI gate. Expanded the CI shellcheck step to cover `scripts/setup-dev.sh`.
+  `AGENTS.md` Development setup block simplified to reference the scripts. Plan:
+  `dev-docs/plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md`.
 - **Security tooling in CI and pre-push** (2026-06-27) — semgrep (OWASP Top 10 SAST) in
   the `static-analysis` CI job and as a pre-push hook, scanning `src`, `scripts`,
   `.github/workflows`, and `docs/source/conf.py`; safety dependency scan in CI (skipped when

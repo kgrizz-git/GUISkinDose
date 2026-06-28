@@ -61,9 +61,9 @@ def test_dicom_table_position_attributes_map_to_tx_ty_tz_without_axis_relabeling
 def test_current_plot_axis_titles_are_historical_pyskindose_aliases():
     from mypyskindose.constants import PLOT_AXIS_TITLE_X, PLOT_AXIS_TITLE_Y, PLOT_AXIS_TITLE_Z
 
-    assert PLOT_AXIS_TITLE_X == "X - LON [cm]"
-    assert PLOT_AXIS_TITLE_Y == "Y - VER [cm]"
-    assert PLOT_AXIS_TITLE_Z == "Z - LAT [cm]"
+    assert PLOT_AXIS_TITLE_X == "X - LON / PT L-R [cm]"
+    assert PLOT_AXIS_TITLE_Y == "Y - VER / PT A-P [cm]"
+    assert PLOT_AXIS_TITLE_Z == "Z - LAT / PT S-I [cm]"
 
 
 @pytest.mark.parametrize(

@@ -47,9 +47,12 @@ from .plot_settings import (
 )
 
 COORDINATE_FRAME_NOTE = (
-    "X (Tx / LON) = DICOM TableLongitudinalPosition<br>"
-    "Y (Ty / VER) = DICOM TableHeightPosition<br>"
-    "Z (Tz / LAT) = DICOM TableLateralPosition"
+    "Display frame after vendor normalization:<br>"
+    "X (Tx / LON) = PT left-right<br>"
+    "Y (Ty / VER) = PT anterior-posterior / table height<br>"
+    "Z (Tz / LAT) = PT superior-inferior<br>"
+    "DICOM LON/LAT are operator-table names on Siemens/Philips; GE raw LON/LAT are patient-anatomy "
+    "names and are swapped into this frame."
 )
 
 

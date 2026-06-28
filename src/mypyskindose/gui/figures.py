@@ -161,9 +161,9 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
             annotations=[coordinate_frame_annotation(txt)],
             scene=dict(
                 aspectmode="data",
-                xaxis=dict(title="X - LON [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
-                yaxis=dict(title="Y - VER [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
-                zaxis=dict(title="Z - LAT [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
+                xaxis=dict(title="X - LON / PT L-R [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
+                yaxis=dict(title="Y - VER / PT A-P [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
+                zaxis=dict(title="Z - LAT / PT S-I [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
             ),
         )
         fig = go.Figure(data=[mesh], layout=layout)

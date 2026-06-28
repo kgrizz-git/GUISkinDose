@@ -31,9 +31,12 @@ For the default head-first supine patient orientation:
 
 The table mesh width is along X and table length is along Z.
 
-### DICOM table coordinate attributes
+### DICOM/operator table coordinate attributes
 
-DICOM RDSR table-position concept names are easy to misread:
+DICOM RDSR table-position concept names are easy to misread. RDSRs store
+`TableLongitudinalPosition`, `TableHeightPosition`, and
+`TableLateralPosition`; they do not call the table-position values `X`, `Y`,
+or `Z`.
 
 | DICOM attribute | DICOM table axis | Physical direction for HFS |
 |---|---|---|
@@ -41,8 +44,10 @@ DICOM RDSR table-position concept names are easy to misread:
 | `(0018,932A) Table Lateral Position` | Z | Longitudinal |
 | `(0018,9328) Table Height Position` | Y | Vertical |
 
-The attribute names are not the same thing as the physical direction labels
-used in the mesh.
+The attribute names are operator/table-axis names for Siemens and Philips, not
+patient-anatomy names. GE raw data uses patient-anatomy longitudinal/lateral
+naming instead; MyPySkinDose swaps GE raw lateral/longitudinal during
+normalization so downstream code sees the same plotted/calculation frame.
 
 ### Normalized DataFrame columns
 
@@ -59,10 +64,14 @@ without a separate fixture-backed refactor.
 
 ### PySkinDose display aliases
 
-Existing plots label axes as `X - LON`, `Y - VER`, and `Z - LAT`. These are
-historical PySkinDose display aliases tied to normalized table-position names.
-They are not a reliable statement of physical direction. When precision
-matters, write both forms, for example `Tx / X display axis / physical lateral`.
+Existing plots label axes as `X - LON / PT L-R`, `Y - VER / PT A-P`, and
+`Z - LAT / PT S-I`. `LON`, `VER`, and `LAT` are historical PySkinDose display
+aliases tied to normalized DICOM/operator table-position attribute names
+(`TableLongitudinalPosition`, `TableHeightPosition`,
+`TableLateralPosition`). `PT L-R`, `PT A-P`, and `PT S-I` state the
+patient-anatomy direction of the plotted axis for head-first supine
+positioning. When precision matters, write both forms, for example
+`Tx / X display axis / DICOM TableLongitudinalPosition / patient left-right`.
 
 ### Origin
 - The `(0, 0, 0)` isocenter corresponds to the **head-end of the patient support table** at its default height and lateral center position

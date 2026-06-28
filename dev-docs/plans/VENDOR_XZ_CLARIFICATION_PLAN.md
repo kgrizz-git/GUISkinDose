@@ -21,14 +21,15 @@ Throughout this document:
 | Term | Meaning |
 |------|---------|
 | **DICOM tag name** | The label from the DICOM RDSR standard, e.g. `TableLongitudinalPosition`, `TableLateralPosition`, `TableHeightPosition`. |
-| **PySkinDose display alias** | The short label currently used by plots and hover text: `LON`, `VER`, `LAT`. This follows the existing PySkinDose implementation, not the anatomical wording in `VENDOR_COORDINATE_SYSTEMS.md`. |
+| **PySkinDose display alias** | The short label currently used by plots and hover text: `LON`, `VER`, `LAT`. These aliases are inherited from DICOM/operator RDSR table-position attribute names after vendor normalization. |
+| **Patient-axis label** | The patient-anatomy label shown alongside the display alias for head-first supine: `PT L-R`, `PT A-P`, `PT S-I`. |
 | **Physical/anatomical semantic name** | The patient/geometric role described in `VENDOR_COORDINATE_SYSTEMS.md`: for head-first supine, lateral = left-right, longitudinal = inferior-superior / foot-head, vertical = up-down. |
 | **Derived column name** | The short normalized DataFrame key consumed by the engine: `Tx`, `Ty`, `Tz`. |
 | **Raw/vendor frame** | The table-coordinate values as parsed from DICOM RDSR or a tabular export before `rdsr_normalizer()` applies vendor offsets, signs, and `swap_lateral_longitudinal`. |
 | **GUI transform source frame** | The normalized table-position frame before GUI post-normalization corrections such as manual `swap_lat_lon` and `flip_tx`/`flip_ty`/`flip_tz`. For GE this frame is already corrected by the normalizer-level `swap_lateral_longitudinal` rule. This is also the current storage frame for `table_origin_detected` and `table_origin_override`. |
 | **Final plotted frame** | The frame after GUI coordinate-correction toggles have been applied. Plot axes, Geometry sliders, Per-exam origin fields, and user-facing labels must refer to this frame. |
 
-Use the term **PySkinDose display alias** in implementation comments and help text when referring to `LON`/`VER`/`LAT`. Do not call `Tx (LON)`, `Ty (VER)`, `Tz (LAT)` "semantic aliases"; that wording caused the contradiction this plan is correcting.
+Use the term **PySkinDose display alias** or **DICOM/operator table-position alias** in implementation comments and help text when referring to `LON`/`VER`/`LAT`. Do not call `Tx (LON)`, `Ty (VER)`, `Tz (LAT)` "semantic aliases"; that wording caused the contradiction this plan is correcting.
 
 ## 3. Verified Current State
 
@@ -55,8 +56,8 @@ There are two rendering pipelines, and both must be considered:
 
 | Pipeline | File / symbol | Current labels |
 |----------|---------------|----------------|
-| GUI dose map | `gui.figures.make_dosemap_fig()` | `X - LON [cm]`, `Y - VER [cm]`, `Z - LAT [cm]` |
-| CLI / notebook geometry | `constants.PLOT_AXIS_TITLE_X/Y/Z`, consumed by `plotting.plot_layout` | `X - LON [cm]`, `Y - VER [cm]`, `Z - LAT [cm]` |
+| GUI dose map | `gui.figures.make_dosemap_fig()` | `X - LON / PT L-R [cm]`, `Y - VER / PT A-P [cm]`, `Z - LAT / PT S-I [cm]` |
+| CLI / notebook geometry | `constants.PLOT_AXIS_TITLE_X/Y/Z`, consumed by `plotting.plot_layout` | `X - LON / PT L-R [cm]`, `Y - VER / PT A-P [cm]`, `Z - LAT / PT S-I [cm]` |
 
 The hover texts are **not** an existing anatomical-semantic counterexample. They match the current PySkinDose display aliases:
 
@@ -85,14 +86,14 @@ Change plot axis titles to:
 | Axis | Anatomical title |
 |------|------------------|
 | X | `X - LAT [cm]` |
-| Y | `Y - VER [cm]` |
+| Y | `Y - VER / PT A-P [cm]` |
 | Z | `Z - LON [cm]` |
 
 This is **out of scope for this plan**. It belongs to `COORDINATE_CONVENTIONS_CLEANUP_PLAN.md` and can only be implemented after characterization tests reconcile `VENDOR_COORDINATE_SYSTEMS.md`, `rdsr_normalizer`, `Beam`, `geom_calc`, dose results, tabular import correction toggles, plot labels, and golden tests.
 
 ### Option B — Keep current labels, make the frame explicit
 
-Keep `X - LON`, `Y - VER`, and `Z - LAT` as the default labels. Add explanatory UI, help text, Data tab aliases, and vendor warnings so users can understand which frame they are looking at.
+Keep the DICOM/operator aliases but add the patient-axis suffixes, so the default labels are `X - LON / PT L-R`, `Y - VER / PT A-P`, and `Z - LAT / PT S-I`. Add explanatory UI, help text, Data tab aliases, and vendor warnings so users can understand which frame they are looking at.
 
 **Recommendation:** implement Option B, with one non-negotiable invariant: **Geometry tab controls and plot labels must operate in the final plotted frame after vendor corrections and any manual GUI corrections.** If the active exam uses a manual post-normalization `Tx`/`Tz` swap, that swap is an import-correction detail; the user-facing `X/LON` table-origin control must still move the plotted X coordinate, not the GUI-source-frame X value that later appears on plotted Z. This is the primary requirement of the plan.
 
@@ -126,39 +127,42 @@ This accepts the 2026-06-25 assessment's state-frame concern while preserving th
    The acceptance rule: enabling manual `swap_lat_lon` must not change which plotted axis a Geometry tab `X`, `Y`, or `Z` table-origin slider moves, and toggling `swap_lat_lon` after an override is active must transpose the displayed override to the correct final plotted axis instead of silently pinning it to the old UI axis.
 
 2. **GUI dose map annotation** — in `src/mypyskindose/gui/figures.py`, keep the current axis titles and add a Plotly scene annotation:
-   - `X (Tx / LON) = DICOM TableLongitudinalPosition`
-   - `Y (Ty / VER) = DICOM TableHeightPosition`
-   - `Z (Tz / LAT) = DICOM TableLateralPosition`
+   - `X (Tx / LON) = PT left-right`
+   - `Y (Ty / VER) = PT anterior-posterior / table height`
+   - `Z (Tz / LAT) = PT superior-inferior`
+   - Siemens/Philips use DICOM/operator table LON/LAT, while GE raw LON/LAT uses patient anatomy and is swapped into this frame during normalization
 
 3. **CLI / notebook geometry annotation** — in `src/mypyskindose/plotting/plot_layout.py`, add the same annotation to `default_geometry_layout()` and `default_procedure_layout()`. This means standalone HTML and notebook geometry plots will show the coordinate note too.
 
 4. **Data tab aliases** — in `src/mypyskindose/gui/tabs/data.py`, add a small column-label map near the top of the file and apply it when building NiceGUI table columns:
    ```python
    COLUMN_LABEL_ALIASES = {
-       "Tx": "Tx (X/LON)",
-       "Ty": "Ty (Y/VER)",
-       "Tz": "Tz (Z/LAT)",
+       "Tx": "Tx (X, DICOM LON, PT L-R)",
+       "Ty": "Ty (Y, DICOM VER, PT A-P)",
+       "Tz": "Tz (Z, DICOM LAT, PT S-I)",
    }
    ```
    Keep exports unchanged: CSV/XLSX/TXT should still write the actual DataFrame column names (`Tx`, `Ty`, `Tz`), not display labels.
 
 5. **Geometry help content** — edit only `docs/source/gui_help/geometry_workflow.md`, then run `python scripts/sync_gui_help.py` to update the mirrored `src/mypyskindose/gui/help/geometry_workflow.md`. Add a concise section explaining:
-   - current plot axes use `X/LON`, `Y/VER`, `Z/LAT`
-   - those labels are PySkinDose display aliases for the normalized DataFrame columns
+   - current plot axes use `X/LON/PT L-R`, `Y/VER/PT A-P`, `Z/LAT/PT S-I`
+   - `LON`/`LAT` are PySkinDose/DICOM operator table-position aliases for the normalized DataFrame columns; `PT ...` suffixes show patient-anatomy directions for head-first supine
+   - RDSRs use table-position names, not `x`, `y`, or `z`
+   - Siemens/Philips use the DICOM/operator table convention; GE raw data uses patient-anatomy longitudinal/lateral naming and is swapped during normalization
    - Geometry and Per-exam table-origin controls always operate in the final plotted frame after vendor corrections
    - manual table-origin overrides are stored in the GUI transform source frame internally, then mapped to the plotted frame for display and editing
    - `VENDOR_COORDINATE_SYSTEMS.md` documents the anatomical/internal-coordinate discussion for developers
    - `AGENTS.md` and shared agent/developer guidance must not keep the stale shorthand `X = lateral, Y = longitudinal, Z = vertical` without also warning that the current plotted PySkinDose display frame is `X/LON`, `Y/VER`, `Z/LAT`. If this plan leaves the deeper anatomical-coordinate contradiction unresolved, update the guidance to point readers here and to `VENDOR_COORDINATE_SYSTEMS.md` instead of presenting the stale shorthand as settled behavior.
 
 6. **Geometry slider labels** — make one consistent naming pass in `src/mypyskindose/gui/tabs/geometry.py`:
-   - patient offset labels: `Longitudinal (X/LON)`, `Vertical (Y/VER)`, `Lateral (Z/LAT)`
-   - table-origin labels: `Table Origin Longitudinal (X/LON)`, `Table Origin Vertical (Y/VER)`, `Table Origin Lateral (Z/LAT)`
+   - patient offset labels: `Patient offset X (DICOM LON, PT L-R)`, `Patient offset Y (DICOM VER, PT A-P)`, `Patient offset Z (DICOM LAT, PT S-I)`
+   - table-origin labels: `Table origin X (DICOM LON, PT L-R)`, `Table origin Y (DICOM VER, PT A-P)`, `Table origin Z (DICOM LAT, PT S-I)`
    This removes the mismatch between clinical words and bare axes. It is only correct after Phase 1 item 1 makes table-origin overrides vendor-invariant.
 
 7. **Per-exam table-origin labels** — in `src/mypyskindose/gui/tabs/_per_exam.py`, use the same visible labels as Geometry for table-origin number inputs:
-   - `Table Origin Longitudinal (X/LON)`
-   - `Table Origin Vertical (Y/VER)`
-   - `Table Origin Lateral (Z/LAT)`
+   - `Table origin X (DICOM LON, PT L-R)`
+   - `Table origin Y (DICOM VER, PT A-P)`
+   - `Table origin Z (DICOM LAT, PT S-I)`
    These controls must also call the final-frame mapping helper from item 1.
 
 8. **Cross-tab table-origin synchronization** — preserve the existing shared-state behavior between Geometry and Settings -> Per-exam corrections while changing the mapping helpers:
@@ -168,9 +172,9 @@ This accepts the 2026-06-25 assessment's state-frame concern while preserving th
    - add a focused test for the `PageContext` refresh path or an isolated helper-level test proving both UI builders read from the same `effective_table_origin(meta)` final-frame values
 
 9. **Body habitus scaling labels** — in `src/mypyskindose/gui/tabs/settings.py`, update the human-phantom scale labels so users can relate the scale setting to the plotted frame:
-   - `Lateral / width (Z/LAT)`
-   - `AP / vertical thickness (Y/VER)`
-   - `Longitudinal / head-foot (X/LON)`
+   - `Lateral / width (X/LON/PT L-R)`
+   - `AP / vertical thickness (Y/VER/PT A-P)`
+   - `Longitudinal / head-foot (Z/LAT/PT S-I)`
    Keep the underlying settings keys unchanged (`phantom_scale_lat`, `phantom_scale_ap`, `phantom_scale_lon`) and add/update GUI tests that assert the new labels. Phantom scaling is global by design: normalizer-level vendor handling plus any per-exam manual `swap_lat_lon` table-position corrections normalize each exam into the common plotted `Tx/Ty/Tz` frame before the shared phantom is positioned, so mixed-vendor multi-exam calculations still use one coherent phantom scale.
 
 10. **GUI export behavior** — `make_dosemap_html()` and `make_dosemap_png()` call `make_dosemap_fig()`, so they should inherit the same labels and annotation. Add tests for this if the annotation is parameterized.
@@ -224,7 +228,7 @@ Phase 3 depends on Phase 2's validation matrix.
    - Supported values:
      - `"pyskindose"`: default, current titles `X - LON`, `Y - VER`, `Z - LAT`
      - `"derived"`: titles `X - Tx`, `Y - Ty`, `Z - Tz`
-   - Do **not** add an anatomical `X - LAT` / `Z - LON` mode in this plan.
+   - Do **not** add an anatomical/patient-direction `X - LAT` / `Z - LON` mode in this plan. A patient-based label mode can be useful later, but only with fixture-backed mappings across DICOM, GE-normalized, Philips-normalized, and tabular/manual-correction paths.
    - The toggle state is session-only in this plan. Do not add it to `PyskindoseSettings` here; if users need persistence later, add a separate GUI-preferences design so core calculation settings do not silently gain UI-only export preferences.
 
 4. **Export consistency** — if the axis label mode affects dose-map exports, pass the selected mode into `make_dosemap_fig()`, `make_dosemap_html()`, and `make_dosemap_png()` instead of reading hidden global state from an export worker.
@@ -237,7 +241,7 @@ Phase 3 depends on Phase 2's validation matrix.
 | GUI dose-map labels and annotation | `gui.figures.make_dosemap_fig()` | Snapshot `fig.to_dict()` and assert scene axis title strings plus annotation text. |
 | GUI HTML/PNG export inheritance | `gui.figures` | Assert export builders call the same figure path or expose the same annotation in figure dict before rendering. |
 | CLI / notebook plot annotation | `plotting.plot_layout` | Unit-test `default_geometry_layout()` / `default_procedure_layout()` annotations and axis titles. |
-| Data tab display aliases | `gui.tabs.data` | Mount or isolate the column-building helper and assert `Tx (X/LON)`, `Ty (Y/VER)`, `Tz (Z/LAT)` labels. |
+| Data tab display aliases | `gui.tabs.data` | Mount or isolate the column-building helper and assert `Tx (X, DICOM LON, PT L-R)`, `Ty (Y, DICOM VER, PT A-P)`, `Tz (Z, DICOM LAT, PT S-I)` labels. |
 | Data export column stability | `gui.tabs.data` | Export a small DataFrame and assert raw column names remain `Tx`, `Ty`, `Tz`. |
 | Help source/mirror sync | docs + script | Edit `docs/source/gui_help/geometry_workflow.md`; run `python scripts/sync_gui_help.py`; assert mirrored file matches. |
 | Agent/developer guidance consistency | docs | Assert `AGENTS.md` / shared guidance no longer present stale anatomical shorthand as the active plotted-frame convention without the PySkinDose display-frame caveat. |
@@ -263,9 +267,9 @@ Add focused GUI/plot tests for any new helpers introduced by Phase 1 or Phase 3.
 
 1. The same Geometry table-origin slider moves the same plotted axis for Siemens-like, Philips-like, GE-normalized, and manually corrected tabular exams; vendor-specific normalization and manual post-normalization swaps are not exposed as different slider behavior.
 2. Table-origin override state can remain in the GUI transform source frame internally, but Geometry and Per-exam controls display and edit final plotted-frame values; toggling manual `swap_lat_lon` after an override is active preserves physical override intent by transposing the displayed X/Z origin values.
-3. Plot axes remain truthful to the current implementation: default labels are `X - LON`, `Y - VER`, `Z - LAT`.
+3. Plot axes remain truthful to the current implementation: default labels are `X - LON / PT L-R`, `Y - VER / PT A-P`, `Z - LAT / PT S-I`.
 4. Geometry and dose-map plots include a concise explanation that ties `X/Y/Z`, `Tx/Ty/Tz`, and `LON/VER/LAT` together.
-5. Data tab column headers show `Tx (X/LON)`, `Ty (Y/VER)`, and `Tz (Z/LAT)` without changing exported DataFrame column names.
+5. Data tab column headers show `Tx (X, DICOM LON, PT L-R)`, `Ty (Y, DICOM VER, PT A-P)`, and `Tz (Z, DICOM LAT, PT S-I)` without changing exported DataFrame column names.
 6. Geometry help content explains the coordinate labels and is edited from `docs/source/gui_help/`, with the mirrored GUI help file synced.
 7. `AGENTS.md` and shared agent/developer guidance no longer present the stale anatomical shorthand as the active plotted-frame convention without the PySkinDose display-frame caveat.
 8. Geometry patient-offset, table-origin, Per-exam table-origin, and body-habitus controls use one visible naming frame.
@@ -322,11 +326,11 @@ Partially rejected:
 The 2026-06-25 assessment was reviewed against the code. Applied findings:
 
 - duplicate §3.3 heading removed
-- hover-text classification corrected; current hover text matches `X/LON`, `Y/VER`, `Z/LAT`
+- hover-text classification corrected; current hover text matches the normalized `X/LON/PT L-R`, `Y/VER/PT A-P`, `Z/LAT/PT S-I` display frame
 - Phase 3 toggle default corrected to current PySkinDose display aliases
 - CLI/notebook/export impact added
 - phase ordering added
-- Data tab aliases changed from ambiguous "semantic aliases" to explicit `Tx (X/LON)` style labels
+- Data tab aliases changed from ambiguous "semantic aliases" to explicit `Tx (X, DICOM LON, PT L-R)` style labels
 - `geom_calc` / `Phantom.position()` / `calculate_dose()` data flow explicitly traced
 - toggle state location specified as `AppState`, session-only
 - `--validate-coordinates` moved out of default Phase 2 scope

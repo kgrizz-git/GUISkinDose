@@ -4,15 +4,19 @@ The Geometry tab lets you visualize beam-patient geometry and verify positioning
 
 ## Coordinate Legend
 
-Geometry plots currently use historical PySkinDose axis aliases: `X - LON`, `Y - VER`, and `Z - LAT`. These labels identify the plotted calculation frame, not every physical or DICOM naming convention. Vendor normalization and import correction toggles are applied before the Geometry preview is drawn.
+Geometry plots use the normalized display labels `X - LON / PT L-R`, `Y - VER / PT A-P`, and `Z - LAT / PT S-I`. RDSR table-position fields are named `TableLongitudinalPosition`, `TableHeightPosition`, and `TableLateralPosition`; RDSRs do not call those fields `X`, `Y`, or `Z`.
 
-`Tx`, `Ty`, and `Tz` are the normalized table-position columns that feed the plotted axes: `Tx` appears on `X/LON`, `Ty` on `Y/VER`, and `Tz` on `Z/LAT`. The Geometry and **Settings → Per-exam corrections** table-origin controls always display and edit this final plotted frame.
+`Tx`, `Ty`, and `Tz` are the normalized table-position columns that feed the plotted axes: `Tx` appears on `X/DICOM LON/PT L-R`, `Ty` on `Y/DICOM VER/PT A-P`, and `Tz` on `Z/DICOM LAT/PT S-I`. The Geometry and **Settings → Per-exam corrections** table-origin controls always display and edit this final plotted frame.
 
-Internally, manual table-origin overrides are stored in the GUI transform source frame, before any expert-only `Tx ↔ Tz` correction toggle is applied. The app maps those stored values to the plotted frame for display and maps edits back before recalculating geometry, so the `X/LON` control moves plotted X even when a site-specific manual swap is enabled.
+`LON`, `VER`, and `LAT` are retained because they match the historical PySkinDose/DICOM table-position naming after vendor normalization. `PT L-R`, `PT A-P`, and `PT S-I` are the patient-anatomy directions of the plotted axes for the standard head-first supine convention.
+
+Siemens and Philips use the DICOM/operator table convention for table longitudinal and lateral. GE raw data uses patient-anatomy longitudinal and lateral naming instead; MyPySkinDose handles that during GE normalization by swapping the raw lateral/longitudinal assignment into the common plotted frame.
+
+Internally, manual table-origin overrides are stored in the GUI transform source frame, before any expert-only `Tx ↔ Tz` correction toggle is applied. The app maps those stored values to the plotted frame for display and maps edits back before recalculating geometry, so the `X/DICOM LON/PT L-R` control moves plotted X even when a site-specific manual swap is enabled.
 
 For GE inputs, the lateral/longitudinal swap is handled during normalization. The GUI `Tx ↔ Tz` swap is a manual expert override only. GE table travel has been confirmed from tabular export inspection as positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. A matched GE DICOM RDSR plus tabular export would be useful later only to pin exact regression fixture values.
 
-Developer-level coordinate notes live in `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`. That document distinguishes the physical/anatomical coordinate discussion from the current PySkinDose display aliases shown in the GUI.
+Developer-level coordinate notes live in `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`. That document distinguishes DICOM table-coordinate names, vendor conventions, patient/anatomical directions, and the current PySkinDose display aliases shown in the GUI. A patient-anatomy label mode should only be added with those mappings explicitly validated.
 
 ## Workflow for Positioning Verification
 

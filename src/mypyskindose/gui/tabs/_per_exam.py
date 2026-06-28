@@ -129,16 +129,16 @@ def build_per_exam_section(ctx: PageContext) -> None:
             with ui.row().classes("items-center gap-2"):
                 for key in ("x", "y", "z"):
                     axis_label = {
-                        "x": "Table Origin Longitudinal (X/LON)",
-                        "y": "Table Origin Vertical (Y/VER)",
-                        "z": "Table Origin Lateral (Z/LAT)",
+                        "x": "Table origin X (DICOM LON, PT L-R)",
+                        "y": "Table origin Y (DICOM VER, PT A-P)",
+                        "z": "Table origin Z (DICOM LAT, PT S-I)",
                     }[key]
                     inputs[key] = ui.number(
                         label=axis_label,
                         value=current.get(key, 0.0),
                         step=1.0,
                         format="%.1f",
-                    ).props("dense outlined").classes("w-52").on_value_change(
+                    ).props("dense outlined").classes("w-64").on_value_change(
                         lambda e, k=key: _on_change(k, e.value)
                     )
                 ui.button(

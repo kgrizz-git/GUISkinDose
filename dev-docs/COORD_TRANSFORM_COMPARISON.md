@@ -10,13 +10,14 @@ This comparison is historical and diagnostic. The canonical coordinate terminolo
 
 | Repo | Physical X | Physical Y | Physical Z | Plot/display aliases |
 |------|------------|------------|------------|----------------------|
-| MyPySkinDose | Lateral | Vertical | Longitudinal | `X - LON`, `Y - VER`, `Z - LAT` (historical PySkinDose aliases) |
+| MyPySkinDose | Lateral | Vertical/AP | Longitudinal | `X - LON / PT L-R`, `Y - VER / PT A-P`, `Z - LAT / PT S-I` |
 | dhen2714/PySkinDose | Lateral | Vertical | Longitudinal | Same inherited normalizer/display convention |
 | PSDCalcReworkTemp | `focal_x` = lateral | `focal_y` = height | `focal_z` = longitudinal | Different transform path |
 
-**Note**: In the DICOM RDSR tags, `TableLongitudinalPosition_mm` maps to the X (lateral) axis
-and `TableLateralPosition_mm` maps to the Z (longitudinal) axis in MyPySkinDose / dhen2714.
-This naming inversion is inherited from the original PySkinDose source.
+**Note**: In the Siemens/Philips DICOM/operator convention, `TableLongitudinalPosition_mm`
+maps to the X (patient left-right) axis and `TableLateralPosition_mm` maps to the Z
+(patient superior-inferior) axis in MyPySkinDose / dhen2714. GE raw data uses
+patient-anatomy longitudinal/lateral naming and is swapped during normalization.
 
 ---
 

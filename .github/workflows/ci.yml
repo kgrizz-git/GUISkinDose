@@ -46,14 +46,18 @@ jobs:
       run: python -m build
     - name: Basedpyright (strict — any type error fails)
       run: basedpyright
+    - name: Install uv
+      uses: astral-sh/setup-uv@v8.2.0
+      with:
+        version: ">=0.11.19"
     - name: Audit dependencies for CVEs and check licenses
       run: |
-        pip-audit --desc on
+        python scripts/audit_dependencies.py
         python scripts/check_licenses.py
     - name: Bandit (Python SAST, medium+ severity)
       run: bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)
-      run: shellcheck run_gui.sh scripts/type_baseline.sh
+      run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
     - name: Semgrep (OWASP Top 10 SAST)
       run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
     - name: Safety (dependency vulnerability scan — skipped without key)

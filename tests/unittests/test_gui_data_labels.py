@@ -10,7 +10,7 @@ from mypyskindose.gui.tabs.data import display_column_label
 
 
 def test_table_position_columns_get_display_aliases():
-    assert display_column_label("Tx") == "Tx (X/LON)"
-    assert display_column_label("Ty") == "Ty (Y/VER)"
-    assert display_column_label("Tz") == "Tz (Z/LAT)"
+    assert display_column_label("Tx") == "Tx (X, DICOM LON, PT L-R)"
+    assert display_column_label("Ty") == "Ty (Y, DICOM VER, PT A-P)"
+    assert display_column_label("Tz") == "Tz (Z, DICOM LAT, PT S-I)"
     assert display_column_label("DoseRP_Gy") == "DoseRP_Gy"
