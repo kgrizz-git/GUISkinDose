@@ -23,7 +23,7 @@ MyPySkinDose uses a normalized calculation frame plus historical PySkinDose/DICO
 
 The `LON`, `VER`, and `LAT` plot aliases are historical PySkinDose labels inherited from DICOM/operator table-coordinate names after vendor normalization. Siemens and Philips use that DICOM/operator convention. GE raw data uses patient-anatomy longitudinal and lateral naming instead; MyPySkinDose swaps GE raw lateral/longitudinal into the common plotted frame during normalization. For developer-level details, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
 
-All values are in **centimeters**.
+All values are in **centimeters**. In the normalized frame, **+Y (vertical) points down** toward the floor, and the `(0, 0, 0)` origin is the beam isocenter, which coincides with the table head-end when the table-position readout is zero.
 
 **Note:** The exact effect of offset parameters may vary depending on the X-ray system manufacturer. The coordinate transformations in `normalization_settings.json` account for vendor-specific conventions.
 

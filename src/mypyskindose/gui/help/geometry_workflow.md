@@ -8,6 +8,8 @@ Geometry plots use the normalized display labels `X - LON / PT L-R`, `Y - VER / 
 
 `Tx`, `Ty`, and `Tz` are the normalized table-position columns that feed the plotted axes: `Tx` appears on `X/DICOM LON/PT L-R`, `Ty` on `Y/DICOM VER/PT A-P`, and `Tz` on `Z/DICOM LAT/PT S-I`. The Geometry and **Settings → Per-exam corrections** table-origin controls always display and edit this final plotted frame.
 
+In this normalized frame, **+Y points down** (toward the floor) and the `(0, 0, 0)` origin is the beam isocenter — it coincides with the table head-end when the table-position readout is zero. Each vendor's raw readout zero sits at a different physical point; the automatic table offsets shift it onto this origin.
+
 `LON`, `VER`, and `LAT` are retained because they match the historical PySkinDose/DICOM table-position naming after vendor normalization. `PT L-R`, `PT A-P`, and `PT S-I` are the patient-anatomy directions of the plotted axes for the standard head-first supine convention.
 
 Siemens and Philips use the DICOM/operator table convention for table longitudinal and lateral. GE raw data uses patient-anatomy longitudinal and lateral naming instead; MyPySkinDose handles that during GE normalization by swapping the raw lateral/longitudinal assignment into the common plotted frame.

@@ -5,7 +5,7 @@ This document explains how MyPySkinDose handles different fluoroscopy system man
 ## Overview
 
 Different X-ray equipment manufacturers (Siemens, Philips, GE, Canon, etc.) use different conventions for:
-- **Coordinate system origins** (where is the isocenter?)
+- **Coordinate system origins** (where is each vendor's table-position readout zero?)
 - **Axis directions** (which way is "positive"?)
 - **Rotation conventions** (clockwise vs counter-clockwise)
 - **Field size calculations** (how beam dimensions are specified)
@@ -26,10 +26,29 @@ For the default head-first supine patient orientation:
 | World axis | Physical direction | Positive direction |
 |---|---|---|
 | X | Lateral, across the table | Patient left |
-| Y | Vertical / table height | Vendor-normalized `Ty`; GE confirmed positive height travel is down |
+| Y | Vertical / table height | Downward (toward the floor / gravity) |
 | Z | Longitudinal, along the table | Cranial / toward patient head |
 
 The table mesh width is along X and table length is along Z.
+
+#### Vertical (table height) sign by vendor
+
+The unified frame always has **+Y pointing down** (toward the floor). Each
+vendor entry's `translation_direction.y` encodes how that vendor's raw
+`TableHeightPosition` maps onto unified +Y. These signs are the validated,
+correct mapping for the models listed in `normalization_settings.json`:
+
+| Vendor (validated model) | `translation_direction.y` | Raw "height increasing" maps to |
+|---|---|---|
+| Siemens (AXIOM-Artis) | `+` | down (unified +Y) |
+| Philips (Allura Clarity) | `-` | up (unified −Y) |
+| GE Healthcare (wildcard; confirmed via tabular export) | `+` | down (unified +Y) |
+| Default (fallback) | `+` | down (unified +Y) |
+
+The qualification is model coverage, not the signs: each sign is correct for the
+specific model it was validated against. A different model from the same vendor
+falls back to the wildcard or Default entry and should have its own vertical
+sign confirmed before its height travel is trusted.
 
 ### DICOM/operator table coordinate attributes
 
@@ -74,7 +93,18 @@ positioning. When precision matters, write both forms, for example
 `Tx / X display axis / DICOM TableLongitudinalPosition / patient left-right`.
 
 ### Origin
-- The `(0, 0, 0)` isocenter corresponds to the **head-end of the patient support table** at its default height and lateral center position
+
+- The unified `(0, 0, 0)` is the **beam isocenter** — the fixed point where the
+  positioner rotation axes cross. It is the calculation and plotting origin, and
+  it is a single fixed point **only in the normalized frame**.
+- When a vendor's table-position readout is zero, the **head-end of the patient
+  support table** sits at the isocenter at its default height and lateral center.
+  This describes the default table/patient placement; it does **not** make the
+  origin a point that moves with the table.
+- Each vendor's **raw table-coordinate readout has its own zero** at a different
+  physical location. That readout zero — not the beam isocenter — is what
+  `translation_offset` shifts onto the unified origin (see
+  [The Two Offset Systems](#the-two-offset-systems)).
 
 ### Patient Position Default
 - Patient in **head-first supine** position (lying on back, head toward positive Z)
@@ -139,7 +169,7 @@ The normalization system applies vendor-specific parameters to transform manufac
 - Uses "ASD" mode for field size calculations
 
 **What This Means:**
-Philips systems define their isocenter at a significantly different physical location than Siemens. The large Y and Z offsets shift the Philips coordinate origin to match the unified system's table head-end reference.
+Philips reports table position against a different readout zero than Siemens — not a different beam isocenter. The large Y and Z offsets shift the Philips table-coordinate origin onto the unified origin (the head-end reference at table-position zero).
 
 ### GE Healthcare (wildcard)
 
@@ -379,10 +409,13 @@ Used by: Siemens, Default
 
 The field size is calculated based on the collimated field area dimensions provided in the RDSR.
 
-### ASD (Alternative Size Definition)
+### ASD (Actual Shutter Distance)
 Used by: Philips
 
-Philips systems may provide field size information in a different format that requires alternative calculation methods.
+Philips reports collimation as shutter openings measured at 100 cm from the
+source. The field size is computed by scaling the summed Top/Bottom (lateral)
+and Left/Right (longitudinal) shutter distances out to the detector distance
+(`DSD`). See diagram 5 and `geom_calc.calculate_field_size()`.
 
 **Implementation**: See `geom_calc.calculate_field_size()` for mode-specific logic.
 
