@@ -22,5 +22,6 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | [BODY_HABITUS_CM_DISPLAY_PLAN.md](BODY_HABITUS_CM_DISPLAY_PLAN.md) | **Completed** (2026-06-26) | Body-habitus scaling sliders display scaled mesh dimensions in cm. |
 | [SLIDER_LABEL_REPOSITION_PLAN.md](SLIDER_LABEL_REPOSITION_PLAN.md) | **Completed** (2026-06-26) | Geometry tab slider value labels repositioned adjacent to sliders (per-axis `ui.row` replacing outer column layout). |
 | [VENDOR_XZ_CLARIFICATION_PLAN.md](VENDOR_XZ_CLARIFICATION_PLAN.md) | **Completed** (2026-06-28) | Vendor-invariant Geometry/Per-exam table-origin controls, explicit `X/LON/PT L-R` labels, plot annotations, Calculate/Geometry help, and vendor warnings. Remaining matched-fixture validation stays in active coordinate-conventions backlog. |
+| [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | **Completed** (2026-06-28) | Centralizes coordinate terminology: physical axes, DICOM attribute names, normalized `Tx/Ty/Tz`, historical PySkinDose plot aliases, vendor conventions, GE confirmed table-travel directions, GUI help, agent guidance, and characterization tests. GE matched-fixture confirmation remains a deferred TO_DO item. |
 
 For active work, see [TO_DO.md](../../TO_DO.md) and execution plans in [../](../).

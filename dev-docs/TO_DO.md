@@ -37,15 +37,13 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **Coordinate conventions cleanup** — centralize physical axes, DICOM table-coordinate definitions,
-  PySkinDose plot aliases, vendor normalization signs, GE normalization-level `Tx`/`Tz` correction, and
-  manual tabular coordinate-override behavior. Plan: [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md).
-  Assessment: [YZ_AXIS_INCONSISTENCY_ASSESSMENT.md](assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md).
-  Deferred fixture confirmation: one matched GE DICOM RDSR plus tabular export would pin exact regression values;
-  GE table-travel directions are already confirmed from tabular export inspection.
+- [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
+  case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
+  cranial, height = down for HFS) and the normalizer-level `Tx`/`Tz` correction are already confirmed; this item
+  is for pinning raw numeric fixture values only. See [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md)
+  and [plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
-  source RDSRs before expanding vendor adapters. Covered by
-  [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
+  source RDSRs before expanding vendor adapters. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Patient orientation support (head-first vs feet-first, prone vs supine)** — investigate whether the code and GUI allow choosing patient orientation (head-first / feet-first) and positioning (prone / supine). See [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
 - [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
 

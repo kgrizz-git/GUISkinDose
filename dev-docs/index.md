@@ -96,7 +96,6 @@ Phased detail derived from diagnostics or master plans.
 |---|---|
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
-| [plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | Centralizes coordinate terminology across physical axes, DICOM table-coordinate attributes, PySkinDose plot aliases, vendor conventions, GE validation, GUI help, and agent guidance. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
@@ -128,6 +127,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md](plans/archive/SLIDER_LABEL_REPOSITION_PLAN.md) | **Completed** (2026-06-26) — Geometry tab slider value labels repositioned adjacent to sliders (per-axis `ui.row` replacing outer column layout). |
 | [plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md](plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md) | **Completed** (2026-06-27) — `setup-dev.sh`/`.bat` one-command hook installer; `pip-audit` added as pre-push hook; CI shellcheck expanded; `AGENTS.md` and `HARNESS_ENGINEERING.md` updated. |
 | [plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md](plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md) | **Completed** (2026-06-28) — Vendor-invariant Geometry/Per-exam table-origin controls, explicit `X/LON/PT L-R` labels, plot annotations, Calculate/Geometry help, and vendor warnings. |
+| [plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | **Completed** (2026-06-28) — Canonical coordinate reference in `VENDOR_COORDINATE_SYSTEMS.md`; DICOM attribute/display-alias distinction; GE convention confirmed; characterization tests; agent + GUI help updated. GE matched-fixture item tracked in TO_DO. |
 
 ---
 
