@@ -47,32 +47,51 @@ def _inject_html_tabular_meta(html: bytes, meta: dict) -> bytes:
 
 
 # ── helper for file dialog ────────────────────────────────────────────────
-def _get_save_path(default_name: str, extension: str) -> str | None:
-    """Open a native Save As dialog."""
+def _is_native_mode() -> bool:
+    """Return True when the GUI is running under pywebview (--native flag)."""
     try:
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        # map extension to filter
-        ext_map = {
-            "csv": [("CSV Files", "*.csv")],
-            "xlsx": [("Excel Files", "*.xlsx")],
-            "txt": [("Text Files", "*.txt")],
-            "json": [("JSON Files", "*.json")],
-            "html": [("HTML Files", "*.html")],
-            "png": [("PNG Images", "*.png")],
-        }
-        path = filedialog.asksaveasfilename(
-            initialfile=default_name,
-            defaultextension=f".{extension}",
-            filetypes=ext_map.get(extension, [("All Files", "*.*")])
+        from nicegui import app as _app
+        return _app.native.main_window is not None
+    except Exception:
+        return False
+
+
+def _get_save_path(default_name: str, extension: str) -> str | None:
+    """Open a native Save As dialog when running in --native (pywebview) mode.
+
+    Uses the pywebview ``create_file_dialog`` API, which is safe to call from
+    background threads (pywebview dispatches it to the main thread internally).
+    Returns ``None`` in browser mode so callers fall back to ``ui.download()``.
+    """
+    try:
+        from nicegui import app as _app
+        main_window = _app.native.main_window
+        if main_window is None:
+            # Browser mode: let the browser handle the save dialog via ui.download().
+            return None
+    except Exception:
+        return None
+
+    # Native mode: use pywebview's built-in save dialog.
+    ext_filter_map = {
+        "csv": ("CSV Files (*.csv)",),
+        "xlsx": ("Excel Files (*.xlsx)",),
+        "txt": ("Text Files (*.txt)",),
+        "json": ("JSON Files (*.json)",),
+        "html": ("HTML Files (*.html)",),
+        "png": ("PNG Images (*.png)",),
+    }
+    try:
+        import webview
+        result = main_window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            save_filename=default_name,
+            file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
         )
-        root.destroy()
-        return path if path else None
+        # pywebview returns a string path for SAVE_DIALOG, or None when cancelled.
+        if not result:
+            return None
+        return result[0] if isinstance(result, (list, tuple)) else result
     except Exception as e:
-        # Most commonly a missing Tkinter (No module named '_tkinter'); the caller
-        # falls back to a browser-style download. See README.md for how to install.
-        dprint("GUI", f"Native save dialog unavailable ({e}); falling back to download.")
+        dprint("GUI", f"pywebview save dialog failed ({e}); falling back to download.")
         return None

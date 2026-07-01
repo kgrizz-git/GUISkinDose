@@ -63,6 +63,10 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Make offsets more visible and configurable for the user** — surface table-origin and coordinate offsets prominently in the GUI (e.g. per-exam offset summary, inline hints on the Geometry tab) and allow easy override without digging into nested settings.
 - [ ] **Verify body habitus scaling correctness** — ensure scaling is applied only in the appropriate dimensions,
   visible on the geometry/dose plot, and factored into dose calculations.
+- [ ] **Reproducible settings export** — export `PyskindoseSettings` or GUI state as JSON to easily reload and reproduce runs.
+- [ ] **3D mesh export** — export the patient phantom mesh with vertex colors (e.g., PLY format) for use in external 3D tools.
+- [ ] **DICOM export** — export a DICOM Secondary Capture of the dose map or a DICOM SR to push results back to PACS.
+
 ### Harness / Repo Hygiene
 
 - [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run

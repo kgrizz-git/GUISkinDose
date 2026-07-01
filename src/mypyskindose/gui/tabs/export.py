@@ -13,7 +13,7 @@ from pathlib import Path
 from nicegui import run, ui
 
 from ..figures import make_dosemap_html, make_dosemap_png
-from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _tabular_input_meta
+from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _is_native_mode, _tabular_input_meta
 from ..page_context import PageContext
 from ..state import state
 
@@ -61,6 +61,8 @@ def build(ctx: PageContext) -> None:
                     return
                 default_name = f"psd_results_{state.file_name or 'data'}.json"
                 save_path = _get_save_path(default_name, "json")
+                if save_path is None and _is_native_mode():
+                    return  # user cancelled the native dialog
                 payload = _build_export_payload()
                 if save_path:
                     with open(save_path, "w") as f:
@@ -76,6 +78,8 @@ def build(ctx: PageContext) -> None:
                     return
                 default_name = f"dose_map_{state.file_name or 'data'}.html"
                 save_path = _get_save_path(default_name, "html")
+                if save_path is None and _is_native_mode():
+                    return  # user cancelled the native dialog
                 content = await run.io_bound(make_dosemap_html)
                 if not content:
                     ui.notify("Failed to generate HTML", type="negative")
@@ -101,6 +105,8 @@ def build(ctx: PageContext) -> None:
                     return
                 default_name = f"dose_map_{state.file_name or 'data'}.png"
                 save_path = _get_save_path(default_name, "png")
+                if save_path is None and _is_native_mode():
+                    return  # user cancelled the native dialog
                 content = await run.io_bound(make_dosemap_png)
                 if not content:
                     ui.notify("Failed to generate PNG (requires kaleido)", type="negative")

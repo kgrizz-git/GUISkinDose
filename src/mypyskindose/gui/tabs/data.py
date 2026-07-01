@@ -14,7 +14,7 @@ import pandas as pd
 from nicegui import ui
 
 from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
-from ..io_helpers import _get_save_path
+from ..io_helpers import _get_save_path, _is_native_mode
 from ..page_context import PageContext
 from ..state import state
 
@@ -63,6 +63,8 @@ def build(ctx: PageContext) -> None:
                 prefix = "raw_" if state.view_raw else "normalized_"
                 default_name = f"{prefix}events_{state.file_name or 'data'}.{fmt}"
                 save_path = _get_save_path(default_name, fmt)
+                if save_path is None and _is_native_mode():
+                    return  # user cancelled the native dialog
 
                 # Prepare normalization metadata
                 meta_df = pd.DataFrame([{
