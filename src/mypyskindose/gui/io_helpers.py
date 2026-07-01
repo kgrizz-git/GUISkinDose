@@ -9,6 +9,7 @@ tab modules). Pure / single-source-of-truth and unit-testable.
 from __future__ import annotations
 
 import json
+from typing import cast
 
 from mypyskindose.debug import dprint
 
@@ -83,10 +84,15 @@ def _get_save_path(default_name: str, extension: str) -> str | None:
     }
     try:
         import webview
-        result = main_window.create_file_dialog(
-            webview.SAVE_DIALOG,
-            save_filename=default_name,
-            file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
+        # Stubs type SAVE_DIALOG as module_property and create_file_dialog as a
+        # coroutine; pywebview's actual runtime API is synchronous — cast to match.
+        result = cast(
+            "tuple[str, ...] | None",
+            main_window.create_file_dialog(
+                cast(int, webview.SAVE_DIALOG),
+                save_filename=default_name,
+                file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
+            ),
         )
         # pywebview returns a string path for SAVE_DIALOG, or None when cancelled.
         if not result:

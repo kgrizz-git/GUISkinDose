@@ -18,9 +18,9 @@ jobs:
     env:
       SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -47,7 +47,7 @@ jobs:
     - name: Basedpyright (strict — any type error fails)
       run: basedpyright
     - name: Install uv
-      uses: astral-sh/setup-uv@v8.2.0
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
       with:
         version: ">=0.11.19"
     - name: Audit dependencies for CVEs and check licenses
@@ -67,9 +67,9 @@ jobs:
   gui-smoke:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -107,9 +107,9 @@ jobs:
       matrix: ${{ fromJSON(needs.matrix-prep.outputs.config) }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
