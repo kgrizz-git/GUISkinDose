@@ -82,6 +82,7 @@ def _get_save_path(default_name: str, extension: str) -> str | None:
         "html": ("HTML Files (*.html)",),
         "png": ("PNG Images (*.png)",),
         "pdf": ("PDF Files (*.pdf)",),
+        "docx": ("Word Documents (*.docx)",),
     }
     try:
         import webview

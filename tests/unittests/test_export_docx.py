@@ -1,20 +1,21 @@
-"""Phase 5 tests for the HTML report writer + format dispatcher."""
+"""Phase 6 tests for the DOCX report writer."""
 
 from __future__ import annotations
 
-import base64
+import io
 
 import pandas as pd
+import pytest
 
 from mypyskindose import PyskindoseSettings, load_settings_example_json
 from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
 from mypyskindose.export.models import ImageEntry
-from mypyskindose.export.writers import FORMATS, render_bytes
-from mypyskindose.export.writers.html import render_html_bytes
 
-_PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-)
+pytest.importorskip("docx")
+
+from mypyskindose.export.writers.docx import render_docx_bytes  # noqa: E402
+
+_PNG = None
 
 
 def _payload():
@@ -35,29 +36,19 @@ def _payload():
     return collect_export_payload(src, with_images=False)
 
 
-def test_write_html_smoke():
-    payload = _payload()
-    payload.images = [ImageEntry(label="Dorsal", view="dorsal", exam_id=None, png_bytes=_PNG)]
-    html = render_html_bytes(payload).decode()
-    assert "<html" in html
-    assert "data:image/png;base64," in html  # embedded image
-    assert "schema_version" in html
+def test_write_docx_smoke():
+    from docx import Document  # type: ignore[import-untyped]
+
+    data = render_docx_bytes(_payload())
+    assert data[:2] == b"PK"  # docx is a zip
+    doc = Document(io.BytesIO(data))
+    text = "\n".join(p.text for p in doc.paragraphs)
+    assert "MyPySkinDose" in text
 
 
-def test_write_html_missing_image_notice():
+def test_write_docx_missing_image_notice():
     payload = _payload()
     payload.images = [ImageEntry(label="Dorsal", view="dorsal", exam_id=None, png_bytes=None,
                                  error_message="Image unavailable (kaleido/export error)")]
-    html = render_html_bytes(payload).decode()
-    assert "Image unavailable" in html
-
-
-def test_dispatcher_all_formats():
-    import pytest
-
-    payload = _payload()
-    for fmt in FORMATS:
-        if fmt == "pdf":
-            pytest.importorskip("reportlab")  # optional `export` extra
-        data = render_bytes(payload, fmt)
-        assert isinstance(data, bytes) and len(data) > 100
+    data = render_docx_bytes(payload)  # must not raise
+    assert data[:2] == b"PK"

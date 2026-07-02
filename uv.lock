@@ -2503,6 +2503,7 @@ docs = [
     { name = "sphinx-rtd-theme" },
 ]
 export = [
+    { name = "python-docx" },
     { name = "reportlab" },
 ]
 gui = [
@@ -2551,6 +2552,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'gui'", specifier = ">=0.24" },
     { name = "pytest-asyncio", marker = "extra == 'gui-native'", specifier = ">=0.24" },
     { name = "pytest-playwright", marker = "extra == 'dev'", specifier = ">=0.4" },
+    { name = "python-docx", marker = "extra == 'export'", specifier = ">=1.1" },
     { name = "pywebview", marker = "extra == 'gui-native'" },
     { name = "reportlab", marker = "extra == 'export'", specifier = ">=4.0" },
     { name = "rich" },
@@ -4319,6 +4321,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a6/12/38c1a0b1e64806780c9563e3fc9f6e472251839662587cfbe9bfaf2ae10a/python_discovery-1.4.0.tar.gz", hash = "sha256:eb8bc7daad3c226c147e45bb4e970a1feb1bf4048ee178e6db59e197b8010ce3", size = 68455, upload-time = "2026-05-28T01:15:37.639Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/8d/3d316429f65029532bb1e28ff77b797d86b5ac3915bb44ca4e19aa283d43/python_discovery-1.4.0-py3-none-any.whl", hash = "sha256:26ed78d703e234879a66244c7d4114563fb13ec5cd30a2d1357e5fb4850782da", size = 33217, upload-time = "2026-05-28T01:15:36.573Z" },
+]
+
+[[package]]
+name = "python-docx"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lxml" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/f7/eddfe33871520adab45aaa1a71f0402a2252050c14c7e3009446c8f4701c/python_docx-1.2.0.tar.gz", hash = "sha256:7bc9d7b7d8a69c9c02ca09216118c86552704edc23bac179283f2e38f86220ce", size = 5723256, upload-time = "2025-06-16T20:46:27.921Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl", hash = "sha256:3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7", size = 252987, upload-time = "2025-06-16T20:46:22.506Z" },
 ]
 
 [[package]]

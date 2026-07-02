@@ -285,6 +285,24 @@ When `interactivity=False`:
 - Static PNG: `PlotOutputs/right.png`, `back.png`, `left.png`, `front.png`
 - Output directory configurable via `file_result_output_path`
 
+### 7.7 Rich Report Export (`mypyskindose.export`)
+Single self-contained audit document from a completed dose calculation, additive to the
+JSON/HTML/PNG downloads. Formats: **XLSX** (`openpyxl`), **PDF** (`reportlab`), **HTML** (stdlib),
+**DOCX** (`python-docx`); PDF/DOCX libs live in the optional `export` extra.
+- `collect_export_payload(source)` builds an `ExportPayload` (report-layout, separate from
+  `PySkinDoseOutput.to_dict()`); normalizes single-exam dict and multi-exam `MultiExamResult` via
+  `ExamView`. Sections: title/software identity, input provenance (DICOM RDSR + tabular branches),
+  per-exam equipment/settings/coordinate corrections/phantom, dosimetric results (per-exam +
+  cumulative), correction-factor statistics (min/max/mean/dose-weighted), warnings + discarded
+  events, and dose-map images (whole-body context + zoom-to-irradiated-region).
+- Writers: `render_<fmt>_bytes(payload)` / `write_<fmt>(payload, path)` + a `render_bytes`/
+  `write_report` dispatcher (`export/writers/`).
+- GUI: Export tab **"Rich report…"** modal (format + optional title; native save-path vs browser
+  download) via `gui/export_source.build_export_source_from_gui`.
+- CLI: `--export-format {xlsx,pdf,html,docx}`, `--export-path`, `--export-title` (headless path;
+  rejects `--aggregate` / `--input-preview-only`).
+- Plan: `dev-docs/plans/RICH_EXPORT_PLAN.md`.
+
 ---
 
 ## 8. Output formats
@@ -483,7 +501,7 @@ from mypyskindose import (
 | CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | `qaelum.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real Qaelum export fixture. |
 | CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | `dosemonitor.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseMonitor export fixture. |
 | CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | `dosewatch.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseWatch export fixture. |
-| PDF/Word report export | Open backlog | GUI report-generation phase |
+| PDF/Word/XLSX/HTML report export | Shipped (2026-07-02) | Rich Report Export — see §7.7; `mypyskindose.export`. GUI modal + CLI `--export-format`. |
 | Side-by-side procedure comparison | Open backlog | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |
 | New vendor RDSR support | Manual JSON edit required | No UI for adding vendors |

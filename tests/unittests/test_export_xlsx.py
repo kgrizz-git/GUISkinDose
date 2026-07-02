@@ -10,8 +10,11 @@ import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
 
+from typing import Any, cast
+
 from mypyskindose import PyskindoseSettings, load_settings_example_json
 from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
+from mypyskindose.export.models import ImageEntry
 from mypyskindose.export.writers.xlsx import render_xlsx_bytes
 
 # 1x1 PNG.
@@ -84,7 +87,7 @@ def _multi_payload():
         aggregate_dose_map=np.array([1.0, 2.0, 0.6]), aggregate_psd=2.0, total_events=4, warnings=[],
     )
     src = ExportSource(
-        execution_context="cli", multi_exam_result=result,
+        execution_context="cli", multi_exam_result=cast("Any", result),
         exams=[
             ExportExamSource("Exam 1", pd.DataFrame(), None, "a.dcm", _settings(), (0, 0, 0)),
             ExportExamSource("Exam 2", pd.DataFrame(), None, "b.dcm", _settings(), (0, 0, 0)),
@@ -110,17 +113,17 @@ def test_write_xlsx_multi_exam_summary_columns():
 
 def test_write_xlsx_images_embedded():
     payload = _single_payload()
-    payload.images = [SimpleNamespace(label="Dorsal", view="dorsal", exam_id=None, png_bytes=_PNG, error_message=None)]
+    payload.images = [ImageEntry(label="Dorsal", view="dorsal", exam_id=None, png_bytes=_PNG)]
     wb = load_workbook(io.BytesIO(render_xlsx_bytes(payload)))
-    assert wb["Images"]._images  # anchored drawings present
+    assert cast("Any", wb["Images"])._images  # anchored drawings present
 
 
 def test_write_xlsx_missing_images():
     payload = _single_payload()
     payload.images = [
-        SimpleNamespace(label="Dorsal", view="dorsal", exam_id=None, png_bytes=None,
-                        error_message="Image unavailable (kaleido/export error)")
+        ImageEntry(label="Dorsal", view="dorsal", exam_id=None, png_bytes=None,
+                   error_message="Image unavailable (kaleido/export error)")
     ]
     data = render_xlsx_bytes(payload)  # must not raise
     wb = load_workbook(io.BytesIO(data))
-    assert not wb["Images"]._images
+    assert not cast("Any", wb["Images"])._images

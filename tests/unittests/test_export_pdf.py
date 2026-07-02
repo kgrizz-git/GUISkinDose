@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pandas as pd
 import pytest
 
 from mypyskindose import PyskindoseSettings, load_settings_example_json
 from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
+from mypyskindose.export.models import ImageEntry
 
 pytest.importorskip("reportlab")
 
@@ -67,8 +66,8 @@ def test_write_pdf_long_filename_wraps():
 def test_write_pdf_no_images():
     payload = _payload()
     payload.images = [
-        SimpleNamespace(label="Dorsal", view="dorsal", exam_id=None, png_bytes=None,
-                        error_message="Image unavailable (kaleido/export error)")
+        ImageEntry(label="Dorsal", view="dorsal", exam_id=None, png_bytes=None,
+                   error_message="Image unavailable (kaleido/export error)")
     ]
     data = render_pdf_bytes(payload)
     assert data.startswith(b"%PDF")

@@ -576,8 +576,8 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         required=False,
         default=None,
         dest="export_format",
-        choices=("xlsx", "pdf", "html"),
-        help="Generate a Rich audit report (XLSX/PDF/HTML) instead of printing JSON.",
+        choices=("xlsx", "pdf", "html", "docx"),
+        help="Generate a Rich audit report (XLSX/PDF/HTML/DOCX) instead of printing JSON.",
     )
 
     parser.add_argument(

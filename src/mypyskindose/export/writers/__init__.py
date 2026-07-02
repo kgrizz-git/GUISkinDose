@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..models import ExportPayload
 
-# User-facing formats and their file extensions (DOCX is Phase 6).
-FORMATS: dict[str, str] = {"xlsx": "xlsx", "pdf": "pdf", "html": "html"}
+# User-facing formats and their file extensions.
+FORMATS: dict[str, str] = {"xlsx": "xlsx", "pdf": "pdf", "html": "html", "docx": "docx"}
 
 
 def render_bytes(payload: "ExportPayload", fmt: str) -> bytes:
@@ -33,6 +33,10 @@ def render_bytes(payload: "ExportPayload", fmt: str) -> bytes:
         from .html import render_html_bytes
 
         return render_html_bytes(payload)
+    if fmt == "docx":
+        from .docx import render_docx_bytes
+
+        return render_docx_bytes(payload)
     raise ValueError(f"Unsupported export format: {fmt!r}. Choose one of {sorted(FORMATS)}.")
 
 

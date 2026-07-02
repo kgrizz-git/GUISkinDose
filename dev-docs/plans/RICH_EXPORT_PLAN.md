@@ -1,25 +1,28 @@
 # Rich Report Export — Master Plan
 
-_Status: **Phases 1–5 shipped** (XLSX + PDF + HTML, GUI modal, CLI flags). Phase 6 (DOCX) and Phase 7 (polish) remain._  
+_Status: **Phases 1–6 shipped** (XLSX + PDF + HTML + DOCX, GUI modal, CLI flags). Phase 7 (polish) mostly complete._  
 _Last updated: 2026-07-02_  
-_Supersedes draft [RICH_EXPORT_SPEC.md](RICH_EXPORT_SPEC.md) and folds in prior ad-hoc assessments_
+_Supersedes draft [RICH_EXPORT_SPEC.md](archive/RICH_EXPORT_SPEC.md) and folds in prior ad-hoc assessments_
 
 ## Implementation status (2026-07-02)
 
 **Shipped:** `src/mypyskindose/export/` package — `payload.py` (`collect_export_payload`,
 `resolve_calculation_result`), `_exam_view.py` (single-dict / multi-object normalizer),
 `metrics.py`, `sections.py`, `provenance.py`, `images.py` (+ zoom-to-dose), `models.py`,
-`cli_source.py`, and `writers/{xlsx,pdf,html}.py` + a `render_bytes`/`write_report` dispatcher.
+`cli_source.py`, and `writers/{xlsx,pdf,html,docx}.py` + a `render_bytes`/`write_report` dispatcher.
 GUI adapter `gui/export_source.py` and Export-tab modal; CLI `--export-format/--export-path/--export-title`
 wired in `__main__.py` via `main.run_cli_export` + `validate_export_flags`. `gui/figures.py`
-delegates to `export/images.py`. `reportlab` added as the optional `export` extra. Tests:
-`tests/unittests/test_export_{payload,xlsx,pdf,html,cli}.py` (25 tests). Full suite green (469).
+delegates to `export/images.py`. `reportlab` + `python-docx` added as the optional `export` extra.
+Docs: CHANGELOG + FEATURE_INVENTORY §7.7 updated; draft spec archived. Tests:
+`tests/unittests/test_export_{payload,xlsx,pdf,html,cli,docx}.py` (27 tests). Full suite green.
 
-**Remaining:** Phase 6 (DOCX writer), Phase 7 (polish — image-cap toggle, a11y/alt-text,
-localization, Results-tab `k_med` alignment, doc updates), and the Phase 4 manual browser/native
-smoke checks (4.3.x). Minor deferrals: XLSX explicit `cell.number_format` (values are pre-formatted
-strings today); GUI "Open file / Open folder" success actions; browser `showSaveFilePicker()`
-progressive enhancement (baseline `ui.download()` fallback is implemented and is the required behavior).
+**Remaining (deferred, low priority):** Phase 7 leftovers — multi-exam image-cap GUI toggle (7.1),
+deeper PDF/DOCX tagged-a11y (7.2, HTML already has `alt`), localization-string extraction (7.3),
+Results-tab `k_med` alignment (7.4, separate PR), and per-tab GUI help (no export help loader exists
+today). Phase 4 manual browser/native save smoke (4.3.x) needs a human. Minor code deferrals: XLSX
+explicit `cell.number_format` (values are pre-formatted strings); GUI "Open file / Open folder"
+success actions; browser `showSaveFilePicker()` progressive enhancement (baseline `ui.download()`
+fallback is implemented and is the required behavior).
 
 ## Summary
 
@@ -564,7 +567,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 - [ ] **7.3** Localization hooks: extract user-visible strings to constants module.
 - [ ] **7.4** Align Results tab correction table to include `k_med` (separate small PR).
 - [ ] **7.5** Update `FEATURE_INVENTORY.md`, `CHANGELOG.md`, GUI help (`docs/source/gui_help/export.md`).
-- [ ] **7.6** Archive `RICH_EXPORT_SPEC.md` → `plans/archive/` when v1 ships; update `dev-docs/index.md`.
+- [x] **7.6** Archived `RICH_EXPORT_SPEC.md` → `plans/archive/`; `dev-docs/index.md` updated.
 
 ---
 
@@ -605,7 +608,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 ## References
 
-- Draft spec: [RICH_EXPORT_SPEC.md](RICH_EXPORT_SPEC.md)
+- Draft spec: [RICH_EXPORT_SPEC.md](archive/RICH_EXPORT_SPEC.md)
 - Coordinates: [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md)
 - Input flow: [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md)
 - Data model: `src/mypyskindose/format_export_data.py`

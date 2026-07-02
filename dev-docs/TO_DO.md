@@ -53,9 +53,19 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
-- [ ] **Rich report exports** — implement per [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) phased checklist
-  (Phase 1: `ExportPayload` collector + tests; then XLSX/PDF writers, GUI, CLI). Consolidated requirements
-  supersede draft [RICH_EXPORT_SPEC.md](plans/RICH_EXPORT_SPEC.md).
+- [x] **Rich report exports** — **shipped** (Phases 1–6 of [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md)):
+  `mypyskindose.export` collector + XLSX/PDF/HTML/DOCX writers, GUI modal, CLI `--export-format`.
+  Deferred leftovers tracked below.
+- [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
+  browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
+- [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
+  accessibility + alt text, HTML already sets `alt` (7.2); extract user-visible strings to a localization module
+  (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); add a per-tab
+  GUI help page for the Export tab once a help loader exists.
+- [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
+  (values are pre-formatted strings today); add GUI "Open file / Open folder" success actions (native only);
+  add browser `showSaveFilePicker()` progressive enhancement (must never replace the baseline `ui.download()`
+  fallback).
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).

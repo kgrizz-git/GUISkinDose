@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -156,7 +157,7 @@ def test_payload_multi_exam_object():
     )
     src = ExportSource(
         execution_context="cli",
-        multi_exam_result=result,
+        multi_exam_result=cast("Any", result),
         exams=[
             ExportExamSource("A", pd.DataFrame(), None, "a.dcm", _settings(), (0, 0, 0)),
             ExportExamSource("B", pd.DataFrame(), None, "b.dcm", _settings(), (0, 0, 0)),

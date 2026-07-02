@@ -74,7 +74,12 @@ def build(ctx: PageContext) -> None:
             with ui.dialog() as rich_report_dialog, ui.card().classes("min-w-96 gap-3"):
                 ui.label("Rich report export").classes("text-lg font-bold")
                 fmt_select = ui.select(
-                    {"xlsx": "Excel workbook (.xlsx)", "pdf": "PDF document (.pdf)", "html": "Web page (.html)"},
+                    {
+                        "xlsx": "Excel workbook (.xlsx)",
+                        "pdf": "PDF document (.pdf)",
+                        "html": "Web page (.html)",
+                        "docx": "Word document (.docx)",
+                    },
                     value="pdf", label="Format",
                 ).classes("w-full")
                 title_input = ui.input(label="Report title (optional)").classes("w-full")
