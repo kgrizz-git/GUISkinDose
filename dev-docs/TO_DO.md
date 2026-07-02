@@ -53,8 +53,9 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
-- [ ] **Rich report exports** — add report-style XLSX/DOCX/PDF outputs with dose images, key inputs, key results,
-  and provenance.
+- [ ] **Rich report exports** — implement per [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) phased checklist
+  (Phase 1: `ExportPayload` collector + tests; then XLSX/PDF writers, GUI, CLI). Consolidated requirements
+  supersede draft [RICH_EXPORT_SPEC.md](plans/RICH_EXPORT_SPEC.md).
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).
