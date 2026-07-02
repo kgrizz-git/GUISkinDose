@@ -103,6 +103,7 @@ Common to both branches:
 
 - Exam count; event counts (loaded, processed, discarded with reason codes)
 - Structured tracking: read discarded events from `discarded_events: dict[str, int]` added to `ExamResult` during `analyze_multiple_exams()` (no regex/string parsing of log messages)
+- **Single-exam caveat:** `ExamResult` exists only on the multi-exam path. Single-exam runs (`main()` → bare dict / `PySkinDoseOutput`) have **no `ExamResult` wrapper**, so structured `discarded_events` has no carrier there. For single-exam, either (a) attach the same `discarded_events: dict[str, int]` to the single-exam source bundle populated by `build_export_source_from_*`, or (b) fall back to the warning-capture helper (§1.1.7). Do **not** silently report zero discards for single-exam when the count is simply unavailable — mark it `N/A` if neither source is populated.
 - Sheet name when tabular XLSX input
 
 ### 3. Equipment (per exam)
@@ -125,6 +126,15 @@ Phantom model/mesh; physical dimensions; mesh resolution (vertex + triangle coun
 
 Report **per exam** and **cumulative** columns.
 
+**Two output representations (must normalize before computing metrics):** the collector receives calculation results in two different shapes and must reduce them to one internal form:
+
+| Path | Carrier | `dose_map` shape | Access style |
+|------|---------|------------------|--------------|
+| Single-exam | `source.output_dict` (a **dict**, `state.output`) | **Sparse**: `[(vertex_index, dose), …]` for `dose > 0` only (see `PySkinDoseOutput.to_dict()`); `psd` is a top-level scalar | dict keys (`output_dict["psd"]`, `["air_kerma"]`) |
+| Multi-exam | `MultiExamResult.exams[].output` (**`PySkinDoseOutput` objects**); `aggregate_dose_map` is a full `np.ndarray` | Full dense `np.ndarray` on `.DoseMap` / `aggregate_dose_map` | attributes (`.PSD`, `.AirKerma`, `.DoseMap`) |
+
+Because the single-exam `dose_map` is sparse, **`argmax` over a dense array does not apply there** — the peak vertex index is the first element of the max-dose tuple, not a positional argmax. Normalize both forms in `resolve_calculation_result` (1.2.1) so downstream metrics code sees a consistent `(psd, air_kerma, dense_or_sparse-aware peak lookup)` interface.
+
 | Metric | Unit | Collection notes |
 |--------|------|------------------|
 | Peak skin dose (PSD) | mGy | Per exam: `output.psd` / `ExamResult.output.PSD`. Cumulative: `aggregate_psd` / `max(aggregate_dose_map)`. |
@@ -145,13 +155,26 @@ Anatomical region labels: deferred (coordinates only in v1).
 
 ### 8. Correction factors
 
-Keys: `k_bs`, `k_isq`, `k_med`, `k_tab` only (see `constants.py`). Filtration → HVL lookup; report HVL clamp/interp in §9.
+Four factors: `k_bs`, `k_isq`, `k_med`, `k_tab` (the `OUTPUT_KEY_CORRECTION_*` constants in `constants.py`). Filtration → HVL lookup; report HVL clamp/interp in §9.
+
+**Dict-key naming caveat (must read before coding the collector):** the `k_bs`/`k_isq`/`k_med`/`k_tab` names are only the *internal* `analysis_result` keys. `PySkinDoseOutput.to_dict()["corrections"]` uses **different** key names:
+
+| Physics factor | `to_dict()["corrections"]` key | `PySkinDoseOutput` attribute |
+|----------------|-------------------------------|------------------------------|
+| `k_bs` | `backscatter` | `.BackscatterCorrection` |
+| `k_isq` | `inverse_square_law` | `.InverseSquareLawCorrection` |
+| `k_med` | `medium` | `.MediumCorrection` |
+| `k_tab` | `table` | `.TableCorrection` |
+| hit cell indices | `correction_value_index` | `.Hits` |
+| per-event kerma | `kerma` | `.Events.kerma` |
+
+Prefer reading from the **attributes** (multi-exam `ExamResult.output` objects) and from these exact dict keys (single-exam `output_dict`) — do **not** look up `corrections["k_bs"]` etc.; those keys do not exist in the exported dict.
 
 **Data shapes in `PySkinDoseOutput`:**
 
 | Factor | Storage | Per-event aggregation |
 |--------|---------|---------------------|
-| `k_med`, `k_tab` | Per-event scalars | Use value directly |
+| `k_med`, `k_tab` | Per-event scalars (`.MediumCorrection[i]`, `.TableCorrection[i]` are floats) | Use value directly |
 | `k_bs`, `k_isq` | Sparse per-hit lists aligned with `Hits` | Per event: arithmetic mean across hit cells ($\bar{k}_{event,i}$); if `len(hits[i]) == 0`, define $\bar{k}_{event,i} = \text{None}$ and exclude from averaging |
 
 **Per-exam dose-weighted mean:**
@@ -293,7 +316,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 - [ ] **1.1.3** Define `ExportExamSource` / `ExportSource` input bundles (see Data architecture).
 - [ ] **1.1.4** Public API: `collect_export_payload(source) -> ExportPayload`.
 - [ ] **1.1.5** Build export sources from existing GUI/CLI input bundles (`InputAdapterResult`, GUI per-exam meta, effective settings objects) instead of copying full normalized DataFrames into public result models.
-- [ ] **1.1.6** If structured discarded-event counts cannot be recovered from the source bundle alone, add the **minimal** in-memory metadata needed on `ExamResult` (for example `discarded_events: dict[str, int]`) without expanding `PySkinDoseOutput.to_dict()` for report-only needs.
+- [ ] **1.1.6** If structured discarded-event counts cannot be recovered from the source bundle alone, add the **minimal** in-memory metadata needed on `ExamResult` (for example `discarded_events: dict[str, int]`) without expanding `PySkinDoseOutput.to_dict()` for report-only needs. **`ExamResult` is multi-exam only** — for the single-exam path (no `ExamResult`), carry the same `discarded_events` on the single-exam source bundle (`ExportExamSource` / `ExportSource`) or fall back to the warning-capture helper (1.1.7); never fabricate a zero count when unavailable (report `N/A`).
 - [ ] **1.1.7** Implement a reusable warning-capture helper for GUI and CLI code paths so calculation-level QA warnings emitted via the `mypyskindose` logger are preserved for export without mutating the existing export JSON schema.
 
 ### 1.2 Source resolution (GUI vs CLI, single vs multi)
@@ -302,6 +325,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
   - If `source.multi_exam_result is not None` → multi-exam path (ignore `output_dict`).
   - Elif `source.output_dict is not None` → single-exam path.
   - Else → raise `ExportError("No calculation result")`.
+  - **Normalize the two output shapes** (see §7 table) into one internal per-exam view so metrics/corrections code never branches on dict-vs-object: expose `psd`, `air_kerma`, correction arrays (via the §8 attribute/key map), and a **peak-vertex accessor** that handles the single-exam **sparse** `dose_map` (`[(idx, dose), …]` → max by dose, index = tuple[0]) and the multi-exam **dense** `np.ndarray` (`argmax`) uniformly.
 - [ ] **1.2.2** Add `build_export_source_from_gui(state) -> ExportSource` in `gui/` (thin adapter; keeps `export/` GUI-import-free).
 - [ ] **1.2.3** Add `build_export_source_from_cli(...) -> ExportSource` so CLI export does not depend on GUI state or ad-hoc reconstruction from serialized dicts.
 - [ ] **1.2.4** Guard: `calculation_done` / equivalent CLI success before export.
@@ -316,13 +340,13 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 - [ ] **1.4.1** Per-exam PSD, air kerma, event counts from `ExamResult` / single `output_dict`.
 - [ ] **1.4.2** Cumulative PSD from `aggregate_psd` or `max(dose_map)`; cumulative air kerma via **explicit sum** across exams.
-- [ ] **1.4.3** PSD peak: `argmax(dose_map)` → vertex index + (X,Y,Z) from skin cells (guarding against uniform-zero maps by returning `None` for peak index and coordinates when `aggregate_psd == 0`); for multi-exam under differing offsets, identify Primary Contributing Exam, reporting baseline and primary coordinates + percentage dose contribution.
+- [ ] **1.4.3** PSD peak via the normalized peak-vertex accessor (1.2.1): dense `argmax` for multi-exam `aggregate_dose_map`; **max-by-dose over the sparse `[(idx, dose), …]` tuples** for the single-exam `output_dict` (index = `tuple[0]`, **not** a positional argmax). Then map vertex index → (X,Y,Z) from `patient_skin_cells` (guarding against uniform-zero maps by returning `None` for peak index and coordinates when PSD == 0 — for single-exam this means the sparse `dose_map` is empty); for multi-exam under differing offsets, identify Primary Contributing Exam, reporting baseline and primary coordinates + percentage dose contribution.
 - [ ] **1.4.4** DAP / fluoro time: read from normalized/source columns when present (multiply `DoseAreaProduct_Gym2` by 10,000 for Gy·cm²). Only report fluoro time when a source exposes a trustworthy duration column; do not treat `PulseWidth_ms` as total fluoro duration.
 - [ ] **1.4.5** Acquisition breakdown: group by normalized `acquisition_type`; sum $K_{a,r}$ and DAP per group.
 
 ### 1.5 Correction statistics (`export/metrics.py`)
 
-- [ ] **1.5.1** Parse `corrections` block from `output_dict` / `PySkinDoseOutput.to_dict()`.
+- [ ] **1.5.1** Parse `corrections` block using the **§8 dict-key / attribute map** (dict keys are `backscatter` / `inverse_square_law` / `medium` / `table` / `correction_value_index` / `kerma` — **not** `k_bs`/`k_isq`/…). Read from `PySkinDoseOutput` attributes for multi-exam objects and from those exact `to_dict()["corrections"]` keys for single-exam `output_dict`.
 - [ ] **1.5.2** `k_med` / `k_tab`: per-event scalar dose-weighted means per exam.
 - [ ] **1.5.3** `k_bs` / `k_isq`: per event, mean across hit cells (None if `len(hits[i]) == 0`); then dose-weight across events where hit count > 0. If an exam has zero events with hits ($\sum_{i \in \text{hits}} K_{a,r,i} == 0$), report the exam dose-weighted mean as `"N/A"` (or `None`) to prevent division-by-zero.
 - [ ] **1.5.4** Cumulative correction means: kerma-weighted across exams (formula in §8).

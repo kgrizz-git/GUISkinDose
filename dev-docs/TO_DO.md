@@ -75,7 +75,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   Drop `GHSA-p4gq-832x-fm9v` once `nltk` ships a fix (currently dev-only via `safety`, no
   in-project use of `nltk.data.load()`). `ignore-until-fixed` should auto-fail the audit again
   when a patched `nltk` release appears in the lockfile.
-- [ ] **Optional SBOM scan** — evaluate grype on built wheel/sdist if PyPI advisories are not enough.
+- [ ] **Optional SBOM scan** — evaluate grype on built wheel/sdist if PyPI advisories are not enough. See [GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md).
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.
 - [ ] **Doc-freshness follow-ups** — add intentional stale-word excludes, extend inventory contradiction rules, and
