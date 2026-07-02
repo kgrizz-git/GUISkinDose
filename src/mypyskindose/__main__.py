@@ -6,7 +6,14 @@ import sys
 from mypyskindose.constants import RUN_ARGUMENTS_MODE_GUI
 from mypyskindose.debug import configure_logging
 from mypyskindose.dev_data import DEVELOPMENT_PARAMETERS
-from mypyskindose.main import analyze_input_file, get_argument_parser, main, preview_input_file
+from mypyskindose.main import (
+    analyze_input_file,
+    get_argument_parser,
+    main,
+    preview_input_file,
+    run_cli_export,
+    validate_export_flags,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +25,19 @@ if __name__ == "__main__":
     # Configure logging once for all entry paths. run_gui calls this again in
     # native mode to add a file sink; the call is idempotent.
     configure_logging()
+
+    # Reject incompatible --export-format combinations before any branch runs.
+    if getattr(args, "export_format", None):
+        try:
+            validate_export_flags(
+                args.export_format,
+                aggregate_only=getattr(args, "aggregate_only", False),
+                input_preview_only=getattr(args, "input_preview_only", False),
+                has_files=bool(args.file_path),
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            sys.exit(1)
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from mypyskindose.gui.app import run_gui
@@ -49,7 +69,29 @@ if __name__ == "__main__":
             else:
                 file_paths.append(fp)
 
-        if len(file_paths) > 1:
+        export_format = getattr(args, "export_format", None)
+        if export_format:
+            try:
+                validate_export_flags(
+                    export_format,
+                    aggregate_only=getattr(args, "aggregate_only", False),
+                    input_preview_only=getattr(args, "input_preview_only", False),
+                    has_files=bool(file_paths),
+                )
+            except ValueError as exc:
+                print(str(exc), file=sys.stderr)
+                sys.exit(1)
+            out_path = run_cli_export(
+                file_paths,
+                run_settings,
+                export_format,
+                export_path=getattr(args, "export_path", None),
+                export_title=getattr(args, "export_title", None),
+                input_schema=getattr(args, "input_schema", None),
+                sheet_name=getattr(args, "sheet_name", 0),
+            )
+            print(f"Report written to {out_path}")
+        elif len(file_paths) > 1:
             from mypyskindose.main import analyze_multiple_input_files
             result = analyze_multiple_input_files(
                 file_paths,

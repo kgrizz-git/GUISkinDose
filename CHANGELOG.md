@@ -12,6 +12,20 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Rich Report Export** (2026-07-02) — new `mypyskindose.export` package produces a single
+  self-contained audit document (**XLSX / PDF / HTML**) from a completed dose calculation,
+  bundling dosimetric results, effective settings, input provenance (DICOM RDSR + tabular
+  branches), correction-factor statistics, warnings/discarded events, and dose-map images
+  (whole-body context + a view zoomed to the irradiated region). `collect_export_payload()`
+  normalizes single-exam (dict) and multi-exam (`MultiExamResult`) results into one payload;
+  writers under `export/writers/` consume it. GUI: Export tab **"Rich report…"** modal
+  (format + optional title; native save-path vs browser download). CLI: `--export-format`,
+  `--export-path`, `--export-title` on the headless path (rejects `--aggregate` /
+  `--input-preview-only`). `reportlab` added as a new optional `export` extra
+  (`pip install -e '.[gui,export]'`); XLSX/images reuse core `openpyxl`/`kaleido`.
+  `gui/figures.py` now delegates dose-map figure construction to the GUI-free
+  `export/images.py`. Plan: `dev-docs/plans/RICH_EXPORT_PLAN.md`.
+
 - **Vendor X/Z coordinate clarification** (2026-06-28) — Geometry and dose-map plots now label the
   normalized frame as `X - LON / PT L-R`, `Y - VER / PT A-P`, and `Z - LAT / PT S-I`;
   Data tab and Geometry/Per-exam controls use the same frame; Geometry and Calculate help explain

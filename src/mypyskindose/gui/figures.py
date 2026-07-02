@@ -11,7 +11,6 @@ from __future__ import annotations
 import traceback
 
 from mypyskindose.debug import dprint
-from mypyskindose.plotting.plot_layout import coordinate_frame_annotation
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
 from .helpers import build_settings
@@ -98,11 +97,13 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
     """Build the dose map Plotly figure.
 
     If explicit_dose_map and explicit_patient are provided, uses those (e.g. for aggregate map).
-    Otherwise reads from current state.output.
+    Otherwise reads from current state.output. Delegates the figure construction to the
+    GUI-free ``export.images`` helper so camera/label logic lives in one place.
     """
     try:
         import numpy as np
-        import plotly.graph_objects as go
+
+        from mypyskindose.export.images import render_dosemap_plotly_figure
 
         if explicit_dose_map is not None and explicit_patient is not None:
             patient_data = explicit_patient["patient"]
@@ -119,54 +120,7 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
             for idx, dose in out["dose_map"]:
                 dose_map[int(idx)] = dose
 
-        r = np.array([
-            patient_data["patient_skin_cells"]["x"],
-            patient_data["patient_skin_cells"]["y"],
-            patient_data["patient_skin_cells"]["z"],
-        ]).T
-        ijk_data = patient_data["triangle_vertex_indices"]
-
-        hover = [
-            f"<b>lat:</b> {r[i,2]:.2f} cm<br><b>lon:</b> {r[i,0]:.2f} cm<br>"
-            f"<b>ver:</b> {r[i,1]:.2f} cm<br><b>dose:</b> {dose_map[i]:.2f} mGy"
-            for i in range(len(r))
-        ]
-
-        cmax = float(np.max(dose_map))
-        if cmax == 0:
-            cmax = 1.0
-
-        mesh = go.Mesh3d(
-            x=r[:, 0], y=r[:, 1], z=r[:, 2],
-            i=ijk_data["i"], j=ijk_data["j"], k=ijk_data["k"],
-            intensity=dose_map,
-            intensitymode="vertex",
-            colorscale=state.colorscale,
-            cmin=0.0,
-            cmax=cmax,
-            showscale=True,
-            hoverinfo="text",
-            text=hover,
-            colorbar=dict(title=dict(text="Skin dose [mGy]", font=dict(size=12))),
-        )
-
-        bg = "rgb(5,5,5)"  # Deep Black
-        txt = "#F8FAFC"
-
-        layout = go.Layout(
-            paper_bgcolor=bg,
-            plot_bgcolor=bg,
-            font=dict(color=txt, family="Inter, sans-serif"),
-            margin=dict(l=0, r=0, b=40, t=40),
-            annotations=[coordinate_frame_annotation(txt)],
-            scene=dict(
-                aspectmode="data",
-                xaxis=dict(title="X - LON / PT L-R [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
-                yaxis=dict(title="Y - VER / PT A-P [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
-                zaxis=dict(title="Z - LAT / PT S-I [cm]", backgroundcolor=bg, color=txt, gridcolor="#262626"),
-            ),
-        )
-        fig = go.Figure(data=[mesh], layout=layout)
+        fig = render_dosemap_plotly_figure(dose_map, patient_data, state.colorscale, dark=True)
         state.dosemap_fig = fig
         return fig.to_dict()
     except Exception:

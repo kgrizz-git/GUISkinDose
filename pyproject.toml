@@ -31,6 +31,9 @@ dependencies = [
 [project.optional-dependencies]
 gui = ["nicegui>=2.0.0", "pytest-asyncio>=0.24"]
 gui-native = ["nicegui>=2.0.0", "pywebview", "pytest-asyncio>=0.24"]
+# Rich report export (PDF via reportlab; XLSX uses core openpyxl, images use
+# core kaleido). Optional so non-export users keep a lean install.
+export = ["reportlab>=4.0"]
 # Sphinx site (docs/source/conf.py); nbsphinx executes the getting-started
 # notebook, so it needs a kernel + ipywidgets at build time. Used by
 # .readthedocs.yml (extra_requirements: [docs]).

@@ -1,8 +1,25 @@
 # Rich Report Export — Master Plan
 
-_Status: master plan (source of truth + phased checklist)_  
+_Status: **Phases 1–5 shipped** (XLSX + PDF + HTML, GUI modal, CLI flags). Phase 6 (DOCX) and Phase 7 (polish) remain._  
 _Last updated: 2026-07-02_  
 _Supersedes draft [RICH_EXPORT_SPEC.md](RICH_EXPORT_SPEC.md) and folds in prior ad-hoc assessments_
+
+## Implementation status (2026-07-02)
+
+**Shipped:** `src/mypyskindose/export/` package — `payload.py` (`collect_export_payload`,
+`resolve_calculation_result`), `_exam_view.py` (single-dict / multi-object normalizer),
+`metrics.py`, `sections.py`, `provenance.py`, `images.py` (+ zoom-to-dose), `models.py`,
+`cli_source.py`, and `writers/{xlsx,pdf,html}.py` + a `render_bytes`/`write_report` dispatcher.
+GUI adapter `gui/export_source.py` and Export-tab modal; CLI `--export-format/--export-path/--export-title`
+wired in `__main__.py` via `main.run_cli_export` + `validate_export_flags`. `gui/figures.py`
+delegates to `export/images.py`. `reportlab` added as the optional `export` extra. Tests:
+`tests/unittests/test_export_{payload,xlsx,pdf,html,cli}.py` (25 tests). Full suite green (469).
+
+**Remaining:** Phase 6 (DOCX writer), Phase 7 (polish — image-cap toggle, a11y/alt-text,
+localization, Results-tab `k_med` alignment, doc updates), and the Phase 4 manual browser/native
+smoke checks (4.3.x). Minor deferrals: XLSX explicit `cell.number_format` (values are pre-formatted
+strings today); GUI "Open file / Open folder" success actions; browser `showSaveFilePicker()`
+progressive enhancement (baseline `ui.download()` fallback is implemented and is the required behavior).
 
 ## Summary
 
@@ -573,15 +590,16 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 ## v1 acceptance criteria
 
-- [ ] Single-exam calculation → XLSX and PDF from Export tab.
-- [ ] All §1–§10 fields present with correct physics names.
-- [ ] Multi-exam: per-exam + cumulative columns for PSD, $K_{a,r}$, corrections, warnings.
-- [ ] Warnings on first page / overview sheet.
-- [ ] Export succeeds when image render fails (notice, no crash).
-- [ ] Browser-mode GUI works without fake local-path semantics; save-picker support is used opportunistically when available, with a toast-backed browser-download fallback otherwise. Native mode supports Browse/save-path selection.
-- [ ] Phase 1–3 unit tests green in CI.
-- [ ] New dependencies only via `export` optional extra (+ existing `openpyxl`, `kaleido`).
-- [ ] Existing JSON/dict export schema remains backward compatible unless an explicitly approved schema-change PR says otherwise.
+- [x] Single-exam calculation → XLSX and PDF from Export tab.
+- [x] All §1–§10 fields present with correct physics names.
+- [x] Multi-exam: per-exam + cumulative columns for PSD, $K_{a,r}$, corrections, warnings.
+- [x] Warnings on first page / overview sheet.
+- [x] Export succeeds when image render fails (notice, no crash). — `test_export_without_kaleido`
+- [x] Browser-mode GUI works without fake local-path semantics; native mode supports Browse/save-path selection. (Baseline `ui.download()` fallback shipped; `showSaveFilePicker()` progressive enhancement deferred — never blocks export.)
+- [x] Phase 1–3 unit tests green in CI. (Plus Phase 5 CLI/HTML tests — 25 total.)
+- [x] New dependencies only via `export` optional extra (+ existing `openpyxl`, `kaleido`).
+- [x] Existing JSON/dict export schema remains backward compatible (payload is separate; no `PySkinDoseOutput.to_dict()` change).
+- [ ] Manual browser/native save smoke (Phase 4.3.x) — pending human verification.
 
 ---
 

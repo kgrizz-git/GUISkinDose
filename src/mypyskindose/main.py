@@ -288,6 +288,189 @@ def analyze_normalized_data_with_custom_settings_object(
     return analyze_data(normalized_data=data_norm, settings=settings)
 
 
+class _WarningCapture(logging.Handler):
+    """Collect WARNING+ records from the ``mypyskindose`` logger for export.
+
+    Used only during headless export so calculation-level QA warnings are
+    preserved on the payload without changing the JSON export schema.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
+
+
+def build_cli_export_source(
+    file_paths: Sequence[str | Path],
+    settings: Union[str, dict, PyskindoseSettings, None],
+    *,
+    input_schema: Optional[str] = None,
+    sheet_name: Union[str, int] = 0,
+    report_title: Optional[str] = None,
+):
+    """Run a calculation for export and assemble an ``ExportSource`` (no GUI).
+
+    Handles single RDSR / tabular files and multi-file (multi-exam) runs, forcing
+    ``output_format='dict'`` and capturing calculation warnings.
+    """
+    from mypyskindose.export import build_export_source_from_cli
+    from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+    settings_obj = parse_settings_to_settings_class(settings=settings)
+    # Force a dose calculation with structured output regardless of the settings
+    # file's mode/format (which may be a plot mode).
+    settings_obj.mode = "calculate_dose"
+    settings_obj.output_format = "dict"
+
+    capture = _WarningCapture()
+    pkg_logger = logging.getLogger("mypyskindose")
+    pkg_logger.addHandler(capture)
+    try:
+        resolved: list[Path] = []
+        for fp in file_paths:
+            p = Path(fp)
+            if not p.exists() and ("*" in str(p) or "?" in str(p)):
+                resolved.extend(sorted(p.parent.glob(p.name)))
+            else:
+                resolved.append(p)
+
+        single_tabular_multi = False
+        if len(resolved) == 1 and resolved[0].suffix.lower() in _TABULAR_SUFFIXES:
+            probe = read_and_normalize_input(
+                resolved[0], input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+            )
+            single_tabular_multi = isinstance(probe, list)
+
+        if len(resolved) > 1 or single_tabular_multi:
+            inputs = _load_inputs_for_export(resolved, settings_obj, input_schema, sheet_name)
+            result = analyze_multiple_exams(inputs, settings_obj)
+            source = build_export_source_from_cli(
+                settings_obj,
+                multi_exam_result=result,
+                inputs=inputs,
+                calc_warnings=list(capture.messages),
+                import_warnings=[w for e in inputs for w in e.warnings],
+                file_name=str(resolved[0]) if resolved else None,
+                report_title=report_title,
+            )
+            return source
+
+        # Single-exam path.
+        single = resolved[0]
+        if single.suffix.lower() in _TABULAR_SUFFIXES:
+            adapter = read_and_normalize_input(
+                single, input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+            )
+            assert not isinstance(adapter, list)  # ruled out above
+            data_norm = adapter.normalized_data
+            inputs = [adapter]
+            import_warnings = list(adapter.warnings)
+        else:
+            data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(single), settings=settings_obj)
+            inputs = None
+            import_warnings = []
+
+        output = analyze_data(normalized_data=data_norm, settings=settings_obj)
+        return build_export_source_from_cli(
+            settings_obj,
+            output_dict=output if isinstance(output, dict) else None,
+            inputs=inputs,
+            single_normalized_data=data_norm,
+            single_source_file=single.name,
+            calc_warnings=list(capture.messages),
+            import_warnings=import_warnings,
+            file_name=single.name,
+            report_title=report_title,
+        )
+    finally:
+        pkg_logger.removeHandler(capture)
+
+
+def _load_inputs_for_export(resolved_paths, settings_obj, input_schema, sheet_name):
+    """Load one ``InputAdapterResult`` per exam (parallel to multi-exam output)."""
+    from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+    from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+    inputs: list = []
+    for fp in resolved_paths:
+        fp = Path(fp)
+        suffix = fp.suffix.lower()
+        if suffix in _TABULAR_SUFFIXES:
+            result = read_and_normalize_input(
+                fp, input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+            )
+            inputs.extend(result if isinstance(result, list) else [result])
+        else:
+            data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(fp), settings=settings_obj)
+            inputs.append(
+                InputAdapterResult(
+                    normalized_data=data_norm,
+                    raw_data=None,
+                    provenance=InputProvenance(
+                        source_type=suffix.lstrip("."), schema_name="rdsr", original_filename=fp.name,
+                        header_row_index=0, detected_encoding="n/a", detected_delimiter=None,
+                        sheet_name=None, column_map={}, unit_conversions={}, warnings=[],
+                    ),
+                    warnings=[],
+                )
+            )
+    return inputs
+
+
+def validate_export_flags(
+    export_format: Optional[str],
+    *,
+    aggregate_only: bool,
+    input_preview_only: bool,
+    has_files: bool,
+) -> None:
+    """Reject incompatible ``--export-format`` flag combinations (plan §5.2.4).
+
+    Raises ``ValueError`` with a user-facing message; callers translate to
+    ``SystemExit``.
+    """
+    if not export_format:
+        return
+    if aggregate_only:
+        raise ValueError("--export-format cannot be combined with --aggregate.")
+    if input_preview_only:
+        raise ValueError("--export-format cannot be combined with --input-preview-only.")
+    if not has_files:
+        raise ValueError("--export-format requires at least one --file-path.")
+
+
+def run_cli_export(
+    file_paths: Sequence[str | Path],
+    settings: Union[str, dict, PyskindoseSettings, None],
+    export_format: str,
+    *,
+    export_path: Optional[Path] = None,
+    export_title: Optional[str] = None,
+    input_schema: Optional[str] = None,
+    sheet_name: Union[str, int] = 0,
+) -> Path:
+    """Build a Rich report from a headless run and write it to disk. Returns the path."""
+    from datetime import datetime
+
+    from mypyskindose.export import collect_export_payload
+    from mypyskindose.export.writers import write_report
+
+    source = build_cli_export_source(
+        file_paths, settings, input_schema=input_schema, sheet_name=sheet_name, report_title=export_title
+    )
+    payload = collect_export_payload(source)
+
+    if export_path is None:
+        stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        base = Path(file_paths[0]).resolve().parent if file_paths else Path.cwd()
+        export_path = base / f"mypyskindose_report_{stamp}.{export_format}"
+    write_report(payload, export_path, export_format)
+    return Path(export_path)
+
+
 def get_argument_parser(arguments) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="PySkinDose",
@@ -388,6 +571,32 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         help="In multi-exam mode: print only the aggregate PSD to stdout instead of the full JSON.",
     )
 
+    parser.add_argument(
+        "--export-format",
+        required=False,
+        default=None,
+        dest="export_format",
+        choices=("xlsx", "pdf", "html"),
+        help="Generate a Rich audit report (XLSX/PDF/HTML) instead of printing JSON.",
+    )
+
+    parser.add_argument(
+        "--export-path",
+        required=False,
+        default=None,
+        dest="export_path",
+        type=Path,
+        help="Output path for --export-format. Defaults to a timestamped file next to the input.",
+    )
+
+    parser.add_argument(
+        "--export-title",
+        required=False,
+        default=None,
+        dest="export_title",
+        help="Optional report title for --export-format.",
+    )
+
     return parser.parse_args(arguments)
 
 
@@ -412,7 +621,28 @@ if __name__ == "__main__":
             else:
                 file_paths.append(fp)
 
-        if len(file_paths) > 1:
+        export_format = getattr(args, "export_format", None)
+        if export_format:
+            try:
+                validate_export_flags(
+                    export_format,
+                    aggregate_only=getattr(args, "aggregate_only", False),
+                    input_preview_only=getattr(args, "input_preview_only", False),
+                    has_files=bool(file_paths),
+                )
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            out_path = run_cli_export(
+                file_paths,
+                run_settings,
+                export_format,
+                export_path=getattr(args, "export_path", None),
+                export_title=getattr(args, "export_title", None),
+                input_schema=getattr(args, "input_schema", None),
+                sheet_name=getattr(args, "sheet_name", 0),
+            )
+            print(f"Report written to {out_path}")
+        elif len(file_paths) > 1:
             result = analyze_multiple_input_files(
                 file_paths,
                 settings=run_settings,

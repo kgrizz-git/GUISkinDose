@@ -1,0 +1,103 @@
+"""Uniform view over the two calculation-result shapes.
+
+Single-exam results arrive as a **dict** (``PySkinDoseOutput.to_dict()``) with a
+*sparse* ``dose_map`` (``[(vertex_index, dose), ...]``). Multi-exam results arrive
+as ``PySkinDoseOutput`` **objects** with a dense ``np.ndarray`` ``DoseMap`` and
+attribute access. ``ExamView`` normalizes both into one interface so the metrics
+and image code never branch on dict-vs-object. See §7 of the Rich Export plan.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import numpy as np
+
+
+@dataclass
+class ExamView:
+    """Canonical, shape-agnostic view of one exam's calculation output."""
+
+    psd: float
+    air_kerma: float
+    patient: dict[str, Any]  # inner patient dict: patient_skin_cells + triangle_vertex_indices + human_phantom
+    dense_dose_map: np.ndarray
+    # Correction factors, keyed by physics name regardless of source dict keys.
+    hits: list[list[int]]  # per-event hit cell indices
+    k_bs: list[Any]  # per-event per-hit lists
+    k_isq: list[Any]  # per-event per-hit lists or per-event scalar
+    k_med: list[float]  # per-event scalar
+    k_tab: list[float]  # per-event scalar
+    kerma: list[float]  # per-event air kerma
+
+    def peak_vertex(self) -> tuple[int | None, float]:
+        """Return ``(vertex_index, dose)`` of the peak dose cell.
+
+        Returns ``(None, 0.0)`` for an all-zero map (nothing hit the phantom).
+        """
+        if self.dense_dose_map.size == 0:
+            return None, 0.0
+        idx = int(np.argmax(self.dense_dose_map))
+        dose = float(self.dense_dose_map[idx])
+        if dose <= 0.0:
+            return None, 0.0
+        return idx, dose
+
+    def skin_cell_xyz(self, index: int) -> tuple[float, float, float] | None:
+        cells = self.patient.get("patient_skin_cells")
+        if not cells or index >= len(cells["x"]):
+            return None
+        return float(cells["x"][index]), float(cells["y"][index]), float(cells["z"][index])
+
+
+def _dense_from_sparse(sparse: list[Any], num_cells: int) -> np.ndarray:
+    dense = np.zeros(num_cells)
+    for idx, dose in sparse:
+        dense[int(idx)] = dose
+    return dense
+
+
+def _to_list(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    return list(value)
+
+
+def view_from_dict(output: dict[str, Any]) -> ExamView:
+    """Build an ``ExamView`` from a single-exam ``PySkinDoseOutput.to_dict()``."""
+    patient = output["patient"]["patient"]
+    num_cells = len(patient["patient_skin_cells"]["x"])
+    dense = _dense_from_sparse(output.get("dose_map", []), num_cells)
+    corr = output.get("corrections", {})
+    return ExamView(
+        psd=float(output.get("psd", 0.0)),
+        air_kerma=float(output.get("air_kerma", 0.0)),
+        patient=patient,
+        dense_dose_map=dense,
+        hits=[list(map(int, h)) for h in corr.get("correction_value_index", [])],
+        k_bs=[_to_list(ev) for ev in corr.get("backscatter", [])],
+        k_isq=[ev if isinstance(ev, (int, float)) else _to_list(ev) for ev in corr.get("inverse_square_law", [])],
+        k_med=[float(v) for v in corr.get("medium", [])],
+        k_tab=[float(v) for v in corr.get("table", [])],
+        kerma=[float(v) for v in corr.get("kerma", [])],
+    )
+
+
+def view_from_output(obj: Any) -> ExamView:
+    """Build an ``ExamView`` from a ``PySkinDoseOutput`` object (multi-exam path)."""
+    patient = obj.Patient["patient"].to_dict()
+    return ExamView(
+        psd=float(obj.PSD),
+        air_kerma=float(obj.AirKerma),
+        patient=patient,
+        dense_dose_map=np.asarray(obj.DoseMap, dtype=float),
+        hits=[list(map(int, h)) for h in obj.Hits],
+        k_bs=[_to_list(ev) for ev in obj.BackscatterCorrection],
+        k_isq=[ev if isinstance(ev, (int, float)) else _to_list(ev) for ev in obj.InverseSquareLawCorrection],
+        k_med=[float(v) for v in obj.MediumCorrection],
+        k_tab=[float(v) for v in obj.TableCorrection],
+        kerma=[float(v) for v in _to_list(obj.Events.kerma)],
+    )
