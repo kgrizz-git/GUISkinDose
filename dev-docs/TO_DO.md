@@ -18,6 +18,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Dose map per-exam checkbox controls** — show cumulative dose or selected exam subsets and update PSD/dose
   map live.
 - [ ] **Fix download/export HTML button** — verify related export paths while touching this area.
+- [ ] **macOS Native Window Maximization** — implement multi-layered safe screen detection and geometry scaling to fix native window size issues on macOS. See [MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md).
 
 ## Product Backlog
 
@@ -63,9 +64,9 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); add a per-tab
   GUI help page for the Export tab once a help loader exists.
 - [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
-  (values are pre-formatted strings today); add GUI "Open file / Open folder" success actions (native only);
-  add browser `showSaveFilePicker()` progressive enhancement (must never replace the baseline `ui.download()`
-  fallback).
+  (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
+  replace the baseline `ui.download()` fallback). (GUI native "Open file / Open folder" success actions — **done**
+  2026-07-02; still needs Windows manual smoke.)
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).
@@ -85,7 +86,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   Drop `GHSA-p4gq-832x-fm9v` once `nltk` ships a fix (currently dev-only via `safety`, no
   in-project use of `nltk.data.load()`). `ignore-until-fixed` should auto-fail the audit again
   when a patched `nltk` release appears in the lockfile.
-- [ ] **Optional SBOM scan** — evaluate grype on built wheel/sdist if PyPI advisories are not enough. See [GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md).
+- [x] **SBOM scan** — grype wired into release workflow (`anchore/scan-action v7.4.0`); policy in `.grype.yaml`. See [GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md).
+- [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.
 - [ ] **Doc-freshness follow-ups** — add intentional stale-word excludes, extend inventory contradiction rules, and

@@ -83,15 +83,16 @@ export SAFETY_API_KEY=...   # or safety auth locally
 safety scan --detailed-output
 ```
 
-### 3. grype (medium priority)
+### 3. grype (medium priority) — **Shipped**
 
-SBOM-based vulnerability scanner (Anchore). Already flagged in TO_DO line 70.
-Scans the built wheel/sdist rather than the source tree — catches dependency issues
-at release time. Integrates via `grype <file>.whl` or `grype dir:.<path>`.
+SBOM-based vulnerability scanner (Anchore). Scans the built wheel/sdist rather than the source tree — catches dependency issues at release time. **Wired into `.github/workflows/release.yml`** via `anchore/scan-action v7.4.0`; policy (`fail-on: high`, `only-fixed: true`) is in `.grype.yaml` at the repository root. See [`dev-docs/plans/GRYPE_RELEASE_SCAN_PLAN.md`](../plans/GRYPE_RELEASE_SCAN_PLAN.md).
+
+Note: grype is a standalone Go binary — **`pip install grype` does not work** (no PyPI package exists). Install locally via:
 
 ```bash
-pip install grype  # or brew install grype
-grype dist/*.whl
+brew install grype                                                    # macOS
+curl -sSfL https://get.anchore.io/grype | sudo sh -s -- -b /usr/local/bin  # Linux/macOS
+grype dist/*.whl dist/*.tar.gz --fail-on high --only-fixed
 ```
 
 ### 4. OWASP Dependency-Check (low priority)
@@ -119,7 +120,7 @@ existing coverage.
 |--------|--------|--------|----------|--------|
 | Add **semgrep** (OWASP Top 10 rules) to CI `static-analysis` job | Low | High (fills biggest SAST gap) | **High** | **Shipped** (CI + pre-push) |
 | Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium | **Shipped** (CI; skipped without `SAFETY_API_KEY`) |
-| Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low | Planned |
+| Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low | **Shipped** (`anchore/scan-action v7.4.0`; `.grype.yaml`) |
 | Add **shellcheck** (`shellcheck-py`) for shell scripts | Low | Medium (catches quoting/`set -e` bugs) | Medium | **Shipped** (pre-commit + CI) |
 
 ### Quick start (local)

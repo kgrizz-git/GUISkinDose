@@ -101,6 +101,8 @@ Phased detail derived from diagnostics or master plans.
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
 | [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
+| [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
+| [plans/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md) | macOS Native Window Maximization: implement safe near-fullscreen size calculation and multi-layered screen detection (AppKit + Tkinter fallbacks) to resolve Cocoa window constraints. |
 
 ## Archived plans (`plans/archive/`)
 

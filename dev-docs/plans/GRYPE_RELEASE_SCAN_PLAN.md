@@ -1,6 +1,6 @@
 # Grype release-scan plan
 
-> **Status:** NEEDS REVIEW
+> **Status:** READY — assessment findings from `tmp/GRYPE_RELEASE_SCAN_PLAN_ASSESSMENT_20260702T213153.md` incorporated (see §Notes below)
 
 Adds [grype](https://github.com/anchore/grype) vulnerability scanning of the built wheel and
 source distribution to the release workflow, providing supply-chain hardening for published
@@ -53,11 +53,11 @@ ignore:
 
 ### 2. Add scan and artifact upload steps to `.github/workflows/release.yml`
 
-In `.github/workflows/release.yml`, insert two new steps **after** `Build a binary wheel and a source tarball` and **before** `Publish distribution to PyPI`:
+In `.github/workflows/release.yml`, insert two new steps **after** `Build a binary wheel and a source tarball` and **before** `Publish distribution to PyPI`.
 
 ```yaml
     - name: Scan built artifacts with grype
-      uses: anchore/scan-action@v7
+      uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
       id: grype-scan
       with:
         path: dist/
@@ -68,7 +68,7 @@ In `.github/workflows/release.yml`, insert two new steps **after** `Build a bina
         only-fixed: true
 
     - name: Upload grype scan results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
       if: always()
       with:
         name: grype-release-scan
@@ -76,10 +76,10 @@ In `.github/workflows/release.yml`, insert two new steps **after** `Build a bina
         retention-days: 30
 ```
 
-- `anchore/scan-action@v7` is Anchore's official GitHub Action. It automatically installs the Grype binary, updates the vulnerability database, runs the scan against `path: dist/`, and evaluates exit codes.
+- `anchore/scan-action` is Anchore's official GitHub Action. It automatically installs the Grype binary, updates the vulnerability database, runs the scan against `path: dist/`, and evaluates exit codes. All three inputs (`output-format`, `output-file`, `only-fixed`) are declared in the action's `action.yml`.
 - `fail-build: true` and `severity-cutoff: high` block publication if any high or critical vulnerability is found.
-- `only-fixed: true` ensures the release is only blocked by actionable vulnerabilities that have a patch available.
-- `if: always()` on `actions/upload-artifact@v4` ensures that if a release is blocked by a CVE, developers can download `grype-scan.json` from the workflow run to inspect the exact findings.
+- `only-fixed: true` ensures the release is only blocked by actionable vulnerabilities that have a patch available. `.grype.yaml` also sets `only-fixed: true` as a belt-and-suspenders fallback (the action does not set `config:`, so `.grype.yaml` is auto-detected by grype).
+- `if: always()` on `actions/upload-artifact` ensures that if a release is blocked by a CVE, developers can download `grype-scan.json` from the workflow run to inspect the exact findings.
 
 ### 3. Add a policy comment in `release.yml`
 
@@ -122,7 +122,7 @@ grype dist/*.whl dist/*.tar.gz --fail-on high --only-fixed
 | `dev-docs/TO_DO.md` | Add link to this plan |
 | `dev-docs/index.md` | Add row for this plan under execution plans |
 | `dev-docs/HARNESS_ENGINEERING.md` | Document local Grype command and `.grype.yaml` location |
-| `dev-docs/assessments/OWASP_SECURITY_TOOLS_ASSESSMENT.md` | Update grype status from "Planned" to "Shipped" after merge, correct CLI syntax |
+| `dev-docs/assessments/OWASP_SECURITY_TOOLS_ASSESSMENT.md` | Status updated to "Shipped"; corrected `pip install grype` to `brew install grype` / curl installer |
 
 ---
 
@@ -130,7 +130,7 @@ grype dist/*.whl dist/*.tar.gz --fail-on high --only-fixed
 
 - [ ] `.grype.yaml` exists at repository root with `only-fixed: true` and `ignore:` block
 - [ ] Local build (`rm -rf dist/ && python -m build`) and scan (`grype dist/*.whl --fail-on high`) pass without errors
-- [ ] `.github/workflows/release.yml` scan step uses `anchore/scan-action@v7` and passes on tag-triggered release
+- [ ] `.github/workflows/release.yml` scan step uses `anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2` (`v7.4.0`) and `actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02` (`v4.6.2`), both pinned to full commit SHAs; passes on a tag-triggered release
 - [ ] Scan results artifact (`grype-scan.json`) is uploaded and accessible in GH Actions run history
 - [ ] A release with a synthetic or known high/critical CVE in a dependency **blocks** publication
 - [ ] `dev-docs/index.md`, `TO_DO.md`, and `HARNESS_ENGINEERING.md` updated
@@ -144,3 +144,32 @@ grype dist/*.whl dist/*.tar.gz --fail-on high --only-fixed
 - **Inter-release vulnerability disclosure:** A dependency CVE disclosed after a release will not be caught until the next build. As a future improvement, a scheduled weekly workflow or Dependabot integration should be added for continuous monitoring.
 - **Network dependency:** Grype downloads its vulnerability database on first run; CI runners have high-speed internet access so this adds ~10 s.
 - **Rollback:** Remove the scan and artifact upload steps from `.github/workflows/release.yml` and delete `.grype.yaml`.
+
+---
+
+## Notes
+
+### Assessment review (2026-07-02)
+
+`tmp/GRYPE_RELEASE_SCAN_PLAN_ASSESSMENT_20260702T213153.md` raised 11 issues and 5 improvements. All were cross-checked against the current plan text:
+
+| Assessment item | Verdict |
+|---|---|
+| `pip install grype` doesn't exist | **Already fixed** — plan explicitly forbids adding to `pyproject.toml` and uses the official installer |
+| Release workflow missing install step | **Already fixed** — action self-installs grype |
+| Version pin `>=0.80` invalid | **Already fixed** — not in plan |
+| `dir:dist` less reliable than explicit targets | **Addressed** — action uses `path: dist/`; local docs use explicit `dist/*.whl dist/*.tar.gz` |
+| Missing cross-ref to `SECURITY_TOOLS_CI_PLAN.md` | **Already fixed** — in Motivation section |
+| No `.grype.yaml` | **Already fixed** — Section 1 |
+| No CI artifact upload | **Already fixed** — Section 2 |
+| No local-usage documentation | **Already fixed** — Section 4 |
+| No `--only-fixed` | **Already fixed** — in `.grype.yaml` and action params |
+| No scheduled scanning | **Acknowledged** — scope exclusion + risk section; future enhancement |
+| `dist/` stale data risk | **Already fixed** — local docs + risk section |
+
+Two issues **not** raised by the assessment were found and addressed in this revision:
+
+1. **SHA pinning** — SHAs were looked up and are now baked into the YAML (`anchore/scan-action@e1165082...` v7.4.0; `actions/upload-artifact@ea165f8d...` v4.6.2), consistent with the existing pattern in `release.yml`. `anchore/grype-action` (mentioned in the assessment) does not exist; `anchore/scan-action` v7 is the correct action.
+2. **Action input compatibility** — confirmed all three inputs (`output-format`, `output-file`, `only-fixed`) are declared in `anchore/scan-action`'s `action.yml`. Note: the action's `config` input is not set, so `.grype.yaml` is auto-detected by grype, providing belt-and-suspenders enforcement of `only-fixed: true`.
+
+The `OWASP_SECURITY_TOOLS_ASSESSMENT.md` still shows `pip install grype` (lines 93, 133) — this will be corrected as part of the implementation step listed in §5.

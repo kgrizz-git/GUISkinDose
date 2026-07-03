@@ -35,6 +35,36 @@ def _rich_report_bytes_titled(fmt: str, title: str | None) -> bytes:
     return render_bytes(payload, fmt)
 
 
+def _open_path(path: Path, *, reveal: bool = False) -> bool:
+    """Open a file (or reveal it in the file manager) with the OS default handler.
+
+    Native mode only. Returns ``True`` on success. Platform-native by necessity;
+    each branch is best-effort and falls back to opening the parent directory.
+    """
+    import subprocess
+    import sys
+
+    target = Path(path)
+    try:
+        if sys.platform.startswith("win"):
+            if reveal:
+                subprocess.run(["explorer", "/select,", str(target)], check=False)
+            else:
+                import os
+
+                os.startfile(str(target))  # type: ignore[attr-defined]  # noqa: S606 — Windows-only
+            return True
+        if sys.platform == "darwin":
+            args = ["open", "-R", str(target)] if reveal else ["open", str(target)]
+            subprocess.run(args, check=False)
+            return True
+        # Linux / other: xdg-open has no reveal; open the containing directory.
+        subprocess.run(["xdg-open", str(target.parent if reveal else target)], check=False)
+        return True
+    except Exception:
+        return False
+
+
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("export"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
@@ -108,12 +138,32 @@ def build(ctx: PageContext) -> None:
                     ui.notify(f"Report failed: {exc}", type="negative")
                     return
                 if save_path:
-                    with open(save_path, "wb") as f:
+                    saved = Path(save_path)
+                    with open(saved, "wb") as f:
                         f.write(content)
-                    ui.notify(f"Saved to {Path(save_path).name}", color="positive")
+                    _show_saved_dialog(saved)
                 else:
                     ui.download(content, default_name)
                     ui.notify("Report downloaded via your browser's download location.", color="positive")
+
+            def _show_saved_dialog(saved: Path) -> None:
+                """Native-mode success dialog with Open file / Open folder actions."""
+                with ui.dialog() as done_dialog, ui.card().classes("gap-3"):
+                    ui.label(f"Saved to {saved.name}").classes("font-medium")
+                    ui.label(str(saved.parent)).classes("text-xs text-grey-6")
+                    with ui.row().classes("w-full justify-end gap-2"):
+                        def _open_file():
+                            if not _open_path(saved):
+                                ui.notify("Could not open the file", type="negative")
+
+                        def _open_folder():
+                            if not _open_path(saved, reveal=True):
+                                ui.notify("Could not open the folder", type="negative")
+
+                        ui.button("Open folder", icon="folder_open", on_click=_open_folder).props("flat")
+                        ui.button("Open file", icon="open_in_new", on_click=_open_file).classes("modern-btn")
+                        ui.button("Close", on_click=done_dialog.close).props("flat")
+                done_dialog.open()
 
             def _build_export_payload() -> dict:
                 """Return state.output enriched with tabular provenance when applicable."""

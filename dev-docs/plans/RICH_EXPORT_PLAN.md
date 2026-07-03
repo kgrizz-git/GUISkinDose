@@ -20,9 +20,10 @@ Docs: CHANGELOG + FEATURE_INVENTORY §7.7 updated; draft spec archived. Tests:
 deeper PDF/DOCX tagged-a11y (7.2, HTML already has `alt`), localization-string extraction (7.3),
 Results-tab `k_med` alignment (7.4, separate PR), and per-tab GUI help (no export help loader exists
 today). Phase 4 manual browser/native save smoke (4.3.x) needs a human. Minor code deferrals: XLSX
-explicit `cell.number_format` (values are pre-formatted strings); GUI "Open file / Open folder"
-success actions; browser `showSaveFilePicker()` progressive enhancement (baseline `ui.download()`
-fallback is implemented and is the required behavior).
+explicit `cell.number_format` (values are pre-formatted strings); browser `showSaveFilePicker()`
+progressive enhancement (baseline `ui.download()` fallback is implemented and is the required
+behavior). GUI native "Open file / Open folder" success actions (4.2.7) are **implemented**
+(`_open_path`, Windows/macOS/Linux launchers, 6 unit tests) — pending Windows manual smoke.
 
 ## Summary
 
@@ -505,7 +506,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 - [ ] **4.2.4** Export handler: `build_export_source_from_gui(state)` → `collect_export_payload` → `render_*_bytes` on `run.io_bound`; native mode optionally writes via `write_*`, browser mode tries `showSaveFilePicker()` when supported and falls back to `ui.download()`. The fallback path is the required baseline and must remain the authoritative behavior during implementation.
 - [ ] **4.2.5** Disable Export when `not state.calculation_done`.
 - [ ] **4.2.6** Progress: spinner or `ui.notify('Generating report…')` for multi-exam.
-- [ ] **4.2.7** Success actions: Open file / Open folder conditionally rendered ONLY in native mode (`_is_native_mode()`), using cross-platform OS launchers (`os.startfile` on Windows, `open` on macOS, `xdg-open` on Linux). In browser fallback mode, show a short toast explaining that the browser saved the file using its normal download location/settings. Manual smoke must confirm the native save dialog appears focused/on top when opened.
+- [x] **4.2.7** Success actions: Open file / Open folder rendered in native mode via a success dialog, using cross-platform OS launchers (`os.startfile` on Windows, `open`/`open -R` on macOS, `xdg-open` on Linux) in `_open_path()`; browser mode shows the download toast. Covered by `tests/gui/test_export_open_path.py` (6 tests). **Windows manual smoke still pending.**
 - [ ] **4.2.8** (Optional v1.1) Results tab secondary "Export report…" button reusing same dialog factory.
 
 ### 4.3 Phase 4 manual smoke

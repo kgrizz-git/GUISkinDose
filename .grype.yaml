@@ -1,0 +1,14 @@
+# Grype configuration for release artifact scanning
+# See: https://github.com/anchore/grype
+
+# Only report/fail on vulnerabilities that have a known fix available
+only-fixed: true
+
+# Fail scan if any vulnerability at or above this severity is detected
+fail-on: high
+
+# Ignore documented false positives or accepted risks
+ignore:
+  - # Example format when excluding advisory mismatches:
+    # vulnerability: CVE-YYYY-NNNN
+    # reason: "Does not affect Python wheel distribution"

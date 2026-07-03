@@ -250,7 +250,19 @@ CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed).
   upstream ships a fix. The wrapper mirrors those IDs to `pip-audit --ignore-vuln` on its fallback
   path. Revisit suppressions quarterly or before releases (see `dev-docs/TO_DO.md`).
 
-Broader SBOM-style scanning (e.g. **grype** on built wheels) remains optional; see `dev-docs/TO_DO.md`.
+**Release artifact scanning (grype):** The release workflow (`release.yml`) scans the built wheel and sdist with [grype](https://github.com/anchore/grype) before publishing. Policy is set in `.grype.yaml` at the repository root (`fail-on: high`, `only-fixed: true`). See [`dev-docs/plans/GRYPE_RELEASE_SCAN_PLAN.md`](plans/GRYPE_RELEASE_SCAN_PLAN.md).
+
+To scan locally before tagging a release:
+
+```bash
+rm -rf dist/ build/
+python -m build
+# macOS:
+brew install grype
+# Linux/macOS curl installer:
+# curl -sSfL https://get.anchore.io/grype | sudo sh -s -- -b /usr/local/bin
+grype dist/*.whl dist/*.tar.gz --fail-on high --only-fixed
+```
 
 ### License compliance
 
