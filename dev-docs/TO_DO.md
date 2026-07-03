@@ -89,7 +89,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 - [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
-  Drop `GHSA-p4gq-832x-fm9v` once `nltk` ships a fix (currently dev-only via `safety`, no
+  Drop `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` (aliases for the same nltk 3.9.4 advisory) once
+  `nltk` ships a fix (currently dev-only via `safety`, no
   in-project use of `nltk.data.load()`). `ignore-until-fixed` should auto-fail the audit again
   when a patched `nltk` release appears in the lockfile.
 - [x] **SBOM scan** — grype wired into release workflow (`anchore/scan-action v7.4.0`); policy in `.grype.yaml`. See [GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md).
