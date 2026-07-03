@@ -15,8 +15,8 @@
 #   - For native window mode: pip install -e ".[gui-native]"
 #
 # MODES:
-#   [1] Browser mode - opens in your default web browser (default)
-#   [2] Native window mode - opens in a standalone desktop window
+#   [1] Browser mode - opens in your default web browser
+#   [2] Native window mode - opens in a standalone desktop window (default)
 #
 
 set -e
@@ -210,7 +210,9 @@ echo "How would you like to run the GUI?"
 echo "[1] Browser (Standard)"
 echo "[2] Native Window (Requires pywebview)"
 echo ""
-read -r -p "Enter your choice (1 or 2, default is 1): " choice
+read -r -p "Enter your choice (1 or 2, default is 2): " choice
+# Default to native window mode when no choice is entered.
+choice="${choice:-2}"
 
 if [ "$choice" == "2" ]; then
     # Check for pywebview before launching native mode

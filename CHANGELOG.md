@@ -10,8 +10,25 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Fixed
+
+- **Native "Save As" dialog for exports** (2026-07-03) — in native (pywebview) window mode, the
+  export/save-path helper (`gui/io_helpers._get_save_path`) called NiceGUI's async
+  `create_file_dialog` without awaiting it, so the returned coroutine was passed to `Path(...)`
+  and every save crashed with `TypeError: argument should be a str ... not 'coroutine'`. The
+  helper is now an awaited coroutine (and uses the non-deprecated `webview.FileDialog.SAVE`),
+  restoring the ability to choose the file location and name in native mode. All callers in the
+  Export and Data tabs await it.
+
 ### Changed
 
+- **GUI toasts appear at the top and linger longer** (2026-07-03) — `gui/notifications.py` patches
+  `ui.notify` once at startup so notifications default to `position="top"` and an 8 s timeout
+  (up from Quasar's 5 s at the bottom). Explicit per-call `position`/`timeout` still win, so
+  persistent (`timeout=0`) toasts are unaffected.
+- **Native window is now the default GUI mode from the launchers** (2026-07-03) — `run_gui.sh` and
+  `run_gui.bat` now default to option **[2] Native Window** when the user presses Enter without a
+  choice (previously defaulted to browser). Browser mode remains selectable as **[1]**.
 - **Rich report export dependencies are now core** (2026-07-03) — `reportlab` (PDF) and
   `python-docx` (DOCX) moved from the optional `export` extra into the main dependency list so
   every install can produce all report formats out of the box. The `export` extra is retained as a

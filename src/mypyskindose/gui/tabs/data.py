@@ -54,7 +54,7 @@ def build(ctx: PageContext) -> None:
                     ui.button("EXPORT XLSX", icon="table_view", on_click=lambda: _local_export("xlsx")).classes("modern-btn h-10 icon-outlined")
                     ui.button("EXPORT TXT", icon="text_snippet", on_click=lambda: _local_export("txt")).classes("modern-btn h-10 icon-outlined")
 
-            def _local_export(fmt: str):
+            async def _local_export(fmt: str):
                 df = state.rdsr_raw_df if state.view_raw else state.rdsr_df
                 if df is None:
                     ui.notify("No data to export", type="warning")
@@ -62,7 +62,7 @@ def build(ctx: PageContext) -> None:
 
                 prefix = "raw_" if state.view_raw else "normalized_"
                 default_name = f"{prefix}events_{state.file_name or 'data'}.{fmt}"
-                save_path = _get_save_path(default_name, fmt)
+                save_path = await _get_save_path(default_name, fmt)
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
 

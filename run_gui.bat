@@ -108,7 +108,9 @@ echo [1] Browser (Standard)
 echo [2] Native Window (Requires pywebview)
 echo.
 
-set /p choice="Enter your choice (1 or 2, default is 1): "
+set /p choice="Enter your choice (1 or 2, default is 2): "
+:: Default to native window mode when no choice is entered.
+if "%choice%"=="" set choice=2
 
 if "%choice%"=="2" (
     :: Check for pywebview before launching native mode

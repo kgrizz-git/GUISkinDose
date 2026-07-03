@@ -9,7 +9,6 @@ tab modules). Pure / single-source-of-truth and unit-testable.
 from __future__ import annotations
 
 import json
-from typing import cast
 
 from mypyskindose.debug import dprint
 
@@ -57,12 +56,15 @@ def _is_native_mode() -> bool:
         return False
 
 
-def _get_save_path(default_name: str, extension: str) -> str | None:
-    """Open a native Save As dialog when running in --native (pywebview) mode.
+async def _get_save_path(default_name: str, extension: str) -> str | None:
+    """Open a native "Save As" dialog when running in --native (pywebview) mode.
 
-    Uses the pywebview ``create_file_dialog`` API, which is safe to call from
-    background threads (pywebview dispatches it to the main thread internally).
-    Returns ``None`` in browser mode so callers fall back to ``ui.download()``.
+    NiceGUI wraps pywebview's window in a ``WindowProxy`` whose
+    ``create_file_dialog`` is a **coroutine** — it marshals the call to the GUI
+    thread over an internal queue and awaits the result. It must be awaited (the
+    old synchronous call returned an un-awaited coroutine, which blew up when a
+    caller did ``Path(save_path)``). Returns ``None`` in browser mode so callers
+    fall back to ``ui.download()``, and ``None`` when the user cancels the dialog.
     """
     try:
         from nicegui import app as _app
@@ -86,17 +88,15 @@ def _get_save_path(default_name: str, extension: str) -> str | None:
     }
     try:
         import webview
-        # Stubs type SAVE_DIALOG as module_property and create_file_dialog as a
-        # coroutine; pywebview's actual runtime API is synchronous — cast to match.
-        result = cast(
-            "tuple[str, ...] | None",
-            main_window.create_file_dialog(
-                cast(int, webview.SAVE_DIALOG),
-                save_filename=default_name,
-                file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
-            ),
+        # FileDialog.SAVE (pywebview >=5); fall back to the deprecated SAVE_DIALOG
+        # constant on older releases.
+        save_dialog = webview.FileDialog.SAVE if hasattr(webview, "FileDialog") else webview.SAVE_DIALOG
+        result = await main_window.create_file_dialog(
+            save_dialog,
+            save_filename=default_name,
+            file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
         )
-        # pywebview returns a string path for SAVE_DIALOG, or None when cancelled.
+        # pywebview returns a tuple/list of paths, or None when cancelled.
         if not result:
             return None
         return result[0] if isinstance(result, (list, tuple)) else result

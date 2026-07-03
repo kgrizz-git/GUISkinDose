@@ -127,7 +127,7 @@ def build(ctx: PageContext) -> None:
                 title = (title_input.value or "").strip() or None
                 stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
                 default_name = f"mypyskindose_report_{stamp}.{fmt}"
-                save_path = _get_save_path(default_name, fmt)
+                save_path = await _get_save_path(default_name, fmt)
                 if save_path is None and _is_native_mode():
                     return  # user cancelled native dialog
                 rich_report_dialog.close()
@@ -214,12 +214,12 @@ def build(ctx: PageContext) -> None:
                     )
                 return payload
 
-            def download_json():
+            async def download_json():
                 if not state.calculation_done or state.output is None:
                     ui.notify("No data to export", color="warning")
                     return
                 default_name = f"psd_results_{state.file_name or 'data'}.json"
-                save_path = _get_save_path(default_name, "json")
+                save_path = await _get_save_path(default_name, "json")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
                 payload = _build_export_payload()
@@ -236,7 +236,7 @@ def build(ctx: PageContext) -> None:
                     ui.notify("No data to export", color="warning")
                     return
                 default_name = f"dose_map_{state.file_name or 'data'}.html"
-                save_path = _get_save_path(default_name, "html")
+                save_path = await _get_save_path(default_name, "html")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
                 content = await run.io_bound(make_dosemap_html)
@@ -263,7 +263,7 @@ def build(ctx: PageContext) -> None:
                     ui.notify("No data to export", color="warning")
                     return
                 default_name = f"dose_map_{state.file_name or 'data'}.png"
-                save_path = _get_save_path(default_name, "png")
+                save_path = await _get_save_path(default_name, "png")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
                 content = await run.io_bound(make_dosemap_png)

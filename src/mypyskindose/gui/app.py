@@ -28,6 +28,7 @@ from nicegui.events import NativeEventArguments
 
 from mypyskindose.debug import configure_logging, dprint
 
+from .notifications import install_notification_defaults
 from .onboarding import dismiss_onboarding, is_onboarding_dismissed
 from .page_context import PageContext
 from .styles import MODERN_CSS
@@ -57,6 +58,8 @@ GUI_VERSION = "1.1.0"
 @ui.page("/")
 def index():
     dprint("GUI", f"Rendering index page (v{GUI_VERSION})")
+
+    install_notification_defaults()
 
     ui.colors(primary="#2563EB", secondary="#2563EB", accent="#831843", positive="#064E3B")
     ui.add_head_html(f"<style>{MODERN_CSS}</style>")
