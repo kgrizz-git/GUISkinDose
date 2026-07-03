@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 from rich import print
 
 from mypyskindose.constants import (
-    BELOW_FLOOR_KVP_POLICY_SNAP,
+    BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE,
     HVL_KVP_FLOOR,
     KEY_PARAM_BEAM_MISS_WARN,
     KEY_PARAM_BELOW_FLOOR_KVP_MANUAL,
@@ -63,9 +63,9 @@ class PyskindoseSettings:
         X-ray tube inherent filtration, for backscatter and medium correction.
     below_floor_kvp_policy : str
         How to handle events with kVp below the HVL table floor (25 kV): one of
-        "snap" (default, clamp to the grid edge), "skip" (drop the events),
-        "manual" (substitute ``below_floor_kvp_manual``), or "exam_average"
-        (substitute the exam's mean in-floor kVp).
+        "exam_average" (default, substitute the exam's mean in-floor kVp),
+        "snap" (clamp to the grid edge), "skip" (drop the events), or
+        "manual" (substitute ``below_floor_kvp_manual``).
     below_floor_kvp_manual : float
         kVp substituted for below-floor events when ``below_floor_kvp_policy`` is
         "manual".
@@ -122,11 +122,11 @@ class PyskindoseSettings:
 
         self.remove_invalid_rows: bool = bool(tmp.get(KEY_PARAM_REMOVE_INVALID_ROWS))
 
-        # Below-floor kVp handling (kVp below the HVL table floor). Default 'snap'
-        # preserves the historical behavior (clamp to the grid edge). See
-        # dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md.
+        # Below-floor kVp handling (kVp below the HVL table floor). Default
+        # 'exam_average' substitutes the mean kVp of the exam for below-floor
+        # events. See dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md.
         self.below_floor_kvp_policy: str = tmp.get(
-            KEY_PARAM_BELOW_FLOOR_KVP_POLICY, BELOW_FLOOR_KVP_POLICY_SNAP
+            KEY_PARAM_BELOW_FLOOR_KVP_POLICY, BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE
         )
         self.below_floor_kvp_manual: float = float(
             tmp.get(KEY_PARAM_BELOW_FLOOR_KVP_MANUAL, HVL_KVP_FLOOR)

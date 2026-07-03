@@ -6,7 +6,7 @@
     "k_tab_val": 0.8,
     "inherent_filtration": 3.1,
     "remove_invalid_rows": false,
-    "below_floor_kvp_policy": "snap",
+    "below_floor_kvp_policy": "exam_average",
     "below_floor_kvp_manual": 70.0,
     "beam_miss_warn": "per_event",
     "silence_pydicom_warnings": true,

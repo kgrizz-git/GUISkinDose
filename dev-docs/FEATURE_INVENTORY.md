@@ -388,7 +388,7 @@ Falls back to `settings_example.json` if nothing provided.
 | `k_tab_val` | float | `0.8` | Estimated table transmission (0–1) |
 | `inherent_filtration` | float | `3.1` | X-ray tube inherent filtration (mmAl) |
 | `remove_invalid_rows` | bool | `False` | Drop events with kVp = 0 |
-| `below_floor_kvp_policy` | str | `"snap"` | Below-floor (kVp < 25) handling: `snap`/`skip`/`manual`/`exam_average` |
+| `below_floor_kvp_policy` | str | `"exam_average"` | Below-floor (kVp < 25) handling: `snap`/`skip`/`manual`/`exam_average` |
 | `below_floor_kvp_manual` | float | `70.0` | Substituted kVp for `below_floor_kvp_policy="manual"` |
 | `silence_pydicom_warnings` | bool | `True` | Suppress pydicom warnings |
 | `output_format` | str | `"html"` | `"html"`, `"dict"`, or `"json"` |

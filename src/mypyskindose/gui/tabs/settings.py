@@ -32,10 +32,10 @@ from ._per_exam import build_per_exam_section
 # Below-floor kVp policy → human-readable labels for the Settings select. Values
 # match mypyskindose.constants.BELOW_FLOOR_KVP_POLICIES.
 BELOW_FLOOR_KVP_OPTIONS = {
-    "snap": "Snap to grid edge (default)",
+    "exam_average": "Substitute the exam-average kVp (default)",
+    "snap": "Snap to grid edge",
     "skip": "Skip (drop the events)",
     "manual": "Substitute a manual kVp",
-    "exam_average": "Substitute the exam-average kVp",
 }
 
 BEAM_MISS_WARN_OPTIONS = {

@@ -251,7 +251,7 @@ def count_below_floor_events(data_norm: pd.DataFrame, floor: float = c.HVL_KVP_F
 
 def apply_below_floor_kvp_policy(
     data_norm: pd.DataFrame,
-    policy: str = c.BELOW_FLOOR_KVP_POLICY_SNAP,
+    policy: str = c.BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE,
     manual_kvp: float = c.HVL_KVP_FLOOR,
     floor: float = c.HVL_KVP_FLOOR,
 ) -> pd.DataFrame:
@@ -260,15 +260,15 @@ def apply_below_floor_kvp_policy(
     Runs *before* :func:`fetch_and_append_hvl` so the HVL lookup then sees only
     in-/near-grid beam qualities. Policies:
 
-    - ``snap`` (default): leave kVp unchanged — ``fetch_and_append_hvl`` clamps the
+    - ``exam_average`` (default): set every below-floor kVp to the mean kVp of
+      *this frame's* in-floor events. ``calculate_dose`` runs once per exam, so the
+      mean is naturally per-exam. If the frame has no in-floor event, fall back to
+      ``snap`` and warn.
+    - ``snap``: leave kVp unchanged — ``fetch_and_append_hvl`` clamps the
       event to the lowest tabulated kVp and flags it ``clamped`` (status quo).
     - ``skip``: drop the below-floor rows (frame is reindexed) so they contribute
       no dose.
     - ``manual``: set every below-floor kVp to ``manual_kvp``.
-    - ``exam_average``: set every below-floor kVp to the mean kVp of *this frame's*
-      in-floor events. ``calculate_dose`` runs once per exam, so the mean is
-      naturally per-exam. If the frame has no in-floor event, fall back to ``snap``
-      and warn.
 
     Always returns a frame with a clean ``0..N-1`` index. Emits a
     ``logger.warning`` (surfaced via ``state.calc_warnings``) naming the action and

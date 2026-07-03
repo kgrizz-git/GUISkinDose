@@ -197,7 +197,7 @@ Top-level settings object. Key attributes:
 | `k_tab_val` | `float` | `0.8` | Table transmission factor (0–1) when estimating |
 | `inherent_filtration` | `float` | `3.1` | X-ray tube inherent filtration in mmAl |
 | `remove_invalid_rows` | `bool` | `False` | Drop RDSR rows with missing/invalid data |
-| `below_floor_kvp_policy` | `str` | `"snap"` | Handle events with kVp < 25 kV HVL floor: `snap`/`skip`/`manual`/`exam_average` |
+| `below_floor_kvp_policy` | `str` | `"exam_average"` | Handle events with kVp < 25 kV HVL floor: `snap`/`skip`/`manual`/`exam_average` |
 | `below_floor_kvp_manual` | `float` | `70.0` | Substituted kVp when `below_floor_kvp_policy="manual"` |
 | `silence_pydicom_warnings` | `bool` | `True` | Suppress pydicom warnings |
 | `output_format` | `str` | `"html"` | `"html"`, `"dict"`, or `"json"` |

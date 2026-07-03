@@ -21,6 +21,31 @@ from .settings_builder import build_settings
 from .state import AppState
 
 
+def _raw_extracted_view(result) -> "object":
+    """Build the 'raw (un-normalized)' Data-tab view from a tabular adapter result.
+
+    ``result.raw_data`` is the verbatim ``header=None`` file read, so it still
+    carries any pre-header banner/numbering rows and uses positional integer
+    column names. For the raw *view* we want the raw source *values* with the
+    real column headers promoted and the pre-header junk / wholly-blank rows
+    dropped — i.e. what the adapter actually extracted, minus column mapping,
+    renaming, and numeric coercion. ``extract_table`` does exactly this using the
+    header row the adapter already detected. Falls back to the verbatim frame if
+    anything is missing (e.g. a synthetic DICOM result).
+    """
+    from mypyskindose.input_adapters.base import extract_table
+
+    raw = getattr(result, "raw_data", None)
+    header_idx = getattr(getattr(result, "provenance", None), "header_row_index", None)
+    if raw is None or header_idx is None:
+        return raw
+    try:
+        _, extracted = extract_table(raw, int(header_idx))
+        return extracted.reset_index(drop=True)
+    except Exception:
+        return raw
+
+
 def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
     """Parse and normalise an RDSR file and append it to the exam list.
 
@@ -330,7 +355,9 @@ def load_tabular(
         state.is_multi_exam = len(state.loaded_exams) > 1
 
         # Per-file state used by the import preview and schema re-parse path.
-        state.rdsr_raw_df = result.raw_data
+        # The raw *view* shows the extracted source values (real headers, no
+        # pre-header banner/blank rows), not the verbatim header=None dump.
+        state.rdsr_raw_df = _raw_extracted_view(result)
         state.file_path = file_path
         if len(state.loaded_exams) == 1:
             state.file_name = file_path.name

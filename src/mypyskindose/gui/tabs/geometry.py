@@ -117,11 +117,38 @@ def build(ctx: PageContext) -> None:
     was_multi_exam = state.is_multi_exam
     exam_selector_guard = {"suppress": False}  # same pattern as table_guard below
     patient_guard = {"suppress": False}
+    # First time the Geometry tab is opened for a freshly loaded dataset, default
+    # the preview to a single event (the middle event of the selected exam). This
+    # is a one-time nudge: once fired it never overrides the user's chosen
+    # mode/event, and the choice persists across tab switches (the panel is built
+    # once). ``last_load_signature`` re-arms the nudge when a new file is loaded.
+    auto_initialized = False
+    last_load_signature: tuple | None = None
 
     def _active_exam_index() -> int:
         if state.is_multi_exam and state.active_exam_index is not None:
             return state.active_exam_index
         return 0
+
+    def _current_load_signature() -> tuple | None:
+        """Identity of the loaded dataset — changes only on load/remove, not on
+        offset edits (which rebuild ``rdsr_df`` but keep the same files)."""
+        if state.rdsr_df is None or not state.loaded_exam_meta:
+            return None
+        return (
+            len(state.loaded_exam_meta),
+            tuple(m.get("file_name", "") for m in state.loaded_exam_meta),
+        )
+
+    def _middle_event_index(active_idx: int | None, composite: bool) -> int:
+        """Middle event of the current preview slice (selected exam, or whole
+        procedure in single-exam mode)."""
+        count = (
+            preview_event_count(state, active_exam_index=active_idx, composite=composite)
+            if state.is_multi_exam
+            else event_count()
+        )
+        return count // 2 if count > 0 else 0
 
     with ui.tab_panel("geometry"):
         with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
@@ -625,6 +652,7 @@ def build(ctx: PageContext) -> None:
     def _refresh_geometry_sliders() -> None:
         nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
         nonlocal live_preview_requested, _in_render_chain
+        nonlocal auto_initialized, last_load_signature, last_preview_mode
         composite_preview = composite_preview_after_exam_mode_change(
             was_multi_exam,
             state.is_multi_exam,
@@ -640,6 +668,27 @@ def build(ctx: PageContext) -> None:
         _update_preview_caption()
         active_idx = state.active_exam_index if state.is_multi_exam else None
         composite = _resolve_composite_for_render() if state.is_multi_exam else False
+
+        # Re-arm the one-time auto-init whenever the loaded dataset changes.
+        sig = _current_load_signature()
+        if sig != last_load_signature:
+            last_load_signature = sig
+            auto_initialized = False
+
+        # Default the preview to a single event (middle of the selected exam) the
+        # first time the user opens the Geometry tab for a given dataset. Gated on
+        # the tab being active so a background load does not eagerly render. Fires
+        # once per loaded file set (re-armed above when the files change), so within
+        # a dataset the user's chosen mode/event survives tab switches untouched.
+        if (
+            not auto_initialized
+            and state.rdsr_df is not None
+            and state.active_tab == "geometry"
+        ):
+            auto_initialized = True
+            last_preview_mode = "plot_event"
+            geom_event_input.set_value(_middle_event_index(active_idx, composite))
+
         clamped = clamp_geometry_event_index(
             state,
             int(geom_event_input.value or 0),

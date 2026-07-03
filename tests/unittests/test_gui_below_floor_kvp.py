@@ -53,9 +53,9 @@ def test_build_settings_propagates_below_floor_policy():
     assert settings.below_floor_kvp_manual == 66.0
 
 
-def test_build_settings_default_policy_is_snap():
+def test_build_settings_default_policy_is_exam_average():
     settings = build_settings(AppState())
-    assert settings.below_floor_kvp_policy == "snap"
+    assert settings.below_floor_kvp_policy == "exam_average"
 
 
 def test_build_settings_propagates_phantom_scale_values():

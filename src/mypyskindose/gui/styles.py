@@ -241,4 +241,17 @@ body {
 .uploader-no-list .q-uploader__list {
     display: none;
 }
+
+/* Sticky/frozen column headers for the Data-tab event table (raw + normalized).
+   The virtual-scroll container (.q-table__middle) scrolls; the header row sticks
+   to its top. The background must be OPAQUE (the base .q-table th uses a
+   translucent fill) so scrolled rows do not bleed through the pinned header. The
+   higher-specificity selector below wins over ".q-table th" despite both using
+   !important. */
+.sticky-header thead tr th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #191919 !important;
+}
 """
