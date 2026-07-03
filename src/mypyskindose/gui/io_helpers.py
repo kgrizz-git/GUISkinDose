@@ -92,7 +92,7 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
         # constant on older releases.
         save_dialog = webview.FileDialog.SAVE if hasattr(webview, "FileDialog") else webview.SAVE_DIALOG
         result = await main_window.create_file_dialog(
-            save_dialog,
+            int(save_dialog),
             save_filename=default_name,
             file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
         )

@@ -167,8 +167,8 @@ def build(ctx: PageContext) -> None:
                     ui.label("Install it, then try the export again:").classes("text-sm")
                     cmd = "pip install mypyskindose[export]"
 
-                    async def _copy_cmd() -> None:
-                        await ui.clipboard.write(cmd)
+                    def _copy_cmd() -> None:
+                        ui.clipboard.write(cmd)
                         ui.notify("Copied", color="positive")
 
                     with ui.row().classes("w-full items-center gap-2 no-wrap"):
