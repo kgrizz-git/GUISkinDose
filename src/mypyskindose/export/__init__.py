@@ -19,6 +19,7 @@ from .models import (
     ExportExamSource,
     ExportPayload,
     ExportSource,
+    MissingExportDependencyError,
 )
 from .payload import collect_export_payload, resolve_calculation_result
 from .cli_source import build_export_source_from_cli
@@ -26,6 +27,7 @@ from .cli_source import build_export_source_from_cli
 __all__ = [
     "RICH_EXPORT_SCHEMA_VERSION",
     "ExportError",
+    "MissingExportDependencyError",
     "ExportExamSource",
     "ExportPayload",
     "ExportSource",

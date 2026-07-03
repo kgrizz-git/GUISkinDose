@@ -17,27 +17,61 @@ if TYPE_CHECKING:
 # User-facing formats and their file extensions.
 FORMATS: dict[str, str] = {"xlsx": "xlsx", "pdf": "pdf", "html": "html", "docx": "docx"}
 
+# Optional third-party package backing each format (None = core dependency).
+# Used to turn a bare ``ModuleNotFoundError`` into an actionable message.
+_FORMAT_PACKAGE: dict[str, str | None] = {
+    "xlsx": "openpyxl",
+    "pdf": "reportlab",
+    "html": None,
+    "docx": "docx",
+}
+# Install name (may differ from import name, e.g. ``docx`` → ``python-docx``).
+_PACKAGE_INSTALL_NAME: dict[str, str] = {"docx": "python-docx"}
+
+
+def _install_hint(package: str) -> str:
+    """A copy-pasteable instruction for installing a missing export package."""
+    install_name = _PACKAGE_INSTALL_NAME.get(package, package)
+    return (
+        f"Install it with 'pip install {install_name}', or reinstall the app with the "
+        f"export extras: 'pip install mypyskindose[export]'."
+    )
+
 
 def render_bytes(payload: "ExportPayload", fmt: str) -> bytes:
-    """Render a payload to bytes for the given format (lazy writer import)."""
+    """Render a payload to bytes for the given format (lazy writer import).
+
+    Raises :class:`~mypyskindose.export.models.MissingExportDependencyError` with
+    install instructions when the format's optional package is not installed.
+    """
     fmt = fmt.lower()
-    if fmt == "xlsx":
-        from .xlsx import render_xlsx_bytes
+    if fmt not in FORMATS:
+        raise ValueError(f"Unsupported export format: {fmt!r}. Choose one of {sorted(FORMATS)}.")
+    try:
+        if fmt == "xlsx":
+            from .xlsx import render_xlsx_bytes
 
-        return render_xlsx_bytes(payload)
-    if fmt == "pdf":
-        from .pdf import render_pdf_bytes
+            return render_xlsx_bytes(payload)
+        if fmt == "pdf":
+            from .pdf import render_pdf_bytes
 
-        return render_pdf_bytes(payload)
-    if fmt == "html":
-        from .html import render_html_bytes
+            return render_pdf_bytes(payload)
+        if fmt == "html":
+            from .html import render_html_bytes
 
-        return render_html_bytes(payload)
-    if fmt == "docx":
+            return render_html_bytes(payload)
+        # fmt == "docx"
         from .docx import render_docx_bytes
 
         return render_docx_bytes(payload)
-    raise ValueError(f"Unsupported export format: {fmt!r}. Choose one of {sorted(FORMATS)}.")
+    except ModuleNotFoundError as exc:
+        package = _FORMAT_PACKAGE.get(fmt)
+        # Only translate a genuinely-missing export backend; re-raise anything else.
+        if package is not None and exc.name in {package, package.split(".")[0]}:
+            from ..models import MissingExportDependencyError
+
+            raise MissingExportDependencyError(fmt, package, _install_hint(package)) from exc
+        raise
 
 
 def write_report(payload: "ExportPayload", path: Path, fmt: str) -> None:

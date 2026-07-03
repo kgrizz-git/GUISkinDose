@@ -38,6 +38,24 @@ class ExportError(Exception):
     """Raised when an export payload cannot be built (e.g. no calculation)."""
 
 
+class MissingExportDependencyError(ExportError):
+    """Raised when a report format needs an optional package that isn't installed.
+
+    Carries the human-facing ``format`` label, the missing ``package`` name, and a
+    ready-to-show ``install_hint`` so callers (GUI toast/dialog, CLI) can present
+    actionable instructions instead of a bare ``ModuleNotFoundError``.
+    """
+
+    def __init__(self, fmt: str, package: str, install_hint: str) -> None:
+        self.format = fmt
+        self.package = package
+        self.install_hint = install_hint
+        super().__init__(
+            f"{fmt.upper()} export needs the '{package}' package, which isn't installed. "
+            f"{install_hint}"
+        )
+
+
 # ── Input bundles (GUI/CLI → collector) ──────────────────────────────────────
 
 

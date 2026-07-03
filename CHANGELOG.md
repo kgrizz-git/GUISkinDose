@@ -10,6 +10,17 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Changed
+
+- **Rich report export dependencies are now core** (2026-07-03) — `reportlab` (PDF) and
+  `python-docx` (DOCX) moved from the optional `export` extra into the main dependency list so
+  every install can produce all report formats out of the box. The `export` extra is retained as a
+  no-op alias for backward compatibility. If an export backend is ever missing (e.g. a partial
+  install), `export.writers.render_bytes()` now raises `MissingExportDependencyError` — with a
+  copy-pasteable `pip install` hint — instead of a bare `ModuleNotFoundError`; the GUI Export tab
+  surfaces this as a persistent, actionable dialog (with a Copy-command button) rather than a brief
+  error toast.
+
 ### Added
 
 - **Rich Report Export** (2026-07-02) — new `mypyskindose.export` package produces a single

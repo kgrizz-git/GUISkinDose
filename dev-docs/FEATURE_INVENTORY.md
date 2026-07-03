@@ -288,7 +288,10 @@ When `interactivity=False`:
 ### 7.7 Rich Report Export (`mypyskindose.export`)
 Single self-contained audit document from a completed dose calculation, additive to the
 JSON/HTML/PNG downloads. Formats: **XLSX** (`openpyxl`), **PDF** (`reportlab`), **HTML** (stdlib),
-**DOCX** (`python-docx`); PDF/DOCX libs live in the optional `export` extra.
+**DOCX** (`python-docx`). All backing libraries are now core dependencies (the `export` extra is
+retained as a no-op alias for backward compatibility). If a backend is somehow missing,
+`writers.render_bytes()` raises `MissingExportDependencyError` with install instructions, which the
+GUI surfaces as a persistent dialog.
 - `collect_export_payload(source)` builds an `ExportPayload` (report-layout, separate from
   `PySkinDoseOutput.to_dict()`); normalizes single-exam dict and multi-exam `MultiExamResult` via
   `ExamView`. Sections: title/software identity, input provenance (DICOM RDSR + tabular branches),

@@ -71,3 +71,6 @@ test_data_gitignored/
 # cursor
 .cursor/
 !.cursor/rules/
+
+# direnv local cache
+.direnv/

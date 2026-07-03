@@ -13,6 +13,8 @@ from pathlib import Path
 
 from nicegui import run, ui
 
+from mypyskindose.export import MissingExportDependencyError
+
 from ..export_source import build_export_source_from_gui
 from ..figures import make_dosemap_html, make_dosemap_png
 from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _is_native_mode, _tabular_input_meta
@@ -134,8 +136,11 @@ def build(ctx: PageContext) -> None:
                 # collect happens inside the worker; pass title through a closure.
                 try:
                     content = await run.io_bound(_rich_report_bytes_titled, fmt, title)
+                except MissingExportDependencyError as exc:
+                    _show_missing_dependency_dialog(exc)
+                    return
                 except Exception as exc:  # kaleido or writer failure
-                    ui.notify(f"Report failed: {exc}", type="negative")
+                    ui.notify(f"Report failed: {exc}", type="negative", timeout=0, close_button="Dismiss")
                     return
                 if save_path:
                     saved = Path(save_path)
@@ -145,6 +150,38 @@ def build(ctx: PageContext) -> None:
                 else:
                     ui.download(content, default_name)
                     ui.notify("Report downloaded via your browser's download location.", color="positive")
+
+            def _show_missing_dependency_dialog(exc: MissingExportDependencyError) -> None:
+                """Persistent, actionable dialog for a missing optional export package."""
+                install_name = "python-docx" if exc.package == "docx" else exc.package
+                with ui.dialog() as dep_dialog, ui.card().classes("gap-3").style("max-width: 32rem"):
+                    with ui.row().classes("items-center gap-2"):
+                        ui.icon("extension_off", color="warning").classes("text-2xl")
+                        ui.label(f"{exc.format.upper()} export needs an extra package").classes(
+                            "text-lg font-medium"
+                        )
+                    ui.label(
+                        f"The '{install_name}' package is required to generate {exc.format.upper()} "
+                        "reports but isn't installed in this environment."
+                    ).classes("text-sm")
+                    ui.label("Install it, then try the export again:").classes("text-sm")
+                    cmd = "pip install mypyskindose[export]"
+
+                    async def _copy_cmd() -> None:
+                        await ui.clipboard.write(cmd)
+                        ui.notify("Copied", color="positive")
+
+                    with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                        ui.label(cmd).classes("font-mono text-xs bg-grey-2 rounded p-2 grow")
+                        ui.button(icon="content_copy", on_click=_copy_cmd).props(
+                            "flat dense"
+                        ).tooltip("Copy command")
+                    ui.label(
+                        f"Or install just this one: pip install {install_name}"
+                    ).classes("text-xs text-grey-6")
+                    with ui.row().classes("w-full justify-end"):
+                        ui.button("Close", on_click=dep_dialog.close).props("flat")
+                dep_dialog.open()
 
             def _show_saved_dialog(saved: Path) -> None:
                 """Native-mode success dialog with Open file / Open folder actions."""
