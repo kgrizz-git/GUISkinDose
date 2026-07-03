@@ -18,7 +18,6 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Dose map per-exam checkbox controls** — show cumulative dose or selected exam subsets and update PSD/dose
   map live.
 - [ ] **Fix download/export HTML button** — verify related export paths while touching this area.
-- [ ] **macOS Native Window Maximization** — implement multi-layered safe screen detection and geometry scaling to fix native window size issues on macOS. See [MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md).
 
 ## Product Backlog
 
@@ -145,3 +144,11 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
 - [x] Cross-tab offset/origin slider synchronization — source plan:
   [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md).
+- [x] macOS native window maximization — archived in
+  [MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md). Shipped
+  2026-07-03: macOS `--native` startup now normalizes saved `maximized=true` into a safe
+  visible-desktop titled window, persists `maximized=false`, and leaves Windows/Linux behavior
+  unchanged.
+- [x] Absolute doc path guard — `scripts/check_doc_freshness.py` now fails on absolute filesystem
+  paths / `file://` URIs in scanned markdown, CI already enforces it, and the `doc-freshness`
+  hook now runs on pre-push as well as pre-commit.

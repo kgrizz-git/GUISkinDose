@@ -255,8 +255,8 @@ Inside `index()`, after the existing layout code, add:
 
 ### 4. Documentation & Indexing
 
-- Register `FIRST_RUN_ONBOARDING_PLAN.md` under **Archived plans (`plans/archive/`)** in [dev-docs/index.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/dev-docs/index.md).
-- Add the first-run onboarding popup feature entry to [CHANGELOG.md](file:///Users/kevingrizzard/MyCode/MyPySkinDose/CHANGELOG.md) under `[Unreleased] → Added`.
+- Register `FIRST_RUN_ONBOARDING_PLAN.md` under **Archived plans (`plans/archive/`)** in [dev-docs/index.md](../../index.md).
+- Add the first-run onboarding popup feature entry to [CHANGELOG.md](../../../CHANGELOG.md) under `[Unreleased] → Added`.
 
 ## Testing
 

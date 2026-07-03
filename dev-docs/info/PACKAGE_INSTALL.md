@@ -15,7 +15,9 @@ Without the package installed, Python doesn't know where `mypyskindose` lives. Y
 ```python
 # Without package install
 import sys
-sys.path.insert(0, "/path/to/MyPySkinDose/src")
+from pathlib import Path
+
+sys.path.insert(0, str(Path("src").resolve()))
 from mypyskindose.main import main
 ```
 
@@ -36,7 +38,7 @@ The `python -m mypyskindose` command works because the package structure defines
 
 ```bash
 # Without package install
-python /path/to/MyPySkinDose/src/mypyskindose/__main__.py --mode gui
+python src/mypyskindose/__main__.py --mode gui
 ```
 
 With installation:

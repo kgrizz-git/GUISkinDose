@@ -58,6 +58,11 @@ MyPySkinDose is organized in layers so settings, dose physics, and presentation 
 
 **Multi-exam Geometry (GUI):** `gui/tabs/geometry.py` binds offset sliders to `loaded_exam_meta[active_exam_index]`; `gui/geometry_preview.py` slices `rdsr_df` via `EXAM_INDEX_COLUMN`; composite preview pauses at >30 events (`composite_live_preview_paused`). Calculate/Settings summaries use `gui/summary_formatters.py` and `per_exam_offsets_version` on `AppState`.
 
+**Native GUI window state:** `gui/app.py` and `gui/window_prefs.py` persist native-window geometry in
+`~/.mypyskindose/gui.json`. On macOS, native startup intentionally normalizes a saved
+`"maximized": true` state into a safe titled window sized to the screen's visible desktop area,
+then persists `maximized=False`; Windows/Linux continue to replay the native maximized flag.
+
 ```mermaid
 flowchart BT
   GUI[L8 gui]

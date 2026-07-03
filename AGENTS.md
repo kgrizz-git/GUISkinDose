@@ -166,6 +166,7 @@ python -m mypyskindose --mode gui
 - GUI dependencies are optional extras: `pip install mypyskindose[gui]` — do not add them to core dependencies
 - **Modularity:** Keep all Python source and Markdown documentation files under ~800 lines unless strictly unavoidable (checked in CI; outliers must be whitelisted in `scripts/check_file_sizes.py`).
 - **Plan lifecycle:** Completed or superseded execution plans must be archived under `dev-docs/plans/archive/` (always update `dev-docs/index.md` in the same PR).
+- **Doc paths:** Never commit absolute filesystem paths or `file://` URIs in repository docs. Use repo-relative Markdown links for tracked files and normal prose/backticks for commands or examples.
 - **GUI help files:** The canonical source for in-app help markdown is `docs/source/gui_help/`. These files are mirrored to `src/mypyskindose/gui/help/` by `scripts/sync_gui_help.py` (enforced by pre-commit + CI). Edit the source under `docs/`, never the mirrored copies under `src/`.
 - **Assessments:** Place diagnostic reports or assessments (such as for refactoring, code quality, bug checks, etc.) under `dev-docs/assessments/` (always update `dev-docs/index.md` in the same PR).
 - **Workspace cleanliness:** Temporary scratch scripts or local output files must be kept in explicitly gitignored paths (e.g. `tmp/`, `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse. Run `python scripts/check_doc_pruning.py` during doc-gardening to review stale active plans/assessments (30 days + 10 commits by default).

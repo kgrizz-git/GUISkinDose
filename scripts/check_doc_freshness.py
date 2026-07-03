@@ -2,17 +2,19 @@
 """Documentation freshness checker for MyPySkinDose.
 
 Purpose:
-    Scan tracked markdown for broken relative links, advisory stale-language
-    patterns, and checkable contradictions against FEATURE_INVENTORY.md
-    (in AGENTS.md and CHANGELOG.md).
+    Scan tracked markdown for broken relative links, forbidden absolute
+    filesystem paths, advisory stale-language patterns, and checkable
+    contradictions against FEATURE_INVENTORY.md (in AGENTS.md and
+    CHANGELOG.md).
 
 Inputs:
     Repository root (auto-detected as parent of ``scripts/``, or ``--repo-root``).
 
 Outputs:
-    Prints broken links as ``file:line: message``, warnings for stale patterns
-    and inventory checks. Exit code 0 when clean; 1 when broken links or
-    inventory contradictions are found (stale-pattern warnings never fail CI).
+    Prints broken links / forbidden absolute paths as ``file:line: message``,
+    warnings for stale patterns and inventory checks. Exit code 0 when clean;
+    1 when broken links, forbidden absolute paths, or inventory contradictions
+    are found (stale-pattern warnings never fail CI).
 
 Usage:
     python scripts/check_doc_freshness.py
@@ -29,6 +31,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+ABSOLUTE_DOC_PATH_RES = (
+    re.compile(r"file:///[^\s)>`]+"),
+    re.compile(r"(?<![A-Za-z0-9_])(?:/Users|/home|/private|/tmp|/var|/path/to)/[^\s)>`]+"),
+    re.compile(r"(?<![A-Za-z0-9_])[A-Za-z]:\\[^\s)>`]+"),
+)
 
 STALE_PATTERN_RE = re.compile(
     r"\b(not implemented|not wired|planned)\b",
@@ -61,6 +68,14 @@ class BrokenLink:
     line_number: int
     target: str
     message: str
+
+
+@dataclass(frozen=True)
+class AbsolutePathHit:
+    source: Path
+    line_number: int
+    match_text: str
+    line: str
 
 
 @dataclass(frozen=True)
@@ -160,6 +175,27 @@ def find_broken_links(markdown_files: list[Path], repo_root: Path) -> list[Broke
     return broken
 
 
+def find_absolute_path_hits(markdown_files: list[Path], repo_root: Path) -> list[AbsolutePathHit]:
+    hits: list[AbsolutePathHit] = []
+    for md_file in markdown_files:
+        rel_source = md_file.relative_to(repo_root)
+        for line_number, line in enumerate(md_file.read_text(encoding="utf-8").splitlines(), start=1):
+            for pattern in ABSOLUTE_DOC_PATH_RES:
+                match = pattern.search(line)
+                if not match:
+                    continue
+                hits.append(
+                    AbsolutePathHit(
+                        source=rel_source,
+                        line_number=line_number,
+                        match_text=match.group(0),
+                        line=line.rstrip(),
+                    )
+                )
+                break
+    return hits
+
+
 def find_stale_pattern_hits(markdown_files: list[Path], repo_root: Path) -> list[StaleHit]:
     hits: list[StaleHit] = []
     for md_file in markdown_files:
@@ -229,6 +265,13 @@ def format_broken_link(item: BrokenLink) -> str:
     return f"{item.source}:{item.line_number}: {item.message}"
 
 
+def format_absolute_path_hit(item: AbsolutePathHit) -> str:
+    return (
+        f"{item.source}:{item.line_number}: forbidden absolute path {item.match_text!r} — "
+        f"{item.line}"
+    )
+
+
 def format_stale_hit(item: StaleHit) -> str:
     return f"warning {item.source}:{item.line_number}: stale pattern — {item.line}"
 
@@ -244,14 +287,15 @@ def run_checks(
     repo_root: Path,
     *,
     report_stale_patterns: bool = True,
-) -> tuple[list[BrokenLink], list[StaleHit], list[InventoryContradiction]]:
+) -> tuple[list[BrokenLink], list[AbsolutePathHit], list[StaleHit], list[InventoryContradiction]]:
     markdown_files = collect_markdown_files(repo_root)
     broken = find_broken_links(markdown_files, repo_root)
+    absolute = find_absolute_path_hits(markdown_files, repo_root)
     stale: list[StaleHit] = []
     if report_stale_patterns:
         stale = find_stale_pattern_hits(markdown_files, repo_root)
     contradictions = find_inventory_contradictions(repo_root)
-    return broken, stale, contradictions
+    return broken, absolute, stale, contradictions
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -270,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
-    broken, stale, contradictions = run_checks(
+    broken, absolute, stale, contradictions = run_checks(
         repo_root,
         report_stale_patterns=not args.no_stale_warnings,
     )
@@ -281,6 +325,12 @@ def main(argv: list[str] | None = None) -> int:
         print("Broken relative links:", file=sys.stderr)
         for item in broken:
             print(format_broken_link(item), file=sys.stderr)
+        exit_code = 1
+
+    if absolute:
+        print("Forbidden absolute filesystem paths in docs:", file=sys.stderr)
+        for item in absolute:
+            print(format_absolute_path_hit(item), file=sys.stderr)
         exit_code = 1
 
     if contradictions:

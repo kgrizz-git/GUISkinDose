@@ -102,7 +102,6 @@ Phased detail derived from diagnostics or master plans.
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
 | [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
-| [plans/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md) | macOS Native Window Maximization: implement safe near-fullscreen size calculation and multi-layered screen detection (AppKit + Tkinter fallbacks) to resolve Cocoa window constraints. |
 
 ## Archived plans (`plans/archive/`)
 
@@ -132,6 +131,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md](plans/archive/ENABLE_SECURITY_HOOKS_DEFAULT_PLAN.md) | **Completed** (2026-06-27) — `setup-dev.sh`/`.bat` one-command hook installer; `pip-audit` added as pre-push hook; CI shellcheck expanded; `AGENTS.md` and `HARNESS_ENGINEERING.md` updated. |
 | [plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md](plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md) | **Completed** (2026-06-28) — Vendor-invariant Geometry/Per-exam table-origin controls, explicit `X/LON/PT L-R` labels, plot annotations, Calculate/Geometry help, and vendor warnings. |
 | [plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | **Completed** (2026-06-28) — Canonical coordinate reference in `VENDOR_COORDINATE_SYSTEMS.md`; DICOM attribute/display-alias distinction; GE convention confirmed; characterization tests; agent + GUI help updated. GE matched-fixture item tracked in TO_DO. |
+| [plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md) | **Completed** (2026-07-03) — macOS native startup now normalizes saved `maximized=true` into a safe visible-desktop titled window, persists `maximized=false`, and keeps Windows/Linux maximize behavior unchanged. |
 
 ---
 

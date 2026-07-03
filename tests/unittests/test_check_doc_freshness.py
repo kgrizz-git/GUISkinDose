@@ -4,6 +4,7 @@ from pathlib import Path
 
 from scripts.check_doc_freshness import (
     collect_markdown_files,
+    find_absolute_path_hits,
     find_broken_links,
     find_inventory_contradictions,
     is_external_link,
@@ -74,6 +75,34 @@ def test_find_broken_links_resolves_sibling_paths(tmp_path: Path):
     broken = find_broken_links([source], repo_root)
     assert len(broken) == 1
     assert broken[0].target == "nope.md"
+
+
+def test_find_absolute_path_hits_reports_file_uri_and_absolute_placeholder(tmp_path: Path):
+    repo_root = tmp_path
+    doc = repo_root / "README.md"
+    doc.write_text(
+        "[bad](file:///Users/name/project/dev-docs/index.md)\n"
+        "Do not use /path/to/MyPySkinDose/src in docs.\n",
+        encoding="utf-8",
+    )
+
+    hits = find_absolute_path_hits([doc], repo_root)
+    assert len(hits) == 2
+    assert hits[0].match_text.startswith("file:///")
+    assert hits[1].match_text.startswith("/path/to/")
+
+
+def test_find_absolute_path_hits_ignores_repo_relative_links_and_slash_commands(tmp_path: Path):
+    repo_root = tmp_path
+    doc = repo_root / "README.md"
+    doc.write_text(
+        "[ok](dev-docs/index.md)\n"
+        "Use the `/verify` skill for visual checks.\n",
+        encoding="utf-8",
+    )
+
+    hits = find_absolute_path_hits([doc], repo_root)
+    assert hits == []
 
 
 def test_collect_markdown_files_includes_optional_root_guidance(tmp_path: Path):

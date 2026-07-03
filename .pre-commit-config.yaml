@@ -48,6 +48,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit, pre-push]
 
       - id: sync-gui-help
         name: GUI help sync (docs/source/gui_help -> src/mypyskindose/gui/help)
