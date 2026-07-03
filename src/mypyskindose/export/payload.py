@@ -124,12 +124,13 @@ def _cumulative_section(resolved: _Resolved, source: ExportSource) -> Cumulative
     peak_xyz = views[0].skin_cell_xyz(peak_idx) if (peak_idx is not None and views) else None
     total_discarded = sum(sum(s.discarded_events.values()) for s in source.exams)
     dap_values = [d for d in (_metrics.total_dap_gycm2(df) for df in dfs) if d is not None]
+    fluoro_values = [t for t in (_metrics.total_fluoro_time_s(df) for df in dfs) if t is not None]
 
     metrics = DosimetricMetrics(
         psd=(float(agg.max()) if agg.size else 0.0),
         air_kerma=_metrics.cumulative_air_kerma(views),
         dap_gycm2=(sum(dap_values) if dap_values else None),
-        fluoro_time_s=None,
+        fluoro_time_s=(sum(fluoro_values) if fluoro_values else None),
         events_processed=sum(len(df) for df in dfs),
         events_discarded=total_discarded,
         peak_vertex_index=peak_idx,

@@ -41,6 +41,15 @@ def build(ctx: PageContext) -> None:
                     events_metric = ui.label("—").classes("text-4xl text-aurora-teal font-bold")
 
             with ui.row().classes("w-full gap-6"):
+                with ui.card().classes("modern-card grow q-pa-lg text-center"):
+                    ui.label("Total DAP").classes("text-caption text-grey-6")
+                    dap_metric = ui.label("—").classes("text-3xl text-white font-bold")
+
+                with ui.card().classes("modern-card grow q-pa-lg text-center"):
+                    ui.label("Total Fluoro Time").classes("text-caption text-grey-6")
+                    fluoro_metric = ui.label("—").classes("text-3xl text-white font-bold")
+
+            with ui.row().classes("w-full gap-6"):
                 # dose map plot
                 with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                     dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
@@ -71,9 +80,17 @@ def build(ctx: PageContext) -> None:
 
         def _refresh_metrics():
             if not state.is_multi_exam and state.calculation_done and state.psd is not None:
+                from mypyskindose.export._format import fmt_duration
+                from mypyskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
+
                 psd_metric.set_text(f"{state.psd:.2f} mGy")
                 kerma_metric.set_text(f"{state.air_kerma:.1f} mGy")
                 events_metric.set_text(str(len(state.rdsr_df) if state.rdsr_df is not None else 0))
+
+                dap = total_dap_gycm2(state.rdsr_df)
+                dap_metric.set_text(f"{dap:.2f} Gy·cm²" if dap is not None else "N/A")
+                fluoro = total_fluoro_time_s(state.rdsr_df)
+                fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
 
         ui.timer(1.0, _refresh_metrics)
 
@@ -130,6 +147,7 @@ def build(ctx: PageContext) -> None:
                 ui.label("Aggregate Peak Skin Dose").classes("text-sm text-aurora-purple font-bold tracking-widest uppercase")
                 agg_psd_metric = ui.label("—").classes("text-5xl text-white font-bold my-2")
                 agg_events_metric = ui.label("across 0 exams").classes("text-sm text-grey-4")
+                agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
 
             # Per-exam accordion
             ui.label("Per-Exam Results").classes("text-xl font-bold tracking-tight q-mt-md")
@@ -224,6 +242,18 @@ def build(ctx: PageContext) -> None:
                 res = state.multi_exam_result
                 agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
                 agg_events_metric.set_text(f"across {len(res.exams)} exams")
+
+                from mypyskindose.export._format import fmt_duration
+                from mypyskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
+
+                dap = total_dap_gycm2(state.rdsr_df)
+                fluoro = total_fluoro_time_s(state.rdsr_df)
+                parts = []
+                if dap is not None:
+                    parts.append(f"Total DAP {dap:.2f} Gy·cm²")
+                if fluoro is not None:
+                    parts.append(f"Fluoro {fmt_duration(fluoro)}")
+                agg_totals_metric.set_text("  ·  ".join(parts))
 
                 if multi_exam_results_ui_stale(last_rendered_run_id, state.calc_run_id):
                     _clear_multi_exam_accordion()

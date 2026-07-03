@@ -10,6 +10,21 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Added
+
+- **Total DAP and fluoro time are now reported** (2026-07-03) — tabular inputs that carry per-event
+  dose-area-product and fluoro-time columns (e.g. Radimetrics `DAP (Total) Gy-cm2` and
+  `Fluoro time (Total) ms`) are now summed into procedure totals and shown in the **rich report**
+  dosimetric summary (previously `N/A`) and on the **Results tab** (new *Total DAP* and *Total
+  Fluoro Time* cards; the multi-exam aggregate banner gains a totals line). Fluoro time is displayed
+  as minutes + seconds (e.g. `5 min 30.8 s (330.8 s)`). The input-adapter pipeline
+  (`input_adapters/base.attach_procedure_dose_totals`) detects the DAP column's units from its
+  header, converts to internal units, and records the interpretation in the provenance
+  unit-conversions. **DAP units that cannot be confirmed from the header are assumed to be Gy·cm²
+  and flagged with an import warning** (surfaced in the report's alert block and the GUI) so the
+  operator can verify before clinical use; fluoro time is assumed to be milliseconds. As a
+  side-effect, DoseTrack DAP totals (which were also dropped during normalization) now report too.
+
 ### Fixed
 
 - **Native "Save As" dialog for exports** (2026-07-03) — in native (pywebview) window mode, the
@@ -22,6 +37,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **CLI `--input-schema` now defaults to `auto`** (2026-07-03) — tabular inputs (.csv/.tsv/.xlsx)
+  are detected from their column headers by default, matching the GUI (which already defaults to
+  `auto`). Previously the CLI fell back to the `normalized` schema, so a Radimetrics or DoseTrack
+  export run without an explicit `--input-schema` failed to locate a header row. Auto-detection
+  scores every real schema (normalized, generic_rdsr_like, radimetrics, dosetrack) and errors with
+  a clear "pass `--input-schema` explicitly" message if two schemas are ambiguous. The
+  library-level `read_and_normalize_input(input_schema=None)` default is unchanged (`normalized`).
+  Detection, per-schema fingerprints, and the DAP-unit / equipment-manufacturer caveat are now
+  documented in `dev-docs/INPUT_SCHEMA_DETECTION.md`, kept in sync with the code by
+  `tests/unittests/test_input_schema_doc.py`.
 - **GUI toasts appear at the top and linger longer** (2026-07-03) — `gui/notifications.py` patches
   `ui.notify` once at startup so notifications default to `position="top"` and an 8 s timeout
   (up from Quasar's 5 s at the bottom). Explicit per-call `position`/`timeout` still win, so

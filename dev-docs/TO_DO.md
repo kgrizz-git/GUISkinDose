@@ -39,6 +39,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
 - [ ] **Input field reference artifact** — check whether a clear list or table of fields expected/required by imported RDSR or tabular input (including fields mapped from those sources) already exists; if not, create a simple standalone file artifact that users can easily consult.
+- [ ] **Fix raw_events_cleaned example RDSR parsing** — investigate and fix the parsing issue that led to the problematic `raw_events_cleaned example RDSR (old) csv export from mypyskindose.csv` in `test_data_gitignored/`.
 - [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
   case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
   cranial, height = down for HFS) and the normalizer-level `Tx`/`Tz` correction are already confirmed; this item
@@ -57,6 +58,7 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
+- [ ] **Rich export phantom dimensions** — report phantom dimensions (anterior-posterior, left-right, superior-inferior) in cm using max values (thickest parts) rather than a scale factor.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
 - [x] **Rich report exports** — **shipped** (Phases 1–6 of [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md)):
   `mypyskindose.export` collector + XLSX/PDF/HTML/DOCX writers, GUI modal, CLI `--export-format`.

@@ -16,6 +16,7 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 - **[dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
 - **[DESIGN.md](DESIGN.md)** — GUI aesthetic intent; **[dev-docs/UI_values.md](dev-docs/UI_values.md)** — auto-generated design tokens from `app.py`
 - **[dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md](dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md)** — plan for CSV/TSV/XLSX exported event-table inputs
+- **[dev-docs/INPUT_SCHEMA_DETECTION.md](dev-docs/INPUT_SCHEMA_DETECTION.md)** — tabular schema auto-detection (GUI/CLI default `auto`, how each source schema is recognized) and the DAP-unit / equipment-manufacturer caveat
 - **[dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md)** — RDSR normalization, vendor offsets, and the internal DataFrame contract
 - **[dev-docs/HARNESS_ENGINEERING.md](dev-docs/HARNESS_ENGINEERING.md)** — repository harness principles, source-of-truth map, and validation commands (includes `python scripts/check_doc_freshness.py`)
 - **[dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)

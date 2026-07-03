@@ -45,6 +45,24 @@ def fmt_correction(value: Any) -> str:
     return fmt_float(value, 4)
 
 
+def fmt_duration(seconds: float | None) -> str:
+    """Human-readable duration as ``M min SS s`` (with the raw seconds).
+
+    Examples: ``330.8`` → ``"5 min 30.8 s (330.8 s)"``; ``42.0`` → ``"42.0 s"``.
+    """
+    if seconds is None:
+        return "N/A"
+    try:
+        total = float(seconds)
+    except (TypeError, ValueError):
+        return str(seconds)
+    if total < 60.0:
+        return f"{total:.1f} s"
+    minutes = int(total // 60)
+    rem = total - minutes * 60
+    return f"{minutes} min {rem:.1f} s ({total:.1f} s)"
+
+
 def fmt_xyz(xyz: tuple[float, float, float] | None) -> str:
     if xyz is None:
         return "N/A"
@@ -71,7 +89,7 @@ def dosimetric_rows(metrics: DosimetricMetrics) -> list[list[str]]:
         ["Peak skin dose (PSD)", f"{fmt_dose(metrics.psd)} mGy"],
         ["Reference air kerma (Ka,r)", f"{fmt_dose(metrics.air_kerma)} mGy"],
         ["Total DAP", (f"{fmt_float(metrics.dap_gycm2, 2)} Gy·cm²" if metrics.dap_gycm2 is not None else "N/A")],
-        ["Total fluoro time", (f"{metrics.fluoro_time_s:.0f} s" if metrics.fluoro_time_s is not None else "N/A")],
+        ["Total fluoro time", fmt_duration(metrics.fluoro_time_s)],
         ["Events processed", str(metrics.events_processed)],
         ["Events discarded", str(metrics.events_discarded)],
         ["PSD peak vertex index", ("N/A" if metrics.peak_vertex_index is None else str(metrics.peak_vertex_index))],

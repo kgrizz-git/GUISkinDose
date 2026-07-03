@@ -19,6 +19,7 @@ rdsr_normalizer() entirely.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
@@ -90,6 +91,123 @@ def coerce_numeric_columns(
             data_df[col] = coerced
 
 
+# ── Procedure dose totals (DAP + fluoro time) ─────────────────────────────────
+#
+# Internal column names carried onto the normalized DataFrame so the export /
+# results layers can sum them into procedure totals. ``DoseAreaProduct_Gym2``
+# holds per-event DAP in Gy·m²; ``fluoro_time_s`` holds per-event fluoro time in
+# seconds (NaN on non-fluoro events, so summing skips them).
+DAP_INTERNAL_COL = "DoseAreaProduct_Gym2"
+FLUORO_TIME_COL = "fluoro_time_s"
+
+# Passed through rdsr_normalizer() (which builds a fresh frame) by copying from
+# the pre-normalization DataFrame in run_normalizer_pipeline().
+_PASSTHROUGH_DOSE_COLS = (DAP_INTERNAL_COL, FLUORO_TIME_COL)
+
+
+def _norm_header(header: object) -> str:
+    return re.sub(r"\s+", " ", str(header).strip().lower())
+
+
+def _find_dap_total_column(columns: list[str]) -> str | None:
+    """Locate the per-event *total* DAP column (both planes), excluding the
+    fluoro-only DAP subset column (``Fluoro DAP (Total)``)."""
+    for col in columns:
+        n = _norm_header(col)
+        if "dap" in n and "fluoro" not in n and "(total)" in n:
+            return col
+    # Fall back to a bare "dap" column (no per-plane split) but still skip fluoro.
+    for col in columns:
+        n = _norm_header(col)
+        if "dap" in n and "fluoro" not in n and "(a)" not in n and "(b)" not in n:
+            return col
+    return None
+
+
+def _find_fluoro_time_total_column(columns: list[str]) -> str | None:
+    """Locate the per-event *total* fluoro time column (both planes)."""
+    for col in columns:
+        n = _norm_header(col)
+        if "fluoro time" in n and "(total)" in n:
+            return col
+    return None
+
+
+def _dap_to_gym2(header: str) -> tuple[float, bool, str | None]:
+    """Return (factor_to_Gy·m², units_confident, canonical_unit) for a DAP header.
+
+    Units are read from the header text. Recognised spellings are converted with
+    confidence; an unrecognised unit is assumed to be Gy·cm² (the near-universal
+    vendor default) but flagged so the operator can verify.
+    """
+    u = re.sub(r"\s+", " ", _norm_header(header).replace("·", " ").replace("*", " ").replace("-", " ").replace("^", ""))
+    # Check cm² before m² ("m2" is a substring of "cm2").
+    if "ugy cm2" in u or "µgy cm2" in u:
+        return (1e-6 / 1e4, True, "µGy·cm²")
+    if "mgy cm2" in u:
+        return (1e-3 / 1e4, True, "mGy·cm²")
+    if "cgy cm2" in u:
+        return (1e-2 / 1e4, True, "cGy·cm²")
+    if "gy cm2" in u or "gycm2" in u:
+        return (1.0 / 1e4, True, "Gy·cm²")
+    if "ugy m2" in u or "µgy m2" in u:
+        return (1e-6, True, "µGy·m²")
+    if "gy m2" in u or "gym2" in u:
+        return (1.0, True, "Gy·m²")
+    return (1.0 / 1e4, False, None)
+
+
+def _fluoro_to_seconds(header: str) -> tuple[float, bool]:
+    """Return (factor_to_seconds, units_confident) for a fluoro-time header."""
+    n = _norm_header(header)
+    if "ms" in n or "millisec" in n:
+        return (1e-3, True)
+    if "min" in n:
+        return (60.0, True)
+    if re.search(r"(\bs\b|\(s\)|\[s\]|sec)", n):
+        return (1.0, True)
+    return (1e-3, False)  # fluoro time is almost always exported in ms
+
+
+def attach_procedure_dose_totals(data_df: pd.DataFrame, ctx: AdapterContext) -> None:
+    """Derive per-event DAP (Gy·m²) and fluoro time (s) columns in place.
+
+    Reads the vendor *total* (both-plane) DAP and fluoro-time columns, converts
+    them to internal units, and stores them under :data:`DAP_INTERNAL_COL` /
+    :data:`FLUORO_TIME_COL`. Existing values (e.g. a DAP column already produced
+    by a vendor transform) are left untouched. Confident unit interpretations are
+    recorded in ``ctx.unit_conversions`` (audit trail); genuine unit *ambiguity*
+    is appended to ``ctx.warnings`` so it surfaces in the report and GUI.
+    """
+    cols = list(data_df.columns)
+
+    if DAP_INTERNAL_COL not in cols:
+        dap_col = _find_dap_total_column(cols)
+        if dap_col is not None:
+            factor, confident, unit = _dap_to_gym2(dap_col)
+            data_df[DAP_INTERNAL_COL] = pd.to_numeric(data_df[dap_col], errors="coerce") * factor
+            if confident:
+                ctx.unit_conversions[DAP_INTERNAL_COL] = f"{unit} → Gy·m² (from {dap_col!r})"
+            else:
+                ctx.warnings.append(
+                    f"DAP read from column {dap_col!r}, but its units could not be confirmed; "
+                    "assuming Gy·cm². Verify the reported DAP before clinical use."
+                )
+
+    if FLUORO_TIME_COL not in cols:
+        ft_col = _find_fluoro_time_total_column(cols)
+        if ft_col is not None:
+            factor, confident = _fluoro_to_seconds(ft_col)
+            data_df[FLUORO_TIME_COL] = pd.to_numeric(data_df[ft_col], errors="coerce") * factor
+            if confident:
+                ctx.unit_conversions[FLUORO_TIME_COL] = f"fluoro time → seconds (from {ft_col!r})"
+            else:
+                ctx.warnings.append(
+                    f"Fluoro time read from column {ft_col!r}, but its units could not be confirmed; "
+                    "assuming milliseconds. Verify the reported fluoro time."
+                )
+
+
 def run_normalizer_pipeline(
     loaded: _RawLoad,
     *,
@@ -152,6 +270,10 @@ def run_normalizer_pipeline(
     )
     data_df = transform(data_df, ctx)
 
+    # Capture per-event DAP / fluoro-time totals before the required-column check
+    # (they are optional) and before rdsr_normalizer() drops unmodelled columns.
+    attach_procedure_dose_totals(data_df, ctx)
+
     missing = required_columns - set(data_df.columns)
     if missing:
         raise ValueError(
@@ -163,6 +285,12 @@ def run_normalizer_pipeline(
         normalized_df = rdsr_normalizer(data_df, settings)
     except Exception as exc:
         raise ValueError(f"rdsr_normalizer() failed on {schema_name} input: {exc}") from exc
+
+    # rdsr_normalizer() rebuilds the frame from scratch, so carry the optional
+    # dosimetric columns across by position (row order is preserved).
+    for col in _PASSTHROUGH_DOSE_COLS:
+        if col in data_df.columns and len(data_df) == len(normalized_df):
+            normalized_df[col] = pd.to_numeric(data_df[col], errors="coerce").to_numpy()
 
     # Sentinel _dt_* targets are adapter-internal; keep them out of the public map.
     public_column_map = {k: v for k, v in column_map.items() if not v.startswith("_dt_")}

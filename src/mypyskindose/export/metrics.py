@@ -26,6 +26,7 @@ from .models import (
 
 _DAP_COL = "DoseAreaProduct_Gym2"  # Gy·m²; ×1e4 → Gy·cm²
 _GYM2_TO_GYCM2 = 10_000.0
+_FLUORO_TIME_COL = "fluoro_time_s"  # per-event fluoro time in seconds
 
 CORRECTION_KEYS = ("k_bs", "k_isq", "k_med", "k_tab")
 
@@ -41,6 +42,20 @@ def total_dap_gycm2(df: pd.DataFrame | None) -> float | None:
     if series.empty:
         return None
     return float(series.sum()) * _GYM2_TO_GYCM2
+
+
+def total_fluoro_time_s(df: pd.DataFrame | None) -> float | None:
+    """Total fluoro time in seconds from the normalized DataFrame, or ``None``.
+
+    Per-event values are NaN on non-fluoro (acquisition) events; those are
+    skipped so the sum is the procedure fluoro time only.
+    """
+    if df is None or _FLUORO_TIME_COL not in df.columns:
+        return None
+    series = pd.to_numeric(df[_FLUORO_TIME_COL], errors="coerce").dropna()
+    if series.empty:
+        return None
+    return float(series.sum())
 
 
 def _normalize_acquisition(raw: Any) -> str:
@@ -97,7 +112,7 @@ def dosimetric_metrics(
         psd=view.psd,
         air_kerma=view.air_kerma,
         dap_gycm2=total_dap_gycm2(df),
-        fluoro_time_s=None,  # v1: not inferred from pulse width (see plan §7)
+        fluoro_time_s=total_fluoro_time_s(df),
         events_processed=events_processed,
         events_discarded=events_discarded,
         peak_vertex_index=peak_idx,

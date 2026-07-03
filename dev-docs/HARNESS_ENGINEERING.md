@@ -30,6 +30,7 @@ Agents working in this repository should be able to answer three questions quick
 | Architecture, data flow, and layering rules | `dev-docs/CODEBASE_OVERVIEW.md` |
 | Feature inventory and known missing features | `dev-docs/FEATURE_INVENTORY.md` |
 | RDSR normalization, offsets, DataFrame contract | `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` |
+| Tabular schema auto-detection + DAP-unit caveat (machine-checked) | `dev-docs/INPUT_SCHEMA_DETECTION.md` via `tests/unittests/test_input_schema_doc.py` |
 | Vendor coordinate systems | `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` |
 | GUI current state + implementation plan | `dev-docs/plans/GUI_PLAN.md` (§0 current state) |
 | GUI design tokens (auto-generated) | `dev-docs/UI_values.md` via `scripts/generate_ui_values.py` |

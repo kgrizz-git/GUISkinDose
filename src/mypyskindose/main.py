@@ -87,8 +87,10 @@ def analyze_input_file(
     settings:
         Settings as a dict, JSON string, path, or PyskindoseSettings object.
     input_schema:
-        Schema adapter name for tabular files ("normalized"). Pass None to use
-        the default. "auto" is not yet supported.
+        Schema adapter for tabular files ("normalized", "generic_rdsr_like",
+        "radimetrics", "dosetrack", or "auto" to detect from column headers).
+        ``None`` uses the library default ("normalized"); the CLI defaults to
+        "auto".
     sheet_name:
         Sheet name or 0-based index for Excel files (ignored otherwise).
     output_format:
@@ -219,10 +221,16 @@ def preview_input_file(
     """Print a column-mapping preview without running the dose calculation."""
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
+    # The radimetrics/generic/dosetrack schemas need settings (rdsr_normalizer
+    # does a manufacturer/model lookup), so supply defaults — preview never runs
+    # a dose calculation, so example settings are sufficient.
+    settings_obj = parse_settings_to_settings_class(settings=None)
+
     raw = read_and_normalize_input(
         file_path,
         input_schema=input_schema,
         sheet_name=sheet_name,
+        settings=settings_obj,
     )
     results = raw if isinstance(raw, list) else [raw]
     for result in results:
@@ -541,10 +549,13 @@ def get_argument_parser(arguments) -> argparse.Namespace:
     parser.add_argument(
         "--input-schema",
         required=False,
-        default=None,
+        default="auto",
         dest="input_schema",
         choices=("normalized", "generic_rdsr_like", "radimetrics", "dosetrack", "auto"),
-        help="Schema adapter for tabular files (.csv/.tsv/.xlsx). Default: 'normalized'.",
+        help=(
+            "Schema adapter for tabular files (.csv/.tsv/.xlsx). Default: 'auto' "
+            "(detect from column headers; falls back to an explicit choice if ambiguous)."
+        ),
     )
 
     parser.add_argument(
