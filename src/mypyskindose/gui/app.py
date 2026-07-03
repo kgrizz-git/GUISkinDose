@@ -15,6 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 from textwrap import dedent
+from typing import Any, cast
 
 # Fix for Windows SSL context loading error during shutdown
 os.environ["SSL_CERT_FILE"] = ""
@@ -212,16 +213,17 @@ def _detect_native_screens() -> list[ScreenBounds]:
         try:
             import AppKit
 
-            main_screen = AppKit.NSScreen.mainScreen()
+            ns_screen = cast(Any, getattr(AppKit, "NSScreen"))
+            main_screen = ns_screen.mainScreen()
             screens = [
                 ScreenBounds(
-                    s.frame().origin.x,
-                    s.frame().origin.y,
-                    s.frame().size.width,
-                    s.frame().size.height,
+                    int(s.frame().origin.x),
+                    int(s.frame().origin.y),
+                    int(s.frame().size.width),
+                    int(s.frame().size.height),
                     is_primary=(s == main_screen),
                 )
-                for s in AppKit.NSScreen.screens()
+                for s in ns_screen.screens()
             ]
         except Exception as exc:
             dprint("GUI", f"AppKit screen detection failed ({exc}); trying webview/Tkinter fallbacks.")
@@ -261,17 +263,18 @@ def _detect_macos_visible_primary_bounds() -> ScreenBounds | None:
     try:
         import AppKit
 
-        screens = list(AppKit.NSScreen.screens())
+        ns_screen = cast(Any, getattr(AppKit, "NSScreen"))
+        screens = list(ns_screen.screens())
         if not screens:
             return None
-        main_screen = AppKit.NSScreen.mainScreen()
+        main_screen = ns_screen.mainScreen()
         target = main_screen or max(screens, key=lambda s: s.frame().size.width * s.frame().size.height)
         visible = target.visibleFrame()
         return ScreenBounds(
-            visible.origin.x,
-            visible.origin.y,
-            visible.size.width,
-            visible.size.height,
+            int(visible.origin.x),
+            int(visible.origin.y),
+            int(visible.size.width),
+            int(visible.size.height),
             is_primary=True,
         )
     except Exception as exc:
@@ -299,10 +302,10 @@ def _normalize_macos_maximized_startup(
     if visible is not None:
         return NativeWindowPrefs(
             maximized=False,
-            width=visible.width,
-            height=visible.height,
-            x=visible.x,
-            y=visible.y,
+            width=int(visible.width),
+            height=int(visible.height),
+            x=int(visible.x),
+            y=int(visible.y),
         )
 
     primary = primary_screen(screens)
@@ -318,8 +321,8 @@ def _normalize_macos_maximized_startup(
 
     width = int(primary.width * 0.9)
     height = int(primary.height * 0.9)
-    x = primary.x + (primary.width - width) // 2
-    y = primary.y + (primary.height - height) // 2
+    x = int(primary.x + (primary.width - width) // 2)
+    y = int(primary.y + (primary.height - height) // 2)
     return NativeWindowPrefs(
         maximized=False,
         width=width,
