@@ -24,6 +24,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   and flagged with an import warning** (surfaced in the report's alert block and the GUI) so the
   operator can verify before clinical use; fluoro time is assumed to be milliseconds. As a
   side-effect, DoseTrack DAP totals (which were also dropped during normalization) now report too.
+- **DAP unit handling is now uniform across tabular adapters** (2026-07-03) — the DoseTrack adapter
+  previously hard-assumed Gy·cm² (unconditional `/10000`) regardless of the column header, and did
+  not flag it. All adapters (Radimetrics, DoseTrack, generic capture) now route DAP through the
+  shared `input_adapters/base.convert_dap_series_to_gym2`, which reads the unit from the source
+  column header (Gy·cm², mGy·cm², cGy·cm², µGy·cm², Gy·m², µGy·m²), records the interpretation in
+  provenance, and only falls back to an assumed Gy·cm² **with a flagged warning** when the header
+  carries no recognisable unit. Files with a `Gy·cm²` header convert exactly as before.
 
 ### Fixed
 

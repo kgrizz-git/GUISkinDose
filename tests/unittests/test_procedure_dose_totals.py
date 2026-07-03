@@ -8,10 +8,15 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from mypyskindose.export._format import fmt_duration
 from mypyskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
-from mypyskindose.input_adapters.base import AdapterContext, attach_procedure_dose_totals
+from mypyskindose.input_adapters.base import (
+    AdapterContext,
+    attach_procedure_dose_totals,
+    convert_dap_series_to_gym2,
+)
 
 
 def _ctx() -> AdapterContext:
@@ -61,6 +66,35 @@ class TestAttachDap:
         ctx = _ctx()
         attach_procedure_dose_totals(df, ctx)
         assert total_dap_gycm2(df) == 50.0  # from the pre-existing 0.005 Gy·m²
+
+
+# ── shared converter (used by DoseTrack and the generic helper) ───────────────
+
+
+class TestConvertDapSeriesToGym2:
+    def test_reads_unit_from_source_header(self):
+        ctx = _ctx()
+        out = convert_dap_series_to_gym2(pd.Series([4.0, 6.0]), "DAP (Gy*cm2)", ctx)
+        assert out.sum() * 1e4 == pytest.approx(10.0)  # 10 Gy·cm² round-trips
+        assert "DoseAreaProduct_Gym2" in ctx.unit_conversions
+        assert not ctx.warnings
+
+    def test_mgy_cm2_header(self):
+        ctx = _ctx()
+        out = convert_dap_series_to_gym2(pd.Series([1000.0]), "DAP mGy-cm2", ctx)
+        # 1000 mGy·cm² == 1 Gy·cm² == 1e-4 Gy·m²
+        assert out.iloc[0] == pytest.approx(1e-4)
+        assert not ctx.warnings
+
+    def test_unitless_header_assumes_and_flags(self):
+        ctx = _ctx()
+        convert_dap_series_to_gym2(pd.Series([4.0]), "DAP", ctx)
+        assert any("units could not be confirmed" in w for w in ctx.warnings)
+
+    def test_none_header_assumes_and_flags(self):
+        ctx = _ctx()
+        convert_dap_series_to_gym2(pd.Series([4.0]), None, ctx)
+        assert any("units could not be confirmed" in w for w in ctx.warnings)
 
 
 # ── capture: fluoro time ──────────────────────────────────────────────────────

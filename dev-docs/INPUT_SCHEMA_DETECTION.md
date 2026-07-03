@@ -78,7 +78,10 @@ MyPySkinDose reads the **DAP (dose–area product) unit from the column header**
 Gy-cm2`), converts to internal `Gy·m²`, and records the interpretation in the provenance
 unit-conversions. If the header carries no recognisable unit token, the value is **assumed to be
 Gy·cm² and flagged with an import warning** (surfaced in the rich report's alert block and the GUI)
-so the operator can verify it before clinical use.
+so the operator can verify it before clinical use. This is **uniform across all tabular adapters** —
+Radimetrics, DoseTrack, and the generic capture path all route DAP through the same
+`convert_dap_series_to_gym2` helper (`input_adapters/base.py`); none silently assumes a unit without
+either reading it from the header or flagging the assumption.
 
 **The true physical unit of DAP often depends on the acquisition equipment manufacturer more than
 on the tabular exporter.** Different vendors report DAP natively in different units — e.g. Gy·cm²,

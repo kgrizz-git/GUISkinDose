@@ -169,6 +169,28 @@ def _fluoro_to_seconds(header: str) -> tuple[float, bool]:
     return (1e-3, False)  # fluoro time is almost always exported in ms
 
 
+def convert_dap_series_to_gym2(
+    values: pd.Series, source_header: str | None, ctx: AdapterContext
+) -> pd.Series:
+    """Convert a DAP column to internal ``Gy·m²`` using the *source header* units.
+
+    The unit is read from ``source_header`` (the vendor's original column name);
+    a confident interpretation is recorded in ``ctx.unit_conversions``, and an
+    unconfirmable unit is assumed to be Gy·cm² **and flagged** in ``ctx.warnings``
+    so no silent assumption reaches the report. Shared by the generic capture
+    helper and vendor adapters (e.g. DoseTrack) so unit handling is uniform.
+    """
+    factor, confident, unit = _dap_to_gym2(source_header or "")
+    if confident:
+        ctx.unit_conversions[DAP_INTERNAL_COL] = f"{unit} → Gy·m² (from {source_header!r})"
+    else:
+        ctx.warnings.append(
+            f"DAP read from column {source_header!r}, but its units could not be confirmed; "
+            "assuming Gy·cm². Verify the reported DAP before clinical use."
+        )
+    return pd.to_numeric(values, errors="coerce") * factor
+
+
 def attach_procedure_dose_totals(data_df: pd.DataFrame, ctx: AdapterContext) -> None:
     """Derive per-event DAP (Gy·m²) and fluoro time (s) columns in place.
 
@@ -184,15 +206,7 @@ def attach_procedure_dose_totals(data_df: pd.DataFrame, ctx: AdapterContext) -> 
     if DAP_INTERNAL_COL not in cols:
         dap_col = _find_dap_total_column(cols)
         if dap_col is not None:
-            factor, confident, unit = _dap_to_gym2(dap_col)
-            data_df[DAP_INTERNAL_COL] = pd.to_numeric(data_df[dap_col], errors="coerce") * factor
-            if confident:
-                ctx.unit_conversions[DAP_INTERNAL_COL] = f"{unit} → Gy·m² (from {dap_col!r})"
-            else:
-                ctx.warnings.append(
-                    f"DAP read from column {dap_col!r}, but its units could not be confirmed; "
-                    "assuming Gy·cm². Verify the reported DAP before clinical use."
-                )
+            data_df[DAP_INTERNAL_COL] = convert_dap_series_to_gym2(data_df[dap_col], dap_col, ctx)
 
     if FLUORO_TIME_COL not in cols:
         ft_col = _find_fluoro_time_total_column(cols)

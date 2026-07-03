@@ -19,6 +19,7 @@ import pandas as pd
 from mypyskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
+    convert_dap_series_to_gym2,
     run_normalizer_pipeline,
 )
 from mypyskindose.input_adapters.models import InputAdapterResult
@@ -227,10 +228,11 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
         data_df["XRayTubeCurrent_mA"] = data_df["XRayTubeCurrent_mA"] / 1000.0
         ctx.unit_conversions["XRayTubeCurrent_mA"] = "µA → mA"
 
-    # DAP Gy·cm² → Gy·m².
+    # DAP → Gy·m², reading the unit from the original source header (falls back to
+    # an assume-Gy·cm²-and-flag path when the header carries no recognisable unit).
     if "_dt_dap" in data_df.columns:
-        data_df["DoseAreaProduct_Gym2"] = data_df["_dt_dap"] / 10000.0
-        ctx.unit_conversions["DoseAreaProduct_Gym2"] = "Gy·cm² → Gy·m² (from DAP column)"
+        dap_src = next((s for s, t in ctx.column_map.items() if t == "_dt_dap"), None)
+        data_df["DoseAreaProduct_Gym2"] = convert_dap_series_to_gym2(data_df["_dt_dap"], dap_src, ctx)
         data_df = data_df.drop(columns=["_dt_dap"])
 
     # Filter thickness handling (Philips: 'Al;Cu' string; Siemens: single Cu value).
