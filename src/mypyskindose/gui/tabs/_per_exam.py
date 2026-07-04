@@ -30,6 +30,7 @@ from ..helpers import (
 )
 from ..page_context import PageContext
 from ..state import reset_results, state
+from ..ui_copy import copy_text
 
 
 def build_per_exam_section(ctx: PageContext) -> None:
@@ -161,7 +162,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 ui.label(src.upper()).classes("text-caption text-grey-6")
                 if meta.get("table_origin_override") is not None:
                     ui.badge("ORIGIN", color="amber").classes("text-xs").tooltip(
-                        "Manual table-origin override active"
+                        copy_text("upload.exam.table_origin.tooltip")
                     )
 
             # Per-exam patient offset (Phase 2.3) — bound directly to the meta dict;
@@ -192,7 +193,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                         value=meta.get("swap_lat_lon", False),
                     ).on_value_change(
                         lambda e, i=idx: _on_exam_transform_change(i, "swap_lat_lon", e.value)
-                    ).tooltip("Manual extra swap only; GE RDSR-level correction is handled during normalization.")
+                    ).tooltip(copy_text("per_exam.tx_tz_swap.tooltip"))
                     ui.switch(
                         "Flip primary angle (Ap1 × −1)",
                         value=meta.get("flip_ap1", False),

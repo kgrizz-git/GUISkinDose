@@ -31,6 +31,40 @@ from dataclasses import dataclass
 from pathlib import Path
 
 MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+BACKTICK_SPAN_RE = re.compile(r"`([^`\n]+)`")
+PROSE_PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9_./-])"
+    r"(?P<path>"
+    r"(?:AGENTS|CHANGELOG|DESIGN|README)\.md"
+    r"|(?:dev-docs|docs/source|src|tests|scripts)/[A-Za-z0-9_./#-]+"
+    r")"
+)
+PATH_TRAILING_CHARS = ".,;:)"
+PATH_REFERENCE_EXTENSIONS = (
+    ".bat",
+    ".cfg",
+    ".css",
+    ".csv",
+    ".dcm",
+    ".html",
+    ".ini",
+    ".ipynb",
+    ".json",
+    ".md",
+    ".py",
+    ".sh",
+    ".toml",
+    ".txt",
+    ".yaml",
+    ".yml",
+)
+PATH_REFERENCE_PREFIXES = (
+    "dev-docs/",
+    "docs/source/",
+    "src/",
+    "tests/",
+    "scripts/",
+)
 ABSOLUTE_DOC_PATH_RES = (
     re.compile(r"file:///[^\s)>`]+"),
     re.compile(r"(?<![A-Za-z0-9_])(?:/Users|/home|/private|/tmp|/var|/path/to)/[^\s)>`]+"),
@@ -91,6 +125,15 @@ class InventoryContradiction:
     line_number: int
     feature: str
     line: str
+
+
+@dataclass(frozen=True)
+class PathReference:
+    source: Path
+    line_number: int
+    target: str
+    context: str
+    message: str
 
 
 def repo_root_from_script() -> Path:
@@ -170,6 +213,127 @@ def find_broken_links(markdown_files: list[Path], repo_root: Path) -> list[Broke
                         line_number=line_number,
                         target=raw_target,
                         message=f"broken link [{raw_target}] -> {resolved}",
+                    )
+                )
+    return broken
+
+
+def markdown_link_spans(line: str) -> list[tuple[int, int]]:
+    return [match.span() for match in MARKDOWN_LINK_RE.finditer(line)]
+
+
+def span_overlaps(span: tuple[int, int], blocked_spans: list[tuple[int, int]]) -> bool:
+    start, end = span
+    return any(start < blocked_end and end > blocked_start for blocked_start, blocked_end in blocked_spans)
+
+
+def clean_path_reference(raw: str) -> str:
+    target = raw.strip().strip(PATH_TRAILING_CHARS)
+    return re.sub(r":\d+$", "", target)
+
+
+def looks_like_repo_path(raw: str) -> bool:
+    target = clean_path_reference(raw)
+    if (
+        not target
+        or "://" in target
+        or any(char.isspace() for char in target)
+        or any(char in target for char in "*{}<>")
+        or target.startswith(("/", "#", "~"))
+    ):
+        return False
+    if target in {"AGENTS.md", "CHANGELOG.md", "DESIGN.md", "README.md"}:
+        return True
+    if target.startswith(PATH_REFERENCE_PREFIXES):
+        return True
+    return False
+
+
+def resolve_path_reference(source_file: Path, path_part: str, repo_root: Path) -> Path:
+    if path_part in {"AGENTS.md", "CHANGELOG.md", "DESIGN.md", "README.md"}:
+        return (repo_root / path_part).resolve()
+    if path_part.startswith(PATH_REFERENCE_PREFIXES):
+        return (repo_root / path_part).resolve()
+    return resolve_relative_link(source_file, path_part, repo_root)
+
+
+def extract_path_references(line: str) -> list[tuple[str, str, tuple[int, int]]]:
+    blocked_spans = markdown_link_spans(line)
+    references: list[tuple[str, str, tuple[int, int]]] = []
+    seen_spans: set[tuple[int, int]] = set()
+
+    for match in BACKTICK_SPAN_RE.finditer(line):
+        if span_overlaps(match.span(), blocked_spans):
+            continue
+        target = clean_path_reference(match.group(1))
+        if looks_like_repo_path(target):
+            references.append((target, "backtick", match.span()))
+            seen_spans.add(match.span())
+
+    for match in PROSE_PATH_RE.finditer(line):
+        if span_overlaps(match.span(), blocked_spans) or span_overlaps(match.span(), list(seen_spans)):
+            continue
+        if match.end() < len(line) and line[match.end()] in "*{}<>":
+            continue
+        target = clean_path_reference(match.group("path"))
+        if looks_like_repo_path(target):
+            references.append((target, "prose", match.span()))
+
+    return references
+
+
+def skip_path_reference_scan(rel_source: Path) -> bool:
+    return rel_source == Path("CHANGELOG.md") or "plans" in rel_source.parts
+
+
+def archive_candidate_for_path(target: str, repo_root: Path) -> str | None:
+    path_part, _anchor = split_link_target(target)
+    prefix = "dev-docs/plans/"
+    archive_prefix = "dev-docs/plans/archive/"
+    if not path_part.startswith(prefix) or path_part.startswith(archive_prefix):
+        return None
+    candidate = f"{archive_prefix}{path_part.removeprefix(prefix)}"
+    if (repo_root / candidate).exists():
+        return candidate
+    return None
+
+
+def find_broken_path_references(markdown_files: list[Path], repo_root: Path) -> list[PathReference]:
+    broken: list[PathReference] = []
+    for md_file in markdown_files:
+        rel_source = md_file.relative_to(repo_root)
+        if skip_path_reference_scan(rel_source):
+            continue
+        lines = md_file.read_text(encoding="utf-8").splitlines()
+        in_fenced_block = False
+        for line_number, line in enumerate(lines, start=1):
+            if line.lstrip().startswith("```"):
+                in_fenced_block = not in_fenced_block
+                continue
+            if in_fenced_block:
+                continue
+            for raw_target, context, _span in extract_path_references(line):
+                if is_external_link(raw_target):
+                    continue
+                path_part, _anchor = split_link_target(raw_target)
+                if not path_part:
+                    continue
+                resolved = resolve_path_reference(md_file, path_part, repo_root)
+                if resolved.exists():
+                    continue
+                archive_candidate = archive_candidate_for_path(raw_target, repo_root)
+                message = f"stale path `{raw_target}`"
+                if archive_candidate:
+                    message += f"; archived candidate: {archive_candidate}"
+                else:
+                    message += f" -> {resolved}"
+                broken.append(
+                    PathReference(
+                        source=rel_source,
+                        line_number=line_number,
+                        target=raw_target,
+                        context=context,
+                        message=message,
                     )
                 )
     return broken
@@ -283,19 +447,33 @@ def format_inventory_contradiction(item: InventoryContradiction) -> str:
     )
 
 
+def format_path_reference(item: PathReference) -> str:
+    return f"{item.source}:{item.line_number}: {item.message}"
+
+
 def run_checks(
     repo_root: Path,
     *,
     report_stale_patterns: bool = True,
-) -> tuple[list[BrokenLink], list[AbsolutePathHit], list[StaleHit], list[InventoryContradiction]]:
+    scan_path_references: bool = True,
+) -> tuple[
+    list[BrokenLink],
+    list[PathReference],
+    list[AbsolutePathHit],
+    list[StaleHit],
+    list[InventoryContradiction],
+]:
     markdown_files = collect_markdown_files(repo_root)
     broken = find_broken_links(markdown_files, repo_root)
+    path_references: list[PathReference] = []
+    if scan_path_references:
+        path_references = find_broken_path_references(markdown_files, repo_root)
     absolute = find_absolute_path_hits(markdown_files, repo_root)
     stale: list[StaleHit] = []
     if report_stale_patterns:
         stale = find_stale_pattern_hits(markdown_files, repo_root)
     contradictions = find_inventory_contradictions(repo_root)
-    return broken, absolute, stale, contradictions
+    return broken, path_references, absolute, stale, contradictions
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -311,12 +489,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip advisory stale-pattern scan",
     )
+    parser.add_argument(
+        "--no-path-reference-scan",
+        action="store_true",
+        help="Skip stale path scan for backtick/prose path references",
+    )
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
-    broken, absolute, stale, contradictions = run_checks(
+    broken, path_references, absolute, stale, contradictions = run_checks(
         repo_root,
         report_stale_patterns=not args.no_stale_warnings,
+        scan_path_references=not args.no_path_reference_scan,
     )
 
     exit_code = 0
@@ -325,6 +509,12 @@ def main(argv: list[str] | None = None) -> int:
         print("Broken relative links:", file=sys.stderr)
         for item in broken:
             print(format_broken_link(item), file=sys.stderr)
+        exit_code = 1
+
+    if path_references:
+        print("Broken path references:", file=sys.stderr)
+        for item in path_references:
+            print(format_path_reference(item), file=sys.stderr)
         exit_code = 1
 
     if absolute:

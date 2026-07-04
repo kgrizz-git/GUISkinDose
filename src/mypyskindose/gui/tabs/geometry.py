@@ -157,6 +157,7 @@ def build(ctx: PageContext) -> None:
                 HelpButton(
                     title="Geometry Workflow",
                     content_path="geometry_workflow.md",
+                    help_id="geometry",
                 )
             vendor_notice = ui.label("").classes("text-caption text-amber-6 italic q-pa-sm modern-card w-full")
             vendor_notice.bind_visibility_from(state, "rdsr_df", backward=lambda v: v is not None)

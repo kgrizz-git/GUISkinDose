@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "keys": {
+    "help.button.tooltip": {
+      "text": "Click for help",
+      "owner": "gui/components/help_button.py"
+    },
+    "per_exam.tx_tz_swap.tooltip": {
+      "text": "Manual extra swap only; GE RDSR-level correction is handled during normalization.",
+      "owner": "gui/tabs/_per_exam.py"
+    },
+    "upload.exam.table_origin.tooltip": {
+      "text": "Manual table-origin override active",
+      "owner": "gui/tabs/upload.py"
+    },
+    "upload.exam.remove.tooltip": {
+      "text": "Remove this exam",
+      "owner": "gui/tabs/upload.py"
+    },
+    "export.copy_command.tooltip": {
+      "text": "Copy command",
+      "owner": "gui/tabs/export.py"
+    }
+  }
+}

@@ -16,6 +16,7 @@ from mypyskindose.input_adapters.column_mapper import _normalize_str
 from mypyskindose.input_adapters.registry import _AUTO_MIN_MARGIN, _SCHEMA_KNOWN_NAMES
 
 DOC = Path(__file__).parent.parent.parent / "dev-docs" / "INPUT_SCHEMA_DETECTION.md"
+REPO_ROOT = Path(__file__).parent.parent.parent
 
 # Marker columns the doc's fingerprint table cites for each schema. Each must be
 # (a) present in that schema's code fingerprint and (b) mentioned in the doc.
@@ -75,3 +76,21 @@ def test_marker_columns_appear_in_doc(doc_text: str):
     for markers in MARKERS.values():
         for marker in markers:
             assert marker in doc_text, f"Marker {marker!r} is not mentioned in the doc"
+
+
+def test_registered_workflow_help_mentions_relevant_setting_tokens():
+    import json
+
+    registry = json.loads((REPO_ROOT / "dev-docs" / "help_registry.json").read_text(encoding="utf-8"))
+    entries = {entry["id"]: entry for entry in registry["entries"]}
+    expected_tokens = {
+        "settings_positioning": ["scale_lat", "scale_ap", "scale_lon", "table_origin"],
+        "settings_below_floor_kvp": ["below_floor_kvp_policy", "manual_below_floor_kvp"],
+        "geometry": ["table_origin"],
+        "calculate": ["below_floor_kvp_policy", "manual_below_floor_kvp", "table_origin"],
+    }
+    help_root = REPO_ROOT / registry["source_dir"]
+    for help_id, tokens in expected_tokens.items():
+        text = (help_root / entries[help_id]["source"]).read_text(encoding="utf-8")
+        for token in tokens:
+            assert token in text, f"{entries[help_id]['source']} does not mention {token}"

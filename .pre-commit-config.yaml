@@ -57,6 +57,27 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: help-registry
+        name: GUI help registry
+        entry: python scripts/check_help_registry.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ui-copy
+        name: UI copy catalog
+        entry: python scripts/check_ui_copy.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: feature-doc-matrix
+        name: feature doc matrix
+        entry: python scripts/check_feature_doc_matrix.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-file-sizes
         name: check file sizes (<800 lines)
         entry: python scripts/check_file_sizes.py

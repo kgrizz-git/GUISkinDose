@@ -12,6 +12,7 @@ from pathlib import Path
 
 from nicegui import run, ui
 
+from ..components import HelpButton
 from ..concurrency import operation_guard, upload_lock
 from ..constants import EXAMPLE_FILES
 from ..helpers import (
@@ -30,6 +31,7 @@ from ..upload_temp_files import (
     register_temp_upload,
     remove_temp_upload,
 )
+from ..ui_copy import copy_text
 from ..widgets.event_table import build as build_event_table
 from ..widgets.import_preview import build as build_import_preview
 
@@ -56,7 +58,13 @@ def upload_exceeds_limit(num_bytes: int) -> bool:
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("upload"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            ui.label("Load File").classes("text-2xl font-bold tracking-tight")
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Load File").classes("text-2xl font-bold tracking-tight")
+                HelpButton(
+                    title="Upload and import help",
+                    content_path="upload_workflow.md",
+                    help_id="upload",
+                )
 
             with ui.card().classes("modern-card w-full border-red-900 bg-red-950/20").bind_visibility_from(
                 state, "normalization_method", backward=lambda v: v == "Fallback"
@@ -359,7 +367,7 @@ def build(ctx: PageContext) -> None:
                                     if meta.get("table_origin_override") is not None:
                                         ui.badge("ORIGIN", color="amber").classes(
                                             "text-xs"
-                                        ).tooltip("Manual table-origin override active")
+                                        ).tooltip(copy_text("upload.exam.table_origin.tooltip"))
                                     ui.space()
                                     def _remove_exam_click(_e, i=idx) -> None:
                                         _remove_exam(i)
@@ -369,7 +377,7 @@ def build(ctx: PageContext) -> None:
                                         on_click=_remove_exam_click,
                                     ).props("flat round dense size=sm color=grey-5 @click.stop").classes(
                                         "icon-outlined"
-                                    ).tooltip("Remove this exam")
+                                    ).tooltip(copy_text("upload.exam.remove.tooltip"))
                         if state.is_multi_exam:
                             ui.label(
                                 "Edit per-exam offsets and coordinate corrections in "

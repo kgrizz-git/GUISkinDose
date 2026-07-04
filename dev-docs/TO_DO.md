@@ -60,9 +60,6 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   export metadata.
 - [ ] **Rich export phantom dimensions** — report phantom dimensions (anterior-posterior, left-right, superior-inferior) in cm using max values (thickest parts) rather than a scale factor.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
-- [x] **Rich report exports** — **shipped** (Phases 1–6 of [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md)):
-  `mypyskindose.export` collector + XLSX/PDF/HTML/DOCX writers, GUI modal, CLI `--export-format`.
-  Deferred leftovers tracked below.
 - [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
   browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
 - [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
@@ -87,24 +84,22 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ### Harness / Repo Hygiene
 
+- [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
+  intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
+  inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,
+  and release documentation audit checklist generation. Original brainstorm:
+  [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
 - [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
   Drop `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` (aliases for the same nltk 3.9.4 advisory) once
   `nltk` ships a fix (currently dev-only via `safety`, no
   in-project use of `nltk.data.load()`). `ignore-until-fixed` should auto-fail the audit again
   when a patched `nltk` release appears in the lockfile.
-- [x] **SBOM scan** — grype wired into release workflow (`anchore/scan-action v7.4.0`); policy in `.grype.yaml`. See [GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md).
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.
 - [ ] **Doc-freshness follow-ups** — add intentional stale-word excludes, extend inventory contradiction rules, and
   consider release-only strict stale-pattern checks.
-- [ ] **Detect stale paths in backtick code spans and prose** — `scripts/check_doc_freshness.py` only inspects
-  `\[text\]\(url\)` markdown links; backtick-wrapped paths (e.g. CHANGELOG entries like
-  `` Plan: `dev-docs/plans/.../FOO.md` ``) and bare path mentions in prose are missed. Extend the
-  checker (or add a sibling scan) to flag stale relative paths in any of these forms so that
-  plan-archive moves don't leave dangling references. See `scripts/check_doc_freshness.py:31`
-  (`MARKDOWN_LINK_RE`) and the 2026-06-25 Spinning-Wheel archive incident for the trigger case.
 - [ ] **Optional doc-pruning release gate** — run `python scripts/check_doc_pruning.py --strict` before releases
   once the team is comfortable with the advisory workflow.
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
@@ -125,11 +120,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 ## Research Ideas
 
 - [ ] Call it GUISkinDose?
-- [ ] **OWASP principles**
-  - [x] Investigate and research OWASP Top 10 and relevant security principles for the project
-  - [x] Assess security-analysis tools — see [OWASP_SECURITY_TOOLS_ASSESSMENT.md](assessments/OWASP_SECURITY_TOOLS_ASSESSMENT.md)
-  - [x] Implement recommended tools in CI per [SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) (semgrep + conditional safety; gitleaks already wired)
-    - [ ] Get free Safety API key ([safetycli.com](https://safetycli.com)) and wire it as `SAFETY_API_KEY` GitHub secret
+- [ ] **Safety API key** — get a free Safety API key ([safetycli.com](https://safetycli.com)) and wire it as
+  `SAFETY_API_KEY` GitHub secret.
 
 ## Open Questions
 
@@ -137,26 +129,3 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   avoid unexpected body-region projections?
 - **K_IRP column** — Results table shows K_IRP as `-` in some runs. Is this intended to represent correction
   factors rather than kerma?
-
-## Recently Completed
-
-- [x] First-run onboarding popup — archived in
-  [FIRST_RUN_ONBOARDING_PLAN.md](plans/archive/FIRST_RUN_ONBOARDING_PLAN.md).
-- [x] Human phantom body-habitus scaling — archived in
-  [PATIENT_SIZE_SCALING_PLAN.md](plans/archive/PATIENT_SIZE_SCALING_PLAN.md).
-- [x] Beam-miss warnings — archived in
-  [NO_PATIENT_INTERSECTION_WARNING_PLAN.md](plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md).
-- [x] Geometry plot spinning wheel / continuous reload — archived in
-  [GEO_TAB_SPINNING_WHEEL_PLAN.md](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md).
-- [x] Show Geometry table-origin slider values — source plan:
-  [GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md](plans/archive/GEOMETRY_TABLE_ORIGIN_SLIDER_VALUES_PLAN.md).
-- [x] Cross-tab offset/origin slider synchronization — source plan:
-  [CROSS_TAB_SLIDER_SYNC_PLAN.md](plans/archive/CROSS_TAB_SLIDER_SYNC_PLAN.md).
-- [x] macOS native window maximization — archived in
-  [MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md). Shipped
-  2026-07-03: macOS `--native` startup now normalizes saved `maximized=true` into a safe
-  visible-desktop titled window, persists `maximized=false`, and leaves Windows/Linux behavior
-  unchanged.
-- [x] Absolute doc path guard — `scripts/check_doc_freshness.py` now fails on absolute filesystem
-  paths / `file://` URIs in scanned markdown, CI already enforces it, and the `doc-freshness`
-  hook now runs on pre-push as well as pre-commit.

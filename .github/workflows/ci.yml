@@ -40,6 +40,12 @@ jobs:
       run: python scripts/check_doc_freshness.py
     - name: Check GUI help sync
       run: python scripts/sync_gui_help.py --check
+    - name: Check GUI help registry
+      run: python scripts/check_help_registry.py
+    - name: Check UI copy catalog
+      run: python scripts/check_ui_copy.py
+    - name: Check feature documentation matrix
+      run: python scripts/check_feature_doc_matrix.py
     - name: Check file sizes (<800 lines)
       run: python scripts/check_file_sizes.py
     - name: Build sdist and wheel

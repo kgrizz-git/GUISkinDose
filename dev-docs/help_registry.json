@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "source_dir": "docs/source/gui_help",
+  "target_dir": "src/mypyskindose/gui/help",
+  "entries": [
+    {
+      "id": "upload",
+      "title": "Upload and import help",
+      "source": "upload_workflow.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/upload.py"],
+      "required": true
+    },
+    {
+      "id": "data",
+      "title": "Data table help",
+      "source": "data_table_workflow.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/data.py"],
+      "required": true
+    },
+    {
+      "id": "settings_positioning",
+      "title": "Positioning and offsets",
+      "source": "positioning_offsets.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/settings.py"],
+      "required": true
+    },
+    {
+      "id": "settings_below_floor_kvp",
+      "title": "Below-floor kVp handling",
+      "source": "below_floor_kvp.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/settings.py"],
+      "required": true
+    },
+    {
+      "id": "geometry",
+      "title": "Geometry workflow",
+      "source": "geometry_workflow.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/geometry.py"],
+      "required": true
+    },
+    {
+      "id": "calculate",
+      "title": "Calculation workflow",
+      "source": "calculation_workflow.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/calculate.py"],
+      "required": true
+    },
+    {
+      "id": "results",
+      "title": "Results help",
+      "source": "results_workflow.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/results.py"],
+      "required": true
+    },
+    {
+      "id": "export",
+      "title": "Export help",
+      "source": "export_workflow.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/export.py"],
+      "required": true
+    }
+  ]
+}

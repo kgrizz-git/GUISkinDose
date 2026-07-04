@@ -27,6 +27,8 @@ All values are in **centimeters**. In the normalized frame, **+Y (vertical) poin
 
 **Note:** The exact effect of offset parameters may vary depending on the X-ray system manufacturer. The coordinate transformations in `normalization_settings.json` account for vendor-specific conventions.
 
+Reproducible setting keys include `scale_lat`, `scale_ap`, and `scale_lon` for human phantom body-habitus scaling, plus `table_origin` metadata for manual table-origin overrides.
+
 ## Iterative Workflow
 
 When the correct positioning is unknown:

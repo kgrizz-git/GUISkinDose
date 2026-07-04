@@ -5,6 +5,8 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | File | Status | Notes |
 |---|---|---|
 | [basedpyright-fix-plan.md](basedpyright-fix-plan.md) | **Completed** (2026) | 147 errors resolved; CI runs strict `basedpyright`. Moved from `src/mypyskindose/dev-docs/`. |
+| [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md) | **Superseded** (2026-07-04) | Brainstorming and high-level documentation/help infrastructure ideas folded into [DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md); deferred experience ideas tracked in `TO_DO.md`. |
+| [DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md) | **Completed** (2026-07-04) | Documentation/help harness checks: stale paths, GUI help registry, UI copy catalog, glossary, feature-doc matrix, hooks, and CI. |
 | [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) | **Completed** (2026) | Phased roadmap to align the repository to agent-first harness standards (Phases 0–5 complete, Phase 6 closed, Phase 7 implemented/stubs tracked). |
 | [recursion-to-iteration.md](recursion-to-iteration.md) | **Completed** (2026-06-16) | Replace per-event tail recursion in `calculate_irradiation_event_result()` with a loop; golden baseline + 1100-event stress test. |
 | [hvl-invalid-event-crash.md](hvl-invalid-event-crash.md) | **Completed** (2026-06-13) | Fix HVL-lookup `IndexError` on out-of-grid kVp events; nearest-grid snap, fail-soft, count surfaced in GUI. |

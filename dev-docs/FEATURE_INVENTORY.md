@@ -27,8 +27,11 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 | License compliance + `THIRD_PARTY_NOTICES.md` | Shipped | `scripts/check_licenses.py`; inventory in `dev-docs/` |
 | Bandit Python SAST | Shipped | CI `bandit` job + pre-commit |
 | pre-commit hooks (ruff, gitleaks, doc-freshness, license-notices) | Shipped | basedpyright on pre-push |
-| Stale-pattern scan (advisory) | Shipped | Warnings only; release gate before semver bump (see `HARNESS_ENGINEERING.md`) |
-| Plan lifecycle (`dev-docs/exec-plans/`) | Deferred | Closed Phase 6 — not needed at current team size |
+| Stale-pattern and path-reference doc scan | Shipped | `scripts/check_doc_freshness.py`; warnings for stale terms, CI-blocking for broken links, path references, and inventory contradictions |
+| GUI help registry | Shipped | `dev-docs/help_registry.json` + `scripts/check_help_registry.py`; validates source help, mirrored bundled help, GUI references, and orphaned help pages |
+| UI copy catalog and glossary | Shipped | `dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `src/mypyskindose/gui/ui_copy.py`, and `scripts/check_ui_copy.py` |
+| Feature documentation matrix | Shipped | `dev-docs/feature_doc_matrix.json` + `scripts/check_feature_doc_matrix.py`; metadata validation plus optional doc-impact review |
+| Plan lifecycle | Deferred | Closed Phase 6 — separate execution-plan directories are not needed at current team size |
 | `references/` external library index | Partial | `dev-docs/references/` stub; expand before next major dependency review |
 
 ---
@@ -497,7 +500,7 @@ from mypyskindose import (
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| CSV/TSV/XLSX event-table input (normalized schema) | Shipped — Phase 1 (2026-06-09) | Python API + CLI; `normalized` schema adapter; full test suite. See `dev-docs/TABULAR_RDSR_INPUT_PLAN.md`. |
+| CSV/TSV/XLSX event-table input (normalized schema) | Shipped — Phase 1 (2026-06-09) | Python API + CLI; `normalized` schema adapter; full test suite. See `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md`. |
 | CSV/TSV/XLSX event-table input (raw RDSR-like schema + auto-detect) | Shipped — Phase 2 (2026-06-09) | `generic_rdsr_like` adapter → `rdsr_normalizer()`; `--input-schema auto`. GUI import workflow is Phase 5. |
 | CSV/TSV/XLSX event-table input (Radimetrics adapter) | Shipped — Phase 3 (2026-06-10) | `radimetrics` adapter; column map + unit conversions (mGy→Gy, cm²→m², mAs→µAs); auto-detection; unknown model warning; synthetic fixture + tests. Validated against AXIOM-Artis column names only — real vendor fixture needed for production sign-off. |
 | CSV/TSV/XLSX event-table input (DoseTrack adapter) | Shipped — Phase 4 (2026-06-10) | `dosetrack` adapter; Equipment Name→Manufacturer inference (`MODEL2MANUF`); ffill; Plane Code normalization; unit conversions (mGy→Gy, Gy·cm²→Gy·m², µA→mA); CFA derivation from DAP formula; Siemens/Philips filter thickness paths; Philips lat/lon swap warning; synthetic AXIOM-Artis fixture + 10 tests. Philips path untested — needs real DoseTrack XLSX. |

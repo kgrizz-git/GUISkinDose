@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "terms": {
+    "PSD": {
+      "preferred": "peak skin dose",
+      "definition": "Maximum accumulated dose on any modeled skin cell, reported in mGy.",
+      "aliases": ["peak skin dose"]
+    },
+    "RDSR": {
+      "preferred": "DICOM Radiation Dose Structured Report",
+      "definition": "DICOM object containing irradiation event geometry and dose metadata.",
+      "aliases": ["radiation dose structured report"]
+    },
+    "DAP": {
+      "preferred": "dose-area product",
+      "definition": "Product of air kerma and beam area used by tabular exports and correction calculations.",
+      "aliases": ["dose area product"]
+    },
+    "HVL": {
+      "preferred": "half-value layer",
+      "definition": "Beam-quality measure used by correction-factor lookup and interpolation.",
+      "aliases": ["half value layer"]
+    },
+    "k_tab": {
+      "preferred": "table transmission correction",
+      "definition": "Correction factor for attenuation through the procedure table or pad.",
+      "aliases": ["table transmission"]
+    },
+    "below_floor_kvp": {
+      "preferred": "below-floor kVp",
+      "definition": "Irradiation event with kVp below the lowest HVL lookup grid value.",
+      "aliases": ["sub-floor kVp"]
+    }
+  }
+}

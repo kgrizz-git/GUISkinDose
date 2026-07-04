@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
 from mypyskindose import PyskindoseSettings, load_settings_example_json
 from mypyskindose.rdsr_normalizer import rdsr_normalizer
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _settings() -> PyskindoseSettings:
@@ -64,6 +68,21 @@ def test_current_plot_axis_titles_are_historical_pyskindose_aliases():
     assert PLOT_AXIS_TITLE_X == "X - LON / PT L-R [cm]"
     assert PLOT_AXIS_TITLE_Y == "Y - VER / PT A-P [cm]"
     assert PLOT_AXIS_TITLE_Z == "Z - LAT / PT S-I [cm]"
+
+
+def test_vendor_coordinate_doc_mentions_canonical_code_and_display_tokens():
+    doc = (REPO_ROOT / "dev-docs" / "VENDOR_COORDINATE_SYSTEMS.md").read_text(encoding="utf-8")
+    for token in (
+        "X/LON/PT L-R",
+        "Y/VER/PT A-P",
+        "Z/LAT/PT S-I",
+        "swap_lateral_longitudinal",
+        "table_origin",
+        "Tx",
+        "Ty",
+        "Tz",
+    ):
+        assert token in doc, f"Missing coordinate documentation token: {token}"
 
 
 @pytest.mark.parametrize(

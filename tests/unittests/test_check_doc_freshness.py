@@ -6,6 +6,7 @@ from scripts.check_doc_freshness import (
     collect_markdown_files,
     find_absolute_path_hits,
     find_broken_links,
+    find_broken_path_references,
     find_inventory_contradictions,
     is_external_link,
     resolve_relative_link,
@@ -75,6 +76,47 @@ def test_find_broken_links_resolves_sibling_paths(tmp_path: Path):
     broken = find_broken_links([source], repo_root)
     assert len(broken) == 1
     assert broken[0].target == "nope.md"
+
+
+def test_find_broken_path_references_reports_backtick_and_prose_paths(tmp_path: Path):
+    repo_root = tmp_path
+    doc = repo_root / "AGENTS.md"
+    archive = repo_root / "dev-docs" / "plans" / "archive"
+    archive.mkdir(parents=True)
+    (archive / "old-plan.md").write_text("# archived\n", encoding="utf-8")
+    doc.write_text(
+        "Archive note: `dev-docs/plans/old-plan.md`\n"
+        "See dev-docs/plans/missing-plan.md before changing this.\n"
+        "External command `/verify` should not be treated as a path.\n"
+        "Python package `mypyskindose.gui.helpers` should not be treated as a path.\n",
+        encoding="utf-8",
+    )
+
+    broken = find_broken_path_references([doc], repo_root)
+
+    assert [item.target for item in broken] == [
+        "dev-docs/plans/old-plan.md",
+        "dev-docs/plans/missing-plan.md",
+    ]
+    assert "archived candidate: dev-docs/plans/archive/old-plan.md" in broken[0].message
+
+
+def test_find_broken_path_references_accepts_existing_paths_and_ignores_links(tmp_path: Path):
+    repo_root = tmp_path
+    doc = repo_root / "README.md"
+    (repo_root / "dev-docs").mkdir()
+    (repo_root / "dev-docs" / "index.md").write_text("# index\n", encoding="utf-8")
+    (repo_root / "scripts").mkdir()
+    (repo_root / "scripts" / "check.py").write_text("print('ok')\n", encoding="utf-8")
+    doc.write_text(
+        "Existing code path: `scripts/check.py`.\n"
+        "Existing prose path dev-docs/index.md is fine.\n"
+        "[Markdown links are handled elsewhere](dev-docs/missing.md).\n"
+        "External URL https://example.com/dev-docs/missing.md is ignored.\n",
+        encoding="utf-8",
+    )
+
+    assert find_broken_path_references([doc], repo_root) == []
 
 
 def test_find_absolute_path_hits_reports_file_uri_and_absolute_placeholder(tmp_path: Path):

@@ -5,6 +5,8 @@ from typing import Optional
 
 from nicegui import ui
 
+from ..ui_copy import copy_text
+
 
 class HelpButton:
     """A help button that displays markdown content in a dialog.
@@ -20,6 +22,7 @@ class HelpButton:
             from the gui/help/ directory.
         icon: Icon to use for the button (default: "help").
         button_text: Text for the button (default: "", icon-only).
+        help_id: Optional registry id used by documentation harness checks.
     """
 
     def __init__(
@@ -29,6 +32,7 @@ class HelpButton:
         content_path: Optional[str] = None,
         icon: str = "help",
         button_text: str = "",
+        help_id: Optional[str] = None,
     ):
         if content is None and content_path is None:
             raise ValueError("Either content or content_path must be provided")
@@ -36,6 +40,7 @@ class HelpButton:
         self.title = title
         self.icon = icon
         self.button_text = button_text
+        self.help_id = help_id
 
         # Load content
         if content is not None:
@@ -73,7 +78,7 @@ class HelpButton:
         """Create the help button and dialog."""
         with ui.button(self.button_text, icon=self.icon, on_click=self._show_dialog).props(
             'flat round size=sm color="grey-7"'
-        ).tooltip("Click for help"):
+        ).tooltip(copy_text("help.button.tooltip")):
             pass
 
     def _show_dialog(self) -> None:

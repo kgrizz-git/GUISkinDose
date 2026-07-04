@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "features": {
+    "tabular_input": {
+      "status": "shipped",
+      "code": [
+        "src/mypyskindose/input_adapters",
+        "src/mypyskindose/gui/tabs/upload.py",
+        "src/mypyskindose/gui/widgets/import_preview.py"
+      ],
+      "tests": [
+        "tests/unittests/test_input_adapters.py",
+        "tests/unittests/test_input_schema_doc.py",
+        "tests/unittests/test_multi_exam.py"
+      ],
+      "docs": [
+        "dev-docs/INPUT_SCHEMA_DETECTION.md",
+        "dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "AGENTS.md"
+      ],
+      "help": ["docs/source/gui_help/upload_workflow.md"]
+    },
+    "vendor_coordinates": {
+      "status": "shipped_with_open_validation",
+      "code": [
+        "src/mypyskindose/input_adapters",
+        "src/mypyskindose/gui/helpers.py",
+        "src/mypyskindose/gui/exam_transforms.py"
+      ],
+      "tests": [
+        "tests/unittests/test_coordinate_conventions.py",
+        "tests/unittests/test_rdsr_normalizer_characterization.py"
+      ],
+      "docs": [
+        "dev-docs/VENDOR_COORDINATE_SYSTEMS.md",
+        "dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md",
+        "AGENTS.md"
+      ],
+      "help": [
+        "docs/source/gui_help/geometry_workflow.md",
+        "docs/source/gui_help/positioning_offsets.md"
+      ]
+    },
+    "below_floor_kvp": {
+      "status": "shipped",
+      "code": [
+        "src/mypyskindose/geom_calc.py",
+        "src/mypyskindose/gui/tabs/calculate.py",
+        "src/mypyskindose/gui/tabs/settings.py"
+      ],
+      "tests": [
+        "tests/unittests/test_geom_calc.py",
+        "tests/unittests/test_gui_below_floor_kvp.py"
+      ],
+      "docs": [
+        "dev-docs/FEATURE_INVENTORY.md",
+        "AGENTS.md"
+      ],
+      "help": [
+        "docs/source/gui_help/below_floor_kvp.md",
+        "docs/source/gui_help/calculation_workflow.md"
+      ]
+    },
+    "rich_exports": {
+      "status": "shipped_with_leftovers",
+      "code": [
+        "src/mypyskindose/export",
+        "src/mypyskindose/gui/tabs/export.py",
+        "src/mypyskindose/main.py"
+      ],
+      "tests": [
+        "tests/unittests/test_export_payload.py",
+        "tests/unittests/test_export_html.py",
+        "tests/unittests/test_export_xlsx.py",
+        "tests/unittests/test_export_pdf.py",
+        "tests/unittests/test_export_docx.py",
+        "tests/unittests/test_export_cli.py"
+      ],
+      "docs": [
+        "dev-docs/plans/RICH_EXPORT_PLAN.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "CHANGELOG.md"
+      ],
+      "help": ["docs/source/gui_help/export_workflow.md"]
+    }
+  }
+}

@@ -20,3 +20,5 @@ Pick how MyPySkinDose should handle such events:
 Whatever you pick is applied **before** the HVL lookup, and every affected event is
 reported in the post-calculation warnings. When below-floor events are detected,
 you are also prompted at calculation time to confirm the policy for that run.
+
+Reproducible setting keys: `below_floor_kvp_policy` stores the selected policy and `manual_below_floor_kvp` stores the manual replacement value.

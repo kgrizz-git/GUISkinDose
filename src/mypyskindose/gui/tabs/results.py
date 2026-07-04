@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from ..components import HelpButton
 from ..constants import COLORSCALES
 from ..figures import make_dosemap_fig
 from ..page_context import PageContext
@@ -23,7 +24,13 @@ def multi_exam_results_ui_stale(last_run_id: int | None, calc_run_id: int) -> bo
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("results"):
         with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
-            ui.label("Results").classes("text-2xl font-bold tracking-tight")
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Results").classes("text-2xl font-bold tracking-tight")
+                HelpButton(
+                    title="Results help",
+                    content_path="results_workflow.md",
+                    help_id="results",
+                )
 
             # metric cards
         with ui.column().bind_visibility_from(state, "is_multi_exam", backward=lambda v: not v).classes("w-full gap-6"):

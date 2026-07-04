@@ -12,6 +12,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Documentation/help harness checks** (2026-07-04) — added JSON metadata and CI/pre-commit checks for GUI help
+  coverage (`dev-docs/help_registry.json`, `scripts/check_help_registry.py`), high-risk UI copy and glossary
+  terminology (`dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `scripts/check_ui_copy.py`), feature-to-doc
+  traceability (`dev-docs/feature_doc_matrix.json`, `scripts/check_feature_doc_matrix.py`), and stale prose/backtick
+  path references in active docs (`scripts/check_doc_freshness.py`). Added missing Upload/Data/Results/Export GUI
+  help pages and registry ids on `HelpButton` uses.
 - **Total DAP and fluoro time are now reported** (2026-07-03) — tabular inputs that carry per-event
   dose-area-product and fluoro-time columns (e.g. Radimetrics `DAP (Total) Gy-cm2` and
   `Fluoro time (Total) ms`) are now summed into procedure totals and shown in the **rich report**

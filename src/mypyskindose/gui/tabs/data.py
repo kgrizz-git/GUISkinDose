@@ -13,6 +13,7 @@ from pathlib import Path
 import pandas as pd
 from nicegui import ui
 
+from ..components import HelpButton
 from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from ..io_helpers import _get_save_path, _is_native_mode
 from ..page_context import PageContext
@@ -33,7 +34,13 @@ def build(ctx: PageContext) -> None:
     with ui.tab_panel("data"):
         with ui.column().classes("w-full gap-4"):
             with ui.column().classes("w-full gap-2 px-4"):
-                ui.label("Irradiation Event Stream").classes("text-2xl font-bold tracking-tight")
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("Irradiation Event Stream").classes("text-2xl font-bold tracking-tight")
+                    HelpButton(
+                        title="Data table help",
+                        content_path="data_table_workflow.md",
+                        help_id="data",
+                    )
                 ui.label().bind_text_from(
                     state, "import_provenance",
                     backward=lambda v: (

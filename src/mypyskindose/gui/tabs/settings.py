@@ -69,7 +69,8 @@ def build(ctx: PageContext) -> None:
                         ui.label("Phantom model and positioning").classes("text-subtitle2")
                         HelpButton(
                             title="Phantom Positioning Offsets",
-                            content_path="positioning_offsets.md"
+                            content_path="positioning_offsets.md",
+                            help_id="settings_positioning",
                         )
                     with ui.row().classes("w-full gap-6"):
                         ui.select(PHANTOM_MODELS, label="Phantom model", value=state.phantom_model).bind_value(
@@ -238,6 +239,7 @@ def build(ctx: PageContext) -> None:
                             HelpButton(
                                 title="Below-floor kVp handling",
                                 content_path="below_floor_kvp.md",
+                                help_id="settings_below_floor_kvp",
                             )
                         ui.select(
                             BELOW_FLOOR_KVP_OPTIONS,

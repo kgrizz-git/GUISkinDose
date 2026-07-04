@@ -15,14 +15,21 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [LICENSE_COMPLIANCE.md](LICENSE_COMPLIANCE.md) | Third-party license policy, `scripts/check_licenses.py`, and `THIRD_PARTY_NOTICES.md` workflow. |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
-| [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
+| [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
+| [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |
+| [../scripts/check_ui_copy.py](../scripts/check_ui_copy.py) | Validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`; checks `copy_text()` usage and terminology warnings. |
+| [../scripts/check_feature_doc_matrix.py](../scripts/check_feature_doc_matrix.py) | Validates feature-to-code/test/doc/help traceability in `dev-docs/feature_doc_matrix.json`; can emit advisory doc-impact warnings from changed paths. |
 | [../scripts/check_agent_guidance.py](../scripts/check_agent_guidance.py) | Advisory drift checker for agent pointer files, `TO_DO.md` size/history, and completed-looking active plans. |
 | [../scripts/check_doc_pruning.py](../scripts/check_doc_pruning.py) | Advisory pruning review: reports old active execution plans and assessments after 30 days and 10 commits. |
 | [../scripts/sync_gui_help.py](../scripts/sync_gui_help.py) | Mirrors `docs/source/gui_help/*.md` -> `src/mypyskindose/gui/help/*.md`; enforced by pre-commit + CI (`ci.yml` `static-analysis` job). |
 | [../scripts/generate_ui_values.py](../scripts/generate_ui_values.py) | Regenerates `UI_values.md` from `MODERN_CSS` in `gui/styles.py`. |
 | Bandit | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job and pre-commit hook (medium+ severity on `src/mypyskindose` + `scripts`). |
-| [TO_DO.md](TO_DO.md) | Short active backlog, deferred work, open questions, and recent completions. |
+| [TO_DO.md](TO_DO.md) | Short active backlog, deferred work, and open questions. Completed history lives in `CHANGELOG.md` and archived plans. |
 | [index.md](index.md) | This catalog — one-line purpose for every file under `dev-docs/`. |
+| [help_registry.json](help_registry.json) | Machine-readable map of GUI help ids to source markdown files, bundled mirror files, and GUI tabs/workflows. |
+| [ui_copy.json](ui_copy.json) | Catalog of high-risk GUI tooltip/help/warning strings used through `copy_text()`. |
+| [glossary.json](glossary.json) | Canonical glossary terms and aliases used by UI copy and help terminology checks. |
+| [feature_doc_matrix.json](feature_doc_matrix.json) | Feature-to-code/test/doc/help traceability matrix for doc-impact review. |
 | GUI smoke tests | `tests/gui/` (requires `pip install -e '.[gui]'`); see `tests/scripts/launch_gui_headless.py` |
 | [references/](references/README.md) | Links to pydicom, NiceGUI, Plotly, and other dependency docs. |
 
@@ -110,6 +117,8 @@ Phased detail derived from diagnostics or master plans.
 |---|---|
 | [plans/archive/README.md](plans/archive/README.md) | Index of completed or superseded execution plans. |
 | [plans/archive/RICH_EXPORT_SPEC.md](plans/archive/RICH_EXPORT_SPEC.md) | **Superseded** — original Rich Report Export draft spec; folded into the master `plans/RICH_EXPORT_PLAN.md`. |
+| [plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md) | **Superseded** — brainstorming and high-level ideas folded into [plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md) plus deferred `TO_DO.md` items. |
+| [plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md) | **Completed** (2026-07-04) — documentation/help harness checks: stale paths, GUI help registry, UI copy catalog, glossary, feature-doc matrix, hooks, and CI. |
 | [plans/archive/basedpyright-fix-plan.md](plans/archive/basedpyright-fix-plan.md) | **Completed** — strict basedpyright rollout (147 errors → 0). |
 | [plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md) | **Completed** — Phased roadmap to align the repository to agent-first harness standards (Phases 0–5 complete, Phase 6 closed, Phase 7 implemented/stubs tracked). |
 | [plans/archive/recursion-to-iteration.md](plans/archive/recursion-to-iteration.md) | **Completed** — Replace per-event tail recursion with a loop; unblocks multi-exam + long procedures. |

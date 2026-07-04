@@ -75,6 +75,7 @@ def build(ctx: PageContext) -> None:
                 HelpButton(
                     title="Calculation Workflow",
                     content_path="calculation_workflow.md",
+                    help_id="calculate",
                 )
 
             with ui.card().classes("modern-card w-full border border-blue-100 shadow-sm"):

@@ -34,10 +34,13 @@ Agents working in this repository should be able to answer three questions quick
 | Vendor coordinate systems | `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` |
 | GUI current state + implementation plan | `dev-docs/plans/GUI_PLAN.md` (§0 current state) |
 | GUI design tokens (auto-generated) | `dev-docs/UI_values.md` via `scripts/generate_ui_values.py` |
+| GUI help registry | `dev-docs/help_registry.json` via `scripts/check_help_registry.py` |
+| GUI UI copy catalog and glossary | `dev-docs/ui_copy.json`, `dev-docs/glossary.json` via `scripts/check_ui_copy.py` |
+| Feature documentation traceability | `dev-docs/feature_doc_matrix.json` via `scripts/check_feature_doc_matrix.py` |
 | GUI aesthetic design spec (root) | `DESIGN.md` |
 | Third-party license inventory | `dev-docs/THIRD_PARTY_NOTICES.md` (generated; do not move to repo root) |
 | External library reference links | `dev-docs/references/` |
-| In-app positioning help plan | `dev-docs/plans/POSITIONING_HELP_PLAN.md` |
+| In-app positioning help | `docs/source/gui_help/positioning_offsets.md` |
 | Tabular CSV/TSV/XLSX input plan | `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` |
 | Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
@@ -167,14 +170,41 @@ python scripts/check_doc_freshness.py
 
 The script scans `AGENTS.md`, `README.md`, `CHANGELOG.md`, optional `DESIGN.md`, and all markdown under `dev-docs/`:
 
-- **CI-blocking:** broken relative markdown links; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. one document says a feature is roadmap-only while another says it has shipped).
+- **CI-blocking:** broken relative markdown links; stale root-relative path references in active non-plan docs; checkable contradictions against `FEATURE_INVENTORY.md` (e.g. one document says a feature is roadmap-only while another says it has shipped).
 - **Advisory only:** stale-keyword hits — printed as warnings; review and update text that is no longer true.
+
+### Documentation/help harness checks
+
+Run these checks when changing GUI help, user-facing tooltips/warnings, glossary terms, or feature documentation:
+
+```bash
+python scripts/check_help_registry.py
+python scripts/check_help_registry.py --strict   # optional release/maintenance gate
+python scripts/check_ui_copy.py
+python scripts/check_ui_copy.py --strict         # optional release/maintenance gate
+python scripts/check_feature_doc_matrix.py
+```
+
+`check_help_registry.py` validates `dev-docs/help_registry.json`, confirms each source help page exists under
+`docs/source/gui_help/`, confirms bundled copies under `src/mypyskindose/gui/help/` are in sync, and checks that
+registered GUI files reference the expected `content_path` and `help_id`. Default mode warns for orphaned help files;
+`--strict` fails on them.
+
+`check_ui_copy.py` validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`, verifies `copy_text()` keys used by
+GUI code, rejects leftover literal catalog text in owner files, and emits terminology warnings. Default mode warns for
+unused copy keys and terminology findings; `--strict` fails on them.
+
+`check_feature_doc_matrix.py` validates `dev-docs/feature_doc_matrix.json`. It can also compare changed implementation
+paths against linked docs/help with `--changed-paths`, `--against-ref`, and `--strict-impact`; CI uses metadata
+validation only.
 
 ### Doc-gardening cadence
 
 | When | Action |
 |------|--------|
 | Every feature/status PR | Run `python scripts/check_doc_freshness.py`; update `FEATURE_INVENTORY.md` if behavior changed |
+| After GUI help/copy changes | Run `python scripts/sync_gui_help.py --check`, `python scripts/check_help_registry.py`, and `python scripts/check_ui_copy.py` |
+| After feature docs or implementation mapping changes | Run `python scripts/check_feature_doc_matrix.py` |
 | After GUI CSS changes | Run `python scripts/generate_ui_values.py` (or `--check` in CI later) |
 | After dependency changes | Run `python scripts/check_licenses.py --write-notices` and commit `dev-docs/THIRD_PARTY_NOTICES.md` |
 | Monthly / before release | Run `python scripts/check_doc_pruning.py`; archive or intentionally keep stale candidates |
@@ -325,7 +355,11 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **gitleaks** | Secret scan on staged changes |
 | **shellcheck** | Shell-script lint (auto-detects `*.sh` + shell shebangs) |
 | **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
-| **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links; stale-pattern warnings only) |
+| **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links/path refs/inventory contradictions; stale-pattern warnings only) |
+| **sync-gui-help** | `python scripts/sync_gui_help.py --check` |
+| **help-registry** | `python scripts/check_help_registry.py` |
+| **ui-copy** | `python scripts/check_ui_copy.py` |
+| **feature-doc-matrix** | `python scripts/check_feature_doc_matrix.py` |
 | **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 | **license-notices** | `python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
@@ -380,7 +414,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | `safety scan --detailed-output` | Ubuntu `static-analysis` job when `SAFETY_API_KEY` secret is set (skipped otherwise) |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
-| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc-freshness, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
+| pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
 

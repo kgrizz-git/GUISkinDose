@@ -25,9 +25,8 @@ Enable this fork to be published on PyPI **alongside** the original project by r
    - `pyproject.toml` updated (project-urls, dependencies, classifiers).
    - `requirements.txt` updated for dev requirements.
 - **Cleanup:**
-   - Legacy/unused artifacts (e.g., `src/pyskindose.egg-info`) removed.
+   - Legacy/unused build metadata artifacts removed.
 - **Final Review:**
    - Ensure all tests, lint, build, and docs workflows are clean and reproducible.
 
 ---
-

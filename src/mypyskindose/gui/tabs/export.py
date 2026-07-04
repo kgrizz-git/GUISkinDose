@@ -15,11 +15,13 @@ from nicegui import run, ui
 
 from mypyskindose.export import MissingExportDependencyError
 
+from ..components import HelpButton
 from ..export_source import build_export_source_from_gui
 from ..figures import make_dosemap_html, make_dosemap_png
 from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _is_native_mode, _tabular_input_meta
 from ..page_context import PageContext
 from ..state import state
+from ..ui_copy import copy_text
 
 
 def _rich_report_bytes_titled(fmt: str, title: str | None) -> bytes:
@@ -70,7 +72,13 @@ def _open_path(path: Path, *, reveal: bool = False) -> bool:
 def build(ctx: PageContext) -> None:
     with ui.tab_panel("export"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            ui.label("Export Results").classes("text-2xl font-bold tracking-tight")
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Export Results").classes("text-2xl font-bold tracking-tight")
+                HelpButton(
+                    title="Export help",
+                    content_path="export_workflow.md",
+                    help_id="export",
+                )
 
             ui.label(
                 "Run a calculation first (tab 4) to enable exports."
@@ -175,7 +183,7 @@ def build(ctx: PageContext) -> None:
                         ui.label(cmd).classes("font-mono text-xs bg-grey-2 rounded p-2 grow")
                         ui.button(icon="content_copy", on_click=_copy_cmd).props(
                             "flat dense"
-                        ).tooltip("Copy command")
+                        ).tooltip(copy_text("export.copy_command.tooltip"))
                     ui.label(
                         f"Or install just this one: pip install {install_name}"
                     ).classes("text-xs text-grey-6")

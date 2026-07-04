@@ -16,6 +16,8 @@ Siemens and Philips use the DICOM/operator table convention for table longitudin
 
 Internally, manual table-origin overrides are stored in the GUI transform source frame, before any expert-only `Tx ↔ Tz` correction toggle is applied. The app maps those stored values to the plotted frame for display and maps edits back before recalculating geometry, so the `X/DICOM LON/PT L-R` control moves plotted X even when a site-specific manual swap is enabled.
 
+Manual table-origin override metadata is tracked with `table_origin` keys so saved settings and exports can identify the correction source.
+
 For GE inputs, the lateral/longitudinal swap is handled during normalization. The GUI `Tx ↔ Tz` swap is a manual expert override only. GE table travel has been confirmed from tabular export inspection as positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. A matched GE DICOM RDSR plus tabular export would be useful later only to pin exact regression fixture values.
 
 Developer-level coordinate notes live in `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`. That document distinguishes DICOM table-coordinate names, vendor conventions, patient/anatomical directions, and the current PySkinDose display aliases shown in the GUI. A patient-anatomy label mode should only be added with those mappings explicitly validated.

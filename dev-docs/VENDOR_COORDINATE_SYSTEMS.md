@@ -91,6 +91,10 @@ aliases tied to normalized DICOM/operator table-position attribute names
 patient-anatomy direction of the plotted axis for head-first supine
 positioning. When precision matters, write both forms, for example
 `Tx / X display axis / DICOM TableLongitudinalPosition / patient left-right`.
+Compact display tokens used by tests and UI summaries are `X/LON/PT L-R`,
+`Y/VER/PT A-P`, and `Z/LAT/PT S-I`. Table-origin override metadata is tracked
+with `table_origin` keys, while GE-style lateral/longitudinal correction is
+controlled by `swap_lateral_longitudinal`.
 
 ### Origin
 
