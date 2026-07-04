@@ -61,6 +61,35 @@ def test_atexit_sweep_removes_remaining():
     assert gui_app._uploaded_temp_files == []
 
 
+def test_discard_temp_upload_removes_registered_file():
+    path = _make_temp()
+    gui_app._register_temp_upload(path)
+
+    gui_app._discard_temp_upload(path)
+
+    assert not path.exists()
+    assert gui_app._uploaded_temp_files == []
+
+
+def test_discard_temp_upload_tolerates_already_deleted_file():
+    path = _make_temp()
+    gui_app._register_temp_upload(path)
+    path.unlink()
+
+    gui_app._discard_temp_upload(path)
+
+    assert gui_app._uploaded_temp_files == []
+
+
+def test_discard_temp_upload_ignores_unregistered_file():
+    path = _make_temp()
+
+    gui_app._discard_temp_upload(path)
+
+    assert path.exists()
+    path.unlink()
+
+
 def test_cleanup_tolerates_already_deleted_file():
     path = _make_temp()
     gui_app._register_temp_upload(path)

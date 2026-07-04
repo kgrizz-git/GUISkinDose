@@ -79,6 +79,17 @@ def _register_temp_upload(path: Path) -> None:
     _uploaded_temp_files.append(path)
 
 
+def _discard_temp_upload(path: Path | None) -> None:
+    """Delete one registered upload temp file when the user unloads or parse fails."""
+    if path is None or path not in _uploaded_temp_files:
+        return
+    _uploaded_temp_files.remove(path)
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        dprint("GUI", f"Could not delete temp upload {path}: {exc}")
+
+
 @atexit.register
 def _cleanup_temp_uploads() -> None:
     """Remove any remaining upload temp files at process exit."""
@@ -309,6 +320,7 @@ def index():
                                 # the loader (not a traceback); show it in full.
                                 upload_status.set_text("Could not load — see message")
                                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
+                                _discard_temp_upload(tmp_path)
 
                             # Clear quasar's (hidden) upload queue so File objects don't
                             # accumulate across uploads. The visible loaded file is shown
@@ -370,6 +382,7 @@ def index():
 
                     def clear_loaded_file() -> None:
                         """Unload the current file and reset input state (card's X button)."""
+                        _discard_temp_upload(state.file_path)
                         state.rdsr_df = None
                         state.rdsr_raw_df = None
                         state.file_name = ""

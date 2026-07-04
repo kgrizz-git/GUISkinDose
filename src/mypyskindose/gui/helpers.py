@@ -14,6 +14,8 @@ from mypyskindose.settings import PyskindoseSettings
 
 from .state import AppState
 
+LOGGER = logging.getLogger("mypyskindose.gui.helpers")
+
 
 class _CalcWarningCollector(logging.Handler):
     """Collects WARNING+ log messages emitted during a dose calculation so the GUI
@@ -228,10 +230,9 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         state.psd = float(output["psd"])
         state.air_kerma = float(output["air_kerma"])
         return True, f"PSD = {output['psd']:.2f} mGy"
-    except Exception:
-        err = traceback.format_exc()
-        print(err)
-        return False, err
+    except Exception as exc:
+        LOGGER.error("Dose calculation failed: %s", exc.__class__.__name__)
+        return False, "Calculation failed. See the application log for details."
 
 
 def event_count_from_state(state: AppState) -> int:

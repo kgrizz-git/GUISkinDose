@@ -51,6 +51,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- Pre-commit backup cleanup: pending staged/unstaged `backups/*.bak` changes are now protected before the mtime fallback, preventing old-mtime in-progress backups from being deleted during commit.
+- GUI privacy/security: uploaded temp files are deleted on explicit unload or failed parse, and calculation failures now show a sanitized UI message instead of raw traceback text.
 - Dose calculation: `calculate_k_isq` now returns one inverse-square-law factor per hit cell for any number of hits. A `len(cells) > 3` guard previously fell back to `norm(axis=0)` for events hitting ≤3 skin cells, which crashed (`operands could not be broadcast (2,) (3,)`) for 1–2 hits and silently mis-dosed exactly-3-hit events. Affected exports whose geometry clips the phantom at only a few cells.
 - Pre-commit backup cleanup: new untracked `backups/*.bak` files are no longer deleted just because the same path was touched in older git history.
 - Pre-commit backup cleanup: a backup whose path is still tracked in `HEAD` but was recreated/force-staged (or locally modified) with new content is now protected too — commit-age deletion is skipped when the path has pending staged/unstaged changes, deferring to the mtime fallback.

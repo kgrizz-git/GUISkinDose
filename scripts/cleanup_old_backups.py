@@ -112,6 +112,9 @@ def _is_stale_backup(
             return True, f"last touched {commits_since} commits ago"
         return False, f"last touched {commits_since} commits ago"
 
+    if _has_pending_changes(repo_root, relative):
+        return False, "has pending staged or unstaged changes"
+
     threshold_ts = _threshold_commit_timestamp(repo_root, max_commits)
     if threshold_ts is None:
         return False, "untracked and repository has fewer than max_commits + 1 commits"
