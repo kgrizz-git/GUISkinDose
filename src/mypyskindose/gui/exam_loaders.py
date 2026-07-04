@@ -5,6 +5,7 @@ from __future__ import annotations
 import traceback
 from pathlib import Path
 
+import pandas as pd
 import pydicom
 
 from mypyskindose.rdsr_parser import rdsr_parser
@@ -21,7 +22,7 @@ from .settings_builder import build_settings
 from .state import AppState
 
 
-def _raw_extracted_view(result) -> "object":
+def _raw_extracted_view(result) -> pd.DataFrame | None:
     """Build the 'raw (un-normalized)' Data-tab view from a tabular adapter result.
 
     ``result.raw_data`` is the verbatim ``header=None`` file read, so it still
