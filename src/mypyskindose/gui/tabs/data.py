@@ -13,6 +13,8 @@ from pathlib import Path
 import pandas as pd
 from nicegui import ui
 
+from mypyskindose.spreadsheet_safety import neutralize_dataframe
+
 from ..components import HelpButton
 from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from ..io_helpers import _get_save_path, _is_native_mode
@@ -83,22 +85,24 @@ def build(ctx: PageContext) -> None:
                     "Table Offset Z [cm]": state.table_offset_z,
                     "Export Type": "Raw" if state.view_raw else "Normalized",
                 }])
+                safe_df = neutralize_dataframe(df)
+                safe_meta = neutralize_dataframe(meta_df)
 
                 if save_path:
                     try:
                         p = Path(save_path)
                         if fmt == "csv":
-                            df.to_csv(p, index=True)
+                            safe_df.to_csv(p, index=True)
                         elif fmt == "txt":
                             with open(p, "w") as f:
                                 f.write("=== NORMALIZATION METADATA ===\n")
-                                f.write(meta_df.to_string() + "\n\n")
+                                f.write(safe_meta.to_string() + "\n\n")
                                 f.write("=== EVENT DATA ===\n")
-                                f.write(df.to_string())
+                                f.write(safe_df.to_string())
                         elif fmt == "xlsx":
                             with pd.ExcelWriter(p) as writer:
-                                df.to_excel(writer, sheet_name="Event Data", index=True)
-                                meta_df.to_excel(writer, sheet_name="Normalization Info", index=False)
+                                safe_df.to_excel(writer, sheet_name="Event Data", index=True)
+                                safe_meta.to_excel(writer, sheet_name="Normalization Info", index=False)
                         ui.notify(f"Saved to {p.name}", color="positive")
                         return
                     except Exception as e:
@@ -106,16 +110,16 @@ def build(ctx: PageContext) -> None:
 
                 # Fallback to browser download
                 if fmt == "csv":
-                    content = df.to_csv(index=True)
+                    content = safe_df.to_csv(index=True)
                     ui.download(content.encode(), default_name)
                 elif fmt == "txt":
-                    content = "=== METADATA ===\n" + meta_df.to_string() + "\n\n" + df.to_string()
+                    content = "=== METADATA ===\n" + safe_meta.to_string() + "\n\n" + safe_df.to_string()
                     ui.download(content.encode(), default_name)
                 elif fmt == "xlsx":
                     output = io.BytesIO()
                     with pd.ExcelWriter(output) as writer:
-                        df.to_excel(writer, sheet_name="Event Data", index=True)
-                        meta_df.to_excel(writer, sheet_name="Normalization Info", index=False)
+                        safe_df.to_excel(writer, sheet_name="Event Data", index=True)
+                        safe_meta.to_excel(writer, sheet_name="Normalization Info", index=False)
                     ui.download(output.getvalue(), default_name)
                 ui.notify(f"Downloaded {fmt.upper()}", color="positive")
 

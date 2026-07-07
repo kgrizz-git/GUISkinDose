@@ -25,6 +25,8 @@ from .._format import (
     correction_row,
     dosimetric_rows,
 )
+from mypyskindose.spreadsheet_safety import neutralize_spreadsheet_value
+
 from ..models import ExamSection, ExportPayload
 
 _BOLD = Font(bold=True)
@@ -51,11 +53,15 @@ def _autofit(ws: Worksheet) -> None:
         ws.column_dimensions[get_column_letter(col)].width = min(max(width + 2, 10), 80)
 
 
+def _cell_value(value) -> object:
+    return neutralize_spreadsheet_value(value)
+
+
 def _write_rows(ws: Worksheet, rows, start_row: int = 1, *, header: bool = False) -> int:
     r = start_row
     for i, row in enumerate(rows):
         for c, value in enumerate(row, start=1):
-            cell = ws.cell(row=r, column=c, value=value)
+            cell = ws.cell(row=r, column=c, value=_cell_value(value))
             if header and i == 0:
                 cell.font = _BOLD
         r += 1
@@ -66,7 +72,7 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
     ws = cast(Worksheet, wb.active)
     ws.title = "Overview"
     ws.sheet_view.showGridLines = True
-    ws["A1"] = payload.meta.report_title
+    ws["A1"] = _cell_value(payload.meta.report_title)
     ws["A1"].font = _TITLE
     meta_rows = [
         ["Application", payload.meta.app_name],
@@ -83,7 +89,7 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
     ws.cell(row=r, column=1, value="Executive alerts").font = _BOLD
     r += 1
     for text, severity in collect_alert_lines(payload):
-        cell = ws.cell(row=r, column=1, value=text)
+        cell = ws.cell(row=r, column=1, value=_cell_value(text))
         cell.alignment = _WRAP
         if severity == "error":
             cell.fill = _RED
@@ -145,7 +151,7 @@ def _settings_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r = 1
     for exam in payload.exams:
         if payload.is_multi_exam:
-            ws.cell(row=r, column=1, value=f"--- Exam {exam.exam_id} ---").font = _BOLD
+            ws.cell(row=r, column=1, value=_cell_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
             r += 1
         r = _write_rows(ws, _settings_block(exam), start_row=r, header=True)
         r += 1
@@ -158,12 +164,12 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r = 1
     if payload.is_multi_exam:
         for exam in payload.exams:
-            ws.cell(row=r, column=1, value=f"--- Exam {exam.exam_id} ---").font = _BOLD
+            ws.cell(row=r, column=1, value=_cell_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
             r += 1
             rows = [CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections]
             r = _write_rows(ws, rows, start_row=r, header=True)
             r += 1
-        ws.cell(row=r, column=1, value="--- Cumulative (kerma-weighted) ---").font = _BOLD
+        ws.cell(row=r, column=1, value=_cell_value("--- Cumulative (kerma-weighted) ---")).font = _BOLD
         r += 1
     rows = [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections]
     _write_rows(ws, rows, start_row=r, header=True)
@@ -175,7 +181,7 @@ def _warnings_sheet(wb: Workbook, payload: ExportPayload) -> None:
     ws.sheet_view.showGridLines = True
     r = 1
     for text, severity in collect_alert_lines(payload):
-        cell = ws.cell(row=r, column=1, value=text)
+        cell = ws.cell(row=r, column=1, value=_cell_value(text))
         cell.alignment = _WRAP
         if severity == "error":
             cell.fill = _RED
@@ -184,7 +190,7 @@ def _warnings_sheet(wb: Workbook, payload: ExportPayload) -> None:
         r += 1
     for exam in payload.exams:
         for msg in exam.warnings:
-            ws.cell(row=r, column=1, value=f"[{exam.exam_id}] {msg}").alignment = _WRAP
+            ws.cell(row=r, column=1, value=_cell_value(f"[{exam.exam_id}] {msg}")).alignment = _WRAP
             r += 1
     _autofit(ws)
 
@@ -194,7 +200,7 @@ def _images_sheet(wb: Workbook, payload: ExportPayload) -> None:
     ws.sheet_view.showGridLines = True
     row = 1
     for entry in payload.images:
-        ws.cell(row=row, column=1, value=entry.label).font = _BOLD
+        ws.cell(row=row, column=1, value=_cell_value(entry.label)).font = _BOLD
         row += 1
         if entry.png_bytes is not None:
             img = XLImage(io.BytesIO(entry.png_bytes))
@@ -206,7 +212,7 @@ def _images_sheet(wb: Workbook, payload: ExportPayload) -> None:
             ws.add_image(img, f"A{row}")
             row += max(int(img.height / 18) + 2, 12)
         else:
-            ws.cell(row=row, column=1, value=entry.error_message or "Image unavailable")
+            ws.cell(row=row, column=1, value=_cell_value(entry.error_message or "Image unavailable"))
             row += 2
     _autofit(ws)
 

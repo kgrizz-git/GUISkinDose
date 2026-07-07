@@ -40,6 +40,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Spreadsheet formula injection on Data tab exports** (2026-07-07) — RDSR and tabular
+  event-table exports (CSV/XLSX/TXT on the Data tab, plus rich-report XLSX cells) now
+  prefix attacker-controlled strings that start with formula trigger characters (`=`, `+`,
+  `-`, `@`, tab, CR) so Excel and similar tools treat them as text instead of evaluating
+  formulas (CWE-1236).
 - **Native "Save As" dialog for exports** (2026-07-03) — in native (pywebview) window mode, the
   export/save-path helper (`gui/io_helpers._get_save_path`) called NiceGUI's async
   `create_file_dialog` without awaiting it, so the returned coroutine was passed to `Path(...)`
