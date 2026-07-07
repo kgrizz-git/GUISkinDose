@@ -41,10 +41,14 @@ def test_neutralize_dataframe_only_touches_object_columns() -> None:
         }
     )
     safe = neutralize_dataframe(df)
-    assert safe.loc[0, "VendorNote"].startswith("'")
+    vendor_note = safe.loc[0, "VendorNote"]
+    assert isinstance(vendor_note, str)
+    assert vendor_note.startswith("'")
     assert safe.loc[1, "VendorNote"] == "ok"
     assert safe["kVp"].tolist() == [80.0, 90.0]
-    assert df.loc[0, "VendorNote"].startswith("=")
+    raw_vendor_note = df.loc[0, "VendorNote"]
+    assert isinstance(raw_vendor_note, str)
+    assert raw_vendor_note.startswith("=")
 
 
 def test_neutralized_xlsx_export_is_not_formula_cell() -> None:
