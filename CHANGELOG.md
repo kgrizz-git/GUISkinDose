@@ -50,6 +50,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Multi-exam plot-suppression fixture no longer breaks on Python 3.10** (2026-07-08) —
+  `tests/unittests/test_multi_exam.py::_suppress_plots` patched via the string
+  `"mypyskindose.analyze_data.create_geometry_plot"`, but the package re-exports a function
+  named `analyze_data` that shadows the submodule of the same name; whether `mock` resolved the
+  target to the module or the function depended on import order and surfaced as an
+  `AttributeError` on the 3.10 build matrix. It now patches the module object obtained via
+  `importlib.import_module`, which is unambiguous across Python versions.
 - **GUI handlers now guard NiceGUI `run.io_bound` results against `None`** (2026-07-07) —
   NiceGUI 3.14 types `run.io_bound`/`run.cpu_bound` as returning `T | None` (it returns `None`
   when a call is cancelled or the app is shutting down), which surfaced 12 strict type errors in

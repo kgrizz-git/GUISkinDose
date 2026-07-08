@@ -182,9 +182,17 @@ def _quiet_logs():
 
 @pytest.fixture()
 def _suppress_plots():
+    # Patch on the module object, not via the "mypyskindose.analyze_data.<attr>" string.
+    # The package exports a function named `analyze_data` (from .analyze_data import
+    # analyze_data), which shadows the submodule of the same name on the package; whether
+    # mock's string traversal resolves to the module or the function depends on import
+    # order and Python version. importlib.import_module always returns the module object.
+    import importlib
+
+    analyze_data_module = importlib.import_module("mypyskindose.analyze_data")
     with (
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch.object(analyze_data_module, "create_geometry_plot"),
+        patch.object(analyze_data_module, "create_dose_map_plot"),
     ):
         yield
 
