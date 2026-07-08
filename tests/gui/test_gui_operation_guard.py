@@ -9,9 +9,10 @@ and state.busy is always cleared on exit (including on exception).
 from __future__ import annotations
 
 import pytest
-from nicegui import ui
 
 pytest.importorskip("nicegui")
+
+from nicegui import ui
 
 from mypyskindose.gui.concurrency import operation_guard
 from mypyskindose.gui.state import state

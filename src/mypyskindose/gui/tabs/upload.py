@@ -13,7 +13,7 @@ from pathlib import Path
 from nicegui import run, ui
 
 from ..components import HelpButton
-from ..concurrency import operation_guard, upload_lock
+from ..concurrency import operation_guard, require_io_result, upload_lock
 from ..constants import EXAMPLE_FILES
 from ..helpers import (
     adjust_active_exam_index_after_remove,
@@ -117,10 +117,10 @@ def build(ctx: PageContext) -> None:
                         upload_status.set_text("PARSING...")
                         if suffix in _TABULAR_SUFFIXES:
                             state.input_source_type = suffix.lstrip(".")
-                            ok, msg = await run.io_bound(load_tabular, tmp_path, state)
+                            ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
                         else:
                             state.input_source_type = "dicom"
-                            ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
+                            ok, msg = require_io_result(await run.io_bound(load_rdsr, tmp_path, state))
                         if ok:
                             state.file_name = file_name
                             ctx.file_label.set_text(file_name.upper())
@@ -150,7 +150,7 @@ def build(ctx: PageContext) -> None:
                                 import_preview.refresh()
                                 import_preview.set_transform_defaults()
                             if suffix in (".xlsx", ".xlsm"):
-                                sheets = await run.io_bound(get_excel_sheets, tmp_path)
+                                sheets = require_io_result(await run.io_bound(get_excel_sheets, tmp_path))
                                 if len(sheets) > 1:
                                     state.available_sheets = sheets
                                     import_preview.sheet_select.set_options(
@@ -256,7 +256,7 @@ def build(ctx: PageContext) -> None:
                         state.flip_ap1 = False
                         state.flip_ap2 = False
                         upload_status.set_text("PARSING...")
-                        ok, msg = await run.io_bound(load_rdsr, path, state)
+                        ok, msg = require_io_result(await run.io_bound(load_rdsr, path, state))
                         if ok:
                             state.file_name = name
                             ctx.file_label.set_text(name.upper())
@@ -298,7 +298,7 @@ def build(ctx: PageContext) -> None:
                             return
                         state.input_schema = schema_select.value or "auto"
                         upload_status.set_text("RE-PARSING...")
-                        ok, msg = await run.io_bound(load_tabular, state.file_path, state, True)
+                        ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
                         if ok:
                             upload_status.set_text(f"OK: {msg}")
                             ui.notify(msg, color="positive")

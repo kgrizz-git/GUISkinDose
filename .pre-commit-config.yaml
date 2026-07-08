@@ -85,6 +85,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-gui-test-placement
+        name: GUI test placement (no nicegui imports outside tests/gui)
+        entry: python scripts/check_gui_test_placement.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       - id: check-untracked-scratch
         name: check for untracked scratch files
         entry: python scripts/check_untracked_scratch.py

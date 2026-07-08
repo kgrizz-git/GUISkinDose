@@ -19,16 +19,23 @@ jobs:
       SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+      with:
+        version: ">=0.11.19"
     - name: Set up Python
       uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: '3.12'
-        cache: 'pip'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,gui]"
-        pip install build
+    # Install the exact versions pinned in uv.lock so PR/main runs are reproducible.
+    # `uv sync --locked` fails if uv.lock is stale relative to pyproject.toml. Upstream
+    # releases are caught deliberately by the scheduled ci-latest workflow, not by random
+    # PRs. `uv sync` writes the environment to ./.venv, which we add to PATH below so the
+    # remaining steps invoke the pinned tools without a `uv run` prefix.
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --extra gui --locked
+    - name: Activate environment
+      run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
     - name: Check changelog updated (PR only)
       if: github.event_name == 'pull_request'
       env:
@@ -48,14 +55,12 @@ jobs:
       run: python scripts/check_feature_doc_matrix.py
     - name: Check file sizes (<800 lines)
       run: python scripts/check_file_sizes.py
+    - name: Check GUI test placement (no nicegui imports outside tests/gui)
+      run: python scripts/check_gui_test_placement.py
     - name: Build sdist and wheel
-      run: python -m build
+      run: uv build
     - name: Basedpyright (strict — any type error fails)
       run: basedpyright
-    - name: Install uv
-      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
-      with:
-        version: ">=0.11.19"
     - name: Audit dependencies for CVEs and check licenses
       run: |
         python scripts/audit_dependencies.py
@@ -74,18 +79,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+      with:
+        version: ">=0.11.19"
     - name: Set up Python
       uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: '3.12'
-        cache: 'pip'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest
-        pip install -e ".[gui]"
+    # Locked install (see static-analysis). dev+gui gives pytest, pytest-asyncio, and nicegui.
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --extra gui --locked
     - name: GUI smoke tests
-      run: python -m pytest tests/gui/ -v --tb=short
+      run: uv run --no-sync pytest tests/gui/ -v --tb=short
 
   matrix-prep:
     runs-on: ubuntu-latest
@@ -99,7 +105,10 @@ jobs:
           REF: ${{ github.ref }}
         run: |
           if [[ "$EVENT_NAME" == "push" && "$REF" == "refs/heads/main" ]]; then
-            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.10"},{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"macos-latest","python-version":"3.10"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.12"},{"os":"macos-latest","python-version":"3.13"},{"os":"windows-latest","python-version":"3.10"},{"os":"windows-latest","python-version":"3.11"},{"os":"windows-latest","python-version":"3.12"},{"os":"windows-latest","python-version":"3.13"}]}'
+            # Full Python coverage on ubuntu (cheap); macOS (billed 10x) and Windows
+            # (billed 2x) only on the oldest + newest supported Python to bound cost
+            # while still catching version- and OS-specific breakage.
+            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.10"},{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"macos-latest","python-version":"3.10"},{"os":"macos-latest","python-version":"3.13"},{"os":"windows-latest","python-version":"3.10"},{"os":"windows-latest","python-version":"3.13"}]}'
           else
             CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.12"}]}'
           fi

@@ -8,7 +8,6 @@ focused modules (``settings_builder``, ``exam_loaders``, ``exam_transforms``,
 from __future__ import annotations
 
 import logging
-import traceback
 from pathlib import Path
 
 from stl import mesh as stl_mesh
@@ -221,10 +220,12 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 return True, f"PSD = {output['psd']:.2f} mGy"
         finally:
             _calc_logger.removeHandler(_collector)
-    except Exception:
-        err = traceback.format_exc()
-        print(err)
-        return False, err
+    except Exception as exc:
+        # Do not surface raw tracebacks to the UI — they can leak internal
+        # filesystem paths and exception details. Log the type for diagnosis
+        # (full traceback via logger) and return a generic message.
+        _gui_logger.exception("Dose calculation failed: %s", exc.__class__.__name__)
+        return False, "Calculation failed. See the application log for details."
 
 
 def event_count_from_state(state: AppState) -> int:

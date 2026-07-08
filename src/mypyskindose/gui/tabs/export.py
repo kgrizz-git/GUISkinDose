@@ -16,6 +16,7 @@ from nicegui import run, ui
 from mypyskindose.export import MissingExportDependencyError
 
 from ..components import HelpButton
+from ..concurrency import require_io_result
 from ..export_source import build_export_source_from_gui
 from ..figures import make_dosemap_html, make_dosemap_png
 from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _is_native_mode, _tabular_input_meta
@@ -143,7 +144,7 @@ def build(ctx: PageContext) -> None:
                 # Stash the optional title on the source builder via state-free arg:
                 # collect happens inside the worker; pass title through a closure.
                 try:
-                    content = await run.io_bound(_rich_report_bytes_titled, fmt, title)
+                    content = require_io_result(await run.io_bound(_rich_report_bytes_titled, fmt, title))
                 except MissingExportDependencyError as exc:
                     _show_missing_dependency_dialog(exc)
                     return
@@ -247,7 +248,7 @@ def build(ctx: PageContext) -> None:
                 save_path = await _get_save_path(default_name, "html")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
-                content = await run.io_bound(make_dosemap_html)
+                content = require_io_result(await run.io_bound(make_dosemap_html))
                 if not content:
                     ui.notify("Failed to generate HTML", type="negative")
                     return
@@ -274,7 +275,7 @@ def build(ctx: PageContext) -> None:
                 save_path = await _get_save_path(default_name, "png")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
-                content = await run.io_bound(make_dosemap_png)
+                content = require_io_result(await run.io_bound(make_dosemap_png))
                 if not content:
                     ui.notify("Failed to generate PNG (requires kaleido)", type="negative")
                     return
