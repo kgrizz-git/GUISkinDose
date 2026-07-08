@@ -7,7 +7,7 @@ full declared dependency set (all extras), pinned by `uv.lock`:
 uv sync --all-extras
 ```
 
-Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-06-26).
+Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-07).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -39,6 +39,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | click | 8.4.1 | BSD-3-Clause | Changes, https://click.palletsprojects.com/page/changes/ |
 | comm | 0.2.3 | BSD-3-Clause | Homepage, https://github.com/ipython/comm |
 | contourpy | 1.3.3 | BSD-3-Clause | Homepage, https://github.com/contourpy/contourpy |
+| coverage | 7.15.0 | Apache-2.0 | https://github.com/coveragepy/coveragepy |
 | cycler | 0.12.1 | BSD-3-Clause | homepage, https://matplotlib.org/cycler/ |
 | cyclonedx-python-lib | 11.8.0 | Apache-2.0 | Bug Tracker, https://github.com/CycloneDX/cyclonedx-python-lib/issues |
 | debugpy | 1.8.21 | MIT | https://aka.ms/debugpy |
@@ -48,7 +49,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | docutils | 0.22.4 | BSD-3-Clause, GPL-2.0-or-later | Changelog, https://docutils.sourceforge.io/HISTORY.html |
 | et_xmlfile | 2.0.0 | MIT | https://foss.heptapod.net/openpyxl/et_xmlfile |
 | executing | 2.2.1 | MIT | https://github.com/alexmojaki/executing |
-| fastapi | 0.127.1 | MIT | Homepage, https://github.com/fastapi/fastapi |
+| fastapi | 0.139.0 | MIT | Homepage, https://github.com/fastapi/fastapi |
 | fastjsonschema | 2.21.2 | BSD-3-Clause | https://github.com/horejsek/python-fastjsonschema |
 | filelock | 3.29.0 | MIT | Documentation, https://py-filelock.readthedocs.io |
 | fonttools | 4.62.1 | MIT | http://github.com/fonttools/fonttools |
@@ -102,7 +103,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nbsphinx | 0.9.8 | MIT | Documentation, https://nbsphinx.readthedocs.io/ |
 | nest-asyncio2 | 1.7.2 | BSD-3-Clause | https://github.com/Chaoses-Ib/nest-asyncio2 |
 | networkx | 3.6.1 | BSD-3-Clause | Homepage, https://networkx.org/ |
-| nicegui | 3.12.1 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
+| nicegui | 3.14.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
 | nodeenv | 1.10.0 | BSD-3-Clause | https://github.com/ekalinin/nodeenv |
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | numpy | 2.3.5 | BSD-3-Clause | homepage, https://numpy.org |
@@ -178,7 +179,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | sphinxcontrib-qthelp | 2.0.0 | BSD-3-Clause | Changelog, https://github.com/sphinx-doc/sphinxcontrib-qthelp/blob/master/CHANGES.rst |
 | sphinxcontrib-serializinghtml | 2.0.0 | BSD-3-Clause | Changelog, https://github.com/sphinx-doc/sphinxcontrib-serializinghtml/blob/master/CHANGES.rst |
 | stack-data | 0.6.3 | MIT | http://github.com/alexmojaki/stack_data |
-| starlette | 0.50.0 | BSD-3-Clause | Homepage, https://github.com/Kludex/starlette |
+| starlette | 1.3.1 | BSD-3-Clause | Homepage, https://github.com/Kludex/starlette |
 | stevedore | 5.8.0 | Apache-2.0 | Homepage, https://docs.openstack.org/stevedore |
 | text-unidecode | 1.3 | UNKNOWN, GPL-2.0-or-later, GPL-2.0-or-later | https://github.com/kmike/text-unidecode/ |
 | tifffile | 2026.3.3 | BSD-3-Clause | https://www.cgohlke.com |

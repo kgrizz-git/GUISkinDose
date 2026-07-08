@@ -214,7 +214,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
     screens: list[ScreenBounds] = []
     if sys.platform == "darwin":
         try:
-            import AppKit
+            import AppKit  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pyobjc)
 
             ns_screen = cast(Any, getattr(AppKit, "NSScreen"))
             main_screen = ns_screen.mainScreen()
@@ -232,7 +232,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
             dprint("GUI", f"AppKit screen detection failed ({exc}); trying webview/Tkinter fallbacks.")
     try:
         if not screens:
-            import webview
+            import webview  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pywebview)
 
             screens = [
                 ScreenBounds(
@@ -264,7 +264,7 @@ def _detect_macos_visible_primary_bounds() -> ScreenBounds | None:
     if sys.platform != "darwin":
         return None
     try:
-        import AppKit
+        import AppKit  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pyobjc)
 
         ns_screen = cast(Any, getattr(AppKit, "NSScreen"))
         screens = list(ns_screen.screens())

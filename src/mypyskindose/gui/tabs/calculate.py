@@ -10,7 +10,7 @@ from __future__ import annotations
 from nicegui import run, ui
 
 from ..components import HelpButton
-from ..concurrency import operation_guard
+from ..concurrency import operation_guard, require_io_result
 from ..helpers import below_floor_event_count, run_calculation
 from ..page_context import PageContext
 from ..summary_formatters import format_patient_offsets
@@ -228,7 +228,7 @@ def build(ctx: PageContext) -> None:
                     calc_status_label.set_text(label)
 
                 try:
-                    ok, msg = await run.io_bound(run_calculation, state, progress_cb)
+                    ok, msg = require_io_result(await run.io_bound(run_calculation, state, progress_cb))
                 finally:
                     calc_progress.set_value(1.0)
                     calc_btn.enable()

@@ -14,7 +14,7 @@ from nicegui import run, ui
 
 from mypyskindose.settings.normalization_settings import normalize_manufacturer_key
 
-from ..concurrency import operation_guard
+from ..concurrency import operation_guard, require_io_result
 from ..helpers import apply_exam_transforms, load_tabular
 from ..page_context import PageContext
 from ..state import reset_results, state
@@ -60,7 +60,7 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
                     if not proceed:
                         return
                     state.input_sheet_name = sheet_select.value or 0
-                    ok, msg = await run.io_bound(load_tabular, state.file_path, state, True)
+                    ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
                     if ok:
                         upload_status.set_text(f"SUCCESS: {msg.upper()}")
                         reset_results()

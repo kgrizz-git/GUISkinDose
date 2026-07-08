@@ -1,0 +1,46 @@
+# Deliberately probes the LATEST released versions of dependencies (ignoring uv.lock).
+#
+# The main `ci` workflow installs from uv.lock so PR/main runs are reproducible and a
+# random upstream release cannot turn an unrelated PR red. The trade-off is that upstream
+# breakage (e.g. a new nicegui tightening its type annotations) would otherwise go
+# unnoticed until someone bumps the lock. This workflow closes that gap: it runs on a
+# weekly schedule (and on demand) with an unpinned install, so a breaking upstream release
+# surfaces here as a failed scheduled run — GitHub emails the workflow's last editor — and
+# you can then fix the code and bump uv.lock deliberately (`uv lock --upgrade`), rather
+# than being ambushed mid-PR.
+
+name: ci-latest
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-latest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  latest-deps:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      with:
+        python-version: '3.12'
+    - name: Install latest dependencies (unpinned — NOT from uv.lock)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,gui]"
+    - name: Show resolved versions
+      run: pip freeze
+    - name: Basedpyright (strict — catches type-stub drift)
+      run: basedpyright
+    - name: GUI test placement (core suite collects with nicegui blocked)
+      run: python scripts/check_gui_test_placement.py
+    - name: Full test suite (core + gui) against latest deps
+      run: python -m pytest -q

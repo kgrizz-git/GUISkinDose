@@ -31,8 +31,11 @@ def ad():
 
 def test_main_uv_audit_success(ad):
     """Test standard uv audit path returning success."""
+    # Pin CI falsy so the local --frozen branch is exercised deterministically
+    # regardless of whether the test itself runs under CI (which sets CI=true).
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
+         patch.dict(os.environ, {"CI": ""}), \
          patch("subprocess.run") as mock_run:
          
         def mock_run_impl(cmd, *args, **kwargs):
@@ -148,8 +151,10 @@ def test_main_uv_too_old_fallback(ad):
 
 def test_main_flag_filtering(ad):
     """Test filtering of pip-audit specific flags in the uv path."""
+    # Pin CI falsy so the --frozen assertion holds under CI (which sets CI=true).
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
+         patch.dict(os.environ, {"CI": ""}), \
          patch("subprocess.run") as mock_run, \
          patch("sys.argv", ["audit_dependencies.py", "--desc", "on", "--format", "json", "--ignore", "GHSA-1"]):
          

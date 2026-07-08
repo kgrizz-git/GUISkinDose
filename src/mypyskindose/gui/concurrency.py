@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Iterator, TypeVar
 
 from nicegui import ui
 
@@ -25,6 +25,22 @@ from .state import state
 
 # Serialises concurrent upload handlers (see module docstring).
 upload_lock = asyncio.Lock()
+
+_T = TypeVar("_T")
+
+
+def require_io_result(result: _T | None) -> _T:
+    """Unwrap the result of a NiceGUI ``run.io_bound`` / ``run.cpu_bound`` call.
+
+    NiceGUI returns ``None`` — instead of the callback's value — when the call is
+    cancelled or the app is shutting down, so every awaited result is typed ``T | None``.
+    Handlers that need the value use this to fail fast with a clear error instead of an
+    opaque ``TypeError`` when unpacking/using ``None``. (NiceGUI 4.0 will raise
+    ``CancelledError`` directly, at which point this helper can be removed.)
+    """
+    if result is None:
+        raise RuntimeError("Background task was cancelled or the application is shutting down.")
+    return result
 
 
 @contextmanager

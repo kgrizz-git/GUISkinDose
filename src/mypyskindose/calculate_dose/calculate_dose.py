@@ -107,11 +107,6 @@ def calculate_dose(
 
     total_number_of_events = len(normalized_data)
 
-    if settings.plot.notebook_mode:
-        from tqdm import tqdm_notebook as pbar
-    else:
-        from tqdm import tqdm as pbar
-
     output_template = _build_output_template(
         total_number_of_events=total_number_of_events, dose_map_size=len(patient.r)
     )
@@ -128,13 +123,35 @@ def calculate_dose(
         pad=pad,
         back_scatter_interpolation=back_scatter_interpolation,
         output=output_template,
-        pbar=pbar(total=total_number_of_events, leave=False, desc="calculating skindose"),
+        pbar=_make_progress_bar(settings.plot.notebook_mode, total_number_of_events),
         corrections_db=settings.corrections_db_path,
         settings=settings,
         exam_id=exam_id,
     )
 
     return patient, output
+
+
+def _make_progress_bar(notebook_mode: bool, total: int):
+    """Return a tqdm progress bar for the dose loop.
+
+    When ``notebook_mode`` is set (e.g. the bundled ``settings_example.json``) but the
+    Jupyter widget backend is unavailable — as in headless CLI/export runs without
+    ``ipywidgets`` installed — ``tqdm_notebook`` raises ``ImportError: IProgress not
+    found`` at construction. Fall back to the plain text bar so dose calculation never
+    crashes purely over progress-bar rendering.
+    """
+    kwargs = {"total": total, "leave": False, "desc": "calculating skindose"}
+    if notebook_mode:
+        try:
+            from tqdm import tqdm_notebook
+
+            return tqdm_notebook(**kwargs)
+        except ImportError:
+            pass
+    from tqdm import tqdm
+
+    return tqdm(**kwargs)
 
 
 def _build_output_template(total_number_of_events: int, dose_map_size: int) -> Dict[str, Any]:

@@ -87,7 +87,7 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
         "docx": ("Word Documents (*.docx)",),
     }
     try:
-        import webview
+        import webview  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pywebview)
         # FileDialog.SAVE (pywebview >=5); fall back to the deprecated SAVE_DIALOG
         # constant on older releases.
         save_dialog = webview.FileDialog.SAVE if hasattr(webview, "FileDialog") else webview.SAVE_DIALOG

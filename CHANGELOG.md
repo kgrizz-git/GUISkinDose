@@ -12,6 +12,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Local CI gate and reproducible CI installs** (2026-07-07) — `scripts/ci_local.py` runs the CI
+  static checks plus the tests in one command before pushing; its core-test step blocks `nicegui`
+  (via `scripts/check_gui_test_placement.py --run`) to reproduce the no-`gui`-extra core matrix that
+  local envs otherwise hide. The `ci` workflow's `static-analysis` and `gui-smoke` jobs now install
+  the exact versions pinned in `uv.lock` (`uv sync --locked`), so PR/main runs are reproducible and
+  an upstream release cannot turn an unrelated PR red. A new scheduled `ci-latest` workflow installs
+  the **latest** dependencies weekly (and on demand) to surface upstream breakage deliberately. CI
+  runner minutes reduced: the main-push matrix drops the priciest jobs (macOS/Windows only on the
+  oldest+newest Python; 12 → 8 jobs) and `gitleaks` no longer double-scans PR-branch pushes.
+
 - **Documentation/help harness checks** (2026-07-04) — added JSON metadata and CI/pre-commit checks for GUI help
   coverage (`dev-docs/help_registry.json`, `scripts/check_help_registry.py`), high-risk UI copy and glossary
   terminology (`dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `scripts/check_ui_copy.py`), feature-to-doc
@@ -40,6 +50,41 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **GUI handlers now guard NiceGUI `run.io_bound` results against `None`** (2026-07-07) —
+  NiceGUI 3.14 types `run.io_bound`/`run.cpu_bound` as returning `T | None` (it returns `None`
+  when a call is cancelled or the app is shutting down), which surfaced 12 strict type errors in
+  the upload/calculate/export/import-preview handlers that unpacked or used the result directly.
+  Added `gui.concurrency.require_io_result()` to unwrap these results (failing fast with a clear
+  message on the interim `None`) and applied it at every call site. Also suppressed the optional
+  gui-native `AppKit`/`webview` import diagnostics (runtime-guarded, not installed in core/CI type
+  environments). Restores a green `basedpyright` static-analysis job.
+- **Backup cleanup no longer deletes in-progress backups with an old mtime** (2026-07-07) —
+  `scripts/cleanup_old_backups.py` `_is_stale_backup` now treats pending staged/unstaged changes
+  as an absolute keep signal before the commit-age *mtime fallback*. Previously a `backups/*.bak`
+  file with local changes but a filesystem mtime older than `HEAD~max_commits` could be removed,
+  causing backup data loss. Added `test_cleanup_keeps_*_with_old_mtime` regression tests.
+- **GUI calculation failures no longer leak tracebacks to the UI** (2026-07-07) —
+  `gui/helpers.run_calculation` now logs the exception (type + traceback via the logger) and
+  returns a generic "Calculation failed. See the application log for details." message instead of
+  returning `traceback.format_exc()`, which could expose internal filesystem paths and exception
+  details in the interface.
+- **Dose calculation no longer crashes over the notebook progress bar** (2026-07-07) —
+  `calculate_dose` selected `tqdm_notebook` whenever `settings.plot.notebook_mode` was set (true in
+  the bundled `settings_example.json`), which raises `ImportError: IProgress not found` in headless
+  CLI/export runs without `ipywidgets`. It now falls back to the plain `tqdm` bar
+  (`_make_progress_bar`) when the notebook widget backend is unavailable.
+- **GUI unit tests relocated so core CI passes without the `gui` extra** (2026-07-07) —
+  several GUI tests imported `nicegui` (directly or via `mypyskindose.gui.*`) at load but lived under
+  `tests/unittests/`, which the core build matrix runs with `--ignore=tests/gui` and no `gui` extra,
+  breaking collection/execution on every platform. Moved `test_gui_helpers`,
+  `test_gui_operation_guard`, `test_gui_results_refresh`, and the `TestGui*` classes from
+  `test_multi_exam.py` into `tests/gui/`. Added `scripts/check_gui_test_placement.py` (wired into CI
+  and the pre-push hook) which blocks `nicegui` and collects the core suite, so a misplaced GUI test
+  is caught locally in seconds instead of only in full CI.
+- **`test_audit_dependencies` `--frozen` assertions made CI-independent** (2026-07-07) —
+  `audit_dependencies.py` emits `--locked` when `CI` is set and `--frozen` otherwise; two tests
+  asserted `--frozen` without pinning `CI`, so they passed locally but failed under GitHub Actions.
+  They now pin `CI` to a falsy value.
 - **Spreadsheet formula injection on Data tab exports** (2026-07-07) — RDSR and tabular
   event-table exports (CSV/XLSX/TXT on the Data tab, plus rich-report XLSX cells) now
   prefix attacker-controlled strings that start with formula trigger characters (`=`, `+`,

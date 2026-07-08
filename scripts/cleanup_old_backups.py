@@ -112,6 +112,13 @@ def _is_stale_backup(
             return True, f"last touched {commits_since} commits ago"
         return False, f"last touched {commits_since} commits ago"
 
+    # commits_since is None when the file has pending staged/unstaged changes
+    # (see _commits_since_last_git_touch). Never age such a file out via the
+    # mtime fallback — an old mtime on an in-progress backup would otherwise
+    # cause data loss. Treat pending changes as an absolute keep signal.
+    if _has_pending_changes(repo_root, relative):
+        return False, "has pending staged or unstaged changes"
+
     threshold_ts = _threshold_commit_timestamp(repo_root, max_commits)
     if threshold_ts is None:
         return False, "untracked and repository has fewer than max_commits + 1 commits"
