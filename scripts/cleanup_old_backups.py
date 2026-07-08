@@ -72,7 +72,7 @@ def _commits_since_last_git_touch(repo_root: Path, relative_path: str) -> int | 
 
     # A path can be tracked in HEAD yet have a brand-new working-tree file at it
     # (recreated and/or force-staged). Stale commit history would then wrongly age
-    # out the fresh file, so defer to the mtime fallback when changes are pending.
+    # out the fresh file, so we keep the file outright when changes are pending.
     if _has_pending_changes(repo_root, relative_path):
         return None
 
