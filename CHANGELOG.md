@@ -50,6 +50,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **GUI tests are now isolated from each other (fixes flaky `gui-smoke`)** (2026-07-08) —
+  the geometry-slider "no render loop" tests failed intermittently in CI (and deterministically
+  under some run orders) because GUI tests shared the module-level `AppState` singleton and left
+  repeating `ui.timer`s (data/settings/results refresh loops) running after their page was torn
+  down; the leaked timers starved the debounce/render timing later tests assert on. Added an
+  autouse fixture in `tests/gui/conftest.py` that cancels all live NiceGUI timers and resets the
+  `state` singleton in place before and after every GUI test.
 - **Multi-exam plot-suppression fixture no longer breaks on Python 3.10** (2026-07-08) —
   `tests/unittests/test_multi_exam.py::_suppress_plots` patched via the string
   `"mypyskindose.analyze_data.create_geometry_plot"`, but the package re-exports a function
