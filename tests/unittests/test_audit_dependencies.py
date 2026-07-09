@@ -247,10 +247,11 @@ def test_main_uv_audit_exec_filenotfound_fallback(ad):
 
 
 def test_load_audit_ignores_reads_pyproject(ad):
-    """The tracked nltk suppression in [tool.uv.audit] should be discoverable."""
+    """[tool.uv.audit] ignore lists should load as a flat list of advisory IDs."""
     pytest.importorskip("tomllib")
     ids = ad._load_audit_ignores(ROOT)
-    assert "GHSA-p4gq-832x-fm9v" in ids
+    assert isinstance(ids, list)
+    assert all(isinstance(v, str) for v in ids)
 
 
 def test_pip_audit_fallback_mirrors_tracked_ignores(ad):

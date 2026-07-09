@@ -10,6 +10,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pre-push dependency audit** (2026-07-09) — bumped transitive dev-only `nltk` 3.9.4 → 3.10.0
+  (`uv.lock`) to clear PYSEC-2026-2078 / CVE-2026-54293 and removed the now-obsolete
+  `[tool.uv.audit] ignore-until-fixed` entries for the prior nltk path-traversal advisory.
+
 ### Added
 
 - **Local CI gate and reproducible CI installs** (2026-07-07) — `scripts/ci_local.py` runs the CI

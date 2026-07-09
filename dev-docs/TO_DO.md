@@ -91,10 +91,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
 - [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
-  Drop `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` (aliases for the same nltk 3.9.4 advisory) once
-  `nltk` ships a fix (currently dev-only via `safety`, no
-  in-project use of `nltk.data.load()`). `ignore-until-fixed` should auto-fail the audit again
-  when a patched `nltk` release appears in the lockfile.
+  (2026-07-09: bumped transitive dev-only `nltk` 3.9.4 → 3.10.0 and removed
+  `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.)
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.
