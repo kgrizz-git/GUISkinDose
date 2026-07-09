@@ -141,8 +141,8 @@ jobs:
     - name: Test with pytest
       run: |
         coverage run -m pytest --ignore=tests/gui
-    - name: Coverage threshold (≥55%)
-      run: coverage report --include="src/mypyskindose/*" --fail-under=55
+    - name: Coverage threshold (≥60%)
+      run: coverage report --include="src/mypyskindose/*" --fail-under=60
     - name: Upload coverage to codecov
       run: |
         codecov
