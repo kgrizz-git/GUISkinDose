@@ -65,6 +65,16 @@ def test_remove_temp_upload_deletes_one():
     assert temp_files._uploaded_temp_files == [second]
 
 
+def test_remove_temp_upload_ignores_unregistered_source_file(tmp_path: Path):
+    source = tmp_path / "source.dcm"
+    source.write_bytes(b"not a temp upload")
+
+    temp_files.remove_temp_upload(source)
+
+    assert source.exists(), "unregistered source files must not be deleted"
+    assert temp_files._uploaded_temp_files == []
+
+
 def test_clear_all_temp_uploads_removes_everything():
     first = _make_temp()
     second = _make_temp()
