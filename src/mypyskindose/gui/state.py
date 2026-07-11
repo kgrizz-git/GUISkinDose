@@ -94,6 +94,10 @@ class AppState:
     # nearest grid point for out-of-range events). Surfaced in the GUI after a run.
     calc_warnings: list[str] = field(default_factory=list)
 
+    # Per-exam dose map visibility (multi-exam Results)
+    visible_exam_dosemaps: list[bool] = field(default_factory=list)
+    aggregate_subset_exams: list[bool] = field(default_factory=list)
+
     # ── Geometry preview figures (Plotly Figure objects) ───────────────────
     setup_fig: Any | None = None
     event_fig: Any | None = None
@@ -125,6 +129,8 @@ def reset_results() -> None:
     state.psd = None
     state.air_kerma = None
     state.dosemap_fig = None
+    state.visible_exam_dosemaps = []
+    state.aggregate_subset_exams = []
 
 
 def is_ready_to_calculate() -> bool:

@@ -15,8 +15,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
   accordion in the GUI.
 - [ ] **Geometry tab per-exam event selection** — let users select or step through events per exam; account for
   Plotly trace count and large datasets.
-- [ ] **Dose map per-exam checkbox controls** — show cumulative dose or selected exam subsets and update PSD/dose
-  map live.
+- [x] **Dose map per-exam checkbox controls** — show cumulative dose or selected exam subsets and update PSD/dose
+  map live. See [DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md).
 - [ ] **Fix download/export HTML button** — verify related export paths while touching this area.
 
 ## Product Backlog

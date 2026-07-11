@@ -115,6 +115,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md) | **Completed** — Multi-exam Results: inline per-exam dose map checkboxes + aggregate subset selector with live PSD recompute. |
 | [plans/archive/README.md](plans/archive/README.md) | Index of completed or superseded execution plans. |
 | [plans/archive/RICH_EXPORT_SPEC.md](plans/archive/RICH_EXPORT_SPEC.md) | **Superseded** — original Rich Report Export draft spec; folded into the master `plans/RICH_EXPORT_PLAN.md`. |
 | [plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md) | **Superseded** — brainstorming and high-level ideas folded into [plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md) plus deferred `TO_DO.md` items. |

@@ -10,11 +10,31 @@ from __future__ import annotations
 
 import traceback
 
+from typing import Any
+
 from mypyskindose.debug import dprint
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
 from .helpers import build_settings
 from .state import state
+
+
+def extract_exam_dose_map(exam_output: Any) -> tuple[Any, dict[str, Any]]:
+    """Extract (dose_map_array, patient_dict) from a PySkinDoseOutput.
+
+    Returns the dose-map as a zero-padded ndarray sized to the patient skin
+    cells, and the patient dict suitable for ``make_dosemap_fig``.
+    """
+    import numpy as np
+
+    output_dict = exam_output.to_dict()
+    patient_for_fig = output_dict["patient"]
+    patient_data = patient_for_fig["patient"]
+    num_cells = len(patient_data["patient_skin_cells"]["x"])
+    dose_map = np.zeros(num_cells)
+    for idx, dose in output_dict["dose_map"]:
+        dose_map[int(idx)] = dose
+    return dose_map, patient_for_fig
 
 
 def make_geometry_fig(
