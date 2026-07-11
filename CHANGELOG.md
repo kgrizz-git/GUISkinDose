@@ -12,6 +12,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **GUI loaded-file removal** (2026-07-11) — removing a bundled example from the GUI's loaded
+  exams list no longer deletes the source `.dcm` fixture from the repository; only registered
+  temporary upload copies are unlinked.
 - **Pre-push dependency audit** (2026-07-09) — bumped transitive dev-only `nltk` 3.9.4 → 3.10.0
   (`uv.lock`) to clear PYSEC-2026-2078 / CVE-2026-54293 and removed the now-obsolete
   `[tool.uv.audit] ignore-until-fixed` entries for the prior nltk path-traversal advisory.

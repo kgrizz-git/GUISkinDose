@@ -26,14 +26,13 @@ def register_temp_upload(path: Path) -> None:
 
 def remove_temp_upload(path: Path) -> None:
     """Delete one specific temp file and deregister it (called when user removes an exam)."""
+    if path not in _uploaded_temp_files:
+        return
     try:
         path.unlink(missing_ok=True)
     except OSError as exc:
         dprint("GUI", f"Could not delete temp upload {path}: {exc}")
-    try:
-        _uploaded_temp_files.remove(path)
-    except ValueError:
-        pass
+    _uploaded_temp_files.remove(path)
 
 
 def clear_all_temp_uploads() -> None:
