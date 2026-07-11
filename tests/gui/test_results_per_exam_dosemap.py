@@ -63,7 +63,7 @@ def test_state_reset_clears_checkbox_state():
     state.aggregate_subset_exams = [False, True]
 
     # Patch the singleton temporarily or test via reset_results
-    import mypyskindose.gui.state as state_mod
+    from mypyskindose.gui import state as state_mod
 
     old_state = state_mod.state
     try:
