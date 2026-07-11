@@ -18,6 +18,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Multi-exam per-exam dose map controls** (2026-07-11) — added inline interactive 3D dose map checkboxes per exam row inside the multi-exam Results accordion (`results.py`), capped at 5 simultaneous inline maps via a memory guard (`MAX_INLINE_MAPS = 5`). Added a visible exams subset selector card allowing users to select specific exams (`All` / `None` / per-exam checkboxes) to dynamically recompute aggregate Peak Skin Dose and update the aggregate dose map plot for the selected subset.
+
 - **Local CI gate and reproducible CI installs** (2026-07-07) — `scripts/ci_local.py` runs the CI
   static checks plus the tests in one command before pushing; its core-test step blocks `nicegui`
   (via `scripts/check_gui_test_placement.py --run`) to reproduce the no-`gui`-extra core matrix that
