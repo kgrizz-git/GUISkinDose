@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import numpy as np
+import pytest
 
 from mypyskindose.gui.figures import extract_exam_dose_map
 from mypyskindose.gui.state import AppState, reset_results
@@ -44,7 +45,7 @@ def test_subset_aggregate_computation():
 
     assert combined is not None
     assert np.allclose(combined, [5.0, 10.0, 3.0, 7.0])
-    assert subset_psd == 10.0
+    assert subset_psd == pytest.approx(10.0)
 
 
 def test_subset_psd():
@@ -54,7 +55,7 @@ def test_subset_psd():
 
     combined, subset_psd = compute_subset_aggregate(res, [True, True])
     assert combined is not None
-    assert subset_psd == 40.0
+    assert subset_psd == pytest.approx(40.0)
 
 
 def test_state_reset_clears_checkbox_state():
