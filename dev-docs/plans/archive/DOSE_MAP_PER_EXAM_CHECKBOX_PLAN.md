@@ -2,9 +2,9 @@
 
 > **TO_DO item:** "Dose map per-exam checkbox controls — show cumulative dose or selected exam subsets and update PSD/dose map live."
 >
-> **Prerequisite context:** [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) Parts I–V shipped. Multi-exam Results accordion + popup single-exam dose map dialog shipped (`results.py:176-316`). This plan adds inline per-exam dose map visibility controls.
+> **Prerequisite context:** [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](../MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) Parts I–V shipped. Multi-exam Results accordion + popup single-exam dose map dialog shipped (`results.py:176-316`). This plan adds inline per-exam dose map visibility controls.
 
-**Plan status:** Draft — 2026-07-11.
+**Plan status:** Completed — 2026-07-11.
 
 ---
 

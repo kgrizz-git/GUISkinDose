@@ -83,6 +83,23 @@
         "CHANGELOG.md"
       ],
       "help": ["docs/source/gui_help/export_workflow.md"]
+    },
+    "dose_map_per_exam": {
+      "status": "shipped",
+      "code": [
+        "src/mypyskindose/gui/tabs/results.py",
+        "src/mypyskindose/gui/figures.py"
+      ],
+      "tests": [
+        "tests/gui/test_results_per_exam_dosemap.py"
+      ],
+      "docs": [
+        "dev-docs/FEATURE_INVENTORY.md",
+        "AGENTS.md"
+      ],
+      "help": [
+        "docs/source/gui_help/results_workflow.md"
+      ]
     }
   }
 }

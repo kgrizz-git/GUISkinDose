@@ -441,6 +441,13 @@ Falls back to `settings_example.json` if nothing provided.
 
 Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_event_index`), `offset_handlers.py` (`apply_patient_offset_slider_tick`, `per_exam_offsets_version`), `summary_formatters.py`.
 
+### 9.5 Multi-exam GUI Results tab controls
+
+| Surface | Behavior |
+|---------|----------|
+| **Per-exam Accordion** | Expand exam row to view Peak Skin Dose, Air Kerma, and event count; **Show inline dose map** checkbox renders a 500px 3D dose map inline (max 5 simultaneous inline maps); **Show Dose Map** button opens full-screen dialog |
+| **Visible Exams Subset Selector** | Checkboxes per exam + **All** / **None** buttons to filter which exams contribute to the Aggregate Dose Map and recompute aggregate Peak Skin Dose on the subset |
+
 ---
 
 ## 10. CLI (`main.py`)

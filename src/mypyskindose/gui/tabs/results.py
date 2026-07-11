@@ -7,11 +7,13 @@ Refactor plan Phase 3.3a. All three refreshers are timer-driven and read only
 
 from __future__ import annotations
 
+from typing import Any
+
 from nicegui import ui
 
 from ..components import HelpButton
-from ..constants import COLORSCALES
-from ..figures import make_dosemap_fig
+from ..constants import COLORSCALES, MAX_INLINE_MAPS
+from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..page_context import PageContext
 from ..state import state
 
@@ -19,6 +21,30 @@ from ..state import state
 def multi_exam_results_ui_stale(last_run_id: int | None, calc_run_id: int) -> bool:
     """True when the per-exam Results accordion must be rebuilt."""
     return last_run_id != calc_run_id
+
+
+def can_show_more_inline(visible: list[bool]) -> bool:
+    """Return True if another inline dose map can be shown without exceeding MAX_INLINE_MAPS."""
+    return sum(visible) < MAX_INLINE_MAPS
+
+
+def compute_subset_aggregate(res: Any, selected_mask: list[bool]) -> tuple[Any, float]:
+    """Sum dose maps for selected exams. Returns (combined_ndarray, subset_psd) or (None, 0.0)."""
+    import numpy as np
+
+    selected_indices = [i for i, s in enumerate(selected_mask) if s]
+    if not selected_indices:
+        return None, 0.0
+    first_output = res.exams[selected_indices[0]].output.to_dict()
+    patient_data = first_output["patient"]["patient"]
+    num_cells = len(patient_data["patient_skin_cells"]["x"])
+    combined = np.zeros(num_cells)
+    for idx in selected_indices:
+        dose_map, _ = extract_exam_dose_map(res.exams[idx].output)
+        assert len(dose_map) == num_cells, "All exams in subset must have matching skin cell counts"
+        combined += dose_map
+    subset_psd = float(np.max(combined)) if combined.size else 0.0
+    return combined, subset_psd
 
 
 def build(ctx: PageContext) -> None:
@@ -160,6 +186,14 @@ def build(ctx: PageContext) -> None:
             ui.label("Per-Exam Results").classes("text-xl font-bold tracking-tight q-mt-md")
             multi_exam_accordion_container = ui.column().classes("w-full gap-2")
 
+            # Visible exams subset selector
+            with ui.card().classes("w-full modern-card q-pa-md"):
+                ui.label("Visible exams in aggregate plot").classes("text-subtitle2 q-mb-sm")
+                with ui.row().classes("w-full items-center gap-2"):
+                    ui.button("All", on_click=lambda: _set_subset_all(True)).classes("modern-btn size-sm")
+                    ui.button("None", on_click=lambda: _set_subset_all(False)).classes("modern-btn size-sm")
+                subset_checkboxes_container = ui.column().classes("w-full gap-1")
+
             # Aggregate dose map
             ui.label("Aggregate Dose Map").classes("text-xl font-bold tracking-tight q-mt-xl")
             with ui.card().classes("w-full modern-card p-0 overflow-hidden relative"):
@@ -169,11 +203,35 @@ def build(ctx: PageContext) -> None:
 
             last_rendered_run_id: int | None = None
             last_agg_map_run_id: int | None = None
+            subset_checkboxes: list[Any] = []
 
             def _clear_multi_exam_accordion() -> None:
                 multi_exam_accordion_container.clear()
 
             def _build_multi_exam_accordion(res) -> None:
+                _inline_rendered: dict[int, bool] = {}
+
+                def _render_inline_dosemap(exam_idx: int, container: Any) -> None:
+                    if res is None or exam_idx >= len(res.exams):
+                        return
+                    with container:
+                        spinner = ui.spinner(size="md", color="indigo").classes("absolute-center")
+                        plot = ui.plotly({}).classes("w-full").style("height:500px")
+                    _inline_rendered[exam_idx] = True
+
+                    async def _build(
+                        _idx=exam_idx, _plot=plot, _spinner=spinner
+                    ):
+                        from nicegui import run
+
+                        dose_map, patient_dict = extract_exam_dose_map(res.exams[_idx].output)
+                        fig = await run.io_bound(make_dosemap_fig, dose_map, patient_dict)
+                        _spinner.visible = False
+                        if fig:
+                            _plot.update_figure(fig)
+
+                    ui.timer(0.1, _build, once=True)
+
                 with multi_exam_accordion_container:
                     for i, exam_res in enumerate(res.exams):
                         study_str = f"Exam {i + 1}"
@@ -214,6 +272,48 @@ def build(ctx: PageContext) -> None:
                                     else:
                                         btn.on_click(lambda _e, idx=i: _show_exam_dosemap_dialog(idx))
 
+                            with ui.row().classes("w-full items-center gap-2 q-mt-sm"):
+                                inline_cb = ui.checkbox(
+                                    "Show inline dose map",
+                                    value=state.visible_exam_dosemaps[i] if i < len(state.visible_exam_dosemaps) else False,
+                                ).classes("text-sm")
+
+                            inline_plot_container = ui.column().classes("w-full")
+                            inline_plot_container.visible = bool(inline_cb.value)
+
+                            def _on_inline_toggle(
+                                e,
+                                idx=i,
+                                cb=inline_cb,
+                                container=inline_plot_container,
+                            ):
+                                is_on = bool(e.value)
+                                state.visible_exam_dosemaps[idx] = is_on
+                                container.visible = is_on
+
+                                if not is_on:
+                                    container.clear()
+                                    _inline_rendered.pop(idx, None)
+                                    return
+
+                                visible_count = sum(state.visible_exam_dosemaps)
+                                if visible_count > MAX_INLINE_MAPS:
+                                    cb.set_value(False)
+                                    state.visible_exam_dosemaps[idx] = False
+                                    container.visible = False
+                                    ui.notify(
+                                        f"Max {MAX_INLINE_MAPS} inline maps simultaneously. Close another first.",
+                                        color="warning",
+                                    )
+                                    return
+
+                                if not _inline_rendered.get(idx):
+                                    _render_inline_dosemap(idx, container)
+
+                            inline_cb.on_value_change(_on_inline_toggle)
+                            if inline_cb.value and not _inline_rendered.get(i):
+                                _render_inline_dosemap(i, inline_plot_container)
+
             def _refresh_aggregate_dosemap(res) -> None:
                 nonlocal last_agg_map_run_id
                 if not res.exams:
@@ -235,12 +335,66 @@ def build(ctx: PageContext) -> None:
                     state.dosemap_fig = fig
                 last_agg_map_run_id = state.calc_run_id
 
+            def _refresh_aggregate_dosemap_subset() -> None:
+                nonlocal last_agg_map_run_id
+                res = state.multi_exam_result
+                if res is None or not res.exams:
+                    agg_dosemap_plot.update_figure({})
+                    last_agg_map_run_id = state.calc_run_id
+                    return
+                if all(state.aggregate_subset_exams):
+                    _refresh_aggregate_dosemap(res)
+                    agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
+                else:
+                    agg_dosemap_spinner.visible = True
+                    combined, subset_psd = compute_subset_aggregate(res, state.aggregate_subset_exams)
+                    if combined is None:
+                        agg_dosemap_spinner.visible = False
+                        agg_dosemap_plot.update_figure({})
+                        agg_psd_metric.set_text("— mGy (no exams selected)")
+                        last_agg_map_run_id = state.calc_run_id
+                        return
+                    first_exam_patient = res.exams[0].output.to_dict()["patient"]
+                    fig = make_dosemap_fig(explicit_dose_map=combined, explicit_patient=first_exam_patient)
+                    agg_dosemap_spinner.visible = False
+                    if fig:
+                        agg_dosemap_plot.update_figure(fig)
+                        state.dosemap_fig = fig
+                    agg_psd_metric.set_text(f"{subset_psd:.2f} mGy (subset)")
+                    last_agg_map_run_id = state.calc_run_id
+
+            def _on_subset_toggle(e: Any, idx: int) -> None:
+                if idx < len(state.aggregate_subset_exams):
+                    state.aggregate_subset_exams[idx] = bool(e.value)
+                _refresh_aggregate_dosemap_subset()
+
+            def _set_subset_all(value: bool) -> None:
+                for i in range(len(state.aggregate_subset_exams)):
+                    state.aggregate_subset_exams[i] = value
+                for cb in subset_checkboxes:
+                    cb.set_value(value)
+                _refresh_aggregate_dosemap_subset()
+
+            def _build_subset_checkboxes(res: Any) -> None:
+                subset_checkboxes.clear()
+                subset_checkboxes_container.clear()
+                with subset_checkboxes_container:
+                    for i, _exam_res in enumerate(res.exams):
+                        cb = ui.checkbox(
+                            f"Exam {i + 1}",
+                            value=state.aggregate_subset_exams[i] if i < len(state.aggregate_subset_exams) else True,
+                        ).classes("text-sm")
+                        cb.on_value_change(lambda e, idx=i: _on_subset_toggle(e, idx))
+                        subset_checkboxes.append(cb)
+
             def _refresh_multi_exam_results():
                 nonlocal last_rendered_run_id, last_agg_map_run_id
 
                 if not state.is_multi_exam or not state.calculation_done or state.multi_exam_result is None:
                     if last_rendered_run_id is not None:
                         _clear_multi_exam_accordion()
+                        subset_checkboxes_container.clear()
+                        subset_checkboxes.clear()
                         last_rendered_run_id = None
                         last_agg_map_run_id = None
                         agg_dosemap_plot.update_figure({})
@@ -263,33 +417,29 @@ def build(ctx: PageContext) -> None:
                 agg_totals_metric.set_text("  ·  ".join(parts))
 
                 if multi_exam_results_ui_stale(last_rendered_run_id, state.calc_run_id):
+                    n = len(res.exams)
+                    if len(state.visible_exam_dosemaps) != n:
+                        state.visible_exam_dosemaps = [False] * n
+                    if len(state.aggregate_subset_exams) != n:
+                        state.aggregate_subset_exams = [True] * n
                     _clear_multi_exam_accordion()
                     _build_multi_exam_accordion(res)
+                    _build_subset_checkboxes(res)
                     last_rendered_run_id = state.calc_run_id
 
                 if multi_exam_results_ui_stale(last_agg_map_run_id, state.calc_run_id):
-                    _refresh_aggregate_dosemap(res)
+                    _refresh_aggregate_dosemap_subset()
 
             ui.timer(1.5, _refresh_multi_exam_results)
 
             def _show_exam_dosemap_dialog(exam_idx: int):
                 """Show a per-exam dose map in a modal dialog (reads latest calc output)."""
-                import numpy as np
-
                 res = state.multi_exam_result
                 if res is None or exam_idx < 0 or exam_idx >= len(res.exams):
                     ui.notify("No dose map for this exam", color="warning")
                     return
 
-                exam_output = res.exams[exam_idx].output
-                output_dict = exam_output.to_dict()
-                patient_for_fig = output_dict["patient"]
-
-                patient_data = patient_for_fig["patient"]
-                num_cells = len(patient_data["patient_skin_cells"]["x"])
-                dose_map_array = np.zeros(num_cells)
-                for idx, dose in output_dict["dose_map"]:
-                    dose_map_array[int(idx)] = dose
+                dose_map_array, patient_for_fig = extract_exam_dose_map(res.exams[exam_idx].output)
 
                 with ui.dialog() as dialog, ui.card().classes("modern-card w-[80vw] max-w-[1200px] p-6"):
                     with ui.row().classes("w-full justify-between items-center mb-4"):
