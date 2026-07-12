@@ -110,6 +110,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
 | [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
+| [plans/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md](plans/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md) | Geometry tab event-stepper UX (chevron prev/next + context caption) on the existing per-exam preview-slice foundation; trace-count guard documentation. |
 
 ## Archived plans (`plans/archive/`)
 
