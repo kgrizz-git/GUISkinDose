@@ -4,10 +4,9 @@
 >
 > **Prerequisite context:** [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) Parts I–V shipped. The Geometry tab already has an exam selector (`geometry.py:188-192`), a bare `ui.number` event input (`geometry.py:395-397`), preview slicing (`geometry_preview.py:78-95`), event clamping (`geometry_preview.py:161-178`), three preview-mode buttons, a composite toggle (`geometry.py:198-201`), and a composite-only live-pause threshold (30 events pause / 100 spinner) at `geometry_preview.py:181-199` and `geometry.py:497-500`. **Single-exam and non-composite `plot_procedure` are currently unguarded** (see Part III). This plan is a UX/polish layer on that foundation — no new architecture, plus a small behavior extension to the trace-count guard.
 >
-> **Index-number convention:** Storage and `geom_event_input` value remain 0-based (Python convention; matches `NO_PATIENT_INTERSECTION_WARNING_PLAN.md` line 124: *"Indices are 0-based (Python convention); consumers converting to user-facing labels should add 1"*). The user-facing caption is **1-based** (`"Event 6 / 23"` = the 6th of 23 events).
+> **Index-number convention:** Internal dataframe indexing and 0-based Python functions remain 0-based (`0 .. N-1`). The user-facing `geom_event_input` value and stepper caption are **1-based** (`1 .. N`, where `1` is the first event of `N`). Consumers feeding `make_geometry_fig` convert the 1-based input value to a 0-based internal index via `max(0, int(geom_event_input.value or 1) - 1)`.
 
-**Plan status:** Draft — 2026-07-11. Revised 2026-07-12 in response to assessment v1 (`tmp/assessment_geometry_per_exam_event_selection_20260711_224635.md`): corrected `prev_btn`/`next_btn` bug (#1), extended trace-count guard to single-exam `plot_procedure` (#2 → option (a)), 1-based caption (#3), line citations (#4), `on_value_change` wording (#5), set_value/on_value_change assumption (#6), `.mark` on context label (#7), explicit disabled init (#8), `set_enabled` on both widgets (#9 — opposite of assessment's recommendation, which was itself wrong), dropped vague AGENTS.md item (#10).
-Re-revised 2026-07-12 in response to assessment v2 (`tmp/assessment_geometry_per_exam_event_selection_20260712_145542.md`): extended the rename's blast radius to include `helpers.py:47` import + `helpers.py:79` `__all__` and the existing tests at `test_gui_multi_exam_geometry_offsets.py:15, 234-252` (v2 #1, critical); added a `preview_procedure()` change so the explicit **Full procedure** click renders the figure even when paused (v2 #2, high); removed stray "/ 11 events" typo in Phase 1 test (v2 #3). **v2 #4 partially accepted:** the plan keeps `len(state.rdsr_df)` in the single-exam branch because the new function is state-aware (takes `state` as a parameter for unit-testability — the existing `test_composite_live_preview_paused_*` pattern) and importing `event_count_from_state` from `helpers.py` would introduce a cycle (`helpers` imports from `geometry_preview`, not vice versa). The comment block above the branch now documents this reasoning so a future editor doesn't "simplify" to the singleton `event_count()`, which would break the tests.
+**Plan status:** Draft — 2026-07-11. Revised 2026-07-12 (v5) incorporating Option A (1-based user input box), offset-slider reactive re-render clarification, and regression-fix CHANGELOG framing.
 
 ---
 
@@ -74,6 +73,8 @@ def event_context_caption(
     ``current_index`` is the 0-based internal value; the returned label adds 1
     so "Event 1 / N" means the first of N events. Matches the convention in
     NO_PATIENT_INTERSECTION_WARNING_PLAN.md line 124 (0-based storage, 1-based UX).
+    Checks ``composite`` to choose between the "Exam #N" and "all exams" suffixes
+    when ``state.is_multi_exam`` is true.
 
     Examples (current_index shown in parens, output in quotes):
       single-exam, 23 events, current_index 5   -> "Event 6 / 23"
@@ -103,7 +104,7 @@ def event_context_caption(
 **Why module-level:** mirrors `clamp_geometry_event_index` and `preview_event_count`, which are already module-level and tested via `test_gui_multi_exam_geometry_offsets.py` and `test_gui_part_v_formatters.py`.
 
 **Edge cases:**
-- `count == 0` (empty slice): caption returns `"Event 0 / 0"` as a placeholder — the stepper is also disabled (Part II-B), so this state is only visible before the user loads data.
+- `count == 0` (empty slice): caption returns `"Event 0 / 0"` as a placeholder. Note that at initial `build()` time the caption starts as `""`; the `"Event 0 / 0"` placeholder string is produced on the next refresh hook (`_update_event_context`) when `count <= 0` before data is loaded. The stepper is also disabled (Part II-B).
 - `current_index` out of range: `clamp_geometry_event_index` clamps it to `[0, count-1]`; the caption displays the clamped-position-plus-one, never the raw input. The stepper's `_step` uses the same clamp.
 - The `count <= 0` short-circuit returns early so we never render `"Event 1 / 0"` for an empty slice (which would look like a bug).
 
@@ -142,8 +143,8 @@ with ui.row().classes("w-full items-end gap-4"):
                 count = _preview_slice_count()
                 if count <= 0:
                     return
-                current = int(geom_event_input.value or 0)
-                new_idx = min(max(0, current + delta), count - 1)
+                current = int(geom_event_input.value or 1)
+                new_idx = min(max(1, current + delta), max(1, count))
                 geom_event_input.set_value(new_idx)
                 # If NiceGUI fires on_value_change on programmatic set_value,
                 # the handler below re-schedules a render. Either path is fine:
@@ -157,7 +158,7 @@ with ui.row().classes("w-full items-end gap-4"):
                 on_click=lambda: _step(-1),
             ).props("flat dense round size=sm color=grey-5").mark("geom-event-prev")
             geom_event_input = ui.number(
-                value=0, min=0, step=1
+                value=1, min=1, step=1
             ).classes("w-20 mono-text").props("dense flat").mark("geom-event-input")
             next_btn = ui.button(
                 icon="chevron_right",
@@ -186,17 +187,14 @@ def _preview_slice_count() -> int:
 
 **Why chevron icons:** plotly already provides a slider for `plot_procedure` mode; we're not duplicating that. The stepper is for single-event mode only and is a light control — two icon buttons + the existing number input. Matches the icon-button pattern already used for the "Reset to auto-detected" / "Reset patient offset to 0" buttons (`geometry.py:258, 386`).
 
-**Variable binding (assessment fixes #1, #7, #9):** `prev_btn`, `next_btn`, `geom_event_input`, and `geom_event_context` are all assigned to closure-local names so `_set_stepper_enabled` and `_update_event_context` (Part II-B) can reference them directly — no NameError. `.mark(...)` is additionally present on every element so the optional automated GUI tests (Phase 2) can select them via NiceGUI's element query/registry without holding Python references across the `user` fixture's sandbox. `_value_change_fires_on_set_value` is a module-level `bool` resolved at import time (see Part II-C).
+**Closure scope & variable binding:** `prev_btn`, `next_btn`, `geom_event_input`, and `geom_event_context` are assigned to local variables inside `build()`. The helper closures (`_step`, `_set_stepper_enabled`, `_update_event_context`, `_render_event_preview_debounced`, `_preview_slice_count`) are also defined inside `build()` after the widgets are created so they can reference these elements directly along with `last_preview_mode`. Every element includes a `.mark(...)` annotation so automated GUI tests can select them by element identifier.
 
 ### II-B. Disable stepper when not in `plot_event` mode
 
-Add a helper to toggle the three stepper widgets together. **Use `set_enabled` on all three widgets** — `ui.number` inherits `set_enabled` from the NiceGUI base element (verified `python -c "from nicegui import ui; print('set_enabled' in dir(ui.number()))"` → `True`). The earlier draft used raw `_props["disable"]` on the number input; that's an unnecessary asymmetry a future editor might "correct" in the wrong direction. Assessment #9 claimed the raw `_props` access was the only option — **that claim is itself wrong**; this plan uses the symmetric API.
+Add a helper to toggle the three stepper widgets together. Use `set_enabled` on all three widgets cleanly (`ui.number` inherits `set_enabled` from the NiceGUI base element):
 
 ```python
 def _set_stepper_enabled(enabled: bool) -> None:
-    # All three widgets inherit set_enabled from the NiceGUI base element;
-    # do not use raw _props["disable"] access (assessment #9 was wrong to
-    # recommend it — see plan revision note at the top).
     geom_event_input.set_enabled(enabled)
     prev_btn.set_enabled(enabled)
     next_btn.set_enabled(enabled)
@@ -218,8 +216,8 @@ Wire the enable/disable into the three existing preview button handlers and `_re
 - `preview_setup()` → `_set_stepper_enabled(False)` after setting `last_preview_mode = "plot_setup"`.
 - `preview_event()` → `_set_stepper_enabled(True)` after setting `last_preview_mode = "plot_event"`.
 - `preview_procedure()` → `_set_stepper_enabled(False)`.
-- `_refresh_geometry_sliders()` → call `_set_stepper_enabled(last_preview_mode == "plot_event")` and `_update_event_context()` after the existing `clamp_geometry_event_index` block.
-- **At the very end of `build()`** (after `ctx.refresh_geometry_tab = _refresh_geometry_sliders` and `_update_preview_caption()` at `geometry.py:712`), add an explicit `_set_stepper_enabled(False)` call so the stepper starts disabled regardless of any future change to call ordering. Without this, the stepper defaults to enabled (NiceGUI's default) while `last_preview_mode` is `None`, which contradicts manual matrix row S1. Assessment #8 caught this: `build()` ends at `_update_preview_caption()`, **not** `_refresh_geometry_sliders()`, so the wiring inside `_refresh_geometry_sliders` does not run at build time.
+- `_refresh_geometry_sliders()` → call `_set_stepper_enabled(last_preview_mode == "plot_event")` and `_update_event_context()` after the existing `clamp_geometry_event_index` block. Note: because `_refresh_geometry_sliders()` auto-initializes `last_preview_mode = "plot_event"` on first Geometry tab open after data load (`geometry.py:684-692`), this automatically enables the stepper when the tab first renders single-event mode. It is disabled again if the user switches to Setup view or Full procedure.
+- **At the very end of `build()`** (after `ctx.refresh_geometry_tab = _refresh_geometry_sliders` and `_update_preview_caption()` at `geometry.py:712`), add an explicit `_set_stepper_enabled(False)` call so the stepper starts disabled at initial empty-tab render before data is loaded.
 
 ### II-C. Render on step (debounced) and `on_value_change` handler
 
@@ -236,7 +234,7 @@ def _render_event_preview_debounced() -> None:
 
 Add the same `_update_event_context()` call to `_on_exam_select_change` and `_on_composite_toggle` so the caption re-labels when the user switches exam or toggles composite.
 
-**New `on_value_change` handler (assessment #5 — this is NOT pre-existing):** the current `geom_event_input` at `geometry.py:395-397` has no `on_value_change`. We add a new handler so typing into the box re-displays the caption live (even before render) and schedules a debounced render. The handler must be wired after the input element is created, in the same place as the other `on_value_change` wirings for `patient_sliders` (`geometry.py:534-535`) and `table_sliders` (`geometry.py:383`):
+**New `on_value_change` handler:** the current `geom_event_input` at `geometry.py:395-397` has no `on_value_change`. We add a new handler so typing into the box re-displays the caption live (even before render) and schedules a debounced render. Wire the handler after the input element is created, in the same place as the other `on_value_change` wirings for `patient_sliders` (`geometry.py:534-535`) and `table_sliders` (`geometry.py:383`):
 
 ```python
 def _on_event_input_change(_e) -> None:
@@ -248,26 +246,25 @@ def _on_event_input_change(_e) -> None:
 geom_event_input.on_value_change(_on_event_input_change)
 ```
 
-**`set_value` / `on_value_change` assumption (assessment #6):** NiceGUI's `on_value_change` typically fires only on **user input**, not on programmatic `set_value`. The `_step` closure in Part II-A guards with `_value_change_fires_on_set_value` (resolved at import time, see below) so both code paths schedule a render exactly once. If the assumption turns out wrong for the installed NiceGUI version, the toggle flips and `_step` skips its own `_render_event_preview_debounced()` call; the `on_value_change` handler takes over. Either way the existing debounce collapses multiple same-window schedules to one render, so a future regression in this heuristic degrades to one redundant schedule, not a broken preview.
+**`set_value` / `on_value_change` assumption:** NiceGUI's `on_value_change` typically fires only on user input, not on programmatic `set_value`. The `_step` closure in Part II-A guards with `_value_change_fires_on_set_value` so both code paths schedule a render exactly once. Note that `_value_change_fires_on_set_value` is a performance optimization (avoiding duplicate debounced schedule), not a correctness gate: because the debounce window collapses multiple schedules inside the same timer window, any duplicate schedule is safely masked.
 
 ```python
 # Resolved once at import. NiceGUI's on_value_change for ui.number fires
-# on user input by convention, not on programmatic set_value. If that ever
-# changes, update this flag and _step (Part II-A) will skip its own
-# _render_event_preview_debounced() call to avoid double-scheduling.
+# on user input by convention, not on programmatic set_value.
+# Performance guard: if True, _step skips its own debounced render call so only
+# on_value_change schedules the debounced render. Either path is safe under debounce.
 _value_change_fires_on_set_value: bool = False
 ```
 
-Place this module-level constant near the top of `geometry.py` (e.g., after the `_GE_WARNING_TOKEN` constant at `geometry.py:56`). The decision is documented in code so a future NiceGUI upgrade doesn't silently introduce a double-debounce.
+Place this module-level constant near the top of `geometry.py` (e.g., after the `_GE_WARNING_TOKEN` constant at `geometry.py:56`).
 
-### II-D. File-size check
+> **Implementation verification check:** Before starting Phase 2, empirically verify NiceGUI's `on_value_change` behavior on programmatic `set_value` and note that `_refresh_geometry_sliders` calls `set_value` twice during auto-init. Our debounce timer safely collapses any resulting schedules to a single render.
+
+### II-D. File-size check and helper placement
 
 - `geometry.py` is at **712 lines**. Cap is **800**, no whitelist (`scripts/check_file_sizes.py`).
-- Net additions:
-  - Stepper card body: +~15 lines (replaces 4-line card).
-  - `_set_stepper_enabled`, `_update_event_context`, `_render_event_preview_debounced`, `_preview_slice_count`, `_step`: +~30 lines.
-  - Enable/disable hooks inside the three preview_* handlers + `_refresh_geometry_sliders`: +~6 lines.
-- Estimated total: **~760 lines**. Still under 800. If a reviewer is nervous, the four small closures can move to `geometry_preview.py` (which is 199 lines and has headroom); but doing so would require passing the closures' widget references in (PageContext field or similar), which is more churn than value for 30 lines. Prefer to keep them in `geometry.py` next to the other preview closures.
+- Net additions if all closures stay in `geometry.py`: ~78 lines added post-implementation, putting `geometry.py` around ~790 lines.
+- **Primary architecture decision:** To keep `geometry.py` comfortably under the 800-line cap (~775 lines or fewer) and make helper functions independently unit-testable, extract `_preview_slice_count`, `_set_stepper_enabled`, `_update_event_context`, and `_render_event_preview_debounced` into `geometry_preview.py` accepting widget references if `geometry.py` exceeds 775 lines during drafting.
 
 `geometry_preview.py` is at **199 lines**; adding `event_context_caption` puts it at ~219. Well within cap.
 
@@ -324,16 +321,10 @@ def procedure_live_preview_paused(
             state, active_exam_index=active_idx, composite=composite
         )
     else:
-        # Single-exam branch: read len(state.rdsr_df) directly (mirrors
-        # event_count() at state.py:140-143) instead of calling the singleton
-        # event_count(). Reason: this function takes `state` as a parameter
-        # (matches preview_event_count's signature) so unit tests can pass a
-        # fixture state; importing event_count_from_state from helpers would
-        # introduce a cycle (helpers.py imports from geometry_preview).
-        # geometry.py:500 uses the singleton event_count() for the spinner
-        # check because it lives in the tab module; this is the state-aware
-        # counterpart.
-        count = len(state.rdsr_df) if state.rdsr_df is not None else 0
+        # Single-exam branch: call preview_event_count(state), which lives in
+        # this same module (geometry_preview.py:98) and returns len(state.rdsr_df)
+        # for single-exam slices without introducing import cycles.
+        count = preview_event_count(state)
     return count > pause_threshold
 ```
 
@@ -353,24 +344,24 @@ def live_preview_allowed() -> bool:
     return True
 ```
 
-**Also update the import at `geometry.py:22`** (replace `composite_live_preview_paused` → `procedure_live_preview_paused` from the `..geometry_preview` import block).
+**Also update the import in `geometry.py` inside the `from ..geometry_preview import` block (currently lines 19–27)** (replace `composite_live_preview_paused` → `procedure_live_preview_paused`).
 
-### Rename blast radius (assessment v2 #1 — critical)
+### Rename blast radius
 
-The definition lives in `geometry_preview.py:181`, but the name is **re-exported through `helpers.py`**:
+The definition lives in `geometry_preview.py:181`, but the name is re-exported through `helpers.py`:
 
-| File | Line | Change |
-|------|------|--------|
+| File | Line / Block | Change |
+|------|--------------|--------|
 | `src/mypyskindose/gui/geometry_preview.py` | 181 | rename definition |
-| `src/mypyskindose/gui/tabs/geometry.py` | 22 | update import |
+| `src/mypyskindose/gui/tabs/geometry.py` | 19–27 (`from ..geometry_preview import` block) | update import |
 | `src/mypyskindose/gui/tabs/geometry.py` | 443 | update call site in `live_preview_allowed` |
 | `src/mypyskindose/gui/helpers.py` | 47 | update the `from .geometry_preview import … composite_live_preview_paused,` line |
 | `src/mypyskindose/gui/helpers.py` | 79 | update the entry inside `__all__ = […]` |
 | `tests/unittests/test_gui_multi_exam_geometry_offsets.py` | 15 | update import |
-| `tests/unittests/test_gui_multi_exam_geometry_offsets.py` | 234 | rename test fn `test_composite_live_preview_paused_only_for_large_composite_procedure` → `test_procedure_live_preview_paused_only_for_large_composite_procedure` (or split into the six new tests below) |
+| `tests/unittests/test_gui_multi_exam_geometry_offsets.py` | 234 | rename test fn `test_composite_live_preview_paused_only_for_large_composite_procedure` → `test_procedure_live_preview_paused_only_for_large_composite_procedure` (or split into the new tests below) |
 | `tests/unittests/test_gui_multi_exam_geometry_offsets.py` | 240, 246, 252 | update each call site |
 
-`geometry.py:28`'s `from ..helpers import …` does not reference this name (it's imported directly from `geometry_preview` at `geometry.py:21`), so `helpers.py`'s copy is currently an **unused** re-export. **But** if `helpers.py:47` keeps importing the old name while the definition is renamed, `helpers.py`'s module-load-time `ImportError` cascades to every tab and breaks the GUI at startup. **Run `grep -rn composite_live_preview_paused src tests` before committing the rename** to confirm there are no other call sites the grep above missed.
+`geometry.py:28`'s `from ..helpers import …` does not reference this name (it's imported directly from `geometry_preview` at lines 19–27). Note that `helpers.py:47` and `79` must be updated in lockstep so module-load does not fail with an `ImportError`. Run `grep -rn composite_live_preview_paused src tests` before committing the rename to confirm there are no remaining call sites.
 
 ### Why `preview_procedure()` must render even when paused (assessment v2 #2 — critical)
 
@@ -405,10 +396,11 @@ async def preview_procedure() -> None:
     live_preview_requested = True
     # Always render the once-per-click figure; the embedded Plotly procedure-mode
     # slider lets the user scrub client-side without re-rendering. The live-pause
-    # guard (procedure_live_preview_paused) only gates the reactive update paths
-    # (_schedule_debounced_render -> _render_preview) so a slider drag on a
-    # >30-event procedure does not thrash. The badge still shows so the user knows
-    # live-refresh is paused; the figure underneath it is the cached click-render.
+    # guard (procedure_live_preview_paused) only gates reactive update paths
+    # (_schedule_debounced_render -> _render_preview) so offset-slider adjustments
+    # on a >30-event procedure do not trigger expensive live re-renders. The badge
+    # still shows so the user knows live-refresh is paused; the figure underneath
+    # it is the cached click-render.
     await _render_preview("plot_procedure")
     _update_paused_badge()
 ```
@@ -421,9 +413,9 @@ async def preview_procedure() -> None:
 |------|--------------------------------------|---------------------|
 | `plot_setup` | No pause, click renders | No change — pause does not apply |
 | `plot_event` | No pause, click renders | No change — pause does not apply |
-| `plot_procedure`, ≤30 events | Click renders, no badge, slider-drag re-renders live | No change |
-| `plot_procedure`, >30 events, **composite** | Click renders **no figure** (only PAUSED badge) (today's quiet limitation) | **New behavior** — click renders the figure (with badge shown), slider-drag reactive refresh is paused; user uses embedded Plotly slider |
-| `plot_procedure`, >30 events, **single-exam or non-composite multi-exam** | Never paused — click renders, slider-drag re-renders live | **New pause** — click renders the figure (with badge shown), slider-drag reactive refresh paused; user uses embedded Plotly slider |
+| `plot_procedure`, ≤30 events | Click renders, no badge, offset-slider edits re-render live | No change |
+| `plot_procedure`, >30 events, **composite** | Click renders **no figure** (only PAUSED badge) (today's quiet limitation) | **Regression fix & new behavior** — click renders the figure (with badge shown), offset-slider reactive refresh is paused; user navigates events via embedded client-side Plotly slider |
+| `plot_procedure`, >30 events, **single-exam or non-composite multi-exam** | Never paused — click renders, offset-slider edits re-render live | **New pause** — click renders the figure (with badge shown), offset-slider reactive refresh paused; user navigates events via embedded client-side Plotly slider |
 
 The "**only the reactive refresh is throttled**" promise now holds for every `plot_procedure` path, including the >30-event case. This fixes the quiet pre-existing composite limitation as a side effect of the plan's central goal.
 
@@ -440,20 +432,19 @@ Add above `procedure_live_preview_paused`:
 ```python
 # ────────────────────────────────────────────────────────────────────
 # Performance guard: this is the "Plotly trace count" mitigation
-# referenced in dev-docs/plans/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md
-# and the TO_DO item "account for Plotly trace count and large datasets".
+# referenced in dev-docs/TO_DO.md ("account for Plotly trace count and
+# large datasets").
 #
 # Scope: ALL plot_procedure live previews — single-exam, multi-exam
 # non-composite, and multi-exam composite. In every one of these paths
 # make_geometry_fig -> plot_procedure builds one trace set per event
 # (plot_procedure.py:65-84), so the figure grows linearly with the
-# active slice's event count. The earlier `composite_live_preview_paused`
-# was composite-only; this generalized version (plan revision 2026-07-12)
-# closes that gap.
+# active slice's event count.
 #
-# We pause live preview above 30 events so a slider drag does not thrash
-# the plot, and show the large-data spinner above 100 (geometry.py:498
-# for composite count, geometry.py:500 for single-exam event_count).
+# We pause live preview above 30 events so patient/table offset-slider
+# adjustments while in Full-procedure mode do not trigger expensive
+# reactive re-renders, and show the large-data spinner above 100
+# (geometry.py:498 for composite count, geometry.py:500 for single-exam).
 #
 # plot_event mode does NOT need this guard — exactly one event per render,
 # so the trace set is small and fixed regardless of slice size.
@@ -466,13 +457,14 @@ Add above `procedure_live_preview_paused`:
 
 ### Tests
 
-Add the following six cases to `tests/unittests/test_gui_multi_exam_geometry_offsets.py` (or a new `test_gui_part_vi_procedure_pause.py` if the file grows past 800 lines):
+Add the following seven cases to `tests/unittests/test_gui_multi_exam_geometry_offsets.py` (or a new `test_gui_part_vi_procedure_pause.py` if the file grows past 800 lines):
 
 - `test_procedure_pause_single_exam_large` — 1 exam, 50 events, `last_preview_mode="plot_procedure"` → `procedure_live_preview_paused(...)` returns `True`.
 - `test_procedure_pause_single_exam_small` — 1 exam, 10 events → returns `False`.
 - `test_procedure_pause_multi_exam_non_composite_large` — multi-exam, non-composite, active slice has 40 events → returns `True`.
 - `test_procedure_pause_multi_exam_composite_large` — multi-exam, composite, 51 events → returns `True` (regression case for the pre-rename behavior).
 - `test_procedure_pause_plot_event_never_pauses` — `last_preview_mode="plot_event"`, any count → returns `False`.
+- `test_procedure_pause_plot_setup_never_pauses` — `last_preview_mode="plot_setup"`, 100 events → returns `False`.
 - `test_procedure_pause_threshold_param` — passing `pause_threshold=15` overrides the default 30.
 
 If the existing `test_composite_live_preview_paused_*` tests (in the same file, after the rename) refer to the old name, update them to call `procedure_live_preview_paused` and add a deprecation/redirect note if you prefer to keep the old function as a thin wrapper — but a clean rename is simpler given the small call-site count (only `geometry.py:live_preview_allowed` and a few tests).
@@ -514,7 +506,7 @@ This mirrors the file to `src/mypyskindose/gui/help/geometry_workflow.md`. Do **
 
 **Files:** `src/mypyskindose/gui/geometry_preview.py`, `tests/unittests/test_gui_multi_exam_geometry_offsets.py` (or `test_gui_part_v_formatters.py`).
 
-**Tests** (pure logic, no NiceGUI; caption is 1-based — assessment #3):
+**Tests** (pure logic, no NiceGUI; caption is 1-based):
 - `test_event_context_caption_single_exam` — 1 exam, 23 events, `current_index=5` (0-based) → `"Event 6 / 23"` (1-based display of the 6th event).
 - `test_event_context_caption_multi_exam_active` — 2 exams, active 1 (i.e. Exam #2), slice has 7 events, `current_index=3` → `"Event 4 / 7 · Exam #2"`.
 - `test_event_context_caption_multi_exam_composite` — composite, 51 events, `current_index=9` → `"Event 10 / 51 · all exams"`.
@@ -529,9 +521,9 @@ Fixture pattern matches the existing tests in `test_gui_multi_exam_geometry_offs
 
 **File:** `src/mypyskindose/gui/tabs/geometry.py`.
 
-**Acceptance (manual; the `user` fixture can't easily drive `ui.number` typing, and the existing `tests/gui/test_gui_flows.py` focuses on tab headings):
-- `python -m mypyskindose --mode gui`, load one example RDSR.
-- Click **Single event** → the stepper enables; caption reads `"Event <middle> / <count>"`.
+**Acceptance (manual):**
+- `python -m mypyskindose --mode gui`, load one example RDSR and open the Geometry tab.
+- Confirm auto-init automatically sets single-event mode and enables the stepper; caption reads `"Event <middle> / <count>"`.
 - Click <kbd>chevron_right</kbd> a handful of times → event index increments, plot re-renders (debounced).
 - Click <kbd>chevron_left</kbd> down to 0 → stays at 0 (no error toast).
 - Click **Full procedure** → stepper disables; caption persists.
@@ -540,34 +532,35 @@ Fixture pattern matches the existing tests in `test_gui_multi_exam_geometry_offs
 - Toggle **Show all exams in preview** → caption suffix becomes `"· all exams"`.
 - `geom_event_input` typing still debounces.
 
-**Automated (optional but recommended):
+**Automated (optional but recommended):**
 - Extend `tests/gui/test_gui_flows.py` or add `tests/gui/test_geometry_stepper.py` with the `user` fixture:
   - Load the example via `ctx.load_example` or by calling the upload handler directly.
-  - Assert `geom_event_context` text contains `"/ <count>"` after clicking **Single event**.
+  - Assert `geom_event_context` text contains `"/ <count>"` after clicking **Single event** or auto-init.
   - Assert the number input's `disable` prop toggles true/false across the three mode buttons.
   - Assert chevron clicks increment the number input's value (or the context label updates).
+  - Add a focused unit/GUI assertion pinning `_value_change_fires_on_set_value` behavior against the installed NiceGUI version.
 
 ### Phase 3 — Extend and document the trace-count guard; render-on-click
 
 **Files:**
 - `src/mypyskindose/gui/geometry_preview.py` — rename `composite_live_preview_paused` → `procedure_live_preview_paused`, generalize to all `plot_procedure` paths, add the comment block (see Part III).
-- `src/mypyskindose/gui/tabs/geometry.py` — update import (line 22) and call site in `live_preview_allowed` (line 443); **also un-gate `preview_procedure()`** so the explicit click renders even when paused (see Part III, "Why `preview_procedure()` must render even when paused" + the "render on explicit click (option (a))" snippet).
-- `src/mypyskindose/gui/helpers.py` — update the import at line 47 and the `__all__` entry at line 79 (assessment v2 #1, critical). Without this, `helpers.py` raises `ImportError` at module load and the GUI breaks.
-- `tests/unittests/test_gui_multi_exam_geometry_offsets.py` — update the import at line 15, rename `test_composite_live_preview_paused_only_for_large_composite_procedure` (line 234) → `test_procedure_live_preview_paused_*`, update call sites at lines 240/246/252, and add the six new tests from Part III's Tests section.
+- `src/mypyskindose/gui/tabs/geometry.py` — update import inside the `from ..geometry_preview import` block and call site in `live_preview_allowed`; also un-gate `preview_procedure()` so the explicit click renders even when paused.
+- `src/mypyskindose/gui/helpers.py` — update the import at line 47 and the `__all__` entry at line 79. Without this, `helpers.py` raises `ImportError` at module load and the GUI breaks.
+- `tests/unittests/test_gui_multi_exam_geometry_offsets.py` — update the import at line 15, rename `test_composite_live_preview_paused_only_for_large_composite_procedure` → `test_procedure_live_preview_paused_*`, update call sites at lines 240/246/252, and add the seven new tests from Part III's Tests section.
 
-This phase **is a behavior change**, not just documentation. See Part III for the full spec, call site, tests, and `preview_procedure()` change. **Run `grep -rn composite_live_preview_paused src tests` before committing** to confirm no remaining references.
+This phase is a behavior change, not just documentation. See Part III for the full spec, call site, tests, and `preview_procedure()` change. Run `grep -rn composite_live_preview_paused src tests` before committing to confirm no remaining references.
 
 **Acceptance:**
-- Unit tests from Part III all green: single-exam large (>30) pauses; single-exam small (≤30) does not; multi-exam non-composite large pauses; multi-exam composite large pauses (regression case); `plot_event` mode never pauses; `pause_threshold` kwarg override works.
-- Existing `test_composite_live_preview_paused_*` tests passed-through or split into the six new tests; renaming is mechanical per the blast-radius table.
+- Unit tests from Part III all green: single-exam large (>30) pauses; single-exam small (≤30) does not; multi-exam non-composite large pauses; multi-exam composite large pauses; `plot_event` mode never pauses; `plot_setup` mode never pauses; `pause_threshold` kwarg override works.
+- Existing `test_composite_live_preview_paused_*` tests passed-through or split into the new tests; renaming is mechanical per the blast-radius table.
 - `grep -rn composite_live_preview_paused src tests` returns zero hits (the rename is complete).
 - `ruff check`; `basedpyright`; `python scripts/check_file_sizes.py` still under the 800 line cap for both `geometry_preview.py` and `geometry.py`.
-- **Manual matrix row M2** (new): load a single exam with >30 events, click **Full procedure** — confirm the figure renders AND the PAUSED badge appears. Drag the embedded Plotly procedure-mode slider — confirm the slider steps through the cached figure (no re-render thrash; **the figure has been rendered once on click, so a slider is available**). Repeat with a ≤30-event RDSR — confirm the figure renders, no PAUSED badge, slider-drag re-renders live.
-- `CHANGELOG.md` gets a user-visible behavior-change line under a feature heading (suggested wording in § Exit criteria).
+- **Manual matrix row M2** (new): load a single exam with >30 events, click **Full procedure** — confirm the figure renders AND the PAUSED badge appears. Drag the embedded Plotly procedure-mode slider — confirm the slider steps through the cached figure (no re-render thrash; the figure has been rendered once on click, so a slider is available). Repeat with a ≤30-event RDSR — confirm the figure renders, no PAUSED badge, slider-drag re-renders live.
+- `CHANGELOG.md` gets a user-visible behavior-change line under a feature heading.
 
 ### Phase 4 — Help sync + registry
 
-**Files:** `docs/source/gui_help/geometry_workflow.md`, `src/mypyskindose/gui/help/geometry_workflow.md` (mirror via `sync_gui_help.py`), `dev-docs/feature_doc_matrix.json`. `CHANGELOG.md` gets the Part III behavior-change note (see Exit criteria) plus a Part IV help-text note; `AGENTS.md` needs no edit (the §3 GUI focus paragraph already mentions per-exam Geometry controls — no new tab or workflow surface is added; the stepper is a polish on the existing Geometry tab). Dropped from this phase (assessment #10): the earlier draft listed `AGENTS.md` without a concrete edit; it has been removed.
+**Files:** `docs/source/gui_help/geometry_workflow.md`, `src/mypyskindose/gui/help/geometry_workflow.md` (mirror via `sync_gui_help.py`), `dev-docs/feature_doc_matrix.json`. `CHANGELOG.md` gets the Part III behavior-change note plus a Part IV help-text note; `AGENTS.md` needs no edit (no new tab or workflow surface is added; the stepper is a polish on the existing Geometry tab).
 
 **Acceptance:**
 - `python scripts/sync_gui_help.py` updates the mirror (verify with `git status`).
@@ -606,7 +599,7 @@ This phase **is a behavior change**, not just documentation. See Part III for th
 ## Exit criteria
 
 - [ ] Phase 1 unit tests green; `event_context_caption` shipped (caption uses 1-based display, internal storage remains 0-based).
-- [ ] Phase 2 stepper row shipped; manual matrix below passes; optional `test_geometry_stepper.py` green; stepper starts disabled at build time (assessment #8).
+- [ ] Phase 2 stepper row shipped; manual matrix below passes; optional `test_geometry_stepper.py` green; stepper starts disabled at initial empty-tab build time.
 - [ ] Phase 3 trace-count guard extended to all `plot_procedure` paths (renamed `procedure_live_preview_paused`); `helpers.py:47/79` and tests at `test_gui_multi_exam_geometry_offsets.py:15, 234-252` renamed in lockstep; `grep -rn composite_live_preview_paused src tests` returns zero hits; `preview_procedure()` un-gated so the explicit click renders the figure even when paused (assessment v2 #2); Phase 3 unit tests green; comment block shipped; manual matrix row M2 green; file-size check green.
 - [ ] Phase 4 help + registry checks green; `CHANGELOG.md` user-visible behavior-change note added; `AGENTS.md` not edited (no new tab/workflow added — see Phase 4 spec rationale).
 - [ ] `python scripts/check_doc_freshness.py` green.
@@ -623,7 +616,7 @@ This phase **is a behavior change**, not just documentation. See Part III for th
 
 | ID | Assert |
 |----|--------|
-| S1 | Single-exam load → stepper disabled initially (assessment #8); click **Single event** → caption shows `"Event <mid> / <count>"` (1-based `mid` of `count`); stepper enabled. |
+| S1 | Single-exam load and open Geometry tab → auto-init sets Single-event mode automatically; caption shows `"Event <mid> / <count>"` (1-based `mid` of `count`) and stepper is enabled. Click **Setup view** or **Full procedure** → stepper disables. |
 | S2 | Chevron right 5 times → the internal 0-based `geom_event_input.value` increments by 5, but the caption displays `+5` from the starting 1-based label (e.g. starts at `Event 6 / 23`, becomes `Event 11 / 23`). Chevron left down to the first event → label stays at `"Event 1 / <count>"` (no error, no toast). |
 | S3 | Click **Setup view** → stepper disables; caption persists. Click **Single event** → re-enables, caption re-syncs. |
 | S4 | Click **Full procedure** → stepper disables; Plotly procedure-mode slider remains usable. |
