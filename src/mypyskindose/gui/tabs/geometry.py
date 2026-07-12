@@ -18,8 +18,9 @@ from ..constants import (
 from ..figures import make_geometry_fig
 from ..geometry_preview import (
     clamp_geometry_event_index,
-    composite_live_preview_paused,
+    procedure_live_preview_paused,
     composite_preview_after_exam_mode_change,
+    event_context_caption,
     exam_select_value,
     geometry_preview_caption,
     preview_event_count,
@@ -54,6 +55,12 @@ _C4_TABLE_ORIGIN_CAPTION = (
 )
 
 _GE_WARNING_TOKEN = "ge manufacturer detected"
+
+# Resolved once at import. NiceGUI's on_value_change for ui.number fires
+# on user input by convention, not on programmatic set_value.
+# Performance guard: if True, _step skips its own debounced render call so only
+# on_value_change schedules the debounced render. Either path is safe under debounce.
+_value_change_fires_on_set_value: bool = False
 
 
 def geometry_vendor_notice(
@@ -390,11 +397,23 @@ def build(ctx: PageContext) -> None:
                     ).props("flat dense color=grey-5").classes("icon-outlined q-mt-sm")
 
             with ui.row().classes("w-full items-end gap-4"):
-                with ui.card().classes("modern-card w-48 p-2"):
+                with ui.card().classes("modern-card w-64 p-2"):
                     ui.label("Event selection").classes("text-xs uppercase opacity-70")
-                    geom_event_input = ui.number(value=0, min=0, step=1).classes(
-                        "w-full mono-text"
-                    ).props("dense flat")
+                    with ui.row().classes("w-full items-center gap-2"):
+                        prev_btn = ui.button(
+                            icon="chevron_left",
+                            on_click=lambda: _step(-1),
+                        ).props("flat dense round size=sm color=grey-5").mark("geom-event-prev")
+                        geom_event_input = ui.number(
+                            value=1, min=1, step=1
+                        ).classes("w-20 mono-text").props("dense flat").mark("geom-event-input")
+                        next_btn = ui.button(
+                            icon="chevron_right",
+                            on_click=lambda: _step(1),
+                        ).props("flat dense round size=sm color=grey-5").mark("geom-event-next")
+                    geom_event_context = ui.label("").classes(
+                        "text-caption text-grey-5 q-mt-xs"
+                    ).mark("geom-event-context")
 
                 ui.button("Setup view", on_click=lambda: preview_setup()).classes(
                     "modern-btn-teal h-12 px-6"
@@ -411,6 +430,58 @@ def build(ctx: PageContext) -> None:
 
             with ui.card().classes("w-full modern-card p-0 overflow-hidden"):
                 geom_plot = ui.plotly({}).classes("w-full").style("height:700px")
+
+    def _preview_slice_count() -> int:
+        if state.is_multi_exam:
+            return preview_event_count(
+                state,
+                active_exam_index=state.active_exam_index,
+                composite=_resolve_composite_for_render(),
+            )
+        return event_count()
+
+    def _step(delta: int) -> None:
+        if last_preview_mode != "plot_event":
+            return
+        count = _preview_slice_count()
+        if count <= 0:
+            return
+        current = int(geom_event_input.value or 1)
+        new_idx = min(max(1, current + delta), max(1, count))
+        geom_event_input.set_value(new_idx)
+        if not _value_change_fires_on_set_value:
+            _render_event_preview_debounced()
+
+    def _set_stepper_enabled(enabled: bool) -> None:
+        geom_event_input.set_enabled(enabled)
+        prev_btn.set_enabled(enabled)
+        next_btn.set_enabled(enabled)
+
+    def _update_event_context() -> None:
+        composite = _resolve_composite_for_render() if state.is_multi_exam else False
+        geom_event_context.set_text(
+            event_context_caption(
+                state,
+                current_index=max(0, int(geom_event_input.value or 1) - 1),
+                active_exam_index=state.active_exam_index if state.is_multi_exam else None,
+                composite=composite,
+            )
+        )
+
+    def _render_event_preview_debounced() -> None:
+        nonlocal last_preview_mode
+        if last_preview_mode != "plot_event":
+            last_preview_mode = "plot_event"
+        _update_event_context()
+        _schedule_debounced_render()
+
+    def _on_event_input_change(_e) -> None:
+        if last_preview_mode != "plot_event":
+            return
+        _update_event_context()
+        _schedule_debounced_render()
+
+    geom_event_input.on_value_change(_on_event_input_change)
 
     def _resolve_composite_for_render() -> bool:
         return resolve_composite_for_render(
@@ -440,7 +511,7 @@ def build(ctx: PageContext) -> None:
     def live_preview_allowed() -> bool:
         if state.busy:
             return False
-        if composite_live_preview_paused(
+        if procedure_live_preview_paused(
             state,
             last_preview_mode=last_preview_mode,
             composite_preview=composite_preview,
@@ -498,7 +569,7 @@ def build(ctx: PageContext) -> None:
             geom_spinner.visible = count > 100
         else:
             geom_spinner.visible = event_count() > 100
-        event_idx = int(geom_event_input.value or 0) if mode == "plot_event" else 0
+        event_idx = max(0, int(geom_event_input.value or 1) - 1) if mode == "plot_event" else 0
         slice_count = (
             preview_event_count(state, active_exam_index=active_idx, composite=composite)
             if state.is_multi_exam
@@ -581,6 +652,7 @@ def build(ctx: PageContext) -> None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_setup"
+        _set_stepper_enabled(False)
         live_preview_requested = True
         if live_preview_allowed():
             await _render_preview("plot_setup")
@@ -593,6 +665,7 @@ def build(ctx: PageContext) -> None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_event"
+        _set_stepper_enabled(True)
         live_preview_requested = True
         if live_preview_allowed():
             await _render_preview("plot_event")
@@ -605,11 +678,17 @@ def build(ctx: PageContext) -> None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_procedure"
+        _set_stepper_enabled(False)
         live_preview_requested = True
-        if live_preview_allowed():
-            await _render_preview("plot_procedure")
-        else:
-            _update_paused_badge()
+        # Always render the once-per-click figure; the embedded Plotly procedure-mode
+        # slider lets the user scrub client-side without re-rendering. The live-pause
+        # guard (procedure_live_preview_paused) only gates reactive update paths
+        # (_schedule_debounced_render -> _render_preview) so offset-slider adjustments
+        # on a >30-event procedure do not trigger expensive live re-renders. The badge
+        # still shows so the user knows live-refresh is paused; the figure underneath
+        # it is the cached click-render.
+        await _render_preview("plot_procedure")
+        _update_paused_badge()
 
     def _rebuild_exam_selector() -> None:
         if not state.is_multi_exam:
@@ -635,6 +714,7 @@ def build(ctx: PageContext) -> None:
         state.active_exam_index = new_index
         last_table_origin_scrub = False
         _update_preview_caption()
+        _update_event_context()
         ctx.refresh_per_exam()
 
     exam_select.on_value_change(_on_exam_select_change)
@@ -643,6 +723,7 @@ def build(ctx: PageContext) -> None:
         nonlocal composite_preview, live_preview_requested
         composite_preview = bool(e.value)
         _update_preview_caption()
+        _update_event_context()
         _update_paused_badge()
         if last_preview_mode:
             live_preview_requested = True
@@ -688,15 +769,17 @@ def build(ctx: PageContext) -> None:
         ):
             auto_initialized = True
             last_preview_mode = "plot_event"
-            geom_event_input.set_value(_middle_event_index(active_idx, composite))
+            geom_event_input.set_value(_middle_event_index(active_idx, composite) + 1)
 
         clamped = clamp_geometry_event_index(
             state,
-            int(geom_event_input.value or 0),
+            max(0, int(geom_event_input.value or 1) - 1),
             active_exam_index=active_idx,
             composite=composite,
         )
-        geom_event_input.set_value(clamped)
+        geom_event_input.set_value(clamped + 1)
+        _set_stepper_enabled(last_preview_mode == "plot_event")
+        _update_event_context()
         if last_preview_mode and not _in_render_chain:
             live_preview_requested = True
             _schedule_debounced_render()
@@ -710,3 +793,4 @@ def build(ctx: PageContext) -> None:
     ctx.refresh_per_exam = _refresh_per_exam_with_sliders
     ctx.refresh_geometry_tab = _refresh_geometry_sliders
     _update_preview_caption()
+    _set_stepper_enabled(False)

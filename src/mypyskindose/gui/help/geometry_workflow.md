@@ -25,8 +25,11 @@ Developer-level coordinate notes live in `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`
 ## Workflow for Positioning Verification
 
 ### Step 1: Select an Event
-1. Enter an event number in the **Event selection** field (0-based index into the current preview slice)
-2. For a single exam, this indexes all events in the file. In **multi-exam** mode, the default slice is the **selected exam** only unless **Show all exams in preview** is enabled.
+1. Click **Single event** under the geometry plot to enter single-event mode. The **Event selection** stepper (the number box with chevron buttons) becomes enabled; the small caption shows your position as `Event <n> / <count>` (single-exam) or `Event <n> / <count> · Exam #<m>` (multi-exam, or `· all exams` when **Show all exams in preview** is on). The caption is **1-based** — `Event 1 / 23` is the first of 23 events.
+2. Use the chevron buttons to step forward or back, or type an event number into the box (the box accepts 1-based indices — `1` is the first event — matching the caption above it).
+3. In **multi-exam** mode the default slice is the **selected exam** only unless **Show all exams in preview** is enabled. Use the exam selector above the preview controls to pick which exam you are stepping through.
+
+**Live-preview pause:** for large procedures, the plot may show a **PAUSED** badge while you drag the procedure-mode slider — this is the performance guard described in [Trace-count guard](#). It fires above 30 events in **any** `Full procedure` path (single-exam or multi-exam, composite or not); you can still click **Full procedure** once and use the Plotly slider to step through the cached figure.
 
 ### Step 2: Visualize Single Event
 1. Click **Single event** to render the beam and patient for that event
@@ -56,7 +59,7 @@ Developer-level coordinate notes live in `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`
 | **Show all exams in preview** | Preview draws all exams' events; phantom stays at the selected exam's offset |
 | **Table-origin scrub** | While adjusting table origin, preview temporarily shows all exams so you can see relative table motion |
 
-Live preview may **pause** when a composite full-procedure view exceeds 30 events (performance guard).
+Live preview may **pause** when a full-procedure view exceeds 30 events (performance guard).
 
 ## Controls
 
@@ -64,7 +67,8 @@ Live preview may **pause** when a composite full-procedure view exceeds 30 event
 |--------|--------|
 | **Setup view** | Phantom and table in starting orientation |
 | **Single event** | Render one specific irradiation event |
-| **Full procedure** | Render all events in the current preview slice (may pause when large in multi-exam composite mode) |
+| **Full procedure** | Render all events in the current preview slice (may pause when large) |
+| **Event selection stepper** | Jump to a specific event within the current preview slice (prev / next or typed number). Disabled unless **Single event** mode is active. The caption is 1-based; the typed number is 0-based. |
 
 ## Tips
 

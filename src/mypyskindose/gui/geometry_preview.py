@@ -178,7 +178,69 @@ def clamp_geometry_event_index(
     return min(max(0, current_index), slice_count - 1)
 
 
-def composite_live_preview_paused(
+def event_context_caption(
+    state: AppState,
+    *,
+    current_index: int,
+    active_exam_index: int | None = None,
+    composite: bool = False,
+) -> str:
+    """User-facing 1-based caption for the Geometry event stepper row.
+
+    ``current_index`` is the 0-based internal value; the returned label adds 1
+    so "Event 1 / N" means the first of N events. Checks ``composite`` to choose
+    between the "Exam #N" and "all exams" suffixes when ``state.is_multi_exam``
+    is true.
+
+    Examples (current_index shown in parens, output in quotes):
+      single-exam, 23 events, current_index 5   -> "Event 6 / 23"
+      multi-exam exam #2 (idx 1), 7 events, current_index 3 -> "Event 4 / 7 · Exam #2"
+      multi-exam composite, 51 events, current_index 9     -> "Event 10 / 51 · all exams"
+      empty slice, current_index 0              -> "Event 0 / 0"
+    """
+    count = preview_event_count(
+        state, active_exam_index=active_exam_index, composite=composite
+    )
+    if count <= 0:
+        return "Event 0 / 0"
+    safe_idx = clamp_geometry_event_index(
+        state, current_index,
+        active_exam_index=active_exam_index, composite=composite,
+    )
+    display_idx = safe_idx + 1
+    if state.is_multi_exam:
+        if composite:
+            return f"Event {display_idx} / {count} · all exams"
+        exam_num = (active_exam_index if active_exam_index is not None
+                    else state.active_exam_index or 0) + 1
+        return f"Event {display_idx} / {count} · Exam #{exam_num}"
+    return f"Event {display_idx} / {count}"
+
+
+# ────────────────────────────────────────────────────────────────────
+# Performance guard: this is the "Plotly trace count" mitigation
+# referenced in dev-docs/TO_DO.md ("account for Plotly trace count and
+# large datasets").
+#
+# Scope: ALL plot_procedure live previews — single-exam, multi-exam
+# non-composite, and multi-exam composite. In every one of these paths
+# make_geometry_fig -> plot_procedure builds one trace set per event
+# (plot_procedure.py:65-84), so the figure grows linearly with the
+# active slice's event count.
+#
+# We pause live preview above 30 events so patient/table offset-slider
+# adjustments while in Full-procedure mode do not trigger expensive
+# reactive re-renders, and show the large-data spinner above 100
+# (geometry.py:498 for composite count, geometry.py:500 for single-exam).
+#
+# plot_event mode does NOT need this guard — exactly one event per render,
+# so the trace set is small and fixed regardless of slice size.
+# plot_setup mode renders no events.
+#
+# If you add a new preview path that grows traces per event, extend
+# `procedure_live_preview_paused` rather than adding a sibling guard.
+# ────────────────────────────────────────────────────────────────────
+def procedure_live_preview_paused(
     state: AppState,
     *,
     last_preview_mode: str | None,
@@ -186,14 +248,27 @@ def composite_live_preview_paused(
     last_table_origin_scrub: bool,
     pause_threshold: int = 30,
 ) -> bool:
-    """True when plot_procedure live preview should show PAUSED (T8, T27)."""
-    if last_preview_mode != "plot_procedure" or not state.is_multi_exam:
+    """True when plot_procedure live preview should show the PAUSED badge.
+
+    Pause policy applies to ALL plot_procedure paths, not only composite:
+    plot_procedure.py builds one trace set per event regardless of composite
+    flag, so the figure grows linearly with total event count in every path.
+    """
+    if last_preview_mode != "plot_procedure":
         return False
-    composite = resolve_composite_for_render(
-        composite_preview=composite_preview,
-        last_table_origin_scrub=last_table_origin_scrub,
-    )
-    if not composite:
-        return False
-    active_idx = state.active_exam_index
-    return preview_event_count(state, active_exam_index=active_idx, composite=True) > pause_threshold
+    if state.is_multi_exam:
+        composite = resolve_composite_for_render(
+            composite_preview=composite_preview,
+            last_table_origin_scrub=last_table_origin_scrub,
+        )
+        active_idx = state.active_exam_index
+        count = preview_event_count(
+            state, active_exam_index=active_idx, composite=composite
+        )
+    else:
+        # Single-exam branch: call preview_event_count(state), which lives in
+        # this same module (geometry_preview.py:98) and returns len(state.rdsr_df)
+        # for single-exam slices without introducing import cycles.
+        count = preview_event_count(state)
+    return count > pause_threshold
+
