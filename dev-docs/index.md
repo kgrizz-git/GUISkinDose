@@ -110,6 +110,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
 | [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
+| [plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | Move Show all exams checkbox next to Full procedure, fix composite state leakage, upgrade event selection to searchable select with exam context. |
 
 ## Archived plans (`plans/archive/`)
 
