@@ -23,6 +23,7 @@ from ..geometry_preview import (
     event_context_caption,
     exam_select_value,
     geometry_preview_caption,
+    geometry_vendor_notice,
     preview_event_count,
     resolve_composite_for_render,
 )
@@ -54,48 +55,11 @@ _C4_TABLE_ORIGIN_CAPTION = (
     "you will see this exam's table move relative to the others."
 )
 
-_GE_WARNING_TOKEN = "ge manufacturer detected"
-
 # Resolved once at import. NiceGUI's on_value_change for ui.number fires
 # on user input by convention, not on programmatic set_value.
 # Performance guard: if True, _step skips its own debounced render call so only
 # on_value_change schedules the debounced render. Either path is safe under debounce.
 _value_change_fires_on_set_value: bool = False
-
-
-def geometry_vendor_notice(
-    meta: dict,
-    *,
-    manufacturer: str = "",
-    model: str = "",
-    normalization_method: str = "",
-) -> str:
-    """Return a compact active-exam coordinate-convention notice for Geometry."""
-    warnings = " ".join(meta.get("warnings", []) or []).lower()
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
-    mdl = (model or meta.get("model") or "").strip()
-    schema = (meta.get("schema") or "").strip()
-    source = (meta.get("source_type") or "").strip().upper()
-    method = (meta.get("normalization_method") or normalization_method or "").strip()
-    parts: list[str] = []
-    if mfr or mdl or method or schema:
-        subject = " / ".join(s for s in (mfr, mdl) if s)
-        details = " · ".join(s for s in (source, schema, method) if s)
-        parts.append("Active exam: " + " · ".join(s for s in (subject, details) if s))
-    if method == "Fallback":
-        parts.append("Default normalization in use; verify Tx/Tz axes and table signs before calculation.")
-    if _GE_WARNING_TOKEN in warnings or "ge" in mfr.lower():
-        if meta.get("swap_lat_lon", False):
-            parts.append("GE handling is already normalized; manual Tx/Tz swap is active and may double-correct.")
-        else:
-            parts.append("GE lateral/longitudinal handling is already applied during normalization.")
-    elif "philips" in mfr.lower():
-        parts.append("Philips large table offsets make missed or double normalization visibly wrong.")
-    elif meta.get("swap_lat_lon", False):
-        parts.append("Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps.")
-    if any(meta.get(k, False) for k in ("flip_tx", "flip_ty", "flip_tz")):
-        parts.append("Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually.")
-    return " ".join(parts)
 
 
 def _table_origin_card_visible() -> bool:
@@ -197,16 +161,6 @@ def build(ctx: PageContext) -> None:
                     value=_exam_select_value(_initial_exam_options),
                     label="Selected exam",
                 ).classes("w-full")
-
-            preview_controls = ui.column().classes("w-full gap-2")
-            preview_controls.bind_visibility_from(state, "is_multi_exam")
-
-            with preview_controls:
-                composite_checkbox = ui.checkbox(
-                    "Show all exams in preview",
-                    value=False,
-                ).classes("text-caption")
-                preview_caption = ui.label("").classes("text-caption text-grey-5 italic")
 
             offset_controls = ui.column().classes("w-full gap-4")
             offset_controls.bind_visibility_from(state, "rdsr_df", backward=lambda v: v is not None)
@@ -424,6 +378,15 @@ def build(ctx: PageContext) -> None:
                 ui.button("Full procedure", on_click=lambda: preview_procedure()).classes(
                     "modern-btn-teal h-12 px-6"
                 )
+
+                preview_controls = ui.column().classes("gap-0 justify-center")
+                preview_controls.bind_visibility_from(state, "is_multi_exam")
+                with preview_controls:
+                    composite_checkbox = ui.checkbox(
+                        "Show all exams in preview",
+                        value=False,
+                    ).classes("text-caption")
+                    preview_caption = ui.label("").classes("text-caption text-grey-5 italic")
 
                 geom_spinner = ui.spinner(size="lg", color="indigo").classes("ml-4")
                 geom_spinner.visible = False
@@ -673,13 +636,14 @@ def build(ctx: PageContext) -> None:
             _update_paused_badge()
 
     async def preview_procedure() -> None:
-        nonlocal last_preview_mode, live_preview_requested
+        nonlocal last_preview_mode, live_preview_requested, last_table_origin_scrub
         if state.rdsr_df is None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_procedure"
         _set_stepper_enabled(False)
         live_preview_requested = True
+        last_table_origin_scrub = False
         # Always render the once-per-click figure; the embedded Plotly procedure-mode
         # slider lets the user scrub client-side without re-rendering. The live-pause
         # guard (procedure_live_preview_paused) only gates reactive update paths

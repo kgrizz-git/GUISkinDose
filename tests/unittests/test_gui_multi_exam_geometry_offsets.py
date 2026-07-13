@@ -383,3 +383,11 @@ def test_procedure_pause_threshold_param():
         pause_threshold=15,
     )
 
+
+def test_geometry_vendor_notice_exported_from_preview():
+    from mypyskindose.gui.geometry_preview import geometry_vendor_notice as preview_notice
+    from mypyskindose.gui.tabs.geometry import geometry_vendor_notice as tab_notice
+
+    assert preview_notice is tab_notice
+
+

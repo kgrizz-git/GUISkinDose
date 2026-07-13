@@ -7,6 +7,43 @@ import pandas as pd
 from .exam_transforms import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from .state import AppState
 
+_GE_WARNING_TOKEN = "ge manufacturer detected"
+
+
+def geometry_vendor_notice(
+    meta: dict,
+    *,
+    manufacturer: str = "",
+    model: str = "",
+    normalization_method: str = "",
+) -> str:
+    """Return a compact active-exam coordinate-convention notice for Geometry."""
+    warnings = " ".join(meta.get("warnings", []) or []).lower()
+    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
+    mdl = (model or meta.get("model") or "").strip()
+    schema = (meta.get("schema") or "").strip()
+    source = (meta.get("source_type") or "").strip().upper()
+    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    parts: list[str] = []
+    if mfr or mdl or method or schema:
+        subject = " / ".join(s for s in (mfr, mdl) if s)
+        details = " · ".join(s for s in (source, schema, method) if s)
+        parts.append("Active exam: " + " · ".join(s for s in (subject, details) if s))
+    if method == "Fallback":
+        parts.append("Default normalization in use; verify Tx/Tz axes and table signs before calculation.")
+    if _GE_WARNING_TOKEN in warnings or "ge" in mfr.lower():
+        if meta.get("swap_lat_lon", False):
+            parts.append("GE handling is already normalized; manual Tx/Tz swap is active and may double-correct.")
+        else:
+            parts.append("GE lateral/longitudinal handling is already applied during normalization.")
+    elif "philips" in mfr.lower():
+        parts.append("Philips large table offsets make missed or double normalization visibly wrong.")
+    elif meta.get("swap_lat_lon", False):
+        parts.append("Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps.")
+    if any(meta.get(k, False) for k in ("flip_tx", "flip_ty", "flip_tz")):
+        parts.append("Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually.")
+    return " ".join(parts)
+
 
 def clamp_active_exam_index(state: AppState) -> None:
     """Keep ``active_exam_index`` in range and sync ``is_multi_exam``."""
