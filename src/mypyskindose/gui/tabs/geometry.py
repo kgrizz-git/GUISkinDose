@@ -18,10 +18,14 @@ from ..constants import (
 from ..figures import make_geometry_fig
 from ..geometry_preview import (
     clamp_geometry_event_index,
-    composite_live_preview_paused,
+    procedure_live_preview_paused,
     composite_preview_after_exam_mode_change,
+    event_context_caption,
+    event_select_options,
     exam_select_value,
+    exam_selector_options,
     geometry_preview_caption,
+    geometry_vendor_notice,
     preview_event_count,
     resolve_composite_for_render,
 )
@@ -53,42 +57,11 @@ _C4_TABLE_ORIGIN_CAPTION = (
     "you will see this exam's table move relative to the others."
 )
 
-_GE_WARNING_TOKEN = "ge manufacturer detected"
-
-
-def geometry_vendor_notice(
-    meta: dict,
-    *,
-    manufacturer: str = "",
-    model: str = "",
-    normalization_method: str = "",
-) -> str:
-    """Return a compact active-exam coordinate-convention notice for Geometry."""
-    warnings = " ".join(meta.get("warnings", []) or []).lower()
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
-    mdl = (model or meta.get("model") or "").strip()
-    schema = (meta.get("schema") or "").strip()
-    source = (meta.get("source_type") or "").strip().upper()
-    method = (meta.get("normalization_method") or normalization_method or "").strip()
-    parts: list[str] = []
-    if mfr or mdl or method or schema:
-        subject = " / ".join(s for s in (mfr, mdl) if s)
-        details = " · ".join(s for s in (source, schema, method) if s)
-        parts.append("Active exam: " + " · ".join(s for s in (subject, details) if s))
-    if method == "Fallback":
-        parts.append("Default normalization in use; verify Tx/Tz axes and table signs before calculation.")
-    if _GE_WARNING_TOKEN in warnings or "ge" in mfr.lower():
-        if meta.get("swap_lat_lon", False):
-            parts.append("GE handling is already normalized; manual Tx/Tz swap is active and may double-correct.")
-        else:
-            parts.append("GE lateral/longitudinal handling is already applied during normalization.")
-    elif "philips" in mfr.lower():
-        parts.append("Philips large table offsets make missed or double normalization visibly wrong.")
-    elif meta.get("swap_lat_lon", False):
-        parts.append("Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps.")
-    if any(meta.get(k, False) for k in ("flip_tx", "flip_ty", "flip_tz")):
-        parts.append("Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually.")
-    return " ".join(parts)
+# Resolved once at import. NiceGUI's on_value_change for ui.number fires
+# on user input by convention, not on programmatic set_value.
+# Performance guard: if True, _step skips its own debounced render call so only
+# on_value_change schedules the debounced render. Either path is safe under debounce.
+_value_change_fires_on_set_value: bool = False
 
 
 def _table_origin_card_visible() -> bool:
@@ -106,6 +79,7 @@ def _table_origin_card_visible() -> bool:
 
 
 def build(ctx: PageContext) -> None:
+    """Build and wire layout controls, phantom preview, and offset sliders for the Geometry tab."""
     slider_timer = None
     _in_render_chain = False
     last_preview_mode: str | None = None
@@ -116,6 +90,7 @@ def build(ctx: PageContext) -> None:
     last_table_origin_scrub = False
     was_multi_exam = state.is_multi_exam
     exam_selector_guard = {"suppress": False}  # same pattern as table_guard below
+    event_select_guard = {"suppress": False}
     patient_guard = {"suppress": False}
     # First time the Geometry tab is opened for a freshly loaded dataset, default
     # the preview to a single event (the middle event of the selected exam). This
@@ -171,35 +146,19 @@ def build(ctx: PageContext) -> None:
                     "text-caption text-grey-5"
                 )
 
-                def _exam_selector_options() -> dict[int, str]:
-                    return {
-                        i: f"#{i + 1} · {meta.get('file_name', '—')}"
-                        for i, meta in enumerate(state.loaded_exam_meta)
-                    }
-
                 def _exam_select_value(options: dict[int, str] | None = None) -> int | None:
-                    opts = options if options is not None else _exam_selector_options()
+                    opts = options if options is not None else exam_selector_options(state)
                     return exam_select_value(
                         state.active_exam_index,
                         set(opts.keys()),
                     )
 
-                _initial_exam_options = _exam_selector_options()
+                _initial_exam_options = exam_selector_options(state)
                 exam_select = ui.select(
                     options=_initial_exam_options,
                     value=_exam_select_value(_initial_exam_options),
                     label="Selected exam",
                 ).classes("w-full")
-
-            preview_controls = ui.column().classes("w-full gap-2")
-            preview_controls.bind_visibility_from(state, "is_multi_exam")
-
-            with preview_controls:
-                composite_checkbox = ui.checkbox(
-                    "Show all exams in preview",
-                    value=False,
-                ).classes("text-caption")
-                preview_caption = ui.label("").classes("text-caption text-grey-5 italic")
 
             offset_controls = ui.column().classes("w-full gap-4")
             offset_controls.bind_visibility_from(state, "rdsr_df", backward=lambda v: v is not None)
@@ -390,11 +349,32 @@ def build(ctx: PageContext) -> None:
                     ).props("flat dense color=grey-5").classes("icon-outlined q-mt-sm")
 
             with ui.row().classes("w-full items-end gap-4"):
-                with ui.card().classes("modern-card w-48 p-2"):
+                with ui.card().classes("modern-card w-auto p-2"):
                     ui.label("Event selection").classes("text-xs uppercase opacity-70")
-                    geom_event_input = ui.number(value=0, min=0, step=1).classes(
-                        "w-full mono-text"
-                    ).props("dense flat")
+                    with ui.row().classes("w-full items-center gap-2"):
+                        geom_exam_select = ui.select(
+                            options=exam_selector_options(state),
+                            value=_exam_select_value(exam_selector_options(state)),
+                            with_input=True,
+                        ).classes("w-44 text-caption").mark("geom-exam-select")
+                        geom_exam_select.bind_visibility_from(state, "is_multi_exam")
+
+                        prev_btn = ui.button(
+                            icon="chevron_left",
+                            on_click=lambda: _step(-1),
+                        ).props("flat dense round size=sm color=grey-5").mark("geom-event-prev")
+                        geom_event_select = ui.select(
+                            options=event_select_options(1),
+                            value=1,
+                            with_input=True,
+                        ).classes("w-24 mono-text").mark("geom-event-select")
+                        next_btn = ui.button(
+                            icon="chevron_right",
+                            on_click=lambda: _step(1),
+                        ).props("flat dense round size=sm color=grey-5").mark("geom-event-next")
+                    geom_event_context = ui.label("").classes(
+                        "text-caption text-grey-5 q-mt-xs"
+                    ).mark("geom-event-context")
 
                 ui.button("Setup view", on_click=lambda: preview_setup()).classes(
                     "modern-btn-teal h-12 px-6"
@@ -406,19 +386,88 @@ def build(ctx: PageContext) -> None:
                     "modern-btn-teal h-12 px-6"
                 )
 
+                preview_controls = ui.column().classes("gap-0 justify-center")
+                preview_controls.bind_visibility_from(state, "is_multi_exam")
+                with preview_controls:
+                    composite_checkbox = ui.checkbox(
+                        "Show all exams in preview",
+                        value=False,
+                    ).classes("text-caption")
+                    preview_caption = ui.label("").classes("text-caption text-grey-5 italic")
+
                 geom_spinner = ui.spinner(size="lg", color="indigo").classes("ml-4")
                 geom_spinner.visible = False
 
             with ui.card().classes("w-full modern-card p-0 overflow-hidden"):
                 geom_plot = ui.plotly({}).classes("w-full").style("height:700px")
 
+    def _preview_slice_count() -> int:
+        if state.is_multi_exam:
+            return preview_event_count(
+                state,
+                active_exam_index=state.active_exam_index,
+                composite=_resolve_composite_for_render(),
+            )
+        return event_count()
+
+    def _step(delta: int) -> None:
+        if last_preview_mode != "plot_event":
+            return
+        count = _preview_slice_count()
+        if count <= 0:
+            return
+        current = int(geom_event_select.value or 1)
+        new_idx = min(max(1, current + delta), max(1, count))
+        event_select_guard["suppress"] = True
+        try:
+            geom_event_select.set_value(new_idx)
+        finally:
+            event_select_guard["suppress"] = False
+        _render_event_preview_debounced()
+
+    def _set_stepper_enabled(enabled: bool) -> None:
+        geom_event_select.set_enabled(enabled)
+        prev_btn.set_enabled(enabled)
+        next_btn.set_enabled(enabled)
+
+    def _update_event_context() -> None:
+        composite = _resolve_composite_for_render() if state.is_multi_exam else False
+        geom_event_context.set_text(
+            event_context_caption(
+                state,
+                current_index=max(0, int(geom_event_select.value or 1) - 1),
+                active_exam_index=state.active_exam_index if state.is_multi_exam else None,
+                composite=composite,
+            )
+        )
+
+    def _render_event_preview_debounced() -> None:
+        nonlocal last_preview_mode
+        if last_preview_mode != "plot_event":
+            last_preview_mode = "plot_event"
+        _update_event_context()
+        _schedule_debounced_render()
+
+    def _on_event_select_change(_e) -> None:
+        """Handle user selection change on the geometry event dropdown."""
+        if event_select_guard["suppress"]:
+            return
+        if last_preview_mode != "plot_event":
+            return
+        _update_event_context()
+        _schedule_debounced_render()
+
+    geom_event_select.on_value_change(_on_event_select_change)
+
     def _resolve_composite_for_render() -> bool:
+        """Resolve effective composite flag based on toggle state and slider scrub status."""
         return resolve_composite_for_render(
             composite_preview=composite_preview,
             last_table_origin_scrub=last_table_origin_scrub,
         )
 
     def _update_preview_caption() -> None:
+        """Update the descriptive preview caption text above the plot."""
         preview_caption.set_text(
             geometry_preview_caption(
                 state,
@@ -440,7 +489,7 @@ def build(ctx: PageContext) -> None:
     def live_preview_allowed() -> bool:
         if state.busy:
             return False
-        if composite_live_preview_paused(
+        if procedure_live_preview_paused(
             state,
             last_preview_mode=last_preview_mode,
             composite_preview=composite_preview,
@@ -498,7 +547,7 @@ def build(ctx: PageContext) -> None:
             geom_spinner.visible = count > 100
         else:
             geom_spinner.visible = event_count() > 100
-        event_idx = int(geom_event_input.value or 0) if mode == "plot_event" else 0
+        event_idx = max(0, int(geom_event_select.value or 1) - 1) if mode == "plot_event" else 0
         slice_count = (
             preview_event_count(state, active_exam_index=active_idx, composite=composite)
             if state.is_multi_exam
@@ -581,6 +630,7 @@ def build(ctx: PageContext) -> None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_setup"
+        _set_stepper_enabled(False)
         live_preview_requested = True
         if live_preview_allowed():
             await _render_preview("plot_setup")
@@ -593,6 +643,7 @@ def build(ctx: PageContext) -> None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_event"
+        _set_stepper_enabled(True)
         live_preview_requested = True
         if live_preview_allowed():
             await _render_preview("plot_event")
@@ -600,27 +651,39 @@ def build(ctx: PageContext) -> None:
             _update_paused_badge()
 
     async def preview_procedure() -> None:
-        nonlocal last_preview_mode, live_preview_requested
+        nonlocal last_preview_mode, live_preview_requested, last_table_origin_scrub
         if state.rdsr_df is None:
             ui.notify("Load data first", type="warning")
             return
         last_preview_mode = "plot_procedure"
+        _set_stepper_enabled(False)
         live_preview_requested = True
-        if live_preview_allowed():
-            await _render_preview("plot_procedure")
-        else:
-            _update_paused_badge()
+        last_table_origin_scrub = False
+        # Always render the once-per-click figure; the embedded Plotly procedure-mode
+        # slider lets the user scrub client-side without re-rendering. The live-pause
+        # guard (procedure_live_preview_paused) only gates reactive update paths
+        # (_schedule_debounced_render -> _render_preview) so offset-slider adjustments
+        # on a >30-event procedure do not trigger expensive live re-renders. The badge
+        # still shows so the user knows live-refresh is paused; the figure underneath
+        # it is the cached click-render.
+        await _render_preview("plot_procedure")
+        _update_paused_badge()
 
     def _rebuild_exam_selector() -> None:
+        """Rebuild exam selector options and sync both header and geometry exam dropdowns."""
         if not state.is_multi_exam:
             return
         exam_selector_guard["suppress"] = True
-        opts = _exam_selector_options()
+        opts = exam_selector_options(state)
+        val = _exam_select_value(opts)
         exam_select.set_options(opts)
-        exam_select.set_value(_exam_select_value(opts))
+        exam_select.set_value(val)
+        geom_exam_select.set_options(opts)
+        geom_exam_select.set_value(val)
         exam_selector_guard["suppress"] = False
 
-    def _on_exam_select_change(_e) -> None:
+    def _on_exam_select_change(e) -> None:
+        """Handle active exam selection change and synchronize dropdown states."""
         nonlocal last_table_origin_scrub, slider_timer, table_origin_pending
         if exam_selector_guard["suppress"]:
             return
@@ -631,18 +694,28 @@ def build(ctx: PageContext) -> None:
         if table_origin_pending and old_index is not None:
             commit_table_origin_transform(state, old_index)
             table_origin_pending = False
-        new_index = int(exam_select.value or 0)
+        new_index = int(e.value if e and hasattr(e, "value") and e.value is not None else (exam_select.value or 0))
+        exam_selector_guard["suppress"] = True
+        try:
+            exam_select.set_value(new_index)
+            geom_exam_select.set_value(new_index)
+        finally:
+            exam_selector_guard["suppress"] = False
         state.active_exam_index = new_index
         last_table_origin_scrub = False
         _update_preview_caption()
+        _update_event_context()
         ctx.refresh_per_exam()
 
     exam_select.on_value_change(_on_exam_select_change)
+    geom_exam_select.on_value_change(_on_exam_select_change)
 
     def _on_composite_toggle(e) -> None:
+        """Handle composite preview checkbox toggle."""
         nonlocal composite_preview, live_preview_requested
         composite_preview = bool(e.value)
         _update_preview_caption()
+        _update_event_context()
         _update_paused_badge()
         if last_preview_mode:
             live_preview_requested = True
@@ -651,6 +724,7 @@ def build(ctx: PageContext) -> None:
     composite_checkbox.on_value_change(_on_composite_toggle)
 
     def _refresh_geometry_sliders() -> None:
+        """Refresh offset sliders, event/exam selectors, and captions when tab or dataset changes."""
         nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
         nonlocal live_preview_requested, _in_render_chain
         nonlocal auto_initialized, last_load_signature, last_preview_mode
@@ -681,22 +755,29 @@ def build(ctx: PageContext) -> None:
         # the tab being active so a background load does not eagerly render. Fires
         # once per loaded file set (re-armed above when the files change), so within
         # a dataset the user's chosen mode/event survives tab switches untouched.
-        if (
-            not auto_initialized
-            and state.rdsr_df is not None
-            and state.active_tab == "geometry"
-        ):
-            auto_initialized = True
-            last_preview_mode = "plot_event"
-            geom_event_input.set_value(_middle_event_index(active_idx, composite))
+        event_select_guard["suppress"] = True
+        try:
+            geom_event_select.set_options(event_select_options(_preview_slice_count()))
+            if (
+                not auto_initialized
+                and state.rdsr_df is not None
+                and state.active_tab == "geometry"
+            ):
+                auto_initialized = True
+                last_preview_mode = "plot_event"
+                geom_event_select.set_value(_middle_event_index(active_idx, composite) + 1)
 
-        clamped = clamp_geometry_event_index(
-            state,
-            int(geom_event_input.value or 0),
-            active_exam_index=active_idx,
-            composite=composite,
-        )
-        geom_event_input.set_value(clamped)
+            clamped = clamp_geometry_event_index(
+                state,
+                max(0, int(geom_event_select.value or 1) - 1),
+                active_exam_index=active_idx,
+                composite=composite,
+            )
+            geom_event_select.set_value(clamped + 1)
+        finally:
+            event_select_guard["suppress"] = False
+        _set_stepper_enabled(last_preview_mode == "plot_event")
+        _update_event_context()
         if last_preview_mode and not _in_render_chain:
             live_preview_requested = True
             _schedule_debounced_render()
@@ -710,3 +791,4 @@ def build(ctx: PageContext) -> None:
     ctx.refresh_per_exam = _refresh_per_exam_with_sliders
     ctx.refresh_geometry_tab = _refresh_geometry_sliders
     _update_preview_caption()
+    _set_stepper_enabled(False)

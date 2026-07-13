@@ -141,3 +141,7 @@ skips = ["B101"]
 #
 # `ignore-until-fixed` suppresses a finding ONLY while no patched release exists, so the
 # audit automatically fails again once an upstream fix is published.
+ignore = [
+    # click 8.1.8 is pinned by semgrep (<8.2); advisory PYSEC-2026-2132 cannot be upgraded until semgrep loosens its click requirement.
+    "PYSEC-2026-2132",
+]

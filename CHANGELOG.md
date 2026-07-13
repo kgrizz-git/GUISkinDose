@@ -10,7 +10,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Added
+
+- **Geometry per-exam event selection** (2026-07-12) — replaced the bare event selection box with an interactive 1-based chevron stepper showing context (e.g., "Event 6 / 23") in the Geometry tab. The stepper is disabled outside of "Single event" mode to improve user focus.
+
 ### Fixed
+
+- **Generalized live-preview pause** (2026-07-12) — generalized the 30-event live-preview pause guard from composite procedures to all procedure modes (single-exam, non-composite, and composite), preventing expensive reactive re-renders on large datasets. Explicitly clicking "Full procedure" now correctly renders the Plotly procedure slider once even if the procedure is paused.
 
 - **GUI loaded-file removal** (2026-07-11) — removing a bundled example from the GUI's loaded
   exams list no longer deletes the source `.dcm` fixture from the repository; only registered

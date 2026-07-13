@@ -12,9 +12,10 @@ pytest.importorskip("nicegui")
 from mypyskindose.gui.geometry_preview import (
     adjust_active_exam_index_after_remove,
     clamp_active_exam_index,
-    composite_live_preview_paused,
+    procedure_live_preview_paused,
     composite_preview_after_exam_mode_change,
     effective_patient_offset_for_preview,
+    event_context_caption,
     exam_select_value,
     geometry_preview_caption,
     preview_event_count,
@@ -231,27 +232,178 @@ def test_composite_preview_reset_on_multi_to_single():
     assert composite_preview_after_exam_mode_change(False, True, False) is False
 
 
-def test_composite_live_preview_paused_only_for_large_composite_procedure():
+def test_procedure_live_preview_paused_only_for_large_composite_procedure():
     st = _multi_exam_state()
     many = _exam(35, 70)
     st.loaded_exams = [many, _exam(1, 80)]
     st.loaded_exam_meta = [{"file_name": "big.dcm"}, {"file_name": "small.csv"}]
     rebuild_rdsr_df(st)
-    assert composite_live_preview_paused(
+    assert procedure_live_preview_paused(
         st,
         last_preview_mode="plot_procedure",
         composite_preview=True,
         last_table_origin_scrub=False,
     )
-    assert not composite_live_preview_paused(
+    assert not procedure_live_preview_paused(
         st,
         last_preview_mode="plot_procedure",
         composite_preview=False,
         last_table_origin_scrub=False,
     )
-    assert not composite_live_preview_paused(
+    assert not procedure_live_preview_paused(
         st,
         last_preview_mode="plot_setup",
         composite_preview=True,
         last_table_origin_scrub=False,
     )
+
+
+def _single_exam_state(n_events: int) -> AppState:
+    """A single-exam AppState with ``n_events`` events."""
+    st = AppState()
+    st.loaded_exams = [_exam(n_events, 70)]
+    st.loaded_exam_meta = [{"file_name": f"{n_events}_events.dcm"}]
+    rebuild_rdsr_df(st)
+    st.is_multi_exam = False
+    st.active_exam_index = 0
+    return st
+
+
+def test_event_context_caption_single_exam():
+    st = _single_exam_state(23)
+    assert event_context_caption(st, current_index=5) == "Event 6 / 23"
+
+
+def test_event_context_caption_multi_exam_active():
+    st = _multi_exam_state()
+    st.active_exam_index = 1
+    # exam #2 (idx 1) has 3 events in the fixture
+    assert event_context_caption(st, current_index=2, active_exam_index=1) == "Event 3 / 3 · Exam #2"
+
+
+def test_event_context_caption_multi_exam_composite():
+    st = _multi_exam_state()
+    num_total = preview_event_count(st, composite=True)
+    assert event_context_caption(st, current_index=2, active_exam_index=None, composite=True) == (
+        f"Event 3 / {num_total} · all exams"
+    )
+
+
+def test_event_context_caption_clamps_out_of_range_index():
+    st = _multi_exam_state()
+    st.active_exam_index = 1
+    # exam #2 has 3 events; clamped to last valid index (2), displayed 1-based
+    assert event_context_caption(st, current_index=999, active_exam_index=1) == "Event 3 / 3 · Exam #2"
+
+
+def test_event_context_caption_empty_slice():
+    st = AppState()
+    st.loaded_exams = [_exam(0, 70)]
+    st.loaded_exam_meta = [{"file_name": "empty.dcm"}]
+    rebuild_rdsr_df(st)
+    st.is_multi_exam = False
+    assert event_context_caption(st, current_index=0) == "Event 0 / 0"
+
+
+def test_procedure_pause_single_exam_large():
+    st = _single_exam_state(50)
+    assert procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_procedure",
+        composite_preview=False,
+        last_table_origin_scrub=False,
+    )
+
+
+def test_procedure_pause_single_exam_small():
+    st = _single_exam_state(10)
+    assert not procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_procedure",
+        composite_preview=False,
+        last_table_origin_scrub=False,
+    )
+
+
+def test_procedure_pause_multi_exam_non_composite_large():
+    st = _multi_exam_state()
+    st.loaded_exams = [_exam(40, 70)]
+    st.loaded_exam_meta = [{"file_name": "big.dcm"}]
+    rebuild_rdsr_df(st)
+    st.is_multi_exam = True
+    st.active_exam_index = 0
+    assert procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_procedure",
+        composite_preview=False,
+        last_table_origin_scrub=False,
+    )
+
+
+def test_procedure_pause_multi_exam_composite_large():
+    st = _multi_exam_state()
+    st.loaded_exams = [_exam(20, 70), _exam(20, 80)]
+    st.loaded_exam_meta = [{"file_name": "e1.dcm"}, {"file_name": "e2.dcm"}]
+    rebuild_rdsr_df(st)
+    assert procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_procedure",
+        composite_preview=True,
+        last_table_origin_scrub=False,
+    )
+
+
+def test_procedure_pause_plot_event_never_pauses():
+    st = _single_exam_state(50)
+    assert not procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_event",
+        composite_preview=False,
+        last_table_origin_scrub=False,
+    )
+
+
+def test_procedure_pause_plot_setup_never_pauses():
+    st = _single_exam_state(50)
+    assert not procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_setup",
+        composite_preview=False,
+        last_table_origin_scrub=False,
+    )
+
+
+def test_procedure_pause_threshold_param():
+    st = _single_exam_state(20)
+    assert procedure_live_preview_paused(
+        st,
+        last_preview_mode="plot_procedure",
+        composite_preview=False,
+        last_table_origin_scrub=False,
+        pause_threshold=15,
+    )
+
+
+def test_geometry_vendor_notice_exported_from_preview():
+    from mypyskindose.gui.geometry_preview import geometry_vendor_notice as preview_notice
+    from mypyskindose.gui.tabs.geometry import geometry_vendor_notice as tab_notice
+
+    assert preview_notice is tab_notice
+
+
+def test_event_select_options():
+    from mypyskindose.gui.geometry_preview import event_select_options
+
+    assert event_select_options(5) == {1: "1", 2: "2", 3: "3", 4: "4", 5: "5"}
+    assert event_select_options(0) == {1: "1"}
+
+
+def test_exam_selector_options():
+    from mypyskindose.gui.geometry_preview import exam_selector_options
+
+    st = AppState()
+    st.loaded_exam_meta = [{"file_name": "exam1.dcm"}, {"file_name": "exam2.dcm"}]
+    assert exam_selector_options(st) == {0: "#1 · exam1.dcm", 1: "#2 · exam2.dcm"}
+
+
+

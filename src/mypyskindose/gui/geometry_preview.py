@@ -7,9 +7,73 @@ import pandas as pd
 from .exam_transforms import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from .state import AppState
 
+_GE_WARNING_TOKEN = "ge manufacturer detected"
+
+
+def geometry_vendor_notice(
+    meta: dict,
+    *,
+    manufacturer: str = "",
+    model: str = "",
+    normalization_method: str = "",
+) -> str:
+    """Return a compact active-exam coordinate-convention notice for Geometry.
+
+    Inspects metadata warnings, manufacturer, model, normalization method, and manual
+    coordinate swap flags to construct informative user guidance regarding table axes
+    and vendor-specific coordinate conventions.
+
+    Parameters
+    ----------
+    meta : dict
+        Exam metadata dictionary containing warnings, vendor info, and coordinate flags.
+    manufacturer : str, optional
+        Manufacturer name override, by default "" (uses ``meta["manufacturer"]``).
+    model : str, optional
+        Equipment model name override, by default "" (uses ``meta["model"]``).
+    normalization_method : str, optional
+        Normalization schema/method override, by default "" (uses ``meta["normalization_method"]``).
+
+    Returns
+    -------
+    str
+        Human-readable warning notice describing any active coordinate transformations or vendor quirks.
+    """
+    warnings = " ".join(meta.get("warnings", []) or []).lower()
+    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
+    mdl = (model or meta.get("model") or "").strip()
+    schema = (meta.get("schema") or "").strip()
+    source = (meta.get("source_type") or "").strip().upper()
+    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    parts: list[str] = []
+    if mfr or mdl or method or schema:
+        subject = " / ".join(s for s in (mfr, mdl) if s)
+        details = " · ".join(s for s in (source, schema, method) if s)
+        parts.append("Active exam: " + " · ".join(s for s in (subject, details) if s))
+    if method == "Fallback":
+        parts.append("Default normalization in use; verify Tx/Tz axes and table signs before calculation.")
+    if _GE_WARNING_TOKEN in warnings or "ge" in mfr.lower():
+        if meta.get("swap_lat_lon", False):
+            parts.append("GE handling is already normalized; manual Tx/Tz swap is active and may double-correct.")
+        else:
+            parts.append("GE lateral/longitudinal handling is already applied during normalization.")
+    elif "philips" in mfr.lower():
+        parts.append("Philips large table offsets make missed or double normalization visibly wrong.")
+    elif meta.get("swap_lat_lon", False):
+        parts.append("Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps.")
+    if any(meta.get(k, False) for k in ("flip_tx", "flip_ty", "flip_tz")):
+        parts.append("Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually.")
+    return " ".join(parts)
+
 
 def clamp_active_exam_index(state: AppState) -> None:
-    """Keep ``active_exam_index`` in range and sync ``is_multi_exam``."""
+    """Keep ``active_exam_index`` in range and sync ``is_multi_exam``.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state to update in-place.
+    """
     n = len(state.loaded_exams)
     state.is_multi_exam = n > 1
     if n == 0:
@@ -21,7 +85,15 @@ def clamp_active_exam_index(state: AppState) -> None:
 
 
 def adjust_active_exam_index_after_remove(state: AppState, removed_index: int) -> None:
-    """Reconcile ``active_exam_index`` after an exam row is removed."""
+    """Reconcile ``active_exam_index`` after an exam row is removed.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state containing loaded exams.
+    removed_index : int
+        0-indexed integer of the exam that was removed.
+    """
     n = len(state.loaded_exams)
     state.is_multi_exam = n > 1
     if n == 0:
@@ -40,7 +112,13 @@ def adjust_active_exam_index_after_remove(state: AppState, removed_index: int) -
 
 
 def on_exams_loaded(state: AppState) -> None:
-    """Set ``active_exam_index`` after loaders append exams."""
+    """Set ``active_exam_index`` after loaders append exams.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state containing newly loaded exams.
+    """
     n = len(state.loaded_exams)
     if n == 1:
         state.active_exam_index = 0
@@ -52,7 +130,20 @@ def exam_select_value(
     active_exam_index: int | None,
     option_indices: set[int] | frozenset[int],
 ) -> int | None:
-    """NiceGUI select value: None when empty; else active index if valid, else first option."""
+    """NiceGUI select value: None when empty; else active index if valid, else first option.
+
+    Parameters
+    ----------
+    active_exam_index : int | None
+        Currently requested active exam index.
+    option_indices : set[int] | frozenset[int]
+        Set of available valid option indices.
+
+    Returns
+    -------
+    int | None
+        Selected integer index, or None if options are empty.
+    """
     if not option_indices:
         return None
     idx = active_exam_index if active_exam_index is not None else 0
@@ -63,7 +154,20 @@ def effective_patient_offset_for_preview(
     state: AppState,
     active_exam_index: int | None = None,
 ) -> tuple[float, float, float]:
-    """Patient offset for the Geometry preview phantom."""
+    """Patient offset for the Geometry preview phantom.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state containing offset overrides and metadata.
+    active_exam_index : int | None, optional
+        Explicit active exam index override, by default None.
+
+    Returns
+    -------
+    tuple[float, float, float]
+        3-tuple of `(dx, dy, dz)` patient offset in cm.
+    """
     idx = active_exam_index if active_exam_index is not None else state.active_exam_index
     if state.is_multi_exam and idx is not None and idx < len(state.loaded_exam_meta):
         m = state.loaded_exam_meta[idx]
@@ -81,7 +185,22 @@ def rdsr_df_for_geometry_preview(
     active_exam_index: int | None = None,
     composite: bool = False,
 ) -> pd.DataFrame | None:
-    """Return a preview-sized event frame (tags stripped) for ``make_geometry_fig``."""
+    """Return a preview-sized event frame (tags stripped) for ``make_geometry_fig``.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state containing loaded RDSR DataFrame.
+    active_exam_index : int | None, optional
+        0-indexed active exam index override, by default None.
+    composite : bool, optional
+        If True, return events from all exams; otherwise slice by active exam, by default False.
+
+    Returns
+    -------
+    pd.DataFrame | None
+        Stripped DataFrame of events for geometry rendering, or None if no RDSR is loaded.
+    """
     if state.rdsr_df is None:
         return None
 
@@ -101,7 +220,22 @@ def preview_event_count(
     active_exam_index: int | None = None,
     composite: bool = False,
 ) -> int:
-    """Event count for the current Geometry preview slice."""
+    """Event count for the current Geometry preview slice.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state.
+    active_exam_index : int | None, optional
+        0-indexed active exam index override, by default None.
+    composite : bool, optional
+        Whether composite preview across all exams is active, by default False.
+
+    Returns
+    -------
+    int
+        Total number of irradiation events in the active preview slice.
+    """
     df = rdsr_df_for_geometry_preview(
         state,
         active_exam_index=active_exam_index,
@@ -115,7 +249,20 @@ def resolve_composite_for_render(
     composite_preview: bool,
     last_table_origin_scrub: bool,
 ) -> bool:
-    """Whether the Geometry preview should include all exams' events."""
+    """Whether the Geometry preview should include all exams' events.
+
+    Parameters
+    ----------
+    composite_preview : bool
+        Current user toggle state for composite preview.
+    last_table_origin_scrub : bool
+        True if the user is actively scrubbing a table origin slider.
+
+    Returns
+    -------
+    bool
+        True if all exams should be rendered together.
+    """
     if last_table_origin_scrub:
         return True
     return composite_preview
@@ -126,7 +273,22 @@ def composite_preview_after_exam_mode_change(
     is_multi_exam: bool,
     current_composite_preview: bool,
 ) -> bool:
-    """Reset composite toggle when transitioning multi-exam → single-exam (T28)."""
+    """Reset composite toggle when transitioning multi-exam → single-exam (T28).
+
+    Parameters
+    ----------
+    was_multi_exam : bool
+        Previous multi-exam state.
+    is_multi_exam : bool
+        New multi-exam state.
+    current_composite_preview : bool
+        Current composite preview toggle value.
+
+    Returns
+    -------
+    bool
+        New composite preview toggle state.
+    """
     if was_multi_exam and not is_multi_exam:
         return False
     return current_composite_preview
@@ -144,7 +306,22 @@ def geometry_preview_caption(
     composite_preview: bool,
     last_table_origin_scrub: bool,
 ) -> str:
-    """User-facing preview caption for multi-exam Geometry (C3 / C4)."""
+    """User-facing preview caption for multi-exam Geometry (C3 / C4).
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state.
+    composite_preview : bool
+        True if composite preview is enabled.
+    last_table_origin_scrub : bool
+        True if the user is scrubbing a table origin slider.
+
+    Returns
+    -------
+    str
+        Explanatory caption text to display above the geometry preview plot.
+    """
     if not state.is_multi_exam:
         return ""
     exam_num = (state.active_exam_index or 0) + 1
@@ -165,7 +342,24 @@ def clamp_geometry_event_index(
     active_exam_index: int | None = None,
     composite: bool = False,
 ) -> int:
-    """Clamp a Geometry event index to the current preview slice (N4)."""
+    """Clamp a Geometry event index to the current preview slice (N4).
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state.
+    current_index : int
+        0-indexed candidate event index.
+    active_exam_index : int | None, optional
+        0-indexed active exam index override, by default None.
+    composite : bool, optional
+        Whether composite preview across all exams is active, by default False.
+
+    Returns
+    -------
+    int
+        Valid 0-indexed event index clamped to `[0, slice_count - 1]`.
+    """
     if state.rdsr_df is None:
         return 0
     slice_count = preview_event_count(
@@ -178,7 +372,69 @@ def clamp_geometry_event_index(
     return min(max(0, current_index), slice_count - 1)
 
 
-def composite_live_preview_paused(
+def event_context_caption(
+    state: AppState,
+    *,
+    current_index: int,
+    active_exam_index: int | None = None,
+    composite: bool = False,
+) -> str:
+    """User-facing 1-based caption for the Geometry event stepper row.
+
+    ``current_index`` is the 0-based internal value; the returned label adds 1
+    so "Event 1 / N" means the first of N events. Checks ``composite`` to choose
+    between the "Exam #N" and "all exams" suffixes when ``state.is_multi_exam``
+    is true.
+
+    Examples (current_index shown in parens, output in quotes):
+      single-exam, 23 events, current_index 5   -> "Event 6 / 23"
+      multi-exam exam #2 (idx 1), 7 events, current_index 3 -> "Event 4 / 7 · Exam #2"
+      multi-exam composite, 51 events, current_index 9     -> "Event 10 / 51 · all exams"
+      empty slice, current_index 0              -> "Event 0 / 0"
+    """
+    count = preview_event_count(
+        state, active_exam_index=active_exam_index, composite=composite
+    )
+    if count <= 0:
+        return "Event 0 / 0"
+    safe_idx = clamp_geometry_event_index(
+        state, current_index,
+        active_exam_index=active_exam_index, composite=composite,
+    )
+    display_idx = safe_idx + 1
+    if state.is_multi_exam:
+        if composite:
+            return f"Event {display_idx} / {count} · all exams"
+        exam_num = (active_exam_index if active_exam_index is not None
+                    else state.active_exam_index or 0) + 1
+        return f"Event {display_idx} / {count} · Exam #{exam_num}"
+    return f"Event {display_idx} / {count}"
+
+
+# ────────────────────────────────────────────────────────────────────
+# Performance guard: this is the "Plotly trace count" mitigation
+# referenced in dev-docs/TO_DO.md ("account for Plotly trace count and
+# large datasets").
+#
+# Scope: ALL plot_procedure live previews — single-exam, multi-exam
+# non-composite, and multi-exam composite. In every one of these paths
+# make_geometry_fig -> plot_procedure builds one trace set per event
+# (plot_procedure.py:65-84), so the figure grows linearly with the
+# active slice's event count.
+#
+# We pause live preview above 30 events so patient/table offset-slider
+# adjustments while in Full-procedure mode do not trigger expensive
+# reactive re-renders, and show the large-data spinner above 100
+# (geometry.py:498 for composite count, geometry.py:500 for single-exam).
+#
+# plot_event mode does NOT need this guard — exactly one event per render,
+# so the trace set is small and fixed regardless of slice size.
+# plot_setup mode renders no events.
+#
+# If you add a new preview path that grows traces per event, extend
+# `procedure_live_preview_paused` rather than adding a sibling guard.
+# ────────────────────────────────────────────────────────────────────
+def procedure_live_preview_paused(
     state: AppState,
     *,
     last_preview_mode: str | None,
@@ -186,14 +442,85 @@ def composite_live_preview_paused(
     last_table_origin_scrub: bool,
     pause_threshold: int = 30,
 ) -> bool:
-    """True when plot_procedure live preview should show PAUSED (T8, T27)."""
-    if last_preview_mode != "plot_procedure" or not state.is_multi_exam:
+    """True when plot_procedure live preview should show the PAUSED badge.
+
+    Pause policy applies to ALL plot_procedure paths, not only composite:
+    plot_procedure.py builds one trace set per event regardless of composite
+    flag, so the figure grows linearly with total event count in every path.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state.
+    last_preview_mode : str | None
+        Name of the active preview mode (`"plot_event"`, `"plot_procedure"`, etc.).
+    composite_preview : bool
+        Whether composite preview across all exams is toggled on.
+    last_table_origin_scrub : bool
+        Whether the user is scrubbing a table origin slider.
+    pause_threshold : int, optional
+        Maximum event count before live preview pauses, by default 30.
+
+    Returns
+    -------
+    bool
+        True if live preview should be paused to avoid UI stutter on large datasets.
+    """
+    if last_preview_mode != "plot_procedure":
         return False
-    composite = resolve_composite_for_render(
-        composite_preview=composite_preview,
-        last_table_origin_scrub=last_table_origin_scrub,
-    )
-    if not composite:
-        return False
-    active_idx = state.active_exam_index
-    return preview_event_count(state, active_exam_index=active_idx, composite=True) > pause_threshold
+    if state.is_multi_exam:
+        composite = resolve_composite_for_render(
+            composite_preview=composite_preview,
+            last_table_origin_scrub=last_table_origin_scrub,
+        )
+        active_idx = state.active_exam_index
+        count = preview_event_count(
+            state, active_exam_index=active_idx, composite=composite
+        )
+    else:
+        # Single-exam branch: call preview_event_count(state), which lives in
+        # this same module (geometry_preview.py:98) and returns len(state.rdsr_df)
+        # for single-exam slices without introducing import cycles.
+        count = preview_event_count(state)
+    return count > pause_threshold
+
+
+def event_select_options(slice_count: int) -> dict[int, str]:
+    """Return dropdown options mapping 1-indexed event numbers to string labels.
+
+    Parameters
+    ----------
+    slice_count : int
+        Total number of events in the currently active exam slice or composite procedure.
+
+    Returns
+    -------
+    dict[int, str]
+        Mapping from 1-indexed event number integer to string display label.
+    """
+    if slice_count <= 0:
+        return {1: "1"}
+    return {i: str(i) for i in range(1, slice_count + 1)}
+
+
+def exam_selector_options(state: AppState) -> dict[int, str]:
+    """Return dropdown options mapping exam index to display label.
+
+    Parameters
+    ----------
+    state : AppState
+        Current application state containing loaded exam metadata.
+
+    Returns
+    -------
+    dict[int, str]
+        Mapping from 0-indexed exam integer to string display label (e.g., `#1 · file.dcm`).
+    """
+    if not state.loaded_exam_meta:
+        return {0: "#1 · Exam 1"}
+    return {
+        i: f"#{i + 1} · {meta.get('file_name', '—')}"
+        for i, meta in enumerate(state.loaded_exam_meta)
+    }
+
+
