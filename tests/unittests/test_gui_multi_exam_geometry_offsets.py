@@ -391,3 +391,19 @@ def test_geometry_vendor_notice_exported_from_preview():
     assert preview_notice is tab_notice
 
 
+def test_event_select_options():
+    from mypyskindose.gui.geometry_preview import event_select_options
+
+    assert event_select_options(5) == {1: "1", 2: "2", 3: "3", 4: "4", 5: "5"}
+    assert event_select_options(0) == {1: "1"}
+
+
+def test_exam_selector_options():
+    from mypyskindose.gui.geometry_preview import exam_selector_options
+
+    st = AppState()
+    st.loaded_exam_meta = [{"file_name": "exam1.dcm"}, {"file_name": "exam2.dcm"}]
+    assert exam_selector_options(st) == {0: "#1 · exam1.dcm", 1: "#2 · exam2.dcm"}
+
+
+

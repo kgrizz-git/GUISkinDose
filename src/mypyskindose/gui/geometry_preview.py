@@ -309,3 +309,21 @@ def procedure_live_preview_paused(
         count = preview_event_count(state)
     return count > pause_threshold
 
+
+def event_select_options(slice_count: int) -> dict[int, str]:
+    """Return dropdown options mapping 1-indexed event numbers to string labels."""
+    if slice_count <= 0:
+        return {1: "1"}
+    return {i: str(i) for i in range(1, slice_count + 1)}
+
+
+def exam_selector_options(state: AppState) -> dict[int, str]:
+    """Return dropdown options mapping exam index to display label."""
+    if not state.loaded_exam_meta:
+        return {0: "#1 · Exam 1"}
+    return {
+        i: f"#{i + 1} · {meta.get('file_name', '—')}"
+        for i, meta in enumerate(state.loaded_exam_meta)
+    }
+
+
