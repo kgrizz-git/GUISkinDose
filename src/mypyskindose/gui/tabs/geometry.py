@@ -79,6 +79,7 @@ def _table_origin_card_visible() -> bool:
 
 
 def build(ctx: PageContext) -> None:
+    """Build and wire layout controls, phantom preview, and offset sliders for the Geometry tab."""
     slider_timer = None
     _in_render_chain = False
     last_preview_mode: str | None = None
@@ -448,6 +449,7 @@ def build(ctx: PageContext) -> None:
         _schedule_debounced_render()
 
     def _on_event_select_change(_e) -> None:
+        """Handle user selection change on the geometry event dropdown."""
         if event_select_guard["suppress"]:
             return
         if last_preview_mode != "plot_event":
@@ -458,12 +460,14 @@ def build(ctx: PageContext) -> None:
     geom_event_select.on_value_change(_on_event_select_change)
 
     def _resolve_composite_for_render() -> bool:
+        """Resolve effective composite flag based on toggle state and slider scrub status."""
         return resolve_composite_for_render(
             composite_preview=composite_preview,
             last_table_origin_scrub=last_table_origin_scrub,
         )
 
     def _update_preview_caption() -> None:
+        """Update the descriptive preview caption text above the plot."""
         preview_caption.set_text(
             geometry_preview_caption(
                 state,
@@ -666,6 +670,7 @@ def build(ctx: PageContext) -> None:
         _update_paused_badge()
 
     def _rebuild_exam_selector() -> None:
+        """Rebuild exam selector options and sync both header and geometry exam dropdowns."""
         if not state.is_multi_exam:
             return
         exam_selector_guard["suppress"] = True
@@ -678,6 +683,7 @@ def build(ctx: PageContext) -> None:
         exam_selector_guard["suppress"] = False
 
     def _on_exam_select_change(e) -> None:
+        """Handle active exam selection change and synchronize dropdown states."""
         nonlocal last_table_origin_scrub, slider_timer, table_origin_pending
         if exam_selector_guard["suppress"]:
             return
@@ -705,6 +711,7 @@ def build(ctx: PageContext) -> None:
     geom_exam_select.on_value_change(_on_exam_select_change)
 
     def _on_composite_toggle(e) -> None:
+        """Handle composite preview checkbox toggle."""
         nonlocal composite_preview, live_preview_requested
         composite_preview = bool(e.value)
         _update_preview_caption()
@@ -717,6 +724,7 @@ def build(ctx: PageContext) -> None:
     composite_checkbox.on_value_change(_on_composite_toggle)
 
     def _refresh_geometry_sliders() -> None:
+        """Refresh offset sliders, event/exam selectors, and captions when tab or dataset changes."""
         nonlocal composite_preview, last_table_origin_scrub, was_multi_exam
         nonlocal live_preview_requested, _in_render_chain
         nonlocal auto_initialized, last_load_signature, last_preview_mode
