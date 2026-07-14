@@ -22,6 +22,7 @@ from ..helpers import (
     any_table_origin_override,
     fallback_normalization_exam_count,
     get_mesh_baseline_extents,
+    get_mesh_baseline_torso_width,
     on_global_patient_offset_change,
 )
 from ..page_context import PageContext
@@ -44,14 +45,20 @@ BEAM_MISS_WARN_OPTIONS = {
     "off": "Off (only all-miss sentinel)",
 }
 
+COMPACT_FULL_WIDTH_COLUMN_CLASSES = "w-full gap-1"
+
 
 def _format_table_offset_line() -> str:
     return format_table_offset_line(state)
 
 
-def _format_scale_cm(scale_factor: float, axis: int) -> str:
-    extents = get_mesh_baseline_extents(state.human_mesh)
-    return format_scale_cm_label(scale_factor, axis, extents)
+def _format_scale_cm(scale_factor: float, axis: int | None) -> str:
+    baseline_cm = (
+        get_mesh_baseline_torso_width(state.human_mesh)
+        if axis is None
+        else get_mesh_baseline_extents(state.human_mesh)[axis]
+    )
+    return format_scale_cm_label(scale_factor, baseline_cm)
 
 
 def build(ctx: PageContext) -> None:
@@ -132,7 +139,7 @@ def build(ctx: PageContext) -> None:
                         backward=lambda _m: any_table_origin_override(state),
                     )
 
-                    patient_offset_single = ui.column().classes("w-full gap-1")
+                    patient_offset_single = ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES)
                     patient_offset_single.bind_visibility_from(
                         state, "is_multi_exam", backward=lambda v: not v
                     )
@@ -174,19 +181,36 @@ def build(ctx: PageContext) -> None:
                     )
                     multi_exam_phantom_caption.bind_visibility_from(state, "is_multi_exam")
 
-                    scale_section = ui.column().classes("w-full gap-2 q-mt-sm")
+                    scale_section = ui.column().classes("w-full gap-3 q-mt-sm")
                     scale_section.bind_visibility_from(
                         state, "phantom_model", backward=lambda v: v == "human"
                     )
                     with scale_section:
-                        ui.label("Body habitus scaling").classes("text-caption text-grey-6")
+                        ui.label("Body habitus scaling").classes("text-subtitle2")
+                        ui.label(
+                            "Values show scaled patient dimensions. Width is measured at the torso, below the arms."
+                        ).classes("text-caption text-grey-5")
                         for label, attr, axis in (
-                            ("Patient lateral / width (display X/LON, PT L-R)", "phantom_scale_lat", 0),
-                            ("Patient AP / vertical thickness (display Y/VER, PT A-P)", "phantom_scale_ap", 1),
-                            ("Patient longitudinal / head-foot (display Z/LAT, PT S-I)", "phantom_scale_lon", 2),
+                            ("Left-right width scale", "phantom_scale_lat", None),
+                            ("Anterior-posterior thickness scale", "phantom_scale_ap", 1),
+                            ("Superior-inferior length scale", "phantom_scale_lon", 2),
                         ):
-                            with ui.row().classes("w-full gap-4 items-center"):
-                                ui.label(label).classes("w-72 text-caption")
+                            with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
+                                with ui.row().classes("w-full items-center justify-between gap-3"):
+                                    ui.label(label).classes("text-body2 font-medium")
+                                    scale_label = ui.label().classes("shrink-0 text-caption mono-text text-right")
+                                    scale_label.bind_text_from(
+                                        state,
+                                        attr,
+                                        backward=lambda v, a=axis: _format_scale_cm(float(v), a),
+                                    )
+                                    scale_label.bind_text_from(
+                                        state,
+                                        "human_mesh",
+                                        backward=lambda _v, a=attr, x=axis: _format_scale_cm(
+                                            float(getattr(state, a)), x
+                                        ),
+                                    )
                                 ui.slider(
                                     min=0.5,
                                     max=2.0,
@@ -194,18 +218,7 @@ def build(ctx: PageContext) -> None:
                                     value=getattr(state, attr),
                                 ).bind_value(state, attr).on(
                                     "update:model-value", _on_phantom_scale_change
-                                ).classes("grow min-w-[100px]")
-                                scale_label = ui.label().classes("w-40 shrink-0 text-caption mono-text text-right")
-                                scale_label.bind_text_from(
-                                    state,
-                                    attr,
-                                    backward=lambda v, a=axis: _format_scale_cm(float(v), a),
-                                )
-                                scale_label.bind_text_from(
-                                    state,
-                                    "human_mesh",
-                                    backward=lambda _v, a=attr, x=axis: _format_scale_cm(float(getattr(state, a)), x),
-                                )
+                                ).classes("w-full")
 
             # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
             # editable block per loaded exam; registers ctx.refresh_per_exam.
@@ -217,7 +230,7 @@ def build(ctx: PageContext) -> None:
                         state, "estimate_k_tab"
                     ).on("update:model-value", reset_results)
 
-                    with ui.column().classes("w-full gap-1"):
+                    with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
                         ui.label("TRANSMISSION FACTOR (k_tab)").classes("technical-label")
                         with ui.row().classes("items-center w-full gap-4"):
                             ui.slider(min=0.0, max=1.0, step=0.01, value=state.k_tab_val).bind_value(

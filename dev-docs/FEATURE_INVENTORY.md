@@ -114,7 +114,12 @@ Human STL meshes support body-habitus scaling via `phantom.scale_lat`,
 `phantom.scale_ap`, and `phantom.scale_lon` (defaults `1.0`, clamped to
 `0.5–2.0`). Scaling is applied to the human mesh before patient/table
 positioning; non-uniform scaling recomputes surface normals so beam
-entrance/exit filtering uses the scaled geometry.
+entrance/exit filtering uses the scaled geometry. In the GUI, centimetre
+readouts use left-right width, anterior-posterior thickness, and
+superior-inferior length nomenclature. The left-right value is the widest
+torso span in the 20–65% head-foot band, measured from feet toward head, so it
+excludes the outstretched arms of shipped T-pose meshes; `scale_lat` still
+scales the full lateral mesh axis.
 
 ### 2.3 Support objects
 

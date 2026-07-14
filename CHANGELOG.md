@@ -14,6 +14,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 - **Geometry per-exam event selection** (2026-07-12) — replaced the bare event selection box with an interactive 1-based chevron stepper showing context (e.g., "Event 6 / 23") in the Geometry tab. The stepper is disabled outside of "Single event" mode to improve user focus.
 
+### Changed
+
+- **Body-habitus scaling controls** (2026-07-13) — reorganized each scaling control so its label and live value sit directly above its slider. Labels now consistently use left-right width, anterior-posterior thickness, and superior-inferior length. The left-right readout measures torso width below the arms while its scale factor continues to resize the full lateral mesh axis.
+
 ### Fixed
 
 - **Generalized live-preview pause** (2026-07-12) — generalized the 30-event live-preview pause guard from composite procedures to all procedure modes (single-exam, non-composite, and composite), preventing expensive reactive re-renders on large datasets. Explicitly clicking "Full procedure" now correctly renders the Plotly procedure slider once even if the procedure is paused.

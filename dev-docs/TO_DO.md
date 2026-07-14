@@ -76,8 +76,6 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
 - [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
 - [ ] **Make offsets more visible and configurable for the user** — surface table-origin and coordinate offsets prominently in the GUI (e.g. per-exam offset summary, inline hints on the Geometry tab) and allow easy override without digging into nested settings.
-- [ ] **Verify body habitus scaling correctness** — ensure scaling is applied only in the appropriate dimensions,
-  visible on the geometry/dose plot, and factored into dose calculations.
 - [ ] **Reproducible settings export** — export `PyskindoseSettings` or GUI state as JSON to easily reload and reproduce runs.
 - [ ] **3D mesh export** — export the patient phantom mesh with vertex colors (e.g., PLY format) for use in external 3D tools.
 - [ ] **DICOM export** — export a DICOM Secondary Capture of the dose map or a DICOM SR to push results back to PACS.

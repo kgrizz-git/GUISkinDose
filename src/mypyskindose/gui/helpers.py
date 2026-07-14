@@ -8,6 +8,7 @@ focused modules (``settings_builder``, ``exam_loaders``, ``exam_transforms``,
 from __future__ import annotations
 
 import logging
+from math import isclose
 from pathlib import Path
 
 from stl import mesh as stl_mesh
@@ -59,6 +60,9 @@ from .state import AppState
 
 _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
 _MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
+_MESH_TORSO_WIDTH_CACHE: dict[str, float] = {}
+_TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
+_ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
 
 __all__ = [
@@ -91,6 +95,7 @@ __all__ = [
     "get_excel_sheets",
     "get_human_mesh_names",
     "get_mesh_baseline_extents",
+    "get_mesh_baseline_torso_width",
     "load_rdsr",
     "load_tabular",
     "on_exams_loaded",
@@ -283,24 +288,16 @@ def get_human_mesh_names() -> list[str]:
     return sorted(p.stem for p in _PHANTOM_DATA_DIR.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
 
 
-def get_mesh_baseline_extents(mesh_name: str) -> tuple[float, float, float]:
-    """Return (lat_extent, ap_extent, lon_extent) in cm for the unscaled mesh.
-
-    Each extent is ``max - min`` along axis 0/1/2 of the STL vertex array,
-    matching the column order used by ``_apply_human_scale`` in
-    ``phantom_class.py`` and the archived PATIENT_SIZE_SCALING_PLAN.
-
-    Results are cached per mesh name. Corrupt or unreadable STLs are cached as
-    ``(0.0, 0.0, 0.0)`` so the GUI can render ``—`` and avoid retrying a
-    broken read on every render.
-    """
-    if mesh_name in _MESH_EXTENT_CACHE:
-        return _MESH_EXTENT_CACHE[mesh_name]
+def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
+    """Load and cache full extents plus the below-arms torso-width measurement."""
+    if mesh_name in _MESH_EXTENT_CACHE and mesh_name in _MESH_TORSO_WIDTH_CACHE:
+        return
 
     phantom_path = _PHANTOM_DATA_DIR / f"{mesh_name}.stl"
     if not phantom_path.exists():
         _MESH_EXTENT_CACHE[mesh_name] = (0.0, 0.0, 0.0)
-        return _MESH_EXTENT_CACHE[mesh_name]
+        _MESH_TORSO_WIDTH_CACHE[mesh_name] = 0.0
+        return
 
     try:
         mesh_data = stl_mesh.Mesh.from_file(str(phantom_path))
@@ -312,13 +309,51 @@ def get_mesh_baseline_extents(mesh_name: str) -> tuple[float, float, float]:
             float(verts[:, 1].max() - verts[:, 1].min()),
             float(verts[:, 2].max() - verts[:, 2].min()),
         )
+        z_min = float(verts[:, 2].min())
+        z_span = extents[2]
+        if isclose(z_span, 0.0, abs_tol=_ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM):
+            raise ValueError("STL has no longitudinal extent")
+        band_start, band_end = _TORSO_WIDTH_Z_FRACTION_RANGE
+        torso_low = z_min + z_span * band_start
+        torso_high = z_min + z_span * band_end
+        torso_points = verts[(verts[:, 2] >= torso_low) & (verts[:, 2] <= torso_high), 0]
+        if torso_points.size == 0:
+            raise ValueError("STL has no vertices in the torso-width band")
+        torso_width = float(torso_points.max() - torso_points.min())
     except Exception as exc:
         _gui_logger.warning(
-            "Could not read baseline extents for human mesh %r (%s); rendering cm display as '—'.",
+            "Could not read baseline extents for human mesh %r (%s); rendering cm displays as '—'.",
             mesh_name,
             exc,
         )
         extents = (0.0, 0.0, 0.0)
+        torso_width = 0.0
 
     _MESH_EXTENT_CACHE[mesh_name] = extents
-    return extents
+    _MESH_TORSO_WIDTH_CACHE[mesh_name] = torso_width
+
+
+def get_mesh_baseline_extents(mesh_name: str) -> tuple[float, float, float]:
+    """Return (left-right, AP, superior-inferior) extents in cm for the unscaled mesh.
+
+    Each extent is ``max - min`` along axis 0/1/2 of the STL vertex array,
+    matching the column order used by ``_apply_human_scale`` in
+    ``phantom_class.py`` and the archived PATIENT_SIZE_SCALING_PLAN.
+
+    Corrupt or unreadable STLs return ``(0.0, 0.0, 0.0)`` so the GUI can render
+    ``—`` without retrying a broken read on every refresh.
+    """
+    _cache_mesh_baseline_measurements(mesh_name)
+    return _MESH_EXTENT_CACHE[mesh_name]
+
+
+def get_mesh_baseline_torso_width(mesh_name: str) -> float:
+    """Return the unscaled left-right torso width in cm, excluding T-pose arms.
+
+    The width is the maximum lateral span in the 20–65% head-foot band,
+    measured from the feet toward the head. This spans the torso while omitting
+    the shoulder/arm region of shipped T-pose meshes. It is a display metric;
+    ``scale_lat`` still scales the entire mesh along its lateral axis.
+    """
+    _cache_mesh_baseline_measurements(mesh_name)
+    return _MESH_TORSO_WIDTH_CACHE[mesh_name]
