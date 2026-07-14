@@ -29,6 +29,21 @@ All values are in **centimeters**. In the normalized frame, **+Y (vertical) poin
 
 Reproducible setting keys include `scale_lat`, `scale_ap`, and `scale_lon` for human phantom body-habitus scaling, plus `table_origin` metadata for manual table-origin overrides.
 
+## Body habitus scaling
+
+For a human phantom, **Settings → Phantom Settings → Body habitus scaling** changes the mesh dimensions before
+geometry and dose calculation. Each slider has its label and its scaled centimetre value immediately above its track:
+
+| Slider | Setting | Displayed measurement |
+|---|---|---|
+| Left-right width scale | `scale_lat` | Widest left-right torso span in the 20–65% head-foot band, measured from feet toward head; this avoids the outstretched arms. |
+| Anterior-posterior thickness scale | `scale_ap` | Anterior-posterior mesh thickness. |
+| Superior-inferior length scale | `scale_lon` | Superior-inferior mesh length. |
+
+The controls change the whole mesh along the selected axis, including the arms for left-right scaling. The displayed
+width is a torso-only measurement; it does not change how `scale_lat` scales the mesh. These controls do not change
+the patient/table positioning offsets above.
+
 ## Iterative Workflow
 
 When the correct positioning is unknown:

@@ -98,9 +98,10 @@ async def test_phantom_scale_controls_render_for_default_human_model(user: User)
         state.human_mesh = "hudfrid"
         await user.open("/")
         await user.should_see("Body habitus scaling")
-        await user.should_see("Patient lateral / width (display X/LON, PT L-R)")
-        await user.should_see("Patient AP / vertical thickness (display Y/VER, PT A-P)")
-        await user.should_see("Patient longitudinal / head-foot (display Z/LAT, PT S-I)")
+        await user.should_see("Values show scaled patient dimensions. Width is measured at the torso, below the arms.")
+        await user.should_see("Left-right width scale")
+        await user.should_see("Anterior-posterior thickness scale")
+        await user.should_see("Superior-inferior length scale")
         await user.should_see("cm")
     finally:
         state.phantom_model = old_model

@@ -51,11 +51,11 @@ def format_table_offset_line(app_state: AppState) -> str:
     )
 
 
-def format_scale_cm_label(scale_factor: float, axis: int, extents: tuple[float, float, float]) -> str:
-    """Format the scale factor and scaled mesh extent for a body-habitus slider."""
-    if extents[axis] == 0.0:
+def format_scale_cm_label(scale_factor: float, baseline_cm: float) -> str:
+    """Format the scale factor and its scaled mesh dimension for one slider."""
+    if baseline_cm == 0.0:
         return f"{scale_factor:.2f}x  (—)"
-    cm = scale_factor * extents[axis]
+    cm = scale_factor * baseline_cm
     return f"{scale_factor:.2f}x  ({cm:.1f} cm)"
 
 

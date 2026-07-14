@@ -84,7 +84,9 @@ Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, 
 Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `scale_ap`, and
 `scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in
 **Settings → Phantom Settings → Body habitus scaling** and geometry/dose calculations use the
-scaled STL vertices and recomputed normals.
+scaled STL vertices and recomputed normals. GUI measurements use left-right width,
+anterior-posterior thickness, and superior-inferior length; the width is measured
+in a torso band below the arms while `scale_lat` still scales the full lateral mesh axis.
 
 ## Current development focus
 
