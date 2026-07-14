@@ -23,6 +23,9 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 | GUI smoke tests (`tests/gui/`) | Shipped | Phase 5; NiceGUI user simulation, `gui-smoke` CI job |
 | Basedpyright strict typecheck | Shipped | CI `typecheck` job |
 | Gitleaks secret scanning | Shipped | `.github/workflows/gitleaks.yml` |
+| Sensitive-content and approved-asset gate | Shipped (baseline review pending) | `scripts/check_sensitive_content.py`; blocks new/changed image, DICOM, opaque-binary, or extensionless assets without an exact inventory hash; generated `approved_asset_inventory.md` provides the linked manual-review view; existing assets await manual approval |
+| phi-scan PHI/PII text scan | Advisory | `.github/workflows/phi-scan.yml`; pinned local CLI on a GitHub runner, no findings upload or AI review |
+| Local Presidio advisory scan | Shipped (advisory) | Optional `privacy-scan` extra and `scripts/run_presidio_advisory.py` scan tracked readable text locally without uploading inputs/findings or printing matched values. |
 | pip-audit dependency scan | Shipped | CI `dependency-audit` job |
 | License compliance + `THIRD_PARTY_NOTICES.md` | Shipped | `scripts/check_licenses.py`; inventory in `dev-docs/` |
 | Bandit Python SAST | Shipped | CI `bandit` job + pre-commit |

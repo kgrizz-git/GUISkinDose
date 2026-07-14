@@ -1,0 +1,84 @@
+# Local PII/PHI text-model reference
+
+_Last reviewed: 2026-07-14. This is an evaluation reference, not a claim that any model de-identifies clinical data._
+
+## Purpose and boundary
+
+This public repository uses a blocking deterministic gate for obvious identifier patterns, absolute paths, and
+human clearance of every image, DICOM, opaque binary, and extensionless file. See
+[`../PRIVACY_AND_SENSITIVE_ASSETS.md`](../PRIVACY_AND_SENSITIVE_ASSETS.md). Local machine-learning detectors are a
+separate, **advisory** second opinion for tracked readable text. They must not become the authority that approves an
+asset, replaces rendered-image/DICOM review, or upload source text or findings.
+
+The current local baseline is [`../../scripts/run_presidio_advisory.py`](../../scripts/run_presidio_advisory.py).
+It runs Microsoft Presidio locally, suppresses matched values in its output, and is intentionally not a CI gate.
+
+## Recommended candidate: NVIDIA GLiNER-PII
+
+[NVIDIA GLiNER-PII](https://huggingface.co/nvidia/gliner-PII) is a non-generative, span-classification model for
+PII and PHI in structured or unstructured text. It produces a label, character offsets, and confidence score for
+each finding. NVIDIA describes it as a GLiNER large-v2.1-derived, 570-million-parameter model covering more than
+55 categories.
+
+| Question | Current answer |
+|---|---|
+| Download | The `model.safetensors` weights are about 1.78 GiB. The repository is about 3.58 GiB because it includes duplicate PyTorch and safe-tensors weight formats. |
+| Memory on a 128-GB Mac | More than sufficient for a local advisory scan; allow a few GiB for model/runtime overhead. This is not a large-language-model-scale memory load. Benchmark actual throughput and peak memory on the target machine. |
+| Locality | Use the GLiNER Python/PyTorch runtime. After the initial model download, inference can run on the developer-controlled machine without sending repository text to a hosted inference provider. |
+| LM Studio | It is not a GGUF generative model, so LM Studio is not the intended runtime. LM Studio can instead host a general LLM through its local API, but that should be a separately benchmarked, optional heuristic—not the primary detector. |
+| macOS support | NVIDIA officially lists Linux, x86_64 CPU, and NVIDIA GPU platforms. PyTorch/MPS may work on Apple Silicon but is not an NVIDIA-supported deployment path; verify it locally before adopting it. |
+| License | NVIDIA Open Model License Agreement. Review its terms before distribution or a production integration. |
+| What it cannot scan | It accepts text. It does not inspect image pixels, DICOM pixel data, or binary metadata by itself. |
+
+The model card reports benchmark results on synthetic and public PII datasets, but those are not evidence that it
+will work on this repository’s documentation, fixtures, or DICOM-derived text. Treat model confidence as triage
+information, not proof of safety.
+
+## Comparable local candidates
+
+| Model | Why consider it | Scale / license | Suggested role |
+|---|---|---|---|
+| [Fastino GLiNER2 Privacy Filter](https://huggingface.co/fastino/gliner2-privacy-filter-PII-multi) | PII-specific, multilingual (seven languages), 42 entity types; its model card reports comparisons against NVIDIA GLiNER-PII and other detectors. | 205M parameters; Apache-2.0. | First GLiNER-family comparison: smaller and permissively licensed. |
+| [NVIDIA GLiNER-PII](https://huggingface.co/nvidia/gliner-PII) | Broad PII/PHI taxonomy and mature GLiNER API. | 570M parameters; NVIDIA Open Model License. | Second local detector if macOS trial is reliable. |
+| [OpenAI Privacy Filter](https://huggingface.co/blog/openai-privacy-filter-web-apps) | Long-context PII span detector with a different architecture/taxonomy. | 1.5B total parameters, 50M active; Apache-2.0. | Later comparator; heavier and not needed for the first evaluation. |
+| [urchade GLiNER Multi-PII](https://huggingface.co/urchade/gliner_multi_pii-v1) | Established multilingual GLiNER PII model. | 1.16-GiB safe-tensors weights; Apache-2.0. | Lightweight historical baseline if newer candidates disagree. |
+| [Gretel GLiNER PII/PHI](https://huggingface.co/gretelai/gretel-gliner-bi-large-v1.0) | English PII/PHI fine-tune with a published entity-label list. | Apache-2.0. | Alternative English-focused GLiNER benchmark. |
+
+Do not infer comparative accuracy from a vendor’s claimed benchmark alone. The listed models have different labels,
+datasets, thresholds, languages, and span-matching rules.
+
+## Integration shape if evaluation succeeds
+
+Keep any new model outside the default dependencies and CI. A safe interface would be a new optional extra and a
+dedicated advisory command with an explicit `--engine gliner2` selection.
+
+- Scan only tracked, UTF-8-readable text within a bounded file size.
+- Reuse the existing runner’s value-suppressed output: path, location, entity type, score, and detector name only.
+- Keep model caches and source text on the approved local machine; do not enable hosted inference, report upload, or
+  automated pull-request comments.
+- Preserve Presidio as a separate engine, or offer an explicit union mode that identifies which engine found each
+  span. Presidio documents a GLiNER recognizer integration, so a unified Presidio-style result format is practical.
+- Do not run a generic LM Studio chat model as a blocking scanner. It may be useful as a manually invoked third
+  heuristic only after it has been evaluated for repeatability, prompt sensitivity, false positives, and missed
+  identifiers.
+
+## Evaluation protocol
+
+1. Create only synthetic, non-identifying positive and negative fixtures. Cover emails, phone numbers, names,
+   addresses, patient/medical-record identifiers, dates where context makes them identifying, and repository paths.
+2. Run Presidio, Fastino GLiNER2, and—if the macOS trial succeeds—NVIDIA GLiNER-PII with documented model versions,
+   labels, thresholds, elapsed time, and peak memory.
+3. Record false positives and misses without copying protected values into logs, issue trackers, or this repository.
+   Evaluate both detection and whether the reported character range is usable for review/redaction.
+4. Compare union and intersection behavior. For this repository, high recall is helpful only when the alert volume
+   remains reviewable; no detector result may auto-approve an asset.
+5. Decide whether to retain one optional local engine, add a scheduled advisory run on synthetic/repository text, or
+   stop. A CI job would require a separate privacy, licensing, cache, and runner-data review.
+
+## Primary references
+
+- [NVIDIA GLiNER-PII model card and files](https://huggingface.co/nvidia/gliner-PII)
+- [Fastino GLiNER2 Privacy Filter model card](https://huggingface.co/fastino/gliner2-privacy-filter-PII-multi)
+- [OpenAI Privacy Filter overview and model links](https://huggingface.co/blog/openai-privacy-filter-web-apps)
+- [Microsoft Presidio samples, including GLiNER integration](https://microsoft.github.io/presidio/samples/)
+- [Presidio installation and local runtime guidance](https://microsoft.github.io/presidio/installation/)

@@ -50,6 +50,20 @@ repos:
         always_run: true
         stages: [pre-commit, pre-push]
 
+      - id: sensitive-content
+        name: sensitive content and approved assets
+        entry: python scripts/check_sensitive_content.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: asset-inventory-markdown
+        name: approved asset inventory Markdown
+        entry: python scripts/render_asset_inventory.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: sync-gui-help
         name: GUI help sync (docs/source/gui_help -> src/mypyskindose/gui/help)
         entry: python scripts/sync_gui_help.py --check

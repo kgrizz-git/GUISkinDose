@@ -9,6 +9,19 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Now / Next
 
+- [ ] **Complete sensitive-asset baseline review** — manually clear every `pending` entry in
+  `approved_asset_inventory.json`, including rendered-image and DICOM burned-in-text review. Record reviewer/date,
+  then switch CI to `python scripts/check_sensitive_content.py --require-approved-assets`.
+- [ ] **Public-history PHI/PII exposure audit and response runbook** — scan all reachable history; define triage,
+  disclosure, history-rewrite, rotation, and maintainer-notification steps before the next release.
+- [ ] **Local PII/PHI detector evaluation** — use
+  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md)'s synthetic-fixture protocol to benchmark the existing
+  Presidio runner against Fastino GLiNER2. Record false positives/misses, thresholds, elapsed time, and peak memory
+  without logging matched values; decide whether either is worth retaining as a scheduled advisory check.
+- [ ] **NVIDIA GLiNER-PII macOS trial** — following
+  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md), verify local Python/PyTorch execution, MPS/CPU behavior,
+  model-license fit, download/cache location, throughput, and memory on the 128-GB Mac. Keep it local and advisory;
+  do not add it to CI or use LM Studio as its runtime unless the trial establishes a supported path.
 - [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
   `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
 - [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results

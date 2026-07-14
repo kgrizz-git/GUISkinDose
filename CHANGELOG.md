@@ -12,6 +12,22 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Sensitive-content and asset-admission gate** (2026-07-13) — added a blocking pre-commit/CI scanner for
+  tracked PII/PHI-like text and absolute local paths, plus SHA-256 inventory enforcement for every image, DICOM,
+  opaque binary, and extensionless file. Existing assets are recorded as explicitly pending a maintainer's manual
+  review; new or changed assets fail immediately. Added a pinned, report-free advisory `phi-scan` workflow and a
+  documented DICOM/image review policy.
+
+- **Local Presidio advisory scan** (2026-07-14) — added an optional `privacy-scan` dependency extra and a
+  tracked-text-only runner. It suppresses matched values, does not upload inputs/findings, and is not wired to CI.
+
+- **Local PII/PHI model evaluation reference** (2026-07-14) — documented local GLiNER, Privacy Filter, and
+  Presidio comparison options, including macOS/LM Studio limits and a synthetic-fixture-only evaluation protocol.
+
+- **Sensitive asset review inventory** (2026-07-14) — added a generated Markdown inventory with links to every
+  guarded asset, human-readable approval state, and DICOM checklist. Pre-commit and CI reject drift from its JSON
+  source of truth.
+
 - **Geometry per-exam event selection** (2026-07-12) — replaced the bare event selection box with an interactive 1-based chevron stepper showing context (e.g., "Event 6 / 23") in the Geometry tab. The stepper is disabled outside of "Single event" mode to improve user focus.
 
 ### Changed

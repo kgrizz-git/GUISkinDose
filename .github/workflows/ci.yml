@@ -45,6 +45,10 @@ jobs:
         python scripts/check_changelog.py
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
+    - name: Check sensitive content and approved assets
+      run: python scripts/check_sensitive_content.py
+    - name: Check approved asset inventory Markdown
+      run: python scripts/render_asset_inventory.py --check
     - name: Check GUI help sync
       run: python scripts/sync_gui_help.py --check
     - name: Check GUI help registry

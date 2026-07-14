@@ -1,0 +1,47 @@
+# Advisory phi-scan configuration. The deterministic repository gate is the
+# blocking control; this scans text-like tracked content for an additional view.
+version: 1
+
+scan:
+  confidence_threshold: 0.8
+  severity_threshold: medium
+  max_file_size_mb: 10
+  follow_symlinks: false
+  include_extensions:
+    - .bat
+    - .cfg
+    - .csv
+    - .html
+    - .ini
+    - .json
+    - .md
+    - .py
+    - .rst
+    - .sh
+    - .svg
+    - .toml
+    - .tsv
+    - .txt
+    - .xml
+    - .yaml
+    - .yml
+  exclude_paths:
+    - .git/
+    - .venv/
+    - build/
+    - dist/
+    - docs/_build/
+    - node_modules/
+    - tests/fixtures/
+    - "*.egg-info/"
+    - __pycache__/
+    - .mypy_cache/
+    - .pytest_cache/
+    - .ruff_cache/
+    - htmlcov/
+    - "*.ipynb"
+    - "*.pyc"
+
+ai:
+  # Do not send findings to an AI provider from this public-repository workflow.
+  enable_ai_review: false

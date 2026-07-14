@@ -55,6 +55,15 @@ notebooks = [
     "ipykernel",
     "ipywidgets",
 ]
+# Optional, local-only Presidio text scan. This is intentionally separate from
+# the core/runtime and normal dev installs; it is advisory and does not upload
+# input or findings anywhere.
+privacy-scan = [
+    # Declared explicitly so a later `uv sync` cannot remove Presidio's local NLP model.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "presidio-analyzer>=2.2.360,<3",
+    "spacy>=3.8,<4",
+]
 dev = [
     "basedpyright>=1.23",
     "pandas-stubs>=2.2",
