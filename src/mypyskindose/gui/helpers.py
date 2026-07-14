@@ -8,6 +8,7 @@ focused modules (``settings_builder``, ``exam_loaders``, ``exam_transforms``,
 from __future__ import annotations
 
 import logging
+from math import isclose
 from pathlib import Path
 
 from stl import mesh as stl_mesh
@@ -61,6 +62,7 @@ _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
 _MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
 _MESH_TORSO_WIDTH_CACHE: dict[str, float] = {}
 _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
+_ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
 
 __all__ = [
@@ -309,7 +311,7 @@ def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
         )
         z_min = float(verts[:, 2].min())
         z_span = extents[2]
-        if z_span == 0.0:
+        if isclose(z_span, 0.0, abs_tol=_ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM):
             raise ValueError("STL has no longitudinal extent")
         band_start, band_end = _TORSO_WIDTH_Z_FRACTION_RANGE
         torso_low = z_min + z_span * band_start

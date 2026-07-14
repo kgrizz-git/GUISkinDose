@@ -45,6 +45,8 @@ BEAM_MISS_WARN_OPTIONS = {
     "off": "Off (only all-miss sentinel)",
 }
 
+COMPACT_FULL_WIDTH_COLUMN_CLASSES = "w-full gap-1"
+
 
 def _format_table_offset_line() -> str:
     return format_table_offset_line(state)
@@ -137,7 +139,7 @@ def build(ctx: PageContext) -> None:
                         backward=lambda _m: any_table_origin_override(state),
                     )
 
-                    patient_offset_single = ui.column().classes("w-full gap-1")
+                    patient_offset_single = ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES)
                     patient_offset_single.bind_visibility_from(
                         state, "is_multi_exam", backward=lambda v: not v
                     )
@@ -193,7 +195,7 @@ def build(ctx: PageContext) -> None:
                             ("Anterior-posterior thickness scale", "phantom_scale_ap", 1),
                             ("Superior-inferior length scale", "phantom_scale_lon", 2),
                         ):
-                            with ui.column().classes("w-full gap-1"):
+                            with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
                                 with ui.row().classes("w-full items-center justify-between gap-3"):
                                     ui.label(label).classes("text-body2 font-medium")
                                     scale_label = ui.label().classes("shrink-0 text-caption mono-text text-right")
@@ -228,7 +230,7 @@ def build(ctx: PageContext) -> None:
                         state, "estimate_k_tab"
                     ).on("update:model-value", reset_results)
 
-                    with ui.column().classes("w-full gap-1"):
+                    with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
                         ui.label("TRANSMISSION FACTOR (k_tab)").classes("technical-label")
                         with ui.row().classes("items-center w-full gap-4"):
                             ui.slider(min=0.0, max=1.0, step=0.01, value=state.k_tab_val).bind_value(

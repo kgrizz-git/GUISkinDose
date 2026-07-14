@@ -38,7 +38,7 @@ def test_get_mesh_baseline_extents_caches_successful_read(monkeypatch: pytest.Mo
     monkeypatch.setattr(helpers.stl_mesh.Mesh, "from_file", fake_from_file)
 
     assert helpers.get_mesh_baseline_extents("sample") == (12.0, 9.0, 12.0)
-    assert helpers.get_mesh_baseline_torso_width("sample") == 5.0
+    assert helpers.get_mesh_baseline_torso_width("sample") == pytest.approx(5.0)
     assert helpers.get_mesh_baseline_extents("sample") == (12.0, 9.0, 12.0)
     assert calls == 1
 
@@ -53,7 +53,7 @@ def test_get_mesh_baseline_extents_caches_unknown_or_empty_mesh(
 
     assert helpers.get_mesh_baseline_extents(mesh_name) == (0.0, 0.0, 0.0)
     assert helpers._MESH_EXTENT_CACHE[mesh_name] == (0.0, 0.0, 0.0)
-    assert helpers.get_mesh_baseline_torso_width(mesh_name) == 0.0
+    assert helpers.get_mesh_baseline_torso_width(mesh_name) == pytest.approx(0.0)
 
 
 def test_get_mesh_baseline_extents_handles_corrupt_stl(
@@ -72,7 +72,7 @@ def test_get_mesh_baseline_extents_handles_corrupt_stl(
     assert helpers.get_mesh_baseline_extents("broken") == (0.0, 0.0, 0.0)
 
     assert helpers._MESH_EXTENT_CACHE["broken"] == (0.0, 0.0, 0.0)
-    assert helpers._MESH_TORSO_WIDTH_CACHE["broken"] == 0.0
+    assert helpers._MESH_TORSO_WIDTH_CACHE["broken"] == pytest.approx(0.0)
     assert len(warnings) == 1
     assert "Could not read baseline extents for human mesh" in warnings[0][0]
 
