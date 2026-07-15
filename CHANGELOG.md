@@ -21,12 +21,21 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Local Presidio advisory scan** (2026-07-14) — added an optional `privacy-scan` dependency extra and a
   tracked-text-only runner. It suppresses matched values, does not upload inputs/findings, and is not wired to CI.
 
-- **Local PII/PHI model evaluation reference** (2026-07-14) — documented local GLiNER, Privacy Filter, and
-  Presidio comparison options, including macOS/LM Studio limits and a synthetic-fixture-only evaluation protocol.
+- **Local PII/PHI evaluation reference** (2026-07-14) — documented local GLiNER, Privacy Filter, Presidio,
+  HoundDog, and DICOM-pixel-scanner options, including macOS/LM Studio limits, local-only boundaries, and a
+  synthetic-fixture-only evaluation protocol.
 
 - **Sensitive asset review inventory** (2026-07-14) — added a generated Markdown inventory with links to every
   guarded asset, human-readable approval state, and DICOM checklist. Pre-commit and CI reject drift from its JSON
   source of truth.
+
+- **Privacy admission hardening** (2026-07-14) — added a commit-message gate; private-network and DICOM/PACS
+  endpoint checks; hard rejection of diagnostic artifacts; and standard-preamble detection for extensionless DICOMs.
+  Notebook-embedded image/PDF outputs, PDFs, and PostScript/EPS files now require hash-pinned human clearance;
+  PDFs also receive fail-closed local page-text, metadata, and readable-attachment scanning. ZIP/TAR/GZIP and
+  Office/iWork containers now receive bounded embedded-text scans and an embedded file/image/DICOM review checklist.
+  Native diagnostic logs are now owner-only on POSIX systems, and GUI load failures no longer expose raw traceback or
+  exception content.
 
 - **Geometry per-exam event selection** (2026-07-12) — replaced the bare event selection box with an interactive 1-based chevron stepper showing context (e.g., "Event 6 / 23") in the Geometry tab. The stepper is disabled outside of "Single event" mode to improve user focus.
 

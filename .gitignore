@@ -6,6 +6,14 @@ dist/
 [Vv]env/
 venv/
 logs/
+*.cache
+*.err
+*.log
+*.log.[0-9]*
+*.out
+*.pkl
+*.pickle
+*.trace
 .idea/
 .vscode/
 .claude/

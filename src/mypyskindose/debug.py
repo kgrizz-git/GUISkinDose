@@ -160,6 +160,11 @@ def _add_file_handler(log_file: str | Path) -> None:
     except OSError as exc:
         root.warning("Could not open log file %s: %s", log_file, exc)
         return
+    if os.name == "posix":
+        try:
+            os.chmod(target, 0o600)
+        except OSError:
+            root.warning("Could not restrict permissions on diagnostic log file")
     file_handler.setLevel(_file_handler_level())
     file_handler.setFormatter(_FORMATTER)
     root.addHandler(file_handler)

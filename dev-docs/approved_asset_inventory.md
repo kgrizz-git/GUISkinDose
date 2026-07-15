@@ -14,18 +14,19 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 53
+**Assets tracked:** 54
 
-| Asset | Type | Purpose | Manual review | DICOM checklist | SHA-256 prefix |
+| Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
 | [`.envrc`](../.envrc) | Extensionless | Local development environment configuration | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `17afa908c3f7` |
-| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `ad557fda2db5` |
+| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `d4e979fb03dd` |
 | [`.semgrepignore`](../.semgrepignore) | Extensionless | Semgrep scan exclusions | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `13f4993dbd3e` |
 | [`LICENSE`](../LICENSE) | Extensionless | Repository license | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `a9f643d12813` |
 | [`docs/Makefile`](../docs/Makefile) | Extensionless | Documentation build entry point | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `e33bf74d5913` |
 | [`docs/source/_static/cmunbx.ttf`](../docs/source/_static/cmunbx.ttf) | Opaque binary | Documentation font asset | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `643afcc8fc9a` |
 | [`docs/source/_static/cmunrm.ttf`](../docs/source/_static/cmunrm.ttf) | Opaque binary | Documentation font asset | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `3deb3c529a46` |
 | [`docs/source/_static/cmunti.ttf`](../docs/source/_static/cmunti.ttf) | Opaque binary | Documentation font asset | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `acd86b280644` |
+| [`docs/source/getting_started/getting_started.ipynb`](../docs/source/getting_started/getting_started.ipynb) | Notebook embedded visual | Getting-started notebook with rendered visual outputs | ⏳ Pending manual review | — | `693bc67d5765` |
 | [`docs/source/user/figures/ExampleSkinDoseMap.png`](../docs/source/user/figures/ExampleSkinDoseMap.png) | Image | Documentation dose-map illustration | ⏳ Pending manual review | — | `0dc55620af6d` |
 | [`docs/source/user/figures/beam/beam_ap1.svg`](../docs/source/user/figures/beam/beam_ap1.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `281d754bbb5d` |
 | [`docs/source/user/figures/beam/beam_ap2.svg`](../docs/source/user/figures/beam/beam_ap2.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `947f2d9ab579` |
@@ -59,8 +60,8 @@ file revision.
 | [`src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl) | Opaque binary | Reduced senior male phantom mesh | ⏳ Pending manual review | — | `87b10fcd07de` |
 | [`src/mypyskindose/phantom_data/.gitkeep`](../src/mypyskindose/phantom_data/.gitkeep) | Extensionless | Keeps the phantom-data directory in Git | ⏳ Pending manual review | — | `e3b0c44298fc` |
 | [`tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy`](../tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy) | Opaque binary | Dose-map golden fixture | ⏳ Pending manual review | — | `ff32650b9ff0` |
-| [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Opaque binary | Normalized spreadsheet fixture | ⏳ Pending manual review | — | `c3342ef4461f` |
-| [`tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx`](../tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx) | Opaque binary | Spreadsheet metadata-header fixture | ⏳ Pending manual review | — | `d5197c95a656` |
+| [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Office/iWork document | Normalized spreadsheet fixture | ⏳ Pending manual review | files ☐ · images ☐ · DICOM ☐ | `c3342ef4461f` |
+| [`tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx`](../tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx) | Office/iWork document | Spreadsheet metadata-header fixture | ⏳ Pending manual review | files ☐ · images ☐ · DICOM ☐ | `d5197c95a656` |
 | [`wiki/backscatter_illustration_1_dark.png`](../wiki/backscatter_illustration_1_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `3cf342f39e79` |
 | [`wiki/backscatter_illustration_2_dark.png`](../wiki/backscatter_illustration_2_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `72446b615647` |
 | [`wiki/backscatter_surface_dark.png`](../wiki/backscatter_surface_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `84405ca6ca0f` |

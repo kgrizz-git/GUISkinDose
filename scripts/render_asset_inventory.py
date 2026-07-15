@@ -24,9 +24,14 @@ except ModuleNotFoundError:  # Direct ``python scripts/render_asset_inventory.py
 MARKDOWN_RELATIVE_PATH = Path("dev-docs/approved_asset_inventory.md")
 KIND_LABELS = {
     "dicom": "DICOM",
+    "archive": "Archive",
     "extensionless": "Extensionless",
     "image": "Image",
+    "notebook_embedded_visual": "Notebook embedded visual",
     "opaque_binary": "Opaque binary",
+    "office_document": "Office/iWork document",
+    "pdf": "PDF",
+    "postscript": "PostScript/EPS",
 }
 
 
@@ -53,17 +58,30 @@ def _review_status(entry: dict[str, object]) -> str:
     return f"⚠ Unknown status: `{_escape_cell(status)}`"
 
 
-def _dicom_review(entry: dict[str, object]) -> str:
-    if entry.get("kind") != "dicom":
+def _review_checklist(entry: dict[str, object]) -> str:
+    kind = entry.get("kind")
+    if kind == "dicom":
+        review = entry.get("dicom_review")
+        if not isinstance(review, dict):
+            return "⚠ Missing DICOM checklist"
+        checks = (
+            ("IDs", "direct_identifiers_reviewed"),
+            ("private", "private_tags_reviewed"),
+            ("pixels", "burned_in_text_reviewed"),
+        )
+    elif kind in {"archive", "office_document"}:
+        review = entry.get("container_review")
+        if not isinstance(review, dict):
+            return "⚠ Missing container checklist"
+        checks = (
+            ("files", "embedded_files_reviewed"),
+            ("images", "embedded_images_reviewed"),
+            ("DICOM", "embedded_dicom_reviewed"),
+        )
+    else:
         return "—"
-    review = entry.get("dicom_review")
     if not isinstance(review, dict):
-        return "⚠ Missing DICOM checklist"
-    checks = (
-        ("IDs", "direct_identifiers_reviewed"),
-        ("private", "private_tags_reviewed"),
-        ("pixels", "burned_in_text_reviewed"),
-    )
+        return "⚠ Missing review checklist"
     return " · ".join(f"{label} {'✓' if review.get(key) is True else '☐'}" for label, key in checks)
 
 
@@ -89,7 +107,7 @@ def render_inventory_markdown(repo_root: Path) -> str:
         "",
         f"**Assets tracked:** {len(entries)}",
         "",
-        "| Asset | Type | Purpose | Manual review | DICOM checklist | SHA-256 prefix |",
+        "| Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for path, entry in entries.items():
@@ -98,7 +116,7 @@ def render_inventory_markdown(repo_root: Path) -> str:
         digest = _escape_cell(entry.get("sha256", ""))[:12]
         lines.append(
             f"| {_asset_link(path)} | {kind} | {purpose} | {_review_status(entry)} | "
-            f"{_dicom_review(entry)} | `{digest}` |"
+            f"{_review_checklist(entry)} | `{digest}` |"
         )
     return "\n".join(lines) + "\n"
 

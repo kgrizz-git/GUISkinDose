@@ -57,6 +57,12 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: sensitive-commit-message
+        name: sensitive content in commit message
+        entry: python scripts/check_commit_message.py
+        language: system
+        stages: [commit-msg]
+
       - id: asset-inventory-markdown
         name: approved asset inventory Markdown
         entry: python scripts/render_asset_inventory.py --check

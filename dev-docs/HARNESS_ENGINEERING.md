@@ -56,7 +56,7 @@ Agents working in this repository should be able to answer three questions quick
 | Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
-| Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
+| Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py`, `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
 | Local Presidio advisory scan | `scripts/run_presidio_advisory.py`, optional `privacy-scan` dependency extra |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI `static-analysis` job + pre-push hook |
@@ -264,8 +264,14 @@ Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full reposi
 ### Sensitive-content and asset admission
 
 `python scripts/check_sensitive_content.py` runs in pre-commit and the CI static-analysis job. It scans all tracked
-text-like files for direct-identifier/absolute-path patterns and enforces exact-hash inventory entries for images,
-DICOM, opaque binaries, and extensionless files. It never writes a matched value to output. See
+text-like files for direct-identifier, private-network/DICOM-endpoint, and absolute-path patterns; rejects common
+diagnostic artifacts; enforces exact-hash inventory entries for images, embedded notebook visuals, DICOM, PDFs,
+PostScript/EPS, supported archives/Office-iWork containers, opaque binaries, and extensionless files; and fails
+closed when a PDF or supported container cannot have its bounded text-bearing contents parsed locally. TeX is scanned
+as ordinary text. A standard-preamble DICOM is recognized even without a filename suffix. It never writes a matched
+value to output.
+`python scripts/check_commit_message.py <git-message-file>` runs at local
+`commit-msg` time with the same value-free rules and no exemptions. See
 [`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md) for the mandatory human-review process and the
 temporary pending baseline. The separate `phi-scan` workflow is advisory only; it has no report upload or AI review.
 `python scripts/render_asset_inventory.py --check` also runs in pre-commit and CI to ensure the linked Markdown
@@ -372,6 +378,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links/path refs/inventory contradictions; stale-pattern warnings only) |
 | **sensitive-content** | `python scripts/check_sensitive_content.py` (direct PII/PHI-like text, absolute paths, and hash-pinned sensitive assets) |
+| **sensitive-commit-message** | `python scripts/check_commit_message.py` (commit-message PII/PHI-like text, internal endpoints, and local paths; `commit-msg` stage only) |
 | **asset-inventory-markdown** | `python scripts/render_asset_inventory.py --check` (generated linked review inventory matches JSON) |
 | **sync-gui-help** | `python scripts/sync_gui_help.py --check` |
 | **help-registry** | `python scripts/check_help_registry.py` |

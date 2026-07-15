@@ -47,6 +47,42 @@ information, not proof of safety.
 Do not infer comparative accuracy from a vendor’s claimed benchmark alone. The listed models have different labels,
 datasets, thresholds, languages, and span-matching rules.
 
+## Other repository-scanning candidates
+
+These tools address distinct layers. They are not interchangeable with the text-model comparison above.
+
+| Tool | What it adds | Recommendation for this repository |
+|---|---|---|
+| [HoundDog.ai Privacy Code Scanner](https://github.com/hounddogai/hounddog) | Deterministic, interprocedural static analysis that traces named sensitive data through application code into logs, files, storage, APIs, third-party SDKs, and AI integrations. The free edition supports Python, JavaScript, and TypeScript. | **Highest-priority local-only proof of concept.** It addresses code paths that could over-log or export patient data; it does not discover literal PII/PHI already committed to fixtures. Until a maintainer explicitly changes this policy, use only the standalone local binary—no API key, cloud platform, GitHub App, managed scan, PR comments, report upload, or optional AI analysis. Pin the downloaded release and ensure reports are ignored and value-safe. |
+| [dicom-phi-scan](https://github.com/elijahrockers/dicom-phi-scan) | Local two-layer DICOM scan: pydicom header-tag checks plus EasyOCR on pixel data when burned-in annotation is present or absent. | Technically aligned with the mandatory DICOM review because it checks pixels as well as tags. It is an early project with no published release at review time; evaluate only on synthetic fixtures after source/dependency/output review. Do not run it in public CI or write unprotected JSON reports, since findings may themselves be sensitive. |
+| [phi-scan](https://github.com/phiscanhq/phi-scan) | Rule/heuristic text scan. | Already installed as the pinned, report-free advisory GitHub workflow. Keep it as a text supplement; it does not clear DICOM or image assets. Evaluate its optional NLP features only through the synthetic-fixture protocol. |
+| [@certifieddata/pii-scan](https://github.com/certifieddata/pii-scan) | Local regex scan for CSV and JSON datasets, with risk levels and masked samples. | Do not add: it is narrower than the existing tracked-text gate and its normal output includes masked example values. It may be useful for an isolated developer dataset triage, never as a public-CI report. |
+
+### HoundDog proof-of-concept boundary
+
+HoundDog is intentionally a different kind of safeguard. It analyzes how source-code values flow; it cannot determine
+whether an image or DICOM fixture contains a real patient identifier. Conversely, the existing sensitive-content gate
+cannot determine that a value named `patient_name` reaches `logger.info()` after several transformations. Use both
+layers if the HoundDog trial is successful.
+
+**Policy status: local-only until further notice.** A cloud account, GitHub App, CI job, managed scan, automated PR
+comment, report upload, or optional AI analysis is prohibited unless a maintainer explicitly changes this documented
+policy after a separate data-processing review.
+
+For the initial local trial:
+
+1. Download a specific HoundDog release directly from its official releases page; do not use a floating pipe-to-shell
+   installer in the evaluation record.
+2. Run the standalone binary locally with no `HOUNDDOG_API_KEY`. Do not install the GitHub App or enable Cloud,
+   managed scans, automated PR configuration, optional AI analysis, or report upload.
+3. Send generated reports only to an ignored local directory. Inspect whether reports contain source excerpts, paths,
+   or values before retaining or sharing them.
+4. Evaluate Python coverage on synthetic representative paths: DICOM/RDSR ingestion, output serialization, logging,
+   temporary files, GUI error handling, and third-party calls. Confirm each finding manually and record only
+   value-suppressed summaries.
+5. Review the current proprietary terms, release integrity, and maintenance process before adding a pinned local
+   pre-commit hook. A cloud account or GitHub App is a separate authorization and data-processing decision.
+
 ## Integration shape if evaluation succeeds
 
 Keep any new model outside the default dependencies and CI. A safe interface would be a new optional extra and a
@@ -82,3 +118,5 @@ dedicated advisory command with an explicit `--engine gliner2` selection.
 - [OpenAI Privacy Filter overview and model links](https://huggingface.co/blog/openai-privacy-filter-web-apps)
 - [Microsoft Presidio samples, including GLiNER integration](https://microsoft.github.io/presidio/samples/)
 - [Presidio installation and local runtime guidance](https://microsoft.github.io/presidio/installation/)
+- [HoundDog scanner README, local-runtime statement, and free/enterprise feature matrix](https://github.com/hounddogai/hounddog)
+- [HoundDog local/CI deployment options](https://docs.hounddog.ai/cloud/getting-started)

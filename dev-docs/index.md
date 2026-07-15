@@ -17,6 +17,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
 | [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate. |
+| [../scripts/check_commit_message.py](../scripts/check_commit_message.py) | Local `commit-msg` gate for value-free sensitive-content checks before the message enters history. |
 | [../scripts/render_asset_inventory.py](../scripts/render_asset_inventory.py) | Generates/checks the linked Markdown view of the machine-enforced sensitive-asset inventory. |
 | [approved_asset_inventory.md](approved_asset_inventory.md) | Generated reviewer-friendly linked view of all approved/pending sensitive assets; must match the JSON source. |
 | [../scripts/run_presidio_advisory.py](../scripts/run_presidio_advisory.py) | Optional local Presidio text scan; advisory only and safe to log. |

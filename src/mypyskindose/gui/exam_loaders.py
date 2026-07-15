@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import traceback
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -20,6 +20,14 @@ from .geometry_preview import on_exams_loaded
 from .offset_handlers import reset_global_offsets_on_new_load
 from .settings_builder import build_settings
 from .state import AppState
+
+
+logger = logging.getLogger(__name__)
+
+
+def _record_load_failure(operation: str, exc: BaseException) -> None:
+    """Record a value-free load failure without persisting source-data details."""
+    logger.error("%s failed (error_type=%s)", operation, type(exc).__name__)
 
 
 def _raw_extracted_view(result) -> pd.DataFrame | None:
@@ -169,9 +177,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
 
         return True, f"Loaded {len(df)} irradiation events from {file_path.name}"
     except Exception as exc:
-        # Log the full traceback for debugging; surface a concise message to the UI.
-        print(traceback.format_exc())
-        return False, f"Could not read this DICOM RDSR file: {exc}"
+        _record_load_failure("DICOM_RDSR_LOAD", exc)
+        return False, "Could not read this DICOM RDSR file. Check the file and try again."
 
 
 def get_excel_sheets(file_path: Path) -> list[str]:
@@ -377,11 +384,10 @@ def load_tabular(
         state.normalization_warnings = []
 
         return True, msg
-    except SchemaDetectionError:
+    except SchemaDetectionError as exc:
         # Not a real parse error — the file just didn't clearly match a known
-        # vendor format. Guide the user to pick one explicitly instead of
-        # dumping a traceback.
-        print(traceback.format_exc())
+        # vendor format. Record only its type, then guide the user to pick one.
+        _record_load_failure("TABULAR_SCHEMA_DETECTION", exc)
         state.import_has_errors = True
         return False, (
             "Couldn't auto-detect this file's format. Open the “Input schema” "
@@ -389,8 +395,6 @@ def load_tabular(
             "DoseTrack, Raw RDSR-like, or Normalized), then upload the file again."
         )
     except Exception as exc:
-        # Genuine read/validation error: log the full traceback for debugging but
-        # surface only a concise one-line message in the UI.
-        print(traceback.format_exc())
+        _record_load_failure("TABULAR_LOAD", exc)
         state.import_has_errors = True
-        return False, f"Could not read this file: {exc}"
+        return False, "Could not read this file. Check the file and try again."

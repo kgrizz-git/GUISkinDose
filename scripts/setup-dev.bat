@@ -13,4 +13,6 @@ call pre-commit install
 if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 call pre-commit install --hook-type pre-push
 if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
-echo Git hooks installed (pre-commit + pre-push).
+call pre-commit install --hook-type commit-msg
+if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
+echo Git hooks installed (pre-commit + pre-push + commit-msg).
