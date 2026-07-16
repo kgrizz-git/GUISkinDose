@@ -75,6 +75,11 @@ jobs:
       run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
     - name: Semgrep (OWASP Top 10 SAST)
       run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
+    - name: Semgrep (project PHI/PII leak rules, advisory)
+      # Advisory: no --error, so findings surface in the log without failing CI.
+      # Triage, do not ignore. Promote to blocking once the surface is cleared.
+      continue-on-error: true
+      run: semgrep --config=.semgrep/mypyskindose-privacy.yml --metrics=off src scripts
     - name: Safety (dependency vulnerability scan — skipped without key)
       if: env.SAFETY_API_KEY != ''
       run: safety scan --detailed-output

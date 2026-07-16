@@ -144,6 +144,32 @@ def test_diagnostic_artifact_and_internal_endpoint_are_blocked_without_echoing_v
     assert "192.168" not in "\n".join(finding.render() for finding in findings)
 
 
+def test_private_ipv6_addresses_are_blocked_without_echoing_value(tmp_path: Path) -> None:
+    config = tmp_path / "modality.cfg"
+    # Split the prefix hextet from its colons so this source line does not self-match
+    # the gate (mirrors the IPv4 test). The written file still contains full addresses.
+    config.write_text("ula=" + "fd12" + ":3456:789a::1\nll=" + "fe80" + "::1\n", encoding="utf-8")
+    _write_policy(tmp_path, [])
+
+    findings = run_checks(tmp_path, paths=["modality.cfg"])
+    assert [(finding.rule, finding.location) for finding in findings] == [
+        ("PRIVATE_IPV6_ADDRESS", "1"),
+        ("PRIVATE_IPV6_ADDRESS", "2"),
+    ]
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "fd12" not in rendered and "fe80" not in rendered
+
+
+def test_mac_address_is_not_a_false_positive_ipv6(tmp_path: Path) -> None:
+    # A MAC address has a colon after only two hex digits, so the fc/fd/fe8 prefix
+    # (four contiguous hex) must not match it.
+    config = tmp_path / "device.cfg"
+    config.write_text("mac=" + "fc:00" + ":11:22:33:44\n", encoding="utf-8")
+    _write_policy(tmp_path, [])
+
+    assert run_checks(tmp_path, paths=["device.cfg"]) == []
+
+
 def test_contextual_patient_identifier_is_blocked_but_test_placeholder_is_allowed(tmp_path: Path) -> None:
     metadata = tmp_path / "metadata.txt"
     metadata.write_text("patient" + "_id=AB-" + "42\npatient_id=TEST\n", encoding="utf-8")

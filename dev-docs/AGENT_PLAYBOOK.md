@@ -36,6 +36,27 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
 - Keep scratch scripts and temporary outputs in gitignored paths such as `tmp/`, `scripts/scratch_*`, `*.tmp`, or
   `debug_*`, or delete them before finishing.
 
+## Privacy and sensitive data
+
+Treat PHI/PII exposure as a first-class defect — in committed content **and** in what code emits at runtime.
+
+- **Never log, print, or write raw identifiers** — patient/study/institution/physician fields, DICOM header values,
+  source filenames, or absolute paths. Log a non-identifying summary or route the value through a redaction helper.
+  Writes must target gitignored, user-known output paths (e.g. `PlotOutputs/`, `tmp/`) and the destination should be
+  surfaced to the user; never write sensitive content to tracked files.
+- **Run the scanner that matches the change, and triage its findings — do not ignore advisories:**
+  - Tracked text, docs, or fixtures that could carry identifiers → the blocking gate runs automatically
+    (`scripts/check_sensitive_content.py`); for an NLP second opinion run
+    `uv run --extra privacy-scan python scripts/run_presidio_advisory.py`.
+  - Source code that logs or writes → the advisory `semgrep-privacy` rules
+    (`semgrep --config=.semgrep/mypyskindose-privacy.yml --metrics=off src scripts`, also a pre-push hook) and, if the
+    binary is installed, HoundDog (`python scripts/run_hounddog_advisory.py`).
+  - Adding or changing a DICOM/image asset → run `dicom-phi-scan` locally on pixels and headers (isolated Python 3.11
+    env) before recording the review in `dev-docs/approved_asset_inventory.json`.
+- **Advisory ≠ optional.** Every advisory finding must be fixed, or annotated as a reviewed false positive with a
+  trailing `# nosemgrep: <rule-id>` (or an allowlist/inventory entry) plus a one-line reason — never silently dropped.
+- Run commands live in `dev-docs/references/LOCAL_PII_MODELS.md`; policy is in `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md`.
+
 ## Before Finishing
 
 Run the smallest meaningful verification set for the change. Common checks:

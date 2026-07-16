@@ -141,6 +141,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: hounddog-dataflow
+        name: HoundDog PHI/PII dataflow scan (local-only, advisory)
+        entry: python scripts/run_hounddog_advisory.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       - id: cleanup-old-backups
         name: cleanup stale backups/ files (>5 commits)
         entry: python scripts/cleanup_old_backups.py
@@ -175,6 +183,15 @@ repos:
       - id: semgrep
         name: semgrep (OWASP Top 10 SAST)
         entry: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: semgrep-privacy
+        name: semgrep (project PHI/PII leak rules, advisory)
+        # No --error: advisory. Findings print but do not block; triage, do not ignore.
+        entry: semgrep --config=.semgrep/mypyskindose-privacy.yml --metrics=off src scripts
         language: system
         pass_filenames: false
         always_run: true

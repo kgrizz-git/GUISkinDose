@@ -1,0 +1,57 @@
+# Project-specific privacy SAST rules for MyPySkinDose.
+#
+# These target the repository's own leak surface: sensitive identifier values
+# (DICOM/normalized patient, study, institution, physician fields, or a source
+# filename) reaching stdout or a logger unredacted. They are ADVISORY (severity
+# WARNING) and run in a separate, non-blocking semgrep invocation so they never
+# fail the build while the existing surface is triaged. Promote to ERROR (and
+# add them to the blocking `--error` invocation) once findings are cleared.
+#
+# Triage, do not ignore: fix by logging a non-identifying summary or routing the
+# value through a redaction helper, or annotate a reviewed false positive with a
+# trailing `# nosemgrep: <rule-id>` plus a one-line reason.
+#
+# Precision note: rules match identifier *attribute access* (e.g. prov.original_filename)
+# or a small set of exactly-named variables, never string literals or config keys,
+# to keep the advisory signal actionable.
+rules:
+  - id: mypyskindose-identifier-attr-to-log-or-stdout
+    severity: WARNING
+    languages: [python]
+    message: >-
+      A patient/study/institution/physician identifier or source filename may be
+      written to stdout or a logger unredacted. Log a non-identifying summary or
+      route through a redaction helper. Advisory: triage, do not ignore.
+    metadata:
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: print(..., $OBJ.$ATTR, ...)
+          - pattern: print(..., f"...{$OBJ.$ATTR}...", ...)
+          - pattern: logging.$M(..., $OBJ.$ATTR, ...)
+          - pattern: logging.$M(..., f"...{$OBJ.$ATTR}...", ...)
+          - pattern: $LOG.$M(..., $OBJ.$ATTR, ...)
+          - pattern: $LOG.$M(..., f"...{$OBJ.$ATTR}...", ...)
+      - metavariable-regex:
+          metavariable: $ATTR
+          regex: ^(original_filename|study_id|patient_name|patient_id|patient_birth_date|patient_age|accession_number|institution_name|institution_address|referring_physician_name|physician_name)$
+
+  - id: mypyskindose-filename-var-to-log-or-stdout
+    severity: WARNING
+    languages: [python]
+    message: >-
+      A filename/path value may be written to stdout or a logger. Confirm it
+      cannot embed a patient identifier; prefer logging a basename or redacted
+      form. Advisory: triage, do not ignore.
+    metadata:
+      category: security
+      confidence: LOW
+    patterns:
+      - pattern-either:
+          - pattern: print(..., f"...{$X}...", ...)
+          - pattern: logging.$M(..., f"...{$X}...", ...)
+          - pattern: $LOG.$M(..., f"...{$X}...", ...)
+      - metavariable-regex:
+          metavariable: $X
+          regex: ^(filename|filepath|file_path|file_name)$

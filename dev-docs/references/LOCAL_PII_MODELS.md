@@ -1,6 +1,6 @@
 # Local PII/PHI text-model reference
 
-_Last reviewed: 2026-07-14. This is an evaluation reference, not a claim that any model de-identifies clinical data._
+_Last reviewed: 2026-07-15. This is an evaluation reference, not a claim that any model de-identifies clinical data._
 
 ## Purpose and boundary
 
@@ -12,6 +12,22 @@ asset, replaces rendered-image/DICOM review, or upload source text or findings.
 
 The current local baseline is [`../../scripts/run_presidio_advisory.py`](../../scripts/run_presidio_advisory.py).
 It runs Microsoft Presidio locally, suppresses matched values in its output, and is intentionally not a CI gate.
+
+## Running the local scanners
+
+Exact invocations for the scanners set up for this repository. The first two are wired into CI/hooks; the last two
+are **local-only** manual tools that never run in public CI. All are value-safe or write only to gitignored paths.
+
+| Scanner | Layer | How to run |
+|---|---|---|
+| **phi-scan** | Deterministic text (tracked files) | Mirrors the [`phi-scan` workflow](../../.github/workflows/phi-scan.yml): `git archive HEAD \| tar -x -C <tmp>` then `uvx --from 'phi-scan==0.7.0' phi-scan scan . --config <repo>/.phi-scanner.yml --no-cache --quiet`. Its NLP layer is intentionally off; Presidio supplies the NLP view. |
+| **Presidio** | NLP text (tracked files) | `uv sync --extra privacy-scan` once, then `uv run --extra privacy-scan python scripts/run_presidio_advisory.py`. Prints `path:line:entity_type:score` only. `PERSON`@0.85 is its dominant false-positive class. |
+| **HoundDog** | Code dataflow (tracked source) | Install the standalone binary, then `python scripts/run_hounddog_advisory.py` (advisory pre-push hook; skips when the binary is absent) or `hounddog scan . --no-color --no-tips` directly. Console output only. |
+| **dicom-phi-scan** | DICOM header + pixel OCR (local data) | Install in an **isolated Python 3.11 env** (its EasyOCR/Pillow/pydicom pins conflict with the 3.12 project env), then `dicom-phi-scan --dir <dicom-dir> --cpu -o <gitignored>.jsonl -v`. Force `--cpu` on macOS; first run downloads EasyOCR models. |
+
+The JSONL report from dicom-phi-scan can itself contain identifier values, so always write it to a gitignored path
+(e.g. `tmp/`) and delete it after review. Inspect it value-safely with `jq` on non-value keys
+(`risk_level`, `.tag_findings[].tag`) rather than printing header values into a terminal or log.
 
 ## Recommended candidate: NVIDIA GLiNER-PII
 

@@ -153,6 +153,15 @@ SENSITIVE_PATTERNS = (
         "PRIVATE_IPV4_ADDRESS",
         re.compile(r"(?<![\d.])(?:10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2})(?![\d.])"),
     ),
+    (
+        # Unique-local (fc/fd leading octet; fc00 through fdff) and link-local
+        # (fe80 through febf) IPv6 addresses. Requires the private prefix hextet plus
+        # >=2 colon groups so a bare hex label or MAC address (colon after only two hex
+        # digits) does not match. Prefixes are written without a trailing "::" here so
+        # this definition does not flag itself.
+        "PRIVATE_IPV6_ADDRESS",
+        re.compile(r"(?i)(?<![0-9a-f:])(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f])(?::[0-9a-f]{0,4}){2,}(?![0-9a-f:])"),
+    ),
     ("DICOM_PACS_URI", re.compile(r"(?i)\b(?:dicom|pacs)://[^\s)>`\"']+")),
     (
         "INTERNAL_DICOM_PACS_HOST",

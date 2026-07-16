@@ -12,6 +12,22 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Advisory PHI/PII leak SAST + agent privacy guidance** (2026-07-15) — added project-specific semgrep rules
+  (`.semgrep/mypyskindose-privacy.yml`) that flag patient/study/institution/physician identifiers and source
+  filenames reaching stdout/loggers, wired as a non-blocking `semgrep-privacy` pre-push hook and CI step (findings
+  surface without failing the build; promote to blocking once cleared). Added an `AGENT_PLAYBOOK.md` "Privacy and
+  sensitive data" section covering when to run each scanner and that advisory findings must be triaged, not ignored.
+
+- **HoundDog dataflow scan + PII/PHI scanner runbook** (2026-07-15) — added an advisory, local-only pre-push hook
+  (`scripts/run_hounddog_advisory.py`) that runs HoundDog's source-code dataflow scan when the standalone binary is
+  installed and skips cleanly otherwise; it never blocks, uploads, or invokes cloud/AI features. Documented exact
+  run commands for all four scanners (phi-scan, Presidio, HoundDog, dicom-phi-scan) in
+  `dev-docs/references/LOCAL_PII_MODELS.md`.
+
+- **Private IPv6 detection in the sensitive-content gate** (2026-07-15) — the blocking gate now flags unique-local
+  and link-local IPv6 addresses (the fc00/7 and fe80/10 prefix ranges) in tracked text alongside the existing
+  private-IPv4 rule, without echoing the matched value. MAC addresses are excluded to avoid false positives.
+
 - **Sensitive-content and asset-admission gate** (2026-07-13) — added a blocking pre-commit/CI scanner for
   tracked PII/PHI-like text and absolute local paths, plus SHA-256 inventory enforcement for every image, DICOM,
   opaque binary, and extensionless file. Existing assets are recorded as explicitly pending a maintainer's manual
