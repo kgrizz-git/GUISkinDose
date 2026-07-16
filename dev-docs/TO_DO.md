@@ -82,6 +82,8 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ### Harness / Repo Hygiene
 
+- [ ] **Adopt the fork-maintenance baseline** — work through the prioritized GitHub governance, attribution,
+  privacy, upstream-sync, and release actions in [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md).
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
   inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,
