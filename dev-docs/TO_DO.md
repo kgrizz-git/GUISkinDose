@@ -9,6 +9,10 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Now / Next
 
+Privacy hardening implementation is coordinated by
+[PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md); the individual privacy items below remain open until
+their corresponding plan exit criteria pass.
+
 - [ ] **Complete sensitive-asset baseline review** — manually clear every `pending` entry in
   `approved_asset_inventory.json`, including rendered-image and DICOM burned-in-text review. Record reviewer/date,
   then switch CI to `python scripts/check_sensitive_content.py --require-approved-assets`.
