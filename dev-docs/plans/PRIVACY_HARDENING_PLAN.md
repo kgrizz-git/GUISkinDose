@@ -87,6 +87,18 @@ output has been proven value-safe.
 6. Create small synthetic positive and negative privacy fixtures containing fake identifiers. Keep them textual where
    possible; any DICOM/image fixture requires normal inventory admission.
 7. Prove each scanner against those fixtures before relying on it.
+8. Apply the reviewed fixture dispositions:
+   - record that `siemens_axiom_artis.dcm` came from the original public PySkinDose repository and is believed to be
+     a test examination acquired on a phantom rather than a patient; treat that provenance as supporting context,
+     not as a substitute for the normal DICOM header/private-tag/pixel checklist;
+   - approve the golden `.npy` dose-map fixture after confirming it remains a numeric-only NumPy array and its golden
+     regression test passes;
+   - replace the 21 `IrradiationEventUID` values copied into `generic_rdsr_events.csv` with deterministic test-only
+     UIDs (for example, UUID-derived `2.25.*` UIDs), preserving uniqueness and any intended relationships;
+   - record the targeted Presidio `PERSON` findings in `ReferencePointDefinition` and `XRayFilterType` as triaged
+     categorical-field false positives rather than silently ignoring them.
+9. Use reviewer initials or a stable public reviewer handle in the inventory instead of requiring a full legal name;
+   `KG` is the reviewer identifier for the current maintainer review.
 
 **Exit criteria**
 

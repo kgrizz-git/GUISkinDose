@@ -64,9 +64,10 @@ all entries have been reviewed, run the stricter command and make it the CI comm
 python scripts/check_sensitive_content.py --require-approved-assets
 ```
 
-Do not mark an entry approved merely because an automated scan is clean. The reviewer must record their name and
-date, confirm its purpose/provenance, and review the rendered content of images or other opaque files. A changed
-hash is a new review.
+Do not mark an entry approved merely because an automated scan is clean. The reviewer must record their initials or
+a stable public reviewer handle and the date, confirm the asset's purpose/provenance, and review the rendered content
+of images or other opaque files. A full legal name is unnecessary in this public inventory. A changed hash is a new
+review.
 
 ## DICOM review
 

@@ -18,57 +18,57 @@ file revision.
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
-| [`.envrc`](../.envrc) | Extensionless | Local development environment configuration | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `17afa908c3f7` |
-| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `d4e979fb03dd` |
-| [`.semgrepignore`](../.semgrepignore) | Extensionless | Semgrep scan exclusions | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `13f4993dbd3e` |
-| [`LICENSE`](../LICENSE) | Extensionless | Repository license | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `a9f643d12813` |
-| [`docs/Makefile`](../docs/Makefile) | Extensionless | Documentation build entry point | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `e33bf74d5913` |
-| [`docs/source/_static/cmunbx.ttf`](../docs/source/_static/cmunbx.ttf) | Opaque binary | Documentation font asset | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `643afcc8fc9a` |
-| [`docs/source/_static/cmunrm.ttf`](../docs/source/_static/cmunrm.ttf) | Opaque binary | Documentation font asset | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `3deb3c529a46` |
-| [`docs/source/_static/cmunti.ttf`](../docs/source/_static/cmunti.ttf) | Opaque binary | Documentation font asset | ✅ Approved — Kevin Grizzard (2026-07-14) | — | `acd86b280644` |
-| [`docs/source/getting_started/getting_started.ipynb`](../docs/source/getting_started/getting_started.ipynb) | Notebook embedded visual | Getting-started notebook with rendered visual outputs | ⏳ Pending manual review | — | `693bc67d5765` |
-| [`docs/source/user/figures/ExampleSkinDoseMap.png`](../docs/source/user/figures/ExampleSkinDoseMap.png) | Image | Documentation dose-map illustration | ⏳ Pending manual review | — | `0dc55620af6d` |
-| [`docs/source/user/figures/beam/beam_ap1.svg`](../docs/source/user/figures/beam/beam_ap1.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `281d754bbb5d` |
-| [`docs/source/user/figures/beam/beam_ap2.svg`](../docs/source/user/figures/beam/beam_ap2.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `947f2d9ab579` |
-| [`docs/source/user/figures/beam/beam_normals.svg`](../docs/source/user/figures/beam/beam_normals.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `74e78447af3f` |
-| [`docs/source/user/figures/beam/beam_standard.svg`](../docs/source/user/figures/beam/beam_standard.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `2cbdbe4fd7a4` |
-| [`docs/source/user/figures/beam/beam_vectors.svg`](../docs/source/user/figures/beam/beam_vectors.svg) | Image | Documentation geometry illustration | ⏳ Pending manual review | — | `ecd3bed40ba4` |
-| [`docs/source/user/figures/table/table_at1.svg`](../docs/source/user/figures/table/table_at1.svg) | Image | Documentation table illustration | ⏳ Pending manual review | — | `c995d47d27ba` |
-| [`docs/source/user/figures/table/table_at2.svg`](../docs/source/user/figures/table/table_at2.svg) | Image | Documentation table illustration | ⏳ Pending manual review | — | `51cc776b0b31` |
-| [`docs/source/user/figures/table/table_at3.svg`](../docs/source/user/figures/table/table_at3.svg) | Image | Documentation table illustration | ⏳ Pending manual review | — | `b694d8956241` |
-| [`docs/source/user/figures/table/table_standard.svg`](../docs/source/user/figures/table/table_standard.svg) | Image | Documentation table illustration | ⏳ Pending manual review | — | `32ffab845368` |
-| [`docs/source/user/figures/table/table_translate.svg`](../docs/source/user/figures/table/table_translate.svg) | Image | Documentation table illustration | ⏳ Pending manual review | — | `6b2a9a8760e2` |
+| [`.envrc`](../.envrc) | Extensionless | Local development environment configuration | ✅ Approved — KG (2026-07-14) | — | `17afa908c3f7` |
+| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — KG (2026-07-14) | — | `d4e979fb03dd` |
+| [`.semgrepignore`](../.semgrepignore) | Extensionless | Semgrep scan exclusions | ✅ Approved — KG (2026-07-14) | — | `13f4993dbd3e` |
+| [`LICENSE`](../LICENSE) | Extensionless | Repository license | ✅ Approved — KG (2026-07-14) | — | `a9f643d12813` |
+| [`docs/Makefile`](../docs/Makefile) | Extensionless | Documentation build entry point | ✅ Approved — KG (2026-07-14) | — | `e33bf74d5913` |
+| [`docs/source/_static/cmunbx.ttf`](../docs/source/_static/cmunbx.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `643afcc8fc9a` |
+| [`docs/source/_static/cmunrm.ttf`](../docs/source/_static/cmunrm.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `3deb3c529a46` |
+| [`docs/source/_static/cmunti.ttf`](../docs/source/_static/cmunti.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `acd86b280644` |
+| [`docs/source/getting_started/getting_started.ipynb`](../docs/source/getting_started/getting_started.ipynb) | Notebook embedded visual | Getting-started notebook with rendered visual outputs | ✅ Approved — KG (2026-07-15) | — | `693bc67d5765` |
+| [`docs/source/user/figures/ExampleSkinDoseMap.png`](../docs/source/user/figures/ExampleSkinDoseMap.png) | Image | Documentation dose-map illustration | ✅ Approved — KG (2026-07-15) | — | `0dc55620af6d` |
+| [`docs/source/user/figures/beam/beam_ap1.svg`](../docs/source/user/figures/beam/beam_ap1.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `281d754bbb5d` |
+| [`docs/source/user/figures/beam/beam_ap2.svg`](../docs/source/user/figures/beam/beam_ap2.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `947f2d9ab579` |
+| [`docs/source/user/figures/beam/beam_normals.svg`](../docs/source/user/figures/beam/beam_normals.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `74e78447af3f` |
+| [`docs/source/user/figures/beam/beam_standard.svg`](../docs/source/user/figures/beam/beam_standard.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `2cbdbe4fd7a4` |
+| [`docs/source/user/figures/beam/beam_vectors.svg`](../docs/source/user/figures/beam/beam_vectors.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `ecd3bed40ba4` |
+| [`docs/source/user/figures/table/table_at1.svg`](../docs/source/user/figures/table/table_at1.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `c995d47d27ba` |
+| [`docs/source/user/figures/table/table_at2.svg`](../docs/source/user/figures/table/table_at2.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `51cc776b0b31` |
+| [`docs/source/user/figures/table/table_at3.svg`](../docs/source/user/figures/table/table_at3.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `b694d8956241` |
+| [`docs/source/user/figures/table/table_standard.svg`](../docs/source/user/figures/table/table_standard.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `32ffab845368` |
+| [`docs/source/user/figures/table/table_translate.svg`](../docs/source/user/figures/table/table_translate.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `6b2a9a8760e2` |
 | [`src/mypyskindose/example_data/RDSR/fake_scanner.dcm`](../src/mypyskindose/example_data/RDSR/fake_scanner.dcm) | DICOM | Synthetic RDSR test fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `bd665ed347e0` |
 | [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm) | DICOM | Philips RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `b1231b0013fe` |
 | [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm) | DICOM | Philips RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `81dddb53e3bf` |
-| [`src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm) | DICOM | Siemens RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `896bcd035df2` |
+| [`src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm) | DICOM | Upstream PySkinDose Siemens RDSR regression fixture; believed to be a phantom test exam | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `896bcd035df2` |
 | [`src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm) | DICOM | Siemens RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `e1f70911cc29` |
-| [`src/mypyskindose/example_data/RDSR/.gitkeep`](../src/mypyskindose/example_data/RDSR/.gitkeep) | Extensionless | Keeps the RDSR example-data directory in Git | ⏳ Pending manual review | — | `e3b0c44298fc` |
-| [`src/mypyskindose/phantom_data/adult_female.stl`](../src/mypyskindose/phantom_data/adult_female.stl) | Opaque binary | Adult female phantom mesh | ⏳ Pending manual review | — | `f74681f580aa` |
-| [`src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl) | Opaque binary | Reduced adult female phantom mesh | ⏳ Pending manual review | — | `fcb6b37d23ca` |
-| [`src/mypyskindose/phantom_data/adult_male.stl`](../src/mypyskindose/phantom_data/adult_male.stl) | Opaque binary | Adult male phantom mesh | ⏳ Pending manual review | — | `ab215e8d3a6f` |
-| [`src/mypyskindose/phantom_data/adult_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/adult_male_reduced_1000t.stl) | Opaque binary | Reduced adult male phantom mesh | ⏳ Pending manual review | — | `3f087b0f05cf` |
-| [`src/mypyskindose/phantom_data/hudfrid.stl`](../src/mypyskindose/phantom_data/hudfrid.stl) | Opaque binary | Hudfrid phantom mesh | ⏳ Pending manual review | — | `808225ebf552` |
-| [`src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl`](../src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl) | Opaque binary | Reduced Hudfrid phantom mesh | ⏳ Pending manual review | — | `f846afbcbb7a` |
-| [`src/mypyskindose/phantom_data/junior_female.stl`](../src/mypyskindose/phantom_data/junior_female.stl) | Opaque binary | Junior female phantom mesh | ⏳ Pending manual review | — | `cbcfd41b58e2` |
-| [`src/mypyskindose/phantom_data/junior_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/junior_female_reduced_1000t.stl) | Opaque binary | Reduced junior female phantom mesh | ⏳ Pending manual review | — | `1bc6cf6b2d43` |
-| [`src/mypyskindose/phantom_data/junior_male.stl`](../src/mypyskindose/phantom_data/junior_male.stl) | Opaque binary | Junior male phantom mesh | ⏳ Pending manual review | — | `27835869352a` |
-| [`src/mypyskindose/phantom_data/junior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/junior_male_reduced_1000t.stl) | Opaque binary | Reduced junior male phantom mesh | ⏳ Pending manual review | — | `e05e4d68f09b` |
-| [`src/mypyskindose/phantom_data/senior_female.stl`](../src/mypyskindose/phantom_data/senior_female.stl) | Opaque binary | Senior female phantom mesh | ⏳ Pending manual review | — | `b1c67ba9bb04` |
-| [`src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl) | Opaque binary | Reduced senior female phantom mesh | ⏳ Pending manual review | — | `a5bdb98d3680` |
-| [`src/mypyskindose/phantom_data/senior_male.stl`](../src/mypyskindose/phantom_data/senior_male.stl) | Opaque binary | Senior male phantom mesh | ⏳ Pending manual review | — | `c682b78dda25` |
-| [`src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl) | Opaque binary | Reduced senior male phantom mesh | ⏳ Pending manual review | — | `87b10fcd07de` |
-| [`src/mypyskindose/phantom_data/.gitkeep`](../src/mypyskindose/phantom_data/.gitkeep) | Extensionless | Keeps the phantom-data directory in Git | ⏳ Pending manual review | — | `e3b0c44298fc` |
-| [`tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy`](../tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy) | Opaque binary | Dose-map golden fixture | ⏳ Pending manual review | — | `ff32650b9ff0` |
+| [`src/mypyskindose/example_data/RDSR/.gitkeep`](../src/mypyskindose/example_data/RDSR/.gitkeep) | Extensionless | Keeps the RDSR example-data directory in Git | ✅ Approved — KG (2026-07-15) | — | `e3b0c44298fc` |
+| [`src/mypyskindose/phantom_data/adult_female.stl`](../src/mypyskindose/phantom_data/adult_female.stl) | Opaque binary | Adult female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `f74681f580aa` |
+| [`src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl) | Opaque binary | Reduced adult female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `fcb6b37d23ca` |
+| [`src/mypyskindose/phantom_data/adult_male.stl`](../src/mypyskindose/phantom_data/adult_male.stl) | Opaque binary | Adult male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `ab215e8d3a6f` |
+| [`src/mypyskindose/phantom_data/adult_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/adult_male_reduced_1000t.stl) | Opaque binary | Reduced adult male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `3f087b0f05cf` |
+| [`src/mypyskindose/phantom_data/hudfrid.stl`](../src/mypyskindose/phantom_data/hudfrid.stl) | Opaque binary | Hudfrid phantom mesh | ✅ Approved — KG (2026-07-15) | — | `808225ebf552` |
+| [`src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl`](../src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl) | Opaque binary | Reduced Hudfrid phantom mesh | ✅ Approved — KG (2026-07-15) | — | `f846afbcbb7a` |
+| [`src/mypyskindose/phantom_data/junior_female.stl`](../src/mypyskindose/phantom_data/junior_female.stl) | Opaque binary | Junior female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `cbcfd41b58e2` |
+| [`src/mypyskindose/phantom_data/junior_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/junior_female_reduced_1000t.stl) | Opaque binary | Reduced junior female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `1bc6cf6b2d43` |
+| [`src/mypyskindose/phantom_data/junior_male.stl`](../src/mypyskindose/phantom_data/junior_male.stl) | Opaque binary | Junior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `27835869352a` |
+| [`src/mypyskindose/phantom_data/junior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/junior_male_reduced_1000t.stl) | Opaque binary | Reduced junior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `e05e4d68f09b` |
+| [`src/mypyskindose/phantom_data/senior_female.stl`](../src/mypyskindose/phantom_data/senior_female.stl) | Opaque binary | Senior female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `b1c67ba9bb04` |
+| [`src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl) | Opaque binary | Reduced senior female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `a5bdb98d3680` |
+| [`src/mypyskindose/phantom_data/senior_male.stl`](../src/mypyskindose/phantom_data/senior_male.stl) | Opaque binary | Senior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `c682b78dda25` |
+| [`src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl) | Opaque binary | Reduced senior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `87b10fcd07de` |
+| [`src/mypyskindose/phantom_data/.gitkeep`](../src/mypyskindose/phantom_data/.gitkeep) | Extensionless | Keeps the phantom-data directory in Git | ✅ Approved — KG (2026-07-15) | — | `e3b0c44298fc` |
+| [`tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy`](../tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy) | Opaque binary | Numeric-only dose-map golden fixture | ✅ Approved — KG (2026-07-15) | — | `ff32650b9ff0` |
 | [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Office/iWork document | Normalized spreadsheet fixture | ⏳ Pending manual review | files ☐ · images ☐ · DICOM ☐ | `c3342ef4461f` |
 | [`tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx`](../tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx) | Office/iWork document | Spreadsheet metadata-header fixture | ⏳ Pending manual review | files ☐ · images ☐ · DICOM ☐ | `d5197c95a656` |
-| [`wiki/backscatter_illustration_1_dark.png`](../wiki/backscatter_illustration_1_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `3cf342f39e79` |
-| [`wiki/backscatter_illustration_2_dark.png`](../wiki/backscatter_illustration_2_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `72446b615647` |
-| [`wiki/backscatter_surface_dark.png`](../wiki/backscatter_surface_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `84405ca6ca0f` |
-| [`wiki/beam_path_through_table_1_dark.png`](../wiki/beam_path_through_table_1_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `054659783718` |
-| [`wiki/beam_path_through_table_2_dark.png`](../wiki/beam_path_through_table_2_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `483aea271807` |
-| [`wiki/collimator_shutters_dark.png`](../wiki/collimator_shutters_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `32dfe3933646` |
-| [`wiki/distance_scaling_dark.png`](../wiki/distance_scaling_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `46cd7f4bcbfc` |
-| [`wiki/human.png`](../wiki/human.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `649b7aa25c5d` |
-| [`wiki/isq_dark.png`](../wiki/isq_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `d041f2a46a80` |
-| [`wiki/mu_en_surface_dark.png`](../wiki/mu_en_surface_dark.png) | Image | Wiki illustration | ⏳ Pending manual review | — | `ba793187784a` |
+| [`wiki/backscatter_illustration_1_dark.png`](../wiki/backscatter_illustration_1_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `3cf342f39e79` |
+| [`wiki/backscatter_illustration_2_dark.png`](../wiki/backscatter_illustration_2_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `72446b615647` |
+| [`wiki/backscatter_surface_dark.png`](../wiki/backscatter_surface_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `84405ca6ca0f` |
+| [`wiki/beam_path_through_table_1_dark.png`](../wiki/beam_path_through_table_1_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `054659783718` |
+| [`wiki/beam_path_through_table_2_dark.png`](../wiki/beam_path_through_table_2_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `483aea271807` |
+| [`wiki/collimator_shutters_dark.png`](../wiki/collimator_shutters_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `32dfe3933646` |
+| [`wiki/distance_scaling_dark.png`](../wiki/distance_scaling_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `46cd7f4bcbfc` |
+| [`wiki/human.png`](../wiki/human.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `649b7aa25c5d` |
+| [`wiki/isq_dark.png`](../wiki/isq_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `d041f2a46a80` |
+| [`wiki/mu_en_surface_dark.png`](../wiki/mu_en_surface_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `ba793187784a` |
