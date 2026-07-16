@@ -13,6 +13,8 @@ from pathlib import Path
 
 from stl import mesh as stl_mesh
 
+from mypyskindose.privacy import safe_error_event
+
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
     EXAM_COLUMN,
@@ -226,11 +228,8 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         finally:
             _calc_logger.removeHandler(_collector)
     except Exception as exc:
-        # Do not surface raw tracebacks to the UI — they can leak internal
-        # filesystem paths and exception details. Log the type for diagnosis
-        # (full traceback via logger) and return a generic message.
-        _gui_logger.exception("Dose calculation failed: %s", exc.__class__.__name__)
-        return False, "Calculation failed. See the application log for details."
+        safe_error_event(_gui_logger, "dose_calculation", exc)
+        return False, "Calculation failed. No source details were written to diagnostics."
 
 
 def event_count_from_state(state: AppState) -> int:
@@ -270,9 +269,7 @@ def _patch_tqdm(progress_cb, total: int):
 
         tqdm_module.tqdm.update = new_update  # type: ignore[method-assign]
     except Exception as exc:
-        from mypyskindose.debug import dprint
-
-        dprint("CALCULATION", f"tqdm progress patch skipped: {exc}")
+        safe_error_event(_gui_logger, "progress_hook", exc, level=logging.DEBUG)
 
 
 def get_example_rdsr_files() -> list[Path]:
@@ -321,11 +318,7 @@ def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
             raise ValueError("STL has no vertices in the torso-width band")
         torso_width = float(torso_points.max() - torso_points.min())
     except Exception as exc:
-        _gui_logger.warning(
-            "Could not read baseline extents for human mesh %r (%s); rendering cm displays as '—'.",
-            mesh_name,
-            exc,
-        )
+        safe_error_event(_gui_logger, "phantom_mesh_measurement", exc, level=logging.WARNING)
         extents = (0.0, 0.0, 0.0)
         torso_width = 0.0
 

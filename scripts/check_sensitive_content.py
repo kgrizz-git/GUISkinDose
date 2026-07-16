@@ -180,6 +180,25 @@ SENSITIVE_PATTERNS = (
     ),
 )
 
+SENSITIVE_PATH_PATTERNS = (
+    (
+        "SENSITIVE_PATIENT_PATH",
+        re.compile(r"(?i)(?:^|[._-])patient(?:[._-]?(?:id|name|mrn))?[._-]?[a-z]*\d{2,}(?:[._-]|$)"),
+    ),
+    (
+        "SENSITIVE_MRN_PATH",
+        re.compile(r"(?i)(?:^|[._-])mrn[._-]?[a-z]*\d{2,}(?:[._-]|$)"),
+    ),
+    (
+        "SENSITIVE_ACCESSION_PATH",
+        re.compile(r"(?i)(?:^|[._-])accession[._-]?[a-z]*\d{2,}(?:[._-]|$)"),
+    ),
+    (
+        "SENSITIVE_STUDY_PATH",
+        re.compile(r"(?i)(?:^|[._-])study(?:[._-]?id)?[._-]?[a-z]*\d{2,}(?:[._-]|$)"),
+    ),
+)
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -188,9 +207,14 @@ class Finding:
     level: str
     location: str = ""
 
-    def render(self) -> str:
+    def render(self, *, verbose_paths: bool = False) -> str:
         suffix = f":{self.location}" if self.location else ""
-        return f"{self.level.upper()} {self.path}{suffix}: {self.rule}"
+        if verbose_paths:
+            path_label = self.path
+        else:
+            token = hashlib.sha256(normalize_path(self.path).encode("utf-8")).hexdigest()[:12]
+            path_label = f"path_token={token}"
+        return f"{self.level.upper()} {path_label}{suffix}: {self.rule}"
 
 
 def repo_root_from_script() -> Path:
@@ -398,12 +422,14 @@ def _pdf_text(path: Path | BytesIO) -> tuple[list[tuple[str, str]], str | None]:
                 extracted.append((f"page{page_number}:", page_text))
         attachments = getattr(reader, "attachments", {})
         if isinstance(attachments, Mapping):
-            for name, contents in attachments.items():
+            attachment_index = 0
+            for contents in attachments.values():
                 for attachment_number, content in enumerate(contents, start=1):
+                    attachment_index += 1
                     if isinstance(content, bytes):
                         attachment_text = content.decode("utf-8", errors="ignore")
                         if attachment_text:
-                            extracted.append((f"attachment:{name}:{attachment_number}:", attachment_text))
+                            extracted.append((f"attachment{attachment_index}.{attachment_number}:", attachment_text))
         return extracted, None
     except Exception:
         return [], "PDF_TEXT_EXTRACTION_FAILED"
@@ -433,6 +459,8 @@ def _container_member_text(
 ) -> tuple[list[tuple[str, str]], set[str], str | None]:
     """Scan a bounded member without returning its potentially sensitive name."""
     flags: set[str] = set()
+    if sensitive_path_rule(name) is not None:
+        flags.add("sensitive_member_name")
     if _has_dicom_member(name, data):
         flags.add("dicom")
     if _is_container_member(name):
@@ -527,6 +555,15 @@ def text_findings(path: str, text: str, location_prefix: str = "") -> list[Findi
     return findings
 
 
+def sensitive_path_rule(path: str) -> str | None:
+    """Return a rule for a PHI-like path component without returning its value."""
+    for component in PurePosixPath(normalize_path(path)).parts:
+        for rule, pattern in SENSITIVE_PATH_PATTERNS:
+            if pattern.search(component):
+                return rule
+    return None
+
+
 def _approved_dicom_review(entry: dict[str, object]) -> bool:
     review = entry.get("dicom_review")
     return isinstance(review, dict) and all(
@@ -557,6 +594,8 @@ def run_checks(
 
     for rel_path in tracked:
         full_path = repo_root / rel_path
+        if path_rule := sensitive_path_rule(rel_path):
+            findings.append(Finding(rel_path, path_rule, "error"))
         if not full_path.is_file():
             findings.append(Finding(rel_path, "TRACKED_FILE_MISSING", "error"))
             continue
@@ -617,6 +656,8 @@ def run_checks(
                 findings.append(Finding(rel_path, "CONTAINER_DICOM_MEMBER_PRESENT", "warning"))
             if "nested_container" in container_flags:
                 findings.append(Finding(rel_path, "CONTAINER_NESTED_ARCHIVE_PRESENT", "warning"))
+            if "sensitive_member_name" in container_flags:
+                findings.append(Finding(rel_path, "CONTAINER_SENSITIVE_MEMBER_NAME", "error"))
 
     for rel_path in sorted(set(inventory) - assets_seen):
         findings.append(Finding(rel_path, "INVENTORY_ENTRY_NOT_A_TRACKED_ASSET", "error"))
@@ -673,6 +714,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="Print a hash-pinned pending-review inventory template and exit.",
     )
+    parser.add_argument(
+        "--verbose-paths",
+        action="store_true",
+        help="Show repository paths locally; default diagnostics use non-reversible path tokens.",
+    )
     args = parser.parse_args(argv)
     repo_root = args.repo_root.resolve()
     if args.print_inventory_template:
@@ -681,14 +727,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         findings = run_checks(repo_root, require_approved_assets=args.require_approved_assets)
     except (RuntimeError, ValueError) as exc:
-        print(f"check_sensitive_content: {exc}", file=sys.stderr)
+        print(f"check_sensitive_content: failed ({type(exc).__name__})", file=sys.stderr)
         return 2
     for finding in findings:
-        print(finding.render(), file=sys.stderr)
+        print(finding.render(verbose_paths=args.verbose_paths), file=sys.stderr)
     errors = [finding for finding in findings if finding.level == "error"]
     if errors:
         return 1
-    print("Sensitive-content gate OK (pending asset reviews reported as warnings).")
+    print("Sensitive-content gate OK.")
     return 0
 
 

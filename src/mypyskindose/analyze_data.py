@@ -18,6 +18,7 @@ from mypyskindose.input_adapters.models import InputAdapterResult
 from mypyskindose.phantom_class import Phantom
 from mypyskindose.plotting.create_dose_map_plot import create_dose_map_plot
 from mypyskindose.plotting.create_geometry_plot import create_geometry_plot
+from mypyskindose.privacy import exception_class_name, opaque_exam_label, safe_error_event
 from mypyskindose.settings import PyskindoseSettings, initialize_settings
 from mypyskindose.debug import dprint
 
@@ -112,8 +113,8 @@ def analyze_multiple_exams(
     Parameters
     ----------
     exams:
-        One InputAdapterResult per exam. Use study_id for labelling when
-        splitting a single multi-study file.
+        One InputAdapterResult per exam. Runtime labels are always opaque and
+        never derived from study identifiers or source filenames.
     settings:
         Global settings. output_format is ignored; MultiExamResult is always
         returned. The caller serializes it via to_dict() / to_json().
@@ -141,6 +142,7 @@ def analyze_multiple_exams(
         _downgraded = True
 
     for i, exam in enumerate(exams):
+        exam_id = opaque_exam_label(i)
         exam_warnings: list[str] = list(exam.warnings)
         if per_exam_extra_warnings and i < len(per_exam_extra_warnings):
             exam_warnings.extend(per_exam_extra_warnings[i])
@@ -177,17 +179,16 @@ def analyze_multiple_exams(
             table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=exam_settings.phantom.dimension)
             pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=exam_settings.phantom.dimension)
 
-            dprint("RENDERING", f"Exam {i}: creating geometry plot")
+            dprint("RENDERING", f"{exam_id}: creating geometry plot")
             create_geometry_plot(normalized_data=data_norm, table=table, pad=pad, settings=exam_settings)
 
-            dprint("CALCULATION", f"Exam {i}: calculating dose")
-            exam_id = exam.study_id or exam.provenance.original_filename
+            dprint("CALCULATION", f"{exam_id}: calculating dose")
             patient, raw_output = calculate_dose(
                 normalized_data=data_norm, settings=exam_settings, table=table, pad=pad, exam_id=exam_id
             )
 
             if raw_output is None or patient is None:
-                msg = f"Exam {i} ({exam.provenance.original_filename!r}): no output (check mode setting)."
+                msg = f"{exam_id}: no output (check mode setting)."
                 exam_warnings.append(msg)
                 run_warnings.append(msg)
                 continue
@@ -197,12 +198,12 @@ def analyze_multiple_exams(
             missed = raw_output.get("missed_event_indices", [])
             if missed:
                 exam_warnings.append(
-                    f"Exam {i} ({exam_id}): {len(missed)} of {len(data_norm)} "
+                    f"{exam_id}: {len(missed)} of {len(data_norm)} "
                     f"event(s) missed the patient phantom."
                 )
                 if len(missed) == len(data_norm) > 0:
                     exam_warnings.append(
-                        f"Exam {i} ({exam_id}): all {len(data_norm)} event(s) missed "
+                        f"{exam_id}: all {len(data_norm)} event(s) missed "
                         f"the patient phantom — dose map for this exam is all zeros; "
                         f"check patient offsets and vendor coordinate frame."
                     )
@@ -239,7 +240,7 @@ def analyze_multiple_exams(
 
             total_events += len(data_norm)
 
-            dprint("RENDERING", f"Exam {i}: creating dose map plot")
+            dprint("RENDERING", f"{exam_id}: creating dose map plot")
             create_dose_map_plot(patient=patient, settings=exam_settings, dose_map=exam_dose_map)
 
             exam_results.append(
@@ -266,8 +267,8 @@ def analyze_multiple_exams(
             )
 
         except Exception as exc:
-            msg = f"Exam {i} ({exam.provenance.original_filename!r}) failed: {exc}"
-            logger.warning(msg)
+            safe_error_event(logger, "multi_exam_analysis", exc, level=logging.WARNING)
+            msg = f"{exam_id}: processing failed (error_type={exception_class_name(exc)})."
             run_warnings.append(msg)
 
     if aggregate_dose_map is None:

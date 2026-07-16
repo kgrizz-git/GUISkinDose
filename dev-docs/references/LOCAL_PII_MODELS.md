@@ -20,9 +20,9 @@ are **local-only** manual tools that never run in public CI. All are value-safe 
 
 | Scanner | Layer | How to run |
 |---|---|---|
-| **phi-scan** | Deterministic text (tracked files) | Mirrors the [`phi-scan` workflow](../../.github/workflows/phi-scan.yml): `git archive HEAD \| tar -x -C <tmp>` then `uvx --from 'phi-scan==0.7.0' phi-scan scan . --config <repo>/.phi-scanner.yml --no-cache --quiet`. Its NLP layer is intentionally off; Presidio supplies the NLP view. |
-| **Presidio** | NLP text (tracked files) | `uv sync --extra privacy-scan` once, then `uv run --extra privacy-scan python scripts/run_presidio_advisory.py`. Prints `path:line:entity_type:score` only. `PERSON`@0.85 is its dominant false-positive class. |
-| **HoundDog** | Code dataflow (tracked source) | Install the standalone binary, then `python scripts/run_hounddog_advisory.py` (advisory pre-push hook; skips when the binary is absent) or `hounddog scan . --no-color --no-tips` directly. Console output only. |
+| **phi-scan** | CSV/TSV secondary scan (tracked files) | Mirrors the [`phi-scan` workflow](../../.github/workflows/phi-scan.yml): `git archive HEAD \| tar -x -C <tmp>` then `uvx --from 'phi-scan==0.7.0' phi-scan scan . --config <repo>/.phi-scanner.yml --baseline --no-cache --quiet --workers 4`. New and expired high-severity findings fail; matched values and reports are not printed or uploaded. |
+| **Presidio** | NLP text (tracked bounded text) | `uv sync --extra privacy-scan` once, then `uv run --no-sync python scripts/run_presidio_advisory.py`. Automation hashes paths, suppresses values, and excludes noisy `PERSON`@0.85 results. For a targeted local name review add `--include-person --verbose-paths`; every result then requires manual triage. |
+| **HoundDog** | Code dataflow (tracked source) | Install the standalone binary, then `python scripts/run_hounddog_advisory.py` (local pre-push hook). The wrapper reports `NOT RUN`, clean, or a value-safe risky-flow count; a completed scan with findings exits 1. Raw JSON is private and ephemeral. |
 | **dicom-phi-scan** | DICOM header + pixel OCR (local data) | Install in an **isolated Python 3.11 env** (its EasyOCR/Pillow/pydicom pins conflict with the 3.12 project env), then `dicom-phi-scan --dir <dicom-dir> --cpu -o <gitignored>.jsonl -v`. Force `--cpu` on macOS; first run downloads EasyOCR models. |
 
 The JSONL report from dicom-phi-scan can itself contain identifier values, so always write it to a gitignored path
@@ -80,6 +80,12 @@ HoundDog is intentionally a different kind of safeguard. It analyzes how source-
 whether an image or DICOM fixture contains a real patient identifier. Conversely, the existing sensitive-content gate
 cannot determine that a value named `patient_name` reaches `logger.info()` after several transformations. Use both
 layers if the HoundDog trial is successful.
+
+The 2026-07-16 local check with HoundDog 3.3.0 detected a synthetic `patient_email` parameter flowing to
+`logging.info`, but reported zero risky flows for the repository even before all project-specific identifier sinks
+were removed. That confirms the generic engine works and also confirms its current rules do not recognize enough of
+MyPySkinDose's DICOM/provenance vocabulary. Keep it as a required local second opinion for logging/write/ingestion
+changes, with project Semgrep as the blocking source-specific control.
 
 **Policy status: local-only until further notice.** A cloud account, GitHub App, CI job, managed scan, automated PR
 comment, report upload, or optional AI analysis is prohibited unless a maintainer explicitly changes this documented

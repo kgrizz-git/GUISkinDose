@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from mypyskindose.debug import dprint
+import logging
+
+from mypyskindose.privacy import safe_error_event
 
 from .window_prefs import load_gui_config, save_gui_config
 
 ONBOARDING_KEY = "onboardingDismissed"
+logger = logging.getLogger(__name__)
 
 
 def is_onboarding_dismissed() -> bool:
@@ -22,7 +25,7 @@ def dismiss_onboarding() -> None:
         data[ONBOARDING_KEY] = True
         save_gui_config(data)
     except Exception as exc:
-        dprint("GUI", f"Failed to persist onboarding dismissal: {exc}")
+        safe_error_event(logger, "onboarding_dismiss", exc, level=logging.DEBUG)
 
 
 def reset_onboarding() -> None:
@@ -32,4 +35,4 @@ def reset_onboarding() -> None:
         data[ONBOARDING_KEY] = False
         save_gui_config(data)
     except Exception as exc:
-        dprint("GUI", f"Failed to reset onboarding: {exc}")
+        safe_error_event(logger, "onboarding_reset", exc, level=logging.DEBUG)

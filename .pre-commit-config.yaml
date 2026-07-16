@@ -52,7 +52,7 @@ repos:
 
       - id: sensitive-content
         name: sensitive content and approved assets
-        entry: python scripts/check_sensitive_content.py
+        entry: python scripts/check_sensitive_content.py --require-approved-assets
         language: system
         pass_filenames: false
         always_run: true
@@ -121,8 +121,8 @@ repos:
         always_run: true
 
       - id: check-ignored-assets
-        name: ignored PNG/HTML outside PlotOutputs (advisory)
-        entry: python scripts/check_ignored_asset_files.py
+        name: ignored risky artifacts outside approved roots
+        entry: python scripts/check_ignored_asset_files.py --strict
         language: system
         pass_filenames: false
         always_run: true
@@ -189,9 +189,8 @@ repos:
         stages: [pre-push]
 
       - id: semgrep-privacy
-        name: semgrep (project PHI/PII leak rules, advisory)
-        # No --error: advisory. Findings print but do not block; triage, do not ignore.
-        entry: semgrep --config=.semgrep/mypyskindose-privacy.yml --metrics=off src scripts
+        name: semgrep (project PHI/PII leak rules, blocking)
+        entry: python scripts/run_semgrep_privacy.py
         language: system
         pass_filenames: false
         always_run: true

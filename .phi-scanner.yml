@@ -1,30 +1,19 @@
 # Advisory phi-scan configuration. The deterministic repository gate is the
-# blocking control; this scans text-like tracked content for an additional view.
+# blocking control; this scans data-shaped tracked text for an additional view.
+# Runtime source sinks are covered by the blocking project Semgrep rules, while
+# Presidio provides the broader weekly NLP review of bounded text files.
 version: 1
 
 scan:
   confidence_threshold: 0.8
-  severity_threshold: medium
+  # Medium findings are dominated by dates and numeric physics-table values.
+  # High-severity additions remain visible and must be triaged.
+  severity_threshold: high
   max_file_size_mb: 10
   follow_symlinks: false
   include_extensions:
-    - .bat
-    - .cfg
     - .csv
-    - .html
-    - .ini
-    - .json
-    - .md
-    - .py
-    - .rst
-    - .sh
-    - .svg
-    - .toml
     - .tsv
-    - .txt
-    - .xml
-    - .yaml
-    - .yml
   exclude_paths:
     - .git/
     - .venv/
@@ -32,7 +21,14 @@ scan:
     - dist/
     - docs/_build/
     - node_modules/
-    - tests/fixtures/
+    # phi-scan 0.7.0 raises on this generated one-line JSON fixture (>4096
+    # characters of code context). The blocking deterministic gate still scans it.
+    - tests/fixtures/export/single_exam_siemens.json
+    # These generated numeric lookup tables exceed spaCy's 1,000,000-character
+    # per-document limit in phi-scan 0.7.0. The blocking gate scans all three.
+    - src/mypyskindose/table_data/hvl_tables/hvl_allura_filters_11deg.csv
+    - src/mypyskindose/table_data/hvl_tables/hvl_axiom_filters_8deg.csv
+    - src/mypyskindose/table_data/hvl_tables/hvl_combined.csv
     - "*.egg-info/"
     - __pycache__/
     - .mypy_cache/

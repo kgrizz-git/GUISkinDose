@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from mypyskindose.privacy import opaque_exam_label
+
 from .models import ExportExamSource, ExportSource
 
 if TYPE_CHECKING:
@@ -37,6 +39,7 @@ def build_export_source_from_cli(
     file_name: str | None = None,
     report_title: str | None = None,
     colorscale: str = "jet",
+    include_source_identifiers: bool = False,
 ) -> ExportSource:
     """Assemble an ``ExportSource`` for headless (CLI) export.
 
@@ -66,7 +69,7 @@ def build_export_source_from_cli(
         adapter = inputs[0] if inputs else None
         exams.append(
             ExportExamSource(
-                exam_id=(single_source_file or file_name or "exam"),
+                exam_id=opaque_exam_label(0),
                 normalized_data=(
                     single_normalized_data
                     if single_normalized_data is not None
@@ -90,6 +93,7 @@ def build_export_source_from_cli(
         file_name=file_name,
         colorscale=colorscale,
         report_title=report_title,
+        include_source_identifiers=include_source_identifiers,
     )
 
 

@@ -1,0 +1,204 @@
+# PhiScan Baseline Snapshot — .phi-scanbaseline
+# Commit this file to track accepted PHI findings in your codebase.
+#
+# phi-scan scan --baseline   report only NEW findings not in this file
+# phi-scan baseline update   refresh after remediating findings
+# phi-scan baseline show     display summary statistics
+#
+# Entries expire after baseline_max_age_days days and revert to active.
+# No raw PHI values are stored — only SHA-256 hashes and finding metadata.
+#
+schema_version: 1
+created_at: '2026-07-16T04:41:53+00:00'
+scanner_version: 0.7.0
+baseline_max_age_days: 90
+entries:
+- file_path: tests/fixtures/tabular_inputs/radimetrics_events.csv
+  line_number: 1
+  line_content_hash: 47c0ce36f98af3ecda1ff5b01065d17080545692eff03e918e875babf88e29e4
+  entity_type: DATE + GEOGRAPHIC + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 7fe389274d3be30ea9a6a46afe08658f91d4ce2ed77cd260e8a5aa536de9f1ab
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/radimetrics_events.csv
+  line_number: 2
+  line_content_hash: 156829b5249a8bb6e053763457bf58086e928c51c51ae2a952a1842a4967d9a2
+  entity_type: ZIP + DOB
+  hipaa_category: quasi_identifier_combination
+  value_hash: 939dd7bbdc6c4b1f34106687bd6926220ddd8396892d9d1bc98396fa89ac87a1
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/radimetrics_events.csv
+  line_number: 2
+  line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
+  entity_type: AGE_OVER_90 + GEOGRAPHIC
+  hipaa_category: quasi_identifier_combination
+  value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/generic_rdsr_events.csv
+  line_number: 1
+  line_content_hash: f1d1aef0424aef005cb78e553d210786300e01cc8d2b908e5ae2d1e7254db238
+  entity_type: ACCOUNT + DATE + GEOGRAPHIC + HEALTH_PLAN + MRN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 76e113b2a5775ba830aa77ba1e12980f8cab9200faa51fafcf3d26a16483c632
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/generic_rdsr_events.csv
+  line_number: 2
+  line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
+  entity_type: AGE_OVER_90 + GEOGRAPHIC
+  hipaa_category: quasi_identifier_combination
+  value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/generic_rdsr_events.csv
+  line_number: 17
+  line_content_hash: 156829b5249a8bb6e053763457bf58086e928c51c51ae2a952a1842a4967d9a2
+  entity_type: ZIP + DOB
+  hipaa_category: quasi_identifier_combination
+  value_hash: 939dd7bbdc6c4b1f34106687bd6926220ddd8396892d9d1bc98396fa89ac87a1
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
+  line_number: 1
+  line_content_hash: ea2ce925af26f856feb9d51e3c782351fc70dd516a1e56cb2aa31ed176e5ea9d
+  entity_type: NAME + DATE
+  hipaa_category: quasi_identifier_combination
+  value_hash: 0d445899f958f84392eab1a438c5f656bf4c9f7a7ba2180b526ac425081a1929
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
+  line_number: 1
+  line_content_hash: a4459e22643586212de2142ab104edd04671e51a86544c90eb61dd1794981051
+  entity_type: ACCOUNT + DATE + GEOGRAPHIC + HEALTH_PLAN + MRN + NAME + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: e2451ef431a384221e56d9b582ab31e9f7811cc7297e1e0068a27232f856c76a
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
+  line_number: 2
+  line_content_hash: 156829b5249a8bb6e053763457bf58086e928c51c51ae2a952a1842a4967d9a2
+  entity_type: ZIP + DOB
+  hipaa_category: quasi_identifier_combination
+  value_hash: 939dd7bbdc6c4b1f34106687bd6926220ddd8396892d9d1bc98396fa89ac87a1
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
+  line_number: 2
+  line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
+  entity_type: AGE_OVER_90 + GEOGRAPHIC
+  hipaa_category: quasi_identifier_combination
+  value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events_semicolon_decimalcomma.csv
+  line_number: 2
+  line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
+  entity_type: HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events.csv
+  line_number: 1
+  line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
+  entity_type: AGE_OVER_90 + GEOGRAPHIC
+  hipaa_category: quasi_identifier_combination
+  value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events.csv
+  line_number: 1
+  line_content_hash: f67c43d47bbca872272f8c26f575f0897a7cb1b5b0e42d5274f130fb7d1da48e
+  entity_type: GEOGRAPHIC + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: d16b4846123078c37f446db17989c530db961b4d8cd646305facd3b8d0353b25
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events.tsv
+  line_number: 1
+  line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
+  entity_type: AGE_OVER_90 + GEOGRAPHIC
+  hipaa_category: quasi_identifier_combination
+  value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events.tsv
+  line_number: 1
+  line_content_hash: f67c43d47bbca872272f8c26f575f0897a7cb1b5b0e42d5274f130fb7d1da48e
+  entity_type: GEOGRAPHIC + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: d16b4846123078c37f446db17989c530db961b4d8cd646305facd3b8d0353b25
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/radimetrics_events_legacy.csv
+  line_number: 2
+  line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
+  entity_type: HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events_multistudy.csv
+  line_number: 1
+  line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
+  entity_type: AGE_OVER_90 + GEOGRAPHIC
+  hipaa_category: quasi_identifier_combination
+  value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: tests/fixtures/tabular_inputs/normalized_events_multistudy.csv
+  line_number: 1
+  line_content_hash: f67c43d47bbca872272f8c26f575f0897a7cb1b5b0e42d5274f130fb7d1da48e
+  entity_type: GEOGRAPHIC + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: d16b4846123078c37f446db17989c530db961b4d8cd646305facd3b8d0353b25
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: src/mypyskindose/table_data/correction_medium_and_backscatter.csv
+  line_number: 1
+  line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
+  entity_type: HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: src/mypyskindose/table_data/device_info.csv
+  line_number: 1
+  line_content_hash: 1ffdd5c63ed08d74570c99ce5a8b6997bcd6f469ca3bc37709379a7e3fd56873
+  entity_type: ACCOUNT + HEALTH_PLAN + MRN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 608e3cabe87a9b05be7b0dbadcddf7a0b632aec2abfff23654e528ec6abe290a
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'
+- file_path: src/mypyskindose/table_data/correction_table_and_pad_attenuation.csv
+  line_number: 2
+  line_content_hash: 8bbb69dbf3facdc9748263ff1e373816c55353b0daedcf1824d171fcf0ffe2af
+  entity_type: DATE + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 4337d83778f793daca54e8a972fd87be2ec457faeb9034200611b04f1f78f32b
+  severity: high
+  created_at: '2026-07-16T04:41:53+00:00'
+  expires_at: '2026-10-14T04:41:53+00:00'

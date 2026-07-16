@@ -34,7 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         findings = scan_commit_message(args.commit_message)
     except ValueError as exc:
-        print(f"check_commit_message: {exc}", file=sys.stderr)
+        print(f"check_commit_message: failed ({type(exc).__name__})", file=sys.stderr)
         return 2
     for finding in findings:
         print(finding.render(), file=sys.stderr)

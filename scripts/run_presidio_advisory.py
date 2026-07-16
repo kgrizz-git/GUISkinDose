@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Run a local, non-blocking Presidio text scan over tracked repository files.
+"""Run local Presidio over bounded, tracked repository text.
 
 Install with ``uv sync --extra privacy-scan``. The optional dependency group
 includes Presidio's compact English model. This script never uploads source
-material or writes a report. It prints only the path, line, entity type, and
-score--never the matching value--and returns zero after scan findings because
-it is deliberately advisory.
+material or writes a report. It prints only a path token, line, entity type,
+and score--never the matching value. Scheduled review can fail on findings or
+scan errors; noisy person-name detection requires a targeted local opt-in.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import subprocess
 import sys
 from collections.abc import Iterable, Sequence
@@ -23,8 +24,26 @@ from typing import Any
 # The deterministic gate still examines those files; this local advisory pass
 # favors predictable resource use.
 MAX_TEXT_BYTES = 64 * 1024
+PRESIDIO_TEXT_SUFFIXES = {
+    ".cfg",
+    ".csv",
+    ".html",
+    ".ini",
+    ".json",
+    ".md",
+    ".rst",
+    ".svg",
+    ".toml",
+    ".tsv",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
+}
+# Public package-author contacts are already line-pinned in the deterministic
+# allowlist; repeating them weekly adds no signal.
+PRESIDIO_EXCLUDED_PATHS = {Path("pyproject.toml")}
 PII_ENTITIES = [
-    "PERSON",
     "EMAIL_ADDRESS",
     "PHONE_NUMBER",
     "CREDIT_CARD",
@@ -51,6 +70,11 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def path_token(path: Path) -> str:
+    """Return a stable, non-reversible display token for a repository path."""
+    return hashlib.sha256(path.as_posix().encode("utf-8")).hexdigest()[:12]
+
+
 def tracked_paths(root: Path) -> list[Path]:
     """Return tracked files only, so ignored local data can never be scanned by default."""
     result = subprocess.run(
@@ -58,11 +82,20 @@ def tracked_paths(root: Path) -> list[Path]:
         check=True,
         capture_output=True,
     )
-    return [root / Path(value.decode("utf-8")) for value in result.stdout.split(b"\0") if value]
+    paths: list[Path] = []
+    for value in result.stdout.split(b"\0"):
+        if not value:
+            continue
+        path = Path(value.decode("utf-8"))
+        if path.suffix.lower() in PRESIDIO_TEXT_SUFFIXES and path not in PRESIDIO_EXCLUDED_PATHS:
+            paths.append(root / path)
+    return paths
 
 
 def read_text(path: Path) -> str | None:
     """Return a small UTF-8 text file; skip opaque/binary and oversized content."""
+    if path.is_symlink():
+        return None
     try:
         data = path.read_bytes()
     except OSError:
@@ -78,13 +111,18 @@ def read_text(path: Path) -> str | None:
 def make_engine() -> Any:
     """Build a Presidio engine using the small local English spaCy model."""
     try:
+        import en_core_web_sm  # type: ignore[import-not-found]  # noqa: F401
+        import tldextract
         from presidio_analyzer import AnalyzerEngine  # type: ignore[reportMissingImports]
         from presidio_analyzer.nlp_engine import NlpEngineProvider  # type: ignore[reportMissingImports]
     except ImportError as exc:
         raise RuntimeError(
-            "Presidio is not installed. Run: uv sync --extra privacy-scan; "
-            "uv run --extra privacy-scan python scripts/run_presidio_advisory.py"
+            "Presidio or its pinned local language model is not installed."
         ) from exc
+
+    # Presidio's email recognizer otherwise lets tldextract fetch the public
+    # suffix list on first use. Use its bundled snapshot with no cache/network.
+    tldextract.extract = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None)
 
     configuration = {
         "nlp_engine_name": "spacy",
@@ -94,7 +132,14 @@ def make_engine() -> Any:
     return AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
 
 
-def scan_paths(engine: Any, root: Path, paths: Iterable[Path]) -> list[Finding]:
+def scan_paths(
+    engine: Any,
+    root: Path,
+    paths: Iterable[Path],
+    *,
+    include_person: bool = False,
+    fail_on_scan_error: bool = False,
+) -> list[Finding]:
     """Scan readable text and retain location/type metadata without source values."""
     findings: list[Finding] = []
     for path in paths:
@@ -102,14 +147,18 @@ def scan_paths(engine: Any, root: Path, paths: Iterable[Path]) -> list[Finding]:
         if text is None:
             continue
         try:
+            entities = [*PII_ENTITIES, "PERSON"] if include_person else PII_ENTITIES
             results = engine.analyze(
                 text=text,
                 language="en",
-                entities=PII_ENTITIES,
-                score_threshold=0.5,
+                entities=entities,
+                score_threshold=0.85,
             )
         except Exception as exc:  # Presidio recognizers must never stop an advisory scan.
-            print(f"WARNING: Presidio could not scan {path.relative_to(root)}: {type(exc).__name__}", file=sys.stderr)
+            token = path_token(path.relative_to(root))
+            print(f"WARNING: Presidio could not scan path_token={token}: {type(exc).__name__}", file=sys.stderr)
+            if fail_on_scan_error:
+                raise RuntimeError("presidio_file_scan_failed") from None
             continue
         relative_path = path.relative_to(root)
         for result in results:
@@ -139,6 +188,24 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=100,
         help="Maximum safe finding summaries to print (default: 100).",
     )
+    parser.add_argument(
+        "--verbose-paths",
+        action="store_true",
+        help="Show repository paths locally; default output uses non-reversible path tokens.",
+    )
+    parser.add_argument(
+        "--fail-on-findings",
+        action="store_true",
+        help="Exit 1 after reporting findings; useful for scheduled secondary review jobs.",
+    )
+    parser.add_argument(
+        "--include-person",
+        action="store_true",
+        help=(
+            "Enable noisy NLP person-name detection for targeted free-text review. "
+            "Do not use this untriaged mode as an automated gate."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -157,31 +224,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             resolved_path.relative_to(root)
         except ValueError:
-            print(f"ERROR: path is outside the repository: {path}", file=sys.stderr)
+            print("ERROR: requested path is outside the repository", file=sys.stderr)
             return 2
         if resolved_path not in tracked_by_resolved_path:
-            print(f"ERROR: not a tracked regular file: {resolved_path.relative_to(root)}", file=sys.stderr)
+            print("ERROR: requested path is not a tracked regular file", file=sys.stderr)
             return 2
         paths.append(tracked_by_resolved_path[resolved_path])
 
     try:
         engine = make_engine()
-    except RuntimeError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+    except Exception as exc:
+        print(f"ERROR: Presidio did not start ({type(exc).__name__})", file=sys.stderr)
         return 2
 
     print(f"Presidio advisory scan: evaluating {len(paths)} tracked file(s).", flush=True)
-    findings = scan_paths(engine, root, paths)
+    try:
+        findings = scan_paths(
+            engine,
+            root,
+            paths,
+            include_person=args.include_person,
+            fail_on_scan_error=args.fail_on_findings,
+        )
+    except RuntimeError as exc:
+        print(f"ERROR: Presidio scan did not complete ({type(exc).__name__})", file=sys.stderr)
+        return 2
     for finding in findings[: args.max_displayed_findings]:
+        path_label = str(finding.path) if args.verbose_paths else f"path_token={path_token(finding.path)}"
         print(
-            f"ADVISORY: {finding.path}:{finding.line}: Presidio {finding.entity_type} "
+            f"ADVISORY: {path_label}:{finding.line}: Presidio {finding.entity_type} "
             f"(score {finding.score:.2f}); value suppressed"
         )
     suppressed_count = len(findings) - min(len(findings), args.max_displayed_findings)
     if suppressed_count:
         print(f"ADVISORY: suppressed {suppressed_count} additional finding summary/summaries.")
     print(f"Presidio advisory scan complete: {len(findings)} finding(s) across {len(paths)} tracked file(s).")
-    return 0
+    return 1 if findings and args.fail_on_findings else 0
 
 
 if __name__ == "__main__":

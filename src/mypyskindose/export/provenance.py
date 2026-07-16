@@ -22,14 +22,18 @@ def collect_provenance(
     exams: list[ExportExamSource],
     import_warnings: list[str],
     fallback_file_name: str | None,
+    *,
+    include_source_identifiers: bool = False,
 ) -> ProvenanceInfo:
     processed = sum(len(e.normalized_data) for e in exams)
     discarded_events = _sum_discarded(exams)
     discarded = sum(discarded_events.values())
 
-    source_files = [e.source_file for e in exams if e.source_file] or (
-        [fallback_file_name] if fallback_file_name else []
-    )
+    source_files = []
+    if include_source_identifiers:
+        source_files = [e.source_file for e in exams if e.source_file] or (
+            [fallback_file_name] if fallback_file_name else []
+        )
 
     # Tabular branch when any exam carries an InputProvenance.
     prov = next((e.provenance for e in exams if e.provenance is not None), None)

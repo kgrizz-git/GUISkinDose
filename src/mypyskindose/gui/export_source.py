@@ -9,6 +9,7 @@ from __future__ import annotations
 import pandas as pd
 
 from mypyskindose.export import ExportExamSource, ExportSource
+from mypyskindose.privacy import opaque_exam_label
 
 from .settings_builder import build_settings
 from .state import AppState
@@ -24,7 +25,9 @@ def _single_transform_meta(state: AppState) -> dict:
     }
 
 
-def build_export_source_from_gui(state: AppState) -> ExportSource:
+def build_export_source_from_gui(
+    state: AppState, *, include_source_identifiers: bool = False
+) -> ExportSource:
     """Assemble an ``ExportSource`` from current GUI state.
 
     Multi-exam (``state.multi_exam_result``) takes precedence over the single
@@ -58,6 +61,7 @@ def build_export_source_from_gui(state: AppState) -> ExportSource:
             import_warnings=list(state.import_warnings),
             file_name=state.file_name or None,
             colorscale=state.colorscale,
+            include_source_identifiers=include_source_identifiers,
         )
 
     # Single-exam path.
@@ -65,7 +69,7 @@ def build_export_source_from_gui(state: AppState) -> ExportSource:
     offset = (state.d_lon, state.d_ver, state.d_lat)
     exams.append(
         ExportExamSource(
-            exam_id=state.file_name or "exam",
+            exam_id=opaque_exam_label(0),
             normalized_data=(state.rdsr_df if state.rdsr_df is not None else pd.DataFrame()),
             provenance=state.import_provenance,
             source_file=state.file_name or None,
@@ -82,4 +86,5 @@ def build_export_source_from_gui(state: AppState) -> ExportSource:
         import_warnings=list(state.import_warnings),
         file_name=state.file_name or None,
         colorscale=state.colorscale,
+        include_source_identifiers=include_source_identifiers,
     )

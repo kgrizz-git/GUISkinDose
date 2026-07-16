@@ -13,6 +13,8 @@ from typing import cast
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Font, PatternFill
+
+from mypyskindose.safe_output import atomic_write_private
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -231,4 +233,4 @@ def render_xlsx_bytes(payload: ExportPayload) -> bytes:
 
 
 def write_xlsx(payload: ExportPayload, path: Path) -> None:
-    build_workbook(payload).save(Path(path))
+    atomic_write_private(path, render_xlsx_bytes(payload))

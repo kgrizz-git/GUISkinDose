@@ -1,7 +1,12 @@
-name: phi-scan (advisory)
+name: phi-scan (secondary privacy review)
 
 on:
   pull_request:
+    paths:
+      - '**.csv'
+      - '**.tsv'
+      - '.phi-scanner.yml'
+      - '.github/workflows/phi-scan.yml'
   push:
     branches: [ main ]
   schedule:
@@ -25,9 +30,8 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/phi-scan-input"
           git archive --format=tar HEAD | tar -x -C "$RUNNER_TEMP/phi-scan-input"
-      - name: Run phi-scan (advisory; no report upload)
-        continue-on-error: true
+      - name: Run phi-scan (quiet; no report upload)
         working-directory: ${{ runner.temp }}/phi-scan-input
         run: >-
           uvx --from 'phi-scan==0.7.0' phi-scan scan .
-          --config "$GITHUB_WORKSPACE/.phi-scanner.yml" --no-cache --quiet
+          --config "$GITHUB_WORKSPACE/.phi-scanner.yml" --baseline --no-cache --quiet --workers 4

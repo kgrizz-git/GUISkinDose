@@ -10,6 +10,7 @@ import pydicom
 
 from mypyskindose.rdsr_parser import rdsr_parser
 from mypyskindose.rdsr_normalizer import rdsr_normalizer
+from mypyskindose.privacy import safe_error_event
 
 from .exam_transforms import (
     _apply_transform_flags,
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def _record_load_failure(operation: str, exc: BaseException) -> None:
     """Record a value-free load failure without persisting source-data details."""
-    logger.error("%s failed (error_type=%s)", operation, type(exc).__name__)
+    safe_error_event(logger, operation, exc)
 
 
 def _raw_extracted_view(result) -> pd.DataFrame | None:

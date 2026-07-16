@@ -1,6 +1,6 @@
 # Privacy and PHI/PII Hardening Plan
 
-_Status: Proposed_
+_Status: Implemented through Phase 9; Phase 10 private history/release-object audit requires an approved private environment_
 _Created: 2026-07-15_
 _Owners: Maintainers; coding agents may implement individual phases_
 _Related policy: [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md)_

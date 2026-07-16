@@ -1,0 +1,49 @@
+name: Presidio (secondary privacy review)
+
+on:
+  pull_request:
+    paths:
+      - '**.cfg'
+      - '**.csv'
+      - '**.html'
+      - '**.ini'
+      - '**.json'
+      - '**.md'
+      - '**.rst'
+      - '**.svg'
+      - '**.toml'
+      - '**.tsv'
+      - '**.txt'
+      - '**.xml'
+      - '**.yaml'
+      - '**.yml'
+      - 'scripts/run_presidio_advisory.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  schedule:
+    - cron: '43 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  presidio:
+    name: Value-suppressed local NLP scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        with:
+          version: "0.11.25"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned local scanner and language model
+        run: uv sync --extra privacy-scan --locked
+      - name: Run Presidio without person-name NLP or report upload
+        run: >-
+          uv run --no-sync python scripts/run_presidio_advisory.py
+          --fail-on-findings --max-displayed-findings 100

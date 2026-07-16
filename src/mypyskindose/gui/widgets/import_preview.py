@@ -68,7 +68,7 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
                         ctx.refresh_exams_table()
                         _refresh_import_preview()
                     else:
-                        ui.notify(f"Sheet parse error: {msg[:200]}", type="negative", timeout=6000)
+                        ui.notify("Sheet parse failed. Review the selected sheet and schema.", type="negative", timeout=6000)
 
             sheet_select.on("update:model-value", _on_sheet_change)
         sheet_row.set_visibility(False)

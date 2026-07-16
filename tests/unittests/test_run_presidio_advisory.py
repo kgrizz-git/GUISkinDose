@@ -19,7 +19,7 @@ class FakeEngine:
     ) -> list[SimpleNamespace]:
         assert language == "en"
         assert entities == PII_ENTITIES
-        assert score_threshold == 0.5
+        assert score_threshold == 0.85
         return [SimpleNamespace(start=text.index("token"), entity_type="EMAIL_ADDRESS", score=0.91)]
 
 
@@ -37,6 +37,20 @@ def test_scan_paths_skips_binary_content(tmp_path: Path) -> None:
     source.write_bytes(b"not text\x00")
 
     assert scan_paths(FakeEngine(), tmp_path, [source]) == []
+
+
+def test_scan_paths_person_detection_requires_opt_in(tmp_path: Path) -> None:
+    source = tmp_path / "note.txt"
+    source.write_text("contains token\n", encoding="utf-8")
+
+    class PersonEngine(FakeEngine):
+        def analyze(self, **kwargs):
+            assert kwargs["entities"] == [*PII_ENTITIES, "PERSON"]
+            return [SimpleNamespace(start=0, entity_type="PERSON", score=0.85)]
+
+    findings = scan_paths(PersonEngine(), tmp_path, [source], include_person=True)
+
+    assert findings == [Finding(path=Path("note.txt"), line=1, entity_type="PERSON", score=0.85)]
 
 
 def test_read_text_skips_oversized_content(tmp_path: Path) -> None:

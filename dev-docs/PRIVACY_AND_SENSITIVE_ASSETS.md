@@ -12,6 +12,9 @@ Run the gate locally with:
 python scripts/check_sensitive_content.py
 ```
 
+CI-safe diagnostics use non-reversible path tokens so a sensitive filename is not copied into public logs. On an
+approved local developer machine, add `--verbose-paths` when the exact repository path is needed for remediation.
+
 It runs in pre-commit and CI. The checker scans every tracked, UTF-8-readable file (including notebooks, SVG/XML,
 CSV/TSV/JSON, and XML content inside XLSX workbooks) for conservative direct-identifier, internal DICOM/PACS
 endpoint, private-network-address, and absolute-path patterns. It also rejects common diagnostic artifacts
@@ -56,9 +59,8 @@ also requires the DICOM-specific inventory checklist. DICOM files without that s
 extensionless-file inventory entry and manual review; use the repository's DICOM preparation procedure to identify
 them before admission.
 
-The initial inventory deliberately records the pre-existing assets as `pending`. This is not approval. Until a
-maintainer completes the baseline review, the default gate permits the unchanged baseline but emits warnings. Once
-all entries have been reviewed, run the stricter command and make it the CI command:
+The baseline review was completed on 2026-07-16 using reviewer initials `KG`; strict mode is now the hook and CI
+default. Run the same admission boundary locally with:
 
 ```bash
 python scripts/check_sensitive_content.py --require-approved-assets
@@ -104,27 +106,31 @@ messages. Do not attach diagnostic logs to issues or commits without reviewing t
 
 ## Additional scanners
 
-[`phi-scan`](https://pypi.org/project/phi-scan/) runs as a pinned, advisory GitHub workflow and is deliberately
-configured to scan only text-like files. The initial pin does not install phi-scan's optional NLP extra, and has no
-report upload or AI review enabled. It supplements, rather than replaces, the deterministic gate: it does not
-authorise a binary asset or prove a DICOM is safe.
+[`phi-scan`](https://pypi.org/project/phi-scan/) runs weekly and on pull requests that change CSV/TSV data. It is
+pinned, quiet, and has no report upload or AI review enabled. Version 0.7.0 is calibrated to high-severity findings in
+CSV/TSV files; broader source-code sinks are enforced by the project Semgrep rules. Its 90-day baseline contains only
+finding hashes and metadata. The current 21 entries were reviewed by `KG` on 2026-07-16 as synthetic fixture headers,
+synthetic numeric rows, or numeric correction-table combinations—not ignored findings. New or expired findings fail
+the secondary workflow and must be triaged. phi-scan supplements, rather than replaces, the deterministic gate: it
+does not authorise a binary asset or prove a DICOM is safe.
 
 [Presidio](https://github.com/data-privacy-stack/presidio) is available as a local, advisory text scan. It does not
 require a Presidio cloud service or an API key. Set it up on a developer-controlled machine with:
 
 ```bash
 uv sync --extra privacy-scan
-uv run --extra privacy-scan python scripts/run_presidio_advisory.py
+uv run --no-sync python scripts/run_presidio_advisory.py
 ```
 
 The runner scans tracked, readable text files only (including when individual paths are supplied), skips
 binary/DICOM/image content and text files larger than 64 KiB, never uploads source material or writes a report,
-suppresses matched values in its output, and exits successfully after findings. It considers people and common
+suppresses matched values in its output, and hashes paths by default. The weekly/PR workflow fails on structured
+identifier findings or scan errors. Noisy spaCy `PERSON` detection is disabled in automation; use
+`--include-person --verbose-paths` only for targeted, local free-text review and triage every result. It considers common
 direct identifier types, rather than URLs, organizations, dates, or locations, and displays at most 100 summaries
-by default. It is not wired to GitHub Actions. Do not point it at clinical data unless the machine and its local
-storage are approved for that data. If Presidio is later used in CI, keep its model downloads and results local to
-the runner, disable calls to external AI providers, and never upload raw findings. Its text/image detection is
-useful for a future scheduled evaluation but cannot establish complete PHI removal by itself.
+by default. Do not point it at clinical data unless the machine and its local storage are approved for that data.
+The scheduled job keeps model downloads and results local to its ephemeral runner, makes no external AI calls, and
+uploads no findings. Presidio cannot establish complete PHI removal by itself.
 
 [`references/LOCAL_PII_MODELS.md`](references/LOCAL_PII_MODELS.md) records the evaluated local-model options,
 including NVIDIA GLiNER-PII, Fastino GLiNER2, and the boundaries for an optional LM Studio heuristic. Follow its
@@ -132,7 +138,9 @@ synthetic-fixture evaluation protocol before adding another detector or making a
 
 The same reference records HoundDog as a candidate **code-dataflow** scanner. It is useful for detecting whether
 code could send patient-like fields to logs, files, APIs, or third-party integrations; it is not a committed-content
-or DICOM-pixel scanner. **Until a maintainer explicitly changes this policy, HoundDog is local-only:** use only its
+or DICOM-pixel scanner. The local wrapper writes raw machine output only to a private ephemeral directory, prints a
+value-safe count, and distinguishes `NOT RUN` from clean. A completed scan with risky flows exits 1; findings must be
+triaged. **Until a maintainer explicitly changes this policy, HoundDog is local-only:** use only its
 standalone binary, with no cloud features, GitHub App, managed scan, PR integration, report upload, or optional AI
 analysis.
 

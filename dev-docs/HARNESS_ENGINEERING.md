@@ -57,7 +57,7 @@ Agents working in this repository should be able to answer three questions quick
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py`, `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
-| Local Presidio advisory scan | `scripts/run_presidio_advisory.py`, optional `privacy-scan` dependency extra |
+| Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI `static-analysis` job + pre-push hook |
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
@@ -263,7 +263,7 @@ Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full reposi
 
 ### Sensitive-content and asset admission
 
-`python scripts/check_sensitive_content.py` runs in pre-commit and the CI static-analysis job. It scans all tracked
+`python scripts/check_sensitive_content.py --require-approved-assets` runs in pre-commit and the CI static-analysis job. It scans all tracked
 text-like files for direct-identifier, private-network/DICOM-endpoint, and absolute-path patterns; rejects common
 diagnostic artifacts; enforces exact-hash inventory entries for images, embedded notebook visuals, DICOM, PDFs,
 PostScript/EPS, supported archives/Office-iWork containers, opaque binaries, and extensionless files; and fails
@@ -272,13 +272,14 @@ as ordinary text. A standard-preamble DICOM is recognized even without a filenam
 value to output.
 `python scripts/check_commit_message.py <git-message-file>` runs at local
 `commit-msg` time with the same value-free rules and no exemptions. See
-[`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md) for the mandatory human-review process and the
-temporary pending baseline. The separate `phi-scan` workflow is advisory only; it has no report upload or AI review.
+[`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md) for the mandatory human-review process and strict
+approved baseline. The separate phi-scan workflow is pinned, quiet, and fails on new/expired reviewed-baseline deltas;
+it has no report upload or AI review.
 `python scripts/render_asset_inventory.py --check` also runs in pre-commit and CI to ensure the linked Markdown
 review view precisely matches the machine-enforced JSON.
-For a local, tracked-text-only Presidio check, install the `privacy-scan` extra and run
-`uv run --extra privacy-scan python scripts/run_presidio_advisory.py`. It is advisory and never uploads inputs or
-findings; see the same privacy policy for scope and limitations.
+For a local Presidio check, install the `privacy-scan` extra and run
+`uv run --no-sync python scripts/run_presidio_advisory.py`. Automation checks structured identifiers with value-safe
+path tokens; targeted local name review adds `--include-person --verbose-paths`. No findings are uploaded.
 
 ### Dependency vulnerability scan (optional `[dev]` extra)
 
@@ -429,7 +430,9 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python -m ruff check src tests` | `build` job (same matrix policy) |
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
-| `python scripts/check_sensitive_content.py` | Ubuntu `static-analysis` job + pre-commit; blocks new/changed unapproved sensitive assets |
+| `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `static-analysis` job + pre-commit; strict asset/content admission with value-safe output |
+| `python scripts/run_semgrep_privacy.py` | Ubuntu `static-analysis` job + pre-push; blocking project privacy SAST |
+| phi-scan / Presidio | Scheduled and relevant-path PR secondary workflows; value-suppressed, no report upload |
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |

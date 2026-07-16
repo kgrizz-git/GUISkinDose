@@ -27,6 +27,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from mypyskindose.safe_output import atomic_write_private
+
 from .._format import (
     COLOR_ERROR,
     COLOR_WARNING,
@@ -215,4 +217,4 @@ def render_pdf_bytes(payload: ExportPayload) -> bytes:
 
 
 def write_pdf(payload: ExportPayload, path: Path) -> None:
-    _build(payload, str(Path(path)))
+    atomic_write_private(path, render_pdf_bytes(payload))

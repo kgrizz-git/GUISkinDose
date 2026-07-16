@@ -83,13 +83,22 @@ class TestMultiExamResultSerialization:
     def test_to_dict_structure(self):
         mr = self._make_multi()
         d = mr.to_dict()
-        assert d["schema_version"] == 1
+        assert d["schema_version"] == 2
         assert "exams" in d
         assert len(d["exams"]) == 2
         assert "aggregate_dose_map" in d
         assert "aggregate_psd" in d
         assert "total_events" in d
         assert d["total_events"] == 10
+        assert "source_file" not in d["exams"][0]
+
+    def test_identified_serialization_requires_explicit_opt_in(self):
+        mr = self._make_multi()
+        default_json = mr.to_json()
+        identified = mr.to_dict(include_source_identifiers=True)
+
+        assert "test.csv" not in default_json
+        assert identified["exams"][0]["source_file"] == "test.csv"
 
     def test_aggregate_psd_is_max_of_aggregate_map(self):
         mr = self._make_multi()

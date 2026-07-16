@@ -91,6 +91,7 @@ class ExportSource:
     colorscale: str = "jet"
     report_title: str | None = None
     load_timestamp: datetime | None = None
+    include_source_identifiers: bool = False
 
 
 # ── Payload (collector → writers) ─────────────────────────────────────────────

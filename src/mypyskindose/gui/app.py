@@ -10,21 +10,19 @@ or directly:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import sys
-import tempfile
-from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
-
-# Fix for Windows SSL context loading error during shutdown
-os.environ["SSL_CERT_FILE"] = ""
 
 # Fix for colorama atexit error on Windows during shutdown
 os.environ["COLORAMA_DISABLE"] = "1"
 
 from nicegui import Client, app, ui
 from nicegui.events import NativeEventArguments
+
+from mypyskindose.privacy import safe_error_event
 
 from mypyskindose.debug import configure_logging, dprint
 
@@ -40,6 +38,7 @@ from .tabs import geometry as geometry_tab
 from .tabs import results as results_tab
 from .tabs import settings as settings_tab
 from .tabs import upload as upload_tab
+from .ui_copy import copy_text
 from .window_prefs import (
     NativeWindowPrefs,
     ScreenBounds,
@@ -50,6 +49,8 @@ from .window_prefs import (
     save_native_window_prefs,
     validate_prefs,
 )
+
+logger = logging.getLogger(__name__)
 
 GUI_VERSION = "1.1.0"
 
@@ -173,7 +174,7 @@ def index():
             with ui.scroll_area().classes("w-full"):
                 ui.markdown(
                     dedent(
-                        """
+                        f"""
                         MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
 
                         **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
@@ -190,7 +191,7 @@ def index():
 
                         **6. Export** — Download results as JSON, HTML, or PNG.
 
-                        All processing runs locally. No data leaves your machine.
+                        **Privacy** — {copy_text("onboarding.privacy_notice")}
                         """
                     ).strip()
                 )
@@ -229,7 +230,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
                 for s in ns_screen.screens()
             ]
         except Exception as exc:
-            dprint("GUI", f"AppKit screen detection failed ({exc}); trying webview/Tkinter fallbacks.")
+            safe_error_event(logger, "appkit_screen_detection", exc, level=logging.DEBUG)
     try:
         if not screens:
             import webview  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pywebview)
@@ -245,7 +246,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
                 for s in webview.screens()
             ]
     except Exception as exc:
-        dprint("GUI", f"Screen detection failed ({exc}); trying Tkinter fallback.")
+        safe_error_event(logger, "native_screen_detection", exc, level=logging.DEBUG)
     if not screens:
         try:
             import tkinter as tk
@@ -256,7 +257,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
             root.destroy()
             screens = [ScreenBounds(0, 0, sw, sh, is_primary=True)]
         except Exception as exc:
-            dprint("GUI", f"Tkinter screen detection failed ({exc}).")
+            safe_error_event(logger, "tk_screen_detection", exc, level=logging.DEBUG)
     return screens
 
 
@@ -281,7 +282,7 @@ def _detect_macos_visible_primary_bounds() -> ScreenBounds | None:
             is_primary=True,
         )
     except Exception as exc:
-        dprint("GUI", f"AppKit visible-frame detection failed ({exc}).")
+        safe_error_event(logger, "appkit_visible_frame", exc, level=logging.DEBUG)
         return None
 
 
@@ -427,23 +428,18 @@ def _register_native_geometry_tracking(
 # ── entry point ────────────────────────────────────────────────────────────
 
 
-def run_gui(native: bool = False, host: str | None = None) -> None:
+def run_gui(native: bool = False, host: str | None = None, *, allow_network: bool = False) -> None:
     """Launch the MyPySkinDose NiceGUI app.
 
     Binds to 127.0.0.1 (localhost only) by default. The GUI has no authentication
     and loads PHI-derived RDSR data into a single process-global, shared state, so
     it must not be exposed on the network unintentionally — and NiceGUI's browser
-    mode would otherwise default to 0.0.0.0 (all interfaces). Pass an explicit
-    ``host`` (e.g. ``"0.0.0.0"``) to opt into LAN serving; only do so on a trusted
-    network and behind your own access controls.
+    mode would otherwise default to 0.0.0.0 (all interfaces). A non-loopback
+    ``host`` also requires the explicit ``allow_network`` acknowledgement; only
+    enable it on a trusted network and behind appropriate access controls.
     """
-    log_file = None
-    if native:
-        log_file = Path(tempfile.gettempdir()) / "mypyskindose-gui.log"
-    configure_logging(log_file=log_file)
+    configure_logging()
     dprint("GUI", f"Starting run_gui, native={native}")
-    if native:
-        dprint("GUI", f"Logging to {log_file}")
 
     if native:
 
@@ -455,9 +451,7 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
                     if callable(set_on_top):
                         set_on_top(True)
             except Exception as exc:
-                dprint("GUI", f"Native window focus failed: {exc}")
-
-    import logging
+                safe_error_event(logger, "native_window_focus", exc, level=logging.DEBUG)
 
     logging.getLogger("nicegui").setLevel(logging.ERROR)
 
@@ -494,11 +488,9 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
 
     bind_host = host or "127.0.0.1"
     if bind_host not in ("127.0.0.1", "localhost"):
-        dprint(
-            "GUI",
-            f"Binding GUI to {bind_host} — exposed beyond localhost with no "
-            "authentication; ensure this is a trusted network.",
-        )
+        if not allow_network:
+            raise ValueError("network_gui_binding_requires_explicit_acknowledgement")
+        logger.warning("non_loopback_gui_binding_requested")
 
     try:
         ui.run(

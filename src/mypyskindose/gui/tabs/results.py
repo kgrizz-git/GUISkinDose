@@ -234,10 +234,8 @@ def build(ctx: PageContext) -> None:
 
                 with multi_exam_accordion_container:
                     for i, exam_res in enumerate(res.exams):
-                        study_str = f"Exam {i + 1}"
-
                         with ui.expansion(
-                            f"{study_str} — {exam_res.exam_id}", icon="personal_video"
+                            exam_res.exam_id, icon="personal_video"
                         ).classes("w-full modern-card bg-zinc-900/50"):
                             with ui.row().classes("w-full items-center justify-between"):
                                 with ui.row().classes("gap-4"):

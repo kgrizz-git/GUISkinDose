@@ -1,5 +1,12 @@
 # Upload And Import
 
+## Privacy and temporary storage
+
+Source filenames and file contents may contain PHI. MyPySkinDose copies browser uploads into a private per-session
+directory under a random name; it does not reuse the original basename. Files are removed when cleared or during an
+orderly shutdown, and stale crash leftovers are removed after 24 hours. Secure erase is not guaranteed on modern
+filesystems. Keep source files and temporary storage within your approved clinical-data boundary.
+
 Use the Upload tab to load one or more DICOM RDSR files or supported tabular event-table exports.
 
 Accepted inputs:

@@ -14,12 +14,13 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 54
+**Assets tracked:** 55
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
 | [`.envrc`](../.envrc) | Extensionless | Local development environment configuration | ✅ Approved — KG (2026-07-14) | — | `17afa908c3f7` |
-| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — KG (2026-07-14) | — | `d4e979fb03dd` |
+| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — KG (2026-07-16) | — | `91f4698d7570` |
+| [`.phi-scanbaseline`](../.phi-scanbaseline) | Extensionless | Reviewed expiring phi-scan false-positive fingerprint baseline; contains no raw matched values | ✅ Approved — KG (2026-07-16) | — | `1b37b07a6870` |
 | [`.semgrepignore`](../.semgrepignore) | Extensionless | Semgrep scan exclusions | ✅ Approved — KG (2026-07-14) | — | `13f4993dbd3e` |
 | [`LICENSE`](../LICENSE) | Extensionless | Repository license | ✅ Approved — KG (2026-07-14) | — | `a9f643d12813` |
 | [`docs/Makefile`](../docs/Makefile) | Extensionless | Documentation build entry point | ✅ Approved — KG (2026-07-14) | — | `e33bf74d5913` |
@@ -38,11 +39,11 @@ file revision.
 | [`docs/source/user/figures/table/table_at3.svg`](../docs/source/user/figures/table/table_at3.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `b694d8956241` |
 | [`docs/source/user/figures/table/table_standard.svg`](../docs/source/user/figures/table/table_standard.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `32ffab845368` |
 | [`docs/source/user/figures/table/table_translate.svg`](../docs/source/user/figures/table/table_translate.svg) | Image | Documentation table illustration | ✅ Approved — KG (2026-07-15) | — | `6b2a9a8760e2` |
-| [`src/mypyskindose/example_data/RDSR/fake_scanner.dcm`](../src/mypyskindose/example_data/RDSR/fake_scanner.dcm) | DICOM | Synthetic RDSR test fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `bd665ed347e0` |
-| [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm) | DICOM | Philips RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `b1231b0013fe` |
-| [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm) | DICOM | Philips RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `81dddb53e3bf` |
-| [`src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm) | DICOM | Upstream PySkinDose Siemens RDSR regression fixture; believed to be a phantom test exam | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `896bcd035df2` |
-| [`src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm) | DICOM | Siemens RDSR regression fixture | ⏳ Pending manual review | IDs ☐ · private ☐ · pixels ☐ | `e1f70911cc29` |
+| [`src/mypyskindose/example_data/RDSR/fake_scanner.dcm`](../src/mypyskindose/example_data/RDSR/fake_scanner.dcm) | DICOM | Synthetic RDSR derived from public upstream PySkinDose test data; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `bd665ed347e0` |
+| [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm) | DICOM | Public upstream PySkinDose Philips RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `b1231b0013fe` |
+| [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm) | DICOM | Public upstream PySkinDose Philips RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `81dddb53e3bf` |
+| [`src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm) | DICOM | Public upstream PySkinDose Siemens RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `896bcd035df2` |
+| [`src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm) | DICOM | Public upstream PySkinDose Siemens RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `e1f70911cc29` |
 | [`src/mypyskindose/example_data/RDSR/.gitkeep`](../src/mypyskindose/example_data/RDSR/.gitkeep) | Extensionless | Keeps the RDSR example-data directory in Git | ✅ Approved — KG (2026-07-15) | — | `e3b0c44298fc` |
 | [`src/mypyskindose/phantom_data/adult_female.stl`](../src/mypyskindose/phantom_data/adult_female.stl) | Opaque binary | Adult female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `f74681f580aa` |
 | [`src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl) | Opaque binary | Reduced adult female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `fcb6b37d23ca` |
@@ -60,8 +61,8 @@ file revision.
 | [`src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl) | Opaque binary | Reduced senior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `87b10fcd07de` |
 | [`src/mypyskindose/phantom_data/.gitkeep`](../src/mypyskindose/phantom_data/.gitkeep) | Extensionless | Keeps the phantom-data directory in Git | ✅ Approved — KG (2026-07-15) | — | `e3b0c44298fc` |
 | [`tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy`](../tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy) | Opaque binary | Numeric-only dose-map golden fixture | ✅ Approved — KG (2026-07-15) | — | `ff32650b9ff0` |
-| [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Office/iWork document | Normalized spreadsheet fixture | ⏳ Pending manual review | files ☐ · images ☐ · DICOM ☐ | `c3342ef4461f` |
-| [`tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx`](../tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx) | Office/iWork document | Spreadsheet metadata-header fixture | ⏳ Pending manual review | files ☐ · images ☐ · DICOM ☐ | `d5197c95a656` |
+| [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Office/iWork document | Normalized spreadsheet fixture | ✅ Approved — KG (2026-07-16) | files ✓ · images ✓ · DICOM ✓ | `c3342ef4461f` |
+| [`tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx`](../tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx) | Office/iWork document | Spreadsheet metadata-header fixture | ✅ Approved — KG (2026-07-16) | files ✓ · images ✓ · DICOM ✓ | `d5197c95a656` |
 | [`wiki/backscatter_illustration_1_dark.png`](../wiki/backscatter_illustration_1_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `3cf342f39e79` |
 | [`wiki/backscatter_illustration_2_dark.png`](../wiki/backscatter_illustration_2_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `72446b615647` |
 | [`wiki/backscatter_surface_dark.png`](../wiki/backscatter_surface_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `84405ca6ca0f` |

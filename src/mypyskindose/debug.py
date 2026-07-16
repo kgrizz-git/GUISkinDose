@@ -24,6 +24,8 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from mypyskindose.privacy import safe_error_event
+
 # File-sink bounds. The native-mode log is a diagnostic aid, not an audit trail:
 # it is opened fresh each session (mode="w") and rotated so it cannot grow without
 # bound or accumulate PHI-bearing lines across runs.
@@ -56,7 +58,7 @@ def _load_debug_json() -> None:
         with open(debug_file, "r", encoding="utf-8") as f:
             user_flags = json.load(f)
     except (OSError, json.JSONDecodeError) as exc:
-        logging.getLogger(_LOGGER_ROOT).warning("Could not read %s: %s", debug_file, exc)
+        safe_error_event(logging.getLogger(_LOGGER_ROOT), "debug_configuration_read", exc, level=logging.WARNING)
         return
     for key, value in user_flags.items():
         if key.upper() in DEBUG_FLAGS:
@@ -158,7 +160,7 @@ def _add_file_handler(log_file: str | Path) -> None:
             encoding="utf-8",
         )
     except OSError as exc:
-        root.warning("Could not open log file %s: %s", log_file, exc)
+        safe_error_event(root, "diagnostic_log_open", exc, level=logging.WARNING)
         return
     if os.name == "posix":
         try:

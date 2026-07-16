@@ -10,6 +10,8 @@ import base64
 import html
 from pathlib import Path
 
+from mypyskindose.safe_output import atomic_write_private
+
 from .._format import (
     COLOR_ERROR,
     COLOR_WARNING,
@@ -134,4 +136,4 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
 
 
 def write_html(payload: ExportPayload, path: Path) -> None:
-    Path(path).write_bytes(render_html_bytes(payload))
+    atomic_write_private(path, render_html_bytes(payload))

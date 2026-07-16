@@ -12,15 +12,29 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
-- **Advisory PHI/PII leak SAST + agent privacy guidance** (2026-07-15) — added project-specific semgrep rules
+- **End-to-end privacy hardening** (2026-07-16) — default result/report serialization now omits source identifiers;
+  internal exams use opaque labels; CLI/GUI exports require an explicit destination/overwrite choice and use private,
+  atomic, Git-aware writes; uploads use private random-name session storage with stale cleanup; runtime diagnostics
+  suppress filenames, paths, exception messages, and tracebacks; tests fail if they modify or leave artifacts in the
+  checkout. Added explicit identified-export and network-binding acknowledgements, onboarding/upload/export privacy
+  notices, value-safe path tokens, CI metadata scanning, and strict approved-asset enforcement.
+
+- **Layered PHI/PII scanner cadence** (2026-07-16) — project privacy Semgrep is now blocking with synthetic rule
+  tests; phi-scan runs weekly and on CSV/TSV pull requests against a reviewed expiring baseline; calibrated Presidio
+  runs weekly/PR with local models and value-suppressed output; HoundDog raw reports are ephemeral and its wrapper
+  distinguishes clean, findings, and not-run states. The five public DICOM fixtures and all other opaque assets are
+  hash-approved with reviewer initials; copied irradiation-event UIDs were replaced by deterministic test-only UIDs.
+
+- **PHI/PII leak SAST + agent privacy guidance** (2026-07-15) — added project-specific semgrep rules
   (`.semgrep/mypyskindose-privacy.yml`) that flag patient/study/institution/physician identifiers and source
-  filenames reaching stdout/loggers, wired as a non-blocking `semgrep-privacy` pre-push hook and CI step (findings
-  surface without failing the build; promote to blocking once cleared). Added an `AGENT_PLAYBOOK.md` "Privacy and
+  filenames reaching stdout/loggers, wired as a blocking `semgrep-privacy` pre-push hook and CI step. Added an
+  `AGENT_PLAYBOOK.md` "Privacy and
   sensitive data" section covering when to run each scanner and that advisory findings must be triaged, not ignored.
 
 - **HoundDog dataflow scan + PII/PHI scanner runbook** (2026-07-15) — added an advisory, local-only pre-push hook
   (`scripts/run_hounddog_advisory.py`) that runs HoundDog's source-code dataflow scan when the standalone binary is
-  installed and skips cleanly otherwise; it never blocks, uploads, or invokes cloud/AI features. Documented exact
+  installed and reports `NOT RUN` otherwise; completed scans fail on risky flows and never upload or invoke cloud/AI
+  features. Documented exact
   run commands for all four scanners (phi-scan, Presidio, HoundDog, dicom-phi-scan) in
   `dev-docs/references/LOCAL_PII_MODELS.md`.
 
@@ -35,7 +49,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   documented DICOM/image review policy.
 
 - **Local Presidio advisory scan** (2026-07-14) — added an optional `privacy-scan` dependency extra and a
-  tracked-text-only runner. It suppresses matched values, does not upload inputs/findings, and is not wired to CI.
+  tracked-text-only runner. It suppresses matched values and does not upload inputs/findings; a calibrated weekly/PR
+  workflow was added on 2026-07-16.
 
 - **Local PII/PHI evaluation reference** (2026-07-14) — documented local GLiNER, Privacy Filter, Presidio,
   HoundDog, and DICOM-pixel-scanner options, including macOS/LM Studio limits, local-only boundaries, and a

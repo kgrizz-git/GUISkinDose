@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from mypyskindose.privacy import safe_error_event
+
 logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
@@ -72,7 +74,7 @@ def _backup_bad_gui_config(path: Path) -> None:
     try:
         path.replace(target)
     except Exception as exc:
-        logger.debug("Could not back up bad gui config from %s to %s: %s", path, target, exc)
+        safe_error_event(logger, "gui_config_backup", exc, level=logging.DEBUG)
 
 
 def load_gui_config() -> dict[str, Any]:
@@ -83,11 +85,11 @@ def load_gui_config() -> dict[str, Any]:
     except FileNotFoundError:
         return {}
     except Exception as exc:
-        logger.debug("Could not load gui config from %s: %s", path, exc)
+        safe_error_event(logger, "gui_config_load", exc, level=logging.DEBUG)
         _backup_bad_gui_config(path)
         return {}
     if not isinstance(data, dict):
-        logger.debug("Ignoring non-object gui config from %s", path)
+        logger.debug("gui_config_non_object")
         _backup_bad_gui_config(path)
         return {}
     return data

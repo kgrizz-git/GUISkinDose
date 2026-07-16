@@ -36,6 +36,7 @@ _test_gui_import.py
 *.html
 *.png
 !docs/**/*.png
+!wiki/**/*.png
 __pycache__/
 **/__pycache__/
 .ipynb_checkpoints

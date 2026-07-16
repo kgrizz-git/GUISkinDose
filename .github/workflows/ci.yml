@@ -46,7 +46,11 @@ jobs:
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
     - name: Check sensitive content and approved assets
-      run: python scripts/check_sensitive_content.py
+      run: python scripts/check_sensitive_content.py --require-approved-assets
+    - name: Check PR and push metadata for sensitive content
+      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
+    - name: Check ignored and untracked risky artifacts
+      run: python scripts/check_ignored_asset_files.py --strict
     - name: Check approved asset inventory Markdown
       run: python scripts/render_asset_inventory.py --check
     - name: Check GUI help sync
@@ -75,11 +79,8 @@ jobs:
       run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
     - name: Semgrep (OWASP Top 10 SAST)
       run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
-    - name: Semgrep (project PHI/PII leak rules, advisory)
-      # Advisory: no --error, so findings surface in the log without failing CI.
-      # Triage, do not ignore. Promote to blocking once the surface is cleared.
-      continue-on-error: true
-      run: semgrep --config=.semgrep/mypyskindose-privacy.yml --metrics=off src scripts
+    - name: Semgrep (project PHI/PII leak rules, blocking)
+      run: python scripts/run_semgrep_privacy.py
     - name: Safety (dependency vulnerability scan — skipped without key)
       if: env.SAFETY_API_KEY != ''
       run: safety scan --detailed-output

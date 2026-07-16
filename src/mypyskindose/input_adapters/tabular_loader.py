@@ -64,7 +64,7 @@ def read_csv(path: Path | str) -> _RawLoad:
             last_exc = exc
             break
 
-    raise ValueError(f"Could not read {path.name!r} with any supported encoding") from last_exc
+    raise ValueError("Could not read CSV input with any supported encoding.") from last_exc
 
 
 def read_tsv(path: Path | str) -> _RawLoad:
@@ -82,7 +82,7 @@ def read_tsv(path: Path | str) -> _RawLoad:
             last_exc = exc
             break
 
-    raise ValueError(f"Could not read {path.name!r} with any supported encoding") from last_exc
+    raise ValueError("Could not read TSV input with any supported encoding.") from last_exc
 
 
 def read_excel(path: Path | str, sheet_name: str | int = 0) -> _RawLoad:

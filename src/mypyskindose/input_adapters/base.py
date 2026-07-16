@@ -34,6 +34,7 @@ from mypyskindose.input_adapters.column_mapper import (
 )
 from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
+from mypyskindose.privacy import exception_class_name
 
 if TYPE_CHECKING:
     from mypyskindose.settings import PyskindoseSettings
@@ -298,7 +299,9 @@ def run_normalizer_pipeline(
     try:
         normalized_df = rdsr_normalizer(data_df, settings)
     except Exception as exc:
-        raise ValueError(f"rdsr_normalizer() failed on {schema_name} input: {exc}") from exc
+        raise ValueError(
+            f"RDSR normalization failed (error_type={exception_class_name(exc)})."
+        ) from exc
 
     # rdsr_normalizer() rebuilds the frame from scratch, so carry the optional
     # dosimetric columns across by position (row order is preserved).

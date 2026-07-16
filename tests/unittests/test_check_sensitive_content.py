@@ -104,6 +104,17 @@ def test_sensitive_text_is_reported_without_echoing_value(tmp_path: Path) -> Non
     assert "person" not in findings[0].render()
 
 
+def test_sensitive_filename_is_rejected_without_echoing_it(tmp_path: Path) -> None:
+    path = "patient_id_AB1234_notes.txt"
+    (tmp_path / path).write_text("synthetic content\n", encoding="utf-8")
+    _write_policy(tmp_path, [])
+
+    findings = run_checks(tmp_path, paths=[path])
+
+    assert [finding.rule for finding in findings] == ["SENSITIVE_PATIENT_PATH"]
+    assert path not in findings[0].render()
+
+
 def test_extensionless_file_requires_an_inventory_entry(tmp_path: Path) -> None:
     extensionless = tmp_path / "possible_dicom"
     extensionless.write_bytes(b"opaque input")
@@ -302,6 +313,18 @@ def test_office_container_scans_text_and_requires_embedded_content_review(tmp_pa
         ("CONTEXTUAL_PATIENT_IDENTIFIER", "error", "member1:1"),
     }
     assert asset_kind("report.docx", document) == "office_document"
+
+
+def test_container_sensitive_member_name_is_rejected_without_echoing_it(tmp_path: Path) -> None:
+    document = tmp_path / "fixture.zip"
+    with zipfile.ZipFile(document, "w") as archive:
+        archive.writestr("patient_id_AB1234_notes.txt", "synthetic content")
+    _write_policy(tmp_path, [_container_asset_entry(tmp_path, "fixture.zip", kind="archive")])
+
+    findings = run_checks(tmp_path, paths=["fixture.zip"])
+
+    assert [finding.rule for finding in findings] == ["CONTAINER_SENSITIVE_MEMBER_NAME"]
+    assert "patient_id" not in findings[0].render()
 
 
 def test_tar_archive_scans_text_and_preserves_cleared_container_behavior(tmp_path: Path) -> None:

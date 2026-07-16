@@ -8,18 +8,21 @@ Refactor plan Phase 3.3c. Timer-driven (`_refresh_raw_table`) plus the
 from __future__ import annotations
 
 import io
-from pathlib import Path
-
+import logging
 import pandas as pd
 from nicegui import ui
 
 from mypyskindose.spreadsheet_safety import neutralize_dataframe
+from mypyskindose.privacy import safe_error_event, safe_user_error
+from mypyskindose.safe_output import atomic_write_private
 
 from ..components import HelpButton
 from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from ..io_helpers import _get_save_path, _is_native_mode
 from ..page_context import PageContext
 from ..state import state
+
+logger = logging.getLogger(__name__)
 
 COLUMN_LABEL_ALIASES = {
     "Tx": "Tx (X, DICOM LON, PT L-R)",
@@ -70,7 +73,7 @@ def build(ctx: PageContext) -> None:
                     return
 
                 prefix = "raw_" if state.view_raw else "normalized_"
-                default_name = f"{prefix}events_{state.file_name or 'data'}.{fmt}"
+                default_name = f"mypyskindose_{prefix}events.{fmt}"
                 save_path = await _get_save_path(default_name, fmt)
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
@@ -88,39 +91,33 @@ def build(ctx: PageContext) -> None:
                 safe_df = neutralize_dataframe(df)
                 safe_meta = neutralize_dataframe(meta_df)
 
-                if save_path:
-                    try:
-                        p = Path(save_path)
-                        if fmt == "csv":
-                            safe_df.to_csv(p, index=True)
-                        elif fmt == "txt":
-                            with open(p, "w") as f:
-                                f.write("=== NORMALIZATION METADATA ===\n")
-                                f.write(safe_meta.to_string() + "\n\n")
-                                f.write("=== EVENT DATA ===\n")
-                                f.write(safe_df.to_string())
-                        elif fmt == "xlsx":
-                            with pd.ExcelWriter(p) as writer:
-                                safe_df.to_excel(writer, sheet_name="Event Data", index=True)
-                                safe_meta.to_excel(writer, sheet_name="Normalization Info", index=False)
-                        ui.notify(f"Saved to {p.name}", color="positive")
-                        return
-                    except Exception as e:
-                        ui.notify(f"Save failed: {e}", type="negative")
-
-                # Fallback to browser download
                 if fmt == "csv":
-                    content = safe_df.to_csv(index=True)
-                    ui.download(content.encode(), default_name)
+                    content = safe_df.to_csv(index=True).encode("utf-8")
                 elif fmt == "txt":
-                    content = "=== METADATA ===\n" + safe_meta.to_string() + "\n\n" + safe_df.to_string()
-                    ui.download(content.encode(), default_name)
-                elif fmt == "xlsx":
+                    content = (
+                        "=== METADATA ===\n"
+                        + safe_meta.to_string()
+                        + "\n\n"
+                        + safe_df.to_string()
+                    ).encode("utf-8")
+                else:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output) as writer:
                         safe_df.to_excel(writer, sheet_name="Event Data", index=True)
                         safe_meta.to_excel(writer, sheet_name="Normalization Info", index=False)
-                    ui.download(output.getvalue(), default_name)
+                    content = output.getvalue()
+
+                if save_path:
+                    try:
+                        atomic_write_private(save_path, content, force=True)
+                        ui.notify("Event-table export saved.", color="positive")
+                        return
+                    except Exception as exc:
+                        safe_error_event(logger, "event_table_export", exc)
+                        ui.notify(safe_user_error("event_table_export"), type="negative")
+                        return
+
+                ui.download(content, default_name)
                 ui.notify(f"Downloaded {fmt.upper()}", color="positive")
 
             with ui.card().classes("modern-card w-full p-0 overflow-hidden sticky-header"):

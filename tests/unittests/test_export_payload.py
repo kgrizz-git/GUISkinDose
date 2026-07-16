@@ -131,6 +131,7 @@ def test_payload_single_exam_dict():
     # DICOM branch (no provenance)
     assert payload.provenance.source_type == "dicom"
     assert payload.provenance.schema_name == "rdsr"
+    assert payload.provenance.source_files == []
     # k_med dose-weighted mean = (2*1.02 + 1*1.03)/3
     kmed = next(c for c in payload.exams[0].corrections if c.key == "k_med")
     assert kmed.dose_weighted_mean == pytest.approx((2 * 1.02 + 1.03) / 3)
@@ -281,7 +282,7 @@ def test_build_export_source_from_gui():
     assert src.execution_context == "gui"
     assert src.output_dict is not None
     assert src.multi_exam_result is None
-    assert src.exams[0].exam_id == "case.dcm"
+    assert src.exams[0].exam_id == "Exam 1"
 
     # multi-exam branch takes precedence
     st.multi_exam_result = SimpleNamespace(
@@ -306,8 +307,20 @@ def test_build_export_source_from_cli():
     assert src.execution_context == "cli"
     assert src.output_dict is not None
     assert src.exams[0].source_file == "c.dcm"
+    assert src.exams[0].exam_id == "Exam 1"
     payload = collect_export_payload(src, with_images=False)
     assert payload.cumulative.metrics.psd == pytest.approx(1.0)
+    assert payload.provenance.source_files == []
+
+    identified = build_export_source_from_cli(
+        _settings(),
+        output_dict=_two_event_output(),
+        single_source_file="c.dcm",
+        file_name="c.dcm",
+        include_source_identifiers=True,
+    )
+    identified_payload = collect_export_payload(identified, with_images=False)
+    assert identified_payload.provenance.source_files == ["c.dcm"]
 
 
 # ── 1.8.10 all events miss the phantom ─────────────────────────────────────────

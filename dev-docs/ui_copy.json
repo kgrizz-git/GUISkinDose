@@ -20,6 +20,22 @@
     "export.copy_command.tooltip": {
       "text": "Copy command",
       "owner": "gui/tabs/export.py"
+    },
+    "export.include_identifiers.label": {
+      "text": "Include source filenames (may contain PHI)",
+      "owner": "gui/tabs/export.py"
+    },
+    "export.include_identifiers.explanation": {
+      "text": "Off by default. Enable only when an identified clinical record is intentionally required.",
+      "owner": "gui/tabs/export.py"
+    },
+    "upload.privacy_notice": {
+      "text": "Privacy: filenames and file contents may contain PHI. Uploads are copied to a private random-name session directory and removed on clear or shutdown.",
+      "owner": "gui/tabs/upload.py"
+    },
+    "onboarding.privacy_notice": {
+      "text": "Processing and temporary upload storage stay on this machine by default. Source filenames and data may contain PHI. Upload copies use private random session names and are removed on clear or shutdown; crash leftovers are removed after 24 hours. Exports can be clinical records, so choose an approved destination and retention policy. Do not expose browser mode on a network without separate access controls.",
+      "owner": "gui/app.py"
     }
   }
 }

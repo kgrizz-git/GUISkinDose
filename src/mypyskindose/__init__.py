@@ -37,9 +37,10 @@ def print_example_rdsr_files():
 
     print("Available RDSR files:\n")
     for filename in files:
+        # nosemgrep: mypyskindose-filename-var-to-log-or-stdout -- bundled public fixture name shown on request; reviewed 2026-07-16
         print(f"\t{filename}")
 
-    print(f"\nFiles located in {rdsr_data_dir.absolute()}")
+    print("\nFiles are packaged with MyPySkinDose example data.")
 
 
 def get_path_to_example_rdsr_files():

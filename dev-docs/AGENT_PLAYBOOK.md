@@ -46,13 +46,17 @@ Treat PHI/PII exposure as a first-class defect — in committed content **and** 
   surfaced to the user; never write sensitive content to tracked files.
 - **Run the scanner that matches the change, and triage its findings — do not ignore advisories:**
   - Tracked text, docs, or fixtures that could carry identifiers → the blocking gate runs automatically
-    (`scripts/check_sensitive_content.py`); for an NLP second opinion run
-    `uv run --extra privacy-scan python scripts/run_presidio_advisory.py`.
-  - Source code that logs or writes → the advisory `semgrep-privacy` rules
-    (`semgrep --config=.semgrep/mypyskindose-privacy.yml --metrics=off src scripts`, also a pre-push hook) and, if the
+    (`scripts/check_sensitive_content.py --require-approved-assets`); for a structured-identifier NLP second opinion run
+    `uv run --no-sync python scripts/run_presidio_advisory.py`. Add `--include-person --verbose-paths` only for a
+    targeted local free-text/name review.
+  - Source code that logs or writes → the blocking privacy rules
+    (`python scripts/run_semgrep_privacy.py`, also a pre-push/CI hook) and, if the
     binary is installed, HoundDog (`python scripts/run_hounddog_advisory.py`).
   - Adding or changing a DICOM/image asset → run `dicom-phi-scan` locally on pixels and headers (isolated Python 3.11
     env) before recording the review in `dev-docs/approved_asset_inventory.json`.
+- **Cadence:** phi-scan and calibrated Presidio run weekly. Run phi-scan/Presidio for new tracked CSV/TSV or likely
+  identifier-bearing text; run Semgrep plus HoundDog for logging/write/export/ingestion/API/database changes; run the
+  DICOM scanner and full human checklist for every added or changed DICOM.
 - **Advisory ≠ optional.** Every advisory finding must be fixed, or annotated as a reviewed false positive with a
   trailing `# nosemgrep: <rule-id>` (or an allowlist/inventory entry) plus a one-line reason — never silently dropped.
 - Run commands live in `dev-docs/references/LOCAL_PII_MODELS.md`; policy is in `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md`.
