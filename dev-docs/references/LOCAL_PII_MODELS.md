@@ -10,8 +10,10 @@ human clearance of every image, DICOM, opaque binary, and extensionless file. Se
 separate, **advisory** second opinion for tracked readable text. They must not become the authority that approves an
 asset, replaces rendered-image/DICOM review, or upload source text or findings.
 
-The current local baseline is [`../../scripts/run_presidio_advisory.py`](../../scripts/run_presidio_advisory.py).
-It runs Microsoft Presidio locally, suppresses matched values in its output, and is intentionally not a CI gate.
+The current local text baseline is
+[`../../scripts/run_presidio_advisory.py`](../../scripts/run_presidio_advisory.py). It runs Microsoft Presidio
+locally and suppresses matched values. Conditional scanner execution and content-bound receipts are orchestrated by
+[`../../scripts/privacy_admission.py`](../../scripts/privacy_admission.py).
 
 ## Running the local scanners
 
@@ -22,12 +24,13 @@ are **local-only** manual tools that never run in public CI. All are value-safe 
 |---|---|---|
 | **phi-scan** | CSV/TSV secondary scan (tracked files) | Mirrors the [`phi-scan` workflow](../../.github/workflows/phi-scan.yml): `git archive HEAD \| tar -x -C <tmp>` then `uvx --from 'phi-scan==0.7.0' phi-scan scan . --config <repo>/.phi-scanner.yml --baseline --no-cache --quiet --workers 4`. New and expired high-severity findings fail; matched values and reports are not printed or uploaded. |
 | **Presidio** | NLP text (tracked bounded text) | `uv sync --extra privacy-scan` once, then `uv run --no-sync python scripts/run_presidio_advisory.py`. Automation hashes paths, suppresses values, and excludes noisy `PERSON`@0.85 results. For a targeted local name review add `--include-person --verbose-paths`; every result then requires manual triage. |
-| **HoundDog** | Code dataflow (tracked source) | Install the standalone binary, then `python scripts/run_hounddog_advisory.py` (local pre-push hook). The wrapper reports `NOT RUN`, clean, or a value-safe risky-flow count; a completed scan with findings exits 1. Raw JSON is private and ephemeral. |
-| **dicom-phi-scan** | DICOM header + pixel OCR (local data) | Install in an **isolated Python 3.11 env** (its EasyOCR/Pillow/pydicom pins conflict with the 3.12 project env), then `dicom-phi-scan --dir <dicom-dir> --cpu -o <gitignored>.jsonl -v`. Force `--cpu` on macOS; first run downloads EasyOCR models. |
+| **HoundDog** | Code dataflow (tracked source) | Install the standalone binary. `python scripts/privacy_admission.py run --mode staged` invokes the value-safe wrapper when sensitive source/sink terms changed. Required mode fails if the tool is unavailable; raw JSON remains private and ephemeral. |
+| **dicom-phi-scan** | DICOM header + pixel OCR (local data) | Install in an isolated environment. Conditional admission invokes `scripts/run_dicom_phi_advisory.py` against a private snapshot, forces CPU mode, summarizes only counts, and deletes its raw report. |
+| **Image OCR + Presidio** | Burned-in text in images and image-bearing files | Conditional admission invokes `scripts/run_image_privacy_advisory.py`; it uses local Tesseract, bounded extraction, and targeted high-threshold `PERSON` recognition. It prints only counts/tokens and never retains OCR text. |
 
-The JSONL report from dicom-phi-scan can itself contain identifier values, so always write it to a gitignored path
-(e.g. `tmp/`) and delete it after review. Inspect it value-safely with `jq` on non-value keys
-(`risk_level`, `.tag_findings[].tag`) rather than printing header values into a terminal or log.
+The JSONL report from dicom-phi-scan can itself contain identifier values. Prefer the repository wrapper, which writes
+the report to an owner-only temporary directory, extracts only counts, and deletes it. If diagnosing the scanner
+manually, keep its report outside the worktree and do not print values, paths, or source excerpts into shared logs.
 
 ## Recommended candidate: NVIDIA GLiNER-PII
 

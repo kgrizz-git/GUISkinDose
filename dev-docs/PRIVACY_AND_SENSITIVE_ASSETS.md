@@ -104,7 +104,34 @@ fresh per session, size-bounded, and owner-only on POSIX systems. GUI load error
 operation label and exception type and show a generic UI message, rather than raw tracebacks, paths, or exception
 messages. Do not attach diagnostic logs to issues or commits without reviewing them separately.
 
+## Protected paths and conditional scanner receipts
+
+[`privacy_admission_policy.json`](privacy_admission_policy.json) defines privacy-critical ignore entries,
+never-track paths, and the file/diff criteria that require secondary scanners. Run:
+
+```bash
+python scripts/privacy_admission.py route --mode staged
+python scripts/privacy_admission.py run --mode staged
+```
+
+The first command explains which scanners the staged change requires without printing filenames. The second scans
+an index snapshot, not arbitrary working-tree files, and writes only a content-bound, value-free receipt beneath
+`.git/privacy-scan-receipts/`. Receipts contain scanner/config/tool digests, input Git object IDs, counts, status,
+and expiry; they contain neither paths nor matched values and become invalid when inputs or scanner configuration
+change. Commit and pre-push hooks fail when a required receipt is absent, stale, expired, or not clean. Standard Git
+has no portable pre-`git add` hook, so the commit hook is the first enforceable admission boundary.
+
+The same policy prevents tracking local logs, scanner reports/state, coverage output, build output, and known local
+data directories. It also fails if required privacy ignore lines are deleted. Never weaken the protected list merely
+to stage a file; prepare the asset through the documented review and inventory process instead.
+
 ## Additional scanners
+
+Direct external privacy tools and runtimes are inventoried in
+[`privacy_tool_inventory.json`](privacy_tool_inventory.json), with a generated review view in
+[`privacy_tool_inventory.md`](privacy_tool_inventory.md). The inventory records reviewed versions, execution
+location, purpose, and output boundary. Every conditional scanner must reference its tools; hooks and CI reject an
+unknown tool or stale generated view. Candidate status does not authorize automated execution.
 
 [`phi-scan`](https://pypi.org/project/phi-scan/) runs weekly and on pull requests that change CSV/TSV data. It is
 pinned, quiet, and has no report upload or AI review enabled. Version 0.7.0 is calibrated to high-severity findings in
@@ -143,6 +170,27 @@ value-safe count, and distinguishes `NOT RUN` from clean. A completed scan with 
 triaged. **Until a maintainer explicitly changes this policy, HoundDog is local-only:** use only its
 standalone binary, with no cloud features, GitHub App, managed scan, PR integration, report upload, or optional AI
 analysis.
+
+[`dicom-phi-scan`](https://github.com/elijahrockers/dicom-phi-scan) is required locally when a staged or outgoing
+change adds or changes DICOM files. `privacy_admission.py` runs it against a private snapshot and reduces the raw
+report to a clean/finding/error status and counts before deleting it. A clean result is advisory evidence only: the
+exact-hash inventory and manual review of standard attributes, nested sequences, private tags, and pixels remain
+mandatory. A scanner finding can satisfy receipt enforcement only when that exact file hash already has an approved
+DICOM checklist in the staged inventory; this is explicit human triage, not a scanner allowlist.
+
+Image OCR plus Presidio analysis is required locally for changed supported images, image-bearing office documents,
+PDFs, and notebooks. The wrapper extracts only a bounded number of renderable images into a private temporary
+directory, uses Poppler to rasterize bounded PDF pages, runs local Tesseract OCR, analyzes the captured text locally,
+and emits only entity counts and path
+tokens. Automated `PERSON` detection is enabled here at a deliberately higher threshold because OCR-bearing assets
+are a narrow, high-risk set; ordinary repository-wide Presidio automation continues to exclude noisy name-only
+detections. OCR cannot prove that an asset is safe and does not replace rendered human review.
+OCR findings can satisfy receipt enforcement only through the staged inventory's exact-hash human approval.
+
+ExifTool is inventoried as a candidate metadata second opinion, not an active hook. It can read metadata from many
+image, PDF, Office, and DICOM formats, but normal output includes values and filenames and it does not inspect pixels.
+Do not run it directly in shared logs. Promotion requires a synthetic-fixture evaluation and a wrapper that emits only
+tag classes/counts and path tokens from private temporary output.
 
 ## Historical exposure audit
 

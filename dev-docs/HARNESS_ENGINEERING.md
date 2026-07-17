@@ -57,7 +57,10 @@ Agents working in this repository should be able to answer three questions quick
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py`, `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
-| Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
+| Conditional privacy admission | `scripts/privacy_admission.py`, `dev-docs/privacy_admission_policy.json`; receipts stay under `.git/privacy-scan-receipts/` |
+| Privacy tool inventory | `dev-docs/privacy_tool_inventory.json`, generated `dev-docs/privacy_tool_inventory.md`, `scripts/render_privacy_tool_inventory.py` |
+| Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `scripts/run_dicom_phi_advisory.py`, `scripts/run_image_privacy_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
+| Local SonarQube | `scripts/run_sonarqube_local.py`, `sonar-project.properties`, `dev-docs/SONARQUBE_LOCAL.md` |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI `static-analysis` job + pre-push hook |
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
@@ -277,9 +280,17 @@ approved baseline. The separate phi-scan workflow is pinned, quiet, and fails on
 it has no report upload or AI review.
 `python scripts/render_asset_inventory.py --check` also runs in pre-commit and CI to ensure the linked Markdown
 review view precisely matches the machine-enforced JSON.
+`python scripts/render_privacy_tool_inventory.py --check` similarly ensures every conditional scanner names its
+direct external tools and that their reviewed version, execution boundary, purpose, and output policy are recorded.
 For a local Presidio check, install the `privacy-scan` extra and run
 `uv run --no-sync python scripts/run_presidio_advisory.py`. Automation checks structured identifiers with value-safe
 path tokens; targeted local name review adds `--include-person --verbose-paths`. No findings are uploaded.
+
+`python scripts/privacy_admission.py route --mode staged` determines whether the index requires phi-scan, Presidio,
+HoundDog, DICOM scanning, or image OCR. `run --mode staged` executes those tools against a private index snapshot and
+stores content-bound, expiring receipts only under Git metadata. Pre-commit verifies staged receipts; pre-push
+verifies outgoing-commit receipts. The policy also rejects tracked local-data/scanner-output paths and deletion of
+privacy-critical `.gitignore` entries. See the privacy policy document before changing routing criteria.
 
 ### Dependency vulnerability scan (optional `[dev]` extra)
 
@@ -381,6 +392,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **sensitive-content** | `python scripts/check_sensitive_content.py` (direct PII/PHI-like text, absolute paths, and hash-pinned sensitive assets) |
 | **sensitive-commit-message** | `python scripts/check_commit_message.py` (commit-message PII/PHI-like text, internal endpoints, and local paths; `commit-msg` stage only) |
 | **asset-inventory-markdown** | `python scripts/render_asset_inventory.py --check` (generated linked review inventory matches JSON) |
+| **privacy-tool-inventory** | `python scripts/render_privacy_tool_inventory.py --check` (tool versions/boundaries and scanner references) |
 | **sync-gui-help** | `python scripts/sync_gui_help.py --check` |
 | **help-registry** | `python scripts/check_help_registry.py` |
 | **ui-copy** | `python scripts/check_ui_copy.py` |
@@ -431,6 +443,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
 | `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `static-analysis` job + pre-commit; strict asset/content admission with value-safe output |
+| `python scripts/privacy_admission.py check/route` | Ubuntu `static-analysis` job + local hooks; protected paths and conditional scanner routing |
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `static-analysis` job + pre-push; blocking project privacy SAST |
 | phi-scan / Presidio | Scheduled and relevant-path PR secondary workflows; value-suppressed, no report upload |
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
@@ -440,7 +453,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
-| `safety scan --detailed-output` | Ubuntu `static-analysis` job when `SAFETY_API_KEY` secret is set (skipped otherwise) |
+| Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-after-gates`, after repository analysis, GUI smoke, and the test matrix succeed |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 

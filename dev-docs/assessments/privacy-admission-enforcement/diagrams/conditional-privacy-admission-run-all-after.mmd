@@ -1,0 +1,9 @@
+flowchart LR
+    Change[Contributor or agent change] --> Index[Git index]
+    Index --> Hooks[Pre-push hook]
+    Hooks --> All[Run deterministic, Presidio, phi-scan, HoundDog, OCR, and DICOM tools]
+    All --> Findings{Clean or reviewed?}
+    Findings -->|yes| Push[Push]
+    Findings -->|no or tool missing| Block[Block]
+    Push --> CI[CI reruns all permitted scanners]
+    CI --> Merge[Merge]

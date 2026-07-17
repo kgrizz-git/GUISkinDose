@@ -2,7 +2,7 @@
   "version": 1,
   "assets": [
     {"path":".envrc","sha256":"17afa908c3f77994c4b8010d5a49a207f160d5d360467986315d1e346dafc162","kind":"extensionless","purpose":"Local development environment configuration","review":{"status":"approved","reviewer":"KG","reviewed_on":"2026-07-14"}},
-    {"path":".gitignore","sha256":"91f4698d75708c632fb838cb5bffd508cbf0f5dd9d4aa66889aa6a9943e5e851","kind":"extensionless","purpose":"Git ignore policy","review":{"status":"approved","reviewer":"KG","reviewed_on":"2026-07-16"}},
+    {"path":".gitignore","sha256":"26d337df3fcb3174a59d1ce1148be194114d2ed8e2e10cbda5550b8b4adc0362","kind":"extensionless","purpose":"Git ignore policy","review":{"status":"approved","reviewer":"KG","reviewed_on":"2026-07-16"}},
     {"path":".phi-scanbaseline","sha256":"1b37b07a6870d107a12d0fc7b9d42383c5ced56001ee4f1b426f3620c38a02a2","kind":"extensionless","purpose":"Reviewed expiring phi-scan false-positive fingerprint baseline; contains no raw matched values","review":{"status":"approved","reviewer":"KG","reviewed_on":"2026-07-16"}},
     {"path":".semgrepignore","sha256":"13f4993dbd3e826ba65e8f9373abbe9431ae72c448af440f3ab19be6e72a657f","kind":"extensionless","purpose":"Semgrep scan exclusions","review":{"status":"approved","reviewer":"KG","reviewed_on":"2026-07-14"}},
     {"path":"LICENSE","sha256":"a9f643d128131b42db21fde7ebb3ef13a0d7eb7a796f0a4a6fd6a46a79d4be86","kind":"extensionless","purpose":"Repository license","review":{"status":"approved","reviewer":"KG","reviewed_on":"2026-07-14"}},

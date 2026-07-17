@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "reviewed_on": "2026-07-16",
+  "scope": "Direct external tools and runtimes used or evaluated by repository privacy controls; transitive packages remain governed by uv.lock and dependency audits.",
+  "tools": [
+    {
+      "id": "phi-scan",
+      "name": "phi-scan",
+      "status": "active",
+      "version": "0.7.0",
+      "version_source": "Exact uvx/workflow pin",
+      "execution": "local and GitHub Actions",
+      "role": "Secondary CSV/TSV PHI heuristic scan",
+      "output_policy": "Quiet, value-suppressed, no uploaded report",
+      "source": "https://github.com/phiscanhq/phi-scan"
+    },
+    {
+      "id": "presidio",
+      "name": "Microsoft Presidio Analyzer",
+      "status": "active",
+      "version": "2.2.363",
+      "version_source": "uv.lock privacy-scan extra",
+      "execution": "local and GitHub Actions",
+      "role": "Structured identifier and targeted OCR-text analysis",
+      "output_policy": "Matched values suppressed; no report upload",
+      "source": "https://github.com/microsoft/presidio"
+    },
+    {
+      "id": "spacy-english-model",
+      "name": "spaCy en_core_web_sm",
+      "status": "active",
+      "version": "3.8.0",
+      "version_source": "Exact uv.lock URL",
+      "execution": "local and GitHub Actions",
+      "role": "Local Presidio NLP recognizer model",
+      "output_policy": "Runs in-process; model output is reduced by the Presidio wrapper",
+      "source": "https://github.com/explosion/spacy-models"
+    },
+    {
+      "id": "hounddog",
+      "name": "HoundDog Privacy Code Scanner",
+      "status": "active",
+      "version": "3.3.0",
+      "version_source": "Reviewed local standalone release; receipt hashes version output",
+      "execution": "local only",
+      "role": "Sensitive-value dataflow into logging, files, APIs, and storage",
+      "output_policy": "Raw JSON is private and ephemeral; only counts/status are printed",
+      "source": "https://github.com/hounddogai/hounddog"
+    },
+    {
+      "id": "dicom-phi-scan",
+      "name": "dicom-phi-scan",
+      "status": "active",
+      "version": "0.1.0",
+      "version_source": "Isolated local Python environment",
+      "execution": "local only",
+      "role": "DICOM header and pixel-PHI secondary scan",
+      "output_policy": "Raw report is private and ephemeral; only counts/status are printed",
+      "source": "https://github.com/elijahrockers/dicom-phi-scan"
+    },
+    {
+      "id": "tesseract",
+      "name": "Tesseract OCR",
+      "status": "active",
+      "version": "5.5.2",
+      "version_source": "Reviewed local Homebrew installation",
+      "execution": "local only",
+      "role": "OCR of changed images and privately rendered document pages",
+      "output_policy": "OCR text exists only in process/private temporary storage",
+      "source": "https://github.com/tesseract-ocr/tesseract"
+    },
+    {
+      "id": "poppler",
+      "name": "Poppler pdftoppm",
+      "status": "active",
+      "version": "26.07.0",
+      "version_source": "Reviewed local Homebrew installation",
+      "execution": "local only",
+      "role": "Rasterize bounded PDF pages for local OCR",
+      "output_policy": "Rendered pages stay in private temporary storage and are deleted",
+      "source": "https://poppler.freedesktop.org/"
+    },
+    {
+      "id": "pillow",
+      "name": "Pillow",
+      "status": "active",
+      "version": "12.3.0",
+      "version_source": "uv.lock",
+      "execution": "local privacy wrapper",
+      "role": "Normalize extracted images to PNG for OCR",
+      "output_policy": "Converted images stay in private temporary storage",
+      "source": "https://python-pillow.github.io/"
+    },
+    {
+      "id": "pypdf",
+      "name": "pypdf",
+      "status": "active",
+      "version": "6.14.2",
+      "version_source": "uv.lock",
+      "execution": "local and GitHub Actions",
+      "role": "Bounded PDF validation/page counting and text/metadata admission checks",
+      "output_policy": "Extracted content is scanned in-process and values are suppressed",
+      "source": "https://github.com/py-pdf/pypdf"
+    },
+    {
+      "id": "semgrep",
+      "name": "Semgrep",
+      "status": "active",
+      "version": "1.168.0",
+      "version_source": "uv.lock dev extra",
+      "execution": "local and GitHub Actions",
+      "role": "Blocking project privacy and general SAST rules",
+      "output_policy": "Metrics disabled; project wrapper emits value-safe findings",
+      "source": "https://github.com/semgrep/semgrep"
+    },
+    {
+      "id": "sonarqube-server",
+      "name": "SonarQube Community Build",
+      "status": "optional",
+      "version": "26.7.0.124771",
+      "version_source": "Loopback Docker server API; local image ID recorded outside Git",
+      "execution": "local only",
+      "role": "Optional code-quality and security second opinion",
+      "output_policy": "Raw scanner log is ephemeral; only status/digests are retained under .git",
+      "source": "https://www.sonarsource.com/products/sonarqube/downloads/"
+    },
+    {
+      "id": "sonar-scanner",
+      "name": "SonarScanner CLI",
+      "status": "optional",
+      "version": "8.1.0.6389",
+      "version_source": "Reviewed local Homebrew installation",
+      "execution": "local only",
+      "role": "Submit analysis to the loopback SonarQube server",
+      "output_policy": "Console output is captured privately and deleted after safe classification",
+      "source": "https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/scanners/sonarscanner/"
+    },
+    {
+      "id": "exiftool",
+      "name": "ExifTool",
+      "status": "candidate",
+      "version": "13.55",
+      "version_source": "Reviewed local Homebrew installation",
+      "execution": "not yet automated",
+      "role": "Candidate secondary metadata inventory for images, PDF, Office, and DICOM",
+      "output_policy": "Do not run directly in shared logs; future wrapper must suppress values and paths",
+      "source": "https://exiftool.org/"
+    }
+  ]
+}

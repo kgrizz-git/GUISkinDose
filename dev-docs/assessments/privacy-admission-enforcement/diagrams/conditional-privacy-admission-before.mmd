@@ -1,0 +1,14 @@
+flowchart LR
+    Change[Contributor or agent change] --> Guidance[Agent and contributor guidance]
+    Change --> Index[Git index]
+    Guidance --> Manual[Manually selected advisory tools]
+    Index --> Hooks[Pre-commit and pre-push hooks]
+    Hooks --> Gate[Blocking deterministic privacy gates]
+    Hooks --> Advisory[HoundDog advisory wrapper]
+    Index --> CI[CI path-filtered workflows]
+    CI --> Text[Presidio and phi-scan]
+    Manual --> LocalReports[Private local reports]
+    Advisory -. missing tool may exit 0 .-> Push[Push]
+    Gate --> Push
+    Text --> Merge[Merge]
+    Push --> CI

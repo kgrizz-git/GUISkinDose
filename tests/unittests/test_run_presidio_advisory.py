@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from scripts.run_presidio_advisory import MAX_TEXT_BYTES, PII_ENTITIES, Finding, read_text, scan_paths
+from scripts.run_presidio_advisory import MAX_TEXT_BYTES, PII_ENTITIES, Finding, read_text, scan_paths, tracked_paths
 
 
 class FakeEngine:
@@ -58,3 +58,12 @@ def test_read_text_skips_oversized_content(tmp_path: Path) -> None:
     source.write_bytes(b"a" * (MAX_TEXT_BYTES + 1))
 
     assert read_text(source) is None
+
+
+def test_materialized_snapshot_discovery_does_not_require_git(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    included = tmp_path / "docs" / "note.md"
+    included.write_text("synthetic text", encoding="utf-8")
+    (tmp_path / "opaque.bin").write_bytes(b"binary\x00")
+
+    assert tracked_paths(tmp_path, require_git=False) == [included]

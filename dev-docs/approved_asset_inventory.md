@@ -19,7 +19,7 @@ file revision.
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
 | [`.envrc`](../.envrc) | Extensionless | Local development environment configuration | ✅ Approved — KG (2026-07-14) | — | `17afa908c3f7` |
-| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — KG (2026-07-16) | — | `91f4698d7570` |
+| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — KG (2026-07-16) | — | `26d337df3fcb` |
 | [`.phi-scanbaseline`](../.phi-scanbaseline) | Extensionless | Reviewed expiring phi-scan false-positive fingerprint baseline; contains no raw matched values | ✅ Approved — KG (2026-07-16) | — | `1b37b07a6870` |
 | [`.semgrepignore`](../.semgrepignore) | Extensionless | Semgrep scan exclusions | ✅ Approved — KG (2026-07-14) | — | `13f4993dbd3e` |
 | [`LICENSE`](../LICENSE) | Extensionless | Repository license | ✅ Approved — KG (2026-07-14) | — | `a9f643d12813` |

@@ -12,6 +12,15 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Content-bound privacy admission and local SonarQube** (2026-07-16) — protected `.gitignore` rules and never-track
+  roots now block unsafe staged paths; a staged/range router requires value-free, expiring receipts for applicable
+  Presidio, phi-scan, HoundDog, DICOM, and image-OCR scans. Receipts and raw reports stay below Git metadata or private
+  temporary directories. Added local Tesseract+Presidio rendered-asset review, a safe `dicom-phi-scan` wrapper, and an
+  optional loopback-only SonarQube Community Build runner with private digest/status tracking. Codecov and Safety cloud
+  execution now occurs only on `main` after repository gates pass; PyPI release publishing requires a successful main
+  CI run. A machine-checked privacy-tool inventory now records direct scanner/runtime versions, roles, execution
+  boundaries, and output policies; ExifTool is recorded as a candidate rather than silently enabled.
+
 - **End-to-end privacy hardening** (2026-07-16) — default result/report serialization now omits source identifiers;
   internal exams use opaque labels; CLI/GUI exports require an explicit destination/overwrite choice and use private,
   atomic, Git-aware writes; uploads use private random-name session storage with stale cleanup; runtime diagnostics

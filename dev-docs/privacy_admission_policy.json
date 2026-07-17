@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "receipt_max_age_hours": 168,
+  "protected_ignore_patterns": [
+    "logs/",
+    "*.cache",
+    "*.err",
+    "*.log",
+    "*.log.[0-9]*",
+    "*.out",
+    "*.pkl",
+    "*.pickle",
+    "*.trace",
+    "tmp/",
+    "PlotOutputs/",
+    "test_data_gitignored/",
+    "build/",
+    "dist/",
+    "site/",
+    "docs/_build/",
+    "htmlcov/",
+    ".coverage",
+    "coverage.xml",
+    ".coverage.*",
+    ".pytest_cache/",
+    ".mypy_cache/",
+    ".ruff_cache/",
+    ".venv/",
+    "[Vv]env/",
+    "venv/",
+    ".direnv/",
+    "backups/",
+    ".scannerwork/",
+    ".sonar/",
+    ".privacy-scan-state/",
+    "sonar-project.properties.local"
+  ],
+  "never_track_prefixes": [
+    "logs/",
+    "tmp/",
+    "PlotOutputs/",
+    "test_data_gitignored/",
+    "build/",
+    "dist/",
+    "site/",
+    "docs/_build/",
+    "htmlcov/",
+    ".pytest_cache/",
+    ".mypy_cache/",
+    ".ruff_cache/",
+    ".venv/",
+    "venv/",
+    ".direnv/",
+    "backups/",
+    ".scannerwork/",
+    ".sonar/",
+    ".privacy-scan-state/"
+  ],
+  "never_track_names": [
+    ".DS_Store",
+    "sonar-project.properties.local"
+  ],
+  "never_track_patterns": [
+    "*.cache", "*.err", "*.log", "*.log.[0-9]*", "*.out", "*.pkl", "*.pickle", "*.trace",
+    ".coverage", "coverage.xml", ".coverage.*", "*.tmp", "*.bak", "*.orig", "debug_*", "scratch*",
+    "temp*", "_test_gui_import.py", "src/mypyskindose/example_data/RDSR/clinical*"
+  ],
+  "scanners": [
+    {
+      "id": "phi-scan",
+      "version": "0.7.0",
+      "tool_ids": ["phi-scan"],
+      "trigger_extensions": [".csv", ".tsv"],
+      "input_extensions": [".csv", ".tsv"],
+      "scope": "all_matching",
+      "config_paths": [
+        ".phi-scanner.yml", ".phi-scanbaseline", "dev-docs/privacy_tool_inventory.json"
+      ]
+    },
+    {
+      "id": "presidio",
+      "version": "locked-privacy-scan-extra",
+      "tool_ids": ["presidio", "spacy-english-model"],
+      "trigger_extensions": [
+        ".cfg", ".csv", ".html", ".ini", ".json", ".md", ".rst", ".svg", ".toml", ".tsv", ".txt",
+        ".xml", ".yaml", ".yml"
+      ],
+      "input_extensions": [
+        ".cfg", ".csv", ".html", ".ini", ".json", ".md", ".rst", ".svg", ".toml", ".tsv", ".txt",
+        ".xml", ".yaml", ".yml"
+      ],
+      "scope": "all_matching",
+      "config_paths": [
+        "scripts/run_presidio_advisory.py", "dev-docs/privacy_tool_inventory.json", "pyproject.toml", "uv.lock"
+      ]
+    },
+    {
+      "id": "hounddog",
+      "version": "local-standalone",
+      "tool_ids": ["hounddog"],
+      "trigger_extensions": [".py"],
+      "trigger_prefixes": ["src/", "scripts/"],
+      "diff_regex": "(?i)(log(?:ger|ging)?|print\\s*\\(|write|export|upload|request|http|api|database|sqlite|patient|identifier|dicom|rdsr|filename|filepath)",
+      "input_extensions": [".py"],
+      "input_prefixes": ["src/", "scripts/"],
+      "scope": "all_matching",
+      "config_paths": ["scripts/run_hounddog_advisory.py", "dev-docs/privacy_tool_inventory.json"]
+    },
+    {
+      "id": "dicom-phi-scan",
+      "version": "local-isolated",
+      "tool_ids": ["dicom-phi-scan"],
+      "trigger_extensions": [".dcm", ".dicom"],
+      "input_extensions": [".dcm", ".dicom"],
+      "scope": "changed",
+      "config_paths": [
+        "scripts/approved_asset_review.py", "scripts/run_dicom_phi_advisory.py",
+        "dev-docs/approved_asset_inventory.json", "dev-docs/privacy_tool_inventory.json"
+      ]
+    },
+    {
+      "id": "image-ocr",
+      "version": "local-tesseract",
+      "tool_ids": ["tesseract", "poppler", "presidio", "pillow", "pypdf"],
+      "trigger_extensions": [
+        ".avif", ".bmp", ".docx", ".gif", ".heic", ".ipynb", ".jpeg", ".jpg", ".pdf", ".png", ".pptx",
+        ".tif", ".tiff", ".webp", ".xlsx"
+      ],
+      "input_extensions": [
+        ".avif", ".bmp", ".docx", ".gif", ".heic", ".ipynb", ".jpeg", ".jpg", ".pdf", ".png", ".pptx",
+        ".tif", ".tiff", ".webp", ".xlsx"
+      ],
+      "scope": "changed",
+      "config_paths": [
+        "scripts/approved_asset_review.py", "scripts/run_image_privacy_advisory.py",
+        "dev-docs/approved_asset_inventory.json", "dev-docs/privacy_tool_inventory.json", "pyproject.toml", "uv.lock"
+      ]
+    }
+  ]
+}

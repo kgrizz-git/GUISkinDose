@@ -57,6 +57,38 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: privacy-admission-policy
+        name: protected privacy paths and scanner routing policy
+        entry: python scripts/privacy_admission.py check --mode staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: privacy-admission-receipts
+        name: conditional privacy scanner receipts (staged snapshot)
+        entry: python scripts/privacy_admission.py verify --mode staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: privacy-admission-policy-push
+        name: protected privacy paths and scanner routing policy (push)
+        entry: python scripts/privacy_admission.py check --mode range
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: privacy-admission-receipts-push
+        name: conditional privacy scanner receipts (branch range)
+        entry: python scripts/privacy_admission.py verify --mode range
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       - id: sensitive-commit-message
         name: sensitive content in commit message
         entry: python scripts/check_commit_message.py
@@ -66,6 +98,13 @@ repos:
       - id: asset-inventory-markdown
         name: approved asset inventory Markdown
         entry: python scripts/render_asset_inventory.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: privacy-tool-inventory
+        name: privacy tool inventory and scanner references
+        entry: python scripts/render_privacy_tool_inventory.py --check
         language: system
         pass_filenames: false
         always_run: true

@@ -75,8 +75,17 @@ def path_token(path: Path) -> str:
     return hashlib.sha256(path.as_posix().encode("utf-8")).hexdigest()[:12]
 
 
-def tracked_paths(root: Path) -> list[Path]:
-    """Return tracked files only, so ignored local data can never be scanned by default."""
+def tracked_paths(root: Path, *, require_git: bool = True) -> list[Path]:
+    """Return tracked files, or regular files from a private materialized snapshot."""
+    if not require_git:
+        return sorted(
+            path
+            for path in root.rglob("*")
+            if path.is_file()
+            and not path.is_symlink()
+            and path.suffix.lower() in PRESIDIO_TEXT_SUFFIXES
+            and path.relative_to(root) not in PRESIDIO_EXCLUDED_PATHS
+        )
     result = subprocess.run(
         ["git", "-C", str(root), "ls-files", "-z"],
         check=True,
@@ -177,6 +186,11 @@ def scan_paths(
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--scan-root",
+        type=Path,
+        help="Private materialized snapshot to scan instead of the repository checkout.",
+    )
+    parser.add_argument(
         "paths",
         nargs="*",
         type=Path,
@@ -214,8 +228,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.max_displayed_findings < 0:
         print("ERROR: --max-displayed-findings must be zero or greater", file=sys.stderr)
         return 2
-    root = repo_root().resolve()
-    all_tracked_paths = tracked_paths(root)
+    root = (args.scan_root or repo_root()).resolve()
+    if not root.is_dir():
+        print("ERROR: scan root is unavailable", file=sys.stderr)
+        return 2
+    all_tracked_paths = tracked_paths(root, require_git=args.scan_root is None)
     tracked_by_resolved_path = {path.resolve(): path for path in all_tracked_paths}
     requested_paths = [root / path for path in args.paths] if args.paths else all_tracked_paths
     paths: list[Path] = []

@@ -83,3 +83,9 @@ test_data_gitignored/
 
 # direnv local cache
 .direnv/
+
+# Local privacy/scanner state and self-hosted SonarQube output
+.privacy-scan-state/
+.scannerwork/
+.sonar/
+sonar-project.properties.local

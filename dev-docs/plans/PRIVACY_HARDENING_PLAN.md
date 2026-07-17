@@ -5,6 +5,7 @@ _Created: 2026-07-15_
 _Owners: Maintainers; coding agents may implement individual phases_
 _Related policy: [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md)_
 _Scanner reference: [LOCAL_PII_MODELS.md](../references/LOCAL_PII_MODELS.md)_
+_Follow-on republication plan: [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md)_
 
 ## 1. Objective
 
