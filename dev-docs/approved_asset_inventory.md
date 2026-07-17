@@ -14,16 +14,10 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 55
+**Assets tracked:** 47
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
-| [`.envrc`](../.envrc) | Extensionless | Local development environment configuration | ✅ Approved — KG (2026-07-14) | — | `17afa908c3f7` |
-| [`.gitignore`](../.gitignore) | Extensionless | Git ignore policy | ✅ Approved — KG (2026-07-16) | — | `26d337df3fcb` |
-| [`.phi-scanbaseline`](../.phi-scanbaseline) | Extensionless | Reviewed expiring phi-scan false-positive fingerprint baseline; contains no raw matched values | ✅ Approved — KG (2026-07-16) | — | `1b37b07a6870` |
-| [`.semgrepignore`](../.semgrepignore) | Extensionless | Semgrep scan exclusions | ✅ Approved — KG (2026-07-14) | — | `13f4993dbd3e` |
-| [`LICENSE`](../LICENSE) | Extensionless | Repository license | ✅ Approved — KG (2026-07-14) | — | `a9f643d12813` |
-| [`docs/Makefile`](../docs/Makefile) | Extensionless | Documentation build entry point | ✅ Approved — KG (2026-07-14) | — | `e33bf74d5913` |
 | [`docs/source/_static/cmunbx.ttf`](../docs/source/_static/cmunbx.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `643afcc8fc9a` |
 | [`docs/source/_static/cmunrm.ttf`](../docs/source/_static/cmunrm.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `3deb3c529a46` |
 | [`docs/source/_static/cmunti.ttf`](../docs/source/_static/cmunti.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `acd86b280644` |
@@ -44,7 +38,6 @@ file revision.
 | [`src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm`](../src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm) | DICOM | Public upstream PySkinDose Philips RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `81dddb53e3bf` |
 | [`src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm) | DICOM | Public upstream PySkinDose Siemens RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `896bcd035df2` |
 | [`src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm`](../src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm) | DICOM | Public upstream PySkinDose Siemens RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained | ✅ Approved — KG (2026-07-16) | IDs ✓ · private ✓ · pixels ✓ | `e1f70911cc29` |
-| [`src/mypyskindose/example_data/RDSR/.gitkeep`](../src/mypyskindose/example_data/RDSR/.gitkeep) | Extensionless | Keeps the RDSR example-data directory in Git | ✅ Approved — KG (2026-07-15) | — | `e3b0c44298fc` |
 | [`src/mypyskindose/phantom_data/adult_female.stl`](../src/mypyskindose/phantom_data/adult_female.stl) | Opaque binary | Adult female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `f74681f580aa` |
 | [`src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl) | Opaque binary | Reduced adult female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `fcb6b37d23ca` |
 | [`src/mypyskindose/phantom_data/adult_male.stl`](../src/mypyskindose/phantom_data/adult_male.stl) | Opaque binary | Adult male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `ab215e8d3a6f` |
@@ -59,7 +52,6 @@ file revision.
 | [`src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl) | Opaque binary | Reduced senior female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `a5bdb98d3680` |
 | [`src/mypyskindose/phantom_data/senior_male.stl`](../src/mypyskindose/phantom_data/senior_male.stl) | Opaque binary | Senior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `c682b78dda25` |
 | [`src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl) | Opaque binary | Reduced senior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `87b10fcd07de` |
-| [`src/mypyskindose/phantom_data/.gitkeep`](../src/mypyskindose/phantom_data/.gitkeep) | Extensionless | Keeps the phantom-data directory in Git | ✅ Approved — KG (2026-07-15) | — | `e3b0c44298fc` |
 | [`tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy`](../tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy) | Opaque binary | Numeric-only dose-map golden fixture | ✅ Approved — KG (2026-07-15) | — | `ff32650b9ff0` |
 | [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Office/iWork document | Normalized spreadsheet fixture | ✅ Approved — KG (2026-07-16) | files ✓ · images ✓ · DICOM ✓ | `c3342ef4461f` |
 | [`tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx`](../tests/fixtures/tabular_inputs/normalized_events_metadata_header.xlsx) | Office/iWork document | Spreadsheet metadata-header fixture | ✅ Approved — KG (2026-07-16) | files ✓ · images ✓ · DICOM ✓ | `d5197c95a656` |

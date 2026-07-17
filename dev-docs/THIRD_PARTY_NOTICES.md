@@ -7,7 +7,7 @@ full declared dependency set (all extras), pinned by `uv.lock`:
 uv sync --all-extras
 ```
 
-Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-14).
+Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-17).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -207,6 +207,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | scipy | 1.17.1 | BSD-3-Clause | homepage, https://scipy.org/ |
 | semantic-version | 2.10.0 | BSD-3-Clause | https://github.com/rbarrois/python-semanticversion |
 | semgrep | 1.169.0 | LGPL-2.1-or-later | Homepage, https://semgrep.dev |
+| shapely | 2.1.2 | BSD-3-Clause | Documentation, https://shapely.readthedocs.io/ |
 | shellcheck_py | 0.11.0.1 | MIT | https://github.com/ryanrhee/shellcheck-py |
 | shellingham | 1.5.4 | ISC | https://github.com/sarugaku/shellingham |
 | simple-websocket | 1.1.0 | MIT | Homepage, https://github.com/miguelgrinberg/simple-websocket |

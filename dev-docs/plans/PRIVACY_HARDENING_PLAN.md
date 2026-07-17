@@ -295,7 +295,7 @@ After Phases 1–5 are clean:
 | Logging/write/export/ingestion/API code changes | Privacy Semgrep + local HoundDog; triage every finding |
 | New/changed tracked text, docs, CSV/JSON/XML | phi-scan diff; Presidio when free text may contain identifiers |
 | New/changed DICOM | Strict inventory review + local dicom-phi-scan + header/private-tag/pixel human review |
-| New/changed image/PDF/Office/archive/extensionless asset | Strict inventory + rendered/container human review; local OCR when available |
+| New/changed image/PDF/Office/archive/opaque-binary asset | Strict inventory + rendered/container human review; local OCR when available |
 | Weekly | Full phi-scan; calibrated value-safe Presidio advisory; review tool updates/findings |
 | Monthly / before release | Strict asset gate, full source SAST, ignored-artifact sweep, hook verification |
 | Before public release | Private history/tag/release-asset audit and response-runbook exercise |

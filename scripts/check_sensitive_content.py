@@ -4,8 +4,8 @@
 The checker is intentionally conservative:
 
 * direct PII/PHI-like text and absolute local paths are errors;
-* images, rendered notebook visuals, DICOM, opaque binary files, and
-  extensionless files must have an exact-hash entry in
+* images, rendered notebook visuals, DICOM, and opaque binary files must have
+  an exact-hash entry in
   ``dev-docs/approved_asset_inventory.json``;
 * existing assets may be recorded as ``pending`` during the one-time manual
   baseline review, but a new or changed asset always fails; and
@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import bz2
-import codecs
 import gzip
 import hashlib
 import json
@@ -244,11 +243,6 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def is_extensionless(path: str) -> bool:
-    name = PurePosixPath(path).name
-    return not Path(name).suffix
-
-
 def has_dicom_preamble(path: Path) -> bool:
     """Return whether *path* has the standard DICOM ``DICM`` preamble marker."""
     try:
@@ -288,16 +282,15 @@ def has_notebook_embedded_visual_output(path: Path) -> bool:
 
 
 def is_probably_binary(path: Path) -> bool:
+    """Return whether the complete file is not valid, NUL-free UTF-8 text."""
     try:
-        sample = path.read_bytes()[:8192]
+        data = path.read_bytes()
     except OSError:
         return True
-    if b"\0" in sample:
+    if b"\0" in data:
         return True
     try:
-        # The fixed-size sample can end mid-character; an incremental decoder
-        # accepts that incomplete final sequence while still rejecting invalid UTF-8.
-        codecs.getincrementaldecoder("utf-8")().decode(sample, final=False)
+        data.decode("utf-8")
     except UnicodeDecodeError:
         return True
     return False
@@ -321,8 +314,6 @@ def asset_kind(path: str, full_path: Path) -> str | None:
         return "image"
     if suffix in ASSET_SUFFIXES or is_probably_binary(full_path):
         return "opaque_binary"
-    if is_extensionless(path):
-        return "extensionless"
     return None
 
 

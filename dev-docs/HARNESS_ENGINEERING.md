@@ -269,7 +269,7 @@ Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full reposi
 `python scripts/check_sensitive_content.py --require-approved-assets` runs in pre-commit and the CI static-analysis job. It scans all tracked
 text-like files for direct-identifier, private-network/DICOM-endpoint, and absolute-path patterns; rejects common
 diagnostic artifacts; enforces exact-hash inventory entries for images, embedded notebook visuals, DICOM, PDFs,
-PostScript/EPS, supported archives/Office-iWork containers, opaque binaries, and extensionless files; and fails
+PostScript/EPS, supported archives/Office-iWork containers, and opaque binaries; and fails
 closed when a PDF or supported container cannot have its bounded text-bearing contents parsed locally. TeX is scanned
 as ordinary text. A standard-preamble DICOM is recognized even without a filename suffix. It never writes a matched
 value to output.

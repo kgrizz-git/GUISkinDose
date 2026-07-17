@@ -21,13 +21,15 @@ endpoint, private-network-address, and absolute-path patterns. It also rejects c
 (`.log`, rotated `.log.N`, `.trace`, `.err`, `.out`, `.pkl`, `.pickle`, and `.cache`) even if their current text is
 clean. It reports only a path, line/member location, and rule id; it never prints the matched value.
 
-Every tracked image, DICOM file, PDF, PostScript/EPS file, supported archive/container, opaque binary file,
-extensionless filename (including dotfiles), or notebook with an embedded rendered image/PDF output must have an
+Every tracked image, DICOM file, PDF, PostScript/EPS file, supported archive/container, opaque binary file, or
+notebook with an embedded rendered image/PDF output must have an
 exact SHA-256 entry in
 [`approved_asset_inventory.json`](approved_asset_inventory.json). The linked, reviewer-friendly
 [`approved_asset_inventory.md`](approved_asset_inventory.md) is generated from that JSON and is checked in
 pre-commit and CI; edit the JSON, then run `python scripts/render_asset_inventory.py --write`. This includes files
-without a `.dcm` extension so an extensionless DICOM cannot bypass review. A new asset, a changed hash, or a
+without a `.dcm` extension so an extensionless DICOM cannot bypass review. Extensionless files (including dotfiles)
+are scanned as text and do not need an inventory entry only when their complete contents are valid, NUL-free UTF-8.
+A new asset, a changed hash, or a
 removed/stale inventory entry fails the gate.
 
 TeX and other UTF-8-readable source files are scanned as ordinary text. PDFs are also parsed locally with `pypdf`:
@@ -54,10 +56,10 @@ Notebook source text is still scanned normally. A notebook that embeds an image/
 a reviewable visual asset, because regex scanning cannot establish whether a base64-rendered output contains burned-in
 information. The whole notebook hash is pinned, so changing its output requires a new review.
 
-An extensionless file with the standard `DICM` marker is classified as DICOM rather than merely extensionless, so it
-also requires the DICOM-specific inventory checklist. DICOM files without that standard preamble still require an
-extensionless-file inventory entry and manual review; use the repository's DICOM preparation procedure to identify
-them before admission.
+An extensionless file with the standard `DICM` marker is classified as DICOM rather than text, so it also requires
+the DICOM-specific inventory checklist. An extensionless file that is not valid UTF-8 is classified as an opaque
+binary and requires manual review; use the repository's DICOM preparation procedure to identify DICOM files without
+the standard preamble before admission.
 
 The baseline review was completed on 2026-07-16 using reviewer initials `KG`; strict mode is now the hook and CI
 default. Run the same admission boundary locally with:

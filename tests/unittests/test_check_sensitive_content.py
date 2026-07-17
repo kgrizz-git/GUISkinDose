@@ -115,14 +115,26 @@ def test_sensitive_filename_is_rejected_without_echoing_it(tmp_path: Path) -> No
     assert path not in findings[0].render()
 
 
-def test_extensionless_file_requires_an_inventory_entry(tmp_path: Path) -> None:
+def test_extensionless_binary_file_requires_an_inventory_entry(tmp_path: Path) -> None:
     extensionless = tmp_path / "possible_dicom"
-    extensionless.write_bytes(b"opaque input")
+    extensionless.write_bytes(b"opaque\0input")
     _write_policy(tmp_path, [])
 
     findings = run_checks(tmp_path, paths=["possible_dicom"])
     assert [(finding.path, finding.rule) for finding in findings] == [
         ("possible_dicom", "ASSET_NOT_IN_APPROVED_INVENTORY")
+    ]
+
+
+def test_extensionless_text_file_is_scanned_without_inventory_entry(tmp_path: Path) -> None:
+    config = tmp_path / ".envrc"
+    config.write_text("contact=" + "person" + "@hospital.test\n", encoding="utf-8")
+    _write_policy(tmp_path, [])
+
+    assert asset_kind(".envrc", config) is None
+    findings = run_checks(tmp_path, paths=[".envrc"])
+    assert [(finding.path, finding.rule, finding.location) for finding in findings] == [
+        (".envrc", "EMAIL_ADDRESS", "1")
     ]
 
 
@@ -355,8 +367,20 @@ def test_commit_message_is_scanned_without_allowlist_or_value_echo(tmp_path: Pat
     assert "scanner.internal" not in findings[0].render()
 
 
-def test_utf8_character_split_at_binary_sample_boundary_is_not_binary(tmp_path: Path) -> None:
+def test_full_utf8_file_is_not_binary(tmp_path: Path) -> None:
     markdown = tmp_path / "notes.md"
     markdown.write_bytes(b"a" * 8191 + "—".encode("utf-8"))
 
     assert is_probably_binary(markdown) is False
+
+
+def test_extensionless_file_with_late_binary_content_is_an_asset(tmp_path: Path) -> None:
+    config = tmp_path / ".envrc"
+    config.write_bytes(b"export SAFE=value\n" * 1000 + b"\0")
+    _write_policy(tmp_path, [])
+
+    assert asset_kind(".envrc", config) == "opaque_binary"
+    findings = run_checks(tmp_path, paths=[".envrc"])
+    assert [(finding.path, finding.rule) for finding in findings] == [
+        (".envrc", "ASSET_NOT_IN_APPROVED_INVENTORY")
+    ]

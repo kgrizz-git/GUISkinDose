@@ -88,4 +88,10 @@ test_data_gitignored/
 .privacy-scan-state/
 .scannerwork/
 .sonar/
+.sonarlint/
 sonar-project.properties.local
+
+# Local environment variables (never commit real tokens; see .env.example)
+.env
+.env.*
+!.env.example

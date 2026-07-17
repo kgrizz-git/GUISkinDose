@@ -5,7 +5,8 @@ _Last reviewed: 2026-07-15. This is an evaluation reference, not a claim that an
 ## Purpose and boundary
 
 This public repository uses a blocking deterministic gate for obvious identifier patterns, absolute paths, and
-human clearance of every image, DICOM, opaque binary, and extensionless file. See
+human clearance of every image, DICOM, and opaque binary file. Extensionless files are scanned as text only when
+their complete contents are valid, NUL-free UTF-8. See
 [`../PRIVACY_AND_SENSITIVE_ASSETS.md`](../PRIVACY_AND_SENSITIVE_ASSETS.md). Local machine-learning detectors are a
 separate, **advisory** second opinion for tracked readable text. They must not become the authority that approves an
 asset, replaces rendered-image/DICOM review, or upload source text or findings.
