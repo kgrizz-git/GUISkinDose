@@ -20,19 +20,12 @@ burned-in text; that requires the recorded manual review in the inventory.
 from __future__ import annotations
 
 import argparse
-import bz2
-import gzip
 import hashlib
 import json
-import lzma
 import re
 import subprocess
 import sys
-import tarfile
-import zipfile
-from collections.abc import Mapping
 from dataclasses import dataclass
-from io import BytesIO
 from pathlib import Path, PurePosixPath
 from typing import Sequence
 
@@ -46,6 +39,47 @@ try:
 except ImportError:  # pragma: no cover - verified by a fail-closed finding below.
     PdfReader = None  # type: ignore[assignment,misc]
 
+if __package__:
+    from .check_sensitive_helpers import (
+        BZIP2_CONTAINER_SUFFIXES,
+        DICOM_SUFFIX,
+        GZIP_CONTAINER_SUFFIXES,
+        OFFICE_CONTAINER_SUFFIXES,
+        POSTSCRIPT_SUFFIXES,
+        TAR_CONTAINER_SUFFIXES,
+        XZ_CONTAINER_SUFFIXES,
+        ZIP_CONTAINER_SUFFIXES,
+        ContainerReadError,
+        cell_data_mappings,
+        extract_pdf_attachments,  # noqa: F401 - re-exported for callers/tests.
+        extract_pdf_metadata,  # noqa: F401 - re-exported for callers/tests.
+        extract_pdf_page_text,  # noqa: F401 - re-exported for callers/tests.
+        inspect_container_member,
+        iter_container_members,
+        mapping_has_visual_mime,
+        pdf_reader_text,
+    )
+else:  # pragma: no cover - exercised by running this file directly.
+    from check_sensitive_helpers import (
+        BZIP2_CONTAINER_SUFFIXES,
+        DICOM_SUFFIX,
+        GZIP_CONTAINER_SUFFIXES,
+        OFFICE_CONTAINER_SUFFIXES,
+        POSTSCRIPT_SUFFIXES,
+        TAR_CONTAINER_SUFFIXES,
+        XZ_CONTAINER_SUFFIXES,
+        ZIP_CONTAINER_SUFFIXES,
+        ContainerReadError,
+        cell_data_mappings,
+        extract_pdf_attachments,  # noqa: F401 - re-exported for callers/tests.
+        extract_pdf_metadata,  # noqa: F401 - re-exported for callers/tests.
+        extract_pdf_page_text,  # noqa: F401 - re-exported for callers/tests.
+        inspect_container_member,
+        iter_container_members,
+        mapping_has_visual_mime,
+        pdf_reader_text,
+    )
+
 
 INVENTORY_RELATIVE_PATH = Path("dev-docs/approved_asset_inventory.json")
 ALLOWLIST_RELATIVE_PATH = Path("dev-docs/sensitive_content_allowlist.json")
@@ -55,7 +89,7 @@ ASSET_SUFFIXES = {
     ".avif",
     ".bmp",
     ".dcm",
-    ".dicom",
+    DICOM_SUFFIX,
     ".gif",
     ".heic",
     ".ico",
@@ -80,35 +114,8 @@ ASSET_SUFFIXES = {
     ".xlsm",
 }
 
-POSTSCRIPT_SUFFIXES = {".eps", ".ps"}
-OFFICE_CONTAINER_SUFFIXES = {".docx", ".numbers", ".odt", ".ods", ".pages", ".pptx", ".xlsx"}
-ZIP_CONTAINER_SUFFIXES = OFFICE_CONTAINER_SUFFIXES | {".epub", ".jar", ".war", ".zip"}
-TAR_CONTAINER_SUFFIXES = {".tar", ".tbz", ".tbz2", ".tgz", ".txz"}
-GZIP_CONTAINER_SUFFIXES = {".gz", ".gzip"}
-BZIP2_CONTAINER_SUFFIXES = {".bz2"}
-XZ_CONTAINER_SUFFIXES = {".xz"}
 CONTAINER_KINDS = {"archive", "office_document"}
-CONTAINER_TEXT_SUFFIXES = {
-    ".cfg",
-    ".csv",
-    ".ini",
-    ".json",
-    ".md",
-    ".rels",
-    ".rst",
-    ".rtf",
-    ".tex",
-    ".tsv",
-    ".txt",
-    ".xml",
-    ".yaml",
-    ".yml",
-}
-MAX_CONTAINER_MEMBERS = 2_000
-MAX_CONTAINER_MEMBER_BYTES = 16 * 1024 * 1024
-MAX_CONTAINER_TOTAL_BYTES = 64 * 1024 * 1024
 DIAGNOSTIC_ARTIFACT_SUFFIXES = {".cache", ".err", ".log", ".out", ".pkl", ".pickle", ".trace"}
-NOTEBOOK_VISUAL_MIME_TYPES = {"application/pdf"}
 DIRECT_IDENTIFIER_KEYWORDS = {
     "AccessionNumber",
     "InstitutionAddress",
@@ -259,26 +266,21 @@ def is_diagnostic_artifact(path: str) -> bool:
 
 
 def has_notebook_embedded_visual_output(path: Path) -> bool:
-    """Return whether a notebook embeds a rendered image or PDF output/attachment."""
+    """Return whether a notebook embeds a rendered image or PDF output/attachment.
+
+    Delegates cell parsing to ``cell_data_mappings``/``mapping_has_visual_mime``
+    (``check_sensitive_helpers``); this function only owns reading and
+    validating the top-level notebook JSON shape.
+    """
     try:
         notebook = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return False
     if not isinstance(notebook, dict) or not isinstance(notebook.get("cells"), list):
         return False
-    for cell in notebook["cells"]:
-        if not isinstance(cell, dict):
-            continue
-        data_mappings = list(cell.get("attachments", {}).values()) if isinstance(cell.get("attachments"), dict) else []
-        outputs = cell.get("outputs", [])
-        if isinstance(outputs, list):
-            data_mappings.extend(output.get("data", {}) for output in outputs if isinstance(output, dict))
-        for data in data_mappings:
-            if isinstance(data, dict) and any(
-                key.startswith("image/") or key in NOTEBOOK_VISUAL_MIME_TYPES for key in data
-            ):
-                return True
-    return False
+    return any(
+        mapping_has_visual_mime(data) for cell in notebook["cells"] for data in cell_data_mappings(cell)
+    )
 
 
 def is_probably_binary(path: Path) -> bool:
@@ -298,7 +300,7 @@ def is_probably_binary(path: Path) -> bool:
 
 def asset_kind(path: str, full_path: Path) -> str | None:
     suffix = Path(path).suffix.lower()
-    if suffix in {".dcm", ".dicom"} or has_dicom_preamble(full_path):
+    if suffix in {".dcm", DICOM_SUFFIX} or has_dicom_preamble(full_path):
         return "dicom"
     if suffix in OFFICE_CONTAINER_SUFFIXES:
         return "office_document"
@@ -389,12 +391,17 @@ def _read_text(path: Path) -> str | None:
         return None
 
 
-def _pdf_text(path: Path | BytesIO) -> tuple[list[tuple[str, str]], str | None]:
+def _pdf_text(path: Path) -> tuple[list[tuple[str, str]], str | None]:
     """Return extractable PDF text and a fail-closed scanner error, if any.
 
     PDF page text, document metadata, and unencrypted embedded attachments are
     scanned. Rendered pages still require a manual inventory review because
     extraction cannot establish whether an image has burned-in information.
+
+    Reader construction, the encryption check, and exception handling stay
+    here (rather than in ``check_sensitive_helpers``) so tests can monkeypatch
+    this module's ``PdfReader`` symbol; the actual field extraction is
+    delegated to ``pdf_reader_text``.
     """
     if PdfReader is None:
         return [], "PDF_TEXT_SCANNER_UNAVAILABLE"
@@ -402,26 +409,7 @@ def _pdf_text(path: Path | BytesIO) -> tuple[list[tuple[str, str]], str | None]:
         reader = PdfReader(path)
         if reader.is_encrypted and reader.decrypt("") == 0:
             return [], "PDF_TEXT_EXTRACTION_FAILED"
-        extracted: list[tuple[str, str]] = []
-        if reader.metadata:
-            metadata = "\n".join(f"{key}: {value}" for key, value in reader.metadata.items() if value is not None)
-            if metadata:
-                extracted.append(("metadata:", metadata))
-        for page_number, page in enumerate(reader.pages, start=1):
-            page_text = page.extract_text()
-            if page_text:
-                extracted.append((f"page{page_number}:", page_text))
-        attachments = getattr(reader, "attachments", {})
-        if isinstance(attachments, Mapping):
-            attachment_index = 0
-            for contents in attachments.values():
-                for attachment_number, content in enumerate(contents, start=1):
-                    attachment_index += 1
-                    if isinstance(content, bytes):
-                        attachment_text = content.decode("utf-8", errors="ignore")
-                        if attachment_text:
-                            extracted.append((f"attachment{attachment_index}.{attachment_number}:", attachment_text))
-        return extracted, None
+        return pdf_reader_text(reader), None
     except Exception:
         return [], "PDF_TEXT_EXTRACTION_FAILED"
 
@@ -434,105 +422,28 @@ def _postscript_text(path: Path) -> str | None:
         return None
 
 
-def _has_dicom_member(name: str, data: bytes) -> bool:
-    return Path(name).suffix.lower() in {".dcm", ".dicom"} or data[128:132] == b"DICM"
-
-
-def _is_container_member(name: str) -> bool:
-    lowered = name.lower()
-    return Path(lowered).suffix in (
-        ZIP_CONTAINER_SUFFIXES | TAR_CONTAINER_SUFFIXES | GZIP_CONTAINER_SUFFIXES | BZIP2_CONTAINER_SUFFIXES | XZ_CONTAINER_SUFFIXES
-    ) or lowered.endswith((".tar.gz", ".tar.bz2", ".tar.xz"))
-
-
-def _container_member_text(
-    member_number: int, name: str, data: bytes
-) -> tuple[list[tuple[str, str]], set[str], str | None]:
-    """Scan a bounded member without returning its potentially sensitive name."""
-    flags: set[str] = set()
-    if sensitive_path_rule(name) is not None:
-        flags.add("sensitive_member_name")
-    if _has_dicom_member(name, data):
-        flags.add("dicom")
-    if _is_container_member(name):
-        flags.add("nested_container")
-    suffix = Path(name).suffix.lower()
-    location_prefix = f"member{member_number}:"
-    if suffix == ".pdf":
-        pdf_text, pdf_error = _pdf_text(BytesIO(data))
-        if pdf_error:
-            return [], flags, "CONTAINER_PDF_TEXT_EXTRACTION_FAILED"
-        return [(f"{location_prefix}{location}", text) for location, text in pdf_text], flags, None
-    if suffix in POSTSCRIPT_SUFFIXES:
-        return [(location_prefix, data.decode("latin-1"))], flags, None
-    if suffix not in CONTAINER_TEXT_SUFFIXES:
-        return [], flags, None
-    try:
-        return [(location_prefix, data.decode("utf-8"))], flags, None
-    except UnicodeDecodeError:
-        return [], flags, None
-
-
 def _container_text(path: Path) -> tuple[list[tuple[str, str]], set[str], str | None]:
-    """Extract bounded text from supported container members without writing them to disk."""
-    member_count = 0
-    total_bytes = 0
+    """Extract bounded text from supported container members without writing them to disk.
+
+    Delegates member iteration and bounded reads to ``iter_container_members``
+    and per-member inspection to ``inspect_container_member`` (both in
+    ``check_sensitive_helpers``); this function only owns aggregating results
+    and computing the privacy-sensitive-name flag via ``sensitive_path_rule``,
+    which must stay in this module.
+    """
     extracted: list[tuple[str, str]] = []
     flags: set[str] = set()
-
-    def inspect_member(name: str, data: bytes) -> str | None:
-        nonlocal member_count, total_bytes
-        member_count += 1
-        total_bytes += len(data)
-        if member_count > MAX_CONTAINER_MEMBERS or len(data) > MAX_CONTAINER_MEMBER_BYTES or total_bytes > MAX_CONTAINER_TOTAL_BYTES:
-            return "CONTAINER_CONTENTS_EXCEED_SCAN_LIMIT"
-        member_text, member_flags, member_error = _container_member_text(member_count, name, data)
+    for member_number, item in enumerate(iter_container_members(path), start=1):
+        if isinstance(item, ContainerReadError):
+            return extracted, flags, item.code
+        name, data = item
+        member_text, member_flags, member_error = inspect_container_member(
+            member_number, name, data, name_is_sensitive=sensitive_path_rule(name) is not None
+        )
+        if member_error:
+            return extracted, flags, member_error
         extracted.extend(member_text)
         flags.update(member_flags)
-        return member_error
-
-    name = path.name.lower()
-    try:
-        if name.endswith((".tar", ".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz", ".tbz2", ".txz")):
-            with tarfile.open(path, "r:*") as archive:
-                for member in archive:
-                    if not member.isfile():
-                        continue
-                    source = archive.extractfile(member)
-                    if source is None:
-                        continue
-                    error = inspect_member(member.name, source.read(MAX_CONTAINER_MEMBER_BYTES + 1))
-                    if error:
-                        return extracted, flags, error
-        elif Path(name).suffix in ZIP_CONTAINER_SUFFIXES:
-            with zipfile.ZipFile(path) as archive:
-                for member in archive.infolist():
-                    if member.is_dir():
-                        continue
-                    if member.file_size > MAX_CONTAINER_MEMBER_BYTES:
-                        return extracted, flags, "CONTAINER_CONTENTS_EXCEED_SCAN_LIMIT"
-                    error = inspect_member(member.filename, archive.read(member))
-                    if error:
-                        return extracted, flags, error
-        elif Path(name).suffix in GZIP_CONTAINER_SUFFIXES:
-            with gzip.open(path, "rb") as source:
-                error = inspect_member(path.stem, source.read(MAX_CONTAINER_MEMBER_BYTES + 1))
-                if error:
-                    return extracted, flags, error
-        elif Path(name).suffix in BZIP2_CONTAINER_SUFFIXES:
-            with bz2.open(path, "rb") as source:
-                error = inspect_member(path.stem, source.read(MAX_CONTAINER_MEMBER_BYTES + 1))
-                if error:
-                    return extracted, flags, error
-        elif Path(name).suffix in XZ_CONTAINER_SUFFIXES:
-            with lzma.open(path, "rb") as source:
-                error = inspect_member(path.stem, source.read(MAX_CONTAINER_MEMBER_BYTES + 1))
-                if error:
-                    return extracted, flags, error
-        else:  # pragma: no cover - asset_kind keeps this branch unreachable.
-            return extracted, flags, "CONTAINER_CONTENTS_SCANNER_UNAVAILABLE"
-    except (OSError, EOFError, gzip.BadGzipFile, lzma.LZMAError, tarfile.TarError, zipfile.BadZipFile):
-        return extracted, flags, "CONTAINER_CONTENTS_EXTRACTION_FAILED"
     return extracted, flags, None
 
 
@@ -571,12 +482,144 @@ def _approved_container_review(entry: dict[str, object]) -> bool:
     )
 
 
+def _tracked_path_findings(rel_path: str, full_path: Path) -> tuple[list[Finding], bool]:
+    """Return path-level findings and whether the caller should skip content scanning.
+
+    Covers the sensitive-path-component check, the missing-file check (which
+    short-circuits everything else for that path), and the diagnostic-artifact
+    check.
+    """
+    findings: list[Finding] = []
+    if path_rule := sensitive_path_rule(rel_path):
+        findings.append(Finding(rel_path, path_rule, "error"))
+    if not full_path.is_file():
+        findings.append(Finding(rel_path, "TRACKED_FILE_MISSING", "error"))
+        return findings, True
+    if is_diagnostic_artifact(rel_path):
+        findings.append(Finding(rel_path, "DIAGNOSTIC_ARTIFACT_FORBIDDEN", "error"))
+    return findings, False
+
+
+def _asset_inventory_findings(
+    rel_path: str,
+    full_path: Path,
+    kind: str,
+    entry: dict[str, object] | None,
+    require_approved_assets: bool,
+) -> list[Finding]:
+    """Return the single most relevant approved-asset-inventory finding, if any."""
+    if entry is None:
+        return [Finding(rel_path, "ASSET_NOT_IN_APPROVED_INVENTORY", "error")]
+    if entry.get("sha256") != sha256(full_path):
+        return [Finding(rel_path, "ASSET_HASH_NOT_APPROVED", "error")]
+    if entry.get("kind") != kind:
+        return [Finding(rel_path, "ASSET_INVENTORY_KIND_MISMATCH", "error")]
+    review = entry.get("review")
+    status = review.get("status") if isinstance(review, dict) else None
+    if status != "approved":
+        level = "error" if require_approved_assets else "warning"
+        return [Finding(rel_path, "ASSET_MANUAL_REVIEW_PENDING", level)]
+    if kind == "dicom" and not _approved_dicom_review(entry):
+        return [Finding(rel_path, "DICOM_REVIEW_FIELDS_INCOMPLETE", "error")]
+    if kind in CONTAINER_KINDS and not _approved_container_review(entry):
+        return [Finding(rel_path, "CONTAINER_REVIEW_FIELDS_INCOMPLETE", "error")]
+    return []
+
+
+def _dicom_identifier_findings(rel_path: str, full_path: Path) -> list[Finding]:
+    """Return warnings for non-empty direct-identifier keywords and private tag values."""
+    identifiers, private_values = _nonempty_dicom_identifiers(full_path)
+    findings: list[Finding] = []
+    if identifiers:
+        findings.append(Finding(rel_path, "DICOM_DIRECT_IDENTIFIER_FIELDS_PRESENT", "warning"))
+    if private_values:
+        findings.append(Finding(rel_path, "DICOM_PRIVATE_TAG_VALUES_PRESENT", "warning"))
+    return findings
+
+
+def _pdf_scan_findings(rel_path: str, full_path: Path) -> list[Finding]:
+    """Return findings from scanning a PDF's extractable metadata/page/attachment text."""
+    findings: list[Finding] = []
+    pdf_text, pdf_error = _pdf_text(full_path)
+    if pdf_error:
+        findings.append(Finding(rel_path, pdf_error, "error"))
+    for location_prefix, extracted_text in pdf_text:
+        findings.extend(text_findings(rel_path, extracted_text, location_prefix))
+    return findings
+
+
+def _postscript_scan_findings(rel_path: str, full_path: Path) -> list[Finding]:
+    """Return findings from scanning a PostScript file's decoded text."""
+    postscript_text = _postscript_text(full_path)
+    if postscript_text is None:
+        return [Finding(rel_path, "POSTSCRIPT_TEXT_EXTRACTION_FAILED", "error")]
+    return text_findings(rel_path, postscript_text)
+
+
+def _container_flag_findings(rel_path: str, flags: set[str]) -> list[Finding]:
+    """Return one finding per member-level flag raised during a container scan."""
+    flag_rules = {
+        "dicom": ("CONTAINER_DICOM_MEMBER_PRESENT", "warning"),
+        "nested_container": ("CONTAINER_NESTED_ARCHIVE_PRESENT", "warning"),
+        "sensitive_member_name": ("CONTAINER_SENSITIVE_MEMBER_NAME", "error"),
+    }
+    return [Finding(rel_path, rule, level) for flag, (rule, level) in flag_rules.items() if flag in flags]
+
+
+def _container_scan_findings(rel_path: str, full_path: Path) -> list[Finding]:
+    """Return findings from scanning a container's member text and member-level flags."""
+    findings: list[Finding] = []
+    container_text, container_flags, container_error = _container_text(full_path)
+    if container_error:
+        findings.append(Finding(rel_path, container_error, "error"))
+    for location_prefix, member_text in container_text:
+        findings.extend(text_findings(rel_path, member_text, location_prefix))
+    findings.extend(_container_flag_findings(rel_path, container_flags))
+    return findings
+
+
+def _extracted_text_findings(rel_path: str, full_path: Path, kind: str | None) -> list[Finding]:
+    """Return findings from plain-text scanning plus the format-specific dispatch.
+
+    Ordinary UTF-8 text is scanned first (matching the historical ordering),
+    then exactly one of the PDF, PostScript, or container extractors runs
+    based on suffix/kind.
+    """
+    findings: list[Finding] = []
+    text = _read_text(full_path)
+    if text is not None:
+        findings.extend(text_findings(rel_path, text))
+    suffix = Path(rel_path).suffix.lower()
+    if suffix == ".pdf":
+        findings.extend(_pdf_scan_findings(rel_path, full_path))
+    elif suffix in POSTSCRIPT_SUFFIXES:
+        findings.extend(_postscript_scan_findings(rel_path, full_path))
+    elif kind in CONTAINER_KINDS:
+        findings.extend(_container_scan_findings(rel_path, full_path))
+    return findings
+
+
+def _orphan_inventory_findings(inventory: dict[str, dict[str, object]], assets_seen: set[str]) -> list[Finding]:
+    """Return a finding for every inventory entry that no longer matches a tracked asset."""
+    return [
+        Finding(rel_path, "INVENTORY_ENTRY_NOT_A_TRACKED_ASSET", "error")
+        for rel_path in sorted(set(inventory) - assets_seen)
+    ]
+
+
 def run_checks(
     repo_root: Path,
     *,
     paths: Sequence[str] | None = None,
     require_approved_assets: bool = False,
 ) -> list[Finding]:
+    """Scan tracked paths and return sorted, allowlist-filtered findings.
+
+    Orchestrates (in order, per path): path/diagnostic checks, approved-asset
+    inventory policy, DICOM identifier warnings, and extracted-text scanning
+    (plain text, then PDF/PostScript/container dispatch) — see the ``_*``
+    policy helpers above for each stage's rules.
+    """
     inventory = load_inventory(repo_root / INVENTORY_RELATIVE_PATH)
     allowlist = load_allowlist(repo_root / ALLOWLIST_RELATIVE_PATH)
     tracked = [normalize_path(path) for path in (paths if paths is not None else tracked_paths(repo_root))]
@@ -585,73 +628,22 @@ def run_checks(
 
     for rel_path in tracked:
         full_path = repo_root / rel_path
-        if path_rule := sensitive_path_rule(rel_path):
-            findings.append(Finding(rel_path, path_rule, "error"))
-        if not full_path.is_file():
-            findings.append(Finding(rel_path, "TRACKED_FILE_MISSING", "error"))
+        path_findings, skip_content = _tracked_path_findings(rel_path, full_path)
+        findings.extend(path_findings)
+        if skip_content:
             continue
-        if is_diagnostic_artifact(rel_path):
-            findings.append(Finding(rel_path, "DIAGNOSTIC_ARTIFACT_FORBIDDEN", "error"))
 
         kind = asset_kind(rel_path, full_path)
         entry = inventory.get(rel_path)
         if kind is not None:
             assets_seen.add(rel_path)
-            if entry is None:
-                findings.append(Finding(rel_path, "ASSET_NOT_IN_APPROVED_INVENTORY", "error"))
-            elif entry.get("sha256") != sha256(full_path):
-                findings.append(Finding(rel_path, "ASSET_HASH_NOT_APPROVED", "error"))
-            elif entry.get("kind") != kind:
-                findings.append(Finding(rel_path, "ASSET_INVENTORY_KIND_MISMATCH", "error"))
-            else:
-                review = entry.get("review")
-                status = review.get("status") if isinstance(review, dict) else None
-                if status != "approved":
-                    level = "error" if require_approved_assets else "warning"
-                    findings.append(Finding(rel_path, "ASSET_MANUAL_REVIEW_PENDING", level))
-                elif kind == "dicom" and not _approved_dicom_review(entry):
-                    findings.append(Finding(rel_path, "DICOM_REVIEW_FIELDS_INCOMPLETE", "error"))
-                elif kind in CONTAINER_KINDS and not _approved_container_review(entry):
-                    findings.append(Finding(rel_path, "CONTAINER_REVIEW_FIELDS_INCOMPLETE", "error"))
-
+            findings.extend(_asset_inventory_findings(rel_path, full_path, kind, entry, require_approved_assets))
             if kind == "dicom":
-                identifiers, private_values = _nonempty_dicom_identifiers(full_path)
-                if identifiers:
-                    findings.append(Finding(rel_path, "DICOM_DIRECT_IDENTIFIER_FIELDS_PRESENT", "warning"))
-                if private_values:
-                    findings.append(Finding(rel_path, "DICOM_PRIVATE_TAG_VALUES_PRESENT", "warning"))
+                findings.extend(_dicom_identifier_findings(rel_path, full_path))
 
-        text = _read_text(full_path)
-        if text is not None:
-            findings.extend(text_findings(rel_path, text))
-        suffix = Path(rel_path).suffix.lower()
-        if suffix == ".pdf":
-            pdf_text, pdf_error = _pdf_text(full_path)
-            if pdf_error:
-                findings.append(Finding(rel_path, pdf_error, "error"))
-            for location_prefix, extracted_text in pdf_text:
-                findings.extend(text_findings(rel_path, extracted_text, location_prefix))
-        elif suffix in POSTSCRIPT_SUFFIXES:
-            postscript_text = _postscript_text(full_path)
-            if postscript_text is None:
-                findings.append(Finding(rel_path, "POSTSCRIPT_TEXT_EXTRACTION_FAILED", "error"))
-            else:
-                findings.extend(text_findings(rel_path, postscript_text))
-        elif kind in CONTAINER_KINDS:
-            container_text, container_flags, container_error = _container_text(full_path)
-            if container_error:
-                findings.append(Finding(rel_path, container_error, "error"))
-            for location_prefix, member_text in container_text:
-                findings.extend(text_findings(rel_path, member_text, location_prefix))
-            if "dicom" in container_flags:
-                findings.append(Finding(rel_path, "CONTAINER_DICOM_MEMBER_PRESENT", "warning"))
-            if "nested_container" in container_flags:
-                findings.append(Finding(rel_path, "CONTAINER_NESTED_ARCHIVE_PRESENT", "warning"))
-            if "sensitive_member_name" in container_flags:
-                findings.append(Finding(rel_path, "CONTAINER_SENSITIVE_MEMBER_NAME", "error"))
+        findings.extend(_extracted_text_findings(rel_path, full_path, kind))
 
-    for rel_path in sorted(set(inventory) - assets_seen):
-        findings.append(Finding(rel_path, "INVENTORY_ENTRY_NOT_A_TRACKED_ASSET", "error"))
+    findings.extend(_orphan_inventory_findings(inventory, assets_seen))
 
     return sorted(
         (finding for finding in findings if (finding.path, finding.rule, finding.location) not in allowlist),

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Union
+from typing import Any, List
 
 import numpy as np
 import pandas as pd
@@ -518,7 +518,7 @@ class Triangle:
         n = np.cross(self.p1, self.p2)
         self.n = n / np.sqrt(n.dot(n))
 
-    def check_intersection(self, start: np.ndarray, stop: np.ndarray) -> Union[bool, List[bool]]:
+    def check_intersection(self, start: np.ndarray, stop: np.ndarray) -> bool | List[bool]:
         """Check if a 3D segment intercepts with the triangle.
 
         Check if a 3D segment intercepts with the triangle. For our purpose,

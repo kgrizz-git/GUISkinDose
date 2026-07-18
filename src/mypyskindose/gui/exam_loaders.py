@@ -176,7 +176,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
                 f"Scanner model '{state.model}' not found. Using default normalization settings."
             )
 
-        return True, f"Loaded {len(df)} irradiation events from {file_path.name}"
+        return True, f"Loaded {len(df)} irradiation events"
     except Exception as exc:
         _record_load_failure("DICOM_RDSR_LOAD", exc)
         return False, "Could not read this DICOM RDSR file. Check the file and try again."
@@ -306,7 +306,7 @@ def load_tabular(
                 })
             result = _raw[0]  # use first exam's provenance for UI hints
             total_events = sum(len(e.normalized_data) for e in new_exams)
-            msg = f"Loaded {len(new_exams)} exams, {total_events} total events from {file_path.name}"
+            msg = f"Loaded {len(new_exams)} exams, {total_events} total events"
         else:
             # Single-study file: keep a pristine base copy and apply the current
             # global coordinate-transform flags (which _set_transform_defaults()
@@ -356,7 +356,7 @@ def load_tabular(
                 "d_lat": seed_d_lat,
                 "normalization_method": "Tabular",
             })
-            msg = f"Loaded {len(result.normalized_data)} events from {file_path.name} ({result.provenance.schema_name})"
+            msg = f"Loaded {len(result.normalized_data)} events ({result.provenance.schema_name})"
 
         # Rebuild concat event preview from all loaded exams.
         rebuild_rdsr_df(state)

@@ -39,6 +39,7 @@ from packaging.utils import canonicalize_name
 
 PROJECT_NAME = "mypyskindose"
 NOTICES_PATH = Path("dev-docs/THIRD_PARTY_NOTICES.md")
+APACHE_2_LICENSE = "Apache-2.0"
 # Inventory the full declared dependency set so the notices file is reproducible
 # regardless of which extras a given developer happened to install. Keep in sync
 # with the [project.optional-dependencies] keys in pyproject.toml.
@@ -56,7 +57,7 @@ BOOTSTRAP_PACKAGES = frozenset(
 ALLOWED_LICENSES = frozenset(
     {
         "0BSD",
-        "Apache-2.0",
+        APACHE_2_LICENSE,
         "BSD-2-Clause",
         "BSD-3-Clause",
         "CC0-1.0",
@@ -92,9 +93,9 @@ LICENSE_CLASSIFIER_RE = re.compile(
 
 # Map common PyPI classifier / metadata names to SPDX-style identifiers.
 LICENSE_ALIASES = {
-    "apache license 2.0": "Apache-2.0",
-    "apache license, version 2.0": "Apache-2.0",
-    "apache software license": "Apache-2.0",
+    "apache license 2.0": APACHE_2_LICENSE,
+    "apache license, version 2.0": APACHE_2_LICENSE,
+    "apache software license": APACHE_2_LICENSE,
     "bsd": "BSD-3-Clause",
     "bsd license": "BSD-3-Clause",
     "bsd-3-clause": "BSD-3-Clause",
@@ -161,7 +162,7 @@ def _normalize_token(value: str) -> str:
     if "mit" in lowered:
         return "MIT"
     if "apache" in lowered and "2" in lowered:
-        return "Apache-2.0"
+        return APACHE_2_LICENSE
     if "bsd" in lowered:
         return "BSD-3-Clause"
     if "gnu general public license" in lowered or re.search(r"\bgpl\b", lowered):
@@ -310,7 +311,7 @@ def collect_package_licenses(
     return sorted(packages, key=lambda pkg: pkg.name.casefold())
 
 
-def render_notices(packages: list[PackageLicense], root: Path) -> str:
+def render_notices(packages: list[PackageLicense], _root: Path) -> str:
     today = date.today().isoformat()
     lines = [
         "# Third-party notices",

@@ -91,7 +91,7 @@ def _detect_schema(loaded: _RawLoad) -> str:
     """
     scores = {name: _score_schema(loaded.raw_df, known) for name, known in _SCHEMA_KNOWN_NAMES}
 
-    if max(scores.values()) == 0.0:
+    if not max(scores.values()):
         raise SchemaDetectionError(
             "Schema auto-detection: no schema could be matched. "
             f"Scores: {scores}. Pass --input-schema explicitly."

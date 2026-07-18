@@ -134,7 +134,7 @@ def _coerce_numeric(
 
 def _build_column_map(
     raw_headers: list[str],
-    warnings: list[str],
+    _warnings: list[str],
 ) -> tuple[dict[str, str], list[str]]:
     """Case-insensitive exact match of raw headers against NORMALIZED_COLUMN_NAMES.
 

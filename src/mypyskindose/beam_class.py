@@ -211,6 +211,6 @@ class Beam:
 
             bool_entrance = [np.dot(temp1[i], temp2[i]) <= 0 for i in range(len(temp1))]
 
-            hits[np.where(hits)] = bool_entrance
+            hits[hits] = bool_entrance
 
         return hits.tolist()

@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Optional, Sequence
 
 import pandas as pd
 
@@ -29,9 +29,87 @@ logger = logging.getLogger(__name__)
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 
+def _settings_with_output_format(
+    settings: Optional[str | dict | PyskindoseSettings], output_format: str
+) -> PyskindoseSettings:
+    settings_obj = parse_settings_to_settings_class(settings=settings)
+    settings_obj.output_format = output_format.casefold()
+    return settings_obj
+
+
+def _warn_for_tabular_input(result: Any) -> None:
+    """Log privacy-safe warning counts for one or more tabular input results."""
+    results = result if isinstance(result, list) else [result]
+    for index, exam in enumerate(results):
+        if exam.warnings:
+            fields = {"count": len(exam.warnings)}
+            if isinstance(result, list):
+                fields["exam"] = index + 1
+            safe_warning(logger, "tabular_input_warnings", **fields)
+
+
+def _read_input_for_analysis(
+    file_path: str | Path,
+    settings: PyskindoseSettings,
+    input_schema: Optional[str],
+    sheet_name: str | int,
+) -> Any:
+    """Load either a tabular input through its adapter or a legacy RDSR/JSON input."""
+    if Path(file_path).suffix.lower() not in _TABULAR_SUFFIXES:
+        return read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
+
+    from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+    return read_and_normalize_input(
+        file_path,
+        input_schema=input_schema,
+        sheet_name=sheet_name,
+        settings=settings,
+    )
+
+
+def _analysis_output_for_input(
+    input_result: Any,
+    settings: PyskindoseSettings,
+    requested_output_format: str,
+) -> Any:
+    """Calculate a single normalized input or aggregate a multi-exam input."""
+    if isinstance(input_result, pd.DataFrame):
+        return analyze_data(normalized_data=input_result, settings=settings)
+    if not isinstance(input_result, list):
+        return analyze_data(normalized_data=input_result.normalized_data, settings=settings)
+
+    if requested_output_format == RUN_ARGUMENTS_OUTPUT_HTML:
+        logger.warning("HTML output format is not supported for multi-exam tabular runs. Forcing to dict.")
+        settings.output_format = RUN_ARGUMENTS_OUTPUT_DICT
+    return analyze_multiple_exams(input_result, settings)
+
+
+def _print_input_preview(result: Any, exam_index: int, include_sensitive_values: bool) -> None:
+    """Print one tabular-input preview with schema metadata and aggregate counts only.
+
+    Never emits source filenames, study IDs, warning text, absolute paths, or
+    normalized event values — including when ``include_sensitive_values`` is true.
+    That flag is retained for CLI compatibility and only acknowledges the request.
+    """
+    del include_sensitive_values  # retained for callers; never enables identifier output
+    provenance = result.provenance
+    print(f"Exam:          {opaque_exam_label(exam_index)}")
+    print(f"Schema:        {provenance.schema_name}")
+    print(f"Encoding:      {provenance.detected_encoding}")
+    print(f"Delimiter:     {provenance.detected_delimiter!r}")
+    print(f"Header row:    {provenance.header_row_index}")
+    print(f"Events loaded: {len(result.normalized_data)}")
+    print(f"Warnings:      {len(provenance.warnings)}")
+    print(f"Mapped cols:   {len(provenance.column_map)}")
+    print()
+    print("Identifiers, warning text, and event values are never printed.")
+    print()
+
+
 def main(
     file_path: Optional[str] = None,
-    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+    settings: Optional[str | dict | PyskindoseSettings] = None,
 ):
     """Run PySkinDose.
 
@@ -70,10 +148,10 @@ def main(
 
 def analyze_input_file(
     file_path: str | Path,
-    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+    settings: Optional[str | dict | PyskindoseSettings] = None,
     *,
     input_schema: Optional[str] = None,
-    sheet_name: Union[str, int] = 0,
+    sheet_name: str | int = 0,
     output_format: str = RUN_ARGUMENTS_OUTPUT_DICT,
 ) -> Any:
     """Run PySkinDose from a tabular file (.csv, .tsv, .xlsx) or DICOM/JSON.
@@ -97,49 +175,19 @@ def analyze_input_file(
     output_format:
         "dict" (default), "json", or "html".
     """
-    settings = parse_settings_to_settings_class(settings=settings)
-    settings.output_format = output_format.casefold()
-
-    suffix = Path(file_path).suffix.lower()
-
-    if suffix in _TABULAR_SUFFIXES:
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
-
-        result = read_and_normalize_input(
-            file_path,
-            input_schema=input_schema,
-            sheet_name=sheet_name,
-            settings=settings,
-        )
-        if isinstance(result, list):
-            for index, exam in enumerate(result):
-                if exam.warnings:
-                    safe_warning(
-                        logger,
-                        "tabular_input_warnings",
-                        exam=index + 1,
-                        count=len(exam.warnings),
-                    )
-            if output_format == "html":
-                logger.warning("HTML output format is not supported for multi-exam tabular runs. Forcing to dict.")
-                output_format = "dict"
-                settings.output_format = "dict"
-            return analyze_multiple_exams(result, settings)
-        if result.warnings:
-            safe_warning(logger, "tabular_input_warnings", count=len(result.warnings))
-        data_norm = result.normalized_data
-    else:
-        data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
-
-    return analyze_data(normalized_data=data_norm, settings=settings)
+    settings_obj = _settings_with_output_format(settings, output_format)
+    input_result = _read_input_for_analysis(file_path, settings_obj, input_schema, sheet_name)
+    if Path(file_path).suffix.lower() in _TABULAR_SUFFIXES:
+        _warn_for_tabular_input(input_result)
+    return _analysis_output_for_input(input_result, settings_obj, output_format)
 
 
 def analyze_multiple_input_files(
     file_paths: Sequence[str | Path],
-    settings: Optional[Union[str, dict, PyskindoseSettings]] = None,
+    settings: Optional[str | dict | PyskindoseSettings] = None,
     *,
     input_schema: Optional[str] = None,
-    sheet_name: Union[str, int] = 0,
+    sheet_name: str | int = 0,
     per_exam_offsets: list[list[float]] | None = None,
 ) -> MultiExamResult:
     """Run PySkinDose on a list of input files, treating each as a separate exam.
@@ -222,7 +270,7 @@ def preview_input_file(
     file_path: str | Path,
     *,
     input_schema: Optional[str] = None,
-    sheet_name: Union[str, int] = 0,
+    sheet_name: str | int = 0,
     include_sensitive_values: bool = False,
 ) -> None:
     """Print a value-safe preview unless sensitive values are explicitly requested."""
@@ -241,42 +289,14 @@ def preview_input_file(
     )
     results = raw if isinstance(raw, list) else [raw]
     for index, result in enumerate(results):
-        prov = result.provenance
-        print(f"Exam:          {opaque_exam_label(index)}")
-        if include_sensitive_values:
-            # nosemgrep: mypyskindose-identifier-attr-to-log-or-stdout -- explicit CLI opt-in; reviewed 2026-07-16
-            print(f"File:          {prov.original_filename}")
-            if result.study_id:
-                # nosemgrep: mypyskindose-identifier-attr-to-log-or-stdout -- explicit CLI opt-in; reviewed 2026-07-16
-                print(f"Study ID:      {result.study_id}")
-        print(f"Schema:        {prov.schema_name}")
-        print(f"Encoding:      {prov.detected_encoding}")
-        print(f"Delimiter:     {prov.detected_delimiter!r}")
-        print(f"Header row:    {prov.header_row_index}")
-        print(f"Events loaded: {len(result.normalized_data)}")
-        print()
-        print("Column map (source → normalized):")
-        for src, norm in prov.column_map.items():
-            print(f"  {src!r:30s} → {norm}")
-        if prov.warnings and include_sensitive_values:
-            print()
-            print("Warnings:")
-            for w in prov.warnings:
-                print(f"  {w}")
-        print()
-        if include_sensitive_values:
-            print("First 5 normalized events:")
-            print(result.normalized_data.head(5).to_string())
-        else:
-            print("Event values suppressed; pass --include-sensitive-preview to display them locally.")
-        print()
+        _print_input_preview(result, index, include_sensitive_values)
 
 
 def analyze_normalized_data_with_custom_settings_object(
     data_norm: pd.DataFrame,
-    settings: Union[PyskindoseSettings, str, dict],
+    settings: PyskindoseSettings | str | dict,
     output_format: Optional[str] = RUN_ARGUMENTS_OUTPUT_JSON,
-) -> Union[str, dict[str, Any], PySkinDoseOutput]:
+) -> str | dict[str, Any] | PySkinDoseOutput:
     """Run PySkinDose with custom normalized data and a custom specified settings objects.
 
     See the
@@ -327,10 +347,10 @@ class _WarningCapture(logging.Handler):
 
 def build_cli_export_source(
     file_paths: Sequence[str | Path],
-    settings: Union[str, dict, PyskindoseSettings, None],
+    settings: str | dict | PyskindoseSettings | None,
     *,
     input_schema: Optional[str] = None,
-    sheet_name: Union[str, int] = 0,
+    sheet_name: str | int = 0,
     report_title: Optional[str] = None,
     include_source_identifiers: bool = False,
 ):
@@ -469,13 +489,13 @@ def validate_export_flags(
 
 def run_cli_export(
     file_paths: Sequence[str | Path],
-    settings: Union[str, dict, PyskindoseSettings, None],
+    settings: str | dict | PyskindoseSettings | None,
     export_format: str,
     *,
     export_path: Optional[Path] = None,
     export_title: Optional[str] = None,
     input_schema: Optional[str] = None,
-    sheet_name: Union[str, int] = 0,
+    sheet_name: str | int = 0,
     include_source_identifiers: bool = False,
     force: bool = False,
     allow_ignored_checkout: bool = False,
@@ -617,7 +637,10 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         action="store_true",
         default=False,
         dest="include_sensitive_preview",
-        help="With --input-preview-only, deliberately print source filename, study ID, warnings, and event values.",
+        help=(
+            "Deprecated no-op retained for compatibility. Input preview never prints "
+            "filenames, study IDs, warning text, or event values."
+        ),
     )
 
     parser.add_argument(

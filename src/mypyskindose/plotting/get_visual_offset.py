@@ -1,11 +1,10 @@
-from typing import Union
 
 from ..beam_class import Beam
 from ..constants import PHANTOM_MODEL_PLANE
 from ..phantom_class import Phantom
 
 
-def _get_visual_offset(patient: Union[Phantom, Beam]) -> float:
+def _get_visual_offset(patient: Phantom | Beam) -> float:
     """Set visual offset of phantom objects.
 
     Determines the visual offset needed for visualizing the phantom correctly in the

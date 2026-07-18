@@ -53,7 +53,7 @@ def format_table_offset_line(app_state: AppState) -> str:
 
 def format_scale_cm_label(scale_factor: float, baseline_cm: float) -> str:
     """Format the scale factor and its scaled mesh dimension for one slider."""
-    if baseline_cm == 0.0:
+    if not baseline_cm:
         return f"{scale_factor:.2f}x  (—)"
     cm = scale_factor * baseline_cm
     return f"{scale_factor:.2f}x  ({cm:.1f} cm)"

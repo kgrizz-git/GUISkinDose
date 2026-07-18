@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 
 class RotationDirection:
@@ -39,7 +39,7 @@ class RotationDirection:
         self.At3 = self._get_direction_as_value(directions["At3"])
 
     @staticmethod
-    def _get_direction_as_value(direction: Union[str, int]):
+    def _get_direction_as_value(direction: str | int):
 
         if direction in (-1, +1):
             return direction

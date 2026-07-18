@@ -7,7 +7,7 @@
       "id": "upload",
       "title": "Upload and import help",
       "source": "upload_workflow.md",
-      "gui_files": ["src/mypyskindose/gui/tabs/upload.py"],
+      "gui_files": ["src/mypyskindose/gui/tabs/upload_builders.py"],
       "required": true
     },
     {
@@ -35,7 +35,7 @@
       "id": "geometry",
       "title": "Geometry workflow",
       "source": "geometry_workflow.md",
-      "gui_files": ["src/mypyskindose/gui/tabs/geometry.py"],
+      "gui_files": ["src/mypyskindose/gui/tabs/geometry_builders.py"],
       "required": true
     },
     {
@@ -49,7 +49,7 @@
       "id": "results",
       "title": "Results help",
       "source": "results_workflow.md",
-      "gui_files": ["src/mypyskindose/gui/tabs/results.py"],
+      "gui_files": ["src/mypyskindose/gui/tabs/results_builders.py"],
       "required": true
     },
     {

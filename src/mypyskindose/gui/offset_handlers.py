@@ -92,7 +92,7 @@ def reset_patient_offset_for_active(app_state: AppState) -> None:
     bump_per_exam_offsets_version(app_state)
 
 
-def on_global_patient_offset_scrub(ctx: PageContext) -> None:
+def on_global_patient_offset_scrub(_ctx: PageContext) -> None:
     sync_global_patient_offset_to_single_exam_meta(state)
     bump_per_exam_offsets_version(state)
 

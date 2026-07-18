@@ -40,6 +40,11 @@ PROSE_PATH_RE = re.compile(
     r")"
 )
 PATH_TRAILING_CHARS = ".,;:)"
+AGENTS_FILENAME = "AGENTS.md"
+README_FILENAME = "README.md"
+CHANGELOG_FILENAME = "CHANGELOG.md"
+DESIGN_FILENAME = "DESIGN.md"
+ROOT_DOC_FILENAMES = frozenset({AGENTS_FILENAME, README_FILENAME, CHANGELOG_FILENAME, DESIGN_FILENAME})
 PATH_REFERENCE_EXTENSIONS = (
     ".bat",
     ".cfg",
@@ -143,13 +148,13 @@ def repo_root_from_script() -> Path:
 def collect_markdown_files(repo_root: Path) -> list[Path]:
     """Return markdown files under the harness doc scan roots."""
     candidates: list[Path] = [
-        repo_root / "AGENTS.md",
+        repo_root / AGENTS_FILENAME,
         repo_root / "CLAUDE.md",
         repo_root / "GEMINI.md",
         repo_root / "QWEN.md",
-        repo_root / "README.md",
-        repo_root / "CHANGELOG.md",
-        repo_root / "DESIGN.md",
+        repo_root / README_FILENAME,
+        repo_root / CHANGELOG_FILENAME,
+        repo_root / DESIGN_FILENAME,
     ]
     dev_docs = repo_root / "dev-docs"
     if dev_docs.is_dir():
@@ -242,7 +247,7 @@ def looks_like_repo_path(raw: str) -> bool:
         or target.startswith(("/", "#", "~"))
     ):
         return False
-    if target in {"AGENTS.md", "CHANGELOG.md", "DESIGN.md", "README.md"}:
+    if target in ROOT_DOC_FILENAMES:
         return True
     if target.startswith(PATH_REFERENCE_PREFIXES):
         return True
@@ -250,7 +255,7 @@ def looks_like_repo_path(raw: str) -> bool:
 
 
 def resolve_path_reference(source_file: Path, path_part: str, repo_root: Path) -> Path:
-    if path_part in {"AGENTS.md", "CHANGELOG.md", "DESIGN.md", "README.md"}:
+    if path_part in ROOT_DOC_FILENAMES:
         return (repo_root / path_part).resolve()
     if path_part.startswith(PATH_REFERENCE_PREFIXES):
         return (repo_root / path_part).resolve()
@@ -283,7 +288,7 @@ def extract_path_references(line: str) -> list[tuple[str, str, tuple[int, int]]]
 
 
 def skip_path_reference_scan(rel_source: Path) -> bool:
-    return rel_source == Path("CHANGELOG.md") or "plans" in rel_source.parts
+    return rel_source == Path(CHANGELOG_FILENAME) or "plans" in rel_source.parts
 
 
 def archive_candidate_for_path(target: str, repo_root: Path) -> str | None:
@@ -391,7 +396,7 @@ def tabular_line_is_false_claim(line: str) -> bool:
     return any(pattern.search(line) for pattern in TABULAR_FALSE_CLAIM_RES)
 
 
-INVENTORY_CHECK_SOURCES = ("AGENTS.md", "CHANGELOG.md")
+INVENTORY_CHECK_SOURCES = (AGENTS_FILENAME, CHANGELOG_FILENAME)
 
 
 def find_inventory_contradictions(repo_root: Path) -> list[InventoryContradiction]:

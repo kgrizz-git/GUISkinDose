@@ -164,7 +164,7 @@ def _dose_weighted_mean(values: list[float | None], kerma: list[float], hits: li
         k = kerma[i] if i < len(kerma) else 0.0
         num += k * val
         den += k
-    if den == 0.0:
+    if not den:
         return None
     return num / den
 

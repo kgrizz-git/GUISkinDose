@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import plotly.graph_objects as go
 
@@ -8,7 +8,7 @@ from .get_visual_offset import _get_visual_offset
 
 
 def create_mesh_3d_general(
-    obj: Union[Phantom, Beam],
+    obj: Phantom | Beam,
     color: str,
     mesh_text: List[str],
     opacity: Optional[float] = None,

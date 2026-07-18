@@ -10,6 +10,50 @@ from .state import AppState
 _GE_WARNING_TOKEN = "ge manufacturer detected"
 
 
+def _active_exam_summary(meta: dict, manufacturer: str, model: str, normalization_method: str) -> str:
+    """Format the optional vendor/schema line for a Geometry notice."""
+    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
+    mdl = (model or meta.get("model") or "").strip()
+    schema = (meta.get("schema") or "").strip()
+    source = (meta.get("source_type") or "").strip().upper()
+    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    subject = " / ".join(value for value in (mfr, mdl) if value)
+    details = " · ".join(value for value in (source, schema, method) if value)
+    summary = " · ".join(value for value in (subject, details) if value)
+    return f"Active exam: {summary}" if summary else ""
+
+
+def _normalization_notice(meta: dict, normalization_method: str) -> str:
+    """Return the fallback-normalization warning, if applicable."""
+    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    if method == "Fallback":
+        return "Default normalization in use; verify Tx/Tz axes and table signs before calculation."
+    return ""
+
+
+def _vendor_coordinate_notice(meta: dict, manufacturer: str) -> str:
+    """Return vendor and manual-swap guidance without changing its precedence."""
+    warnings = " ".join(meta.get("warnings", []) or []).lower()
+    mfr = (manufacturer or meta.get("manufacturer") or "").strip().lower()
+    manual_swap = bool(meta.get("swap_lat_lon", False))
+    if _GE_WARNING_TOKEN in warnings or "ge" in mfr:
+        if manual_swap:
+            return "GE handling is already normalized; manual Tx/Tz swap is active and may double-correct."
+        return "GE lateral/longitudinal handling is already applied during normalization."
+    if "philips" in mfr:
+        return "Philips large table offsets make missed or double normalization visibly wrong."
+    if manual_swap:
+        return "Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps."
+    return ""
+
+
+def _axis_flip_notice(meta: dict) -> str:
+    """Return the axis-flip warning when any manual axis flip is active."""
+    if any(meta.get(key, False) for key in ("flip_tx", "flip_ty", "flip_tz")):
+        return "Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually."
+    return ""
+
+
 def geometry_vendor_notice(
     meta: dict,
     *,
@@ -39,31 +83,13 @@ def geometry_vendor_notice(
     str
         Human-readable warning notice describing any active coordinate transformations or vendor quirks.
     """
-    warnings = " ".join(meta.get("warnings", []) or []).lower()
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
-    mdl = (model or meta.get("model") or "").strip()
-    schema = (meta.get("schema") or "").strip()
-    source = (meta.get("source_type") or "").strip().upper()
-    method = (meta.get("normalization_method") or normalization_method or "").strip()
-    parts: list[str] = []
-    if mfr or mdl or method or schema:
-        subject = " / ".join(s for s in (mfr, mdl) if s)
-        details = " · ".join(s for s in (source, schema, method) if s)
-        parts.append("Active exam: " + " · ".join(s for s in (subject, details) if s))
-    if method == "Fallback":
-        parts.append("Default normalization in use; verify Tx/Tz axes and table signs before calculation.")
-    if _GE_WARNING_TOKEN in warnings or "ge" in mfr.lower():
-        if meta.get("swap_lat_lon", False):
-            parts.append("GE handling is already normalized; manual Tx/Tz swap is active and may double-correct.")
-        else:
-            parts.append("GE lateral/longitudinal handling is already applied during normalization.")
-    elif "philips" in mfr.lower():
-        parts.append("Philips large table offsets make missed or double normalization visibly wrong.")
-    elif meta.get("swap_lat_lon", False):
-        parts.append("Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps.")
-    if any(meta.get(k, False) for k in ("flip_tx", "flip_ty", "flip_tz")):
-        parts.append("Axis-direction flip reverses table motion about detected origin; fix mirrored origins manually.")
-    return " ".join(parts)
+    parts = (
+        _active_exam_summary(meta, manufacturer, model, normalization_method),
+        _normalization_notice(meta, normalization_method),
+        _vendor_coordinate_notice(meta, manufacturer),
+        _axis_flip_notice(meta),
+    )
+    return " ".join(part for part in parts if part)
 
 
 def clamp_active_exam_index(state: AppState) -> None:
@@ -522,5 +548,4 @@ def exam_selector_options(state: AppState) -> dict[int, str]:
         i: f"#{i + 1} · {meta.get('file_name', '—')}"
         for i, meta in enumerate(state.loaded_exam_meta)
     }
-
 

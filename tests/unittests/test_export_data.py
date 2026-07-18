@@ -152,10 +152,13 @@ def test_tabular_input_meta_shape_and_serializable():
 
 
 def test_inject_html_meta_inserts_comment_after_head():
+    import base64
+    import json
+
     html = b"<html><head><title>x</title></head><body>map</body></html>"
     meta = {"schema": "dosetrack", "warnings": []}
     out = gui_io._inject_html_tabular_meta(html, meta)
-    assert b"dosetrack" in out
+    assert b"mypyskindose:tabular_input" in out
     assert b"<body>map</body>" in out  # original content preserved
     # comment appears exactly once
     assert out.count(b"mypyskindose:tabular_input") == 1
@@ -166,6 +169,12 @@ def test_inject_html_meta_inserts_comment_after_head():
     head_close_pos = out.index(b"</head>")
     assert comment_pos < title_pos, "comment must precede <title> (right after opening <head>)"
     assert comment_pos < head_close_pos, "comment must be inside the head, before </head>"
+    # verify base64-encoded content decodes to the original meta
+    comment_start = out.index(b"mypyskindose:tabular_input ") + len(b"mypyskindose:tabular_input ")
+    comment_end = out.index(b" -->", comment_start)
+    encoded = out[comment_start:comment_end].decode("ascii")
+    decoded = json.loads(base64.b64decode(encoded).decode("utf-8"))
+    assert decoded == meta
 
 
 def test_inject_html_meta_noop_without_head():
