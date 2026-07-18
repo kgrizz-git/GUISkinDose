@@ -55,7 +55,7 @@ def _event_dataset() -> Dataset:
 
 
 def test_parser_preserves_legacy_duplicate_measurement_and_detector_rules():
-    parsed = rdsr_parser(_event_dataset())
+    parsed = rdsr_parser(_event_dataset())  # type: ignore[arg-type]
     row = parsed.iloc[0]
 
     assert row["DoseAreaProduct_mGy"] == [1.0, 2.0]

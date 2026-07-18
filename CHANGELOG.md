@@ -10,6 +10,14 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Changed
+
+- **GUI complexity refactoring (SonarQube Phase 4)** (2026-07-18) — decomposed nine high-complexity GUI components
+  into controller/builder modules: `geometry_builders.py`, `results_builders.py`, `upload_builders.py`, and extracted
+  settings-summary builders in `calculate.py`. Each tab now has a thin public entry point and a sibling module owning
+  the controller, view references, and layout builders. All 9 `S3776` cognitive-complexity findings resolved; 663 tests
+  pass; basedpyright clean (0 errors); all pre-commit and pre-push hooks pass.
+
 ### Added
 
 - **Content-bound privacy admission and local SonarQube** (2026-07-16) — protected `.gitignore` rules and never-track

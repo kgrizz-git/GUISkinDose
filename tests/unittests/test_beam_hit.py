@@ -20,7 +20,7 @@ def test_check_hit_keeps_plane_cells_inside_the_beam() -> None:
         phantom_model="plane",
     )
 
-    assert _beam_for_hit_tests().check_hit(patient) == [True, False]
+    assert _beam_for_hit_tests().check_hit(patient) == [True, False]  # type: ignore[arg-type]
 
 
 def test_check_hit_excludes_non_entrance_cells_for_3d_phantoms() -> None:
@@ -30,4 +30,4 @@ def test_check_hit_excludes_non_entrance_cells_for_3d_phantoms() -> None:
         phantom_model="human",
     )
 
-    assert _beam_for_hit_tests().check_hit(patient) == [True, False, False]
+    assert _beam_for_hit_tests().check_hit(patient) == [True, False, False]  # type: ignore[arg-type]
