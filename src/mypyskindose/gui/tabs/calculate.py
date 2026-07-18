@@ -18,6 +18,9 @@ from ..state import state
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
 _MAX_TOASTS: int = 5
+_SUMMARY_LABEL_CLASSES = "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+_SUMMARY_VALUE_CLASSES = "font-bold text-[13px]"
+_SUMMARY_ROW_CLASSES = "items-baseline gap-2"
 
 
 def _format_patient_offsets() -> str:
@@ -97,25 +100,25 @@ def build(ctx: PageContext) -> None:
                         with ui.column().classes("gap-1"):
                             with ui.column().classes("gap-0"):
                                 ui.label("File:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 ui.label().bind_text_from(
                                     state, "file_name", backward=lambda v: f"{v if v else 'None'}"
-                                ).classes("font-bold text-[13px] truncate w-full")
-                            with ui.row().classes("items-baseline gap-2"):
+                                ).classes(f"{_SUMMARY_VALUE_CLASSES} truncate w-full")
+                            with ui.row().classes(_SUMMARY_ROW_CLASSES):
                                 ui.label("Events:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 ui.label().bind_text_from(
                                     state, "rdsr_df", backward=lambda v: f"{len(v) if v is not None else 0}"
-                                ).classes("font-bold text-[13px]")
+                                ).classes(_SUMMARY_VALUE_CLASSES)
                             with ui.column().classes("gap-0"):
                                 ui.label("Scanner:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 ui.label().bind_text_from(
                                     state, "manufacturer", backward=lambda v: f"{v} {state.model}"
-                                ).classes("font-bold text-[13px]")
+                                ).classes(_SUMMARY_VALUE_CLASSES)
                                 ui.label().bind_text_from(
                                     state, "normalization_method", backward=lambda v: f"({v})"
                                 ).classes("text-[10px] opacity-40 italic")
@@ -125,19 +128,19 @@ def build(ctx: PageContext) -> None:
                             "text-sm text-aurora-purple font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
                         )
                         with ui.column().classes("gap-1"):
-                            with ui.row().classes("items-baseline gap-2"):
+                            with ui.row().classes(_SUMMARY_ROW_CLASSES):
                                 ui.label("Model:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 ui.label().bind_text_from(
                                     state, "phantom_model", backward=lambda v: f"{v}"
-                                ).classes("font-bold text-[13px]")
+                                ).classes(_SUMMARY_VALUE_CLASSES)
                             with ui.column().classes("gap-0"):
                                 ui.label("Patient Offsets:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 patient_offset_summary = ui.label(_format_patient_offsets()).classes(
-                                    "font-bold text-[13px]"
+                                    _SUMMARY_VALUE_CLASSES
                                 )
                                 patient_offset_summary.bind_text_from(
                                     state,
@@ -149,10 +152,10 @@ def build(ctx: PageContext) -> None:
                                 )
                             with ui.column().classes("gap-0"):
                                 ui.label("Table Offsets:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 table_offset_summary = ui.label(_format_table_offset_line()).classes(
-                                    "font-bold text-[13px]"
+                                    _SUMMARY_VALUE_CLASSES
                                 )
                                 table_offset_summary.bind_text_from(
                                     state, "table_offset_x", backward=lambda _v: _format_table_offset_line()
@@ -175,20 +178,20 @@ def build(ctx: PageContext) -> None:
                             "text-sm text-aurora-pink font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
                         )
                         with ui.column().classes("gap-1"):
-                            with ui.row().classes("items-baseline gap-2"):
+                            with ui.row().classes(_SUMMARY_ROW_CLASSES):
                                 ui.label("k_tab:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 ui.label().bind_text_from(
                                     state, "estimate_k_tab", backward=lambda v: "Estimated" if v else "Measured"
-                                ).classes("font-bold text-[13px]")
-                            with ui.row().classes("items-baseline gap-2"):
+                                ).classes(_SUMMARY_VALUE_CLASSES)
+                            with ui.row().classes(_SUMMARY_ROW_CLASSES):
                                 ui.label("Filtration:").classes(
-                                    "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
+                                    _SUMMARY_LABEL_CLASSES
                                 )
                                 ui.label().bind_text_from(
                                     state, "inherent_filtration", backward=lambda v: f"{v} mmAl"
-                                ).classes("font-bold text-[13px]")
+                                ).classes(_SUMMARY_VALUE_CLASSES)
 
             with ui.column().classes("w-full items-center gap-4 q-mt-xl"):
                 calc_btn = ui.button(

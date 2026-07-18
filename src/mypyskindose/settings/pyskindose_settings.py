@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, cast
 
 from rich import print
 
@@ -79,9 +79,9 @@ class PyskindoseSettings:
 
     def __init__(
         self,
-        settings: Union[str, dict],
-        normalization_settings: Optional[Union[Path, str, dict, NormalizationSettings]] = None,
-        file_result_output_path: Optional[Union[str, Path]] = None,
+        settings: str | dict,
+        normalization_settings: Optional[Path | str | dict | NormalizationSettings] = None,
+        file_result_output_path: Optional[str | Path] = None,
         output_format: str = RUN_ARGUMENTS_OUTPUT_HTML,
     ):
         """Initialize settings class.
@@ -135,7 +135,7 @@ class PyskindoseSettings:
         self.beam_miss_warn: str = tmp.get(KEY_PARAM_BEAM_MISS_WARN, "per_event")
 
     @staticmethod
-    def _initialize_output_path(output_path: Optional[Union[str, Path]], output_format: str) -> Path:
+    def _initialize_output_path(output_path: Optional[str | Path], output_format: str) -> Path:
         if output_path is None:
             output = Path.cwd() / "PlotOutputs"
 
@@ -158,7 +158,7 @@ class PyskindoseSettings:
 
     @staticmethod
     def _initialize_normalization_settings(
-        normalization_settings: Optional[Union[Path, str, dict, NormalizationSettings]]
+        normalization_settings: Optional[Path | str | dict | NormalizationSettings]
     ) -> NormalizationSettings:
         if normalization_settings is None:
             normalization_settings = Path(__file__).parent.parent / "normalization_settings.json"
@@ -213,7 +213,7 @@ class PyskindoseSettings:
         return print(output_str)
 
 
-def initialize_settings(settings: Union[str, dict, PyskindoseSettings]) -> PyskindoseSettings:
+def initialize_settings(settings: str | dict | PyskindoseSettings) -> PyskindoseSettings:
     valid_input_settings = settings is not None and isinstance(settings, (str, dict, PyskindoseSettings))
 
     if not valid_input_settings:

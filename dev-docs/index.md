@@ -130,6 +130,12 @@ Phased detail derived from diagnostics or master plans.
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
 | [plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | Move Show all exams checkbox next to Full procedure, fix composite state leakage, upgrade event selection to searchable select with exam context. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | Ordered execution plan for DICOM/tabular sanitization, enforceable privacy scanners, full GUISkinDose Python/PyPI naming, fork-preserving rename, and cautious publication. |
+| [plans/sonarqube_remediation_plan.md](plans/sonarqube_remediation_plan.md) | Phased remediation plan to address the 292 open SonarQube issues in the MyPySkinDose codebase, prioritizing bug fixes and core complexity reduction. |
+| [plans/refactor_geometry_tab_complexity.md](plans/refactor_geometry_tab_complexity.md) | Complexity Refactoring Plan: Geometry Tab (reduces build function complexity from 158). |
+| [plans/refactor_results_tab_complexity.md](plans/refactor_results_tab_complexity.md) | Complexity Refactoring Plan: Results Tab (reduces build function complexity from 128). |
+| [plans/refactor_upload_tab_complexity.md](plans/refactor_upload_tab_complexity.md) | Complexity Refactoring Plan: Upload Tab (reduces build function complexity from 97). |
+| [plans/refactor_check_sensitive_content_plan.md](plans/refactor_check_sensitive_content_plan.md) | Complexity Refactoring Plan: Privacy Scan Script (reduces run_checks complexity from 76). |
+| [plans/refactor_other_gui_tabs_complexity.md](plans/refactor_other_gui_tabs_complexity.md) | Complexity Refactoring Plan: Remaining GUI Components (covers export, per-exam, calculate, data, Geometry Preview, and Import Preview findings). |
 
 ## Archived plans (`plans/archive/`)
 

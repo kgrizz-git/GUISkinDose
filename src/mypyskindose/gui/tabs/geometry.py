@@ -43,6 +43,9 @@ from ..helpers import (
 from ..page_context import PageContext
 from ..state import event_count, reset_results, state
 
+_VIEW_BUTTON_CLASSES = "modern-btn-teal h-12 px-6"
+_LOAD_DATA_FIRST_MESSAGE = "Load data first"
+
 _C1_BANNER = (
     "Multiple exams loaded. Sliders edit the selected exam below. "
     "Calculate uses each exam's own patient offset and table-origin settings. "
@@ -377,13 +380,13 @@ def build(ctx: PageContext) -> None:
                     ).mark("geom-event-context")
 
                 ui.button("Setup view", on_click=lambda: preview_setup()).classes(
-                    "modern-btn-teal h-12 px-6"
+                    _VIEW_BUTTON_CLASSES
                 )
                 ui.button("Single event", on_click=lambda: preview_event()).classes(
-                    "modern-btn-teal h-12 px-6"
+                    _VIEW_BUTTON_CLASSES
                 )
                 ui.button("Full procedure", on_click=lambda: preview_procedure()).classes(
-                    "modern-btn-teal h-12 px-6"
+                    _VIEW_BUTTON_CLASSES
                 )
 
                 preview_controls = ui.column().classes("gap-0 justify-center")
@@ -627,7 +630,7 @@ def build(ctx: PageContext) -> None:
     async def preview_setup() -> None:
         nonlocal last_preview_mode, live_preview_requested
         if state.rdsr_df is None:
-            ui.notify("Load data first", type="warning")
+            ui.notify(_LOAD_DATA_FIRST_MESSAGE, type="warning")
             return
         last_preview_mode = "plot_setup"
         _set_stepper_enabled(False)
@@ -640,7 +643,7 @@ def build(ctx: PageContext) -> None:
     async def preview_event() -> None:
         nonlocal last_preview_mode, live_preview_requested
         if state.rdsr_df is None:
-            ui.notify("Load data first", type="warning")
+            ui.notify(_LOAD_DATA_FIRST_MESSAGE, type="warning")
             return
         last_preview_mode = "plot_event"
         _set_stepper_enabled(True)
@@ -653,7 +656,7 @@ def build(ctx: PageContext) -> None:
     async def preview_procedure() -> None:
         nonlocal last_preview_mode, live_preview_requested, last_table_origin_scrub
         if state.rdsr_df is None:
-            ui.notify("Load data first", type="warning")
+            ui.notify(_LOAD_DATA_FIRST_MESSAGE, type="warning")
             return
         last_preview_mode = "plot_procedure"
         _set_stepper_enabled(False)

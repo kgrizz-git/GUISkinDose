@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -531,7 +531,7 @@ def format_analysis_result_for_export(
     table: Phantom,
     pad: Phantom,
     settings: PyskindoseSettings,
-) -> Union[PySkinDoseOutput, dict[str, Any], str]:
+) -> PySkinDoseOutput | dict[str, Any] | str:
     """Formats the result of the PySkinDose analysis into a PySkinDoseOutput class instance that has a methods for
     converting the result to either a dict or a JSON string to facilitate building custom visualizations and for other
     custom implementations of the PySkinDose calculated data.

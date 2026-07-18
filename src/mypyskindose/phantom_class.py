@@ -1,7 +1,7 @@
 import copy
 from itertools import chain
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -56,7 +56,7 @@ class Phantom:
         self,
         phantom_model: str,
         phantom_dim: PhantomDimensions,
-        human_mesh: Optional[Union[str, tuple[str, mesh.Mesh]]] = None,
+        human_mesh: Optional[str | tuple[str, mesh.Mesh]] = None,
         human_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
     ):
         """Create the phantom of choice.
@@ -266,7 +266,7 @@ class Phantom:
 
     @staticmethod
     def _get_phantom_mesh_from_tuple(
-        phantom_mesh_tuple: tuple[str, Union[mesh.Mesh, str, Path]]
+        phantom_mesh_tuple: tuple[str, mesh.Mesh | str | Path]
     ) -> tuple[str, mesh.Mesh]:
         if not isinstance(phantom_mesh_tuple[0], str):
             raise TypeError(

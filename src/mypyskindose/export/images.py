@@ -33,7 +33,7 @@ def eye_facing(xyz: tuple[float, float, float] | None, distance: float = 2.5) ->
         return dict(ANTERIOR)
     v = np.array(xyz, dtype=float)
     norm = float(np.linalg.norm(v))
-    if norm == 0.0:
+    if not norm:
         return dict(ANTERIOR)
     u = v / norm
     return {"x": float(u[0] * distance), "y": float(u[1] * distance), "z": float(u[2] * distance)}

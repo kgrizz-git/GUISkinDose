@@ -50,12 +50,13 @@ except ImportError:  # pragma: no cover - verified by a fail-closed finding belo
 INVENTORY_RELATIVE_PATH = Path("dev-docs/approved_asset_inventory.json")
 ALLOWLIST_RELATIVE_PATH = Path("dev-docs/sensitive_content_allowlist.json")
 INVENTORY_VERSION = 1
+DICOM_SUFFIX = ".dicom"
 
 ASSET_SUFFIXES = {
     ".avif",
     ".bmp",
     ".dcm",
-    ".dicom",
+    DICOM_SUFFIX,
     ".gif",
     ".heic",
     ".ico",
@@ -298,7 +299,7 @@ def is_probably_binary(path: Path) -> bool:
 
 def asset_kind(path: str, full_path: Path) -> str | None:
     suffix = Path(path).suffix.lower()
-    if suffix in {".dcm", ".dicom"} or has_dicom_preamble(full_path):
+    if suffix in {".dcm", DICOM_SUFFIX} or has_dicom_preamble(full_path):
         return "dicom"
     if suffix in OFFICE_CONTAINER_SUFFIXES:
         return "office_document"
@@ -435,7 +436,7 @@ def _postscript_text(path: Path) -> str | None:
 
 
 def _has_dicom_member(name: str, data: bytes) -> bool:
-    return Path(name).suffix.lower() in {".dcm", ".dicom"} or data[128:132] == b"DICM"
+    return Path(name).suffix.lower() in {".dcm", DICOM_SUFFIX} or data[128:132] == b"DICM"
 
 
 def _is_container_member(name: str) -> bool:

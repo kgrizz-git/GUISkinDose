@@ -32,6 +32,8 @@ from ..page_context import PageContext
 from ..state import reset_results, state
 from ..ui_copy import copy_text
 
+_MUTED_CAPTION_CLASSES = "text-caption text-grey-6"
+
 
 def build_per_exam_section(ctx: PageContext) -> None:
     """Build the per-exam corrections UI and register ``ctx.refresh_per_exam``."""
@@ -98,7 +100,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 "Override the table coordinate origin (cm) for a misdetected "
                 "scanner or a tabular export without convention metadata. "
                 "This changes the dose map."
-            ).classes("text-caption text-grey-6")
+            ).classes(_MUTED_CAPTION_CLASSES)
             status_label = ui.label(_status_text()).classes("text-caption text-amber-400 italic")
 
             def _on_change(key: str, value) -> None:
@@ -159,7 +161,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 ui.label(meta.get("file_name", "—")).classes(
                     "text-caption font-mono truncate"
                 ).style("max-width: 240px")
-                ui.label(src.upper()).classes("text-caption text-grey-6")
+                ui.label(src.upper()).classes(_MUTED_CAPTION_CLASSES)
                 if meta.get("table_origin_override") is not None:
                     ui.badge("ORIGIN", color="amber").classes("text-xs").tooltip(
                         copy_text("upload.exam.table_origin.tooltip")
@@ -210,9 +212,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                     # a table axis when this export's convention runs opposite the
                     # global/auto one.
                     ui.separator().props("dense")
-                    ui.label("Axis directions (reverse table motion):").classes(
-                        "text-caption text-grey-6"
-                    )
+                    ui.label("Axis directions (reverse table motion):").classes(_MUTED_CAPTION_CLASSES)
                     ui.switch(
                         "Reverse longitudinal (Tx × −1)",
                         value=meta.get("flip_tx", False),
@@ -251,7 +251,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
             # analyze_data, so the global-copy control is hidden for one file.
             if state.is_multi_exam:
                 with ui.row().classes("w-full items-center gap-3 q-mb-xs"):
-                    global_offset_label = ui.label("").classes("text-caption text-grey-6")
+                    global_offset_label = ui.label("").classes(_MUTED_CAPTION_CLASSES)
 
                     def _global_offset_text() -> str:
                         return (
@@ -288,7 +288,7 @@ def build_per_exam_section(ctx: PageContext) -> None:
                 "Patient offsets, coordinate corrections, and table-origin overrides "
                 "applied per exam. Editing one exam never affects another. Load files "
                 "in the Upload tab; the loaded-files summary (and removal) lives there."
-            ).classes("text-caption text-grey-6")
+            ).classes(_MUTED_CAPTION_CLASSES)
             empty_hint = ui.label("No exams loaded yet — load a file in the Upload tab.").classes(
                 "text-caption text-grey-5 italic"
             )

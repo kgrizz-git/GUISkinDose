@@ -24,6 +24,8 @@ from ..state import state
 
 logger = logging.getLogger(__name__)
 
+_EXPORT_BUTTON_CLASSES = "modern-btn h-10 icon-outlined"
+
 COLUMN_LABEL_ALIASES = {
     "Tx": "Tx (X, DICOM LON, PT L-R)",
     "Ty": "Ty (Y, DICOM VER, PT A-P)",
@@ -35,7 +37,7 @@ def display_column_label(column: str) -> str:
     return COLUMN_LABEL_ALIASES.get(column, column)
 
 
-def build(ctx: PageContext) -> None:
+def build(_ctx: PageContext) -> None:
     with ui.tab_panel("data"):
         with ui.column().classes("w-full gap-4"):
             with ui.column().classes("w-full gap-2 px-4"):
@@ -62,9 +64,9 @@ def build(ctx: PageContext) -> None:
                     ).bind_value_to(state, "view_raw", forward=lambda v: v == "raw").classes("modern-toggle")
 
                 with ui.row().classes("w-full items-center gap-3"):
-                    ui.button("EXPORT CSV", icon="description", on_click=lambda: _local_export("csv")).classes("modern-btn h-10 icon-outlined")
-                    ui.button("EXPORT XLSX", icon="table_view", on_click=lambda: _local_export("xlsx")).classes("modern-btn h-10 icon-outlined")
-                    ui.button("EXPORT TXT", icon="text_snippet", on_click=lambda: _local_export("txt")).classes("modern-btn h-10 icon-outlined")
+                    ui.button("EXPORT CSV", icon="description", on_click=lambda: _local_export("csv")).classes(_EXPORT_BUTTON_CLASSES)
+                    ui.button("EXPORT XLSX", icon="table_view", on_click=lambda: _local_export("xlsx")).classes(_EXPORT_BUTTON_CLASSES)
+                    ui.button("EXPORT TXT", icon="text_snippet", on_click=lambda: _local_export("txt")).classes(_EXPORT_BUTTON_CLASSES)
 
             async def _local_export(fmt: str):
                 df = state.rdsr_raw_df if state.view_raw else state.rdsr_df

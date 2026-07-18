@@ -45,6 +45,10 @@ BEAM_MISS_WARN_OPTIONS = {
     "off": "Off (only all-miss sentinel)",
 }
 
+_MODEL_VALUE_EVENT = "update:model-value"
+_SETTINGS_EXPANSION_CLASSES = "modern-card w-full"
+_SETTINGS_SECTION_CLASSES = "w-full gap-4 q-pa-md"
+
 COMPACT_FULL_WIDTH_COLUMN_CLASSES = "w-full gap-1"
 
 
@@ -70,8 +74,8 @@ def build(ctx: PageContext) -> None:
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
             ui.label("Calculation Settings").classes("text-2xl font-bold tracking-tight")
 
-            with ui.expansion("Phantom Settings", icon="person", value=True).classes("modern-card w-full"):
-                with ui.column().classes("w-full gap-4 q-pa-md"):
+            with ui.expansion("Phantom Settings", icon="person", value=True).classes(_SETTINGS_EXPANSION_CLASSES):
+                with ui.column().classes(_SETTINGS_SECTION_CLASSES):
                     with ui.row().classes("w-full items-center justify-between"):
                         ui.label("Phantom model and positioning").classes("text-subtitle2")
                         HelpButton(
@@ -82,11 +86,11 @@ def build(ctx: PageContext) -> None:
                     with ui.row().classes("w-full gap-6"):
                         ui.select(PHANTOM_MODELS, label="Phantom model", value=state.phantom_model).bind_value(
                             state, "phantom_model"
-                        ).on("update:model-value", reset_results).classes("grow")
+                        ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
 
                         mesh_select = ui.select(
                             HUMAN_MESHES, label="Human mesh", value=state.human_mesh
-                        ).bind_value(state, "human_mesh").on("update:model-value", reset_results).classes("grow")
+                        ).bind_value(state, "human_mesh").on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
 
                     # show/hide mesh selector based on model
                     def _update_mesh_visibility():
@@ -96,7 +100,7 @@ def build(ctx: PageContext) -> None:
 
                     ui.select(ORIENTATIONS, label="Patient orientation", value=state.patient_orientation).bind_value(
                         state, "patient_orientation"
-                    ).on("update:model-value", reset_results).classes("w-full")
+                    ).on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
 
                     ui.label("Table Offsets (auto-detected, cm)").classes("text-caption text-grey-6 q-mt-sm")
                     table_offset_label = ui.label(_format_table_offset_line()).classes("text-body2 mono-text")
@@ -166,13 +170,13 @@ def build(ctx: PageContext) -> None:
                         with ui.row().classes("w-full gap-4"):
                             ui.number(label="Longitudinal", value=state.d_lon, step=1.0).bind_value(
                                 state, "d_lon"
-                            ).on("update:model-value", _on_patient_offset_change).classes("grow")
+                            ).on(_MODEL_VALUE_EVENT, _on_patient_offset_change).classes("grow")
                             ui.number(label="Vertical", value=state.d_ver, step=1.0).bind_value(
                                 state, "d_ver"
-                            ).on("update:model-value", _on_patient_offset_change).classes("grow")
+                            ).on(_MODEL_VALUE_EVENT, _on_patient_offset_change).classes("grow")
                             ui.number(label="Lateral", value=state.d_lat, step=1.0).bind_value(
                                 state, "d_lat"
-                            ).on("update:model-value", _on_patient_offset_change).classes("grow")
+                            ).on(_MODEL_VALUE_EVENT, _on_patient_offset_change).classes("grow")
 
                         _update_offset_range_hint()
 
@@ -217,34 +221,34 @@ def build(ctx: PageContext) -> None:
                                     step=0.05,
                                     value=getattr(state, attr),
                                 ).bind_value(state, attr).on(
-                                    "update:model-value", _on_phantom_scale_change
+                                    _MODEL_VALUE_EVENT, _on_phantom_scale_change
                                 ).classes("w-full")
 
             # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
             # editable block per loaded exam; registers ctx.refresh_per_exam.
             build_per_exam_section(ctx)
 
-            with ui.expansion("Physics Settings", icon="science").classes("modern-card w-full"):
-                with ui.column().classes("w-full gap-4 q-pa-md"):
+            with ui.expansion("Physics Settings", icon="science").classes(_SETTINGS_EXPANSION_CLASSES):
+                with ui.column().classes(_SETTINGS_SECTION_CLASSES):
                     ui.checkbox("Use estimated table transmission (k_tab)", value=state.estimate_k_tab).bind_value(
                         state, "estimate_k_tab"
-                    ).on("update:model-value", reset_results)
+                    ).on(_MODEL_VALUE_EVENT, reset_results)
 
                     with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
                         ui.label("TRANSMISSION FACTOR (k_tab)").classes("technical-label")
                         with ui.row().classes("items-center w-full gap-4"):
                             ui.slider(min=0.0, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
                                 state, "k_tab_val"
-                            ).on("update:model-value", reset_results).classes("grow")
+                            ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
                             ui.label().bind_text_from(state, "k_tab_val", backward=lambda v: f"{v:.2f}").classes("mono-text font-bold")
 
                     ui.number(
                         label="Inherent filtration (mmAl)", value=state.inherent_filtration, min=0.0, step=0.1
-                    ).bind_value(state, "inherent_filtration").on("update:model-value", reset_results).classes("w-full")
+                    ).bind_value(state, "inherent_filtration").on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
 
                     ui.checkbox("Remove invalid data (kVp = 0)", value=state.remove_invalid_rows).bind_value(
                         state, "remove_invalid_rows"
-                    ).on("update:model-value", reset_results)
+                    ).on(_MODEL_VALUE_EVENT, reset_results)
 
                     with ui.column().classes("w-full gap-2"):
                         with ui.row().classes("w-full items-center justify-between"):
@@ -259,13 +263,13 @@ def build(ctx: PageContext) -> None:
                             label="Policy for events below the HVL table floor",
                             value=state.below_floor_kvp_policy,
                         ).bind_value(state, "below_floor_kvp_policy").on(
-                            "update:model-value", reset_results
+                            _MODEL_VALUE_EVENT, reset_results
                         ).classes("w-full")
 
                         manual_kvp = ui.number(
                             label="Manual kVp", value=state.below_floor_kvp_manual, min=25.0, max=175.0, step=1.0
                         ).bind_value(state, "below_floor_kvp_manual").on(
-                            "update:model-value", reset_results
+                            _MODEL_VALUE_EVENT, reset_results
                         ).classes("w-full")
 
                         def _update_manual_kvp_visibility():
@@ -278,11 +282,11 @@ def build(ctx: PageContext) -> None:
                         label="Beam-miss warning verbosity",
                         value=state.beam_miss_warn,
                     ).bind_value(state, "beam_miss_warn").on(
-                        "update:model-value", reset_results
+                        _MODEL_VALUE_EVENT, reset_results
                     ).classes("w-full")
 
-            with ui.expansion("Visual Settings", icon="palette").classes("modern-card w-full"):
-                with ui.column().classes("w-full gap-4 q-pa-md"):
+            with ui.expansion("Visual Settings", icon="palette").classes(_SETTINGS_EXPANSION_CLASSES):
+                with ui.column().classes(_SETTINGS_SECTION_CLASSES):
                     ui.checkbox("Auto-render dose map on completion", value=state.plot_dosemap).bind_value(
                         state, "plot_dosemap"
                     )

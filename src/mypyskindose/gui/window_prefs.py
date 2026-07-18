@@ -143,7 +143,7 @@ def title_bar_accessible_on_any_screen(
     x: int,
     y: int,
     width: int,
-    height: int,
+    _height: int,
     screens: list[ScreenBounds],
     *,
     title_bar_height: int = TITLE_BAR_HEIGHT,

@@ -22,6 +22,7 @@ ALLOWED_SCANNER_NAMES = {"sonar-scanner", "sonar-scanner.bat"}
 SOURCE_ROOTS = ("src", "scripts", "tests")
 EXCLUDED_PARTS = {"__pycache__", ".scannerwork"}
 EXCLUDED_PREFIXES = ("src/mypyskindose/example_data/", "src/mypyskindose/phantom_data/", "tests/fixtures/")
+INVALID_HOST_URL = "invalid SonarQube host URL"
 
 
 def repo_root() -> Path:
@@ -44,25 +45,25 @@ def validate_scanner_binary(binary: str) -> Path:
 def sanitize_host_url(url: str, *, allow_remote: bool) -> str:
     """Validate and rebuild a SonarQube URL from trusted parsed components only."""
     if any(ch in url for ch in "\r\n\x00"):
-        raise ValueError("invalid SonarQube host URL")
+        raise ValueError(INVALID_HOST_URL)
     parsed = urlparse(url)
     scheme = (parsed.scheme or "").lower()
     hostname = (parsed.hostname or "").lower()
     if scheme not in {"http", "https"} or not hostname:
-        raise ValueError("invalid SonarQube host URL")
+        raise ValueError(INVALID_HOST_URL)
     if hostname in ALLOWED_LOCAL_HOSTS:
         # Emit literals so downstream argv construction does not retain CLI taint.
         host = {"localhost": "localhost", "127.0.0.1": "127.0.0.1", "::1": "[::1]"}[hostname]
     elif allow_remote:
         if any(ch in hostname for ch in " \t\r\n\x00/;\\\"'"):
-            raise ValueError("invalid SonarQube host URL")
+            raise ValueError(INVALID_HOST_URL)
         host = hostname if ":" not in hostname else f"[{hostname}]"
     else:
         raise ValueError("non-loopback SonarQube host requires --allow-remote")
     try:
         port = parsed.port
     except ValueError as exc:
-        raise ValueError("invalid SonarQube host URL") from exc
+        raise ValueError(INVALID_HOST_URL) from exc
     if port is None:
         return f"{scheme}://{host}"
     return f"{scheme}://{host}:{int(port)}"

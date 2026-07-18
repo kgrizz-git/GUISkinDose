@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -40,7 +40,7 @@ def create_irradiation_event_procedure_plot_data(
     table: Phantom,
     pad: Phantom,
     patient: Optional[Phantom] = None,
-) -> Dict[str, Union[go.Scatter3d, go.Mesh3d]]:
+) -> Dict[str, go.Scatter3d | go.Mesh3d]:
 
     # Position geometry objects
     beam = Beam(data_norm, event=event, plot_setup=False)

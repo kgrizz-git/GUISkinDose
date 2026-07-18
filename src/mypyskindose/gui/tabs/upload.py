@@ -38,6 +38,8 @@ from ..widgets.import_preview import build as build_import_preview
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024  # 64 MiB
 
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
+_LOAD_FAILURE_STATUS = "Could not load — see message"
+_NO_FILE_LOADED_STATUS = "No file loaded"
 
 _FORMAT_BADGE_COLORS = {
     "dicom": "purple",
@@ -157,7 +159,7 @@ def build(ctx: PageContext) -> None:
                                     )
                                     import_preview.sheet_row.set_visibility(True)
                         else:
-                            upload_status.set_text("Could not load — see message")
+                            upload_status.set_text(_LOAD_FAILURE_STATUS)
                             ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
                         _uploader["el"].reset()
@@ -219,10 +221,10 @@ def build(ctx: PageContext) -> None:
                     state.d_lat = 0.0
                     reset_results()
                     import_preview.sheet_row.set_visibility(False)
-                    ctx.file_label.set_text("No file loaded")
+                    ctx.file_label.set_text(_NO_FILE_LOADED_STATUS)
                     ctx.events_label.set_text("0 events")
                     ctx.psd_label.set_text("PSD: 0.00 mGy")
-                    upload_status.set_text("No file loaded")
+                    upload_status.set_text(_NO_FILE_LOADED_STATUS)
                     example_select.set_value(None)
                     _build_uploader()
                     event_table.refresh()
@@ -238,7 +240,7 @@ def build(ctx: PageContext) -> None:
                         value=None,
                     ).classes("grow").mark("example-select")
 
-                upload_status = ui.label("No file loaded").classes("text-caption text-grey-5 q-mt-xs")
+                upload_status = ui.label(_NO_FILE_LOADED_STATUS).classes("text-caption text-grey-5 q-mt-xs")
 
                 async def load_example():
                     name = example_select.value
@@ -269,7 +271,7 @@ def build(ctx: PageContext) -> None:
                             _refresh_exams_table()
                             ctx.refresh_per_exam()
                         else:
-                            upload_status.set_text("Could not load — see message")
+                            upload_status.set_text(_LOAD_FAILURE_STATUS)
                             ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
                 example_select.on_value_change(lambda: load_example())
@@ -307,7 +309,7 @@ def build(ctx: PageContext) -> None:
                             import_preview.refresh()
                             import_preview.set_transform_defaults()
                         else:
-                            upload_status.set_text("Could not load — see message")
+                            upload_status.set_text(_LOAD_FAILURE_STATUS)
                             ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
                 schema_select.on_value_change(lambda: _on_schema_change())
@@ -408,7 +410,7 @@ def build(ctx: PageContext) -> None:
                 if n == 0:
                     state.file_name = ""
                     state.file_path = None
-                    ctx.file_label.set_text("No file loaded")
+                    ctx.file_label.set_text(_NO_FILE_LOADED_STATUS)
                     ctx.events_label.set_text("0 events")
                 elif n == 1:
                     meta0 = state.loaded_exam_meta[0]

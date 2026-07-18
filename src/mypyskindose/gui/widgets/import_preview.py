@@ -22,6 +22,10 @@ from ..state import reset_results, state
 _GE_MANUFACTURER_VARIANTS = frozenset({
     "ge", "ge medical systems", "ge healthcare", "general electric", "gems"
 })
+_COMPACT_ROW_CLASSES = "items-center gap-3 q-mb-xs"
+_MUTED_CAPTION_CLASSES = "text-caption text-grey-5"
+_MODEL_VALUE_EVENT = "update:model-value"
+_COORDINATE_LABEL_CLASSES = "text-caption text-grey-5 font-mono"
 
 
 @dataclass
@@ -38,15 +42,15 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
     with ui.card().classes("modern-card w-full").bind_visibility_from(
         state, "input_source_type", backward=lambda v: v not in ("", "dicom")
     ):
-        with ui.row().classes("items-center gap-3 q-mb-xs"):
+        with ui.row().classes(_COMPACT_ROW_CLASSES):
             ui.label("Import preview").classes("text-subtitle2")
             import_schema_badge = ui.badge("—", color="blue").classes("text-xs uppercase")
 
         with ui.row().classes("w-full gap-6 q-mb-xs"):
-            import_encoding_label = ui.label("Encoding: —").classes("text-caption text-grey-5")
-            import_delimiter_label = ui.label("Delimiter: —").classes("text-caption text-grey-5")
-            import_header_label = ui.label("Header row: —").classes("text-caption text-grey-5")
-            import_sheet_label = ui.label("").classes("text-caption text-grey-5")
+            import_encoding_label = ui.label("Encoding: —").classes(_MUTED_CAPTION_CLASSES)
+            import_delimiter_label = ui.label("Delimiter: —").classes(_MUTED_CAPTION_CLASSES)
+            import_header_label = ui.label("Header row: —").classes(_MUTED_CAPTION_CLASSES)
+            import_sheet_label = ui.label("").classes(_MUTED_CAPTION_CLASSES)
 
         sheet_row = ui.row().classes("w-full items-center gap-3 q-mb-xs")
         with sheet_row:
@@ -70,46 +74,46 @@ def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
                     else:
                         ui.notify("Sheet parse failed. Review the selected sheet and schema.", type="negative", timeout=6000)
 
-            sheet_select.on("update:model-value", _on_sheet_change)
+            sheet_select.on(_MODEL_VALUE_EVENT, _on_sheet_change)
         sheet_row.set_visibility(False)
 
         coord_card = ui.card().classes("modern-card w-full bg-blue-950/20 q-pa-sm q-mb-xs")
         coord_card.set_visibility(False)
         with coord_card:
-            with ui.row().classes("items-center gap-3 q-mb-xs"):
+            with ui.row().classes(_COMPACT_ROW_CLASSES):
                 ui.label("COORDINATE CORRECTIONS").classes("text-caption text-grey-4 font-bold tracking-widest")
                 coord_auto_label = ui.label("").classes("text-caption text-blue-400 italic")
             ui.label(
                 "Applied after normalization. Use only for manual source/export corrections."
             ).classes("text-caption text-grey-6 q-mb-sm")
 
-            with ui.row().classes("items-center gap-3 q-mb-xs"):
+            with ui.row().classes(_COMPACT_ROW_CLASSES):
                 ui.switch("Swap lateral ↔ longitudinal").bind_value(state, "swap_lat_lon").on(
-                    "update:model-value", lambda: _on_swap_toggle()
+                    _MODEL_VALUE_EVENT, lambda: _on_swap_toggle()
                 ).tooltip(
                     "Swaps Tx ↔ Tz in the normalized output.\n"
                     "GE RDSR-level correction is handled during normalization.\n"
                     "Use only when a site-specific export is known to need an extra swap."
                 )
-                ui.label("Tx ↔ Tz").classes("text-caption text-grey-5 font-mono")
+                ui.label("Tx ↔ Tz").classes(_COORDINATE_LABEL_CLASSES)
 
-            with ui.row().classes("items-center gap-3 q-mb-xs"):
+            with ui.row().classes(_COMPACT_ROW_CLASSES):
                 ui.switch("Flip primary angle (Ap1)").bind_value(state, "flip_ap1").on(
-                    "update:model-value", lambda: _on_flip_ap1_toggle()
+                    _MODEL_VALUE_EVENT, lambda: _on_flip_ap1_toggle()
                 ).tooltip(
                     "Negates Ap1 after normalization (e.g. RAO 30° → LAO 30°).\n"
                     "Use when the gantry primary rotation direction is opposite to convention."
                 )
-                ui.label("Ap1 × −1").classes("text-caption text-grey-5 font-mono")
+                ui.label("Ap1 × −1").classes(_COORDINATE_LABEL_CLASSES)
 
-            with ui.row().classes("items-center gap-3 q-mb-xs"):
+            with ui.row().classes(_COMPACT_ROW_CLASSES):
                 ui.switch("Flip secondary angle (Ap2)").bind_value(state, "flip_ap2").on(
-                    "update:model-value", lambda: _on_flip_ap2_toggle()
+                    _MODEL_VALUE_EVENT, lambda: _on_flip_ap2_toggle()
                 ).tooltip(
                     "Negates Ap2 after normalization (e.g. CRA 20° → CAU 20°).\n"
                     "Use when the gantry secondary rotation direction is opposite to convention."
                 )
-                ui.label("Ap2 × −1").classes("text-caption text-grey-5 font-mono")
+                ui.label("Ap2 × −1").classes(_COORDINATE_LABEL_CLASSES)
 
             ui.separator().classes("q-my-xs")
             ui.label(

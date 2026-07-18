@@ -17,6 +17,11 @@ from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..page_context import PageContext
 from ..state import state
 
+_METRIC_ROW_CLASSES = "w-full gap-6"
+_METRIC_CARD_CLASSES = "modern-card grow q-pa-lg text-center"
+_MUTED_CAPTION_CLASSES = "text-caption text-grey-6"
+_EXAM_METRIC_LABEL_CLASSES = "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
+
 
 def multi_exam_results_ui_stale(last_run_id: int | None, calc_run_id: int) -> bool:
     """True when the per-exam Results accordion must be rebuilt."""
@@ -47,7 +52,7 @@ def compute_subset_aggregate(res: Any, selected_mask: list[bool]) -> tuple[Any, 
     return combined, subset_psd
 
 
-def build(ctx: PageContext) -> None:
+def build(_ctx: PageContext) -> None:
     with ui.tab_panel("results"):
         with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
             with ui.row().classes("w-full items-center justify-between"):
@@ -59,30 +64,30 @@ def build(ctx: PageContext) -> None:
                 )
 
             # metric cards
-        with ui.column().bind_visibility_from(state, "is_multi_exam", backward=lambda v: not v).classes("w-full gap-6"):
-            with ui.row().classes("w-full gap-6"):
-                with ui.card().classes("modern-card grow q-pa-lg text-center"):
-                    ui.label("Peak Skin Dose").classes("text-caption text-grey-6")
+        with ui.column().bind_visibility_from(state, "is_multi_exam", backward=lambda v: not v).classes(_METRIC_ROW_CLASSES):
+            with ui.row().classes(_METRIC_ROW_CLASSES):
+                with ui.card().classes(_METRIC_CARD_CLASSES):
+                    ui.label("Peak Skin Dose").classes(_MUTED_CAPTION_CLASSES)
                     psd_metric = ui.label("—").classes("text-4xl text-aurora-purple font-bold")
 
-                with ui.card().classes("modern-card grow q-pa-lg text-center"):
-                    ui.label("Total Air Kerma").classes("text-caption text-grey-6")
+                with ui.card().classes(_METRIC_CARD_CLASSES):
+                    ui.label("Total Air Kerma").classes(_MUTED_CAPTION_CLASSES)
                     kerma_metric = ui.label("—").classes("text-4xl text-white font-bold")
 
-                with ui.card().classes("modern-card grow q-pa-lg text-center"):
-                    ui.label("Events").classes("text-caption text-grey-6")
+                with ui.card().classes(_METRIC_CARD_CLASSES):
+                    ui.label("Events").classes(_MUTED_CAPTION_CLASSES)
                     events_metric = ui.label("—").classes("text-4xl text-aurora-teal font-bold")
 
-            with ui.row().classes("w-full gap-6"):
-                with ui.card().classes("modern-card grow q-pa-lg text-center"):
-                    ui.label("Total DAP").classes("text-caption text-grey-6")
+            with ui.row().classes(_METRIC_ROW_CLASSES):
+                with ui.card().classes(_METRIC_CARD_CLASSES):
+                    ui.label("Total DAP").classes(_MUTED_CAPTION_CLASSES)
                     dap_metric = ui.label("—").classes("text-3xl text-white font-bold")
 
-                with ui.card().classes("modern-card grow q-pa-lg text-center"):
-                    ui.label("Total Fluoro Time").classes("text-caption text-grey-6")
+                with ui.card().classes(_METRIC_CARD_CLASSES):
+                    ui.label("Total Fluoro Time").classes(_MUTED_CAPTION_CLASSES)
                     fluoro_metric = ui.label("—").classes("text-3xl text-white font-bold")
 
-            with ui.row().classes("w-full gap-6"):
+            with ui.row().classes(_METRIC_ROW_CLASSES):
                 # dose map plot
                 with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                     dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
@@ -99,7 +104,7 @@ def build(ctx: PageContext) -> None:
 
                     ui.button("REGENERATE PLOT", on_click=lambda: _refresh_dosemap()).classes("full-width modern-btn modern-btn-teal q-mt-md")
 
-                ui.label("Correction factors per event").classes("text-caption text-grey-6")
+                ui.label("Correction factors per event").classes(_MUTED_CAPTION_CLASSES)
                 corr_table = ui.table(
                     columns=[
                         {"name": "event", "label": "EV", "field": "event", "align": "right"},
@@ -174,7 +179,7 @@ def build(ctx: PageContext) -> None:
         ui.timer(2.0, _refresh_corr_table)
 
         # ── Multi-exam section ────────────────────────────────────────────────
-        with ui.column().bind_visibility_from(state, "is_multi_exam").classes("w-full gap-6"):
+        with ui.column().bind_visibility_from(state, "is_multi_exam").classes(_METRIC_ROW_CLASSES):
             # Aggregate PSD banner card
             with ui.card().classes("modern-card w-full text-center border border-aurora-purple/50 bg-aurora-purple/10 p-6"):
                 ui.label("Aggregate Peak Skin Dose").classes("text-sm text-aurora-purple font-bold tracking-widest uppercase")
@@ -240,23 +245,17 @@ def build(ctx: PageContext) -> None:
                             with ui.row().classes("w-full items-center justify-between"):
                                 with ui.row().classes("gap-4"):
                                     with ui.column().classes("gap-0"):
-                                        ui.label("PSD").classes(
-                                            "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
-                                        )
+                                        ui.label("PSD").classes(_EXAM_METRIC_LABEL_CLASSES)
                                         ui.label(f"{exam_res.output.PSD:.2f} mGy").classes(
                                             "text-aurora-purple font-bold"
                                         )
                                     with ui.column().classes("gap-0"):
-                                        ui.label("Air Kerma").classes(
-                                            "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
-                                        )
+                                        ui.label("Air Kerma").classes(_EXAM_METRIC_LABEL_CLASSES)
                                         ui.label(f"{exam_res.output.AirKerma:.1f} mGy").classes(
                                             "text-white font-bold"
                                         )
                                     with ui.column().classes("gap-0"):
-                                        ui.label("Events").classes(
-                                            "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
-                                        )
+                                        ui.label("Events").classes(_EXAM_METRIC_LABEL_CLASSES)
                                         ui.label(str(exam_res.event_count)).classes("text-white font-bold")
 
                                 with ui.button(

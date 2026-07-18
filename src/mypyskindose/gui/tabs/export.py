@@ -29,6 +29,11 @@ from ..ui_copy import copy_text
 
 logger = logging.getLogger(__name__)
 
+_EXPORT_CARD_TITLE_CLASSES = "text-subtitle2 q-mb-sm"
+_EXPORT_CARD_DESCRIPTION_CLASSES = "text-xs text-grey-5 q-mb-md"
+_EXPORT_CARD_BUTTON_CLASSES = "full-width modern-btn icon-outlined"
+_NO_DATA_TO_EXPORT_MESSAGE = "No data to export"
+
 
 def _rich_report_bytes_titled(
     fmt: str, title: str | None, include_source_identifiers: bool = False
@@ -79,7 +84,7 @@ def _open_path(path: Path, *, reveal: bool = False) -> bool:
         return False
 
 
-def build(ctx: PageContext) -> None:
+def build(_ctx: PageContext) -> None:
     with ui.tab_panel("export"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
             with ui.row().classes("w-full items-center justify-between"):
@@ -103,29 +108,29 @@ def build(ctx: PageContext) -> None:
 
             with ui.grid(columns=2).classes("w-full gap-6"):
                 with ui.card().classes("modern-card"):
-                    ui.label("JSON — full results dict").classes("text-subtitle2 q-mb-sm")
-                    ui.label("Full results dictionary containing all data.").classes("text-xs text-grey-5 q-mb-md")
-                    ui.button("Download JSON", icon="download", on_click=lambda: download_json()).classes("full-width modern-btn icon-outlined")
+                    ui.label("JSON — full results dict").classes(_EXPORT_CARD_TITLE_CLASSES)
+                    ui.label("Full results dictionary containing all data.").classes(_EXPORT_CARD_DESCRIPTION_CLASSES)
+                    ui.button("Download JSON", icon="download", on_click=lambda: download_json()).classes(_EXPORT_CARD_BUTTON_CLASSES)
 
                 with ui.card().classes("modern-card modern-card-teal"):
-                    ui.label("Interactive HTML dose map").classes("text-subtitle2 q-mb-sm")
-                    ui.label("Standalone HTML file with interactive 3D map.").classes("text-xs text-grey-5 q-mb-md")
-                    ui.button("Download HTML", icon="html", on_click=lambda: download_html()).classes("full-width modern-btn icon-outlined")
+                    ui.label("Interactive HTML dose map").classes(_EXPORT_CARD_TITLE_CLASSES)
+                    ui.label("Standalone HTML file with interactive 3D map.").classes(_EXPORT_CARD_DESCRIPTION_CLASSES)
+                    ui.button("Download HTML", icon="html", on_click=lambda: download_html()).classes(_EXPORT_CARD_BUTTON_CLASSES)
 
                 with ui.card().classes("modern-card"):
-                    ui.label("PNG dose map").classes("text-subtitle2 q-mb-sm")
-                    ui.label("Static capture of the current dose map view.").classes("text-xs text-grey-5 q-mb-md")
-                    ui.button("Download PNG", icon="image", on_click=lambda: download_png()).classes("full-width modern-btn icon-outlined")
+                    ui.label("PNG dose map").classes(_EXPORT_CARD_TITLE_CLASSES)
+                    ui.label("Static capture of the current dose map view.").classes(_EXPORT_CARD_DESCRIPTION_CLASSES)
+                    ui.button("Download PNG", icon="image", on_click=lambda: download_png()).classes(_EXPORT_CARD_BUTTON_CLASSES)
 
                 with ui.card().classes("modern-card modern-card-teal"):
-                    ui.label("Rich report — audit document").classes("text-subtitle2 q-mb-sm")
+                    ui.label("Rich report — audit document").classes(_EXPORT_CARD_TITLE_CLASSES)
                     ui.label(
                         "Self-contained XLSX / PDF / HTML with results, settings, "
                         "provenance, corrections, warnings, and dose-map images."
-                    ).classes("text-xs text-grey-5 q-mb-md")
+                    ).classes(_EXPORT_CARD_DESCRIPTION_CLASSES)
                     ui.button(
                         "Rich report…", icon="description", on_click=lambda: rich_report_dialog.open()
-                    ).classes("full-width modern-btn icon-outlined").bind_enabled_from(state, "calculation_done")
+                    ).classes(_EXPORT_CARD_BUTTON_CLASSES).bind_enabled_from(state, "calculation_done")
 
             # ── Rich report modal ────────────────────────────────────────────
             with ui.dialog() as rich_report_dialog, ui.card().classes("min-w-96 gap-3"):
@@ -266,7 +271,7 @@ def build(ctx: PageContext) -> None:
                 if not state.calculation_done or (
                     state.output is None and state.multi_exam_result is None
                 ):
-                    ui.notify("No data to export", color="warning")
+                    ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
                     return
                 default_name = "mypyskindose_results.json"
                 save_path = await _get_save_path(default_name, "json")
@@ -291,7 +296,7 @@ def build(ctx: PageContext) -> None:
 
             async def download_html():
                 if not state.calculation_done:
-                    ui.notify("No data to export", color="warning")
+                    ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
                     return
                 default_name = "mypyskindose_dose_map.html"
                 save_path = await _get_save_path(default_name, "html")
@@ -323,7 +328,7 @@ def build(ctx: PageContext) -> None:
 
             async def download_png():
                 if not state.calculation_done:
-                    ui.notify("No data to export", color="warning")
+                    ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
                     return
                 default_name = "mypyskindose_dose_map.png"
                 save_path = await _get_save_path(default_name, "png")
