@@ -86,9 +86,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 ### Fixed
 
 - **CI dirty-checkout and SonarCloud gate** (2026-07-17) — exclude regenerable `corrections.db` artifacts
-  from the pytest checkout guard; confine commit-message and Sonar scanner CLI paths; write privacy-tool
-  inventory Markdown only to a fixed repo path; move workflow `contents: read` permissions to job level;
-  and replace float equality in the Presidio advisory fake engine with `math.isclose`.
+  from the pytest checkout guard; confine commit-message and Sonar scanner CLI paths; rebuild Sonar host URLs
+  from allowlisted components before `subprocess.run`; write privacy-tool inventory Markdown only to a fixed
+  repo path; move workflow `contents: read` permissions to job level; and replace float equality in the
+  Presidio advisory fake engine with `math.isclose`.
 
 - **Semgrep-pinned mcp audit suppressions** (2026-07-17) — added tracked `[tool.uv.audit]`
   suppressions for GHSA-jpw9-pfvf-9f58, GHSA-hvrp-rf83-w775, and GHSA-vj7q-gjh5-988w while

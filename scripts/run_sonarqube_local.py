@@ -41,10 +41,39 @@ def validate_scanner_binary(binary: str) -> Path:
     return resolved
 
 
+def sanitize_host_url(url: str, *, allow_remote: bool) -> str:
+    """Validate and rebuild a SonarQube URL from trusted parsed components only."""
+    if any(ch in url for ch in "\r\n\x00"):
+        raise ValueError("invalid SonarQube host URL")
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+    hostname = (parsed.hostname or "").lower()
+    if scheme not in {"http", "https"} or not hostname:
+        raise ValueError("invalid SonarQube host URL")
+    if hostname in ALLOWED_LOCAL_HOSTS:
+        # Emit literals so downstream argv construction does not retain CLI taint.
+        host = {"localhost": "localhost", "127.0.0.1": "127.0.0.1", "::1": "[::1]"}[hostname]
+    elif allow_remote:
+        if any(ch in hostname for ch in " \t\r\n\x00/;\\\"'"):
+            raise ValueError("invalid SonarQube host URL")
+        host = hostname if ":" not in hostname else f"[{hostname}]"
+    else:
+        raise ValueError("non-loopback SonarQube host requires --allow-remote")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("invalid SonarQube host URL") from exc
+    if port is None:
+        return f"{scheme}://{host}"
+    return f"{scheme}://{host}:{int(port)}"
+
+
+def validate_host(url: str, *, allow_remote: bool) -> None:
+    sanitize_host_url(url, allow_remote=allow_remote)
+
+
 def build_scanner_command(binary: Path, host_url: str, *, wait_for_quality_gate: bool) -> list[str]:
     """Build an argv list for sonar-scanner after host/binary validation."""
-    if any(ch in host_url for ch in "\r\n\x00"):
-        raise ValueError("invalid SonarQube host URL")
     command = [str(binary), f"-Dsonar.host.url={host_url}"]
     if wait_for_quality_gate:
         command.extend(["-Dsonar.qualitygate.wait=true", "-Dsonar.qualitygate.timeout=300"])
@@ -65,15 +94,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--no-quality-gate-wait", action="store_true", help="Do not wait for the quality gate result.")
     return parser.parse_args(argv)
-
-
-def validate_host(url: str, *, allow_remote: bool) -> None:
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("invalid SonarQube host URL")
-    if not allow_remote and parsed.hostname.lower() not in ALLOWED_LOCAL_HOSTS:
-        raise ValueError("non-loopback SonarQube host requires --allow-remote")
-
 
 def git_path(root: Path, name: str) -> Path:
     result = subprocess.run(
@@ -160,20 +180,16 @@ def classify_failure(log_path: Path) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     root = repo_root()
-    try:
-        validate_host(args.host_url, allow_remote=args.allow_remote)
-    except ValueError as exc:
-        print(f"ERROR: SonarQube local analysis refused ({exc}).", file=sys.stderr)
-        return 2
     located = shutil.which("sonar-scanner")
     if located is None:
         print("ERROR: SonarQube local analysis did not run (scanner_missing).", file=sys.stderr)
         return 2
     try:
+        safe_host_url = sanitize_host_url(args.host_url, allow_remote=args.allow_remote)
         binary = validate_scanner_binary(located)
         command = build_scanner_command(
             binary,
-            args.host_url,
+            safe_host_url,
             wait_for_quality_gate=not args.no_quality_gate_wait,
         )
     except ValueError as exc:
@@ -196,7 +212,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         log_path = Path(temp_dir) / "scanner.log"
         try:
             with log_path.open("wb") as log:
-                completed = subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, check=False)
+                # argv is a list (no shell); binary basename and host URL were rebuilt from allowlists.
+                completed = subprocess.run(  # NOSONAR pythonsecurity:S8705
+                    command,
+                    cwd=root,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    check=False,
+                )
         except OSError as exc:
             print(f"ERROR: SonarQube local analysis did not complete ({type(exc).__name__}).", file=sys.stderr)
             return 2

@@ -9,6 +9,7 @@ import pytest
 from scripts.run_sonarqube_local import (
     build_scanner_command,
     classify_failure,
+    sanitize_host_url,
     validate_host,
     validate_scanner_binary,
 )
@@ -55,8 +56,14 @@ def test_scanner_command_rejects_control_characters_in_host(tmp_path: Path) -> N
     binary.write_text("#!/bin/sh\n", encoding="utf-8")
     resolved = binary.resolve()
 
-    command = build_scanner_command(resolved, "http://localhost:9000", wait_for_quality_gate=True)
+    safe_url = sanitize_host_url("http://localhost:9000", allow_remote=False)
+    command = build_scanner_command(resolved, safe_url, wait_for_quality_gate=True)
     assert command[0] == str(resolved)
     assert command[1] == "-Dsonar.host.url=http://localhost:9000"
     with pytest.raises(ValueError, match="invalid SonarQube host URL"):
-        build_scanner_command(resolved, "http://localhost:9000\n-Dsonar.extra=1", wait_for_quality_gate=False)
+        sanitize_host_url("http://localhost:9000\n-Dsonar.extra=1", allow_remote=False)
+
+
+def test_sanitize_host_url_emits_loopback_literals() -> None:
+    assert sanitize_host_url("http://127.0.0.1:9000", allow_remote=False) == "http://127.0.0.1:9000"
+    assert sanitize_host_url("http://[::1]:9000", allow_remote=False) == "http://[::1]:9000"
