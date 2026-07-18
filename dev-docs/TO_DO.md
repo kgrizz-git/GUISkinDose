@@ -126,7 +126,9 @@ their corresponding plan exit criteria pass.
 - [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
   (2026-07-09: bumped transitive dev-only `nltk` 3.9.4 → 3.10.0 and removed
-  `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.)
+  `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.
+  2026-07-17: added mcp GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
+  suppressions while semgrep pins `mcp==1.23.3`; remove when semgrep bumps or relaxes the pin.)
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.

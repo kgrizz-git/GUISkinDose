@@ -85,6 +85,14 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Semgrep-pinned mcp audit suppressions** (2026-07-17) — added tracked `[tool.uv.audit]`
+  suppressions for GHSA-jpw9-pfvf-9f58, GHSA-hvrp-rf83-w775, and GHSA-vj7q-gjh5-988w while
+  semgrep continues to pin `mcp==1.23.3` (fixes require mcp >=1.27.2 / >=1.28.1). mcp is a
+  semgrep-only transitive dependency and is unused by MyPySkinDose runtime code. Also added
+  `pytest.importorskip("nicegui")` to `test_exam_loader_privacy.py` so core CI can collect
+  without the GUI extra, and refreshed `.phi-scanbaseline` after deterministic UID
+  de-identification changed fixture finding hashes (14 reviewed synthetic/numeric entries).
+
 - **Generalized live-preview pause** (2026-07-12) — generalized the 30-event live-preview pause guard from composite procedures to all procedure modes (single-exam, non-composite, and composite), preventing expensive reactive re-renders on large datasets. Explicitly clicking "Full procedure" now correctly renders the Plotly procedure slider once even if the procedure is paused.
 
 - **GUI loaded-file removal** (2026-07-11) — removing a bundled example from the GUI's loaded

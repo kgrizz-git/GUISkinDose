@@ -138,7 +138,7 @@ unknown tool or stale generated view. Candidate status does not authorize automa
 [`phi-scan`](https://pypi.org/project/phi-scan/) runs weekly and on pull requests that change CSV/TSV data. It is
 pinned, quiet, and has no report upload or AI review enabled. Version 0.7.0 is calibrated to high-severity findings in
 CSV/TSV files; broader source-code sinks are enforced by the project Semgrep rules. Its 90-day baseline contains only
-finding hashes and metadata. The current 21 entries were reviewed by `KG` on 2026-07-16 as synthetic fixture headers,
+finding hashes and metadata. The current 14 entries were reviewed by `KG` on 2026-07-17 as synthetic fixture headers,
 synthetic numeric rows, or numeric correction-table combinations—not ignored findings. New or expired findings fail
 the secondary workflow and must be triaged. phi-scan supplements, rather than replaces, the deterministic gate: it
 does not authorise a binary asset or prove a DICOM is safe.

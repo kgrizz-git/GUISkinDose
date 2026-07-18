@@ -155,4 +155,10 @@ skips = ["B101"]
 ignore = [
     # click 8.1.8 is pinned by semgrep (<8.2); advisory PYSEC-2026-2132 cannot be upgraded until semgrep loosens its click requirement.
     "PYSEC-2026-2132",
+    # mcp 1.23.3 is pinned exactly by semgrep; GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
+    # are fixed in mcp >=1.27.2 / >=1.28.1. Suppress until semgrep relaxes or bumps the pin. mcp is only
+    # pulled in for the optional Semgrep MCP server path and is not used by MyPySkinDose runtime code.
+    "GHSA-jpw9-pfvf-9f58",
+    "GHSA-hvrp-rf83-w775",
+    "GHSA-vj7q-gjh5-988w",
 ]

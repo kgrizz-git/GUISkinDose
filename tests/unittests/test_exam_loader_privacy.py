@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
+# exam_loaders transitively imports NiceGUI via page_context; skip in core CI.
+pytest.importorskip("nicegui")
+
 from mypyskindose.gui.exam_loaders import _record_load_failure
 
 
