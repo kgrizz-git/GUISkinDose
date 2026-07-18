@@ -121,7 +121,7 @@ def make_engine() -> Any:
     """Build a Presidio engine using the small local English spaCy model."""
     try:
         import en_core_web_sm  # type: ignore[import-not-found]  # noqa: F401
-        import tldextract
+        import tldextract  # type: ignore[import-not-found]
         from presidio_analyzer import AnalyzerEngine  # type: ignore[reportMissingImports]
         from presidio_analyzer.nlp_engine import NlpEngineProvider  # type: ignore[reportMissingImports]
     except ImportError as exc:

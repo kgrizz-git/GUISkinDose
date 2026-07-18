@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -62,19 +63,24 @@ def test_get_mesh_baseline_extents_handles_corrupt_stl(
 ) -> None:
     (tmp_path / "broken.stl").write_text("not an stl")
     monkeypatch.setattr(helpers, "_PHANTOM_DATA_DIR", tmp_path)
-    warnings: list[tuple[str, tuple[object, ...]]] = []
+    messages: list[str] = []
 
-    def fake_warning(message: str, *args: object) -> None:
-        warnings.append((message, args))
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
 
-    monkeypatch.setattr(helpers._gui_logger, "warning", fake_warning)
-
-    assert helpers.get_mesh_baseline_extents("broken") == (0.0, 0.0, 0.0)
+    handler = _Capture(level=logging.WARNING)
+    helpers._gui_logger.addHandler(handler)
+    try:
+        assert helpers.get_mesh_baseline_extents("broken") == (0.0, 0.0, 0.0)
+    finally:
+        helpers._gui_logger.removeHandler(handler)
 
     assert helpers._MESH_EXTENT_CACHE["broken"] == (0.0, 0.0, 0.0)
     assert helpers._MESH_TORSO_WIDTH_CACHE["broken"] == pytest.approx(0.0)
-    assert len(warnings) == 1
-    assert "Could not read baseline extents for human mesh" in warnings[0][0]
+    text = "\n".join(messages)
+    assert "phantom_mesh_measurement failed (error_type=ValueError)" in text
+    assert "not an stl" not in text
 
 
 @pytest.mark.parametrize(

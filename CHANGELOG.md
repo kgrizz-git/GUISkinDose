@@ -92,6 +92,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `pytest.importorskip("nicegui")` to `test_exam_loader_privacy.py` so core CI can collect
   without the GUI extra, and refreshed `.phi-scanbaseline` after deterministic UID
   de-identification changed fixture finding hashes (14 reviewed synthetic/numeric entries).
+  Follow-up CI fixes: install `coverage` in the build job, type-ignore optional `tldextract`
+  in the Presidio advisory runner, and assert value-safe logging for corrupt STL mesh reads.
 
 - **Generalized live-preview pause** (2026-07-12) — generalized the 30-event live-preview pause guard from composite procedures to all procedure modes (single-exam, non-composite, and composite), preventing expensive reactive re-renders on large datasets. Explicitly clicking "Full procedure" now correctly renders the Plotly procedure slider once even if the procedure is paused.
 
