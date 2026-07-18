@@ -131,6 +131,12 @@ their corresponding plan exit criteria pass.
   `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.
   2026-07-17: added mcp GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
   suppressions while semgrep pins `mcp==1.23.3`; remove when semgrep bumps or relaxes the pin.)
+  (2026-07-18: confirmed GitHub Dependabot still opens alerts for these GHSA IDs — alerts #2/#3/#4 on
+  `kgrizz-git/MyPySkinDose` — because the `uv.lock`-level `dep_scope` reads as `runtime` to Dependabot and GitHub's
+  advisory feed is independent of `[tool.uv.audit]` ignores. CI's `uv audit` is the gate that matters; the Dependabot
+  alerts are informational and should stay open until semgrep bumps/relaxes its `mcp==1.23.3` pin
+  (patched versions are `mcp >=1.27.2` / `>=1.28.1`). Context: `mcp` is transitive via the optional Semgrep MCP server
+  path and is not imported or run by MyPySkinDose runtime code, so the CVEs are not exploitable in this repo.)
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.
