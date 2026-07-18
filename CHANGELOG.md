@@ -83,6 +83,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 - **Body-habitus scaling controls** (2026-07-13) — reorganized each scaling control so its label and live value sit directly above its slider. Labels now consistently use left-right width, anterior-posterior thickness, and superior-inferior length. The left-right readout measures torso width below the arms while its scale factor continues to resize the full lateral mesh axis.
 
+- **gitleaks workflow permissions** (2026-07-18) — added an explicit least-privilege `permissions:` block
+  (`contents: read`, `pull-requests: write`) to `.github/workflows/gitleaks.yml`, closing open GitHub Code
+  Scanning alert #3 (`actions/missing-workflow-permissions`). The `pull-requests` scope is required by
+  gitleaks-action to post PR review comments. Updated `dev-docs/FORK_MAINTAINER_GUIDE.md` to note gitleaks
+  now declares permissions. Commented on Dependabot PR #13 (closed) that the `mcp` 1.23.3→1.27.2 bump is
+  blocked by semgrep's exact pin and remains tracked via `dev-docs/TO_DO.md` and `[tool.uv.audit]` ignores.
+
 ### Fixed
 
 - **CI dirty-checkout and SonarCloud gate** (2026-07-17) — exclude regenerable `corrections.db` artifacts
