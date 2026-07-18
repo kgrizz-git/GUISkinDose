@@ -21,6 +21,7 @@ from mypyskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
 )
 from mypyskindose.helpers.read_and_normalize_rdsr_data import read_and_normalise_rdsr_data
+from mypyskindose.privacy import install_value_safe_excepthook, opaque_exam_label, safe_user_error, safe_warning
 from mypyskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
@@ -111,16 +112,21 @@ def analyze_input_file(
             settings=settings,
         )
         if isinstance(result, list):
-            for exam in result:
-                for w in exam.warnings:
-                    logger.warning("tabular input (exam %s): %s", exam.study_id or "?", w)
+            for index, exam in enumerate(result):
+                if exam.warnings:
+                    safe_warning(
+                        logger,
+                        "tabular_input_warnings",
+                        exam=index + 1,
+                        count=len(exam.warnings),
+                    )
             if output_format == "html":
                 logger.warning("HTML output format is not supported for multi-exam tabular runs. Forcing to dict.")
                 output_format = "dict"
                 settings.output_format = "dict"
             return analyze_multiple_exams(result, settings)
-        for w in result.warnings:
-            logger.warning("tabular input: %s", w)
+        if result.warnings:
+            safe_warning(logger, "tabular_input_warnings", count=len(result.warnings))
         data_norm = result.normalized_data
     else:
         data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
@@ -217,8 +223,9 @@ def preview_input_file(
     *,
     input_schema: Optional[str] = None,
     sheet_name: Union[str, int] = 0,
+    include_sensitive_values: bool = False,
 ) -> None:
-    """Print a column-mapping preview without running the dose calculation."""
+    """Print a value-safe preview unless sensitive values are explicitly requested."""
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     # The radimetrics/generic/dosetrack schemas need settings (rdsr_normalizer
@@ -233,11 +240,15 @@ def preview_input_file(
         settings=settings_obj,
     )
     results = raw if isinstance(raw, list) else [raw]
-    for result in results:
+    for index, result in enumerate(results):
         prov = result.provenance
-        print(f"File:          {prov.original_filename}")
-        if result.study_id:
-            print(f"Study ID:      {result.study_id}")
+        print(f"Exam:          {opaque_exam_label(index)}")
+        if include_sensitive_values:
+            # nosemgrep: mypyskindose-identifier-attr-to-log-or-stdout -- explicit CLI opt-in; reviewed 2026-07-16
+            print(f"File:          {prov.original_filename}")
+            if result.study_id:
+                # nosemgrep: mypyskindose-identifier-attr-to-log-or-stdout -- explicit CLI opt-in; reviewed 2026-07-16
+                print(f"Study ID:      {result.study_id}")
         print(f"Schema:        {prov.schema_name}")
         print(f"Encoding:      {prov.detected_encoding}")
         print(f"Delimiter:     {prov.detected_delimiter!r}")
@@ -247,14 +258,17 @@ def preview_input_file(
         print("Column map (source → normalized):")
         for src, norm in prov.column_map.items():
             print(f"  {src!r:30s} → {norm}")
-        if prov.warnings:
+        if prov.warnings and include_sensitive_values:
             print()
             print("Warnings:")
             for w in prov.warnings:
                 print(f"  {w}")
         print()
-        print("First 5 normalized events:")
-        print(result.normalized_data.head(5).to_string())
+        if include_sensitive_values:
+            print("First 5 normalized events:")
+            print(result.normalized_data.head(5).to_string())
+        else:
+            print("Event values suppressed; pass --include-sensitive-preview to display them locally.")
         print()
 
 
@@ -318,6 +332,7 @@ def build_cli_export_source(
     input_schema: Optional[str] = None,
     sheet_name: Union[str, int] = 0,
     report_title: Optional[str] = None,
+    include_source_identifiers: bool = False,
 ):
     """Run a calculation for export and assemble an ``ExportSource`` (no GUI).
 
@@ -363,6 +378,7 @@ def build_cli_export_source(
                 import_warnings=[w for e in inputs for w in e.warnings],
                 file_name=str(resolved[0]) if resolved else None,
                 report_title=report_title,
+                include_source_identifiers=include_source_identifiers,
             )
             return source
 
@@ -392,6 +408,7 @@ def build_cli_export_source(
             import_warnings=import_warnings,
             file_name=single.name,
             report_title=report_title,
+            include_source_identifiers=include_source_identifiers,
         )
     finally:
         pkg_logger.removeHandler(capture)
@@ -459,23 +476,33 @@ def run_cli_export(
     export_title: Optional[str] = None,
     input_schema: Optional[str] = None,
     sheet_name: Union[str, int] = 0,
+    include_source_identifiers: bool = False,
+    force: bool = False,
+    allow_ignored_checkout: bool = False,
 ) -> Path:
     """Build a Rich report from a headless run and write it to disk. Returns the path."""
-    from datetime import datetime
-
     from mypyskindose.export import collect_export_payload
     from mypyskindose.export.writers import write_report
 
+    if export_path is None:
+        raise ValueError("--export-path is required for filesystem report exports.")
+
     source = build_cli_export_source(
-        file_paths, settings, input_schema=input_schema, sheet_name=sheet_name, report_title=export_title
+        file_paths,
+        settings,
+        input_schema=input_schema,
+        sheet_name=sheet_name,
+        report_title=export_title,
+        include_source_identifiers=include_source_identifiers,
     )
     payload = collect_export_payload(source)
-
-    if export_path is None:
-        stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        base = Path(file_paths[0]).resolve().parent if file_paths else Path.cwd()
-        export_path = base / f"mypyskindose_report_{stamp}.{export_format}"
-    write_report(payload, export_path, export_format)
+    write_report(
+        payload,
+        export_path,
+        export_format,
+        force=force,
+        allow_ignored_checkout=allow_ignored_checkout,
+    )
     return Path(export_path)
 
 
@@ -542,7 +569,18 @@ def get_argument_parser(arguments) -> argparse.Namespace:
             "Host/interface for the GUI server to bind to. Defaults to 127.0.0.1 "
             "(localhost only). Pass '0.0.0.0' to serve on the LAN — only on a "
             "trusted network, since the GUI has no authentication and exposes "
-            "loaded PHI-derived data."
+            "loaded PHI-derived data. Requires --allow-network."
+        ),
+    )
+
+    parser.add_argument(
+        "--allow-network",
+        action="store_true",
+        default=False,
+        dest="allow_network",
+        help=(
+            "Explicitly acknowledge and allow a non-loopback GUI binding. The GUI "
+            "has no authentication and may display PHI-derived data."
         ),
     )
 
@@ -571,7 +609,15 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         action="store_true",
         default=False,
         dest="input_preview_only",
-        help="Print column mapping and first events without running dose calculation.",
+        help="Print a value-safe input summary without running dose calculation.",
+    )
+
+    parser.add_argument(
+        "--include-sensitive-preview",
+        action="store_true",
+        default=False,
+        dest="include_sensitive_preview",
+        help="With --input-preview-only, deliberately print source filename, study ID, warnings, and event values.",
     )
 
     parser.add_argument(
@@ -597,7 +643,28 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         default=None,
         dest="export_path",
         type=Path,
-        help="Output path for --export-format. Defaults to a timestamped file next to the input.",
+        help="Required output path for --export-format. Existing and tracked files are refused by default.",
+    )
+
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="Allow replacement of an existing untracked export file.",
+    )
+
+    parser.add_argument(
+        "--include-source-identifiers",
+        action="store_true",
+        default=False,
+        help="Include source filenames in reports; the resulting file may contain PHI.",
+    )
+
+    parser.add_argument(
+        "--allow-ignored-checkout-output",
+        action="store_true",
+        default=False,
+        help="Allow export only to a Git-ignored path inside the current checkout.",
     )
 
     parser.add_argument(
@@ -612,11 +679,16 @@ def get_argument_parser(arguments) -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    install_value_safe_excepthook(logger)
     args = get_argument_parser(sys.argv[1:])
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from mypyskindose.gui.app import run_gui
-        run_gui(native=getattr(args, "native", False), host=getattr(args, "host", None))
+        run_gui(
+            native=getattr(args, "native", False),
+            host=getattr(args, "host", None),
+            allow_network=getattr(args, "allow_network", False),
+        )
     else:
         if (run_settings := args.settings) is None:
             logger.warning("No settings specified. Running with development parameters")
@@ -642,7 +714,7 @@ if __name__ == "__main__":
                     has_files=bool(file_paths),
                 )
             except ValueError as exc:
-                raise SystemExit(str(exc)) from exc
+                raise SystemExit(safe_user_error("invalid_export_options")) from exc
             out_path = run_cli_export(
                 file_paths,
                 run_settings,
@@ -651,8 +723,12 @@ if __name__ == "__main__":
                 export_title=getattr(args, "export_title", None),
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
+                include_source_identifiers=getattr(args, "include_source_identifiers", False),
+                force=getattr(args, "force", False),
+                allow_ignored_checkout=getattr(args, "allow_ignored_checkout_output", False),
             )
-            print(f"Report written to {out_path}")
+            del out_path
+            print("Report written successfully.")
         elif len(file_paths) > 1:
             result = analyze_multiple_input_files(
                 file_paths,
@@ -674,6 +750,7 @@ if __name__ == "__main__":
                         single_path,
                         input_schema=getattr(args, "input_schema", None),
                         sheet_name=getattr(args, "sheet_name", 0),
+                        include_sensitive_values=getattr(args, "include_sensitive_preview", False),
                     )
                 else:
                     analyze_input_file(

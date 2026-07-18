@@ -6,6 +6,14 @@ dist/
 [Vv]env/
 venv/
 logs/
+*.cache
+*.err
+*.log
+*.log.[0-9]*
+*.out
+*.pkl
+*.pickle
+*.trace
 .idea/
 .vscode/
 .claude/
@@ -28,6 +36,7 @@ _test_gui_import.py
 *.html
 *.png
 !docs/**/*.png
+!wiki/**/*.png
 __pycache__/
 **/__pycache__/
 .ipynb_checkpoints
@@ -74,3 +83,15 @@ test_data_gitignored/
 
 # direnv local cache
 .direnv/
+
+# Local privacy/scanner state and self-hosted SonarQube output
+.privacy-scan-state/
+.scannerwork/
+.sonar/
+.sonarlint/
+sonar-project.properties.local
+
+# Local environment variables (never commit real tokens; see .env.example)
+.env
+.env.*
+!.env.example

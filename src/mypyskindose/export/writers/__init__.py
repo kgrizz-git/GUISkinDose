@@ -11,6 +11,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from mypyskindose.safe_output import atomic_write_private
+
 if TYPE_CHECKING:
     from ..models import ExportPayload
 
@@ -74,6 +76,18 @@ def render_bytes(payload: "ExportPayload", fmt: str) -> bytes:
         raise
 
 
-def write_report(payload: "ExportPayload", path: Path, fmt: str) -> None:
-    """Write a payload to ``path`` for the given format."""
-    Path(path).write_bytes(render_bytes(payload, fmt))
+def write_report(
+    payload: "ExportPayload",
+    path: Path,
+    fmt: str,
+    *,
+    force: bool = False,
+    allow_ignored_checkout: bool = False,
+) -> None:
+    """Write a payload through the atomic, Git-aware export boundary."""
+    atomic_write_private(
+        path,
+        render_bytes(payload, fmt),
+        force=force,
+        allow_ignored_checkout=allow_ignored_checkout,
+    )

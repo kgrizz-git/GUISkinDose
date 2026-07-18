@@ -8,12 +8,15 @@ interface (notifications go through ``ui.notify``, not the drawer).
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 
 from nicegui import run, ui
 
 from mypyskindose.export import MissingExportDependencyError
+from mypyskindose.privacy import safe_error_event, safe_user_error
+from mypyskindose.safe_output import atomic_write_private
 
 from ..components import HelpButton
 from ..concurrency import require_io_result
@@ -24,8 +27,12 @@ from ..page_context import PageContext
 from ..state import state
 from ..ui_copy import copy_text
 
+logger = logging.getLogger(__name__)
 
-def _rich_report_bytes_titled(fmt: str, title: str | None) -> bytes:
+
+def _rich_report_bytes_titled(
+    fmt: str, title: str | None, include_source_identifiers: bool = False
+) -> bytes:
     """Build the export payload from GUI state and render it (heavy: kaleido).
 
     Runs on a worker thread via ``run.io_bound``.
@@ -33,7 +40,9 @@ def _rich_report_bytes_titled(fmt: str, title: str | None) -> bytes:
     from mypyskindose.export import collect_export_payload
     from mypyskindose.export.writers import render_bytes
 
-    source = build_export_source_from_gui(state)
+    source = build_export_source_from_gui(
+        state, include_source_identifiers=include_source_identifiers
+    )
     if title:
         source.report_title = title
     payload = collect_export_payload(source)
@@ -84,6 +93,13 @@ def build(ctx: PageContext) -> None:
             ui.label(
                 "Run a calculation first (tab 4) to enable exports."
             ).classes("text-caption text-grey-6 q-mb-md").bind_visibility_from(state, "calculation_done", backward=lambda v: not v)
+
+            include_identifiers = ui.checkbox(
+                copy_text("export.include_identifiers.label"), value=False
+            ).props("color=warning")
+            ui.label(
+                copy_text("export.include_identifiers.explanation")
+            ).classes("text-xs text-orange-5")
 
             with ui.grid(columns=2).classes("w-full gap-6"):
                 with ui.card().classes("modern-card"):
@@ -144,17 +160,34 @@ def build(ctx: PageContext) -> None:
                 # Stash the optional title on the source builder via state-free arg:
                 # collect happens inside the worker; pass title through a closure.
                 try:
-                    content = require_io_result(await run.io_bound(_rich_report_bytes_titled, fmt, title))
+                    content = require_io_result(
+                        await run.io_bound(
+                            _rich_report_bytes_titled,
+                            fmt,
+                            title,
+                            bool(include_identifiers.value),
+                        )
+                    )
                 except MissingExportDependencyError as exc:
                     _show_missing_dependency_dialog(exc)
                     return
                 except Exception as exc:  # kaleido or writer failure
-                    ui.notify(f"Report failed: {exc}", type="negative", timeout=0, close_button="Dismiss")
+                    safe_error_event(logger, "rich_report_export", exc)
+                    ui.notify(
+                        safe_user_error("rich_report_export"),
+                        type="negative",
+                        timeout=0,
+                        close_button="Dismiss",
+                    )
                     return
                 if save_path:
                     saved = Path(save_path)
-                    with open(saved, "wb") as f:
-                        f.write(content)
+                    try:
+                        atomic_write_private(saved, content, force=True)
+                    except Exception as exc:
+                        safe_error_event(logger, "rich_report_write", exc)
+                        ui.notify(safe_user_error("rich_report_write"), type="negative")
+                        return
                     _show_saved_dialog(saved)
                 else:
                     ui.download(content, default_name)
@@ -213,29 +246,45 @@ def build(ctx: PageContext) -> None:
 
             def _build_export_payload() -> dict:
                 """Return state.output enriched with tabular provenance when applicable."""
-                payload = dict(state.output or {})
+                if state.multi_exam_result is not None:
+                    payload = state.multi_exam_result.to_dict(
+                        include_source_identifiers=bool(include_identifiers.value)
+                    )
+                else:
+                    payload = dict(state.output or {})
                 if state.import_provenance is not None:
                     payload["tabular_input"] = _tabular_input_meta(
                         state.file_name,
                         state.import_provenance,
                         state.swap_lat_lon,
                         state.import_warnings,
+                        include_source_identifiers=bool(include_identifiers.value),
                     )
                 return payload
 
             async def download_json():
-                if not state.calculation_done or state.output is None:
+                if not state.calculation_done or (
+                    state.output is None and state.multi_exam_result is None
+                ):
                     ui.notify("No data to export", color="warning")
                     return
-                default_name = f"psd_results_{state.file_name or 'data'}.json"
+                default_name = "mypyskindose_results.json"
                 save_path = await _get_save_path(default_name, "json")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
                 payload = _build_export_payload()
                 if save_path:
-                    with open(save_path, "w") as f:
-                        json.dump(payload, f, indent=4)
-                    ui.notify(f"Saved to {Path(save_path).name}", color="positive")
+                    try:
+                        atomic_write_private(
+                            save_path,
+                            json.dumps(payload, indent=4).encode("utf-8"),
+                            force=True,
+                        )
+                    except Exception as exc:
+                        safe_error_event(logger, "json_export_write", exc)
+                        ui.notify(safe_user_error("json_export_write"), type="negative")
+                        return
+                    ui.notify("JSON export saved.", color="positive")
                 else:
                     content = json.dumps(payload, indent=4)
                     ui.download(content.encode(), default_name)
@@ -244,7 +293,7 @@ def build(ctx: PageContext) -> None:
                 if not state.calculation_done:
                     ui.notify("No data to export", color="warning")
                     return
-                default_name = f"dose_map_{state.file_name or 'data'}.html"
+                default_name = "mypyskindose_dose_map.html"
                 save_path = await _get_save_path(default_name, "html")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
@@ -258,12 +307,17 @@ def build(ctx: PageContext) -> None:
                         state.import_provenance,
                         state.swap_lat_lon,
                         state.import_warnings,
+                        include_source_identifiers=bool(include_identifiers.value),
                     )
                     content = _inject_html_tabular_meta(content, meta)
                 if save_path:
-                    with open(save_path, "wb") as f:
-                        f.write(content)
-                    ui.notify(f"Saved to {Path(save_path).name}", color="positive")
+                    try:
+                        atomic_write_private(save_path, content, force=True)
+                    except Exception as exc:
+                        safe_error_event(logger, "html_export_write", exc)
+                        ui.notify(safe_user_error("html_export_write"), type="negative")
+                        return
+                    ui.notify("HTML export saved.", color="positive")
                 else:
                     ui.download(content, default_name)
 
@@ -271,7 +325,7 @@ def build(ctx: PageContext) -> None:
                 if not state.calculation_done:
                     ui.notify("No data to export", color="warning")
                     return
-                default_name = f"dose_map_{state.file_name or 'data'}.png"
+                default_name = "mypyskindose_dose_map.png"
                 save_path = await _get_save_path(default_name, "png")
                 if save_path is None and _is_native_mode():
                     return  # user cancelled the native dialog
@@ -280,8 +334,12 @@ def build(ctx: PageContext) -> None:
                     ui.notify("Failed to generate PNG (requires kaleido)", type="negative")
                     return
                 if save_path:
-                    with open(save_path, "wb") as f:
-                        f.write(content)
-                    ui.notify(f"Saved to {Path(save_path).name}", color="positive")
+                    try:
+                        atomic_write_private(save_path, content, force=True)
+                    except Exception as exc:
+                        safe_error_event(logger, "png_export_write", exc)
+                        ui.notify(safe_user_error("png_export_write"), type="negative")
+                        return
+                    ui.notify("PNG export saved.", color="positive")
                 else:
                     ui.download(content, default_name)

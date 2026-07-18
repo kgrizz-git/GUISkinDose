@@ -1,5 +1,12 @@
 # Export
 
+## Privacy
+
+Exports are de-identified by default and use filenames that do not derive from the source exam. Enabling **Include
+source filenames (may contain PHI)** is a separate, intentional action and can make the export an identified clinical
+record. Store every export in an approved destination, apply the appropriate retention policy, and avoid repository
+or shared-network locations unless they are specifically approved for clinical data.
+
 Use the Export tab after a calculation completes to save result artifacts.
 
 Available exports:

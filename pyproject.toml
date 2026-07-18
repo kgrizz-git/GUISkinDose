@@ -26,6 +26,7 @@ dependencies = [
     "kaleido",
     "rich",
     "openpyxl",
+    "pypdf>=5.0",
     "reportlab>=4.0",
     "python-docx>=1.1",
 ]
@@ -55,6 +56,15 @@ notebooks = [
     "ipykernel",
     "ipywidgets",
 ]
+# Optional, local-only Presidio text scan. This is intentionally separate from
+# the core/runtime and normal dev installs; it is advisory and does not upload
+# input or findings anywhere.
+privacy-scan = [
+    # Declared explicitly so a later `uv sync` cannot remove Presidio's local NLP model.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "presidio-analyzer>=2.2.360,<3",
+    "spacy>=3.8,<4",
+]
 dev = [
     "basedpyright>=1.23",
     "pandas-stubs>=2.2",
@@ -66,6 +76,7 @@ dev = [
     "shellcheck-py>=0.11",
     "pre-commit>=4.0",
     "pytest>=7.0",
+    "pytest-cov>=5.0",
     "ruff>=0.15",
     "playwright>=1.40",
     "pytest-playwright>=0.4",
@@ -144,4 +155,10 @@ skips = ["B101"]
 ignore = [
     # click 8.1.8 is pinned by semgrep (<8.2); advisory PYSEC-2026-2132 cannot be upgraded until semgrep loosens its click requirement.
     "PYSEC-2026-2132",
+    # mcp 1.23.3 is pinned exactly by semgrep; GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
+    # are fixed in mcp >=1.27.2 / >=1.28.1. Suppress until semgrep relaxes or bumps the pin. mcp is only
+    # pulled in for the optional Semgrep MCP server path and is not used by MyPySkinDose runtime code.
+    "GHSA-jpw9-pfvf-9f58",
+    "GHSA-hvrp-rf83-w775",
+    "GHSA-vj7q-gjh5-988w",
 ]

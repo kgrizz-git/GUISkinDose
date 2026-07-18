@@ -1,0 +1,194 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "privacy_admission_enforcement_20260716",
+  "sourceEvidence": {
+    "kind": "repository_control_collection",
+    "label": "Privacy hooks, ignore rules, scanner wrappers, workflows, and guidance",
+    "collectionSha256": "39aa91f7e3ceb96f7b00ebd85077aaee53388a5b73c56827cd226300481e0581",
+    "artifactCount": 11,
+    "targetRevision": "49814a7e0efc6174372bc4f58c23f59c825e6e10",
+    "sourceDrift": "present"
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "Centralize protected-path and conditional-scanner enforcement with staged-content-bound receipts."
+  },
+  "constraints": {
+    "profile": "balanced",
+    "changeHorizons": ["incremental", "medium_term"],
+    "nonNegotiables": [
+      "Never commit or upload raw scanner reports, OCR text, DICOM values, or matched source values.",
+      "Required CI must catch local hook bypass.",
+      "Cross-platform development must remain supported."
+    ],
+    "assumptions": [
+      "No scanner latency or memory measurements are available yet.",
+      "HoundDog and clinical asset scanners remain local-only unless policy is separately reviewed."
+    ]
+  },
+  "opportunities": [
+    {
+      "opportunityId": "conditional-privacy-admission",
+      "title": "Bind privacy admission to staged content",
+      "summary": "Use one policy for protected paths, scanner routing, receipts, and reviewed dispositions.",
+      "diagnosis": "Applicability and completion are distributed across prose, hooks, wrappers, and CI filters.",
+      "evidence": [
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E1",
+          "path": ".pre-commit-config.yaml",
+          "claim": "Blocking and advisory tools are independently routed across hook stages."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E2",
+          "path": "scripts/check_ignored_asset_files.py",
+          "claim": "Risky artifacts are checked, but required ignore rules are not represented by one policy."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E3",
+          "path": "scripts/run_hounddog_advisory.py",
+          "claim": "A missing or incomplete HoundDog scan returns success."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "document",
+          "evidenceId": "E5",
+          "path": "dev-docs/AGENT_PLAYBOOK.md",
+          "claim": "Written conditional routing cannot by itself prove execution against staged content."
+        }
+      ],
+      "desiredInvariants": [
+        "Required ignore rules cannot be removed without a reviewed policy change.",
+        "Never-track roots cannot be committed even when force-added.",
+        "Required scanner receipts match exact staged blobs and scanner configuration.",
+        "Missing, stale, failed, or undisposed scanner results block the applicable boundary.",
+        "Required CI evaluates the same policy independently."
+      ],
+      "proposalPath": "proposals/conditional-privacy-admission.md",
+      "options": [
+        {
+          "optionId": "guidance-current-hooks",
+          "title": "Strengthen guidance and current hooks",
+          "kind": "baseline",
+          "summary": "Clarify routing and add focused checks without content-bound execution proof.",
+          "diagramPaths": {
+            "before": "diagrams/conditional-privacy-admission-before.mmd",
+            "after": "diagrams/conditional-privacy-admission-guidance-after.mmd"
+          },
+          "evidenceCoverage": [
+            {"evidenceId": "E1", "effect": "mitigates", "tacticalFixRequired": true, "rationale": "Clearer routing reduces accidental omissions."},
+            {"evidenceId": "E2", "effect": "mitigates", "tacticalFixRequired": true, "rationale": "Selected ignore checks catch simple removal."},
+            {"evidenceId": "E3", "effect": "mitigates", "tacticalFixRequired": true, "rationale": "Wrapper exit semantics can be tightened."},
+            {"evidenceId": "E5", "effect": "mitigates", "tacticalFixRequired": true, "rationale": "Guidance remains the primary conditional control."}
+          ],
+          "tradeoffs": [
+            {"dimension": "security", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "Clearer rules reduce mistakes but do not prove tool execution.", "validationPlan": "Exercise missing-tool and misrouted-change cases."},
+            {"dimension": "performance", "direction": "neutral", "confidence": "high", "basis": "source-derived", "assessment": "Existing scanner cadence remains.", "validationPlan": "Compare hook timing before and after focused checks."},
+            {"dimension": "memory", "direction": "neutral", "confidence": "high", "basis": "source-derived", "assessment": "No new model or retained state is introduced.", "validationPlan": "Confirm focused checks use bounded path metadata."},
+            {"dimension": "reliability", "direction": "improves", "confidence": "low", "basis": "hypothetical", "assessment": "Tighter wrappers reduce ambiguous success while distributed routing remains.", "validationPlan": "Fault-inject missing and failed scanners."},
+            {"dimension": "operability", "direction": "neutral", "confidence": "medium", "basis": "source-derived", "assessment": "Several policy owners still require coordinated updates.", "validationPlan": "Audit routing consistency after a synthetic scanner addition."},
+            {"dimension": "migration", "direction": "neutral", "confidence": "high", "basis": "source-derived", "assessment": "Focused changes preserve current workflows.", "validationPlan": "Run existing hook and CI tests."}
+          ],
+          "residualRisks": ["Scanner execution remains instruction-dependent."],
+          "implementationReadiness": {
+            "affectedComponents": [".gitignore", ".pre-commit-config.yaml", "dev-docs/AGENT_PLAYBOOK.md"],
+            "workPackages": ["Clarify routing and protect selected ignore rules."],
+            "acceptanceCriteria": ["Known policy-removal and missing-tool cases are detected."],
+            "migrationNotes": ["Use as the tactical baseline while stronger routing is built."],
+            "rollback": "Revert focused documentation and hook checks."
+          }
+        },
+        {
+          "optionId": "run-all-scanners",
+          "title": "Run every scanner on every push",
+          "kind": "structural",
+          "summary": "Remove conditional routing by making the complete scanner set universal.",
+          "diagramPaths": {
+            "before": "diagrams/conditional-privacy-admission-before.mmd",
+            "after": "diagrams/conditional-privacy-admission-run-all-after.mmd"
+          },
+          "evidenceCoverage": [
+            {"evidenceId": "E1", "effect": "addresses", "tacticalFixRequired": true, "rationale": "Universal execution removes routing ambiguity."},
+            {"evidenceId": "E2", "effect": "unaffected", "tacticalFixRequired": true, "rationale": "Ignore protection still needs a direct control."},
+            {"evidenceId": "E3", "effect": "addresses", "tacticalFixRequired": true, "rationale": "A required universal scan must fail when absent."},
+            {"evidenceId": "E5", "effect": "addresses", "tacticalFixRequired": false, "rationale": "Conditional instructions are no longer needed for selection."}
+          ],
+          "tradeoffs": [
+            {"dimension": "security", "direction": "improves", "confidence": "high", "basis": "source-derived", "assessment": "No relevant change can be misclassified as scanner-inapplicable.", "validationPlan": "Bypass local hooks and require full CI execution."},
+            {"dimension": "performance", "direction": "regresses", "confidence": "medium", "basis": "source-derived", "assessment": "NLP, OCR, and repository-wide scans join every push path.", "validationPlan": "Measure cold and warm full-suite wall time."},
+            {"dimension": "memory", "direction": "regresses", "confidence": "medium", "basis": "source-derived", "assessment": "All scanner models and runtimes may load for unrelated changes.", "validationPlan": "Measure peak RSS and model-cache size on each OS."},
+            {"dimension": "reliability", "direction": "regresses", "confidence": "medium", "basis": "hypothetical", "assessment": "The least portable scanner can block unrelated pushes.", "validationPlan": "Run the full suite on supported operating systems."},
+            {"dimension": "operability", "direction": "regresses", "confidence": "medium", "basis": "source-derived", "assessment": "Every developer and runner needs every scanner dependency.", "validationPlan": "Test clean setup and offline behavior."},
+            {"dimension": "migration", "direction": "regresses", "confidence": "high", "basis": "source-derived", "assessment": "Immediate dependency and workflow expansion is required.", "validationPlan": "Trial in report-only mode before blocking."}
+          ],
+          "residualRisks": ["Scanner false negatives remain.", "Ignore-rule tampering needs a separate gate."],
+          "implementationReadiness": {
+            "affectedComponents": [".pre-commit-config.yaml", ".github/workflows", "pyproject.toml"],
+            "workPackages": ["Make every scanner portable, pinned, and mandatory."],
+            "acceptanceCriteria": ["Every push completes every scanner or fails."],
+            "migrationNotes": ["Benchmark before blocking."],
+            "rollback": "Restore path-filtered execution while retaining deterministic gates."
+          }
+        },
+        {
+          "optionId": "conditional-content-receipts",
+          "title": "Route conditionally with content-bound receipts",
+          "kind": "structural",
+          "summary": "Centralize policy and prove expensive scans against exact staged blobs and configuration.",
+          "diagramPaths": {
+            "before": "diagrams/conditional-privacy-admission-before.mmd",
+            "after": "diagrams/conditional-privacy-admission-receipts-after.mmd"
+          },
+          "evidenceCoverage": [
+            {"evidenceId": "E1", "effect": "addresses", "tacticalFixRequired": true, "rationale": "One policy owns applicability across hooks and CI."},
+            {"evidenceId": "E2", "effect": "addresses", "tacticalFixRequired": true, "rationale": "Required-ignore and never-track rules become blocking."},
+            {"evidenceId": "E3", "effect": "addresses", "tacticalFixRequired": true, "rationale": "Receipts cannot be created for not-run scanners."},
+            {"evidenceId": "E5", "effect": "addresses", "tacticalFixRequired": true, "rationale": "Instructions are backed by deterministic routing and verification."}
+          ],
+          "tradeoffs": [
+            {"dimension": "security", "direction": "improves", "confidence": "high", "basis": "source-derived", "assessment": "Applicability and successful execution become content/configuration-bound.", "validationPlan": "Exercise stale, missing, failed, forged-shape, and changed-content receipts."},
+            {"dimension": "performance", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "Relative to universal scanning, expensive tools run only for relevant changes.", "validationPlan": "Measure routing overhead and per-trigger scan time."},
+            {"dimension": "memory", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "Only applicable scanner models need to load.", "validationPlan": "Measure peak RSS per trigger class."},
+            {"dimension": "reliability", "direction": "unknown", "confidence": "medium", "basis": "hypothetical", "assessment": "Scoped failures help, but index/receipt state introduces new edge cases.", "validationPlan": "Test partial staging, renames, worktrees, expiry, and all supported OSes."},
+            {"dimension": "operability", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "One policy becomes the routing source of truth, with receipt cleanup and disposition review as new duties.", "validationPlan": "Add a scanner in a synthetic branch and audit required edits."},
+            {"dimension": "migration", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "Trigger families can move from report-only to blocking independently.", "validationPlan": "Promote one family at a time with rollback drills."}
+          ],
+          "residualRisks": [
+            "A malicious local maintainer can forge local state.",
+            "Scanner false negatives remain.",
+            "Public CI cannot reproduce every local-only scanner."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [".gitignore", ".pre-commit-config.yaml", "scripts", ".github/workflows", "dev-docs"],
+            "workPackages": [
+              "Define policy and trigger schema.",
+              "Implement protected paths and staged-snapshot routing.",
+              "Normalize wrapper exit states and create private receipts.",
+              "Add dispositions, CI parity, and synthetic tests."
+            ],
+            "acceptanceCriteria": [
+              "Forbidden roots cannot be committed.",
+              "Relevant changes require matching successful receipts.",
+              "Required CI catches local bypass without exposing values."
+            ],
+            "migrationNotes": ["Start report-only and promote each trigger family after calibration."],
+            "rollback": "Disable the affected receipt requirement while retaining deterministic gates and CI scans."
+          }
+        }
+      ],
+      "recommendedOptionId": "conditional-content-receipts",
+      "recommendation": "Use conditional content-bound receipts; retain current controls during incremental rollout."
+    }
+  ],
+  "openQuestions": [
+    "Which roots are permanently never-track versus inventory-admissible?",
+    "Can HoundDog run on a reviewed CI runner, or must it remain local-only?",
+    "What receipt expiry is appropriate after scanner timing and update-cadence measurements?"
+  ]
+}

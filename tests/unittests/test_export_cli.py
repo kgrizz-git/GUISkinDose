@@ -27,18 +27,19 @@ def test_cli_export_xlsx(tmp_path):
 
 
 @pytest.mark.skipif(not _RDSR.exists(), reason="example RDSR missing")
-def test_cli_export_default_path(tmp_path, monkeypatch):
-    pytest.importorskip("reportlab")  # PDF writer is in the optional `export` extra
-    # No export_path -> timestamped file next to the input. Copy RDSR into tmp.
-    import shutil
+def test_cli_export_requires_explicit_path():
+    with pytest.raises(ValueError, match="--export-path is required"):
+        run_cli_export([str(_RDSR)], str(_SETTINGS), "pdf")
 
-    local = tmp_path / "case.dcm"
-    shutil.copy(_RDSR, local)
-    result = run_cli_export([str(local)], str(_SETTINGS), "pdf")
-    assert result.parent == tmp_path
-    assert result.name.startswith("mypyskindose_report_")
-    assert result.suffix == ".pdf"
-    assert result.exists()
+
+@pytest.mark.skipif(not _RDSR.exists(), reason="example RDSR missing")
+def test_cli_export_refuses_overwrite_without_force(tmp_path):
+    out = tmp_path / "report.html"
+    out.write_text("existing", encoding="utf-8")
+    with pytest.raises(ValueError, match="export_destination_exists"):
+        run_cli_export([str(_RDSR)], str(_SETTINGS), "html", export_path=out)
+    run_cli_export([str(_RDSR)], str(_SETTINGS), "html", export_path=out, force=True)
+    assert out.read_bytes().lower().startswith(b"<!doctype html>")
 
 
 def test_cli_export_flag_conflicts():

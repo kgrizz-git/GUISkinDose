@@ -6,17 +6,43 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   build-n-publish:
-    name: Build an publish Python distributions to PyPI
+    name: Build and publish Python distributions to PyPI
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+      with:
+        fetch-depth: 0
+    - name: Require release commit on main with successful CI
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        RELEASE_COMMIT=$(git rev-parse "$GITHUB_SHA^{commit}")
+        git fetch origin main
+        git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main
+        SUCCESSFUL_RUNS=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$RELEASE_COMMIT" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')
+        test "$SUCCESSFUL_RUNS" -ge 1
     - name: Setup python 3.12
       uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: 3.12
+    - name: Install uv
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+      with:
+        version: "0.11.25"
+    - name: Install locked privacy/release checks
+      run: uv sync --extra dev --locked
+    - name: Enforce privacy release gates
+      run: |
+        uv run --no-sync python scripts/check_sensitive_content.py --require-approved-assets
+        uv run --no-sync python scripts/check_ignored_asset_files.py --strict
+        uv run --no-sync python scripts/run_semgrep_privacy.py
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip

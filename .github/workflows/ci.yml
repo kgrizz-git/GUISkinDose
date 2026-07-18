@@ -15,10 +15,12 @@ concurrency:
 jobs:
   static-analysis:
     runs-on: ubuntu-latest
-    env:
-      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+      with:
+        fetch-depth: 0
     - name: Install uv
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
       with:
@@ -45,6 +47,27 @@ jobs:
         python scripts/check_changelog.py
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
+    - name: Check sensitive content and approved assets
+      run: python scripts/check_sensitive_content.py --require-approved-assets
+    - name: Check protected privacy paths and scanner routing policy
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+      run: |
+        python scripts/privacy_admission.py check --mode all
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          PRIVACY_BASE_REF="origin/$BASE_REF" python scripts/privacy_admission.py route --mode range
+        else
+          python scripts/privacy_admission.py route --mode all
+        fi
+    - name: Check PR and push metadata for sensitive content
+      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
+    - name: Check ignored and untracked risky artifacts
+      run: python scripts/check_ignored_asset_files.py --strict
+    - name: Check approved asset inventory Markdown
+      run: python scripts/render_asset_inventory.py --check
+    - name: Check privacy tool inventory and scanner references
+      run: python scripts/render_privacy_tool_inventory.py --check
     - name: Check GUI help sync
       run: python scripts/sync_gui_help.py --check
     - name: Check GUI help registry
@@ -71,12 +94,13 @@ jobs:
       run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
     - name: Semgrep (OWASP Top 10 SAST)
       run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
-    - name: Safety (dependency vulnerability scan — skipped without key)
-      if: env.SAFETY_API_KEY != ''
-      run: safety scan --detailed-output
+    - name: Semgrep (project PHI/PII leak rules, blocking)
+      run: python scripts/run_semgrep_privacy.py
 
   gui-smoke:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
     - name: Install uv
@@ -95,6 +119,8 @@ jobs:
 
   matrix-prep:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       config: ${{ steps.set-matrix.outputs.config }}
     steps:
@@ -117,6 +143,8 @@ jobs:
   build:
     needs: matrix-prep
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-prep.outputs.config) }}
@@ -131,7 +159,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest codecov ruff
+        pip install pytest ruff coverage
         pip install -e .
     - name: Compile check
       run: python -m compileall src/mypyskindose
@@ -143,6 +171,31 @@ jobs:
         coverage run -m pytest --ignore=tests/gui
     - name: Coverage threshold (≥60%)
       run: coverage report --include="src/mypyskindose/*" --fail-under=60
-    - name: Upload coverage to codecov
+
+  cloud-scans-after-gates:
+    name: Main-only external cloud scans
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [static-analysis, gui-smoke, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+    steps:
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      with:
+        python-version: '3.12'
+    - name: Install external scan clients
+      run: python -m pip install --upgrade codecov safety
+    - name: Generate coverage after all repository gates pass
       run: |
-        codecov
+        python -m pip install -e . pytest coverage
+        coverage run -m pytest --ignore=tests/gui
+        coverage xml
+    - name: Upload coverage to Codecov (main only)
+      run: codecov
+    - name: Run Safety cloud scan (main only; skipped without key)
+      if: env.SAFETY_API_KEY != ''
+      run: safety scan --detailed-output

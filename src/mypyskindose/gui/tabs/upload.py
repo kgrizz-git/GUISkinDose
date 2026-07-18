@@ -7,7 +7,6 @@ closing over ``index()`` scope.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 from nicegui import run, ui
@@ -28,7 +27,7 @@ from ..page_context import PageContext
 from ..state import reset_results, state
 from ..upload_temp_files import (
     clear_all_temp_uploads,
-    register_temp_upload,
+    create_temp_upload,
     remove_temp_upload,
 )
 from ..ui_copy import copy_text
@@ -80,6 +79,9 @@ def build(ctx: PageContext) -> None:
                 ui.label(
                     "DICOM RDSR (.dcm) or tabular event table (.csv, .tsv, .xlsx, .xlsm)"
                 ).classes("text-sm text-grey-4 q-mb-sm")
+                ui.label(
+                    copy_text("upload.privacy_notice")
+                ).classes("text-xs text-orange-5 q-mb-sm")
 
                 async def handle_upload(e):
                     async with upload_lock:
@@ -105,10 +107,7 @@ def build(ctx: PageContext) -> None:
                             )
                             _uploader["el"].reset()
                             return
-                        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                            tmp.write(data)
-                            tmp_path = Path(tmp.name)
-                        register_temp_upload(tmp_path)
+                        tmp_path = create_temp_upload(data, suffix=suffix)
 
                         state.input_sheet_name = 0
                         state.available_sheets = []

@@ -14,12 +14,14 @@ from mypyskindose.main import (
     run_cli_export,
     validate_export_flags,
 )
+from mypyskindose.privacy import install_value_safe_excepthook, safe_user_error
 
 logger = logging.getLogger(__name__)
 
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 if __name__ == "__main__":
+    install_value_safe_excepthook(logger)
     args = get_argument_parser(sys.argv[1:])
 
     # Configure logging once for all entry paths. run_gui calls this again in
@@ -35,14 +37,18 @@ if __name__ == "__main__":
                 input_preview_only=getattr(args, "input_preview_only", False),
                 has_files=bool(args.file_path),
             )
-        except ValueError as exc:
-            print(str(exc), file=sys.stderr)
+        except ValueError:
+            print(safe_user_error("invalid_export_options"), file=sys.stderr)
             sys.exit(1)
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from mypyskindose.gui.app import run_gui
 
-        run_gui(native=getattr(args, "native", False), host=getattr(args, "host", None))
+        run_gui(
+            native=getattr(args, "native", False),
+            host=getattr(args, "host", None),
+            allow_network=getattr(args, "allow_network", False),
+        )
     elif getattr(args, "input_preview_only", False):
         if not args.file_path:
             print("--input-preview-only requires --file-path", file=sys.stderr)
@@ -52,6 +58,7 @@ if __name__ == "__main__":
                 single_path,
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
+                include_sensitive_values=getattr(args, "include_sensitive_preview", False),
             )
     else:
         if (run_settings := args.settings) is None:
@@ -78,8 +85,8 @@ if __name__ == "__main__":
                     input_preview_only=getattr(args, "input_preview_only", False),
                     has_files=bool(file_paths),
                 )
-            except ValueError as exc:
-                print(str(exc), file=sys.stderr)
+            except ValueError:
+                print(safe_user_error("invalid_export_options"), file=sys.stderr)
                 sys.exit(1)
             out_path = run_cli_export(
                 file_paths,
@@ -89,8 +96,12 @@ if __name__ == "__main__":
                 export_title=getattr(args, "export_title", None),
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
+                include_source_identifiers=getattr(args, "include_source_identifiers", False),
+                force=getattr(args, "force", False),
+                allow_ignored_checkout=getattr(args, "allow_ignored_checkout_output", False),
             )
-            print(f"Report written to {out_path}")
+            del out_path
+            print("Report written successfully.")
         elif len(file_paths) > 1:
             from mypyskindose.main import analyze_multiple_input_files
             result = analyze_multiple_input_files(

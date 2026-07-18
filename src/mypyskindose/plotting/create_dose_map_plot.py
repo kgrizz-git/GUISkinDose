@@ -7,6 +7,8 @@ import plotly.graph_objects as go
 from PIL import Image
 
 from mypyskindose.phantom_class import Phantom
+from mypyskindose.privacy import safe_error_event
+from mypyskindose.safe_output import atomic_write_private
 from mypyskindose.plotting.create_layout_for_dose_map_plots import (
     create_layout_for_dose_map_plots,
 )
@@ -139,15 +141,18 @@ def create_dose_map_plot(patient: Phantom, settings: PyskindoseSettings, dose_ma
     else:
         from tqdm import tqdm as pbar
 
-    # create static dose map plots
+    print("Writing four static dose-map images to the configured output directory.")
+    # Render in memory, then cross the Git-aware atomic output boundary.
     try:
         for i in pbar(range(len(eyes)), desc="saving static dosemaps: "):
             fig["layout"]["scene"]["camera"] = eyes[i]
-            fig.write_image(names[i].absolute())
-    except IOError:
-        logger.error("Failed to save image plots", exc_info=True)
+            image_bytes = fig.to_image(format="png")
+            atomic_write_private(names[i], image_bytes, allow_ignored_checkout=True)
+    except Exception as exc:
+        safe_error_event(logger, "static_dosemap_write", exc)
+        return
 
-    print(f"Saved plots to {settings.file_result_output_path.absolute()}")
+    print("Saved static dose-map plots.")
 
     # show dose map plot with PIL if not in notebook mode
     if not settings.plot.notebook_mode:

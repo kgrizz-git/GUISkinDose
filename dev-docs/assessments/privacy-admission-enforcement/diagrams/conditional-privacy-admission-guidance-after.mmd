@@ -1,0 +1,10 @@
+flowchart LR
+    Change[Contributor or agent change] --> Guidance[Expanded written routing rules]
+    Change --> Index[Git index]
+    Guidance --> Manual[Contributor runs applicable tools]
+    Index --> Hooks[Existing hooks]
+    Hooks --> Gate[Existing deterministic gates]
+    Hooks --> Push[Push]
+    Push --> CI[Existing CI path filters]
+    CI --> Merge[Merge]
+    Manual -. no content-bound proof .-> Hooks

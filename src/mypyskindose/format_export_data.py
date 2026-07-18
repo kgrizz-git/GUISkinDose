@@ -28,7 +28,7 @@ from mypyskindose.settings import PyskindoseSettings
 # ``MultiExamResult.to_dict()``) changes incompatibly: field removed, renamed, or
 # type changed. Not tied to package semver; downstream consumers should read this
 # before parsing nested fields.
-EXPORT_SCHEMA_VERSION = 1
+EXPORT_SCHEMA_VERSION = 2
 
 
 @dataclass
@@ -496,29 +496,32 @@ class MultiExamResult:
     total_events: int
     warnings: list[str]
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self, *, include_source_identifiers: bool = False) -> dict[str, Any]:
+        """Serialize results, excluding source filenames by default."""
+        exams: list[dict[str, Any]] = []
+        for exam in self.exams:
+            serialized = {
+                "exam_id": exam.exam_id,
+                "event_count": exam.event_count,
+                "patient_offset": exam.patient_offset,
+                "settings_snapshot": exam.settings_snapshot,
+                "warnings": exam.warnings,
+                "output": exam.output.to_dict(),
+            }
+            if include_source_identifiers:
+                serialized["source_file"] = exam.source_file
+            exams.append(serialized)
         return {
             "schema_version": EXPORT_SCHEMA_VERSION,
-            "exams": [
-                {
-                    "exam_id": e.exam_id,
-                    "source_file": e.source_file,
-                    "event_count": e.event_count,
-                    "patient_offset": e.patient_offset,
-                    "settings_snapshot": e.settings_snapshot,
-                    "warnings": e.warnings,
-                    "output": e.output.to_dict(),
-                }
-                for e in self.exams
-            ],
+            "exams": exams,
             "aggregate_dose_map": self.aggregate_dose_map.tolist(),
             "aggregate_psd": self.aggregate_psd,
             "total_events": self.total_events,
             "warnings": self.warnings,
         }
 
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
+    def to_json(self, *, include_source_identifiers: bool = False) -> str:
+        return json.dumps(self.to_dict(include_source_identifiers=include_source_identifiers))
 
 
 def format_analysis_result_for_export(

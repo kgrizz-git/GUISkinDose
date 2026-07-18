@@ -12,6 +12,8 @@ from pathlib import Path
 from docx import Document  # type: ignore[import-untyped]
 from docx.shared import Inches, Pt, RGBColor  # type: ignore[import-untyped]
 
+from mypyskindose.safe_output import atomic_write_private
+
 from .._format import (
     CORRECTION_HEADER,
     OFFSET_LABELS,
@@ -134,4 +136,4 @@ def render_docx_bytes(payload: ExportPayload) -> bytes:
 
 
 def write_docx(payload: ExportPayload, path: Path) -> None:
-    build_document(payload).save(str(Path(path)))
+    atomic_write_private(path, render_docx_bytes(payload))

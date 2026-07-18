@@ -134,12 +134,21 @@ def test_tabular_input_meta_shape_and_serializable():
     meta = gui_io._tabular_input_meta(
         "export.csv", _fake_provenance(), swap_lat_lon=True, warnings=["w1", "w2"]
     )
-    assert meta["source_file"] == "export.csv"
+    assert "source_file" not in meta
     assert meta["schema"] == "radimetrics"
     assert meta["header_row_index"] == 3
     assert meta["lat_lon_swapped"] is True
     assert meta["warnings"] == ["w1", "w2"]
     json.dumps(meta)  # embedded in JSON export — must serialize
+
+    identified = gui_io._tabular_input_meta(
+        "export.csv",
+        _fake_provenance(),
+        swap_lat_lon=True,
+        warnings=[],
+        include_source_identifiers=True,
+    )
+    assert identified["source_file"] == "export.csv"
 
 
 def test_inject_html_meta_inserts_comment_after_head():

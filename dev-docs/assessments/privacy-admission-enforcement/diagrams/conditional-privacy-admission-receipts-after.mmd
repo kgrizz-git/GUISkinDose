@@ -1,0 +1,13 @@
+flowchart LR
+    Change[Contributor or agent change] --> Index[Exact staged snapshot]
+    Index --> Policy[Versioned privacy admission policy]
+    Policy --> Protect[Protected ignore and never-track gate]
+    Policy --> Router[Conditional scanner router]
+    Router --> Required[Required scanner wrappers]
+    Required --> Receipt[Private content-bound receipts]
+    Receipt --> Verify[Pre-push receipt verifier]
+    Protect --> Verify
+    Verify -->|valid and clean/reviewed| Push[Push]
+    Verify -->|missing, stale, error, or finding| Block[Block]
+    Push --> CI[Required CI independently evaluates policy]
+    CI --> Merge[Merge]

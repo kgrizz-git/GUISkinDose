@@ -1,6 +1,6 @@
 # Documentation index
 
-_Date: 2026-07-02_
+_Date: 2026-07-16_
 
 Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) for agent orientation, then [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) for validation commands and the source-of-truth map.
 
@@ -17,6 +17,20 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
+| [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate. |
+| [privacy_admission_policy.json](privacy_admission_policy.json) | Machine-enforced protected-ignore, never-track, conditional scanner, receipt-expiry, and scanner-configuration policy. |
+| [../scripts/privacy_admission.py](../scripts/privacy_admission.py) | Staged/range privacy router, protected-path gate, scanner runner, and content-bound private receipt verifier. |
+| [../scripts/check_commit_message.py](../scripts/check_commit_message.py) | Local `commit-msg` gate for value-free sensitive-content checks before the message enters history. |
+| [../scripts/render_asset_inventory.py](../scripts/render_asset_inventory.py) | Generates/checks the linked Markdown view of the machine-enforced sensitive-asset inventory. |
+| [approved_asset_inventory.md](approved_asset_inventory.md) | Generated reviewer-friendly linked view of all approved/pending sensitive assets; must match the JSON source. |
+| [privacy_tool_inventory.json](privacy_tool_inventory.json) | Machine-readable versions, roles, execution boundaries, and output policies for direct privacy tools and runtimes. |
+| [privacy_tool_inventory.md](privacy_tool_inventory.md) | Generated reviewer-friendly privacy-tool inventory; active scanner references are checked in hooks and CI. |
+| [../scripts/render_privacy_tool_inventory.py](../scripts/render_privacy_tool_inventory.py) | Validates scanner-to-tool coverage and generates the privacy-tool inventory Markdown. |
+| [../scripts/run_presidio_advisory.py](../scripts/run_presidio_advisory.py) | Optional local Presidio text scan; advisory only and safe to log. |
+| [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md) | Public-repository privacy policy, DICOM/image review requirements, approved-asset inventory, and scanner use. |
+| [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Private evidence, historical audit, containment, rewrite/notification, verification, and privacy release checklist runbook. |
+| [references/LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md) | Local advisory PII/PHI model comparison, macOS/LM Studio boundaries, and synthetic-fixture evaluation protocol. |
+| [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md) | Optional loopback-only SonarQube Community Build runner, private result tracking, and local quality-gate workflow. |
 | [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |
 | [../scripts/check_ui_copy.py](../scripts/check_ui_copy.py) | Validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`; checks `copy_text()` usage and terminology warnings. |
 | [../scripts/check_feature_doc_matrix.py](../scripts/check_feature_doc_matrix.py) | Validates feature-to-code/test/doc/help traceability in `dev-docs/feature_doc_matrix.json`; can emit advisory doc-impact warnings from changed paths. |
@@ -53,6 +67,8 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
+| [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
+| [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
 
@@ -95,6 +111,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md) | Round 2 gap review: restore-from-maximize, title-bar validation, maximized event filtering, debounce lifecycle, CI-safe tests, `Path.replace`. |
 | [assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md](assessments/YZ_AXIS_INCONSISTENCY_ASSESSMENT.md) | Audit of coordinate naming contradictions: physical geometry, DICOM attribute names, and historical PySkinDose plot aliases differ; current recommendation is documentation/comment cleanup plus fixture-backed validation before behavior changes. |
 | [assessments/OWASP_SECURITY_TOOLS_ASSESSMENT.md](assessments/OWASP_SECURITY_TOOLS_ASSESSMENT.md) | OWASP Top 10 coverage audit of current SAST/dependency scanning; recommendations for semgrep, safety, gitleaks. |
+| [assessments/privacy-admission-enforcement/hardening.md](assessments/privacy-admission-enforcement/hardening.md) | Design review of protected ignore/never-track rules and conditional scanner enforcement; recommends staged-content-bound local receipts plus independent CI. |
 
 ---
 
@@ -112,6 +129,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
 | [plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | Move Show all exams checkbox next to Full procedure, fix composite state leakage, upgrade event selection to searchable select with exam context. |
+| [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | Ordered execution plan for DICOM/tabular sanitization, enforceable privacy scanners, full GUISkinDose Python/PyPI naming, fork-preserving rename, and cautious publication. |
 
 ## Archived plans (`plans/archive/`)
 

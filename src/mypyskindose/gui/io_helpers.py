@@ -9,21 +9,30 @@ tab modules). Pure / single-source-of-truth and unit-testable.
 from __future__ import annotations
 
 import json
+import logging
 
-from mypyskindose.debug import dprint
+from mypyskindose.privacy import safe_error_event
+
+logger = logging.getLogger(__name__)
 
 
 # ── tabular provenance embedding in exports ───────────────────────────────
 # Both the JSON payload and the HTML export embed the tabular import provenance
 # so a saved result records exactly how its source table was read.
-def _tabular_input_meta(file_name, provenance, swap_lat_lon, warnings) -> dict:
+def _tabular_input_meta(
+    file_name,
+    provenance,
+    swap_lat_lon,
+    warnings,
+    *,
+    include_source_identifiers: bool = False,
+) -> dict:
     """Build the tabular-input provenance dict embedded in exports.
 
     Downstream consumers should read the top-level ``schema_version`` on the
     export payload before parsing nested calculation fields.
     """
-    return {
-        "source_file": file_name,
+    result = {
         "schema": provenance.schema_name,
         "encoding": provenance.detected_encoding,
         "delimiter": provenance.detected_delimiter,
@@ -32,6 +41,9 @@ def _tabular_input_meta(file_name, provenance, swap_lat_lon, warnings) -> dict:
         "lat_lon_swapped": swap_lat_lon,
         "warnings": list(warnings),
     }
+    if include_source_identifiers:
+        result["source_file"] = file_name
+    return result
 
 
 def _inject_html_tabular_meta(html: bytes, meta: dict) -> bytes:
@@ -100,6 +112,6 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
         if not result:
             return None
         return result[0] if isinstance(result, (list, tuple)) else result
-    except Exception as e:
-        dprint("GUI", f"pywebview save dialog failed ({e}); falling back to download.")
+    except Exception as exc:
+        safe_error_event(logger, "native_save_dialog", exc, level=logging.DEBUG)
         return None

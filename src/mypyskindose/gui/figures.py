@@ -8,15 +8,16 @@ the HTML/PNG exporters), or ``None`` on failure.
 
 from __future__ import annotations
 
-import traceback
-
+import logging
 from typing import Any
 
-from mypyskindose.debug import dprint
+from mypyskindose.privacy import safe_error_event
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
 from .helpers import build_settings
 from .state import state
+
+logger = logging.getLogger(__name__)
 
 
 def extract_exam_dose_map(exam_output: Any) -> tuple[Any, dict[str, Any]]:
@@ -108,8 +109,8 @@ def make_geometry_fig(
             )
             return fig.to_dict()
         return None
-    except Exception:
-        dprint("RENDERING", traceback.format_exc())
+    except Exception as exc:
+        safe_error_event(logger, "geometry_figure_render", exc, level=logging.DEBUG)
         return None
 
 
@@ -143,8 +144,8 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
         fig = render_dosemap_plotly_figure(dose_map, patient_data, state.colorscale, dark=True)
         state.dosemap_fig = fig
         return fig.to_dict()
-    except Exception:
-        dprint("RENDERING", traceback.format_exc())
+    except Exception as exc:
+        safe_error_event(logger, "dosemap_figure_render", exc, level=logging.DEBUG)
         return None
 
 

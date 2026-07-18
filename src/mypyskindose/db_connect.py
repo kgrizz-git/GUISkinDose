@@ -4,6 +4,8 @@ import sqlite3
 
 import pandas as pd
 
+from mypyskindose.privacy import safe_error_event
+
 logger = logging.getLogger("mypyskindose")
 
 
@@ -35,8 +37,8 @@ def db_connect(db_name: str):
 
         # Create cursor (enables sql commands using the sql method)
         cursor = conn.cursor()
-    except sqlite3.Error:
-        logger.error("Failed to connect to/create database at {}".format(db_name), exc_info=True)
+    except sqlite3.Error as exc:
+        safe_error_event(logger, "corrections_database_connect", exc)
         raise
 
     if not db_exist:

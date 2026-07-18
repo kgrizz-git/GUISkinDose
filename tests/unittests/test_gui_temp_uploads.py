@@ -10,6 +10,7 @@ and the atexit sweep removes whatever remains.
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -39,6 +40,19 @@ def test_register_tracks_current_upload():
     temp_files.register_temp_upload(path)
     assert path in temp_files._uploaded_temp_files
     assert path.exists()
+
+
+def test_create_temp_upload_uses_private_random_session_storage():
+    source_name = "PATIENT-SENTINEL-12345.dcm"
+    path = temp_files.create_temp_upload(b"synthetic", suffix=Path(source_name).suffix)
+
+    assert source_name not in str(path)
+    assert path.name.startswith("upload-")
+    assert path.parent.name.startswith("session-")
+    assert path.read_bytes() == b"synthetic"
+    if os.name == "posix":
+        assert path.stat().st_mode & 0o777 == 0o600
+        assert path.parent.stat().st_mode & 0o777 == 0o700
 
 
 def test_register_accumulates_uploads():

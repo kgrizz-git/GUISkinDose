@@ -1,0 +1,145 @@
+# Project-specific, blocking privacy SAST rules for MyPySkinDose.
+#
+# Findings must be fixed or documented inline with a narrow `nosemgrep` comment
+# that explains why the value is deliberately user-visible. The rules avoid
+# reporting matched runtime values, but normal Semgrep output can include source
+# code, so CI and hooks use quiet/error mode and do not upload reports.
+rules:
+  - id: mypyskindose-identifier-attr-to-log-or-stdout
+    severity: ERROR
+    languages: [python]
+    message: >-
+      A sensitive identifier or source filename may reach a diagnostic or UI
+      sink. Emit only a stable operation code/count, or require explicit user
+      opt-in and document the reviewed exception inline.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe: CWE-532
+    patterns:
+      - pattern-either:
+          - pattern: print(..., $OBJ.$ATTR, ...)
+          - pattern: print(..., f"...{$OBJ.$ATTR}...", ...)
+          - pattern: logging.$M(..., $OBJ.$ATTR, ...)
+          - pattern: logging.$M(..., f"...{$OBJ.$ATTR}...", ...)
+          - pattern: $LOG.$M(..., $OBJ.$ATTR, ...)
+          - pattern: $LOG.$M(..., f"...{$OBJ.$ATTR}...", ...)
+          - pattern: ui.notify(..., $OBJ.$ATTR, ...)
+          - pattern: ui.notify(..., f"...{$OBJ.$ATTR}...", ...)
+      - metavariable-regex:
+          metavariable: $ATTR
+          regex: ^(original_filename|source_file|study_id|patient_name|patient_id|patient_birth_date|patient_age|accession_number|institution_name|institution_address|referring_physician_name|physician_name|irradiation_event_uid)$
+
+  - id: mypyskindose-filename-var-to-log-or-stdout
+    severity: ERROR
+    languages: [python]
+    message: >-
+      A filename/path variable may reach a diagnostic sink. Source filenames
+      can contain PHI; use an opaque label or a stable value-free message.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe: CWE-532
+    patterns:
+      - pattern-either:
+          - pattern: print(..., f"...{$X}...", ...)
+          - pattern: logging.$M(..., f"...{$X}...", ...)
+          - pattern: $LOG.$M(..., f"...{$X}...", ...)
+      - metavariable-regex:
+          metavariable: $X
+          regex: ^(filename|filepath|file_path|file_name|source_file|source_path)$
+
+  - id: mypyskindose-raw-exception-to-diagnostic
+    severity: ERROR
+    languages: [python]
+    message: >-
+      Raw exception text may contain identifiers or absolute paths. Report a
+      stable operation code and exception class through the privacy helper.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-532
+    paths:
+      include:
+        - src/**
+    patterns:
+      - pattern-either:
+          - pattern: print(..., $EXC, ...)
+          - pattern: print(..., str($EXC), ...)
+          - pattern: print(..., f"...{$EXC}...", ...)
+          - pattern: logging.$M(..., $EXC, ...)
+          - pattern: logging.$M(..., f"...{$EXC}...", ...)
+          - pattern: $LOG.$M(..., $EXC, ...)
+          - pattern: $LOG.$M(..., f"...{$EXC}...", ...)
+          - pattern: ui.notify(..., $EXC, ...)
+          - pattern: ui.notify(..., f"...{$EXC}...", ...)
+      - pattern-not-inside: safe_error_event(..., $EXC, ...)
+      - pattern-not-inside: exception_class_name($EXC)
+      - pattern-not-inside: sys.__excepthook__(..., $EXC, ...)
+      - metavariable-regex:
+          metavariable: $EXC
+          regex: ^(exc|err|error|exception)$
+
+  - id: mypyskindose-prohibited-exception-diagnostics
+    severity: ERROR
+    languages: [python]
+    message: >-
+      Tracebacks and logger.exception/exc_info can expose identifiers and paths.
+      Use the value-safe privacy diagnostic helper.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-532
+    paths:
+      include:
+        - src/**
+    pattern-either:
+      - pattern: $LOG.exception(...)
+      - pattern: logging.exception(...)
+      - pattern: $LOG.$M(..., exc_info=True, ...)
+      - pattern: logging.$M(..., exc_info=True, ...)
+      - pattern: traceback.format_exc(...)
+      - pattern: traceback.print_exc(...)
+
+  - id: mypyskindose-unsafe-gui-export-write
+    severity: ERROR
+    languages: [python]
+    message: >-
+      GUI/export output bypasses the atomic Git-aware write boundary. Render to
+      bytes and use atomic_write_private.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-73
+    paths:
+      include:
+        - src/mypyskindose/gui/tabs/data.py
+        - src/mypyskindose/gui/tabs/export.py
+        - src/mypyskindose/export/writers/**
+        - src/mypyskindose/plotting/create_dose_map_plot.py
+    pattern-either:
+      - pattern: $P.write_text(...)
+      - pattern: $P.write_bytes(...)
+      - pattern: $P.open("w", ...)
+      - pattern: $P.open("wb", ...)
+      - pattern: open($P, "w", ...)
+      - pattern: open($P, "wb", ...)
+      - pattern: $FIG.write_image(...)
+
+  - id: mypyskindose-persistent-clinical-named-tempfile
+    severity: ERROR
+    languages: [python]
+    message: >-
+      Persistent upload temp files must use the private random-name session
+      store and its cleanup registry.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-377
+    paths:
+      include:
+        - src/mypyskindose/gui/tabs/**
+        - src/mypyskindose/gui/widgets/**
+        - src/mypyskindose/gui/upload_temp_files.py
+    patterns:
+      - pattern: tempfile.NamedTemporaryFile(..., delete=False, ...)

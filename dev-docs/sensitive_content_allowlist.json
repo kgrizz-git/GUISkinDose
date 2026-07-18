@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "allowed_findings": [
+    {
+      "path": "pyproject.toml",
+      "rule": "EMAIL_ADDRESS",
+      "location": "8",
+      "reason": "Public package-author contact deliberately supplied in project metadata."
+    },
+    {
+      "path": "pyproject.toml",
+      "rule": "EMAIL_ADDRESS",
+      "location": "9",
+      "reason": "Public package-author contact deliberately supplied in project metadata."
+    },
+    {
+      "path": "tests/unittests/test_check_doc_freshness.py",
+      "rule": "FILE_URI",
+      "location": "126",
+      "reason": "Deliberate test input for the documentation path checker."
+    }
+  ]
+}

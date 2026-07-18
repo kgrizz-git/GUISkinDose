@@ -24,6 +24,7 @@ from mypyskindose.input_adapters.base import (
 )
 from mypyskindose.input_adapters.models import InputAdapterResult
 from mypyskindose.input_adapters.tabular_loader import _RawLoad
+from mypyskindose.privacy import exception_class_name
 from mypyskindose.settings import PyskindoseSettings
 
 # Lowercase versions of key DoseTrack export column headers (for header detection).
@@ -213,7 +214,9 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
         try:
             data_df["AcquisitionPlane"] = _normalize_plane_code(data_df["AcquisitionPlane"])
         except ValueError as exc:
-            raise ValueError(f"DoseTrack plane code normalization failed: {exc}") from exc
+            raise ValueError(
+                f"DoseTrack plane code normalization failed (error_type={exception_class_name(exc)})."
+            ) from exc
 
     # Coerce numeric columns, plus the DAP sentinel.
     coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, warnings)

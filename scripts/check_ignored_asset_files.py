@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Warn when PNG/HTML files outside PlotOutputs are untracked or gitignored.
+"""Detect risky generated/data artifacts outside approved ignored roots.
 
 Repository policy keeps ``*.png`` and ``*.html`` in ``.gitignore`` so local dose-map
 exports do not clutter ``git status``, with ``!docs/**/*.png`` as the only broad
@@ -15,11 +15,33 @@ import subprocess
 import sys
 from pathlib import Path, PurePosixPath
 
-ASSET_SUFFIXES = {".png", ".html"}
+ASSET_SUFFIXES = {
+    ".csv",
+    ".dcm",
+    ".dicom",
+    ".docx",
+    ".html",
+    ".jsonl",
+    ".log",
+    ".npy",
+    ".npz",
+    ".out",
+    ".pdf",
+    ".pickle",
+    ".pkl",
+    ".png",
+    ".sarif",
+    ".trace",
+    ".tsv",
+    ".xlsx",
+}
+RISKY_JSON_NAME_PARTS = {"debug", "diagnostic", "export", "finding", "report", "result", "scan"}
 
 # Paths where ignored PNG/HTML are expected (local outputs and build trees).
 EXCLUDED_PREFIXES = (
     "PlotOutputs/",
+    "tmp/",
+    "test_data_gitignored/",
     "docs/_build/",
     "site/",
     "htmlcov/",
@@ -55,7 +77,19 @@ def _normalize_repo_path(path_str: str) -> str:
 
 
 def _is_asset_path(path_str: str) -> bool:
-    return Path(path_str).suffix.lower() in ASSET_SUFFIXES
+    path = Path(path_str)
+    if path.suffix.lower() in ASSET_SUFFIXES:
+        return True
+    return path.suffix.lower() == ".json" and any(part in path.stem.lower() for part in RISKY_JSON_NAME_PARTS)
+
+
+def _path_label(path_str: str, *, verbose_paths: bool) -> str:
+    if verbose_paths:
+        return path_str
+    import hashlib
+
+    token = hashlib.sha256(_normalize_repo_path(path_str).encode("utf-8")).hexdigest()[:12]
+    return f"path_token={token}"
 
 
 def _is_excluded_path(path_str: str) -> bool:
@@ -119,16 +153,17 @@ def check_ignored_asset_files(
     git_ls_files_output: str | None = None,
     git_status_output: str | None = None,
     strict: bool = False,
+    verbose_paths: bool = False,
 ) -> bool:
     """Print advisory warnings for stray PNG/HTML assets. Returns True if no warnings."""
     root = repo_root or repo_root_from_script()
     warnings: list[str] = []
 
     for path_str in _collect_tracked_but_ignored(root, git_ls_files_output):
+        path_label = _path_label(path_str, verbose_paths=verbose_paths)
         warnings.append(
-            f"tracked but gitignored (may be dropped by `git rm --cached`): {path_str}\n"
-            f"       Force-add (`git add -f {path_str}`), move under docs/, or add a targeted\n"
-            f"       `!path` exception in .gitignore if this asset must stay in version control."
+            f"tracked but gitignored (may be dropped by `git rm --cached`): {path_label}\n"
+            "       Review locally, then explicitly track or relocate it if it belongs in the repository."
         )
 
     status_hits = _collect_status_asset_paths(root, git_status_output)
@@ -137,21 +172,22 @@ def check_ignored_asset_files(
         if path_str in tracked_ignored:
             continue
         if status == "!!":
+            path_label = _path_label(path_str, verbose_paths=verbose_paths)
             warnings.append(
-                f"gitignored asset on disk: {path_str}\n"
-                f"       If intentional local output, move it under PlotOutputs/. Otherwise track it\n"
-                f"       (`git add -f {path_str}`) or relocate under docs/."
+                f"gitignored risky artifact on disk: {path_label}\n"
+                "       Move intentional local output under an approved ignored root or remove it after review."
             )
         else:
+            path_label = _path_label(path_str, verbose_paths=verbose_paths)
             warnings.append(
-                f"untracked asset outside PlotOutputs/: {path_str}\n"
-                f"       Add it to git if it belongs in the repo, or move generated output under PlotOutputs/."
+                f"untracked risky artifact outside approved output roots: {path_label}\n"
+                "       Admit it through the sensitive-asset policy or relocate/remove it."
             )
 
     if warnings:
         header = (
-            "WARNING: PNG/HTML files outside PlotOutputs/ are untracked or gitignored.\n"
-            "         The *.png / *.html rules can hide assets from version control."
+            "WARNING: risky files outside approved output roots are untracked or gitignored.\n"
+            "         Generated clinical/scanner artifacts can otherwise persist unnoticed."
         )
         print(header, file=sys.stderr)
         for message in warnings:
@@ -169,8 +205,13 @@ def main() -> int:
         action="store_true",
         help="Exit 1 when warnings are found (optional CI/release gate).",
     )
+    parser.add_argument(
+        "--verbose-paths",
+        action="store_true",
+        help="Show repository paths locally; default diagnostics use non-reversible path tokens.",
+    )
     args = parser.parse_args()
-    ok = check_ignored_asset_files(strict=args.strict)
+    ok = check_ignored_asset_files(strict=args.strict, verbose_paths=args.verbose_paths)
     return 0 if ok else 1
 
 

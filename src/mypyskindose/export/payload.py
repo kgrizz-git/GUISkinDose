@@ -69,7 +69,7 @@ def resolve_calculation_result(source: ExportSource) -> _Resolved:
         )
     if source.output_dict is not None:
         view = view_from_dict(source.output_dict)
-        exam_id = source.exams[0].exam_id if source.exams else (source.file_name or "exam")
+        exam_id = source.exams[0].exam_id if source.exams else "Exam 1"
         return _Resolved(
             is_multi_exam=False,
             views=[view],
@@ -198,7 +198,12 @@ def collect_export_payload(source: ExportSource, *, with_images: bool = True) ->
         ),
     )
 
-    provenance = collect_provenance(source.exams, source.import_warnings, source.file_name)
+    provenance = collect_provenance(
+        source.exams,
+        source.import_warnings,
+        source.file_name,
+        include_source_identifiers=source.include_source_identifiers,
+    )
 
     exam_sections = [
         _build_exam_section(view, _exam_source_for(source, i), exam_id)

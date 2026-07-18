@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
 
 import pytest
 
@@ -166,3 +167,12 @@ def test_file_sink_purged_on_new_session(clean_logging, tmp_path):
 
     assert "STALE" not in log_file.read_text()
     assert not (tmp_path / "gui.log.1").exists()
+
+
+def test_file_sink_is_owner_only_on_posix(clean_logging, tmp_path):
+    if os.name != "posix":
+        pytest.skip("POSIX file mode bits are not portable to this platform")
+    log_file = tmp_path / "gui.log"
+    dbg.configure_logging(log_file=log_file, force=True)
+
+    assert log_file.stat().st_mode & 0o077 == 0

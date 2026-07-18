@@ -36,6 +36,36 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
 - Keep scratch scripts and temporary outputs in gitignored paths such as `tmp/`, `scripts/scratch_*`, `*.tmp`, or
   `debug_*`, or delete them before finishing.
 
+## Privacy and sensitive data
+
+Treat PHI/PII exposure as a first-class defect — in committed content **and** in what code emits at runtime.
+
+- **Never log, print, or write raw identifiers** — patient/study/institution/physician fields, DICOM header values,
+  source filenames, or absolute paths. Log a non-identifying summary or route the value through a redaction helper.
+  Writes must target gitignored, user-known output paths (e.g. `PlotOutputs/`, `tmp/`) and the destination should be
+  surfaced to the user; never write sensitive content to tracked files.
+- **Run the scanner that matches the change, and triage its findings — do not ignore advisories:**
+  - Before committing, inspect the staged route with `python scripts/privacy_admission.py route --mode staged`, then
+    run `python scripts/privacy_admission.py run --mode staged`. The receipt hook blocks when an applicable scanner did
+    not complete cleanly against the exact staged content/configuration. Receipts are private under Git metadata.
+  - Tracked text, docs, or fixtures that could carry identifiers → the blocking gate runs automatically
+    (`scripts/check_sensitive_content.py --require-approved-assets`); for a structured-identifier NLP second opinion run
+    `uv run --no-sync python scripts/run_presidio_advisory.py`. Add `--include-person --verbose-paths` only for a
+    targeted local free-text/name review.
+  - Source code that logs or writes → the blocking privacy rules
+    (`python scripts/run_semgrep_privacy.py`, also a pre-push/CI hook) and required local HoundDog receipt when routed.
+  - Adding or changing a DICOM/image asset → the route requires the safe local DICOM or image-OCR wrapper before
+    recording the review in `dev-docs/approved_asset_inventory.json`.
+- **Cadence:** phi-scan and calibrated Presidio run weekly. Run phi-scan/Presidio for new tracked CSV/TSV or likely
+  identifier-bearing text; run Semgrep plus HoundDog for logging/write/export/ingestion/API/database changes; run the
+  DICOM scanner and full human checklist for every added or changed DICOM.
+- **Advisory ≠ optional.** Every advisory finding must be fixed, or annotated as a reviewed false positive with a
+  trailing `# nosemgrep: <rule-id>` (or an allowlist/inventory entry) plus a one-line reason — never silently dropped.
+- Run commands live in `dev-docs/references/LOCAL_PII_MODELS.md`; policy is in `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md`.
+- Never weaken a protected ignore rule or force-add a path under a never-track root. The blocking policy is
+  `dev-docs/privacy_admission_policy.json`; standard Git has no dependable pre-add hook, so commit/push/CI are the
+  enforcement boundaries.
+
 ## Before Finishing
 
 Run the smallest meaningful verification set for the change. Common checks:

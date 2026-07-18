@@ -9,6 +9,42 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Now / Next
 
+Privacy hardening implementation is coordinated by
+[PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md); the individual privacy items below remain open until
+their corresponding plan exit criteria pass.
+
+- [ ] **Complete sensitive-asset baseline review** — manually clear every `pending` entry in
+  `approved_asset_inventory.json`, including rendered-image and DICOM burned-in-text review. Record reviewer/date,
+  then switch CI to `python scripts/check_sensitive_content.py --require-approved-assets`.
+- [ ] **P0 — public-history PHI/PII exposure audit and response runbook** — before the next release, use an
+  isolated local/private checkout to scan every reachable commit, tag, release branch, and relevant LFS/release
+  artifact for the current value-suppressed PII/PHI/path rules and representative DICOM/image fixtures. Verify the
+  process against synthetic known-positive history; never write matched values to a public log. Define triage,
+  private evidence handling, disclosure, history rewrite, cache/clone limitations, secret rotation, maintainer
+  notification, and re-scan/verification steps for a real finding.
+- [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
+  nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
+  gate scans first-level text and requires manual embedded-file/image/DICOM clearance.
+- [ ] **Local OCR evaluation for rendered assets** — evaluate conventional local OCR (for example Tesseract) and a
+  local-only ML OCR option against synthetic image, PDF, Office/iWork preview, and DICOM burned-in-text fixtures.
+  Keep source files, models, caches, intermediate images, and value-suppressed findings on an approved local machine;
+  do not upload reports or add OCR to CI until false positives, misses, runtime, and report safety are documented.
+- [ ] **Local PII/PHI detector evaluation** — use
+  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md)'s synthetic-fixture protocol to benchmark the existing
+  Presidio runner against Fastino GLiNER2. Record false positives/misses, thresholds, elapsed time, and peak memory
+  without logging matched values; decide whether either is worth retaining as a scheduled advisory check.
+- [ ] **NVIDIA GLiNER-PII macOS trial** — following
+  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md), verify local Python/PyTorch execution, MPS/CPU behavior,
+  model-license fit, download/cache location, throughput, and memory on the 128-GB Mac. Keep it local and advisory;
+  do not add it to CI or use LM Studio as its runtime unless the trial establishes a supported path.
+- [ ] **HoundDog local privacy-code-scanner proof of concept** — follow the isolated local-only procedure in
+  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md): use a pinned standalone release with no API key, cloud,
+  GitHub App, managed scans, PR comments, report upload, or optional AI analysis. Assess Python dataflow coverage,
+  false positives, report safety, and license terms. It remains local-only until a maintainer explicitly changes the
+  policy; do not add CI, cloud, GitHub App, managed scan, PR comments, report upload, or AI analysis.
+- [ ] **DICOM pixel-PHI scanner evaluation** — source/dependency-review `dicom-phi-scan` and test it only against
+  synthetic DICOM fixtures. Confirm its OCR/report output cannot leak findings before deciding on any local workflow;
+  it must never replace human DICOM inventory clearance or run in public CI without a separate approval.
 - [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
   `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
 - [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results
@@ -92,7 +128,9 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 - [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
   (2026-07-09: bumped transitive dev-only `nltk` 3.9.4 → 3.10.0 and removed
-  `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.)
+  `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.
+  2026-07-17: added mcp GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
+  suppressions while semgrep pins `mcp==1.23.3`; remove when semgrep bumps or relaxes the pin.)
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks.

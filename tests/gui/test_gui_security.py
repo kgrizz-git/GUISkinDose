@@ -33,11 +33,18 @@ def test_run_gui_binds_localhost_by_default(monkeypatch) -> None:
 
 
 def test_run_gui_host_is_opt_in(monkeypatch) -> None:
-    """An explicit host (LAN serving) is honored and passed through verbatim."""
+    """An acknowledged LAN host is honored and passed through verbatim."""
     captured: dict = {}
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
-    gui_app.run_gui(native=False, host="0.0.0.0")
+    gui_app.run_gui(native=False, host="0.0.0.0", allow_network=True)
     assert captured["host"] == "0.0.0.0"
+
+
+def test_run_gui_rejects_unacknowledged_network_binding(monkeypatch) -> None:
+    """A non-loopback host requires an explicit privacy acknowledgement."""
+    monkeypatch.setattr(gui_app.ui, "run", lambda **_kw: None)
+    with pytest.raises(ValueError, match="network_gui_binding_requires_explicit_acknowledgement"):
+        gui_app.run_gui(native=False, host="0.0.0.0")
 
 
 # ── 2. upload size cap ──────────────────────────────────────────────────────

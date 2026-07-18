@@ -12,6 +12,71 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Content-bound privacy admission and local SonarQube** (2026-07-16) — protected `.gitignore` rules and never-track
+  roots now block unsafe staged paths; a staged/range router requires value-free, expiring receipts for applicable
+  Presidio, phi-scan, HoundDog, DICOM, and image-OCR scans. Receipts and raw reports stay below Git metadata or private
+  temporary directories. Added local Tesseract+Presidio rendered-asset review, a safe `dicom-phi-scan` wrapper, and an
+  optional loopback-only SonarQube Community Build runner with private digest/status tracking. Codecov and Safety cloud
+  execution now occurs only on `main` after repository gates pass; PyPI release publishing requires a successful main
+  CI run. A machine-checked privacy-tool inventory now records direct scanner/runtime versions, roles, execution
+  boundaries, and output policies; ExifTool is recorded as a candidate rather than silently enabled.
+
+- **End-to-end privacy hardening** (2026-07-16) — default result/report serialization now omits source identifiers;
+  internal exams use opaque labels; CLI/GUI exports require an explicit destination/overwrite choice and use private,
+  atomic, Git-aware writes; uploads use private random-name session storage with stale cleanup; runtime diagnostics
+  suppress filenames, paths, exception messages, and tracebacks; tests fail if they modify or leave artifacts in the
+  checkout. Added explicit identified-export and network-binding acknowledgements, onboarding/upload/export privacy
+  notices, value-safe path tokens, CI metadata scanning, and strict approved-asset enforcement.
+
+- **Layered PHI/PII scanner cadence** (2026-07-16) — project privacy Semgrep is now blocking with synthetic rule
+  tests; phi-scan runs weekly and on CSV/TSV pull requests against a reviewed expiring baseline; calibrated Presidio
+  runs weekly/PR with local models and value-suppressed output; HoundDog raw reports are ephemeral and its wrapper
+  distinguishes clean, findings, and not-run states. The five public DICOM fixtures and all other opaque assets are
+  hash-approved with reviewer initials; copied irradiation-event UIDs were replaced by deterministic test-only UIDs.
+
+- **PHI/PII leak SAST + agent privacy guidance** (2026-07-15) — added project-specific semgrep rules
+  (`.semgrep/mypyskindose-privacy.yml`) that flag patient/study/institution/physician identifiers and source
+  filenames reaching stdout/loggers, wired as a blocking `semgrep-privacy` pre-push hook and CI step. Added an
+  `AGENT_PLAYBOOK.md` "Privacy and
+  sensitive data" section covering when to run each scanner and that advisory findings must be triaged, not ignored.
+
+- **HoundDog dataflow scan + PII/PHI scanner runbook** (2026-07-15) — added an advisory, local-only pre-push hook
+  (`scripts/run_hounddog_advisory.py`) that runs HoundDog's source-code dataflow scan when the standalone binary is
+  installed and reports `NOT RUN` otherwise; completed scans fail on risky flows and never upload or invoke cloud/AI
+  features. Documented exact
+  run commands for all four scanners (phi-scan, Presidio, HoundDog, dicom-phi-scan) in
+  `dev-docs/references/LOCAL_PII_MODELS.md`.
+
+- **Private IPv6 detection in the sensitive-content gate** (2026-07-15) — the blocking gate now flags unique-local
+  and link-local IPv6 addresses (the fc00/7 and fe80/10 prefix ranges) in tracked text alongside the existing
+  private-IPv4 rule, without echoing the matched value. MAC addresses are excluded to avoid false positives.
+
+- **Sensitive-content and asset-admission gate** (2026-07-13) — added a blocking pre-commit/CI scanner for
+  tracked PII/PHI-like text and absolute local paths, plus SHA-256 inventory enforcement for every image, DICOM,
+  opaque binary, and extensionless file. Existing assets are recorded as explicitly pending a maintainer's manual
+  review; new or changed assets fail immediately. Added a pinned, report-free advisory `phi-scan` workflow and a
+  documented DICOM/image review policy.
+
+- **Local Presidio advisory scan** (2026-07-14) — added an optional `privacy-scan` dependency extra and a
+  tracked-text-only runner. It suppresses matched values and does not upload inputs/findings; a calibrated weekly/PR
+  workflow was added on 2026-07-16.
+
+- **Local PII/PHI evaluation reference** (2026-07-14) — documented local GLiNER, Privacy Filter, Presidio,
+  HoundDog, and DICOM-pixel-scanner options, including macOS/LM Studio limits, local-only boundaries, and a
+  synthetic-fixture-only evaluation protocol.
+
+- **Sensitive asset review inventory** (2026-07-14) — added a generated Markdown inventory with links to every
+  guarded asset, human-readable approval state, and DICOM checklist. Pre-commit and CI reject drift from its JSON
+  source of truth.
+
+- **Privacy admission hardening** (2026-07-14) — added a commit-message gate; private-network and DICOM/PACS
+  endpoint checks; hard rejection of diagnostic artifacts; and standard-preamble detection for extensionless DICOMs.
+  Notebook-embedded image/PDF outputs, PDFs, and PostScript/EPS files now require hash-pinned human clearance;
+  PDFs also receive fail-closed local page-text, metadata, and readable-attachment scanning. ZIP/TAR/GZIP and
+  Office/iWork containers now receive bounded embedded-text scans and an embedded file/image/DICOM review checklist.
+  Native diagnostic logs are now owner-only on POSIX systems, and GUI load failures no longer expose raw traceback or
+  exception content.
+
 - **Geometry per-exam event selection** (2026-07-12) — replaced the bare event selection box with an interactive 1-based chevron stepper showing context (e.g., "Event 6 / 23") in the Geometry tab. The stepper is disabled outside of "Single event" mode to improve user focus.
 
 ### Changed
@@ -19,6 +84,22 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Body-habitus scaling controls** (2026-07-13) — reorganized each scaling control so its label and live value sit directly above its slider. Labels now consistently use left-right width, anterior-posterior thickness, and superior-inferior length. The left-right readout measures torso width below the arms while its scale factor continues to resize the full lateral mesh axis.
 
 ### Fixed
+
+- **CI dirty-checkout and SonarCloud gate** (2026-07-17) — exclude regenerable `corrections.db` artifacts
+  from the pytest checkout guard; confine commit-message and Sonar scanner CLI paths; rebuild Sonar host URLs
+  from allowlisted components before `subprocess.run`; write privacy-tool inventory Markdown only to a fixed
+  repo path; move workflow `contents: read` permissions to job level; and replace float equality in the
+  Presidio advisory fake engine with `math.isclose`.
+
+- **Semgrep-pinned mcp audit suppressions** (2026-07-17) — added tracked `[tool.uv.audit]`
+  suppressions for GHSA-jpw9-pfvf-9f58, GHSA-hvrp-rf83-w775, and GHSA-vj7q-gjh5-988w while
+  semgrep continues to pin `mcp==1.23.3` (fixes require mcp >=1.27.2 / >=1.28.1). mcp is a
+  semgrep-only transitive dependency and is unused by MyPySkinDose runtime code. Also added
+  `pytest.importorskip("nicegui")` to `test_exam_loader_privacy.py` so core CI can collect
+  without the GUI extra, and refreshed `.phi-scanbaseline` after deterministic UID
+  de-identification changed fixture finding hashes (14 reviewed synthetic/numeric entries).
+  Follow-up CI fixes: install `coverage` in the build job, type-ignore optional `tldextract`
+  in the Presidio advisory runner, and assert value-safe logging for corrupt STL mesh reads.
 
 - **Generalized live-preview pause** (2026-07-12) — generalized the 30-event live-preview pause guard from composite procedures to all procedure modes (single-exam, non-composite, and composite), preventing expensive reactive re-renders on large datasets. Explicitly clicking "Full procedure" now correctly renders the Plotly procedure slider once even if the procedure is paused.
 

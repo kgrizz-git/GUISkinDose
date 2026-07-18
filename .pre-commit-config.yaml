@@ -50,6 +50,65 @@ repos:
         always_run: true
         stages: [pre-commit, pre-push]
 
+      - id: sensitive-content
+        name: sensitive content and approved assets
+        entry: python scripts/check_sensitive_content.py --require-approved-assets
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: privacy-admission-policy
+        name: protected privacy paths and scanner routing policy
+        entry: python scripts/privacy_admission.py check --mode staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: privacy-admission-receipts
+        name: conditional privacy scanner receipts (staged snapshot)
+        entry: python scripts/privacy_admission.py verify --mode staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: privacy-admission-policy-push
+        name: protected privacy paths and scanner routing policy (push)
+        entry: python scripts/privacy_admission.py check --mode range
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: privacy-admission-receipts-push
+        name: conditional privacy scanner receipts (branch range)
+        entry: python scripts/privacy_admission.py verify --mode range
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: sensitive-commit-message
+        name: sensitive content in commit message
+        entry: python scripts/check_commit_message.py
+        language: system
+        stages: [commit-msg]
+
+      - id: asset-inventory-markdown
+        name: approved asset inventory Markdown
+        entry: python scripts/render_asset_inventory.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: privacy-tool-inventory
+        name: privacy tool inventory and scanner references
+        entry: python scripts/render_privacy_tool_inventory.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: sync-gui-help
         name: GUI help sync (docs/source/gui_help -> src/mypyskindose/gui/help)
         entry: python scripts/sync_gui_help.py --check
@@ -101,8 +160,8 @@ repos:
         always_run: true
 
       - id: check-ignored-assets
-        name: ignored PNG/HTML outside PlotOutputs (advisory)
-        entry: python scripts/check_ignored_asset_files.py
+        name: ignored risky artifacts outside approved roots
+        entry: python scripts/check_ignored_asset_files.py --strict
         language: system
         pass_filenames: false
         always_run: true
@@ -120,6 +179,14 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+      - id: hounddog-dataflow
+        name: HoundDog PHI/PII dataflow scan (local-only, advisory)
+        entry: python scripts/run_hounddog_advisory.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
 
       - id: cleanup-old-backups
         name: cleanup stale backups/ files (>5 commits)
@@ -155,6 +222,14 @@ repos:
       - id: semgrep
         name: semgrep (OWASP Top 10 SAST)
         entry: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: semgrep-privacy
+        name: semgrep (project PHI/PII leak rules, blocking)
+        entry: python scripts/run_semgrep_privacy.py
         language: system
         pass_filenames: false
         always_run: true
