@@ -50,6 +50,16 @@ _EXCLUDED_FILENAMES = {
 }
 
 
+def _is_excluded_artifact(path: Path) -> bool:
+    """Ignore regenerable local artifacts that tests may create from committed inputs."""
+    if path.name in _EXCLUDED_FILENAMES or path.name.startswith(".coverage"):
+        return True
+    # db_connect() auto-builds this SQLite cache from committed CSV tables; it is gitignored.
+    if path.name == "corrections.db" or path.name.startswith("corrections.db-"):
+        return True
+    return False
+
+
 def _digest(path: Path) -> str:
     hasher = hashlib.sha256()
     with path.open("rb") as source:
@@ -80,11 +90,7 @@ def _workspace_snapshot() -> tuple[dict[Path, str], dict[Path, str]]:
         dirnames[:] = [name for name in dirnames if name not in _EXCLUDED_DIRS]
         for filename in filenames:
             path = Path(directory) / filename
-            if (
-                path not in tracked_paths
-                and path.name not in _EXCLUDED_FILENAMES
-                and not path.name.startswith(".coverage")
-            ):
+            if path not in tracked_paths and not _is_excluded_artifact(path):
                 other[path] = _digest(path)
     return tracked, other
 

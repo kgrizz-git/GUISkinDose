@@ -12,12 +12,11 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   static-analysis:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
       with:
@@ -100,6 +99,8 @@ jobs:
 
   gui-smoke:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
     - name: Install uv
@@ -118,6 +119,8 @@ jobs:
 
   matrix-prep:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       config: ${{ steps.set-matrix.outputs.config }}
     steps:
@@ -140,6 +143,8 @@ jobs:
   build:
     needs: matrix-prep
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-prep.outputs.config) }}
@@ -172,6 +177,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [static-analysis, gui-smoke, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
     steps:

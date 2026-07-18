@@ -129,6 +129,25 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def inventory_markdown_path(root: Path) -> Path:
+    """Resolve the fixed inventory Markdown path and reject escapes."""
+    resolved_root = root.resolve()
+    target = (resolved_root / MARKDOWN_PATH).resolve()
+    if not target.is_relative_to(resolved_root):
+        raise ValueError("inventory markdown path escaped repository")
+    if target.relative_to(resolved_root) != MARKDOWN_PATH:
+        raise ValueError("inventory markdown path escaped repository")
+    return target
+
+
+def write_inventory_markdown(root: Path, content: str) -> None:
+    """Write rendered inventory Markdown only to the fixed repo-relative path."""
+    target = inventory_markdown_path(root)
+    # Content is derived from the committed JSON inventory, not a filesystem path.
+    # Sonar S2083 can mis-taint this write; the destination path is confined above.
+    target.write_text(content, encoding="utf-8")  # NOSONAR pythonsecurity:S2083
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     root = repo_root()
@@ -136,6 +155,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         inventory = load_json(root / INVENTORY_PATH)
         policy = load_json(root / POLICY_PATH)
         errors = validate(inventory, policy)
+        target = inventory_markdown_path(root)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"ERROR: privacy tool inventory unavailable ({type(exc).__name__}).", file=sys.stderr)
         return 2
@@ -144,9 +164,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"ERROR: {error}.", file=sys.stderr)
         return 1
     expected = render(inventory)
-    target = root / MARKDOWN_PATH
     if args.write:
-        target.write_text(expected, encoding="utf-8")
+        write_inventory_markdown(root, expected)
         return 0
     try:
         current = target.read_text(encoding="utf-8")

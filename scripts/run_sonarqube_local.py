@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 
 SETTINGS_PATH = Path("sonar-project.properties")
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+ALLOWED_SCANNER_NAMES = {"sonar-scanner", "sonar-scanner.bat"}
 SOURCE_ROOTS = ("src", "scripts", "tests")
 EXCLUDED_PARTS = {"__pycache__", ".scannerwork"}
 EXCLUDED_PREFIXES = ("src/mypyskindose/example_data/", "src/mypyskindose/phantom_data/", "tests/fixtures/")
@@ -25,6 +26,29 @@ EXCLUDED_PREFIXES = ("src/mypyskindose/example_data/", "src/mypyskindose/phantom
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def validate_scanner_binary(binary: str) -> Path:
+    """Require an absolute sonar-scanner path with a known basename before exec."""
+    path = Path(binary)
+    if not path.is_absolute():
+        raise ValueError("scanner binary must be an absolute path")
+    resolved = path.resolve()
+    if resolved.name not in ALLOWED_SCANNER_NAMES:
+        raise ValueError("unexpected scanner binary name")
+    if not resolved.is_file():
+        raise ValueError("scanner binary is not a file")
+    return resolved
+
+
+def build_scanner_command(binary: Path, host_url: str, *, wait_for_quality_gate: bool) -> list[str]:
+    """Build an argv list for sonar-scanner after host/binary validation."""
+    if any(ch in host_url for ch in "\r\n\x00"):
+        raise ValueError("invalid SonarQube host URL")
+    command = [str(binary), f"-Dsonar.host.url={host_url}"]
+    if wait_for_quality_gate:
+        command.extend(["-Dsonar.qualitygate.wait=true", "-Dsonar.qualitygate.timeout=300"])
+    return command
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -141,9 +165,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as exc:
         print(f"ERROR: SonarQube local analysis refused ({exc}).", file=sys.stderr)
         return 2
-    binary = shutil.which("sonar-scanner")
-    if binary is None:
+    located = shutil.which("sonar-scanner")
+    if located is None:
         print("ERROR: SonarQube local analysis did not run (scanner_missing).", file=sys.stderr)
+        return 2
+    try:
+        binary = validate_scanner_binary(located)
+        command = build_scanner_command(
+            binary,
+            args.host_url,
+            wait_for_quality_gate=not args.no_quality_gate_wait,
+        )
+    except ValueError as exc:
+        print(f"ERROR: SonarQube local analysis refused ({exc}).", file=sys.stderr)
         return 2
     if not (root / SETTINGS_PATH).is_file():
         print("ERROR: SonarQube local settings are missing.", file=sys.stderr)
@@ -151,15 +185,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         content_sha256, input_count = source_digest(root)
-        version_sha256 = scanner_version_digest(binary)
+        version_sha256 = scanner_version_digest(str(binary))
         settings_sha256 = hashlib.sha256((root / SETTINGS_PATH).read_bytes()).hexdigest()
     except (OSError, RuntimeError) as exc:
         print(f"ERROR: SonarQube local analysis preparation failed ({type(exc).__name__}).", file=sys.stderr)
         return 2
 
-    command = [binary, f"-Dsonar.host.url={args.host_url}"]
-    if not args.no_quality_gate_wait:
-        command.extend(["-Dsonar.qualitygate.wait=true", "-Dsonar.qualitygate.timeout=300"])
     print(f"SonarQube local analysis started: tracked_inputs={input_count}; scanner output suppressed.", flush=True)
     with tempfile.TemporaryDirectory(prefix="sonarqube-private-log-") as temp_dir:
         log_path = Path(temp_dir) / "scanner.log"

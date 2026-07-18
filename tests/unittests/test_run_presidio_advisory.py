@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -19,7 +20,7 @@ class FakeEngine:
     ) -> list[SimpleNamespace]:
         assert language == "en"
         assert entities == PII_ENTITIES
-        assert score_threshold == 0.85
+        assert math.isclose(score_threshold, 0.85, rel_tol=0.0, abs_tol=1e-9)
         return [SimpleNamespace(start=text.index("token"), entity_type="EMAIL_ADDRESS", score=0.91)]
 
 
