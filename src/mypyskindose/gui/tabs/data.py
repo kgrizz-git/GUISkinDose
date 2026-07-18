@@ -104,6 +104,7 @@ def _refresh_raw_table(raw_data_table: ui.table) -> None:
     if dataframe is None:
         raw_data_table.columns = []
         raw_data_table.rows = []
+        raw_data_table.update()
         return
 
     dataframe = dataframe.reset_index()
@@ -133,9 +134,9 @@ def _build_data_header() -> ui.toggle:
             state,
             "import_provenance",
             backward=lambda value: (
-                f"Source: {state.file_name}  ·  Schema: {value.schema_name}"
+                f"Source: loaded data  ·  Schema: {value.schema_name}"
                 if value is not None
-                else f"Source: {state.file_name}"
+                else "Source: loaded data"
             ),
         ).classes("text-caption text-grey-5").bind_visibility_from(state, "file_name", backward=bool)
         with ui.row().classes("w-full items-center gap-3 q-mb-sm"):

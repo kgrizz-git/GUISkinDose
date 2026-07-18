@@ -86,35 +86,24 @@ def _analysis_output_for_input(
 
 
 def _print_input_preview(result: Any, exam_index: int, include_sensitive_values: bool) -> None:
-    """Print one tabular-input preview, suppressing values unless explicitly enabled."""
+    """Print one tabular-input preview with schema metadata and aggregate counts only.
+
+    Never emits source filenames, study IDs, warning text, absolute paths, or
+    normalized event values — including when ``include_sensitive_values`` is true.
+    That flag is retained for CLI compatibility and only acknowledges the request.
+    """
+    del include_sensitive_values  # retained for callers; never enables identifier output
     provenance = result.provenance
     print(f"Exam:          {opaque_exam_label(exam_index)}")
-    if include_sensitive_values:
-        # nosemgrep: mypyskindose-identifier-attr-to-log-or-stdout -- explicit CLI opt-in; reviewed 2026-07-16
-        print(f"File:          {provenance.original_filename}")
-        if result.study_id:
-            # nosemgrep: mypyskindose-identifier-attr-to-log-or-stdout -- explicit CLI opt-in; reviewed 2026-07-16
-            print(f"Study ID:      {result.study_id}")
     print(f"Schema:        {provenance.schema_name}")
     print(f"Encoding:      {provenance.detected_encoding}")
     print(f"Delimiter:     {provenance.detected_delimiter!r}")
     print(f"Header row:    {provenance.header_row_index}")
     print(f"Events loaded: {len(result.normalized_data)}")
+    print(f"Warnings:      {len(provenance.warnings)}")
+    print(f"Mapped cols:   {len(provenance.column_map)}")
     print()
-    print("Column map (source → normalized):")
-    for source, normalized in provenance.column_map.items():
-        print(f"  {source!r:30s} → {normalized}")
-    if provenance.warnings and include_sensitive_values:
-        print()
-        print("Warnings:")
-        for warning in provenance.warnings:
-            print(f"  {warning}")
-    print()
-    if include_sensitive_values:
-        print("First 5 normalized events:")
-        print(result.normalized_data.head(5).to_string())
-    else:
-        print("Event values suppressed; pass --include-sensitive-preview to display them locally.")
+    print("Identifiers, warning text, and event values are never printed.")
     print()
 
 
@@ -648,7 +637,10 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         action="store_true",
         default=False,
         dest="include_sensitive_preview",
-        help="With --input-preview-only, deliberately print source filename, study ID, warnings, and event values.",
+        help=(
+            "Deprecated no-op retained for compatibility. Input preview never prints "
+            "filenames, study IDs, warning text, or event values."
+        ),
     )
 
     parser.add_argument(

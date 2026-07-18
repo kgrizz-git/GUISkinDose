@@ -1,8 +1,11 @@
 # Complexity Refactoring Plan: Results Tab
 
+> **Status:** Completed and archived (2026-07-18). Shipped as
+> `results.py` (thin entry) + `results_builders.py` (controller / builders).
+
 This is the detailed companion to Phase 4.2 of
-[the SonarQube remediation plan](sonarqube_remediation_plan.md). It targets
-`build` in [results.py](../../src/mypyskindose/gui/tabs/results.py#L50), whose
+[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
+`build` in [results.py](../../../src/mypyskindose/gui/tabs/results.py#L50), whose
 baseline cognitive complexity is **128**.
 
 ---
@@ -12,7 +15,7 @@ baseline cognitive complexity is **128**.
 Move layout and callback ownership into a new sibling module without importing
 the owner module back:
 
-```
+```text
 src/mypyskindose/gui/tabs/
 ├── results.py              # public build(ctx), compatibility helpers as needed
 └── results_builders.py     # controller, UI references, layout builders

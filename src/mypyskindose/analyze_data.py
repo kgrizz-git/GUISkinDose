@@ -104,11 +104,37 @@ def _global_patient_offset(settings: PyskindoseSettings) -> list[float]:
     ]
 
 
+def _require_valid_patient_offset(offset: object, exam_index: int) -> list[float]:
+    """Require exactly three finite numeric centimeter values for one exam offset."""
+    if not isinstance(offset, (list, tuple)) or len(offset) != 3:
+        raise ValueError(
+            f"Per-exam offset for exam {exam_index} must contain exactly 3 finite numeric values, "
+            f"got {offset!r}"
+        )
+    if not all(
+        isinstance(value, (int, float)) and not isinstance(value, bool) and np.isfinite(value)
+        for value in offset
+    ):
+        raise ValueError(
+            f"Per-exam offset for exam {exam_index} must contain exactly 3 finite numeric values, "
+            f"got {offset!r}"
+        )
+    return [float(value) for value in offset]
+
+
+def _validate_per_exam_offsets(per_exam_offsets: list[list[float]] | None) -> None:
+    """Reject invalid per-exam offsets before any exam produces output."""
+    if not per_exam_offsets:
+        return
+    for exam_index, offset in enumerate(per_exam_offsets):
+        _require_valid_patient_offset(offset, exam_index)
+
+
 def _effective_patient_offset(
     global_offset: list[float], per_exam_offsets: list[list[float]] | None, exam_index: int
 ) -> list[float]:
     if per_exam_offsets and exam_index < len(per_exam_offsets):
-        return [float(value) for value in per_exam_offsets[exam_index]]
+        return _require_valid_patient_offset(per_exam_offsets[exam_index], exam_index)
     return global_offset
 
 
@@ -256,6 +282,10 @@ def analyze_multiple_exams(
     downgrade_beam_warning = settings.beam_miss_warn == "per_event"
     if downgrade_beam_warning:
         logger.info("beam_miss_warn downgraded from 'per_event' to 'summary' for multi-exam run.")
+
+    # Validate every configured offset before any exam produces output so a bad
+    # later offset cannot leave a partial multi-exam result behind.
+    _validate_per_exam_offsets(per_exam_offsets)
 
     exam_results: list[ExamResult] = []
     run_warnings: list[str] = []

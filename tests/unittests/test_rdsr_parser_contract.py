@@ -70,5 +70,7 @@ def test_preview_suppresses_event_values_by_default(capsys):
 
     output = capsys.readouterr().out
     assert "Exam:" in output
-    assert "Event values suppressed" in output
+    assert "Identifiers, warning text, and event values are never printed." in output
     assert "First 5 normalized events:" not in output
+    assert "File:" not in output
+    assert "Study ID:" not in output

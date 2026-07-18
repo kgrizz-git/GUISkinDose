@@ -17,7 +17,8 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
-| [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate. |
+| [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate (policy/CLI). |
+| [../scripts/check_sensitive_helpers.py](../scripts/check_sensitive_helpers.py) | Notebook/PDF/container reader helpers for the sensitive-content gate. |
 | [privacy_admission_policy.json](privacy_admission_policy.json) | Machine-enforced protected-ignore, never-track, conditional scanner, receipt-expiry, and scanner-configuration policy. |
 | [../scripts/privacy_admission.py](../scripts/privacy_admission.py) | Staged/range privacy router, protected-path gate, scanner runner, and content-bound private receipt verifier. |
 | [../scripts/check_commit_message.py](../scripts/check_commit_message.py) | Local `commit-msg` gate for value-free sensitive-content checks before the message enters history. |
@@ -131,16 +132,16 @@ Phased detail derived from diagnostics or master plans.
 | [plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | Move Show all exams checkbox next to Full procedure, fix composite state leakage, upgrade event selection to searchable select with exam context. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | Ordered execution plan for DICOM/tabular sanitization, enforceable privacy scanners, full GUISkinDose Python/PyPI naming, fork-preserving rename, and cautious publication. |
 | [plans/sonarqube_remediation_plan.md](plans/sonarqube_remediation_plan.md) | Phased remediation plan to address the 292 open SonarQube issues in the MyPySkinDose codebase, prioritizing bug fixes and core complexity reduction. |
-| [plans/refactor_geometry_tab_complexity.md](plans/refactor_geometry_tab_complexity.md) | Complexity Refactoring Plan: Geometry Tab (reduces build function complexity from 158). |
-| [plans/refactor_results_tab_complexity.md](plans/refactor_results_tab_complexity.md) | Complexity Refactoring Plan: Results Tab (reduces build function complexity from 128). |
-| [plans/refactor_upload_tab_complexity.md](plans/refactor_upload_tab_complexity.md) | Complexity Refactoring Plan: Upload Tab (reduces build function complexity from 97). |
-| [plans/refactor_check_sensitive_content_plan.md](plans/refactor_check_sensitive_content_plan.md) | Complexity Refactoring Plan: Privacy Scan Script (reduces run_checks complexity from 76). |
-| [plans/refactor_other_gui_tabs_complexity.md](plans/refactor_other_gui_tabs_complexity.md) | Complexity Refactoring Plan: Remaining GUI Components (covers export, per-exam, calculate, data, Geometry Preview, and Import Preview findings). |
 
 ## Archived plans (`plans/archive/`)
 
 | File | Purpose |
 |---|---|
+| [plans/archive/refactor_check_sensitive_content_plan.md](plans/archive/refactor_check_sensitive_content_plan.md) | **Completed** (2026-07-18) — Privacy scan script complexity split into `check_sensitive_content.py` + `check_sensitive_helpers.py`. |
+| [plans/archive/refactor_geometry_tab_complexity.md](plans/archive/refactor_geometry_tab_complexity.md) | **Completed** (2026-07-18) — Geometry tab complexity split into `geometry.py` + `geometry_builders.py`. |
+| [plans/archive/refactor_results_tab_complexity.md](plans/archive/refactor_results_tab_complexity.md) | **Completed** (2026-07-18) — Results tab complexity split into `results.py` + `results_builders.py`. |
+| [plans/archive/refactor_upload_tab_complexity.md](plans/archive/refactor_upload_tab_complexity.md) | **Completed** (2026-07-18) — Upload tab complexity split into `upload.py` + `upload_builders.py`. |
+| [plans/archive/refactor_other_gui_tabs_complexity.md](plans/archive/refactor_other_gui_tabs_complexity.md) | **Completed** (2026-07-18) — Remaining GUI complexity (export, per-exam, calculate, data, geometry preview, import preview). |
 | [plans/archive/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md](plans/archive/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md) | **Completed** (2026-07-12) — Geometry tab event-stepper UX (chevron prev/next + context caption) on the existing per-exam preview-slice foundation; trace-count guard documentation. |
 | [plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md) | **Completed** — Multi-exam Results: inline per-exam dose map checkboxes + aggregate subset selector with live PSD recompute. |
 | [plans/archive/README.md](plans/archive/README.md) | Index of completed or superseded execution plans. |

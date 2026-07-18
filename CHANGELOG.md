@@ -12,6 +12,23 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Sensitive-content scanner complexity refactoring (SonarQube Phase 5)** (2026-07-18) — extracted
+  format-specific readers (notebook attachment/output inspection, PDF metadata/page/attachment
+  extraction, and bounded archive/office-document member iteration) from `scripts/check_sensitive_content.py`
+  into a new `scripts/check_sensitive_helpers.py` module; `run_checks` was split into small policy
+  helpers (path/diagnostic checks, asset-inventory status, DICOM identifier warnings, and
+  extracted-text/container-flag scanning) while keeping its public signature and return value
+  unchanged. Behaviour-preserving: 37 targeted tests plus the full unit suite pass, direct CLI
+  output is byte-identical to the pre-refactor script, and all four baseline `S3776` findings and
+  their extracted helpers are now well under the complexity budget. No new dependencies; no
+  embedded content is written to disk or logged.
+
+- **CodeRabbit follow-ups (privacy / robustness)** (2026-07-18) — validate all per-exam offsets
+  before multi-exam batch output; make GUI upload/example loads transactional with temp-file cleanup;
+  show opaque exam aliases instead of source filenames on Upload/Settings/drawer surfaces; suppress
+  CLI input-preview identifiers even with `--include-sensitive-preview`; archive completed GUI and
+  privacy-scan complexity refactor plans under `dev-docs/plans/archive/`.
+
 - **GUI complexity refactoring (SonarQube Phase 4)** (2026-07-18) — decomposed nine high-complexity GUI components
   into controller/builder modules: `geometry_builders.py`, `results_builders.py`, `upload_builders.py`, and extracted
   settings-summary builders in `calculate.py`. Each tab now has a thin public entry point and a sibling module owning

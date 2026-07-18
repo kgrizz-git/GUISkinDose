@@ -183,6 +183,21 @@ class GeometryTabController:
         self.live_preview_requested = False
         self._update_paused_badge()
 
+    def flush_pending_table_origin(self) -> None:
+        """Cancel pending debounce timer and commit table-origin transform synchronously.
+
+        Called before calculation starts to prevent a race between the debounced
+        render and run_calculation reading loaded_exams.
+        """
+        if self._slider_timer is not None:
+            self._slider_timer.cancel()
+            self._slider_timer = None
+        if self.table_origin_pending:
+            commit_table_origin_transform(state, self.active_exam_index)
+            self.table_origin_pending = False
+            self.last_table_origin_scrub = False
+            reset_results()
+
     async def _render_preview(self, mode: str) -> None:
         if state.rdsr_df is None:
             self.refs.plot.update_figure({})
@@ -265,13 +280,7 @@ class GeometryTabController:
             self.refs.geom_event_select.set_value(new_idx)
         finally:
             self.event_select_guard["suppress"] = False
-        self._render_event_preview_debounced()
-
-    def _render_event_preview_debounced(self) -> None:
-        if self.last_preview_mode != "plot_event":
-            self.last_preview_mode = "plot_event"
-        self.update_event_context()
-        self.schedule_debounced_render()
+        self.render_event_preview_debounced()
 
     def set_stepper_enabled(self, enabled: bool) -> None:
         self.refs.geom_event_select.set_enabled(enabled)
@@ -441,6 +450,7 @@ class GeometryTabController:
     def register_context_hooks(self) -> None:
         self.ctx.clear_offset_stale_caption = self.clear_offset_stale_caption
         self.ctx.refresh_geometry_preview = self.request_geometry_preview_refresh
+        self.ctx.flush_geometry_pending = self.flush_pending_table_origin
         original_refresh_per_exam = self.ctx.refresh_per_exam
 
         def _refresh_per_exam_with_sliders() -> None:
@@ -784,7 +794,6 @@ def build_geometry_tab(ctx: PageContext) -> None:
     ctrl.register_context_hooks()
     ctrl.update_preview_caption()
     ctrl.set_stepper_enabled(False)
-
 
 def build(ctx: PageContext) -> None:
     """Public entry point — delegates to :func:`build_geometry_tab`."""

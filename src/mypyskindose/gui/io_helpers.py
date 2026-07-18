@@ -50,11 +50,17 @@ def _inject_html_tabular_meta(html: bytes, meta: dict) -> bytes:
     """Insert the provenance as an HTML comment immediately after <head>.
 
     Returns *html* unchanged if no ``<head>`` tag is present. Only the first
-    ``<head>`` is annotated.
+    ``<head>`` is annotated. The JSON is base64-encoded to prevent untrusted
+    headers, warnings, or filenames containing --> from terminating the comment
+    or injecting markup.
     """
+    import base64
+
     if b"<head>" not in html:
         return html
-    comment = f"<head>\n<!-- mypyskindose:tabular_input {json.dumps(meta, indent=2)} -->"
+    json_bytes = json.dumps(meta, indent=2).encode("utf-8")
+    encoded = base64.b64encode(json_bytes).decode("ascii")
+    comment = f"<head>\n<!-- mypyskindose:tabular_input {encoded} -->"
     return html.replace(b"<head>", comment.encode(), 1)
 
 

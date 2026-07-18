@@ -23,6 +23,8 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from mypyskindose.privacy import opaque_exam_label
+
 from ..helpers import (
     apply_exam_transforms,
     bump_per_exam_offsets_version,
@@ -226,7 +228,7 @@ def _build_exam_card_header(idx: int, meta: dict) -> None:
     src = (meta.get("source_type") or "?").lower()
     with ui.row().classes("items-center w-full gap-3 no-wrap"):
         ui.label(f"#{idx + 1}").classes("text-caption text-grey-5 font-bold")
-        ui.label(meta.get("file_name", "—")).classes("text-caption font-mono truncate").style("max-width: 240px")
+        ui.label(opaque_exam_label(idx)).classes("text-caption font-mono truncate").style("max-width: 240px")
         ui.label(src.upper()).classes(_MUTED_CAPTION_CLASSES)
         if meta.get("table_origin_override") is not None:
             ui.badge("ORIGIN", color="amber").classes("text-xs").tooltip(

@@ -231,16 +231,19 @@ passed. The local gate remained non-OK because of unrelated in-scope backlog.
 ### Phase 4: GUI decomposition
 
 - **Task 4.1 — `S3776` (1):** Implement the
-  [Geometry Tab Refactoring Plan](refactor_geometry_tab_complexity.md).
+  [Geometry Tab Refactoring Plan](archive/refactor_geometry_tab_complexity.md)
+  (**completed** 2026-07-18).
 - **Task 4.2 — `S3776` (1):** Implement the
-  [Results Tab Refactoring Plan](refactor_results_tab_complexity.md).
+  [Results Tab Refactoring Plan](archive/refactor_results_tab_complexity.md)
+  (**completed** 2026-07-18).
 - **Task 4.3 — `S3776` (1):** Implement the
-  [Upload Tab Refactoring Plan](refactor_upload_tab_complexity.md).
+  [Upload Tab Refactoring Plan](archive/refactor_upload_tab_complexity.md)
+  (**completed** 2026-07-18).
 - **Task 4.4 — `S3776` (6):** Implement the
-[Remaining GUI Components Refactoring Plan](refactor_other_gui_tabs_complexity.md)
-for `export.py`, `_per_exam.py`, `calculate.py`, `data.py`,
-`geometry_preview.py` (`geometry_vendor_notice`), and
-`widgets/import_preview.py`.
+  [Remaining GUI Components Refactoring Plan](archive/refactor_other_gui_tabs_complexity.md)
+  for `export.py`, `_per_exam.py`, `calculate.py`, `data.py`,
+  `geometry_preview.py` (`geometry_vendor_notice`), and
+  `widgets/import_preview.py` (**completed** 2026-07-18).
 
 **Acceptance:** all nine GUI findings (`geometry`, `results`, `upload`, `export`,
 `build_per_exam_section`, `calculate`, `data`, `geometry_vendor_notice`, and
@@ -251,9 +254,9 @@ alone are not sufficient for timer, binding, and event-handler changes.
 ### Phase 5: Privacy scanner decomposition
 
 - **Task 5.1 — `S3776` (4):** Implement the
-  [Privacy Scan Refactoring Plan](refactor_check_sensitive_content_plan.md) for
+  [Privacy Scan Refactoring Plan](archive/refactor_check_sensitive_content_plan.md) for
   `has_notebook_embedded_visual_output`, `_pdf_text`, `_container_text`, and
-  `run_checks`.
+  `run_checks` (**completed** 2026-07-18).
 
 **Acceptance:** all four named functions and every extracted helper are at or
 below the threshold; archive/container/PDF/notebook and privacy-admission tests

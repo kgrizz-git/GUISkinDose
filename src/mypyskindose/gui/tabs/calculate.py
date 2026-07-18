@@ -112,6 +112,7 @@ class _CalculationController:
         controls = self._require_controls()
         controls.button.disable()
         self.ctx.run_btn_drawer.disable()
+        self.ctx.flush_geometry_pending()
         controls.progress.visible = True
         controls.progress.set_value(0)
         controls.status_label.set_text("Starting...")
@@ -131,6 +132,13 @@ class _CalculationController:
         if ok:
             self._show_success(message)
             return
+        state.calculation_done = False
+        state.output = None
+        state.multi_exam_result = None
+        state.psd = None
+        state.air_kerma = None
+        state.dosemap_fig = None
+        self.ctx.psd_label.set_text("PSD: 0.00 mGy")
         self._require_controls().status_label.set_text("Calculation failed")
         ui.notify(f"Error: {message[:300]}", type="negative", timeout=10000)
 
@@ -174,7 +182,7 @@ def _build_input_data_summary() -> None:
             with ui.column().classes("gap-0"):
                 ui.label("File:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(
-                    state, "file_name", backward=lambda v: f"{v if v else 'None'}"
+                    state, "file_name", backward=lambda v: "Loaded" if v else "None"
                 ).classes(f"{_SUMMARY_VALUE_CLASSES} truncate w-full")
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Events:").classes(_SUMMARY_LABEL_CLASSES)

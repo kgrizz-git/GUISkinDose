@@ -1,7 +1,11 @@
 # Complexity Refactoring Plan: Privacy Scan Script
 
+> **Status:** Completed and archived (2026-07-18). Shipped as
+> `scripts/check_sensitive_content.py` (policy/CLI) +
+> `scripts/check_sensitive_helpers.py` (notebook/PDF/container readers).
+
 This is the detailed companion to Phase 5 of
-[the SonarQube remediation plan](sonarqube_remediation_plan.md). It targets all
+[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets all
 four `S3776` findings in `scripts/check_sensitive_content.py`:
 
 | Function | Baseline complexity |
@@ -22,7 +26,7 @@ inventory, container, or identifier checks.
 Extract format-specific readers into `scripts/check_sensitive_helpers.py` and
 leave policy/configuration/CLI ownership in `check_sensitive_content.py`:
 
-```
+```text
 scripts/
 ├── check_sensitive_content.py   # policy constants, run_checks orchestration, CLI
 └── check_sensitive_helpers.py   # notebook/PDF/container reader helpers

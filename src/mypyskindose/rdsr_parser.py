@@ -52,7 +52,7 @@ def _extract_detector_size(parsed: dict, comment: str) -> None:
         return
 
     for part in comment_parts:
-        if KEY_RDSR_II_DIAMETER_SRDATA in part:
+        if KEY_RDSR_II_DIAMETER_SRDATA in part and "=" in part:
             parsed[KEY_RDSR_DETECTORSIZE_MM] = part.split("=")[1].replace('"', "")
 
 

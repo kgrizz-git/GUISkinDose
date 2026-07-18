@@ -55,3 +55,8 @@ class PageContext:
     # Refresh sliders and captions when the user navigates into this tab.
     # Default no-op — geometry.py wires it on build.
     refresh_geometry_tab: Callable[[], None] = field(default=_noop)
+    # Geometry tab registers this so the calculate tab can flush pending
+    # table-origin transforms and cancel debounce timers before starting a
+    # calculation, preventing a race between the debounced render and
+    # run_calculation reading loaded_exams.
+    flush_geometry_pending: Callable[[], None] = field(default=_noop)

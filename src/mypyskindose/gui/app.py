@@ -22,7 +22,7 @@ os.environ["COLORAMA_DISABLE"] = "1"
 from nicegui import Client, app, ui
 from nicegui.events import NativeEventArguments
 
-from mypyskindose.privacy import safe_error_event
+from mypyskindose.privacy import opaque_exam_label, safe_error_event
 
 from mypyskindose.debug import configure_logging, dprint
 
@@ -157,7 +157,11 @@ def index():
 
     if state.rdsr_df is not None:
         dprint("GUI", "Restoring UI state from loaded data")
-        ctx.file_label.set_text(state.file_name.upper())
+        n_exams = len(state.loaded_exams)
+        if n_exams <= 1:
+            ctx.file_label.set_text(opaque_exam_label(0).upper() if n_exams == 1 else "No file loaded")
+        else:
+            ctx.file_label.set_text(f"{n_exams} FILES")
         ctx.events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
         ctx.refresh_event_table()
         ctx.refresh_exams_table()

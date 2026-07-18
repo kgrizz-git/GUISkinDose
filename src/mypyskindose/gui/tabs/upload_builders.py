@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any
 
 from nicegui import run, ui
 
+from mypyskindose.privacy import opaque_exam_label
+
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result, upload_lock
 from ..constants import EXAMPLE_FILES
@@ -53,9 +55,70 @@ _FORMAT_BADGE_COLORS = {
     "xlsm": "green",
 }
 
+# AppState fields restored when a load fails after partial mutation.
+_LOAD_STATE_FIELDS = (
+    "rdsr_df",
+    "rdsr_raw_df",
+    "file_path",
+    "file_name",
+    "manufacturer",
+    "model",
+    "normalization_method",
+    "normalization_warnings",
+    "table_offset_x",
+    "table_offset_y",
+    "table_offset_z",
+    "input_source_type",
+    "input_sheet_name",
+    "available_sheets",
+    "import_provenance",
+    "import_warnings",
+    "import_has_errors",
+    "swap_lat_lon",
+    "flip_ap1",
+    "flip_ap2",
+    "loaded_exams",
+    "loaded_exam_meta",
+    "is_multi_exam",
+    "active_exam_index",
+    "d_lon",
+    "d_ver",
+    "d_lat",
+)
+
 
 def upload_exceeds_limit(num_bytes: int) -> bool:
     return num_bytes > MAX_UPLOAD_BYTES
+
+
+def _snapshot_load_state() -> dict[str, Any]:
+    """Capture exam/input state so a failed load can roll back cleanly."""
+    snap: dict[str, Any] = {}
+    for name in _LOAD_STATE_FIELDS:
+        value = getattr(state, name)
+        if name in ("normalization_warnings", "import_warnings", "available_sheets", "loaded_exams"):
+            snap[name] = list(value)
+        elif name == "loaded_exam_meta":
+            snap[name] = [dict(meta) for meta in value]
+        else:
+            snap[name] = value
+    return snap
+
+
+def _restore_load_state(snap: dict[str, Any]) -> None:
+    """Restore exam/input state captured by :func:`_snapshot_load_state`."""
+    for name, value in snap.items():
+        setattr(state, name, value)
+
+
+def _drawer_file_label() -> str:
+    """Return a non-identifying drawer label for the current exam set."""
+    n_exams = len(state.loaded_exams)
+    if n_exams == 0:
+        return _NO_FILE_LOADED_STATUS
+    if n_exams == 1:
+        return opaque_exam_label(0).upper()
+    return f"{n_exams} FILES"
 
 
 class UploadTabController:
@@ -75,6 +138,15 @@ class UploadTabController:
                 return
             file_name = e.file.name
             suffix = Path(file_name).suffix.lower() or ".dcm"
+            if suffix not in _TABULAR_SUFFIXES and suffix != ".dcm":
+                self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
+                ui.notify(
+                    f"Unsupported file type: {suffix}. Accepted: .dcm, .csv, .tsv, .xlsx, .xlsm",
+                    type="negative",
+                    timeout=8000,
+                )
+                self.refs.uploader["el"].reset()
+                return
             data = await e.file.read()
             from mypyskindose.debug import dprint
 
@@ -89,40 +161,50 @@ class UploadTabController:
                 )
                 self.refs.uploader["el"].reset()
                 return
-            tmp_path = create_temp_upload(data, suffix=suffix)
-            state.input_sheet_name = 0
-            state.available_sheets = []
-            self.refs.import_preview.sheet_row.set_visibility(False)
-            self.refs.upload_status.set_text("PARSING...")
-            if suffix in _TABULAR_SUFFIXES:
-                state.input_source_type = suffix.lstrip(".")
-                ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
-            else:
-                state.input_source_type = "dicom"
-                ok, msg = require_io_result(await run.io_bound(load_rdsr, tmp_path, state))
-            if ok:
-                await self._on_load_success(file_name, suffix, tmp_path, msg)
-            else:
+
+            snap = _snapshot_load_state()
+            tmp_path: Path | None = None
+            try:
+                tmp_path = create_temp_upload(data, suffix=suffix)
+                self.refs.upload_status.set_text("PARSING...")
+                if suffix in _TABULAR_SUFFIXES:
+                    state.input_source_type = suffix.lstrip(".")
+                    ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
+                else:
+                    state.input_source_type = "dicom"
+                    ok, msg = require_io_result(await run.io_bound(load_rdsr, tmp_path, state))
+                if ok:
+                    # Commit sheet defaults only after a successful parse.
+                    state.input_sheet_name = 0
+                    state.available_sheets = []
+                    self.refs.import_preview.sheet_row.set_visibility(False)
+                    await self._on_load_success(file_name, suffix, tmp_path, msg)
+                else:
+                    _restore_load_state(snap)
+                    remove_temp_upload(tmp_path)
+                    self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
+                    ui.notify(msg, type="negative", timeout=10000, multi_line=True)
+            except Exception:
+                _restore_load_state(snap)
+                if tmp_path is not None:
+                    remove_temp_upload(tmp_path)
                 self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
-                ui.notify(msg, type="negative", timeout=10000, multi_line=True)
-            self.refs.uploader["el"].reset()
+                ui.notify("Could not load this file. Check the file and try again.", type="negative")
+            finally:
+                self.refs.uploader["el"].reset()
 
     async def _on_load_success(self, file_name: str, suffix: str, tmp_path: Path, msg: str) -> None:
+        # Keep the original name in state for optional export provenance only;
+        # never render it in the drawer or status surfaces.
         state.file_name = file_name
-        self.ctx.file_label.set_text(file_name.upper())
-        self.ctx.events_label.set_text(
-            f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
-        )
-        self.refs.upload_status.set_text(f"OK: {msg}")
         n_exams = len(state.loaded_exams)
         n_events = len(state.rdsr_df) if state.rdsr_df is not None else 0
-        self.ctx.file_label.set_text(
-            file_name.upper() if n_exams == 1 else f"{n_exams} FILES"
-        )
+        self.ctx.file_label.set_text(_drawer_file_label())
         self.ctx.events_label.set_text(f"{n_events} EVENTS")
+        self.refs.upload_status.set_text(f"OK: {msg}")
         if state.is_multi_exam:
             ui.notify(
-                f"{len(state.loaded_exams)} exams loaded — each gets its own "
+                f"{n_exams} exams loaded — each gets its own "
                 "dose map; skin doses are summed across all exams on the "
                 "phantom (aggregate PSD = peak of the summed map).",
                 color="blue",
@@ -151,29 +233,36 @@ class UploadTabController:
             if not proceed:
                 return
             path = EXAMPLE_FILES[name]
-            clear_all_temp_uploads()
-            clear_multi_exam_state(state)
-            state.input_source_type = "dicom"
-            state.swap_lat_lon = False
-            state.flip_ap1 = False
-            state.flip_ap2 = False
-            self.refs.upload_status.set_text("PARSING...")
-            ok, msg = require_io_result(await run.io_bound(load_rdsr, path, state))
-            if ok:
-                state.file_name = name
-                self.ctx.file_label.set_text(name.upper())
-                self.ctx.events_label.set_text(
-                    f"{len(state.rdsr_df) if state.rdsr_df is not None else 0} EVENTS"
-                )
-                self.refs.upload_status.set_text(f"OK: {msg}")
-                ui.notify(msg, color="positive")
-                reset_results()
-                self.refs.event_table.refresh()
-                self.refresh_exams_table()
-                self.ctx.refresh_per_exam()
-            else:
+            snap = _snapshot_load_state()
+            try:
+                # Stage against cleared exam state; keep prior uploads' temps until commit.
+                clear_multi_exam_state(state)
+                state.input_source_type = "dicom"
+                state.swap_lat_lon = False
+                state.flip_ap1 = False
+                state.flip_ap2 = False
+                self.refs.upload_status.set_text("PARSING...")
+                ok, msg = require_io_result(await run.io_bound(load_rdsr, path, state))
+                if ok:
+                    clear_all_temp_uploads()
+                    state.file_name = name
+                    n_events = len(state.rdsr_df) if state.rdsr_df is not None else 0
+                    self.ctx.file_label.set_text(_drawer_file_label())
+                    self.ctx.events_label.set_text(f"{n_events} EVENTS")
+                    self.refs.upload_status.set_text(f"OK: {msg}")
+                    ui.notify(msg, color="positive")
+                    reset_results()
+                    self.refs.event_table.refresh()
+                    self.refresh_exams_table()
+                    self.ctx.refresh_per_exam()
+                else:
+                    _restore_load_state(snap)
+                    self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
+                    ui.notify(msg, type="negative", timeout=10000, multi_line=True)
+            except Exception:
+                _restore_load_state(snap)
                 self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
-                ui.notify(msg, type="negative", timeout=10000, multi_line=True)
+                ui.notify("Could not load this example. Try again.", type="negative")
 
     async def reparse_schema(self) -> None:
         if state.file_path is None or state.input_source_type in ("", "dicom"):
@@ -193,7 +282,6 @@ class UploadTabController:
                 self.refs.event_table.refresh()
                 self.refresh_exams_table()
                 self.refs.import_preview.refresh()
-                self.refs.import_preview.set_transform_defaults()
             else:
                 self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
@@ -263,11 +351,11 @@ class UploadTabController:
             state.file_name = meta0.get("file_name", "")
             state.file_path = meta0.get("file_path")
             restore_globals_from_exam_meta(state, meta0)
-            self.ctx.file_label.set_text(state.file_name.upper())
+            self.ctx.file_label.set_text(_drawer_file_label())
             self.ctx.events_label.set_text(f"{n_events} EVENTS")
         else:
             state.file_name = f"{n} files"
-            self.ctx.file_label.set_text(f"{n} FILES")
+            self.ctx.file_label.set_text(_drawer_file_label())
             self.ctx.events_label.set_text(f"{n_events} EVENTS")
         reset_results()
         self.ctx.psd_label.set_text("PSD: 0.00 mGy")
@@ -308,7 +396,6 @@ class UploadTabController:
         schema = meta.get("schema") or getattr(
             getattr(exam, "provenance", None), "schema_name", "—"
         )
-        study_id = str(exam.study_id) if getattr(exam, "study_id", None) else "—"
         warnings = meta.get("warnings") or []
         with ui.card().classes(
             "modern-card w-full bg-blue-950/20 q-pa-sm cursor-pointer"
@@ -319,13 +406,10 @@ class UploadTabController:
                     src.upper(),
                     color=_FORMAT_BADGE_COLORS.get(src, "blue"),
                 ).classes("text-xs")
-                ui.label(meta.get("file_name", "—")).classes(
+                ui.label(opaque_exam_label(idx)).classes(
                     "text-caption font-mono truncate"
                 ).style("max-width: 200px")
                 ui.label(schema).classes("text-caption text-grey-5")
-                ui.label(study_id).classes(
-                    "text-caption text-grey-6 font-mono truncate"
-                ).style("max-width: 160px")
                 ui.label(f"{len(exam.normalized_data)} ev").classes(
                     "text-caption text-grey-4"
                 )

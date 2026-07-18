@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from nicegui import ui
+from nicegui import run, ui
 
 from ..components import HelpButton
 from ..constants import COLORSCALES, MAX_INLINE_MAPS
@@ -77,18 +77,18 @@ class ResultsTabController:
             fluoro = total_fluoro_time_s(state.rdsr_df)
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
 
-    def refresh_dosemap(self) -> None:
+    async def refresh_dosemap(self) -> None:
         if state.is_multi_exam or not state.calculation_done:
             return
         self.refs.dosemap_spinner.visible = True
-        fig = make_dosemap_fig()
+        fig = await run.io_bound(make_dosemap_fig)
         self.refs.dosemap_spinner.visible = False
         if fig:
             self.refs.dosemap_plot.update_figure(fig)
 
-    def maybe_auto_refresh_dosemap(self) -> None:
+    async def maybe_auto_refresh_dosemap(self) -> None:
         if not state.is_multi_exam and state.calculation_done and state.dosemap_fig is None:
-            self.refresh_dosemap()
+            await self.refresh_dosemap()
 
     def refresh_corr_table(self) -> None:
         if state.is_multi_exam or not state.calculation_done or state.output is None:
@@ -509,7 +509,7 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
             ctrl.refs.agg_dosemap_spinner.visible = False
 
 
-def build_results_panel(ctx: PageContext) -> None:
+def build_results_panel(_ctx: PageContext) -> None:
     """Construct and wire the complete Results tab."""
     ctrl = ResultsTabController()
 

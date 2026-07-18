@@ -1,17 +1,20 @@
 # Complexity Refactoring Plan: Remaining GUI Components
 
+> **Status:** Completed and archived (2026-07-18). Shipped controllers/builders for
+> export, per-exam, calculate, data, geometry-preview helpers, and import preview.
+
 This is the detailed companion to Phase 4.4 of
-[the SonarQube remediation plan](sonarqube_remediation_plan.md). It covers the
+[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It covers the
 six remaining GUI findings in that phase:
 
 | Component | Function | Baseline complexity |
 |---|---|---:|
-| [export.py](../../src/mypyskindose/gui/tabs/export.py#L82) | `build` | 72 |
-| [_per_exam.py](../../src/mypyskindose/gui/tabs/_per_exam.py#L36) | `build_per_exam_section` | 42 |
-| [calculate.py](../../src/mypyskindose/gui/tabs/calculate.py#L70) | `build` | 32 |
-| [data.py](../../src/mypyskindose/gui/tabs/data.py#L38) | `build` | 27 |
-| [geometry_preview.py](../../src/mypyskindose/gui/geometry_preview.py#L13) | `geometry_vendor_notice` | 17 |
-| [import_preview.py](../../src/mypyskindose/gui/widgets/import_preview.py#L37) | `build` | 46 |
+| [export.py](../../../src/mypyskindose/gui/tabs/export.py#L82) | `build` | 72 |
+| [_per_exam.py](../../../src/mypyskindose/gui/tabs/_per_exam.py#L36) | `build_per_exam_section` | 42 |
+| [calculate.py](../../../src/mypyskindose/gui/tabs/calculate.py#L70) | `build` | 32 |
+| [data.py](../../../src/mypyskindose/gui/tabs/data.py#L38) | `build` | 27 |
+| [geometry_preview.py](../../../src/mypyskindose/gui/geometry_preview.py#L13) | `geometry_vendor_notice` | 17 |
+| [import_preview.py](../../../src/mypyskindose/gui/widgets/import_preview.py#L37) | `build` | 46 |
 
 The function name in `_per_exam.py` is deliberately recorded as
 `build_per_exam_section`, not `build`. Reconfirm rule/component/line against the

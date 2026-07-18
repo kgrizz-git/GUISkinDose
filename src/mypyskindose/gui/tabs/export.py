@@ -140,7 +140,6 @@ def _show_saved_dialog(saved: Path) -> None:
     """Native-mode success dialog with Open file / Open folder actions."""
     with ui.dialog() as done_dialog, ui.card().classes("gap-3"):
         ui.label(f"Saved to {saved.name}").classes("font-medium")
-        ui.label(str(saved.parent)).classes("text-xs text-grey-6")
         with ui.row().classes("w-full justify-end gap-2"):
             def _open_file():
                 if not _open_path(saved):
@@ -202,7 +201,14 @@ class ExportTabController:
         save_path = await _get_save_path(default_name, "html")
         if save_path is None and _is_native_mode():
             return  # user cancelled the native dialog
-        content = require_io_result(await run.io_bound(make_dosemap_html))
+        explicit_dose_map = None
+        explicit_patient = None
+        if state.multi_exam_result is not None and state.multi_exam_result.exams:
+            explicit_dose_map = state.multi_exam_result.aggregate_dose_map
+            explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
+        content = require_io_result(
+            await run.io_bound(make_dosemap_html, explicit_dose_map, explicit_patient)
+        )
         if not content:
             ui.notify("Failed to generate HTML", type="negative")
             return
@@ -225,7 +231,14 @@ class ExportTabController:
         save_path = await _get_save_path(default_name, "png")
         if save_path is None and _is_native_mode():
             return  # user cancelled the native dialog
-        content = require_io_result(await run.io_bound(make_dosemap_png))
+        explicit_dose_map = None
+        explicit_patient = None
+        if state.multi_exam_result is not None and state.multi_exam_result.exams:
+            explicit_dose_map = state.multi_exam_result.aggregate_dose_map
+            explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
+        content = require_io_result(
+            await run.io_bound(make_dosemap_png, explicit_dose_map, explicit_patient)
+        )
         if not content:
             ui.notify("Failed to generate PNG (requires kaleido)", type="negative")
             return
