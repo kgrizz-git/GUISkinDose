@@ -410,7 +410,9 @@ class UploadTabController:
                     "text-caption font-mono truncate"
                 ).style("max-width: 200px")
                 ui.label(schema).classes("text-caption text-grey-5")
-                ui.label(f"{len(exam.normalized_data)} ev").classes(
+                event_count = len(exam.normalized_data)
+                event_word = "event" if event_count == 1 else "events"
+                ui.label(f"{event_count} {event_word}").classes(
                     "text-caption text-grey-4"
                 )
                 if warnings:
