@@ -29,6 +29,58 @@ from .settings import PyskindoseSettings
 logger = logging.getLogger("mypyskindose")
 
 
+class RdsrUnitError(ValueError):
+    """Raised when an RDSR reports a quantity in an unexpected physical unit.
+
+    ``rdsr_parser`` encodes each measured value's DICOM unit into the column name
+    (e.g. ``DoseRP_Gy``). When a report uses a unit this pipeline does not
+    convert, the expected column is absent and a sibling ``{concept}_{other-unit}``
+    column is present; the normalizer would otherwise fail with an opaque
+    AttributeError. This surfaces a clear, unit-naming message instead. See
+    dev-docs/INPUT_SCHEMA_DETECTION.md ("Unit handling").
+    """
+
+
+# Concept prefix (as produced by rdsr_parser) → (expected DICOM unit code,
+# human-readable quantity label). These are the quantities the normalizer reads
+# by unit-suffixed column name; a differing unit is a hard, un-converted mismatch.
+_EXPECTED_UNITS: dict[str, tuple[str, str]] = {
+    "DoseRP": ("Gy", "reference point dose"),
+    "KVP": ("kV", "tube voltage (kVp)"),
+    "DistanceSourcetoDetector": ("mm", "source-to-detector distance"),
+    "DistanceSourcetoIsocenter": ("mm", "source-to-isocenter distance"),
+    "TableLongitudinalPosition": ("mm", "table longitudinal position"),
+    "TableLateralPosition": ("mm", "table lateral position"),
+    "TableHeightPosition": ("mm", "table height position"),
+    "PositionerPrimaryAngle": ("deg", "positioner primary angle"),
+    "PositionerSecondaryAngle": ("deg", "positioner secondary angle"),
+}
+
+
+def _verify_expected_units(data_parsed: pd.DataFrame) -> None:
+    """Raise :class:`RdsrUnitError` if a quantity is reported in an unexpected unit.
+
+    For each expected ``{concept}_{unit}`` column that is absent, check whether a
+    sibling ``{concept}_*`` column (same quantity, different unit) is present. If
+    so, the report used a unit this pipeline does not convert; fail early with a
+    clear message rather than a downstream AttributeError. A concept that is
+    wholly absent is left to the existing missing-column handling.
+    """
+    columns = list(data_parsed.columns)
+    for concept, (expected_unit, label) in _EXPECTED_UNITS.items():
+        if f"{concept}_{expected_unit}" in columns:
+            continue
+        prefix = f"{concept}_"
+        siblings = [c for c in columns if c.startswith(prefix)]
+        if siblings:
+            found_unit = siblings[0][len(prefix):]
+            raise RdsrUnitError(
+                f"This RDSR reports {label} in '{found_unit}', but MyPySkinDose expects "
+                f"'{expected_unit}'. The report uses a unit this pipeline does not convert; "
+                "verify the acquisition device's dose-report configuration."
+            )
+
+
 def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> pd.DataFrame:
     """Normalize RDSR data for PySkinDose compliance.
 
@@ -145,6 +197,8 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
         Aluminum X-ray filter thickness in mm.
     """
     data_norm = pd.DataFrame()
+
+    _verify_expected_units(data_parsed)
 
     settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
 

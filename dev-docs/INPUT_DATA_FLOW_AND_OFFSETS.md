@@ -10,6 +10,13 @@ MyPySkinDose accepts two primary forms of input data:
 - **DICOM RDSR (`.dcm`)**: The standard input format. It runs through `rdsr_parser.py` (extracts tags) and `rdsr_normalizer.py` (standardizes the coordinate space and parameters).
 - **Pre-parsed JSON files (`.json`)**: Found in `example_data/RDSR/` (e.g., `beam_collimations.json`, `table_translations.json`). These bypass the parser and normalizer entirely. They are loaded directly into Pandas DataFrames and are primarily used for testing specific geometry and mathematical edge cases.
 
+Tabular exports (`.csv`, `.tsv`, `.xlsx`) are additionally supported via `input_adapters/`.
+
+> **Physical units.** How each input path resolves physical units into the internal DataFrame contract
+> (RDSR reads-and-asserts; tabular adapters read the unit from each column header and flag when it
+> cannot be confirmed) is documented in
+> [INPUT_SCHEMA_DETECTION.md → Unit handling](INPUT_SCHEMA_DETECTION.md#unit-handling).
+
 ## 2. Normalization Settings
 
 Different X-ray manufacturers define their reference coordinates differently. `rdsr_normalizer.py` uses `normalization_settings.json` to map these to MyPySkinDose's standardized coordinate system. It matches the RDSR's `Manufacturer` and `ManufacturerModelName` to apply:

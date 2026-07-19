@@ -131,6 +131,8 @@ Common to both branches:
 
 Per exam ID: manufacturer, model, and normalization profile matched. Include station name and software version only if they are actually available from the source adapter or a future parser enhancement; they are **not** required for v1.
 
+**Unit parsing / conversions (shipped):** `ExamSection.unit_conversions` (from `provenance.unit_conversions`) is rendered in the equipment block of every writer as `Units: <field>` rows (e.g. `mGy → Gy (from 'Air Kerma (mGy)')`). It is empty for DICOM RDSR (units read+asserted, not converted) and `normalized` inputs. See [INPUT_SCHEMA_DETECTION.md → Unit handling](../INPUT_SCHEMA_DETECTION.md#unit-handling).
+
 ### 4. Settings snapshot
 
 Effective `PyskindoseSettings` per exam when offsets differ. Serialize the effective settings directly in the payload collector (from GUI/CLI source adapters or per-exam settings objects); do **not** expand `PySkinDoseOutput.to_dict()` just for report generation. Include at minimum: `mode`, `phantom` (model/mesh/scaling/orientation), `normalization_settings`, `below_floor_kvp_policy`, `below_floor_kvp_manual`, `estimate_k_tab`, `k_tab_val`, `corrections_db_path`, `beam_miss_warn` (note CLI default is `per_event` while GUI default is `summary`), `inherent_filtration`, `remove_invalid_rows`; flag non-defaults vs `settings_example.json`. Report effective kVp per below-floor event after policy application.

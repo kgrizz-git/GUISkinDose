@@ -490,9 +490,10 @@ class TestRadimetricsAdapter:
             input_schema="radimetrics",
             settings=_default_settings(),
         )
-        # Source: 0.030 mGy → 3e-05 Gy in K_IRP
-        assert result.provenance.unit_conversions.get("DoseRP_Gy") == "mGy → Gy"
-        assert result.provenance.unit_conversions.get("CollimatedFieldArea_m2") == "cm² → m²"
+        # Source: 0.030 mGy → 3e-05 Gy in K_IRP. The audit string now names the
+        # source header the unit was read from.
+        assert result.provenance.unit_conversions.get("DoseRP_Gy", "").startswith("mGy → Gy")
+        assert result.provenance.unit_conversions.get("CollimatedFieldArea_m2", "").startswith("cm² → m²")
 
     def test_kvp_numeric_and_positive(self):
         from mypyskindose.input_adapters.registry import read_and_normalize_input
@@ -633,7 +634,7 @@ class TestDoseTrackAdapter:
             input_schema="dosetrack",
             settings=_default_settings(),
         )
-        assert result.provenance.unit_conversions.get("DoseRP_Gy") == "mGy → Gy"
+        assert result.provenance.unit_conversions.get("DoseRP_Gy", "").startswith("mGy → Gy")
         assert "DoseAreaProduct_Gym2" in result.provenance.unit_conversions
 
     def test_manufacturer_inferred_from_equipment_name(self):

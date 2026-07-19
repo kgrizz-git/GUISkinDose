@@ -37,6 +37,19 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Header-aware unit detection for tabular input** (2026-07-19) — the `radimetrics` and `dosetrack`
+  adapters now read each field's physical unit from its source column header (reference-point dose,
+  collimated field area, tube current, exposure, source-to-detector/isocenter distances, table
+  positions) and convert to internal units, generalizing the existing DAP helper via
+  `convert_field_with_header_units()` and a unit registry in `input_adapters/base.py`. Correctly- or
+  unlabelled exports produce identical results; mislabelled/atypical exports now convert by their real
+  header unit, with a confident read recorded in the provenance audit trail and an import warning when
+  the token is unreadable. The unit-conversion audit trail is now surfaced in the GUI import preview and
+  in rich exports (`ExamSection.unit_conversions` → all four writers + dict/JSON payload). DICOM RDSR
+  unit mismatches now raise a clear, unit-naming `RdsrUnitError` (surfaced in the GUI) instead of a
+  generic failure. Unit handling across all three input paths is documented in
+  `dev-docs/INPUT_SCHEMA_DETECTION.md` ("Unit handling").
+
 - **Content-bound privacy admission and local SonarQube** (2026-07-16) — protected `.gitignore` rules and never-track
   roots now block unsafe staged paths; a staged/range router requires value-free, expiring receipts for applicable
   Presidio, phi-scan, HoundDog, DICOM, and image-OCR scans. Receipts and raw reports stay below Git metadata or private

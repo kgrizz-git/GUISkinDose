@@ -101,6 +101,11 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         phantom=(_sections.phantom_section(view, settings) if settings is not None else {}),
         metrics=_metrics.dosimetric_metrics(view, df, events_discarded=discarded),
         corrections=_metrics.correction_stats(view),
+        unit_conversions=(
+            dict(exam_src.provenance.unit_conversions)
+            if exam_src is not None and exam_src.provenance is not None
+            else {}
+        ),
         warnings=(list(exam_src.extra_warnings) if exam_src else []),
     )
 

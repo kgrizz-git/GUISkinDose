@@ -20,6 +20,7 @@ from mypyskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
     convert_dap_series_to_gym2,
+    convert_field_with_header_units,
     run_normalizer_pipeline,
 )
 from mypyskindose.input_adapters.models import InputAdapterResult
@@ -223,13 +224,20 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
     if "_dt_dap" in data_df.columns:
         data_df["_dt_dap"] = pd.to_numeric(data_df["_dt_dap"].astype(str).str.strip(), errors="coerce")
 
-    # Unit conversions.
-    if "DoseRP_Gy" in data_df.columns:
-        data_df["DoseRP_Gy"] = data_df["DoseRP_Gy"] / 1000.0
-        ctx.unit_conversions["DoseRP_Gy"] = "mGy → Gy"
-    if "XRayTubeCurrent_mA" in data_df.columns:
-        data_df["XRayTubeCurrent_mA"] = data_df["XRayTubeCurrent_mA"] / 1000.0
-        ctx.unit_conversions["XRayTubeCurrent_mA"] = "µA → mA"
+    # Header-aware unit conversions (unreadable tokens fall back to the DoseTrack
+    # vendor defaults — mGy/µA/mm — and are flagged). Distances must be converted
+    # before the CollimatedFieldArea_m2 derivation below, which assumes mm. The
+    # DAP column and the derived CFA are handled separately further down.
+    for col, kind in (
+        ("DoseRP_Gy", "dose"),
+        ("XRayTubeCurrent_mA", "tube_current"),
+        ("DistanceSourcetoDetector_mm", "distance"),
+        ("DistanceSourcetoIsocenter_mm", "distance"),
+        ("TableLongitudinalPosition_mm", "distance"),
+        ("TableLateralPosition_mm", "distance"),
+        ("TableHeightPosition_mm", "distance"),
+    ):
+        convert_field_with_header_units(data_df, col, kind, ctx)
 
     # DAP → Gy·m², reading the unit from the original source header (falls back to
     # an assume-Gy·cm²-and-flag path when the header carries no recognisable unit).

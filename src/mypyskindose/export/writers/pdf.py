@@ -134,6 +134,8 @@ def _settings_flow(exam: ExamSection, multi: bool) -> list:
         rows.append([str(OFFSET_LABELS.get(key, key)), str(value)])
     rows.append(["Manufacturer", exam.manufacturer or "N/A"])
     rows.append(["Model", exam.model or "N/A"])
+    for field_name, desc in exam.unit_conversions.items():
+        rows.append([f"Units: {field_name}", desc])
     flow: list[Any] = []
     if multi:
         flow.append(Paragraph(f"Exam {exam.exam_id}", _H2))

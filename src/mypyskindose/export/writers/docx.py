@@ -76,6 +76,8 @@ def _settings_rows(exam) -> list[list[str]]:
         rows.append([str(OFFSET_LABELS.get(key, key)), str(value)])
     rows.append(["Manufacturer", exam.manufacturer or "N/A"])
     rows.append(["Model", exam.model or "N/A"])
+    for field_name, desc in exam.unit_conversions.items():
+        rows.append([f"Units: {field_name}", desc])
     return rows
 
 

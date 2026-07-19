@@ -137,6 +137,8 @@ def _settings_block(exam: ExamSection) -> list[list[str]]:
     rows.append(["Manufacturer", exam.manufacturer or "N/A"])
     rows.append(["Model", exam.model or "N/A"])
     rows.append(["Normalization profile", exam.normalization_profile or "N/A"])
+    for field_name, desc in exam.unit_conversions.items():
+        rows.append([f"Units: {field_name}", desc])
     toggles = exam.coordinate.get("toggles", {})
     for key, value in toggles.items():
         rows.append([f"coord.{key}", str(value)])
