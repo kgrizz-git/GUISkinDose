@@ -117,6 +117,15 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **HTML/PNG dose-map export error reporting (Phase 1)** (2026-07-19) — `make_dosemap_html`
+  and `make_dosemap_png` no longer silently return `None` on failure, which `require_io_result`
+  mislabeled as a cancelled background task; both now log via `safe_error_event` and re-raise.
+  The `download_html` / `download_png` export handlers distinguish a genuine NiceGUI
+  cancel/shutdown from a real render failure and show an actionable, dismissible notify for the
+  latter (no PHI). Root cause of the underlying render failure is not yet identified (tracked as
+  Phase 2 in `dev-docs/plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md`); this phase only fixes the
+  misleading error message.
+
 - **CI dirty-checkout and SonarCloud gate** (2026-07-17) — exclude regenerable `corrections.db` artifacts
   from the pytest checkout guard; confine commit-message and Sonar scanner CLI paths; rebuild Sonar host URLs
   from allowlisted components before `subprocess.run`; write privacy-tool inventory Markdown only to a fixed

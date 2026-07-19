@@ -53,7 +53,7 @@ their corresponding plan exit criteria pass.
   Plotly trace count and large datasets.
 - [x] **Dose map per-exam checkbox controls** — show cumulative dose or selected exam subsets and update PSD/dose
   map live. See [DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md).
-- [ ] **Fix download/export HTML button** — verify related export paths while touching this area.
+- [ ] **Fix download/export HTML button** — `require_io_result` conflates "callback returned None" with "task cancelled"; `make_dosemap_html`/`make_dosemap_png` swallow exceptions with no log (Results aggregate map can render while HTML export fails). Plan: [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment: [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
 
 ## Product Backlog
 
