@@ -42,8 +42,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   collimated field area, tube current, exposure, source-to-detector/isocenter distances, table
   positions) and convert to internal units, generalizing the existing DAP helper via
   `convert_field_with_header_units()` and a unit registry in `input_adapters/base.py`. Correctly- or
-  unlabelled exports produce identical results; mislabelled/atypical exports now convert by their real
-  header unit, with a confident read recorded in the provenance audit trail and an import warning when
+  unlabelled exports produce identical results; mislabelled/atypical exports now convert by their
+  declared header unit, with a confident read recorded in the provenance audit trail and an import warning when
   the token is unreadable. The unit-conversion audit trail is now surfaced in the GUI import preview and
   in rich exports (`ExamSection.unit_conversions` → all four writers + dict/JSON payload). DICOM RDSR
   unit mismatches now raise a clear, unit-naming `RdsrUnitError` (surfaced in the GUI) instead of a

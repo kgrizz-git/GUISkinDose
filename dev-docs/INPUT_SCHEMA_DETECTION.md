@@ -104,8 +104,10 @@ standard DICOM unit — but it fails loud rather than mis-converting.
 
 Every convertible tabular quantity reads its unit from the column header and converts to the internal
 unit, recording a confident interpretation in the provenance `unit_conversions` (shown in the GUI
-import preview and in rich exports) and appending an import warning when the token is unreadable so no
-silent assumption reaches the report:
+import preview and in rich exports). For quantities whose unit genuinely varies between vendors, an
+unreadable token appends an import warning so no silent assumption reaches the report. Distances and
+table positions (where mm is near-universal) fall back to mm silently — see the **Warns** column
+below:
 
 | Quantity | Internal unit | Recognised tokens | Assumed if unreadable | Warns |
 |---|---|---|---|---|

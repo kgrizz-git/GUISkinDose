@@ -102,7 +102,7 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         metrics=_metrics.dosimetric_metrics(view, df, events_discarded=discarded),
         corrections=_metrics.correction_stats(view),
         unit_conversions=(
-            dict(exam_src.provenance.unit_conversions)
+            dict(getattr(exam_src.provenance, "unit_conversions", None) or {})
             if exam_src is not None and exam_src.provenance is not None
             else {}
         ),

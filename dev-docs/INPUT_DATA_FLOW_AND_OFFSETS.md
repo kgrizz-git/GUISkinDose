@@ -13,8 +13,9 @@ MyPySkinDose accepts two primary forms of input data:
 Tabular exports (`.csv`, `.tsv`, `.xlsx`) are additionally supported via `input_adapters/`.
 
 > **Physical units.** How each input path resolves physical units into the internal DataFrame contract
-> (RDSR reads-and-asserts; tabular adapters read the unit from each column header and flag when it
-> cannot be confirmed) is documented in
+> (RDSR reads-and-asserts; tabular adapters read the unit from each column header and flag
+> variable-unit quantities when the token cannot be confirmed — distances default silently to mm) is
+> documented in
 > [INPUT_SCHEMA_DETECTION.md → Unit handling](INPUT_SCHEMA_DETECTION.md#unit-handling).
 
 ## 2. Normalization Settings

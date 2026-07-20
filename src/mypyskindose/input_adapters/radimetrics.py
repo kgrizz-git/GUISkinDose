@@ -151,6 +151,7 @@ _NUMERIC_COLUMNS: frozenset[str] = frozenset(
         "XRayFilterThicknessMinimum_mm",
         "XRayFilterThicknessMaximum_mm",
         "Exposure_uAs",
+        "XRayTubeCurrent_mA",
     }
 )
 
