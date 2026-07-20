@@ -245,6 +245,7 @@ class ExportTabController:
                 include_source_identifiers=self._include_ids(),
             )
             content = _inject_html_tabular_meta(content, meta)
+        logger.info("dosemap html export rendered (bytes=%d)", len(content))
         _write_or_download(save_path, content, default_name, "HTML export saved.", "html_export_write")
 
     async def download_png(self) -> None:
@@ -283,6 +284,7 @@ class ExportTabController:
                 "package). Check the log for details.",
             )
             return
+        logger.info("dosemap png export rendered (bytes=%d)", len(content))
         _write_or_download(save_path, content, default_name, "PNG export saved.", "png_export_write")
 
     async def _render_rich_report(self, fmt: str, title: str | None) -> bytes | None:
