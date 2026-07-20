@@ -46,9 +46,9 @@ def _relative_frame_path(filename: str) -> str:
     """
     parts = Path(filename).parts
     if "mypyskindose" in parts:
-        return "/".join(parts[parts.index("mypyskindose") :])
+        return Path(*parts[parts.index("mypyskindose") :]).as_posix()
     if "site-packages" in parts:
-        return "/".join(parts[parts.index("site-packages") + 1 :])
+        return Path(*parts[parts.index("site-packages") + 1 :]).as_posix()
     return Path(filename).name
 
 
@@ -86,7 +86,14 @@ def safe_traceback(exc: BaseException) -> str:
         lines.append(f"{prefix}{exception_class_name(current)}")
         frames = traceback.extract_tb(current.__traceback__)[-_MAX_TRACEBACK_FRAMES:]
         lines.extend(f"  {_safe_frame(frame)}" for frame in frames)
-        current = current.__cause__ or current.__context__
+        # Mirror CPython's traceback display: prefer an explicit cause; otherwise
+        # follow the implicit context only when it was not suppressed (``from None``).
+        if current.__cause__ is not None:
+            current = current.__cause__
+        elif not current.__suppress_context__:
+            current = current.__context__
+        else:
+            current = None
     return "\n".join(lines)
 
 

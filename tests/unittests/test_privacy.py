@@ -92,6 +92,19 @@ def test_safe_traceback_walks_cause_chain_without_values() -> None:
     assert "test_privacy.py:" in location
 
 
+def test_safe_traceback_honors_suppressed_context() -> None:
+    try:
+        try:
+            raise ValueError("inner")
+        except ValueError:
+            raise RuntimeError("outer") from None  # suppresses the ValueError context
+    except RuntimeError as exc:
+        trace = safe_traceback(exc)
+
+    assert "RuntimeError" in trace
+    assert "ValueError" not in trace  # explicitly suppressed via `from None`
+
+
 def test_safe_warning_accepts_only_non_sensitive_scalars() -> None:
     logger, handler, stream = _captured_logger("mypyskindose.test.privacy.warning")
     try:
