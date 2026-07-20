@@ -14,9 +14,7 @@ def create_plot_and_save_to_file(mode: str, data: List[go.Mesh3d | go.Scatter3d]
     :param layout:
     :return:
     """
-    plot_filename = f"{mode}.html"
-
-    logger.debug(f"Creating plot and savint to file {plot_filename}")
+    logger.debug(f"Creating {mode} plot (rendered via Figure.show)")
 
     fig = go.Figure(data=data, layout=layout)
 
