@@ -29,5 +29,7 @@ def test_load_failure_log_suppresses_exception_message() -> None:
         logger.removeHandler(handler)
 
     text = "\n".join(messages)
-    assert "DICOM_RDSR_LOAD failed (error_type=ValueError)" in text
+    # Trailing paren dropped so the assertion tolerates the value-free
+    # " at <path>:<lineno> in <func>" location suffix safe_error_event may add.
+    assert "DICOM_RDSR_LOAD failed (error_type=ValueError" in text
     assert "patient_name" not in text
