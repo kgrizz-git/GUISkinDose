@@ -8,9 +8,11 @@ import logging
 import pytest
 
 from mypyskindose.privacy import (
+    innermost_location,
     install_value_safe_excepthook,
     opaque_exam_label,
     safe_error_event,
+    safe_traceback,
     safe_user_error,
     safe_warning,
 )
@@ -37,6 +39,70 @@ def test_safe_error_event_suppresses_exception_message_and_path() -> None:
     assert sentinel not in output
     assert "RuntimeError" in output
     assert "dose_calculation" in output
+
+
+def _raise_with_sentinels(sentinel: str) -> RuntimeError:
+    """Raise (and return) a real RuntimeError whose message + a local hold the sentinel."""
+    patient_path = sentinel  # local variable that must never be logged
+    try:
+        raise RuntimeError(f"failed for {patient_path}")
+    except RuntimeError as exc:
+        return exc
+
+
+def test_safe_error_event_logs_value_free_location_but_not_message() -> None:
+    sentinel = "PATIENT-SENTINEL-/Users/private/exam.dcm"
+    exc = _raise_with_sentinels(sentinel)
+    logger, handler, stream = _captured_logger("mypyskindose.test.privacy.loc")
+    logger.setLevel(logging.DEBUG)
+
+    try:
+        safe_error_event(logger, "dose_calculation", exc)
+    finally:
+        logger.removeHandler(handler)
+
+    output = stream.getvalue()
+    # Value-free diagnostics gained: exception type + our source location + DEBUG trace.
+    assert "RuntimeError" in output
+    assert "mypyskindose/privacy.py" not in output  # raised from the test module, not here
+    assert "test_privacy.py:" in output
+    assert "in _raise_with_sentinels" in output
+    assert "traceback (value-free)" in output
+    # Still no message, no local value, no absolute path.
+    assert sentinel not in output
+    assert "/Users/" not in output
+    assert "failed for" not in output
+
+
+def test_safe_traceback_walks_cause_chain_without_values() -> None:
+    sentinel = "SENTINEL-VALUE-98765"
+    try:
+        try:
+            raise ValueError(f"inner {sentinel}")
+        except ValueError as inner:
+            raise RuntimeError(f"outer {sentinel}") from inner
+    except RuntimeError as exc:
+        trace = safe_traceback(exc)
+        location = innermost_location(exc)
+
+    assert "RuntimeError" in trace
+    assert "caused by: ValueError" in trace
+    assert sentinel not in trace
+    assert sentinel not in location
+    assert "test_privacy.py:" in location
+
+
+def test_safe_traceback_honors_suppressed_context() -> None:
+    try:
+        try:
+            raise ValueError("inner")
+        except ValueError:
+            raise RuntimeError("outer") from None  # suppresses the ValueError context
+    except RuntimeError as exc:
+        trace = safe_traceback(exc)
+
+    assert "RuntimeError" in trace
+    assert "ValueError" not in trace  # explicitly suppressed via `from None`
 
 
 def test_safe_warning_accepts_only_non_sensitive_scalars() -> None:

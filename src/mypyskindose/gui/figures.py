@@ -2,8 +2,11 @@
 
 These functions read from the shared ``state`` singleton and ``build_settings``;
 they do not depend on any page-construction scope, so they live here rather than
-inside the page function. Each returns a Plotly figure ``dict`` (or ``bytes`` for
-the HTML/PNG exporters), or ``None`` on failure.
+inside the page function. ``make_geometry_fig``/``make_dosemap_fig`` return a Plotly
+figure ``dict`` or ``None`` on failure (an empty plot is an acceptable outcome for
+Results). ``make_dosemap_html``/``make_dosemap_png`` return ``bytes`` and instead
+*raise* on failure, since a silent ``None`` there is indistinguishable from NiceGUI's
+cancel-on-shutdown sentinel (see ``gui/concurrency.require_io_result``).
 """
 
 from __future__ import annotations
@@ -149,30 +152,43 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
         return None
 
 
-def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes | None:
-    """Render the dose map as a standalone interactive HTML document."""
+def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes:
+    """Render the dose map as a standalone interactive HTML document.
+
+    Raises on failure (instead of returning ``None``) so callers — notably the
+    export handlers in ``gui/tabs/export.py`` — can distinguish a real render
+    failure from NiceGUI's ``run.io_bound`` cancel-on-shutdown ``None`` sentinel
+    (see ``require_io_result``). The failure is logged via ``safe_error_event``
+    before re-raising so no exception text/PHI reaches the caller or the log.
+    """
     try:
         fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
         if fig_dict is None:
-            return None
+            raise RuntimeError("Dose map figure could not be built")
         import plotly.graph_objects as go
 
         fig = go.Figure(fig_dict)
         return fig.to_html(full_html=True).encode()
-    except Exception:
-        return None
+    except Exception as exc:
+        safe_error_event(logger, "dosemap_html_render", exc)
+        raise
 
 
-def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes | None:
-    """Render the dose map as a static PNG (requires kaleido)."""
+def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
+    """Render the dose map as a static PNG (requires kaleido).
+
+    Raises on failure (instead of returning ``None``) — mirrors
+    ``make_dosemap_html``; see that docstring for the cancel-vs-failure rationale.
+    """
     try:
         fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
         if fig_dict is None:
-            return None
+            raise RuntimeError("Dose map figure could not be built")
         import plotly.graph_objects as go
 
         fig = go.Figure(fig_dict)
         fig.update_layout(scene_camera=dict(eye=dict(x=-2.5, y=1.5, z=0)))
         return fig.to_image(format="png")
-    except Exception:
-        return None
+    except Exception as exc:
+        safe_error_event(logger, "dosemap_png_render", exc)
+        raise

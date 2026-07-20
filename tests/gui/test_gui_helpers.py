@@ -79,7 +79,9 @@ def test_get_mesh_baseline_extents_handles_corrupt_stl(
     assert helpers._MESH_EXTENT_CACHE["broken"] == (0.0, 0.0, 0.0)
     assert helpers._MESH_TORSO_WIDTH_CACHE["broken"] == pytest.approx(0.0)
     text = "\n".join(messages)
-    assert "phantom_mesh_measurement failed (error_type=ValueError)" in text
+    # Trailing paren dropped so the assertion tolerates the value-free
+    # " at <path>:<lineno> in <func>" location suffix safe_error_event adds.
+    assert "phantom_mesh_measurement failed (error_type=ValueError" in text
     assert "not an stl" not in text
 
 

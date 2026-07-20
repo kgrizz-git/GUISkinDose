@@ -12,6 +12,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **More diagnostic (still value-free) error logging** (2026-07-19) — `privacy.safe_error_event` now appends
+  the value-free code location where an exception was raised (`path:lineno in func`) to its one-line summary,
+  and — when DEBUG is enabled — emits a value-free traceback that walks the exception's `cause`/`context`
+  chain (frame locations + exception class names only). Exception messages, source-line text, local values,
+  and absolute paths are still never logged. This turns otherwise-opaque failures (e.g. a bare
+  `multi_exam_analysis failed (error_type=RuntimeError)`) into something diagnosable without exposing clinical
+  data. Successful HTML/PNG dose-map exports also now log a byte-count-only breadcrumb (previously silent).
+- **Corrected misleading geometry-plot debug log** (2026-07-19) — `create_plot_and_save_to_file` logged
+  "savint to file `<mode>.html`" although it never writes a file (it calls `Figure.show`, which the GUI
+  intercepts to embed the figure); fixed the typo and the false file-write claim.
 - **Sensitive-content scanner complexity refactoring (SonarQube Phase 5)** (2026-07-18) — extracted
   format-specific readers (notebook attachment/output inspection, PDF metadata/page/attachment
   extraction, and bounded archive/office-document member iteration) from `scripts/check_sensitive_content.py`
@@ -129,6 +139,15 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   blocked by semgrep's exact pin and remains tracked via `dev-docs/TO_DO.md` and `[tool.uv.audit]` ignores.
 
 ### Fixed
+
+- **HTML/PNG dose-map export error reporting (Phase 1)** (2026-07-19) — `make_dosemap_html`
+  and `make_dosemap_png` no longer silently return `None` on failure, which `require_io_result`
+  mislabeled as a cancelled background task; both now log via `safe_error_event` and re-raise.
+  The `download_html` / `download_png` export handlers distinguish a genuine NiceGUI
+  cancel/shutdown from a real render failure and show an actionable, dismissible notify for the
+  latter (no PHI). Root cause of the underlying render failure is not yet identified (tracked as
+  Phase 2 in `dev-docs/plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md`); this phase only fixes the
+  misleading error message.
 
 - **CI dirty-checkout and SonarCloud gate** (2026-07-17) — exclude regenerable `corrections.db` artifacts
   from the pytest checkout guard; confine commit-message and Sonar scanner CLI paths; rebuild Sonar host URLs

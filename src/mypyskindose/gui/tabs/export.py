@@ -107,6 +107,19 @@ def _write_or_download(save_path, content, default_name: str, saved_msg: str, wr
         ui.download(content, default_name)
 
 
+def _notify_export_failure(safe_error_key: str, exc: Exception, message: str) -> None:
+    """Log an export failure safely and show actionable, dismissible negative notifications.
+
+    Shared by every non-cancel exception path in ``download_html``/``download_png`` (both the
+    non-cancel ``RuntimeError`` branch and the generic ``Exception`` branch) so a builder failure
+    such as ``RuntimeError("Dose map figure could not be built")`` can never escape the handler
+    silently mislabeled as a cancellation.
+    """
+    safe_error_event(logger, safe_error_key, exc)
+    ui.notify(safe_user_error(safe_error_key), type="negative", timeout=0, close_button="Dismiss")
+    ui.notify(message, type="negative")
+
+
 def _show_missing_dependency_dialog(exc: MissingExportDependencyError) -> None:
     """Persistent, actionable dialog for a missing optional export package."""
     install_name = "python-docx" if exc.package == "docx" else exc.package
@@ -206,11 +219,22 @@ class ExportTabController:
         if state.multi_exam_result is not None and state.multi_exam_result.exams:
             explicit_dose_map = state.multi_exam_result.aggregate_dose_map
             explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
-        content = require_io_result(
-            await run.io_bound(make_dosemap_html, explicit_dose_map, explicit_patient)
-        )
-        if not content:
-            ui.notify("Failed to generate HTML", type="negative")
+        try:
+            content = require_io_result(
+                await run.io_bound(make_dosemap_html, explicit_dose_map, explicit_patient)
+            )
+        except RuntimeError as exc:
+            if "Background task was cancelled" in str(exc):
+                ui.notify("Export cancelled — the application is shutting down.", type="warning")
+                return
+            _notify_export_failure(
+                "html_export", exc, "Could not generate the HTML dose map. Check the log for details."
+            )
+            return
+        except Exception as exc:
+            _notify_export_failure(
+                "html_export", exc, "Could not generate the HTML dose map. Check the log for details."
+            )
             return
         if state.import_provenance is not None:
             meta = _tabular_input_meta(
@@ -221,6 +245,7 @@ class ExportTabController:
                 include_source_identifiers=self._include_ids(),
             )
             content = _inject_html_tabular_meta(content, meta)
+        logger.info("dosemap html export rendered (bytes=%d)", len(content))
         _write_or_download(save_path, content, default_name, "HTML export saved.", "html_export_write")
 
     async def download_png(self) -> None:
@@ -236,12 +261,30 @@ class ExportTabController:
         if state.multi_exam_result is not None and state.multi_exam_result.exams:
             explicit_dose_map = state.multi_exam_result.aggregate_dose_map
             explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
-        content = require_io_result(
-            await run.io_bound(make_dosemap_png, explicit_dose_map, explicit_patient)
-        )
-        if not content:
-            ui.notify("Failed to generate PNG (requires kaleido)", type="negative")
+        try:
+            content = require_io_result(
+                await run.io_bound(make_dosemap_png, explicit_dose_map, explicit_patient)
+            )
+        except RuntimeError as exc:
+            if "Background task was cancelled" in str(exc):
+                ui.notify("Export cancelled — the application is shutting down.", type="warning")
+                return
+            _notify_export_failure(
+                "png_export",
+                exc,
+                "Could not generate the PNG dose map (this may require the 'kaleido' "
+                "package). Check the log for details.",
+            )
             return
+        except Exception as exc:
+            _notify_export_failure(
+                "png_export",
+                exc,
+                "Could not generate the PNG dose map (this may require the 'kaleido' "
+                "package). Check the log for details.",
+            )
+            return
+        logger.info("dosemap png export rendered (bytes=%d)", len(content))
         _write_or_download(save_path, content, default_name, "PNG export saved.", "png_export_write")
 
     async def _render_rich_report(self, fmt: str, title: str | None) -> bytes | None:
