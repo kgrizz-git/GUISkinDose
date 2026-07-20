@@ -62,6 +62,8 @@ class ImportPreviewController:
     sheet_label: ui.label
     warnings_label: ui.label
     col_map_table: ui.table
+    unit_conv_row: ui.column
+    unit_conv_table: ui.table
     event_sample_table: ui.table
 
     def __init__(self, ctx: PageContext, upload_status: ui.label) -> None:
@@ -155,6 +157,7 @@ class ImportPreviewController:
         self._refresh_metadata(prov)
         self._refresh_warnings()
         self._refresh_column_map(prov)
+        self._refresh_unit_conversions(prov)
         self._refresh_event_sample()
 
     def _refresh_metadata(self, prov) -> None:
@@ -179,6 +182,14 @@ class ImportPreviewController:
         if prov.column_map:
             self.col_map_table.rows = [{"source": k, "mapped": v} for k, v in prov.column_map.items()]
             self.col_map_table.update()
+
+    def _refresh_unit_conversions(self, prov) -> None:
+        conversions = getattr(prov, "unit_conversions", None) or {}
+        self.unit_conv_row.set_visibility(bool(conversions))
+        self.unit_conv_table.rows = [
+            {"field": field, "conversion": desc} for field, desc in conversions.items()
+        ]
+        self.unit_conv_table.update()
 
     def _refresh_event_sample(self) -> None:
         if state.rdsr_df is None:
@@ -281,6 +292,22 @@ def _build_mapping_and_sample(controller: ImportPreviewController) -> None:
     ).classes("w-full mono-text")
     col_map_table.props("dense flat")
     controller.col_map_table = col_map_table
+
+    # Unit conversions applied (read from the source headers). Hidden when none.
+    unit_conv_row = ui.column().classes("w-full q-mt-sm")
+    with unit_conv_row:
+        ui.label("Units applied (source unit → internal)").classes("text-caption text-grey-6 q-mb-xs")
+        unit_conv_table = ui.table(
+            columns=[
+                {"name": "field", "label": "Field", "field": "field", "align": "left"},
+                {"name": "conversion", "label": "Conversion", "field": "conversion", "align": "left"},
+            ],
+            rows=[],
+            row_key="field",
+        ).classes("w-full mono-text")
+        unit_conv_table.props("dense flat")
+    controller.unit_conv_row = unit_conv_row
+    controller.unit_conv_table = unit_conv_table
 
     ui.label("First 5 events (normalized)").classes("text-caption text-grey-6 q-mt-sm q-mb-xs")
     event_sample_table = ui.table(columns=[], rows=[], row_key="__idx").classes("w-full mono-text")

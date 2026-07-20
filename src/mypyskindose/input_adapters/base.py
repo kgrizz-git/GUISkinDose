@@ -192,6 +192,132 @@ def convert_dap_series_to_gym2(
     return pd.to_numeric(values, errors="coerce") * factor
 
 
+# ── Generalized per-field header-unit conversion ──────────────────────────────
+#
+# DAP and fluoro time (above) already read their unit from the vendor header.
+# The same idea generalizes to the other convertible quantities: rather than
+# assume a fixed source unit, read the unit token from the column's original
+# header and convert to the internal unit, recording a confident interpretation
+# in ``ctx.unit_conversions`` and flagging (``ctx.warnings``) when the token
+# cannot be read so no silent assumption reaches the report. See
+# dev-docs/INPUT_SCHEMA_DETECTION.md ("Unit handling").
+
+
+@dataclass(frozen=True)
+class _UnitSpec:
+    """Unit table for one physical quantity.
+
+    ``tokens`` maps recognised unit spellings to ``(factor_to_internal, canonical
+    label)`` and is tried in order, so a compound token (``cm2``) precedes its
+    substring (``m2``). ``default_*`` is the assumed unit when no token is
+    readable; ``warn_on_default`` flags that assumption for quantities whose unit
+    genuinely varies between vendors (dose, area, current, exposure) but stays
+    quiet for near-universal defaults (distance / table position in mm).
+    """
+
+    internal: str
+    tokens: tuple[tuple[str, float, str], ...]
+    default_factor: float
+    default_unit: str
+    warn_on_default: bool
+
+
+# Keyed by a semantic quantity name used at the call site. ``distance`` also
+# covers the table-position columns (all internal-mm).
+_UNIT_SPECS: dict[str, _UnitSpec] = {
+    "dose": _UnitSpec(
+        internal="Gy",
+        tokens=(("ugy", 1e-6, "µGy"), ("mgy", 1e-3, "mGy"), ("cgy", 1e-2, "cGy"), ("gy", 1.0, "Gy")),
+        default_factor=1e-3,
+        default_unit="mGy",
+        warn_on_default=True,
+    ),
+    "distance": _UnitSpec(
+        internal="mm",
+        tokens=(("mm", 1.0, "mm"), ("cm", 10.0, "cm")),
+        default_factor=1.0,
+        default_unit="mm",
+        warn_on_default=False,
+    ),
+    "area": _UnitSpec(
+        internal="m²",
+        tokens=(("cm2", 1e-4, "cm²"), ("m2", 1.0, "m²")),
+        default_factor=1e-4,
+        default_unit="cm²",
+        warn_on_default=True,
+    ),
+    "tube_current": _UnitSpec(
+        internal="mA",
+        tokens=(("ua", 1e-3, "µA"), ("ma", 1.0, "mA")),
+        default_factor=1e-3,
+        default_unit="µA",
+        warn_on_default=True,
+    ),
+    "exposure": _UnitSpec(
+        internal="µAs",
+        tokens=(("mas", 1e3, "mAs"), ("uas", 1.0, "µAs")),
+        default_factor=1e3,
+        default_unit="mAs",
+        warn_on_default=True,
+    ),
+}
+
+
+def _normalize_unit_text(header: str) -> str:
+    """Lowercase, fold µ/μ→u and ²/^2→2, and reduce separators to single spaces."""
+    u = str(header).lower().replace("µ", "u").replace("μ", "u").replace("²", "2").replace("^2", "2")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", u)).strip()
+
+
+def _read_unit_factor(header: str, spec: _UnitSpec) -> tuple[float, bool, str]:
+    """Return ``(factor_to_internal, units_confident, unit_label)`` for *header*.
+
+    Tokens are matched on word boundaries so ``ma`` does not match inside
+    ``mas`` and ``m2`` does not match inside ``cm2``. An unreadable header falls
+    back to the quantity's vendor default (``units_confident=False``).
+    """
+    text = _normalize_unit_text(header)
+    for token, factor, label in spec.tokens:
+        if re.search(r"(?<![a-z0-9])" + re.escape(token) + r"(?![a-z0-9])", text):
+            return factor, True, label
+    return spec.default_factor, False, spec.default_unit
+
+
+def source_header_for(ctx: AdapterContext, target_col: str) -> str | None:
+    """Return the original vendor header that mapped to ``target_col`` (or None)."""
+    return next((src for src, tgt in ctx.column_map.items() if tgt == target_col), None)
+
+
+def convert_field_with_header_units(
+    data_df: pd.DataFrame,
+    target_col: str,
+    kind: str,
+    ctx: AdapterContext,
+) -> None:
+    """Convert ``data_df[target_col]`` to its internal unit using the unit token
+    read from the column's original vendor header (via ``ctx.column_map``).
+
+    A confident read is recorded in ``ctx.unit_conversions``; an unreadable token
+    falls back to the quantity's vendor-default factor and — for quantities whose
+    unit genuinely varies between vendors — is flagged in ``ctx.warnings`` so no
+    silent assumption reaches the report. No-ops if the column is absent. Mirrors
+    :func:`convert_dap_series_to_gym2`, which handles the DAP special case.
+    """
+    if target_col not in data_df.columns:
+        return
+    spec = _UNIT_SPECS[kind]
+    source_header = source_header_for(ctx, target_col)
+    factor, confident, unit = _read_unit_factor(source_header or "", spec)
+    data_df[target_col] = pd.to_numeric(data_df[target_col], errors="coerce") * factor
+    if confident:
+        ctx.unit_conversions[target_col] = f"{unit} → {spec.internal} (from {source_header!r})"
+    elif spec.warn_on_default:
+        ctx.warnings.append(
+            f"{target_col}: units could not be read from column {source_header!r}; "
+            f"assuming {spec.default_unit}. Verify the value before clinical use."
+        )
+
+
 def attach_procedure_dose_totals(data_df: pd.DataFrame, ctx: AdapterContext) -> None:
     """Derive per-event DAP (Gy·m²) and fluoro time (s) columns in place.
 

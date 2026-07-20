@@ -17,6 +17,7 @@ import pandas as pd
 from mypyskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
+    convert_field_with_header_units,
     run_normalizer_pipeline,
 )
 from mypyskindose.input_adapters.models import InputAdapterResult
@@ -150,15 +151,24 @@ _NUMERIC_COLUMNS: frozenset[str] = frozenset(
         "XRayFilterThicknessMinimum_mm",
         "XRayFilterThicknessMaximum_mm",
         "Exposure_uAs",
+        "XRayTubeCurrent_mA",
     }
 )
 
-# Unit conversions applied after column rename.
-# Each entry: (column_name, operation, factor, description); source unit → internal unit.
-_UNIT_CONVERSIONS: list[tuple[str, str, float, str]] = [
-    ("DoseRP_Gy", "divide", 1000.0, "mGy → Gy"),
-    ("CollimatedFieldArea_m2", "divide", 10000.0, "cm² → m²"),
-    ("Exposure_uAs", "multiply", 1000.0, "mAs → µAs"),
+# Header-aware unit conversions (target column → quantity kind). The unit is read
+# from each column's original vendor header; unreadable tokens fall back to the
+# documented vendor default (mGy/cm²/mAs/mm) and are flagged. See
+# dev-docs/INPUT_SCHEMA_DETECTION.md ("Unit handling").
+_UNIT_FIELDS: list[tuple[str, str]] = [
+    ("DoseRP_Gy", "dose"),
+    ("CollimatedFieldArea_m2", "area"),
+    ("Exposure_uAs", "exposure"),
+    ("XRayTubeCurrent_mA", "tube_current"),
+    ("DistanceSourcetoDetector_mm", "distance"),
+    ("DistanceSourcetoIsocenter_mm", "distance"),
+    ("TableLongitudinalPosition_mm", "distance"),
+    ("TableLateralPosition_mm", "distance"),
+    ("TableHeightPosition_mm", "distance"),
 ]
 
 _KNOWN_MODELS = {"AXIOM-Artis", "Artis", "Artis Q", "Artis Zee"}
@@ -170,11 +180,9 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
     # Coerce numerics (CSV reads all cells as strings)
     coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, ctx.warnings)
 
-    # Apply unit conversions
-    for col, op, factor, description in _UNIT_CONVERSIONS:
-        if col in data_df.columns:
-            data_df[col] = data_df[col] / factor if op == "divide" else data_df[col] * factor
-            ctx.unit_conversions[col] = description
+    # Convert each field to its internal unit, reading the unit from the header.
+    for col, kind in _UNIT_FIELDS:
+        convert_field_with_header_units(data_df, col, kind, ctx)
 
     # Warn on unvalidated models and GE lat/lon convention (non-blocking)
     if "ManufacturerModelName" in data_df.columns:

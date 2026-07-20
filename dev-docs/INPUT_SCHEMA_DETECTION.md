@@ -65,6 +65,16 @@ The clearest human tells between the two aggregator exports:
 
 The two fingerprints share **no** columns, so they separate cleanly.
 
+### Adapter provenance and validation status
+
+The `radimetrics` and `dosetrack` column maps and vendor transforms are derived from the
+`dhen2714/PySkinDose` fork (`RADIMETRICS2PSD` / `DOSETRACK2PSD`, saved under
+`dev-docs/references/dhen2714_*.py`), not from a vendor specification we authored. Both are validated
+only against **Siemens AXIOM-Artis** exports. The DoseTrack **Philips** path (filter-string split,
+lateral/longitudinal handling) is implemented but **untested against a real Philips DoseTrack export**.
+Treat unvalidated manufacturer/model combinations as best-effort: the adapters warn on unknown models,
+but the column mapping and unit assumptions may not hold. Verify results against known-good RDSR output.
+
 ### Overriding detection
 
 If a file is misdetected or ambiguous, select the schema explicitly:
@@ -72,16 +82,51 @@ If a file is misdetected or ambiguous, select the schema explicitly:
 - CLI: `--input-schema radimetrics` (or `dosetrack`, `generic_rdsr_like`, `normalized`).
 - GUI: the schema dropdown on the Upload tab.
 
-## A caveat on DAP units
+## Unit handling
 
-MyPySkinDose reads the **DAP (dose–area product) unit from the column header** (e.g. `DAP (Total)
-Gy-cm2`), converts to internal `Gy·m²`, and records the interpretation in the provenance
-unit-conversions. If the header carries no recognisable unit token, the value is **assumed to be
-Gy·cm² and flagged with an import warning** (surfaced in the rich report's alert block and the GUI)
-so the operator can verify it before clinical use. This is **uniform across all tabular adapters** —
-Radimetrics, DoseTrack, and the generic capture path all route DAP through the same
-`convert_dap_series_to_gym2` helper (`input_adapters/base.py`); none silently assumes a unit without
-either reading it from the header or flagging the assumption.
+MyPySkinDose has three input paths and they handle physical units differently. The goal in all three
+is that no unit is silently assumed without either being read from the source or flagged.
+
+### DICOM RDSR (reads + asserts)
+
+`rdsr_parser.py` embeds each measured value's DICOM unit code
+(`MeasurementUnitsCodeSequence`) into the column name — that is why parsed columns are named
+`DoseRP_Gy`, `DistanceSourcetoDetector_mm`, `KVP_kV`. `rdsr_normalizer.py` then reads those
+unit-suffixed columns with fixed factors (`DoseRP_Gy * 1000`, `_mm / 10`). Because access is by
+unit-suffixed name, a report using a non-standard unit yields a differently-named column
+(`DoseRP_mGy`), which would otherwise fail with an opaque `AttributeError`. `_verify_expected_units`
+detects this up front and raises **`RdsrUnitError`** with a clear, unit-naming message; the GUI
+(`gui/exam_loaders.py::load_rdsr`) surfaces that message instead of the generic
+"Could not read this DICOM RDSR file". The RDSR path is not unit-*adaptive* — it recognises only the
+standard DICOM unit — but it fails loud rather than mis-converting.
+
+### Tabular adapters (read from header, flag when unreadable)
+
+Every convertible tabular quantity reads its unit from the column header and converts to the internal
+unit, recording a confident interpretation in the provenance `unit_conversions` (shown in the GUI
+import preview and in rich exports). For quantities whose unit genuinely varies between vendors, an
+unreadable token appends an import warning so no silent assumption reaches the report. Distances and
+table positions (where mm is near-universal) fall back to mm silently — see the **Warns** column
+below:
+
+| Quantity | Internal unit | Recognised tokens | Assumed if unreadable | Warns |
+|---|---|---|---|---|
+| Reference point dose | Gy | Gy, mGy, µGy, cGy | mGy | yes |
+| DAP (dose–area product) | Gy·m² | Gy·cm², mGy·cm², cGy·cm², µGy·cm², Gy·m², µGy·m² | Gy·cm² | yes |
+| Collimated field area | m² | cm², m² | cm² | yes |
+| Tube current | mA | µA, mA | µA | yes |
+| Exposure | µAs | mAs, µAs | mAs | yes |
+| Fluoro time | s | ms, s, min | ms | yes |
+| Source–detector / source–isocenter distance, table positions | mm | mm, cm | mm | no (mm near-universal) |
+
+Non-DAP quantities route through `convert_field_with_header_units` (`input_adapters/base.py`); DAP and
+fluoro time keep their dedicated helpers (`convert_dap_series_to_gym2`, `_fluoro_to_seconds`). The
+`radimetrics` and `dosetrack` adapters drive their conversions through these helpers, so a correctly-
+or unlabelled export produces the same numbers as before, while a mislabelled/atypical export now
+converts by its actual header unit instead of a hardcoded assumption. The `normalized` schema is
+already in internal units and does not convert.
+
+### DAP: a deeper caveat
 
 **The true physical unit of DAP often depends on the acquisition equipment manufacturer more than
 on the tabular exporter.** Different vendors report DAP natively in different units — e.g. Gy·cm²,

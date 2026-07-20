@@ -192,6 +192,10 @@ class ExamSection:
     # Dosimetric (§7) and corrections (§8)
     metrics: DosimetricMetrics
     corrections: list[CorrectionStat]
+    # Unit parsing / conversions applied by the input adapter (§3) —
+    # {internal field: "source unit → internal (from 'header')"}. Empty for
+    # DICOM RDSR (units read+asserted, not converted) and normalized inputs.
+    unit_conversions: dict[str, str] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
 

@@ -9,7 +9,7 @@ import pandas as pd
 import pydicom
 
 from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
+from mypyskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
 from mypyskindose.privacy import safe_error_event
 
 from .exam_transforms import (
@@ -177,6 +177,11 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             )
 
         return True, f"Loaded {len(df)} irradiation events"
+    except RdsrUnitError as exc:
+        # Unit mismatch is a specific, actionable condition — surface the
+        # unit-naming message (units are not PHI) instead of the generic error.
+        _record_load_failure("DICOM_RDSR_UNIT_MISMATCH", exc)
+        return False, str(exc)
     except Exception as exc:
         _record_load_failure("DICOM_RDSR_LOAD", exc)
         return False, "Could not read this DICOM RDSR file. Check the file and try again."
