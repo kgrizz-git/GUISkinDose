@@ -140,6 +140,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Latest-dependency type-check compatibility** (2026-07-20) — narrowed the human-mesh annotation to match the mesh-loading helper's contract: tuple model names are strings and unsupported top-level `Path` values are no longer advertised, resolving the scheduled `ci-latest` Basedpyright failure.
+
 - **HTML/PNG dose-map export error reporting (Phase 1)** (2026-07-19) — `make_dosemap_html`
   and `make_dosemap_png` no longer silently return `None` on failure, which `require_io_result`
   mislabeled as a cancelled background task; both now log via `safe_error_event` and re-raise.
