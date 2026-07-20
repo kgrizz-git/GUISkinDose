@@ -120,6 +120,14 @@ their corresponding plan exit criteria pass.
 
 - [ ] **Adopt the fork-maintenance baseline** — work through the prioritized GitHub governance, attribution,
   privacy, upstream-sync, and release actions in [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md).
+- [ ] **Make commit-msg / pre-push hooks worktree-aware** — `scripts/check_commit_message.py`'s
+  `resolve_commit_message_path()` confines the commit-message path to `cwd` / `cwd/.git` / tempdir, but in a
+  linked `git worktree` git passes `COMMIT_EDITMSG` under the *main* repo's `.git/worktrees/<name>/`, so the hook
+  raises "commit-message path escapes repository" and blocks the commit (worked around with
+  `SKIP=sensitive-commit-message`). Add `git rev-parse --git-common-dir` (and `--git-dir`) to the allowed roots.
+  Relatedly, the pre-push hooks (basedpyright, gui-test-placement) resolve `mypyskindose` from whichever editable
+  install is on `PATH` — the main checkout, not the worktree branch — so committing/pushing from a worktree needs
+  the worktree's own venv on `PATH`; document or detect this so worktree-based PR fixes don't trip false failures.
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
   inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,
