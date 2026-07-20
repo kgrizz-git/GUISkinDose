@@ -10,11 +10,17 @@ from __future__ import annotations
 import logging
 import re
 import sys
+import traceback
+from pathlib import Path
 from typing import Final
 
 
 _CODE_RE: Final = re.compile(r"^[A-Za-z][A-Za-z0-9_.:-]{0,63}$")
 _SAFE_EXCEPTION_RE: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,79}$")
+# Frame function names are code identifiers (incl. <module>, <lambda>, <listcomp>).
+_SAFE_FRAME_NAME_RE: Final = re.compile(r"^[<A-Za-z_][A-Za-z0-9_>.]{0,79}$")
+# Deepest frames are the most diagnostic; cap to keep log lines bounded.
+_MAX_TRACEBACK_FRAMES: Final = 8
 
 
 def _code(value: str, *, label: str) -> str:
@@ -29,6 +35,61 @@ def exception_class_name(exc: BaseException) -> str:
     return name if _SAFE_EXCEPTION_RE.fullmatch(name) else "Exception"
 
 
+def _relative_frame_path(filename: str) -> str:
+    """Reduce a traceback frame's source path to a value-safe relative fragment.
+
+    Traceback frames are always Python source files (never patient data), but
+    their absolute paths can embed a home-directory/username, so strip to a
+    package-relative fragment: from ``mypyskindose/`` for our own code, from
+    inside ``site-packages/`` for dependencies, else the bare file name. Never
+    returns an absolute path.
+    """
+    parts = Path(filename).parts
+    if "mypyskindose" in parts:
+        return "/".join(parts[parts.index("mypyskindose") :])
+    if "site-packages" in parts:
+        return "/".join(parts[parts.index("site-packages") + 1 :])
+    return Path(filename).name
+
+
+def _safe_frame(frame: traceback.FrameSummary) -> str:
+    """Render one frame as ``path:lineno in func`` — no source text or locals."""
+    name = frame.name if _SAFE_FRAME_NAME_RE.fullmatch(frame.name or "") else "?"
+    return f"{_relative_frame_path(frame.filename)}:{frame.lineno} in {name}"
+
+
+def innermost_location(exc: BaseException) -> str:
+    """Return ``path:lineno in func`` for where ``exc`` was raised (or "").
+
+    Value-free: only the code location, never the exception message or locals.
+    Empty when the exception carries no traceback (e.g. constructed but never
+    raised).
+    """
+    frames = traceback.extract_tb(exc.__traceback__)
+    return _safe_frame(frames[-1]) if frames else ""
+
+
+def safe_traceback(exc: BaseException) -> str:
+    """Return a value-free traceback for ``exc`` and its cause/context chain.
+
+    Includes only exception class names and ``path:lineno in func`` frame
+    locations (deepest ``_MAX_TRACEBACK_FRAMES`` per exception). Never includes
+    exception messages, source-line text, local values, or absolute paths, so it
+    is safe to emit at DEBUG alongside the value-free one-line summary.
+    """
+    lines: list[str] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        prefix = "" if not lines else "caused by: "
+        lines.append(f"{prefix}{exception_class_name(current)}")
+        frames = traceback.extract_tb(current.__traceback__)[-_MAX_TRACEBACK_FRAMES:]
+        lines.extend(f"  {_safe_frame(frame)}" for frame in frames)
+        current = current.__cause__ or current.__context__
+    return "\n".join(lines)
+
+
 def safe_error_event(
     logger: logging.Logger,
     operation: str,
@@ -36,13 +97,25 @@ def safe_error_event(
     *,
     level: int = logging.ERROR,
 ) -> None:
-    """Log an operation code and exception class, never exception text."""
-    logger.log(
-        level,
-        "%s failed (error_type=%s)",
-        _code(operation, label="operation"),
-        exception_class_name(exc),
-    )
+    """Log an operation code and exception class, never exception text.
+
+    The one-line summary also carries the value-free code location where the
+    exception was raised (``path:lineno in func``) when available. When DEBUG is
+    enabled for ``logger``, a value-free traceback of the exception (and its
+    cause/context chain) is emitted too — still message-, value-, and
+    absolute-path-free — to make otherwise opaque errors (e.g. a bare
+    ``RuntimeError``) diagnosable without exposing clinical data.
+    """
+    op = _code(operation, label="operation")
+    error_type = exception_class_name(exc)
+    location = innermost_location(exc)
+    if location:
+        logger.log(level, "%s failed (error_type=%s at %s)", op, error_type, location)
+    else:
+        logger.log(level, "%s failed (error_type=%s)", op, error_type)
+    if logger.isEnabledFor(logging.DEBUG):
+        detail = safe_traceback(exc)
+        logger.debug("%s traceback (value-free):\n%s", op, detail)
 
 
 def safe_warning(logger: logging.Logger, code: str, **metrics: int | float | bool | None) -> None:

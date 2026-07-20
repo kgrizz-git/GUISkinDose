@@ -12,6 +12,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **More diagnostic (still value-free) error logging** (2026-07-19) — `privacy.safe_error_event` now appends
+  the value-free code location where an exception was raised (`path:lineno in func`) to its one-line summary,
+  and — when DEBUG is enabled — emits a value-free traceback that walks the exception's `cause`/`context`
+  chain (frame locations + exception class names only). Exception messages, source-line text, local values,
+  and absolute paths are still never logged. This turns otherwise-opaque failures (e.g. a bare
+  `multi_exam_analysis failed (error_type=RuntimeError)`) into something diagnosable without exposing clinical
+  data. Successful HTML/PNG dose-map exports also now log a byte-count-only breadcrumb (previously silent).
+- **Corrected misleading geometry-plot debug log** (2026-07-19) — `create_plot_and_save_to_file` logged
+  "savint to file `<mode>.html`" although it never writes a file (it calls `Figure.show`, which the GUI
+  intercepts to embed the figure); fixed the typo and the false file-write claim.
 - **Sensitive-content scanner complexity refactoring (SonarQube Phase 5)** (2026-07-18) — extracted
   format-specific readers (notebook attachment/output inspection, PDF metadata/page/attachment
   extraction, and bounded archive/office-document member iteration) from `scripts/check_sensitive_content.py`
