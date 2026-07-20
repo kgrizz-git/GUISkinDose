@@ -56,7 +56,7 @@ class Phantom:
         self,
         phantom_model: str,
         phantom_dim: PhantomDimensions,
-        human_mesh: Optional[str | Path | tuple[str | Path | mesh.Mesh, mesh.Mesh | str | Path]] = None,
+        human_mesh: Optional[str | tuple[str, mesh.Mesh | str | Path]] = None,
         human_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
     ):
         """Create the phantom of choice.
