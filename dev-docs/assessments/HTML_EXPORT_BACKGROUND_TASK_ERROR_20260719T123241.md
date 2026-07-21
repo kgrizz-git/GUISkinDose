@@ -21,7 +21,7 @@ PNG export uses the same `require_io_result` + silent-`None` pattern and is at e
 
 ## Error Trace
 
-```
+```text
 RuntimeError: Background task was cancelled or the application is shutting down.
   File "gui/tabs/export.py", line 210, in download_html
     content = require_io_result(await run.io_bound(make_dosemap_html, ...))
@@ -139,7 +139,7 @@ Do **not** remove `require_io_result` until NiceGUI 4.0; keep it for real cancel
 
 Catch builder failures (and keep cancel as a separate message). Example:
 
-```
+```text
 Could not generate HTML dose map. See the log for details.
 ```
 

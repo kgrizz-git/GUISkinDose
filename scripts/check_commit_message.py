@@ -8,6 +8,7 @@ line and rule identifier; it never writes the commit-message content to output.
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 import tempfile
 from collections.abc import Sequence
@@ -17,6 +18,26 @@ if __package__:
     from .check_sensitive_content import Finding, text_findings
 else:  # pragma: no cover - exercised by git invoking this file directly.
     from check_sensitive_content import Finding, text_findings
+
+
+def _git_dir_roots() -> list[Path]:
+    roots: list[Path] = []
+    for flag in ("--git-dir", "--git-common-dir"):
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", flag],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=2.0,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                p = Path(res.stdout.strip()).resolve()
+                if p not in roots:
+                    roots.append(p)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            pass
+    return roots
 
 
 def resolve_commit_message_path(
@@ -40,6 +61,7 @@ def resolve_commit_message_path(
             Path.cwd().resolve(),
             (Path.cwd() / ".git").resolve(),
             Path(tempfile.gettempdir()).resolve(),
+            *_git_dir_roots(),
         ]
     )
     if not any(resolved == root or resolved.is_relative_to(root) for root in roots):

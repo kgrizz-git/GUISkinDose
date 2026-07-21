@@ -383,6 +383,62 @@ def test_commit_message_is_scanned_without_allowlist_or_value_echo(tmp_path: Pat
     assert "scanner.internal" not in findings[0].render()
 
 
+def test_resolve_commit_message_path_supports_worktree_git_dir(tmp_path: Path, monkeypatch) -> None:
+    import tempfile
+
+    from scripts.check_commit_message import resolve_commit_message_path
+
+    git_dir = tmp_path / ".git" / "worktrees" / "feature-branch"
+    git_dir.mkdir(parents=True)
+    msg_file = git_dir / "COMMIT_EDITMSG"
+    msg_file.write_text("feat: worktree commit\n", encoding="utf-8")
+
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path / "fake_temp"))
+
+    def mock_run(cmd, **kwargs):
+        class Result:
+            returncode = 0
+            stdout = str(git_dir) if "--git-dir" in cmd else str(tmp_path / ".git")
+
+        return Result()
+
+    monkeypatch.setattr("scripts.check_commit_message.subprocess.run", mock_run)
+    worktree_cwd = tmp_path / ".worktrees" / "feature-branch"
+    worktree_cwd.mkdir(parents=True)
+    monkeypatch.chdir(worktree_cwd)
+
+    resolved = resolve_commit_message_path(msg_file)
+    assert resolved == msg_file.resolve()
+
+
+def test_resolve_worktree_roots_do_not_widen_to_arbitrary_paths(tmp_path: Path, monkeypatch) -> None:
+    import tempfile
+
+    import pytest
+
+    from scripts.check_commit_message import resolve_commit_message_path
+
+    outside_dir = Path("/nonexistent_test_root_12345")
+    msg_file = outside_dir / "COMMIT_EDITMSG"
+
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    monkeypatch.chdir(repo_dir)
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path / "fake_temp"))
+
+    def mock_run(cmd, **kwargs):
+        class Result:
+            returncode = 0
+            stdout = str(repo_dir / ".git")
+
+        return Result()
+
+    monkeypatch.setattr("scripts.check_commit_message.subprocess.run", mock_run)
+
+    with pytest.raises(ValueError, match="commit-message path escapes repository"):
+        resolve_commit_message_path(msg_file)
+
+
 def test_full_utf8_file_is_not_binary(tmp_path: Path) -> None:
     markdown = tmp_path / "notes.md"
     markdown.write_bytes(b"a" * 8191 + "—".encode("utf-8"))
