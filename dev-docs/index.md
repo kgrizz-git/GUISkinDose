@@ -68,6 +68,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
+| [plans/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Source of truth** — MakeHuman phantom library generation master plan and sub-plans (Phases 1–5). |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
