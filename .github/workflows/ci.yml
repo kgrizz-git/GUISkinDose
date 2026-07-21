@@ -7,13 +7,45 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  schedule:
+    - cron: '15 5 * * 0'
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  schedule-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+    steps:
+    - id: gate
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        HEAD_SHA: ${{ github.sha }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [[ "$EVENT_NAME" != "schedule" ]]; then
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        previous_sha="$(gh api \
+          "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?status=completed&per_page=100" \
+          --jq '[.workflow_runs[] | select(.event == "schedule" or .event == "workflow_dispatch")][0].head_sha // empty')"
+        if [[ -n "$previous_sha" && "$previous_sha" == "$HEAD_SHA" ]]; then
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+        fi
+
   static-analysis:
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -98,6 +130,8 @@ jobs:
       run: python scripts/run_semgrep_privacy.py
 
   gui-smoke:
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -118,6 +152,8 @@ jobs:
       run: uv run --no-sync pytest tests/gui/ -v --tb=short
 
   matrix-prep:
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -130,13 +166,18 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF: ${{ github.ref }}
         run: |
-          if [[ "$EVENT_NAME" == "push" && "$REF" == "refs/heads/main" ]]; then
-            # Full Python coverage on ubuntu (cheap); macOS (billed 10x) and Windows
-            # (billed 2x) only on the oldest + newest supported Python to bound cost
-            # while still catching version- and OS-specific breakage.
-            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.10"},{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"macos-latest","python-version":"3.10"},{"os":"macos-latest","python-version":"3.13"},{"os":"windows-latest","python-version":"3.10"},{"os":"windows-latest","python-version":"3.13"}]}'
+          if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            # The weekly/manual compatibility sweep covers every supported Python on
+            # Ubuntu and the oldest/newest versions on macOS (10x billing) and
+            # Windows (2x billing). Keep these expensive runners off the merge path.
+            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"ubuntu-latest","python-version":"3.14"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.14"},{"os":"windows-latest","python-version":"3.11"},{"os":"windows-latest","python-version":"3.14"}]}'
+          elif [[ "$EVENT_NAME" == "push" && "$REF" == "refs/heads/main" ]]; then
+            # Every merge gets the full supported-version range on inexpensive Ubuntu.
+            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"ubuntu-latest","python-version":"3.14"}]}'
           else
-            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.12"}]}'
+            # PRs get a current-runtime signal quickly; main and the weekly sweep
+            # provide the remaining supported-version and OS coverage.
+            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.14"}]}'
           fi
           echo "config=$CONFIG" >> "$GITHUB_OUTPUT"
 

@@ -12,6 +12,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Lean CI matrix and current Python support** (2026-07-20) — raised the supported Python minimum from 3.10 to
+  3.11, added Python 3.14 coverage, and set Basedpyright's target accordingly. Pull requests now receive a fast
+  Ubuntu/Python 3.14 check; `main` tests Python 3.11–3.14 on Ubuntu; the macOS/Windows oldest/newest compatibility
+  matrix runs weekly only after a new `main` commit since the prior scheduled/manual compatibility sweep, or on
+  manual dispatch. The latest-dependencies probe also uses Python 3.14. Presidio remains a weekly, value-suppressed
+  secondary privacy review with manual dispatch instead of running on every text-only PR.
+
 - **More diagnostic (still value-free) error logging** (2026-07-19) — `privacy.safe_error_event` now appends
   the value-free code location where an exception was raised (`path:lineno in func`) to its one-line summary,
   and — when DEBUG is enabled — emits a value-free traceback that walks the exception's `cause`/`context`

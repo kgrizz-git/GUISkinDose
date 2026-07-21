@@ -1,25 +1,6 @@
 name: Presidio (secondary privacy review)
 
 on:
-  pull_request:
-    paths:
-      - '**.cfg'
-      - '**.csv'
-      - '**.html'
-      - '**.ini'
-      - '**.json'
-      - '**.md'
-      - '**.rst'
-      - '**.svg'
-      - '**.toml'
-      - '**.tsv'
-      - '**.txt'
-      - '**.xml'
-      - '**.yaml'
-      - '**.yml'
-      - 'scripts/run_presidio_advisory.py'
-      - 'pyproject.toml'
-      - 'uv.lock'
   schedule:
     - cron: '43 6 * * 1'
   workflow_dispatch:

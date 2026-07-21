@@ -16,12 +16,6 @@ their corresponding plan exit criteria pass.
 - [ ] **Complete sensitive-asset baseline review** — manually clear every `pending` entry in
   `approved_asset_inventory.json`, including rendered-image and DICOM burned-in-text review. Record reviewer/date,
   then switch CI to `python scripts/check_sensitive_content.py --require-approved-assets`.
-- [ ] **P0 — public-history PHI/PII exposure audit and response runbook** — before the next release, use an
-  isolated local/private checkout to scan every reachable commit, tag, release branch, and relevant LFS/release
-  artifact for the current value-suppressed PII/PHI/path rules and representative DICOM/image fixtures. Verify the
-  process against synthetic known-positive history; never write matched values to a public log. Define triage,
-  private evidence handling, disclosure, history rewrite, cache/clone limitations, secret rotation, maintainer
-  notification, and re-scan/verification steps for a real finding.
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
   gate scans first-level text and requires manual embedded-file/image/DICOM clearance.

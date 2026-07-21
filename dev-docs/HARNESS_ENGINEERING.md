@@ -420,16 +420,18 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 
 - syntax/lint checks should fail the workflow on errors
 - tests should fail the workflow on errors
-- full cross-platform matrix runs on **`main` pushes and pull requests**; other branch pushes use a quick Ubuntu + Python 3.12 cell only
+- pull requests receive a fast current-runtime Ubuntu check; `main` pushes cover all supported Python versions on Ubuntu;
+  the full cross-platform matrix runs weekly and on demand
 - docs-only changes may run a smaller check set, but should still pass basic syntax and markdown/link sanity when such tooling exists
 
 ### Test matrix policy (`build` job)
 
 | Trigger | Matrix |
 |---------|--------|
-| Pull request | 12 cells — Ubuntu/macOS/Windows × Python 3.10–3.13 |
-| Push to `main` | Same full matrix |
-| Push to other branches (e.g. `WIP`) | 1 cell — Ubuntu + Python 3.12 |
+| Pull request | 1 cell — Ubuntu + Python 3.14 |
+| Push to `main` | 4 cells — Ubuntu × Python 3.11–3.14 |
+| Weekly schedule | 8 cells — Ubuntu × Python 3.11–3.14, plus macOS/Windows × Python 3.11 and 3.14; skipped when `main` has not changed since the prior scheduled or manual compatibility sweep |
+| Manual dispatch | Same 8-cell compatibility sweep, regardless of whether `main` changed; it becomes the baseline for the next weekly run |
 
 Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-freshness) still run on every push/PR. Workflow concurrency cancels superseded runs on the same branch/PR.
 
@@ -437,15 +439,15 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 
 | Check | Where in CI |
 |---|---|
-| `python -m compileall src/mypyskindose` | `build` job (full matrix on PR/`main`; quick cell otherwise) |
-| `python -m pytest` | `build` job (same matrix policy) |
-| `python -m ruff check src tests` | `build` job (same matrix policy) |
+| `python -m compileall src/mypyskindose` | `build` job (matrix policy above) |
+| `python -m pytest` | `build` job (matrix policy above) |
+| `python -m ruff check src tests` | `build` job (matrix policy above) |
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
 | `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `static-analysis` job + pre-commit; strict asset/content admission with value-safe output |
 | `python scripts/privacy_admission.py check/route` | Ubuntu `static-analysis` job + local hooks; protected paths and conditional scanner routing |
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `static-analysis` job + pre-push; blocking project privacy SAST |
-| phi-scan / Presidio | Scheduled and relevant-path PR secondary workflows; value-suppressed, no report upload |
+| phi-scan / Presidio | Scheduled secondary workflows; Presidio also supports manual dispatch. Both are value-suppressed with no report upload. |
 | GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |

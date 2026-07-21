@@ -269,7 +269,7 @@ def calculate_k_tab(
 
         # Off-grid within this device/plane: snap Al to the nearest measured value,
         # then interpolate over (kVp, Cu) with edge clamping.
-        al_grid = np.sort(rows["filtration_added_mmal"].unique())
+        al_grid = np.sort(np.unique(rows["filtration_added_mmal"].to_numpy(dtype=float)))
         al_snap = float(al_grid[int(np.abs(al_grid - round(al)).argmin())])
 
         cache_key = (model, str(plane), al_snap)
@@ -290,7 +290,7 @@ def calculate_k_tab(
             # exact after clamping to the table's kVp range.
             kv_axis = piv.index.to_numpy(dtype=float)
             kv_c = float(np.clip(round(kvp), kv_axis[0], kv_axis[-1]))
-            value = float(piv.loc[kv_c].iloc[0])
+            value = float(np.interp(kv_c, kv_axis, piv.to_numpy(dtype=float)[:, 0]))
             status = STATUS_CLAMPED if (kv_c != round(kvp) or cu != cu_axis[0]) else STATUS_EXACT
         k_tab[event] = value
 

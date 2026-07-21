@@ -25,7 +25,7 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 | Gitleaks secret scanning | Shipped | `.github/workflows/gitleaks.yml` |
 | Sensitive-content and approved-asset gate | Shipped (strict) | `scripts/check_sensitive_content.py`; all current assets reviewed/hash-approved; strict hooks/CI, path-component checks, container-member-name checks, and value-safe path tokens |
 | phi-scan PHI/PII text scan | Shipped (secondary) | Weekly + CSV/TSV PR workflow; pinned, quiet, reviewed 90-day baseline, new findings fail, no report/AI upload |
-| Presidio advisory scan | Shipped (secondary) | Optional `privacy-scan` extra; weekly + text PR workflow with local model, structured identifiers, path hashes, no report upload; noisy `PERSON` mode is targeted/local only |
+| Presidio advisory scan | Shipped (secondary) | Optional `privacy-scan` extra; weekly + manual workflow with local model, structured identifiers, path hashes, no report upload; noisy `PERSON` mode is targeted/local only |
 | Project privacy Semgrep | Shipped (blocking) | Six source-specific leak/write/temp rules, synthetic positive/negative tests, value-safe wrapper, CI + pre-push |
 | Runtime/output privacy boundary | Shipped | Opaque exam labels, de-identified serialization/export defaults, explicit identified-export opt-in, atomic Git-aware writes, private upload lifecycle, and pytest checkout guard |
 | pip-audit dependency scan | Shipped | CI `dependency-audit` job |
