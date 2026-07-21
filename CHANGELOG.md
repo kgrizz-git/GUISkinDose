@@ -10,6 +10,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Fixed
+
+- **Worktree-aware commit message git hook** (2026-07-21) — updated `scripts/check_commit_message.py`'s `resolve_commit_message_path()` to inspect `--git-dir` and `--git-common-dir`, allowing git commits from linked worktrees to resolve `.git/worktrees/<name>/COMMIT_EDITMSG` without triggering false path containment errors. Reused test fixtures in `tests/unittests/test_gui_figures.py` and added `text` language tags to code blocks in `HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md`.
+
 ### Changed
 
 - **Lean CI matrix and current Python support** (2026-07-20) — raised the supported Python minimum from 3.10 to
