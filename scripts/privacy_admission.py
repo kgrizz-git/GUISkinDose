@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from threading import Lock
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
@@ -354,9 +355,24 @@ def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequ
             scanned_paths[offset : offset + PRESIDIO_BATCH_SIZE]
             for offset in range(0, len(scanned_paths), PRESIDIO_BATCH_SIZE)
         ]
+        output_lock = Lock()
 
         def scan_batch(paths: Sequence[str]) -> int:
-            return subprocess.run([*command, *paths], cwd=snapshot, env=environment, check=False).returncode
+            completed = subprocess.run(
+                [*command, "--", *paths],
+                cwd=snapshot,
+                env=environment,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            with output_lock:
+                if completed.stdout:
+                    print(completed.stdout, end="")
+                if completed.stderr:
+                    print(completed.stderr, end="", file=sys.stderr)
+            return completed.returncode
 
         with ThreadPoolExecutor(max_workers=PRESIDIO_MAX_WORKERS) as executor:
             return 0 if all(code == 0 for code in executor.map(scan_batch, batches)) else 1

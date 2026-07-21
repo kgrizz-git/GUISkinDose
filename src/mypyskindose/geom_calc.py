@@ -308,8 +308,12 @@ def apply_below_floor_kvp_policy(
         return kept
 
     df = data_norm.copy()
+    row_positions = np.asarray(indices, dtype=np.intp)
+    col_pos = df.columns.get_loc(col)
+    if not isinstance(col_pos, int):
+        raise ValueError(f"Expected one normalized kVp column, found multiple entries for {col!r}.")
     if policy == c.BELOW_FLOOR_KVP_POLICY_MANUAL:
-        df.loc[df.index[indices], col] = float(manual_kvp)
+        df.iloc[row_positions, col_pos] = float(manual_kvp)
         logger.warning(
             "Below-floor kVp policy 'manual': set %d event(s) below the %g kV HVL "
             "floor to %g kV. Affected event index(es): %s.",
@@ -329,7 +333,7 @@ def apply_below_floor_kvp_policy(
             )
             return data_norm
         avg = float(in_floor.mean())
-        df.loc[df.index[indices], col] = avg
+        df.iloc[row_positions, col_pos] = avg
         logger.warning(
             "Below-floor kVp policy 'exam_average': set %d event(s) below the %g kV "
             "HVL floor to the exam mean kVp %.1f kV. Affected event index(es): %s.",

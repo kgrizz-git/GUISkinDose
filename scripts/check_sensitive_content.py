@@ -199,6 +199,14 @@ ESCAPED_FASTAPI_DECORATOR_EMAILS = frozenset(
     for method in ("route", "get", "post", "put", "delete", "patch", "options", "head", "trace", "middleware")
 )
 
+ARCHIVE_CONTAINER_SUFFIXES = (
+    ZIP_CONTAINER_SUFFIXES
+    | TAR_CONTAINER_SUFFIXES
+    | GZIP_CONTAINER_SUFFIXES
+    | BZIP2_CONTAINER_SUFFIXES
+    | XZ_CONTAINER_SUFFIXES
+)
+
 SENSITIVE_PATH_PATTERNS = (
     (
         "SENSITIVE_PATIENT_PATH",
@@ -315,14 +323,7 @@ def asset_kind(path: str, full_path: Path) -> str | None:
         return "dicom"
     if suffix in OFFICE_CONTAINER_SUFFIXES:
         return "office_document"
-    if (
-        suffix
-        in ZIP_CONTAINER_SUFFIXES
-        | TAR_CONTAINER_SUFFIXES
-        | GZIP_CONTAINER_SUFFIXES
-        | BZIP2_CONTAINER_SUFFIXES
-        | XZ_CONTAINER_SUFFIXES
-    ):
+    if suffix in ARCHIVE_CONTAINER_SUFFIXES:
         return "archive"
     if suffix == ".pdf":
         return "pdf"
