@@ -276,6 +276,28 @@ def test_below_floor_policy_exam_average_uses_in_floor_mean():
     assert any("exam_average" in m.lower() or "exam mean" in m.lower() for m in messages)
 
 
+def test_below_floor_policy_uses_positions_when_index_labels_repeat():
+    """Only below-floor rows change when the input frame has duplicate index labels."""
+    import pandas as pd
+
+    from mypyskindose.geom_calc import apply_below_floor_kvp_policy
+
+    data_norm = pd.DataFrame(
+        {
+            "kVp": [10.0, 70.0, 5.0, 90.0],
+            "filter_thickness_Cu": [0.0] * 4,
+            "filter_thickness_Al": [0.0] * 4,
+        },
+        index=[0, 0, 1, 2],
+    )
+
+    manual = apply_below_floor_kvp_policy(data_norm, policy="manual", manual_kvp=66.0)
+    average = apply_below_floor_kvp_policy(data_norm, policy="exam_average", manual_kvp=66.0)
+
+    assert manual["kVp"].tolist() == [66.0, 70.0, 66.0, 90.0]
+    assert average["kVp"].tolist() == [80.0, 70.0, 80.0, 90.0]
+
+
 def test_below_floor_policy_exam_average_all_below_falls_back_to_snap():
     """An all-below-floor frame has no in-floor mean → fall back to snap + warn,
     leaving kVp unchanged so Phase 1 clamps it."""

@@ -97,7 +97,8 @@ value. Prefer removing or replacing data over adding an allowlist entry.
 
 The `sensitive-commit-message` local `commit-msg` hook applies the same value-free text rules to the message before a
 commit is created. Commit messages have no allowlist: remove sensitive wording instead of trying to exempt it. This
-hook cannot change existing public history; use the public-history audit/runbook item in `TO_DO.md` for that work.
+hook cannot change existing public history; use the [privacy incident response and history-audit runbook](PRIVACY_INCIDENT_RESPONSE.md)
+for that work.
 Run `bash scripts/setup-dev.sh` or `scripts\setup-dev.bat` after updating the checkout; those setup scripts install
 the `pre-commit`, `pre-push`, and `commit-msg` hook types.
 
@@ -196,17 +197,20 @@ tag classes/counts and path tokens from private temporary output.
 
 ## Historical exposure audit
 
-The blocking gate protects newly proposed revisions; it cannot remove information from a commit already public. The
-P0 backlog item requires an isolated, local/private audit of every reachable commit, tag, release branch, and relevant
-LFS/release artifact. The audit should use the same value-suppressed rules, prove its detector against synthetic
-known-positive history, and keep raw evidence out of issues, Actions logs, and public reports. Its response runbook
-must cover triage, private evidence handling, notification, history rewrite, cache/clone limitations, credential
-rotation where relevant, and a post-remediation re-scan. Git history rewriting reduces future discoverability but
-cannot guarantee deletion from existing clones, forks, caches, or third-party archives.
+The blocking gate protects newly proposed revisions; it cannot remove information from a commit already public.
+The completed 2026-07-20 audit used an isolated private checkout and value-suppressed rules, validated the detector
+against synthetic known-positive history, and covered reachable Git history, tags, releases, Actions artifacts/logs,
+PR discussions, package indexes, and project-controlled mirrors. Maintainer-triaged findings were approved upstream
+fixtures, intentional attribution, or scanner false positives; no unresolved PHI/PII exposure remained. Raw evidence
+and the value-free completion receipt are owner-only and outside the repository.
+
+Revalidate the relevant delta before a release or after enabling a new public surface, following the
+[privacy incident response and history-audit runbook](PRIVACY_INCIDENT_RESPONSE.md). Git history rewriting reduces
+future discoverability but cannot guarantee deletion from existing clones, forks, caches, or third-party archives.
 
 ## Response to a finding
 
 1. Stop sharing the affected revision or artifact and remove it from the working tree.
 2. Treat a possible real identifier as sensitive even if the scanner's confidence is low.
-3. Notify repository maintainers and follow the historical-exposure runbook once it is added.
+3. Notify repository maintainers and follow the [privacy incident response and history-audit runbook](PRIVACY_INCIDENT_RESPONSE.md).
 4. Rotate any secrets separately; Gitleaks and GitHub secret scanning cover credentials, not PHI.

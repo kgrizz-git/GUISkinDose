@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import fnmatch
 import hashlib
 import io
@@ -15,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from threading import Lock
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
@@ -22,6 +24,11 @@ from typing import Any, Literal, Sequence
 
 POLICY_PATH = Path("dev-docs/privacy_admission_policy.json")
 Mode = Literal["staged", "range", "all"]
+# Keep the local NLP scanner responsive on repositories with many documentation
+# files.  Each invocation receives a disjoint subset; the receipt still covers
+# the complete, content-hashed input set.
+PRESIDIO_BATCH_SIZE = 25
+PRESIDIO_MAX_WORKERS = 8
 
 
 @dataclass(frozen=True)
@@ -331,11 +338,44 @@ def materialize_head(root: Path, destination: Path) -> None:
 def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequence[str]) -> int:
     python = sys.executable
     project_args = ["--project", str(root)]
+    environment = os.environ.copy()
+    uv_cache = git_path_directory(root, "privacy-uv-cache")
+    uv_cache.mkdir(parents=True, exist_ok=True, mode=0o700)
+    environment.setdefault("UV_CACHE_DIR", str(uv_cache))
     if rule.scanner_id == "presidio":
         command = [
             "uv", "run", *project_args, "--no-sync", "python", str(snapshot / "scripts/run_presidio_advisory.py"),
             "--scan-root", str(snapshot), "--fail-on-findings", "--max-displayed-findings", "100",
         ]
+        # Keep this in sync with ``run_presidio_advisory.PRESIDIO_EXCLUDED_PATHS``.
+        # The policy receipt still binds pyproject.toml as scanner configuration,
+        # while the advisory scanner deliberately excludes its author contacts.
+        scanned_paths = [path for path in input_paths if path != "pyproject.toml"]
+        batches = [
+            scanned_paths[offset : offset + PRESIDIO_BATCH_SIZE]
+            for offset in range(0, len(scanned_paths), PRESIDIO_BATCH_SIZE)
+        ]
+        output_lock = Lock()
+
+        def scan_batch(paths: Sequence[str]) -> int:
+            completed = subprocess.run(
+                [*command, "--", *paths],
+                cwd=snapshot,
+                env=environment,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            with output_lock:
+                if completed.stdout:
+                    print(completed.stdout, end="")
+                if completed.stderr:
+                    print(completed.stderr, end="", file=sys.stderr)
+            return completed.returncode
+
+        with ThreadPoolExecutor(max_workers=PRESIDIO_MAX_WORKERS) as executor:
+            return 0 if all(code == 0 for code in executor.map(scan_batch, batches)) else 1
     elif rule.scanner_id == "hounddog":
         command = [
             python, str(snapshot / "scripts/run_hounddog_advisory.py"),
@@ -358,10 +398,6 @@ def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequ
         ]
     else:
         raise RuntimeError("unknown_scanner")
-    environment = os.environ.copy()
-    uv_cache = git_path_directory(root, "privacy-uv-cache")
-    uv_cache.mkdir(parents=True, exist_ok=True, mode=0o700)
-    environment.setdefault("UV_CACHE_DIR", str(uv_cache))
     completed = subprocess.run(command, cwd=snapshot, env=environment, check=False)
     return completed.returncode
 

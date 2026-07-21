@@ -1,6 +1,6 @@
 # Privacy incident response and history-audit runbook
 
-_Last reviewed: 2026-07-16_
+_Last reviewed: 2026-07-20_
 
 Use this runbook for suspected PHI/PII in repository content, filenames, logs, CI output, release artifacts, package
 indexes, or Git history. Do not copy the suspected value into an issue, chat, commit message, terminal transcript, or

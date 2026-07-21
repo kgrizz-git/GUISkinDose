@@ -10,7 +10,7 @@ The package name in code is `mypyskindose`.
 
 ## Requirements
 
-- Python 3.10 or above
+- Python 3.11 or above
 - A settings configuration, typically based on [src/mypyskindose/settings_example.json](src/mypyskindose/settings_example.json)
 - An RDSR DICOM file, or a normalized/pre-parsed JSON export of RDSR data
 

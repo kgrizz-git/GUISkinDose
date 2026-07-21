@@ -153,7 +153,7 @@ python -m mypyskindose --mode gui
 
 ## Conventions
 
-- Python 3.10+
+- Python 3.11+
 
 ### Cross-platform (Windows, macOS, Linux)
 

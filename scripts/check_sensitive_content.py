@@ -144,7 +144,13 @@ SENSITIVE_PATTERNS = (
         re.compile(r"(?i)\b[A-Z0-9._%+-]+@(?!example\.(?:com|org|net)\b)[A-Z0-9.-]+\.[A-Z]{2,}\b"),
     ),
     ("US_SSN", re.compile(r"(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)")),
-    ("US_PHONE_NUMBER", re.compile(r"(?<!\d)(?:\+1[-. ]?)?(?:\(?\d{3}\)?[-. ]?)\d{3}[-. ]\d{4}(?!\d)")),
+    (
+        "US_PHONE_NUMBER",
+        re.compile(
+            r"(?<![0-9A-Fa-f-])(?:\+?1[-. ]?)?(?:\([2-9]\d{2}\)|[2-9]\d{2})[-. ]?"
+            r"[2-9]\d{2}[-. ]\d{4}(?![0-9A-Fa-f-])"
+        ),
+    ),
     (
         "POSIX_HOME_PATH",
         re.compile(r"(?<![A-Za-z0-9_./-])/(?:Users|home)/[^\s)>`\"']+"),
@@ -157,7 +163,9 @@ SENSITIVE_PATTERNS = (
     ("FILE_URI", re.compile(r"(?i)file:///(?:Users|home|private|var)/[^\s)>`\"']+")),
     (
         "PRIVATE_IPV4_ADDRESS",
-        re.compile(r"(?<![\d.])(?:10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2})(?![\d.])"),
+        re.compile(
+            r"(?<![\d.])(?:10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2})(?![\d.])"
+        ),
     ),
     (
         # Unique-local (fc/fd leading octet; fc00 through fdff) and link-local
@@ -184,6 +192,19 @@ SENSITIVE_PATTERNS = (
             r"(?=[a-z0-9-]*\d)[a-z0-9-]+"
         ),
     ),
+)
+
+ESCAPED_FASTAPI_DECORATOR_EMAILS = frozenset(
+    f"n@app.{method}"
+    for method in ("route", "get", "post", "put", "delete", "patch", "options", "head", "trace", "middleware")
+)
+
+ARCHIVE_CONTAINER_SUFFIXES = (
+    ZIP_CONTAINER_SUFFIXES
+    | TAR_CONTAINER_SUFFIXES
+    | GZIP_CONTAINER_SUFFIXES
+    | BZIP2_CONTAINER_SUFFIXES
+    | XZ_CONTAINER_SUFFIXES
 )
 
 SENSITIVE_PATH_PATTERNS = (
@@ -278,9 +299,7 @@ def has_notebook_embedded_visual_output(path: Path) -> bool:
         return False
     if not isinstance(notebook, dict) or not isinstance(notebook.get("cells"), list):
         return False
-    return any(
-        mapping_has_visual_mime(data) for cell in notebook["cells"] for data in cell_data_mappings(cell)
-    )
+    return any(mapping_has_visual_mime(data) for cell in notebook["cells"] for data in cell_data_mappings(cell))
 
 
 def is_probably_binary(path: Path) -> bool:
@@ -304,7 +323,7 @@ def asset_kind(path: str, full_path: Path) -> str | None:
         return "dicom"
     if suffix in OFFICE_CONTAINER_SUFFIXES:
         return "office_document"
-    if suffix in ZIP_CONTAINER_SUFFIXES | TAR_CONTAINER_SUFFIXES | GZIP_CONTAINER_SUFFIXES | BZIP2_CONTAINER_SUFFIXES | XZ_CONTAINER_SUFFIXES:
+    if suffix in ARCHIVE_CONTAINER_SUFFIXES:
         return "archive"
     if suffix == ".pdf":
         return "pdf"
@@ -447,11 +466,21 @@ def _container_text(path: Path) -> tuple[list[tuple[str, str]], set[str], str | 
     return extracted, flags, None
 
 
+def _is_escaped_fastapi_decorator_email(line: str, match: re.Match[str]) -> bool:
+    """Avoid treating an escaped ``\\n@app.post``-style decorator as an email address."""
+    return (
+        match.start() > 0
+        and line[match.start() - 1] == "\\"
+        and match.group(0).lower() in ESCAPED_FASTAPI_DECORATOR_EMAILS
+    )
+
+
 def text_findings(path: str, text: str, location_prefix: str = "") -> list[Finding]:
     findings: list[Finding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
         for rule, pattern in SENSITIVE_PATTERNS:
-            if pattern.search(line):
+            match = pattern.search(line)
+            if match and not (rule == "EMAIL_ADDRESS" and _is_escaped_fastapi_decorator_email(line, match)):
                 location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
                 findings.append(Finding(path=path, rule=rule, level="error", location=location))
     return findings

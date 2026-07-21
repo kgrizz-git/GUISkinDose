@@ -18,9 +18,7 @@ from scripts.check_sensitive_content import asset_kind, is_probably_binary, run_
 def _write_policy(root: Path, assets: list[dict[str, object]]) -> None:
     docs = root / "dev-docs"
     docs.mkdir(exist_ok=True)
-    (docs / "approved_asset_inventory.json").write_text(
-        json.dumps({"version": 1, "assets": assets}), encoding="utf-8"
-    )
+    (docs / "approved_asset_inventory.json").write_text(json.dumps({"version": 1, "assets": assets}), encoding="utf-8")
     (docs / "sensitive_content_allowlist.json").write_text(
         json.dumps({"version": 1, "allowed_findings": []}), encoding="utf-8"
     )
@@ -102,6 +100,28 @@ def test_sensitive_text_is_reported_without_echoing_value(tmp_path: Path) -> Non
         ("notes.txt", "EMAIL_ADDRESS", "1")
     ]
     assert "person" not in findings[0].render()
+
+
+def test_escaped_fastapi_decorator_is_not_an_email_address(tmp_path: Path) -> None:
+    text = tmp_path / "routes.json"
+    text.write_text(r'{"source": "\\n@app.post(\'/items\')"}' + "\n", encoding="utf-8")
+    _write_policy(tmp_path, [])
+
+    assert run_checks(tmp_path, paths=["routes.json"]) == []
+
+
+def test_phone_detection_rejects_guid_fragments_and_invalid_nanp_prefixes(tmp_path: Path) -> None:
+    text = tmp_path / "runner.txt"
+    valid_phone = "(415) " + "555-0123"
+    invalid_phone = "123-" + "456-7890"
+    text.write_text(
+        f"valid={valid_phone}\nguid=fd629-417f-989d-8150d45be882\ninvalid={invalid_phone}\n",
+        encoding="utf-8",
+    )
+    _write_policy(tmp_path, [])
+
+    findings = run_checks(tmp_path, paths=["runner.txt"])
+    assert [(finding.rule, finding.location) for finding in findings] == [("US_PHONE_NUMBER", "1")]
 
 
 def test_sensitive_filename_is_rejected_without_echoing_it(tmp_path: Path) -> None:
@@ -199,9 +219,7 @@ def test_contextual_patient_identifier_is_blocked_but_test_placeholder_is_allowe
     _write_policy(tmp_path, [])
 
     findings = run_checks(tmp_path, paths=["metadata.txt"])
-    assert [(finding.rule, finding.location) for finding in findings] == [
-        ("CONTEXTUAL_PATIENT_IDENTIFIER", "1")
-    ]
+    assert [(finding.rule, finding.location) for finding in findings] == [("CONTEXTUAL_PATIENT_IDENTIFIER", "1")]
 
 
 def test_notebook_embedded_visual_requires_an_inventory_entry(tmp_path: Path) -> None:
@@ -289,9 +307,7 @@ def test_real_pdf_page_text_is_scanned(tmp_path: Path) -> None:
 
     findings = run_checks(tmp_path, paths=["report.pdf"])
 
-    assert [(finding.rule, finding.location) for finding in findings] == [
-        ("CONTEXTUAL_PATIENT_IDENTIFIER", "page1:1")
-    ]
+    assert [(finding.rule, finding.location) for finding in findings] == [("CONTEXTUAL_PATIENT_IDENTIFIER", "page1:1")]
 
 
 def test_inventory_kind_must_match_detected_asset_type(tmp_path: Path) -> None:
@@ -381,6 +397,4 @@ def test_extensionless_file_with_late_binary_content_is_an_asset(tmp_path: Path)
 
     assert asset_kind(".envrc", config) == "opaque_binary"
     findings = run_checks(tmp_path, paths=[".envrc"])
-    assert [(finding.path, finding.rule) for finding in findings] == [
-        (".envrc", "ASSET_NOT_IN_APPROVED_INVENTORY")
-    ]
+    assert [(finding.path, finding.rule) for finding in findings] == [(".envrc", "ASSET_NOT_IN_APPROVED_INVENTORY")]

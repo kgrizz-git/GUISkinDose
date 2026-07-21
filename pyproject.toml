@@ -3,7 +3,7 @@ name = "mypyskindose"
 version = "25.1.1"
 description = "Tools and script for calculating peak skin dose and create dose maps for fluoroscopic exams from RDSR data (fork of PySkinDose)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name="Max Hellström", email="max.hellstrom@gmail.com" },
     { name="Josef Lundman", email="josef@lundman.eu" },
@@ -116,7 +116,7 @@ markers = [
 line-length = 120
 
 [tool.basedpyright]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 include = ["src/mypyskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
 exclude = [
     "**/__pycache__",
