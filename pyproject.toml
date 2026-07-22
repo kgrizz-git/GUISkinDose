@@ -1,6 +1,6 @@
 [project]
 name = "mypyskindose"
-version = "25.1.1"
+version = "25.2.0"
 description = "Tools and script for calculating peak skin dose and create dose maps for fluoroscopic exams from RDSR data (fork of PySkinDose)"
 readme = "README.md"
 requires-python = ">=3.11"

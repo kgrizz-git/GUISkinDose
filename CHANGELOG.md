@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `25.1.1`).
+**Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`).
 This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml` when releasing.
 
 ## [Unreleased]
@@ -15,7 +15,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Fun / public-domain phantom mesh survey** (2026-07-21) — added
   `dev-docs/references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md` (stylized CC0 characters, MakeHuman,
   classical sculpture scans, Smithsonian Open Access, Mixamo/Daz shipping caveats) and a short summary
-  section in `ADDITIONAL_PHANTOMS.md`; registered in `dev-docs/index.md`.
+  section in `ADDITIONAL_PHANTOMS.md`; registered in `dev-docs/index.md`. Updated with Steamboat Willie /
+  Mickey caveats, convertible format notes (`.obj`/`.ply`/… → STL), and concrete **Venus de Milo** (SMK
+  **CC0**) / **David** (Scan the World **CC BY-SA 4.0**) license and integration guidance.
 
 - **`ADDITIONAL_PHANTOMS.md` consolidated** (2026-07-21) — rewrote the layered review appendices into one reference:
   shipped mesh inventory, preferred MPFB path, external sources (with corrected XCAT/Mesh50 license notes),
@@ -24,11 +26,18 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Automated phantom library plan** (2026-07-21) — replaced the MakeHuman GUI generation master/sub-plans with
   `dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
   parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
-  docs archived under `dev-docs/plans/archive/`. Phase 0 headless spike **PASS**
-  (`dev-docs/assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`); Phase 1 catalog + orchestrator shipped
-  (`scripts/phantom_gen/catalog_v1.json`, `run_catalog.py`, unit + optional `@pytest.mark.blender_mpfb` tests);
-  Phase 2 P0 meshes generated/tuned in `tmp/phantom_gen/p0/`
-  (`dev-docs/assessments/P0_PHANTOM_GENERATION_2026-07-21.md`).
+  docs archived under `dev-docs/plans/archive/`. Phases 0–4 complete (spike, catalog, P0/P1 generation, install).
+
+## [25.2.0] - 2026-07-21
+
+### Added
+
+- **Parametric human phantom library (MPFB)** — ten new full-body meshes with male/female pairs:
+  `pediatric_5y_*`, `pediatric_10y_*`, `adult_ectomorph_*`, `adult_endomorph_*`, `bariatric_class2_*`
+  (plus `*_reduced_1000t` previews). Generated via headless Blender/MPFB true-shape targets
+  (`scripts/phantom_gen/`), not affine stretch of existing STLs. Provenance: MakeHuman/MPFB core
+  assets CC0; see `ADDITIONAL_PHANTOMS.md` and assessments `P0_PHANTOM_GENERATION_2026-07-21.md` /
+  `P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md`.
 
 ### Fixed
 

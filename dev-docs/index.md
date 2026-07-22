@@ -70,7 +70,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
-| [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Source of truth** — agent-executable full-body phantom library with **true shape variety** via headless MPFB/Blender (Phase 0 PASS; Phase 1 catalog + orchestrator done; affine stretch not for shipping). |
+| [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Source of truth** — agent-executable full-body phantom library with **true shape variety** via headless MPFB/Blender (Phases 0–4 complete; 10 new meshes shipped in 25.2.0). |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
@@ -108,7 +108,8 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | File | Purpose |
 |---|---|
 | [assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) | **PASS** — Phase 0 headless MPFB/Blender phantom spike: adult/pediatric/heavy meshes + anti-balloon shape gates. |
-| [assessments/P0_PHANTOM_GENERATION_2026-07-21.md](assessments/P0_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 2 P0 catalog meshes in `tmp/` (pediatric + ectomorph/endomorph) with ordering and shape gates. |
+| [assessments/P0_PHANTOM_GENERATION_2026-07-21.md](assessments/P0_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 2 P0 catalog meshes (pediatric + ectomorph/endomorph) with ordering and shape gates. |
+| [assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md](assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 3 class-II bariatric male/female meshes; abdomen anti-balloon gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |

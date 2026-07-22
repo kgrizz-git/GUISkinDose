@@ -4,7 +4,9 @@ Survey of free / open-license **full-body or humanoid** meshes that could be fun
 
 This is a **candidate-source list**, not a commitment to ship any of these. Clinical dosimetry still prefers anatomical libraries and the MPFB catalog — see [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) and [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 
-**Out of scope here:** isolated organs, bones, prosthetic/engineering mannequins, and trademarked cartoon IPs (Mickey, Mario, etc.). Prefer original CC0 characters or public-domain sculpture scans.
+**Out of scope here:** isolated organs, bones, prosthetic/engineering mannequins, and **modern trademarked cartoon IPs**. Prefer original CC0 characters or clearly licensed sculpture scans. **Mickey Mouse:** only the **1928 Steamboat Willie** design is public domain in the US (as of 2024); later Mickey designs remain under copyright, and Disney trademarks still apply to branding / source confusion — treat Mickey as a legal special case, not a default fun phantom.
+
+**Formats:** MyPySkinDose ships and loads **binary `.stl`**. Upstream files may be `.stl`, `.obj`, `.ply`, `.fbx`, or `.glTF` — convert with Blender or MeshLab, strip textures/colors, then follow the integration checklist.
 
 **Before committing any STL to this repo:** verify the **per-model** license, convert to binary STL, run the [integration checklist](../ADDITIONAL_PHANTOMS.md#integration-checklist), and hash-pin the file per [`PRIVACY_AND_SENSITIVE_ASSETS.md`](../PRIVACY_AND_SENSITIVE_ASSETS.md).
 
@@ -14,14 +16,15 @@ This is a **candidate-source list**, not a commitment to ship any of these. Clin
 
 | Tier | Examples | Shipping in MyPySkinDose |
 |------|----------|--------------------------|
-| **Safest** | CC0 / public domain | Redistribute with provenance note |
-| **OK with care** | CC-BY, CC-BY-SA | Attribution (and share-alike for SA) in notices / catalog metadata |
+| **Safest** | CC0 / public domain / PDM | Redistribute with provenance note |
+| **OK with care** | CC-BY, CC-BY-SA | Attribution (and share-alike for SA) on the **mesh asset** in notices / catalog metadata — does not relicense MIT app code |
 | **Usually avoid shipping** | CC-BY-NC | Blocks commercial redistribution of the package |
 | **Do not ship raw meshes** | Mixamo, many Daz “free” bases | Use in a private build only; EULAs forbid redistributing raw character files |
+| **Special case** | Steamboat Willie–era Mickey fan meshes | PD character design ≠ free-for-all branding; prefer non-Disney cartoon sources |
 
 Always re-check the model page — aggregators mix licenses.
 
-**Formats:** `.obj` / `.fbx` / `.glTF` → convert in Blender or MeshLab to binary `.stl`. Strip textures/colors; MyPySkinDose uses geometry only. Scale to centimeters and re-anchor to the MyPySkinDose frame.
+**Conversion:** `.obj` / `.ply` / `.fbx` / `.glTF` → binary `.stl` in Blender or MeshLab. Scale to centimeters and re-anchor to the MyPySkinDose frame.
 
 ---
 
@@ -94,15 +97,24 @@ Good for demos, teaching, and “fun” phantom selectors. Expect low poly count
 
 ## Classical sculptures and historical figures
 
-These make memorable phantoms (David on the table, Lincoln life mask as a head-heavy oddity, etc.). Prefer **standing / reclining full figures** or life-size busts you intentionally accept as non-full-body. Recline and scale to cm; many scans are upright and meters-scale.
+These make memorable phantoms (David on the table, Lincoln life mask as a head-heavy oddity, etc.). Prefer **standing / reclining full figures** or life-size busts you intentionally accept as non-full-body. Recline and scale to cm; many scans are upright and meters- or mm-scale for printing.
+
+### Priority targets: Venus de Milo and Michelangelo’s David
+
+| Figure | Recommended download | License | Notes |
+|------|----------------------|---------|-------|
+| **Venus de Milo** | SMK digital cast: [Sketchfab CC0](https://sketchfab.com/3d-models/venus-de-milo-aphrodite-of-milos-53082b5d6cef4c34a9701a2a24f58075), [Commons CC0 STL](https://commons.wikimedia.org/wiki/File:Venus_(Afrodite)_fra_Milo_-_KAS434_1.stl), high-res at [smk.dk/3d](https://www.smk.dk/3d) | **CC0 / PDM** | **Best shipping candidate.** Scan of a museum plaster cast, not the Louvre marble — still recognizably Venus. Downscaled Sketchfab version is ~274k tris; decimate hard. |
+| **Venus (Louvre scan)** | [Scan the World on Commons](https://commons.wikimedia.org/wiki/File:Scan_the_World_-_Venus_de_Milo.stl) (~29 MB) | **CC BY-SA 4.0** | Attribution + share-alike on mesh derivatives |
+| **David** | [Scan the World on Commons](https://commons.wikimedia.org/wiki/File:David_(Michelangelo).stl) (~57 MB); also [MyMiniFactory object 2052](https://www.myminifactory.com/object/3d-print-michelangelo-s-david-in-florence-italy-2052) (Credit / Remix / **Commercial**) | **CC BY-SA 4.0** on Commons | **Easy to obtain**; large. Credit Scan the World; keep mesh derivatives SA-compatible |
+
+**Integration effort (both):** low for acquisition, moderate for MyPySkinDose readiness — lay supine, scale height to a plausible table-phantom extent (or accept giant/miniature as a joke demo), close holes if needed, decimate to ~3k–8k faces, re-orient normals, smoke-test entrance/exit.
 
 ### Scan the World (MyMiniFactory)
 
 - **Site:** [myminifactory.com/scantheworld](https://www.myminifactory.com/scantheworld/)
 - **Formats:** `.stl`, `.obj`
-- **License:** Often **CC-BY-NC** — fine for private demos; **problematic to ship** in a commercially usable public package. Check each scan.
-- **Examples of interest:** Michelangelo’s *David*, *Venus de Milo*, and other classical sculpture scans
-- **Fit:** Fun demos and education; clear NC before committing
+- **License:** **Per object** — some are commercial-friendly; some are NC. Do not generalize. For *David* / *Venus*, prefer the Wikimedia Commons copies above where the license is explicit CC BY-SA 4.0.
+- **Fit:** Huge catalog of sculpture scans; always open the license panel before downloading for shipping
 
 ### Smithsonian 3D Digitization
 
@@ -114,7 +126,14 @@ These make memorable phantoms (David on the table, Lincoln life mask as a head-h
 
 ### Other museum / open-access scan portals
 
-Search for CC0 or explicit public-domain full-figure scans (national museums, Wikimedia Commons 3D, Europeana). Same rules: per-object license, convert, re-anchor, validate normals.
+Search for CC0 or explicit public-domain full-figure scans (national museums, Wikimedia Commons 3D, Europeana, SMK). Same rules: per-object license, convert, re-anchor, validate normals.
+
+### Mickey Mouse / Steamboat Willie (special case)
+
+- **US copyright:** The **1928 Steamboat Willie** Mickey (and that short) entered the public domain on **2024-01-01**. Later Mickey designs (color, evolved proportions, etc.) remain copyrighted.
+- **Trademark:** Disney still trademarks “Mickey Mouse” and related branding — avoid use that implies Disney affiliation or official merchandise.
+- **Meshes:** Fan STLs/OBJs appeared quickly on Printables, Sketchfab, etc.; each file has its **own** creator license on top of the PD character design.
+- **For this repo:** Prefer Quaternius/Kenney for cartoon phantoms. If experimenting locally with Steamboat Willie–style meshes, keep them out of the shipping catalog unless legal/product review explicitly clears naming and branding.
 
 ---
 
@@ -126,8 +145,10 @@ If adding a playful set alongside clinical meshes:
 |------|---------------|---------------|
 | Low-poly modern person | Quaternius / Kenney | CC0 — preferred for shipping |
 | Parametric “cartoonish” adult | MakeHuman / MPFB with extreme face/body targets | Core assets CC0 |
-| *David* or *Venus de Milo* | Scan the World | Often NC — local-only unless a CC0/CC-BY scan is found |
+| *Venus de Milo* | **SMK CC0** cast scan (preferred) | Safest classical option |
+| Michelangelo’s *David* | Scan the World / Commons | **CC BY-SA 4.0** — attribute + SA on mesh |
 | Lincoln (or similar) bust / figure | Smithsonian Open Access | Prefer CC0 objects only |
+| Steamboat Willie–style Mickey | Fan sites | PD design only (1928); trademark + later designs — usually skip for shipping |
 | Mixamo “Y Bot” style | Mixamo | Local-only; do not ship raw mesh |
 
 Label fun meshes clearly in the UI (e.g. “demo / non-clinical”) so users do not confuse them with dosimetry reference phantoms.
@@ -136,7 +157,7 @@ Label fun meshes clearly in the UI (e.g. “demo / non-clinical”) so users do 
 
 ## Conversion and integration reminders
 
-1. Import in Blender → apply transforms → export binary STL (or MeshLab).
+1. Import in Blender (or MeshLab) from `.stl` / `.obj` / `.ply` / `.fbx` / `.glTF` → apply transforms → export binary STL.
 2. Scale so extents are **centimeters** (many game assets are meters or arbitrary units).
 3. Orient head-first supine; posterior near `max(Y) ≈ 0`, crown near `max(Z) ≈ 0` — see the [integration checklist](../ADDITIONAL_PHANTOMS.md#integration-checklist).
 4. Decimate to ~3k–8k faces when possible; re-orient faces coherently; load once through `Phantom` so normals recompute.

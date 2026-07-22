@@ -111,6 +111,13 @@ Located in `src/mypyskindose/phantom_data/`:
 | `adult_female` | Adult female |
 | `junior_male` | Junior male |
 | `junior_female` | Junior female |
+| `senior_male` | Senior male |
+| `senior_female` | Senior female |
+| `pediatric_5y_male`, `pediatric_5y_female` | MPFB parametric ~5 y |
+| `pediatric_10y_male`, `pediatric_10y_female` | MPFB parametric ~10 y |
+| `adult_ectomorph_male`, `adult_ectomorph_female` | MPFB thin adult habitus |
+| `adult_endomorph_male`, `adult_endomorph_female` | MPFB heavy adult habitus |
+| `bariatric_class2_male`, `bariatric_class2_female` | MPFB class-II habitus (parametric CG) |
 | `*_reduced_1000t` | Low-resolution variants of each (faster, used in `plot_procedure`) |
 
 Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file path.

@@ -244,21 +244,22 @@ all pass anti-balloon checks. — **PASS** (`dev-docs/assessments/P0_PHANTOM_GEN
 
 ## Phase 3 — P1 bariatric
 
-- [ ] Generate class-II pair with abdomen-dominant targets.
-- [ ] If MPFB cannot produce abdomen_bulk above threshold without mesh artifacts, document
+- [x] Generate class-II pair with abdomen-dominant targets.
+- [x] If MPFB cannot produce abdomen_bulk above threshold without mesh artifacts, document
       limitation and either soften class-II targets or stop — **do not** substitute XYZ scale.
-- [ ] Reduced variants + validate.
+      Comment: **PASS** without softening — see `P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md`.
+- [x] Reduced variants + validate.
 
 ---
 
 ## Phase 4 — Integrate
 
-- [ ] Install passing STLs into `src/mypyskindose/phantom_data/`.
-- [ ] Integration tests: discovery, load, anchors, scale hook smoke.
-- [ ] Optional dose smoke on one pediatric + one heavy mesh (example RDSR, `psd > 0`).
-- [ ] Update `AGENTS.md` mesh list, `CHANGELOG.md`, `ADDITIONAL_PHANTOMS.md` license note.
-- [ ] Privacy admission for every new binary.
-- [ ] Semver: **minor** when meshes ship.
+- [x] Install passing STLs into `src/mypyskindose/phantom_data/`.
+- [x] Integration tests: discovery, load, anchors, scale hook smoke.
+- [x] Optional dose smoke on one pediatric + one heavy mesh (example RDSR, `psd > 0`).
+- [x] Update `AGENTS.md` mesh list, `CHANGELOG.md`, `ADDITIONAL_PHANTOMS.md` license note.
+- [x] Privacy admission for every new binary.
+- [x] Semver: **minor** when meshes ship. (`25.2.0`)
 
 ---
 

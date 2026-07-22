@@ -18,6 +18,9 @@ Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery
 | `adult_male`, `adult_female` | 26,756 | Full-resolution adults |
 | `junior_male`, `junior_female` | 26,756 | Same topology family as adults |
 | `senior_male`, `senior_female` | 26,756 | Distinct meshes; same face count as adult/junior full variants |
+| `pediatric_5y_*`, `pediatric_10y_*` | 26,756 | MPFB parametric pediatric (male/female) |
+| `adult_ectomorph_*`, `adult_endomorph_*` | 26,756 | MPFB thin / heavy adult habitus (male/female) |
+| `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); CG parametric, not CT-grade |
 | `*_reduced_1000t` | 1,000 | Preview-only; not listed in mesh selectors |
 
 Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to one of the non-reduced names. Body-habitus sliders (`scale_lat`, `scale_ap`, `scale_lon`, clamped 0.5–2.0) apply at load via `Phantom._apply_human_scale` and are for **moderate sensitivity studies**, not for shipping new body shapes (see below).
@@ -28,7 +31,7 @@ Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to one 
 
 **Policy:** shipped phantoms must have **true shape variety** (parametric phenotype / regional morph targets), not global affine stretches of existing STLs.
 
-1. **Headless MPFB under Blender** — primary path. Catalog presets + `scripts/phantom_gen/` produce full-body meshes in the MyPySkinDose frame. See [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phase 0 spike PASS; Phase 1 catalog/orchestrator in place).
+1. **Headless MPFB under Blender** — primary path. Catalog presets + `scripts/phantom_gen/` produce full-body meshes in the MyPySkinDose frame. See [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phases 0–4 complete; v1 catalog meshes shipped).
 2. **MakeHuman standalone GUI** — same asset family as MPFB; use only if headless automation is blocked and a hybrid hand-export path is explicitly approved. Extreme-weight models are not Class-III bariatric fidelity.
 3. **GUI `scale_*` on a shipped mesh** — acceptable for interactive “what if” habitus checks; **not** a shipping method for new catalog rows.
 
@@ -74,7 +77,9 @@ TCIA + Slicer remains the best **manual** fallback for a real bariatric surface 
 
 ## Fun / stylized / historical phantoms
 
-Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to ship or demo **non-clinical** humanoids: low-poly game characters, MakeHuman cartoon morphs, and public-domain classical / historical figures (e.g. *David*, *Venus de Milo*, Lincoln life-mask scans).
+Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to ship or demo **non-clinical** humanoids: low-poly game characters, MakeHuman cartoon morphs, and classical / historical figures.
+
+**Input formats:** MyPySkinDose loads **binary `.stl`**. Candidate sources may ship `.stl`, `.obj`, `.ply`, `.fbx`, or `.glTF` — convert in Blender or MeshLab, then run the [integration checklist](#integration-checklist).
 
 **Short version:**
 
@@ -82,11 +87,28 @@ Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to shi
 |------|----------------------|---------------|
 | Realistic parametric | MakeHuman / MPFB (core assets **CC0**) | Preferred generation path already |
 | Stylized / cartoon | [Quaternius](https://quaternius.com/), [Kenney.nl](https://kenney.nl/assets) (**CC0**) | Best open-license fun candidates |
-| Classical sculpture | [Scan the World](https://www.myminifactory.com/scantheworld/) | Often **CC-BY-NC** — local demos unless a redistributable license is confirmed |
+| *Venus de Milo* | Prefer **SMK** plaster-cast scan (**CC0** / PDM) | Easy download; recline + decimate + re-anchor (see below) |
+| Michelangelo’s *David* | Scan the World on **Wikimedia Commons** (**CC BY-SA 4.0**) | Easy download; attribution + share-alike on the mesh; large file |
+| Other classical scans | [Scan the World](https://www.myminifactory.com/scantheworld/) | **Per-object** license (some NC — do not assume) |
 | Historical figures | [Smithsonian 3D](https://3d.si.edu/) Open Access (**CC0** when marked) | Check each object page |
-| Mixamo / Daz free bases | Mixamo, Daz starters | Fine for private experiments; **do not commit raw meshes** (EULA redistribution limits) |
+| Steamboat Willie–era Mickey | Fan STLs on Printables / Sketchfab | Only the **1928** design is PD in the US; later Mickey + trademarks still apply — see reference doc |
+| Mixamo / Daz free bases | Mixamo, Daz starters | Private experiments only; **do not commit raw meshes** |
 
 Still apply the [integration checklist](#integration-checklist) (cm scale, table-contact frame, watertight mesh, outward normals). Label fun meshes as demo/non-clinical in the UI.
+
+### Venus de Milo and David — can we add them easily?
+
+**Yes, as fun/demo phantoms** — downloadable STLs already exist. The work is conversion/integration (not hunting for a mesh): scale to cm, lay the upright statue **supine** on the table pad, decimate to ~3k–8k faces, fix winding/normals, hash-pin, and record provenance. They will not look like patients (missing arms on Venus; oversized head/hand on David; standing-sculpture proportions).
+
+| Figure | Recommended source | License | Ease |
+|------|---------------------|---------|------|
+| **Venus de Milo** | [SMK – National Gallery of Denmark](https://sketchfab.com/3d-models/venus-de-milo-aphrodite-of-milos-53082b5d6cef4c34a9701a2a24f58075) digital cast (also [Wikimedia Commons CC0](https://commons.wikimedia.org/wiki/File:Venus_(Afrodite)_fra_Milo_-_KAS434_1.stl)); high-res via [smk.dk/3d](https://www.smk.dk/3d) | **CC0 / public domain** — safest for shipping | Straightforward; prefer SMK over Louvre Scan-the-World copies |
+| **Venus (alternate)** | [Scan the World on Wikimedia](https://commons.wikimedia.org/wiki/File:Scan_the_World_-_Venus_de_Milo.stl) | **CC BY-SA 4.0** — OK with attribution + share-alike on derivatives of the mesh | Same pipeline; larger / different scan |
+| **David** | [Scan the World on Wikimedia](https://commons.wikimedia.org/wiki/File:David_(Michelangelo).stl) (~57 MB STL) | **CC BY-SA 4.0** (commercial remix allowed with credit + SA). MyMiniFactory lists the same object as Credit / Remix / Commercial — still verify before commit | Download is easy; file is heavy — decimate before shipping |
+
+**CC BY-SA note:** Does not relicense the MIT application code. It does require attribution and that **modified versions of that mesh** stay under a compatible share-alike license; put credit + license in catalog metadata / notices next to the STL.
+
+**Mickey Mouse:** Not a default shipping candidate. Only the **1928 Steamboat Willie** depiction entered the US public domain (2024); later designs remain copyrighted, and Disney trademarks still restrict branding/confusion. Fan meshes exist, but prefer Quaternius/Kenney for cartoon phantoms.
 
 **Full source list, formats, and license caveats:** [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
 
