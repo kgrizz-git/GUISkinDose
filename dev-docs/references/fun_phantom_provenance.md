@@ -129,3 +129,50 @@ Until then, `petite_herculanaise` is **not shipped**: no STL is installed under 
 `NOTICE_petite_herculanaise.txt`, and no inventory entry is added. The manifest keeps its
 placeholder `petite_herculanaise` entry (orientation not locked). The ingest pipeline and README
 require **no** changes for this blocker.
+
+---
+
+## Ramesses II (`ramesses_ii`)
+
+- **Object:** Colossal sculpture of Ramesses II (museum scan, recumbent/mounted figure).
+- **License:** **CC BY 4.0** — attribution required. Sidecar:
+  `src/mypyskindose/phantom_data/NOTICE_ramesses_ii.txt`.
+- **Source (retrieved 2026-07-22):**
+  - Wikimedia Commons — `File:Colossal_sculpture_of_Ramesses_II.stl` (Dejp3)
+    (`https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl`).
+  - Raw ~25 MB stays under gitignored `tmp/fun_phantoms/raw/ramesses_ii/` (not committed).
+
+### Locked ingest transform (discovered + locked 2026-07-22)
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `rotate_deg` | `[90, 0, 0]` | Raw body (S–I) along raw Y (crown at max Y); Rx +90° maps crown → max Z and anterior (raw +Z) → −Y. |
+| `height_axis` | `z` | Post-rotation body axis (scaled toward ~185 cm). |
+| `height_cm` | `185.0` | Target; final shipped height ≈ **192.5 cm** after voxel remesh padding (within 170–200 cm). |
+| `flip_y` | `false` | Rotation already yields face-up; no extra Y negation. |
+| `target_faces` | `6000` | Remesh produced ~5630 faces (≤ budget); quadric was effectively a no-op. |
+| `voxel_pitch` | `5.5` | cm — solid voxel + marching-cubes remesh (raw scan not watertight). |
+| `face_up_frac` / `face_up_band_frac` | `0.55` / `0.12` | Defaults; gate passed. |
+
+### Repair / watertight
+
+- Raw scan is **not** watertight (multiple disconnected bodies / open boundaries). `fill_holes` could
+  not close it. Ingest used `--voxel-pitch 5.5` (`_voxel_remesh_watertight` via trimesh +
+  scikit-image marching cubes) to produce a single closed manifold. Colossal / blocky proportions
+  after remesh are accepted per plan (smoke passes).
+
+### Validation + smoke results (2026-07-22)
+
+- `validate_phantom.py --require-trimesh`: **PASS** — 5630 faces, anchors OK, height ≈ 192.5 cm,
+  watertight `True`, face-up + outward normals (200/200), Phantom load OK.
+- **Anterior-beam smoke** on `siemens_axiom_example_procedure.dcm`: PSD ≈ **25.3 mGy**; top-30 dose
+  cells all on anterior (**−Y**) (mean Y ≈ −11 cm).
+
+### Installed assets
+
+| File | Faces | SHA-256 |
+|------|-------|---------|
+| `src/mypyskindose/phantom_data/ramesses_ii.stl` | 5630 | `5b22b53a3a3cc867989816e0194f2fb89adc8591ae4a5a4b6c7cbd7218d4985f` |
+| `src/mypyskindose/phantom_data/ramesses_ii_reduced_1000t.stl` | 1000 | `d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987` |
+
+Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).

@@ -12,6 +12,14 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Ramesses II (demo) phantom** (2026-07-22) — Task 4 of
+  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `ramesses_ii` (Wikimedia Commons,
+  Dejp3, **CC BY 4.0**) with `NOTICE_ramesses_ii.txt`, locked transform (`rotate_deg=[90,0,0]`,
+  `height_cm=185`, `flip_y=false`, `voxel_pitch=5.5`), ~5.6k-face full STL + `_reduced_1000t`. Raw scan
+  was not watertight; ingest remeshes via solid voxel + marching cubes (`scikit-image` /
+  `networkx` added to `.[phantom-gen]`). Fun-mode validate + anterior-beam smoke pass (entrance −Y).
+  Provenance + dual inventory hashes. **Minor** SemVer bump on release when demos ship.
+
 - **Cosmic Buddha (demo) phantom** (2026-07-22) — Task 2 of
   `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. First shipped demo / non-clinical
   phantom: `cosmic_buddha` (Smithsonian Institution, Freer Gallery of Art; **CC0**). Ingested from the

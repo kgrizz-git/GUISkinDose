@@ -52,14 +52,16 @@
       "license": "CC BY 4.0",
       "attribution": "Colossal sculpture of Ramesses II, by Dejp3 (Wikimedia Commons). CC BY 4.0: attribution required.",
       "notice_required": true,
+      "orientation_locked": true,
       "height_cm": 185.0,
       "height_axis": "z",
-      "rotate_deg": [0, 0, 0],
+      "rotate_deg": [90, 0, 0],
       "flip_y": false,
       "target_faces": 6000,
+      "voxel_pitch": 5.5,
       "face_up_frac": 0.55,
       "face_up_band_frac": 0.12,
-      "geometry_notes": "Already lying; mainly scale + PSD-frame axis lock (crown at max Z, back at max Y). Colossal proportions may look odd; accept if smoke passes. NOTICE_ramesses_ii.txt required (BY). Raw STL ~24 MB stays under tmp/.",
+      "geometry_notes": "Recumbent/mounted colossal figure. Orientation LOCKED (2026-07-22) by depth-map discovery of the raw mesh: raw body (superior-inferior) axis = raw Y with the crown/nemes headdress at max Y and feet at min Y; raw X = lateral; raw Z = anterior-posterior with the carved face/body relief on raw +Z (anterior) and the flat museum mounting plate + plinth on raw -Z (posterior). rotate_deg=[90,0,0] (Rx +90 deg, sxyz) maps raw Y->+Z (crown at max Z), raw +Z (anterior)->-Y, raw -Z (posterior/mount)->+Y so the back anchors to the table (y_max~=0) face-up; height_axis=z is the post-rotation body axis (raw Y span ~=48.87 -> scaled to 185 cm, scale ~=3.785). flip_y=false: the Rx rotation already yields face-up, so no extra Y negation. WATERTIGHT REPAIR: the raw scan is NOT watertight (10 disconnected bodies, ~4438 open boundary edges, euler=17); fill_holes cannot close it, so voxel_pitch=5.5 cm triggers the solid-voxel + marching-cubes remesh (_voxel_remesh_watertight) which yields a single closed manifold (~5.6k faces <= target 6000, so quadric decimation is a no-op and watertightness survives). Final shipped height ~=192 cm (marching-cubes pads the bbox ~1 voxel per side; within the 170-200 cm target). Colossal/blocky proportions accepted per plan (smoke passes). NOTICE_ramesses_ii.txt required (BY). Raw STL ~25 MB stays under tmp/.",
       "fallback_notes": "Single Commons CC BY 4.0 source (Dejp3)."
     },
     "steamboat_willie": {

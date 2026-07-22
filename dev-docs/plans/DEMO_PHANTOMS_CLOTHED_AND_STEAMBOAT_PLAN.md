@@ -346,18 +346,20 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 
 **Files:**
 - Create: shipped STLs + `NOTICE_ramesses_ii.txt`
-- Modify: manifest, provenance, inventory (**both** STLs)
+- Modify: manifest, provenance, inventory (**both** STLs), `LICENSE_COMPLIANCE.md`, `.[phantom-gen]` extras
 
-- [ ] **Step 1: Download** Commons CC BY 4.0 STL (~24 MB raw stays in `tmp/`).
+- [x] **Step 1: Download** Commons CC BY 4.0 STL (~24 MB raw stays in `tmp/`).
 
-- [ ] **Step 2: Ingest** — already lying; focus scale + PSD-frame axes; lock rotation + `flip_y` that puts
-  crown at max Z and back at max Y. Accept colossal proportions if smoke passes.
+- [x] **Step 2: Ingest** — locked `rotate_deg=[90,0,0]`, `flip_y=false`, `height_cm=185`,
+  `voxel_pitch=5.5` (marching-cubes remesh; raw not watertight). Final height ≈ 192.5 cm; ~5630 faces.
 
-- [ ] **Step 3: Validate** full mesh + anterior-beam smoke on `siemens_axiom_example_procedure.dcm`.
+- [x] **Step 3: Validate** full mesh + anterior-beam smoke on `siemens_axiom_example_procedure.dcm`
+  (entrance −Y; PSD ≈ 25.3 mGy).
 
-- [ ] **Step 4: Install** + NOTICE (Dejp3 / CC BY 4.0) + provenance + inventory both STLs.
+- [x] **Step 4: Install** + NOTICE (Dejp3 / CC BY 4.0) + provenance + inventory both STLs +
+  LICENSE_COMPLIANCE redistributed-mesh note.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ---
 

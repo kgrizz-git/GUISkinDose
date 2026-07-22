@@ -14,7 +14,7 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 69
+**Assets tracked:** 71
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
@@ -56,6 +56,8 @@ file revision.
 | [`src/mypyskindose/phantom_data/bariatric_class2_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/bariatric_class2_male_reduced_1000t.stl) | Opaque binary | Reduced MPFB parametric human phantom mesh (bariatric_class2_male) | ✅ Approved — KG (2026-07-22) | — | `4374b59ad302` |
 | [`src/mypyskindose/phantom_data/cosmic_buddha.stl`](../src/mypyskindose/phantom_data/cosmic_buddha.stl) | Opaque binary | Cosmic Buddha (demo) non-clinical phantom mesh (Smithsonian CC0; missing head/hands) | ✅ Approved — KG (2026-07-22) | — | `cd6c5428bb02` |
 | [`src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl`](../src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl) | Opaque binary | Reduced Cosmic Buddha (demo) non-clinical phantom mesh (Smithsonian CC0) | ✅ Approved — KG (2026-07-22) | — | `66d9ae78a9d7` |
+| [`src/mypyskindose/phantom_data/ramesses_ii.stl`](../src/mypyskindose/phantom_data/ramesses_ii.stl) | Opaque binary | Ramesses II (demo) non-clinical phantom mesh (Wikimedia Commons, Dejp3, CC BY 4.0; voxel-remeshed watertight) | ✅ Approved — KG (2026-07-22) | — | `5b22b53a3a3c` |
+| [`src/mypyskindose/phantom_data/ramesses_ii_reduced_1000t.stl`](../src/mypyskindose/phantom_data/ramesses_ii_reduced_1000t.stl) | Opaque binary | Reduced Ramesses II (demo) non-clinical phantom mesh (Wikimedia Commons, Dejp3, CC BY 4.0) | ✅ Approved — KG (2026-07-22) | — | `d109bfcc36aa` |
 | [`src/mypyskindose/phantom_data/hudfrid.stl`](../src/mypyskindose/phantom_data/hudfrid.stl) | Opaque binary | Hudfrid phantom mesh | ✅ Approved — KG (2026-07-15) | — | `808225ebf552` |
 | [`src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl`](../src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl) | Opaque binary | Reduced Hudfrid phantom mesh | ✅ Approved — KG (2026-07-15) | — | `f846afbcbb7a` |
 | [`src/mypyskindose/phantom_data/junior_female.stl`](../src/mypyskindose/phantom_data/junior_female.stl) | Opaque binary | Junior female phantom mesh | ✅ Approved — KG (2026-07-15) | — | `cbcfd41b58e2` |

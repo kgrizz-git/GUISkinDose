@@ -7,7 +7,7 @@ full declared dependency set (all extras), pinned by `uv.lock`:
 uv sync --all-extras
 ```
 
-Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-21).
+Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-22).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -75,6 +75,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | identify | 2.6.19 | MIT | https://github.com/pre-commit/identify |
 | idna | 3.18 | BSD-3-Clause | Changelog, https://github.com/kjd/idna/blob/master/HISTORY.md |
 | ifaddr | 0.2.0 | MIT | https://github.com/pydron/ifaddr |
+| ImageIO | 2.37.4 | BSD-2-Clause | homepage, https://github.com/imageio/imageio |
 | imagesize | 2.0.0 | MIT | https://github.com/shibukawa/imagesize_py |
 | importlib_metadata | 8.7.1 | Apache-2.0 | Source, https://github.com/python/importlib_metadata |
 | iniconfig | 2.3.0 | MIT | Homepage, https://github.com/pytest-dev/iniconfig |
@@ -102,6 +103,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | jupyterlab_server | 2.28.0 | BSD-3-Clause | Homepage, https://jupyterlab-server.readthedocs.io |
 | jupyterlab_widgets | 3.0.16 | BSD-3-Clause | Homepage, https://github.com/jupyter-widgets/ipywidgets |
 | kaleido | 1.3.0 | MIT, UNKNOWN, MIT, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN | Homepage, https://github.com/plotly/kaleido |
+| lazy-loader | 0.5 | BSD-3-Clause | Home, https://scientific-python.org/specs/spec-0001/ |
 | license-expression | 30.4.4 | Apache-2.0 | https://github.com/aboutcode-org/license-expression |
 | logistro | 2.0.1 | MIT, UNKNOWN, MIT, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN | Homepage, https://github.com/geopozo/logistro |
 | lxml | 6.1.1 | BSD-3-Clause | https://lxml.de/ |
@@ -124,6 +126,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nbformat | 5.10.4 | BSD-3-Clause | Homepage, https://jupyter.org |
 | nbsphinx | 0.9.8 | MIT | Documentation, https://nbsphinx.readthedocs.io/ |
 | nest-asyncio2 | 1.7.2 | BSD-3-Clause | https://github.com/Chaoses-Ib/nest-asyncio2 |
+| networkx | 3.6.1 | BSD-3-Clause | Homepage, https://networkx.org/ |
 | nicegui | 3.14.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
 | nltk | 3.10.0 | Apache-2.0 | https://www.nltk.org/ |
 | nodeenv | 1.10.0 | BSD-3-Clause | https://github.com/ekalinin/nodeenv |
@@ -220,6 +223,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | ruff | 0.15.18 | MIT | https://docs.astral.sh/ruff |
 | safety | 3.8.1 | MIT | homepage, https://safetycli.com |
 | safety-schemas | 0.0.16 | MIT | Homepage, https://github.com/pyupio/safety_schemas |
+| scikit-image | 0.26.0 | BSD-3-Clause | homepage, https://scikit-image.org |
 | scipy | 1.17.1 | BSD-3-Clause | homepage, https://scipy.org/ |
 | semantic-version | 2.10.0 | BSD-3-Clause | https://github.com/rbarrois/python-semanticversion |
 | semgrep | 1.168.0 | LGPL-2.1-or-later | Homepage, https://semgrep.dev |
@@ -248,6 +252,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tenacity | 9.1.4 | Apache-2.0 | https://github.com/jd/tenacity |
 | terminado | 0.18.1 | BSD-3-Clause | Homepage, https://github.com/jupyter/terminado |
 | text-unidecode | 1.3 | UNKNOWN, GPL-2.0-or-later, GPL-2.0-or-later | https://github.com/kmike/text-unidecode/ |
+| tifffile | 2026.7.14 | BSD-3-Clause | https://www.cgohlke.com |
 | tinycss2 | 1.5.1 | BSD-3-Clause | Changelog, https://github.com/Kozea/tinycss2/releases |
 | tomli | 2.4.1 | MIT | Homepage, https://github.com/hukkin/tomli |
 | tomli_w | 1.2.0 | MIT | Changelog, https://github.com/hukkin/tomli-w/blob/master/CHANGELOG.md |

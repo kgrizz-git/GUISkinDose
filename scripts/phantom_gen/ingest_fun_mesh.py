@@ -21,6 +21,8 @@ Inputs
 - ``--target-faces``: shipping face budget (quadric decimation, no subsample)
 - ``--flip-y`` / ``--no-flip-y``: map to ``force_flip_y`` (see plan flip contract)
 - ``--face-up-frac`` / ``--face-up-band-frac``: fun-mode face-up gate tuning
+- ``--voxel-pitch``: voxel edge (cm) for the marching-cubes watertight remesh
+  (used instead of fill/cap for messy raw scans; needs ``scikit-image``)
 - ``--out-dir``:     output directory for ``{id}.stl`` (e.g. ``tmp/fun_phantoms/psd``)
 - ``--preview-only``: report post-transform extents/faces only; no write/validate
 - ``--manifest``:    manifest JSON (defaults to ``fun_mesh_manifest.json`` beside this file)
@@ -115,7 +117,13 @@ def _uniform_scale_to_height(mesh, *, height_cm: float, height_axis: str) -> flo
 
 
 def _fill_and_fix(mesh) -> None:
-    """Best-effort cap open boundaries and make normals consistent (in place)."""
+    """Best-effort cap open boundaries and make normals consistent (in place).
+
+    ``trimesh.Trimesh.fill_holes`` needs ``networkx`` (part of the ``phantom-gen``
+    extra). It only closes simple boundary loops; meshes with wide-open bases or
+    multiple disconnected bodies (raw museum scans) will not become watertight
+    here — use ``_voxel_remesh_watertight`` (``--voxel-pitch``) for those.
+    """
     import trimesh
 
     try:
@@ -124,6 +132,39 @@ def _fill_and_fix(mesh) -> None:
         pass
     trimesh.repair.fix_winding(mesh)
     trimesh.repair.fix_normals(mesh)
+
+
+def _voxel_remesh_watertight(mesh, *, pitch: float):
+    """Return a watertight, manifold remesh of ``mesh`` via voxel marching cubes.
+
+    Raw statue/cartoon scans are frequently non-watertight (open bases, multiple
+    disconnected bodies, self-intersections) that ``fill_holes`` cannot close. A
+    solid-voxelization + marching-cubes remesh is a robust, cross-platform
+    (pure ``trimesh`` + ``scipy`` + ``scikit-image``) way to produce a single
+    closed manifold shell that preserves the overall silhouette — which is what
+    the PSD entrance/exit geometry depends on.
+
+    ``pitch`` is the voxel edge length in the *current* mesh units (centimetres,
+    because scaling to ``height_cm`` runs before this step). Choose a pitch that
+    yields a face count at or below the shipping ``target_faces`` so the later
+    quadric-decimation step is a no-op and cannot reintroduce non-manifold edges
+    (aggressive quadric decimation of a marching-cubes mesh can break
+    watertightness). ``marching_cubes`` output is in voxel-index coordinates, so
+    the grid ``transform`` is applied to return to world (cm) coordinates.
+
+    Requires ``scikit-image`` (for ``skimage.measure.marching_cubes``, used by
+    ``trimesh.voxel``) and ``scipy`` (solid ``fill``); both ship in the
+    ``phantom-gen`` extra.
+    """
+    import trimesh
+
+    voxels = mesh.voxelized(pitch=pitch).fill()
+    remeshed = voxels.marching_cubes
+    remeshed.apply_transform(voxels.transform)  # voxel-index -> world (cm)
+    remeshed.merge_vertices()
+    trimesh.repair.fix_winding(remeshed)
+    trimesh.repair.fix_normals(remeshed)
+    return remeshed
 
 
 def _trimesh_from_soup(vectors: np.ndarray):
@@ -147,19 +188,28 @@ def ingest_fun_mesh(
     out_dir: Path,
     face_up_frac: float = 0.55,
     face_up_band_frac: float = 0.12,
+    voxel_pitch: float | None = None,
     preview_only: bool = False,
 ) -> dict:
     """Run the full fun-mesh ingest pipeline and return a report dict.
 
-    Pipeline: load -> Euler rotate -> uniform scale to ``height_cm`` -> fill/cap
-    -> PSD transform (``obj_y_up=False``, ``meters_to_cm_if_small=False``,
-    ``force_flip_y=flip_y``, ``flip_y_if_needed=False``) -> re-fix winding/normals
-    -> quadric decimate (no subsample) -> re-fix normals -> write ``{id}.stl``
-    -> validate (fun mode) unless ``preview_only``.
+    Pipeline: load -> Euler rotate -> uniform scale to ``height_cm`` ->
+    fill/cap **or** voxel remesh -> PSD transform (``obj_y_up=False``,
+    ``meters_to_cm_if_small=False``, ``force_flip_y=flip_y``,
+    ``flip_y_if_needed=False``) -> re-fix winding/normals -> quadric decimate
+    (no subsample) -> re-fix normals -> write ``{id}.stl`` -> validate (fun mode)
+    unless ``preview_only``.
+
+    When ``voxel_pitch`` is set, the fill/cap step is replaced by a solid
+    voxel + marching-cubes remesh (``_voxel_remesh_watertight``). This is the
+    locked repair path for raw scans that ``fill_holes`` cannot close (open
+    bases, multiple disconnected bodies — e.g. Ramesses II). Choose a pitch that
+    yields at most ``target_faces`` faces so the later decimation is a no-op and
+    the watertight/manifold result survives to the shipped STL.
     """
     import trimesh
 
-    report: dict = {"id": mesh_id, "preview_only": preview_only}
+    report: dict = {"id": mesh_id, "preview_only": preview_only, "voxel_pitch": voxel_pitch}
 
     mesh = _load_trimesh(input_path)
     report["raw_faces"] = int(len(mesh.faces))
@@ -170,8 +220,14 @@ def ingest_fun_mesh(
     # 2) Uniform scale so the height-axis span == height_cm.
     report["scale"] = _uniform_scale_to_height(mesh, height_cm=height_cm, height_axis=height_axis)
 
-    # 3) Fill/cap open boundaries + pre-transform normal fix.
-    _fill_and_fix(mesh)
+    # 3) Cap open boundaries. Watertight-by-fill for meshes with simple holes;
+    #    voxel remesh for messy raw scans (locked per-mesh via voxel_pitch).
+    if voxel_pitch is not None:
+        mesh = _voxel_remesh_watertight(mesh, pitch=float(voxel_pitch))
+        report["remesh_faces"] = int(len(mesh.faces))
+        report["remesh_watertight"] = bool(mesh.is_watertight)
+    else:
+        _fill_and_fix(mesh)
 
     # 4) PSD anchor. Input is already Z-up (rotated) and in cm, so disable the
     #    OBJ Y-up remap and the meters->cm auto-detect. flip_y is locked, so the
@@ -256,6 +312,16 @@ def main(argv: list[str] | None = None) -> int:
     flip_group.add_argument("--no-flip-y", dest="flip_y", action="store_false", help="force_flip_y=False")
     parser.add_argument("--face-up-frac", type=float, default=None, help="Face-up Y-thickness fraction")
     parser.add_argument("--face-up-band-frac", type=float, default=None, help="Face-up superior Z-band fraction")
+    parser.add_argument(
+        "--voxel-pitch",
+        type=float,
+        default=None,
+        help=(
+            "Voxel edge length (cm) for the marching-cubes watertight remesh used "
+            "instead of fill/cap for messy raw scans. Pick a pitch that yields "
+            "<= target-faces faces so decimation stays a no-op."
+        ),
+    )
     parser.add_argument("--out-dir", type=Path, default=Path("tmp/fun_phantoms/psd"), help="Output directory")
     parser.add_argument("--preview-only", action="store_true", help="Report extents/faces; no write/validate")
     parser.add_argument("--manifest", type=Path, default=_DEFAULT_MANIFEST, help="fun_mesh_manifest.json path")
@@ -286,6 +352,8 @@ def main(argv: list[str] | None = None) -> int:
     flip_y = pick(args.flip_y, "flip_y", False)
     face_up_frac = float(pick(args.face_up_frac, "face_up_frac", 0.55))
     face_up_band_frac = float(pick(args.face_up_band_frac, "face_up_band_frac", 0.12))
+    voxel_pitch_val = pick(args.voxel_pitch, "voxel_pitch", None)
+    voxel_pitch = float(voxel_pitch_val) if voxel_pitch_val is not None else None
 
     if height_cm is None:
         print("ERROR: --height-cm is required (not found in manifest)", file=sys.stderr)
@@ -303,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
             out_dir=args.out_dir,
             face_up_frac=face_up_frac,
             face_up_band_frac=face_up_band_frac,
+            voxel_pitch=voxel_pitch,
             preview_only=args.preview_only,
         )
     except Exception as exc:  # noqa: BLE001

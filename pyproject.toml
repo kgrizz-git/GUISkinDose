@@ -70,6 +70,11 @@ privacy-scan = [
 phantom-gen = [
     "trimesh>=4",
     "fast-simplification",
+    # networkx: trimesh.fill_holes boundary-loop capping.
+    # scikit-image: marching-cubes watertight remesh (ingest_fun_mesh --voxel-pitch)
+    # for messy raw scans that fill_holes cannot close (e.g. Ramesses II).
+    "networkx>=3",
+    "scikit-image>=0.22",
 ]
 dev = [
     "basedpyright>=1.23",

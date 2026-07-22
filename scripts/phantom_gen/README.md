@@ -93,7 +93,8 @@ are statues/cartoons ingested via `ingest_fun_mesh.py` + `fun_mesh_manifest.json
 They are **non-clinical** and must be labeled `(demo)`. Full plan:
 [`dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../../dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 
-**Requires** `trimesh>=4` + `fast-simplification`:
+**Requires** `trimesh>=4` + `fast-simplification` (+ `networkx` / `scikit-image` for hole-fill /
+voxel remesh):
 
 ```bash
 pip install -e ".[phantom-gen]"
@@ -114,6 +115,7 @@ raw mesh
   → Euler rotate (degrees, sxyz)
   → uniform scale so the height-axis span == height_cm
   → fill/cap open boundaries (+ pre-transform fix_winding/fix_normals)
+    OR --voxel-pitch remesh (solid voxel + marching cubes; e.g. Ramesses II)
   → PSD anchor: transform_to_psd_frame(obj_y_up=False,
         meters_to_cm_if_small=False, force_flip_y=<flip_y>, flip_y_if_needed=False)
   → RE-FIX winding/normals (a Y-flip reverses triangle handedness)
@@ -129,6 +131,10 @@ maps to the transform as: `flip_y: true` → `--force-flip-y`; `flip_y: false` �
 `--no-flip-y` (also disables the asymmetric heuristic). Statue/cartoon bounding
 boxes are near-symmetric, so **always** re-run `fix_winding` / `fix_normals`
 after the PSD transform (and again after decimate).
+
+When `fill_holes` cannot close open museum scans, pass `--voxel-pitch` (cm) or set
+`voxel_pitch` in the manifest (needs `scikit-image`). Never ship with
+`--allow-subsample`.
 
 ### Ingest CLI
 

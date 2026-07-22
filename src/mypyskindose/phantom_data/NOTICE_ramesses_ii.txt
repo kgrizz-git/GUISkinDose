@@ -1,0 +1,33 @@
+NOTICE — ramesses_ii.stl / ramesses_ii_reduced_1000t.stl (MyPySkinDose demo phantom)
+=====================================================================================
+
+This is a DEMO / NON-CLINICAL phantom mesh. It must never be presented or used as
+a dosimetry reference phantom.
+
+Source work:  "Colossal sculpture of Ramesses II"
+Author:       Dejp3
+Repository:   Wikimedia Commons
+File:         File:Colossal_sculpture_of_Ramesses_II.stl
+URL:          https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl
+License:      Creative Commons Attribution 4.0 International (CC BY 4.0)
+              https://creativecommons.org/licenses/by/4.0/
+Retrieved:    2026-07-22
+
+Attribution (required by CC BY 4.0):
+  "Colossal sculpture of Ramesses II" by Dejp3, via Wikimedia Commons,
+  licensed under CC BY 4.0.
+
+Modifications:
+  The redistributed STL files are DERIVATIVES of the source scan. They were
+  reoriented into the MyPySkinDose PSD (head-first supine) frame, uniformly
+  scaled (body axis to ~185 cm; final height ~192 cm), remeshed to a single
+  watertight manifold via solid voxelization + marching cubes (the raw scan was
+  not watertight), and decimated (full mesh ~5.6k faces; reduced preview ~1k
+  faces). See scripts/phantom_gen/fun_mesh_manifest.json and
+  dev-docs/references/fun_phantom_provenance.md for the exact locked transform
+  and repair details.
+
+CC BY 4.0 permits redistribution and modification (including commercial use)
+provided attribution is given and changes are indicated, as above. This NOTICE
+applies to the mesh binaries only; the MyPySkinDose application code remains
+under its own MIT license.

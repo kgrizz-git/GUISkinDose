@@ -445,6 +445,28 @@
       }
     },
     {
+      "path": "src/mypyskindose/phantom_data/ramesses_ii.stl",
+      "sha256": "5b22b53a3a3cc867989816e0194f2fb89adc8591ae4a5a4b6c7cbd7218d4985f",
+      "kind": "opaque_binary",
+      "purpose": "Ramesses II (demo) non-clinical phantom mesh (Wikimedia Commons, Dejp3, CC BY 4.0; voxel-remeshed watertight)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ramesses_ii_reduced_1000t.stl",
+      "sha256": "d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987",
+      "kind": "opaque_binary",
+      "purpose": "Reduced Ramesses II (demo) non-clinical phantom mesh (Wikimedia Commons, Dejp3, CC BY 4.0)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
       "path": "src/mypyskindose/phantom_data/hudfrid.stl",
       "sha256": "808225ebf5529bcd996bd6f5840f6eb9001595d224d80b7ee88f9758da666faa",
       "kind": "opaque_binary",
