@@ -191,8 +191,8 @@ Search for CC0 or explicit public-domain full-figure / bust scans (national muse
 | Popeye / book Pooh | Thingiverse / Printables (verify) | Phase 2; early design only |
 | Mixamo “Y Bot” | Mixamo | Local-only; do not ship |
 
-Label fun meshes clearly in the UI (e.g. “demo / non-clinical”). **Active v1 execution:**
-[`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+Label fun meshes clearly in the UI (e.g. “demo / non-clinical”). **v1 execution (archived):**
+[`plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 Broader backlog: [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md).
 
 ---
@@ -211,7 +211,7 @@ Broader backlog: [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_
 ## Related documents
 
 - [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) — clinical sources + integration checklist + short summary of this page
-- [`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — ship Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat (v1)
+- [`plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — v1 complete: Cosmic Buddha, Ramesses II, Steamboat shipped; Petite blocked
 - [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md) — Venus/David (D1), Phase 2 PD cartoons
 - [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — MPFB generation runbook
 - [`LICENSE_COMPLIANCE.md`](../LICENSE_COMPLIANCE.md) — third-party license policy

@@ -1,15 +1,13 @@
 # Clothed Full-Body + Steamboat Demo Phantoms Plan
 
-> **Status (2026-07-22):** Active v1 execution plan. Broader survey / Venus–David D1 backlog:
-> [`FUN_DEMO_PHANTOMS_PLAN.md`](FUN_DEMO_PHANTOMS_PLAN.md). Clinical habitus:
-> [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+> **Status (2026-07-22):** **Completed** (v1 archived). Shipped: Cosmic Buddha, Ramesses II,
+> Steamboat Willie. **Not shipped:** Petite Herculanaise (Cults login/Cloudflare; NC mirrors).
+> Broader survey / Venus–David D1 backlog:
+> [`FUN_DEMO_PHANTOMS_PLAN.md`](../FUN_DEMO_PHANTOMS_PLAN.md). Clinical habitus:
+> [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 >
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development`
-> (recommended) or `superpowers:executing-plans` to implement this plan task-by-task.
-> Steps use checkbox (`- [ ]`) syntax. Mark a checkbox only after the step is fully done and verified.
->
-> **Related:** [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md),
-> [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](../references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
+> **Related:** [`ADDITIONAL_PHANTOMS.md`](../../ADDITIONAL_PHANTOMS.md),
+> [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](../../references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
 >
 > **Review fold-in (2026-07-22):** Independent review **GO WITH NITS** applied — NiceGUI
 > `{stem: label}` options dict; re-fix normals **after** Y-flip; face-up threshold tunable;
@@ -37,7 +35,7 @@ existing `Phantom` loader; Blender/MeshLab only for hole-fill when pure `trimesh
 
 | Topic | Decision |
 |-------|----------|
-| Nude classical (Venus/David) | Out of scope here — D1 remains on `FUN_DEMO_PHANTOMS_PLAN.md` |
+| Nude classical (Venus/David) | Out of scope here — D1 remains on [`FUN_DEMO_PHANTOMS_PLAN.md`](../FUN_DEMO_PHANTOMS_PLAN.md) |
 | Watertight | Hard gate; trimesh must be installed for ingest/validate (`wt is None` must **fail**, not pass) |
 | Smoke RDSR | `src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm` |
 | Steamboat source | Commons Cojocaru CC BY 4.0 primary; JoeBert Sketchfab CC-BY alternate; Quaternius only if both fail |
@@ -133,7 +131,7 @@ existing `Phantom` loader; Blender/MeshLab only for hole-fill when pure `trimesh
 | 3 | `ramesses_ii` | [Commons STL](https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl) (Dejp3) | **CC BY 4.0** | Already lying; mainly scale + axis lock; NOTICE; proportions may look odd | Scale longest body axis to ~170–200 cm |
 | 4 | `steamboat_willie` | [Commons STL](https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl) (Adrian Cojocaru); fallback JoeBert Sketchfab CC-BY ~5.6k tris | **CC BY 4.0** | Cartoon; NOTICE; trademark-safe labeling | ~120 cm |
 
-**Out of scope here:** Venus/David (nude — see `FUN_DEMO_PHANTOMS_PLAN.md` D1), Lincoln bust, Popeye/Pooh,
+**Out of scope here:** Venus/David (nude — see [`FUN_DEMO_PHANTOMS_PLAN.md`](../FUN_DEMO_PHANTOMS_PLAN.md) D1), Lincoln bust, Popeye/Pooh,
 Quaternius filler (only if Steamboat **and** JoeBert entirely fail).
 
 ---
@@ -313,7 +311,7 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 > and mirror, even the Cults "CC BY-SA" label is not a reliable non-NC source without further
 > verification. Per plan policy (abort if NC; do not invent a mesh), Task 3 is left incomplete.
 > Full detail + unblock criteria in
-> [`../references/fun_phantom_provenance.md`](../references/fun_phantom_provenance.md) → *Petite
+> [`../../references/fun_phantom_provenance.md`](../../references/fun_phantom_provenance.md) → *Petite
 > Herculanaise* section. Ship policy allows continuing with the remaining IDs without blocking release.
 
 **Files:**
@@ -436,13 +434,15 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 
 ### Task 7: Close-out
 
-- [ ] **Step 1:** Mark Tasks 2–5 complete only for meshes that shipped; note any failed mesh + reason in
-  provenance (do not pretend it shipped).
+- [x] **Step 1:** Mark Tasks 2–5 complete only for meshes that shipped; note any failed mesh + reason in
+  provenance (do not pretend it shipped). Shipped: Cosmic / Ramesses / Steamboat. Petite blocked
+  (documented in provenance + Task 3).
 
-- [ ] **Step 2:** Update `dev-docs/TO_DO.md` and `dev-docs/index.md` status for this plan.
+- [x] **Step 2:** Update `dev-docs/TO_DO.md` and `dev-docs/index.md` status for this plan.
 
-- [ ] **Step 3:** When v1 of this plan is done, archive under `dev-docs/plans/archive/` and fix `index.md`
-  paths in the same PR. Leave Venus/David / Phase 2 cartoons on `FUN_DEMO_PHANTOMS_PLAN.md` until decided.
+- [x] **Step 3:** Archive under `dev-docs/plans/archive/` and fix `index.md` paths. Leave Venus/David /
+  Phase 2 cartoons on `FUN_DEMO_PHANTOMS_PLAN.md` until decided. Petite remains a backlog candidate
+  if a redistributable BY-SA download becomes available.
 
 ---
 

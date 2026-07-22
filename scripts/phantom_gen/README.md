@@ -91,7 +91,7 @@ passes ``force_flip_y=True``. For one-off CLI transforms of MPFB OBJs, use
 Demo phantoms (Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat Willie)
 are statues/cartoons ingested via `ingest_fun_mesh.py` + `fun_mesh_manifest.json`.
 They are **non-clinical** and must be labeled `(demo)`. Full plan:
-[`dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../../dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+[`dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../../dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 
 **Requires** `trimesh>=4` + `fast-simplification` (+ `networkx` / `scikit-image` for hole-fill /
 voxel remesh):

@@ -1,14 +1,13 @@
 # Fun Demo Phantoms Implementation Plan
 
-> **Status (2026-07-22):** **Active v1 execution** for Cosmic Buddha + Petite Herculanaise + Ramesses II +
-> Steamboat Willie lives in
-> [`DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+> **Status (2026-07-22):** **v1 clothed+Steamboat execution complete** — archived at
+> [`archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md)
+> (shipped Cosmic Buddha, Ramesses II, Steamboat Willie; Petite Herculanaise blocked).
 > This document remains the broader candidate survey and holds **D1-gated** Venus/David tasks plus Phase 2
-> cartoon / bust backlog.
+> cartoon / bust backlog (and optional Petite unblock if a redistributable BY-SA download appears).
 >
-> **For agentic workers:** For the clothed+Steamboat v1, follow the plan linked above. Use
-> `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans`.
-> Steps use checkbox (`- [ ]`) syntax. Mark a checkbox only after the step is fully done and verified.
+> **For agentic workers:** Use `superpowers:subagent-driven-development` (recommended) or
+> `superpowers:executing-plans`. Mark a checkbox only after the step is fully done and verified.
 >
 > **Related:** [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md),
 > [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](../references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).

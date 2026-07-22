@@ -2,7 +2,7 @@
 
 This file records the source, license, retrieval date, locked ingest transform, and any repair or
 validation exceptions for the **demo / non-clinical** phantoms shipped from
-[`../plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+[`../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 
 These meshes are labeled **(demo)** in the GUI/docs and must **never** be presented as dosimetry
 reference phantoms. Mesh-asset licenses are tracked here (and in `phantom_data/NOTICE_*.txt` for

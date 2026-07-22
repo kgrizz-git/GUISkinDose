@@ -9,7 +9,7 @@ PSD frame, re-fixes winding/normals **after** the flip (a Y-flip reverses
 triangle handedness), decimates to a shipping face budget, and validates the
 result with the fun-mode gates in ``validate_phantom.py``.
 
-See ``dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
+See ``dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
 
 Inputs
 ------

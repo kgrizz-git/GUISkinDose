@@ -4,6 +4,7 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 
 | File | Status | Notes |
 |---|---|---|
+| [DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Completed** (2026-07-22) | Demo phantoms v1: Cosmic Buddha, Ramesses II, Steamboat Willie shipped; Petite Herculanaise blocked. Fun ingest + face-up gate + GUI `(demo)` labels. Broader backlog: [`../FUN_DEMO_PHANTOMS_PLAN.md`](../FUN_DEMO_PHANTOMS_PLAN.md). |
 | [MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) | MakeHuman GUI master + Phases 1–5; replaced by [`../AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md). |
 | [basedpyright-fix-plan.md](basedpyright-fix-plan.md) | **Completed** (2026) | 147 errors resolved; CI runs strict `basedpyright`. Moved from `src/mypyskindose/dev-docs/`. |
 | [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md) | **Superseded** (2026-07-04) | Brainstorming and high-level documentation/help infrastructure ideas folded into [DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md); deferred experience ideas tracked in `TO_DO.md`. |

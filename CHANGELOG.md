@@ -10,24 +10,31 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Changed
+
+- **Demo phantoms v1 plan archived** (2026-07-22) — Moved
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` after shipping Cosmic Buddha,
+  Ramesses II, and Steamboat Willie. Petite Herculanaise remains blocked; Venus/David and Phase 2
+  cartoons stay on `FUN_DEMO_PHANTOMS_PLAN.md`. SemVer: **minor** on release (new demo meshes).
+
 ### Added
 
 - **Demo phantom GUI labels + docs** (2026-07-22) — Task 6 of
-  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Settings mesh selector uses NiceGUI
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Settings mesh selector uses NiceGUI
   `{stem: label}` options via `get_human_mesh_options()` with `(demo)` suffixes for shipped
   `cosmic_buddha`, `ramesses_ii`, `steamboat_willie`. Optional fun-manifest torso overrides wired into
   habitus baselines. Help + AGENTS / FEATURE_INVENTORY / ADDITIONAL / `demo_phantoms` feature matrix
   row. Petite Herculanaise remains blocked (not listed as shipped).
 
 - **Steamboat Willie (demo) phantom** (2026-07-22) — Task 5 of
-  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `steamboat_willie` (Wikimedia
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `steamboat_willie` (Wikimedia
   Commons, Adrian Cojocaru, **CC BY 4.0**) with `NOTICE_steamboat_willie.txt`, locked transform
   (`rotate_deg=[0,0,0]`, `height_cm=120`, `flip_y=true`, `voxel_pitch=4.5`), ~5.7k-face full STL +
   `_reduced_1000t`. Trademark-safe labeling only (`steamboat_willie`). Fun-mode validate + anterior-beam
   smoke pass. Provenance + dual inventory hashes. **Minor** SemVer bump on release when demos ship.
 
 - **Ramesses II (demo) phantom** (2026-07-22) — Task 4 of
-  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `ramesses_ii` (Wikimedia Commons,
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `ramesses_ii` (Wikimedia Commons,
   Dejp3, **CC BY 4.0**) with `NOTICE_ramesses_ii.txt`, locked transform (`rotate_deg=[90,0,0]`,
   `height_cm=185`, `flip_y=false`, `voxel_pitch=5.5`), ~5.6k-face full STL + `_reduced_1000t`. Raw scan
   was not watertight; ingest remeshes via solid voxel + marching cubes (`scikit-image` /
@@ -35,7 +42,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   Provenance + dual inventory hashes. **Minor** SemVer bump on release when demos ship.
 
 - **Cosmic Buddha (demo) phantom** (2026-07-22) — Task 2 of
-  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. First shipped demo / non-clinical
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. First shipped demo / non-clinical
   phantom: `cosmic_buddha` (Smithsonian Institution, Freer Gallery of Art; **CC0**). Ingested from the
   ~150k-face Wikimedia Commons mirror via `ingest_fun_mesh.py` with a locked transform
   (`rotate_deg=[0,0,0]`, `height_axis=z`, `height_cm=151`, `flip_y=false`, headless face-up band
@@ -49,7 +56,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `THIRD_PARTY_NOTICES.md` change. Shipping a new asset → **minor** SemVer bump on release.
 
 - **Fun / demo phantom ingest scaffolding** (2026-07-22) — Task 1 of
-  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. New
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. New
   `scripts/phantom_gen/fun_mesh_manifest.json` (locked source URLs, licenses, placeholder
   `rotate_deg`/`flip_y`, heights, optional `face_up_frac`/torso overrides for the four demo IDs) and
   `scripts/phantom_gen/ingest_fun_mesh.py` CLI (Euler rotate → uniform scale → fill/cap → PSD anchor
@@ -82,7 +89,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 ### Added
 
 - **Clothed + Steamboat demo phantoms plan** (2026-07-22) —
-  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` to ship Cosmic Buddha (**CC0**), Petite
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` to ship Cosmic Buddha (**CC0**), Petite
   Herculanaise (**CC BY-SA**), Ramesses II (**CC BY 4.0**), and Steamboat Willie (**CC BY 4.0**) with
   scale/rotate ingest, watertight validate, NOTICE sidecars, and GUI `(demo)` labels. Linked from
   `TO_DO.md`, `index.md`, and `ADDITIONAL_PHANTOMS.md`. Broader fun-demo survey / Venus–David D1 backlog
@@ -107,7 +114,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   after review: transform `--no-obj-y-up` contract, watertight/GUI/NOTICE fixes, nude-sculpture decision gate,
   Steamboat Willie alternates, **clothed full-body try trio** (Cosmic Buddha **CC0**, Petite Herculanaise
   **CC BY-SA**, Ramesses II **CC BY 4.0**; Lincoln bust fallback), and Phase 2 PD cartoons (Popeye, book Pooh).
-  **2026-07-22:** v1 clothed+Steamboat execution split to `DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`.
+  **2026-07-22:** v1 clothed+Steamboat execution split to `DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`
+  (later archived under `plans/archive/`).
 
 ### Changed
 

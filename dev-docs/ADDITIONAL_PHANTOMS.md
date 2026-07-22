@@ -114,8 +114,8 @@ Still apply the [integration checklist](#integration-checklist) (cm scale, table
 
 **Mickey Mouse:** Only the **1928 Steamboat Willie** depiction is PD in the US (2024); later designs + Disney trademarks still apply. Shippable mesh: [Commons](https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl) (**CC BY 4.0**). Other early PD cartoons (Popeye 2025, book Pooh ~2022) and clothed full-body scans (Smithsonian Cosmic Buddha CC0, etc.) are surveyed in the reference doc.
 
-**Execution plan (v1 — Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat):**
-[`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+**Execution plan (v1 complete — Cosmic Buddha, Ramesses II, Steamboat; Petite blocked):**
+[`plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 Venus/David and Phase 2 cartoons remain on [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](plans/FUN_DEMO_PHANTOMS_PLAN.md).
 
 **Full source list, formats, and license caveats:** [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
@@ -200,7 +200,7 @@ With a known anterior LAO (or similar) projection on a trusted RDSR, PSD should 
 
 ## Related documents
 
-- [`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — **active v1:** Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat
+- [`plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — **completed v1** (Petite blocked): Cosmic Buddha, Ramesses II, Steamboat
 - [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](plans/FUN_DEMO_PHANTOMS_PLAN.md) — broader backlog (Venus/David D1, Phase 2 PD cartoons)
 - [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — generation runbook and catalog policy
 - [`assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) — Phase 0 headless spike result

@@ -95,7 +95,7 @@ def is_watertight(path: Path) -> bool | None:
 #
 # These gates support the demo-phantom ingest pipeline (Cosmic Buddha, Petite
 # Herculanaise, Ramesses II, Steamboat Willie). See
-# ``dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``. They enforce a
+# ``dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``. They enforce a
 # face-up supine orientation and outward-facing surface normals, which the
 # clinical validator does not check. Statue/cartoon bounding boxes are often
 # near-symmetric in Y, so the ``flip_y_if_needed`` heuristic can silently leave
@@ -341,7 +341,7 @@ def validate(
     stricter for shipped non-clinical demo meshes: it hard-fails when trimesh is
     missing or the mesh is not watertight, enforces a <=20k face ceiling, and
     adds a face-up orientation gate and an outward-normal ray gate. See
-    ``dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
+    ``dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
     """
     results: dict = {"file": str(stl_path), "passed": False, "require_trimesh": require_trimesh, "checks": {}}
     if not stl_path.exists():
