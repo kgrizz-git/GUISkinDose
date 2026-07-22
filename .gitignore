@@ -45,6 +45,7 @@ __pycache__/
 
 scratch*
 scripts/scratch_*
+scripts/phantom_gen/env.local.json
 *.tmp
 *.bak
 *.orig

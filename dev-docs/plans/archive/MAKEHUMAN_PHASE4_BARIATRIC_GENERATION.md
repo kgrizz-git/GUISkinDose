@@ -1,5 +1,7 @@
 # Phase 4: Bariatric Phantom Generation
 
+> **SUPERSEDED (2026-07-21).** See [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+
 ## Objective
 
 Generate 6 bariatric phantoms across BMI classes I, II, and III for both male and female anatomies. These phantoms represent the growing bariatric patient population and present unique challenges for dose distribution due to increased tissue attenuation and table positioning challenges.

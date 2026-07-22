@@ -1,5 +1,7 @@
 # Phase 3: Adult Phantom Generation
 
+> **SUPERSEDED (2026-07-21).** See [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+
 ## Objective
 
 Generate 6 adult phantoms representing ectomorph (thin), mesomorph (average), and endomorph (heavy) body types for both male and female anatomies. These phantoms will provide a spectrum of adult body habitus for dose distribution studies and complement the existing adult_male/adult_female phantoms.

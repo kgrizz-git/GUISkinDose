@@ -1,5 +1,7 @@
 # Phase 2: Pediatric Phantom Generation
 
+> **SUPERSEDED (2026-07-21).** See [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+
 ## Objective
 
 Generate 4 pediatric phantoms (5-year and 10-year, male and female) using the MakeHuman pipeline established in Phase 1. These phantoms will fill the gap between the existing junior phantom (~15 years) and provide accurate dose estimation for pediatric fluoroscopic procedures.

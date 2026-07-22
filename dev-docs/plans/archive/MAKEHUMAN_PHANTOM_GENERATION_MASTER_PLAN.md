@@ -1,5 +1,9 @@
 # MakeHuman Phantom Generation - Master Plan
 
+> **SUPERSEDED (2026-07-21).** Replaced by
+> [`dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+> Kept for historical reference only. Do not execute these MakeHuman GUI phases for new work.
+
 ## Overview
 
 This master plan orchestrates the generation of a comprehensive phantom library using MakeHuman software to create anatomically diverse patient phantoms for MyPySkinDose. The approach uses parametric human modeling to generate consistent, watertight meshes across a spectrum of body habitus types from pediatric to bariatric, for both male and female anatomies.

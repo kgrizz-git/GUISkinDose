@@ -1,0 +1,291 @@
+{
+  "version": 1,
+  "blender_user_resources_hint": "tmp/blender_user",
+  "mpfb_module": "bl_ext.blender_org.mpfb",
+  "scale": 0.1,
+  "license_note": "Meshes generated from MPFB/MakeHuman basemesh + targets; see ADDITIONAL_PHANTOMS.md",
+  "affine_control_base": {
+    "method": "mpfb_catalog_id",
+    "id": "_shape_ref_adult_male",
+    "note": "Anti-balloon controls must use same mesh family as candidates (MPFB), not shipped adult_male.stl"
+  },
+  "entries": {
+    "_shape_ref_adult_male": {
+      "priority": "REF",
+      "intent": "Neutral MPFB adult male used only as affine-control base (not shipped)",
+      "license": "mpfb-makehuman-assets",
+      "ship": false,
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [140.0, 200.0],
+        "width_x": [70.0, 130.0],
+        "thickness_y": [25.0, 60.0],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "pediatric_5y_male": {
+      "priority": "P0",
+      "intent": "~5 y boy; larger head/body ratio",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [65.0, 110.0],
+        "width_x": [35.0, 75.0],
+        "thickness_y": [12.0, 35.0],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.3
+      }
+    },
+    "pediatric_5y_female": {
+      "priority": "P0",
+      "intent": "~5 y girl; larger head/body ratio",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [65.0, 110.0],
+        "width_x": [35.0, 75.0],
+        "thickness_y": [12.0, 35.0],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.3
+      }
+    },
+    "pediatric_10y_male": {
+      "priority": "P0",
+      "intent": "~10 y boy; intermediate head/limb proportions",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.14,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.32,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [90.0, 140.0],
+        "width_x": [40.0, 90.0],
+        "thickness_y": [14.0, 40.0],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.25
+      }
+    },
+    "pediatric_10y_female": {
+      "priority": "P0",
+      "intent": "~10 y girl; intermediate head/limb proportions",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.14,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.32,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [90.0, 140.0],
+        "width_x": [40.0, 90.0],
+        "thickness_y": [14.0, 40.0],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.25
+      }
+    },
+    "adult_ectomorph_male": {
+      "priority": "P0",
+      "intent": "thin adult male; narrow waist/chest",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.35,
+        "weight": 0.15,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [150.0, 190.0],
+        "width_x": [70.0, 105.0],
+        "thickness_y": [22.0, 45.0],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_ectomorph_female": {
+      "priority": "P0",
+      "intent": "thin adult female; narrow waist; modest hips",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.36,
+        "muscle": 0.35,
+        "weight": 0.15,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.35,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [145.0, 185.0],
+        "width_x": [60.0, 100.0],
+        "thickness_y": [20.0, 42.0],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_endomorph_male": {
+      "priority": "P0",
+      "intent": "heavy adult male; abdomen/torso emphasis",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.45,
+        "muscle": 0.4,
+        "weight": 0.9,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [
+        {"name": "stomach-pregnant-incr", "value": 0.75}
+      ],
+      "expect": {
+        "height_z": [155.0, 190.0],
+        "width_x": [95.0, 140.0],
+        "thickness_y": [35.0, 70.0],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "adult_endomorph_female": {
+      "priority": "P0",
+      "intent": "heavy adult female; stomach + hips",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.45,
+        "muscle": 0.35,
+        "weight": 0.9,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.7,
+        "firmness": 0.55,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [
+        {"name": "stomach-pregnant-incr", "value": 0.7}
+      ],
+      "expect": {
+        "height_z": [150.0, 185.0],
+        "width_x": [90.0, 135.0],
+        "thickness_y": [32.0, 68.0],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "bariatric_class2_male": {
+      "priority": "P1",
+      "intent": "BMI ~35–40 male; abdomen-dominant",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.35,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [
+        {"name": "stomach-pregnant-incr", "value": 0.95}
+      ],
+      "expect": {
+        "height_z": [155.0, 190.0],
+        "width_x": [100.0, 160.0],
+        "thickness_y": [40.0, 85.0],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "bariatric_class2_female": {
+      "priority": "P1",
+      "intent": "BMI ~35–40 female; abdomen + hips",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.8,
+        "firmness": 0.55,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [
+        {"name": "stomach-pregnant-incr", "value": 0.9}
+      ],
+      "expect": {
+        "height_z": [150.0, 185.0],
+        "width_x": [95.0, 155.0],
+        "thickness_y": [38.0, 85.0],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    }
+  }
+}

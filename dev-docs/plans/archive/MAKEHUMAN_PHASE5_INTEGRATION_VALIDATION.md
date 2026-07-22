@@ -1,5 +1,7 @@
 # Phase 5: Integration and Validation
 
+> **SUPERSEDED (2026-07-21).** See [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+
 ## Objective
 
 Integrate all generated phantoms from Phases 2-4 into the MyPySkinDose library, create reduced-resolution variants for fast calculations, update documentation, and perform comprehensive end-to-end validation to ensure the new phantom library is production-ready.

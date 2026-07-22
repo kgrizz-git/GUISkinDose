@@ -110,6 +110,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "slow: long-running tests (e.g. 1000+ event dose stress); deselect with '-m \"not slow\"'",
+    "blender_mpfb: requires local Blender ≥4.2 with MPFB; skipped when unavailable",
 ]
 
 [tool.ruff]

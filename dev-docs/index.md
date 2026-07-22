@@ -58,6 +58,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, **package layering rules**, settings, classes, functions, and repository layout. |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | Feature status ledger: calculations, rendering, settings, outputs, CLI, API, and **harness/CI §0**. |
 | [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
+| [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) | Shipped human-mesh inventory, preferred MPFB generation path, external phantom sources, and STL integration checklist (normals, frame, triangle budget, license/privacy). |
 
 ---
 
@@ -68,7 +69,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
-| [plans/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Source of truth** — MakeHuman phantom library generation master plan and sub-plans (Phases 1–5). |
+| [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Source of truth** — agent-executable full-body phantom library with **true shape variety** via headless MPFB/Blender (Phase 0 PASS; Phase 1 catalog + orchestrator done; affine stretch not for shipping). |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
@@ -105,6 +106,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 
 | File | Purpose |
 |---|---|
+| [assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) | **PASS** — Phase 0 headless MPFB/Blender phantom spike: adult/pediatric/heavy meshes + anti-balloon shape gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |
@@ -141,6 +143,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) — MakeHuman GUI master plan; replaced by [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). Phase sub-plans `MAKEHUMAN_PHASE1_*` … `MAKEHUMAN_PHASE5_*` archived alongside. |
 | [plans/archive/refactor_check_sensitive_content_plan.md](plans/archive/refactor_check_sensitive_content_plan.md) | **Completed** (2026-07-18) — Privacy scan script complexity split into `check_sensitive_content.py` + `check_sensitive_helpers.py`. |
 | [plans/archive/refactor_geometry_tab_complexity.md](plans/archive/refactor_geometry_tab_complexity.md) | **Completed** (2026-07-18) — Geometry tab complexity split into `geometry.py` + `geometry_builders.py`. |
 | [plans/archive/refactor_results_tab_complexity.md](plans/archive/refactor_results_tab_complexity.md) | **Completed** (2026-07-18) — Results tab complexity split into `results.py` + `results_builders.py`. |

@@ -1,5 +1,7 @@
 # Phase 1: MakeHuman Setup and Testing
 
+> **SUPERSEDED (2026-07-21).** See [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+
 ## Objective
 
 Establish a working MakeHuman environment, create a test phantom, and develop the validation pipeline to ensure all subsequent phantoms will integrate correctly with MyPySkinDose.

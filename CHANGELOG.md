@@ -10,6 +10,19 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Changed
+
+- **`ADDITIONAL_PHANTOMS.md` consolidated** (2026-07-21) — rewrote the layered review appendices into one reference:
+  shipped mesh inventory, preferred MPFB path, external sources (with corrected XCAT/Mesh50 license notes),
+  bariatric options, and a single integration checklist; registered in `dev-docs/index.md`.
+
+- **Automated phantom library plan** (2026-07-21) — replaced the MakeHuman GUI generation master/sub-plans with
+  `dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
+  parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
+  docs archived under `dev-docs/plans/archive/`. Phase 0 headless spike **PASS**
+  (`dev-docs/assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`); Phase 1 catalog + orchestrator shipped
+  (`scripts/phantom_gen/catalog_v1.json`, `run_catalog.py`, unit + optional `@pytest.mark.blender_mpfb` tests).
+
 ### Fixed
 
 - **Worktree-aware commit message git hook** (2026-07-21) — updated `scripts/check_commit_message.py`'s `resolve_commit_message_path()` to inspect `--git-dir` and `--git-common-dir`, allowing git commits from linked worktrees to resolve `.git/worktrees/<name>/COMMIT_EDITMSG` without triggering false path containment errors. Reused test fixtures in `tests/unittests/test_gui_figures.py` and added `text` language tags to code blocks in `HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md`.
