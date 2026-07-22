@@ -32,7 +32,7 @@ Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to one 
 2. **MakeHuman standalone GUI** — same asset family as MPFB; use only if headless automation is blocked and a hybrid hand-export path is explicitly approved. Extreme-weight models are not Class-III bariatric fidelity.
 3. **GUI `scale_*` on a shipped mesh** — acceptable for interactive “what if” habitus checks; **not** a shipping method for new catalog rows.
 
-Document MPFB/MakeHuman AGPL asset provenance and redistribution notes in catalog metadata (and here) before committing new STLs. Every new or changed `.stl` also needs hash-pinned review in `approved_asset_inventory.json` ([`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md)).
+Document provenance before committing new STLs: MakeHuman/MPFB **core assets are CC0**; community packs may be CC0 or CC-BY; MakeHuman/MPFB **source code** is AGPL/GPL. Every new or changed `.stl` also needs hash-pinned review in `approved_asset_inventory.json` ([`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md)).
 
 ---
 
@@ -69,6 +69,26 @@ When parametric or published meshes are insufficient:
 4. **Visible Human / Visible Korean Human (NLM and related)** — public cryosection data; highest surface fidelity after segmentation, but dense; same decimation/validation path.
 
 TCIA + Slicer remains the best **manual** fallback for a real bariatric surface when parametric tools cannot reach the needed habitus. It is poor for agent automation compared with the MPFB catalog path.
+
+---
+
+## Fun / stylized / historical phantoms
+
+Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to ship or demo **non-clinical** humanoids: low-poly game characters, MakeHuman cartoon morphs, and public-domain classical / historical figures (e.g. *David*, *Venus de Milo*, Lincoln life-mask scans).
+
+**Short version:**
+
+| Kind | Good starting points | Shipping note |
+|------|----------------------|---------------|
+| Realistic parametric | MakeHuman / MPFB (core assets **CC0**) | Preferred generation path already |
+| Stylized / cartoon | [Quaternius](https://quaternius.com/), [Kenney.nl](https://kenney.nl/assets) (**CC0**) | Best open-license fun candidates |
+| Classical sculpture | [Scan the World](https://www.myminifactory.com/scantheworld/) | Often **CC-BY-NC** — local demos unless a redistributable license is confirmed |
+| Historical figures | [Smithsonian 3D](https://3d.si.edu/) Open Access (**CC0** when marked) | Check each object page |
+| Mixamo / Daz free bases | Mixamo, Daz starters | Fine for private experiments; **do not commit raw meshes** (EULA redistribution limits) |
+
+Still apply the [integration checklist](#integration-checklist) (cm scale, table-contact frame, watertight mesh, outward normals). Label fun meshes as demo/non-clinical in the UI.
+
+**Full source list, formats, and license caveats:** [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
 
 ---
 
@@ -152,6 +172,7 @@ With a known anterior LAO (or similar) projection on a trusted RDSR, PSD should 
 
 - [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — generation runbook and catalog policy
 - [`assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) — Phase 0 headless spike result
+- [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) — stylized, cartoon, and public-domain figure mesh sources
 - [`VENDOR_COORDINATE_SYSTEMS.md`](VENDOR_COORDINATE_SYSTEMS.md) — physical vs plot-label coordinates
 - [`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md) — STL admission
 - [`TO_DO.md`](TO_DO.md) — backlog item for exploring additional phantoms

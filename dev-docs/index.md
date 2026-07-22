@@ -58,7 +58,8 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, **package layering rules**, settings, classes, functions, and repository layout. |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | Feature status ledger: calculations, rendering, settings, outputs, CLI, API, and **harness/CI §0**. |
 | [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
-| [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) | Shipped human-mesh inventory, preferred MPFB generation path, external phantom sources, and STL integration checklist (normals, frame, triangle budget, license/privacy). |
+| [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) | Shipped human-mesh inventory, preferred MPFB generation path, external phantom sources, fun/stylized/historical summary, and STL integration checklist (normals, frame, triangle budget, license/privacy). |
+| [references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) | Free/open-license candidate meshes for stylized characters, parametric humans, and public-domain classical/historical figures (license tiers for shipping). |
 
 ---
 
@@ -107,6 +108,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | File | Purpose |
 |---|---|
 | [assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) | **PASS** — Phase 0 headless MPFB/Blender phantom spike: adult/pediatric/heavy meshes + anti-balloon shape gates. |
+| [assessments/P0_PHANTOM_GENERATION_2026-07-21.md](assessments/P0_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 2 P0 catalog meshes in `tmp/` (pediatric + ectomorph/endomorph) with ordering and shape gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |

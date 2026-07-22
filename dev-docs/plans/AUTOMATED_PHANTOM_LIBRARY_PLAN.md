@@ -232,13 +232,13 @@ substitute without an explicit user decision to lower the realism bar.
 
 ## Phase 2 — Generate P0 shapes
 
-- [ ] Generate four pediatric + four adult ectomorph/endomorph STLs into `tmp/`.
-- [ ] Tune catalog macros until extent **and** shape-metric checks pass.
-- [ ] Generate reduced 1k variants.
-- [ ] Record final macro values in catalog (reproducibility).
+- [x] Generate four pediatric + four adult ectomorph/endomorph STLs into `tmp/`.
+- [x] Tune catalog macros until extent **and** shape-metric checks pass.
+- [x] Generate reduced 1k variants.
+- [x] Record final macro values in catalog (reproducibility).
 
 **Verify:** pediatric heights increase 5y → 10y → junior; ectomorph width < adult < endomorph;
-all pass anti-balloon checks.
+all pass anti-balloon checks. — **PASS** (`dev-docs/assessments/P0_PHANTOM_GENERATION_2026-07-21.md`).
 
 ---
 

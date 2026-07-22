@@ -12,6 +12,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Fun / public-domain phantom mesh survey** (2026-07-21) — added
+  `dev-docs/references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md` (stylized CC0 characters, MakeHuman,
+  classical sculpture scans, Smithsonian Open Access, Mixamo/Daz shipping caveats) and a short summary
+  section in `ADDITIONAL_PHANTOMS.md`; registered in `dev-docs/index.md`.
+
 - **`ADDITIONAL_PHANTOMS.md` consolidated** (2026-07-21) — rewrote the layered review appendices into one reference:
   shipped mesh inventory, preferred MPFB path, external sources (with corrected XCAT/Mesh50 license notes),
   bariatric options, and a single integration checklist; registered in `dev-docs/index.md`.
@@ -21,7 +26,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
   docs archived under `dev-docs/plans/archive/`. Phase 0 headless spike **PASS**
   (`dev-docs/assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`); Phase 1 catalog + orchestrator shipped
-  (`scripts/phantom_gen/catalog_v1.json`, `run_catalog.py`, unit + optional `@pytest.mark.blender_mpfb` tests).
+  (`scripts/phantom_gen/catalog_v1.json`, `run_catalog.py`, unit + optional `@pytest.mark.blender_mpfb` tests);
+  Phase 2 P0 meshes generated/tuned in `tmp/phantom_gen/p0/`
+  (`dev-docs/assessments/P0_PHANTOM_GENERATION_2026-07-21.md`).
 
 ### Fixed
 

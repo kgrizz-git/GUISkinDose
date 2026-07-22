@@ -41,7 +41,7 @@ Optional local overrides (gitignored): `scripts/phantom_gen/env.local.json`
 { "blender": "/opt/homebrew/bin/blender" }
 ```
 
-## Catalog + orchestrator (Phase 1)
+## Catalog + orchestrator (Phase 1+)
 
 Phenotype presets: `scripts/phantom_gen/catalog_v1.json` (P0/P1 rows; no affine `base_mesh`).
 
@@ -52,13 +52,20 @@ source .venv/bin/activate
 # One entry
 python scripts/phantom_gen/run_catalog.py --only pediatric_5y_male
 
-# All P0, then install passing STLs into phantom_data/ (privacy admission still required)
-python scripts/phantom_gen/run_catalog.py --priority P0
+# All P0 (writes tmp/phantom_gen/…); reduced previews
+python scripts/phantom_gen/run_catalog.py --priority P0 --out-dir tmp/phantom_gen/p0
+python scripts/phantom_gen/generate_reduced.py tmp/phantom_gen/p0/*.stl --out-dir tmp/phantom_gen/p0
+
+# Install passing STLs into phantom_data/ (privacy admission still required before commit)
 python scripts/phantom_gen/run_catalog.py --priority P0 --install
 ```
 
 Flags: `--only <id>`, `--priority P0|P1`, `--install`, `--skip-shape`, `--skip-phantom-load`,
 `--json-report path`, `--blender /path/to/blender`.
+
+Anti-balloon affine controls use gender-matched MPFB refs (`_shape_ref_adult_male` /
+`_shape_ref_adult_female`), not shipped STLs. Refs are generated on demand into
+`tmp/phantom_gen/` and are never installed.
 
 ### Spike (legacy single-step)
 
@@ -86,6 +93,4 @@ export BLENDER_USER_RESOURCES="$PWD/tmp/blender_user"
 pytest -m blender_mpfb tests/unittests/test_phantom_gen_blender_mpfb.py -q
 ```
 
-Anti-balloon affine controls use an MPFB-generated `_shape_ref_adult_male` (same mesh
-family), not the shipped `adult_male.stl`. The ref is generated on demand into
-`tmp/phantom_gen/` and is never installed.
+CI runs the unit suite; `blender_mpfb` tests are for local regeneration only.

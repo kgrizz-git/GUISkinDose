@@ -7,7 +7,8 @@
   "affine_control_base": {
     "method": "mpfb_catalog_id",
     "id": "_shape_ref_adult_male",
-    "note": "Anti-balloon controls must use same mesh family as candidates (MPFB), not shipped adult_male.stl"
+    "id_female": "_shape_ref_adult_female",
+    "note": "Anti-balloon controls use same MPFB mesh family; female candidates use female ref"
   },
   "entries": {
     "_shape_ref_adult_male": {
@@ -31,6 +32,31 @@
         "height_z": [140.0, 200.0],
         "width_x": [70.0, 130.0],
         "thickness_y": [25.0, 60.0],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "_shape_ref_adult_female": {
+      "priority": "REF",
+      "intent": "Neutral MPFB adult female used only as affine-control base (not shipped)",
+      "license": "mpfb-makehuman-assets",
+      "ship": false,
+      "macros": {
+        "gender": 0.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [140.0, 200.0],
+        "width_x": [60.0, 120.0],
+        "thickness_y": [22.0, 55.0],
         "shape_metric": null,
         "shape_margin": 0.05
       }
@@ -142,15 +168,20 @@
       "macros": {
         "gender": 1.0,
         "age": 0.36,
-        "muscle": 0.35,
-        "weight": 0.15,
+        "muscle": 0.25,
+        "weight": 0.08,
         "proportions": 0.5,
         "height": 0.55,
         "cupsize": 0.5,
         "firmness": 0.5,
         "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
       },
-      "detail_targets": [],
+      "detail_targets": [
+        {"name": "torso-scale-horiz-decr", "value": 0.55},
+        {"name": "torso-scale-depth-decr", "value": 0.45},
+        {"name": "measure-waist-circ-decr", "value": 0.55},
+        {"name": "stomach-tone-incr", "value": 0.35}
+      ],
       "expect": {
         "height_z": [150.0, 190.0],
         "width_x": [70.0, 105.0],
@@ -166,15 +197,21 @@
       "macros": {
         "gender": 0.0,
         "age": 0.36,
-        "muscle": 0.35,
-        "weight": 0.15,
+        "muscle": 0.25,
+        "weight": 0.08,
         "proportions": 0.5,
         "height": 0.5,
-        "cupsize": 0.35,
+        "cupsize": 0.3,
         "firmness": 0.5,
         "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
       },
-      "detail_targets": [],
+      "detail_targets": [
+        {"name": "torso-scale-horiz-decr", "value": 0.5},
+        {"name": "torso-scale-depth-decr", "value": 0.4},
+        {"name": "measure-waist-circ-decr", "value": 0.5},
+        {"name": "hip-scale-horiz-decr", "value": 0.35},
+        {"name": "stomach-tone-incr", "value": 0.3}
+      ],
       "expect": {
         "height_z": [145.0, 185.0],
         "width_x": [60.0, 100.0],
@@ -190,8 +227,8 @@
       "macros": {
         "gender": 1.0,
         "age": 0.45,
-        "muscle": 0.4,
-        "weight": 0.9,
+        "muscle": 0.35,
+        "weight": 0.95,
         "proportions": 0.55,
         "height": 0.5,
         "cupsize": 0.5,
@@ -199,12 +236,16 @@
         "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
       },
       "detail_targets": [
-        {"name": "stomach-pregnant-incr", "value": 0.75}
+        {"name": "stomach-pregnant-incr", "value": 0.9},
+        {"name": "stomach-tone-decr", "value": 0.5},
+        {"name": "torso-scale-depth-incr", "value": 0.45},
+        {"name": "torso-scale-horiz-incr", "value": 0.35},
+        {"name": "measure-waist-circ-incr", "value": 0.5}
       ],
       "expect": {
         "height_z": [155.0, 190.0],
-        "width_x": [95.0, 140.0],
-        "thickness_y": [35.0, 70.0],
+        "width_x": [95.0, 145.0],
+        "thickness_y": [35.0, 75.0],
         "shape_metric": "abdomen_bulk",
         "shape_margin": 0.05
       }
@@ -216,21 +257,27 @@
       "macros": {
         "gender": 0.0,
         "age": 0.45,
-        "muscle": 0.35,
-        "weight": 0.9,
+        "muscle": 0.3,
+        "weight": 0.95,
         "proportions": 0.55,
         "height": 0.48,
-        "cupsize": 0.7,
+        "cupsize": 0.75,
         "firmness": 0.55,
         "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
       },
       "detail_targets": [
-        {"name": "stomach-pregnant-incr", "value": 0.7}
+        {"name": "stomach-pregnant-incr", "value": 0.88},
+        {"name": "stomach-tone-decr", "value": 0.45},
+        {"name": "torso-scale-depth-incr", "value": 0.4},
+        {"name": "torso-scale-horiz-incr", "value": 0.35},
+        {"name": "hip-scale-horiz-incr", "value": 0.55},
+        {"name": "measure-waist-circ-incr", "value": 0.45},
+        {"name": "measure-hips-circ-incr", "value": 0.5}
       ],
       "expect": {
         "height_z": [150.0, 185.0],
-        "width_x": [90.0, 135.0],
-        "thickness_y": [32.0, 68.0],
+        "width_x": [85.0, 140.0],
+        "thickness_y": [32.0, 75.0],
         "shape_metric": "abdomen_bulk",
         "shape_margin": 0.05
       }
@@ -242,7 +289,7 @@
       "macros": {
         "gender": 1.0,
         "age": 0.5,
-        "muscle": 0.35,
+        "muscle": 0.3,
         "weight": 0.98,
         "proportions": 0.55,
         "height": 0.5,
@@ -251,7 +298,11 @@
         "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
       },
       "detail_targets": [
-        {"name": "stomach-pregnant-incr", "value": 0.95}
+        {"name": "stomach-pregnant-incr", "value": 0.98},
+        {"name": "stomach-tone-decr", "value": 0.6},
+        {"name": "torso-scale-depth-incr", "value": 0.55},
+        {"name": "torso-scale-horiz-incr", "value": 0.5},
+        {"name": "measure-waist-circ-incr", "value": 0.7}
       ],
       "expect": {
         "height_z": [155.0, 190.0],
@@ -268,16 +319,22 @@
       "macros": {
         "gender": 0.0,
         "age": 0.5,
-        "muscle": 0.3,
+        "muscle": 0.28,
         "weight": 0.98,
         "proportions": 0.55,
         "height": 0.48,
-        "cupsize": 0.8,
+        "cupsize": 0.85,
         "firmness": 0.55,
         "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}
       },
       "detail_targets": [
-        {"name": "stomach-pregnant-incr", "value": 0.9}
+        {"name": "stomach-pregnant-incr", "value": 0.95},
+        {"name": "stomach-tone-decr", "value": 0.55},
+        {"name": "torso-scale-depth-incr", "value": 0.5},
+        {"name": "torso-scale-horiz-incr", "value": 0.45},
+        {"name": "hip-scale-horiz-incr", "value": 0.7},
+        {"name": "measure-waist-circ-incr", "value": 0.6},
+        {"name": "measure-hips-circ-incr", "value": 0.65}
       ],
       "expect": {
         "height_z": [150.0, 185.0],

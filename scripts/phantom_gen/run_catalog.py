@@ -29,13 +29,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from scripts.phantom_gen.affine_control import build_affine_control
-from scripts.phantom_gen.transform_to_psd_frame import (
+from scripts.phantom_gen.affine_control import build_affine_control  # noqa: E402
+from scripts.phantom_gen.transform_to_psd_frame import (  # noqa: E402
     _load_vertices_faces,
     _write_binary_stl,
     transform_to_psd_frame,
 )
-from scripts.phantom_gen.validate_phantom import (
+from scripts.phantom_gen.validate_phantom import (  # noqa: E402
     abdomen_bulk,
     extents,
     head_ratio,
@@ -212,12 +212,24 @@ def check_expect_ranges(ext: dict[str, float], expect: dict[str, Any]) -> list[s
     return failures
 
 
+def resolve_affine_ref_id(catalog: dict[str, Any], entry: dict[str, Any]) -> str:
+    """Pick MPFB shape-ref catalog id (female ref when gender macro < 0.5)."""
+    cfg = catalog.get("affine_control_base")
+    if not isinstance(cfg, dict) or cfg.get("method") != "mpfb_catalog_id":
+        raise ValueError("affine_control_base must use method mpfb_catalog_id")
+    gender = float(entry.get("macros", {}).get("gender", 1.0))
+    if gender < 0.5 and cfg.get("id_female"):
+        return str(cfg["id_female"])
+    return str(cfg["id"])
+
+
 def ensure_affine_control_base(
     catalog: dict[str, Any],
     *,
     catalog_path: Path,
     out_dir: Path,
     blender: str,
+    entry: dict[str, Any] | None = None,
 ) -> Path:
     """Return STL path for affine-control base (generate MPFB ref if configured)."""
     cfg = catalog.get("affine_control_base", "src/mypyskindose/phantom_data/adult_male.stl")
@@ -230,7 +242,7 @@ def ensure_affine_control_base(
     method = cfg.get("method")
     if method != "mpfb_catalog_id":
         raise ValueError(f"unsupported affine_control_base method: {method!r}")
-    ref_id = cfg["id"]
+    ref_id = resolve_affine_ref_id(catalog, entry or {})
     if ref_id not in catalog["entries"]:
         raise KeyError(f"affine_control_base catalog id missing: {ref_id}")
 
@@ -288,6 +300,7 @@ def process_entry(
             catalog_path=catalog_path,
             out_dir=out_dir,
             blender=blender,
+            entry=entry,
         )
         control_stl = out_dir / f"control_{catalog_id}.stl"
         build_affine_control(base_stl, stl_path, control_stl, mode="uniform_height")

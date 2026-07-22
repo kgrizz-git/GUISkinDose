@@ -61,12 +61,14 @@ def _write_box_stl(path: Path, *, x: float, y: float, z: float, origin=(0.0, 0.0
 
 def test_catalog_v1_loads_and_forbids_affine_shipping_fields():
     catalog = load_catalog(CATALOG_V1)
-    # 10 shippable + 1 MPFB shape-reference adult
-    assert len(catalog["entries"]) == 11
+    # 10 shippable + 2 MPFB shape-reference adults
+    assert len(catalog["entries"]) == 12
     assert "pediatric_5y_male" in catalog["entries"]
     assert "bariatric_class2_female" in catalog["entries"]
     assert "_shape_ref_adult_male" in catalog["entries"]
+    assert "_shape_ref_adult_female" in catalog["entries"]
     assert catalog["entries"]["_shape_ref_adult_male"].get("ship") is False
+    assert catalog["entries"]["_shape_ref_adult_female"].get("ship") is False
     for entry in catalog["entries"].values():
         assert "base_mesh" not in entry
         assert "scale" not in entry
@@ -77,6 +79,7 @@ def test_catalog_v1_loads_and_forbids_affine_shipping_fields():
     base = catalog["affine_control_base"]
     assert base["method"] == "mpfb_catalog_id"
     assert base["id"] == "_shape_ref_adult_male"
+    assert base["id_female"] == "_shape_ref_adult_female"
 
 
 def test_catalog_rejects_base_mesh_entry(tmp_path: Path):
@@ -206,6 +209,25 @@ def test_affine_control_uniform_height_preserves_ratios(tmp_path: Path):
     s = info["scale"]
     assert s[0] == pytest.approx(s[1])
     assert s[1] == pytest.approx(s[2])
+
+
+def test_generate_reduced_writes_1000_face_preview(tmp_path: Path):
+    from stl import mesh as stl_mesh
+
+    from scripts.phantom_gen.generate_reduced import generate_reduced
+
+    src = tmp_path / "box.stl"
+    _write_box_stl(src, x=10.0, y=5.0, z=20.0, origin=(-5.0, -5.0, -20.0))
+    base = stl_mesh.Mesh.from_file(str(src))
+    big = stl_mesh.Mesh(np.zeros(1500, dtype=stl_mesh.Mesh.dtype))
+    for i in range(1500):
+        big.vectors[i] = base.vectors[i % len(base.vectors)]
+    big_path = tmp_path / "big.stl"
+    big.save(str(big_path))
+
+    out = generate_reduced(big_path, target_faces=1000)
+    assert out.name.endswith("_reduced_1000t.stl")
+    assert len(stl_mesh.Mesh.from_file(str(out)).vectors) == 1000
 
 
 def test_validate_basic_anchors_on_shipped_mesh():
