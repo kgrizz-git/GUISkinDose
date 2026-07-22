@@ -1,0 +1,82 @@
+{
+  "_comment": "Fun / demo (non-clinical) phantom ingest manifest. See dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md. rotate_deg + flip_y are PLACEHOLDERS until per-mesh orientation discovery locks them (Tasks 2-5). height_axis is the raw-mesh axis (x|y|z) whose span is scaled to height_cm BEFORE the PSD transform. flip_y maps to transform_to_psd_frame: true -> force_flip_y=True; false -> force_flip_y=False AND flip_y_if_needed=False. face_up_frac defaults to 0.55 (superior 12% Z band); Cosmic Buddha is headless so it uses face_up_band_frac 0.20 (superior 20% robe/torso band). torso_z_fraction_range / baseline_torso_width_cm are optional GUI habitus overrides wired in Task 6. Mesh asset licenses are NOT tracked in dev-docs/THIRD_PARTY_NOTICES.md (Python deps only).",
+  "schema_version": 1,
+  "defaults": {
+    "target_faces": 6000,
+    "face_up_frac": 0.55,
+    "face_up_band_frac": 0.12,
+    "height_axis": "z"
+  },
+  "meshes": {
+    "cosmic_buddha": {
+      "id": "cosmic_buddha",
+      "phase": 1,
+      "source_url": "https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-desire:d8c62be8-4ebc-11ea-b77f-2e728ce88125",
+      "license": "CC0",
+      "attribution": "Smithsonian 3D (Freer Gallery of Art). CC0 public-domain dedication; SI credit encouraged but not required.",
+      "notice_required": false,
+      "height_cm": 151.0,
+      "height_axis": "z",
+      "rotate_deg": [0, 0, 0],
+      "flip_y": false,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.20,
+      "geometry_notes": "Standing draped figure ~151 cm; MISSING HEAD AND HANDS. Rotate upright->supine. No head means a weaker face-up cue: apply the face-up gate to the superior 20% robe/torso band (face_up_band_frac=0.20) and record the exception in provenance. May need Blender hole-fill for an open base.",
+      "fallback_notes": "Single CC0 SI source. If the open base cannot be capped by trimesh or Blender, drop this ID rather than weaken the watertight gate."
+    },
+    "petite_herculanaise": {
+      "id": "petite_herculanaise",
+      "phase": 1,
+      "source_url": "https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris",
+      "source_url_alt": "https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356",
+      "license": "CC BY-SA",
+      "attribution": "Petite Herculanaise (Louvre, Paris) scan, Cults3D. CC BY-SA: attribution + ShareAlike required; the redistributed STL derivative stays SA-compatible (app code remains MIT).",
+      "notice_required": true,
+      "height_cm": 165.0,
+      "height_axis": "z",
+      "rotate_deg": [0, 0, 0],
+      "flip_y": false,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.12,
+      "geometry_notes": "Standing draped woman -> rotate upright->supine. NOTICE_petite_herculanaise.txt required (BY-SA).",
+      "fallback_notes": "Prefer Cults CC BY-SA source. MyMiniFactory 6356 only if the license panel is confirmed non-NC (abort if NC); record the exact license panel if used."
+    },
+    "ramesses_ii": {
+      "id": "ramesses_ii",
+      "phase": 1,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl",
+      "license": "CC BY 4.0",
+      "attribution": "Colossal sculpture of Ramesses II, by Dejp3 (Wikimedia Commons). CC BY 4.0: attribution required.",
+      "notice_required": true,
+      "height_cm": 185.0,
+      "height_axis": "z",
+      "rotate_deg": [0, 0, 0],
+      "flip_y": false,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.12,
+      "geometry_notes": "Already lying; mainly scale + PSD-frame axis lock (crown at max Z, back at max Y). Colossal proportions may look odd; accept if smoke passes. NOTICE_ramesses_ii.txt required (BY). Raw STL ~24 MB stays under tmp/.",
+      "fallback_notes": "Single Commons CC BY 4.0 source (Dejp3)."
+    },
+    "steamboat_willie": {
+      "id": "steamboat_willie",
+      "phase": 1,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl",
+      "source_url_alt": "https://sketchfab.com/ (JoeBert 'Steamboat Willie' CC-BY, ~5.6k tris)",
+      "license": "CC BY 4.0",
+      "attribution": "Steamboat Willie 3D model, by Adrian Cojocaru (Wikimedia Commons). CC BY 4.0: attribution required. US public-domain 1928 design; CC BY applies to the 3D mesh. TRADEMARK CAUTION: label stem 'steamboat_willie' only, never 'Mickey Mouse' / Disney affiliation.",
+      "notice_required": true,
+      "height_cm": 120.0,
+      "height_axis": "z",
+      "rotate_deg": [0, 0, 0],
+      "flip_y": false,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.12,
+      "geometry_notes": "Cartoon figure ~120 cm. NOTICE_steamboat_willie.txt required (BY). Fill/cap + post-flip normal fix before and after decimate.",
+      "fallback_notes": "Primary: Commons Cojocaru CC BY 4.0. If watertight repair fails, fall back to JoeBert Sketchfab CC-BY (~5.6k tris). Quaternius filler only if BOTH Steamboat sources entirely fail."
+    }
+  }
+}

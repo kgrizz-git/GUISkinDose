@@ -12,6 +12,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Fun / demo phantom ingest scaffolding** (2026-07-22) — Task 1 of
+  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. New
+  `scripts/phantom_gen/fun_mesh_manifest.json` (locked source URLs, licenses, placeholder
+  `rotate_deg`/`flip_y`, heights, optional `face_up_frac`/torso overrides for the four demo IDs) and
+  `scripts/phantom_gen/ingest_fun_mesh.py` CLI (Euler rotate → uniform scale → fill/cap → PSD anchor
+  with `obj_y_up=False` + explicit flip → re-fix winding/normals → quadric decimate → validate).
+  `validate_phantom.py` gains a `--require-trimesh` fun mode (hard watertight gate, ≤20k face ceiling,
+  face-up band gate, dependency-free outward-normal ray gate). No demo STLs shipped yet
+  (developer tooling only; no runtime or public API change).
+
 - **Settings phantom preview** (2026-07-22) — live Plotly human-mesh preview on Settings (no RDSR).
   Prefers `_reduced_1000t` when present; dose still uses the full STL. Reflects habitus scales,
   patient orientation, and patient offsets (active exam in multi-exam mode). Debounced refresh via

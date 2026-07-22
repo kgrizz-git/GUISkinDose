@@ -91,6 +91,219 @@ def is_watertight(path: Path) -> bool | None:
     return bool(mesh.is_watertight)
 
 
+# --- Fun / demo (non-clinical) ingest gates -----------------------------------
+#
+# These gates support the demo-phantom ingest pipeline (Cosmic Buddha, Petite
+# Herculanaise, Ramesses II, Steamboat Willie). See
+# ``dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``. They enforce a
+# face-up supine orientation and outward-facing surface normals, which the
+# clinical validator does not check. Statue/cartoon bounding boxes are often
+# near-symmetric in Y, so the ``flip_y_if_needed`` heuristic can silently leave
+# a mesh face-down; these gates catch that before shipping.
+
+# Default clinical validator ceiling (kept for backwards compatibility).
+CLINICAL_MAX_FACES = 40000
+# Fun / demo shipping ceiling (hard cap enforced when ``--require-trimesh``).
+FUN_MAX_FACES = 20000
+# Minimum sampled ray hits before the outward-normal gate is meaningful.
+_MIN_NORMAL_SAMPLES = 8
+
+
+def face_up_ok(
+    vertices: np.ndarray,
+    *,
+    face_up_frac: float = 0.55,
+    band_frac: float = 0.12,
+) -> tuple[bool, dict]:
+    """Check that the anterior (chest/face) lies toward -Y in the superior band.
+
+    In the PSD frame the posterior/back rests on the table at ``y_max ~= 0`` and
+    the anterior points toward ``-Y``. For a face-up supine mesh, the superior
+    ``band_frac`` Z band (measured from ``z_max`` toward the feet) must reach a
+    long way toward ``-Y``. Concretely we require::
+
+        y_min_headband <= y_max - face_up_frac * thickness_y
+
+    where ``thickness_y`` is the full anterior-posterior extent of the mesh.
+
+    Parameters
+    ----------
+    vertices:
+        ``(N, 3)`` vertex array already in the PSD frame (cm).
+    face_up_frac:
+        Fraction of the total Y thickness the head band must extend below
+        ``y_max`` (default 0.55; manifest-overridable).
+    band_frac:
+        Superior Z-band fraction sampled from ``z_max`` toward the feet
+        (default 0.12; use 0.20 for headless meshes like Cosmic Buddha).
+
+    Returns
+    -------
+    (passed, detail): tuple[bool, dict]
+    """
+    z = vertices[:, 2]
+    y = vertices[:, 1]
+    z_min, z_max = float(z.min()), float(z.max())
+    y_min, y_max = float(y.min()), float(y.max())
+    height_z = z_max - z_min
+    thickness_y = y_max - y_min
+    detail: dict = {
+        "face_up_frac": face_up_frac,
+        "band_frac": band_frac,
+        "thickness_y": thickness_y,
+    }
+    if height_z <= 0 or thickness_y <= 0:
+        detail["reason"] = "degenerate_extent"
+        detail["passed"] = False
+        return False, detail
+
+    z_cut = z_max - band_frac * height_z
+    band_mask = z >= z_cut
+    if int(band_mask.sum()) < 10:
+        detail["reason"] = "too_few_headband_points"
+        detail["headband_points"] = int(band_mask.sum())
+        detail["passed"] = False
+        return False, detail
+
+    y_min_headband = float(y[band_mask].min())
+    threshold = y_max - face_up_frac * thickness_y
+    passed = y_min_headband <= threshold
+    detail.update(
+        {
+            "y_max": y_max,
+            "y_min_headband": y_min_headband,
+            "threshold": threshold,
+            "headband_points": int(band_mask.sum()),
+            "passed": passed,
+        }
+    )
+    return passed, detail
+
+
+def _load_trimesh(path: Path):
+    """Load ``path`` as a single concatenated ``trimesh.Trimesh`` (or raise)."""
+    import trimesh
+
+    mesh = trimesh.load(str(path), force="mesh")
+    if isinstance(mesh, trimesh.Scene):
+        mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
+    return mesh
+
+
+def _first_hit_face(
+    origin: np.ndarray,
+    direction: np.ndarray,
+    triangles: np.ndarray,
+    *,
+    eps: float = 1e-8,
+) -> int | None:
+    """Return the index of the first triangle a ray hits (Moller-Trumbore).
+
+    Vectorized over all ``triangles`` for a single ray. Returns the triangle
+    index with the smallest positive ray parameter ``t`` or ``None`` if no hit.
+    This is a dependency-free intersector (no rtree / embree backend needed).
+    """
+    v0 = triangles[:, 0, :]
+    e1 = triangles[:, 1, :] - v0
+    e2 = triangles[:, 2, :] - v0
+    pvec = np.cross(direction, e2)
+    det = np.einsum("ij,ij->i", e1, pvec)
+    valid = np.abs(det) > eps
+    inv_det = np.zeros_like(det)
+    inv_det[valid] = 1.0 / det[valid]
+    tvec = origin - v0
+    u = np.einsum("ij,ij->i", tvec, pvec) * inv_det
+    qvec = np.cross(tvec, e1)
+    v = np.einsum("j,ij->i", direction, qvec) * inv_det
+    t = np.einsum("ij,ij->i", e2, qvec) * inv_det
+    hit = valid & (u >= -eps) & (v >= -eps) & (u + v <= 1.0 + eps) & (t > eps)
+    if not hit.any():
+        return None
+    hit_idx = np.where(hit)[0]
+    return int(hit_idx[np.argmin(t[hit_idx])])
+
+
+def outward_normals_ok(
+    path: Path,
+    *,
+    n_samples: int = 200,
+    seed: int = 0,
+) -> tuple[bool, dict]:
+    """Ray-cast gate that a majority of face normals point outward.
+
+    For a random sample of face centroids, a ray is cast from **outside** the
+    bounding box back toward the surface. At the first hit the hit-face normal
+    ``n`` must oppose the ray direction (``dot(n, ray_direction) < 0``), meaning
+    the surface faces back toward the (outside) ray origin. Fails if a majority
+    of sampled hits point the wrong way (inward normals -> wrong entrance side
+    in dose calc). Uses a dependency-free Moller-Trumbore intersector (no rtree
+    or embree backend required).
+
+    Returns ``(passed, detail)``. If trimesh is unavailable this raises; callers
+    that reach this gate have already required trimesh.
+    """
+    mesh = _load_trimesh(path)
+    detail: dict = {"n_requested": int(n_samples)}
+
+    faces = np.asarray(mesh.faces)
+    if len(faces) == 0:
+        detail.update({"reason": "no_faces", "passed": False})
+        return False, detail
+
+    triangles = np.asarray(mesh.triangles, dtype=float)
+    centroids = np.asarray(mesh.triangles_center, dtype=float)
+    face_normals = np.asarray(mesh.face_normals, dtype=float)
+    center = np.asarray(mesh.vertices, dtype=float).mean(axis=0)
+    diag = float(np.linalg.norm(mesh.bounds[1] - mesh.bounds[0]))
+    if diag <= 0:
+        detail.update({"reason": "degenerate_bounds", "passed": False})
+        return False, detail
+
+    rng = np.random.default_rng(seed)
+    n = min(int(n_samples), len(centroids))
+    idx = rng.choice(len(centroids), size=n, replace=False)
+
+    # Outward direction from mesh center to each sampled centroid.
+    out_dir = centroids[idx] - center
+    norms = np.linalg.norm(out_dir, axis=1)
+    keep = norms > 1e-9
+    out_dir = out_dir[keep] / norms[keep, None]
+    sample_centroids = centroids[idx][keep]
+    if len(out_dir) < _MIN_NORMAL_SAMPLES:
+        detail.update({"reason": "too_few_valid_samples", "n_valid": int(len(out_dir)), "passed": False})
+        return False, detail
+
+    # Origins well outside the bbox; rays travel back toward the surface.
+    origins = sample_centroids + out_dir * diag
+    directions = -out_dir
+
+    outward = 0
+    total = 0
+    for origin, ray_dir in zip(origins, directions):
+        tri = _first_hit_face(origin, ray_dir, triangles)
+        if tri is None:
+            continue
+        total += 1
+        if float(np.dot(face_normals[tri], ray_dir)) < 0.0:
+            outward += 1
+
+    if total < _MIN_NORMAL_SAMPLES:
+        detail.update({"reason": "too_few_ray_hits", "n_hits": int(total), "passed": False})
+        return False, detail
+
+    frac = outward / float(total)
+    passed = frac > 0.5
+    detail.update(
+        {
+            "n_hits": total,
+            "outward_hits": outward,
+            "outward_fraction": frac,
+            "passed": passed,
+        }
+    )
+    return passed, detail
+
+
 def phantom_load_ok(path: Path, name: str) -> tuple[bool, str]:
     try:
         from mypyskindose import Phantom, PyskindoseSettings, load_settings_example_json
@@ -117,16 +330,30 @@ def validate(
     metric: str | None = None,
     metric_margin: float = 0.05,
     skip_phantom_load: bool = False,
+    require_trimesh: bool = False,
+    face_up_frac: float = 0.55,
+    face_up_band_frac: float = 0.12,
 ) -> dict:
-    results: dict = {"file": str(stl_path), "passed": False, "checks": {}}
+    """Validate a phantom STL against the MyPySkinDose frame.
+
+    Clinical mode (default) checks anchors, scale, a <=40k face ceiling, and
+    optional shape metrics. Fun / demo mode (``require_trimesh=True``) is
+    stricter for shipped non-clinical demo meshes: it hard-fails when trimesh is
+    missing or the mesh is not watertight, enforces a <=20k face ceiling, and
+    adds a face-up orientation gate and an outward-normal ray gate. See
+    ``dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
+    """
+    results: dict = {"file": str(stl_path), "passed": False, "require_trimesh": require_trimesh, "checks": {}}
     if not stl_path.exists():
         results["checks"]["exists"] = False
         return results
     results["checks"]["exists"] = True
 
+    max_faces = FUN_MAX_FACES if require_trimesh else CLINICAL_MAX_FACES
     faces = face_count(stl_path)
     results["checks"]["face_count"] = faces
-    results["checks"]["face_count_ok"] = 1000 <= faces <= 40000
+    results["checks"]["face_count_ok"] = 1000 <= faces <= max_faces
+    results["checks"]["face_count_ceiling"] = max_faces
 
     verts = load_vertices(stl_path)
     ext = extents(verts)
@@ -138,10 +365,33 @@ def validate(
 
     wt = is_watertight(stl_path)
     results["checks"]["watertight"] = wt
-    results["checks"]["watertight_ok"] = wt is True or wt is None
+    if require_trimesh:
+        # Fun mode: trimesh must be installed (wt is None -> import failed) and
+        # the mesh must be watertight. Never let an unrepaired mesh pass.
+        results["checks"]["watertight_ok"] = wt is True
+    else:
+        results["checks"]["watertight_ok"] = wt is True or wt is None
 
     results["checks"]["head_ratio"] = head_ratio(verts)
     results["checks"]["abdomen_bulk"] = abdomen_bulk(verts)
+
+    # Fun / demo gates: face-up orientation + outward normals.
+    fun_ok = True
+    if require_trimesh:
+        fu_pass, fu_detail = face_up_ok(
+            verts, face_up_frac=face_up_frac, band_frac=face_up_band_frac
+        )
+        results["checks"]["face_up"] = fu_detail
+        results["checks"]["face_up_ok"] = fu_pass
+
+        try:
+            on_pass, on_detail = outward_normals_ok(stl_path)
+        except ImportError as exc:
+            on_pass, on_detail = False, {"reason": f"trimesh_missing:{exc}", "passed": False}
+        results["checks"]["outward_normals"] = on_detail
+        results["checks"]["outward_normals_ok"] = on_pass
+
+        fun_ok = fu_pass and on_pass
 
     if not skip_phantom_load:
         ok, detail = phantom_load_ok(stl_path, stl_path.stem)
@@ -187,6 +437,7 @@ def validate(
         and results["checks"]["watertight_ok"]
         and results["checks"]["phantom_load_ok"]
         and shape_ok
+        and fun_ok
     )
     return results
 
@@ -198,6 +449,26 @@ def main() -> int:
     parser.add_argument("--metric", choices=["head_ratio", "abdomen_bulk"], default=None)
     parser.add_argument("--metric-margin", type=float, default=0.05)
     parser.add_argument("--skip-phantom-load", action="store_true")
+    parser.add_argument(
+        "--require-trimesh",
+        action="store_true",
+        help=(
+            "Fun / demo mode: hard-fail if trimesh missing or not watertight, "
+            "enforce <=20k faces, and run face-up + outward-normal gates."
+        ),
+    )
+    parser.add_argument(
+        "--face-up-frac",
+        type=float,
+        default=0.55,
+        help="Fraction of Y thickness the head band must reach toward -Y (fun mode).",
+    )
+    parser.add_argument(
+        "--face-up-band-frac",
+        type=float,
+        default=0.12,
+        help="Superior Z-band fraction for the face-up gate (use 0.20 for headless meshes).",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -207,6 +478,9 @@ def main() -> int:
         metric=args.metric,
         metric_margin=args.metric_margin,
         skip_phantom_load=args.skip_phantom_load,
+        require_trimesh=args.require_trimesh,
+        face_up_frac=args.face_up_frac,
+        face_up_band_frac=args.face_up_band_frac,
     )
     if args.json:
         print(json.dumps(results, indent=2))
