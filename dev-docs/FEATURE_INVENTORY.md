@@ -118,6 +118,7 @@ Located in `src/mypyskindose/phantom_data/`:
 | `adult_ectomorph_male`, `adult_ectomorph_female` | MPFB thin adult habitus |
 | `adult_endomorph_male`, `adult_endomorph_female` | MPFB heavy adult habitus |
 | `bariatric_class2_male`, `bariatric_class2_female` | MPFB class-II habitus (parametric CG) |
+| `cosmic_buddha`, `ramesses_ii`, `steamboat_willie` | Demo / non-clinical (GUI `(demo)` label); not dosimetry references |
 | `*_reduced_1000t` | Low-resolution variants of each (faster, used in `plot_procedure`) |
 
 Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file path.

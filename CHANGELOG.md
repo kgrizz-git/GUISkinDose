@@ -12,6 +12,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Demo phantom GUI labels + docs** (2026-07-22) — Task 6 of
+  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Settings mesh selector uses NiceGUI
+  `{stem: label}` options via `get_human_mesh_options()` with `(demo)` suffixes for shipped
+  `cosmic_buddha`, `ramesses_ii`, `steamboat_willie`. Optional fun-manifest torso overrides wired into
+  habitus baselines. Help + AGENTS / FEATURE_INVENTORY / ADDITIONAL / `demo_phantoms` feature matrix
+  row. Petite Herculanaise remains blocked (not listed as shipped).
+
 - **Steamboat Willie (demo) phantom** (2026-07-22) — Task 5 of
   `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `steamboat_willie` (Wikimedia
   Commons, Adrian Cojocaru, **CC BY 4.0**) with `NOTICE_steamboat_willie.txt`, locked transform

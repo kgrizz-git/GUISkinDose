@@ -21,6 +21,9 @@ Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery
 | `pediatric_5y_*`, `pediatric_10y_*` | 26,756 | MPFB parametric pediatric (male/female) |
 | `adult_ectomorph_*`, `adult_endomorph_*` | 26,756 | MPFB thin / heavy adult habitus (male/female) |
 | `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); CG parametric, not CT-grade |
+| `cosmic_buddha` | ~6,000 | Demo / non-clinical (CC0); missing head/hands |
+| `ramesses_ii` | ~5,600 | Demo / non-clinical (CC BY 4.0); voxel-remeshed |
+| `steamboat_willie` | ~5,700 | Demo / non-clinical (CC BY 4.0); trademark-safe label only |
 | `*_reduced_1000t` | 1,000 | Preview-only; not listed in mesh selectors |
 
 Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to one of the non-reduced names. Body-habitus sliders (`scale_lat`, `scale_ap`, `scale_lon`, clamped 0.5–2.0) apply at load via `Phantom._apply_human_scale` and are for **moderate sensitivity studies**, not for shipping new body shapes (see below).
@@ -87,12 +90,12 @@ Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to shi
 |------|----------------------|---------------|
 | Realistic parametric | MakeHuman / MPFB (core assets **CC0**) | Preferred generation path already |
 | Stylized / original cartoon | [Quaternius](https://quaternius.com/), [Kenney.nl](https://kenney.nl/assets) (**CC0**) | Safest fun candidates (no franchise trademarks) |
-| Clothed / draped full-body | Cosmic Buddha (**CC0**); Petite Herculanaise (**CC BY-SA**); Ramesses II (**CC BY 4.0**) | Try all three in v1 (scale/rotate); see plan |
+| Clothed / draped full-body | Cosmic Buddha (**CC0**, shipped); Ramesses II (**CC BY 4.0**, shipped); Petite Herculanaise (**CC BY-SA**, blocked — NC/login) | See plan + provenance |
 | Historical busts / portraits | [Smithsonian 3D](https://3d.si.edu/) Open Access (**CC0** when marked) — e.g. Lincoln | Fallback only (not full-body) |
 | *Venus de Milo* | Prefer **SMK** plaster-cast scan (**CC0** / PDM) | Easy download; **nude art** — plan decision D1 |
 | Michelangelo’s *David* | Scan the World on **Wikimedia Commons** (**CC BY-SA 4.0**) | Easy download; nude art — D1; SA on mesh |
 | Other classical / historical statues | [Scan the World](https://www.myminifactory.com/scantheworld/), SMK | **Per-object** license; many togas are **NC** — skip those |
-| Steamboat Willie / Popeye / book Pooh | Commons / Thingiverse / Printables (verify) | Early PD designs only; mesh license separate; see reference doc |
+| Steamboat Willie / Popeye / book Pooh | Commons / Thingiverse / Printables (verify) | Steamboat Willie shipped (CC BY); early PD designs only |
 | Mixamo / Daz free bases | Mixamo, Daz starters | Private experiments only; **do not commit raw meshes** |
 
 Still apply the [integration checklist](#integration-checklist) (cm scale, table-contact frame, watertight mesh, outward normals). Label fun meshes as demo/non-clinical in the UI.

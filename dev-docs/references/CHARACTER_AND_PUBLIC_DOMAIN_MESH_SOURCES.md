@@ -117,7 +117,7 @@ Full-body clothed scans **do exist**, but redistributable ones (CC0 / CC-BY / CC
 
 | Figure / type | Hub | License watch | Notes |
 |---------------|-----|---------------|-------|
-| **Cosmic Buddha** | [Smithsonian 3D](https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-desire:d8c62be8-4ebc-11ea-b77f-2e728ce88125) | **CC0** (object page) | Standing ~151 cm; primary clothed full-body try |
+| **Cosmic Buddha** | [Smithsonian 3D](https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-existence:d8c62be8-4ebc-11ea-b77f-2e728ce88125) | **CC0** (object page) | **Shipped** as `cosmic_buddha` (demo); standing ~151 cm; missing head/hands |
 | **Petite Herculanaise** (draped woman) | [Cults](https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris) / [MMF 6356](https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356) | **CC BY-SA** (Cults) | Full-body classical drapery; NOTICE if SA; re-check MMF |
 | **Ramesses II** colossal | [Commons STL](https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl) | **CC BY 4.0** | Clothed; already lying — scale/axes; proportions may be odd |
 | Other draped Buddha / Bodhisattva | SI / Commons / Scan the World | **Per object** | Prefer SI CC0 or Commons BY/SA; skip MMF NC |
@@ -161,7 +161,7 @@ Search for CC0 or explicit public-domain full-figure / bust scans (national muse
 
 | Character | Early form PD (US) | Mesh availability | Shipping note |
 |-----------|--------------------|-------------------|---------------|
-| **Steamboat Willie** Mickey | 2024 | [Commons CC BY 4.0](https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl); JoeBert / others CC-BY — see plan | **v1** candidate; stem `steamboat_willie` only |
+| **Steamboat Willie** Mickey | 2024 | [Commons CC BY 4.0](https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl); JoeBert / others CC-BY — see plan | **Shipped** as `steamboat_willie` (demo); stem only |
 | **Popeye** (1929) | 2025 | e.g. [Thingiverse CC BY](https://www.thingiverse.com/thing:2417631); many others — verify | **Phase 2**; trademark-safe stem `popeye` |
 | **Winnie-the-Pooh** (Milne book) | ~2022 | e.g. [Printables 1925 Public Domain](https://www.printables.com/model/1706462-winnie-the-pooh-pooh-bear-1925); Sketchfab CC-BY | **Phase 2**; **no Disney red shirt** |
 | **Betty Boop** (*Dizzy Dishes*) | 2026 (early form) | Many modern Betty / NC Printables | **Weak** — PD look is poodle-flapper; trademarks |

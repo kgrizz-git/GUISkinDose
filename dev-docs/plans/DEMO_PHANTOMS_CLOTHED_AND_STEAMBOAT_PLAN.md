@@ -410,30 +410,27 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 - Raw stem labels between Task 2 and Task 6 are acceptable; prefer landing Step 1 soon after the first
   mesh ships if multiple commits land over days.
 
-- [ ] **Step 1: Implement `{stem: label}` options map** + `DEMO_HUMAN_MESHES` frozenset of **actually
+- [x] **Step 1: Implement `{stem: label}` options map** + `DEMO_HUMAN_MESHES` frozenset of **actually
   shipped** stems for `(demo)` suffix / tests. Title-case clinical stems (e.g. `Adult Female`) so demos
   are not the only pretty labels. Add a unit assertion that every options key is a discovered stem.
 
-- [ ] **Step 2: Wire torso overrides** from manifest for shipped demos into GUI baseline measurement
+- [x] **Step 2: Wire torso overrides** from manifest for shipped demos into GUI baseline measurement
   (override band or explicit `baseline_torso_width_cm`).
 
-- [ ] **Step 3 (optional product):** When `state.human_mesh in DEMO_HUMAN_MESHES`, show a non-clinical
-  warning banner; if so, register strings in `ui_copy.json` / `help_registry.json`. Help-page notes alone
-  are acceptable without a banner.
+- [x] **Step 3 (optional product):** Help-page notes alone (no banner) — `phantom_preview.md` documents
+  demo / non-clinical, Cosmic headless, Steamboat trademark caution. No `ui_copy` / help_registry change.
 
-- [ ] **Step 4: Integration tests** for shipped IDs only (files exist, discovered, PSD anchors via
-  `Phantom(..., phantom_dim=...)`). Parametrize only meshes that actually shipped.
+- [x] **Step 4: Integration tests** for shipped IDs only — `tests/unittests/test_demo_phantoms_integration.py`.
 
-- [ ] **Step 5: Run** targeted pytest — expect PASS.
+- [x] **Step 5: Run** targeted pytest — PASS.
 
-- [ ] **Step 6: Docs / help** — AGENTS, ADDITIONAL, FEATURE_INVENTORY, add **`demo_phantoms`** to
-  `feature_doc_matrix.json`, provenance, CHANGELOG (minor when released). Help: demo / non-clinical;
-  Steamboat trademark caution; SA note for Petite; Cosmic Buddha missing head/hands note.
+- [x] **Step 6: Docs / help** — AGENTS, ADDITIONAL, FEATURE_INVENTORY, **`demo_phantoms`** in
+  `feature_doc_matrix.json`, CHANGELOG, help sync. Petite remains blocked (noted).
 
-- [ ] **Step 7: Run gates** — `check_doc_freshness`; `check_sensitive_content --require-approved-assets`;
-  `check_ui_copy` / `check_help_registry` if banner/strings added. **Do not** `--write-notices` for meshes alone.
+- [x] **Step 7: Run gates** — freshness / sensitive / help registry as applicable. No `--write-notices`
+  for mesh-only.
 
-- [ ] **Step 8: Commit.**
+- [x] **Step 8: Commit.**
 
 ---
 

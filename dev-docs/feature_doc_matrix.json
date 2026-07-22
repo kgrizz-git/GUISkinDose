@@ -109,6 +109,31 @@
         "docs/source/gui_help/positioning_offsets.md"
       ]
     },
+    "demo_phantoms": {
+      "status": "shipped_with_leftovers",
+      "code": [
+        "src/mypyskindose/gui/helpers.py",
+        "src/mypyskindose/gui/constants.py",
+        "src/mypyskindose/phantom_data",
+        "scripts/phantom_gen/ingest_fun_mesh.py",
+        "scripts/phantom_gen/fun_mesh_manifest.json"
+      ],
+      "tests": [
+        "tests/unittests/test_demo_phantoms_integration.py",
+        "tests/unittests/test_phantom_gen_pipeline.py"
+      ],
+      "docs": [
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/ADDITIONAL_PHANTOMS.md",
+        "dev-docs/references/fun_phantom_provenance.md",
+        "dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md",
+        "CHANGELOG.md",
+        "AGENTS.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_preview.md"
+      ]
+    },
     "rich_exports": {
       "status": "shipped_with_leftovers",
       "code": [

@@ -61,11 +61,29 @@ from .settings_builder import build_settings, fallback_normalization_exam_count
 from .state import AppState
 
 _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
+_FUN_MESH_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
 _MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
 _MESH_TORSO_WIDTH_CACHE: dict[str, float] = {}
 _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
 _ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
+
+# Actually shipped demo / non-clinical mesh stems (dynamic discovery still globs all STLs).
+DEMO_HUMAN_MESHES: frozenset[str] = frozenset(
+    {
+        "cosmic_buddha",
+        "ramesses_ii",
+        "steamboat_willie",
+    }
+)
+
+_DEMO_DISPLAY_LABELS: dict[str, str] = {
+    "cosmic_buddha": "Cosmic Buddha (demo)",
+    "ramesses_ii": "Ramesses II (demo)",
+    "steamboat_willie": "Steamboat Willie (demo)",
+    # Blocked / not shipped — kept for label consistency if added later:
+    "petite_herculanaise": "Petite Herculanaise (demo)",
+}
 
 __all__ = [
     "EXAM_COLUMN",
@@ -95,7 +113,9 @@ __all__ = [
     "geometry_preview_caption",
     "get_example_rdsr_files",
     "get_excel_sheets",
+    "DEMO_HUMAN_MESHES",
     "get_human_mesh_names",
+    "get_human_mesh_options",
     "get_mesh_baseline_extents",
     "get_mesh_baseline_torso_width",
     "load_rdsr",
@@ -285,6 +305,50 @@ def get_human_mesh_names() -> list[str]:
     return sorted(p.stem for p in _PHANTOM_DATA_DIR.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
 
 
+def _title_case_mesh_stem(stem: str) -> str:
+    """Human-readable clinical label from a snake_case mesh stem."""
+    return stem.replace("_", " ").title()
+
+
+def get_human_mesh_options() -> dict[str, str]:
+    """Return NiceGUI ``ui.select`` options as ``{stem: display_label}``.
+
+    Dict **keys** are the bound values (file stems under ``phantom_data/``). Dict
+    **values** are display labels. Demo meshes that are actually shipped get a
+    ``(demo)`` suffix. Do not invert to label→stem — that would bind the label
+    string into ``state.human_mesh`` and break STL paths.
+    """
+    options: dict[str, str] = {}
+    for stem in get_human_mesh_names():
+        if stem in _DEMO_DISPLAY_LABELS and stem in DEMO_HUMAN_MESHES:
+            options[stem] = _DEMO_DISPLAY_LABELS[stem]
+        elif stem in DEMO_HUMAN_MESHES:
+            options[stem] = f"{_title_case_mesh_stem(stem)} (demo)"
+        else:
+            options[stem] = _title_case_mesh_stem(stem)
+    return options
+
+
+def _fun_manifest_torso_override(mesh_name: str) -> tuple[tuple[float, float] | None, float | None]:
+    """Optional ``torso_z_fraction_range`` / ``baseline_torso_width_cm`` from the fun manifest."""
+    if not _FUN_MESH_MANIFEST_PATH.is_file():
+        return None, None
+    try:
+        import json
+
+        data = json.loads(_FUN_MESH_MANIFEST_PATH.read_text(encoding="utf-8"))
+        entry = data.get("meshes", {}).get(mesh_name, {})
+    except Exception:
+        return None, None
+    band = entry.get("torso_z_fraction_range")
+    band_tuple: tuple[float, float] | None = None
+    if isinstance(band, (list, tuple)) and len(band) == 2:
+        band_tuple = (float(band[0]), float(band[1]))
+    width = entry.get("baseline_torso_width_cm")
+    width_val = float(width) if width is not None else None
+    return band_tuple, width_val
+
+
 def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
     """Load and cache full extents plus the below-arms torso-width measurement."""
     if mesh_name in _MESH_EXTENT_CACHE and mesh_name in _MESH_TORSO_WIDTH_CACHE:
@@ -310,13 +374,18 @@ def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
         z_span = extents[2]
         if isclose(z_span, 0.0, abs_tol=_ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM):
             raise ValueError("STL has no longitudinal extent")
-        band_start, band_end = _TORSO_WIDTH_Z_FRACTION_RANGE
-        torso_low = z_min + z_span * band_start
-        torso_high = z_min + z_span * band_end
-        torso_points = verts[(verts[:, 2] >= torso_low) & (verts[:, 2] <= torso_high), 0]
-        if torso_points.size == 0:
-            raise ValueError("STL has no vertices in the torso-width band")
-        torso_width = float(torso_points.max() - torso_points.min())
+
+        band_override, width_override = _fun_manifest_torso_override(mesh_name)
+        if width_override is not None and width_override > 0.0:
+            torso_width = float(width_override)
+        else:
+            band_start, band_end = band_override or _TORSO_WIDTH_Z_FRACTION_RANGE
+            torso_low = z_min + z_span * band_start
+            torso_high = z_min + z_span * band_end
+            torso_points = verts[(verts[:, 2] >= torso_low) & (verts[:, 2] <= torso_high), 0]
+            if torso_points.size == 0:
+                raise ValueError("STL has no vertices in the torso-width band")
+            torso_width = float(torso_points.max() - torso_points.min())
     except Exception as exc:
         safe_error_event(_gui_logger, "phantom_mesh_measurement", exc, level=logging.WARNING)
         extents = (0.0, 0.0, 0.0)

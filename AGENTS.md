@@ -84,7 +84,9 @@ Set `settings.output_format` to:
 
 Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`,
 `senior_male`, `senior_female`, plus MPFB parametric variants `pediatric_5y_*`, `pediatric_10y_*`,
-`adult_ectomorph_*`, `adult_endomorph_*`, `bariatric_class2_*` (male/female each)
+`adult_ectomorph_*`, `adult_endomorph_*`, `bariatric_class2_*` (male/female each), plus labeled
+**demo / non-clinical** meshes `cosmic_buddha`, `ramesses_ii`, `steamboat_willie` (GUI `(demo)` suffix;
+never use as dosimetry references)
 
 Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `scale_ap`, and
 `scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in

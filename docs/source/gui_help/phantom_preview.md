@@ -23,5 +23,9 @@ approximate — do not treat them as equal to calculation bounds.
 
 - Plane and cylinder models show a short “preview available for human mesh” note instead of a plot.
 - This panel does not replace the Geometry tab event/setup preview (which needs RDSR data).
+- Meshes labeled **(demo)** (for example Cosmic Buddha, Ramesses II, Steamboat Willie) are
+  **non-clinical**. Use them for visual demos only — not as dosimetry reference phantoms.
+  Cosmic Buddha is missing its head and hands. Steamboat Willie must not be marketed as
+  Disney “Mickey Mouse.”
 
 Related: [Phantom positioning and offsets](positioning_offsets.md).

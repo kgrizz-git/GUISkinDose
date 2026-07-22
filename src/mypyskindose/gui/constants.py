@@ -8,9 +8,9 @@ imports the tab modules), avoiding a circular import.
 
 from __future__ import annotations
 
-from .helpers import get_example_rdsr_files, get_human_mesh_names
+from .helpers import get_example_rdsr_files, get_human_mesh_options
 
-HUMAN_MESHES = get_human_mesh_names()
+HUMAN_MESHES = get_human_mesh_options()
 
 # Bundled example RDSR files, keyed by filename. The synthetic "fake_scanner.dcm"
 # is demoted to last so a real scanner is the default selection (dict insertion
