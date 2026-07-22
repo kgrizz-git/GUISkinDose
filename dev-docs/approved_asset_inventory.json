@@ -467,6 +467,28 @@
       }
     },
     {
+      "path": "src/mypyskindose/phantom_data/steamboat_willie.stl",
+      "sha256": "c2a3c27c78accce366529e9d92b4334dbd7760b7af986886a35dfa185b6cf4ea",
+      "kind": "opaque_binary",
+      "purpose": "Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; voxel-remeshed watertight)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl",
+      "sha256": "7c73b550e0b8d023719c4d01084a07ea4ebbb2bf60e1aab433e0e047a14e3527",
+      "kind": "opaque_binary",
+      "purpose": "Reduced Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
       "path": "src/mypyskindose/phantom_data/hudfrid.stl",
       "sha256": "808225ebf5529bcd996bd6f5840f6eb9001595d224d80b7ee88f9758da666faa",
       "kind": "opaque_binary",

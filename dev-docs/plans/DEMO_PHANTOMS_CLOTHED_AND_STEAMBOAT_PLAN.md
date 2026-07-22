@@ -369,20 +369,19 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 - Create: shipped STLs + `NOTICE_steamboat_willie.txt`
 - Modify: manifest, provenance, inventory (**both** STLs)
 
-- [ ] **Step 1: Download** Commons Cojocaru (**CC BY 4.0**). If watertight repair fails, try JoeBert
-  Sketchfab CC-BY (~5.6k tris) before any Quaternius filler.
+- [x] **Step 1: Download** Commons Cojocaru (**CC BY 4.0**).
 
-- [ ] **Step 2: Branding** — stem/UI `steamboat_willie` / “Steamboat Willie (demo)” only. Provenance: US PD
+- [x] **Step 2: Branding** — stem/UI `steamboat_willie` / “Steamboat Willie (demo)” only. Provenance: US PD
   1928 design + CC BY on 3D mesh + trademark caution.
 
-- [ ] **Step 3: Ingest** (~120 cm); NOTICE for BY; fill/cap + post-flip normal fix before/after decimate;
-  lock `flip_y`.
+- [x] **Step 3: Ingest** (~120 cm); NOTICE for BY; `voxel_pitch=4.5` remesh (raw not watertight);
+  lock `flip_y=true`.
 
-- [ ] **Step 4: Validate** full mesh + anterior-beam smoke on `siemens_axiom_example_procedure.dcm`.
+- [x] **Step 4: Validate** full mesh + anterior-beam smoke on `siemens_axiom_example_procedure.dcm`.
 
-- [ ] **Step 5: Install** + provenance + inventory both STLs.
+- [x] **Step 5: Install** + provenance + inventory both STLs.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ---
 

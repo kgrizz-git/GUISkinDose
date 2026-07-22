@@ -19,11 +19,15 @@
       "orientation_locked": true,
       "height_cm": 151.0,
       "height_axis": "z",
-      "rotate_deg": [0, 0, 0],
+      "rotate_deg": [
+        0,
+        0,
+        0
+      ],
       "flip_y": false,
       "target_faces": 6000,
       "face_up_frac": 0.55,
-      "face_up_band_frac": 0.20,
+      "face_up_band_frac": 0.2,
       "geometry_notes": "Standing draped figure ~151 cm; MISSING HEAD AND HANDS. Orientation LOCKED (2026-07-22) by depth-map discovery: raw axes already map to the PSD frame (raw Z=superior-inferior with crown/top at max Z, raw X=lateral, raw Y=anterior-posterior), so rotate_deg=[0,0,0] and height_axis=z. The carved 'realms' relief, arm/hand stubs, and scalloped robe hem are on the raw -Y face (anterior); the smooth back is +Y (posterior), so flip_y=false anchors the back to the table (y_max~=0) with the anterior toward -Y. No head means a weaker face-up cue: the face-up gate uses the superior 20% robe/torso band (face_up_band_frac=0.20); the raw mesh is already watertight (euler_number=2), so no hole-fill/Blender cap was needed.",
       "fallback_notes": "Single CC0 SI source. If the open base cannot be capped by trimesh or Blender, drop this ID rather than weaken the watertight gate."
     },
@@ -37,7 +41,11 @@
       "notice_required": true,
       "height_cm": 165.0,
       "height_axis": "z",
-      "rotate_deg": [0, 0, 0],
+      "rotate_deg": [
+        0,
+        0,
+        0
+      ],
       "flip_y": false,
       "target_faces": 6000,
       "face_up_frac": 0.55,
@@ -55,7 +63,11 @@
       "orientation_locked": true,
       "height_cm": 185.0,
       "height_axis": "z",
-      "rotate_deg": [90, 0, 0],
+      "rotate_deg": [
+        90,
+        0,
+        0
+      ],
       "flip_y": false,
       "target_faces": 6000,
       "voxel_pitch": 5.5,
@@ -74,13 +86,19 @@
       "notice_required": true,
       "height_cm": 120.0,
       "height_axis": "z",
-      "rotate_deg": [0, 0, 0],
-      "flip_y": false,
+      "rotate_deg": [
+        0,
+        0,
+        0
+      ],
+      "flip_y": true,
       "target_faces": 6000,
       "face_up_frac": 0.55,
       "face_up_band_frac": 0.12,
-      "geometry_notes": "Cartoon figure ~120 cm. NOTICE_steamboat_willie.txt required (BY). Fill/cap + post-flip normal fix before and after decimate.",
-      "fallback_notes": "Primary: Commons Cojocaru CC BY 4.0. If watertight repair fails, fall back to JoeBert Sketchfab CC-BY (~5.6k tris). Quaternius filler only if BOTH Steamboat sources entirely fail."
+      "geometry_notes": "Cartoon Steamboat Willie figure. Orientation LOCKED (2026-07-22): raw Z is standing height (floor near min Z, crown/hat at max Z), so rotate_deg=[0,0,0], height_axis=z, height_cm=120 (final ~121.5 cm after voxel remesh). Raw scan is NOT watertight (~144k faces, euler=82); fill_holes fails \u2192 voxel_pitch=4.5 cm marching-cubes remesh (~5676 faces, watertight). flip_y=true required for face-up (anterior toward -Y); --no-flip-y fails the face-up gate. NOTICE_steamboat_willie.txt required (CC BY 4.0). Trademark: stem steamboat_willie only.",
+      "fallback_notes": "Primary: Commons Cojocaru CC BY 4.0. If watertight repair fails, fall back to JoeBert Sketchfab CC-BY (~5.6k tris). Quaternius filler only if BOTH Steamboat sources entirely fail.",
+      "orientation_locked": true,
+      "voxel_pitch": 4.5
     }
   }
 }

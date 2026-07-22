@@ -176,3 +176,49 @@ require **no** changes for this blocker.
 | `src/mypyskindose/phantom_data/ramesses_ii_reduced_1000t.stl` | 1000 | `d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).
+
+---
+
+## Steamboat Willie (`steamboat_willie`)
+
+- **Object:** 3D model of the 1928 Steamboat Willie character design.
+- **License:** **CC BY 4.0** on the mesh (Adrian Cojocaru, Wikimedia Commons). The early 1928
+  character design is US public-domain (2024); **trademark caution** — product stem/label is
+  `steamboat_willie` / “Steamboat Willie (demo)” only (never “Mickey Mouse” / Disney affiliation).
+  Sidecar: `src/mypyskindose/phantom_data/NOTICE_steamboat_willie.txt`.
+- **Source (retrieved 2026-07-22):**
+  - Wikimedia Commons — `File:Steamboat_Willie_3D_Model.stl`
+    (`https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl`).
+
+### Locked ingest transform (discovered + locked 2026-07-22)
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `rotate_deg` | `[0, 0, 0]` | Raw Z is standing height (floor near min Z; hat/crown at max Z). |
+| `height_axis` | `z` | Scaled to 120 cm (final ≈ 121.5 cm after remesh padding). |
+| `height_cm` | `120.0` | Plan cartoon height. |
+| `flip_y` | **`true`** | Required for face-up; `--no-flip-y` fails the face-up gate. |
+| `target_faces` | `6000` | Remesh produced ~5676 faces (≤ budget). |
+| `voxel_pitch` | `4.5` | cm — raw ~144k faces, not watertight; fill_holes failed. |
+| `face_up_frac` / `face_up_band_frac` | `0.55` / `0.12` | Defaults; gate passed with `flip_y=true`. |
+
+### Repair / watertight
+
+- Raw mesh: ~143728 faces, `watertight=False`, `euler_number=82`. `fill_holes` did not close it.
+  Ingest used `voxel_pitch=4.5` marching-cubes remesh → single closed manifold (~5676 faces).
+
+### Validation + smoke results (2026-07-22)
+
+- `validate_phantom.py --require-trimesh`: **PASS** — 5676 faces, anchors OK, height ≈ 121.5 cm,
+  watertight `True`, face-up + outward normals (200/200), Phantom load OK.
+- **Anterior-beam smoke** on `siemens_axiom_example_procedure.dcm`: PSD ≈ **2.80 mGy**; top-30 dose
+  cells all on anterior (**−Y**) (mean Y ≈ −58 cm — cartoon proportions / large ears).
+
+### Installed assets
+
+| File | Faces | SHA-256 |
+|------|-------|---------|
+| `src/mypyskindose/phantom_data/steamboat_willie.stl` | 5676 | `c2a3c27c78accce366529e9d92b4334dbd7760b7af986886a35dfa185b6cf4ea` |
+| `src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl` | 1000 | `7c73b550e0b8d023719c4d01084a07ea4ebbb2bf60e1aab433e0e047a14e3527` |
+
+Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).

@@ -12,6 +12,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Steamboat Willie (demo) phantom** (2026-07-22) — Task 5 of
+  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `steamboat_willie` (Wikimedia
+  Commons, Adrian Cojocaru, **CC BY 4.0**) with `NOTICE_steamboat_willie.txt`, locked transform
+  (`rotate_deg=[0,0,0]`, `height_cm=120`, `flip_y=true`, `voxel_pitch=4.5`), ~5.7k-face full STL +
+  `_reduced_1000t`. Trademark-safe labeling only (`steamboat_willie`). Fun-mode validate + anterior-beam
+  smoke pass. Provenance + dual inventory hashes. **Minor** SemVer bump on release when demos ship.
+
 - **Ramesses II (demo) phantom** (2026-07-22) — Task 4 of
   `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `ramesses_ii` (Wikimedia Commons,
   Dejp3, **CC BY 4.0**) with `NOTICE_ramesses_ii.txt`, locked transform (`rotate_deg=[90,0,0]`,
