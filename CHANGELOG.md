@@ -40,10 +40,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   Herculanaise (**CC BY-SA**), Ramesses II (**CC BY 4.0**), and Steamboat Willie (**CC BY 4.0**) with
   scale/rotate ingest, watertight validate, NOTICE sidecars, and GUI `(demo)` labels. Linked from
   `TO_DO.md`, `index.md`, and `ADDITIONAL_PHANTOMS.md`. Broader fun-demo survey / Venus–David D1 backlog
-  remains in `FUN_DEMO_PHANTOMS_PLAN.md`. Updated after assessment: unified GUI display→stem map, fill/cap +
-  fix winding before decimate, dual STL inventory, scale/`--no-unit-detect` order, optional torso overrides;
-  mesh credits via NOTICE/provenance (**not** `THIRD_PARTY_NOTICES.md`). Added **face-up supine gate**
-  (manifest `flip_y`; do not trust asymmetric `flip_y_if_needed` on symmetric statues).
+  remains in `FUN_DEMO_PHANTOMS_PLAN.md`. Independent-review fold-in: NiceGUI `{stem: label}` options
+  (not label→stem), re-fix normals after Y-flip, fun-mode `--require-trimesh` + ≤20k faces, tunable
+  `face_up_frac`, `demo_phantoms` feature_doc_matrix row, validate full STL only; plus prior items
+  (dual inventory, scale/`--no-unit-detect`, torso overrides, smoke on
+  `example_data/RDSR/siemens_axiom_example_procedure.dcm`, NOTICE ≠ `THIRD_PARTY_NOTICES.md`).
 
 - **Settings phantom preview plan** (2026-07-22) — `dev-docs/plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md` for a
   live Plotly preview of the selected human mesh on Settings (no RDSR; prefer `_reduced_1000t`; **live
