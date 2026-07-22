@@ -277,20 +277,28 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 - Modify: `fun_mesh_manifest.json` (lock rotation + `flip_y`), `fun_phantom_provenance.md`,
   `dev-docs/approved_asset_inventory.json` (**both** STLs)
 
-- [ ] **Step 1: Download** Smithsonian CC0 mesh (browser OK); confirm object page still says CC0.
+- [x] **Step 1: Download** Smithsonian CC0 mesh (browser OK); confirm object page still says CC0.
+  Retrieved 2026-07-22 from the ~7.5 MB / ~150k-face Wikimedia Commons mirror
+  (`File:Cosmic-buddha-laser-scan-150k (Smithsonian Institution).stl`); CC0 confirmed via the Commons
+  API (`LicenseShortName=CC0`). SI object slug corrected to `…realms-existence…`.
 
-- [ ] **Step 2: Discover + lock** upright→supine rotation + `flip_y`; ingest ~151–170 cm / ~6k faces + 1000t.
+- [x] **Step 2: Discover + lock** upright→supine rotation + `flip_y`; ingest ~151–170 cm / ~6k faces + 1000t.
   Note missing head/hands in provenance; use superior-20% face-up band and tune `face_up_frac` if needed.
+  Locked `rotate_deg=[0,0,0]`, `height_axis=z`, `height_cm=151`, `flip_y=false`, `face_up_band_frac=0.20`
+  (raw axes already map to PSD; anterior relief on raw −Y). Ingested to 6000 faces + `_reduced_1000t`.
 
-- [ ] **Step 3: Validate** full mesh (`--require-trimesh`, face-up + normals) + anterior-beam smoke on
+- [x] **Step 3: Validate** full mesh (`--require-trimesh`, face-up + normals) + anterior-beam smoke on
   `siemens_axiom_example_procedure.dcm` + `plot_setup` smoke. Repair robe holes / open base (Blender
   fallback OK). If unrepairable, document and skip shipping this ID.
+  All gates PASS (watertight True, ≤20k faces, face-up, outward normals 200/200); anterior-beam smoke
+  entrance on −Y (PSD ≈ 16.3 mGy); `plot_setup` builds cleanly. Raw mesh already watertight — no cap needed.
 
-- [ ] **Step 4: Install** + provenance (CC0 / SI credit encouraged) + inventory hash **for both**
+- [x] **Step 4: Install** + provenance (CC0 / SI credit encouraged) + inventory hash **for both**
   `cosmic_buddha.stl` and `cosmic_buddha_reduced_1000t.stl` with review fields; run
-  `python scripts/render_asset_inventory.py --write`.
+  `python scripts/render_asset_inventory.py --write`. Done; `dev-docs/references/fun_phantom_provenance.md`
+  created; both STLs hash-pinned; inventory Markdown regenerated.
 
-- [ ] **Step 5: Commit** shipped STLs + provenance/inventory/docs deltas for this mesh.
+- [x] **Step 5: Commit** shipped STLs + provenance/inventory/docs deltas for this mesh.
 
 ---
 

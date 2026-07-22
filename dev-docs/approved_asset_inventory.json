@@ -423,6 +423,28 @@
       }
     },
     {
+      "path": "src/mypyskindose/phantom_data/cosmic_buddha.stl",
+      "sha256": "cd6c5428bb0292740251fb990954f1a9e4cfc9e7abcdf3109c04edd7f63c3a1a",
+      "kind": "opaque_binary",
+      "purpose": "Cosmic Buddha (demo) non-clinical phantom mesh (Smithsonian CC0; missing head/hands)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl",
+      "sha256": "66d9ae78a9d74662d18dc1b3490664fb3168ea3ebf70ea19fda5da3d5588a142",
+      "kind": "opaque_binary",
+      "purpose": "Reduced Cosmic Buddha (demo) non-clinical phantom mesh (Smithsonian CC0)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
       "path": "src/mypyskindose/phantom_data/hudfrid.stl",
       "sha256": "808225ebf5529bcd996bd6f5840f6eb9001595d224d80b7ee88f9758da666faa",
       "kind": "opaque_binary",

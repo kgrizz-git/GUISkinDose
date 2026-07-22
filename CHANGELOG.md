@@ -12,6 +12,20 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Cosmic Buddha (demo) phantom** (2026-07-22) — Task 2 of
+  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. First shipped demo / non-clinical
+  phantom: `cosmic_buddha` (Smithsonian Institution, Freer Gallery of Art; **CC0**). Ingested from the
+  ~150k-face Wikimedia Commons mirror via `ingest_fun_mesh.py` with a locked transform
+  (`rotate_deg=[0,0,0]`, `height_axis=z`, `height_cm=151`, `flip_y=false`, headless face-up band
+  `face_up_band_frac=0.20`), shipping `cosmic_buddha.stl` (6000 faces) + `cosmic_buddha_reduced_1000t.stl`.
+  Full-mesh fun-mode validation passes (watertight `True`, ≤20k faces, face-up + outward-normal gates);
+  anterior-beam smoke on `example_data/RDSR/siemens_axiom_example_procedure.dcm` confirms entrance on the
+  anterior (−Y) side (PSD ≈ 16.3 mGy). The statue is **missing its head and hands** — expect odd habitus
+  labels and a weaker face cue. Discoverable via `get_human_mesh_names()`; GUI `(demo)` labels land in
+  Task 6. Provenance in `dev-docs/references/fun_phantom_provenance.md`; both STLs hash-pinned in
+  `dev-docs/approved_asset_inventory.json`. CC0 → no `NOTICE_*.txt` sidecar and no
+  `THIRD_PARTY_NOTICES.md` change. Shipping a new asset → **minor** SemVer bump on release.
+
 - **Fun / demo phantom ingest scaffolding** (2026-07-22) — Task 1 of
   `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. New
   `scripts/phantom_gen/fun_mesh_manifest.json` (locked source URLs, licenses, placeholder

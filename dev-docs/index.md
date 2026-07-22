@@ -60,6 +60,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
 | [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) | Shipped human-mesh inventory, preferred MPFB generation path, external phantom sources, fun/stylized/historical summary, and STL integration checklist (normals, frame, triangle budget, license/privacy). |
 | [references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) | Free/open-license candidate meshes for stylized characters, parametric humans, and public-domain classical/historical figures (license tiers for shipping). |
+| [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md) | Source, license, retrieval date, locked ingest transform, repair notes, and validate/smoke results for shipped **demo / non-clinical** phantoms (Cosmic Buddha, …). |
 
 ---
 

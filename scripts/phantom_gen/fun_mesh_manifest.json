@@ -11,10 +11,12 @@
     "cosmic_buddha": {
       "id": "cosmic_buddha",
       "phase": 1,
-      "source_url": "https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-desire:d8c62be8-4ebc-11ea-b77f-2e728ce88125",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Cosmic-buddha-laser-scan-150k_(Smithsonian_Institution).stl",
+      "source_url_si": "https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-existence:d8c62be8-4ebc-11ea-b77f-2e728ce88125",
       "license": "CC0",
-      "attribution": "Smithsonian 3D (Freer Gallery of Art). CC0 public-domain dedication; SI credit encouraged but not required.",
+      "attribution": "Smithsonian Institution (Freer Gallery of Art), 'Buddha draped in robes portraying the Realms of Existence'. CC0 public-domain dedication; SI credit encouraged but not required. Retrieved via the Wikimedia Commons 150k-face mirror (~7.5 MB), not the 2.88 GB full-resolution scan.",
       "notice_required": false,
+      "orientation_locked": true,
       "height_cm": 151.0,
       "height_axis": "z",
       "rotate_deg": [0, 0, 0],
@@ -22,7 +24,7 @@
       "target_faces": 6000,
       "face_up_frac": 0.55,
       "face_up_band_frac": 0.20,
-      "geometry_notes": "Standing draped figure ~151 cm; MISSING HEAD AND HANDS. Rotate upright->supine. No head means a weaker face-up cue: apply the face-up gate to the superior 20% robe/torso band (face_up_band_frac=0.20) and record the exception in provenance. May need Blender hole-fill for an open base.",
+      "geometry_notes": "Standing draped figure ~151 cm; MISSING HEAD AND HANDS. Orientation LOCKED (2026-07-22) by depth-map discovery: raw axes already map to the PSD frame (raw Z=superior-inferior with crown/top at max Z, raw X=lateral, raw Y=anterior-posterior), so rotate_deg=[0,0,0] and height_axis=z. The carved 'realms' relief, arm/hand stubs, and scalloped robe hem are on the raw -Y face (anterior); the smooth back is +Y (posterior), so flip_y=false anchors the back to the table (y_max~=0) with the anterior toward -Y. No head means a weaker face-up cue: the face-up gate uses the superior 20% robe/torso band (face_up_band_frac=0.20); the raw mesh is already watertight (euler_number=2), so no hole-fill/Blender cap was needed.",
       "fallback_notes": "Single CC0 SI source. If the open base cannot be capped by trimesh or Blender, drop this ID rather than weaken the watertight gate."
     },
     "petite_herculanaise": {

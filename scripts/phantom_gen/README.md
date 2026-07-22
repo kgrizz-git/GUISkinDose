@@ -170,7 +170,8 @@ for shipped demo meshes:
   `0.12`; use `0.20` for the headless Cosmic Buddha), requires
   `y_min_headband ≤ y_max − face_up_frac × thickness_y` (default
   `--face-up-frac 0.55`);
-- runs an **outward-normal** ray gate (trimesh `RayMeshIntersector`): a majority
+- runs an **outward-normal** ray gate (dependency-free Möller–Trumbore first-hit;
+  no ``rtree``/embree required): a majority
   of sampled first hits must satisfy `dot(n, ray_direction) < 0`.
 
 ```bash
