@@ -86,3 +86,46 @@ renders (side, top, and per-face depth maps), then locked in `fun_mesh_manifest.
 | `src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl` | 1000 | `66d9ae78a9d74662d18dc1b3490664fb3168ea3ebf70ea19fda5da3d5588a142` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).
+
+---
+
+## Petite Herculanaise (`petite_herculanaise`) — NOT SHIPPED (blocked 2026-07-22)
+
+- **Object:** "Petite Herculanaise" (Small Herculaneum Woman), draped female statue at the Musée du
+  Louvre, Paris; a Scan the World scan.
+- **Intended license (target):** **CC BY-SA** — a redistributable, non-NonCommercial license so the
+  mesh derivative can ship with a `NOTICE_petite_herculanaise.txt` sidecar while the app stays MIT.
+
+### Blocker: no accessible non-NonCommercial STL
+
+No copy of this mesh could be obtained under a redistributable **non-NC** license without an
+interactive browser login. Every openly downloadable mirror is **NonCommercial**, which the plan
+forbids shipping. Sources checked on 2026-07-22:
+
+| Source | License (as shown) | Downloadable unauthenticated? | Verdict |
+|--------|--------------------|-------------------------------|---------|
+| [Cults3D — Louvre account, design 32587](https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris) | **CC BY-SA** (page: "CCby🔁", "No AI") | **No** — download endpoint returns HTTP 403 behind a Cloudflare challenge (`cf-mitigated: challenge`) and requires a logged-in Cults account | Blocked: interactive login required |
+| [MyMiniFactory — Scan the World object 6356](https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356) | **CC BY-NC-SA** | Login required; license is NC regardless | **Abort (NC)** per plan |
+| [Zenodo mirror — DOI 10.5281/zenodo.20223576](https://doi.org/10.5281/zenodo.20223576) (Scan-the-World, 2026) | **CC BY-NC-SA 4.0** (Zenodo API `metadata.license.id = cc-by-nc-sa-4.0`; files: `.glb`, `.usdz`, no STL) | **Yes** (open access) | **Abort (NC)** per plan |
+| Wikimedia Commons | n/a | Photographs only — **no STL** of this statue (Commons STL search for "Herculan" → 0 hits) | No mesh available |
+
+### License-integrity concern
+
+The **same** underlying Scan the World scan is published as **CC BY-NC-SA** at its origin
+(MyMiniFactory) and on the Zenodo mirror, while only the Cults listing shows **CC BY-SA** (no NC).
+Because the authoritative Scan the World terms for this asset appear to be NonCommercial, the Cults
+"CC BY-SA" label cannot be relied upon for a clean non-NC redistribution without further
+verification. This is an additional reason not to ship until the license is resolved on an
+accessible source.
+
+### What would unblock Task 3
+
+- An interactive Cults download (logged-in browser) that yields `louvre-petite-herculanaise-1.stl`
+  under **CC BY-SA**, saved to `tmp/fun_phantoms/raw/petite_herculanaise/`, **and** confirmation
+  that this specific asset is genuinely non-NC; **or**
+- Any other mirror offering the STL under CC0 / CC BY / CC BY-SA (no NC).
+
+Until then, `petite_herculanaise` is **not shipped**: no STL is installed under `phantom_data/`, no
+`NOTICE_petite_herculanaise.txt`, and no inventory entry is added. The manifest keeps its
+placeholder `petite_herculanaise` entry (orientation not locked). The ingest pipeline and README
+require **no** changes for this blocker.

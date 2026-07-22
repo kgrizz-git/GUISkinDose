@@ -302,7 +302,19 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 
 ---
 
-### Task 3: Petite Herculanaise (`petite_herculanaise`)
+### Task 3: Petite Herculanaise (`petite_herculanaise`) — BLOCKED (2026-07-22)
+
+> **Status: BLOCKED — not shipped.** No non-NonCommercial STL is obtainable without an interactive
+> Cults login. The only **CC BY-SA** listing (Cults3D, design 32587) sits behind a Cloudflare
+> challenge + account login (download endpoint returns HTTP 403 `cf-mitigated: challenge`). Every
+> openly downloadable mirror is **NonCommercial**: MyMiniFactory 6356 = **CC BY-NC-SA**; the Zenodo
+> mirror (DOI 10.5281/zenodo.20223576) = **CC BY-NC-SA 4.0** (and ships only `.glb`/`.usdz`, no STL);
+> Wikimedia Commons has photos only, no STL. Because the same Scan the World scan is NC at its origin
+> and mirror, even the Cults "CC BY-SA" label is not a reliable non-NC source without further
+> verification. Per plan policy (abort if NC; do not invent a mesh), Task 3 is left incomplete.
+> Full detail + unblock criteria in
+> [`../references/fun_phantom_provenance.md`](../references/fun_phantom_provenance.md) → *Petite
+> Herculanaise* section. Ship policy allows continuing with the remaining IDs without blocking release.
 
 **Files:**
 - Create: shipped STLs + `NOTICE_petite_herculanaise.txt`
@@ -310,15 +322,23 @@ Do **not** run `python scripts/check_licenses.py --write-notices` solely because
 
 - [ ] **Step 1: Download** from Cults (license **CC BY-SA** explicit; login/browser OK). If using MMF
   instead, record the license panel and abort if NC.
+  > BLOCKED: Cults download requires interactive login (Cloudflare challenge, HTTP 403); MMF 6356 and
+  > the Zenodo mirror are both **CC BY-NC-SA** (NC → abort); no CC0/BY/BY-SA STL mirror exists on
+  > Commons. No raw file saved to `tmp/fun_phantoms/raw/petite_herculanaise/`.
 
 - [ ] **Step 2: Ingest** with upright→supine rotation + locked `flip_y`; NOTICE sidecar (attribution + SA
   note that **mesh derivatives** stay SA-compatible; app code remains MIT).
+  > Not started — no source mesh (see Step 1 blocker).
 
 - [ ] **Step 3: Validate** full mesh + anterior-beam smoke on `siemens_axiom_example_procedure.dcm` + GUI smoke.
+  > Not started — no source mesh.
 
 - [ ] **Step 4: Install** + provenance + inventory both STLs + short LICENSE_COMPLIANCE redistributed-asset note.
+  > Not started — no source mesh. (Blocker is documented in provenance; `LICENSE_COMPLIANCE.md`
+  > redistributed-asset note deferred until a mesh actually ships.)
 
 - [ ] **Step 5: Commit.**
+  > Documentation-only blocker note committed; no STLs, NOTICE, or inventory entries added.
 
 ---
 
