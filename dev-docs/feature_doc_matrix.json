@@ -67,10 +67,13 @@
       "code": [
         "src/mypyskindose/phantom_class.py",
         "src/mypyskindose/gui/helpers.py",
-        "src/mypyskindose/gui/tabs/settings.py"
+        "src/mypyskindose/gui/tabs/settings.py",
+        "src/mypyskindose/gui/phantom_preview.py",
+        "src/mypyskindose/gui/phantom_preview_controller.py"
       ],
       "tests": [
         "tests/unittests/test_phantom_scaling.py",
+        "tests/unittests/test_gui_phantom_preview.py",
         "tests/gui/test_gui_helpers.py",
         "tests/gui/test_gui_flows.py",
         "tests/unittests/test_gui_summary_formatters.py"
@@ -81,6 +84,28 @@
         "CHANGELOG.md"
       ],
       "help": [
+        "docs/source/gui_help/positioning_offsets.md",
+        "docs/source/gui_help/phantom_preview.md"
+      ]
+    },
+    "settings_phantom_preview": {
+      "status": "shipped",
+      "code": [
+        "src/mypyskindose/gui/phantom_preview.py",
+        "src/mypyskindose/gui/phantom_preview_controller.py",
+        "src/mypyskindose/gui/tabs/settings.py",
+        "src/mypyskindose/gui/page_context.py"
+      ],
+      "tests": [
+        "tests/unittests/test_gui_phantom_preview.py"
+      ],
+      "docs": [
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md",
+        "CHANGELOG.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_preview.md",
         "docs/source/gui_help/positioning_offsets.md"
       ]
     },

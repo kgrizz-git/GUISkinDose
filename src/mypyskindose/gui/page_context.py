@@ -52,6 +52,9 @@ class PageContext:
     # Geometry tab registers this so Settings changes that affect phantom geometry
     # can request the same debounced preview refresh used by Geometry controls.
     refresh_geometry_preview: Callable[[], None] = field(default=_noop)
+    # Settings tab registers this for the no-RDSR human-mesh preview; pose-changing
+    # controls (Settings, Geometry offsets, per-exam offsets) call the same schedule.
+    refresh_phantom_preview: Callable[[], None] = field(default=_noop)
     # Refresh sliders and captions when the user navigates into this tab.
     # Default no-op — geometry.py wires it on build.
     refresh_geometry_tab: Callable[[], None] = field(default=_noop)

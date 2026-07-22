@@ -451,7 +451,7 @@ Falls back to `settings_example.json` if nothing provided.
 | Surface | Behavior |
 |---------|----------|
 | **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); PAUSED when composite `plot_procedure` > 30 events |
-| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview |
+| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview; **live 3D human-mesh preview** (no RDSR; prefers `_reduced_1000t`; reflects scales, orientation, and active-exam offsets) |
 | **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
 | **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections |
 | **Upload tab** | Click exam card → set active index and open Geometry tab |

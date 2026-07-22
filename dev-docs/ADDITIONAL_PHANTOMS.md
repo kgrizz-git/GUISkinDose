@@ -86,12 +86,13 @@ Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to shi
 | Kind | Good starting points | Shipping note |
 |------|----------------------|---------------|
 | Realistic parametric | MakeHuman / MPFB (core assets **CC0**) | Preferred generation path already |
-| Stylized / cartoon | [Quaternius](https://quaternius.com/), [Kenney.nl](https://kenney.nl/assets) (**CC0**) | Best open-license fun candidates |
-| *Venus de Milo* | Prefer **SMK** plaster-cast scan (**CC0** / PDM) | Easy download; recline + decimate + re-anchor (see below) |
-| Michelangelo’s *David* | Scan the World on **Wikimedia Commons** (**CC BY-SA 4.0**) | Easy download; attribution + share-alike on the mesh; large file |
-| Other classical scans | [Scan the World](https://www.myminifactory.com/scantheworld/) | **Per-object** license (some NC — do not assume) |
-| Historical figures | [Smithsonian 3D](https://3d.si.edu/) Open Access (**CC0** when marked) | Check each object page |
-| Steamboat Willie–era Mickey | Fan STLs on Printables / Sketchfab | Only the **1928** design is PD in the US; later Mickey + trademarks still apply — see reference doc |
+| Stylized / original cartoon | [Quaternius](https://quaternius.com/), [Kenney.nl](https://kenney.nl/assets) (**CC0**) | Safest fun candidates (no franchise trademarks) |
+| Clothed / draped full-body | Cosmic Buddha (**CC0**); Petite Herculanaise (**CC BY-SA**); Ramesses II (**CC BY 4.0**) | Try all three in v1 (scale/rotate); see plan |
+| Historical busts / portraits | [Smithsonian 3D](https://3d.si.edu/) Open Access (**CC0** when marked) — e.g. Lincoln | Fallback only (not full-body) |
+| *Venus de Milo* | Prefer **SMK** plaster-cast scan (**CC0** / PDM) | Easy download; **nude art** — plan decision D1 |
+| Michelangelo’s *David* | Scan the World on **Wikimedia Commons** (**CC BY-SA 4.0**) | Easy download; nude art — D1; SA on mesh |
+| Other classical / historical statues | [Scan the World](https://www.myminifactory.com/scantheworld/), SMK | **Per-object** license; many togas are **NC** — skip those |
+| Steamboat Willie / Popeye / book Pooh | Commons / Thingiverse / Printables (verify) | Early PD designs only; mesh license separate; see reference doc |
 | Mixamo / Daz free bases | Mixamo, Daz starters | Private experiments only; **do not commit raw meshes** |
 
 Still apply the [integration checklist](#integration-checklist) (cm scale, table-contact frame, watertight mesh, outward normals). Label fun meshes as demo/non-clinical in the UI.
@@ -108,7 +109,11 @@ Still apply the [integration checklist](#integration-checklist) (cm scale, table
 
 **CC BY-SA note:** Does not relicense the MIT application code. It does require attribution and that **modified versions of that mesh** stay under a compatible share-alike license; put credit + license in catalog metadata / notices next to the STL.
 
-**Mickey Mouse:** Not a default shipping candidate. Only the **1928 Steamboat Willie** depiction entered the US public domain (2024); later designs remain copyrighted, and Disney trademarks still restrict branding/confusion. Fan meshes exist, but prefer Quaternius/Kenney for cartoon phantoms.
+**Mickey Mouse:** Only the **1928 Steamboat Willie** depiction is PD in the US (2024); later designs + Disney trademarks still apply. Shippable mesh: [Commons](https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl) (**CC BY 4.0**). Other early PD cartoons (Popeye 2025, book Pooh ~2022) and clothed full-body scans (Smithsonian Cosmic Buddha CC0, etc.) are surveyed in the reference doc.
+
+**Execution plan (v1 — Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat):**
+[`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+Venus/David and Phase 2 cartoons remain on [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](plans/FUN_DEMO_PHANTOMS_PLAN.md).
 
 **Full source list, formats, and license caveats:** [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
 
@@ -192,6 +197,8 @@ With a known anterior LAO (or similar) projection on a trusted RDSR, PSD should 
 
 ## Related documents
 
+- [`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — **active v1:** Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat
+- [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](plans/FUN_DEMO_PHANTOMS_PLAN.md) — broader backlog (Venus/David D1, Phase 2 PD cartoons)
 - [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — generation runbook and catalog policy
 - [`assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) — Phase 0 headless spike result
 - [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) — stylized, cartoon, and public-domain figure mesh sources

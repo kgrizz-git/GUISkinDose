@@ -10,14 +10,67 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Added
+
+- **Settings phantom preview** (2026-07-22) — live Plotly human-mesh preview on Settings (no RDSR).
+  Prefers `_reduced_1000t` when present; dose still uses the full STL. Reflects habitus scales,
+  patient orientation, and patient offsets (active exam in multi-exam mode). Debounced refresh via
+  `ctx.refresh_phantom_preview` with stale-request guarding; `uirevision` preserves camera orbit
+  across scale updates. Help: `docs/source/gui_help/phantom_preview.md`.
+
+### Fixed
+
+- **MPFB catalog reduced previews (Settings scatter)** (2026-07-22) — Settings uses
+  ``*_reduced_1000t`` while Geometry uses the full STL. The 10 catalog reduced meshes had been
+  regenerated without ``trimesh``/``fast-simplification``, so ``generate_reduced`` silently
+  triangle-subsampled (~2700 unique verts / 1000 faces → disconnected beige fragments). Regenerated
+  with quadric decimation (~502 unique verts); ``generate_reduced`` now requires real decimation by
+  default (``--allow-subsample`` for tests only). Optional extra: ``pip install -e ".[phantom-gen]"``.
+
+- **MPFB catalog phantoms face-up** (2026-07-22) — the 10 shipped parametric meshes
+  (`pediatric_*`, `adult_ecto/endomorph_*`, `bariatric_class2_*`) were face-down on the table
+  because `transform_to_psd_frame`’s Y-flip heuristic is a no-op on near-symmetric MPFB depth.
+  Reoriented all 10 (Y-flip + winding fix), regenerated `_reduced_1000t`, refreshed inventory hashes.
+  `run_catalog.py` now uses ``force_flip_y=True``; CLI adds ``--force-flip-y``.
+
+### Added
+
+- **Clothed + Steamboat demo phantoms plan** (2026-07-22) —
+  `dev-docs/plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` to ship Cosmic Buddha (**CC0**), Petite
+  Herculanaise (**CC BY-SA**), Ramesses II (**CC BY 4.0**), and Steamboat Willie (**CC BY 4.0**) with
+  scale/rotate ingest, watertight validate, NOTICE sidecars, and GUI `(demo)` labels. Linked from
+  `TO_DO.md`, `index.md`, and `ADDITIONAL_PHANTOMS.md`. Broader fun-demo survey / Venus–David D1 backlog
+  remains in `FUN_DEMO_PHANTOMS_PLAN.md`. Updated after assessment: unified GUI display→stem map, fill/cap +
+  fix winding before decimate, dual STL inventory, scale/`--no-unit-detect` order, optional torso overrides;
+  mesh credits via NOTICE/provenance (**not** `THIRD_PARTY_NOTICES.md`). Added **face-up supine gate**
+  (manifest `flip_y`; do not trust asymmetric `flip_y_if_needed` on symmetric statues).
+
+- **Settings phantom preview plan** (2026-07-22) — `dev-docs/plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md` for a
+  live Plotly preview of the selected human mesh on Settings (no RDSR; prefer `_reduced_1000t`; **live
+  habitus `scale_lat/ap/lon` + patient offsets**; orientation via `position_patient_phantom_on_table`).
+  Revised after subagent review and assessments: async debounce + stale-id;
+  `ctx.refresh_phantom_preview`; Plotly `uirevision`; lightweight hover text; `COLOR_*` styling;
+  cylinder/plane preview deferred; **`PreviewSnapshot`** (no live `state` on worker); multi-exam
+  **active-exam** offsets; cross-tab refresh call sites + mount-time paint; reuse
+  `GEOMETRY_DEBOUNCE_SEC`; preview controller extraction; `copy_text` / `feature_doc_matrix`.
+
+- **Fun demo phantoms plan** (2026-07-21) — `dev-docs/plans/FUN_DEMO_PHANTOMS_PLAN.md` to ship Venus de Milo
+  (SMK **CC0**), Michelangelo’s David (Scan the World **CC BY-SA 4.0**), and Steamboat Willie (Commons **CC BY
+  4.0**) as labeled non-clinical phantoms; linked from `TO_DO.md`, `index.md`, and phantom source docs. Updated
+  after review: transform `--no-obj-y-up` contract, watertight/GUI/NOTICE fixes, nude-sculpture decision gate,
+  Steamboat Willie alternates, **clothed full-body try trio** (Cosmic Buddha **CC0**, Petite Herculanaise
+  **CC BY-SA**, Ramesses II **CC BY 4.0**; Lincoln bust fallback), and Phase 2 PD cartoons (Popeye, book Pooh).
+  **2026-07-22:** v1 clothed+Steamboat execution split to `DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`.
+
 ### Changed
 
 - **Fun / public-domain phantom mesh survey** (2026-07-21) — added
   `dev-docs/references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md` (stylized CC0 characters, MakeHuman,
-  classical sculpture scans, Smithsonian Open Access, Mixamo/Daz shipping caveats) and a short summary
-  section in `ADDITIONAL_PHANTOMS.md`; registered in `dev-docs/index.md`. Updated with Steamboat Willie /
-  Mickey caveats, convertible format notes (`.obj`/`.ply`/… → STL), and concrete **Venus de Milo** (SMK
-  **CC0**) / **David** (Scan the World **CC BY-SA 4.0**) license and integration guidance.
+  classical sculpture scans, Smithsonian Open Access clothed full-body and busts, Mixamo/Daz shipping caveats)
+  and a short summary section in `ADDITIONAL_PHANTOMS.md`; registered in `dev-docs/index.md`. Updated with
+  Steamboat Willie / Mickey caveats, convertible format notes (`.obj`/`.ply`/… → STL), concrete **Venus de Milo**
+  (SMK **CC0**) / **David** (Scan the World **CC BY-SA 4.0**) guidance, and **clothed full-body** statue leads
+  (Cosmic Buddha, Petite Herculanaise; NC toga traps).
 
 - **`ADDITIONAL_PHANTOMS.md` consolidated** (2026-07-21) — rewrote the layered review appendices into one reference:
   shipped mesh inventory, preferred MPFB path, external sources (with corrected XCAT/Mesh50 license notes),

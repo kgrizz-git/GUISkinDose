@@ -52,6 +52,9 @@ source .venv/bin/activate
 # One entry
 python scripts/phantom_gen/run_catalog.py --only pediatric_5y_male
 
+# Reduced-preview deps (quadric decimation; do not ship triangle-subsample fallbacks)
+pip install -e ".[phantom-gen]"
+
 # All P0 (writes tmp/phantom_gen/…); reduced previews
 python scripts/phantom_gen/run_catalog.py --priority P0 --out-dir tmp/phantom_gen/p0
 python scripts/phantom_gen/generate_reduced.py tmp/phantom_gen/p0/*.stl --out-dir tmp/phantom_gen/p0
@@ -73,9 +76,15 @@ Anti-balloon affine controls use gender-matched MPFB refs (`_shape_ref_adult_mal
 blender -b -P scripts/phantom_gen/mpfb_generate.py -- \
   --catalog scripts/phantom_gen/spike_catalog.json --catalog-id spike_adult_male
 python scripts/phantom_gen/transform_to_psd_frame.py tmp/phantom_gen/spike_adult_male.obj \
-  -o tmp/phantom_gen/spike_adult_male.stl
+  -o tmp/phantom_gen/spike_adult_male.stl --force-flip-y
 python scripts/phantom_gen/validate_phantom.py tmp/phantom_gen/spike_adult_male.stl
 ```
+
+MPFB/Blender OBJ exports are often near-symmetric in depth, so the default
+`flip_y_if_needed` heuristic is a no-op and can leave meshes **face-down**
+(face toward the table at max Y). Catalog generation (`run_catalog.py`) always
+passes ``force_flip_y=True``. For one-off CLI transforms of MPFB OBJs, use
+``--force-flip-y`` so the posterior lands at max Y (face-up supine).
 
 ## Tests
 

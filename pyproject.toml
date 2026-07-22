@@ -65,6 +65,12 @@ privacy-scan = [
     "presidio-analyzer>=2.2.360,<3",
     "spacy>=3.8,<4",
 ]
+# Headless phantom library tooling (reduced Mesh3d previews need real quadric
+# decimation — triangle subsample looks like scatter fragments in Settings).
+phantom-gen = [
+    "trimesh>=4",
+    "fast-simplification",
+]
 dev = [
     "basedpyright>=1.23",
     "pandas-stubs>=2.2",

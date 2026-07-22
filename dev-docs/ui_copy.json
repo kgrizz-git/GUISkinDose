@@ -5,6 +5,18 @@
       "text": "Click for help",
       "owner": "gui/components/help_button.py"
     },
+    "settings.phantom_preview.caption": {
+      "text": "Phantom preview (setup pose; back on support pad/table). Reflects body-habitus scales and patient offsets (active exam when multiple exams are loaded).",
+      "owner": "gui/tabs/settings.py"
+    },
+    "settings.phantom_preview.unavailable": {
+      "text": "Preview unavailable",
+      "owner": "gui/phantom_preview_controller.py"
+    },
+    "settings.phantom_preview.human_only": {
+      "text": "Preview available for human mesh",
+      "owner": "gui/phantom_preview_controller.py"
+    },
     "per_exam.tx_tz_swap.tooltip": {
       "text": "Manual extra swap only; GE RDSR-level correction is handled during normalization.",
       "owner": "gui/tabs/_per_exam.py"

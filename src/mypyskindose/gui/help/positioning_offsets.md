@@ -98,9 +98,12 @@ If beam angles seem reversed:
 ## Tips
 
 - Start with small adjustments (1-5 cm) and observe the effect
-- Check the Geometry tab frequently — it's the fastest way to verify changes
+- Check the **Settings phantom preview** (no RDSR required) and the Geometry tab frequently —
+  both refresh when habitus scales or patient offsets change
 - Document working values for your system/procedure combinations
 - Different procedure types have characteristic beam positions (cardiac → chest, neuro → head, etc.)
+
+See also: [Settings phantom preview](phantom_preview.md).
 
 ## Getting More Help
 

@@ -133,6 +133,38 @@ def test_transform_to_psd_frame_anchors_obj_y_up_meters():
     assert 160.0 < ext["height_z"] < 180.0  # 1.7 m → 170 cm
 
 
+def test_transform_force_flip_y_mirrors_near_symmetric_depth():
+    """MPFB-like near-symmetric depth: force_flip_y puts the nose toward −Y (face-up)."""
+    rng = np.random.default_rng(2)
+    n = 300
+    # Y-up meters; depth (Z) nearly symmetric so the heuristic is a no-op.
+    vertices = np.column_stack(
+        [
+            rng.uniform(-0.2, 0.2, n),
+            rng.uniform(0.0, 1.7, n),
+            rng.uniform(-0.2, 0.2, n),
+        ]
+    )
+    # Mark a "nose" at +Z (Blender depth) mid-face so after remap it lands on +Y without force.
+    nose = np.array([[0.0, 1.55, 0.25], [0.0, 1.54, 0.24], [0.0, 1.56, 0.24]])
+    vertices = np.vstack([vertices, nose])
+    no_force = transform_to_psd_frame(vertices, obj_y_up=True, force_flip_y=False)
+    forced = transform_to_psd_frame(vertices, obj_y_up=True, force_flip_y=True)
+
+    def mid_sag_head_tips(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        zmax = float(arr[:, 2].max())
+        head = arr[arr[:, 2] > zmax - 20.0]
+        strip = head[np.abs(head[:, 0]) < 3.0]
+        return strip[strip[:, 1].argmin()], strip[strip[:, 1].argmax()]
+
+    tn_f, tp_f = mid_sag_head_tips(forced)
+    tn_n, tp_n = mid_sag_head_tips(no_force)
+    # Face-up (forced): more inferior tip (nose) at ymin (−Y).
+    assert tn_f[2] < tp_f[2] - 1.0
+    # Face-down (no force): more inferior tip at ymax (toward table).
+    assert tp_n[2] < tn_n[2] - 1.0
+
+
 def test_head_ratio_higher_for_large_head_bulk():
     # Build synthetic point clouds: adult-like vs big-head pediatric-like.
     rng = np.random.default_rng(1)
@@ -225,7 +257,9 @@ def test_generate_reduced_writes_1000_face_preview(tmp_path: Path):
     big_path = tmp_path / "big.stl"
     big.save(str(big_path))
 
-    out = generate_reduced(big_path, target_faces=1000)
+    # Unit-test mesh is degenerate duplicated faces; allow subsample so CI does
+    # not require trimesh/fast-simplification. Shipping uses quadric decimation.
+    out = generate_reduced(big_path, target_faces=1000, allow_subsample=True)
     assert out.name.endswith("_reduced_1000t.stl")
     assert len(stl_mesh.Mesh.from_file(str(out)).vectors) == 1000
 

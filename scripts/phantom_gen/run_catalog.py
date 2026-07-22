@@ -187,9 +187,13 @@ def run_blender_generate(
 
 
 def transform_obj_to_stl(obj_path: Path, stl_path: Path) -> dict[str, float]:
-    """Transform Blender OBJ into PSD-frame STL; return extent summary."""
+    """Transform Blender OBJ into PSD-frame STL; return extent summary.
+
+    MPFB exports need ``force_flip_y=True`` so the posterior lands at max Y
+    (face-up). The asymmetric heuristic is often a no-op on these meshes.
+    """
     vertices, faces = _load_vertices_faces(obj_path)
-    transformed = transform_to_psd_frame(vertices)
+    transformed = transform_to_psd_frame(vertices, force_flip_y=True)
     _write_binary_stl(stl_path, transformed, faces)
     return extents(transformed)
 

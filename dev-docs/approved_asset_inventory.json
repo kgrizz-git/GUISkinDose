@@ -248,7 +248,7 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_ectomorph_female.stl",
-      "sha256": "c2fe79f731518352594cf941879e5c1fdc67d729f40723ca4e165ffa0011e4bd",
+      "sha256": "d8806c0158e7095f2efed21874edc4176d2f016a4c7010ecf8df6580dba52655",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_ectomorph_female)",
       "review": {
@@ -259,18 +259,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_ectomorph_female_reduced_1000t.stl",
-      "sha256": "a097c9025ca316f3e5b96625eed3df5e0a90545f9983b2b06df93023b06661d2",
+      "sha256": "3ab7670b401ae5a1d5f346cf9a1a6390f522b2f51dfb69fb84a55314262be0c0",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_ectomorph_female)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_ectomorph_male.stl",
-      "sha256": "cf1d1dac6ebd2c9c437d5439e525304276b1250ad77fd4acd229c121647883ab",
+      "sha256": "d9a44fe5e7bfa9fbd9da75d9b6c56799b1f4b64da2ef5f048c15e672a0b3e449",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_ectomorph_male)",
       "review": {
@@ -281,18 +281,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_ectomorph_male_reduced_1000t.stl",
-      "sha256": "48917964d677ee4ef931df010de4d51e43ffba0702618d105a6cd43cf674877a",
+      "sha256": "81e8b4a6ec69efc30ef4fc37e9908782de60711b39794a46b62b4303c51eae39",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_ectomorph_male)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_endomorph_female.stl",
-      "sha256": "fe0ef2bd34e16477c4d27ae14ca9bd831bdb491259922e3b8a1de96c4a67dc0a",
+      "sha256": "0f0f24db80c111081ab3cf508fcafd4bf9e2d562b1e72bf8fbe0fc41ca62bbc3",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_endomorph_female)",
       "review": {
@@ -303,18 +303,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_endomorph_female_reduced_1000t.stl",
-      "sha256": "f6ee48e612fd5b3d9f9fc726721819886bbbc9f172abd7c3439ebce6a5509165",
+      "sha256": "54172e7451e33083c02edeea3eb93b394b108b6dbac7af15210bbe1e0c739b93",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_endomorph_female)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_endomorph_male.stl",
-      "sha256": "df1cbd682a8ab40a450c08239804ad3f2c773b523e54678679036551a510df1c",
+      "sha256": "341892ad856514a4a010053575ab8eec69a19c6c16c71a14d68e7a1989e924a6",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_endomorph_male)",
       "review": {
@@ -325,13 +325,13 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/adult_endomorph_male_reduced_1000t.stl",
-      "sha256": "4da0e364c62ef37a76fdfb38ccd46a7952dc7829d39c7753f736430d45d8d06f",
+      "sha256": "57310c3639c56e2c8ff8f2779e2aae23316b05888938fd8419244f4aec058f14",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_endomorph_male)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
@@ -380,7 +380,7 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/bariatric_class2_female.stl",
-      "sha256": "2216bbdcda3640585a894792de520bd17e3bb419f60835f9fca4f63dee46b0b8",
+      "sha256": "00d597f1ab941b9339d575322ae4979a12819935f94f08aec9266e00ed58885d",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (bariatric_class2_female)",
       "review": {
@@ -391,18 +391,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/bariatric_class2_female_reduced_1000t.stl",
-      "sha256": "31c5fadb0476635b4b5985709e169d19c6e6b84f02b58119ebabd02c6ee0e146",
+      "sha256": "8eb1e79fc0cbd0f9b259689afba93a10846cb3d2c8300e8d455da1bc6c4173ea",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (bariatric_class2_female)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/bariatric_class2_male.stl",
-      "sha256": "1fab437a97aafef18a443853474ddfc7bd144d382e22842b41a98734430f3b32",
+      "sha256": "70784eb17b2edbefacf25c8e64d2fd07e1f91dc3694e009400ba4c257e0ffd71",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (bariatric_class2_male)",
       "review": {
@@ -413,13 +413,13 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/bariatric_class2_male_reduced_1000t.stl",
-      "sha256": "4f99e03f2c14a7624aea0e8571fb308c78d794c283a54bfb49045bf3aac66eb4",
+      "sha256": "4374b59ad302e9149f520c8d43ca52bca78f4f18d71c69bb481f23e752d47c8a",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (bariatric_class2_male)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
@@ -490,7 +490,7 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_10y_female.stl",
-      "sha256": "1f7038b752d98c4a3f6c40fd01150b95e769694bf2926efee5f43e082a0c91f1",
+      "sha256": "9976234931baf195867e213cd7d0fb1cacb2f77c3483b585e6aed1f1f81ba9fb",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (pediatric_10y_female)",
       "review": {
@@ -501,18 +501,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_10y_female_reduced_1000t.stl",
-      "sha256": "8c1d72e8c635843137080ca78b854ce63777536fa8de0b49b22f7b7c4de31ae2",
+      "sha256": "3efa8cd07d185e651844abdc726290df55330a436e6cb5cff4a9142b7eba59ed",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (pediatric_10y_female)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_10y_male.stl",
-      "sha256": "f642c05c8a94ef44832a446993f650c22b6f40bd5a40a4ff767ff15f8dda86e8",
+      "sha256": "f98114a03fcf7e829f963c7ba8f8698b6af5fdf4b850c7956f7e3bad096014a2",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (pediatric_10y_male)",
       "review": {
@@ -523,18 +523,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_10y_male_reduced_1000t.stl",
-      "sha256": "eb310a03ccfac9400fefc322381c015edfe351703e8984580f8b6861fc7dfe85",
+      "sha256": "a6e11da117ff58928235627761c5b4c1d498b0bc0e22ae55231cd93ec29b8f06",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (pediatric_10y_male)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_5y_female.stl",
-      "sha256": "f84595f3c35630566cf1130bbf14ac61f1a2e5fb864ecef55b3b6a430c9ebf44",
+      "sha256": "22e867786300ab0ef2960e08153b66c4aa326c2fe4ec53482ee49ebd82e6590c",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (pediatric_5y_female)",
       "review": {
@@ -545,18 +545,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_5y_female_reduced_1000t.stl",
-      "sha256": "dc3d530fe379622b1e72703882274cc5b82681c353320aba4f825bf25662e63f",
+      "sha256": "20e552b401ee9fbaee764af80e7dbb997837bb4531df67c610aac2fa29c60e0a",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (pediatric_5y_female)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_5y_male.stl",
-      "sha256": "6b0cd03e02229de33975fa6a7f8f1948e5b733f5a9d4c38183d1349e4a4306d0",
+      "sha256": "87ac02addea047aa9763e864e6e15e88314d84bec94a1a46bcabdabbee00a25b",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (pediatric_5y_male)",
       "review": {
@@ -567,13 +567,13 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_5y_male_reduced_1000t.stl",
-      "sha256": "09f11f41be5d91012f3a5bf7be5471aca50809daa01c8aae4fa075ccb96e3c26",
+      "sha256": "b750b199938695bdd662e72468df4d970b6b0c08fc1b6c9ea15e233334154aca",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (pediatric_5y_male)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {

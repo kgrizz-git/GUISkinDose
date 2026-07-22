@@ -1,9 +1,6 @@
-"""Geometry tab controller, view references, and layout builders.
+"""Geometry tab controller, view refs, and layout builders.
 
-Sibling module to ``geometry.py``; owns the ``GeometryTabController`` (tab-local
-state and callbacks), ``GeometryViewRefs`` (UI element handles), and the layout
-builder functions.  ``geometry.py`` remains the thin public entry point that
-``app.py`` imports.
+``geometry.py`` remains the thin public entry point imported by ``app.py``.
 """
 
 from __future__ import annotations
@@ -387,6 +384,7 @@ class GeometryTabController:
         self.update_stale_caption()
         self.update_preview_caption()
         self.schedule_debounced_render()
+        self.ctx.refresh_phantom_preview()
 
     def handle_table_slider_change(self, key: str, slider: ui.slider) -> None:
         if self.table_guard["suppress"] or not state.loaded_exam_meta:
@@ -414,6 +412,7 @@ class GeometryTabController:
         else:
             reset_results()
             self.ctx.refresh_per_exam()
+            self.ctx.refresh_phantom_preview()
         self.sync_patient_sliders_from_meta()
         self.offset_changed_since_calc = True
         self.update_stale_caption()

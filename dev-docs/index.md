@@ -129,6 +129,9 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. |
+| [plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Active v1:** Cosmic Buddha (CC0), Petite Herculanaise (CC BY-SA), Ramesses II (CC BY 4.0), Steamboat Willie (CC BY 4.0) — scale/rotate ingest, **face-up `flip_y` gate**, validate, GUI `(demo)` labels. |
+| [plans/FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md) | Broader fun-demo survey: nude classical (Venus/David, D1-gated), Phase 2 cartoons, bust fallbacks. **v1 clothed+Steamboat execution** moved to `DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. |
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |

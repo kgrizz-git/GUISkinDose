@@ -1,9 +1,8 @@
 """Settings tab — phantom, physics, and visual calculation settings.
 
-Refactor plan Phase 3.3e. Almost entirely two-way ``state`` binds with
-``reset_results`` on change; the only handler is ``_update_mesh_visibility``
-(its own timer). Reads only ``state`` + constants, so ``ctx`` is accepted only
-for a uniform ``build(ctx)`` interface.
+Refactor plan Phase 3.3e. Mostly two-way ``state`` binds with ``reset_results``
+on change. Phantom model / mesh / orientation / habitus / offsets also refresh
+the Settings phantom preview and (where needed) the Geometry preview.
 """
 
 from __future__ import annotations
@@ -26,8 +25,10 @@ from ..helpers import (
     on_global_patient_offset_change,
 )
 from ..page_context import PageContext
+from ..phantom_preview_controller import PhantomPreviewController
 from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..state import reset_results, state
+from ..ui_copy import copy_text
 from ._per_exam import build_per_exam_section
 
 # Below-floor kVp policy → human-readable labels for the Settings select. Values
@@ -66,9 +67,10 @@ def _format_scale_cm(scale_factor: float, axis: int | None) -> str:
 
 
 def build(ctx: PageContext) -> None:
-    def _on_phantom_scale_change() -> None:
+    def _on_phantom_pose_change() -> None:
         reset_results()
         ctx.refresh_geometry_preview()
+        ctx.refresh_phantom_preview()
 
     with ui.tab_panel("settings"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
@@ -86,11 +88,13 @@ def build(ctx: PageContext) -> None:
                     with ui.row().classes("w-full gap-6"):
                         ui.select(PHANTOM_MODELS, label="Phantom model", value=state.phantom_model).bind_value(
                             state, "phantom_model"
-                        ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
+                        ).on(_MODEL_VALUE_EVENT, _on_phantom_pose_change).classes("grow")
 
                         mesh_select = ui.select(
                             HUMAN_MESHES, label="Human mesh", value=state.human_mesh
-                        ).bind_value(state, "human_mesh").on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
+                        ).bind_value(state, "human_mesh").on(
+                            _MODEL_VALUE_EVENT, _on_phantom_pose_change
+                        ).classes("grow")
 
                     # show/hide mesh selector based on model
                     def _update_mesh_visibility():
@@ -100,7 +104,22 @@ def build(ctx: PageContext) -> None:
 
                     ui.select(ORIENTATIONS, label="Patient orientation", value=state.patient_orientation).bind_value(
                         state, "patient_orientation"
-                    ).on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
+                    ).on(_MODEL_VALUE_EVENT, _on_phantom_pose_change).classes("w-full")
+
+                    with ui.row().classes("w-full items-center justify-between"):
+                        ui.label("Phantom preview").classes("text-subtitle2")
+                        HelpButton(
+                            title="Settings phantom preview",
+                            content_path="phantom_preview.md",
+                            help_id="settings_phantom_preview",
+                        )
+                    preview_plot = ui.plotly({}).classes("w-full").style("height: 360px")
+                    preview_status = ui.label("").classes("text-caption text-grey-5 italic")
+                    ui.label(copy_text("settings.phantom_preview.caption")).classes(
+                        "text-caption text-grey-5"
+                    )
+                    preview_controller = PhantomPreviewController(preview_plot, preview_status)
+                    ctx.refresh_phantom_preview = preview_controller.schedule_refresh
 
                     ui.label("Table Offsets (auto-detected, cm)").classes("text-caption text-grey-6 q-mt-sm")
                     table_offset_label = ui.label(_format_table_offset_line()).classes("text-body2 mono-text")
@@ -221,7 +240,7 @@ def build(ctx: PageContext) -> None:
                                     step=0.05,
                                     value=getattr(state, attr),
                                 ).bind_value(state, attr).on(
-                                    _MODEL_VALUE_EVENT, _on_phantom_scale_change
+                                    _MODEL_VALUE_EVENT, _on_phantom_pose_change
                                 ).classes("w-full")
 
             # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
@@ -293,3 +312,6 @@ def build(ctx: PageContext) -> None:
                     ui.select(COLORSCALES, label="Dose map colorscale", value=state.colorscale).bind_value(
                         state, "colorscale"
                     ).classes("w-full")
+
+    # Initial paint so Settings is not blank until the first control change.
+    preview_controller.schedule_refresh()

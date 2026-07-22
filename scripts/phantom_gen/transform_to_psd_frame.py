@@ -95,9 +95,16 @@ def transform_to_psd_frame(
     *,
     meters_to_cm_if_small: bool = True,
     flip_y_if_needed: bool = True,
+    force_flip_y: bool = False,
     obj_y_up: bool = True,
 ) -> np.ndarray:
-    """Return transformed vertex array (cm, PSD anchors)."""
+    """Return transformed vertex array (cm, PSD anchors).
+
+    Face-up supine convention: posterior/back at ``max(Y) ≈ 0`` (table), anterior
+    toward −Y. MPFB/Blender OBJ exports are often near-symmetric in Y after remap, so
+    the asymmetric ``flip_y_if_needed`` heuristic is a no-op and can leave meshes
+    **face-down**. Pass ``force_flip_y=True`` for MPFB catalog generation.
+    """
     v = np.asarray(vertices, dtype=float).copy()
     if obj_y_up:
         v = _remap_obj_y_up_to_z_up(v)
@@ -108,8 +115,10 @@ def transform_to_psd_frame(
     if meters_to_cm_if_small and height < 3.0:
         v *= 100.0
 
-    # Posterior should be max Y; if greater protrusion is on +Y, flip.
-    if flip_y_if_needed:
+    # Posterior should be max Y.
+    if force_flip_y:
+        v[:, 1] *= -1.0
+    elif flip_y_if_needed:
         y_min, y_max = float(v[:, 1].min()), float(v[:, 1].max())
         y_mid = 0.5 * (y_min + y_max)
         if abs(y_min - y_mid) < abs(y_max - y_mid):
@@ -129,6 +138,11 @@ def main() -> int:
     parser.add_argument("--no-unit-detect", action="store_true")
     parser.add_argument("--no-flip-y", action="store_true")
     parser.add_argument(
+        "--force-flip-y",
+        action="store_true",
+        help="Always flip Y before anchoring (MPFB catalog; overrides heuristic)",
+    )
+    parser.add_argument(
         "--no-obj-y-up",
         action="store_true",
         help="Skip Blender OBJ Y-up remapping (input already Z-up)",
@@ -143,7 +157,8 @@ def main() -> int:
     transformed = transform_to_psd_frame(
         vertices,
         meters_to_cm_if_small=not args.no_unit_detect,
-        flip_y_if_needed=not args.no_flip_y,
+        flip_y_if_needed=not args.no_flip_y and not args.force_flip_y,
+        force_flip_y=args.force_flip_y,
         obj_y_up=not args.no_obj_y_up,
     )
     _write_binary_stl(args.output, transformed, faces)

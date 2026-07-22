@@ -97,61 +97,103 @@ Good for demos, teaching, and “fun” phantom selectors. Expect low poly count
 
 ## Classical sculptures and historical figures
 
-These make memorable phantoms (David on the table, Lincoln life mask as a head-heavy oddity, etc.). Prefer **standing / reclining full figures** or life-size busts you intentionally accept as non-full-body. Recline and scale to cm; many scans are upright and meters- or mm-scale for printing.
+These make memorable phantoms (David on the table, Cosmic Buddha draped, etc.). **Prefer standing / reclining clothed full figures** — dose demos typically need a full body on the table. Busts and life masks are novelty fallbacks only. Recline and scale to cm; many scans are upright and meters- or mm-scale for printing.
 
-### Priority targets: Venus de Milo and Michelangelo’s David
+**Nude classical art (Venus, David, many SMK casts):** fine as historical demos legally when licensed, but may be awkward in a clinical GUI — see plan decision **D1** in [`FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md). Prefer **clothed / draped full-body** figures when avoiding that issue.
+
+### Priority classical targets: Venus de Milo and Michelangelo’s David
 
 | Figure | Recommended download | License | Notes |
 |------|----------------------|---------|-------|
-| **Venus de Milo** | SMK digital cast: [Sketchfab CC0](https://sketchfab.com/3d-models/venus-de-milo-aphrodite-of-milos-53082b5d6cef4c34a9701a2a24f58075), [Commons CC0 STL](https://commons.wikimedia.org/wiki/File:Venus_(Afrodite)_fra_Milo_-_KAS434_1.stl), high-res at [smk.dk/3d](https://www.smk.dk/3d) | **CC0 / PDM** | **Best shipping candidate.** Scan of a museum plaster cast, not the Louvre marble — still recognizably Venus. Downscaled Sketchfab version is ~274k tris; decimate hard. |
+| **Venus de Milo** | SMK digital cast: [Sketchfab CC0](https://sketchfab.com/3d-models/venus-de-milo-aphrodite-of-milos-53082b5d6cef4c34a9701a2a24f58075), [Commons CC0 STL](https://commons.wikimedia.org/wiki/File:Venus_(Afrodite)_fra_Milo_-_KAS434_1.stl), high-res at [smk.dk/3d](https://www.smk.dk/3d) | **CC0 / PDM** | **Best classical shipping candidate** (license). Cast scan, not Louvre marble. Downscaled Sketchfab ~274k tris; decimate hard. |
 | **Venus (Louvre scan)** | [Scan the World on Commons](https://commons.wikimedia.org/wiki/File:Scan_the_World_-_Venus_de_Milo.stl) (~29 MB) | **CC BY-SA 4.0** | Attribution + share-alike on mesh derivatives |
 | **David** | [Scan the World on Commons](https://commons.wikimedia.org/wiki/File:David_(Michelangelo).stl) (~57 MB); also [MyMiniFactory object 2052](https://www.myminifactory.com/object/3d-print-michelangelo-s-david-in-florence-italy-2052) (Credit / Remix / **Commercial**) | **CC BY-SA 4.0** on Commons | **Easy to obtain**; large. Credit Scan the World; keep mesh derivatives SA-compatible |
 
 **Integration effort (both):** low for acquisition, moderate for MyPySkinDose readiness — lay supine, scale height to a plausible table-phantom extent (or accept giant/miniature as a joke demo), close holes if needed, decimate to ~3k–8k faces, re-orient normals, smoke-test entrance/exit.
+
+### Clothed / draped full-body statues (preferred for dose demos)
+
+Full-body clothed scans **do exist**, but redistributable ones (CC0 / CC-BY / CC-BY-SA **without NC**) are scarcer than nudes and busts. Many Scan the World toga/robed figures are **Noncommercial** — reject those for shipping.
+
+| Figure / type | Hub | License watch | Notes |
+|---------------|-----|---------------|-------|
+| **Cosmic Buddha** | [Smithsonian 3D](https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-desire:d8c62be8-4ebc-11ea-b77f-2e728ce88125) | **CC0** (object page) | Standing ~151 cm; primary clothed full-body try |
+| **Petite Herculanaise** (draped woman) | [Cults](https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris) / [MMF 6356](https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356) | **CC BY-SA** (Cults) | Full-body classical drapery; NOTICE if SA; re-check MMF |
+| **Ramesses II** colossal | [Commons STL](https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl) | **CC BY 4.0** | Clothed; already lying — scale/axes; proportions may be odd |
+| Other draped Buddha / Bodhisattva | SI / Commons / Scan the World | **Per object** | Prefer SI CC0 or Commons BY/SA; skip MMF NC |
+| Scan the World toga / “robed man” | MyMiniFactory | Often **NC / Exclusive** | e.g. Altes Museum Toga — **do not ship** unless Commons BY/SA mirror |
+| Greenough Washington / Greek Slave | Smithsonian | **CC0** when marked | Full figures but **nude / semi-nude** — not clothed; same D1 issue |
+
+### Busts / life masks (fallback only)
+
+| Figure / type | Hub | License watch | Notes |
+|---------------|-----|---------------|-------|
+| **Abraham Lincoln** life mask / bust | [Smithsonian 3D](https://3d.si.edu/) | **CC0** when marked | Head-only; not typical dose geometry |
+| **Helen Keller, Anne Sullivan**, other OA portraits | Smithsonian Open Access | **CC0** when marked | Filter Open Access / CC0 |
+| Other Smithsonian people / cultural figures | [3d.si.edu Open Access highlights](https://3d.si.edu/collections/openaccesshighlights) | **CC0** when marked | Skip objects with tighter terms |
+| SMK other casts (Apollo, Doryphoros, Discobolus, …) | [smk.dk/3d](https://www.smk.dk/3d) | Often **CC0 / PDM** | Many are nude classical — same sensitivity as Venus/David |
+
+Busts: after orientation, scale so superior–inferior extent is readable (~20–40 cm) if used as fallback. Document scale in provenance.
 
 ### Scan the World (MyMiniFactory)
 
 - **Site:** [myminifactory.com/scantheworld](https://www.myminifactory.com/scantheworld/)
 - **Formats:** `.stl`, `.obj`
 - **License:** **Per object** — some are commercial-friendly; some are NC. Do not generalize. For *David* / *Venus*, prefer the Wikimedia Commons copies above where the license is explicit CC BY-SA 4.0.
-- **Fit:** Huge catalog of sculpture scans; always open the license panel before downloading for shipping
+- **Fit:** Huge catalog of sculpture + historical scans; always open the license panel before downloading for shipping
 
 ### Smithsonian 3D Digitization
 
 - **Site:** [3d.si.edu](https://3d.si.edu/) — prefer objects marked **CC0 / Open Access**
 - **Formats:** `.stl`, `.obj` (when download enabled)
 - **License:** Many highlights are **CC0**; some objects have tighter terms — **read the object page**
-- **Examples of interest:** Abraham Lincoln life masks / busts, other historical figure scans in Open Access
-- **Fit:** Strong public-domain candidates when CC0 is confirmed
+- **Fit:** Best hub for **CC0 cultural figures** — includes clothed full-body (Cosmic Buddha) and busts/life masks; always check the object page
 
 ### Other museum / open-access scan portals
 
-Search for CC0 or explicit public-domain full-figure scans (national museums, Wikimedia Commons 3D, Europeana, SMK). Same rules: per-object license, convert, re-anchor, validate normals.
+Search for CC0 or explicit public-domain full-figure / bust scans (national museums, Wikimedia Commons 3D, Europeana, SMK). Same rules: per-object license, convert, re-anchor, validate normals.
+
+---
+
+## Public-domain / early cartoon characters
+
+**Two layers:** (1) is the **character design** PD in the US for that year’s look? (2) is **this STL** CC0/CC-BY (not NC)? Video-game icons (Mario, Pac-Man, Sonic, …) are **still copyrighted** — out of scope.
+
+| Character | Early form PD (US) | Mesh availability | Shipping note |
+|-----------|--------------------|-------------------|---------------|
+| **Steamboat Willie** Mickey | 2024 | [Commons CC BY 4.0](https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl); JoeBert / others CC-BY — see plan | **v1** candidate; stem `steamboat_willie` only |
+| **Popeye** (1929) | 2025 | e.g. [Thingiverse CC BY](https://www.thingiverse.com/thing:2417631); many others — verify | **Phase 2**; trademark-safe stem `popeye` |
+| **Winnie-the-Pooh** (Milne book) | ~2022 | e.g. [Printables 1925 Public Domain](https://www.printables.com/model/1706462-winnie-the-pooh-pooh-bear-1925); Sketchfab CC-BY | **Phase 2**; **no Disney red shirt** |
+| **Betty Boop** (*Dizzy Dishes*) | 2026 (early form) | Many modern Betty / NC Printables | **Weak** — PD look is poodle-flapper; trademarks |
+| **Tintin** (early strips) | 2025 (US early) | Fan STLs often NC / personal-use | **Weak** — trademark risk |
+| Original CC0 toons | N/A | Quaternius / Kenney | **Safest** filler |
 
 ### Mickey Mouse / Steamboat Willie (special case)
 
-- **US copyright:** The **1928 Steamboat Willie** Mickey (and that short) entered the public domain on **2024-01-01**. Later Mickey designs (color, evolved proportions, etc.) remain copyrighted.
-- **Trademark:** Disney still trademarks “Mickey Mouse” and related branding — avoid use that implies Disney affiliation or official merchandise.
-- **Meshes:** Fan STLs/OBJs appeared quickly on Printables, Sketchfab, etc.; each file has its **own** creator license on top of the PD character design.
-- **For this repo:** Prefer Quaternius/Kenney for cartoon phantoms. If experimenting locally with Steamboat Willie–style meshes, keep them out of the shipping catalog unless legal/product review explicitly clears naming and branding.
+- **US copyright:** The **1928 Steamboat Willie** Mickey (and that short) entered the public domain on **2024-01-01**. Later Mickey designs remain copyrighted.
+- **Trademark:** Disney still trademarks “Mickey Mouse” and related branding — avoid implying Disney affiliation.
+- **Meshes:** Prefer Commons Cojocaru (**CC BY 4.0**); alternates in [`FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md) § Steamboat Willie candidates. Avoid Sketchfab Free Standard / NC.
+- **For this repo:** Stem/label **`steamboat_willie`** (not “Mickey Mouse”).
 
 ---
 
 ## Suggested shortlist for “fun” phantoms
 
-If adding a playful set alongside clinical meshes:
-
 | Idea | Likely source | License watch |
 |------|---------------|---------------|
-| Low-poly modern person | Quaternius / Kenney | CC0 — preferred for shipping |
-| Parametric “cartoonish” adult | MakeHuman / MPFB with extreme face/body targets | Core assets CC0 |
-| *Venus de Milo* | **SMK CC0** cast scan (preferred) | Safest classical option |
-| Michelangelo’s *David* | Scan the World / Commons | **CC BY-SA 4.0** — attribute + SA on mesh |
-| Lincoln (or similar) bust / figure | Smithsonian Open Access | Prefer CC0 objects only |
-| Steamboat Willie–style Mickey | Fan sites | PD design only (1928); trademark + later designs — usually skip for shipping |
-| Mixamo “Y Bot” style | Mixamo | Local-only; do not ship raw mesh |
+| Low-poly modern person | Quaternius / Kenney | CC0 — preferred generic |
+| Parametric “cartoonish” adult | MakeHuman / MPFB | Core assets CC0 |
+| Cosmic Buddha (draped full-body) | Smithsonian Open Access | **CC0** — preferred clothed full-body without nude issue |
+| Lincoln (or similar) bust | Smithsonian Open Access | **CC0** — fallback only (not full-body) |
+| *Venus de Milo* | **SMK CC0** cast | Safest classical license; D1 nude decision |
+| Michelangelo’s *David* | Scan the World / Commons | **CC BY-SA 4.0** |
+| Steamboat Willie | Commons CC BY 4.0 | Label `steamboat_willie` |
+| Popeye / book Pooh | Thingiverse / Printables (verify) | Phase 2; early design only |
+| Mixamo “Y Bot” | Mixamo | Local-only; do not ship |
 
-Label fun meshes clearly in the UI (e.g. “demo / non-clinical”) so users do not confuse them with dosimetry reference phantoms.
+Label fun meshes clearly in the UI (e.g. “demo / non-clinical”). **Active v1 execution:**
+[`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
+Broader backlog: [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md).
 
 ---
 
@@ -159,16 +201,18 @@ Label fun meshes clearly in the UI (e.g. “demo / non-clinical”) so users do 
 
 1. Import in Blender (or MeshLab) from `.stl` / `.obj` / `.ply` / `.fbx` / `.glTF` → apply transforms → export binary STL.
 2. Scale so extents are **centimeters** (many game assets are meters or arbitrary units).
-3. Orient head-first supine; posterior near `max(Y) ≈ 0`, crown near `max(Z) ≈ 0` — see the [integration checklist](../ADDITIONAL_PHANTOMS.md#integration-checklist).
+3. Orient head-first supine; posterior near `max(Y) ≈ 0`, crown near `max(Z) ≈ 0` — see the [integration checklist](../ADDITIONAL_PHANTOMS.md#integration-checklist). For fun ingest, call `transform_to_psd_frame` with **`--no-obj-y-up`**.
 4. Decimate to ~3k–8k faces when possible; re-orient faces coherently; load once through `Phantom` so normals recompute.
-5. Record license + attribution + source URL in catalog metadata / `THIRD_PARTY_NOTICES` as appropriate.
-6. Hash-pin the STL in `approved_asset_inventory.json`.
+5. Record license + attribution + source URL in provenance / NOTICE sidecars (BY/SA). Dependency `THIRD_PARTY_NOTICES.md` is not a substitute for mesh credits.
+6. Hash-pin the STL in `approved_asset_inventory.json` with human review fields.
 
 ---
 
 ## Related documents
 
 - [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) — clinical sources + integration checklist + short summary of this page
+- [`plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — ship Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat (v1)
+- [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md) — Venus/David (D1), Phase 2 PD cartoons
 - [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — MPFB generation runbook
 - [`LICENSE_COMPLIANCE.md`](../LICENSE_COMPLIANCE.md) — third-party license policy
 - [`PRIVACY_AND_SENSITIVE_ASSETS.md`](../PRIVACY_AND_SENSITIVE_ASSETS.md) — binary STL admission
