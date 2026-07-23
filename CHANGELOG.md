@@ -34,6 +34,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Bariatric thick-extremities variants** (2026-07-22) — Keeps abdomen-dominant
+  `bariatric_class2_{male,female}` and adds `bariatric_class2_{male,female}_thick_extremities`
+  with additive MPFB arm/leg/neck/head detail targets. Catalog skips abdomen-vs-affine shape
+  compare for the thick rows (limb bulk confounds that metric). SemVer: **minor** on release.
+
 - **Demo phantom GUI labels + docs** (2026-07-22) — Task 6 of
   `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Settings mesh selector uses NiceGUI
   `{stem: label}` options via `get_human_mesh_options()` with `(demo)` suffixes for shipped

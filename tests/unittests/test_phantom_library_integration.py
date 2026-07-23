@@ -20,6 +20,8 @@ NEW_MESHES = [
     "adult_endomorph_female",
     "bariatric_class2_male",
     "bariatric_class2_female",
+    "bariatric_class2_male_thick_extremities",
+    "bariatric_class2_female_thick_extremities",
 ]
 
 PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"

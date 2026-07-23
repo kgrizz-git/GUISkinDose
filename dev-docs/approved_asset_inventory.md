@@ -14,7 +14,7 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 73
+**Assets tracked:** 77
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
@@ -54,6 +54,10 @@ file revision.
 | [`src/mypyskindose/phantom_data/bariatric_class2_female_reduced_1000t.stl`](../src/mypyskindose/phantom_data/bariatric_class2_female_reduced_1000t.stl) | Opaque binary | Reduced MPFB parametric human phantom mesh (bariatric_class2_female) | ✅ Approved — KG (2026-07-22) | — | `8eb1e79fc0cb` |
 | [`src/mypyskindose/phantom_data/bariatric_class2_male.stl`](../src/mypyskindose/phantom_data/bariatric_class2_male.stl) | Opaque binary | MPFB parametric human phantom mesh (bariatric_class2_male) | ✅ Approved — KG (2026-07-21) | — | `70784eb17b2e` |
 | [`src/mypyskindose/phantom_data/bariatric_class2_male_reduced_1000t.stl`](../src/mypyskindose/phantom_data/bariatric_class2_male_reduced_1000t.stl) | Opaque binary | Reduced MPFB parametric human phantom mesh (bariatric_class2_male) | ✅ Approved — KG (2026-07-22) | — | `4374b59ad302` |
+| [`src/mypyskindose/phantom_data/bariatric_class2_male_thick_extremities.stl`](../src/mypyskindose/phantom_data/bariatric_class2_male_thick_extremities.stl) | Opaque binary | MPFB parametric human phantom mesh (bariatric_class2_male_thick_extremities) | ✅ Approved — KG (2026-07-22) | — | `9d711d4239f8` |
+| [`src/mypyskindose/phantom_data/bariatric_class2_male_thick_extremities_reduced_1000t.stl`](../src/mypyskindose/phantom_data/bariatric_class2_male_thick_extremities_reduced_1000t.stl) | Opaque binary | Reduced MPFB parametric human phantom mesh (bariatric_class2_male_thick_extremities) | ✅ Approved — KG (2026-07-22) | — | `d06eeafd93d3` |
+| [`src/mypyskindose/phantom_data/bariatric_class2_female_thick_extremities.stl`](../src/mypyskindose/phantom_data/bariatric_class2_female_thick_extremities.stl) | Opaque binary | MPFB parametric human phantom mesh (bariatric_class2_female_thick_extremities) | ✅ Approved — KG (2026-07-22) | — | `37295b9c7365` |
+| [`src/mypyskindose/phantom_data/bariatric_class2_female_thick_extremities_reduced_1000t.stl`](../src/mypyskindose/phantom_data/bariatric_class2_female_thick_extremities_reduced_1000t.stl) | Opaque binary | Reduced MPFB parametric human phantom mesh (bariatric_class2_female_thick_extremities) | ✅ Approved — KG (2026-07-22) | — | `79ac77dd9ad2` |
 | [`src/mypyskindose/phantom_data/cosmic_buddha.stl`](../src/mypyskindose/phantom_data/cosmic_buddha.stl) | Opaque binary | Cosmic Buddha (demo) non-clinical phantom mesh (Smithsonian CC0; missing head/hands) | ✅ Approved — KG (2026-07-22) | — | `cd6c5428bb02` |
 | [`src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl`](../src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl) | Opaque binary | Reduced Cosmic Buddha (demo) non-clinical phantom mesh (Smithsonian CC0) | ✅ Approved — KG (2026-07-22) | — | `66d9ae78a9d7` |
 | [`src/mypyskindose/phantom_data/ramesses_ii.stl`](../src/mypyskindose/phantom_data/ramesses_ii.stl) | Opaque binary | Ramesses II (demo) non-clinical phantom mesh (Wikimedia Commons, Dejp3, CC BY 4.0; voxel-remeshed watertight) | ✅ Approved — KG (2026-07-22) | — | `5b22b53a3a3c` |

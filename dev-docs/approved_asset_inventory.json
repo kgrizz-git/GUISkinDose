@@ -423,6 +423,50 @@
       }
     },
     {
+      "path": "src/mypyskindose/phantom_data/bariatric_class2_male_thick_extremities.stl",
+      "sha256": "9d711d4239f86945e563c7ea5e6358bc7788e8a70d3da03b10772b3ead3222c7",
+      "kind": "opaque_binary",
+      "purpose": "MPFB parametric human phantom mesh (bariatric_class2_male_thick_extremities)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/bariatric_class2_male_thick_extremities_reduced_1000t.stl",
+      "sha256": "d06eeafd93d39281aa310300261d7e517fd6de2a57e392182fe259b321e52327",
+      "kind": "opaque_binary",
+      "purpose": "Reduced MPFB parametric human phantom mesh (bariatric_class2_male_thick_extremities)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/bariatric_class2_female_thick_extremities.stl",
+      "sha256": "37295b9c73656ebc98ef6c0c875513654df7acefea2416399178cf1d57dc37a3",
+      "kind": "opaque_binary",
+      "purpose": "MPFB parametric human phantom mesh (bariatric_class2_female_thick_extremities)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/bariatric_class2_female_thick_extremities_reduced_1000t.stl",
+      "sha256": "79ac77dd9ad24bd69cd12c3e2f0589ebdd0c98a55f96b25329055430d59c142e",
+      "kind": "opaque_binary",
+      "purpose": "Reduced MPFB parametric human phantom mesh (bariatric_class2_female_thick_extremities)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-22"
+      }
+    },
+    {
       "path": "src/mypyskindose/phantom_data/cosmic_buddha.stl",
       "sha256": "cd6c5428bb0292740251fb990954f1a9e4cfc9e7abcdf3109c04edd7f63c3a1a",
       "kind": "opaque_binary",
