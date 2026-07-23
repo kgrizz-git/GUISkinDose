@@ -190,34 +190,33 @@ Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_i
   - Wikimedia Commons — `File:Steamboat_Willie_3D_Model.stl`
     (`https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl`).
 
-### Locked ingest transform (re-locked 2026-07-22 QA — supine roll)
+### Locked ingest transform (re-locked 2026-07-23 QA — face-up)
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
-| `rotate_deg` | `[0, 0, 90]` | Rz +90 corrects prior right-side-lying ship; raw Z remains standing height. |
+| `rotate_deg` | `[0, 0, -90]` | Rz −90 + flip for supine face-up (prior +90 left face-down). |
 | `height_axis` | `z` | Scaled to 120 cm (final ≈ 121.5 cm after remesh padding). |
 | `height_cm` | `120.0` | Plan cartoon height. |
-| `flip_y` | **`true`** | Face-up after roll. |
+| `flip_y` | **`true`** | With Rz −90, required for anterior toward −Y. |
 | `target_faces` | `6000` | Remesh produced ~5676 faces (≤ budget). |
 | `voxel_pitch` | `4.5` | cm — raw ~144k faces, not watertight; fill_holes failed. |
-| `face_up_frac` / `face_up_band_frac` | `0.55` / `0.12` | Defaults; face-up + not_side_lying gates pass. |
+| `face_up_frac` / `face_up_band_frac` | `0.55` / `0.12` | Gates pass; confirm visually (ears can fool headband heuristic). |
 
 ### Repair / watertight
 
 - Raw mesh: ~143728 faces, `watertight=False`, `euler_number=82`. `fill_holes` did not close it.
   Ingest used `voxel_pitch=4.5` marching-cubes remesh → single closed manifold (~5676 faces).
 
-### Validation + smoke results (2026-07-22 QA re-orient)
+### Validation + smoke results (2026-07-23 QA face-up)
 
-- `validate_phantom.py --require-trimesh`: **PASS** — 5676 faces, anchors OK, height ≈ 121.5 cm,
-  watertight `True`, face-up + **not_side_lying** + outward normals, Phantom load OK.
-- Prior `[0,0,0]` ship failed the new not_side_lying gate (headband X≫Y).
+- `validate_phantom.py --require-trimesh`: **PASS** — face-up + not_side_lying + outward normals.
+- Visual anterior (−Y) camera: character face / wheel toward camera (not face-down).
 
 ### Installed assets
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/steamboat_willie.stl` | 5676 | `1c6869789d56d904893511bc7f0584f6670e42b60513160d0521b8b99be62ed9` |
-| `src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl` | 1000 | `97de278e8e58290d44c02c8c7975b839a6dd824a5b732be6812cf0d17902ec37` |
+| `src/mypyskindose/phantom_data/steamboat_willie.stl` | 5676 | `9873c532d806b7dd0ae0e4f3204f4eceed84c93e9dd5459e3b1e1520d5682bba` |
+| `src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl` | 1000 | `538590b074077ed631dba34505f09c5c42255f930b4c19ef57751a693b2fff9f` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).

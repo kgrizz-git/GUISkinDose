@@ -17,6 +17,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   enforces a clinical `face_up_ok` gate after transform. See
   `dev-docs/assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md`.
 
+- **Steamboat Willie face-up correction** (2026-07-23) — Locked `rotate_deg=[0,0,-90]` with
+  `flip_y=true` after visual anterior review (prior Rz +90 left the character face-down; ears can
+  fool the headband face-up gate). Inventory hashes updated.
+
 - **Steamboat Willie re-oriented supine** (2026-07-22) — Re-ingest with `rotate_deg=[0,0,90]`
   (Rz +90) so the figure is not right-side-lying. Fun validate adds a `not_side_lying` headband
   gate. Inventory hashes updated.

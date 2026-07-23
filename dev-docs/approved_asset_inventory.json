@@ -512,24 +512,24 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/steamboat_willie.stl",
-      "sha256": "1c6869789d56d904893511bc7f0584f6670e42b60513160d0521b8b99be62ed9",
+      "sha256": "9873c532d806b7dd0ae0e4f3204f4eceed84c93e9dd5459e3b1e1520d5682bba",
       "kind": "opaque_binary",
-      "purpose": "Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; voxel-remeshed watertight; Rz+90 supine)",
+      "purpose": "Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; voxel-remeshed watertight; Rz-90 face-up)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-22"
+        "reviewed_on": "2026-07-23"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl",
-      "sha256": "97de278e8e58290d44c02c8c7975b839a6dd824a5b732be6812cf0d17902ec37",
+      "sha256": "538590b074077ed631dba34505f09c5c42255f930b4c19ef57751a693b2fff9f",
       "kind": "opaque_binary",
-      "purpose": "Reduced Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; Rz+90 supine)",
+      "purpose": "Reduced Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; Rz-90 face-up)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-22"
+        "reviewed_on": "2026-07-23"
       }
     },
     {
