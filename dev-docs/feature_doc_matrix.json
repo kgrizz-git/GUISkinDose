@@ -114,6 +114,7 @@
       "code": [
         "src/mypyskindose/gui/helpers.py",
         "src/mypyskindose/gui/constants.py",
+        "src/mypyskindose/gui/window_prefs.py",
         "src/mypyskindose/phantom_data",
         "scripts/phantom_gen/ingest_fun_mesh.py",
         "scripts/phantom_gen/fun_mesh_manifest.json"
@@ -127,6 +128,7 @@
         "dev-docs/ADDITIONAL_PHANTOMS.md",
         "dev-docs/references/fun_phantom_provenance.md",
         "dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md",
+        "dev-docs/plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md",
         "CHANGELOG.md",
         "AGENTS.md"
       ],

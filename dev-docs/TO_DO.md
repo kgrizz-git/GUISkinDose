@@ -53,7 +53,7 @@ their corresponding plan exit criteria pass.
 
 ### Input Data And Calculation
 
-- [ ] **Explore additional phantoms** — investigate and add support for new anthropomorphic phantoms. See [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md). **Demo v1 complete** (Cosmic Buddha, Ramesses II, Steamboat Willie; Petite Herculanaise blocked): [archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md). Broader fun/demo backlog (Venus/David D1, Phase 2 cartoons, optional Petite unblock): [FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md).
+- [ ] **Explore additional phantoms** — investigate and add support for new anthropomorphic phantoms. See [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md). **Demo v1 complete** (gated in GUI): [archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md). **QA / demo gate / thick bariatric:** [PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) (completed 2026-07-22). Broader fun/demo backlog (Venus/David D1, Phase 2 cartoons, optional Petite unblock): [FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md).
 - [ ] **Settings phantom preview** — live 3D human-mesh preview on Settings (no RDSR; habitus scales + offsets; reduced mesh). **Code + docs shipped; needs manual smoke** then archive plan. Plan: [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md).
 - [ ] **Simplified DICOM-only estimate** — investigate a fast pre-scan/fallback estimate from DICOM fields without
   the full phantom-mesh pipeline.

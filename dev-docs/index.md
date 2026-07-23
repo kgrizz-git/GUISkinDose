@@ -110,6 +110,8 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 |---|---|
 | [assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) | **PASS** — Phase 0 headless MPFB/Blender phantom spike: adult/pediatric/heavy meshes + anti-balloon shape gates. |
 | [assessments/P0_PHANTOM_GENERATION_2026-07-21.md](assessments/P0_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 2 P0 catalog meshes (pediatric + ectomorph/endomorph) with ordering and shape gates. |
+| [assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md](assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md) | Drifted shipped pediatric 5y male reinstalled face-up; clinical `face_up_ok` gate in `run_catalog`. |
+| [assessments/BARIATRIC_THICK_EXTREMITIES_2026-07-22.md](assessments/BARIATRIC_THICK_EXTREMITIES_2026-07-22.md) | Class-II thick-extremities variants; abdomen-vs-affine skipped for limb-bulk rows. |
 | [assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md](assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 3 class-II bariatric male/female meshes; abdomen anti-balloon gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
@@ -131,6 +133,7 @@ Phased detail derived from diagnostics or master plans.
 | File | Purpose |
 |---|---|
 | [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. |
+| [plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) — Demo gate (`gui.json`), Steamboat supine, pediatric 5y male fix, bariatric thick-extremities variants. |
 | [plans/FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md) | Broader fun-demo survey: nude classical (Venus/David, D1-gated), Phase 2 cartoons, bust fallbacks. v1 clothed+Steamboat execution archived (see archive entry). |
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |

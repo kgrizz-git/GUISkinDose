@@ -20,10 +20,11 @@ Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery
 | `senior_male`, `senior_female` | 26,756 | Distinct meshes; same face count as adult/junior full variants |
 | `pediatric_5y_*`, `pediatric_10y_*` | 26,756 | MPFB parametric pediatric (male/female) |
 | `adult_ectomorph_*`, `adult_endomorph_*` | 26,756 | MPFB thin / heavy adult habitus (male/female) |
-| `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); CG parametric, not CT-grade |
-| `cosmic_buddha` | ~6,000 | Demo / non-clinical (CC0); missing head/hands |
-| `ramesses_ii` | ~5,600 | Demo / non-clinical (CC BY 4.0); voxel-remeshed |
-| `steamboat_willie` | ~5,700 | Demo / non-clinical (CC BY 4.0); trademark-safe label only |
+| `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); abdomen-dominant and `_thick_extremities` variants |
+
+| `cosmic_buddha` | ~6,000 | Demo / non-clinical (CC0); missing head/hands; GUI Demo section (opt-in) |
+| `ramesses_ii` | ~5,600 | Demo / non-clinical (CC BY 4.0); on disk / CLI only (not in Settings list) |
+| `steamboat_willie` | ~5,700 | Demo / non-clinical (CC BY 4.0); trademark-safe label; GUI Demo section (opt-in) |
 | `*_reduced_1000t` | 1,000 | Preview-only; not listed in mesh selectors |
 
 Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to one of the non-reduced names. Body-habitus sliders (`scale_lat`, `scale_ap`, `scale_lon`, clamped 0.5–2.0) apply at load via `Phantom._apply_human_scale` and are for **moderate sensitivity studies**, not for shipping new body shapes (see below).
