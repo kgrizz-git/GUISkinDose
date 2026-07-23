@@ -95,6 +95,15 @@ def load_gui_config() -> dict[str, Any]:
     return data
 
 
+def show_demo_phantoms_enabled() -> bool:
+    """Return whether Settings should list demo / non-clinical human meshes.
+
+    Reads ``show_demo_phantoms`` from ``~/.mypyskindose/gui.json`` (local, not
+    committed). Missing key or missing file defaults to ``False``.
+    """
+    return bool(load_gui_config().get("show_demo_phantoms", False))
+
+
 def save_gui_config(data: dict[str, Any]) -> None:
     """Atomically write the raw GUI config dict."""
     path = config_path()

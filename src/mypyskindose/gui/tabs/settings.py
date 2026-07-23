@@ -12,14 +12,15 @@ from nicegui import ui
 from ..components import HelpButton
 from ..constants import (
     COLORSCALES,
-    HUMAN_MESHES,
     ORIENTATIONS,
     PATIENT_OFFSET_SLIDER_RANGE_CM,
     PHANTOM_MODELS,
 )
 from ..helpers import (
+    DEMO_MESH_SECTION_KEY,
     any_table_origin_override,
     fallback_normalization_exam_count,
+    get_human_mesh_options,
     get_mesh_baseline_extents,
     get_mesh_baseline_torso_width,
     on_global_patient_offset_change,
@@ -90,11 +91,27 @@ def build(ctx: PageContext) -> None:
                             state, "phantom_model"
                         ).on(_MODEL_VALUE_EVENT, _on_phantom_pose_change).classes("grow")
 
-                        mesh_select = ui.select(
-                            HUMAN_MESHES, label="Human mesh", value=state.human_mesh
-                        ).bind_value(state, "human_mesh").on(
-                            _MODEL_VALUE_EVENT, _on_phantom_pose_change
-                        ).classes("grow")
+                        mesh_options = get_human_mesh_options()
+                        if state.human_mesh not in mesh_options or state.human_mesh == DEMO_MESH_SECTION_KEY:
+                            # Demos off / hidden mesh / stale stem → fall back to first clinical option.
+                            state.human_mesh = next(iter(mesh_options), "hudfrid")
+                        mesh_select = (
+                            ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
+                            .bind_value(state, "human_mesh")
+                            .classes("grow")
+                        )
+
+                        def _on_human_mesh_change() -> None:
+                            if state.human_mesh == DEMO_MESH_SECTION_KEY:
+                                # Separator is not a mesh; snap back to a real stem.
+                                state.human_mesh = next(
+                                    (k for k in mesh_options if k != DEMO_MESH_SECTION_KEY),
+                                    "hudfrid",
+                                )
+                                mesh_select.value = state.human_mesh
+                            _on_phantom_pose_change()
+
+                        mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
 
                     # show/hide mesh selector based on model
                     def _update_mesh_visibility():

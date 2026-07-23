@@ -12,6 +12,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Demo phantoms gated behind local prefs** (2026-07-22) — Settings mesh dropdown lists
+  clinical phantoms only by default. Opt in with `"show_demo_phantoms": true` in
+  `~/.mypyskindose/gui.json` to append a **Demo** section (Cosmic Buddha headless + Steamboat
+  Willie). `ramesses_ii` stays on disk but is never listed in the GUI. Separator key is
+  non-selectable.
+
 - **Demo phantoms v1 plan archived** (2026-07-22) — Moved
   `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` after shipping Cosmic Buddha,
   Ramesses II, and Steamboat Willie. Petite Herculanaise remains blocked; Venus/David and Phase 2

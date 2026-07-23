@@ -68,17 +68,28 @@ _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
 _ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
 
-# Actually shipped demo / non-clinical mesh stems (dynamic discovery still globs all STLs).
+# Demo / non-clinical mesh stems listed in Settings only when
+# ``show_demo_phantoms`` is true in ``~/.mypyskindose/gui.json`` (default off).
 DEMO_HUMAN_MESHES: frozenset[str] = frozenset(
     {
         "cosmic_buddha",
-        "ramesses_ii",
         "steamboat_willie",
     }
 )
 
+# On-disk meshes that must never appear in the Settings mesh selector (even with demos on).
+GUI_HIDDEN_HUMAN_MESHES: frozenset[str] = frozenset(
+    {
+        "ramesses_ii",
+    }
+)
+
+# Non-selectable ui.select sentinel separating clinical meshes from demos.
+DEMO_MESH_SECTION_KEY = "__demo_section__"
+DEMO_MESH_SECTION_LABEL = "── Demo ──"
+
 _DEMO_DISPLAY_LABELS: dict[str, str] = {
-    "cosmic_buddha": "Cosmic Buddha (demo)",
+    "cosmic_buddha": "Cosmic Buddha (demo, headless)",
     "ramesses_ii": "Ramesses II (demo)",
     "steamboat_willie": "Steamboat Willie (demo)",
     # Blocked / not shipped — kept for label consistency if added later:
@@ -114,6 +125,9 @@ __all__ = [
     "get_example_rdsr_files",
     "get_excel_sheets",
     "DEMO_HUMAN_MESHES",
+    "DEMO_MESH_SECTION_KEY",
+    "DEMO_MESH_SECTION_LABEL",
+    "GUI_HIDDEN_HUMAN_MESHES",
     "get_human_mesh_names",
     "get_human_mesh_options",
     "get_mesh_baseline_extents",
@@ -310,22 +324,41 @@ def _title_case_mesh_stem(stem: str) -> str:
     return stem.replace("_", " ").title()
 
 
-def get_human_mesh_options() -> dict[str, str]:
+def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:
     """Return NiceGUI ``ui.select`` options as ``{stem: display_label}``.
 
     Dict **keys** are the bound values (file stems under ``phantom_data/``). Dict
-    **values** are display labels. Demo meshes that are actually shipped get a
-    ``(demo)`` suffix. Do not invert to label→stem — that would bind the label
-    string into ``state.human_mesh`` and break STL paths.
+    **values** are display labels. Insertion order is clinical meshes (alpha),
+    then an optional non-selectable Demo section sentinel, then demo stems when
+    enabled. ``GUI_HIDDEN_HUMAN_MESHES`` are never listed.
+
+    ``include_demos`` defaults to ``show_demo_phantoms_enabled()`` (local
+    ``gui.json``, default off). Do not invert to label→stem — that would bind
+    the label string into ``state.human_mesh`` and break STL paths.
     """
+    from .window_prefs import show_demo_phantoms_enabled
+
+    if include_demos is None:
+        include_demos = show_demo_phantoms_enabled()
+
+    names = get_human_mesh_names()
+    clinical = sorted(
+        stem
+        for stem in names
+        if stem not in DEMO_HUMAN_MESHES and stem not in GUI_HIDDEN_HUMAN_MESHES
+    )
+    demos = sorted(stem for stem in names if stem in DEMO_HUMAN_MESHES) if include_demos else []
+
     options: dict[str, str] = {}
-    for stem in get_human_mesh_names():
-        if stem in _DEMO_DISPLAY_LABELS and stem in DEMO_HUMAN_MESHES:
-            options[stem] = _DEMO_DISPLAY_LABELS[stem]
-        elif stem in DEMO_HUMAN_MESHES:
-            options[stem] = f"{_title_case_mesh_stem(stem)} (demo)"
-        else:
-            options[stem] = _title_case_mesh_stem(stem)
+    for stem in clinical:
+        options[stem] = _title_case_mesh_stem(stem)
+    if demos:
+        options[DEMO_MESH_SECTION_KEY] = DEMO_MESH_SECTION_LABEL
+        for stem in demos:
+            if stem in _DEMO_DISPLAY_LABELS:
+                options[stem] = _DEMO_DISPLAY_LABELS[stem]
+            else:
+                options[stem] = f"{_title_case_mesh_stem(stem)} (demo)"
     return options
 
 
