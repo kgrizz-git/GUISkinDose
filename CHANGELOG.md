@@ -12,6 +12,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Pediatric 5y male reinstalled face-up** (2026-07-22) — Replaced a drifted shipped STL with a
+  fresh catalog regenerate; head now rests near the table like the female peer. `run_catalog`
+  enforces a clinical `face_up_ok` gate after transform. See
+  `dev-docs/assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md`.
+
 - **Steamboat Willie re-oriented supine** (2026-07-22) — Re-ingest with `rotate_deg=[0,0,90]`
   (Rz +90) so the figure is not right-side-lying. Fun validate adds a `not_side_lying` headband
   gate. Inventory hashes updated.

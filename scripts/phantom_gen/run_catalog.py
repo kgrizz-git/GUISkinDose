@@ -38,6 +38,7 @@ from scripts.phantom_gen.transform_to_psd_frame import (  # noqa: E402
 from scripts.phantom_gen.validate_phantom import (  # noqa: E402
     abdomen_bulk,
     extents,
+    face_up_ok,
     head_ratio,
     load_vertices,
     validate,
@@ -186,14 +187,21 @@ def run_blender_generate(
     return obj_path
 
 
-def transform_obj_to_stl(obj_path: Path, stl_path: Path) -> dict[str, float]:
+def transform_obj_to_stl(
+    obj_path: Path,
+    stl_path: Path,
+    *,
+    force_flip_y: bool = True,
+) -> dict[str, float]:
     """Transform Blender OBJ into PSD-frame STL; return extent summary.
 
-    MPFB exports need ``force_flip_y=True`` so the posterior lands at max Y
-    (face-up). The asymmetric heuristic is often a no-op on these meshes.
+    MPFB exports typically need ``force_flip_y=True`` so the posterior lands at
+    max Y (face-up). Per-entry catalog override may set ``force_flip_y`` false
+    when a regenerate proves the default is wrong. The asymmetric heuristic is
+    often a no-op on these meshes, so the flag is explicit.
     """
     vertices, faces = _load_vertices_faces(obj_path)
-    transformed = transform_to_psd_frame(vertices, force_flip_y=True)
+    transformed = transform_to_psd_frame(vertices, force_flip_y=force_flip_y)
     _write_binary_stl(stl_path, transformed, faces)
     return extents(transformed)
 
@@ -289,8 +297,17 @@ def process_entry(
     report["steps"]["generate"] = {"ok": True, "obj": str(obj_path.name)}
 
     stl_path = out_dir / f"{catalog_id}.stl"
-    ext = transform_obj_to_stl(obj_path, stl_path)
-    report["steps"]["transform"] = {"ok": True, "extents": ext}
+    force_flip = bool(entry.get("force_flip_y", True))
+    ext = transform_obj_to_stl(obj_path, stl_path, force_flip_y=force_flip)
+    report["steps"]["transform"] = {"ok": True, "extents": ext, "force_flip_y": force_flip}
+
+    # Clinical face-up gate (same PSD convention as fun demos).
+    fu_pass, fu_detail = face_up_ok(load_vertices(stl_path))
+    report["steps"]["face_up"] = {"ok": fu_pass, **fu_detail}
+    if not fu_pass:
+        report["passed"] = False
+        report["stl"] = str(stl_path)
+        return report
 
     range_failures = check_expect_ranges(ext, expect)
     report["steps"]["expect_ranges"] = {"ok": not range_failures, "failures": range_failures}

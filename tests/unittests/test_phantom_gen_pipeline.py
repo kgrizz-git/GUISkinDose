@@ -391,6 +391,7 @@ def test_validate_fun_mode_passes_on_watertight_sphere(tmp_path: Path):
     assert result["checks"]["face_count_ceiling"] == 20000
     assert result["checks"]["anchors_ok"], result["checks"]["extents"]
     assert result["checks"]["face_up_ok"], result["checks"]["face_up"]
+    assert result["checks"]["not_side_lying_ok"], result["checks"]["not_side_lying"]
     assert result["checks"]["outward_normals_ok"], result["checks"]["outward_normals"]
     assert result["passed"]
 

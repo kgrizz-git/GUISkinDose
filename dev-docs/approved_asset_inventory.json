@@ -622,18 +622,18 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_5y_male.stl",
-      "sha256": "87ac02addea047aa9763e864e6e15e88314d84bec94a1a46bcabdabbee00a25b",
+      "sha256": "ec97bcc7292007928b02aae934d572e640e52811edeb4438ade4155ec25dd731",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (pediatric_5y_male)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-21"
+        "reviewed_on": "2026-07-22"
       }
     },
     {
       "path": "src/mypyskindose/phantom_data/pediatric_5y_male_reduced_1000t.stl",
-      "sha256": "b750b199938695bdd662e72468df4d970b6b0c08fc1b6c9ea15e233334154aca",
+      "sha256": "2067d7f4a32a52d70750099bfa6b4da5fdd6127f4485b772f0a469d3254ad8b0",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (pediatric_5y_male)",
       "review": {
