@@ -468,9 +468,9 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/steamboat_willie.stl",
-      "sha256": "c2a3c27c78accce366529e9d92b4334dbd7760b7af986886a35dfa185b6cf4ea",
+      "sha256": "1c6869789d56d904893511bc7f0584f6670e42b60513160d0521b8b99be62ed9",
       "kind": "opaque_binary",
-      "purpose": "Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; voxel-remeshed watertight)",
+      "purpose": "Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; voxel-remeshed watertight; Rz+90 supine)",
       "review": {
         "status": "approved",
         "reviewer": "KG",
@@ -479,9 +479,9 @@
     },
     {
       "path": "src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl",
-      "sha256": "7c73b550e0b8d023719c4d01084a07ea4ebbb2bf60e1aab433e0e047a14e3527",
+      "sha256": "97de278e8e58290d44c02c8c7975b839a6dd824a5b732be6812cf0d17902ec37",
       "kind": "opaque_binary",
-      "purpose": "Reduced Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0)",
+      "purpose": "Reduced Steamboat Willie (demo) non-clinical phantom mesh (Wikimedia Commons, Adrian Cojocaru, CC BY 4.0; Rz+90 supine)",
       "review": {
         "status": "approved",
         "reviewer": "KG",

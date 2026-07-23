@@ -180,6 +180,50 @@ def face_up_ok(
     return passed, detail
 
 
+def not_side_lying_ok(
+    vertices: np.ndarray,
+    *,
+    band_frac: float = 0.12,
+    max_lateral_over_ap: float = 1.35,
+) -> tuple[bool, dict]:
+    """Reject meshes whose superior band is much wider in X than in Y (side-lying).
+
+    After PSD framing, a supine character should present face/chest protrusion
+    primarily along Y (AP), not a wide lateral headband with a thin AP span.
+    Side-lying fails when::
+
+        headband_x_span > max_lateral_over_ap * headband_y_span
+    """
+    z = vertices[:, 2]
+    z_min, z_max = float(z.min()), float(z.max())
+    height_z = z_max - z_min
+    detail: dict = {"band_frac": band_frac, "max_lateral_over_ap": max_lateral_over_ap}
+    if height_z <= 0:
+        detail["reason"] = "degenerate_extent"
+        detail["passed"] = False
+        return False, detail
+    band_mask = z >= z_max - band_frac * height_z
+    if int(band_mask.sum()) < 10:
+        detail["reason"] = "too_few_headband_points"
+        detail["headband_points"] = int(band_mask.sum())
+        detail["passed"] = False
+        return False, detail
+    hb = vertices[band_mask]
+    hx = float(hb[:, 0].max() - hb[:, 0].min())
+    hy = float(hb[:, 1].max() - hb[:, 1].min())
+    ratio = hx / max(hy, 1e-9)
+    passed = ratio <= max_lateral_over_ap
+    detail.update(
+        {
+            "headband_x_span": hx,
+            "headband_y_span": hy,
+            "lateral_over_ap": ratio,
+            "passed": passed,
+        }
+    )
+    return passed, detail
+
+
 def _load_trimesh(path: Path):
     """Load ``path`` as a single concatenated ``trimesh.Trimesh`` (or raise)."""
     import trimesh
@@ -384,6 +428,10 @@ def validate(
         results["checks"]["face_up"] = fu_detail
         results["checks"]["face_up_ok"] = fu_pass
 
+        side_pass, side_detail = not_side_lying_ok(verts, band_frac=face_up_band_frac)
+        results["checks"]["not_side_lying"] = side_detail
+        results["checks"]["not_side_lying_ok"] = side_pass
+
         try:
             on_pass, on_detail = outward_normals_ok(stl_path)
         except ImportError as exc:
@@ -391,7 +439,7 @@ def validate(
         results["checks"]["outward_normals"] = on_detail
         results["checks"]["outward_normals_ok"] = on_pass
 
-        fun_ok = fu_pass and on_pass
+        fun_ok = fu_pass and side_pass and on_pass
 
     if not skip_phantom_load:
         ok, detail = phantom_load_ok(stl_path, stl_path.stem)

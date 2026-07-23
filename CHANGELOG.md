@@ -12,6 +12,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Steamboat Willie re-oriented supine** (2026-07-22) — Re-ingest with `rotate_deg=[0,0,90]`
+  (Rz +90) so the figure is not right-side-lying. Fun validate adds a `not_side_lying` headband
+  gate. Inventory hashes updated.
+
 - **Demo phantoms gated behind local prefs** (2026-07-22) — Settings mesh dropdown lists
   clinical phantoms only by default. Opt in with `"show_demo_phantoms": true` in
   `~/.mypyskindose/gui.json` to append a **Demo** section (Cosmic Buddha headless + Steamboat

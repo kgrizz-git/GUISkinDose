@@ -89,13 +89,13 @@
       "rotate_deg": [
         0,
         0,
-        0
+        90
       ],
       "flip_y": true,
       "target_faces": 6000,
       "face_up_frac": 0.55,
       "face_up_band_frac": 0.12,
-      "geometry_notes": "Cartoon Steamboat Willie figure. Orientation LOCKED (2026-07-22): raw Z is standing height (floor near min Z, crown/hat at max Z), so rotate_deg=[0,0,0], height_axis=z, height_cm=120 (final ~121.5 cm after voxel remesh). Raw scan is NOT watertight (~144k faces, euler=82); fill_holes fails \u2192 voxel_pitch=4.5 cm marching-cubes remesh (~5676 faces, watertight). flip_y=true required for face-up (anterior toward -Y); --no-flip-y fails the face-up gate. NOTICE_steamboat_willie.txt required (CC BY 4.0). Trademark: stem steamboat_willie only.",
+      "geometry_notes": "Cartoon Steamboat Willie figure. Orientation RE-LOCKED (2026-07-22 QA): raw Z is standing height; rotate_deg=[0,0,90] (Rz +90) corrects prior side-lying (right-side) shipping so the figure is supine. height_axis=z, height_cm=120 (final ~121.5 cm after voxel remesh). Raw scan is NOT watertight (~144k faces); fill_holes fails → voxel_pitch=4.5 cm marching-cubes remesh (~5676 faces, watertight). flip_y=true for face-up. Fun validate adds not_side_lying gate (superior headband X span must not dominate Y). NOTICE_steamboat_willie.txt required (CC BY 4.0). Trademark: stem steamboat_willie only.",
       "fallback_notes": "Primary: Commons Cojocaru CC BY 4.0. If watertight repair fails, fall back to JoeBert Sketchfab CC-BY (~5.6k tris). Quaternius filler only if BOTH Steamboat sources entirely fail.",
       "orientation_locked": true,
       "voxel_pitch": 4.5
