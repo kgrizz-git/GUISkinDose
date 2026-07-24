@@ -55,7 +55,58 @@ def _import_mpfb_services(module_name: str):
     humanservice = __import__(f"{base}.services.humanservice", fromlist=["HumanService"])
     targetservice = __import__(f"{base}.services.targetservice", fromlist=["TargetService"])
     exportservice = __import__(f"{base}.services.exportservice", fromlist=["ExportService"])
-    return humanservice.HumanService, targetservice.TargetService, exportservice.ExportService
+    objectservice = __import__(f"{base}.services.objectservice", fromlist=["ObjectService"])
+    rigservice = __import__(f"{base}.services.rigservice", fromlist=["RigService"])
+    return (
+        humanservice.HumanService,
+        targetservice.TargetService,
+        exportservice.ExportService,
+        objectservice.ObjectService,
+        rigservice.RigService,
+    )
+
+
+def _resolve_pose_path(repo_root: Path, entry: dict) -> Path | None:
+    """Return pose JSON path from catalog ``pose`` or ``pose_file``, else None."""
+    pose_file = entry.get("pose_file")
+    pose_name = entry.get("pose")
+    if pose_file:
+        path = Path(pose_file)
+        if not path.is_absolute():
+            path = repo_root / "scripts" / "phantom_gen" / path
+        return path
+    if pose_name:
+        return repo_root / "scripts" / "phantom_gen" / "poses" / f"{pose_name}.json"
+    return None
+
+
+def _apply_catalog_pose(
+    basemesh,
+    entry: dict,
+    *,
+    HumanService,
+    ObjectService,
+    RigService,
+    repo_root: Path,
+) -> None:
+    """Optionally add default FK rig, apply pose dict, bake as rest pose."""
+    pose_path = _resolve_pose_path(repo_root, entry)
+    if pose_path is None:
+        return
+    if not pose_path.is_file():
+        raise FileNotFoundError(f"Catalog pose file not found: {pose_path}")
+
+    import bpy
+
+    pose = json.loads(pose_path.read_text(encoding="utf-8"))
+    armature = HumanService.add_builtin_rig(basemesh, "default", import_weights=True)
+    ObjectService.deselect_and_deactivate_all()
+    ObjectService.activate_blender_object(armature)
+    bpy.ops.object.mode_set(mode="POSE", toggle=False)
+    RigService.set_pose_from_dict(armature, pose, from_rest_pose=True)
+    bpy.ops.object.mode_set(mode="OBJECT", toggle=False)
+    RigService.apply_pose_as_rest_pose(armature)
+    print(f"MPFB_POSE_OK file={pose_path.name} armature={armature.name}")
 
 
 def _find_target_file(mpfb_root: Path, target_name: str) -> Path:
@@ -95,7 +146,9 @@ def main() -> int:
     scale = float(catalog.get("scale", 0.1))
 
     _enable_mpfb(module_name)
-    HumanService, TargetService, ExportService = _import_mpfb_services(module_name)
+    HumanService, TargetService, ExportService, ObjectService, RigService = _import_mpfb_services(
+        module_name
+    )
 
     macro = TargetService.get_default_macro_info_dict()
     macro.update(entry["macros"])
@@ -123,6 +176,15 @@ def main() -> int:
         target_path = _find_target_file(mpfb_root, name)
         TargetService.load_target(basemesh, str(target_path), weight=value, name=name)
         TargetService.set_target_value(basemesh, name, value)
+
+    _apply_catalog_pose(
+        basemesh,
+        entry,
+        HumanService=HumanService,
+        ObjectService=ObjectService,
+        RigService=RigService,
+        repo_root=_repo_root_from_script(),
+    )
 
     bpy.context.view_layer.objects.active = basemesh
     basemesh.select_set(True)

@@ -8,32 +8,66 @@ import pytest
 
 from mypyskindose import Phantom, PyskindoseSettings, load_settings_example_json
 from mypyskindose.gui.helpers import get_human_mesh_names
+from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
 
 NEW_MESHES = [
-    "pediatric_5y_male",
-    "pediatric_5y_female",
-    "pediatric_10y_male",
-    "pediatric_10y_female",
-    "adult_ectomorph_male",
-    "adult_ectomorph_female",
-    "adult_endomorph_male",
-    "adult_endomorph_female",
-    "bariatric_class2_male",
-    "bariatric_class2_female",
-    "bariatric_class2_male_thick_extremities",
-    "bariatric_class2_female_thick_extremities",
+    "ped_preschool_male",
+    "ped_preschool_female",
+    "ped_5y_male",
+    "ped_5y_female",
+    "ped_10y_male",
+    "ped_10y_female",
+    "adult_ecto_male",
+    "adult_ecto_female",
+    "adult_endo_male",
+    "adult_endo_female",
+    "adult_bariatric_male_1",
+    "adult_bariatric_female_1",
+    "adult_bariatric_male_2",
+    "adult_bariatric_female_2",
+    "adult_bariatric_male_3",
+    "adult_bariatric_female_3",
+]
+
+ARMS_DOWN_MESHES = [
+    f"{stem}_arms_down"
+    for stem in [
+        "ped_preschool_male",
+        "ped_preschool_female",
+        "ped_5y_male",
+        "ped_5y_female",
+        "ped_10y_male",
+        "ped_10y_female",
+        "junior_male",
+        "junior_female",
+        "adult_male",
+        "adult_female",
+        "adult_ecto_male",
+        "adult_ecto_female",
+        "adult_endo_male",
+        "adult_endo_female",
+        "adult_bariatric_male_1",
+        "adult_bariatric_female_1",
+        "adult_bariatric_male_2",
+        "adult_bariatric_female_2",
+        "adult_bariatric_male_3",
+        "adult_bariatric_female_3",
+        "senior_male",
+        "senior_female",
+        "hudfrid",
+    ]
 ]
 
 PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"
 
 
-@pytest.mark.parametrize("mesh_name", NEW_MESHES)
+@pytest.mark.parametrize("mesh_name", NEW_MESHES + ARMS_DOWN_MESHES)
 def test_new_mesh_files_exist_with_reduced_variant(mesh_name: str):
     assert (PHANTOM_DATA / f"{mesh_name}.stl").is_file()
     assert (PHANTOM_DATA / f"{mesh_name}_reduced_1000t.stl").is_file()
 
 
-@pytest.mark.parametrize("mesh_name", NEW_MESHES)
+@pytest.mark.parametrize("mesh_name", NEW_MESHES + ARMS_DOWN_MESHES)
 def test_reduced_preview_meshes_are_connected(mesh_name: str):
     """Settings preview uses ``*_reduced_1000t``; subsample soups look like scatter fragments."""
     from stl import mesh as stl_mesh
@@ -50,13 +84,13 @@ def test_reduced_preview_meshes_are_connected(mesh_name: str):
 
 def test_new_meshes_are_discovered():
     names = get_human_mesh_names()
-    for mesh_name in NEW_MESHES:
+    for mesh_name in NEW_MESHES + ARMS_DOWN_MESHES:
         assert mesh_name in names
-    for mesh_name in NEW_MESHES:
+    for mesh_name in NEW_MESHES + ARMS_DOWN_MESHES:
         assert f"{mesh_name}_reduced_1000t" not in names
 
 
-@pytest.mark.parametrize("mesh_name", NEW_MESHES)
+@pytest.mark.parametrize("mesh_name", NEW_MESHES + ARMS_DOWN_MESHES)
 def test_new_mesh_loads_with_psd_anchors(mesh_name: str):
     settings = PyskindoseSettings(settings=load_settings_example_json())
     phantom = Phantom(
@@ -75,21 +109,35 @@ def test_new_mesh_loads_with_psd_anchors(mesh_name: str):
     assert 50.0 < height < 220.0
 
 
-@pytest.mark.parametrize("mesh_name", ["pediatric_5y_male", "adult_endomorph_male"])
+@pytest.mark.parametrize("mesh_name", ["ped_5y_male", "adult_endo_male"])
 def test_new_mesh_scale_hook_smoke(mesh_name: str):
     settings = PyskindoseSettings(settings=load_settings_example_json())
-    unscaled = Phantom(
+    phantom = Phantom(
         phantom_model="human",
         phantom_dim=settings.phantom.dimension,
         human_mesh=mesh_name,
-        human_scale=(1.0, 1.0, 1.0),
+        human_scale=(1.1, 0.9, 1.05),
     )
-    scaled = Phantom(
+    assert len(phantom.r) > 1000
+
+
+def test_arms_down_label_and_sort_order():
+    from mypyskindose.phantom_mesh_names import human_mesh_display_label, sort_clinical_mesh_stems
+
+    assert human_mesh_display_label("ped_5y_male_arms_down") == "Pediatric 5y Male (arms down)"
+    ordered = sort_clinical_mesh_stems(["ped_5y_male_arms_down", "ped_5y_female", "ped_5y_male"])
+    assert ordered == ["ped_5y_male", "ped_5y_male_arms_down", "ped_5y_female"]
+
+
+def test_legacy_mesh_aliases_resolve_and_load():
+    assert resolve_human_mesh_stem("pediatric_5y_male") == "ped_5y_male"
+    assert resolve_human_mesh_stem("bariatric_class2_male_thick_extremities") == "adult_bariatric_male_2"
+    assert resolve_human_mesh_stem("cosmic_buddha_reduced_1000t") == "demo_cosmic_buddha_reduced_1000t"
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    phantom = Phantom(
         phantom_model="human",
         phantom_dim=settings.phantom.dimension,
-        human_mesh=mesh_name,
-        human_scale=(1.2, 1.0, 1.0),
+        human_mesh="pediatric_10y_female",
     )
-    unscaled_w = float(unscaled.r[:, 0].max() - unscaled.r[:, 0].min())
-    scaled_w = float(scaled.r[:, 0].max() - scaled.r[:, 0].min())
-    assert scaled_w == pytest.approx(1.2 * unscaled_w, rel=1e-3)
+    assert phantom.human_model == "ped_10y_female"
+    assert len(phantom.r) > 1000

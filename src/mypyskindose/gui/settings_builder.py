@@ -34,7 +34,9 @@ def build_settings(
     base["silence_pydicom_warnings"] = True
 
     base["phantom"]["model"] = app_state.phantom_model
-    base["phantom"]["human_mesh"] = app_state.human_mesh
+    from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+
+    base["phantom"]["human_mesh"] = resolve_human_mesh_stem(app_state.human_mesh)
     base["phantom"]["scale_lat"] = app_state.phantom_scale_lat
     base["phantom"]["scale_ap"] = app_state.phantom_scale_ap
     base["phantom"]["scale_lon"] = app_state.phantom_scale_lon

@@ -88,6 +88,32 @@
         "docs/source/gui_help/phantom_preview.md"
       ]
     },
+    "arms_down_phantoms": {
+      "status": "shipped",
+      "code": [
+        "scripts/phantom_gen/mpfb_generate.py",
+        "scripts/phantom_gen/poses/arms_down_default_fk.json",
+        "scripts/phantom_gen/catalog_v1.json",
+        "src/mypyskindose/phantom_mesh_names.py",
+        "src/mypyskindose/phantom_data"
+      ],
+      "tests": [
+        "tests/unittests/test_phantom_gen_pose.py",
+        "tests/unittests/test_phantom_library_integration.py",
+        "tests/unittests/test_phantom_gen_pipeline.py"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/ADDITIONAL_PHANTOMS.md",
+        "dev-docs/plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md",
+        "dev-docs/assessments/ARMS_DOWN_SPIKE_PED_5Y_MALE_2026-07-23.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_preview.md"
+      ]
+    },
     "settings_phantom_preview": {
       "status": "shipped",
       "code": [

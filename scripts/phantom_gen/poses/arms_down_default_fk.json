@@ -1,0 +1,18 @@
+{
+  "_comment": "Additive arms-down pose for MPFB default_fk rig. XYZ euler radians relative to rest. Negative upperarm X pulls hands back from anterior; Z adducts from A-pose so arms hang beside the hips with a small gap. Tuned on ped_5y_male spike (2026-07-23). Use only for new catalog IDs.",
+  "skeleton_type": "default_fk",
+  "has_ik_bones": false,
+  "bone_translations": {},
+  "bone_rotations": {
+    "clavicle.L": [0.0, 0.0, -0.04],
+    "clavicle.R": [0.0, 0.0, 0.04],
+    "shoulder01.L": [0.0, 0.0, -0.06],
+    "shoulder01.R": [0.0, 0.0, 0.06],
+    "upperarm01.L": [-0.40, 0.0, -0.40],
+    "upperarm01.R": [-0.40, 0.0, 0.40],
+    "upperarm02.L": [0.0, 0.0, -0.12],
+    "upperarm02.R": [0.0, 0.0, 0.12],
+    "lowerarm01.L": [0.0, 0.0, 0.0],
+    "lowerarm01.R": [0.0, 0.0, 0.0]
+  }
+}

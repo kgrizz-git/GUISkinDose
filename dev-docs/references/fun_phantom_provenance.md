@@ -82,8 +82,8 @@ renders (side, top, and per-face depth maps), then locked in `fun_mesh_manifest.
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/cosmic_buddha.stl` | 6000 | `cd6c5428bb0292740251fb990954f1a9e4cfc9e7abcdf3109c04edd7f63c3a1a` |
-| `src/mypyskindose/phantom_data/cosmic_buddha_reduced_1000t.stl` | 1000 | `66d9ae78a9d74662d18dc1b3490664fb3168ea3ebf70ea19fda5da3d5588a142` |
+| `src/mypyskindose/phantom_data/demo_cosmic_buddha.stl` | 6000 | `cd6c5428bb0292740251fb990954f1a9e4cfc9e7abcdf3109c04edd7f63c3a1a` |
+| `src/mypyskindose/phantom_data/demo_cosmic_buddha_reduced_1000t.stl` | 1000 | `66d9ae78a9d74662d18dc1b3490664fb3168ea3ebf70ea19fda5da3d5588a142` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).
 
@@ -132,6 +132,36 @@ require **no** changes for this blocker.
 
 ---
 
+## Louvre Cults batch (local `tmp/` only) — NOT SHIPPED (reviewed 2026-07-23)
+
+Local working copies under gitignored `tmp/STL-downloads-and-links/` (zips + Cults `.webloc`
+bookmarks). These are **local experiments only** — do **not** install under `phantom_data/`, add
+inventory hashes, or list in the GUI.
+
+| Local zip (stem) | Cults product page | Cults license (page) | Scan the World / Zenodo | Ship? |
+|------------------|--------------------|----------------------|-------------------------|-------|
+| `socrates-at-the-louvre-paris…` | [Socrates](https://cults3d.com/en/3d-model/art/socrates-at-the-louvre-paris) | **CULTS PU** (private use) + No AI | [Zenodo 20239314](https://zenodo.org/records/20239314): **CC BY-NC-SA 4.0** | **No** — PU forbids redistributing the digital file; NC forbids commercial package redistribution |
+| `mattei-athena-at-the-louvre-paris…` | [Mattei Athena](https://cults3d.com/en/3d-model/art/mattei-athena-at-the-louvre-paris) | **CC BY-SA** + No AI | [MMF 16590](https://www.myminifactory.com/object/3d-print-mattei-athena-at-the-louvre-paris-16590) / [Zenodo 20240225](https://zenodo.org/records/20240225): **BY-NC-SA / CC BY-NC-SA 4.0** | **No** — same Cults-vs-STW NC conflict as Petite Herculanaise |
+| `childebert-at-the-louvre-paris…` | [Childebert](https://cults3d.com/en/3d-model/art/childebert-at-the-louvre-paris) | **CC BY-SA** + No AI | [Zenodo 20207953](https://zenodo.org/records/20207953): **CC BY-NC-SA 4.0** | **No** |
+| `draped-woman-at-the-louvre-paris-d084266a-…` | [Draped Woman](https://cults3d.com/en/3d-model/art/draped-woman-at-the-louvre-paris-d084266a-7655-47f1-91ce-decd5f18a2ba) | **CC BY-SA** + No AI | [Zenodo 20164972](https://zenodo.org/records/20164972): **CC BY-NC-SA 4.0** | **No** |
+
+Order/download `.webloc` files in that folder (`cults3d.com/en/orders/…`) are private receipt URLs,
+not license sources.
+
+### Policy takeaway
+
+- Prefer **CC0** or plain **CC BY** (no NC) sources already used for shipped demos (Smithsonian /
+  Wikimedia Commons).
+- When Cults shows **CC BY-SA** but MyMiniFactory / Zenodo Scan the World mirrors of the **same**
+  scan are **CC BY-NC-SA**, treat the STW **NC** terms as authoritative and **do not ship** until a
+  clean non-NC source is confirmed (same rule as Petite Herculanaise above).
+- **CULTS PU** ([Cults license docs](https://cults3d.com/en/licenses)): private print use only —
+  no redistribution, sale, donation, or exchange of the digital files.
+- Cults **No AI** badges are platform terms alongside the license label; they are not a substitute
+  for clearing NC / PU.
+
+---
+
 ## Ramesses II (`ramesses_ii`)
 
 - **Object:** Colossal sculpture of Ramesses II (museum scan, recumbent/mounted figure).
@@ -172,8 +202,8 @@ require **no** changes for this blocker.
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/ramesses_ii.stl` | 5630 | `5b22b53a3a3cc867989816e0194f2fb89adc8591ae4a5a4b6c7cbd7218d4985f` |
-| `src/mypyskindose/phantom_data/ramesses_ii_reduced_1000t.stl` | 1000 | `d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987` |
+| `src/mypyskindose/phantom_data/demo_ramesses_ii.stl` | 5630 | `5b22b53a3a3cc867989816e0194f2fb89adc8591ae4a5a4b6c7cbd7218d4985f` |
+| `src/mypyskindose/phantom_data/demo_ramesses_ii_reduced_1000t.stl` | 1000 | `d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).
 
@@ -216,7 +246,7 @@ Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_i
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/steamboat_willie.stl` | 5676 | `9873c532d806b7dd0ae0e4f3204f4eceed84c93e9dd5459e3b1e1520d5682bba` |
-| `src/mypyskindose/phantom_data/steamboat_willie_reduced_1000t.stl` | 1000 | `538590b074077ed631dba34505f09c5c42255f930b4c19ef57751a693b2fff9f` |
+| `src/mypyskindose/phantom_data/demo_steamboat_willie.stl` | 5676 | `9873c532d806b7dd0ae0e4f3204f4eceed84c93e9dd5459e3b1e1520d5682bba` |
+| `src/mypyskindose/phantom_data/demo_steamboat_willie_reduced_1000t.stl` | 1000 | `538590b074077ed631dba34505f09c5c42255f930b4c19ef57751a693b2fff9f` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).

@@ -118,11 +118,14 @@ Full-body clothed scans **do exist**, but redistributable ones (CC0 / CC-BY / CC
 | Figure / type | Hub | License watch | Notes |
 |---------------|-----|---------------|-------|
 | **Cosmic Buddha** | [Smithsonian 3D](https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-existence:d8c62be8-4ebc-11ea-b77f-2e728ce88125) | **CC0** (object page) | **Shipped** as `cosmic_buddha` (demo); standing ~151 cm; missing head/hands |
-| **Petite Herculanaise** (draped woman) | [Cults](https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris) / [MMF 6356](https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356) | **CC BY-SA** (Cults) | Full-body classical drapery; NOTICE if SA; re-check MMF |
-| **Ramesses II** colossal | [Commons STL](https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl) | **CC BY 4.0** | Clothed; already lying — scale/axes; proportions may be odd |
+| **Petite Herculanaise** (draped woman) | [Cults](https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris) / [MMF 6356](https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356) / Zenodo STW | Cults **CC BY-SA**; STW/Zenodo **CC BY-NC-SA** | **Not shipped** — NC mirrors + Cults login; see provenance |
+| **Ramesses II** colossal | [Commons STL](https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl) | **CC BY 4.0** | **Shipped** as `ramesses_ii` (demo; CLI/on-disk; GUI-hidden) |
+| **Louvre Cults batch** (Socrates, Mattei Athena, Childebert, Draped Woman) | Cults Louvre account + STW Zenodo mirrors | Cults **PU** or **CC BY-SA**; Zenodo **CC BY-NC-SA 4.0** | **Not shipped** — reviewed 2026-07-23; local `tmp/STL-downloads-and-links/` only; see [`fun_phantom_provenance.md`](fun_phantom_provenance.md) |
 | Other draped Buddha / Bodhisattva | SI / Commons / Scan the World | **Per object** | Prefer SI CC0 or Commons BY/SA; skip MMF NC |
 | Scan the World toga / “robed man” | MyMiniFactory | Often **NC / Exclusive** | e.g. Altes Museum Toga — **do not ship** unless Commons BY/SA mirror |
 | Greenough Washington / Greek Slave | Smithsonian | **CC0** when marked | Full figures but **nude / semi-nude** — not clothed; same D1 issue |
+
+**Cults vs Scan the World:** When the same Louvre scan is **CC BY-SA** on Cults but **CC BY-NC-SA** on MyMiniFactory/Zenodo, treat **NC** as blocking for redistributable shipping until a clean non-NC source is confirmed. **CULTS PU** forbids redistributing digital files entirely ([Cults licenses](https://cults3d.com/en/licenses)).
 
 ### Busts / life masks (fallback only)
 

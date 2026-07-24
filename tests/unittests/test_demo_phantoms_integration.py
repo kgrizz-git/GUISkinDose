@@ -57,10 +57,10 @@ def test_demo_mesh_options_when_enabled_have_section_at_end():
         assert mesh_name in options
         assert keys.index(mesh_name) > section_idx
         assert "demo" in options[mesh_name].lower()
-    assert "headless" in options["cosmic_buddha"].lower()
+    assert "headless" in options["demo_cosmic_buddha"].lower()
     for hidden in GUI_HIDDEN_HUMAN_MESHES:
         assert hidden not in options
-    assert "Mickey" not in options.get("steamboat_willie", "")
+    assert "Mickey" not in options.get("demo_steamboat_willie", "")
 
 
 def test_show_demo_phantoms_enabled_defaults_false(monkeypatch, tmp_path):
@@ -68,9 +68,48 @@ def test_show_demo_phantoms_enabled_defaults_false(monkeypatch, tmp_path):
 
     cfg = tmp_path / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: cfg)
+    monkeypatch.delenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, raising=False)
+    monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: None)
     assert window_prefs.show_demo_phantoms_enabled() is False
     cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
     assert window_prefs.show_demo_phantoms_enabled() is True
+
+
+def test_show_demo_phantoms_env_overrides_home_gui_json(monkeypatch, tmp_path):
+    from mypyskindose.gui import window_prefs
+
+    cfg = tmp_path / "gui.json"
+    cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: cfg)
+    monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: None)
+    monkeypatch.setenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, "0")
+    assert window_prefs.show_demo_phantoms_enabled() is False
+    monkeypatch.setenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, "yes")
+    assert window_prefs.show_demo_phantoms_enabled() is True
+
+
+def test_show_demo_phantoms_repo_local_json_and_dotenv(monkeypatch, tmp_path):
+    from mypyskindose.gui import window_prefs
+
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
+    home_cfg = tmp_path / "home_gui.json"
+    home_cfg.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: home_cfg)
+    monkeypatch.delenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, raising=False)
+    monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: tmp_path)
+
+    local = tmp_path / window_prefs.REPO_LOCAL_GUI_CONFIG_NAME
+    local.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
+    assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is True
+
+    local.write_text("{}\n", encoding="utf-8")
+    assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is False
+
+    (tmp_path / ".env").write_text(
+        f"# local\n{window_prefs.SHOW_DEMO_PHANTOMS_ENV}=true\n",
+        encoding="utf-8",
+    )
+    assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is True
 
 
 @pytest.mark.parametrize("mesh_name", ON_DISK_DEMO_MESHES)

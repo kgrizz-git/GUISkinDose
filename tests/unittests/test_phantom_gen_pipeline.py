@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CATALOG_V1 = REPO_ROOT / "scripts" / "phantom_gen" / "catalog_v1.json"
 FUN_MANIFEST = REPO_ROOT / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
 ADULT_MALE = REPO_ROOT / "src" / "mypyskindose" / "phantom_data" / "adult_male.stl"
-FUN_MESH_IDS = ("cosmic_buddha", "petite_herculanaise", "ramesses_ii", "steamboat_willie")
+FUN_MESH_IDS = ("demo_cosmic_buddha", "petite_herculanaise", "demo_ramesses_ii", "demo_steamboat_willie")
 
 
 def _write_box_stl(path: Path, *, x: float, y: float, z: float, origin=(0.0, 0.0, 0.0)) -> None:
@@ -69,10 +69,16 @@ def _write_box_stl(path: Path, *, x: float, y: float, z: float, origin=(0.0, 0.0
 
 def test_catalog_v1_loads_and_forbids_affine_shipping_fields():
     catalog = load_catalog(CATALOG_V1)
-    # 10 shippable + 2 MPFB shape-reference adults
-    assert len(catalog["entries"]) == 12
-    assert "pediatric_5y_male" in catalog["entries"]
-    assert "bariatric_class2_female" in catalog["entries"]
+    # 16 A-pose + 23 arms_down (incl. legacy approx) + 2 MPFB shape-reference adults
+    assert len(catalog["entries"]) == 41
+    assert "ped_preschool_male" in catalog["entries"]
+    assert "ped_5y_male" in catalog["entries"]
+    assert "ped_5y_male_arms_down" in catalog["entries"]
+    assert catalog["entries"]["ped_5y_male_arms_down"].get("pose") == "arms_down_default_fk"
+    assert "adult_bariatric_female_1" in catalog["entries"]
+    assert "adult_bariatric_male_3" in catalog["entries"]
+    assert "junior_male_arms_down" in catalog["entries"]
+    assert "hudfrid_arms_down" in catalog["entries"]
     assert "_shape_ref_adult_male" in catalog["entries"]
     assert "_shape_ref_adult_female" in catalog["entries"]
     assert catalog["entries"]["_shape_ref_adult_male"].get("ship") is False
@@ -109,16 +115,17 @@ def test_catalog_rejects_base_mesh_entry(tmp_path: Path):
 
 def test_select_ids_only_and_priority():
     catalog = load_catalog(CATALOG_V1)
-    assert select_ids(catalog, only="pediatric_5y_male", priority=None) == ["pediatric_5y_male"]
+    assert select_ids(catalog, only="ped_5y_male", priority=None) == ["ped_5y_male"]
     # REF entries excluded from default / priority sweeps
     all_ids = select_ids(catalog, only=None, priority=None)
     assert "_shape_ref_adult_male" not in all_ids
-    assert len(all_ids) == 10
+    assert len(all_ids) == 39
+    assert len([i for i in all_ids if i.endswith("_arms_down")]) == 23
     p0 = select_ids(catalog, only=None, priority="P0")
-    assert len(p0) == 8
+    assert len(p0) == 25
     assert all(catalog["entries"][i]["priority"] == "P0" for i in p0)
     p1 = select_ids(catalog, only=None, priority="P1")
-    assert len(p1) == 2
+    assert len(p1) == 14
 
 
 def test_transform_to_psd_frame_anchors_obj_y_up_meters():
@@ -296,9 +303,9 @@ def test_fun_mesh_manifest_has_all_four_ids():
         assert entry["id"] == mesh_id
         assert len(entry["rotate_deg"]) == 3
     # Cosmic Buddha uses the headless superior-20% face-up band.
-    assert meshes["cosmic_buddha"]["face_up_band_frac"] == pytest.approx(0.20)
+    assert meshes["demo_cosmic_buddha"]["face_up_band_frac"] == pytest.approx(0.20)
     # Steamboat records a fallback source note.
-    assert "fallback_notes" in meshes["steamboat_willie"]
+    assert "fallback_notes" in meshes["demo_steamboat_willie"]
 
 
 def test_manifest_entry_merges_defaults():

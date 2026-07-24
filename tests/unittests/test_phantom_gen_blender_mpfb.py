@@ -36,7 +36,7 @@ def test_generate_one_catalog_entry_smoke(tmp_path: Path):
     catalog = load_catalog(CATALOG_V1)
     # Use smallest pediatric entry for a relatively quick smoke.
     report = process_entry(
-        "pediatric_5y_male",
+        "ped_5y_male",
         catalog,
         catalog_path=CATALOG_V1,
         out_dir=tmp_path,
@@ -45,4 +45,4 @@ def test_generate_one_catalog_entry_smoke(tmp_path: Path):
         skip_shape=False,
     )
     assert report["passed"], report
-    assert (tmp_path / "pediatric_5y_male.stl").is_file()
+    assert (tmp_path / "ped_5y_male.stl").is_file()

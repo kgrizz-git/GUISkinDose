@@ -24,9 +24,12 @@ approximate — do not treat them as equal to calculation bounds.
 - Plane and cylinder models show a short “preview available for human mesh” note instead of a plot.
 - This panel does not replace the Geometry tab event/setup preview (which needs RDSR data).
 - Demo / non-clinical meshes (for example Cosmic Buddha, Steamboat Willie) are **hidden by
-  default**. To list them in a **Demo** section at the end of the mesh dropdown, set
-  `"show_demo_phantoms": true` in `~/.mypyskindose/gui.json` (local preferences; not
-  committed). Use demos for visuals only — not as dosimetry reference phantoms.
+  default**. To list them in a **Demo** section at the end of the mesh dropdown, enable any
+  of (first explicit setting wins):
+  - process env / `.env`: `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS=true`
+  - repo-local gitignored `.mypyskindose.local.json`: `{"show_demo_phantoms": true}`
+  - user prefs `~/.mypyskindose/gui.json`: `"show_demo_phantoms": true`
+  Use demos for visuals only — not as dosimetry reference phantoms.
   Cosmic Buddha is missing its head and hands. Steamboat Willie must not be marketed as
   Disney “Mickey Mouse.” Ramesses II remains on disk for advanced/CLI use but is not
   listed in the GUI (excess stone/plinth geometry).

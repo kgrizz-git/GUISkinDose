@@ -18,9 +18,12 @@ Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery
 | `adult_male`, `adult_female` | 26,756 | Full-resolution adults |
 | `junior_male`, `junior_female` | 26,756 | Same topology family as adults |
 | `senior_male`, `senior_female` | 26,756 | Distinct meshes; same face count as adult/junior full variants |
-| `pediatric_5y_*`, `pediatric_10y_*` | 26,756 | MPFB parametric pediatric (male/female) |
+| `ped_preschool_*`, `ped_5y_*`, `ped_10y_*` | 26,756 | MPFB parametric pediatric (male/female) |
+| `adult_ecto_*`, `adult_endo_*` | 26,756 | MPFB ectomorph / endomorph |
+| `*_arms_down` | 26,756 | Additive arms-down twins of clinical stems (incl. MPFB approx of legacy) |
+| `adult_bariatric_{sex}_{1,2,3}` | 26,756 | Class-II series: 1 abdomen, 2 thick extremities, 3 extra-thick |
 | `adult_ectomorph_*`, `adult_endomorph_*` | 26,756 | MPFB thin / heavy adult habitus (male/female) |
-| `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); abdomen-dominant and `_thick_extremities` variants |
+| `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); abdomen-dominant, `_thick_extremities`, and `_extra_thick_extremities` variants |
 
 | `cosmic_buddha` | ~6,000 | Demo / non-clinical (CC0); missing head/hands; GUI Demo section (opt-in) |
 | `ramesses_ii` | ~5,600 | Demo / non-clinical (CC BY 4.0); on disk / CLI only (not in Settings list) |
@@ -91,7 +94,7 @@ Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to shi
 |------|----------------------|---------------|
 | Realistic parametric | MakeHuman / MPFB (core assets **CC0**) | Preferred generation path already |
 | Stylized / original cartoon | [Quaternius](https://quaternius.com/), [Kenney.nl](https://kenney.nl/assets) (**CC0**) | Safest fun candidates (no franchise trademarks) |
-| Clothed / draped full-body | Cosmic Buddha (**CC0**, shipped); Ramesses II (**CC BY 4.0**, shipped); Petite Herculanaise (**CC BY-SA**, blocked — NC/login) | See plan + provenance |
+| Clothed / draped full-body | Cosmic Buddha (**CC0**, shipped); Ramesses II (**CC BY 4.0**, shipped); Petite Herculanaise + other Louvre Cults/STW scans (**blocked** — NC / CULTS PU; see provenance) | Prefer SI CC0 / Commons BY; see [`references/fun_phantom_provenance.md`](references/fun_phantom_provenance.md) |
 | Historical busts / portraits | [Smithsonian 3D](https://3d.si.edu/) Open Access (**CC0** when marked) — e.g. Lincoln | Fallback only (not full-body) |
 | *Venus de Milo* | Prefer **SMK** plaster-cast scan (**CC0** / PDM) | Easy download; **nude art** — plan decision D1 |
 | Michelangelo’s *David* | Scan the World on **Wikimedia Commons** (**CC BY-SA 4.0**) | Easy download; nude art — D1; SA on mesh |

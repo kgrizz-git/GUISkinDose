@@ -19,6 +19,7 @@ from ..constants import (
 from ..helpers import (
     DEMO_MESH_SECTION_KEY,
     any_table_origin_override,
+    canonicalize_human_mesh_selection,
     fallback_normalization_exam_count,
     get_human_mesh_options,
     get_mesh_baseline_extents,
@@ -92,9 +93,7 @@ def build(ctx: PageContext) -> None:
                         ).on(_MODEL_VALUE_EVENT, _on_phantom_pose_change).classes("grow")
 
                         mesh_options = get_human_mesh_options()
-                        if state.human_mesh not in mesh_options or state.human_mesh == DEMO_MESH_SECTION_KEY:
-                            # Demos off / hidden mesh / stale stem → fall back to first clinical option.
-                            state.human_mesh = next(iter(mesh_options), "hudfrid")
+                        state.human_mesh = canonicalize_human_mesh_selection(state.human_mesh, mesh_options)
                         mesh_select = (
                             ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
                             .bind_value(state, "human_mesh")

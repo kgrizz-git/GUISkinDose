@@ -3,12 +3,17 @@
 Loads and saves normal (restored) window size/position and maximized state to
 ``~/.mypyskindose/gui.json``. This module intentionally does not import
 pywebview so unit tests can run without the ``gui-native`` extra.
+
+Demo / non-clinical mesh visibility (``show_demo_phantoms``) can also be enabled
+via process env, a repo ``.env``, or a gitignored repo-local JSON — see
+``show_demo_phantoms_enabled``.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +31,10 @@ DEFAULT_HEIGHT = 768
 TITLE_BAR_HEIGHT = 32
 MIN_HORIZONTAL_OVERLAP = 50
 MAXIMIZED_FILL_RATIO = 0.90
+
+# Local opt-in for Settings Demo meshes (never commit true in shared configs).
+SHOW_DEMO_PHANTOMS_ENV = "MYPYSKINDOSE_SHOW_DEMO_PHANTOMS"
+REPO_LOCAL_GUI_CONFIG_NAME = ".mypyskindose.local.json"
 
 
 @dataclass
@@ -95,13 +104,114 @@ def load_gui_config() -> dict[str, Any]:
     return data
 
 
-def show_demo_phantoms_enabled() -> bool:
+def _parse_boolish(raw: Any) -> bool | None:
+    """Parse common truthy/falsy strings; ``None`` means unset / unrecognized."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        if raw == 1:
+            return True
+        if raw == 0:
+            return False
+        return None
+    text = str(raw).strip().lower()
+    if not text:
+        return None
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+
+def _read_dotenv_value(path: Path, key: str) -> str | None:
+    """Read a single ``KEY=VALUE`` from a dotenv file without loading all keys."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None
+    except Exception as exc:
+        safe_error_event(logger, "demo_phantoms_dotenv_read", exc, level=logging.DEBUG)
+        return None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        name, value = stripped.split("=", 1)
+        if name.strip() != key:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        return value
+    return None
+
+
+def find_repo_root(start: Path | None = None) -> Path | None:
+    """Return the nearest ancestor (including ``start``) that has ``pyproject.toml``."""
+    cur = (start or Path.cwd()).resolve()
+    for candidate in [cur, *cur.parents]:
+        if (candidate / "pyproject.toml").is_file():
+            return candidate
+    return None
+
+
+def repo_local_gui_config_path(start: Path | None = None) -> Path | None:
+    """Path to gitignored ``.mypyskindose.local.json`` under the repo root, if any."""
+    root = find_repo_root(start)
+    if root is None:
+        return None
+    return root / REPO_LOCAL_GUI_CONFIG_NAME
+
+
+def _load_repo_local_gui_config(start: Path | None = None) -> dict[str, Any]:
+    path = repo_local_gui_config_path(start)
+    if path is None or not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        safe_error_event(logger, "repo_local_gui_config_load", exc, level=logging.DEBUG)
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def show_demo_phantoms_enabled(*, start: Path | None = None) -> bool:
     """Return whether Settings should list demo / non-clinical human meshes.
 
-    Reads ``show_demo_phantoms`` from ``~/.mypyskindose/gui.json`` (local, not
-    committed). Missing key or missing file defaults to ``False``.
+    First source that explicitly sets the flag wins (later sources ignored):
+
+    1. Process env ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
+    2. Repo ``.env`` (same key; only if process env unset)
+    3. Gitignored ``.mypyskindose.local.json`` in the repo root
+       (``{"show_demo_phantoms": true}``)
+    4. ``~/.mypyskindose/gui.json`` (``show_demo_phantoms``)
+
+    Missing / unrecognized values fall through. Default is ``False``.
     """
-    return bool(load_gui_config().get("show_demo_phantoms", False))
+    env_raw = os.environ.get(SHOW_DEMO_PHANTOMS_ENV)
+    parsed = _parse_boolish(env_raw)
+    if parsed is not None:
+        return parsed
+
+    root = find_repo_root(start)
+    if root is not None:
+        dotenv_raw = _read_dotenv_value(root / ".env", SHOW_DEMO_PHANTOMS_ENV)
+        parsed = _parse_boolish(dotenv_raw)
+        if parsed is not None:
+            return parsed
+
+        local = _load_repo_local_gui_config(start)
+        if "show_demo_phantoms" in local:
+            parsed = _parse_boolish(local.get("show_demo_phantoms"))
+            if parsed is not None:
+                return parsed
+
+    home_raw = load_gui_config().get("show_demo_phantoms")
+    parsed = _parse_boolish(home_raw)
+    return bool(parsed) if parsed is not None else False
 
 
 def save_gui_config(data: dict[str, Any]) -> None:

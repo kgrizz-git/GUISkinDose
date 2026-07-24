@@ -14,6 +14,15 @@ from pathlib import Path
 from stl import mesh as stl_mesh
 
 from mypyskindose.privacy import safe_error_event
+from mypyskindose.phantom_mesh_names import (
+    DEMO_HUMAN_MESHES,
+    DEMO_MESH_SECTION_KEY,
+    DEMO_MESH_SECTION_LABEL,
+    GUI_HIDDEN_HUMAN_MESHES,
+    human_mesh_display_label,
+    resolve_human_mesh_stem,
+    sort_clinical_mesh_stems,
+)
 
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
@@ -68,33 +77,8 @@ _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
 _ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
 
-# Demo / non-clinical mesh stems listed in Settings only when
-# ``show_demo_phantoms`` is true in ``~/.mypyskindose/gui.json`` (default off).
-DEMO_HUMAN_MESHES: frozenset[str] = frozenset(
-    {
-        "cosmic_buddha",
-        "steamboat_willie",
-    }
-)
-
-# On-disk meshes that must never appear in the Settings mesh selector (even with demos on).
-GUI_HIDDEN_HUMAN_MESHES: frozenset[str] = frozenset(
-    {
-        "ramesses_ii",
-    }
-)
-
-# Non-selectable ui.select sentinel separating clinical meshes from demos.
-DEMO_MESH_SECTION_KEY = "__demo_section__"
-DEMO_MESH_SECTION_LABEL = "── Demo ──"
-
-_DEMO_DISPLAY_LABELS: dict[str, str] = {
-    "cosmic_buddha": "Cosmic Buddha (demo, headless)",
-    "ramesses_ii": "Ramesses II (demo)",
-    "steamboat_willie": "Steamboat Willie (demo)",
-    # Blocked / not shipped — kept for label consistency if added later:
-    "petite_herculanaise": "Petite Herculanaise (demo)",
-}
+# Demo / hidden mesh sets and section sentinel live in ``phantom_mesh_names``
+# (canonical stems after the 2026-07-23 naming migration).
 
 __all__ = [
     "EXAM_COLUMN",
@@ -128,6 +112,7 @@ __all__ = [
     "DEMO_MESH_SECTION_KEY",
     "DEMO_MESH_SECTION_LABEL",
     "GUI_HIDDEN_HUMAN_MESHES",
+    "canonicalize_human_mesh_selection",
     "get_human_mesh_names",
     "get_human_mesh_options",
     "get_mesh_baseline_extents",
@@ -144,6 +129,7 @@ __all__ = [
     "reset_global_offsets_on_new_load",
     "reset_patient_offset_for_active",
     "resolve_composite_for_render",
+    "resolve_human_mesh_stem",
     "restore_globals_from_exam_meta",
     "run_calculation",
     "stage_table_origin_axis",
@@ -315,25 +301,21 @@ def get_example_rdsr_files() -> list[Path]:
 
 
 def get_human_mesh_names() -> list[str]:
-    """Return available human mesh names (full-resolution only)."""
+    """Return available human mesh names (full-resolution only, canonical stems)."""
     return sorted(p.stem for p in _PHANTOM_DATA_DIR.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
-
-
-def _title_case_mesh_stem(stem: str) -> str:
-    """Human-readable clinical label from a snake_case mesh stem."""
-    return stem.replace("_", " ").title()
 
 
 def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:
     """Return NiceGUI ``ui.select`` options as ``{stem: display_label}``.
 
-    Dict **keys** are the bound values (file stems under ``phantom_data/``). Dict
-    **values** are display labels. Insertion order is clinical meshes (alpha),
-    then an optional non-selectable Demo section sentinel, then demo stems when
-    enabled. ``GUI_HIDDEN_HUMAN_MESHES`` are never listed.
+    Dict **keys** are the bound values (canonical file stems under ``phantom_data/``).
+    Dict **values** are display labels. Insertion order follows the naming-plan
+    clinical sort key, then an optional non-selectable Demo section sentinel,
+    then demo stems when enabled. ``GUI_HIDDEN_HUMAN_MESHES`` are never listed.
 
-    ``include_demos`` defaults to ``show_demo_phantoms_enabled()`` (local
-    ``gui.json``, default off). Do not invert to label→stem — that would bind
+    ``include_demos`` defaults to ``show_demo_phantoms_enabled()`` (env /
+    repo-local JSON / home ``gui.json``; default off). Do not invert to
+    label→stem — that would bind
     the label string into ``state.human_mesh`` and break STL paths.
     """
     from .window_prefs import show_demo_phantoms_enabled
@@ -342,24 +324,31 @@ def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, st
         include_demos = show_demo_phantoms_enabled()
 
     names = get_human_mesh_names()
-    clinical = sorted(
-        stem
-        for stem in names
-        if stem not in DEMO_HUMAN_MESHES and stem not in GUI_HIDDEN_HUMAN_MESHES
+    clinical = sort_clinical_mesh_stems(
+        stem for stem in names if stem not in DEMO_HUMAN_MESHES and stem not in GUI_HIDDEN_HUMAN_MESHES
     )
     demos = sorted(stem for stem in names if stem in DEMO_HUMAN_MESHES) if include_demos else []
 
     options: dict[str, str] = {}
     for stem in clinical:
-        options[stem] = _title_case_mesh_stem(stem)
+        options[stem] = human_mesh_display_label(stem)
     if demos:
         options[DEMO_MESH_SECTION_KEY] = DEMO_MESH_SECTION_LABEL
         for stem in demos:
-            if stem in _DEMO_DISPLAY_LABELS:
-                options[stem] = _DEMO_DISPLAY_LABELS[stem]
-            else:
-                options[stem] = f"{_title_case_mesh_stem(stem)} (demo)"
+            options[stem] = human_mesh_display_label(stem)
     return options
+
+
+def canonicalize_human_mesh_selection(stem: str, mesh_options: dict[str, str]) -> str:
+    """Map a saved/legacy stem to a selectable canonical option key.
+
+    Resolves aliases first. If the result is missing from ``mesh_options``
+    (e.g. demos gated off), fall back to the first clinical option or hudfrid.
+    """
+    canonical = resolve_human_mesh_stem(stem or "")
+    if canonical in mesh_options and canonical != DEMO_MESH_SECTION_KEY:
+        return canonical
+    return next((k for k in mesh_options if k != DEMO_MESH_SECTION_KEY), "hudfrid")
 
 
 def _fun_manifest_torso_override(mesh_name: str) -> tuple[tuple[float, float] | None, float | None]:
@@ -370,7 +359,9 @@ def _fun_manifest_torso_override(mesh_name: str) -> tuple[tuple[float, float] | 
         import json
 
         data = json.loads(_FUN_MESH_MANIFEST_PATH.read_text(encoding="utf-8"))
-        entry = data.get("meshes", {}).get(mesh_name, {})
+        entry = data.get("meshes", {}).get(resolve_human_mesh_stem(mesh_name), {})
+        if not entry:
+            entry = data.get("meshes", {}).get(mesh_name, {})
     except Exception:
         return None, None
     band = entry.get("torso_z_fraction_range")
@@ -384,6 +375,7 @@ def _fun_manifest_torso_override(mesh_name: str) -> tuple[tuple[float, float] | 
 
 def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
     """Load and cache full extents plus the below-arms torso-width measurement."""
+    mesh_name = resolve_human_mesh_stem(mesh_name)
     if mesh_name in _MESH_EXTENT_CACHE and mesh_name in _MESH_TORSO_WIDTH_CACHE:
         return
 

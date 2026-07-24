@@ -208,8 +208,12 @@ class Phantom:
 
             if isinstance(human_mesh, str):
                 # load selected phantom model from binary .stl file
-                self.human_model = human_mesh
-                phantom_path = Path(__file__).parent / f"phantom_data/{human_mesh}.stl"
+                # Resolve legacy aliases to canonical on-disk stems (incl. reduced).
+                from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+
+                resolved = resolve_human_mesh_stem(human_mesh)
+                self.human_model = resolved
+                phantom_path = Path(__file__).parent / f"phantom_data/{resolved}.stl"
                 phantom_mesh = mesh.Mesh.from_file(str(phantom_path.absolute()))
             elif isinstance(human_mesh, tuple):
                 self.human_model, phantom_mesh = self._get_phantom_mesh_from_tuple(human_mesh)

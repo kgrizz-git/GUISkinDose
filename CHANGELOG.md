@@ -12,6 +12,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Demo phantoms enable sources** (2026-07-23) — `show_demo_phantoms_enabled()` now checks, in
+  order: process env / repo `.env` (`MYPYSKINDOSE_SHOW_DEMO_PHANTOMS`), gitignored
+  `.mypyskindose.local.json`, then `~/.mypyskindose/gui.json`. Default remains off.
+
 - **Pediatric 5y male reinstalled face-up** (2026-07-22) — Replaced a drifted shipped STL with a
   fresh catalog regenerate; head now rests near the table like the female peer. `run_catalog`
   enforces a clinical `face_up_ok` gate after transform. See
@@ -37,6 +41,46 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   cartoons stay on `FUN_DEMO_PHANTOMS_PLAN.md`. SemVer: **minor** on release (new demo meshes).
 
 ### Added
+
+- **Phantom mesh naming convention** (2026-07-23) — Canonical stems `ped_*`, `adult_ecto/endo_*`,
+  `adult_bariatric_{sex}_{1,2,3}`, `demo_*`; legacy aliases resolve in Phantom / preview / Settings.
+  Kept `adult_male` / `junior_*` / `hudfrid`. SemVer: **minor** on release.
+
+- **Pediatric preschool meshes + stature relabel** (2026-07-23) — Option-2 keep-all
+  relabel: former short 5y (~74–78 cm) kept as `ped_preschool_*`; former 10y (~101–108 cm)
+  promoted to `ped_5y_*`; new `ped_10y_*` near CDC median (~137–139 cm). SemVer: **minor**
+  on release.
+
+- **Bariatric series `_1/_2/_3`** (2026-07-23) — `adult_bariatric_{sex}_1` (abdomen), `_2`
+  (thick extremities), `_3` (extra-thick). SemVer: **minor** on release.
+
+- **Pediatric stature review** (2026-07-23) — Documented short pediatric SI heights; addressed by
+  preschool relabel + new 10y regenerate. See
+  `dev-docs/assessments/PEDIATRIC_PHANTOM_STATURE_REVIEW_2026-07-23.md`.
+
+- **Louvre Cults / Scan the World license review** (2026-07-23) — Documented local
+  `tmp/STL-downloads-and-links/` candidates (Socrates, Mattei Athena, Childebert, Draped Woman):
+  Cults labels are **CULTS PU** or **CC BY-SA**, while Zenodo Scan the World mirrors are
+  **CC BY-NC-SA 4.0**. None are shippable under current redistributable (non-NC) policy; recorded in
+  `dev-docs/references/fun_phantom_provenance.md` and the character/mesh sources survey.
+
+- **TO_DO: phantom mesh naming convention** (2026-07-23) — Decisions locked: keep
+  `adult_male` / `junior_*` / `hudfrid`; rename MPFB pediatrics to `ped_*`; ecto/endo to
+  `adult_ecto_*` / `adult_endo_*`; bariatrics to `adult_bariatric_{sex}_{1,2,3}`; demos to
+  `demo_*`. Migrate later with aliases. See
+  `dev-docs/plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md`.
+
+- **Arms-down clinical variants** (2026-07-23) — Additive `*_arms_down` meshes for all clinical
+  stems (23 twins), including MPFB stature approximations of legacy `junior_*` / `adult_male|female` /
+  `senior_*` / `hudfrid`. A-pose originals unchanged. Pose: `scripts/phantom_gen/poses/arms_down_default_fk.json`.
+  SemVer: **minor** on release. See `dev-docs/plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md`.
+
+- **Arms-down spike** (2026-07-23) — `ped_5y_male_arms_down` generated in tmp via catalog
+  `"pose": "arms_down_default_fk"`; waist/chest lateral width collapses toward torso. Superseded by
+  the full clinical wave above.
+
+- **TO_DO: user-imported custom meshes** (2026-07-23) — Backlog item to consider a GUI/CLI pipeline
+  for users to import their own STL (or similar) phantoms (local cache; validate/orient; not bundled).
 
 - **Bariatric thick-extremities variants** (2026-07-22) — Keeps abdomen-dominant
   `bariatric_class2_{male,female}` and adds `bariatric_class2_{male,female}_thick_extremities`

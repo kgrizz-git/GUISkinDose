@@ -113,14 +113,16 @@ Located in `src/mypyskindose/phantom_data/`:
 | `junior_female` | Junior female |
 | `senior_male` | Senior male |
 | `senior_female` | Senior female |
-| `pediatric_5y_male`, `pediatric_5y_female` | MPFB parametric ~5 y |
-| `pediatric_10y_male`, `pediatric_10y_female` | MPFB parametric ~10 y |
-| `adult_ectomorph_male`, `adult_ectomorph_female` | MPFB thin adult habitus |
-| `adult_endomorph_male`, `adult_endomorph_female` | MPFB heavy adult habitus |
-| `bariatric_class2_male`, `bariatric_class2_female` | MPFB class-II habitus (abdomen-dominant) |
-| `bariatric_class2_male_thick_extremities`, `bariatric_class2_female_thick_extremities` | Class-II plus thicker arms/legs/neck/head |
-| `cosmic_buddha`, `steamboat_willie` | Demo / non-clinical; GUI Demo section only when `"show_demo_phantoms": true` in `~/.mypyskindose/gui.json` (default off) |
-| `ramesses_ii` | Demo on disk for CLI; never listed in Settings mesh selector |
+| `ped_preschool_male`, `ped_preschool_female` | MPFB parametric preschool/toddler (~75 cm SI) |
+| `ped_5y_male`, `ped_5y_female` | MPFB parametric ~5 y (~101–108 cm SI; near CDC median) |
+| `ped_10y_male`, `ped_10y_female` | MPFB parametric ~10 y (~137–139 cm SI; near CDC median) |
+| `adult_ecto_male`, `adult_ecto_female` | MPFB ectomorph (thin) habitus |
+| `adult_endo_male`, `adult_endo_female` | MPFB endomorph (soft torso) habitus |
+| `adult_bariatric_male_1`, `adult_bariatric_female_1` | Class-II habitus (abdomen-dominant) |
+| `adult_bariatric_male_2`, `adult_bariatric_female_2` | Class-II + thicker arms/legs/neck/head |
+| `adult_bariatric_male_3`, `adult_bariatric_female_3` | Class-II + extra-thick neck/extremities |
+| `*_arms_down` | Additive arms-by-torso twins of each clinical stem (A-pose kept); legacy `junior_*` / `adult_*` / `senior_*` / `hudfrid` twins are MPFB stature approx |
+| `demo_cosmic_buddha`, `demo_steamboat_willie` | Non-clinical demos (gated in GUI); `demo_ramesses_ii` on disk, hidden |
 | `*_reduced_1000t` | Low-resolution variants of each (faster, used in `plot_procedure`) |
 
 Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file path.

@@ -66,6 +66,10 @@ python scripts/phantom_gen/run_catalog.py --priority P0 --install
 Flags: `--only <id>`, `--priority P0|P1`, `--install`, `--skip-shape`, `--skip-phantom-load`,
 `--json-report path`, `--blender /path/to/blender`.
 
+Optional catalog `"pose": "arms_down_default_fk"` (see `poses/arms_down_default_fk.json`) adds the
+MPFB default FK rig, applies the pose, and bakes it as rest before export. Used by shipped
+`*_arms_down` rows; A-pose catalog rows omit the field.
+
 Anti-balloon affine controls use gender-matched MPFB refs (`_shape_ref_adult_male` /
 `_shape_ref_adult_female`), not shipped STLs. Refs are generated on demand into
 `tmp/phantom_gen/` and are never installed.

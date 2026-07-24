@@ -122,10 +122,13 @@ def resolve_preview_mesh(stem: str) -> str:
     """Return reduced companion stem when its STL exists; else the logical stem.
 
     Looks only under package ``phantom_data/``. Never double-appends
-    ``_reduced_1000t``.
+    ``_reduced_1000t``. Legacy mesh aliases resolve to canonical stems first.
     """
+    from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+
     if not stem:
         return stem
+    stem = resolve_human_mesh_stem(stem)
     if stem.endswith(_REDUCED_SUFFIX):
         return stem
     reduced = f"{stem}{_REDUCED_SUFFIX}"
