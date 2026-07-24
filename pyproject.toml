@@ -52,7 +52,7 @@ docs = [
 ]
 # Interactive notebook editing (JupyterLab); the docs build does not need this.
 notebooks = [
-    "jupyterlab",
+    "jupyterlab>=4.6.2",
     "ipykernel",
     "ipywidgets",
 ]
@@ -134,6 +134,8 @@ exclude = [
     "**/__pycache__",
     "src/mypyskindose/table_data",
     "tests/manual_tests",
+    # Headless Blender/MPFB tooling: bpy/trimesh/numpy-stl stubs are incomplete.
+    "scripts/phantom_gen",
 ]
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false

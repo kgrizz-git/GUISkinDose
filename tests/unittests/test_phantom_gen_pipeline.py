@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -58,7 +59,7 @@ def _write_box_stl(path: Path, *, x: float, y: float, z: float, origin=(0.0, 0.0
         (3, 7, 4),
         (3, 4, 0),
     ]
-    stl = stl_mesh.Mesh(np.zeros(len(faces), dtype=stl_mesh.Mesh.dtype))
+    stl: Any = stl_mesh.Mesh(np.zeros(len(faces), dtype=stl_mesh.Mesh.dtype))
     for i, (a, b, c) in enumerate(faces):
         stl.vectors[i][0] = corners[a]
         stl.vectors[i][1] = corners[b]
@@ -265,8 +266,8 @@ def test_generate_reduced_writes_named_face_preview(tmp_path: Path):
 
     src = tmp_path / "box.stl"
     _write_box_stl(src, x=10.0, y=5.0, z=20.0, origin=(-5.0, -5.0, -20.0))
-    base = stl_mesh.Mesh.from_file(str(src))
-    big = stl_mesh.Mesh(np.zeros(1500, dtype=stl_mesh.Mesh.dtype))
+    base: Any = stl_mesh.Mesh.from_file(str(src))
+    big: Any = stl_mesh.Mesh(np.zeros(1500, dtype=stl_mesh.Mesh.dtype))
     for i in range(1500):
         big.vectors[i] = base.vectors[i % len(base.vectors)]
     big_path = tmp_path / "big.stl"

@@ -337,14 +337,14 @@ class Phantom:
 
             self.n = np.matmul(Rx, np.matmul(Ry, np.matmul(Rz, self.n.T))).T
 
-    def translate(self, dr: List[int]) -> None:
+    def translate(self, dr: list[float]) -> None:
         """Translate the phantom in the x, y or z direction.
 
         Parameters
         ----------
-        dr : List[int]
+        dr : list[float]
             list of distances the phantom should be translated, given in cm.
-            Specified as dr = [dx: <int>, dy: <int>, dz: <int>]. E.g.
+            Specified as dr = [dx, dy, dz]. E.g.
             dr = [0, 0, 10] will translate the phantom 10 cm in the z direction
 
         """

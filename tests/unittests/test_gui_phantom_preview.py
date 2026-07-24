@@ -11,6 +11,8 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
+pytest.importorskip("nicegui")
+
 from mypyskindose.constants import COLOR_PAD, COLOR_PATIENT, COLOR_TABLE
 from mypyskindose.gui.phantom_preview import (
     PreviewSnapshot,

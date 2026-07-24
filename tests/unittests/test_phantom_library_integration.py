@@ -7,8 +7,11 @@ from pathlib import Path
 import pytest
 
 from mypyskindose import Phantom, PyskindoseSettings, load_settings_example_json
-from mypyskindose.gui.helpers import get_human_mesh_names
 from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+
+pytest.importorskip("nicegui")
+
+from mypyskindose.gui.helpers import get_human_mesh_names  # noqa: E402
 
 NEW_MESHES = [
     "ped_preschool_male",

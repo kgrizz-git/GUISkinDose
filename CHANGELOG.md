@@ -22,6 +22,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Settings phantom preview caption** (2026-07-24) — Notes that the panel uses a reduced mesh for
   display speed while dose calculation and Geometry setup/event plots use the full mesh.
 
+- **Push-harness fixes for phantom catalog branch** (2026-07-24) — Exclude `scripts/phantom_gen` from
+  basedpyright (incomplete bpy/trimesh/numpy-stl stubs); type patient offsets as floats; require
+  `jupyterlab>=4.6.2` for notebook extra advisory CVEs; GUI-placement `importorskip` on phantom
+  unit tests that transitively import NiceGUI.
+
 ### Removed
 
 - **Demo / non-clinical phantoms unshipped** (2026-07-24) — `demo_cosmic_buddha`,
