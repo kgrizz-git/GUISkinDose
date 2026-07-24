@@ -10,6 +10,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Fixed
+
+- **STL Z-positioning unit test** (2026-07-24) — `test_stl_phantom_positioning_in_z_direction` now
+  skips `*_reduced_*` preview companions (decimation can leave tiny +Z verts); full clinical meshes
+  still require no vertices with Z > 0.
+
 ### Added
 
 - **`_reduced_3000t` phantom preview companions** (2026-07-24) — ~3k-face reduced STLs for all
