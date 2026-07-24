@@ -136,12 +136,11 @@
       ]
     },
     "demo_phantoms": {
-      "status": "shipped_with_leftovers",
+      "status": "retired",
       "code": [
         "src/mypyskindose/gui/helpers.py",
-        "src/mypyskindose/gui/constants.py",
         "src/mypyskindose/gui/window_prefs.py",
-        "src/mypyskindose/phantom_data",
+        "src/mypyskindose/phantom_mesh_names.py",
         "scripts/phantom_gen/ingest_fun_mesh.py",
         "scripts/phantom_gen/fun_mesh_manifest.json"
       ],
@@ -150,13 +149,12 @@
         "tests/unittests/test_phantom_gen_pipeline.py"
       ],
       "docs": [
+        "CHANGELOG.md",
+        "AGENTS.md",
         "dev-docs/FEATURE_INVENTORY.md",
         "dev-docs/ADDITIONAL_PHANTOMS.md",
         "dev-docs/references/fun_phantom_provenance.md",
-        "dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md",
-        "dev-docs/plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md",
-        "CHANGELOG.md",
-        "AGENTS.md"
+        "dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md"
       ],
       "help": [
         "docs/source/gui_help/phantom_preview.md"

@@ -1,13 +1,20 @@
 # Fun / demo phantom provenance
 
 This file records the source, license, retrieval date, locked ingest transform, and any repair or
-validation exceptions for the **demo / non-clinical** phantoms shipped from
+validation exceptions for the **demo / non-clinical** phantoms from
 [`../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 
-These meshes are labeled **(demo)** in the GUI/docs and must **never** be presented as dosimetry
-reference phantoms. Mesh-asset licenses are tracked here (and in `phantom_data/NOTICE_*.txt` for
-CC BY / CC BY-SA assets) — **not** in `dev-docs/THIRD_PARTY_NOTICES.md`, which is the Python-package
-inventory only.
+**Package status (2026-07-24):** these meshes are **no longer shipped** under
+`src/mypyskindose/phantom_data/`. A local recovery stash (gitignored) with attribution notes may
+exist at `tmp/phantom_data_demo_stash/`. Paths below that mention `tmp/phantom_data_demo_stash/`
+are the local stash layout; the same files and `NOTICE_*.txt` sidecars remain reachable in
+**git history** from the commits that shipped them (CC BY attribution for Ramesses / Steamboat
+was recorded in those commits and in this provenance file — do not rewrite history to erase that).
+
+These meshes were labeled **(demo)** and must **never** be presented as dosimetry reference
+phantoms. Mesh-asset licenses are tracked here (and historically in `phantom_data/NOTICE_*.txt`
+sidecars for CC BY assets) — **not** in `dev-docs/THIRD_PARTY_NOTICES.md`, which is the
+Python-package inventory only.
 
 Ingest pipeline (shared): `scripts/phantom_gen/ingest_fun_mesh.py` reads the per-mesh locked
 transform from `scripts/phantom_gen/fun_mesh_manifest.json`, applies
@@ -82,8 +89,8 @@ renders (side, top, and per-face depth maps), then locked in `fun_mesh_manifest.
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/demo_cosmic_buddha.stl` | 6000 | `cd6c5428bb0292740251fb990954f1a9e4cfc9e7abcdf3109c04edd7f63c3a1a` |
-| `src/mypyskindose/phantom_data/demo_cosmic_buddha_reduced_1000t.stl` | 1000 | `66d9ae78a9d74662d18dc1b3490664fb3168ea3ebf70ea19fda5da3d5588a142` |
+| `tmp/phantom_data_demo_stash/demo_cosmic_buddha.stl` | 6000 | `cd6c5428bb0292740251fb990954f1a9e4cfc9e7abcdf3109c04edd7f63c3a1a` |
+| `tmp/phantom_data_demo_stash/demo_cosmic_buddha_reduced_1000t.stl` | 1000 | `66d9ae78a9d74662d18dc1b3490664fb3168ea3ebf70ea19fda5da3d5588a142` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).
 
@@ -166,7 +173,7 @@ not license sources.
 
 - **Object:** Colossal sculpture of Ramesses II (museum scan, recumbent/mounted figure).
 - **License:** **CC BY 4.0** — attribution required. Sidecar:
-  `src/mypyskindose/phantom_data/NOTICE_ramesses_ii.txt`.
+  `tmp/phantom_data_demo_stash/NOTICE_ramesses_ii.txt`.
 - **Source (retrieved 2026-07-22):**
   - Wikimedia Commons — `File:Colossal_sculpture_of_Ramesses_II.stl` (Dejp3)
     (`https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl`).
@@ -202,8 +209,8 @@ not license sources.
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/demo_ramesses_ii.stl` | 5630 | `5b22b53a3a3cc867989816e0194f2fb89adc8591ae4a5a4b6c7cbd7218d4985f` |
-| `src/mypyskindose/phantom_data/demo_ramesses_ii_reduced_1000t.stl` | 1000 | `d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987` |
+| `tmp/phantom_data_demo_stash/demo_ramesses_ii.stl` | 5630 | `5b22b53a3a3cc867989816e0194f2fb89adc8591ae4a5a4b6c7cbd7218d4985f` |
+| `tmp/phantom_data_demo_stash/demo_ramesses_ii_reduced_1000t.stl` | 1000 | `d109bfcc36aa35c4d2292de2b8df9b7c9762b56e163000068c00833e69d06987` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).
 
@@ -215,7 +222,7 @@ Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_i
 - **License:** **CC BY 4.0** on the mesh (Adrian Cojocaru, Wikimedia Commons). The early 1928
   character design is US public-domain (2024); **trademark caution** — product stem/label is
   `steamboat_willie` / “Steamboat Willie (demo)” only (never “Mickey Mouse” / Disney affiliation).
-  Sidecar: `src/mypyskindose/phantom_data/NOTICE_steamboat_willie.txt`.
+  Sidecar: `tmp/phantom_data_demo_stash/NOTICE_steamboat_willie.txt`.
 - **Source (retrieved 2026-07-22):**
   - Wikimedia Commons — `File:Steamboat_Willie_3D_Model.stl`
     (`https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl`).
@@ -246,7 +253,7 @@ Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_i
 
 | File | Faces | SHA-256 |
 |------|-------|---------|
-| `src/mypyskindose/phantom_data/demo_steamboat_willie.stl` | 5676 | `9873c532d806b7dd0ae0e4f3204f4eceed84c93e9dd5459e3b1e1520d5682bba` |
-| `src/mypyskindose/phantom_data/demo_steamboat_willie_reduced_1000t.stl` | 1000 | `538590b074077ed631dba34505f09c5c42255f930b4c19ef57751a693b2fff9f` |
+| `tmp/phantom_data_demo_stash/demo_steamboat_willie.stl` | 5676 | `9873c532d806b7dd0ae0e4f3204f4eceed84c93e9dd5459e3b1e1520d5682bba` |
+| `tmp/phantom_data_demo_stash/demo_steamboat_willie_reduced_1000t.stl` | 1000 | `538590b074077ed631dba34505f09c5c42255f930b4c19ef57751a693b2fff9f` |
 
 Both are hash-pinned in [`../approved_asset_inventory.json`](../approved_asset_inventory.json).

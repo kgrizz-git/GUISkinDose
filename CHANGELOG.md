@@ -10,6 +10,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Removed
+
+- **Demo / non-clinical phantoms unshipped** (2026-07-24) — `demo_cosmic_buddha`,
+  `demo_ramesses_ii`, and `demo_steamboat_willie` (and reduced companions / NOTICE sidecars)
+  removed from `phantom_data/`. Local recovery stash (gitignored) with attribution notes:
+  `tmp/phantom_data_demo_stash/README.md`. SemVer: **minor** on release (library surface shrinks).
+
 ### Changed
 
 - **Demo phantoms enable sources** (2026-07-23) — `show_demo_phantoms_enabled()` now checks, in

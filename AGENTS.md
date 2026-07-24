@@ -82,16 +82,14 @@ Set `settings.output_format` to:
 | `"cylinder"` | Elliptic cylinder |
 | `"human"` | STL mesh (set `settings.phantom.human_mesh`) |
 
-Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`,
-`senior_male`, `senior_female`, plus MPFB parametric variants `ped_preschool_*`,
-`ped_5y_*`, `ped_10y_*`, `adult_ecto_*`, `adult_endo_*`, `adult_bariatric_{sex}_{1,2,3}`
-(1=abdomen, 2=thick extremities, 3=extra-thick). Each clinical stem also has an additive
-`*_arms_down` twin (arms by the torso; A-pose originals kept). Plus labeled **demo / non-clinical** meshes
-`demo_cosmic_buddha`, `demo_steamboat_willie` (GUI Demo section; enable via
-`MYPYSKINDOSE_SHOW_DEMO_PHANTOMS`, repo `.mypyskindose.local.json`, or `~/.mypyskindose/gui.json`;
-default off). `demo_ramesses_ii` remains on disk for CLI but is not listed in the GUI. Legacy
-stems (e.g. `pediatric_5y_male`, `bariatric_class2_male`, `cosmic_buddha`) still resolve via
-aliases. Never use demos as dosimetry references.
+Available human meshes live under `src/mypyskindose/phantom_data/` and are discovered
+at runtime (Settings / CLI). The clinical library covers age bands (preschool through
+senior), sex variants, habitus families (ecto / endo / bariatric series), and optional
+`*_arms_down` twins for table-side posing. Exact stems may change as the catalog is
+trimmed; prefer the in-app mesh list or `get_human_mesh_names()` over hard-coded
+inventories. Legacy stems (e.g. `pediatric_5y_male`, `bariatric_class2_male`) still
+resolve via aliases. Non-clinical demo STLs are **not** shipped (local stash only under
+gitignored `tmp/phantom_data_demo_stash/` if retained on a developer machine).
 
 Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `scale_ap`, and
 `scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in

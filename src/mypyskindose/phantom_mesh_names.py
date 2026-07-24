@@ -41,6 +41,8 @@ _REDUCED_SUFFIX = "_reduced_1000t"
 _ARMS_DOWN_SUFFIX = "_arms_down"
 
 # Demo / non-clinical (Settings only when show_demo_phantoms is on).
+# Not currently shipped under phantom_data/; stems retained so a future re-add
+# stays gated and aliases keep resolving. See tmp/phantom_data_demo_stash/README.md.
 DEMO_HUMAN_MESHES: frozenset[str] = frozenset(
     {
         "demo_cosmic_buddha",
@@ -49,6 +51,7 @@ DEMO_HUMAN_MESHES: frozenset[str] = frozenset(
 )
 
 # On disk but never listed in Settings (even with demos on).
+# Retained for the same future-restore / alias reasons as DEMO_HUMAN_MESHES.
 GUI_HIDDEN_HUMAN_MESHES: frozenset[str] = frozenset(
     {
         "demo_ramesses_ii",

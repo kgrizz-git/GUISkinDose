@@ -102,30 +102,23 @@ New vendors can be added by editing `normalization_settings.json`.
 | `human` | STL mesh loaded from file | Yes | Yes |
 
 ### 2.2 Human mesh files
-Located in `src/mypyskindose/phantom_data/`:
 
-| Mesh name | Description |
-|-----------|-------------|
-| `hudfrid` | Adult male, optimised for skin dose |
-| `adult_male` | Adult male |
-| `adult_female` | Adult female |
-| `junior_male` | Junior male |
-| `junior_female` | Junior female |
-| `senior_male` | Senior male |
-| `senior_female` | Senior female |
-| `ped_preschool_male`, `ped_preschool_female` | MPFB parametric preschool/toddler (~75 cm SI) |
-| `ped_5y_male`, `ped_5y_female` | MPFB parametric ~5 y (~101–108 cm SI; near CDC median) |
-| `ped_10y_male`, `ped_10y_female` | MPFB parametric ~10 y (~137–139 cm SI; near CDC median) |
-| `adult_ecto_male`, `adult_ecto_female` | MPFB ectomorph (thin) habitus |
-| `adult_endo_male`, `adult_endo_female` | MPFB endomorph (soft torso) habitus |
-| `adult_bariatric_male_1`, `adult_bariatric_female_1` | Class-II habitus (abdomen-dominant) |
-| `adult_bariatric_male_2`, `adult_bariatric_female_2` | Class-II + thicker arms/legs/neck/head |
-| `adult_bariatric_male_3`, `adult_bariatric_female_3` | Class-II + extra-thick neck/extremities |
-| `*_arms_down` | Additive arms-by-torso twins of each clinical stem (A-pose kept); legacy `junior_*` / `adult_*` / `senior_*` / `hudfrid` twins are MPFB stature approx |
-| `demo_cosmic_buddha`, `demo_steamboat_willie` | Non-clinical demos (gated in GUI); `demo_ramesses_ii` on disk, hidden |
-| `*_reduced_1000t` | Low-resolution variants of each (faster, used in `plot_procedure`) |
+Located in `src/mypyskindose/phantom_data/` (full-resolution `.stl` plus optional
+`*_reduced_1000t` previews). The Settings / CLI mesh list is **filesystem-discovered** —
+treat the families below as the product surface, not a frozen stem census (inventory may
+be trimmed without a docs rewrite of every id).
+
+| Family | Role |
+|--------|------|
+| Legacy clinical (`hudfrid`, `adult_*`, `junior_*`, `senior_*`) | Long-standing baseline STLs |
+| Pediatric MPFB (`ped_preschool_*`, `ped_5y_*`, `ped_10y_*`) | Age-band parametric meshes |
+| Habitus MPFB (`adult_ecto_*`, `adult_endo_*`, `adult_bariatric_{sex}_{n}`) | Thin / soft / class-II series |
+| `*_arms_down` | Additive arms-by-torso twins (A-pose siblings kept) |
+| `*_reduced_1000t` | Low-face previews (GUI / `plot_procedure`; not listed as full meshes) |
 
 Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file path.
+Legacy stem aliases still resolve. Non-clinical demo meshes are not shipped with the
+package (see `tmp/phantom_data_demo_stash/README.md` on machines that kept a local copy).
 
 Human STL meshes support body-habitus scaling via `phantom.scale_lat`,
 `phantom.scale_ap`, and `phantom.scale_lon` (defaults `1.0`, clamped to

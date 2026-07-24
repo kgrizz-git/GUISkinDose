@@ -10,27 +10,29 @@ Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDIN
 
 ## Currently shipped meshes
 
-Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI) globs `*.stl` and **excludes** `*_reduced_1000t` preview variants:
+Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
+globs `*.stl` and **excludes** `*_reduced_1000t` preview variants. Prefer the runtime mesh list
+(or `get_human_mesh_names()`) over treating any table here as a frozen census — stems may be
+trimmed as the catalog settles.
 
-| Mesh | Faces (approx.) | Notes |
-|------|----------------:|-------|
-| `hudfrid` | 13,674 | Default example mesh |
-| `adult_male`, `adult_female` | 26,756 | Full-resolution adults |
-| `junior_male`, `junior_female` | 26,756 | Same topology family as adults |
-| `senior_male`, `senior_female` | 26,756 | Distinct meshes; same face count as adult/junior full variants |
-| `ped_preschool_*`, `ped_5y_*`, `ped_10y_*` | 26,756 | MPFB parametric pediatric (male/female) |
-| `adult_ecto_*`, `adult_endo_*` | 26,756 | MPFB ectomorph / endomorph |
-| `*_arms_down` | 26,756 | Additive arms-down twins of clinical stems (incl. MPFB approx of legacy) |
-| `adult_bariatric_{sex}_{1,2,3}` | 26,756 | Class-II series: 1 abdomen, 2 thick extremities, 3 extra-thick |
-| `adult_ectomorph_*`, `adult_endomorph_*` | 26,756 | MPFB thin / heavy adult habitus (male/female) |
-| `bariatric_class2_*` | 26,756 | MPFB class-II habitus (male/female); abdomen-dominant, `_thick_extremities`, and `_extra_thick_extremities` variants |
+**Families (not an exhaustive id list):**
 
-| `cosmic_buddha` | ~6,000 | Demo / non-clinical (CC0); missing head/hands; GUI Demo section (opt-in) |
-| `ramesses_ii` | ~5,600 | Demo / non-clinical (CC BY 4.0); on disk / CLI only (not in Settings list) |
-| `steamboat_willie` | ~5,700 | Demo / non-clinical (CC BY 4.0); trademark-safe label; GUI Demo section (opt-in) |
-| `*_reduced_1000t` | 1,000 | Preview-only; not listed in mesh selectors |
+| Family | Typical notes |
+|--------|---------------|
+| Legacy clinical | `hudfrid`, `adult_*`, `junior_*`, `senior_*` baselines |
+| Pediatric MPFB | `ped_preschool_*`, `ped_5y_*`, `ped_10y_*` age bands |
+| Habitus MPFB | `adult_ecto_*`, `adult_endo_*`, `adult_bariatric_{sex}_{n}` |
+| Arms-down twins | `*_arms_down` additive siblings (A-pose kept) |
+| Reduced previews | `*_reduced_1000t` (~1k faces; not listed as full meshes) |
 
-Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to one of the non-reduced names. Body-habitus sliders (`scale_lat`, `scale_ap`, `scale_lon`, clamped 0.5–2.0) apply at load via `Phantom._apply_human_scale` and are for **moderate sensitivity studies**, not for shipping new body shapes (see below).
+Non-clinical demo / fun meshes are **not** shipped. A local recovery stash (gitignored) may
+exist at `tmp/phantom_data_demo_stash/` with attribution notes if someone previously pulled
+those assets; do not re-add without license + inventory review.
+
+Set `settings.phantom.model = "human"` and `settings.phantom.human_mesh` to a discovered
+non-reduced name. Body-habitus sliders (`scale_lat`, `scale_ap`, `scale_lon`, clamped 0.5–2.0)
+apply at load via `Phantom._apply_human_scale` and are for **moderate sensitivity studies**,
+not for shipping new body shapes (see below).
 
 ---
 
