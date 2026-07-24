@@ -57,6 +57,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.phantom_gen.generate_reduced import decimate_to_target_faces  # noqa: E402
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
 from scripts.phantom_gen.transform_to_psd_frame import transform_to_psd_frame  # noqa: E402
 from scripts.phantom_gen.validate_phantom import validate  # noqa: E402
 
@@ -66,7 +67,8 @@ _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 
 def load_manifest(path: Path) -> dict:
     """Load the fun-mesh manifest JSON, returning the parsed dict."""
-    with path.open(encoding="utf-8") as handle:
+    safe = resolve_under_roots(path, must_be_file=True)
+    with safe.open(encoding="utf-8") as handle:  # NOSONAR pythonsecurity:S2083
         return json.load(handle)
 
 
@@ -273,9 +275,10 @@ def ingest_fun_mesh(
     report["final_faces"] = int(len(final.faces))
 
     # 8) Write {id}.stl (binary STL) under out-dir. NOT installed to phantom_data/.
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{mesh_id}.stl"
-    final.export(str(out_path), file_type="stl")
+    safe_out_dir = resolve_under_roots(out_dir, must_exist=False)
+    safe_out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = resolve_under_roots(safe_out_dir / f"{mesh_id}.stl", must_exist=False)
+    final.export(str(out_path), file_type="stl")  # NOSONAR pythonsecurity:S2083
     report["written"] = str(out_path)
 
     # 9) Validate in fun mode (watertight True, <=20k faces, face-up, normals).

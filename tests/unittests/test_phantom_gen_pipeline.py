@@ -11,6 +11,7 @@ import pytest
 from stl import mesh as stl_mesh
 
 from scripts.phantom_gen.affine_control import build_affine_control
+from scripts.phantom_gen.path_safety import resolve_under_roots
 from scripts.phantom_gen.run_catalog import (
     build_blender_generate_argv,
     build_blender_probe_argv,
@@ -74,6 +75,16 @@ def _write_box_stl(path: Path, *, x: float, y: float, z: float, origin=(0.0, 0.0
         stl.vectors[i][2] = corners[c]
     path.parent.mkdir(parents=True, exist_ok=True)
     stl.save(str(path))
+
+
+def test_resolve_under_roots_rejects_escapes(tmp_path: Path):
+    confined = resolve_under_roots(tmp_path / "ok.stl", roots=(tmp_path,), must_exist=False)
+    assert confined.is_relative_to(tmp_path.resolve())
+    outside = Path("/etc/passwd")
+    with pytest.raises(ValueError, match="escaped"):
+        resolve_under_roots(outside, roots=(tmp_path,), must_exist=False)
+    with pytest.raises(ValueError, match="escaped"):
+        resolve_under_roots("../etc/passwd", roots=(tmp_path,), must_exist=False)
 
 
 def test_validate_catalog_id_and_blender_argv_builders(tmp_path: Path):

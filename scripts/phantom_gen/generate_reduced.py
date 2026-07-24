@@ -27,20 +27,28 @@ from pathlib import Path
 import numpy as np
 from stl import mesh as stl_mesh
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
+
 # Connected preview meshes share vertices heavily; triangle-subsample soups do not.
 _MAX_UNIQUE_VERTS_PER_FACE = 1.2
 
 
 def _load_triangle_soup(path: Path) -> np.ndarray:
-    m = stl_mesh.Mesh.from_file(str(path))
+    safe = resolve_under_roots(path, must_be_file=True)
+    m = stl_mesh.Mesh.from_file(str(safe))  # NOSONAR pythonsecurity:S2083
     return np.asarray(m.vectors, dtype=float).copy()
 
 
 def _write_vectors(path: Path, vectors: np.ndarray) -> None:
+    safe = resolve_under_roots(path, must_exist=False)
     out = stl_mesh.Mesh(np.zeros(vectors.shape[0], dtype=stl_mesh.Mesh.dtype))
     out.vectors = vectors
-    path.parent.mkdir(parents=True, exist_ok=True)
-    out.save(str(path))
+    safe.parent.mkdir(parents=True, exist_ok=True)
+    out.save(str(safe))  # NOSONAR pythonsecurity:S2083
 
 
 def unique_vertex_count(vectors: np.ndarray, *, decimals: int = 5) -> int:

@@ -20,9 +20,16 @@ from pathlib import Path
 import numpy as np
 from stl import mesh as stl_mesh
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
+
 
 def _load(path: Path) -> tuple[np.ndarray, stl_mesh.Mesh]:
-    m = stl_mesh.Mesh.from_file(str(path))
+    safe = resolve_under_roots(path, must_be_file=True)
+    m = stl_mesh.Mesh.from_file(str(safe))  # NOSONAR pythonsecurity:S2083
     verts = m.vectors.reshape(-1, 3).astype(float)
     return verts, m
 
@@ -66,15 +73,16 @@ def build_affine_control(
 
     out = stl_mesh.Mesh(np.zeros(base_mesh.vectors.shape[0], dtype=stl_mesh.Mesh.dtype))
     out.vectors = scaled.reshape(-1, 3, 3)
-    out_stl.parent.mkdir(parents=True, exist_ok=True)
-    out.save(str(out_stl))
+    safe_out = resolve_under_roots(out_stl, must_exist=False)
+    safe_out.parent.mkdir(parents=True, exist_ok=True)
+    out.save(str(safe_out))  # NOSONAR pythonsecurity:S2083
 
     return {
         "mode": mode,
         "scale": scale.tolist(),
         "match_span": match_span.tolist(),
         "out_span": _spans(scaled).tolist(),
-        "out": str(out_stl),
+        "out": safe_out.name,
     }
 
 

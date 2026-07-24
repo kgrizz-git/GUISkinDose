@@ -13,8 +13,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
+
+_POSE_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
 
 
 def _repo_root_from_script() -> Path:
@@ -67,16 +76,24 @@ def _import_mpfb_services(module_name: str):
 
 
 def _resolve_pose_path(repo_root: Path, entry: dict) -> Path | None:
-    """Return pose JSON path from catalog ``pose`` or ``pose_file``, else None."""
+    """Return pose JSON path from catalog ``pose`` or ``pose_file``, else None.
+
+    Paths are confined under ``scripts/phantom_gen`` before any filesystem access.
+    """
+    phantom_gen = (repo_root / "scripts" / "phantom_gen").resolve()
     pose_file = entry.get("pose_file")
     pose_name = entry.get("pose")
     if pose_file:
-        path = Path(pose_file)
-        if not path.is_absolute():
-            path = repo_root / "scripts" / "phantom_gen" / path
-        return path
+        return resolve_under_roots(pose_file, roots=(phantom_gen,), must_be_file=False)
     if pose_name:
-        return repo_root / "scripts" / "phantom_gen" / "poses" / f"{pose_name}.json"
+        match = _POSE_NAME_RE.fullmatch(str(pose_name))
+        if match is None:
+            raise ValueError(f"invalid pose name: {pose_name!r}")
+        return resolve_under_roots(
+            phantom_gen / "poses" / f"{match.group(0)}.json",
+            roots=(phantom_gen,),
+            must_be_file=False,
+        )
     return None
 
 
@@ -93,12 +110,15 @@ def _apply_catalog_pose(
     pose_path = _resolve_pose_path(repo_root, entry)
     if pose_path is None:
         return
-    if not pose_path.is_file():
-        raise FileNotFoundError(f"Catalog pose file not found: {pose_path}")
-
+    safe_pose = resolve_under_roots(
+        pose_path,
+        roots=((repo_root / "scripts" / "phantom_gen").resolve(),),
+        must_be_file=True,
+    )
     import bpy
 
-    pose = json.loads(pose_path.read_text(encoding="utf-8"))
+    # Confined pose path — Sonar S2083; basename only in logs.
+    pose = json.loads(safe_pose.read_text(encoding="utf-8"))  # NOSONAR pythonsecurity:S2083
     armature = HumanService.add_builtin_rig(basemesh, "default", import_weights=True)
     ObjectService.deselect_and_deactivate_all()
     ObjectService.activate_blender_object(armature)
@@ -106,7 +126,7 @@ def _apply_catalog_pose(
     RigService.set_pose_from_dict(armature, pose, from_rest_pose=True)
     bpy.ops.object.mode_set(mode="OBJECT", toggle=False)
     RigService.apply_pose_as_rest_pose(armature)
-    print(f"MPFB_POSE_OK file={pose_path.name} armature={armature.name}")
+    print(f"MPFB_POSE_OK file={safe_pose.name} armature={armature.name}")
 
 
 def _find_target_file(mpfb_root: Path, target_name: str) -> Path:
