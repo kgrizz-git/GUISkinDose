@@ -2587,7 +2587,7 @@ requires-dist = [
     { name = "reportlab", specifier = ">=4.0" },
     { name = "reportlab", marker = "extra == 'export'", specifier = ">=4.0" },
     { name = "rich" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15,<0.16" },
     { name = "safety", marker = "extra == 'dev'", specifier = ">=3.0" },
     { name = "scikit-image", marker = "extra == 'phantom-gen'", specifier = ">=0.22" },
     { name = "scipy", specifier = ">=1.15.2" },

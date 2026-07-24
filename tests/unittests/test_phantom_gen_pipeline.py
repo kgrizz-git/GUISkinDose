@@ -365,7 +365,7 @@ def test_face_up_gate_fails_for_face_down_body():
 
 def _make_icosphere_stl(path: Path, *, radius: float, subdivisions: int = 3):
     """Write a watertight icosphere translated into the PSD frame (anchors ~0)."""
-    import trimesh
+    trimesh = pytest.importorskip("trimesh")
 
     sphere = trimesh.creation.icosphere(subdivisions=subdivisions, radius=radius)
     # Anchor: x_mid=0, y_max=0, z_max=0 (sphere centered at origin -> shift by -radius).

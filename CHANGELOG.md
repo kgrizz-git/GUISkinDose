@@ -25,7 +25,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Push-harness fixes for phantom catalog branch** (2026-07-24) — Exclude `scripts/phantom_gen` from
   basedpyright (incomplete bpy/trimesh/numpy-stl stubs); type patient offsets as floats; require
   `jupyterlab>=4.6.2` for notebook extra advisory CVEs; GUI-placement `importorskip` on phantom
-  unit tests that transitively import NiceGUI.
+  unit tests that transitively import NiceGUI. Pin CI/`[dev]` ruff to `>=0.15,<0.16` so unpinned
+  `pip install ruff` cannot pull 0.16 and fail the matrix on hundreds of newly-noisy findings.
 
 ### Removed
 

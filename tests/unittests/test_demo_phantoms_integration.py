@@ -13,7 +13,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.helpers import (  # noqa: E402
+from mypyskindose.gui.helpers import (
     DEMO_HUMAN_MESHES,
     DEMO_MESH_SECTION_KEY,
     GUI_HIDDEN_HUMAN_MESHES,

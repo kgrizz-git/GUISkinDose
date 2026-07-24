@@ -11,7 +11,7 @@ from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.helpers import get_human_mesh_names  # noqa: E402
+from mypyskindose.gui.helpers import get_human_mesh_names
 
 NEW_MESHES = [
     "ped_preschool_male",
