@@ -16,18 +16,26 @@ from pathlib import Path
 
 import numpy as np
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
+
 
 def load_vertices(path: Path) -> np.ndarray:
     from stl import mesh as stl_mesh
 
-    m = stl_mesh.Mesh.from_file(str(path))
+    safe = resolve_under_roots(path, must_be_file=True)
+    m = stl_mesh.Mesh.from_file(str(safe))  # NOSONAR pythonsecurity:S2083
     return m.vectors.reshape(-1, 3).astype(float)
 
 
 def face_count(path: Path) -> int:
     from stl import mesh as stl_mesh
 
-    m = stl_mesh.Mesh.from_file(str(path))
+    safe = resolve_under_roots(path, must_be_file=True)
+    m = stl_mesh.Mesh.from_file(str(safe))  # NOSONAR pythonsecurity:S2083
     return int(len(m.vectors))
 
 
@@ -85,7 +93,8 @@ def is_watertight(path: Path) -> bool | None:
         import trimesh
     except ImportError:
         return None
-    mesh = trimesh.load(str(path), force="mesh")
+    safe = resolve_under_roots(path, must_be_file=True)
+    mesh = trimesh.load(str(safe), force="mesh")  # NOSONAR pythonsecurity:S2083
     if isinstance(mesh, trimesh.Scene):
         mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
     return bool(mesh.is_watertight)
@@ -228,7 +237,8 @@ def _load_trimesh(path: Path):
     """Load ``path`` as a single concatenated ``trimesh.Trimesh`` (or raise)."""
     import trimesh
 
-    mesh = trimesh.load(str(path), force="mesh")
+    safe = resolve_under_roots(path, must_be_file=True)
+    mesh = trimesh.load(str(safe), force="mesh")  # NOSONAR pythonsecurity:S2083
     if isinstance(mesh, trimesh.Scene):
         mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
     return mesh
@@ -354,11 +364,12 @@ def phantom_load_ok(path: Path, name: str) -> tuple[bool, str]:
     except Exception as exc:  # noqa: BLE001
         return False, f"import_failed:{type(exc).__name__}"
     try:
+        safe = resolve_under_roots(path, must_be_file=True)
         settings = PyskindoseSettings(load_settings_example_json())
         phantom = Phantom(
             phantom_model="human",
             phantom_dim=settings.phantom.dimension,
-            human_mesh=(name, path),
+            human_mesh=(name, safe),
         )
         if len(phantom.r) == 0 or len(phantom.n) == 0:
             return False, "empty_geometry"
@@ -387,11 +398,24 @@ def validate(
     adds a face-up orientation gate and an outward-normal ray gate. See
     ``dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
     """
+    try:
+        stl_path = resolve_under_roots(stl_path, must_exist=False)
+        if compare_affine is not None:
+            compare_affine = resolve_under_roots(compare_affine, must_be_file=True)
+    except ValueError as exc:
+        return {
+            "file": str(stl_path),
+            "passed": False,
+            "require_trimesh": require_trimesh,
+            "checks": {"path_confined": False, "path_error": str(exc)},
+        }
+
     results: dict = {"file": str(stl_path), "passed": False, "require_trimesh": require_trimesh, "checks": {}}
     if not stl_path.exists():
         results["checks"]["exists"] = False
         return results
     results["checks"]["exists"] = True
+    results["checks"]["path_confined"] = True
 
     max_faces = FUN_MAX_FACES if require_trimesh else CLINICAL_MAX_FACES
     faces = face_count(stl_path)
@@ -520,9 +544,20 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
+    try:
+        stl_path = resolve_under_roots(args.stl, must_exist=False)
+        compare_affine = (
+            resolve_under_roots(args.compare_affine, must_be_file=True)
+            if args.compare_affine is not None
+            else None
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
     results = validate(
-        args.stl,
-        compare_affine=args.compare_affine,
+        stl_path,
+        compare_affine=compare_affine,
         metric=args.metric,
         metric_margin=args.metric_margin,
         skip_phantom_load=args.skip_phantom_load,

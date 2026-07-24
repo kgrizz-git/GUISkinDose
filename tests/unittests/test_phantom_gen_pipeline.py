@@ -21,12 +21,13 @@ from scripts.phantom_gen.run_catalog import (
     validate_blender_binary,
     validate_catalog_id,
 )
-from scripts.phantom_gen.transform_to_psd_frame import transform_to_psd_frame
+from scripts.phantom_gen.transform_to_psd_frame import _load_vertices_faces, transform_to_psd_frame
 from scripts.phantom_gen.validate_phantom import (
     abdomen_bulk,
     extents,
     face_up_ok,
     head_ratio,
+    load_vertices,
     validate,
 )
 
@@ -85,6 +86,17 @@ def test_resolve_under_roots_rejects_escapes(tmp_path: Path):
         resolve_under_roots(outside, roots=(tmp_path,), must_exist=False)
     with pytest.raises(ValueError, match="escaped"):
         resolve_under_roots("../etc/passwd", roots=(tmp_path,), must_exist=False)
+
+
+def test_transform_and_validate_loaders_reject_path_escapes():
+    outside = Path("/etc/passwd")
+    with pytest.raises(ValueError, match="escaped"):
+        _load_vertices_faces(outside)
+    with pytest.raises(ValueError, match="escaped"):
+        load_vertices(outside)
+    results = validate(outside, skip_phantom_load=True)
+    assert results["passed"] is False
+    assert results["checks"].get("path_confined") is False
 
 
 def test_validate_catalog_id_and_blender_argv_builders(tmp_path: Path):

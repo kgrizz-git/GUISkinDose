@@ -78,13 +78,18 @@ def _import_mpfb_services(module_name: str):
 def _resolve_pose_path(repo_root: Path, entry: dict) -> Path | None:
     """Return pose JSON path from catalog ``pose`` or ``pose_file``, else None.
 
-    Paths are confined under ``scripts/phantom_gen`` before any filesystem access.
+    Named poses resolve under ``scripts/phantom_gen/poses``. Explicit ``pose_file``
+    paths must stay under the phantom_gen tree (relative) or the shared allowlist
+    (absolute: repo, phantom_gen, process temp — for pytest / local scratch).
     """
     phantom_gen = (repo_root / "scripts" / "phantom_gen").resolve()
     pose_file = entry.get("pose_file")
     pose_name = entry.get("pose")
     if pose_file:
-        return resolve_under_roots(pose_file, roots=(phantom_gen,), must_be_file=False)
+        raw = Path(pose_file).expanduser()
+        if raw.is_absolute():
+            return resolve_under_roots(raw, must_be_file=False)
+        return resolve_under_roots(raw, roots=(phantom_gen,), must_be_file=False)
     if pose_name:
         match = _POSE_NAME_RE.fullmatch(str(pose_name))
         if match is None:
@@ -110,11 +115,10 @@ def _apply_catalog_pose(
     pose_path = _resolve_pose_path(repo_root, entry)
     if pose_path is None:
         return
-    safe_pose = resolve_under_roots(
-        pose_path,
-        roots=((repo_root / "scripts" / "phantom_gen").resolve(),),
-        must_be_file=True,
-    )
+    # Re-check under the shared allowlist (absolute pose_file may live in temp).
+    safe_pose = resolve_under_roots(pose_path, must_exist=False)
+    if not safe_pose.is_file():
+        raise FileNotFoundError(f"Catalog pose file not found: {safe_pose.name}")
     import bpy
 
     # Confined pose path — Sonar S2083; basename only in logs.

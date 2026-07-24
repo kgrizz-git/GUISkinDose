@@ -18,12 +18,19 @@ from pathlib import Path
 
 import numpy as np
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
+
 
 def _load_obj(path: Path) -> tuple[np.ndarray, np.ndarray]:
     """Minimal Wavefront OBJ loader (triangulated faces; no materials)."""
+    safe = resolve_under_roots(path, must_be_file=True)
     vertices: list[list[float]] = []
     faces: list[list[int]] = []
-    with path.open(encoding="utf-8", errors="replace") as handle:
+    with safe.open(encoding="utf-8", errors="replace") as handle:  # NOSONAR pythonsecurity:S2083
         for line in handle:
             if line.startswith("v "):
                 parts = line.split()
@@ -40,20 +47,21 @@ def _load_obj(path: Path) -> tuple[np.ndarray, np.ndarray]:
                 for i in range(1, len(idxs) - 1):
                     faces.append([idxs[0], idxs[i], idxs[i + 1]])
     if not vertices or not faces:
-        raise ValueError(f"OBJ has no geometry: {path.name}")
+        raise ValueError(f"OBJ has no geometry: {safe.name}")
     return np.asarray(vertices, dtype=float), np.asarray(faces, dtype=np.int64)
 
 
 def _load_vertices_faces(path: Path) -> tuple[np.ndarray, np.ndarray]:
     """Load mesh vertices/faces from OBJ (stdlib) or STL (numpy-stl / optional trimesh)."""
-    suffix = path.suffix.lower()
+    safe = resolve_under_roots(path, must_be_file=True)
+    suffix = safe.suffix.lower()
     if suffix == ".obj":
-        return _load_obj(path)
+        return _load_obj(safe)
 
     if suffix in {".stl", ".stl.gz"}:
         from stl import mesh as stl_mesh
 
-        m = stl_mesh.Mesh.from_file(str(path))
+        m = stl_mesh.Mesh.from_file(str(safe))  # NOSONAR pythonsecurity:S2083
         # Unique vertices are not required for transform; keep triangle soup topology.
         faces = np.arange(len(m.vectors) * 3, dtype=np.int64).reshape(-1, 3)
         vertices = m.vectors.reshape(-1, 3).astype(float)
@@ -65,7 +73,7 @@ def _load_vertices_faces(path: Path) -> tuple[np.ndarray, np.ndarray]:
     except ImportError as exc:
         raise ImportError(f"unsupported mesh format {suffix}; install trimesh or use OBJ/STL") from exc
 
-    mesh = trimesh.load(str(path), force="mesh")
+    mesh = trimesh.load(str(safe), force="mesh")  # NOSONAR pythonsecurity:S2083
     if isinstance(mesh, trimesh.Scene):
         mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
     vertices = np.asarray(mesh.vertices, dtype=float)
@@ -76,12 +84,13 @@ def _load_vertices_faces(path: Path) -> tuple[np.ndarray, np.ndarray]:
 def _write_binary_stl(path: Path, vertices: np.ndarray, faces: np.ndarray) -> None:
     from stl import mesh as stl_mesh
 
+    safe = resolve_under_roots(path, must_exist=False)
     stl = stl_mesh.Mesh(np.zeros(faces.shape[0], dtype=stl_mesh.Mesh.dtype))
     for i, tri in enumerate(faces):
         for j in range(3):
             stl.vectors[i][j] = vertices[tri[j]]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    stl.save(str(path))
+    safe.parent.mkdir(parents=True, exist_ok=True)
+    stl.save(str(safe))  # NOSONAR pythonsecurity:S2083
 
 
 def _remap_obj_y_up_to_z_up(vertices: np.ndarray) -> np.ndarray:
@@ -149,11 +158,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"ERROR: input not found: {args.input}", file=sys.stderr)
+    try:
+        input_path = resolve_under_roots(args.input, must_be_file=True)
+        output_path = resolve_under_roots(args.output, must_exist=False)
+    except (ValueError, FileNotFoundError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    vertices, faces = _load_vertices_faces(args.input)
+    vertices, faces = _load_vertices_faces(input_path)
     transformed = transform_to_psd_frame(
         vertices,
         meters_to_cm_if_small=not args.no_unit_detect,
@@ -161,7 +173,7 @@ def main() -> int:
         force_flip_y=args.force_flip_y,
         obj_y_up=not args.no_obj_y_up,
     )
-    _write_binary_stl(args.output, transformed, faces)
+    _write_binary_stl(output_path, transformed, faces)
 
     spans = transformed.max(axis=0) - transformed.min(axis=0)
     print(
@@ -171,7 +183,7 @@ def main() -> int:
         f"y=[{transformed[:, 1].min():.2f},{transformed[:, 1].max():.2f}] "
         f"z=[{transformed[:, 2].min():.2f},{transformed[:, 2].max():.2f}] "
         f"spans=({spans[0]:.1f},{spans[1]:.1f},{spans[2]:.1f}) "
-        f"out={args.output}"
+        f"out={output_path}"
     )
     return 0
 

@@ -38,7 +38,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   and catalog ids, then rebuilds argv from trusted components before `subprocess.run` (Sonar S8705).
 
 - **Phantom_gen path confinement** (2026-07-24) — Shared `path_safety.resolve_under_roots` confines
-  CLI/catalog-derived paths under allowlisted roots before open/mkdir/write (Sonar S2083).
+  CLI/catalog-derived paths under allowlisted roots before open/mkdir/write (Sonar S2083), including
+  `transform_to_psd_frame.py` and `validate_phantom.py` load/write helpers. Absolute catalog
+  `pose_file` paths may also live under the process temp dir (pytest / local scratch).
 
 ### Removed
 
