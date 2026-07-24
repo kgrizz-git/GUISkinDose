@@ -65,21 +65,22 @@ PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "p
 def test_new_mesh_files_exist_with_reduced_variant(mesh_name: str):
     assert (PHANTOM_DATA / f"{mesh_name}.stl").is_file()
     assert (PHANTOM_DATA / f"{mesh_name}_reduced_1000t.stl").is_file()
+    assert (PHANTOM_DATA / f"{mesh_name}_reduced_3000t.stl").is_file()
 
 
 @pytest.mark.parametrize("mesh_name", NEW_MESHES + ARMS_DOWN_MESHES)
 def test_reduced_preview_meshes_are_connected(mesh_name: str):
-    """Settings preview uses ``*_reduced_1000t``; subsample soups look like scatter fragments."""
+    """Settings / plot_procedure prefer ``*_reduced_3000t``; 1k companions remain shipped."""
     from stl import mesh as stl_mesh
 
     from scripts.phantom_gen.generate_reduced import unique_vertex_count
 
-    reduced = stl_mesh.Mesh.from_file(str(PHANTOM_DATA / f"{mesh_name}_reduced_1000t.stl"))
-    n_faces = len(reduced.vectors)
-    uniq = unique_vertex_count(reduced.vectors)
-    assert n_faces == 1000
-    # Proper quadric decimation shares verts (~0.5/face); triangle subsample is ~2.7+/face.
-    assert uniq / n_faces <= 1.2, f"{mesh_name}_reduced_1000t looks disconnected (uniq={uniq})"
+    for suffix, n_faces in (("_reduced_3000t", 3000), ("_reduced_1000t", 1000)):
+        reduced = stl_mesh.Mesh.from_file(str(PHANTOM_DATA / f"{mesh_name}{suffix}.stl"))
+        assert len(reduced.vectors) == n_faces
+        uniq = unique_vertex_count(reduced.vectors)
+        # Proper quadric decimation shares verts (~0.5/face); triangle subsample is ~2.7+/face.
+        assert uniq / n_faces <= 1.2, f"{mesh_name}{suffix} looks disconnected (uniq={uniq})"
 
 
 def test_new_meshes_are_discovered():
@@ -88,6 +89,7 @@ def test_new_meshes_are_discovered():
         assert mesh_name in names
     for mesh_name in NEW_MESHES + ARMS_DOWN_MESHES:
         assert f"{mesh_name}_reduced_1000t" not in names
+        assert f"{mesh_name}_reduced_3000t" not in names
 
 
 @pytest.mark.parametrize("mesh_name", NEW_MESHES + ARMS_DOWN_MESHES)

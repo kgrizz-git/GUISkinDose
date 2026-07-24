@@ -10,6 +10,18 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Added
+
+- **`_reduced_3000t` phantom preview companions** (2026-07-24) — ~3k-face reduced STLs for all
+  shipped clinical human meshes (alongside existing `_reduced_1000t`). Settings preview and
+  `plot_procedure` prefer `_reduced_3000t` when present; dose still uses the full STL.
+  `generate_reduced` default target is 3000 faces. SemVer: **patch** on release (preview assets).
+
+### Changed
+
+- **Settings phantom preview caption** (2026-07-24) — Notes that the panel uses a reduced mesh for
+  display speed while dose calculation and Geometry setup/event plots use the full mesh.
+
 ### Removed
 
 - **Demo / non-clinical phantoms unshipped** (2026-07-24) — `demo_cosmic_buddha`,

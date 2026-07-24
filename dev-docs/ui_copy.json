@@ -6,7 +6,7 @@
       "owner": "gui/components/help_button.py"
     },
     "settings.phantom_preview.caption": {
-      "text": "Phantom preview (setup pose; back on support pad/table). Reflects body-habitus scales and patient offsets (active exam when multiple exams are loaded).",
+      "text": "Phantom preview (setup pose; back on support pad/table). Reflects body-habitus scales and patient offsets (active exam when multiple exams are loaded). Display uses a reduced mesh for speed; dose calculation and Geometry setup/event plots use the full mesh.",
       "owner": "gui/tabs/settings.py"
     },
     "settings.phantom_preview.unavailable": {

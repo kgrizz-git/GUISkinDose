@@ -15,9 +15,10 @@ Geometry preview). Global offset spinboxes on Settings apply when a single exam 
 
 ## Performance note
 
-When a `{mesh}_reduced_1000t.stl` companion exists, the preview uses that lighter mesh for
-snappy updates. **Dose calculation still uses the full STL.** Reduced preview bounds are
-approximate — do not treat them as equal to calculation bounds.
+When a `{mesh}_reduced_3000t.stl` companion exists, the preview uses that lighter mesh for
+snappy updates (falls back to `_reduced_1000t` if only that is present). **Dose calculation
+still uses the full STL.** Reduced preview bounds are approximate — do not treat them as
+equal to calculation bounds.
 
 ## Limitations
 

@@ -27,6 +27,7 @@ KNOWN_DEMO_STEMS = sorted(DEMO_HUMAN_MESHES | GUI_HIDDEN_HUMAN_MESHES)
 def test_demo_meshes_are_not_shipped(mesh_name: str):
     assert not (PHANTOM_DATA / f"{mesh_name}.stl").exists()
     assert not (PHANTOM_DATA / f"{mesh_name}_reduced_1000t.stl").exists()
+    assert not (PHANTOM_DATA / f"{mesh_name}_reduced_3000t.stl").exists()
 
 
 def test_discovered_meshes_exclude_demo_stems():

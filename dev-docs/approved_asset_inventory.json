@@ -1410,6 +1410,512 @@
         "reviewer": "KG",
         "reviewed_on": "2026-07-23"
       }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_arms_down_reduced_3000t.stl",
+      "sha256": "676263842c62f4153f24a6b42e269d7f16944131e69b2853a137e363d456c02c",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_1_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_reduced_3000t.stl",
+      "sha256": "9bd84438e36f0b73452e8dad81e0bd4a5c6bf121426667a06de1e83d291823aa",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_1)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_arms_down_reduced_3000t.stl",
+      "sha256": "310f975ccf727f813aabf034cf336c0b2ef77e432f2df6e8ec0dc6b76962050c",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_2_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_reduced_3000t.stl",
+      "sha256": "bbd97bf6a018d98342071afc1a501603f53020d35db9bd62dedba5d58e3539ca",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_2)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_arms_down_reduced_3000t.stl",
+      "sha256": "4d6cf446b18e21c12cc6ab8f6bafdff113e159d82f7a305f2a20bc68038bcb7e",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_3_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_reduced_3000t.stl",
+      "sha256": "868f7c31ebb126c5569f1427222855926d620fc3e6d325d461781560f0036e4b",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_3)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_arms_down_reduced_3000t.stl",
+      "sha256": "6a5dba17fba7180b8603c6b7d9792437ffd5bb6a9a90c3d3228a279f069ad4b0",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_1_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_reduced_3000t.stl",
+      "sha256": "2abc1bd35cdf698818c785784da101ecbe1b4eb4f400b6a696f5ff77abd304cc",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_1)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_arms_down_reduced_3000t.stl",
+      "sha256": "11226d44e45ce404a82f8a69fc91cfe4a346866bb66580958d974c16907ac65d",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_2_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_reduced_3000t.stl",
+      "sha256": "c35c03fcf9d3d88cb110119d6038ecf98fcc06d055847057bcf98f94324c85fb",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_2)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_arms_down_reduced_3000t.stl",
+      "sha256": "90adee741089f2525e3755299679be0223a83db3d26d51d652fc5d67501b8401",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_3_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_reduced_3000t.stl",
+      "sha256": "1b722a254193f2d2f559e04d8ac5eaf260f1670a6cb3d08cd2ea9023b3f47b14",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_3)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_ecto_female_arms_down_reduced_3000t.stl",
+      "sha256": "b7bdf7f2de892c7c75e8e5bebf613100730e4555899e8868a5707532f00512d5",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_ecto_female_reduced_3000t.stl",
+      "sha256": "a1a6f09bd9a5d258298beebdfb7f66ec1c3dde86b1cf02168e55125c31037288",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_ecto_male_arms_down_reduced_3000t.stl",
+      "sha256": "59fcbc2174dcdb942f505f16e2c43385e60782981f235ec302ce815dce3d19e5",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_ecto_male_reduced_3000t.stl",
+      "sha256": "2343b851da72e00d2a9e671a7986bb534e048ad9848019d4104728b7b83c658e",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_endo_female_arms_down_reduced_3000t.stl",
+      "sha256": "90c416c1b09096375959112da4f06a0732d7e4a854ac1d646c9f612c19bd36ba",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_endo_female_reduced_3000t.stl",
+      "sha256": "912b28c01e26dab8f998600c8eab7dd0e8b54d0a4ec66932e843493c5a094d74",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_endo_male_arms_down_reduced_3000t.stl",
+      "sha256": "c8c4d41ac468fa287e9655e1207371aa484b92cc7d3abc9d670f93ec61c6fe11",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_endo_male_reduced_3000t.stl",
+      "sha256": "b10e4175b2fb3da3149456cca828dc4e937ae9d349a0be523ef3d598aa95ef51",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_female_arms_down_reduced_3000t.stl",
+      "sha256": "bfa8482dd5128d8db0afb0406976926a56ae786b8fb05e78b893ff29251869e8",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_female_reduced_3000t.stl",
+      "sha256": "95129ca25970c4d508c4112e86280b893fe762b3e14a9a3922b0f4e4986f14e5",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_male_arms_down_reduced_3000t.stl",
+      "sha256": "b7b295ff890840286b3d0c31e0dc9683fdae48ca1cd79eaf66c51f222ce3b62b",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/adult_male_reduced_3000t.stl",
+      "sha256": "e87989fa37b35a2da58d5a08c102792f64ee4674f75c673d262d73b8c64c0801",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/hudfrid_arms_down_reduced_3000t.stl",
+      "sha256": "8eba45fa93c6af6c2f4b3cf4a5c987a8009b1bb921cbf9afd5ac9df173486fac",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (hudfrid_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/hudfrid_reduced_3000t.stl",
+      "sha256": "d08c9a7b2cab8dc4409392ef3947cab3b76485511eff1a3ac93fa43d9440b7b0",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (hudfrid)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/junior_female_arms_down_reduced_3000t.stl",
+      "sha256": "aa2b03a3f6b4a03e0b94db2d1338ec54617a723037d525bb03f208564cbaeb38",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/junior_female_reduced_3000t.stl",
+      "sha256": "ae55c3c3d0e2bdd6fd6beebcc2036debe4df7e3958868315cbeb789bbc919301",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/junior_male_arms_down_reduced_3000t.stl",
+      "sha256": "1e6b9d0e5bf1aa926a328f04d9d802bc02dc9f9c51a6a5ee19ec206ff697382c",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/junior_male_reduced_3000t.stl",
+      "sha256": "f193bdf7fddd94486394380236a10d4a32e81a8671a99df63e35b92d3f4a2849",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_10y_female_arms_down_reduced_3000t.stl",
+      "sha256": "a88fda02601c405ade9bf02bcf2e553e3b20a18af4c6eff2f0b15c0c5e73c295",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_10y_female_reduced_3000t.stl",
+      "sha256": "c9ba51efbe05f08f1850bc82e992a5bfe0c8711e8782aca64c308874f1d9f76f",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_10y_male_arms_down_reduced_3000t.stl",
+      "sha256": "8c375875185bb53d47df47d40615abd4f58b165dc83308f396bb0f5852d2a3b7",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_10y_male_reduced_3000t.stl",
+      "sha256": "b3099f234ce45b09577a97899d08b5fa24398ce34533f7f61fa605494cdb56d3",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_5y_female_arms_down_reduced_3000t.stl",
+      "sha256": "942d8c7c6110d18e5bc7b7de60755308dffb970bd5f6454d988ff7b69d00dcc9",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_5y_female_reduced_3000t.stl",
+      "sha256": "03e08c0119e9c04d2084a04747ec7dab50e3aa8bd9a9f32030af39e6f038ceed",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_5y_male_arms_down_reduced_3000t.stl",
+      "sha256": "be8a523ad9c3ca622896eb915c9f4c97d837ad89fc6f191eabe014c9177d52c5",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_5y_male_reduced_3000t.stl",
+      "sha256": "89237b59f592f7c541180c93af041dec7c7460884cd5ed15394267bf0911815b",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_preschool_female_arms_down_reduced_3000t.stl",
+      "sha256": "084181b89a808b3ce0a65a6208eac7ebe5afeea948f99b2f289ece4bf2e843d7",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_preschool_female_reduced_3000t.stl",
+      "sha256": "4f06194076a75b8b7c0d5e8d96319dd2ee892d86f05be6ff8f4b8341c409484c",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_preschool_male_arms_down_reduced_3000t.stl",
+      "sha256": "3b141084f2d26f85e0c5e14faad95a2f58afcb01482519c79cc02a14420ae8e2",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/ped_preschool_male_reduced_3000t.stl",
+      "sha256": "8473e7ac1407dc530fed045d3ef49408d35cda4ec60585bef8b46629d7ba7c60",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/senior_female_arms_down_reduced_3000t.stl",
+      "sha256": "920f7c8613d6b467d2d7c2d3f217727a90c913d50beacde4f3e59cb2b7b0996b",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_female_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/senior_female_reduced_3000t.stl",
+      "sha256": "a640957bcd219ccb90b8ca6802065bb0b3a1aeb95049c9fe829e07caed7284c5",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_female)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/senior_male_arms_down_reduced_3000t.stl",
+      "sha256": "2dae9e1001e5e2880973f236904569ad927aaa9a848b022c896572127803d89c",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_male_arms_down)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
+    },
+    {
+      "path": "src/mypyskindose/phantom_data/senior_male_reduced_3000t.stl",
+      "sha256": "59bff7961b3e39266b22d926810bc36f64a534380a71e6209a9e77c23548972f",
+      "kind": "opaque_binary",
+      "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_male)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-24"
+      }
     }
   ]
 }

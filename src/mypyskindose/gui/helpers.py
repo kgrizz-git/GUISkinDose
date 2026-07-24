@@ -302,7 +302,11 @@ def get_example_rdsr_files() -> list[Path]:
 
 def get_human_mesh_names() -> list[str]:
     """Return available human mesh names (full-resolution only, canonical stems)."""
-    return sorted(p.stem for p in _PHANTOM_DATA_DIR.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
+    return sorted(
+        p.stem
+        for p in _PHANTOM_DATA_DIR.glob("*.stl")
+        if "_reduced_" not in p.stem
+    )
 
 
 def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:

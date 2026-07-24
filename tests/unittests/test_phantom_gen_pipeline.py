@@ -258,7 +258,7 @@ def test_affine_control_uniform_height_preserves_ratios(tmp_path: Path):
     assert s[1] == pytest.approx(s[2])
 
 
-def test_generate_reduced_writes_1000_face_preview(tmp_path: Path):
+def test_generate_reduced_writes_named_face_preview(tmp_path: Path):
     from stl import mesh as stl_mesh
 
     from scripts.phantom_gen.generate_reduced import generate_reduced
@@ -277,6 +277,9 @@ def test_generate_reduced_writes_1000_face_preview(tmp_path: Path):
     out = generate_reduced(big_path, target_faces=1000, allow_subsample=True)
     assert out.name.endswith("_reduced_1000t.stl")
     assert len(stl_mesh.Mesh.from_file(str(out)).vectors) == 1000
+
+    default_out = generate_reduced(big_path, allow_subsample=True)
+    assert default_out.name.endswith("_reduced_3000t.stl")
 
 
 def test_validate_basic_anchors_on_shipped_mesh():

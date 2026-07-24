@@ -161,11 +161,12 @@ writing or validating. Never pass `--allow-subsample` to `generate_reduced` /
 the decimator for shipping — subsample produces disconnected triangle soup and
 is for tests/emergencies only.
 
-Then build the `_reduced_1000t` preview separately (also no subsample):
+Then build a reduced preview separately (default ~3000 faces; also no subsample):
 
 ```bash
 python scripts/phantom_gen/generate_reduced.py tmp/fun_phantoms/psd/cosmic_buddha.stl \
   --out-dir tmp/fun_phantoms/psd
+# optional legacy detail: --target-faces 1000
 ```
 
 ### Fun-mode validation (`--require-trimesh`)
@@ -189,7 +190,7 @@ python scripts/phantom_gen/validate_phantom.py tmp/fun_phantoms/psd/cosmic_buddh
   --require-trimesh --face-up-band-frac 0.20
 ```
 
-Run fun-mode gates on the **full** `{id}.stl` only, not `_reduced_1000t.stl`.
+Run fun-mode gates on the **full** `{id}.stl` only, not `*_reduced_*t.stl` previews.
 
 > Mesh asset licenses (CC0 / CC BY / CC BY-SA) are tracked in
 > `phantom_data/NOTICE_*.txt` + `dev-docs/references/fun_phantom_provenance.md`,

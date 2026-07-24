@@ -53,7 +53,7 @@ def _span(trace: dict, axis: str) -> float:
 
 
 def test_resolve_preview_mesh_prefers_reduced_when_present():
-    assert resolve_preview_mesh("hudfrid") == "hudfrid_reduced_1000t"
+    assert resolve_preview_mesh("hudfrid") == "hudfrid_reduced_3000t"
 
 
 def test_resolve_preview_mesh_returns_stem_when_reduced_absent(tmp_path, monkeypatch):
@@ -68,6 +68,7 @@ def test_resolve_preview_mesh_returns_stem_when_reduced_absent(tmp_path, monkeyp
 
 def test_resolve_preview_mesh_never_double_appends_reduced_suffix():
     assert resolve_preview_mesh("hudfrid_reduced_1000t") == "hudfrid_reduced_1000t"
+    assert resolve_preview_mesh("hudfrid_reduced_3000t") == "hudfrid_reduced_3000t"
 
 
 def test_make_phantom_preview_fig_builds_patient_table_pad_without_rdsr():

@@ -12,6 +12,7 @@ and ``dev-docs/plans/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md``.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Iterable
 
 # Content-preserving renames (old stem → canonical on-disk stem).
@@ -37,7 +38,10 @@ HUMAN_MESH_ALIASES: dict[str, str] = {
     "ramesses_ii": "demo_ramesses_ii",
 }
 
-_REDUCED_SUFFIX = "_reduced_1000t"
+_REDUCED_SUFFIX = "_reduced_3000t"
+_LEGACY_REDUCED_SUFFIXES = ("_reduced_1000t",)
+# Prefer higher-detail previews when several companions exist.
+_PREVIEW_REDUCED_SUFFIXES = (_REDUCED_SUFFIX, *_LEGACY_REDUCED_SUFFIXES)
 _ARMS_DOWN_SUFFIX = "_arms_down"
 
 # Demo / non-clinical (Settings only when show_demo_phantoms is on).
@@ -154,15 +158,41 @@ _CLINICAL_SORT_ORDER: tuple[str, ...] = (
 def resolve_human_mesh_stem(stem: str) -> str:
     """Return the canonical full-res or reduced stem for ``stem``.
 
-    Legacy aliases map to new basenames. A ``_reduced_1000t`` suffix is preserved
-    on the canonical base. Unknown stems pass through unchanged.
+    Legacy aliases map to new basenames. ``_reduced_3000t`` and legacy
+    ``_reduced_1000t`` suffixes are preserved on the canonical base (both may
+    ship). Unknown stems pass through unchanged.
     """
     if not stem:
         return stem
-    reduced = stem.endswith(_REDUCED_SUFFIX)
-    base = stem[: -len(_REDUCED_SUFFIX)] if reduced else stem
-    canonical = HUMAN_MESH_ALIASES.get(base, base)
-    return f"{canonical}{_REDUCED_SUFFIX}" if reduced else canonical
+    for suffix in _PREVIEW_REDUCED_SUFFIXES:
+        if stem.endswith(suffix):
+            base = stem[: -len(suffix)]
+            canonical = HUMAN_MESH_ALIASES.get(base, base)
+            return f"{canonical}{suffix}"
+    canonical = HUMAN_MESH_ALIASES.get(stem, stem)
+    return canonical
+
+
+def prefer_reduced_preview_stem(stem: str, *, phantom_data_dir: Path | None = None) -> str:
+    """Return the best available reduced companion for ``stem``, else the stem.
+
+    Prefers ``_reduced_3000t`` over ``_reduced_1000t`` when both exist under
+    package ``phantom_data/``.
+    """
+    from mypyskindose import __file__ as _pkg_file
+
+    if not stem:
+        return stem
+    stem = resolve_human_mesh_stem(stem)
+    for suffix in _PREVIEW_REDUCED_SUFFIXES:
+        if stem.endswith(suffix):
+            return stem
+    data_dir = phantom_data_dir or (Path(_pkg_file).resolve().parent / "phantom_data")
+    for suffix in _PREVIEW_REDUCED_SUFFIXES:
+        candidate = f"{stem}{suffix}"
+        if (data_dir / f"{candidate}.stl").is_file():
+            return candidate
+    return stem
 
 
 def human_mesh_display_label(stem: str) -> str:

@@ -1,7 +1,7 @@
 """Settings-tab human phantom preview figure builder (no RDSR).
 
 Builds a Plotly figure of the selected human mesh on table+pad for the Settings
-UI. Prefer ``{stem}_reduced_1000t`` when present under package ``phantom_data/``.
+UI. Prefer ``{stem}_reduced_3000t`` when present under package ``phantom_data/``.
 Dose calculation continues to use the full logical mesh stem.
 
 Inputs
@@ -49,7 +49,6 @@ logger = logging.getLogger(__name__)
 
 # Same package root Phantom uses for STL loads (gui/ → mypyskindose/phantom_data).
 _PHANTOM_DATA_DIR = Path(__file__).resolve().parent.parent / "phantom_data"
-_REDUCED_SUFFIX = "_reduced_1000t"
 _PREVIEW_BG = "rgb(5,5,5)"
 _SHORT_LABELS = {
     "patient": "Patient",
@@ -121,20 +120,12 @@ def capture_phantom_preview_snapshot(app_state: AppState) -> PreviewSnapshot:
 def resolve_preview_mesh(stem: str) -> str:
     """Return reduced companion stem when its STL exists; else the logical stem.
 
-    Looks only under package ``phantom_data/``. Never double-appends
+    Looks only under package ``phantom_data/``. Prefers ``_reduced_3000t`` over
     ``_reduced_1000t``. Legacy mesh aliases resolve to canonical stems first.
     """
-    from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+    from mypyskindose.phantom_mesh_names import prefer_reduced_preview_stem
 
-    if not stem:
-        return stem
-    stem = resolve_human_mesh_stem(stem)
-    if stem.endswith(_REDUCED_SUFFIX):
-        return stem
-    reduced = f"{stem}{_REDUCED_SUFFIX}"
-    if (_PHANTOM_DATA_DIR / f"{reduced}.stl").is_file():
-        return reduced
-    return stem
+    return prefer_reduced_preview_stem(stem, phantom_data_dir=_PHANTOM_DATA_DIR)
 
 
 def build_settings_from_snapshot(

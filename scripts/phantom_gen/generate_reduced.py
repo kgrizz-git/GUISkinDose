@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Decimate a PSD-frame STL to a ~1000-triangle preview mesh.
+"""Decimate a PSD-frame STL to a ~3000-triangle preview mesh.
 
-Writes ``{stem}_reduced_1000t.stl`` next to the input (or under ``--out-dir``).
+Writes ``{stem}_reduced_3000t.stl`` next to the input (or under ``--out-dir``).
 
 Requires ``trimesh`` and ``fast-simplification`` for shipping-quality output
 (quadric edge collapse). Uniform triangle subsample is intentionally *not*
@@ -14,7 +14,7 @@ Install::
 
 Usage::
 
-    python scripts/phantom_gen/generate_reduced.py tmp/phantom_gen/p0/pediatric_5y_male.stl
+    python scripts/phantom_gen/generate_reduced.py tmp/phantom_gen/p0/ped_5y_male.stl
     python scripts/phantom_gen/generate_reduced.py tmp/phantom_gen/p0/*.stl --out-dir tmp/phantom_gen/p0
 """
 
@@ -77,7 +77,7 @@ def _subsample_triangles(vectors: np.ndarray, target_faces: int) -> np.ndarray:
 def decimate_to_target_faces(
     vectors: np.ndarray,
     *,
-    target_faces: int = 1000,
+    target_faces: int = 3000,
     allow_subsample: bool = False,
 ) -> np.ndarray:
     """Return a triangle-soup with approximately ``target_faces`` faces.
@@ -122,7 +122,7 @@ def generate_reduced(
     stl_path: Path,
     *,
     out_path: Path | None = None,
-    target_faces: int = 1000,
+    target_faces: int = 3000,
     allow_subsample: bool = False,
 ) -> Path:
     """Write reduced STL; return output path."""
@@ -144,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("inputs", nargs="+", type=Path, help="Input STL path(s)")
     parser.add_argument("--out-dir", type=Path, default=None)
-    parser.add_argument("--target-faces", type=int, default=1000)
+    parser.add_argument("--target-faces", type=int, default=3000)
     parser.add_argument(
         "--allow-subsample",
         action="store_true",

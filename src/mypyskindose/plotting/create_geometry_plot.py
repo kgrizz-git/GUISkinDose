@@ -3,7 +3,7 @@ import pandas as pd
 from mypyskindose import constants as c
 from mypyskindose.geom_calc import position_patient_phantom_on_table
 from mypyskindose.phantom_class import Phantom
-from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+from mypyskindose.phantom_mesh_names import prefer_reduced_preview_stem, resolve_human_mesh_stem
 from mypyskindose.plotting.plot_geometry import plot_geometry
 from mypyskindose.settings import PyskindoseSettings
 
@@ -44,10 +44,10 @@ def create_geometry_plot(
     if isinstance(settings.phantom.human_mesh, tuple):
         human_mesh_arg: str | tuple = settings.phantom.human_mesh
     else:
-        mesh_stem = str(settings.phantom.human_mesh)
+        mesh_stem = resolve_human_mesh_stem(str(settings.phantom.human_mesh))
         if settings.mode == c.MODE_PLOT_PROCEDURE and settings.phantom.model == c.PHANTOM_MODEL_HUMAN:
-            mesh_stem = f"{mesh_stem}{c.PHANTOM_HUMAN_MESH_SPARSE_MODEL_ENDING}"
-        human_mesh_arg = resolve_human_mesh_stem(mesh_stem)
+            mesh_stem = prefer_reduced_preview_stem(mesh_stem)
+        human_mesh_arg = mesh_stem
 
     patient = Phantom(
         phantom_model=settings.phantom.model,

@@ -95,7 +95,7 @@ Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `sca
 `scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in
 **Settings → Phantom Settings → Body habitus scaling** and geometry/dose calculations use the
 scaled STL vertices and recomputed normals. Settings also shows a live 3D human-mesh preview
-(no RDSR; prefers `_reduced_1000t` for display) so users can confirm mesh, face-up pose,
+(no RDSR; prefers `_reduced_3000t` when present, else `_reduced_1000t`) so users can confirm mesh, face-up pose,
 habitus scales, and patient offsets before upload. GUI measurements use left-right width,
 anterior-posterior thickness, and superior-inferior length; the width is measured
 in a torso band below the arms while `scale_lat` still scales the full lateral mesh axis.

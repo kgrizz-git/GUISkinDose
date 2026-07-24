@@ -11,7 +11,7 @@ Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDIN
 ## Currently shipped meshes
 
 Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
-globs `*.stl` and **excludes** `*_reduced_1000t` preview variants. Prefer the runtime mesh list
+globs `*.stl` and **excludes** any `*_reduced_*` preview variants. Prefer the runtime mesh list
 (or `get_human_mesh_names()`) over treating any table here as a frozen census — stems may be
 trimmed as the catalog settles.
 
@@ -23,7 +23,7 @@ trimmed as the catalog settles.
 | Pediatric MPFB | `ped_preschool_*`, `ped_5y_*`, `ped_10y_*` age bands |
 | Habitus MPFB | `adult_ecto_*`, `adult_endo_*`, `adult_bariatric_{sex}_{n}` |
 | Arms-down twins | `*_arms_down` additive siblings (A-pose kept) |
-| Reduced previews | `*_reduced_1000t` (~1k faces; not listed as full meshes) |
+| Reduced previews | `*_reduced_3000t` preferred (~3k faces); `*_reduced_1000t` still shipped; not listed as full meshes |
 
 Non-clinical demo / fun meshes are **not** shipped. A local recovery stash (gitignored) may
 exist at `tmp/phantom_data_demo_stash/` with attribution notes if someone previously pulled
@@ -198,7 +198,7 @@ With a known anterior LAO (or similar) projection on a trusted RDSR, PSD should 
 | `Phantom.__init__` / human branch in `phantom_class.py` | Loads STL from `phantom_data/` |
 | `Phantom._apply_human_scale` | GUI/body-habitus scaling + normal recompute |
 | `Phantom._recompute_human_normals_from_triangles` | Authoritative normal derivation after scale/import |
-| `print_available_human_phantoms()` / GUI helper that globs `phantom_data/*.stl` | Mesh discovery (skips `*_reduced_1000t`) |
+| `print_available_human_phantoms()` / GUI helper that globs `phantom_data/*.stl` | Mesh discovery (skips `*_reduced_*`) |
 | `Beam.check_hit` | Entrance/exit from normal sign |
 | Settings → Phantom → Body habitus scaling | Writes `scale_lat` / `scale_ap` / `scale_lon` |
 
