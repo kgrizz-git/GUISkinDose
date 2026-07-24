@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -49,6 +50,80 @@ DEFAULT_CATALOG = Path(__file__).resolve().parent / "catalog_v1.json"
 DEFAULT_OUT = REPO_ROOT / "tmp" / "phantom_gen"
 MPFB_GENERATE = Path(__file__).resolve().parent / "mpfb_generate.py"
 PHANTOM_DATA = REPO_ROOT / "src" / "mypyskindose" / "phantom_data"
+
+# Catalog ids and Blender basenames are allowlisted before any subprocess argv is built.
+_CATALOG_ID_RE = re.compile(r"^[A-Za-z0-9_]+$")
+_ALLOWED_BLENDER_NAMES = frozenset({"blender", "Blender"})
+_MPFB_PROBE_EXPR = (
+    "import addon_utils; "
+    "ok=any(m.__name__=='bl_ext.blender_org.mpfb' for m in addon_utils.modules()); "
+    "print('MPFB_OK' if ok else 'MPFB_MISSING')"
+)
+
+
+def validate_catalog_id(catalog_id: str) -> str:
+    """Return ``catalog_id`` only when it matches the allowlisted stem pattern."""
+    match = _CATALOG_ID_RE.fullmatch(catalog_id)
+    if match is None:
+        raise ValueError(f"invalid catalog id: {catalog_id!r}")
+    # Rebuild from the match so callers do not retain untrusted CLI taint.
+    return match.group(0)
+
+
+def validate_blender_binary(blender: str) -> Path:
+    """Require a resolvable Blender executable with an allowlisted basename."""
+    if not blender or any(ch in blender for ch in "\r\n\x00"):
+        raise ValueError("invalid blender binary path")
+    raw = Path(blender).expanduser()
+    if raw.is_file() and os.access(raw, os.X_OK):
+        resolved = raw.resolve()
+    else:
+        found = shutil.which(blender)
+        if found is None:
+            raise ValueError("blender binary not found")
+        resolved = Path(found).resolve()
+    if resolved.name not in _ALLOWED_BLENDER_NAMES:
+        raise ValueError("unexpected blender binary name")
+    if not resolved.is_file() or not os.access(resolved, os.X_OK):
+        raise ValueError("blender binary is not executable")
+    return resolved
+
+
+def build_blender_probe_argv(blender: Path) -> list[str]:
+    """Build Blender probe argv from a validated binary and a fixed Python expr."""
+    return [str(blender), "-b", "--python-expr", _MPFB_PROBE_EXPR]
+
+
+def build_blender_generate_argv(
+    blender: Path,
+    *,
+    catalog_id: str,
+    catalog: Path,
+    out_dir: Path,
+) -> list[str]:
+    """Build headless MPFB generate argv from allowlisted / resolved components only."""
+    safe_id = validate_catalog_id(catalog_id)
+    script = MPFB_GENERATE.resolve()
+    if not script.is_file():
+        raise FileNotFoundError("mpfb_generate.py missing")
+    catalog_path = catalog.expanduser().resolve()
+    if not catalog_path.is_file():
+        raise FileNotFoundError("catalog JSON missing")
+    out_path = out_dir.expanduser().resolve()
+    out_path.mkdir(parents=True, exist_ok=True)
+    return [
+        str(blender),
+        "-b",
+        "-P",
+        str(script),
+        "--",
+        "--catalog-id",
+        safe_id,
+        "--catalog",
+        str(catalog_path),
+        "--out-dir",
+        str(out_path),
+    ]
 
 
 def load_catalog(path: Path) -> dict[str, Any]:
@@ -104,8 +179,8 @@ def resolve_blender(env_local: Path | None = None) -> str:
 def blender_mpfb_available(blender: str | None = None) -> tuple[bool, str]:
     """Return (ok, detail) for headless Blender + MPFB availability."""
     try:
-        blender_bin = blender or resolve_blender()
-    except FileNotFoundError as exc:
+        blender_bin = validate_blender_binary(blender or resolve_blender())
+    except (FileNotFoundError, ValueError) as exc:
         return False, str(exc)
 
     user_resources = os.environ.get("BLENDER_USER_RESOURCES")
@@ -118,14 +193,11 @@ def blender_mpfb_available(blender: str | None = None) -> tuple[bool, str]:
     if user_resources:
         env["BLENDER_USER_RESOURCES"] = user_resources
 
-    expr = (
-        "import addon_utils; "
-        "ok=any(m.__name__=='bl_ext.blender_org.mpfb' for m in addon_utils.modules()); "
-        "print('MPFB_OK' if ok else 'MPFB_MISSING')"
-    )
+    # argv rebuilt from validated binary + fixed probe expr (no shell, no CLI taint).
+    cmd = build_blender_probe_argv(blender_bin)
     try:
-        proc = subprocess.run(
-            [blender_bin, "-b", "--python-expr", expr],
+        proc = subprocess.run(  # NOSONAR pythonsecurity:S8705
+            cmd,
             capture_output=True,
             text=True,
             env=env,
@@ -137,7 +209,7 @@ def blender_mpfb_available(blender: str | None = None) -> tuple[bool, str]:
 
     combined = (proc.stdout or "") + (proc.stderr or "")
     if "MPFB_OK" in combined:
-        return True, blender_bin
+        return True, str(blender_bin)
     if "MPFB_MISSING" in combined:
         return False, "mpfb_not_installed"
     return False, f"blender_probe_exit_{proc.returncode}"
@@ -151,7 +223,13 @@ def run_blender_generate(
     blender: str,
 ) -> Path:
     """Invoke Blender/MPFB generate; return path to OBJ."""
-    out_dir.mkdir(parents=True, exist_ok=True)
+    blender_bin = validate_blender_binary(blender)
+    cmd = build_blender_generate_argv(
+        blender_bin,
+        catalog_id=catalog_id,
+        catalog=catalog,
+        out_dir=out_dir,
+    )
     user_resources = os.environ.get("BLENDER_USER_RESOURCES")
     if not user_resources:
         hint = REPO_ROOT / "tmp" / "blender_user"
@@ -161,27 +239,22 @@ def run_blender_generate(
     if user_resources:
         env["BLENDER_USER_RESOURCES"] = user_resources
 
-    cmd = [
-        blender,
-        "-b",
-        "-P",
-        str(MPFB_GENERATE),
-        "--",
-        "--catalog-id",
-        catalog_id,
-        "--catalog",
-        str(catalog),
-        "--out-dir",
-        str(out_dir),
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False)
+    # argv rebuilt from allowlisted id + resolved paths (no shell).
+    proc = subprocess.run(  # NOSONAR pythonsecurity:S8705
+        cmd,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
     if proc.returncode != 0:
         # Avoid dumping absolute paths / full Blender logs into caller stdout by default.
         raise RuntimeError(
             f"mpfb_generate failed for {catalog_id} (exit={proc.returncode}); "
             f"see Blender stderr (length={len(proc.stderr or '')})"
         )
-    obj_path = out_dir / f"{catalog_id}.obj"
+    safe_id = validate_catalog_id(catalog_id)
+    obj_path = out_dir.expanduser().resolve() / f"{safe_id}.obj"
     if not obj_path.is_file():
         raise RuntimeError(f"expected OBJ missing for {catalog_id}")
     return obj_path
@@ -412,12 +485,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        blender = args.blender or resolve_blender()
-    except FileNotFoundError as exc:
+        blender = validate_blender_binary(args.blender or resolve_blender())
+    except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
-    ok_mpfb, detail = blender_mpfb_available(blender)
+    ok_mpfb, detail = blender_mpfb_available(str(blender))
     if not ok_mpfb:
         print(f"ERROR: Blender/MPFB unavailable ({detail})", file=sys.stderr)
         return 2
@@ -432,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
                 catalog,
                 catalog_path=args.catalog,
                 out_dir=args.out_dir,
-                blender=blender,
+                blender=str(blender),
                 skip_phantom_load=args.skip_phantom_load,
                 skip_shape=args.skip_shape,
             )

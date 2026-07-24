@@ -11,7 +11,15 @@ import pytest
 from stl import mesh as stl_mesh
 
 from scripts.phantom_gen.affine_control import build_affine_control
-from scripts.phantom_gen.run_catalog import check_expect_ranges, load_catalog, select_ids
+from scripts.phantom_gen.run_catalog import (
+    build_blender_generate_argv,
+    build_blender_probe_argv,
+    check_expect_ranges,
+    load_catalog,
+    select_ids,
+    validate_blender_binary,
+    validate_catalog_id,
+)
 from scripts.phantom_gen.transform_to_psd_frame import transform_to_psd_frame
 from scripts.phantom_gen.validate_phantom import (
     abdomen_bulk,
@@ -66,6 +74,42 @@ def _write_box_stl(path: Path, *, x: float, y: float, z: float, origin=(0.0, 0.0
         stl.vectors[i][2] = corners[c]
     path.parent.mkdir(parents=True, exist_ok=True)
     stl.save(str(path))
+
+
+def test_validate_catalog_id_and_blender_argv_builders(tmp_path: Path):
+    assert validate_catalog_id("ped_5y_male") == "ped_5y_male"
+    with pytest.raises(ValueError):
+        validate_catalog_id("ped_5y_male; rm -rf /")
+    with pytest.raises(ValueError):
+        validate_catalog_id("../escape")
+
+    fake = tmp_path / "blender"
+    fake.write_text("#!/bin/sh\n", encoding="utf-8")
+    fake.chmod(0o755)
+    validated = validate_blender_binary(str(fake))
+    assert validated == fake.resolve()
+    probe = build_blender_probe_argv(validated)
+    assert probe[0] == str(validated)
+    assert probe[1:3] == ["-b", "--python-expr"]
+
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text("{}", encoding="utf-8")
+    argv = build_blender_generate_argv(
+        validated,
+        catalog_id="ped_5y_male",
+        catalog=catalog,
+        out_dir=tmp_path / "out",
+    )
+    assert argv[0] == str(validated)
+    assert argv[1:4] == ["-b", "-P", str((REPO_ROOT / "scripts/phantom_gen/mpfb_generate.py").resolve())]
+    assert "--catalog-id" in argv and "ped_5y_male" in argv
+    with pytest.raises(ValueError):
+        build_blender_generate_argv(
+            validated,
+            catalog_id="bad;id",
+            catalog=catalog,
+            out_dir=tmp_path / "out",
+        )
 
 
 def test_catalog_v1_loads_and_forbids_affine_shipping_fields():

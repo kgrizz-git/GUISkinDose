@@ -28,6 +28,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   unit tests that transitively import NiceGUI. Pin CI/`[dev]` ruff to `>=0.15,<0.16` so unpinned
   `pip install ruff` cannot pull 0.16 and fail the matrix on hundreds of newly-noisy findings.
 
+- **Blender subprocess argv allowlisting** (2026-07-24) — `run_catalog.py` validates Blender basename
+  and catalog ids, then rebuilds argv from trusted components before `subprocess.run` (Sonar S8705).
+
 ### Removed
 
 - **Demo / non-clinical phantoms unshipped** (2026-07-24) — `demo_cosmic_buddha`,
