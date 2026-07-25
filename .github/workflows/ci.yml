@@ -192,26 +192,27 @@ jobs:
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      with:
+        version: ">=0.11.19"
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest "ruff>=0.15,<0.16" coverage
-        pip install -e .
+    # Install the exact versions pinned in uv.lock so PR/main runs are reproducible;
+    # unpinned upstream breakage is caught deliberately by ci-latest. `uv run --no-sync`
+    # keeps the pinned tools on PATH across every OS (.venv/bin vs .venv/Scripts).
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --locked --python ${{ matrix.python-version }}
     - name: Compile check
-      run: python -m compileall src/mypyskindose
+      run: uv run --no-sync python -m compileall src/mypyskindose
     - name: Lint with ruff
-      run: |
-        ruff check src tests
+      run: uv run --no-sync ruff check src tests
     - name: Test with pytest
-      run: |
-        coverage run -m pytest --ignore=tests/gui
+      run: uv run --no-sync coverage run -m pytest --ignore=tests/gui
     - name: Coverage threshold (≥60%)
-      run: coverage report --include="src/mypyskindose/*" --fail-under=60
+      run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=60
 
   cloud-scans-after-gates:
     name: Main-only external cloud scans
@@ -224,19 +225,25 @@ jobs:
       SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      with:
+        version: ">=0.11.19"
     - name: Set up Python
       uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: '3.12'
-    - name: Install external scan clients
-      run: python -m pip install --upgrade codecov safety
+    # Locked install provides pytest, coverage, and the safety client from uv.lock.
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --locked
     - name: Generate coverage after all repository gates pass
       run: |
-        python -m pip install -e . pytest coverage
-        coverage run -m pytest --ignore=tests/gui
-        coverage xml
+        uv run --no-sync coverage run -m pytest --ignore=tests/gui
+        uv run --no-sync coverage xml
     - name: Upload coverage to Codecov (main only)
-      run: codecov
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
+      with:
+        files: coverage.xml
     - name: Run Safety cloud scan (main only; skipped without key)
       if: env.SAFETY_API_KEY != ''
-      run: safety scan --detailed-output
+      run: uv run --no-sync safety scan --detailed-output

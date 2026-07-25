@@ -12,6 +12,14 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Security
 
+- **CI locked installs** (2026-07-24) — the `ci.yml` test/coverage matrix (`build`) and the
+  main-only `cloud-scans-after-gates` job now install via `uv sync --extra dev --locked` and run
+  tools through `uv run --no-sync` (cross-OS) instead of unpinned `pip install`, and coverage
+  upload uses the pinned `codecov/codecov-action` instead of `pip install codecov`. This clears
+  the SonarCloud **S8544** (unpinned-dependency) findings on those jobs. The intentionally
+  unpinned `ci-latest.yml` sweep is unchanged by design. Note: **S8541** ("omitting `--no-build`")
+  still reports on `uv sync` lines — it is unavoidable when installing the local project and is a
+  SonarCloud accept/disable-rule item, not a code fix.
 - **Release pipeline hardening** (2026-07-24) — `release.yml` now builds with the pinned `uv`
   toolchain (`uv build`) instead of an unpinned `pip install setuptools wheel twine build`
   (clears SonarCloud S8544/S8541 on the release path), and publishes to PyPI via **Trusted

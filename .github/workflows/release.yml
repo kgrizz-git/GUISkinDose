@@ -47,8 +47,9 @@ jobs:
     - name: Build a binary wheel and a source tarball
       # Build with the pinned uv toolchain already installed above (uv resolves
       # build deps from the project) instead of an unpinned `pip install build`.
-      # Clears SonarCloud S8544/S8541 on the release path and drops the unused
-      # setuptools/wheel/twine installs (gh-action-pypi-publish uploads on its own).
+      # Removes the SonarCloud S8544 (unpinned deps) finding on the release path and
+      # drops the unused setuptools/wheel/twine installs (gh-action-pypi-publish
+      # uploads on its own).
       run: uv build
     - name: Scan built artifacts with grype
       uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
