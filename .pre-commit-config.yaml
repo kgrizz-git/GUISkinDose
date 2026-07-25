@@ -50,6 +50,14 @@ repos:
         always_run: true
         stages: [pre-commit, pre-push]
 
+      - id: sonar-properties-parity
+        name: Sonar configuration scope parity
+        entry: python scripts/check_sonar_properties.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, pre-push]
+
       - id: sensitive-content
         name: sensitive content and approved assets
         entry: python scripts/check_sensitive_content.py --require-approved-assets

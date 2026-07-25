@@ -23,7 +23,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   Automatic Analysis actually reads; `sonar-project.properties` is ignored by it) excluding
   directories/artifacts where private data is most likely to land (`example_data`, `phantom_data`,
   `table_data`, `dev-docs`, `**/*.dcm`, notebooks, `**/*.log`, `**/*.txt`, images) plus build
-  noise, and mirrored the same exclusions into `sonar-project.properties`. Also aligned the stale
+  noise, and mirrored the same exclusions into `sonar-project.properties`; the new
+  `check_sonar_properties.py` pre-commit/CI check keeps the shared scope keys in parity. Also aligned the stale
   `sonar-project.properties` project key/name to `kgrizz-git_MyPySkinDose` / `MyPySkinDose` and
   added `sonar.organization` so the local/CI scanner file is actually usable. Scan hygiene and
   defense-in-depth only — the real PHI/PII guard remains the commit/CI privacy gates
