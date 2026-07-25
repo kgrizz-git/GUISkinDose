@@ -1,0 +1,41 @@
+# Publishing to PyPI
+
+> **Status:** This project is **not currently published to PyPI** by this fork. The
+> `release.yml` workflow was inherited from upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose)
+> and stays **inert** unless you deliberately create a GitHub Release. You do not need
+> to do anything here for normal development.
+
+## How releasing works now
+
+`.github/workflows/release.yml` runs only on a **GitHub Release (`created`)** event. It:
+
+1. Verifies the release commit is on `main` with a successful CI run.
+2. Builds the sdist + wheel with `uv build` (pinned toolchain — no unpinned `pip install`).
+3. Scans the built artifacts with grype (fails on actionable high/critical CVEs).
+4. Publishes to PyPI via **Trusted Publishing (OIDC)** — no stored API token.
+
+The publish step authenticates with a short-lived OpenID Connect token minted by GitHub
+Actions (`permissions: id-token: write`), so there is **no `PYPI_*` secret to leak or rotate**.
+
+## One-time PyPI setup (only if you ever want to publish)
+
+Trusted Publishing needs a one-time registration on PyPI so it will trust this repo:
+
+1. Sign in at <https://pypi.org> (create an account if needed).
+2. **If the `mypyskindose` project does not exist on PyPI yet**, add a *pending* publisher:
+   PyPI → your account → **Publishing** → *Add a new pending publisher* with
+   - PyPI Project Name: `mypyskindose`
+   - Owner: `kgrizz-git`
+   - Repository name: `MyPySkinDose`
+   - Workflow name: `release.yml`
+   - Environment: *(leave blank)*
+3. **If the project already exists**, do the same under
+   Project → **Settings → Publishing → Add a trusted publisher**.
+
+That's it — no secrets to store in GitHub. To cut a release afterwards: bump the version in
+`pyproject.toml`, create a GitHub Release, and the workflow builds, scans, and publishes.
+
+## If you never plan to publish
+
+You can safely leave this as-is (the workflow never runs on its own), or delete
+`.github/workflows/release.yml` and this file. Nothing else in the project depends on them.

@@ -10,6 +10,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Security
+
+- **Release pipeline hardening** (2026-07-24) — `release.yml` now builds with the pinned `uv`
+  toolchain (`uv build`) instead of an unpinned `pip install setuptools wheel twine build`
+  (clears SonarCloud S8544/S8541 on the release path), and publishes to PyPI via **Trusted
+  Publishing (OIDC)** — removing the stored `PYPI_DEPLOY_API_KEY` secret in favor of a
+  short-lived token (`id-token: write`). The workflow stays inert unless a GitHub Release is
+  created; see `PUBLISHING.md` for the one-time PyPI trusted-publisher setup needed before any
+  first real publish.
+
 ### Fixed
 
 - **SonarCloud new-code Security Rating** (2026-07-24) — Confined the remaining CLI-derived
