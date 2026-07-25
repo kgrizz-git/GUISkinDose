@@ -25,6 +25,17 @@
       "required": true
     },
     {
+      "id": "settings_phantom_preview",
+      "title": "Settings phantom preview",
+      "source": "phantom_preview.md",
+      "gui_files": [
+        "src/mypyskindose/gui/tabs/settings.py",
+        "src/mypyskindose/gui/phantom_preview.py",
+        "src/mypyskindose/gui/phantom_preview_controller.py"
+      ],
+      "required": true
+    },
+    {
       "id": "settings_below_floor_kvp",
       "title": "Below-floor kVp handling",
       "source": "below_floor_kvp.md",

@@ -102,18 +102,23 @@ New vendors can be added by editing `normalization_settings.json`.
 | `human` | STL mesh loaded from file | Yes | Yes |
 
 ### 2.2 Human mesh files
-Located in `src/mypyskindose/phantom_data/`:
 
-| Mesh name | Description |
-|-----------|-------------|
-| `hudfrid` | Adult male, optimised for skin dose |
-| `adult_male` | Adult male |
-| `adult_female` | Adult female |
-| `junior_male` | Junior male |
-| `junior_female` | Junior female |
-| `*_reduced_1000t` | Low-resolution variants of each (faster, used in `plot_procedure`) |
+Located in `src/mypyskindose/phantom_data/` (full-resolution `.stl` plus optional
+`*_reduced_3000t` / `*_reduced_1000t` previews). The Settings / CLI mesh list is **filesystem-discovered** —
+treat the families below as the product surface, not a frozen stem census (inventory may
+be trimmed without a docs rewrite of every id).
+
+| Family | Role |
+|--------|------|
+| Legacy clinical (`hudfrid`, `adult_*`, `junior_*`, `senior_*`) | Long-standing baseline STLs |
+| Pediatric MPFB (`ped_preschool_*`, `ped_5y_*`, `ped_10y_*`) | Age-band parametric meshes |
+| Habitus MPFB (`adult_ecto_*`, `adult_endo_*`, `adult_bariatric_{sex}_{n}`) | Thin / soft / class-II series |
+| `*_arms_down` | Additive arms-by-torso twins (A-pose siblings kept) |
+| `*_reduced_3000t` / `*_reduced_1000t` | Low-face previews (GUI / `plot_procedure` prefer 3k; not listed as full meshes) |
 
 Custom STL meshes can be passed as a `tuple(name, mesh.Mesh)` or a temp file path.
+Legacy stem aliases still resolve. Non-clinical demo meshes are not shipped with the
+package (see `tmp/phantom_data_demo_stash/README.md` on machines that kept a local copy).
 
 Human STL meshes support body-habitus scaling via `phantom.scale_lat`,
 `phantom.scale_ap`, and `phantom.scale_lon` (defaults `1.0`, clamped to
@@ -444,7 +449,7 @@ Falls back to `settings_example.json` if nothing provided.
 | Surface | Behavior |
 |---------|----------|
 | **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); PAUSED when composite `plot_procedure` > 30 events |
-| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview |
+| **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview; **live 3D human-mesh preview** (no RDSR; prefers `_reduced_3000t` then `_reduced_1000t`; reflects scales, orientation, and active-exam offsets) |
 | **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
 | **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections |
 | **Upload tab** | Click exam card → set active index and open Geometry tab |

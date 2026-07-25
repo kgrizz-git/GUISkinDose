@@ -67,10 +67,13 @@
       "code": [
         "src/mypyskindose/phantom_class.py",
         "src/mypyskindose/gui/helpers.py",
-        "src/mypyskindose/gui/tabs/settings.py"
+        "src/mypyskindose/gui/tabs/settings.py",
+        "src/mypyskindose/gui/phantom_preview.py",
+        "src/mypyskindose/gui/phantom_preview_controller.py"
       ],
       "tests": [
         "tests/unittests/test_phantom_scaling.py",
+        "tests/unittests/test_gui_phantom_preview.py",
         "tests/gui/test_gui_helpers.py",
         "tests/gui/test_gui_flows.py",
         "tests/unittests/test_gui_summary_formatters.py"
@@ -81,7 +84,80 @@
         "CHANGELOG.md"
       ],
       "help": [
+        "docs/source/gui_help/positioning_offsets.md",
+        "docs/source/gui_help/phantom_preview.md"
+      ]
+    },
+    "arms_down_phantoms": {
+      "status": "shipped",
+      "code": [
+        "scripts/phantom_gen/mpfb_generate.py",
+        "scripts/phantom_gen/poses/arms_down_default_fk.json",
+        "scripts/phantom_gen/catalog_v1.json",
+        "src/mypyskindose/phantom_mesh_names.py",
+        "src/mypyskindose/phantom_data"
+      ],
+      "tests": [
+        "tests/unittests/test_phantom_gen_pose.py",
+        "tests/unittests/test_phantom_library_integration.py",
+        "tests/unittests/test_phantom_gen_pipeline.py"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/ADDITIONAL_PHANTOMS.md",
+        "dev-docs/plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md",
+        "dev-docs/assessments/ARMS_DOWN_SPIKE_PED_5Y_MALE_2026-07-23.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_preview.md"
+      ]
+    },
+    "settings_phantom_preview": {
+      "status": "shipped",
+      "code": [
+        "src/mypyskindose/gui/phantom_preview.py",
+        "src/mypyskindose/gui/phantom_preview_controller.py",
+        "src/mypyskindose/gui/tabs/settings.py",
+        "src/mypyskindose/gui/page_context.py"
+      ],
+      "tests": [
+        "tests/unittests/test_gui_phantom_preview.py"
+      ],
+      "docs": [
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md",
+        "CHANGELOG.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_preview.md",
         "docs/source/gui_help/positioning_offsets.md"
+      ]
+    },
+    "demo_phantoms": {
+      "status": "retired",
+      "code": [
+        "src/mypyskindose/gui/helpers.py",
+        "src/mypyskindose/gui/window_prefs.py",
+        "src/mypyskindose/phantom_mesh_names.py",
+        "scripts/phantom_gen/ingest_fun_mesh.py",
+        "scripts/phantom_gen/fun_mesh_manifest.json"
+      ],
+      "tests": [
+        "tests/unittests/test_demo_phantoms_integration.py",
+        "tests/unittests/test_phantom_gen_pipeline.py"
+      ],
+      "docs": [
+        "CHANGELOG.md",
+        "AGENTS.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/ADDITIONAL_PHANTOMS.md",
+        "dev-docs/references/fun_phantom_provenance.md",
+        "dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_preview.md"
       ]
     },
     "rich_exports": {

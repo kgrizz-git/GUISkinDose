@@ -14,6 +14,15 @@ from pathlib import Path
 from stl import mesh as stl_mesh
 
 from mypyskindose.privacy import safe_error_event
+from mypyskindose.phantom_mesh_names import (
+    DEMO_HUMAN_MESHES,
+    DEMO_MESH_SECTION_KEY,
+    DEMO_MESH_SECTION_LABEL,
+    GUI_HIDDEN_HUMAN_MESHES,
+    human_mesh_display_label,
+    resolve_human_mesh_stem,
+    sort_clinical_mesh_stems,
+)
 
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
@@ -61,11 +70,15 @@ from .settings_builder import build_settings, fallback_normalization_exam_count
 from .state import AppState
 
 _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
+_FUN_MESH_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
 _MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
 _MESH_TORSO_WIDTH_CACHE: dict[str, float] = {}
 _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
 _ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
+
+# Demo / hidden mesh sets and section sentinel live in ``phantom_mesh_names``
+# (canonical stems after the 2026-07-23 naming migration).
 
 __all__ = [
     "EXAM_COLUMN",
@@ -95,7 +108,13 @@ __all__ = [
     "geometry_preview_caption",
     "get_example_rdsr_files",
     "get_excel_sheets",
+    "DEMO_HUMAN_MESHES",
+    "DEMO_MESH_SECTION_KEY",
+    "DEMO_MESH_SECTION_LABEL",
+    "GUI_HIDDEN_HUMAN_MESHES",
+    "canonicalize_human_mesh_selection",
     "get_human_mesh_names",
+    "get_human_mesh_options",
     "get_mesh_baseline_extents",
     "get_mesh_baseline_torso_width",
     "load_rdsr",
@@ -110,6 +129,7 @@ __all__ = [
     "reset_global_offsets_on_new_load",
     "reset_patient_offset_for_active",
     "resolve_composite_for_render",
+    "resolve_human_mesh_stem",
     "restore_globals_from_exam_meta",
     "run_calculation",
     "stage_table_origin_axis",
@@ -281,12 +301,85 @@ def get_example_rdsr_files() -> list[Path]:
 
 
 def get_human_mesh_names() -> list[str]:
-    """Return available human mesh names (full-resolution only)."""
-    return sorted(p.stem for p in _PHANTOM_DATA_DIR.glob("*.stl") if not p.stem.endswith("_reduced_1000t"))
+    """Return available human mesh names (full-resolution only, canonical stems)."""
+    return sorted(
+        p.stem
+        for p in _PHANTOM_DATA_DIR.glob("*.stl")
+        if "_reduced_" not in p.stem
+    )
+
+
+def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:
+    """Return NiceGUI ``ui.select`` options as ``{stem: display_label}``.
+
+    Dict **keys** are the bound values (canonical file stems under ``phantom_data/``).
+    Dict **values** are display labels. Insertion order follows the naming-plan
+    clinical sort key, then an optional non-selectable Demo section sentinel,
+    then demo stems when enabled. ``GUI_HIDDEN_HUMAN_MESHES`` are never listed.
+
+    ``include_demos`` defaults to ``show_demo_phantoms_enabled()`` (env /
+    repo-local JSON / home ``gui.json``; default off). Do not invert to
+    label→stem — that would bind
+    the label string into ``state.human_mesh`` and break STL paths.
+    """
+    from .window_prefs import show_demo_phantoms_enabled
+
+    if include_demos is None:
+        include_demos = show_demo_phantoms_enabled()
+
+    names = get_human_mesh_names()
+    clinical = sort_clinical_mesh_stems(
+        stem for stem in names if stem not in DEMO_HUMAN_MESHES and stem not in GUI_HIDDEN_HUMAN_MESHES
+    )
+    demos = sorted(stem for stem in names if stem in DEMO_HUMAN_MESHES) if include_demos else []
+
+    options: dict[str, str] = {}
+    for stem in clinical:
+        options[stem] = human_mesh_display_label(stem)
+    if demos:
+        options[DEMO_MESH_SECTION_KEY] = DEMO_MESH_SECTION_LABEL
+        for stem in demos:
+            options[stem] = human_mesh_display_label(stem)
+    return options
+
+
+def canonicalize_human_mesh_selection(stem: str, mesh_options: dict[str, str]) -> str:
+    """Map a saved/legacy stem to a selectable canonical option key.
+
+    Resolves aliases first. If the result is missing from ``mesh_options``
+    (e.g. demos gated off), fall back to the first clinical option or hudfrid.
+    """
+    canonical = resolve_human_mesh_stem(stem or "")
+    if canonical in mesh_options and canonical != DEMO_MESH_SECTION_KEY:
+        return canonical
+    return next((k for k in mesh_options if k != DEMO_MESH_SECTION_KEY), "hudfrid")
+
+
+def _fun_manifest_torso_override(mesh_name: str) -> tuple[tuple[float, float] | None, float | None]:
+    """Optional ``torso_z_fraction_range`` / ``baseline_torso_width_cm`` from the fun manifest."""
+    if not _FUN_MESH_MANIFEST_PATH.is_file():
+        return None, None
+    try:
+        import json
+
+        data = json.loads(_FUN_MESH_MANIFEST_PATH.read_text(encoding="utf-8"))
+        entry = data.get("meshes", {}).get(resolve_human_mesh_stem(mesh_name), {})
+        if not entry:
+            entry = data.get("meshes", {}).get(mesh_name, {})
+    except Exception:
+        return None, None
+    band = entry.get("torso_z_fraction_range")
+    band_tuple: tuple[float, float] | None = None
+    if isinstance(band, (list, tuple)) and len(band) == 2:
+        band_tuple = (float(band[0]), float(band[1]))
+    width = entry.get("baseline_torso_width_cm")
+    width_val = float(width) if width is not None else None
+    return band_tuple, width_val
 
 
 def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
     """Load and cache full extents plus the below-arms torso-width measurement."""
+    mesh_name = resolve_human_mesh_stem(mesh_name)
     if mesh_name in _MESH_EXTENT_CACHE and mesh_name in _MESH_TORSO_WIDTH_CACHE:
         return
 
@@ -310,13 +403,18 @@ def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
         z_span = extents[2]
         if isclose(z_span, 0.0, abs_tol=_ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM):
             raise ValueError("STL has no longitudinal extent")
-        band_start, band_end = _TORSO_WIDTH_Z_FRACTION_RANGE
-        torso_low = z_min + z_span * band_start
-        torso_high = z_min + z_span * band_end
-        torso_points = verts[(verts[:, 2] >= torso_low) & (verts[:, 2] <= torso_high), 0]
-        if torso_points.size == 0:
-            raise ValueError("STL has no vertices in the torso-width band")
-        torso_width = float(torso_points.max() - torso_points.min())
+
+        band_override, width_override = _fun_manifest_torso_override(mesh_name)
+        if width_override is not None and width_override > 0.0:
+            torso_width = float(width_override)
+        else:
+            band_start, band_end = band_override or _TORSO_WIDTH_Z_FRACTION_RANGE
+            torso_low = z_min + z_span * band_start
+            torso_high = z_min + z_span * band_end
+            torso_points = verts[(verts[:, 2] >= torso_low) & (verts[:, 2] <= torso_high), 0]
+            if torso_points.size == 0:
+                raise ValueError("STL has no vertices in the torso-width band")
+            torso_width = float(torso_points.max() - torso_points.min())
     except Exception as exc:
         safe_error_event(_gui_logger, "phantom_mesh_measurement", exc, level=logging.WARNING)
         extents = (0.0, 0.0, 0.0)

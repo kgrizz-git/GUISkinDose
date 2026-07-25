@@ -3,6 +3,7 @@ import pandas as pd
 from mypyskindose import constants as c
 from mypyskindose.geom_calc import position_patient_phantom_on_table
 from mypyskindose.phantom_class import Phantom
+from mypyskindose.phantom_mesh_names import prefer_reduced_preview_stem, resolve_human_mesh_stem
 from mypyskindose.plotting.plot_geometry import plot_geometry
 from mypyskindose.settings import PyskindoseSettings
 
@@ -40,14 +41,18 @@ def create_geometry_plot(
     elif settings.phantom.model == c.PHANTOM_MODEL_CYLINDER:
         settings.phantom.dimension.cylinder_resolution = c.RESOLUTION_SPARSE
 
+    if isinstance(settings.phantom.human_mesh, tuple):
+        human_mesh_arg: str | tuple = settings.phantom.human_mesh
+    else:
+        mesh_stem = resolve_human_mesh_stem(str(settings.phantom.human_mesh))
+        if settings.mode == c.MODE_PLOT_PROCEDURE and settings.phantom.model == c.PHANTOM_MODEL_HUMAN:
+            mesh_stem = prefer_reduced_preview_stem(mesh_stem)
+        human_mesh_arg = mesh_stem
+
     patient = Phantom(
         phantom_model=settings.phantom.model,
         phantom_dim=settings.phantom.dimension,
-        human_mesh=(
-            settings.phantom.human_mesh
-            if isinstance(settings.phantom.human_mesh, tuple)
-            else f"{settings.phantom.human_mesh}{c.PHANTOM_HUMAN_MESH_SPARSE_MODEL_ENDING if settings.mode == c.MODE_PLOT_PROCEDURE and settings.phantom.model == c.PHANTOM_MODEL_HUMAN else ''}"
-        ),  # override dense .stl phantoms in plot_procedure .html plotting
+        human_mesh=human_mesh_arg,  # override dense .stl phantoms in plot_procedure .html plotting
         human_scale=(settings.phantom.scale_lat, settings.phantom.scale_ap, settings.phantom.scale_lon),
     )
 

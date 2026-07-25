@@ -82,12 +82,21 @@ Set `settings.output_format` to:
 | `"cylinder"` | Elliptic cylinder |
 | `"human"` | STL mesh (set `settings.phantom.human_mesh`) |
 
-Available human meshes: `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`, `senior_male`, `senior_female`
+Available human meshes live under `src/mypyskindose/phantom_data/` and are discovered
+at runtime (Settings / CLI). The clinical library covers age bands (preschool through
+senior), sex variants, habitus families (ecto / endo / bariatric series), and optional
+`*_arms_down` twins for table-side posing. Exact stems may change as the catalog is
+trimmed; prefer the in-app mesh list or `get_human_mesh_names()` over hard-coded
+inventories. Legacy stems (e.g. `pediatric_5y_male`, `bariatric_class2_male`) still
+resolve via aliases. Non-clinical demo STLs are **not** shipped (local stash only under
+gitignored `tmp/phantom_data_demo_stash/` if retained on a developer machine).
 
 Human meshes can be directionally scaled with `settings.phantom.scale_lat`, `scale_ap`, and
 `scale_lon` (defaults `1.0`; clamped to `0.5–2.0`). The GUI exposes these in
 **Settings → Phantom Settings → Body habitus scaling** and geometry/dose calculations use the
-scaled STL vertices and recomputed normals. GUI measurements use left-right width,
+scaled STL vertices and recomputed normals. Settings also shows a live 3D human-mesh preview
+(no RDSR; prefers `_reduced_3000t` when present, else `_reduced_1000t`) so users can confirm mesh, face-up pose,
+habitus scales, and patient offsets before upload. GUI measurements use left-right width,
 anterior-posterior thickness, and superior-inferior length; the width is measured
 in a torso band below the arms while `scale_lat` still scales the full lateral mesh axis.
 
@@ -103,6 +112,7 @@ See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implem
 4. Tabular input Phases 1–5 are **shipped**: `input_adapters/` handles `.csv`, `.tsv`, `.xlsx` via `normalized`, `generic_rdsr_like`, `radimetrics`, and `dosetrack` schemas. DoseTrack adapter: Equipment Name → Manufacturer inference (`MODEL2MANUF`), ffill, integer Plane Code normalization, unit conversions, CFA derivation from DAP formula, Siemens/Philips filter thickness, Philips lat/lon swap warning. GE lateral/longitudinal handling is now normalization-level via `swap_lateral_longitudinal`; GUI `Tx↔Tz` swap remains a manual expert override for site-specific exports. CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only` are wired. GUI Phase 5: upload tab accepts all tabular formats; import preview panel; schema selector including DoseTrack; **individual coordinate correction toggles** (Tx↔Tz swap, Ap1×−1, Ap2×−1) applied live; **XLSX sheet picker** for multi-sheet workbooks with re-parse on change. Qaelum, DoseMonitor, and DoseWatch are Phase 5+ placeholders (stub adapters exist; need real export fixtures). See `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` and `dev-docs/references/`.
 5. Robustness/physics: the HVL and `k_tab` lookups now **interpolate** off-grid filtration and **clamp** (never extrapolate) out-of-range queries, warning per event (`grid_interp.py`). Events below the 25 kV HVL floor are handled by a user-selectable policy — `below_floor_kvp_policy` ∈ `exam_average` (default) / `snap` / `skip` / `manual` (`geom_calc.apply_below_floor_kvp_policy()`), surfaced as a Physics setting + a pre-calc prompt. See `dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md`.
 6. Harness focus: keep `AGENTS.md` and `dev-docs/` synchronized with behavior and use the checks in `dev-docs/HARNESS_ENGINEERING.md`. New or changed images, DICOM, and opaque binaries require an exact approved-inventory hash; extensionless files are scanned as text only when their complete contents are valid, NUL-free UTF-8. See `PRIVACY_AND_SENSITIVE_ASSETS.md`.
+7. **Phantom library expansion:** agent-executable full-body **true shape** variants via headless MPFB/Blender parametric targets — see [dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phases 0–4 complete; 10 new meshes shipped). Supersedes archived MakeHuman GUI plans.
 
 ## Development setup
 

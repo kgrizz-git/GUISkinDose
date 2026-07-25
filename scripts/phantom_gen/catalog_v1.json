@@ -1,0 +1,2820 @@
+{
+  "version": 1,
+  "blender_user_resources_hint": "tmp/blender_user",
+  "mpfb_module": "bl_ext.blender_org.mpfb",
+  "scale": 0.1,
+  "license_note": "Meshes generated from MPFB/MakeHuman basemesh + targets; see ADDITIONAL_PHANTOMS.md",
+  "affine_control_base": {
+    "method": "mpfb_catalog_id",
+    "id": "_shape_ref_adult_male",
+    "id_female": "_shape_ref_adult_female",
+    "note": "Anti-balloon controls use same MPFB mesh family; female candidates use female ref"
+  },
+  "entries": {
+    "_shape_ref_adult_male": {
+      "priority": "REF",
+      "intent": "Neutral MPFB adult male used only as affine-control base (not shipped)",
+      "license": "mpfb-makehuman-assets",
+      "ship": false,
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          140.0,
+          200.0
+        ],
+        "width_x": [
+          70.0,
+          130.0
+        ],
+        "thickness_y": [
+          25.0,
+          60.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "_shape_ref_adult_female": {
+      "priority": "REF",
+      "intent": "Neutral MPFB adult female used only as affine-control base (not shipped)",
+      "license": "mpfb-makehuman-assets",
+      "ship": false,
+      "macros": {
+        "gender": 0.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          140.0,
+          200.0
+        ],
+        "width_x": [
+          60.0,
+          120.0
+        ],
+        "thickness_y": [
+          22.0,
+          55.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "ped_preschool_male": {
+      "priority": "P0",
+      "intent": "~preschool / toddler boy (~75 cm SI)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          65.0,
+          90.0
+        ],
+        "width_x": [
+          35.0,
+          75.0
+        ],
+        "thickness_y": [
+          12.0,
+          35.0
+        ],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.3
+      }
+    },
+    "ped_preschool_female": {
+      "priority": "P0",
+      "intent": "~preschool / toddler girl (~74 cm SI)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          65.0,
+          90.0
+        ],
+        "width_x": [
+          35.0,
+          75.0
+        ],
+        "thickness_y": [
+          12.0,
+          35.0
+        ],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.3
+      }
+    },
+    "ped_5y_male": {
+      "priority": "P0",
+      "intent": "~5 y boy; SI near CDC median (~108 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.14,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.32,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          95.0,
+          120.0
+        ],
+        "width_x": [
+          40.0,
+          90.0
+        ],
+        "thickness_y": [
+          14.0,
+          40.0
+        ],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.25
+      }
+    },
+    "ped_5y_female": {
+      "priority": "P0",
+      "intent": "~5 y girl; SI near CDC median (~108 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.14,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.32,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          95.0,
+          120.0
+        ],
+        "width_x": [
+          40.0,
+          90.0
+        ],
+        "thickness_y": [
+          14.0,
+          40.0
+        ],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.25
+      }
+    },
+    "ped_10y_male": {
+      "priority": "P0",
+      "intent": "~10 y boy; SI near CDC median (~138 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.22,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.48,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          128.0,
+          150.0
+        ],
+        "width_x": [
+          45.0,
+          110.0
+        ],
+        "thickness_y": [
+          16.0,
+          45.0
+        ],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.22
+      }
+    },
+    "ped_10y_female": {
+      "priority": "P0",
+      "intent": "~10 y girl; SI near CDC median (~138 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.24,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          128.0,
+          150.0
+        ],
+        "width_x": [
+          45.0,
+          110.0
+        ],
+        "thickness_y": [
+          16.0,
+          45.0
+        ],
+        "shape_metric": "head_ratio",
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.22
+      }
+    },
+    "adult_ecto_male": {
+      "priority": "P0",
+      "intent": "thin adult male; narrow waist/chest",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.25,
+        "weight": 0.08,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "torso-scale-horiz-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-decr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-waist-circ-decr",
+          "value": 0.55
+        },
+        {
+          "name": "stomach-tone-incr",
+          "value": 0.35
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          190.0
+        ],
+        "width_x": [
+          70.0,
+          105.0
+        ],
+        "thickness_y": [
+          22.0,
+          45.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_ecto_female": {
+      "priority": "P0",
+      "intent": "thin adult female; narrow waist/chest",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.36,
+        "muscle": 0.25,
+        "weight": 0.08,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.3,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "torso-scale-horiz-decr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-depth-decr",
+          "value": 0.4
+        },
+        {
+          "name": "measure-waist-circ-decr",
+          "value": 0.5
+        },
+        {
+          "name": "hip-scale-horiz-decr",
+          "value": 0.35
+        },
+        {
+          "name": "stomach-tone-incr",
+          "value": 0.3
+        }
+      ],
+      "expect": {
+        "height_z": [
+          145.0,
+          185.0
+        ],
+        "width_x": [
+          60.0,
+          100.0
+        ],
+        "thickness_y": [
+          20.0,
+          42.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_endo_male": {
+      "priority": "P0",
+      "intent": "heavy adult male; soft torso (non-bariatric)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.45,
+        "muscle": 0.35,
+        "weight": 0.95,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.9
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.45
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.35
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.5
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          95.0,
+          145.0
+        ],
+        "thickness_y": [
+          35.0,
+          75.0
+        ],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "adult_endo_female": {
+      "priority": "P0",
+      "intent": "heavy adult female; soft torso (non-bariatric)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.45,
+        "muscle": 0.3,
+        "weight": 0.95,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.75,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.88
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.45
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.4
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.35
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.55
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.5
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          85.0,
+          140.0
+        ],
+        "thickness_y": [
+          32.0,
+          75.0
+        ],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "adult_bariatric_male_1": {
+      "priority": "P1",
+      "intent": "BMI ~35\u201340 male; abdomen-dominant class-II (series _1)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.98
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.6
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.7
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          100.0,
+          160.0
+        ],
+        "thickness_y": [
+          40.0,
+          85.0
+        ],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "adult_bariatric_female_1": {
+      "priority": "P1",
+      "intent": "BMI ~35\u201340 female; abdomen + hips class-II (series _1)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.28,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.85,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.95
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.6
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.65
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          95.0,
+          155.0
+        ],
+        "thickness_y": [
+          38.0,
+          85.0
+        ],
+        "shape_metric": "abdomen_bulk",
+        "shape_margin": 0.05
+      }
+    },
+    "adult_bariatric_male_2": {
+      "priority": "P1",
+      "intent": "BMI ~35\u201340 male; class-II + thicker neck/extremities (series _2)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.98
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.6
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.75
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.75
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.55
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.45
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.4
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          100.0,
+          175.0
+        ],
+        "thickness_y": [
+          40.0,
+          95.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_bariatric_female_2": {
+      "priority": "P1",
+      "intent": "BMI ~35\u201340 female; class-II + thicker neck/extremities (series _2)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.28,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.85,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.95
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.6
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.4
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.35
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          95.0,
+          170.0
+        ],
+        "thickness_y": [
+          38.0,
+          95.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_bariatric_male_3": {
+      "priority": "P1",
+      "intent": "BMI ~35\u201340 male; class-II + extra-thick neck/extremities (series _3)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.98
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.6
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.95
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.95
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.95
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.8
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.75
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.6
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          100.0,
+          190.0
+        ],
+        "thickness_y": [
+          40.0,
+          105.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "adult_bariatric_female_3": {
+      "priority": "P1",
+      "intent": "BMI ~35\u201340 female; class-II + extra-thick neck/extremities (series _3)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.28,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.85,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.95
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.6
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.7
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.6
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.55
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          95.0,
+          185.0
+        ],
+        "thickness_y": [
+          38.0,
+          105.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      }
+    },
+    "ped_preschool_male_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of ped_preschool_male; ~preschool / toddler boy (~75 cm SI)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          65.0,
+          90.0
+        ],
+        "width_x": [
+          18.0,
+          63.8
+        ],
+        "thickness_y": [
+          10.0,
+          35.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.3
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "ped_preschool_female_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of ped_preschool_female; ~preschool / toddler girl (~74 cm SI)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          65.0,
+          90.0
+        ],
+        "width_x": [
+          18.0,
+          63.8
+        ],
+        "thickness_y": [
+          10.0,
+          35.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.3
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "ped_5y_male_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of ped_5y_male; ~5 y boy; SI near CDC median (~108 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.14,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.32,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          95.0,
+          120.0
+        ],
+        "width_x": [
+          18.0,
+          76.5
+        ],
+        "thickness_y": [
+          10.0,
+          40.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.25
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "ped_5y_female_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of ped_5y_female; ~5 y girl; SI near CDC median (~108 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.14,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.32,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          95.0,
+          120.0
+        ],
+        "width_x": [
+          18.0,
+          76.5
+        ],
+        "thickness_y": [
+          10.0,
+          40.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.25
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "ped_10y_male_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of ped_10y_male; ~10 y boy; SI near CDC median (~138 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.22,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.48,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          128.0,
+          150.0
+        ],
+        "width_x": [
+          18.0,
+          93.5
+        ],
+        "thickness_y": [
+          11.2,
+          45.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.22
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "ped_10y_female_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of ped_10y_female; ~10 y girl; SI near CDC median (~138 cm)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.24,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          128.0,
+          150.0
+        ],
+        "width_x": [
+          18.0,
+          93.5
+        ],
+        "thickness_y": [
+          11.2,
+          45.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05,
+        "head_ratio_min": 0.22
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_ecto_male_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of adult_ecto_male; thin adult male; narrow waist/chest",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.25,
+        "weight": 0.08,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "torso-scale-horiz-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-decr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-waist-circ-decr",
+          "value": 0.55
+        },
+        {
+          "name": "stomach-tone-incr",
+          "value": 0.35
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          190.0
+        ],
+        "width_x": [
+          24.5,
+          89.2
+        ],
+        "thickness_y": [
+          15.4,
+          45.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_ecto_female_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of adult_ecto_female; thin adult female; narrow waist/chest",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.36,
+        "muscle": 0.25,
+        "weight": 0.08,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.3,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "torso-scale-horiz-decr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-depth-decr",
+          "value": 0.4
+        },
+        {
+          "name": "measure-waist-circ-decr",
+          "value": 0.5
+        },
+        {
+          "name": "hip-scale-horiz-decr",
+          "value": 0.35
+        },
+        {
+          "name": "stomach-tone-incr",
+          "value": 0.3
+        }
+      ],
+      "expect": {
+        "height_z": [
+          145.0,
+          185.0
+        ],
+        "width_x": [
+          21.0,
+          85.0
+        ],
+        "thickness_y": [
+          14.0,
+          42.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_endo_male_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of adult_endo_male; heavy adult male; soft torso (non-bariatric)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.45,
+        "muscle": 0.35,
+        "weight": 0.95,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.9
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.45
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.35
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.5
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          33.2,
+          123.2
+        ],
+        "thickness_y": [
+          24.5,
+          75.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_endo_female_arms_down": {
+      "priority": "P0",
+      "intent": "Arms-down twin of adult_endo_female; heavy adult female; soft torso (non-bariatric)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.45,
+        "muscle": 0.3,
+        "weight": 0.95,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.75,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.88
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.45
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.4
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.35
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.55
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.5
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          29.7,
+          119.0
+        ],
+        "thickness_y": [
+          22.4,
+          75.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_bariatric_male_1_arms_down": {
+      "priority": "P1",
+      "intent": "Arms-down twin of adult_bariatric_male_1; BMI ~35\u201340 male; abdomen-dominant class-II (series _1)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.98
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.6
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.7
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          35.0,
+          136.0
+        ],
+        "thickness_y": [
+          28.0,
+          85.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_bariatric_female_1_arms_down": {
+      "priority": "P1",
+      "intent": "Arms-down twin of adult_bariatric_female_1; BMI ~35\u201340 female; abdomen + hips class-II (series _1)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.28,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.85,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.95
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.6
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.65
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          33.2,
+          131.8
+        ],
+        "thickness_y": [
+          26.6,
+          85.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_bariatric_male_2_arms_down": {
+      "priority": "P1",
+      "intent": "Arms-down twin of adult_bariatric_male_2; BMI ~35\u201340 male; class-II + thicker neck/extremities (series _2)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.98
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.6
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.75
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.75
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.65
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.55
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.45
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.4
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          35.0,
+          148.8
+        ],
+        "thickness_y": [
+          28.0,
+          95.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_bariatric_female_2_arms_down": {
+      "priority": "P1",
+      "intent": "Arms-down twin of adult_bariatric_female_2; BMI ~35\u201340 female; class-II + thicker neck/extremities (series _2)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.28,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.85,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.95
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.6
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.6
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.55
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.4
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.4
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.35
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          33.2,
+          144.5
+        ],
+        "thickness_y": [
+          26.6,
+          95.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_bariatric_male_3_arms_down": {
+      "priority": "P1",
+      "intent": "Arms-down twin of adult_bariatric_male_3; BMI ~35\u201340 male; class-II + extra-thick neck/extremities (series _3)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.3,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.98
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.6
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.5
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.95
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.95
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.95
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.8
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.75
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.6
+        }
+      ],
+      "expect": {
+        "height_z": [
+          155.0,
+          190.0
+        ],
+        "width_x": [
+          35.0,
+          161.5
+        ],
+        "thickness_y": [
+          28.0,
+          105.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_bariatric_female_3_arms_down": {
+      "priority": "P1",
+      "intent": "Arms-down twin of adult_bariatric_female_3; BMI ~35\u201340 female; class-II + extra-thick neck/extremities (series _3)",
+      "license": "mpfb-makehuman-assets",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.28,
+        "weight": 0.98,
+        "proportions": 0.55,
+        "height": 0.48,
+        "cupsize": 0.85,
+        "firmness": 0.55,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.95
+        },
+        {
+          "name": "stomach-tone-decr",
+          "value": 0.55
+        },
+        {
+          "name": "torso-scale-depth-incr",
+          "value": 0.5
+        },
+        {
+          "name": "torso-scale-horiz-incr",
+          "value": 0.45
+        },
+        {
+          "name": "hip-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "measure-waist-circ-incr",
+          "value": 0.6
+        },
+        {
+          "name": "measure-hips-circ-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-upperarm-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "l-upperarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-upperarm-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-lowerarm-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "r-lowerarm-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "l-upperarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-upperarm-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-lowerarm-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-lowerarm-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-thigh-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "measure-calf-circ-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-upperleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "r-upperleg-fat-incr",
+          "value": 0.85
+        },
+        {
+          "name": "l-lowerleg-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "r-lowerleg-fat-incr",
+          "value": 0.8
+        },
+        {
+          "name": "l-upperleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "r-upperleg-scale-horiz-incr",
+          "value": 0.7
+        },
+        {
+          "name": "l-lowerleg-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "r-lowerleg-scale-horiz-incr",
+          "value": 0.65
+        },
+        {
+          "name": "measure-neck-circ-incr",
+          "value": 0.9
+        },
+        {
+          "name": "neck-scale-horiz-incr",
+          "value": 0.75
+        },
+        {
+          "name": "neck-double-incr",
+          "value": 0.7
+        },
+        {
+          "name": "head-scale-horiz-incr",
+          "value": 0.6
+        },
+        {
+          "name": "head-scale-depth-incr",
+          "value": 0.55
+        }
+      ],
+      "expect": {
+        "height_z": [
+          150.0,
+          185.0
+        ],
+        "width_x": [
+          33.2,
+          157.2
+        ],
+        "thickness_y": [
+          26.6,
+          105.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "junior_male_arms_down": {
+      "priority": "P0",
+      "intent": "MPFB approx of junior_male stature (~130\u2013145 cm) with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "junior_male",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.22,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.48,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          120.0,
+          155.0
+        ],
+        "width_x": [
+          25.0,
+          70.0
+        ],
+        "thickness_y": [
+          14.0,
+          40.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "junior_female_arms_down": {
+      "priority": "P0",
+      "intent": "MPFB approx of junior_female stature (~120\u2013140 cm) with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "junior_female",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.22,
+        "muscle": 0.45,
+        "weight": 0.48,
+        "proportions": 0.5,
+        "height": 0.45,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          115.0,
+          150.0
+        ],
+        "width_x": [
+          25.0,
+          70.0
+        ],
+        "thickness_y": [
+          12.0,
+          38.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_male_arms_down": {
+      "priority": "P0",
+      "intent": "MPFB approx of adult_male (~170\u2013185 cm) with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "adult_male",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          155.0,
+          195.0
+        ],
+        "width_x": [
+          30.0,
+          85.0
+        ],
+        "thickness_y": [
+          18.0,
+          50.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "adult_female_arms_down": {
+      "priority": "P0",
+      "intent": "MPFB approx of adult_female (~155\u2013175 cm) with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "adult_female",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          145.0,
+          185.0
+        ],
+        "width_x": [
+          28.0,
+          80.0
+        ],
+        "thickness_y": [
+          16.0,
+          48.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "senior_male_arms_down": {
+      "priority": "P1",
+      "intent": "MPFB approx of senior_male (~165\u2013185 cm, older age macro) with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "senior_male",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.72,
+        "muscle": 0.4,
+        "weight": 0.52,
+        "proportions": 0.5,
+        "height": 0.52,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          150.0,
+          190.0
+        ],
+        "width_x": [
+          30.0,
+          85.0
+        ],
+        "thickness_y": [
+          18.0,
+          52.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "senior_female_arms_down": {
+      "priority": "P1",
+      "intent": "MPFB approx of senior_female (~150\u2013175 cm, older age macro) with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "senior_female",
+      "macros": {
+        "gender": 0.0,
+        "age": 0.72,
+        "muscle": 0.4,
+        "weight": 0.52,
+        "proportions": 0.5,
+        "height": 0.48,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          140.0,
+          180.0
+        ],
+        "width_x": [
+          28.0,
+          80.0
+        ],
+        "thickness_y": [
+          16.0,
+          50.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    },
+    "hudfrid_arms_down": {
+      "priority": "P0",
+      "intent": "MPFB approx of hudfrid adult male stature with arms_down pose",
+      "license": "mpfb-makehuman-assets",
+      "legacy_approx_of": "hudfrid",
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.55,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [],
+      "expect": {
+        "height_z": [
+          155.0,
+          195.0
+        ],
+        "width_x": [
+          30.0,
+          85.0
+        ],
+        "thickness_y": [
+          18.0,
+          50.0
+        ],
+        "shape_metric": null,
+        "shape_margin": 0.05
+      },
+      "pose": "arms_down_default_fk"
+    }
+  }
+}

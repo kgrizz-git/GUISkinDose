@@ -208,8 +208,12 @@ class Phantom:
 
             if isinstance(human_mesh, str):
                 # load selected phantom model from binary .stl file
-                self.human_model = human_mesh
-                phantom_path = Path(__file__).parent / f"phantom_data/{human_mesh}.stl"
+                # Resolve legacy aliases to canonical on-disk stems (incl. reduced).
+                from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+
+                resolved = resolve_human_mesh_stem(human_mesh)
+                self.human_model = resolved
+                phantom_path = Path(__file__).parent / f"phantom_data/{resolved}.stl"
                 phantom_mesh = mesh.Mesh.from_file(str(phantom_path.absolute()))
             elif isinstance(human_mesh, tuple):
                 self.human_model, phantom_mesh = self._get_phantom_mesh_from_tuple(human_mesh)
@@ -333,14 +337,14 @@ class Phantom:
 
             self.n = np.matmul(Rx, np.matmul(Ry, np.matmul(Rz, self.n.T))).T
 
-    def translate(self, dr: List[int]) -> None:
+    def translate(self, dr: list[float]) -> None:
         """Translate the phantom in the x, y or z direction.
 
         Parameters
         ----------
-        dr : List[int]
+        dr : list[float]
             list of distances the phantom should be translated, given in cm.
-            Specified as dr = [dx: <int>, dy: <int>, dz: <int>]. E.g.
+            Specified as dr = [dx, dy, dz]. E.g.
             dr = [0, 0, 10] will translate the phantom 10 cm in the z direction
 
         """

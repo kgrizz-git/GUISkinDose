@@ -70,6 +70,8 @@ def _on_exam_offset_change(ctx: PageContext) -> None:
     bump_per_exam_offsets_version(state)
     _invalidate(ctx)
     ctx.refresh_per_exam()
+    ctx.refresh_geometry_preview()
+    ctx.refresh_phantom_preview()
 
 
 def _on_exam_transform_change(ctx: PageContext, index: int, key: str, value) -> None:

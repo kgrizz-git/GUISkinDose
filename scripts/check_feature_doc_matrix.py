@@ -18,6 +18,7 @@ ALLOWED_STATUSES = {
     "shipped_with_leftovers",
     "shipped_with_open_validation",
     "deferred",
+    "retired",
 }
 
 

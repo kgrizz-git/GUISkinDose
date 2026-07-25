@@ -101,6 +101,8 @@ def on_global_patient_offset_change(ctx: PageContext) -> None:
     on_global_patient_offset_scrub(ctx)
     reset_results()
     ctx.refresh_per_exam()
+    ctx.refresh_geometry_preview()
+    ctx.refresh_phantom_preview()
 
 
 _TABLE_ORIGIN_AXES = ("x", "y", "z")

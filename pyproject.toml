@@ -1,6 +1,6 @@
 [project]
 name = "mypyskindose"
-version = "25.1.1"
+version = "25.2.0"
 description = "Tools and script for calculating peak skin dose and create dose maps for fluoroscopic exams from RDSR data (fork of PySkinDose)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -52,7 +52,7 @@ docs = [
 ]
 # Interactive notebook editing (JupyterLab); the docs build does not need this.
 notebooks = [
-    "jupyterlab",
+    "jupyterlab>=4.6.2",
     "ipykernel",
     "ipywidgets",
 ]
@@ -64,6 +64,17 @@ privacy-scan = [
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "presidio-analyzer>=2.2.360,<3",
     "spacy>=3.8,<4",
+]
+# Headless phantom library tooling (reduced Mesh3d previews need real quadric
+# decimation — triangle subsample looks like scatter fragments in Settings).
+phantom-gen = [
+    "trimesh>=4",
+    "fast-simplification",
+    # networkx: trimesh.fill_holes boundary-loop capping.
+    # scikit-image: marching-cubes watertight remesh (ingest_fun_mesh --voxel-pitch)
+    # for messy raw scans that fill_holes cannot close (e.g. Ramesses II).
+    "networkx>=3",
+    "scikit-image>=0.22",
 ]
 dev = [
     "basedpyright>=1.23",
@@ -77,7 +88,7 @@ dev = [
     "pre-commit>=4.0",
     "pytest>=7.0",
     "pytest-cov>=5.0",
-    "ruff>=0.15",
+    "ruff>=0.15,<0.16",
     "playwright>=1.40",
     "pytest-playwright>=0.4",
 ]
@@ -110,6 +121,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "slow: long-running tests (e.g. 1000+ event dose stress); deselect with '-m \"not slow\"'",
+    "blender_mpfb: requires local Blender ≥4.2 with MPFB; skipped when unavailable",
 ]
 
 [tool.ruff]
@@ -122,6 +134,8 @@ exclude = [
     "**/__pycache__",
     "src/mypyskindose/table_data",
     "tests/manual_tests",
+    # Headless Blender/MPFB tooling: bpy/trimesh/numpy-stl stubs are incomplete.
+    "scripts/phantom_gen",
 ]
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false

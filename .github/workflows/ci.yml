@@ -200,7 +200,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest ruff coverage
+        pip install pytest "ruff>=0.15,<0.16" coverage
         pip install -e .
     - name: Compile check
       run: python -m compileall src/mypyskindose

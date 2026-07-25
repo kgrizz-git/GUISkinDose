@@ -24,7 +24,7 @@ def print_available_human_phantoms():
 
     phantom_data_dir = Path(__file__).parent / "phantom_data"
     phantoms = [
-        phantom.stem for phantom in phantom_data_dir.glob("*.stl") if not phantom.stem.endswith("reduced_1000t")
+        phantom.stem for phantom in phantom_data_dir.glob("*.stl") if "_reduced_" not in phantom.stem
     ]
 
     for phantom in phantoms:

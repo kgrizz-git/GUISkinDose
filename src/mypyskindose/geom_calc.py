@@ -85,7 +85,7 @@ def position_patient_phantom_on_table(
     table: Phantom,
     pad: Phantom,
     pad_thickness: Any,
-    patient_offset: List[int],
+    patient_offset: list[float],
     patient_orientation: str,
 ) -> None:
     """Places the patient phantom upon the patient support table.
@@ -104,9 +104,9 @@ def position_patient_phantom_on_table(
         Pad phantom to represent the patient support pad
     pad_thickness: Any
         Patient support pad thickness
-    patient_offset : List[int]
+    patient_offset : list[float]
         Offsets the patient phantom from the centered along the head end of the
-        table top, given as [Tx: <int>, "Ty": <int>, "Tz": <int>] in cm.
+        table top, given as [d_lon, d_ver, d_lat] in cm.
     patient_orientation : str
         patient orientation upon table. Choose between
         c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE and

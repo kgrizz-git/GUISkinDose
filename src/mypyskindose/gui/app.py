@@ -126,6 +126,8 @@ def index():
         if tab_name == "geometry":
             ctx.refresh_geometry_tab()
             ctx.refresh_geometry_preview()
+        elif tab_name == "settings":
+            ctx.refresh_phantom_preview()
 
     with ui.tabs().classes("w-full").on(
         "update:model-value", lambda e: _on_tab_changed(e.args)

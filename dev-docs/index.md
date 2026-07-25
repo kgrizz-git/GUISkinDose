@@ -58,6 +58,9 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, **package layering rules**, settings, classes, functions, and repository layout. |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | Feature status ledger: calculations, rendering, settings, outputs, CLI, API, and **harness/CI §0**. |
 | [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
+| [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) | Shipped human-mesh inventory, preferred MPFB generation path, external phantom sources, fun/stylized/historical summary, and STL integration checklist (normals, frame, triangle budget, license/privacy). |
+| [references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) | Free/open-license candidate meshes for stylized characters, parametric humans, and public-domain classical/historical figures (license tiers for shipping). |
+| [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md) | Source, license, retrieval date, locked ingest transform, repair notes, and validate/smoke results for shipped **demo / non-clinical** phantoms; also blocked candidates (Petite Herculanaise, Louvre Cults/STW NC batch). |
 
 ---
 
@@ -68,6 +71,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
+| [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Source of truth** — agent-executable full-body phantom library with **true shape variety** via headless MPFB/Blender (Phases 0–4 complete; 10 new meshes shipped in 25.2.0). |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
@@ -104,6 +108,14 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 
 | File | Purpose |
 |---|---|
+| [assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) | **PASS** — Phase 0 headless MPFB/Blender phantom spike: adult/pediatric/heavy meshes + anti-balloon shape gates. |
+| [assessments/P0_PHANTOM_GENERATION_2026-07-21.md](assessments/P0_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 2 P0 catalog meshes (pediatric + ectomorph/endomorph) with ordering and shape gates. |
+| [assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md](assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md) | Drifted shipped pediatric 5y male reinstalled face-up; clinical `face_up_ok` gate in `run_catalog`. |
+| [assessments/PEDIATRIC_PHANTOM_STATURE_REVIEW_2026-07-23.md](assessments/PEDIATRIC_PHANTOM_STATURE_REVIEW_2026-07-23.md) | Stature review + option-2 relabel (preschool / 5y / new ~138 cm 10y). |
+| [assessments/ARMS_DOWN_SPIKE_PED_5Y_MALE_2026-07-23.md](assessments/ARMS_DOWN_SPIKE_PED_5Y_MALE_2026-07-23.md) | Arms-down spike metrics vs A-pose `ped_5y_male` (waist wx 68→22 cm). |
+| [assessments/BARIATRIC_THICK_EXTREMITIES_2026-07-22.md](assessments/BARIATRIC_THICK_EXTREMITIES_2026-07-22.md) | Class-II thick-extremities variants; abdomen-vs-affine skipped for limb-bulk rows. |
+| [assessments/BARIATRIC_EXTRA_THICK_EXTREMITIES_2026-07-23.md](assessments/BARIATRIC_EXTRA_THICK_EXTREMITIES_2026-07-23.md) | Class-II extra-thick neck/extremities variants (additive; base + thick unchanged). |
+| [assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md](assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 3 class-II bariatric male/female meshes; abdomen anti-balloon gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
 | [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |
@@ -123,6 +135,11 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. |
+| [plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) — Demo gate (`gui.json`), Steamboat supine, pediatric 5y male fix, bariatric thick-extremities variants. |
+| [plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md](plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md) | **Implemented** (2026-07-23) — `ped_*` / `adult_ecto|endo_*` / `adult_bariatric_{sex}_{1,2,3}` / `demo_*` + aliases. |
+| [plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md](plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md) | **Complete** — additive `_arms_down` for all clinical stems (23 twins; legacy via MPFB approx). |
+| [plans/FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md) | Broader fun-demo survey: nude classical (Venus/David, D1-gated), Phase 2 cartoons, bust fallbacks. v1 clothed+Steamboat execution archived (see archive entry). |
 | [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
 | [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
@@ -140,6 +157,8 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Completed** (2026-07-22) — Demo phantoms v1: Cosmic Buddha, Ramesses II, Steamboat Willie shipped; Petite Herculanaise blocked (login/NC). Fun ingest + face-up `flip_y` gate + GUI `(demo)` labels. |
+| [plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) — MakeHuman GUI master plan; replaced by [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). Phase sub-plans `MAKEHUMAN_PHASE1_*` … `MAKEHUMAN_PHASE5_*` archived alongside. |
 | [plans/archive/refactor_check_sensitive_content_plan.md](plans/archive/refactor_check_sensitive_content_plan.md) | **Completed** (2026-07-18) — Privacy scan script complexity split into `check_sensitive_content.py` + `check_sensitive_helpers.py`. |
 | [plans/archive/refactor_geometry_tab_complexity.md](plans/archive/refactor_geometry_tab_complexity.md) | **Completed** (2026-07-18) — Geometry tab complexity split into `geometry.py` + `geometry_builders.py`. |
 | [plans/archive/refactor_results_tab_complexity.md](plans/archive/refactor_results_tab_complexity.md) | **Completed** (2026-07-18) — Results tab complexity split into `results.py` + `results_builders.py`. |

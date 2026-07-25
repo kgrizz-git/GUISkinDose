@@ -1,0 +1,104 @@
+{
+  "_comment": "Fun / demo (non-clinical) phantom ingest manifest. See dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md. rotate_deg + flip_y are PLACEHOLDERS until per-mesh orientation discovery locks them (Tasks 2-5). height_axis is the raw-mesh axis (x|y|z) whose span is scaled to height_cm BEFORE the PSD transform. flip_y maps to transform_to_psd_frame: true -> force_flip_y=True; false -> force_flip_y=False AND flip_y_if_needed=False. face_up_frac defaults to 0.55 (superior 12% Z band); Cosmic Buddha is headless so it uses face_up_band_frac 0.20 (superior 20% robe/torso band). torso_z_fraction_range / baseline_torso_width_cm are optional GUI habitus overrides wired in Task 6. Mesh asset licenses are NOT tracked in dev-docs/THIRD_PARTY_NOTICES.md (Python deps only).",
+  "schema_version": 1,
+  "defaults": {
+    "target_faces": 6000,
+    "face_up_frac": 0.55,
+    "face_up_band_frac": 0.12,
+    "height_axis": "z"
+  },
+  "meshes": {
+    "demo_cosmic_buddha": {
+      "id": "demo_cosmic_buddha",
+      "phase": 1,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Cosmic-buddha-laser-scan-150k_(Smithsonian_Institution).stl",
+      "source_url_si": "https://3d.si.edu/object/3d/buddha-draped-robes-portraying-realms-existence:d8c62be8-4ebc-11ea-b77f-2e728ce88125",
+      "license": "CC0",
+      "attribution": "Smithsonian Institution (Freer Gallery of Art), 'Buddha draped in robes portraying the Realms of Existence'. CC0 public-domain dedication; SI credit encouraged but not required. Retrieved via the Wikimedia Commons 150k-face mirror (~7.5 MB), not the 2.88 GB full-resolution scan.",
+      "notice_required": false,
+      "orientation_locked": true,
+      "height_cm": 151.0,
+      "height_axis": "z",
+      "rotate_deg": [
+        0,
+        0,
+        0
+      ],
+      "flip_y": false,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.2,
+      "geometry_notes": "Standing draped figure ~151 cm; MISSING HEAD AND HANDS. Orientation LOCKED (2026-07-22) by depth-map discovery: raw axes already map to the PSD frame (raw Z=superior-inferior with crown/top at max Z, raw X=lateral, raw Y=anterior-posterior), so rotate_deg=[0,0,0] and height_axis=z. The carved 'realms' relief, arm/hand stubs, and scalloped robe hem are on the raw -Y face (anterior); the smooth back is +Y (posterior), so flip_y=false anchors the back to the table (y_max~=0) with the anterior toward -Y. No head means a weaker face-up cue: the face-up gate uses the superior 20% robe/torso band (face_up_band_frac=0.20); the raw mesh is already watertight (euler_number=2), so no hole-fill/Blender cap was needed.",
+      "fallback_notes": "Single CC0 SI source. If the open base cannot be capped by trimesh or Blender, drop this ID rather than weaken the watertight gate."
+    },
+    "petite_herculanaise": {
+      "id": "petite_herculanaise",
+      "phase": 1,
+      "source_url": "https://cults3d.com/en/3d-model/art/statue-of-a-woman-petite-herculanaise-at-the-louvre-paris",
+      "source_url_alt": "https://www.myminifactory.com/object/3d-print-statue-of-a-woman-petite-herculanaise-at-the-louvre-paris-6356",
+      "license": "CC BY-SA",
+      "attribution": "Petite Herculanaise (Louvre, Paris) scan, Cults3D. CC BY-SA: attribution + ShareAlike required; the redistributed STL derivative stays SA-compatible (app code remains MIT).",
+      "notice_required": true,
+      "height_cm": 165.0,
+      "height_axis": "z",
+      "rotate_deg": [
+        0,
+        0,
+        0
+      ],
+      "flip_y": false,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.12,
+      "geometry_notes": "Standing draped woman -> rotate upright->supine. NOTICE_petite_herculanaise.txt required (BY-SA).",
+      "fallback_notes": "Prefer Cults CC BY-SA source. MyMiniFactory 6356 only if the license panel is confirmed non-NC (abort if NC); record the exact license panel if used."
+    },
+    "demo_ramesses_ii": {
+      "id": "demo_ramesses_ii",
+      "phase": 1,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Colossal_sculpture_of_Ramesses_II.stl",
+      "license": "CC BY 4.0",
+      "attribution": "Colossal sculpture of Ramesses II, by Dejp3 (Wikimedia Commons). CC BY 4.0: attribution required.",
+      "notice_required": true,
+      "orientation_locked": true,
+      "height_cm": 185.0,
+      "height_axis": "z",
+      "rotate_deg": [
+        90,
+        0,
+        0
+      ],
+      "flip_y": false,
+      "target_faces": 6000,
+      "voxel_pitch": 5.5,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.12,
+      "geometry_notes": "Recumbent/mounted colossal figure. Orientation LOCKED (2026-07-22) by depth-map discovery of the raw mesh: raw body (superior-inferior) axis = raw Y with the crown/nemes headdress at max Y and feet at min Y; raw X = lateral; raw Z = anterior-posterior with the carved face/body relief on raw +Z (anterior) and the flat museum mounting plate + plinth on raw -Z (posterior). rotate_deg=[90,0,0] (Rx +90 deg, sxyz) maps raw Y->+Z (crown at max Z), raw +Z (anterior)->-Y, raw -Z (posterior/mount)->+Y so the back anchors to the table (y_max~=0) face-up; height_axis=z is the post-rotation body axis (raw Y span ~=48.87 -> scaled to 185 cm, scale ~=3.785). flip_y=false: the Rx rotation already yields face-up, so no extra Y negation. WATERTIGHT REPAIR: the raw scan is NOT watertight (10 disconnected bodies, ~4438 open boundary edges, euler=17); fill_holes cannot close it, so voxel_pitch=5.5 cm triggers the solid-voxel + marching-cubes remesh (_voxel_remesh_watertight) which yields a single closed manifold (~5.6k faces <= target 6000, so quadric decimation is a no-op and watertightness survives). Final shipped height ~=192 cm (marching-cubes pads the bbox ~1 voxel per side; within the 170-200 cm target). Colossal/blocky proportions accepted per plan (smoke passes). NOTICE_ramesses_ii.txt required (BY). Raw STL ~25 MB stays under tmp/.",
+      "fallback_notes": "Single Commons CC BY 4.0 source (Dejp3)."
+    },
+    "demo_steamboat_willie": {
+      "id": "demo_steamboat_willie",
+      "phase": 1,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Steamboat_Willie_3D_Model.stl",
+      "source_url_alt": "https://sketchfab.com/ (JoeBert 'Steamboat Willie' CC-BY, ~5.6k tris)",
+      "license": "CC BY 4.0",
+      "attribution": "Steamboat Willie 3D model, by Adrian Cojocaru (Wikimedia Commons). CC BY 4.0: attribution required. US public-domain 1928 design; CC BY applies to the 3D mesh. TRADEMARK CAUTION: label stem 'steamboat_willie' only, never 'Mickey Mouse' / Disney affiliation.",
+      "notice_required": true,
+      "height_cm": 120.0,
+      "height_axis": "z",
+      "rotate_deg": [
+        0,
+        0,
+        -90
+      ],
+      "flip_y": true,
+      "target_faces": 6000,
+      "face_up_frac": 0.55,
+      "face_up_band_frac": 0.12,
+      "geometry_notes": "Cartoon Steamboat Willie figure. Orientation RE-LOCKED (2026-07-23 QA): raw Z is standing height; rotate_deg=[0,0,-90] (Rz -90) + flip_y=true places the character supine face-up (anterior toward -Y). Prior [0,0,90] left him face-down visually (ears still fooled the face_up headband gate). height_axis=z, height_cm=120 (final ~121.5 cm after voxel remesh). Raw scan is NOT watertight (~144k faces); fill_holes fails \u2192 voxel_pitch=4.5 cm marching-cubes remesh (~5676 faces, watertight). Fun validate runs face_up + not_side_lying; confirm with anterior-camera smoke. NOTICE_steamboat_willie.txt required (CC BY 4.0). Trademark: stem steamboat_willie only.",
+      "fallback_notes": "Primary: Commons Cojocaru CC BY 4.0. If watertight repair fails, fall back to JoeBert Sketchfab CC-BY (~5.6k tris). Quaternius filler only if BOTH Steamboat sources entirely fail.",
+      "orientation_locked": true,
+      "voxel_pitch": 4.5
+    }
+  }
+}

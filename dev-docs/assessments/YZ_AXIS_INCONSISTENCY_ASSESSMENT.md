@@ -157,7 +157,7 @@ This creates a visual paradox when viewing the 3D plot: the table extends along 
 - **Other documentation files** referencing the stale convention:
   - `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` — check for stale axis references
   - `dev-docs/CODEBASE_OVERVIEW.md` — check for stale axis references
-  - `ADDITIONAL_PHANTOMS.md` lines 56-57 and 84 — these already describe the correct convention but should be cross-checked after AGENTS.md is fixed
+  - `ADDITIONAL_PHANTOMS.md` integration checklist (frame/units) — describes the physical mesh convention; cross-check after AGENTS.md is fixed
 
 ---
 
@@ -184,7 +184,7 @@ No file was found using the AGENTS.md documented convention (X=lateral, Y=longit
 ## 6. Related
 
 - `dev-docs/plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md` — completed explicit axis-label work in the GUI
-- `dev-docs/ADDITIONAL_PHANTOMS.md` § "Corrections and clarifications" — first flag of this inconsistency
+- `dev-docs/ADDITIONAL_PHANTOMS.md` (historical layered reviews, since consolidated) — first flag of this inconsistency
 - `dev-docs/TO_DO.md` — tracking item (linked to this assessment)
 
 

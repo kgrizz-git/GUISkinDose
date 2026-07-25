@@ -1,0 +1,66 @@
+{
+  "blender_user_resources_hint": "tmp/blender_user",
+  "mpfb_module": "bl_ext.blender_org.mpfb",
+  "scale": 0.1,
+  "entries": {
+    "spike_adult_male": {
+      "macros": {
+        "gender": 1.0,
+        "age": 0.36,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": []
+    },
+    "spike_pediatric": {
+      "macros": {
+        "gender": 1.0,
+        "age": 0.07,
+        "muscle": 0.4,
+        "weight": 0.45,
+        "proportions": 0.5,
+        "height": 0.2,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": []
+    },
+    "spike_heavy": {
+      "macros": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.35,
+        "weight": 0.95,
+        "proportions": 0.55,
+        "height": 0.5,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "race": {
+          "asian": 0.0,
+          "caucasian": 1.0,
+          "african": 0.0
+        }
+      },
+      "detail_targets": [
+        {
+          "name": "stomach-pregnant-incr",
+          "value": 0.85
+        }
+      ]
+    }
+  }
+}

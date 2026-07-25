@@ -45,6 +45,7 @@ __pycache__/
 
 scratch*
 scripts/scratch_*
+scripts/phantom_gen/env.local.json
 *.tmp
 *.bak
 *.orig
@@ -95,3 +96,6 @@ sonar-project.properties.local
 .env
 .env.*
 !.env.example
+
+# Per-checkout GUI / developer prefs (e.g. show_demo_phantoms); never commit
+.mypyskindose.local.json

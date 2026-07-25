@@ -5,10 +5,254 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `25.1.1`).
+**Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`).
 This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml` when releasing.
 
 ## [Unreleased]
+
+### Fixed
+
+- **STL Z-positioning unit test** (2026-07-24) — `test_stl_phantom_positioning_in_z_direction` now
+  skips `*_reduced_*` preview companions (decimation can leave tiny +Z verts); full clinical meshes
+  still require no vertices with Z > 0.
+
+### Added
+
+- **`_reduced_3000t` phantom preview companions** (2026-07-24) — ~3k-face reduced STLs for all
+  shipped clinical human meshes (alongside existing `_reduced_1000t`). Settings preview and
+  `plot_procedure` prefer `_reduced_3000t` when present; dose still uses the full STL.
+  `generate_reduced` default target is 3000 faces. SemVer: **patch** on release (preview assets).
+
+### Changed
+
+- **Settings phantom preview caption** (2026-07-24) — Notes that the panel uses a reduced mesh for
+  display speed while dose calculation and Geometry setup/event plots use the full mesh.
+
+- **Push-harness fixes for phantom catalog branch** (2026-07-24) — Exclude `scripts/phantom_gen` from
+  basedpyright (incomplete bpy/trimesh/numpy-stl stubs); type patient offsets as floats; require
+  `jupyterlab>=4.6.2` for notebook extra advisory CVEs; GUI-placement `importorskip` on phantom
+  unit tests that transitively import NiceGUI. Pin CI/`[dev]` ruff to `>=0.15,<0.16` so unpinned
+  `pip install ruff` cannot pull 0.16 and fail the matrix on hundreds of newly-noisy findings.
+
+- **Blender subprocess argv allowlisting** (2026-07-24) — `run_catalog.py` validates Blender basename
+  and catalog ids, then rebuilds argv from trusted components before `subprocess.run` (Sonar S8705).
+
+- **Phantom_gen path confinement** (2026-07-24) — Shared `path_safety.resolve_under_roots` confines
+  CLI/catalog-derived paths under allowlisted roots before open/mkdir/write (Sonar S2083), including
+  `transform_to_psd_frame.py` and `validate_phantom.py` load/write helpers. Absolute catalog
+  `pose_file` paths may also live under the process temp dir (pytest / local scratch).
+
+### Removed
+
+- **Demo / non-clinical phantoms unshipped** (2026-07-24) — `demo_cosmic_buddha`,
+  `demo_ramesses_ii`, and `demo_steamboat_willie` (and reduced companions / NOTICE sidecars)
+  removed from `phantom_data/`. Local recovery stash (gitignored) with attribution notes:
+  `tmp/phantom_data_demo_stash/README.md`. SemVer: **minor** on release (library surface shrinks).
+
+### Changed
+
+- **Demo phantoms enable sources** (2026-07-23) — `show_demo_phantoms_enabled()` now checks, in
+  order: process env / repo `.env` (`MYPYSKINDOSE_SHOW_DEMO_PHANTOMS`), gitignored
+  `.mypyskindose.local.json`, then `~/.mypyskindose/gui.json`. Default remains off.
+
+- **Pediatric 5y male reinstalled face-up** (2026-07-22) — Replaced a drifted shipped STL with a
+  fresh catalog regenerate; head now rests near the table like the female peer. `run_catalog`
+  enforces a clinical `face_up_ok` gate after transform. See
+  `dev-docs/assessments/PEDIATRIC_5Y_MALE_ORIENTATION_FIX_2026-07-22.md`.
+
+- **Steamboat Willie face-up correction** (2026-07-23) — Locked `rotate_deg=[0,0,-90]` with
+  `flip_y=true` after visual anterior review (prior Rz +90 left the character face-down; ears can
+  fool the headband face-up gate). Inventory hashes updated.
+
+- **Steamboat Willie re-oriented supine** (2026-07-22) — Re-ingest with `rotate_deg=[0,0,90]`
+  (Rz +90) so the figure is not right-side-lying. Fun validate adds a `not_side_lying` headband
+  gate. Inventory hashes updated.
+
+- **Demo phantoms gated behind local prefs** (2026-07-22) — Settings mesh dropdown lists
+  clinical phantoms only by default. Opt in with `"show_demo_phantoms": true` in
+  `~/.mypyskindose/gui.json` to append a **Demo** section (Cosmic Buddha headless + Steamboat
+  Willie). `ramesses_ii` stays on disk but is never listed in the GUI. Separator key is
+  non-selectable.
+
+- **Demo phantoms v1 plan archived** (2026-07-22) — Moved
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` after shipping Cosmic Buddha,
+  Ramesses II, and Steamboat Willie. Petite Herculanaise remains blocked; Venus/David and Phase 2
+  cartoons stay on `FUN_DEMO_PHANTOMS_PLAN.md`. SemVer: **minor** on release (new demo meshes).
+
+### Added
+
+- **Phantom mesh naming convention** (2026-07-23) — Canonical stems `ped_*`, `adult_ecto/endo_*`,
+  `adult_bariatric_{sex}_{1,2,3}`, `demo_*`; legacy aliases resolve in Phantom / preview / Settings.
+  Kept `adult_male` / `junior_*` / `hudfrid`. SemVer: **minor** on release.
+
+- **Pediatric preschool meshes + stature relabel** (2026-07-23) — Option-2 keep-all
+  relabel: former short 5y (~74–78 cm) kept as `ped_preschool_*`; former 10y (~101–108 cm)
+  promoted to `ped_5y_*`; new `ped_10y_*` near CDC median (~137–139 cm). SemVer: **minor**
+  on release.
+
+- **Bariatric series `_1/_2/_3`** (2026-07-23) — `adult_bariatric_{sex}_1` (abdomen), `_2`
+  (thick extremities), `_3` (extra-thick). SemVer: **minor** on release.
+
+- **Pediatric stature review** (2026-07-23) — Documented short pediatric SI heights; addressed by
+  preschool relabel + new 10y regenerate. See
+  `dev-docs/assessments/PEDIATRIC_PHANTOM_STATURE_REVIEW_2026-07-23.md`.
+
+- **Louvre Cults / Scan the World license review** (2026-07-23) — Documented local
+  `tmp/STL-downloads-and-links/` candidates (Socrates, Mattei Athena, Childebert, Draped Woman):
+  Cults labels are **CULTS PU** or **CC BY-SA**, while Zenodo Scan the World mirrors are
+  **CC BY-NC-SA 4.0**. None are shippable under current redistributable (non-NC) policy; recorded in
+  `dev-docs/references/fun_phantom_provenance.md` and the character/mesh sources survey.
+
+- **TO_DO: phantom mesh naming convention** (2026-07-23) — Decisions locked: keep
+  `adult_male` / `junior_*` / `hudfrid`; rename MPFB pediatrics to `ped_*`; ecto/endo to
+  `adult_ecto_*` / `adult_endo_*`; bariatrics to `adult_bariatric_{sex}_{1,2,3}`; demos to
+  `demo_*`. Migrate later with aliases. See
+  `dev-docs/plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md`.
+
+- **Arms-down clinical variants** (2026-07-23) — Additive `*_arms_down` meshes for all clinical
+  stems (23 twins), including MPFB stature approximations of legacy `junior_*` / `adult_male|female` /
+  `senior_*` / `hudfrid`. A-pose originals unchanged. Pose: `scripts/phantom_gen/poses/arms_down_default_fk.json`.
+  SemVer: **minor** on release. See `dev-docs/plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md`.
+
+- **Arms-down spike** (2026-07-23) — `ped_5y_male_arms_down` generated in tmp via catalog
+  `"pose": "arms_down_default_fk"`; waist/chest lateral width collapses toward torso. Superseded by
+  the full clinical wave above.
+
+- **TO_DO: user-imported custom meshes** (2026-07-23) — Backlog item to consider a GUI/CLI pipeline
+  for users to import their own STL (or similar) phantoms (local cache; validate/orient; not bundled).
+
+- **Bariatric thick-extremities variants** (2026-07-22) — Keeps abdomen-dominant
+  `bariatric_class2_{male,female}` and adds `bariatric_class2_{male,female}_thick_extremities`
+  with additive MPFB arm/leg/neck/head detail targets. Catalog skips abdomen-vs-affine shape
+  compare for the thick rows (limb bulk confounds that metric). SemVer: **minor** on release.
+
+- **Demo phantom GUI labels + docs** (2026-07-22) — Task 6 of
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Settings mesh selector uses NiceGUI
+  `{stem: label}` options via `get_human_mesh_options()` with `(demo)` suffixes for shipped
+  `cosmic_buddha`, `ramesses_ii`, `steamboat_willie`. Optional fun-manifest torso overrides wired into
+  habitus baselines. Help + AGENTS / FEATURE_INVENTORY / ADDITIONAL / `demo_phantoms` feature matrix
+  row. Petite Herculanaise remains blocked (not listed as shipped).
+
+- **Steamboat Willie (demo) phantom** (2026-07-22) — Task 5 of
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `steamboat_willie` (Wikimedia
+  Commons, Adrian Cojocaru, **CC BY 4.0**) with `NOTICE_steamboat_willie.txt`, locked transform
+  (`rotate_deg=[0,0,0]`, `height_cm=120`, `flip_y=true`, `voxel_pitch=4.5`), ~5.7k-face full STL +
+  `_reduced_1000t`. Trademark-safe labeling only (`steamboat_willie`). Fun-mode validate + anterior-beam
+  smoke pass. Provenance + dual inventory hashes. **Minor** SemVer bump on release when demos ship.
+
+- **Ramesses II (demo) phantom** (2026-07-22) — Task 4 of
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. Ships `ramesses_ii` (Wikimedia Commons,
+  Dejp3, **CC BY 4.0**) with `NOTICE_ramesses_ii.txt`, locked transform (`rotate_deg=[90,0,0]`,
+  `height_cm=185`, `flip_y=false`, `voxel_pitch=5.5`), ~5.6k-face full STL + `_reduced_1000t`. Raw scan
+  was not watertight; ingest remeshes via solid voxel + marching cubes (`scikit-image` /
+  `networkx` added to `.[phantom-gen]`). Fun-mode validate + anterior-beam smoke pass (entrance −Y).
+  Provenance + dual inventory hashes. **Minor** SemVer bump on release when demos ship.
+
+- **Cosmic Buddha (demo) phantom** (2026-07-22) — Task 2 of
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. First shipped demo / non-clinical
+  phantom: `cosmic_buddha` (Smithsonian Institution, Freer Gallery of Art; **CC0**). Ingested from the
+  ~150k-face Wikimedia Commons mirror via `ingest_fun_mesh.py` with a locked transform
+  (`rotate_deg=[0,0,0]`, `height_axis=z`, `height_cm=151`, `flip_y=false`, headless face-up band
+  `face_up_band_frac=0.20`), shipping `cosmic_buddha.stl` (6000 faces) + `cosmic_buddha_reduced_1000t.stl`.
+  Full-mesh fun-mode validation passes (watertight `True`, ≤20k faces, face-up + outward-normal gates);
+  anterior-beam smoke on `example_data/RDSR/siemens_axiom_example_procedure.dcm` confirms entrance on the
+  anterior (−Y) side (PSD ≈ 16.3 mGy). The statue is **missing its head and hands** — expect odd habitus
+  labels and a weaker face cue. Discoverable via `get_human_mesh_names()`; GUI `(demo)` labels land in
+  Task 6. Provenance in `dev-docs/references/fun_phantom_provenance.md`; both STLs hash-pinned in
+  `dev-docs/approved_asset_inventory.json`. CC0 → no `NOTICE_*.txt` sidecar and no
+  `THIRD_PARTY_NOTICES.md` change. Shipping a new asset → **minor** SemVer bump on release.
+
+- **Fun / demo phantom ingest scaffolding** (2026-07-22) — Task 1 of
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`. New
+  `scripts/phantom_gen/fun_mesh_manifest.json` (locked source URLs, licenses, placeholder
+  `rotate_deg`/`flip_y`, heights, optional `face_up_frac`/torso overrides for the four demo IDs) and
+  `scripts/phantom_gen/ingest_fun_mesh.py` CLI (Euler rotate → uniform scale → fill/cap → PSD anchor
+  with `obj_y_up=False` + explicit flip → re-fix winding/normals → quadric decimate → validate).
+  `validate_phantom.py` gains a `--require-trimesh` fun mode (hard watertight gate, ≤20k face ceiling,
+  face-up band gate, dependency-free outward-normal ray gate). No demo STLs shipped yet
+  (developer tooling only; no runtime or public API change).
+
+- **Settings phantom preview** (2026-07-22) — live Plotly human-mesh preview on Settings (no RDSR).
+  Prefers `_reduced_1000t` when present; dose still uses the full STL. Reflects habitus scales,
+  patient orientation, and patient offsets (active exam in multi-exam mode). Debounced refresh via
+  `ctx.refresh_phantom_preview` with stale-request guarding; `uirevision` preserves camera orbit
+  across scale updates. Help: `docs/source/gui_help/phantom_preview.md`.
+
+### Fixed
+
+- **MPFB catalog reduced previews (Settings scatter)** (2026-07-22) — Settings uses
+  ``*_reduced_1000t`` while Geometry uses the full STL. The 10 catalog reduced meshes had been
+  regenerated without ``trimesh``/``fast-simplification``, so ``generate_reduced`` silently
+  triangle-subsampled (~2700 unique verts / 1000 faces → disconnected beige fragments). Regenerated
+  with quadric decimation (~502 unique verts); ``generate_reduced`` now requires real decimation by
+  default (``--allow-subsample`` for tests only). Optional extra: ``pip install -e ".[phantom-gen]"``.
+
+- **MPFB catalog phantoms face-up** (2026-07-22) — the 10 shipped parametric meshes
+  (`pediatric_*`, `adult_ecto/endomorph_*`, `bariatric_class2_*`) were face-down on the table
+  because `transform_to_psd_frame`’s Y-flip heuristic is a no-op on near-symmetric MPFB depth.
+  Reoriented all 10 (Y-flip + winding fix), regenerated `_reduced_1000t`, refreshed inventory hashes.
+  `run_catalog.py` now uses ``force_flip_y=True``; CLI adds ``--force-flip-y``.
+
+### Added
+
+- **Clothed + Steamboat demo phantoms plan** (2026-07-22) —
+  `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` to ship Cosmic Buddha (**CC0**), Petite
+  Herculanaise (**CC BY-SA**), Ramesses II (**CC BY 4.0**), and Steamboat Willie (**CC BY 4.0**) with
+  scale/rotate ingest, watertight validate, NOTICE sidecars, and GUI `(demo)` labels. Linked from
+  `TO_DO.md`, `index.md`, and `ADDITIONAL_PHANTOMS.md`. Broader fun-demo survey / Venus–David D1 backlog
+  remains in `FUN_DEMO_PHANTOMS_PLAN.md`. Independent-review fold-in: NiceGUI `{stem: label}` options
+  (not label→stem), re-fix normals after Y-flip, fun-mode `--require-trimesh` + ≤20k faces, tunable
+  `face_up_frac`, `demo_phantoms` feature_doc_matrix row, validate full STL only; plus prior items
+  (dual inventory, scale/`--no-unit-detect`, torso overrides, smoke on
+  `example_data/RDSR/siemens_axiom_example_procedure.dcm`, NOTICE ≠ `THIRD_PARTY_NOTICES.md`).
+
+- **Settings phantom preview plan** (2026-07-22) — `dev-docs/plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md` for a
+  live Plotly preview of the selected human mesh on Settings (no RDSR; prefer `_reduced_1000t`; **live
+  habitus `scale_lat/ap/lon` + patient offsets**; orientation via `position_patient_phantom_on_table`).
+  Revised after subagent review and assessments: async debounce + stale-id;
+  `ctx.refresh_phantom_preview`; Plotly `uirevision`; lightweight hover text; `COLOR_*` styling;
+  cylinder/plane preview deferred; **`PreviewSnapshot`** (no live `state` on worker); multi-exam
+  **active-exam** offsets; cross-tab refresh call sites + mount-time paint; reuse
+  `GEOMETRY_DEBOUNCE_SEC`; preview controller extraction; `copy_text` / `feature_doc_matrix`.
+
+- **Fun demo phantoms plan** (2026-07-21) — `dev-docs/plans/FUN_DEMO_PHANTOMS_PLAN.md` to ship Venus de Milo
+  (SMK **CC0**), Michelangelo’s David (Scan the World **CC BY-SA 4.0**), and Steamboat Willie (Commons **CC BY
+  4.0**) as labeled non-clinical phantoms; linked from `TO_DO.md`, `index.md`, and phantom source docs. Updated
+  after review: transform `--no-obj-y-up` contract, watertight/GUI/NOTICE fixes, nude-sculpture decision gate,
+  Steamboat Willie alternates, **clothed full-body try trio** (Cosmic Buddha **CC0**, Petite Herculanaise
+  **CC BY-SA**, Ramesses II **CC BY 4.0**; Lincoln bust fallback), and Phase 2 PD cartoons (Popeye, book Pooh).
+  **2026-07-22:** v1 clothed+Steamboat execution split to `DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`
+  (later archived under `plans/archive/`).
+
+### Changed
+
+- **Fun / public-domain phantom mesh survey** (2026-07-21) — added
+  `dev-docs/references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md` (stylized CC0 characters, MakeHuman,
+  classical sculpture scans, Smithsonian Open Access clothed full-body and busts, Mixamo/Daz shipping caveats)
+  and a short summary section in `ADDITIONAL_PHANTOMS.md`; registered in `dev-docs/index.md`. Updated with
+  Steamboat Willie / Mickey caveats, convertible format notes (`.obj`/`.ply`/… → STL), concrete **Venus de Milo**
+  (SMK **CC0**) / **David** (Scan the World **CC BY-SA 4.0**) guidance, and **clothed full-body** statue leads
+  (Cosmic Buddha, Petite Herculanaise; NC toga traps).
+
+- **`ADDITIONAL_PHANTOMS.md` consolidated** (2026-07-21) — rewrote the layered review appendices into one reference:
+  shipped mesh inventory, preferred MPFB path, external sources (with corrected XCAT/Mesh50 license notes),
+  bariatric options, and a single integration checklist; registered in `dev-docs/index.md`.
+
+- **Automated phantom library plan** (2026-07-21) — replaced the MakeHuman GUI generation master/sub-plans with
+  `dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
+  parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
+  docs archived under `dev-docs/plans/archive/`. Phases 0–4 complete (spike, catalog, P0/P1 generation, install).
+
+## [25.2.0] - 2026-07-21
+
+### Added
+
+- **Parametric human phantom library (MPFB)** — ten new full-body meshes with male/female pairs:
+  `pediatric_5y_*`, `pediatric_10y_*`, `adult_ectomorph_*`, `adult_endomorph_*`, `bariatric_class2_*`
+  (plus `*_reduced_1000t` previews). Generated via headless Blender/MPFB true-shape targets
+  (`scripts/phantom_gen/`), not affine stretch of existing STLs. Provenance: MakeHuman/MPFB core
+  assets CC0; see `ADDITIONAL_PHANTOMS.md` and assessments `P0_PHANTOM_GENERATION_2026-07-21.md` /
+  `P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md`.
 
 ### Fixed
 
