@@ -118,11 +118,11 @@ def main():
             if "--frozen" not in uv_args and "--locked" not in uv_args:
                 uv_args.append("--frozen")
 
-        # Reject passthrough args containing shell metacharacters / newlines before
-        # handing them to the (shell-less) subprocess call (Sonar S8705).
+        # Reject passthrough args containing control characters or surrounding
+        # whitespace before the (shell-less, list-form) `uv audit` call (Sonar S8705).
         for arg in uv_args:
             if any(ch in arg for ch in "\n\r\x00") or arg.strip() != arg:
-                raise ValueError(f"unsafe audit argument: {arg!r}")
+                raise ValueError("unsafe audit argument")
         try:
             result = subprocess.run(
                 [uv_bin, "audit"] + uv_args,

@@ -52,9 +52,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   allowlisting so SonarCloud stops rating new code below A. `mpfb_generate` and `run_catalog`
   now route catalog/report paths through `path_safety.resolve_under_roots`;
   `check_feature_doc_matrix` validates the changed-paths file stays under the repo root and
-  its git ref against a conservative pattern; `audit_dependencies` rejects passthrough args
-  with shell metacharacters; `check_doc_freshness` matches link schemes without embedding a
-  clear-text `http://` literal (S5332). Behavior unchanged; dev-tooling hardening only.
+  its git ref against a conservative pattern; `audit_dependencies` rejects `uv audit` passthrough
+  args containing control characters or surrounding whitespace (the call is already shell-less /
+  list-form); `check_doc_freshness` matches link schemes without embedding a clear-text `http://`
+  literal (S5332). Behavior unchanged; dev-tooling hardening only.
 - **STL Z-positioning unit test** (2026-07-24) — `test_stl_phantom_positioning_in_z_direction` now
   skips `*_reduced_*` preview companions (decimation can leave tiny +Z verts); full clinical meshes
   still require no vertices with Z > 0.

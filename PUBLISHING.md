@@ -31,9 +31,15 @@ Trusted Publishing needs a one-time registration on PyPI so it will trust this r
    - Environment: *(leave blank)*
 3. **If the project already exists**, do the same under
    Project → **Settings → Publishing → Add a trusted publisher**.
+4. **One-time cleanup of the legacy token.** Removing `password:` from the workflow does *not*
+   delete or revoke the old credential. After a first release confirms Trusted Publishing works,
+   delete the GitHub repository secret `PYPI_DEPLOY_API_KEY` (Settings → Secrets and variables →
+   Actions) **and** revoke that token on PyPI (Account → API tokens). Only after this is the
+   "no `PYPI_*` secret" state actually true.
 
-That's it — no secrets to store in GitHub. To cut a release afterwards: bump the version in
-`pyproject.toml`, create a GitHub Release, and the workflow builds, scans, and publishes.
+That's it — no long-lived secret once the cleanup above is done. To cut a release afterward: bump
+the version in `pyproject.toml`, create a GitHub Release, and the workflow builds, scans, and
+publishes.
 
 ## If you never plan to publish
 

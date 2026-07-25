@@ -159,6 +159,11 @@ def main() -> int:
     import bpy
 
     args = _parse_args(sys.argv)
+    # catalog_id is later used as a bare filename component (``{id}.obj``); require a
+    # single safe stem so path separators / traversal cannot escape the output dir.
+    if not re.fullmatch(r"[A-Za-z0-9_]+", args.catalog_id):
+        print("ERROR: invalid catalog id", file=sys.stderr)
+        return 2
     catalog_path = resolve_under_roots(args.catalog, must_be_file=True)
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     if args.catalog_id not in catalog["entries"]:

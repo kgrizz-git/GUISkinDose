@@ -23,7 +23,7 @@ def _resolve_within(path: Path, root: Path) -> Path:
     resolved = path.expanduser().resolve()
     root = root.resolve()
     if not (resolved == root or resolved.is_relative_to(root)):
-        raise ValueError(f"path escapes repository root: {path}")
+        raise ValueError("changed-paths file escapes the repository root")
     return resolved
 ALLOWED_STATUSES = {
     "roadmap",
@@ -177,7 +177,7 @@ def changed_paths_from_file(path: Path, repo_root: Path) -> list[str]:
 
 def changed_paths_from_git(repo_root: Path, ref: str) -> tuple[list[str], str | None]:
     if not _SAFE_GIT_REF_RE.match(ref):
-        raise ValueError(f"unsafe git ref: {ref!r}")
+        raise ValueError("--against-ref does not match the allowed git-ref pattern")
     completed = subprocess.run(
         ["git", "diff", "--name-only", f"{ref}...HEAD"],
         cwd=repo_root,
