@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -12,6 +13,18 @@ from pathlib import Path
 from typing import Any
 
 MATRIX_PATH = Path("dev-docs/feature_doc_matrix.json")
+
+# Conservative allowlist for git refs passed to ``git diff`` (Sonar S8705).
+_SAFE_GIT_REF_RE = re.compile(r"^[\w./@{}^~-]+$")
+
+
+def _resolve_within(path: Path, root: Path) -> Path:
+    """Resolve ``path`` and require it stays under ``root`` (Sonar S8707)."""
+    resolved = path.expanduser().resolve()
+    root = root.resolve()
+    if not (resolved == root or resolved.is_relative_to(root)):
+        raise ValueError(f"path escapes repository root: {path}")
+    return resolved
 ALLOWED_STATUSES = {
     "roadmap",
     "shipped",
@@ -157,11 +170,14 @@ def evaluate_doc_impact(
     return result
 
 
-def changed_paths_from_file(path: Path) -> list[str]:
-    return path.read_text(encoding="utf-8").splitlines()
+def changed_paths_from_file(path: Path, repo_root: Path) -> list[str]:
+    safe_path = _resolve_within(path, repo_root)
+    return safe_path.read_text(encoding="utf-8").splitlines()
 
 
 def changed_paths_from_git(repo_root: Path, ref: str) -> tuple[list[str], str | None]:
+    if not _SAFE_GIT_REF_RE.match(ref):
+        raise ValueError(f"unsafe git ref: {ref!r}")
     completed = subprocess.run(
         ["git", "diff", "--name-only", f"{ref}...HEAD"],
         cwd=repo_root,
@@ -191,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
     changed: list[str] = []
     git_warning: str | None = None
     if args.changed_paths:
-        changed = changed_paths_from_file(args.changed_paths)
+        changed = changed_paths_from_file(args.changed_paths, repo_root)
     elif args.against_ref:
         changed, git_warning = changed_paths_from_git(repo_root, args.against_ref)
 
