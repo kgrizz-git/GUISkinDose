@@ -10,8 +10,52 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Security
+
+- **Notebook embedded-visual review checklist** (2026-07-25) — `notebook_embedded_visual` assets
+  in `approved_asset_inventory.json` now require a `notebook_review` block with
+  `embedded_images_reviewed` and `burned_in_text_reviewed` both `true`; an `approved` status alone
+  no longer clears a notebook with rendered image/PDF outputs (`check_sensitive_content.py` emits
+  `NOTEBOOK_REVIEW_FIELDS_INCOMPLETE` otherwise). This gives notebooks parity with the DICOM and
+  container review checklists so embedded outputs get an explicit human PII/PHI review. The
+  rendered inventory Markdown and `PRIVACY_AND_SENSITIVE_ASSETS.md` document the new fields.
+- **SonarCloud analysis scope** (2026-07-25) — added `.sonarcloud.properties` (the file
+  Automatic Analysis actually reads; `sonar-project.properties` is ignored by it) excluding
+  directories/artifacts where private data is most likely to land (`example_data`, `phantom_data`,
+  `table_data`, `dev-docs`, `**/*.dcm`, notebooks, `**/*.log`, `**/*.txt`, images) plus build
+  noise, and mirrored the same exclusions into `sonar-project.properties`. Also aligned the stale
+  `sonar-project.properties` project key/name to `kgrizz-git_MyPySkinDose` / `MyPySkinDose` and
+  added `sonar.organization` so the local/CI scanner file is actually usable. Scan hygiene and
+  defense-in-depth only — the real PHI/PII guard remains the commit/CI privacy gates
+  (`check_sensitive_content.py` forbids `*.log`, hash-gates images/DICOM/notebook outputs, and
+  pattern-scans all UTF-8 text incl. `*.txt`/`*.ipynb`).
+- **CI locked installs** (2026-07-24) — the `ci.yml` test/coverage matrix (`build`) and the
+  main-only `cloud-scans-after-gates` job now install via `uv sync --extra dev --locked` and run
+  tools through `uv run --no-sync` (cross-OS) instead of unpinned `pip install`, and coverage
+  upload uses the pinned `codecov/codecov-action` instead of `pip install codecov`. This clears
+  the SonarCloud **S8544** (unpinned-dependency) findings on those jobs. The intentionally
+  unpinned `ci-latest.yml` sweep is unchanged by design. Note: **S8541** ("omitting `--no-build`")
+  still reports on `uv sync` lines — it is unavoidable when installing the local project and is a
+  SonarCloud accept/disable-rule item, not a code fix.
+- **Release pipeline hardening** (2026-07-24) — `release.yml` now builds with the pinned `uv`
+  toolchain (`uv build`) instead of an unpinned `pip install setuptools wheel twine build`
+  (clears SonarCloud S8544/S8541 on the release path), and publishes to PyPI via **Trusted
+  Publishing (OIDC)** — removing the stored `PYPI_DEPLOY_API_KEY` secret in favor of a
+  short-lived token (`id-token: write`). The workflow stays inert unless a GitHub Release is
+  created; see `PUBLISHING.md` for the one-time PyPI trusted-publisher setup needed before any
+  first real publish.
+
 ### Fixed
 
+- **SonarCloud new-code Security Rating** (2026-07-24) — Confined the remaining CLI-derived
+  filesystem paths in dev scripts through path validation and added git-ref / audit-arg
+  allowlisting so SonarCloud stops rating new code below A. `mpfb_generate` and `run_catalog`
+  now route catalog/report paths through `path_safety.resolve_under_roots`;
+  `check_feature_doc_matrix` validates the changed-paths file stays under the repo root and
+  its git ref against a conservative pattern; `audit_dependencies` rejects `uv audit` passthrough
+  args containing control characters or surrounding whitespace (the call is already shell-less /
+  list-form); `check_doc_freshness` matches link schemes without embedding a clear-text `http://`
+  literal (S5332). Behavior unchanged; dev-tooling hardening only.
 - **STL Z-positioning unit test** (2026-07-24) — `test_stl_phantom_positioning_in_z_direction` now
   skips `*_reduced_*` preview companions (decimation can leave tiny +Z verts); full clinical meshes
   still require no vertices with Z > 0.

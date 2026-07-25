@@ -56,6 +56,23 @@ def _container_asset_entry(root: Path, path: str, *, kind: str = "office_documen
     return entry
 
 
+def _notebook_asset_entry(root: Path, path: str) -> dict[str, object]:
+    entry = _asset_entry(root, path)
+    entry["kind"] = "notebook_embedded_visual"
+    entry["notebook_review"] = {
+        "embedded_images_reviewed": True,
+        "burned_in_text_reviewed": True,
+    }
+    return entry
+
+
+def _write_notebook_with_embedded_image(path: Path) -> None:
+    path.write_text(
+        json.dumps({"cells": [{"cell_type": "code", "outputs": [{"data": {"image/png": "synthetic"}}]}]}),
+        encoding="utf-8",
+    )
+
+
 def test_approved_asset_passes(tmp_path: Path) -> None:
     asset = tmp_path / "diagram.png"
     asset.write_bytes(b"not a real image, but a hash-pinned asset")
@@ -243,6 +260,26 @@ def test_notebook_embedded_visual_requires_an_inventory_entry(tmp_path: Path) ->
     assert [(finding.path, finding.rule) for finding in run_checks(tmp_path, paths=["rendered.ipynb"])] == [
         ("rendered.ipynb", "ASSET_NOT_IN_APPROVED_INVENTORY")
     ]
+
+
+def test_notebook_embedded_visual_requires_review_checklist(tmp_path: Path) -> None:
+    notebook = tmp_path / "rendered.ipynb"
+    _write_notebook_with_embedded_image(notebook)
+    entry = _notebook_asset_entry(tmp_path, "rendered.ipynb")
+    entry.pop("notebook_review")  # approved status alone must not clear embedded visuals
+    _write_policy(tmp_path, [entry])
+
+    assert [(finding.path, finding.rule) for finding in run_checks(tmp_path, paths=["rendered.ipynb"])] == [
+        ("rendered.ipynb", "NOTEBOOK_REVIEW_FIELDS_INCOMPLETE")
+    ]
+
+
+def test_notebook_embedded_visual_with_completed_review_passes(tmp_path: Path) -> None:
+    notebook = tmp_path / "rendered.ipynb"
+    _write_notebook_with_embedded_image(notebook)
+    _write_policy(tmp_path, [_notebook_asset_entry(tmp_path, "rendered.ipynb")])
+
+    assert run_checks(tmp_path, paths=["rendered.ipynb"]) == []
 
 
 def test_tex_source_is_scanned_as_plain_text(tmp_path: Path) -> None:

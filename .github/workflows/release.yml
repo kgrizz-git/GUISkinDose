@@ -14,6 +14,10 @@ jobs:
   build-n-publish:
     name: Build and publish Python distributions to PyPI
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write  # PyPI Trusted Publishing (OIDC), scoped to this publish job only
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
@@ -43,13 +47,13 @@ jobs:
         uv run --no-sync python scripts/check_sensitive_content.py --require-approved-assets
         uv run --no-sync python scripts/check_ignored_asset_files.py --strict
         uv run --no-sync python scripts/run_semgrep_privacy.py
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools wheel twine build
     - name: Build a binary wheel and a source tarball
-      run: |
-        python -m build
+      # Build with the pinned uv toolchain already installed above (uv resolves
+      # build deps from the project) instead of an unpinned `pip install build`.
+      # Removes the SonarCloud S8544 (unpinned deps) finding on the release path and
+      # drops the unused setuptools/wheel/twine installs (gh-action-pypi-publish
+      # uploads on its own).
+      run: uv build
     - name: Scan built artifacts with grype
       uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
       id: grype-scan
@@ -67,8 +71,12 @@ jobs:
         name: grype-release-scan
         path: grype-scan.json
         retention-days: 30
-    - name: Publish distribution to PyPI
+    - name: Publish distribution to PyPI (Trusted Publishing / OIDC)
+      # No password/secret: authenticates via a short-lived OIDC token (needs the
+      # job-level `id-token: write` permission above). Before the FIRST real publish,
+      # register a PyPI "trusted publisher" for this project pointing at owner/repo +
+      # workflow filename `release.yml` (see PUBLISHING.md). This step only runs when a
+      # release is created; until a trusted publisher is registered it will FAIL rather
+      # than publish silently, and releases are maintainer-triggered only.
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@c1b34028248d0c9f7d90fe29fef2122e2276ff6f  # master
-      with:
-        password: ${{ secrets.PYPI_DEPLOY_API_KEY }}

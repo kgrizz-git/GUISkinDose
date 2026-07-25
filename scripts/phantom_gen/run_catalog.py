@@ -31,6 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.phantom_gen.affine_control import build_affine_control  # noqa: E402
+from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
 from scripts.phantom_gen.transform_to_psd_frame import (  # noqa: E402
     _load_vertices_faces,
     _write_binary_stl,
@@ -128,7 +129,8 @@ def build_blender_generate_argv(
 
 def load_catalog(path: Path) -> dict[str, Any]:
     """Load and lightly validate catalog JSON structure."""
-    data = json.loads(path.read_text(encoding="utf-8"))
+    safe_path = resolve_under_roots(path, must_be_file=True)
+    data = json.loads(safe_path.read_text(encoding="utf-8"))
     if "entries" not in data or not isinstance(data["entries"], dict):
         raise ValueError("catalog missing entries object")
     for entry_id, entry in data["entries"].items():
@@ -542,8 +544,9 @@ def main(argv: list[str] | None = None) -> int:
 
     summary = {"passed": failures == 0, "n_fail": failures, "reports": reports}
     if args.json_report:
-        args.json_report.parent.mkdir(parents=True, exist_ok=True)
-        args.json_report.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        report_path = resolve_under_roots(args.json_report)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     print(f"=== done: {len(ids) - failures}/{len(ids)} passed ===")
     return 0 if failures == 0 else 1
