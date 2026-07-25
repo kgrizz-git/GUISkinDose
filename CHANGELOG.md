@@ -12,12 +12,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Security
 
-- **SonarCloud analysis scope** (2026-07-24) — added `.sonarcloud.properties` (the file
+- **SonarCloud analysis scope** (2026-07-25) — added `.sonarcloud.properties` (the file
   Automatic Analysis actually reads; `sonar-project.properties` is ignored by it) excluding
-  data/asset directories where private data is most likely to land (`example_data`,
-  `phantom_data`, `table_data`, `**/*.dcm`, notebooks) plus build noise, and mirrored the same
-  exclusions into `sonar-project.properties` for local/CI scanner runs. Scan hygiene and
-  defense-in-depth only — the real PHI/PII guard remains the commit/CI privacy-admission gates.
+  directories/artifacts where private data is most likely to land (`example_data`, `phantom_data`,
+  `table_data`, `dev-docs`, `**/*.dcm`, notebooks, `**/*.log`, `**/*.txt`, images) plus build
+  noise, and mirrored the same exclusions into `sonar-project.properties`. Also aligned the stale
+  `sonar-project.properties` project key/name to `kgrizz-git_MyPySkinDose` / `MyPySkinDose` and
+  added `sonar.organization` so the local/CI scanner file is actually usable. Scan hygiene and
+  defense-in-depth only — the real PHI/PII guard remains the commit/CI privacy gates
+  (`check_sensitive_content.py` forbids `*.log`, hash-gates images/DICOM/notebook outputs, and
+  pattern-scans all UTF-8 text incl. `*.txt`/`*.ipynb`).
 - **CI locked installs** (2026-07-24) — the `ci.yml` test/coverage matrix (`build`) and the
   main-only `cloud-scans-after-gates` job now install via `uv sync --extra dev --locked` and run
   tools through `uv run --no-sync` (cross-OS) instead of unpinned `pip install`, and coverage
