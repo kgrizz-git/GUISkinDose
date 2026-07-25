@@ -1,5 +1,7 @@
 # MyPySkinDose
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kgrizz-git_MyPySkinDose&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kgrizz-git_MyPySkinDose)
+
 Modified from the upstream PySkinDose project: https://github.com/rvbCMTS/PySkinDose
 
 Original author: Max Hellström
