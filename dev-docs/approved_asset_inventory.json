@@ -43,6 +43,10 @@
         "status": "approved",
         "reviewer": "KG",
         "reviewed_on": "2026-07-15"
+      },
+      "notebook_review": {
+        "embedded_images_reviewed": true,
+        "burned_in_text_reviewed": true
       }
     },
     {

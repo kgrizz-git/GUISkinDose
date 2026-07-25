@@ -54,7 +54,10 @@ are never printed by the gate, since a filename can itself contain sensitive inf
 
 Notebook source text is still scanned normally. A notebook that embeds an image/PDF output is additionally treated as
 a reviewable visual asset, because regex scanning cannot establish whether a base64-rendered output contains burned-in
-information. The whole notebook hash is pinned, so changing its output requires a new review.
+information. Such a notebook also needs a `notebook_review` checklist with both `embedded_images_reviewed` and
+`burned_in_text_reviewed` set to `true`, recorded only after a reviewer inspects the rendered outputs for PII/PHI (an
+`approved` status alone is not sufficient). The whole notebook hash is pinned, so changing its output requires a new
+review.
 
 An extensionless file with the standard `DICM` marker is classified as DICOM rather than text, so it also requires
 the DICOM-specific inventory checklist. An extensionless file that is not valid UTF-8 is classified as an opaque

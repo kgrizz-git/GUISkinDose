@@ -511,6 +511,13 @@ def _approved_container_review(entry: dict[str, object]) -> bool:
     )
 
 
+def _approved_notebook_review(entry: dict[str, object]) -> bool:
+    review = entry.get("notebook_review")
+    return isinstance(review, dict) and all(
+        review.get(name) is True for name in ("embedded_images_reviewed", "burned_in_text_reviewed")
+    )
+
+
 def _tracked_path_findings(rel_path: str, full_path: Path) -> tuple[list[Finding], bool]:
     """Return path-level findings and whether the caller should skip content scanning.
 
@@ -552,6 +559,8 @@ def _asset_inventory_findings(
         return [Finding(rel_path, "DICOM_REVIEW_FIELDS_INCOMPLETE", "error")]
     if kind in CONTAINER_KINDS and not _approved_container_review(entry):
         return [Finding(rel_path, "CONTAINER_REVIEW_FIELDS_INCOMPLETE", "error")]
+    if kind == "notebook_embedded_visual" and not _approved_notebook_review(entry):
+        return [Finding(rel_path, "NOTEBOOK_REVIEW_FIELDS_INCOMPLETE", "error")]
     return []
 
 
@@ -708,6 +717,11 @@ def inventory_template(repo_root: Path, paths: Sequence[str] | None = None) -> d
                 "embedded_files_reviewed": False,
                 "embedded_images_reviewed": False,
                 "embedded_dicom_reviewed": False,
+            }
+        elif kind == "notebook_embedded_visual":
+            entry["notebook_review"] = {
+                "embedded_images_reviewed": False,
+                "burned_in_text_reviewed": False,
             }
         assets.append(entry)
     return {"version": INVENTORY_VERSION, "assets": assets}

@@ -78,6 +78,14 @@ def _review_checklist(entry: dict[str, object]) -> str:
             ("images", "embedded_images_reviewed"),
             ("DICOM", "embedded_dicom_reviewed"),
         )
+    elif kind == "notebook_embedded_visual":
+        review = entry.get("notebook_review")
+        if not isinstance(review, dict):
+            return "⚠ Missing notebook checklist"
+        checks = (
+            ("images", "embedded_images_reviewed"),
+            ("burned-in", "burned_in_text_reviewed"),
+        )
     else:
         return "—"
     if not isinstance(review, dict):

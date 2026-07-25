@@ -12,6 +12,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Security
 
+- **Notebook embedded-visual review checklist** (2026-07-25) — `notebook_embedded_visual` assets
+  in `approved_asset_inventory.json` now require a `notebook_review` block with
+  `embedded_images_reviewed` and `burned_in_text_reviewed` both `true`; an `approved` status alone
+  no longer clears a notebook with rendered image/PDF outputs (`check_sensitive_content.py` emits
+  `NOTEBOOK_REVIEW_FIELDS_INCOMPLETE` otherwise). This gives notebooks parity with the DICOM and
+  container review checklists so embedded outputs get an explicit human PII/PHI review. The
+  rendered inventory Markdown and `PRIVACY_AND_SENSITIVE_ASSETS.md` document the new fields.
 - **SonarCloud analysis scope** (2026-07-25) — added `.sonarcloud.properties` (the file
   Automatic Analysis actually reads; `sonar-project.properties` is ignored by it) excluding
   directories/artifacts where private data is most likely to land (`example_data`, `phantom_data`,
