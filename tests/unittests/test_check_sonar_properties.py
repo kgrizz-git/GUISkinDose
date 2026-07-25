@@ -31,7 +31,29 @@ def test_check_sonar_properties_rejects_different_shared_setting(tmp_path: Path)
     assert check_sonar_properties(tmp_path) is False
 
 
+def test_check_sonar_properties_diagnostics_do_not_expose_property_details(tmp_path: Path, capsys) -> None:
+    write_configurations(tmp_path, differing_key="sonar.exclusions")
+
+    assert check_sonar_properties(tmp_path) is False
+
+    output = capsys.readouterr().out
+    assert "sonar.exclusions" not in output
+    assert ".sonarcloud.properties" not in output
+
+
 def test_check_sonar_properties_rejects_missing_shared_setting(tmp_path: Path) -> None:
     write_configurations(tmp_path, missing_key="sonar.test.exclusions")
 
     assert check_sonar_properties(tmp_path) is False
+
+
+def test_check_sonar_properties_malformed_diagnostic_omits_path(tmp_path: Path, capsys) -> None:
+    write_configurations(tmp_path)
+    (tmp_path / ".sonarcloud.properties").write_text("not-a-property", encoding="utf-8")
+
+    assert check_sonar_properties(tmp_path) is False
+
+    output = capsys.readouterr().out
+    assert "ValueError" in output
+    assert "not-a-property" not in output
+    assert str(tmp_path) not in output

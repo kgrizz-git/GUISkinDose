@@ -21,7 +21,7 @@ def read_properties(path: Path) -> dict[str, str]:
             continue
         key, separator, value = line.partition("=")
         if not separator or not key.strip():
-            raise ValueError(f"{path.name}:{line_number}: expected key=value")
+            raise ValueError(f"line {line_number}: expected key=value")
         properties[key.strip()] = value.strip()
     return properties
 
@@ -33,18 +33,17 @@ def check_sonar_properties(repo_root: Path | None = None) -> bool:
     try:
         configurations = {path.name: read_properties(path) for path in paths}
     except (OSError, ValueError) as exc:
-        print(f"ERROR: could not read Sonar properties: {exc}")
+        print(f"ERROR: could not read Sonar properties ({type(exc).__name__}).")
         return False
 
     valid = True
     for key in SHARED_KEYS:
         values = {filename: configuration.get(key) for filename, configuration in configurations.items()}
         if None in values.values():
-            missing = ", ".join(filename for filename, value in values.items() if value is None)
-            print(f"ERROR: {key} is missing from {missing}")
+            print("ERROR: a required shared analysis-scope setting is missing.")
             valid = False
         elif len(set(values.values())) != 1:
-            print(f"ERROR: {key} differs between Sonar configuration files")
+            print("ERROR: shared Sonar analysis-scope settings differ.")
             valid = False
 
     if valid:
