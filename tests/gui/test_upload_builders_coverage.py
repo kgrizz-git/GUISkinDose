@@ -217,3 +217,65 @@ async def test_upload_tabular_shows_import_preview(user: User) -> None:
 
     await user.should_see("Import preview", retries=30)
     await user.should_see("NORMALIZED", retries=30)
+
+
+@pytest.mark.asyncio
+async def test_handle_upload_success_dicom(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _upload_controller()
+    data = b"dicom-bytes"
+    event = SimpleNamespace(file=SimpleNamespace(name="case.dcm", read=AsyncMock(return_value=data)))
+    tmp = Path("/tmp/fake_upload.dcm")
+    success_calls: list[tuple] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return True, "loaded"
+
+    async def _on_success(*args):
+        success_calls.append(args)
+
+    monkeypatch.setattr(ub, "create_temp_upload", lambda payload, suffix=".dcm": tmp)
+    monkeypatch.setattr(ub.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(ub, "require_io_result", lambda x: x)
+    monkeypatch.setattr(ctrl, "_on_load_success", _on_success)
+
+    await ctrl.handle_upload(event)
+
+    assert success_calls
+    assert success_calls[0][0] == "case.dcm"
+    cast(MagicMock, ctrl.refs.uploader["el"].reset).assert_called()
+
+
+def test_select_exam_for_geometry_switches_tab() -> None:
+    ctrl = _upload_controller()
+    ctrl.ctx.refresh_per_exam = MagicMock()
+    state.loaded_exams = [SimpleNamespace(), SimpleNamespace()]
+    state.loaded_exam_meta = [{"file_name": "a.dcm"}, {"file_name": "b.dcm"}]
+    ctrl.select_exam_for_geometry(1)
+    assert state.active_exam_index == 1
+    cast(MagicMock, ctrl.ctx.tabs.set_value).assert_called_with("geometry")
+    cast(MagicMock, ctrl.ctx.refresh_per_exam).assert_called()
+
+
+def test_remove_exam_keeps_remaining_single(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _upload_controller()
+    state.loaded_exams = [
+        SimpleNamespace(normalized_data=MagicMock(__len__=lambda s: 2)),
+        SimpleNamespace(normalized_data=MagicMock(__len__=lambda s: 3)),
+    ]
+    state.loaded_exam_meta = [
+        {"file_name": "a.dcm", "file_path": Path("a.dcm")},
+        {"file_name": "b.dcm", "file_path": Path("b.dcm")},
+    ]
+    state.is_multi_exam = True
+    state.rdsr_df = MagicMock(__len__=lambda s: 3)
+    monkeypatch.setattr(ub, "rebuild_rdsr_df", lambda st: None)
+    monkeypatch.setattr(ub, "remove_temp_upload", lambda p: None)
+    monkeypatch.setattr(ub, "restore_globals_from_exam_meta", lambda st, meta: None)
+    monkeypatch.setattr(ub, "adjust_active_exam_index_after_remove", lambda st, i: None)
+    monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
+
+    ctrl.remove_exam(0)
+
+    assert len(state.loaded_exams) == 1
+    assert state.file_name == "b.dcm"
+    cast(MagicMock, ctrl.ctx.file_label.set_text).assert_called()

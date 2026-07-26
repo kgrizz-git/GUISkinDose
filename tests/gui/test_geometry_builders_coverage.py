@@ -8,6 +8,7 @@ preview after loading the bundled Philips example.
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -321,3 +322,53 @@ async def test_preview_event_and_procedure_paths(monkeypatch: pytest.MonkeyPatch
 
     assert rendered == ["plot_event", "plot_procedure"]
     assert ctrl.last_preview_mode == "plot_procedure"
+
+
+def test_on_exam_select_change_updates_active_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_philips_into_state()
+    ctrl = _controller()
+    _wire_geometry_refs(ctrl)
+    state.is_multi_exam = True
+    state.active_exam_index = 0
+    state.loaded_exam_meta = [{"file_name": "a.dcm"}, {"file_name": "b.dcm"}]
+    monkeypatch.setattr(ctrl, "update_preview_caption", lambda: None)
+    monkeypatch.setattr(ctrl, "update_event_context", lambda: None)
+    ctrl.ctx.refresh_per_exam = MagicMock()
+
+    event = SimpleNamespace(value=1)
+    ctrl.on_exam_select_change(event)
+
+    assert state.active_exam_index == 1
+    cast(MagicMock, ctrl.ctx.refresh_per_exam).assert_called()
+
+
+def test_on_composite_toggle_schedules_render(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    _wire_geometry_refs(ctrl)
+    ctrl.last_preview_mode = "plot_event"
+    scheduled: list[bool] = []
+    monkeypatch.setattr(ctrl, "schedule_debounced_render", lambda: scheduled.append(True))
+    monkeypatch.setattr(ctrl, "update_preview_caption", lambda: None)
+    monkeypatch.setattr(ctrl, "update_event_context", lambda: None)
+    monkeypatch.setattr(ctrl, "_update_paused_badge", lambda: None)
+
+    ctrl.on_composite_toggle(SimpleNamespace(value=True))
+
+    assert ctrl.composite_preview is True
+    assert scheduled == [True]
+
+
+def test_handle_table_slider_change_stages_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_philips_into_state()
+    ctrl = _controller()
+    _wire_geometry_refs(ctrl)
+    scheduled: list[bool] = []
+    monkeypatch.setattr(ctrl, "schedule_debounced_render", lambda: scheduled.append(True))
+    monkeypatch.setattr(gb, "stage_table_origin_axis", lambda meta, key, val: None)
+
+    ctrl.handle_table_slider_change("Tx", MagicMock(value=12.0))
+
+    assert ctrl.table_origin_pending is True
+    assert ctrl.last_table_origin_scrub is True
+    cast(MagicMock, ctrl.refs.table_val_labels["Tx"].set_text).assert_called_with("12.0 cm")
+    assert scheduled == [True]

@@ -37,8 +37,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 ### Added
 
 - **Additional GUI coverage tests for Sonar new-code gate** (2026-07-26) — extended geometry /
-  results / export coverage suites and added `tests/gui/test_data_tab_coverage.py` so main’s
-  new-code coverage can clear Sonar way’s 80% threshold (was ~79% after PR #32 merge).
+  results / export / upload / import-preview coverage suites and added
+  `tests/gui/test_data_tab_coverage.py`, `test_per_exam_coverage.py`, and
+  `test_phantom_preview_controller_coverage.py` so main’s new-code coverage can clear Sonar
+  way’s 80% threshold (was ~79% after PR #32 merge).
 - **Sonar + privacy-gated scans master plan** (2026-07-25) — `dev-docs/plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md`
   covers Sonar security fixes; keep GUI in coverage via combined `tests/gui/` coverage.xml + GUI
   tests; remove README Sonar badge when custom quality gates are unavailable (done on this
