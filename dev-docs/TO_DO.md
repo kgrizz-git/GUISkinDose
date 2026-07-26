@@ -117,8 +117,11 @@ their corresponding plan exit criteria pass.
 
 ### Harness / Repo Hygiene
 
-- [ ] **Adopt the fork-maintenance baseline** — work through the prioritized GitHub governance, attribution,
-  privacy, upstream-sync, and release actions in [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md).
+- [x] **Adopt the fork-maintenance baseline** — community files, Issues + no-PHI
+  templates, intended-use / not-FDA-cleared disclaimer, README docs-extra fix,
+  migration-status correction, fork baseline record, and GitHub Issues enabled
+  (2026-07-26). Ongoing ops (monthly upstream check, first-PyPI trusted-publisher
+  registration) remain in [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md).
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `mypyskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report

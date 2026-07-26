@@ -8,6 +8,9 @@ authors = [
     { name="Max Hellström", email="max.hellstrom@gmail.com" },
     { name="Josef Lundman", email="josef@lundman.eu" },
 ]
+maintainers = [
+    { name="Kevin Grizzard" },
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

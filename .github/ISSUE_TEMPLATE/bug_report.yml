@@ -1,0 +1,105 @@
+name: Bug report
+description: Report a reproducible problem in MyPySkinDose
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug.
+
+        **Do not attach or paste** real patient data, raw clinical RDSRs, identified screenshots,
+        credentials, private URLs, full unredacted logs, or any PHI/PII. Use synthetic or
+        documented de-identified fixtures only. Security issues belong in
+        [private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new),
+        not here.
+
+        This software is **not FDA-cleared**. Dose results are for research, education, development,
+        or institutional quality-assurance workflows. Physicists and physicians remain responsible
+        for reviewing outputs and for any patient-care decisions.
+  - type: checkboxes
+    id: no-phi
+    attributes:
+      label: Privacy confirmation
+      description: Required before we can triage this report.
+      options:
+        - label: I confirm this issue contains no PHI/PII, real clinical RDSRs, identified screenshots, credentials, private URLs, full unredacted logs, or private institutional identifiers.
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong in one or two sentences?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps using synthetic or example data only.
+      placeholder: |
+        1. Install …
+        2. Run …
+        3. Observe …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: MyPySkinDose version
+      description: From `pyproject.toml` or `import mypyskindose; print(mypyskindose.__version__)` if available.
+      placeholder: "25.2.0"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.x"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Other / mixed
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options:
+        - CLI / Python API
+        - GUI (browser)
+        - GUI (native)
+        - Notebook
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: extras
+    attributes:
+      label: Environment details
+      description: Optional. Package extras (`gui`, `dev`), relevant settings (no patient identifiers), and whether dose values look wrong vs a crash.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or screenshots
+      description: Paste only after removing identifiers, filenames that identify patients, absolute paths, and institutional details.

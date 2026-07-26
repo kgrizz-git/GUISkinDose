@@ -10,6 +10,32 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Added
+
+- **Fork maintainer community baseline** (2026-07-26) — `CONTRIBUTING.md`,
+  `SECURITY.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`,
+  `CITATION.cff`, privacy-aware GitHub issue forms, and a PR template. README
+  states research/education/QA intended use, **not FDA-cleared**, and that
+  physicists/physicians remain responsible for reviewing results and patient-care
+  decisions. Issues and Discussions enabled; ideas and submissions welcome there
+  (prefer those channels over cold PRs). Private intake for security, privacy
+  incidents, and CoC reports is GitHub private vulnerability reporting. See
+  `dev-docs/FORK_MAINTAINER_GUIDE.md`.
+- **Additional GUI coverage tests for Sonar new-code gate** (2026-07-26) — extended geometry /
+  results / export / upload / import-preview coverage suites and added
+  `tests/gui/test_data_tab_coverage.py`, `test_per_exam_coverage.py`, and
+  `test_phantom_preview_controller_coverage.py` so main’s new-code coverage can clear Sonar
+  way’s 80% threshold (was ~79% after PR #32 merge).
+- **Sonar + privacy-gated scans master plan** (2026-07-25) — `dev-docs/plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md`
+  covers Sonar security fixes; keep GUI in coverage via combined `tests/gui/` coverage.xml + GUI
+  tests; remove README Sonar badge when custom quality gates are unavailable (done on this
+  branch); cloud analyzer path exclusions audit for Sonar / Semgrep / CodeRabbit (and a note that
+  future DeepSource or similar SaaS SAST must use the same privacy-gate + exclusion pattern);
+  Semgrep as local Actions CLI with Cloud App disabled; restore Sonar on PRs; run OWASP Semgrep /
+  Sonar / CodeRabbit only after `privacy-gates`. Branch: `plan/sonar-privacy-gated-scans`.
+- **GUI coverage tests for Sonar** (2026-07-25) — added `tests/gui/test_*_coverage.py` suites for
+  geometry/upload/results builders, import preview, calculate, and export tabs (P0/P1 modules).
+
 ### Changed
 
 - **Sonar quality-gate README badge removed** (2026-07-25) — dropped the SonarCloud
@@ -33,23 +59,6 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `privacy-gates` succeeds (does not wait for the full matrix).
 - **SonarCloud Automatic Analysis disabled; Free gate untunable** (2026-07-25) — CI-based
   analysis is authoritative; Free/Sonar-way `new_coverage` stays at 80% (B2-B / no README badge).
-
-### Added
-
-- **Additional GUI coverage tests for Sonar new-code gate** (2026-07-26) — extended geometry /
-  results / export / upload / import-preview coverage suites and added
-  `tests/gui/test_data_tab_coverage.py`, `test_per_exam_coverage.py`, and
-  `test_phantom_preview_controller_coverage.py` so main’s new-code coverage can clear Sonar
-  way’s 80% threshold (was ~79% after PR #32 merge).
-- **Sonar + privacy-gated scans master plan** (2026-07-25) — `dev-docs/plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md`
-  covers Sonar security fixes; keep GUI in coverage via combined `tests/gui/` coverage.xml + GUI
-  tests; remove README Sonar badge when custom quality gates are unavailable (done on this
-  branch); cloud analyzer path exclusions audit for Sonar / Semgrep / CodeRabbit (and a note that
-  future DeepSource or similar SaaS SAST must use the same privacy-gate + exclusion pattern);
-  Semgrep as local Actions CLI with Cloud App disabled; restore Sonar on PRs; run OWASP Semgrep /
-  Sonar / CodeRabbit only after `privacy-gates`. Branch: `plan/sonar-privacy-gated-scans`.
-- **GUI coverage tests for Sonar** (2026-07-25) — added `tests/gui/test_*_coverage.py` suites for
-  geometry/upload/results builders, import preview, calculate, and export tabs (P0/P1 modules).
 
 ### Security
 
