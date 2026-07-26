@@ -18,6 +18,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   concatenations, duplicated string literals, dead/commented code, an empty help-button block,
   and preferred `{...}`/`[]` literals over `dict(...)`/`list()` across plot/export helpers
   (python:S7497, S7502, S5799, S1192, S125, S108, S1854, S7498).
+- **SonarQube cognitive-complexity hotspots** (2026-07-26) — split the highest-complexity
+  `src/` functions: correction-value handlers in `export/metrics.py`, native geometry tracking
+  into `gui/native_geometry.py`, `run_gui` setup helpers, CLI export source builders, and
+  exam coordinate-transform helpers (python:S3776).
 
 ### Added
 

@@ -33,6 +33,34 @@ def _exam_is_ge(exam) -> bool:
     return _GE_MANUFACTURER_WARNING in warnings_lower
 
 
+def _apply_axis_direction_flips(df, detected: dict, *, flip_tx, flip_ty, flip_tz) -> None:
+    """In-place reverse table-position axis directions about the detected origin."""
+    for flip, col, key in (
+        (flip_tx, "Tx", "x"),
+        (flip_ty, "Ty", "y"),
+        (flip_tz, "Tz", "z"),
+    ):
+        if flip and col in df.columns:
+            pivot = float(detected.get(key, 0.0))
+            df[col] = 2.0 * pivot - df[col]
+
+
+def _apply_table_origin_override(df, detected: dict, override: dict) -> None:
+    """In-place re-base table position columns by ``(override − detected)``."""
+    for col, key in (("Tx", "x"), ("Ty", "y"), ("Tz", "z")):
+        if col not in df.columns:
+            continue
+        delta = float(override.get(key, 0.0)) - float(detected.get(key, 0.0))
+        if delta:
+            df[col] = df[col] + delta
+
+
+def _apply_lat_lon_swap(df) -> None:
+    """In-place swap Tx/Tz when both columns are present."""
+    if "Tx" in df.columns and "Tz" in df.columns:
+        df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
+
+
 def _apply_transform_flags(
     base,
     swap_lat_lon,
@@ -68,29 +96,13 @@ def _apply_transform_flags(
     df = base.copy()
     detected = table_origin_detected or {"x": 0.0, "y": 0.0, "z": 0.0}
     if schema_name != "normalized":
-        for flip, col, key in (
-            (flip_tx, "Tx", "x"),
-            (flip_ty, "Ty", "y"),
-            (flip_tz, "Tz", "z"),
-        ):
-            if flip and col in df.columns:
-                pivot = float(detected.get(key, 0.0))
-                df[col] = 2.0 * pivot - df[col]
+        _apply_axis_direction_flips(
+            df, detected, flip_tx=flip_tx, flip_ty=flip_ty, flip_tz=flip_tz
+        )
     if table_origin_override is not None:
-        for col, key in (("Tx", "x"), ("Ty", "y"), ("Tz", "z")):
-            if col in df.columns:
-                delta = float(table_origin_override.get(key, 0.0)) - float(
-                    detected.get(key, 0.0)
-                )
-                if delta:
-                    df[col] = df[col] + delta
-    if (
-        swap_lat_lon
-        and schema_name != "normalized"
-        and "Tx" in df.columns
-        and "Tz" in df.columns
-    ):
-        df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
+        _apply_table_origin_override(df, detected, table_origin_override)
+    if swap_lat_lon and schema_name != "normalized":
+        _apply_lat_lon_swap(df)
     if flip_ap1 and "Ap1" in df.columns:
         df["Ap1"] = -df["Ap1"]
     if flip_ap2 and "Ap2" in df.columns:

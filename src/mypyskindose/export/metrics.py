@@ -68,6 +68,28 @@ def _normalize_acquisition(raw: Any) -> str:
     return "other"
 
 
+def _accumulate_acquisition_row(
+    groups: dict[str, dict[str, Any]],
+    row: Any,
+    *,
+    kerma_col: str | None,
+    has_dap: bool,
+) -> None:
+    """Update acquisition-mode group buckets from one normalized-event row."""
+    raw = row[KEY_NORMALIZATION_ACQUISITION_TYPE]
+    mode = _normalize_acquisition(raw)
+    g = groups.setdefault(mode, {"raw": set(), "count": 0, "kerma": 0.0, "dap": 0.0, "dap_seen": False})
+    g["raw"].add(str(raw))
+    g["count"] += 1
+    if kerma_col is not None:
+        g["kerma"] += float(pd.to_numeric(row[kerma_col], errors="coerce") or 0.0)
+    if has_dap:
+        val = pd.to_numeric(row[_DAP_COL], errors="coerce")
+        if not pd.isna(val):
+            g["dap"] += float(val) * _GYM2_TO_GYCM2
+            g["dap_seen"] = True
+
+
 def acquisition_breakdown(df: pd.DataFrame | None) -> list[AcquisitionBreakdown]:
     """Summarize event counts/kerma/DAP by normalized acquisition type."""
     if df is None or KEY_NORMALIZATION_ACQUISITION_TYPE not in df.columns:
@@ -76,18 +98,7 @@ def acquisition_breakdown(df: pd.DataFrame | None) -> list[AcquisitionBreakdown]
     has_dap = _DAP_COL in df.columns
     groups: dict[str, dict[str, Any]] = {}
     for _, row in df.iterrows():
-        raw = row[KEY_NORMALIZATION_ACQUISITION_TYPE]
-        mode = _normalize_acquisition(raw)
-        g = groups.setdefault(mode, {"raw": set(), "count": 0, "kerma": 0.0, "dap": 0.0, "dap_seen": False})
-        g["raw"].add(str(raw))
-        g["count"] += 1
-        if kerma_col is not None:
-            g["kerma"] += float(pd.to_numeric(row[kerma_col], errors="coerce") or 0.0)
-        if has_dap:
-            val = pd.to_numeric(row[_DAP_COL], errors="coerce")
-            if not pd.isna(val):
-                g["dap"] += float(val) * _GYM2_TO_GYCM2
-                g["dap_seen"] = True
+        _accumulate_acquisition_row(groups, row, kerma_col=kerma_col, has_dap=has_dap)
     order = {"fluoroscopy": 0, "acquisition": 1, "other": 2}
     return [
         AcquisitionBreakdown(
@@ -127,6 +138,51 @@ def dosimetric_metrics(
 # ── corrections ───────────────────────────────────────────────────────────────
 
 
+def _mean_or_none(values: Any) -> float | None:
+    """Arithmetic mean of a sequence, or ``None`` when empty."""
+    if isinstance(values, (int, float)):
+        return float(values)
+    return float(np.mean(values)) if len(values) else None
+
+
+def _scalar_at(seq: Any, index: int, *, default: float | None = None) -> float | None:
+    """Float at ``index`` when in range, else ``default``."""
+    if index >= len(seq):
+        return default
+    return float(seq[index])
+
+
+def _event_value_k_med(view: ExamView, index: int) -> float | None:
+    return _scalar_at(view.k_med, index)
+
+
+def _event_value_k_tab(view: ExamView, index: int) -> float | None:
+    return _scalar_at(view.k_tab, index)
+
+
+def _event_value_k_meter(view: ExamView, index: int) -> float | None:
+    return _scalar_at(view.k_meter or [], index, default=1.0)
+
+
+def _event_value_k_bs(view: ExamView, index: int) -> float | None:
+    cells = view.k_bs[index] if index < len(view.k_bs) else []
+    return _mean_or_none(cells)
+
+
+def _event_value_k_isq(view: ExamView, index: int) -> float | None:
+    values = view.k_isq[index] if index < len(view.k_isq) else []
+    return _mean_or_none(values)
+
+
+_EVENT_VALUE_HANDLERS = {
+    "k_med": _event_value_k_med,
+    "k_tab": _event_value_k_tab,
+    "k_meter": _event_value_k_meter,
+    "k_bs": _event_value_k_bs,
+    "k_isq": _event_value_k_isq,
+}
+
+
 def _per_event_values(view: ExamView, key: str) -> list[float | None]:
     """Representative per-event value for a factor, restricted to events with hits.
 
@@ -134,30 +190,13 @@ def _per_event_values(view: ExamView, key: str) -> list[float | None]:
     the value is the arithmetic mean across hit cells; for ``k_med`` / ``k_tab`` it
     is the per-event scalar.
     """
-    n = len(view.hits)
+    handler = _EVENT_VALUE_HANDLERS.get(key)
     out: list[float | None] = []
-    for i in range(n):
-        if len(view.hits[i]) == 0:
+    for i in range(len(view.hits)):
+        if len(view.hits[i]) == 0 or handler is None:
             out.append(None)
             continue
-        if key == "k_med":
-            out.append(float(view.k_med[i]) if i < len(view.k_med) else None)
-        elif key == "k_tab":
-            out.append(float(view.k_tab[i]) if i < len(view.k_tab) else None)
-        elif key == "k_meter":
-            meters = view.k_meter or []
-            out.append(float(meters[i]) if i < len(meters) else 1.0)
-        elif key == "k_bs":
-            cells = view.k_bs[i] if i < len(view.k_bs) else []
-            out.append(float(np.mean(cells)) if len(cells) else None)
-        elif key == "k_isq":
-            v = view.k_isq[i] if i < len(view.k_isq) else []
-            if isinstance(v, (int, float)):
-                out.append(float(v))
-            else:
-                out.append(float(np.mean(v)) if len(v) else None)
-        else:  # pragma: no cover - guarded by CORRECTION_KEYS
-            out.append(None)
+        out.append(handler(view, i))
     return out
 
 
@@ -197,6 +236,29 @@ def correction_stats(view: ExamView) -> list[CorrectionStat]:
     return stats
 
 
+def _pool_correction_across_views(
+    views: list[ExamView], key: str
+) -> tuple[list[float], float | None]:
+    """Pool per-event values and kerma-weighted mean for one correction key."""
+    pooled: list[float] = []
+    wnum = 0.0
+    wden = 0.0
+    for view in views:
+        values = _per_event_values(view, key)
+        pooled.extend(v for v in values if v is not None)
+        exam_dwm = _dose_weighted_mean(values, view.kerma, view.hits)
+        weight = (
+            view.air_kerma_corrected
+            if view.air_kerma_corrected is not None
+            else view.air_kerma
+        )
+        if exam_dwm is not None and weight > 0:
+            wnum += weight * exam_dwm
+            wden += weight
+    dose_weighted = wnum / wden if wden > 0 else None
+    return pooled, dose_weighted
+
+
 def cumulative_correction_stats(views: list[ExamView]) -> list[CorrectionStat]:
     """Kerma-weighted cumulative corrections (§8): min/max/mean pool per-event
     values across exams; dose-weighted mean is kerma-weighted across per-exam
@@ -209,28 +271,14 @@ def cumulative_correction_stats(views: list[ExamView]) -> list[CorrectionStat]:
     keys = CORRECTION_KEYS if include_meter else tuple(k for k in CORRECTION_KEYS if k != "k_meter")
     stats: list[CorrectionStat] = []
     for key in keys:
-        pooled: list[float] = []
-        wnum = 0.0
-        wden = 0.0
-        for view in views:
-            values = _per_event_values(view, key)
-            pooled.extend(v for v in values if v is not None)
-            exam_dwm = _dose_weighted_mean(values, view.kerma, view.hits)
-            weight = (
-                view.air_kerma_corrected
-                if view.air_kerma_corrected is not None
-                else view.air_kerma
-            )
-            if exam_dwm is not None and weight > 0:
-                wnum += weight * exam_dwm
-                wden += weight
+        pooled, dose_weighted = _pool_correction_across_views(views, key)
         stats.append(
             CorrectionStat(
                 key=key,
                 minimum=(min(pooled) if pooled else None),
                 maximum=(max(pooled) if pooled else None),
                 mean=(float(np.mean(pooled)) if pooled else None),
-                dose_weighted_mean=(wnum / wden if wden > 0 else None),
+                dose_weighted_mean=dose_weighted,
             )
         )
     return stats
