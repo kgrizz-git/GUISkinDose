@@ -137,6 +137,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   filenames in CF not-found errors/debug logs; export validates kerma list lengths;
   docstrings added across Calculate-tab / kerma tests and remaining branch-touched
   src helpers (export writers, analyze_data, adapters, settings).
+- **Export kerma-array validation** (2026-07-26) — `PySkinDoseOutput` uses `len(data_norm)` as
+  the event count, rejects hits/kerma length mismatches, and requires
+  `kerma_meter_correction` / `kerma_corrected` to be both provided or both omitted.
 - **SonarCloud new-code Security Rating** (2026-07-24) — Confined the remaining CLI-derived
   filesystem paths in dev scripts through path validation and added git-ref / audit-arg
   allowlisting so SonarCloud stops rating new code below A. `mpfb_generate` and `run_catalog`

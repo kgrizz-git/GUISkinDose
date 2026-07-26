@@ -364,6 +364,16 @@ class PySkinDoseOutput:
         """
         error = False
         error_message = [""]
+        n_events = len(data_norm)
+
+        if len(hits) != n_events:
+            error = True
+            error_message.append(
+                (
+                    "Hits:\n"
+                    "\tThe hits list is not the same length as the number of normalized events"
+                )
+            )
 
         if len(backscatter_correction) != len(hits):
             error = True
@@ -395,7 +405,18 @@ class PySkinDoseOutput:
                 ("Table correction:\n" "\tThe table correction list is not the same length as the number of events")
             )
 
-        if kerma_meter_correction is not None and len(kerma_meter_correction) != len(hits):
+        has_kerma_meter = kerma_meter_correction is not None
+        has_kerma_corrected = kerma_corrected is not None
+        if has_kerma_meter != has_kerma_corrected:
+            error = True
+            error_message.append(
+                (
+                    "Kerma correction:\n"
+                    "\tkerma_meter_correction and kerma_corrected must both be provided or both omitted"
+                )
+            )
+
+        if has_kerma_meter and len(kerma_meter_correction) != n_events:
             error = True
             error_message.append(
                 (
@@ -404,7 +425,7 @@ class PySkinDoseOutput:
                 )
             )
 
-        if kerma_corrected is not None and len(kerma_corrected) != len(hits):
+        if has_kerma_corrected and len(kerma_corrected) != n_events:
             error = True
             error_message.append(
                 (
@@ -419,14 +440,12 @@ class PySkinDoseOutput:
         self.PSD: float = dose_map.max()
         self.AirKerma: float = data_norm[KEY_NORMALIZATION_AIR_KERMA].sum()
         self.Events: EventOutput = EventOutput(data_norm=data_norm)
-        n_events = len(hits)
         if kerma_meter_correction is None:
             self.KermaMeterCorrection: list[float] = [1.0] * n_events
-        else:
-            self.KermaMeterCorrection = [float(v) for v in kerma_meter_correction]
-        if kerma_corrected is None:
             self.KermaCorrected: list[float] = list(self.Events.kerma)
         else:
+            assert kerma_corrected is not None  # paired by validation above
+            self.KermaMeterCorrection = [float(v) for v in kerma_meter_correction]
             self.KermaCorrected = [float(v) for v in kerma_corrected]
         self.AirKermaCorrected: float = float(sum(self.KermaCorrected))
         self.PatientOffsets: dict = {
@@ -571,7 +590,7 @@ class MultiExamResult:
         }
 
     def to_json(self, *, include_source_identifiers: bool = False) -> str:
-        """Serialize the full PySkinDoseOutput to a JSON string."""
+        """Serialize this MultiExamResult to a JSON string."""
         return json.dumps(self.to_dict(include_source_identifiers=include_source_identifiers))
 
 
