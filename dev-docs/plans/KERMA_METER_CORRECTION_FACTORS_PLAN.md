@@ -16,6 +16,12 @@ Definition (for documentation, UI, and export):
 
 > **CF = (real measured dose) / (unit reported dose)**
 
+where "real measured dose" is the **NIST-traceable (or national-standard-traceable) reference air kerma** assigned
+to the unit+tube during an external QC/ion-chamber calibration against a reference standard (i.e. an independent
+measurement made outside the system's self-reporting meter), not the unit's own reported value. Equivalently, CF
+is the multiplicative calibration that converts the unit's reported (uncalibrated) air kerma into the
+laboratory-traceable air kerma for that individual tube.
+
 A reported `K_IRP` is multiplied by CF to obtain the corrected air kerma:
 
 ```
@@ -70,8 +76,9 @@ This is a **calibration correction to the meter/reporting chain**, conceptually 
 6. CLI: a `--kerma-meter-correction-file PATH` flag and a `--kerma-meter-correction-mode
    {file,prompt-off}` flag exist; non-interactive runs that lack a file fall back to CF = 1.0 with a warning
    (never block).
-7. The original uncorrected K_IRP is **also** retained in `output` (e.g. `kerma_reported`), so the correction is
-   auditable/reversible in exports and tests.
+7. The original uncorrected K_IRP is retained in the **existing** `output[c.OUTPUT_KEY_KERMA]` field (unchanged for
+   dict-mode consumers — no silent behavior break); the corrected value lives in a **new**
+   `output[c.OUTPUT_KEY_KERMA_CORRECTED]` field, so the correction is auditable/reversible in exports and tests.
 8. Unit and tabular inputs parse station identifiers cleanly and never PII-leak (station names can be free text;
    apply the project's runtime privacy rule — no raw identifiers in logs/exports beyond what the user has already
    chosen to load; see `PRIVACY_AND_SENSITIVE_ASSETS.md`).
@@ -102,31 +109,33 @@ Findings:
 
 ## 6. Equipment key design (resolution & precedence)
 
-A composite key identifies "which unit + tube" an event belongs to, resolved with the following precedence
-(first non-empty wins). If nothing resolves, the event goes to CF=1.0.
+A composite key identifies "which unit + tube" an event belongs to, resolved by a **single fixed order**
+(first non-empty wins). If nothing resolves, the event goes to CF=1.0. There is no configurable strategy — the
+order is baked in to keep the model simple and predictable; the lookup table does the matching.
 
-1. Explicit user-label override (settings) — exact-match label the user types in the GUI/passes via setting.
+1. Explicit user-label override (`settings.kerma_meter_correction.explicit_label`, a single string) — when set,
+   every event gets this label as its equipment identity (useful for reprocessing an ambiguous export under a
+   deliberate unit name).
 2. `DeviceSerialNumber` (most stable per-unit identifier) when present.
 3. `StationName` when present.
-4. **Tabular fallback (per the user's requirement)** — when neither station name nor serial number is available
-   (the normal case for CSV/TSV/XLSX exports, which carry no DICOM top-level attributes), resolve the equipment
-   identity from the tabular column that names the unit. Specifically, look for an **"equipment" column first**,
-   then the source-specific variants: DoseTrack's **"Equipment Name"** sentinel column (currently consumed by
-   `input_adapters/dosetrack.py:185` to infer `ManufacturerModelName` and then *dropped* at `:206` — Phase 0 must
-   preserve it as the per-unit `station_name` *before* it is dropped), Radimetrics' **"Device"** column, and the
-   generic "device model"/"station name" candidates already enumerated in `column_mapper.py:34`. Only the values
-   of these columns — not the model-name inference — populate the equipment key; the existing inference stays as
-   a separate side effect for `ManufacturerModelName`.
+4. **Tabular fallback (per the user's requirement)** — when no DICOM station or serial is available (the normal
+   case for CSV/TSV/XLSX exports, which carry no DICOM top-level attributes), resolve the equipment identity from
+   the tabular column that names the unit. Specifically, in this order: DoseTrack's **"Equipment Name"** sentinel
+   column (currently consumed by `input_adapters/dosetrack.py:185` to infer `ManufacturerModelName` and then
+   *dropped* at `:206` — Phase 0 must persist its value as the per-unit identity *before* it is dropped),
+   Radimetrics' **"Device"** column, then generic lowercase candidates `equipment`, `equipment name`, `station name`
+   per `column_mapper.py:34`. Only the column *values* populate the equipment key; the existing model inference
+   stays as a separate side effect for `ManufacturerModelName`.
 5. Empty → unresolved → CF=1.0.
 
 The effective event key is `(equipment_label, acquisition_plane_normalized)` where
 `acquisition_plane_normalized ∈ {"single", "A", "B"}` (collapse "Single Plane" → "single"; keep "A"/"B" suffix).
-The lookup table is queried with this `(equipment, tube)` pair. Wildcard rows (`equipment_label="<any>"` or
-`tube="<any>"`) are supported as user-authored fallbacks (lower precedence than exact match) so a site can ship a
-per-model default and override specific units.
+The lookup table is queried with this `(equipment, tube)` pair. There is **no wildcard row matching**: an absent
+`(equipment, tube)` row resolves to `default_factor` (1.0 by default), so the unresolved case and the
+"per-model fallback" case collapse to one explicit knob.
 
 Rationale: `DeviceSerialNumber` is more globally unique than `StationName` (which can be a friendly room label like
-`"INR Lab"`). Both are offered because sites may publish lookup tables keyed the way their physicists maintain them.
+`"INR Lab"`). The order is fixed so the lookup-table author doesn't need to reason about per-run strategy settings.
 For tabular exports — which never carry DICOM station/serial — the **"equipment"-style column is the *primary*
 per-unit identifier**, not a last-resort hack: it is the only per-unit signal a tabular row has, and it must be
 captured rather than collapsed into the model name as the adapters do today.
@@ -138,9 +147,10 @@ Deliberately minimal and human-editable. Columns:
 | Column | Type | Required | Notes |
 |---|---|---|---|
 | `equipment` | str | yes | Station name, device serial, or a user-defined label. Case-insensitive; whitespace-trimmed. |
-| `tube` | str | yes | `"single"`, `"A"`, `"B"`, or `"<any>"`. |
-| `correction_factor` | float | yes | CF. Default-fallback rows may be `<any>`; exact match wins over `<any>`. |
-| `notes` | str | no | Free-text provenance / measurement date (never exposed as PHI; user responsibility). |
+| `tube` | str | yes | `"single"`, `"A"`, `"B"`. No wildcard sentinel. |
+| `correction_factor` | float | yes | CF. No wildcard fallback row; an absent `(equipment, tube)` row
+       resolves to `settings.kerma_meter_correction.default_factor` (1.0 by default). |
+| `notes` | str | no | Free-text provenance / measurement date (never exposed as PHI; user responsibility).
 | `source` | str | no | Optional short citation of the QC measurement (e.g. "QC 2026-06"). |
 
 Example rows:
@@ -150,7 +160,6 @@ equipment,tube,correction_factor,notes,source
 U601,single,1.03,Annual QC 2026-06,site QC lab
 722013-362,A,0.97,Water calorimetry 2026-03,NMRO
 722013-362,B,1.02,Water calorimetry 2026-03,NMRO
-<any>,<any>,1.0 default fallback if neither header row matches,,
 ```
 
 Accepted formats: `.csv`, `.tsv`, `.xlsx` (first sheet by default; sheet name configurable), and a JSON of the
@@ -172,24 +181,26 @@ Add to `PyskindoseSettings` (`settings/pyskindose_settings.py`) and `settings_ex
   "file": null,                   // str | Path | null
   "file_sheet": null,             // optional XLSX sheet name
   "default_factor": 1.0,          // used for unresolved events and prompt-prefill
-  "key_strategy": "serial_then_station",  // "serial_then_station" | "station_then_serial" | "label_only"
-  "explicit_label": null,         // str | null — force an equipment label for this run
-  "prompt_at_calc": true          // GUI: open a CF collection modal before calculate_dose
+  "explicit_label": null,         // str | null — force one equipment label for this run
+  "prompt_at_calc": false         // GUI only: open a CF collection modal before calculate_dose
 }
 ```
 
 Defaults are chosen so a freshly-loaded settings JSON (no key) is **behavior-preserving**: `enable: false` → CF=1.0
 everywhere, identical to today. Raising `enable: true` with no file and `mode: "file"` → CF=1.0 *with* a one-time
 summary warning that the correction feature is enabled but no table was supplied (so the user doesn't silently
-believe a correction was applied).
+believe a correction was applied). The key-resolution order (§6) is **not configurable** — there are no
+`key_strategy` or `--kerma-meter-key-strategy` knobs, by design (see §6 rationale).
 
 CLI (`main.py`):
 
 - `--kerma-meter-correction` (flag): enable the feature.
 - `--kerma-meter-correction-file PATH`
 - `--kerma-meter-correction-mode {file,prompt}` (prompt only meaningful in `--mode gui`).
-- `--kerma-meter-key-strategy {serial_then_station,station_then_serial,label_only}`
 - `--kerma-meter-explicit-label TEXT`
+
+`prompt_at_calc` is **GUI-only and defaults to `false`**: non-interactive / CLI / scripted workflows must never
+block on a prompt; enabling it only affects GUI runs initiated from the Calculate tab.
 
 ## 9. Implementation phases
 
@@ -202,6 +213,10 @@ Each phase is independently shippable and leaves behavior unchanged when the fea
   `KEY_RDSR_DEVICE_SERIAL = "DeviceSerialNumber"` to `constants.py`). Missing attributes store as `None`, not crash.
 - Normalize into `data_norm` (new keys `KEY_NORMALIZATION_STATION_NAME = "station_name"`,
   `KEY_NORMALIZATION_DEVICE_SERIAL = "device_serial"`) in `rdsr_normalizer._normalize_machine_parameters`.
+  These keys are reserved for the CF feature and **do not collide** with any current `KEY_NORMALIZATION_*`
+  column today (verified: the only `*_NAME` column is `KEY_NORMALIZATION_MODEL_NAME = "model"`, distinct from
+  `station_name`). If Phase 0 introduces a future collision risk, prefer appending a `_cf` suffix over renaming
+  the existing column; collisions must fail typecheck (`basedpyright`) rather than silently overwrite.
 - Tabular adapters: when station name / device serial are absent (the usual tabular case — no DICOM top-level
   attrs), the **"equipment" column becomes the per-unit identifier** and must be preserved into a
   `station_name`-equivalent column *before* any existing step drops it. Concretely:
@@ -219,7 +234,6 @@ Each phase is independently shippable and leaves behavior unchanged when the fea
     alone is treated as a per-unit identity when no DICOM station/serial is present.
 - Add unit + characterization tests for missing vs present identifiers (DICOM RDSR with present/absent station and
   serial; each tabular adapter with/without an "equipment"-style column). **No dose change yet.**
-- Add unit + characterization tests for missing vs present identifiers. **No dose change yet.**
 
 ### Phase 1 — Correction-factor engine (pure function, CF=… by key)
 
@@ -247,20 +261,26 @@ def resolve_correction_factors(
 ```
 
 Semantics follow §6 and mirror `corrections.calculate_k_tab`'s warning style (per-event index lists via
-`grid_interp.format_event_indices`). Lookups are exact-match-first, then `<any>` fallback, else `default_factor`.
+`grid_interp.format_event_indices`). Lookups are exact-match on `(equipment, tube)`; an absent row resolves to
+`default_factor` (1.0 by default). There is **no wildcard row**.
 No dose math here — pure resolution. Fully unit-testable without a GUI or RDSR run.
 
 ### Phase 2 — Wire into dose pipeline (CF applied exactly once, before physics corrections)
 
 - In the per-event dose accumulation, multiply `normalized_data.K_IRP[event]` by `factors[event]` at the point the
-  kerma enters `event_dose` (`add_correction_and_event_dose_to_output.py:90`) — **once**.
-- Keep the *reported* K_IRP in `output[c.OUTPUT_KEY_KERMA_REPORTED]` (new key) and store *corrected* in
-  `output[c.OUTPUT_KEY_KERMA]` — note audit clarity: the existing kerma field becomes the corrected value used for
-  dose; PSD and exports reference the corrected value. Document this in `OUTPUT_*` constants and `CODEBASE_OVERVIEW.md`.
+  kerma enters `event_dose` (`add_correction_and_event_dose_to_output.py:90`) — **once**, on the *internal* value
+  used for dose accumulation only.
+- **Backward compatibility (dict-mode consumers):** the existing `output[c.OUTPUT_KEY_KERMA]` field is **left
+  as the untouched reported K_IRP** (the value stored today). The corrected value lives in a **new**
+  `output[c.OUTPUT_KEY_KERMA_CORRECTED]` field. This is a purely additive change — dictionary consumers who already
+  read `OUTPUT_KEY_KERMA` keep getting exactly what they get today; only the dose map and PSD silently move to
+  the corrected air kerma when CF≠1. Call this out in `CHANGELOG.md` (under the release that ships CF) and in
+  `CODEBASE_OVERVIEW.md`'s output-fields table, so consumers who want the dose-relevant value can switch to
+  `OUTPUT_KEY_KERMA_CORRECTED`.
 - Add `output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = factors[event]` plus `resolved_keys` to support the
   corrections table (Rich Export) and tests.
 - Gate everything behind `settings.kerma_meter_correction.enable`; when disabled, `factors` is all-ones and
-  `reported == corrected`.
+  `OUTPUT_KEY_KERMA_CORRECTED == OUTPUT_KEY_KERMA` (both equal to the reported value).
 
 ### Phase 3 — CLI + Settings wiring
 
@@ -296,7 +316,7 @@ No dose math here — pure resolution. Fully unit-testable without a GUI or RDSR
 - Add a `feature_doc_matrix.json` row mapping the feature to its code/tests/docs/help.
 - Archive this plan under `dev-docs/plans/archive/` once §4 acceptance passes and update `dev-docs/index.md`.
 
-## 8'. Phase ordering & dependencies
+## 10. Phase ordering & dependencies
 
 ```
 Phase 0 (parsing) ──┬─► Phase 1 (resolve) ──► Phase 2 (wire to dose) ──► Phase 3 (CLI/Settings)
@@ -308,7 +328,7 @@ Phase 0 (parsing) ──┬─► Phase 1 (resolve) ──► Phase 2 (wire to d
 Phases 0–3 are the minimum to ship the feature headlessly (CLI). 4–5 ship the user-facing experience. Each phase
 keeps the prior behavior unchanged when disabled.
 
-## 9'. Out of scope (explicit)
+## 11. Out of scope (explicit)
 
 - Per-frame adjustment, dynamic CF (e.g. CF as a function of kVp / HVL) — CF is a single calibration multiplier per
   (equipment, tube). Future hook: store optional kVp bands in the table; not in this plan.
@@ -318,20 +338,24 @@ keeps the prior behavior unchanged when disabled.
   CF is unit/tube-keyed).
 - Automated population of CF from a QC database — manual entry only.
 
-## 10. Risks & mitigations
+## 12. Risks & mitigations
 
 | Risk | Mitigation |
 |---|---|
 | User mis-keys the table (wrong serial) → wrong dose applied silently | Per-event unresolved warnings + corrections table clearly shows resolved (equipment, tube, CF); prompt mode shows the resolved key next to each input. Acceptance §4.7 keeps reported K_IRP auditable. |
-| Station names containing PII shipped in exports | Treat station/serial as user-loaded data; the existing Rich-Export policy already defers sanitization to the user. Add a *short* de-identification note in the export metadata doc and ensure logs use truncated/summary form, not full raw strings. |
-| Double-application of CF (in K_IRP and in corrections) | Apply exactly once at the K_IRP entry point; tests assert `corrected == reported × CF`. Existing tests run with CF=1.0 to preserve parity. |
-| Different vendors / events setting `acquisition_plane` inconsistently ("Single Plane" on a biplane-station's single-plane acquisition) | Camera-ready key normalization is on the event's plane string only — Tube A vs B is what matters; if a station has both A and B events but only an A CF supplied, B events resolve to a `<any>` row or `default_factor` (=1.0 by default). Documented in-table. |
+| Station names containing PII shipped in exports | Concrete export/log rules in §14: per-event tables never carry the station/serial column; only one-block provenance metadata lists the matched equipment labels, only when the user supplied a CF file; INFO logs use counts only. |
+| Double-application of CF (in K_IRP and in corrections) | Apply exactly once at the K_IRP entry point; tests assert `OUTPUT_KEY_KERMA_CORRECTED == OUTPUT_KEY_KERMA × CF`. Existing tests run with CF=1.0 to preserve parity. |
+| Different vendors / events setting `acquisition_plane` inconsistently ("Single Plane" on a biplane-station's single-plane acquisition) | Key normalization is on the event's plane string only — Tube A vs B is what matters; if a station has both A and B events but only an A CF supplied, B events resolve to `default_factor` (=1.0 by default). There is no wildcard row. |
+| **Silent behavior break for dict-mode consumers** (the reviewer's #6) | **Reversed Phase 2 polarity:** `OUTPUT_KEY_KERMA` keeps reporting the *uncorrected* value (today's behavior); the *corrected* value is in a **new** `OUTPUT_KEY_KERMA_CORRECTED` field. CHANGELOG and `CODEBASE_OVERVIEW.md` call this out; zero existing consumers change behavior. |
+| **Phase 0 adapter pipeline changes** (highest-risk phase, per reviewer #5) | New normalized column keys `station_name` / `device_serial` do **not** collide with any current `KEY_NORMALIZATION_*` (only `*_NAME` key is `model`). DoseTrack: persist `_dt_equipment_name` into `station_name` *before* the existing `drop(columns=["_dt_equipment_name"])` at `dosetrack.py:206`; the dropped sentinel stays dropped after the copy, so downstream consumers see no behaviour change. Any future name collision must trip `basedpyright` (typed dict keys), not silently overwrite. |
 | Backwards compatibility of saved settings/example JSON | New settings block defaults preserve current behavior; `settings_example.json` only gets a commented block; old JSONs continue to load (absent block == disabled). |
 | Tabular inputs without plane codes | DoseTrack's integer plane code already maps to "Single Plane" / "Plane A" / "Plane B" (`dosetrack.py:141`). Other adapters default to "Single Plane" — same as today; CF then keys as `single`. |
 
-## 11. Test plan
+## 13. Test plan
 
-- `tests/unittests/test_kerma_correction.py`: pure resolver tests (key precedence, `<any>` fallback, missing IDs,
+- `tests/unittests/test_kerma_correction.py`: pure resolver tests (fixed key precedence serial → station → tabular
+  "equipment" column → unresolved; missing IDs; deterministic factor application; parity `factors == [1.0] * n`
+  when disabled or table empty; absence of wildcard matching).
   deterministic factor application, and parity `factors == [1.0] * n` when disabled or table empty).
 - `tests/unittests/test_rdsr_parser_station.py`: assert `StationName` / `DeviceSerialNumber` parsing for each example
   RDSR; `None` when missing.
@@ -342,18 +366,35 @@ keeps the prior behavior unchanged when disabled.
 - Characterization: load all `example_data/RDSR/*.dcm` end-to-end with CF=1.0 and assert byte-identical PSD/dose map
   to the current main-branch output (guards against accidental double-application or K_IRP mutation).
 
-## 12. Privacy / harness notes
+## 14. Privacy / harness notes
 
-- Station names and serial numbers are operator-controlled identifiers, not patient PHI, but can indirectly identify
-  a site/room. Follow `PRIVACY_AND_SENSITIVE_ASSETS.md`: never log full raw station strings at INFO; use summary
-  forms ("equipment resolved: 3 unique units, 0 unresolved") at summary level and per-event at DEBUG only, gated
-  behind `logging` — never `print`.
-- Treat the CF file as user-supplied data; do not commit example CF tables with real site identifiers.
-- Keep new source files under the ~800-line modularity ceiling; keep `kerma_correction.py` cohesive.
-- Run the harness checks called out in `HARNESS_ENGINEERING.md` (ruff, basedpyright, pytest, doc-freshness,
-  help-registry, ui-copy) in the PR.
+Station names and device serial numbers are operator-controlled identifiers, not patient PHI, but they can
+indirectly identify a site/room and are user-loaded (not filtered by the project). Concrete handling rules:
 
-## 13. Open questions
+- **Logging:**
+  - At INFO/WARNING: never print full raw station/serial strings. Use summary forms only: counts and buckets,
+    e.g. `"kerma-meter correction: 3 unique equipment keys resolved, 2 unresolved → CF=1.0"`.
+  - Per-event raw strings appear only at DEBUG, gated behind the standard `logging` module (never `print`),
+    and only when the user explicitly raised verbosity (default runtime stays INFO).
+- **Exports (HTML/PDF/DOCX/XLSX):**
+  - **Body/event tables go only by index** (the per-event corrections table already keys by event index). Do
+    **not** add a "Station" or "Serial" column to per-event tables.
+  - The resolved equipment label appears **only in export metadata**, only as a single-block list
+    ("Equipment matched in CF table: U601, 722013-362"), and only when the user has loaded a CF file
+    (`mode == "file"`). The provenance block notes "Station/serial values are user-loaded; site responsibility
+    for downstream sharing."
+  - File-name and on-disk paths in exports keep the existing redaction policy (no source RDSR filename).
+- **CF table files:** treat as user-supplied data; do **not** commit example CF tables with real-site station
+  names (use placeholders like `U601` / `722013-362` or `<site-label>`). The in-repo example fixture, if any,
+  uses synthetic station labels of the form `unit-NN` so the schema is self-explanatory without leaking a
+  real identifier.
+- **Tabular input:** the existing identifier-redaction logic on tabular columns is unchanged; the new
+  `station_name`-equivalent column inherits the same logging redaction (no full value at INFO).
+- **Harness:** keep new source files under the ~800-line modularity ceiling; keep `kerma_correction.py` cohesive.
+  Run the harness checks called out in `HARNESS_ENGINEERING.md` (ruff, basedpyright, pytest, doc-freshness,
+  help-registry, ui-copy) in the PR; add a UI-copy entry for any new user-visible CF string.
+
+## 15. Open questions
 
 - Do we want a per-model "default CF" row in the table (e.g. apply a model-level calibration to all units of that
   model unless overridden)? Current design treats model as out-of-scope; reconsider only if sites ask.
