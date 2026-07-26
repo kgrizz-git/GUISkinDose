@@ -53,6 +53,7 @@ class Position:
     z: list[float]
 
     def to_dict(self):
+        """Serialize Position coordinates to a plain dict."""
         return {
             "x": [float(el) for el in self.x],
             "y": [float(el) for el in self.y],
@@ -80,6 +81,7 @@ class VertexIndices:
     k: list[float]
 
     def to_dict(self):
+        """Serialize triangle vertex indices to a plain dict."""
         return {
             "i": [float(el) for el in self.i],
             "j": [float(el) for el in self.j],
@@ -104,6 +106,7 @@ class HumanPhantomOutput:
     """
 
     def __init__(self, phantom: Phantom):
+        """Capture human-phantom mesh geometry for export."""
         self.human_model = phantom.human_model
         self.phantom_skin_cells = Position(
             x=phantom.r[:, 0].tolist(), y=phantom.r[:, 1].tolist(), z=phantom.r[:, 2].tolist()
@@ -114,6 +117,7 @@ class HumanPhantomOutput:
         self.r_ref = phantom.r_ref
 
     def to_dict(self) -> dict:
+        """Serialize human-phantom export fields to a dict."""
         return {
             "human_phantom": self.human_model,
             "r_ref": self.r_ref.tolist(),
@@ -122,6 +126,7 @@ class HumanPhantomOutput:
         }
 
     def to_json(self) -> str:
+        """Serialize human-phantom export fields to JSON."""
         return json.dumps(self.to_dict())
 
 
@@ -138,6 +143,7 @@ class NonHumanPhantomOutput(HumanPhantomOutput):
     """
 
     def __init__(self, phantom: Phantom):
+        """Capture non-human (plane/cylinder) phantom geometry for export."""
         super().__init__(phantom)
         self.human_model = None
 
@@ -171,6 +177,7 @@ class EventOutput:
     """
 
     def __init__(self, data_norm: pd.DataFrame):
+        """Extract per-event geometry fields from normalized RDSR data."""
         self.events = len(data_norm)
 
         self.rotation = {
@@ -198,12 +205,14 @@ class EventOutput:
         ) = self._extract_beam_data_list(data_norm=data_norm, event=0, setup=True)
 
     def _extract_position_list(self, phantom: Phantom, data_norm: pd.DataFrame) -> list[Position]:
+        """Build a Position list for every event after positioning *phantom*."""
         return [
             self._get_position_dict(phantom=phantom, data_norm=data_norm, event=ind) for ind in range(len(data_norm))
         ]
 
     @staticmethod
     def _get_position_dict(phantom: Phantom, data_norm: pd.DataFrame, event: int) -> Position:
+        """Position *phantom* for one event and return its vertex Position."""
         phantom.position(data_norm=data_norm, event=event)
         return Position(
             x=phantom.r[:, 0].tolist(),
@@ -215,6 +224,7 @@ class EventOutput:
     def _extract_beam_data_list(
         data_norm: pd.DataFrame, event: int, setup: bool = False
     ) -> tuple[Position, VertexIndices, Position, VertexIndices]:
+        """Extract beam mesh Position/index data for one irradiation event."""
         beam = Beam(data_norm, event=event, plot_setup=setup)
         beam_position = Position(x=beam.r[:, 0].tolist(), y=beam.r[:, 1].tolist(), z=beam.r[:, 2].tolist())
         beam_vertex_indices = VertexIndices(
@@ -230,6 +240,7 @@ class EventOutput:
         return beam_position, beam_vertex_indices, detector_position, detector_vertex_indices
 
     def to_dict(self):
+        """Serialize event geometry fields to a plain dict."""
         return {
             "number_of_events": self.events,
             "rotation": self.rotation,
@@ -382,6 +393,24 @@ class PySkinDoseOutput:
             error = True
             error_message.append(
                 ("Table correction:\n" "\tThe table correction list is not the same length as the number of events")
+            )
+
+        if kerma_meter_correction is not None and len(kerma_meter_correction) != len(hits):
+            error = True
+            error_message.append(
+                (
+                    "Kerma-meter correction:\n"
+                    "\tThe kerma-meter correction list is not the same length as the number of events"
+                )
+            )
+
+        if kerma_corrected is not None and len(kerma_corrected) != len(hits):
+            error = True
+            error_message.append(
+                (
+                    "Kerma corrected:\n"
+                    "\tThe kerma-corrected list is not the same length as the number of events"
+                )
             )
 
         if error:
@@ -542,6 +571,7 @@ class MultiExamResult:
         }
 
     def to_json(self, *, include_source_identifiers: bool = False) -> str:
+        """Serialize the full PySkinDoseOutput to a JSON string."""
         return json.dumps(self.to_dict(include_source_identifiers=include_source_identifiers))
 
 

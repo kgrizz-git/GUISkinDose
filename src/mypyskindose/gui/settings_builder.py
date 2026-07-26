@@ -11,6 +11,7 @@ from .state import AppState
 
 
 def fallback_normalization_exam_count(app_state: AppState) -> int:
+    """Count loaded exams still using fallback normalization."""
     return sum(1 for m in app_state.loaded_exam_meta if m.get("normalization_method") == "Fallback")
 
 

@@ -33,6 +33,7 @@ _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 def _settings_with_output_format(
     settings: Optional[str | dict | PyskindoseSettings], output_format: str
 ) -> PyskindoseSettings:
+    """Parse settings and force the requested output_format."""
     settings_obj = parse_settings_to_settings_class(settings=settings)
     settings_obj.output_format = output_format.casefold()
     return settings_obj
@@ -339,10 +340,12 @@ class _WarningCapture(logging.Handler):
     """
 
     def __init__(self) -> None:
+        """Create a WARNING-level handler that stores messages in-memory."""
         super().__init__(level=logging.WARNING)
         self.messages: list[str] = []
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Append the formatted log message to the capture list."""
         self.messages.append(record.getMessage())
 
 
@@ -528,6 +531,7 @@ def run_cli_export(
 
 
 def get_argument_parser(arguments) -> argparse.Namespace:
+    """Parse CLI argv into an argparse Namespace for PySkinDose."""
     parser = argparse.ArgumentParser(
         prog="PySkinDose",
         description=(

@@ -142,6 +142,7 @@ class PyskindoseSettings:
 
     @staticmethod
     def _initialize_output_path(output_path: Optional[str | Path], output_format: str) -> Path:
+        """Resolve the plot/output directory for the chosen output_format."""
         if output_path is None:
             output = Path.cwd() / "PlotOutputs"
 
@@ -166,6 +167,7 @@ class PyskindoseSettings:
     def _initialize_normalization_settings(
         normalization_settings: Optional[Path | str | dict | NormalizationSettings]
     ) -> NormalizationSettings:
+        """Load NormalizationSettings from path, dict, or existing instance."""
         if normalization_settings is None:
             normalization_settings = Path(__file__).parent.parent / "normalization_settings.json"
 
@@ -220,6 +222,7 @@ class PyskindoseSettings:
 
 
 def initialize_settings(settings: str | dict | PyskindoseSettings) -> PyskindoseSettings:
+    """Coerce str/dict/settings input into a PyskindoseSettings instance."""
     valid_input_settings = settings is not None and isinstance(settings, (str, dict, PyskindoseSettings))
 
     if not valid_input_settings:

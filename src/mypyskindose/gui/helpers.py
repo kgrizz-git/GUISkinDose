@@ -142,10 +142,12 @@ class _CalcWarningCollector(logging.Handler):
     can surface them (e.g. how many events had their HVL snapped to the grid)."""
 
     def __init__(self) -> None:
+        """Create a WARNING-level handler that stores messages in-memory."""
         super().__init__(level=logging.WARNING)
         self.messages: list[str] = []
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Append the formatted log message to the capture list."""
         self.messages.append(record.getMessage())
 
 
@@ -255,6 +257,7 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
 
 
 def event_count_from_state(state: AppState) -> int:
+    """Return the number of loaded events in *state*, or 0."""
     if state.rdsr_df is None:
         return 0
     return len(state.rdsr_df)
@@ -285,6 +288,7 @@ def _patch_tqdm(progress_cb, total: int):
         original_update = tqdm_module.tqdm.update
 
         def new_update(self, n=1):
+            """tqdm update hook that forwards fractional progress to *progress_cb*."""
             original_update(self, n)
             if total > 0:
                 progress_cb(self.n / total, f"Event {self.n} / {total}")

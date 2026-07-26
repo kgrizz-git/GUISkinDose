@@ -39,6 +39,7 @@ class KermaMeterCorrectionSettings:
     """
 
     def __init__(self, raw: dict[str, Any] | None = None):
+        """Parse a settings dict into kerma-meter CF fields with validation."""
         data = raw or {}
         self.enable: bool = bool(data.get("enable", False))
         mode = str(data.get("mode", "file")).strip().lower()

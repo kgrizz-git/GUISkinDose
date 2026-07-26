@@ -97,6 +97,7 @@ def analyze_data(
 
 
 def _global_patient_offset(settings: PyskindoseSettings) -> list[float]:
+    """Return the global patient offset as [lon, ver, lat] in cm."""
     return [
         float(settings.phantom.patient_offset.d_lon),
         float(settings.phantom.patient_offset.d_ver),
@@ -133,6 +134,7 @@ def _validate_per_exam_offsets(per_exam_offsets: list[list[float]] | None) -> No
 def _effective_patient_offset(
     global_offset: list[float], per_exam_offsets: list[list[float]] | None, exam_index: int
 ) -> list[float]:
+    """Pick the per-exam patient offset when present, else the global offset."""
     if per_exam_offsets and exam_index < len(per_exam_offsets):
         return _require_valid_patient_offset(per_exam_offsets[exam_index], exam_index)
     return global_offset
@@ -141,6 +143,7 @@ def _effective_patient_offset(
 def _settings_for_exam(
     settings: PyskindoseSettings, effective_offset: list[float], downgrade_beam_warning: bool
 ) -> PyskindoseSettings:
+    """Clone settings with an exam-specific patient offset (and optional beam-warning tweak)."""
     global_offset = _global_patient_offset(settings)
     if effective_offset == global_offset and not downgrade_beam_warning:
         return settings
@@ -157,6 +160,7 @@ def _settings_for_exam(
 def _exam_warnings(
     exam: InputAdapterResult, exam_index: int, per_exam_extra_warnings: list[list[str]] | None
 ) -> list[str]:
+    """Collect import warnings plus any per-exam extra warnings for one exam."""
     warnings = list(exam.warnings)
     if per_exam_extra_warnings and exam_index < len(per_exam_extra_warnings):
         warnings.extend(per_exam_extra_warnings[exam_index])
@@ -172,6 +176,7 @@ def _fresh_table_and_pad(settings: PyskindoseSettings) -> tuple[Phantom, Phantom
 
 
 def _add_missed_event_warnings(exam_warnings: list[str], exam_id: str, raw_output: dict, event_count: int) -> None:
+    """Append warnings for irradiation events that missed the phantom."""
     missed = raw_output.get("missed_event_indices", [])
     if not missed:
         return
@@ -187,6 +192,7 @@ def _add_missed_event_warnings(exam_warnings: list[str], exam_id: str, raw_outpu
 def _multi_exam_output(
     patient: Phantom, table: Phantom, pad: Phantom, raw_output: dict, settings: PyskindoseSettings, data_norm: pd.DataFrame
 ) -> PySkinDoseOutput:
+    """Build a PySkinDoseOutput for one exam inside a multi-exam run."""
     return PySkinDoseOutput(
         patient=patient,
         table=table,
@@ -219,6 +225,7 @@ def _exam_result(
     data_norm: pd.DataFrame,
     warnings: list[str],
 ) -> ExamResult:
+    """Assemble the per-exam result dict after a successful dose calculation."""
     return ExamResult(
         exam_id=exam_id,
         source_file=exam.provenance.original_filename,
@@ -248,6 +255,7 @@ def _process_exam(
     settings: PyskindoseSettings,
     warnings: list[str],
 ) -> ExamResult | None:
+    """Run geometry + dose calculation for a single loaded exam."""
     data_norm = calculate_rotation_matrices(exam.normalized_data)
     table, pad = _fresh_table_and_pad(settings)
     dprint("RENDERING", f"{exam_id}: creating geometry plot")

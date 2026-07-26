@@ -63,14 +63,17 @@ class NumberedCanvas(canvas.Canvas):
     """
 
     def __init__(self, *args, **kwargs):
+        """Initialize the numbered canvas and page-state buffer."""
         super().__init__(*args, **kwargs)
         self._saved_states: list[dict] = []
 
     def showPage(self) -> None:
+        """Checkpoint page state before starting a new PDF page."""
         self._saved_states.append(dict(self.__dict__))
         self._startPage()  # type: ignore[attr-defined]
 
     def save(self) -> None:
+        """Draw page footers on saved states, then finalize the PDF."""
         total = len(self._saved_states)
         for state in self._saved_states:
             self.__dict__.update(state)
@@ -79,16 +82,19 @@ class NumberedCanvas(canvas.Canvas):
         super().save()
 
     def _draw_footer(self, total: int) -> None:
+        """Draw the Page N of M footer on the current page."""
         self.setFont("Helvetica", 7)
         self.setFillColor(colors.grey)
         self.drawRightString(_PAGE[0] - _MARGIN, _MARGIN * 0.5, f"Page {self.getPageNumber()} of {total}")
 
 
 def _p(text: str, style: ParagraphStyle = _CELL) -> Paragraph:
+    """Wrap text in a ReportLab Paragraph with HTML escaping."""
     return Paragraph(str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), style)
 
 
 def _table(rows: list[list], col_widths: list[float], *, header: bool = True) -> Table:
+    """Build a styled ReportLab Table from row data."""
     data = [[_p(c) for c in row] for row in rows]
     t = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
     style = [
@@ -103,6 +109,7 @@ def _table(rows: list[list], col_widths: list[float], *, header: bool = True) ->
 
 
 def _alert_box(payload: ExportPayload) -> list:
+    """Build flowables for the executive-alerts section."""
     flow: list[Any] = [Paragraph("Executive alerts", _H2)]
     for text, severity in collect_alert_lines(payload):
         bg = _RED if severity == "error" else (_AMBER if severity == "warning" else colors.HexColor("#D4EDDA"))
@@ -120,11 +127,13 @@ def _alert_box(payload: ExportPayload) -> list:
 
 
 def _dosimetric_table(payload: ExportPayload) -> Table:
+    """Build the cumulative dosimetric metrics table."""
     rows = [["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics)
     return _table(rows, [_CONTENT_WIDTH * 0.5, _CONTENT_WIDTH * 0.5])
 
 
 def _settings_flow(exam: ExamSection, multi: bool) -> list:
+    """Build settings flowables for one exam section."""
     rows = [["Setting", "Value"]]
     for key, value in exam.settings.items():
         if key in ("phantom", "patient_offset"):
@@ -147,6 +156,7 @@ def _settings_flow(exam: ExamSection, multi: bool) -> list:
 
 
 def _corrections_flow(payload: ExportPayload) -> list:
+    """Build correction-factor flowables for the PDF body."""
     flow: list[Any] = [Paragraph("Correction factors", _H2)]
     widths = [_CONTENT_WIDTH * 0.36] + [_CONTENT_WIDTH * 0.16] * 4
     if payload.is_multi_exam:
@@ -162,6 +172,7 @@ def _corrections_flow(payload: ExportPayload) -> list:
 
 
 def _images_flow(payload: ExportPayload) -> list:
+    """Build dose-map image flowables for the PDF body."""
     flow: list[Any] = [Paragraph("Dose-map images", _H2)]
     for entry in payload.images:
         flow.append(Paragraph(entry.label, _BODY))
@@ -178,6 +189,7 @@ def _images_flow(payload: ExportPayload) -> list:
 
 
 def _story(payload: ExportPayload) -> list:
+    """Assemble the full PDF story (flowables list)."""
     story: list[Any] = [
         Paragraph(payload.meta.report_title, _H1),
         _p(
@@ -206,6 +218,7 @@ def _story(payload: ExportPayload) -> list:
 
 
 def _build(payload: ExportPayload, target) -> None:
+    """Build and return a completed PDF document buffer."""
     doc = BaseDocTemplate(
         target, pagesize=_PAGE,
         leftMargin=_MARGIN, rightMargin=_MARGIN, topMargin=_MARGIN, bottomMargin=_MARGIN,
@@ -217,10 +230,12 @@ def _build(payload: ExportPayload, target) -> None:
 
 
 def render_pdf_bytes(payload: ExportPayload) -> bytes:
+    """Render the PDF report to an in-memory bytes payload."""
     buf = io.BytesIO()
     _build(payload, buf)
     return buf.getvalue()
 
 
 def write_pdf(payload: ExportPayload, path: Path) -> None:
+    """Atomically write the PDF report to *path*."""
     atomic_write_private(path, render_pdf_bytes(payload))

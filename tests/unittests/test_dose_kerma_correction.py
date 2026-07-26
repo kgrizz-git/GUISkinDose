@@ -22,6 +22,7 @@ EXAMPLE = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "exampl
 
 
 def _settings(**km_overrides) -> PyskindoseSettings:
+    """Build calculate_dose settings with optional kerma-meter overrides."""
     raw = load_settings_example_json()
     raw["mode"] = "calculate_dose"
     raw["phantom"]["model"] = "cylinder"
@@ -34,6 +35,7 @@ def _settings(**km_overrides) -> PyskindoseSettings:
 
 
 def _table_pad(settings: PyskindoseSettings) -> tuple[Phantom, Phantom]:
+    """Construct table and pad phantoms for a settings object."""
     dim = settings.phantom.dimension
     return (
         Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=dim),
@@ -42,12 +44,14 @@ def _table_pad(settings: PyskindoseSettings) -> tuple[Phantom, Phantom]:
 
 
 def _norm_from_example(name: str, settings: PyskindoseSettings):
+    """Parse and normalize an example RDSR, appending rotation matrices."""
     data_raw = pydicom.dcmread(EXAMPLE / name)
     norm = rdsr_normalizer(rdsr_parser(data_raw, silence_pydicom_warnings=True), settings)
     return calculate_rotation_matrices(norm)
 
 
 def test_disabled_matches_baseline_psd():
+    """CF disabled matches enable+default_factor=1.0 dose maps and kerma."""
     settings = _settings(enable=False)
     data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
     table, pad = _table_pad(settings)
@@ -64,14 +68,14 @@ def test_disabled_matches_baseline_psd():
 
 
 def test_constant_cf_scales_psd_and_preserves_reported_kerma():
+    """Table CF scales dose/corrected kerma while reported kerma stays unchanged."""
     settings = _settings(enable=False)
     data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
     table, pad = _table_pad(settings)
     _, out_base = calculate_dose(data_norm.copy(), settings, table, pad)
 
-    settings_cf = _settings(enable=True, default_factor=1.5, file=None)
-    # Force all events to default via unresolved identity on this fixture? Artis has serial.
-    # Use in-memory table keyed to the resolved serial with CF=1.5.
+    # Distinct default_factor so a missed lookup cannot silently look correct.
+    settings_cf = _settings(enable=True, default_factor=2.0, file=None)
     settings_cf.kerma_meter_correction.in_memory_table = {("146278", "single"): 1.5}
     table2, pad2 = _table_pad(settings_cf)
     k_irp_before = data_norm[c.KEY_NORMALIZATION_AIR_KERMA].tolist()
@@ -89,6 +93,7 @@ def test_constant_cf_scales_psd_and_preserves_reported_kerma():
 
 
 def test_settings_round_trip_without_block():
+    """Settings JSON without kerma_meter_correction still loads with safe defaults."""
     raw = load_settings_example_json()
     raw.pop("kerma_meter_correction", None)
     settings = PyskindoseSettings(settings=raw)
@@ -97,6 +102,7 @@ def test_settings_round_trip_without_block():
 
 
 def test_settings_example_block_loads():
+    """settings_example.json kerma_meter_correction block parses as expected."""
     settings = PyskindoseSettings(settings=load_settings_example_json())
     assert settings.kerma_meter_correction.enable is False
     assert settings.kerma_meter_correction.mode == "file"

@@ -40,10 +40,12 @@ details{margin:.5rem 0;} summary{cursor:pointer;font-weight:600;}
 
 
 def _esc(value) -> str:
+    """HTML-escape a value for safe embedding."""
     return html.escape(str(value))
 
 
 def _table(rows: list[list], *, header: bool = True) -> str:
+    """Render a list of rows as an HTML table."""
     out = ["<table>"]
     for i, row in enumerate(rows):
         tag = "th" if header and i == 0 else "td"
@@ -53,6 +55,7 @@ def _table(rows: list[list], *, header: bool = True) -> str:
 
 
 def _alerts(payload: ExportPayload) -> str:
+    """Render the executive-alerts HTML section."""
     parts = ["<h2>Executive alerts</h2>"]
     for text, severity in collect_alert_lines(payload):
         parts.append(f'<div class="alert {severity}">{_esc(text)}</div>')
@@ -60,6 +63,7 @@ def _alerts(payload: ExportPayload) -> str:
 
 
 def _settings_rows(exam) -> list[list[str]]:
+    """Build Setting/Value rows for one exam's settings block."""
     rows = [["Setting", "Value"]]
     for key, value in exam.settings.items():
         if key in ("phantom", "patient_offset"):
@@ -77,6 +81,7 @@ def _settings_rows(exam) -> list[list[str]]:
 
 
 def _images(payload: ExportPayload) -> str:
+    """Render embedded dose-map images as an HTML section."""
     if not payload.images:
         return ""
     parts = ["<h2>Dose-map images</h2>"]
@@ -92,6 +97,7 @@ def _images(payload: ExportPayload) -> str:
 
 
 def render_html_bytes(payload: ExportPayload) -> bytes:
+    """Render the HTML report to an in-memory bytes payload."""
     m = payload.meta
     body = [
         f"<h1>{_esc(m.report_title)}</h1>",
@@ -142,4 +148,5 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
 
 
 def write_html(payload: ExportPayload, path: Path) -> None:
+    """Atomically write the HTML report to *path*."""
     atomic_write_private(path, render_html_bytes(payload))

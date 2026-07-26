@@ -32,6 +32,7 @@ EXPECTED_PRESENT = {
 
 
 def _minimal_event(data_raw: Dataset) -> Dataset:
+    """Attach a minimal irradiation-event ContentSequence to a DICOM dataset."""
     event = Dataset()
     code = Dataset()
     code.CodeMeaning = "Irradiation Event X-Ray Data"
@@ -42,6 +43,7 @@ def _minimal_event(data_raw: Dataset) -> Dataset:
 
 
 def test_parser_captures_station_and_serial_when_present():
+    """Parser stores StationName and DeviceSerialNumber when present."""
     data_raw = Dataset()
     data_raw.Manufacturer = "TestCo"
     data_raw.ManufacturerModelName = "TestModel"
@@ -53,6 +55,7 @@ def test_parser_captures_station_and_serial_when_present():
 
 
 def test_parser_missing_station_and_serial_are_none():
+    """Missing StationName/DeviceSerialNumber become None."""
     data_raw = Dataset()
     data_raw.Manufacturer = "TestCo"
     data_raw.ManufacturerModelName = "TestModel"
@@ -63,6 +66,7 @@ def test_parser_missing_station_and_serial_are_none():
 
 @pytest.mark.parametrize("filename,expected", list(EXPECTED_PRESENT.items()))
 def test_example_rdsr_station_serial_present(filename: str, expected: tuple[str, str]):
+    """Shipped example RDSRs expose expected station/serial values."""
     path = EXAMPLE_RDSR / filename
     assert path.is_file()
     data_raw = pydicom.dcmread(path)
@@ -72,6 +76,7 @@ def test_example_rdsr_station_serial_present(filename: str, expected: tuple[str,
 
 
 def test_example_rdsr_missing_station_serial():
+    """Example procedure RDSR without station/serial yields None."""
     path = EXAMPLE_RDSR / "siemens_axiom_example_procedure.dcm"
     data_raw = pydicom.dcmread(path)
     parsed = rdsr_parser(data_raw)
@@ -80,6 +85,7 @@ def test_example_rdsr_missing_station_serial():
 
 
 def test_normalizer_copies_station_serial_into_data_norm():
+    """Normalizer copies station/serial into normalized columns."""
     path = EXAMPLE_RDSR / "siemens_axiom_artis.dcm"
     data_raw = pydicom.dcmread(path)
     parsed = rdsr_parser(data_raw)

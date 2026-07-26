@@ -17,10 +17,12 @@ FIXTURES = Path(__file__).parent.parent / "fixtures" / "tabular_inputs"
 
 
 def _default_settings() -> PyskindoseSettings:
+    """Return example settings for tabular adapter tests."""
     return PyskindoseSettings(settings=load_settings_example_json())
 
 
 def test_dosetrack_persists_equipment_name_as_station_name(tmp_path: Path):
+    """DoseTrack Equipment Name is stored as station_name."""
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     result = read_and_normalize_input(
@@ -54,6 +56,7 @@ def test_radimetrics_equipment_vs_device_split(tmp_path: Path):
 
 
 def test_radimetrics_without_equipment_station_is_none():
+    """Radimetrics without Equipment leaves station_name null."""
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     result = read_and_normalize_input(
@@ -71,6 +74,7 @@ def test_radimetrics_without_equipment_station_is_none():
 
 
 def test_generic_rdsr_equipment_column_to_station(tmp_path: Path):
+    """Generic RDSR Equipment column maps to station_name."""
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     src = FIXTURES / "generic_rdsr_events.csv"
@@ -89,6 +93,7 @@ def test_generic_rdsr_equipment_column_to_station(tmp_path: Path):
 
 
 def test_normalized_station_serial_round_trip(tmp_path: Path):
+    """Normalized schema preserves station_name and device_serial."""
     from mypyskindose.input_adapters.models import InputAdapterResult
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
@@ -106,6 +111,7 @@ def test_normalized_station_serial_round_trip(tmp_path: Path):
 
 
 def test_normalized_without_identity_still_loads():
+    """Normalized files without identity columns still load."""
     from mypyskindose.input_adapters.models import InputAdapterResult
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 

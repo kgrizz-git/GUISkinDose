@@ -51,7 +51,7 @@ def _resolve_kerma_meter_cf(
         try:
             file_table = load_correction_table(km.file, km.file_sheet)
             table_meta = {"source_stem": km.file.stem}
-        except ValueError as exc:
+        except (OSError, UnicodeError, ValueError, TypeError) as exc:
             logger.warning(
                 "kerma-meter correction: failed to load table (%s); "
                 "using default_factor=%.4g.",

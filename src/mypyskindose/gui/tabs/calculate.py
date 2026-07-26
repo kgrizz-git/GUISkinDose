@@ -30,6 +30,7 @@ _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
 
 
 def _format_patient_offsets() -> str:
+    """Format the current patient-offset summary string for the Calculate card."""
     return format_patient_offsets(state)
 
 
@@ -47,34 +48,12 @@ def _normalized_data_frames() -> list:
 
 def _collect_equipment_tube_keys() -> list[tuple[str, str]]:
     """Sorted unique (equipment, tube) pairs across loaded normalized frames."""
-    from mypyskindose.constants import (
-        KEY_NORMALIZATION_ACQUISITION_PLANE,
-        KEY_NORMALIZATION_DEVICE_SERIAL,
-        KEY_NORMALIZATION_STATION_NAME,
-    )
-    from mypyskindose.kerma_correction import normalize_equipment_label, normalize_tube
+    from mypyskindose.kerma_correction import unique_equipment_tube_keys
 
-    keys: set[tuple[str, str]] = set()
-    for df in _normalized_data_frames():
-        for i in range(len(df)):
-            serial = (
-                df[KEY_NORMALIZATION_DEVICE_SERIAL].iloc[i]
-                if KEY_NORMALIZATION_DEVICE_SERIAL in df.columns
-                else None
-            )
-            station = (
-                df[KEY_NORMALIZATION_STATION_NAME].iloc[i]
-                if KEY_NORMALIZATION_STATION_NAME in df.columns
-                else None
-            )
-            plane = (
-                df[KEY_NORMALIZATION_ACQUISITION_PLANE].iloc[i]
-                if KEY_NORMALIZATION_ACQUISITION_PLANE in df.columns
-                else None
-            )
-            equip = normalize_equipment_label(serial) or normalize_equipment_label(station) or "unresolved"
-            keys.add((equip, normalize_tube(plane)))
-    return sorted(keys)
+    return unique_equipment_tube_keys(
+        _normalized_data_frames(),
+        explicit_label=state.kerma_meter_explicit_label,
+    )
 
 
 async def below_floor_prompt(n_below: int) -> bool:
@@ -170,6 +149,8 @@ async def explicit_label_collapse_confirm(n_keys: int, label: str) -> bool:
 
 @dataclass
 class _CalculationControls:
+    """Run button, progress bar, and status label owned by the Calculate tab."""
+
     button: ui.button
     progress: ui.linear_progress
     status_label: ui.label
@@ -179,10 +160,12 @@ class _CalculationController:
     """Own Calculate-tab references while application state remains in ``state``."""
 
     def __init__(self, ctx: PageContext) -> None:
+        """Bind this controller to the page chrome in ``ctx``."""
         self.ctx = ctx
         self.controls: _CalculationControls | None = None
 
     async def do_calculate(self) -> None:
+        """Validate inputs, run pre-calc prompts, then execute the dose calculation."""
         if state.rdsr_df is None:
             ui.notify("Load a file first (tab 1)", color="warning")
             return
@@ -201,6 +184,7 @@ class _CalculationController:
         self._finish_calculation(ok, message)
 
     async def _below_floor_policy_is_ready(self) -> bool:
+        """Return True when below-floor policy is set or the user confirms the prompt."""
         if state.below_floor_prompt_suppressed:
             return True
         n_below = below_floor_event_count(state)
@@ -221,6 +205,7 @@ class _CalculationController:
         return await explicit_label_collapse_confirm(len(auto), label)
 
     async def _kerma_meter_is_ready(self) -> bool:
+        """Confirm explicit-label collapse and optional CF prompt; never blocks on Cancel."""
         if not state.kerma_meter_enable:
             return True
         if not await self._explicit_label_collapse_ok():
@@ -230,6 +215,7 @@ class _CalculationController:
         return True
 
     async def _run_calculation(self) -> tuple[bool, str]:
+        """Disable controls, run ``run_calculation`` on a worker thread, then re-enable."""
         controls = self._require_controls()
         controls.button.disable()
         self.ctx.run_btn_drawer.disable()
@@ -245,11 +231,13 @@ class _CalculationController:
             self.ctx.run_btn_drawer.enable()
 
     def _update_progress(self, fraction: float, label: str) -> None:
+        """Update the Calculate progress bar and status caption."""
         controls = self._require_controls()
         controls.progress.set_value(fraction)
         controls.status_label.set_text(label)
 
     def _finish_calculation(self, ok: bool, message: str) -> None:
+        """Apply success or failure UI after a calculation attempt."""
         if ok:
             self._show_success(message)
             return
@@ -264,6 +252,7 @@ class _CalculationController:
         ui.notify(f"Error: {message[:300]}", type="negative", timeout=10000)
 
     def _show_success(self, message: str) -> None:
+        """Update PSD chrome, switch to Results, and surface any calc warnings."""
         self.ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
         self.ctx.clear_offset_stale_caption()
         ui.notify(f"✓ {message}", color="positive")
@@ -277,6 +266,7 @@ class _CalculationController:
         self._show_calculation_warnings()
 
     def _show_calculation_warnings(self) -> None:
+        """Toast up to ``_MAX_TOASTS`` calc warnings, then a remainder notice."""
         for index, warning in enumerate(state.calc_warnings):
             if index < _MAX_TOASTS:
                 ui.notify(warning, type="warning", timeout=12000, multi_line=True)
@@ -289,12 +279,14 @@ class _CalculationController:
             break
 
     def _require_controls(self) -> _CalculationControls:
+        """Return initialized Calculate controls or raise if ``build`` has not run."""
         if self.controls is None:
             raise RuntimeError("Calculate controls are not initialized.")
         return self.controls
 
 
 def _build_input_data_summary() -> None:
+    """Render the Calculate card's input-data summary column."""
     with ui.column().classes("gap-2"):
         ui.label("INPUT DATA").classes(
             "text-sm text-aurora-teal font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
@@ -321,6 +313,7 @@ def _build_input_data_summary() -> None:
 
 
 def _build_phantom_setup_summary() -> None:
+    """Render the Calculate card's phantom / offsets summary column."""
     with ui.column().classes("gap-2"):
         ui.label("PHANTOM SETUP").classes(
             "text-sm text-aurora-purple font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
@@ -354,6 +347,7 @@ def _build_phantom_setup_summary() -> None:
 
 
 def _build_physics_summary() -> None:
+    """Render the Calculate card's physics-parameters summary column."""
     with ui.column().classes("gap-2"):
         ui.label("PHYSICS PARAMETERS").classes(
             "text-sm text-aurora-pink font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
@@ -372,6 +366,7 @@ def _build_physics_summary() -> None:
 
 
 def _build_settings_summary_card() -> None:
+    """Build the three-column settings summary card above the Run button."""
     with ui.card().classes("modern-card w-full border border-blue-100 shadow-sm"):
         with ui.row().classes("items-center justify-between w-full"):
             ui.label("Current settings").classes("text-xl font-bold q-mb-md")
@@ -389,6 +384,7 @@ def _build_settings_summary_card() -> None:
 
 
 def build(ctx: PageContext) -> None:
+    """Construct the Calculate tab panel and wire the drawer Run button."""
     controller = _CalculationController(ctx)
     with ui.tab_panel("calculate"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):

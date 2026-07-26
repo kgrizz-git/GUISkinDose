@@ -17,6 +17,7 @@ import pandas as pd
 
 @dataclass
 class AppState:
+    """Mutable GUI application state shared across NiceGUI pages."""
     # ── RDSR data ──────────────────────────────────────────────────────────
     rdsr_df: pd.DataFrame | None = None
     rdsr_raw_df: pd.DataFrame | None = None
@@ -144,10 +145,12 @@ def reset_results() -> None:
 
 
 def is_ready_to_calculate() -> bool:
+    """True when an RDSR/tabular dataset is loaded and ready to calculate."""
     return state.rdsr_df is not None
 
 
 def event_count() -> int:
+    """Return the number of events in the loaded dataset, or 0."""
     if state.rdsr_df is None:
         return 0
     return len(state.rdsr_df)

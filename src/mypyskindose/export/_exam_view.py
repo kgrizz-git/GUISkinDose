@@ -48,6 +48,7 @@ class ExamView:
         return idx, dose
 
     def skin_cell_xyz(self, index: int) -> tuple[float, float, float] | None:
+        """Return skin-cell XYZ (cm) for *index*, or None if out of range."""
         cells = self.patient.get("patient_skin_cells")
         if not cells or index >= len(cells["x"]):
             return None
@@ -55,6 +56,7 @@ class ExamView:
 
 
 def _dense_from_sparse(sparse: list[Any], num_cells: int) -> np.ndarray:
+    """Expand sparse (index, dose) pairs into a dense length-*num_cells* array."""
     dense = np.zeros(num_cells)
     for idx, dose in sparse:
         dense[int(idx)] = dose
@@ -62,6 +64,7 @@ def _dense_from_sparse(sparse: list[Any], num_cells: int) -> np.ndarray:
 
 
 def _to_list(value: Any) -> list[Any]:
+    """Coerce None/ndarray/scalar values to a plain Python list."""
     if value is None:
         return []
     if isinstance(value, np.ndarray):

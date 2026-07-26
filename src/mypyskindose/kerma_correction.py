@@ -133,6 +133,23 @@ def distinct_auto_resolved_equipment_keys(data_norm: pd.DataFrame) -> set[str]:
     return {eq for eq, _ in keys if eq is not None}
 
 
+def unique_equipment_tube_keys(
+    frames: Sequence[pd.DataFrame],
+    *,
+    explicit_label: str | None = None,
+) -> list[tuple[str, str]]:
+    """Sorted unique ``(equipment, tube)`` pairs across frames for prompt/UI.
+
+    Uses the same precedence as dose resolution (``explicit_label`` → serial →
+    station). Unresolved equipment becomes the sentinel ``\"unresolved\"``.
+    """
+    keys: set[tuple[str, str]] = set()
+    for df in frames:
+        for equip, tube in resolve_correction_keys(df, explicit_label=explicit_label):
+            keys.add((equip or "unresolved", tube))
+    return sorted(keys)
+
+
 def _warn_suspicious_factor(factor: float) -> None:
     """Warn when a CF falls outside the typical band (privacy: no equipment labels)."""
     if not (_CF_SUSPICIOUS_LO <= factor <= _CF_SUSPICIOUS_HI):
@@ -154,9 +171,11 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
         "station_name": "equipment",
         "stationname": "equipment",
         "device_serial": "equipment",
+        "device_serial_number": "equipment",
         "deviceserialnumber": "equipment",
         "tube": "tube",
         "acquisition_plane": "tube",
+        "acquisitionplane": "tube",
         "plane": "tube",
         "correction_factor": "correction_factor",
         "cf": "correction_factor",
@@ -173,9 +192,8 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def _rows_to_factor_dict(
     rows: Sequence[Mapping[str, Any]],
-    *,
-    source_stem: str | None = None,
 ) -> dict[tuple[str, str], float]:
+    """Build a first-wins ``(equipment, tube) → CF`` map from normalized row dicts."""
     table: dict[tuple[str, str], float] = {}
     duplicates = 0
     for row in rows:
@@ -209,12 +227,12 @@ def _rows_to_factor_dict(
             "kerma-meter correction: %d duplicate (equipment, tube) row(s); first wins.",
             duplicates,
         )
-    if source_stem is not None:
-        logger.debug("kerma-meter correction table loaded from stem=%s (%d rows)", source_stem, len(table))
+    logger.debug("kerma-meter correction table loaded (%d rows)", len(table))
     return table
 
 
 def _ensure_row_budget(n_rows: int) -> None:
+    """Raise when a CF table exceeds the hard row limit."""
     if n_rows > _MAX_TABLE_ROWS:
         raise ValueError(f"Kerma-meter correction table exceeds {_MAX_TABLE_ROWS} rows.")
 
@@ -274,7 +292,7 @@ def load_correction_table(path: Path | str, sheet: str | int | None = None) -> d
     """
     path = Path(path)
     if not path.is_file():
-        raise ValueError(f"Kerma-meter correction file not found or not a regular file: {path.name}")
+        raise ValueError("Kerma-meter correction file not found or not a regular file.")
 
     if path.suffix.lower() == ".json":
         rows: Sequence[Mapping[str, Any]] = _load_json_correction_rows(path)
@@ -283,7 +301,7 @@ def load_correction_table(path: Path | str, sheet: str | int | None = None) -> d
             list[dict[str, Any]],
             _load_tabular_correction_df(path, sheet).to_dict(orient="records"),
         )
-    return _rows_to_factor_dict(rows, source_stem=path.stem)
+    return _rows_to_factor_dict(rows)
 
 
 def merge_tables(
@@ -331,8 +349,21 @@ def resolve_correction_factors(
         if cf is None:
             factors.append(default_factor)
             table_miss.append(i)
+            continue
+        try:
+            value = float(cf)
+        except (TypeError, ValueError):
+            value = float("nan")
+        if not math.isfinite(value) or value <= 0:
+            logger.warning(
+                "kerma-meter correction: invalid factor for event index %d; "
+                "using default_factor=%.4g.",
+                i,
+                default_factor,
+            )
+            factors.append(default_factor)
         else:
-            factors.append(float(cf))
+            factors.append(value)
 
     n = len(factors)
     if unresolved:

@@ -222,6 +222,7 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
 def _normalize_machine_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize manufacturer/model and related machine identity fields."""
 
     data_norm[KEY_NORMALIZATION_MODEL_NAME] = data_parsed.ManufacturerModelName
 
@@ -257,6 +258,7 @@ def _normalize_machine_parameters(
 def _normalize_table_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize table position fields into the internal centimetre frame."""
 
     table_longitudinal_mm = data_parsed.TableLongitudinalPosition_mm
     table_lateral_mm = data_parsed.TableLateralPosition_mm
@@ -281,6 +283,7 @@ def _normalize_table_parameters(
 def _normalize_xray_filter_materials(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize X-ray filter materials and thicknesses."""
     # parse filter material and thickness
 
     # Load filter min and max, and fill all NANs with zeros
@@ -336,6 +339,7 @@ def _normalize_xray_filter_materials(
 def _normalize_beam_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize beam angulation, FS, and related beam geometry fields."""
 
     # beam angulation
     data_norm["Ap1"] = norm.rot_dir.Ap1 * data_parsed.PositionerPrimaryAngle_deg

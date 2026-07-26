@@ -43,6 +43,7 @@ OFFSET_LABELS = {
 
 
 def fmt_float(value: Any, digits: int = 2) -> str:
+    """Format a numeric value to *digits* decimals, or N/A."""
     if value is None:
         return "N/A"
     try:
@@ -52,10 +53,12 @@ def fmt_float(value: Any, digits: int = 2) -> str:
 
 
 def fmt_dose(value: Any) -> str:
+    """Format a dose value to one decimal place."""
     return fmt_float(value, 1)
 
 
 def fmt_correction(value: Any) -> str:
+    """Format a correction factor to four decimal places."""
     return fmt_float(value, 4)
 
 
@@ -78,6 +81,7 @@ def fmt_duration(seconds: float | None) -> str:
 
 
 def fmt_xyz(xyz: tuple[float, float, float] | None) -> str:
+    """Format an XYZ tuple as a centimetre coordinate string."""
     if xyz is None:
         return "N/A"
     return f"({xyz[0]:.2f}, {xyz[1]:.2f}, {xyz[2]:.2f}) cm"

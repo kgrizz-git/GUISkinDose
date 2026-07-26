@@ -59,6 +59,7 @@ def total_fluoro_time_s(df: pd.DataFrame | None) -> float | None:
 
 
 def _normalize_acquisition(raw: Any) -> str:
+    """Map raw acquisition-type labels to fluoroscopy/acquisition/other."""
     label = str(raw).lower()
     if "fluoro" in label:
         return "fluoroscopy"
@@ -68,6 +69,7 @@ def _normalize_acquisition(raw: Any) -> str:
 
 
 def acquisition_breakdown(df: pd.DataFrame | None) -> list[AcquisitionBreakdown]:
+    """Summarize event counts/kerma/DAP by normalized acquisition type."""
     if df is None or KEY_NORMALIZATION_ACQUISITION_TYPE not in df.columns:
         return []
     kerma_col = KEY_NORMALIZATION_AIR_KERMA if KEY_NORMALIZATION_AIR_KERMA in df.columns else None
@@ -105,6 +107,7 @@ def dosimetric_metrics(
     *,
     events_discarded: int = 0,
 ) -> DosimetricMetrics:
+    """Compute cumulative dosimetric metrics for an exam view."""
     peak_idx, _ = view.peak_vertex()
     peak_xyz = view.skin_cell_xyz(peak_idx) if peak_idx is not None else None
     events_processed = 0 if df is None else len(df)
@@ -159,6 +162,7 @@ def _per_event_values(view: ExamView, key: str) -> list[float | None]:
 
 
 def _dose_weighted_mean(values: list[float | None], kerma: list[float], hits: list[list[int]]) -> float | None:
+    """Kerma-weighted mean of per-event correction values over hit cells."""
     num = 0.0
     den = 0.0
     for i, val in enumerate(values):
@@ -173,6 +177,7 @@ def _dose_weighted_mean(values: list[float | None], kerma: list[float], hits: li
 
 
 def correction_stats(view: ExamView) -> list[CorrectionStat]:
+    """Build min/mean/max correction-factor stats for export tables."""
     keys = CORRECTION_KEYS
     if view.k_meter is None:
         keys = tuple(k for k in CORRECTION_KEYS if k != "k_meter")
