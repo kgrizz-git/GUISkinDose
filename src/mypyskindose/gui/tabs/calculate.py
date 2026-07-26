@@ -72,6 +72,81 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
+async def kerma_meter_prompt() -> bool:
+    """Collect per-(equipment, tube) CF values before calculation when mode=prompt.
+
+    Cancel leaves default factors (never blocks calculation permanently — returns
+    True after clearing the in-memory table so default_factor applies).
+    """
+    from mypyskindose.constants import (
+        KEY_NORMALIZATION_ACQUISITION_PLANE,
+        KEY_NORMALIZATION_DEVICE_SERIAL,
+        KEY_NORMALIZATION_STATION_NAME,
+    )
+    from mypyskindose.kerma_correction import normalize_equipment_label, normalize_tube
+
+    keys: set[tuple[str, str]] = set()
+    frames = []
+    if state.rdsr_df is not None:
+        frames.append(state.rdsr_df)
+    for exam in state.loaded_exams:
+        nd = getattr(exam, "normalized_data", None)
+        if nd is not None:
+            frames.append(nd)
+    for df in frames:
+        for i in range(len(df)):
+            serial = df[KEY_NORMALIZATION_DEVICE_SERIAL].iloc[i] if KEY_NORMALIZATION_DEVICE_SERIAL in df.columns else None
+            station = df[KEY_NORMALIZATION_STATION_NAME].iloc[i] if KEY_NORMALIZATION_STATION_NAME in df.columns else None
+            plane = df[KEY_NORMALIZATION_ACQUISITION_PLANE].iloc[i] if KEY_NORMALIZATION_ACQUISITION_PLANE in df.columns else None
+            equip = normalize_equipment_label(serial) or normalize_equipment_label(station) or "unresolved"
+            tube = normalize_tube(plane)
+            keys.add((equip, tube))
+
+    sorted_keys = sorted(keys)
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-xl gap-3"):
+        ui.label("Kerma-meter correction factors").classes("text-lg font-bold")
+        ui.label(
+            "Enter CF = (real measured dose) / (unit reported dose) for each "
+            "detected (equipment, tube) pair. Cancel uses the default factor."
+        ).classes("text-sm text-grey-7")
+        inputs: dict[tuple[str, str], ui.number] = {}
+        for equip, tube in sorted_keys:
+            inputs[(equip, tube)] = ui.number(
+                label=f"{equip} / {tube}",
+                value=state.kerma_meter_default_factor,
+                min=0.01,
+                step=0.01,
+            ).classes("w-full")
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Confirm", on_click=lambda: dialog.submit("ok")).classes("modern-btn modern-btn-teal")
+
+    result = await dialog
+    if result != "ok":
+        state.kerma_meter_in_memory_table = None
+        return True
+    state.kerma_meter_in_memory_table = {
+        key: float(inp.value or state.kerma_meter_default_factor) for key, inp in inputs.items()
+    }
+    return True
+
+
+async def explicit_label_collapse_confirm(n_keys: int, label: str) -> bool:
+    """Blocking confirmation when explicit_label would collapse distinct units."""
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
+        ui.label("Collapse multiple equipment keys?").classes("text-lg font-bold")
+        ui.label(
+            f"An explicit equipment label would force {n_keys} distinct auto-resolved "
+            f"units onto one label for this calculation. Continue only if intentional."
+        ).classes("text-sm text-grey-7")
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Apply label", on_click=lambda: dialog.submit("ok")).classes(
+                "modern-btn modern-btn-teal"
+            )
+    return (await dialog) == "ok"
+
+
 @dataclass
 class _CalculationControls:
     button: ui.button
@@ -95,6 +170,8 @@ class _CalculationController:
             return
         if not await self._below_floor_policy_is_ready():
             return
+        if not await self._kerma_meter_is_ready():
+            return
 
         with operation_guard("starting a calculation") as proceed:
             if not proceed:
@@ -107,6 +184,29 @@ class _CalculationController:
             return True
         n_below = below_floor_event_count(state)
         return n_below <= 0 or await below_floor_prompt(n_below)
+
+    async def _kerma_meter_is_ready(self) -> bool:
+        if not state.kerma_meter_enable:
+            return True
+        label = (state.kerma_meter_explicit_label or "").strip()
+        if label:
+            from mypyskindose.kerma_correction import distinct_auto_resolved_equipment_keys
+
+            frames = []
+            if state.rdsr_df is not None:
+                frames.append(state.rdsr_df)
+            for exam in state.loaded_exams:
+                nd = getattr(exam, "normalized_data", None)
+                if nd is not None:
+                    frames.append(nd)
+            auto: set[str] = set()
+            for df in frames:
+                auto |= distinct_auto_resolved_equipment_keys(df)
+            if len(auto) > 1 and not await explicit_label_collapse_confirm(len(auto), label):
+                return False
+        if state.kerma_meter_mode == "prompt" or state.kerma_meter_prompt_at_calc:
+            return await kerma_meter_prompt()
+        return True
 
     async def _run_calculation(self) -> tuple[bool, str]:
         controls = self._require_controls()

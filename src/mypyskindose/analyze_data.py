@@ -205,6 +205,8 @@ def _multi_exam_output(
         table_correction=raw_output[c.OUTPUT_KEY_CORRECTION_TABLE],
         settings=settings,
         data_norm=data_norm,
+        kerma_meter_correction=raw_output.get(c.OUTPUT_KEY_CORRECTION_KERMA_METER),
+        kerma_corrected=raw_output.get(c.OUTPUT_KEY_KERMA_CORRECTED),
     )
 
 

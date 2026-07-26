@@ -49,6 +49,16 @@ NORMALIZED_COLUMN_NAMES: frozenset[str] = frozenset(
     }
 )
 
+# Optional per-unit identity columns for kerma-meter correction (not required).
+NORMALIZED_OPTIONAL_IDENTITY_COLUMNS: frozenset[str] = frozenset(
+    {
+        "station_name",
+        "device_serial",
+        "stationname",  # alias for StationName-style headers
+        "deviceserialnumber",
+    }
+)
+
 # Maps lowercase canonical name → proper-case name expected by analyze_data().
 # Matches the column names produced by rdsr_normalizer().
 NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
@@ -75,11 +85,17 @@ NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
     "fs_long": "FS_long",
     "kvp": "kVp",
     "k_irp": "K_IRP",
+    "station_name": "station_name",
+    "device_serial": "device_serial",
+    "stationname": "station_name",
+    "deviceserialnumber": "device_serial",
 }
 
-# All normalized columns are required; separated for clarity if optional columns
-# are added later.
+# Required columns only — identity columns are optional.
 NORMALIZED_REQUIRED_COLUMNS: frozenset[str] = NORMALIZED_COLUMN_NAMES
+
+# Names recognized during header detection (required + optional identity).
+NORMALIZED_HEADER_NAMES: frozenset[str] = NORMALIZED_COLUMN_NAMES | NORMALIZED_OPTIONAL_IDENTITY_COLUMNS
 
 # Columns that should be numeric after loading.
 _NUMERIC_COLUMNS = frozenset(
@@ -148,8 +164,13 @@ def _build_column_map(
     for raw_h in raw_headers:
         stripped = raw_h.strip()
         lower = stripped.lower().replace(" ", "_")
-        if lower in NORMALIZED_COLUMN_NAMES:
-            proper = NORMALIZED_COLUMN_CANONICAL[lower]
+        # Also accept compact aliases without underscores (StationName, etc.).
+        compact = stripped.lower().replace(" ", "").replace("_", "")
+        key = lower if lower in NORMALIZED_COLUMN_CANONICAL else (
+            compact if compact in NORMALIZED_COLUMN_CANONICAL else None
+        )
+        if key is not None:
+            proper = NORMALIZED_COLUMN_CANONICAL[key]
             if proper in column_map.values():
                 existing_src = next(k for k, v in column_map.items() if v == proper)
                 errors.append(
@@ -159,7 +180,10 @@ def _build_column_map(
             else:
                 column_map[stripped] = proper
 
-    missing = NORMALIZED_REQUIRED_COLUMNS - {v.lower() for v in column_map.values()}
+    mapped_required = {
+        v.lower() for v in column_map.values() if v.lower() in NORMALIZED_REQUIRED_COLUMNS
+    }
+    missing = NORMALIZED_REQUIRED_COLUMNS - mapped_required
     if missing:
         errors.append(
             f"Missing required column(s): {sorted(missing)}. "
@@ -180,7 +204,7 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list
     raw_df = loaded.raw_df
 
     # 1. Detect header row
-    header_idx = detect_header_row(raw_df, NORMALIZED_COLUMN_NAMES)
+    header_idx = detect_header_row(raw_df, NORMALIZED_HEADER_NAMES)
 
     # 2. Extract headers and data (shared with the rdsr-normalizer pipeline)
     raw_headers, data_df = extract_table(raw_df, header_idx)

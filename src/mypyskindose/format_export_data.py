@@ -11,10 +11,12 @@ from mypyskindose.constants import (
     KEY_NORMALIZATION_AIR_KERMA,
     OUTPUT_KEY_CORRECTION_BACK_SCATTER,
     OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW,
+    OUTPUT_KEY_CORRECTION_KERMA_METER,
     OUTPUT_KEY_CORRECTION_MEDIUM,
     OUTPUT_KEY_CORRECTION_TABLE,
     OUTPUT_KEY_DOSE_MAP,
     OUTPUT_KEY_HITS,
+    OUTPUT_KEY_KERMA_CORRECTED,
     PHANTOM_MODEL_HUMAN,
     PLOT_TRACE_ORDER_BEAM_WIREFRAME,
     PLOT_TRACE_ORDER_DETECTOR_WIREFRAME,
@@ -310,6 +312,8 @@ class PySkinDoseOutput:
         table_correction: list[float],
         settings: PyskindoseSettings,
         data_norm: pd.DataFrame,
+        kerma_meter_correction: list[float] | None = None,
+        kerma_corrected: list[float] | None = None,
     ):
         """Create a PySkinDose output instance based on data from the PySkinDose run
 
@@ -342,6 +346,10 @@ class PySkinDoseOutput:
             The instance of the settings class used in the PySkinDose run for the current data
         data_norm : pd.DataFrame
             The RDSR data, normalized for compliance with PySkinDose's use of units etc.
+        kerma_meter_correction : list[float], optional
+            Per-event kerma-meter CF (``k_meter``). Defaults to all 1.0.
+        kerma_corrected : list[float], optional
+            Per-event corrected air kerma (reported × CF). Defaults to reported.
         """
         error = False
         error_message = [""]
@@ -382,6 +390,16 @@ class PySkinDoseOutput:
         self.PSD: float = dose_map.max()
         self.AirKerma: float = data_norm[KEY_NORMALIZATION_AIR_KERMA].sum()
         self.Events: EventOutput = EventOutput(data_norm=data_norm)
+        n_events = len(hits)
+        if kerma_meter_correction is None:
+            self.KermaMeterCorrection: list[float] = [1.0] * n_events
+        else:
+            self.KermaMeterCorrection = [float(v) for v in kerma_meter_correction]
+        if kerma_corrected is None:
+            self.KermaCorrected: list[float] = list(self.Events.kerma)
+        else:
+            self.KermaCorrected = [float(v) for v in kerma_corrected]
+        self.AirKermaCorrected: float = float(sum(self.KermaCorrected))
         self.PatientOffsets: dict = {
             "long": settings.phantom.patient_offset.d_lon,
             "vert": settings.phantom.patient_offset.d_ver,
@@ -419,6 +437,7 @@ class PySkinDoseOutput:
             "schema_version": EXPORT_SCHEMA_VERSION,
             "psd": self.PSD,
             "air_kerma": self.AirKerma,
+            "air_kerma_corrected": self.AirKermaCorrected,
             "patient": {
                 "patient_type": self.Patient["patient_type"],
                 "patient": self.Patient["patient"].to_dict(),
@@ -458,6 +477,8 @@ class PySkinDoseOutput:
                 "table": self.TableCorrection,
                 "inverse_square_law": self.InverseSquareLawCorrection,
                 "kerma": self.Events.to_dict().get("kerma", []),
+                "kerma_corrected": self.KermaCorrected,
+                "kerma_meter": self.KermaMeterCorrection,
             },
             "events": self.Events.to_dict(),
         }
@@ -575,6 +596,8 @@ def format_analysis_result_for_export(
         table_correction=analysis_result[OUTPUT_KEY_CORRECTION_TABLE],
         settings=settings,
         data_norm=data_norm,
+        kerma_meter_correction=analysis_result.get(OUTPUT_KEY_CORRECTION_KERMA_METER),
+        kerma_corrected=analysis_result.get(OUTPUT_KEY_KERMA_CORRECTED),
     )
 
     if settings.output_format == RUN_ARGUMENTS_OUTPUT_DICT:

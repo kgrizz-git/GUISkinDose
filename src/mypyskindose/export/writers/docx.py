@@ -16,9 +16,11 @@ from mypyskindose.safe_output import atomic_write_private
 
 from .._format import (
     CORRECTION_HEADER,
+    KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
     collect_alert_lines,
     correction_row,
+    corrections_use_kerma_meter,
     dosimetric_rows,
 )
 from ..models import ExportPayload
@@ -119,6 +121,8 @@ def build_document(payload: ExportPayload):
             _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections])
         doc.add_paragraph("Cumulative (kerma-weighted)")
     _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections])
+    if corrections_use_kerma_meter(payload):
+        doc.add_paragraph(KERMA_METER_WEIGHTING_FOOTNOTE)
 
     if payload.images:
         doc.add_heading("Dose-map images", level=2)

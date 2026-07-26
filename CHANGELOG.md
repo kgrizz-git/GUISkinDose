@@ -12,6 +12,15 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Kerma-meter correction factors** (2026-07-26) — optional per-(equipment × tube)
+  calibration `CF = (real measured dose) / (unit reported dose)` applied to reported
+  `K_IRP` before physics corrections. Lookup via CSV/TSV/XLSX/JSON or GUI prompt;
+  fail-soft to `default_factor` (1.0). Reported `air_kerma` / `OUTPUT_KEY_KERMA` stay
+  backward-compatible; corrected values are additive (`air_kerma_corrected`,
+  `kerma_corrected`, `k_meter`). CLI: `--kerma-meter-correction`,
+  `--kerma-meter-correction-file`, `--kerma-meter-correction-mode`,
+  `--kerma-meter-explicit-label`. When CF is enabled, kerma-weighted export correction
+  stats use corrected K_IRP (see footnote in Rich Export corrections section).
 - **Fork maintainer community baseline** (2026-07-26) — `CONTRIBUTING.md`,
   `SECURITY.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`,
   `CITATION.cff`, privacy-aware GitHub issue forms, and a PR template. README

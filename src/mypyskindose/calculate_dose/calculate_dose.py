@@ -15,10 +15,68 @@ from mypyskindose.geom_calc import (
     fetch_and_append_hvl,
     position_patient_phantom_on_table,
 )
+from mypyskindose.kerma_correction import (
+    all_ones_correction,
+    distinct_auto_resolved_equipment_keys,
+    load_correction_table,
+    merge_tables,
+    resolve_correction_factors,
+)
 from mypyskindose.phantom_class import Phantom
 from mypyskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_kerma_meter_cf(
+    normalized_data: pd.DataFrame,
+    settings: PyskindoseSettings,
+) -> list[float]:
+    """Resolve per-event kerma-meter CF; skip I/O when disabled."""
+    km = settings.kerma_meter_correction
+    n = len(normalized_data)
+    if not km.enable:
+        return all_ones_correction(n).factors
+
+    file_table = None
+    table_meta: dict[str, object] | None = None
+    if km.mode == "prompt" and km.in_memory_table is None:
+        # Non-GUI / prompt without a confirmed table → fail-soft.
+        logger.warning(
+            "kerma-meter correction: mode=prompt without an in-memory table; "
+            "using default_factor=%.4g for all events.",
+            km.default_factor,
+        )
+    elif km.file is not None:
+        try:
+            file_table = load_correction_table(km.file, km.file_sheet)
+            table_meta = {"source_stem": km.file.stem}
+        except ValueError as exc:
+            logger.warning(
+                "kerma-meter correction: failed to load table (%s); "
+                "using default_factor=%.4g.",
+                type(exc).__name__,
+                km.default_factor,
+            )
+
+    if km.explicit_label:
+        auto_keys = distinct_auto_resolved_equipment_keys(normalized_data)
+        if len(auto_keys) > 1:
+            logger.warning(
+                "kerma-meter correction: explicit_label collapses %d distinct "
+                "auto-resolved equipment keys onto one label.",
+                len(auto_keys),
+            )
+
+    table = merge_tables(file_table, km.in_memory_table)
+    result = resolve_correction_factors(
+        normalized_data,
+        table,
+        explicit_label=km.explicit_label,
+        default_factor=km.default_factor,
+        table_metadata=table_meta,
+    )
+    return result.factors
 
 
 def calculate_dose(
@@ -105,6 +163,8 @@ def calculate_dose(
         corrections_db=settings.corrections_db_path,
     )
 
+    kerma_cf = _resolve_kerma_meter_cf(normalized_data, settings)
+
     total_number_of_events = len(normalized_data)
 
     output_template = _build_output_template(
@@ -127,6 +187,7 @@ def calculate_dose(
         corrections_db=settings.corrections_db_path,
         settings=settings,
         exam_id=exam_id,
+        kerma_cf=kerma_cf,
     )
 
     return patient, output
@@ -167,11 +228,13 @@ def _build_output_template(total_number_of_events: int, dose_map_size: int) -> D
     return {
         c.OUTPUT_KEY_HITS: [[] for _ in range(total_number_of_events)],
         c.OUTPUT_KEY_KERMA: [0.0] * total_number_of_events,
+        c.OUTPUT_KEY_KERMA_CORRECTED: [0.0] * total_number_of_events,
         c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW: [
             np.array([]) for _ in range(total_number_of_events)
         ],
         c.OUTPUT_KEY_CORRECTION_BACK_SCATTER: [np.array([]) for _ in range(total_number_of_events)],
         c.OUTPUT_KEY_CORRECTION_MEDIUM: [0.0] * total_number_of_events,
         c.OUTPUT_KEY_CORRECTION_TABLE: [0.0] * total_number_of_events,
+        c.OUTPUT_KEY_CORRECTION_KERMA_METER: [1.0] * total_number_of_events,
         c.OUTPUT_KEY_DOSE_MAP: np.zeros(dose_map_size),
     }

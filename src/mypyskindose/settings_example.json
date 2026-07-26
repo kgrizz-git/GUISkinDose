@@ -47,5 +47,14 @@
             "pad_thickness": 4
         }
     },
+    "kerma_meter_correction": {
+        "enable": false,
+        "mode": "file",
+        "file": null,
+        "file_sheet": null,
+        "default_factor": 1.0,
+        "explicit_label": null,
+        "prompt_at_calc": false
+    },
     "corrections_db_path": "corrections.db"
 }

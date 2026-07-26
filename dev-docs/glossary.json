@@ -30,6 +30,16 @@
       "preferred": "below-floor kVp",
       "definition": "Irradiation event with kVp below the lowest HVL lookup grid value.",
       "aliases": ["sub-floor kVp"]
+    },
+    "kerma_meter_correction": {
+      "preferred": "kerma-meter correction factor",
+      "definition": "Calibration multiplier CF = (real measured dose) / (unit reported dose), applied per equipment × tube before physics corrections.",
+      "aliases": [
+        "kerma calibration factor",
+        "K_a,r correction coefficient",
+        "KAP correction coefficient",
+        "k_meter"
+      ]
     }
   }
 }

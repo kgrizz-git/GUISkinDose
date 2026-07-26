@@ -159,13 +159,13 @@ Phased detail derived from diagnostics or master plans.
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | Ordered execution plan for DICOM/tabular sanitization, enforceable privacy scanners, full GUISkinDose Python/PyPI naming, fork-preserving rename, and cautious publication. |
 | [plans/sonarqube_remediation_plan.md](plans/sonarqube_remediation_plan.md) | Phased remediation plan to address the 292 open SonarQube issues in the MyPySkinDose codebase, prioritizing bug fixes and core complexity reduction. |
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
-| [plans/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/KERMA_METER_CORRECTION_FACTORS_PLAN.md) | **Active — not started** (reviewed 2026-07-26) — per-(unit×tube) kerma-meter CF on `K_IRP` before physics corrections; reported kerma fields stay additive-compatible; fail-soft to `default_factor`; file/GUI prompt; phase-mapped tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 
 ## Archived plans (`plans/archive/`)
 
 | File | Purpose |
-|---|---|
+|---|---|| [plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md) | **Shipped** (2026-07-26) — per-(unit×tube) kerma-meter CF; reported kerma additive-compatible; file/GUI prompt. |
+
 | [plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Completed** (2026-07-22) — Demo phantoms v1: Cosmic Buddha, Ramesses II, Steamboat Willie shipped; Petite Herculanaise blocked (login/NC). Fun ingest + face-up `flip_y` gate + GUI `(demo)` labels. |
 | [plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) — MakeHuman GUI master plan; replaced by [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). Phase sub-plans `MAKEHUMAN_PHASE1_*` … `MAKEHUMAN_PHASE5_*` archived alongside. |
 | [plans/archive/refactor_check_sensitive_content_plan.md](plans/archive/refactor_check_sensitive_content_plan.md) | **Completed** (2026-07-18) — Privacy scan script complexity split into `check_sensitive_content.py` + `check_sensitive_helpers.py`. |

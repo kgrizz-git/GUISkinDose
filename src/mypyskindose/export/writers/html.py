@@ -16,9 +16,11 @@ from .._format import (
     COLOR_ERROR,
     COLOR_WARNING,
     CORRECTION_HEADER,
+    KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
     collect_alert_lines,
     correction_row,
+    corrections_use_kerma_meter,
     dosimetric_rows,
 )
 from ..models import ExportPayload
@@ -118,6 +120,8 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
             body.append("</details>")
         body.append("<p>Cumulative (kerma-weighted)</p>")
     body.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections]))
+    if corrections_use_kerma_meter(payload):
+        body.append(f"<p><em>{_esc(KERMA_METER_WEIGHTING_FOOTNOTE)}</em></p>")
 
     body.append("<h2>Settings &amp; equipment</h2>")
     for exam in payload.exams:

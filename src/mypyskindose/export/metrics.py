@@ -28,7 +28,7 @@ _DAP_COL = "DoseAreaProduct_Gym2"  # Gy·m²; ×1e4 → Gy·cm²
 _GYM2_TO_GYCM2 = 10_000.0
 _FLUORO_TIME_COL = "fluoro_time_s"  # per-event fluoro time in seconds
 
-CORRECTION_KEYS = ("k_bs", "k_isq", "k_med", "k_tab")
+CORRECTION_KEYS = ("k_bs", "k_isq", "k_med", "k_tab", "k_meter")
 
 
 # ── dosimetric ────────────────────────────────────────────────────────────────
@@ -141,6 +141,9 @@ def _per_event_values(view: ExamView, key: str) -> list[float | None]:
             out.append(float(view.k_med[i]) if i < len(view.k_med) else None)
         elif key == "k_tab":
             out.append(float(view.k_tab[i]) if i < len(view.k_tab) else None)
+        elif key == "k_meter":
+            meters = view.k_meter or []
+            out.append(float(meters[i]) if i < len(meters) else 1.0)
         elif key == "k_bs":
             cells = view.k_bs[i] if i < len(view.k_bs) else []
             out.append(float(np.mean(cells)) if len(cells) else None)
@@ -170,8 +173,11 @@ def _dose_weighted_mean(values: list[float | None], kerma: list[float], hits: li
 
 
 def correction_stats(view: ExamView) -> list[CorrectionStat]:
+    keys = CORRECTION_KEYS
+    if view.k_meter is None:
+        keys = tuple(k for k in CORRECTION_KEYS if k != "k_meter")
     stats: list[CorrectionStat] = []
-    for key in CORRECTION_KEYS:
+    for key in keys:
         values = _per_event_values(view, key)
         present = [v for v in values if v is not None]
         stats.append(
@@ -189,9 +195,15 @@ def correction_stats(view: ExamView) -> list[CorrectionStat]:
 def cumulative_correction_stats(views: list[ExamView]) -> list[CorrectionStat]:
     """Kerma-weighted cumulative corrections (§8): min/max/mean pool per-event
     values across exams; dose-weighted mean is kerma-weighted across per-exam
-    weighted means."""
+    weighted means.
+
+    When any exam carries kerma-meter-corrected weights, those corrected kerma
+    values are used for dose-weighted means.
+    """
+    include_meter = any(v.k_meter is not None for v in views)
+    keys = CORRECTION_KEYS if include_meter else tuple(k for k in CORRECTION_KEYS if k != "k_meter")
     stats: list[CorrectionStat] = []
-    for key in CORRECTION_KEYS:
+    for key in keys:
         pooled: list[float] = []
         wnum = 0.0
         wden = 0.0
@@ -199,9 +211,14 @@ def cumulative_correction_stats(views: list[ExamView]) -> list[CorrectionStat]:
             values = _per_event_values(view, key)
             pooled.extend(v for v in values if v is not None)
             exam_dwm = _dose_weighted_mean(values, view.kerma, view.hits)
-            if exam_dwm is not None and view.air_kerma > 0:
-                wnum += view.air_kerma * exam_dwm
-                wden += view.air_kerma
+            weight = (
+                view.air_kerma_corrected
+                if view.air_kerma_corrected is not None
+                else view.air_kerma
+            )
+            if exam_dwm is not None and weight > 0:
+                wnum += weight * exam_dwm
+                wden += weight
         stats.append(
             CorrectionStat(
                 key=key,

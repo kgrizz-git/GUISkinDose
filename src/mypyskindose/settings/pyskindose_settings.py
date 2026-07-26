@@ -23,6 +23,7 @@ from mypyskindose.constants import (
     RUN_ARGUMENTS_VALID_OUTPUT_FORMATS,
 )
 
+from .kerma_meter_correction_settings import KermaMeterCorrectionSettings
 from .normalization_settings import NormalizationSettings
 from .phantom_settings import PhantomSettings
 from .plot_settings import Plotsettings
@@ -133,6 +134,11 @@ class PyskindoseSettings:
         )
 
         self.beam_miss_warn: str = tmp.get(KEY_PARAM_BEAM_MISS_WARN, "per_event")
+
+        km_raw = tmp.get("kerma_meter_correction")
+        self.kerma_meter_correction = KermaMeterCorrectionSettings(
+            km_raw if isinstance(km_raw, dict) else None
+        )
 
     @staticmethod
     def _initialize_output_path(output_path: Optional[str | Path], output_format: str) -> Path:

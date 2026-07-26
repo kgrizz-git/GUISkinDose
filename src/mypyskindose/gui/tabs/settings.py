@@ -320,6 +320,50 @@ def build(ctx: PageContext) -> None:
                         _MODEL_VALUE_EVENT, reset_results
                     ).classes("w-full")
 
+                    with ui.column().classes("w-full gap-2"):
+                        with ui.row().classes("w-full items-center justify-between"):
+                            ui.label("Kerma-meter correction").classes("text-subtitle2")
+                            HelpButton(
+                                title="Kerma-meter correction",
+                                content_path="kerma_meter_correction.md",
+                                help_id="settings_kerma_meter_correction",
+                            )
+                        ui.checkbox(
+                            "Enable kerma-meter correction factors",
+                            value=state.kerma_meter_enable,
+                        ).bind_value(state, "kerma_meter_enable").on(_MODEL_VALUE_EVENT, reset_results)
+                        ui.select(
+                            {"file": "Lookup file", "prompt": "Prompt before calculation"},
+                            label="Correction mode",
+                            value=state.kerma_meter_mode,
+                        ).bind_value(state, "kerma_meter_mode").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.input(
+                            label="Correction table path (CSV/TSV/XLSX/JSON)",
+                            value=state.kerma_meter_file or "",
+                        ).bind_value(state, "kerma_meter_file").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.number(
+                            label="Default factor (unresolved / table miss)",
+                            value=state.kerma_meter_default_factor,
+                            min=0.01,
+                            step=0.01,
+                        ).bind_value(state, "kerma_meter_default_factor").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.input(
+                            label="Explicit equipment label (optional override)",
+                            value=state.kerma_meter_explicit_label or "",
+                        ).bind_value(state, "kerma_meter_explicit_label").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.label(
+                            "CF = (real measured dose) / (unit reported dose). "
+                            "Radimetrics Equipment = room; DoseTrack Equipment Name is often the model."
+                        ).classes("text-xs text-grey-6")
+
             with ui.expansion("Visual Settings", icon="palette").classes(_SETTINGS_EXPANSION_CLASSES):
                 with ui.column().classes(_SETTINGS_SECTION_CLASSES):
                     ui.checkbox("Auto-render dose map on completion", value=state.plot_dosemap).bind_value(

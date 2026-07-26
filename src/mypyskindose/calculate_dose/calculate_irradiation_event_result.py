@@ -41,6 +41,7 @@ def calculate_irradiation_event_result(
     pbar: tqdm | None = None,
     settings: "PyskindoseSettings | None" = None,
     exam_id: str | None = None,
+    kerma_cf: List[float] | None = None,
 ) -> Dict[str, Any]:
     """Conducts skin dose calculation.
 
@@ -87,6 +88,8 @@ def calculate_irradiation_event_result(
         Inverse-square-law correction factors, by default None
     pbar : tqdm
         progress bar object
+    kerma_cf : List[float], optional
+        Per-event kerma-meter correction factors (default all 1.0).
 
     Returns
     -------
@@ -100,6 +103,8 @@ def calculate_irradiation_event_result(
         field_area = []
     if k_isq is None:
         k_isq = np.array([])
+    if kerma_cf is None:
+        kerma_cf = [1.0] * total_events
 
     missed_event_indices: list[int] = []
 
@@ -148,8 +153,12 @@ def calculate_irradiation_event_result(
 
         logger.debug("Saving event data")
 
+        reported_kerma = float(normalized_data.K_IRP[ev])
+        cf = float(kerma_cf[ev]) if ev < len(kerma_cf) else 1.0
         output[c.OUTPUT_KEY_HITS][ev] = hits
-        output[c.OUTPUT_KEY_KERMA][ev] = normalized_data.K_IRP[ev]
+        output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
+        output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf
+        output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = cf
         output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][ev] = k_isq
 
         output = add_corrections_and_event_dose_to_output(
@@ -163,6 +172,7 @@ def calculate_irradiation_event_result(
             k_tab=k_tab,
             output=output,
             corrections_db=corrections_db,
+            kerma_cf=cf,
         )
 
         if pbar is not None:

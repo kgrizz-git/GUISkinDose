@@ -23,6 +23,7 @@ def add_corrections_and_event_dose_to_output(
     k_tab: List[float],
     corrections_db: str,
     output: Dict[str, Any],
+    kerma_cf: float = 1.0,
 ) -> Dict[str, Any]:
     """Add correction factors and event dose to output dictionary.
 
@@ -55,6 +56,8 @@ def add_corrections_and_event_dose_to_output(
     output : Dict[str, Any]
         Dictionary containing outputs to store from the calculations. E.g. dose map and
         correction factors.
+    kerma_cf : float
+        Kerma-meter correction factor for this event (applied once to reported K_IRP).
 
     Returns
     -------
@@ -87,7 +90,8 @@ def add_corrections_and_event_dose_to_output(
 
     logger.debug("Calculating event skin dose by applying each correction" "factor to the reference point air kerma")
 
-    event_dose[hits] += normalized_data.K_IRP[event]
+    # Reported K_IRP × kerma-meter CF (do not mutate normalized_data.K_IRP).
+    event_dose[hits] += float(normalized_data.K_IRP[event]) * float(kerma_cf)
     event_dose[hits] *= output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][event]
 
     event_dose[hits] *= k_med

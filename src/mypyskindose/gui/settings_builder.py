@@ -33,6 +33,16 @@ def build_settings(
     base["beam_miss_warn"] = app_state.beam_miss_warn
     base["silence_pydicom_warnings"] = True
 
+    base["kerma_meter_correction"] = {
+        "enable": app_state.kerma_meter_enable,
+        "mode": app_state.kerma_meter_mode,
+        "file": app_state.kerma_meter_file or None,
+        "file_sheet": app_state.kerma_meter_file_sheet or None,
+        "default_factor": app_state.kerma_meter_default_factor,
+        "explicit_label": app_state.kerma_meter_explicit_label or None,
+        "prompt_at_calc": app_state.kerma_meter_prompt_at_calc,
+    }
+
     base["phantom"]["model"] = app_state.phantom_model
     from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
 

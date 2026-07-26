@@ -16,7 +16,21 @@ CORRECTION_LABELS = {
     "k_isq": "Inverse-square law (k_isq)",
     "k_med": "Medium (k_med)",
     "k_tab": "Table (k_tab)",
+    "k_meter": "Kerma-meter (k_meter)",
 }
+
+KERMA_METER_WEIGHTING_FOOTNOTE = (
+    "Dose-weighted means use kerma-meter-corrected K_IRP when a correction "
+    "table/prompt was applied."
+)
+
+
+def corrections_use_kerma_meter(payload: ExportPayload) -> bool:
+    """True when any exam/cumulative correction list includes ``k_meter``."""
+    for exam in payload.exams:
+        if any(s.key == "k_meter" for s in exam.corrections):
+            return True
+    return any(s.key == "k_meter" for s in payload.cumulative.corrections)
 
 # Patient-offset field → clear anatomical direction. The offset fields carry the
 # axis in their name: d_lon = longitudinal (superior-inferior), d_ver = vertical

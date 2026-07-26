@@ -33,9 +33,11 @@ from .._format import (
     COLOR_ERROR,
     COLOR_WARNING,
     CORRECTION_HEADER,
+    KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
     collect_alert_lines,
     correction_row,
+    corrections_use_kerma_meter,
     dosimetric_rows,
 )
 from ..models import ExamSection, ExportPayload
@@ -154,6 +156,8 @@ def _corrections_flow(payload: ExportPayload) -> list:
             flow.append(Spacer(1, 4))
         flow.append(Paragraph("Cumulative (kerma-weighted)", _BODY))
     flow.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections], widths))
+    if corrections_use_kerma_meter(payload):
+        flow.append(Paragraph(KERMA_METER_WEIGHTING_FOOTNOTE, _BODY))
     return flow
 
 

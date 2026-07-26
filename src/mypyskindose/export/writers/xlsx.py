@@ -22,9 +22,11 @@ from .._format import (
     COLOR_ERROR,
     COLOR_WARNING,
     CORRECTION_HEADER,
+    KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
     collect_alert_lines,
     correction_row,
+    corrections_use_kerma_meter,
     dosimetric_rows,
 )
 from mypyskindose.spreadsheet_safety import neutralize_spreadsheet_value
@@ -172,7 +174,10 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
         ws.cell(row=r, column=1, value=neutralize_spreadsheet_value("--- Cumulative (kerma-weighted) ---")).font = _BOLD
         r += 1
     rows = [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections]
-    _write_rows(ws, rows, start_row=r, header=True)
+    r = _write_rows(ws, rows, start_row=r, header=True)
+    if corrections_use_kerma_meter(payload):
+        r += 1
+        ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(KERMA_METER_WEIGHTING_FOOTNOTE))
     _autofit(ws)
 
 

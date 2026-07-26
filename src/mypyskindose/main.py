@@ -7,6 +7,7 @@ from typing import Any, Optional, Sequence
 import pandas as pd
 
 from mypyskindose.analyze_data import analyze_data, analyze_multiple_exams
+from mypyskindose.cli_kerma_meter import add_kerma_meter_cli_arguments, apply_kerma_meter_cli_flags
 from mypyskindose.constants import (
     RUN_ARGUMENTS_MODE_GUI,
     RUN_ARGUMENTS_MODE_HEADLESS,
@@ -698,6 +699,8 @@ def get_argument_parser(arguments) -> argparse.Namespace:
         help="Optional report title for --export-format.",
     )
 
+    add_kerma_meter_cli_arguments(parser)
+
     return parser.parse_args(arguments)
 
 
@@ -716,6 +719,11 @@ if __name__ == "__main__":
         if (run_settings := args.settings) is None:
             logger.warning("No settings specified. Running with development parameters")
             run_settings = DEVELOPMENT_PARAMETERS
+
+        # Apply kerma-meter CLI overrides onto a concrete settings object once.
+        settings_for_run = parse_settings_to_settings_class(settings=run_settings)
+        apply_kerma_meter_cli_flags(settings_for_run, args)
+        run_settings = settings_for_run
 
         file_paths_raw: list[str] = args.file_path or []
         from pathlib import Path

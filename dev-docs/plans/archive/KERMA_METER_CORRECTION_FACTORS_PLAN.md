@@ -1,11 +1,14 @@
 # Kerma-Meter Correction Factors (per equipment × tube)
 
-Status: **Active — not started**
+Status: **Shipped** (Phases 0–6)
 Plan type: Execution plan (input data & calculation)
 Created: 2026-07-26
-Updated: 2026-07-26 (review pass: gaps, consistency, resilience, tests)
+Updated: 2026-07-26 (implemented; archive candidate)
 Owner: maintainer
-Related: [TO_DO.md](../TO_DO.md) — *Input Data And Calculation*; [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md); [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md); [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md); AAPM TG-190 (industry calibration context).
+Related: [TO_DO.md](../../TO_DO.md) — *Input Data And Calculation*; [INPUT_DATA_FLOW_AND_OFFSETS.md](../../INPUT_DATA_FLOW_AND_OFFSETS.md); [VENDOR_COORDINATE_SYSTEMS.md](../../VENDOR_COORDINATE_SYSTEMS.md); [TABULAR_RDSR_INPUT_PLAN.md](../TABULAR_RDSR_INPUT_PLAN.md); AAPM TG-190 (industry calibration context).
+
+> **Implementation complete.** Core module: `src/mypyskindose/kerma_correction.py`.
+> Archive under `plans/archive/` after the shipping PR merges and acceptance §4 is signed off.
 
 ---
 

@@ -27,6 +27,8 @@ GENERIC_RDSR_COLUMN_NAMES: frozenset[str] = frozenset(
     {
         "manufacturer",
         "manufacturermodelname",
+        "stationname",
+        "deviceserialnumber",
         "acquisitionplane",
         "irradiationeventtype",
         "distancesourcetodetector_mm",
@@ -58,6 +60,9 @@ GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
         "model name",
         "device",           # Radimetrics and some custom exports use bare "Device"
     ],
+    # Per-unit identity for kerma-meter CF (optional; distinct from model).
+    "StationName": ["station name", "stationname", "equipment name", "equipment"],
+    "DeviceSerialNumber": ["device serial number", "deviceserialnumber", "device serial"],
     "IrradiationEventType": [
         "irradiationeventtype",
         "irradiation event type",
