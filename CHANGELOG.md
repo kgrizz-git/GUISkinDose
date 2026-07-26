@@ -18,7 +18,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   states research/education/QA intended use, **not FDA-cleared**, and that
   physicists/physicians remain responsible for reviewing results and patient-care
   decisions. Issues and Discussions enabled; ideas and submissions welcome there
-  (prefer those channels over cold PRs). See `dev-docs/FORK_MAINTAINER_GUIDE.md`.
+  (prefer those channels over cold PRs). Private intake for security, privacy
+  incidents, and CoC reports is GitHub private vulnerability reporting. See
+  `dev-docs/FORK_MAINTAINER_GUIDE.md`.
 - **Additional GUI coverage tests for Sonar new-code gate** (2026-07-26) — extended geometry /
   results / export / upload / import-preview coverage suites and added
   `tests/gui/test_data_tab_coverage.py`, `test_per_exam_coverage.py`, and

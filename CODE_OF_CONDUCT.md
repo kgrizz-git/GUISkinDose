@@ -59,10 +59,11 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement by contacting the
-maintainer privately via GitHub
-([@kgrizz-git](https://github.com/kgrizz-git)).
-Do not include patient data or other sensitive clinical material in a report.
+reported to the community leaders responsible for enforcement through GitHub
+[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new)
+(mark the report as a Code of Conduct concern in the description). Do not
+include patient data or other sensitive clinical material in a report. Public
+Issues and Discussions are not appropriate for private enforcement reports.
 
 All complaints will be reviewed and investigated promptly and fairly.
 

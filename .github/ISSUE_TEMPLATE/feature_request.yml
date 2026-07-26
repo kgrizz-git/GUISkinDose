@@ -19,7 +19,7 @@ body:
     attributes:
       label: Privacy confirmation
       options:
-        - label: I confirm this request contains no PHI/PII, real clinical RDSRs, credentials, or private institutional identifiers.
+        - label: I confirm this request contains no PHI/PII, real clinical RDSRs, identified screenshots, credentials, private URLs, full unredacted logs, or private institutional identifiers.
           required: true
   - type: textarea
     id: problem

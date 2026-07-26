@@ -19,15 +19,17 @@ treatment, or regulatory compliance claims.
 | Bugs | [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues/new?template=bug_report.yml) (bug form) |
 | Feature ideas | [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues/new?template=feature_request.yml) (feature form) |
 | Questions / contribution proposals | [GitHub Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions) |
-| Security vulnerabilities | [Private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new) — see [SECURITY.md](SECURITY.md) |
+| Security, privacy incidents, or private Code of Conduct reports | [GitHub private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new) — see [SECURITY.md](SECURITY.md) |
 | How contribution works | [CONTRIBUTING.md](CONTRIBUTING.md) — ideas welcome via Issue/Discussion; prefer those over cold PRs |
-| Maintainer | [@kgrizz-git](https://github.com/kgrizz-git) (profile link; no private GitHub DM) |
+| Maintainer profile | [@kgrizz-git](https://github.com/kgrizz-git) (identity only; not a private inbox) |
 
 Support is **best-effort** and may be slow. There is no guaranteed response time.
 
-GitHub does not provide a general private messaging inbox for maintainers.
-Public Issues/Discussions (or private vulnerability reports for security) are
-the supported ways to get a notification.
+GitHub does not provide a general private messaging inbox for maintainers. Public
+Issues/Discussions are for ordinary bugs and questions. The **only supported
+private intake** for security vulnerabilities, suspected PHI/privacy incidents,
+and Code of Conduct reports that must stay private is GitHub
+[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new).
 
 ## What not to attach
 

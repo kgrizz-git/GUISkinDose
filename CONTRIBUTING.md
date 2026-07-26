@@ -40,7 +40,9 @@ Do **not** attach, paste, commit, or upload:
 - Full unredacted logs that include identifiers, source filenames, or absolute paths
 
 Use synthetic fixtures or documented de-identified examples only. Mistaken
-commits of patient data are incidents — stop sharing, get help, and follow
+commits of patient data are incidents — stop sharing, report via GitHub
+[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new),
+and follow
 [dev-docs/PRIVACY_INCIDENT_RESPONSE.md](dev-docs/PRIVACY_INCIDENT_RESPONSE.md).
 
 ## How to reach the maintainer on GitHub
@@ -49,7 +51,7 @@ commits of patient data are incidents — stop sharing, get help, and follow
 |---|---|
 | [Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) | Bugs and concrete feature requests (forms required) |
 | [Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions) | Questions, ideas, and contribution proposals |
-| [Private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new) | Security only — see [SECURITY.md](SECURITY.md) |
+| [Private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new) | Security, privacy incidents, and private CoC reports — see [SECURITY.md](SECURITY.md) / [SUPPORT.md](SUPPORT.md) |
 | Profile [@kgrizz-git](https://github.com/kgrizz-git) | Public profile link only — GitHub has **no** general private DM inbox |
 
 Mentioning `@kgrizz-git` in an Issue or Discussion notifies the maintainer.

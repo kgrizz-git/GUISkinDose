@@ -28,8 +28,10 @@ We will acknowledge reports when we can and prefer coordinated disclosure. We do
 ## Patient data and privacy incidents
 
 If you believe real PHI/PII or clinical data was committed or leaked through
-this project, treat it as an incident: stop sharing copies, contact the
-maintainer privately, and follow
+this project, treat it as an incident: stop sharing copies, report it through
+GitHub
+[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new)
+(the same private intake used for security reports), and follow
 [dev-docs/PRIVACY_INCIDENT_RESPONSE.md](dev-docs/PRIVACY_INCIDENT_RESPONSE.md).
 Do not paste identifiers into public issues or pull requests.
 

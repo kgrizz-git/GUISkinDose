@@ -30,5 +30,6 @@ release workflow stays inert until a GitHub Release is created.
 ## Changing maintainership
 
 If maintainership needs to change, update this file, [SUPPORT.md](SUPPORT.md),
+[CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md),
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) enforcement contact, and package
 maintainer metadata in `pyproject.toml` in the same change.
