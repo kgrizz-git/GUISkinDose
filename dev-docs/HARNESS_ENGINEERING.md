@@ -60,7 +60,7 @@ Agents working in this repository should be able to answer three questions quick
 | Conditional privacy admission | `scripts/privacy_admission.py`, `dev-docs/privacy_admission_policy.json`; receipts stay under `.git/privacy-scan-receipts/` |
 | Privacy tool inventory | `dev-docs/privacy_tool_inventory.json`, generated `dev-docs/privacy_tool_inventory.md`, `scripts/render_privacy_tool_inventory.py` |
 | Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `scripts/run_dicom_phi_advisory.py`, `scripts/run_image_privacy_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
-| Sonar configuration / local SonarQube | `scripts/check_sonar_properties.py` (shared scope parity), `scripts/run_sonarqube_local.py`, `sonar-project.properties`, `.sonarcloud.properties`, `dev-docs/SONARQUBE_LOCAL.md`. Cloud exclusions omit asset/fixture/binary surfaces; GUI stays in coverage. README Quality Gate badge removed on Free/Sonar-way (untunable 80% new coverage). |
+| Sonar configuration / local SonarQube | `scripts/check_sonar_properties.py` (shared scope parity), `scripts/check_cloud_scanner_exclusions.py` (Sonar + CodeRabbit sensitive-file policy), `scripts/run_sonarqube_local.py`, `sonar-project.properties`, `.sonarcloud.properties`, `dev-docs/SONARQUBE_LOCAL.md`. Cloud exclusions omit asset/fixture/binary surfaces; GUI stays in coverage. README Quality Gate badge removed on Free/Sonar-way (untunable 80% new coverage). |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI local CLI on include-list roots (`src scripts .github/workflows docs/source/conf.py`); pre-push hook; **Semgrep Cloud App stays disabled** (`--metrics=off`, no `SEMGREP_APP_TOKEN`) |
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
@@ -453,12 +453,12 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
-| `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
+| `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
-| SonarCloud CI scan | `sonar-scan` on pull requests and `main` pushes, after `privacy-gates` + `build`; combined non-GUI+GUI `coverage.xml`; Automatic Analysis disabled |
+| SonarCloud CI scan | Disabled until an administrator protects `main` and sets repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`; then `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled. No tokenized scanner runs on a PR head. |
 | Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
-| CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on non-draft PRs (deduped per head SHA) |
+| CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on non-draft PRs (deduped per head SHA). Manual CodeRabbit requests bypass the CI ordering, so this is not a trusted privacy boundary. |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.

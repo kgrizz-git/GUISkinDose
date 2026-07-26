@@ -2,7 +2,7 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 #
 # Job DAG (privacy-first): schedule-gate → privacy-gates → {static-analysis, owasp-semgrep,
-# gui-smoke, build} → sonar-scan (PR+main). Codecov/Safety stay main-only in cloud-scans-main.
+# gui-smoke, build} → sonar-scan (opt-in protected-main only). Codecov/Safety stay main-only in cloud-scans-main.
 
 name: ci
 
@@ -141,6 +141,8 @@ jobs:
       run: python scripts/check_doc_freshness.py
     - name: Check Sonar configuration scope parity
       run: python scripts/check_sonar_properties.py
+    - name: Check cloud scanner sensitive-file exclusions
+      run: python scripts/check_cloud_scanner_exclusions.py
     - name: Check GUI help sync
       run: python scripts/sync_gui_help.py --check
     - name: Check GUI help registry
@@ -186,10 +188,17 @@ jobs:
       run: uv sync --extra dev --locked
     - name: Activate environment
       run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
-    # Include-list roots only — do not expand into example_data / phantoms / fixtures.
+    # Semgrep runs locally. Exclude approved asset/data surfaces even from this SAST pass;
+    # the privacy admission gate remains the authoritative full-content check.
     # Semgrep Cloud App stays disabled (--metrics=off; no SEMGREP_APP_TOKEN).
     - name: Semgrep (OWASP Top 10 SAST)
-      run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
+      env:
+        SEMGREP_SEND_METRICS: "off"
+      run: >-
+        semgrep --config=p/owasp-top-ten --error --metrics=off
+        --exclude='src/**/example_data/**' --exclude='src/**/phantom_data/**'
+        --exclude='src/**/table_data/**' --exclude='tests/fixtures/**'
+        src scripts .github/workflows docs/source/conf.py
 
   gui-smoke:
     needs: [schedule-gate, privacy-gates]
@@ -277,16 +286,15 @@ jobs:
       run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=60
 
   sonar-scan:
-    name: SonarCloud scan (PR + main)
+    name: SonarCloud scan (opt-in protected main only)
     needs: [schedule-gate, privacy-gates, build]
     if: >
       needs.schedule-gate.outputs.should_run == 'true' &&
-      (github.event_name == 'pull_request' ||
-       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      vars.SONAR_PROTECTED_MAIN_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     env:
       SONAR_TOKEN_AVAILABLE: ${{ secrets.SONAR_TOKEN != '' }}
     steps:
@@ -312,7 +320,9 @@ jobs:
         uv run --no-sync coverage run --append -m pytest tests/gui/
         uv run --no-sync coverage xml
     # CI-based analysis is authoritative (Automatic Analysis disabled). Reads
-    # sonar-project.properties. Skipped when SONAR_TOKEN is absent.
+    # sonar-project.properties. This job stays disabled until a repository administrator
+    # protects main and then explicitly sets SONAR_PROTECTED_MAIN_ENABLED=true. It is also
+    # skipped when SONAR_TOKEN is absent.
     - name: SonarQube Cloud scan (skipped without token)
       if: env.SONAR_TOKEN_AVAILABLE == 'true'
       uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f  # v8.2.1

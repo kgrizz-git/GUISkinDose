@@ -53,6 +53,14 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Security
 
+- **PR cloud-scanner boundary hardening** (2026-07-26) — tokenized SonarCloud analysis now
+  runs only on `main` pushes and requires an explicit `SONAR_PROTECTED_MAIN_ENABLED=true`
+  repository variable, keeping it fail-closed until branch protection is confirmed. Added
+  regression tests that forbid `pull_request_target`, prevent PR-head Sonar execution, and
+  preserve CI-requested CodeRabbit review after privacy gates. Sonar and CodeRabbit now share
+  CI-enforced exclusions for `.dicom` and additional medical/image/document/binary formats;
+  OWASP Semgrep remains local with telemetry disabled and asset fixtures excluded. CodeRabbit
+  manual review commands remain a documented, accepted bypass of CI ordering.
 - **Sonar S8707 catalog report write** (2026-07-26) — `write_text_under_roots()` confines the
   JSON report path then writes via `open().write` so Sonar does not treat CLI-derived report
   payload content as a path-injection sink on `Path.write_text` (clears remaining S8707 on

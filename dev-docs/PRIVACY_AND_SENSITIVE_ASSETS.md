@@ -141,15 +141,19 @@ content) so containment stays effective.
 
 | Tool | Kind | Sensitive-surface policy |
 |---|---|---|
-| SonarCloud (`sonar.exclusions` / `.sonarcloud.properties`) | Cloud upload | Exclude `example_data` / `phantom_data` / `table_data`, `tests/fixtures`, `dev-docs`, DICOM/images/tabular/DB dumps, `tmp` / `PlotOutputs` / `htmlcov` / `coverage.xml`. Keep GUI **in** coverage. |
-| CodeRabbit (`.coderabbit.yaml` `path_filters`) | Cloud PR review | Same intent via quoted `!` globs; auto-review disabled until privacy-gates request a review. |
-| OWASP Semgrep (Actions + pre-push) | Local CLI | **Include-list** roots only: `src scripts .github/workflows docs/source/conf.py` — do not expand into asset dirs. |
+| SonarCloud (`sonar.exclusions` / `.sonarcloud.properties`) | Cloud upload | Disabled by default. An administrator may set `SONAR_PROTECTED_MAIN_ENABLED=true` only after protecting `main`; then tokenized analysis runs on `main` pushes only, never a PR head. Exclude `example_data` / `phantom_data` / `table_data`, `tests/fixtures`, `dev-docs`, DICOM (including `.dicom`)/images/documents/tabular/DB dumps, `tmp` / `PlotOutputs` / `htmlcov` / `coverage.xml`. Keep GUI **in** coverage. |
+| CodeRabbit (`.coderabbit.yaml` `path_filters`) | Cloud PR review | CI requests review after `privacy-gates`; quoted `!` globs exclude the same sensitive file classes. Auto-review is off, but a manual `@coderabbitai review` command can bypass CI ordering, so filters are defense in depth—not an admission-control boundary. |
+| OWASP Semgrep (Actions + pre-push) | Local CLI | **Include-list** roots only: `src scripts .github/workflows docs/source/conf.py`; CI also excludes example/phantom/table data and fixtures. Semgrep Cloud App remains disabled. |
 | Privacy Semgrep (`run_semgrep_privacy.py`) | Local CLI | Scans `src` / `scripts` / `tests` **code** paths; do not strip for “privacy.” |
 | `check_sensitive_content` / admission | Local gates | **Never** exclude for convenience — containment layer. |
 
-Future SaaS SAST (e.g. DeepSource), if enabled, must use the same two protections: after
-`privacy-gates`, plus sensitive-surface exclusions. See
-`plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md` (D11/D12).
+Future SaaS SAST (e.g. DeepSource) must not be enabled for PR heads merely because its
+configuration has exclusions: a same-repository PR controls that configuration and the
+workflow. Use protected-branch-only analysis (as for SonarCloud) or a separately designed
+trusted service. Before enabling it, configure `exclude_patterns` for every pattern in
+`scripts/check_cloud_scanner_exclusions.py`, extend that check to validate the new config,
+and obtain an explicit external-data authorization. Do **not** use `pull_request_target`
+with a candidate checkout to try to make the PR policy trusted.
 
 Direct external privacy tools and runtimes are inventoried in
 [`privacy_tool_inventory.json`](privacy_tool_inventory.json), with a generated review view in
