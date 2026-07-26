@@ -120,3 +120,42 @@ async def test_export_rich_report_multi_exam_payload(monkeypatch, _capture_notif
     await ctrl.export_rich_report()
 
     cast(MagicMock, ctrl._render_rich_report).assert_awaited_once_with("pdf", None)
+
+
+@pytest.mark.asyncio
+async def test_download_html_browser_mode(monkeypatch, _capture_notify) -> None:
+    state.calculation_done = True
+    state.multi_exam_result = None
+    state.import_provenance = None
+    ctrl = _controller()
+    downloaded: list[tuple] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return b"<html>ok</html>"
+
+    monkeypatch.setattr(export_tab, "_is_native_mode", lambda: False)
+    monkeypatch.setattr(export_tab, "_get_save_path", AsyncMock(return_value=None))
+    monkeypatch.setattr(export_tab.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(export_tab, "require_io_result", lambda x: x)
+    monkeypatch.setattr(ui, "download", lambda content, name: downloaded.append((content, name)))
+
+    await ctrl.download_html()
+
+    assert downloaded
+    assert downloaded[0][0] == b"<html>ok</html>"
+
+
+@pytest.mark.asyncio
+async def test_download_png_warns_without_calculation(_capture_notify) -> None:
+    state.calculation_done = False
+    ctrl = _controller()
+    await ctrl.download_png()
+    messages = [str(a[0]) if a else "" for a, _ in _capture_notify]
+    assert any("No data to export" in m for m in messages)
+
+
+def test_write_or_download_browser_path(monkeypatch, _capture_notify) -> None:
+    downloaded: list[tuple] = []
+    monkeypatch.setattr(ui, "download", lambda content, name: downloaded.append((content, name)))
+    export_tab._write_or_download(None, b"abc", "out.txt", "saved", "test_write")
+    assert downloaded == [(b"abc", "out.txt")]

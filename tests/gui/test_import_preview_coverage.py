@@ -158,3 +158,58 @@ async def test_on_sheet_change_reparses_file(monkeypatch: pytest.MonkeyPatch) ->
 
     assert refreshed["n"] == 1
     cast(MagicMock, ctrl.upload_status.set_text).assert_called()
+
+
+def test_set_transform_defaults_noop_without_provenance() -> None:
+    ctrl = _controller()
+    state.import_provenance = None
+    ctrl.set_transform_defaults()
+    cast(MagicMock, ctrl.coord_auto_label.set_text).assert_not_called()
+
+
+def test_set_transform_defaults_multi_exam_clears_label() -> None:
+    ctrl = _controller()
+    state.import_provenance = SimpleNamespace(schema_name="radimetrics")
+    state.is_multi_exam = True
+    ctrl.set_transform_defaults()
+    cast(MagicMock, ctrl.coord_auto_label.set_text).assert_called_with("")
+
+
+def test_on_flip_toggle_commits(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.input_source_type = "csv"
+    state.flip_ap1 = True
+    state.loaded_exam_meta = [{"swap_lat_lon": False, "flip_ap1": False, "flip_ap2": False}]
+    committed: list[str] = []
+    monkeypatch.setattr(ctrl, "_commit_single_exam_transform", lambda: committed.append("ok"))
+
+    ctrl.on_flip_toggle("flip_ap1")
+
+    assert state.loaded_exam_meta[0]["flip_ap1"] is True
+    assert committed == ["ok"]
+
+
+def test_refresh_shows_warnings_and_unit_conversions() -> None:
+    ctrl = _controller()
+    state.input_source_type = "csv"
+    state.import_warnings = ["warn-a", "warn-b"]
+    state.import_provenance = SimpleNamespace(
+        schema_name="radimetrics",
+        detected_encoding="utf-8",
+        detected_delimiter=",",
+        header_row_index=0,
+        column_map={"A": "a"},
+        unit_conversions={"DAP": "Gy·cm² → µGy·m²"},
+    )
+    state.available_sheets = ["Sheet1", "Sheet2"]
+    state.input_sheet_name = "Sheet1"
+    state.rdsr_df = None
+    state.is_multi_exam = False
+
+    ctrl.refresh()
+
+    cast(MagicMock, ctrl.warnings_label.set_text).assert_called()
+    assert "warn-a" in str(cast(MagicMock, ctrl.warnings_label.set_text).call_args)
+    cast(MagicMock, ctrl.unit_conv_row.set_visibility).assert_called_with(True)
+    cast(MagicMock, ctrl.sheet_label.set_text).assert_called()
+    cast(MagicMock, ctrl.coord_card.set_visibility).assert_called_with(True)
