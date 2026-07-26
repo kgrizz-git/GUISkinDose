@@ -1,5 +1,8 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+#
+# Job DAG (privacy-first): schedule-gate → privacy-gates → {static-analysis, owasp-semgrep,
+# gui-smoke, build} → sonar-scan (PR+main). Codecov/Safety stay main-only in cloud-scans-main.
 
 name: ci
 
@@ -43,8 +46,54 @@ jobs:
           echo "should_run=true" >> "$GITHUB_OUTPUT"
         fi
 
-  static-analysis:
+  privacy-gates:
     needs: schedule-gate
+    if: needs.schedule-gate.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        fetch-depth: 0
+    - name: Install uv
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      with:
+        version: ">=0.11.19"
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      with:
+        python-version: '3.12'
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --locked
+    - name: Activate environment
+      run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+    - name: Check sensitive content and approved assets
+      run: python scripts/check_sensitive_content.py --require-approved-assets
+    - name: Check protected privacy paths and scanner routing policy
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+      run: |
+        python scripts/privacy_admission.py check --mode all
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          PRIVACY_BASE_REF="origin/$BASE_REF" python scripts/privacy_admission.py route --mode range
+        else
+          python scripts/privacy_admission.py route --mode all
+        fi
+    - name: Check PR and push metadata for sensitive content
+      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
+    - name: Check ignored and untracked risky artifacts
+      run: python scripts/check_ignored_asset_files.py --strict
+    - name: Check approved asset inventory Markdown
+      run: python scripts/render_asset_inventory.py --check
+    - name: Check privacy tool inventory and scanner references
+      run: python scripts/render_privacy_tool_inventory.py --check
+    - name: Semgrep (project PHI/PII leak rules, blocking)
+      run: python scripts/run_semgrep_privacy.py
+
+  static-analysis:
+    needs: [schedule-gate, privacy-gates]
     if: needs.schedule-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -81,27 +130,6 @@ jobs:
       run: python scripts/check_doc_freshness.py
     - name: Check Sonar configuration scope parity
       run: python scripts/check_sonar_properties.py
-    - name: Check sensitive content and approved assets
-      run: python scripts/check_sensitive_content.py --require-approved-assets
-    - name: Check protected privacy paths and scanner routing policy
-      env:
-        EVENT_NAME: ${{ github.event_name }}
-        BASE_REF: ${{ github.base_ref }}
-      run: |
-        python scripts/privacy_admission.py check --mode all
-        if [ "$EVENT_NAME" = "pull_request" ]; then
-          PRIVACY_BASE_REF="origin/$BASE_REF" python scripts/privacy_admission.py route --mode range
-        else
-          python scripts/privacy_admission.py route --mode all
-        fi
-    - name: Check PR and push metadata for sensitive content
-      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
-    - name: Check ignored and untracked risky artifacts
-      run: python scripts/check_ignored_asset_files.py --strict
-    - name: Check approved asset inventory Markdown
-      run: python scripts/render_asset_inventory.py --check
-    - name: Check privacy tool inventory and scanner references
-      run: python scripts/render_privacy_tool_inventory.py --check
     - name: Check GUI help sync
       run: python scripts/sync_gui_help.py --check
     - name: Check GUI help registry
@@ -126,13 +154,34 @@ jobs:
       run: bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)
       run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
+
+  owasp-semgrep:
+    needs: [schedule-gate, privacy-gates]
+    if: needs.schedule-gate.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      with:
+        version: ">=0.11.19"
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      with:
+        python-version: '3.12'
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --locked
+    - name: Activate environment
+      run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+    # Include-list roots only — do not expand into example_data / phantoms / fixtures.
+    # Semgrep Cloud App stays disabled (--metrics=off; no SEMGREP_APP_TOKEN).
     - name: Semgrep (OWASP Top 10 SAST)
       run: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
-    - name: Semgrep (project PHI/PII leak rules, blocking)
-      run: python scripts/run_semgrep_privacy.py
 
   gui-smoke:
-    needs: schedule-gate
+    needs: [schedule-gate, privacy-gates]
     if: needs.schedule-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -184,7 +233,7 @@ jobs:
           echo "config=$CONFIG" >> "$GITHUB_OUTPUT"
 
   build:
-    needs: matrix-prep
+    needs: [matrix-prep, privacy-gates]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -216,15 +265,18 @@ jobs:
     - name: Coverage threshold (≥60%)
       run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=60
 
-  cloud-scans-after-gates:
-    name: Main-only external cloud scans
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [static-analysis, gui-smoke, build]
+  sonar-scan:
+    name: SonarCloud scan (PR + main)
+    needs: [schedule-gate, privacy-gates, build]
+    if: >
+      needs.schedule-gate.outputs.should_run == 'true' &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     env:
-      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
       SONAR_TOKEN_AVAILABLE: ${{ secrets.SONAR_TOKEN != '' }}
     steps:
     # fetch-depth: 0 gives SonarQube full git history for accurate blame / new-code detection.
@@ -240,10 +292,47 @@ jobs:
       uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
       with:
         python-version: '3.12'
-    # Locked install: pytest + coverage + safety + NiceGUI (GUI tests feed Sonar coverage).
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
-    - name: Generate coverage after all repository gates pass
+    - name: Generate combined coverage (non-GUI + GUI)
+      run: |
+        uv run --no-sync coverage erase
+        uv run --no-sync coverage run -m pytest --ignore=tests/gui
+        uv run --no-sync coverage run --append -m pytest tests/gui/
+        uv run --no-sync coverage xml
+    # CI-based analysis is authoritative (Automatic Analysis disabled). Reads
+    # sonar-project.properties. Skipped when SONAR_TOKEN is absent.
+    - name: SonarQube Cloud scan (skipped without token)
+      if: env.SONAR_TOKEN_AVAILABLE == 'true'
+      uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f  # v8.2.1
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cloud-scans-main:
+    name: Main-only Codecov + Safety
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [privacy-gates, static-analysis, gui-smoke, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      with:
+        version: ">=0.11.19"
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      with:
+        python-version: '3.12'
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --extra gui --locked
+    - name: Generate combined coverage for Codecov
       run: |
         uv run --no-sync coverage erase
         uv run --no-sync coverage run -m pytest --ignore=tests/gui
@@ -253,15 +342,6 @@ jobs:
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
       with:
         files: coverage.xml
-    # SonarQube Cloud CI-based analysis (main only). Reads sonar-project.properties for
-    # project key, sources, and exclusions. Requires Automatic Analysis to be DISABLED in
-    # the SonarCloud project (Administration > Analysis Method) or this step will error.
-    # The quality-gate badge tracks whatever this uploads for the main branch.
-    - name: SonarQube Cloud scan (main only; skipped without token)
-      if: env.SONAR_TOKEN_AVAILABLE == 'true'
-      uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f  # v8.2.1
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     - name: Run Safety cloud scan (main only; skipped without key)
       if: env.SAFETY_API_KEY != ''
       run: uv run --no-sync safety scan --detailed-output

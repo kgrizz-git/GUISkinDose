@@ -1,6 +1,6 @@
 # Sonar gate repair + privacy-gated external scans
 
-_Status: Active — PR1 implementation in progress (A + B0 + B1 + B2-B + B3 done; C/D/E next)_
+_Status: Active — PR1 done; PR2 (C+D privacy-gates + Sonar on PR) in progress; Phase E next_
 _Created: 2026-07-25_
 _Branch: `plan/sonar-privacy-gated-scans`_
 _Owners: Maintainers; coding agents may implement phases in order_
@@ -508,9 +508,9 @@ needs: [schedule-gate, privacy-gates]
 if: needs.schedule-gate.outputs.should_run == 'true'
 ```
 
-- [ ] **C1.1** Add `privacy-gates` job; remove duplicated steps from `static-analysis`
-- [ ] **C1.2** Wire `static-analysis.needs` to include `privacy-gates`
-- [ ] **C1.3** Wire `gui-smoke` and `build` with `needs: privacy-gates` (D13 locked) so a
+- [x] **C1.1** Add `privacy-gates` job; remove duplicated steps from `static-analysis`
+- [x] **C1.2** Wire `static-analysis.needs` to include `privacy-gates`
+- [x] **C1.3** Wire `gui-smoke` and `build` with `needs: privacy-gates` (D13 locked) so a
   privacy fail cancels wasted matrix / smoke minutes
 
 ### Task C2: OWASP Semgrep only after privacy-gates
@@ -544,8 +544,8 @@ owasp-semgrep:
 Remove the OWASP Semgrep step from `static-analysis`. Optionally add the same
 `SEMGREP_SEND_METRICS=off` to the privacy Semgrep wrapper env in `privacy-gates`.
 
-- [ ] **C2.1** Add job; delete old step
-- [ ] **C2.2** Update harness docs table (semgrep OWASP row → `owasp-semgrep` after privacy; note Cloud App disabled / Actions CLI only)
+- [x] **C2.1** Add job; delete old step
+- [x] **C2.2** Update harness docs table (semgrep OWASP row → `owasp-semgrep` after privacy; note Cloud App disabled / Actions CLI only)
 
 ---
 
@@ -575,9 +575,9 @@ Replace today’s single `cloud-scans-after-gates` with:
    - `needs: [privacy-gates, static-analysis, gui-smoke, build]` (or `sonar-scan`)
    - Codecov upload + Safety only (no Sonar duplication)
 
-- [ ] **D1.1** Implement `sonar-scan` for PR + main
-- [ ] **D1.2** Slim main-only job to Codecov + Safety
-- [ ] **D1.3** Changelog + HARNESS_ENGINEERING updates (remove “Sonar main only” wording)
+- [x] **D1.1** Implement `sonar-scan` for PR + main
+- [x] **D1.2** Slim main-only job to Codecov + Safety
+- [x] **D1.3** Changelog + HARNESS_ENGINEERING updates (remove “Sonar main only” wording)
 
 ### Task D2: Maintainer SonarCloud UI checklist (manual)
 
@@ -611,7 +611,7 @@ reviews:
   # Manual escape hatch remains: comment `@coderabbitai review` on the PR.
 ```
 
-- [ ] **E1.1** Add `.coderabbit.yaml` with auto_review disabled
+- [x] **E1.1** Add `.coderabbit.yaml` with auto_review disabled
 - [ ] **E1.2** Note in HARNESS / AGENTS that CodeRabbit is privacy-gated
 
 ### Task E2: Request review after privacy-gates

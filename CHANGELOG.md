@@ -24,6 +24,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   (`tmp/**`, `PlotOutputs/**`, `htmlcov/**`, `coverage.xml`); `.coderabbit.yaml` disables
   auto-review and path-filters sensitive surfaces; privacy docs record cloud-vs-local scope
   (OWASP Semgrep stays include-list; privacy Semgrep keeps `src`/`scripts`/`tests`).
+- **Privacy-gated CI scans** (2026-07-25) — `privacy-gates` job runs admission + privacy
+  Semgrep first; OWASP Semgrep, SonarCloud (PR+main), gui-smoke, and the build matrix wait on
+  it. Codecov/Safety stay main-only. Automatic Analysis is off; Free/Sonar-way coverage gate
+  remains untunable (no README badge).
 - **SonarCloud Automatic Analysis disabled; Free gate untunable** (2026-07-25) — CI-based
   analysis is authoritative; Free/Sonar-way `new_coverage` stays at 80% (B2-B / no README badge).
 

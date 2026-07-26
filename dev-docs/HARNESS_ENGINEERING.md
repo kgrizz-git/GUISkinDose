@@ -266,7 +266,7 @@ Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full reposi
 
 ### Sensitive-content and asset admission
 
-`python scripts/check_sensitive_content.py --require-approved-assets` runs in pre-commit and the CI static-analysis job. It scans all tracked
+`python scripts/check_sensitive_content.py --require-approved-assets` runs in pre-commit and the CI `privacy-gates` job. It scans all tracked
 text-like files for direct-identifier, private-network/DICOM-endpoint, and absolute-path patterns; rejects common
 diagnostic artifacts; enforces exact-hash inventory entries for images, embedded notebook visuals, DICOM, PDFs,
 PostScript/EPS, supported archives/Office-iWork containers, and opaque binaries; and fails
@@ -444,19 +444,21 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python -m ruff check src tests` | `build` job (matrix policy above) |
 | `python -m build` | Ubuntu `package-build` job (Python 3.12) |
 | `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
-| `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `static-analysis` job + pre-commit; strict asset/content admission with value-safe output |
-| `python scripts/privacy_admission.py check/route` | Ubuntu `static-analysis` job + local hooks; protected paths and conditional scanner routing |
-| `python scripts/run_semgrep_privacy.py` | Ubuntu `static-analysis` job + pre-push; blocking project privacy SAST |
+| `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `privacy-gates` job + pre-commit; strict asset/content admission with value-safe output |
+| `python scripts/privacy_admission.py check/route` | Ubuntu `privacy-gates` job + local hooks; protected paths and conditional scanner routing |
+| `python scripts/run_semgrep_privacy.py` | Ubuntu `privacy-gates` job + pre-push; blocking project privacy SAST |
 | phi-scan / Presidio | Scheduled secondary workflows; Presidio also supports manual dispatch. Both are value-suppressed with no report upload. |
-| GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job (requires `.[gui]`) |
-| `basedpyright` | Ubuntu `typecheck` job (requires `.[dev,gui]`) |
+| GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
+| `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
-| `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py` | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
-| Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-after-gates`, after repository analysis, GUI smoke, and the test matrix succeed |
+| SonarCloud CI scan | `sonar-scan` on pull requests and `main` pushes, after `privacy-gates` + `build`; combined non-GUI+GUI `coverage.xml`; Automatic Analysis disabled |
+| Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
+| CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; review requested only after privacy-gates (Phase E) |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.
