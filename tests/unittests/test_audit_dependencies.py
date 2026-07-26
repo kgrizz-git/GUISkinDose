@@ -36,6 +36,7 @@ def test_main_uv_audit_success(ad):
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
          patch.dict(os.environ, {"CI": ""}), \
+         patch("sys.argv", ["audit_dependencies.py"]), \
          patch("subprocess.run") as mock_run:
          
         def mock_run_impl(cmd, *args, **kwargs):
@@ -149,15 +150,45 @@ def test_main_uv_too_old_fallback(ad):
         assert called_cmd[0] == "pip-audit"
 
 
+def test_build_uv_audit_argv_allowlist(ad):
+    """Only --frozen / --locked survive the trusted argv rebuild."""
+    assert ad.build_uv_audit_argv("/path/to/uv", []) == ["/path/to/uv", "audit"]
+    assert ad.build_uv_audit_argv("/path/to/uv", ["--frozen"]) == [
+        "/path/to/uv",
+        "audit",
+        "--frozen",
+    ]
+    assert ad.build_uv_audit_argv("/path/to/uv", ["--locked"]) == [
+        "/path/to/uv",
+        "audit",
+        "--locked",
+    ]
+    # pip-audit-only flags are stripped; allowlisted flags remain.
+    assert ad.build_uv_audit_argv("/path/to/uv", ["--desc", "on", "--frozen"]) == [
+        "/path/to/uv",
+        "audit",
+        "--frozen",
+    ]
+
+
+def test_build_uv_audit_argv_rejects_unknown(ad):
+    """Non-allowlisted tokens (including --ignore) must raise ValueError."""
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_uv_audit_argv("/path/to/uv", ["--ignore", "GHSA-1"])
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_uv_audit_argv("/path/to/uv", ["--frozen", "evil"])
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_uv_audit_argv("/path/to/uv", ["--frozen\n"])
+
+
 def test_main_flag_filtering(ad):
-    """Test filtering of pip-audit specific flags in the uv path."""
-    # Pin CI falsy so the --frozen assertion holds under CI (which sets CI=true).
+    """pip-audit-only flags are stripped; leftover non-allowlisted args fail closed."""
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
          patch.dict(os.environ, {"CI": ""}), \
          patch("subprocess.run") as mock_run, \
          patch("sys.argv", ["audit_dependencies.py", "--desc", "on", "--format", "json", "--ignore", "GHSA-1"]):
-         
+
         def mock_run_impl(cmd, *args, **kwargs):
             res = MagicMock()
             res.returncode = 0
@@ -166,7 +197,30 @@ def test_main_flag_filtering(ad):
             elif "audit" in cmd and "--help" in cmd:
                 res.stdout = "uv audit help"
             return res
-            
+
+        mock_run.side_effect = mock_run_impl
+
+        with pytest.raises(ValueError, match="unsupported or unsafe"):
+            ad.main()
+
+
+def test_main_allowlisted_passthrough(ad):
+    """Explicit --frozen from argv is accepted on the uv audit path."""
+    with patch("shutil.which", return_value="/path/to/uv"), \
+         patch("pathlib.Path.exists", return_value=True), \
+         patch.dict(os.environ, {"CI": ""}), \
+         patch("subprocess.run") as mock_run, \
+         patch("sys.argv", ["audit_dependencies.py", "--desc", "on", "--frozen"]):
+
+        def mock_run_impl(cmd, *args, **kwargs):
+            res = MagicMock()
+            res.returncode = 0
+            if "--version" in cmd:
+                res.stdout = UV_AUDIT_VERSION
+            elif "audit" in cmd and "--help" in cmd:
+                res.stdout = "uv audit help"
+            return res
+
         mock_run.side_effect = mock_run_impl
 
         with pytest.raises(SystemExit) as excinfo:
@@ -174,15 +228,7 @@ def test_main_flag_filtering(ad):
 
         assert excinfo.value.code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
-        assert called_cmd[0] == "/path/to/uv"
-        assert called_cmd[1] == "audit"
-        assert "--frozen" in called_cmd
-        assert "--desc" not in called_cmd
-        assert "on" not in called_cmd
-        assert "--format" not in called_cmd
-        assert "json" not in called_cmd
-        assert "--ignore" in called_cmd
-        assert "GHSA-1" in called_cmd
+        assert called_cmd == ["/path/to/uv", "audit", "--frozen"]
 
 
 def test_main_ci_enforcement(ad):
@@ -190,6 +236,7 @@ def test_main_ci_enforcement(ad):
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
          patch("subprocess.run") as mock_run, \
+         patch("sys.argv", ["audit_dependencies.py"]), \
          patch.dict(os.environ, {"CI": "true"}):
          
         def mock_run_impl(cmd, *args, **kwargs):
@@ -218,6 +265,7 @@ def test_main_uv_audit_exec_filenotfound_fallback(ad):
     """Test that if executing the uv binary fails with FileNotFoundError, it falls back to pip-audit."""
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
+         patch("sys.argv", ["audit_dependencies.py"]), \
          patch("subprocess.run") as mock_run:
          
         def mock_run_impl(cmd, *args, **kwargs):

@@ -76,6 +76,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
+| [plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md](plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md) | **Active** — Sonar security + GUI coverage tests; README QG badge removed (Free/Sonar-way); exclusion audit for Sonar/Semgrep/CodeRabbit; Semgrep Actions not Cloud; privacy-gate Semgrep/Sonar/CodeRabbit. |
 
 ---
 

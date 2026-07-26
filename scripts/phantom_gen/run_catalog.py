@@ -31,7 +31,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.phantom_gen.affine_control import build_affine_control  # noqa: E402
-from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
+from scripts.phantom_gen.path_safety import (  # noqa: E402
+    resolve_under_roots,
+    trusted_path_under_roots,
+)
 from scripts.phantom_gen.transform_to_psd_frame import (  # noqa: E402
     _load_vertices_faces,
     _write_binary_stl,
@@ -544,7 +547,9 @@ def main(argv: list[str] | None = None) -> int:
 
     summary = {"passed": failures == 0, "n_fail": failures, "reports": reports}
     if args.json_report:
-        report_path = resolve_under_roots(args.json_report)
+        # Rebuild under a trusted root so Sonar S8707 does not treat the CLI path
+        # as a still-tainted write target after resolve_under_roots.
+        report_path = trusted_path_under_roots(args.json_report)
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 

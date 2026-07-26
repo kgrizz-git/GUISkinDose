@@ -10,8 +10,47 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Changed
+
+- **Sonar quality-gate README badge removed** (2026-07-25) — dropped the SonarCloud
+  `alert_status` badge from `README.md`. On Free / read-only Sonar way the new-code coverage
+  gate stays at 80% and cannot be lowered, so the badge was advertising a red status we cannot
+  tune. Sonar analysis remains in CI per `SONAR_PRIVACY_GATED_SCANS_PLAN.md`; the badge may
+  return only when the gate is green sustainably or a custom gate is available.
+- **Sonar coverage now includes GUI tests** (2026-07-25) — cloud-scans coverage generation
+  installs the `gui` extra and runs a two-pass `coverage` recipe (non-GUI then `tests/gui/`
+  with `--append`) so Sonar measures `src/mypyskindose/gui/`. Documented in `SONARQUBE_LOCAL.md`.
+- **Cloud scanner exclusion audit** (2026-07-25) — Sonar exclusions add runtime output globs
+  (`tmp/**`, `PlotOutputs/**`, `htmlcov/**`, `coverage.xml`); `.coderabbit.yaml` disables
+  auto-review and path-filters sensitive surfaces; privacy docs record cloud-vs-local scope
+  (OWASP Semgrep stays include-list; privacy Semgrep keeps `src`/`scripts`/`tests`).
+- **Privacy-gated CI scans** (2026-07-25) — `privacy-gates` job runs admission + privacy
+  Semgrep first; OWASP Semgrep, SonarCloud (PR+main), gui-smoke, and the build matrix wait on
+  it. Codecov/Safety stay main-only. Automatic Analysis is off; Free/Sonar-way coverage gate
+  remains untunable (no README badge).
+- **CodeRabbit after privacy-gates** (2026-07-25) — auto-review disabled; CI posts
+  `@coderabbitai review` on non-draft PRs once per head SHA only after reusable
+  `privacy-gates` succeeds (does not wait for the full matrix).
+- **SonarCloud Automatic Analysis disabled; Free gate untunable** (2026-07-25) — CI-based
+  analysis is authoritative; Free/Sonar-way `new_coverage` stays at 80% (B2-B / no README badge).
+
+### Added
+
+- **Sonar + privacy-gated scans master plan** (2026-07-25) — `dev-docs/plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md`
+  covers Sonar security fixes; keep GUI in coverage via combined `tests/gui/` coverage.xml + GUI
+  tests; remove README Sonar badge when custom quality gates are unavailable (done on this
+  branch); cloud analyzer path exclusions audit for Sonar / Semgrep / CodeRabbit (and a note that
+  future DeepSource or similar SaaS SAST must use the same privacy-gate + exclusion pattern);
+  Semgrep as local Actions CLI with Cloud App disabled; restore Sonar on PRs; run OWASP Semgrep /
+  Sonar / CodeRabbit only after `privacy-gates`. Branch: `plan/sonar-privacy-gated-scans`.
+- **GUI coverage tests for Sonar** (2026-07-25) — added `tests/gui/test_*_coverage.py` suites for
+  geometry/upload/results builders, import preview, calculate, and export tabs (P0/P1 modules).
+
 ### Security
 
+- **Sonar S8707 / S8705 sanitizers** (2026-07-25) — `trusted_path_under_roots()` rebuilds catalog
+  JSON report paths from allowlisted roots before write; `build_uv_audit_argv()` allowlists only
+  `--frozen`/`--locked` for `uv audit` subprocess argv (clears SonarCloud new-code Security Rating C).
 - **Notebook embedded-visual review checklist** (2026-07-25) — `notebook_embedded_visual` assets
   in `approved_asset_inventory.json` now require a `notebook_review` block with
   `embedded_images_reviewed` and `burned_in_text_reviewed` both `true`; an `approved` status alone
