@@ -60,9 +60,9 @@ Agents working in this repository should be able to answer three questions quick
 | Conditional privacy admission | `scripts/privacy_admission.py`, `dev-docs/privacy_admission_policy.json`; receipts stay under `.git/privacy-scan-receipts/` |
 | Privacy tool inventory | `dev-docs/privacy_tool_inventory.json`, generated `dev-docs/privacy_tool_inventory.md`, `scripts/render_privacy_tool_inventory.py` |
 | Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `scripts/run_dicom_phi_advisory.py`, `scripts/run_image_privacy_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
-| Sonar configuration / local SonarQube | `scripts/check_sonar_properties.py` (shared scope parity), `scripts/run_sonarqube_local.py`, `sonar-project.properties`, `.sonarcloud.properties`, `dev-docs/SONARQUBE_LOCAL.md` |
+| Sonar configuration / local SonarQube | `scripts/check_sonar_properties.py` (shared scope parity), `scripts/run_sonarqube_local.py`, `sonar-project.properties`, `.sonarcloud.properties`, `dev-docs/SONARQUBE_LOCAL.md`. Cloud exclusions omit asset/fixture/binary surfaces; GUI stays in coverage. README Quality Gate badge removed on Free/Sonar-way (untunable 80% new coverage). |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
-| OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI `static-analysis` job + pre-push hook |
+| OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI local CLI on include-list roots (`src scripts .github/workflows docs/source/conf.py`); pre-push hook; **Semgrep Cloud App stays disabled** (`--metrics=off`, no `SEMGREP_APP_TOKEN`) |
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |

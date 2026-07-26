@@ -1,6 +1,6 @@
 # Sonar gate repair + privacy-gated external scans
 
-_Status: Active master plan — not started_
+_Status: Active — PR1 implementation in progress (A + B0 + B1 + B2-B + B3 done; C/D/E next)_
 _Created: 2026-07-25_
 _Branch: `plan/sonar-privacy-gated-scans`_
 _Owners: Maintainers; coding agents may implement phases in order_
@@ -137,7 +137,7 @@ sole source of truth (already noted in `ci.yml` comments).
 | D4 | Safety / Codecov | Stay **main-only** |
 | D5 | What counts as “privacy checks” | Early admission stack + **project** privacy Semgrep (`run_semgrep_privacy.py`). OWASP Semgrep is **not** a privacy check. |
 | D6 | CodeRabbit | Disable auto-review; trigger only after `privacy-gates` succeeds on the PR head |
-| D7 | Automatic Analysis | Document required disable in SonarCloud UI; CI scan becomes authoritative |
+| D7 | Automatic Analysis | **Disabled by maintainer 2026-07-25** — CI-based analysis is authoritative. |
 | D8 | Pre-push OWASP Semgrep | Keep local pre-push as developer convenience; CI is the privacy-ordered gate. Do not remove the hook in this plan. |
 | D9 | Local CI `fail-under` | Keep matrix `coverage report --fail-under=60` on non-GUI runs (`--ignore=tests/gui`). Do not lower the local pytest coverage floor; only the SonarCloud quality-gate condition changes. |
 | D10 | Semgrep Cloud vs Actions | **Semgrep Cloud App stays disabled** (user confirmed). Continue running Semgrep as **local CLI** in GitHub Actions + pre-push with `--metrics=off` and **no** `SEMGREP_APP_TOKEN`. OWASP pack still *downloads rules* from the Semgrep registry (network); analysis does not upload the repo to Semgrep Cloud. |
@@ -145,6 +145,7 @@ sole source of truth (already noted in `ci.yml` comments).
 | D12 | Future DeepSource (and similar SaaS SAST) | **Not enabled now.** If DeepSource (or any similar cloud analyzer / PR bot) is added later, apply the **same two protections** as Sonar/CodeRabbit: (1) run / trigger only **after `privacy-gates` succeeds**, (2) configure path/file exclusions aligned with the §2c sensitive-surface list. Document in HARNESS when introduced; do not auto-review or upload before admission. |
 | D13 | `gui-smoke` / `build` vs privacy | **Both wait on `privacy-gates`** (locked 2026-07-25). |
 | D14 | CodeRabbit trigger | **After `privacy-gates` only** — do not wait for full CI/matrix (locked 2026-07-25). |
+| D15 | Free-tier quality gate | **Confirmed untunable** (2026-07-25) — cannot lower new_coverage below Sonar way 80%. Stay on **B2-B** (no README badge). |
 
 ---
 
@@ -237,9 +238,9 @@ Do **not** put `src/mypyskindose/gui/**` on this list (coverage / review of GUI 
 
 ### Task B0 — audit + wire exclusions (checklist)
 
-- [ ] **B0.1** **Sonar:** Diff canonical list vs `sonar-project.properties` /
+- [x] **B0.1** **Sonar:** Diff canonical list vs `sonar-project.properties` /
   `.sonarcloud.properties`; add any missing globs; run `check_sonar_properties.py`
-- [ ] **B0.2** **CodeRabbit:** Add `.coderabbit.yaml` with `reviews.auto_review.enabled: false`
+- [x] **B0.2** **CodeRabbit:** Add `.coderabbit.yaml` with `reviews.auto_review.enabled: false`
   and `reviews.path_filters` excluding the sensitive-surface list (quoted `!` patterns), e.g.:
 
 ```yaml
@@ -264,16 +265,16 @@ reviews:
 
   (Tune exact globs to CodeRabbit’s glob rules at implement time; keep parity with Sonar intent.)
 
-- [ ] **B0.3** **OWASP Semgrep:** Confirm CI + pre-push still use the include-list roots above;
+- [x] **B0.3** **OWASP Semgrep:** Confirm CI + pre-push still use the include-list roots above;
   document “do not scan asset dirs”; optionally add explicit `--exclude` for
   `**/example_data/**`, `**/phantom_data/**`, `**/table_data/**`, `tests/fixtures/**` as
   belt-and-suspenders if a future command widens the tree
-- [ ] **B0.4** **Privacy Semgrep:** Confirm still scans `src`/`scripts`/`tests` code paths;
+- [x] **B0.4** **Privacy Semgrep:** Confirm still scans `src`/`scripts`/`tests` code paths;
   do **not** strip those for “privacy” — only consider excluding non-code under
   `tests/fixtures` if noise appears
-- [ ] **B0.5** Document the matrix in `PRIVACY_AND_SENSITIVE_ASSETS.md` +
+- [x] **B0.5** Document the matrix in `PRIVACY_AND_SENSITIVE_ASSETS.md` +
   `HARNESS_ENGINEERING.md` (“Cloud vs local scanner scope”)
-- [ ] **B0.6** Changelog note (Changed — scanner exclusion audit / CodeRabbit path filters)
+- [x] **B0.6** Changelog note (Changed — scanner exclusion audit / CodeRabbit path filters)
 
 ### Future SaaS scanners (DeepSource, etc.)
 
@@ -320,10 +321,10 @@ def trusted_path_under_roots(path: Path | str, **kwargs) -> Path:
 
 Use `trusted_path_under_roots` for the JSON report write in `run_catalog.main`.
 
-- [ ] **A1.1** Add/extend unit tests for escape rejection and trusted rebuild
-- [ ] **A1.2** Implement helper + switch `run_catalog` report write to it
-- [ ] **A1.3** Run `pytest` on the new/changed tests
-- [ ] **A1.4** Changelog note under `[Unreleased]` → Security/Fixed
+- [x] **A1.1** Add/extend unit tests for escape rejection and trusted rebuild
+- [x] **A1.2** Implement helper + switch `run_catalog` report write to it
+- [x] **A1.3** Run `pytest` on the new/changed tests
+- [x] **A1.4** Changelog note under `[Unreleased]` → Security/Fixed
 
 ### Task A2: Rebuild `uv audit` argv from an allowlist (S8705)
 
@@ -353,10 +354,10 @@ def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:
 If passthrough of ignore flags is required later, add them explicitly with value validation —
 do not reintroduce free-form passthrough.
 
-- [ ] **A2.1** Failing tests for rejected args / accepted `--frozen`/`--locked`
-- [ ] **A2.2** Implement allowlisted argv builder; wire into `subprocess.run`
-- [ ] **A2.3** Run tests; confirm `scripts/audit_dependencies.py` still works with no args
-- [ ] **A2.4** Changelog note
+- [x] **A2.1** Failing tests for rejected args / accepted `--frozen`/`--locked`
+- [x] **A2.2** Implement allowlisted argv builder; wire into `subprocess.run`
+- [x] **A2.3** Run tests; confirm `scripts/audit_dependencies.py` still works with no args
+- [x] **A2.4** Changelog note
 
 ### Task A3: Fallback if Sonar still flags after code fix
 
@@ -413,9 +414,9 @@ uv run --no-sync coverage xml
 Keep the matrix `build` job on `--ignore=tests/gui` + `fail-under=60` (fast, no NiceGUI).
 Keep `gui-smoke` as the dedicated NiceGUI job; Sonar’s combined coverage is separate.
 
-- [ ] **B1.1** Change Sonar coverage steps to `dev+gui` and `--append` GUI tests
-- [ ] **B1.2** Document the two-pass coverage command in `SONARQUBE_LOCAL.md`
-- [ ] **B1.3** Confirm `coverage.xml` includes `src/mypyskindose/gui/` paths
+- [x] **B1.1** Change Sonar coverage steps to `dev+gui` and `--append` GUI tests
+- [x] **B1.2** Document the two-pass coverage command in `SONARQUBE_LOCAL.md`
+- [x] **B1.3** Confirm `coverage.xml` includes `src/mypyskindose/gui/` paths
 
 ### Task B2: Quality gate threshold **or** remove README badge
 
@@ -439,7 +440,7 @@ can you Create/Copy a gate and edit “Coverage on New Code”?
 
 - [x] **B2.B1** Delete the Quality Gate Status badge from `README.md` (done 2026-07-25 on
   `plan/sonar-privacy-gated-scans`)
-- [ ] **B2.B2** In `SONARQUBE_LOCAL.md` / HARNESS: note badge removed because Free/Sonar-way
+- [x] **B2.B2** In `SONARQUBE_LOCAL.md` / HARNESS: note badge removed because Free/Sonar-way
   80% is not tunable; Sonar remains in CI; badge may return when coverage or plan allows
 - [x] **B2.B3** Changelog note under Changed (done with badge removal)
 - [ ] **B2.B4** Optional later: re-add badge only when `alert_status=OK` is sustainable
@@ -467,11 +468,11 @@ Constraints (existing harness rules):
 - Prefer exercising real builders with mocks at I/O and Plotly boundaries over excluding code.
 - Cancel NiceGUI timers via existing `tests/gui/conftest.py` autouse fixture.
 
-- [ ] **B3.1** Add/extend tests covering ≥1 major path through each P0 module
-- [ ] **B3.2** Add/extend tests for P1 modules
-- [ ] **B3.3** Run `pytest tests/gui/ -q` locally; fix flakes before CI
+- [x] **B3.1** Add/extend tests covering ≥1 major path through each P0 module
+- [x] **B3.2** Add/extend tests for P1 modules
+- [x] **B3.3** Run `pytest tests/gui/ -q` locally; fix flakes before CI
 - [ ] **B3.4** After Sonar upload, record new_coverage %; if on B2-A, confirm ≥ **50%**
-- [ ] **B3.5** Changelog note (Added — GUI coverage tests)
+- [x] **B3.5** Changelog note (Added — GUI coverage tests)
 
 Prefer shipping B3 with B1 in the same merge train. Badge green is **only** required under
 B2-A; under B2-B the badge is already gone.
@@ -582,10 +583,12 @@ Replace today’s single `cloud-scans-after-gates` with:
 
 Document in `dev-docs/SONARQUBE_LOCAL.md` and HARNESS:
 
-- [ ] **D2.1** Administration → Analysis Method → **disable Automatic Analysis**
+- [x] **D2.1** Administration → Analysis Method → **disable Automatic Analysis**
+  (done by maintainer 2026-07-25)
 - [ ] **D2.2** Confirm CI-based analysis succeeds on a test PR
 - [ ] **D2.3** If badge still present (B2-A): confirm it can go green after security + coverage work
-- [ ] **D2.4** If badge removed (B2-B): confirm README has no Sonar QG badge
+- [x] **D2.4** If badge removed (B2-B): confirm README has no Sonar QG badge
+- [x] **D2.5** Free tier: custom `new_coverage` gate **not** available — stay B2-B (confirmed 2026-07-25)
 
 Without D2.1, Automatic Analysis can still fail GitHub’s “SonarCloud Code Analysis” check
 independently of privacy-gated CI.

@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit: auto-review off; path filters exclude sensitive surfaces from cloud review.
+# Reviews are requested only after privacy-gates (see .github/workflows/coderabbit-after-privacy.yml).
+language: en-US
+reviews:
+  auto_review:
+    enabled: false
+  path_filters:
+    - "!src/**/example_data/**"
+    - "!src/**/phantom_data/**"
+    - "!src/**/table_data/**"
+    - "!tests/fixtures/**"
+    - "!dev-docs/**"
+    - "!tmp/**"
+    - "!PlotOutputs/**"
+    - "!htmlcov/**"
+    - "!coverage.xml"
+    - "!**/*.dcm"
+    - "!**/*.ipynb"
+    - "!**/*.log"
+    - "!**/*.txt"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.gif"
+    - "!**/*.svg"
+    - "!**/*.csv"
+    - "!**/*.tsv"
+    - "!**/*.xlsx"
+    - "!**/*.xls"
+    - "!**/*.json"
+    - "!**/*.db"
+    - "!**/*.sqlite"
+    - "!**/*.parquet"
+    - "!**/uv.lock"
+    - "!**/__pycache__/**"
+    - "!**/*.pyc"
