@@ -16,7 +16,8 @@ import math
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, cast
 
 import pandas as pd
 
@@ -171,7 +172,7 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _rows_to_factor_dict(
-    rows: list[dict[str, Any]],
+    rows: Sequence[Mapping[str, Any]],
     *,
     source_stem: str | None = None,
 ) -> dict[tuple[str, str], float]:
@@ -183,6 +184,10 @@ def _rows_to_factor_dict(
         raw_cf = row.get("correction_factor")
         if equip is None:
             raise ValueError("Kerma-meter correction table: equipment column has an empty value.")
+        if raw_cf is None:
+            raise ValueError(
+                "Kerma-meter correction table: correction_factor must be a finite float > 0."
+            )
         try:
             factor = float(raw_cf)
         except (TypeError, ValueError) as exc:
@@ -226,7 +231,7 @@ def _load_json_correction_rows(path: Path) -> list[dict[str, Any]]:
     if not isinstance(rows, list) or len(rows) == 0:
         raise ValueError("Kerma-meter correction JSON has no factor rows.")
     _ensure_row_budget(len(rows))
-    return rows
+    return cast(list[dict[str, Any]], rows)
 
 
 def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataFrame:
@@ -272,9 +277,12 @@ def load_correction_table(path: Path | str, sheet: str | int | None = None) -> d
         raise ValueError(f"Kerma-meter correction file not found or not a regular file: {path.name}")
 
     if path.suffix.lower() == ".json":
-        rows = _load_json_correction_rows(path)
+        rows: Sequence[Mapping[str, Any]] = _load_json_correction_rows(path)
     else:
-        rows = _load_tabular_correction_df(path, sheet).to_dict(orient="records")
+        rows = cast(
+            list[dict[str, Any]],
+            _load_tabular_correction_df(path, sheet).to_dict(orient="records"),
+        )
     return _rows_to_factor_dict(rows, source_stem=path.stem)
 
 

@@ -126,6 +126,8 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   (`kerma_meter_prompt` no longer always-returns-bool; dialog is fire-and-continue),
   duplicated dialog CSS literals (S1192), unused warn-helper params (S1172), and cognitive
   complexity on CF table load / Calculate kerma readiness helpers. Behavior unchanged.
+  Also tightened basedpyright types on CF table load and identity-adapter tests so
+  pre-push typecheck passes.
 - **SonarCloud new-code Security Rating** (2026-07-24) — Confined the remaining CLI-derived
   filesystem paths in dev scripts through path validation and added git-ref / audit-arg
   allowlisting so SonarCloud stops rating new code below A. `mpfb_generate` and `run_catalog`

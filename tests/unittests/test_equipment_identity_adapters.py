@@ -89,6 +89,7 @@ def test_generic_rdsr_equipment_column_to_station(tmp_path: Path):
 
 
 def test_normalized_station_serial_round_trip(tmp_path: Path):
+    from mypyskindose.input_adapters.models import InputAdapterResult
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     src = FIXTURES / "normalized_events.csv"
@@ -99,16 +100,19 @@ def test_normalized_station_serial_round_trip(tmp_path: Path):
     df.to_csv(path, index=False)
 
     result = read_and_normalize_input(path, input_schema="normalized")
+    assert isinstance(result, InputAdapterResult)
     assert (result.normalized_data[KEY_NORMALIZATION_STATION_NAME] == "unit-norm-01").all()
     assert (result.normalized_data[KEY_NORMALIZATION_DEVICE_SERIAL] == "serial-norm-01").all()
 
 
 def test_normalized_without_identity_still_loads():
+    from mypyskindose.input_adapters.models import InputAdapterResult
     from mypyskindose.input_adapters.registry import read_and_normalize_input
 
     result = read_and_normalize_input(
         FIXTURES / "normalized_events.csv",
         input_schema="normalized",
     )
+    assert isinstance(result, InputAdapterResult)
     assert "K_IRP" in result.normalized_data.columns
     assert KEY_NORMALIZATION_STATION_NAME not in result.normalized_data.columns
