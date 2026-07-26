@@ -1,6 +1,6 @@
 # Sonar gate repair + privacy-gated external scans
 
-_Status: Active — PR1–PR3 implemented on branch; open PR (F5) remaining_
+_Status: Active — implementation complete on PR #32 (CI + Sonar QG OK); merge when ready_
 _Created: 2026-07-25_
 _Branch: `plan/sonar-privacy-gated-scans`_
 _Owners: Maintainers; coding agents may implement phases in order_
@@ -471,7 +471,10 @@ Constraints (existing harness rules):
 - [x] **B3.1** Add/extend tests covering ≥1 major path through each P0 module
 - [x] **B3.2** Add/extend tests for P1 modules
 - [x] **B3.3** Run `pytest tests/gui/ -q` locally; fix flakes before CI
-- [ ] **B3.4** After Sonar upload, record new_coverage %; if on B2-A, confirm ≥ **50%**
+- [x] **B3.4** After Sonar upload, record new_coverage %; if on B2-A, confirm ≥ **50%**
+  (PR #32: quality gate OK; `new_lines_to_cover=0` / `new_uncovered_lines=0` on the PR
+  delta; overall coverage 83.4%; Security Rating A. Main’s older new-code window may still
+  differ until the period rolls — re-check after merge.)
 - [x] **B3.5** Changelog note (Added — GUI coverage tests)
 
 Prefer shipping B3 with B1 in the same merge train. Badge green is **only** required under
@@ -585,7 +588,8 @@ Document in `dev-docs/SONARQUBE_LOCAL.md` and HARNESS:
 
 - [x] **D2.1** Administration → Analysis Method → **disable Automatic Analysis**
   (done by maintainer 2026-07-25)
-- [ ] **D2.2** Confirm CI-based analysis succeeds on a test PR
+- [x] **D2.2** Confirm CI-based analysis succeeds on a test PR
+  (PR #32: `SonarCloud scan` + `SonarCloud Code Analysis` both pass; QG status OK)
 - [ ] **D2.3** If badge still present (B2-A): confirm it can go green after security + coverage work
 - [x] **D2.4** If badge removed (B2-B): confirm README has no Sonar QG badge
 - [x] **D2.5** Free tier: custom `new_coverage` gate **not** available — stay B2-B (confirmed 2026-07-25)
@@ -637,12 +641,14 @@ job with `needs: [privacy-gates]` so review is requested as soon as admission pa
 - [x] **F2** Update `dev-docs/HARNESS_ENGINEERING.md` CI DAG + “privacy before cloud” rule
 - [x] **F3** Update `CHANGELOG.md` `[Unreleased]` (Security / Fixed / Changed as appropriate)
 - [x] **F4** Update `AGENTS.md` / playbook only if operator workflow changes for agents
-- [ ] **F5** Open PR from `plan/sonar-privacy-gated-scans` (or implementation branch) with
+- [x] **F5** Open PR from `plan/sonar-privacy-gated-scans` (or implementation branch) with
   test plan:
   - Privacy fail → OWASP Semgrep / Sonar / CodeRabbit do not run
   - Privacy pass → OWASP Semgrep runs; Sonar runs on PR; CodeRabbit comment appears
   - After merge to main: Security Rating A on new code; README has no red Sonar badge
     (removed under B2-B, or green under B2-A)
+
+  Opened as https://github.com/kgrizz-git/MyPySkinDose/pull/32
 
 ---
 
