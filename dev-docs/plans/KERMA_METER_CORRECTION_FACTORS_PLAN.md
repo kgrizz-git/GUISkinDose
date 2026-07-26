@@ -108,17 +108,28 @@ A composite key identifies "which unit + tube" an event belongs to, resolved wit
 1. Explicit user-label override (settings) — exact-match label the user types in the GUI/passes via setting.
 2. `DeviceSerialNumber` (most stable per-unit identifier) when present.
 3. `StationName` when present.
-4. Tabular-only escape hatch: the raw "Equipment Name" / "device" column when neither DICOM field is available.
+4. **Tabular fallback (per the user's requirement)** — when neither station name nor serial number is available
+   (the normal case for CSV/TSV/XLSX exports, which carry no DICOM top-level attributes), resolve the equipment
+   identity from the tabular column that names the unit. Specifically, look for an **"equipment" column first**,
+   then the source-specific variants: DoseTrack's **"Equipment Name"** sentinel column (currently consumed by
+   `input_adapters/dosetrack.py:185` to infer `ManufacturerModelName` and then *dropped* at `:206` — Phase 0 must
+   preserve it as the per-unit `station_name` *before* it is dropped), Radimetrics' **"Device"** column, and the
+   generic "device model"/"station name" candidates already enumerated in `column_mapper.py:34`. Only the values
+   of these columns — not the model-name inference — populate the equipment key; the existing inference stays as
+   a separate side effect for `ManufacturerModelName`.
 5. Empty → unresolved → CF=1.0.
 
 The effective event key is `(equipment_label, acquisition_plane_normalized)` where
 `acquisition_plane_normalized ∈ {"single", "A", "B"}` (collapse "Single Plane" → "single"; keep "A"/"B" suffix).
-The lookup table is queried with this `(equipment_label, tube)` pair. Wildcard rows (`equipment_label="<any>"` or
+The lookup table is queried with this `(equipment, tube)` pair. Wildcard rows (`equipment_label="<any>"` or
 `tube="<any>"`) are supported as user-authored fallbacks (lower precedence than exact match) so a site can ship a
 per-model default and override specific units.
 
 Rationale: `DeviceSerialNumber` is more globally unique than `StationName` (which can be a friendly room label like
 `"INR Lab"`). Both are offered because sites may publish lookup tables keyed the way their physicists maintain them.
+For tabular exports — which never carry DICOM station/serial — the **"equipment"-style column is the *primary*
+per-unit identifier**, not a last-resort hack: it is the only per-unit signal a tabular row has, and it must be
+captured rather than collapsed into the model name as the adapters do today.
 
 ## 7. Lookup-table schema
 
@@ -191,8 +202,23 @@ Each phase is independently shippable and leaves behavior unchanged when the fea
   `KEY_RDSR_DEVICE_SERIAL = "DeviceSerialNumber"` to `constants.py`). Missing attributes store as `None`, not crash.
 - Normalize into `data_norm` (new keys `KEY_NORMALIZATION_STATION_NAME = "station_name"`,
   `KEY_NORMALIZATION_DEVICE_SERIAL = "device_serial"`) in `rdsr_normalizer._normalize_machine_parameters`.
-- Tabular adapters: ensure the "Equipment Name"/"device" column is preserved into a `station_name`-equivalent
-  column when present (DoseTrack already surfaces it; Radimetrics may need a column mapping).
+- Tabular adapters: when station name / device serial are absent (the usual tabular case — no DICOM top-level
+  attrs), the **"equipment" column becomes the per-unit identifier** and must be preserved into a
+  `station_name`-equivalent column *before* any existing step drops it. Concretely:
+  - **Generic** (`column_mapper.py`): add an "equipment" candidate list targeted at the per-unit column
+    (distinct from the model column at `column_mapper.py:34`); first source-specific equipment-name candidate
+    wins. Also recognize plain `equipment` and `equipment name`.
+  - **DoseTrack** (`dosetrack.py:185`–`:206`): today the `_dt_equipment_name` sentinel is read only to derive
+    `ManufacturerModelName`, then `data_df.drop(columns=["_dt_equipment_name"])` discards it. Persist its value
+    into the new `station_name`/`device_serial`-equivalent column *before* the drop so the per-unit key survives.
+  - **Radimetrics** (`column_mapper.py:70` lists `"device"` for `ManufacturerModelName`): the "Device" column is
+    reused to infer the model; if it is the only per-unit signal available, copy it to the station-identity column
+    rather than collapsing to model. Where the model column and a separate equipment/unit column both exist, keep
+    the unit-specific one for identity and the model one for `ManufacturerModelName`.
+  - **Generic RDSR tabular** (`generic_rdsr.py:57` "device model"/`"device"`): same split — the "device" column
+    alone is treated as a per-unit identity when no DICOM station/serial is present.
+- Add unit + characterization tests for missing vs present identifiers (DICOM RDSR with present/absent station and
+  serial; each tabular adapter with/without an "equipment"-style column). **No dose change yet.**
 - Add unit + characterization tests for missing vs present identifiers. **No dose change yet.**
 
 ### Phase 1 — Correction-factor engine (pure function, CF=… by key)
