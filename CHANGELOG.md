@@ -28,6 +28,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   Semgrep first; OWASP Semgrep, SonarCloud (PR+main), gui-smoke, and the build matrix wait on
   it. Codecov/Safety stay main-only. Automatic Analysis is off; Free/Sonar-way coverage gate
   remains untunable (no README badge).
+- **CodeRabbit after privacy-gates** (2026-07-25) — auto-review disabled; CI posts
+  `@coderabbitai review` on non-draft PRs once per head SHA only after reusable
+  `privacy-gates` succeeds (does not wait for the full matrix).
 - **SonarCloud Automatic Analysis disabled; Free gate untunable** (2026-07-25) — CI-based
   analysis is authoritative; Free/Sonar-way `new_coverage` stays at 80% (B2-B / no README badge).
 

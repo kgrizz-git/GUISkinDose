@@ -458,7 +458,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | SonarCloud CI scan | `sonar-scan` on pull requests and `main` pushes, after `privacy-gates` + `build`; combined non-GUI+GUI `coverage.xml`; Automatic Analysis disabled |
 | Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
-| CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; review requested only after privacy-gates (Phase E) |
+| CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on non-draft PRs (deduped per head SHA) |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.

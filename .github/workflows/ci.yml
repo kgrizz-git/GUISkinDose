@@ -49,48 +49,59 @@ jobs:
   privacy-gates:
     needs: schedule-gate
     if: needs.schedule-gate.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
     permissions:
       contents: read
+    uses: ./.github/workflows/privacy-gates.yml
+
+  request-coderabbit:
+    # Fires as soon as privacy-gates succeeds (D14) — does not wait for matrix/Sonar.
+    needs: [schedule-gate, privacy-gates]
+    if: >
+      needs.schedule-gate.outputs.should_run == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - name: Request CodeRabbit review after privacy-gates
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
       with:
-        fetch-depth: 0
-    - name: Install uv
-      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
-      with:
-        version: ">=0.11.19"
-    - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
-      with:
-        python-version: '3.12'
-    - name: Install dependencies (locked)
-      run: uv sync --extra dev --locked
-    - name: Activate environment
-      run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
-    - name: Check sensitive content and approved assets
-      run: python scripts/check_sensitive_content.py --require-approved-assets
-    - name: Check protected privacy paths and scanner routing policy
-      env:
-        EVENT_NAME: ${{ github.event_name }}
-        BASE_REF: ${{ github.base_ref }}
-      run: |
-        python scripts/privacy_admission.py check --mode all
-        if [ "$EVENT_NAME" = "pull_request" ]; then
-          PRIVACY_BASE_REF="origin/$BASE_REF" python scripts/privacy_admission.py route --mode range
-        else
-          python scripts/privacy_admission.py route --mode all
-        fi
-    - name: Check PR and push metadata for sensitive content
-      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
-    - name: Check ignored and untracked risky artifacts
-      run: python scripts/check_ignored_asset_files.py --strict
-    - name: Check approved asset inventory Markdown
-      run: python scripts/render_asset_inventory.py --check
-    - name: Check privacy tool inventory and scanner references
-      run: python scripts/render_privacy_tool_inventory.py --check
-    - name: Semgrep (project PHI/PII leak rules, blocking)
-      run: python scripts/run_semgrep_privacy.py
+        script: |
+          const pr = context.payload.pull_request;
+          if (!pr) {
+            core.info('No pull_request payload; skipping CodeRabbit request.');
+            return;
+          }
+          const prNumber = pr.number;
+          const headSha = pr.head.sha;
+          const { owner, repo } = context.repo;
+          const marker = `@coderabbitai review`;
+          const shaMarker = `<!-- mypyskindose-coderabbit:${headSha} -->`;
+
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number: prNumber,
+            per_page: 100,
+          });
+
+          const alreadyForSha = comments.some(
+            (c) => c.user?.login === 'github-actions[bot]' && c.body?.includes(shaMarker)
+          );
+          if (alreadyForSha) {
+            core.info(`CodeRabbit already requested for head SHA ${headSha} on PR #${prNumber}.`);
+            return;
+          }
+
+          await github.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body: `${marker}\n${shaMarker}`,
+          });
+          core.info(`Requested CodeRabbit review on PR #${prNumber} after privacy-gates (${headSha}).`);
 
   static-analysis:
     needs: [schedule-gate, privacy-gates]

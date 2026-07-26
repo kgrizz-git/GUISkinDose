@@ -1,0 +1,52 @@
+# Reusable privacy admission gates. Called from ci.yml before Semgrep/Sonar/GUI/build.
+# Do not trigger this file on pull_request directly — that would double-run with ci.
+name: privacy-gates
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-gates:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        fetch-depth: 0
+    - name: Install uv
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      with:
+        version: ">=0.11.19"
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      with:
+        python-version: '3.12'
+    - name: Install dependencies (locked)
+      run: uv sync --extra dev --locked
+    - name: Activate environment
+      run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+    - name: Check sensitive content and approved assets
+      run: python scripts/check_sensitive_content.py --require-approved-assets
+    - name: Check protected privacy paths and scanner routing policy
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+      run: |
+        python scripts/privacy_admission.py check --mode all
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          PRIVACY_BASE_REF="origin/$BASE_REF" python scripts/privacy_admission.py route --mode range
+        else
+          python scripts/privacy_admission.py route --mode all
+        fi
+    - name: Check PR and push metadata for sensitive content
+      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
+    - name: Check ignored and untracked risky artifacts
+      run: python scripts/check_ignored_asset_files.py --strict
+    - name: Check approved asset inventory Markdown
+      run: python scripts/render_asset_inventory.py --check
+    - name: Check privacy tool inventory and scanner references
+      run: python scripts/render_privacy_tool_inventory.py --check
+    - name: Semgrep (project PHI/PII leak rules, blocking)
+      run: python scripts/run_semgrep_privacy.py

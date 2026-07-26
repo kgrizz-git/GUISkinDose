@@ -1,6 +1,6 @@
 # Sonar gate repair + privacy-gated external scans
 
-_Status: Active — PR1 done; PR2 (C+D privacy-gates + Sonar on PR) in progress; Phase E next_
+_Status: Active — PR1–PR3 implemented on branch; open PR (F5) remaining_
 _Created: 2026-07-25_
 _Branch: `plan/sonar-privacy-gated-scans`_
 _Owners: Maintainers; coding agents may implement phases in order_
@@ -612,69 +612,31 @@ reviews:
 ```
 
 - [x] **E1.1** Add `.coderabbit.yaml` with auto_review disabled
-- [ ] **E1.2** Note in HARNESS / AGENTS that CodeRabbit is privacy-gated
+- [x] **E1.2** Note in HARNESS / AGENTS that CodeRabbit is privacy-gated
 
 ### Task E2: Request review after privacy-gates
 
 **Files:**
-- Create: `.github/workflows/coderabbit-after-privacy.yml`
+- Create: `.github/workflows/privacy-gates.yml` (reusable `workflow_call`)
+- Modify: `.github/workflows/ci.yml` (`uses:` + `request-coderabbit` job)
 
-Pattern: `workflow_run` on workflow `ci` when conclusion is success is **too coarse** (waits
-for entire CI). Prefer a dedicated approach:
+Implemented as: extract reusable `privacy-gates.yml`; add in-ci `request-coderabbit`
+job with `needs: [privacy-gates]` so review is requested as soon as admission passes
+(D14), without waiting for the matrix / Sonar. Draft PRs are skipped.
 
-**Preferred:** make `privacy-gates` a **reusable workflow** or expose a thin workflow
-`privacy-gates.yml` that `ci.yml` also calls — then CodeRabbit triggers on that workflow’s
-success for `pull_request` events.
-
-Minimal viable approach without full reusable extraction:
-
-```yaml
-name: coderabbit-after-privacy
-on:
-  workflow_run:
-    workflows: ["ci"]
-    types: [completed]
-
-jobs:
-  request-review:
-    if: >
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
-    steps:
-      - uses: actions/github-script@...  # pinned digest
-        with:
-          script: |
-            // Resolve PR number from workflow_run; skip if privacy-gates was skipped
-            // Post '@coderabbitai review' once per head SHA (dedupe existing comments)
-```
-
-**Problem:** `workflow_run` on full `ci` success waits for build matrix — slower than
-“after privacy only”, and skips CodeRabbit when later jobs fail even if privacy passed.
-
-**Better (implement this):** extract `.github/workflows/privacy-gates.yml` as a callable /
-standalone workflow triggered on `pull_request` + `push`, and:
-
-- `ci.yml` starts with `uses: ./.github/workflows/privacy-gates.yml` or `needs` via
-  `workflow_call`
-- `coderabbit-after-privacy.yml` listens to workflow name `privacy-gates` success only
-
-- [ ] **E2.1** Extract reusable/standalone `privacy-gates` workflow used by `ci.yml`
-- [ ] **E2.2** Add CodeRabbit request workflow on `privacy-gates` success for PRs
-- [ ] **E2.3** Deduplicate `@coderabbitai review` comments per head SHA
-- [ ] **E2.4** Document that drafts are skipped if CodeRabbit config skips drafts
+- [x] **E2.1** Extract reusable/standalone `privacy-gates` workflow used by `ci.yml`
+- [x] **E2.2** Add CodeRabbit request job after `privacy-gates` success for non-draft PRs
+- [x] **E2.3** Deduplicate `@coderabbitai review` comments per head SHA
+- [x] **E2.4** Document that drafts are skipped (`draft == false` + `.coderabbit.yaml` drafts: false)
 
 ---
 
 ## Phase F — Docs, changelog, verification
 
-- [ ] **F1** Update `dev-docs/index.md` Master plans table (this file)
-- [ ] **F2** Update `dev-docs/HARNESS_ENGINEERING.md` CI DAG + “privacy before cloud” rule
-- [ ] **F3** Update `CHANGELOG.md` `[Unreleased]` (Security / Fixed / Changed as appropriate)
-- [ ] **F4** Update `AGENTS.md` / playbook only if operator workflow changes for agents
+- [x] **F1** Update `dev-docs/index.md` Master plans table (this file)
+- [x] **F2** Update `dev-docs/HARNESS_ENGINEERING.md` CI DAG + “privacy before cloud” rule
+- [x] **F3** Update `CHANGELOG.md` `[Unreleased]` (Security / Fixed / Changed as appropriate)
+- [x] **F4** Update `AGENTS.md` / playbook only if operator workflow changes for agents
 - [ ] **F5** Open PR from `plan/sonar-privacy-gated-scans` (or implementation branch) with
   test plan:
   - Privacy fail → OWASP Semgrep / Sonar / CodeRabbit do not run
