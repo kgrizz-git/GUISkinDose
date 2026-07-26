@@ -10,6 +10,24 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Changed
+
+- **Sonar quality-gate README badge removed** (2026-07-25) — dropped the SonarCloud
+  `alert_status` badge from `README.md`. On Free / read-only Sonar way the new-code coverage
+  gate stays at 80% and cannot be lowered, so the badge was advertising a red status we cannot
+  tune. Sonar analysis remains in CI per `SONAR_PRIVACY_GATED_SCANS_PLAN.md`; the badge may
+  return only when the gate is green sustainably or a custom gate is available.
+
+### Added
+
+- **Sonar + privacy-gated scans master plan** (2026-07-25) — `dev-docs/plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md`
+  covers Sonar security fixes; keep GUI in coverage via combined `tests/gui/` coverage.xml + GUI
+  tests; remove README Sonar badge when custom quality gates are unavailable (done on this
+  branch); cloud analyzer path exclusions audit for Sonar / Semgrep / CodeRabbit (and a note that
+  future DeepSource or similar SaaS SAST must use the same privacy-gate + exclusion pattern);
+  Semgrep as local Actions CLI with Cloud App disabled; restore Sonar on PRs; run OWASP Semgrep /
+  Sonar / CodeRabbit only after `privacy-gates`. Branch: `plan/sonar-privacy-gated-scans`.
+
 ### Security
 
 - **Notebook embedded-visual review checklist** (2026-07-25) — `notebook_embedded_visual` assets
