@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -91,9 +93,10 @@ async def test_do_calculate_success_updates_drawer_and_tabs(monkeypatch: pytest.
 
     await ctrl.do_calculate()
 
-    ctrl.ctx.psd_label.set_text.assert_called_with("PSD: 9.50 mGy")
-    ctrl.ctx.tabs.set_value.assert_called_with("results")
-    ctrl.controls.status_label.set_text.assert_called()
+    cast(MagicMock, ctrl.ctx.psd_label.set_text).assert_called_with("PSD: 9.50 mGy")
+    cast(MagicMock, ctrl.ctx.tabs.set_value).assert_called_with("results")
+    assert ctrl.controls is not None
+    cast(MagicMock, ctrl.controls.status_label.set_text).assert_called()
 
 
 @pytest.mark.asyncio
@@ -116,7 +119,7 @@ async def test_do_calculate_failure_clears_results(monkeypatch: pytest.MonkeyPat
     assert state.calculation_done is False
     assert state.output is None
     assert state.psd is None
-    ctrl.ctx.psd_label.set_text.assert_called_with("PSD: 0.00 mGy")
+    cast(MagicMock, ctrl.ctx.psd_label.set_text).assert_called_with("PSD: 0.00 mGy")
 
 
 @pytest.mark.asyncio

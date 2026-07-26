@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -109,8 +111,8 @@ def test_clear_all_exams_resets_state_and_ui(monkeypatch: pytest.MonkeyPatch) ->
     assert state.rdsr_df is None
     assert state.file_name == ""
     assert state.calculation_done is False
-    ctrl.ctx.file_label.set_text.assert_called_with("No file loaded")
-    ctrl.refs.event_table.refresh.assert_called()
+    cast(MagicMock, ctrl.ctx.file_label.set_text).assert_called_with("No file loaded")
+    cast(MagicMock, ctrl.refs.event_table.refresh).assert_called()
 
 
 def test_remove_last_exam_clears_drawer_labels() -> None:
@@ -123,8 +125,8 @@ def test_remove_last_exam_clears_drawer_labels() -> None:
     ctrl.remove_exam(0)
 
     assert state.loaded_exams == []
-    ctrl.ctx.file_label.set_text.assert_called_with("No file loaded")
-    ctrl.ctx.events_label.set_text.assert_called_with("0 events")
+    cast(MagicMock, ctrl.ctx.file_label.set_text).assert_called_with("No file loaded")
+    cast(MagicMock, ctrl.ctx.events_label.set_text).assert_called_with("0 events")
 
 
 @pytest.mark.asyncio
@@ -150,8 +152,8 @@ async def test_load_example_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert state.file_name == _PHILIPS_NAME
     assert state.rdsr_df is not None
-    ctrl.refs.upload_status.set_text.assert_called()
-    ctrl.refs.event_table.refresh.assert_called()
+    cast(MagicMock, ctrl.refs.upload_status.set_text).assert_called()
+    cast(MagicMock, ctrl.refs.event_table.refresh).assert_called()
 
 
 @pytest.mark.asyncio
@@ -161,8 +163,8 @@ async def test_handle_upload_rejects_unsupported_suffix() -> None:
 
     await ctrl.handle_upload(event)
 
-    ctrl.refs.upload_status.set_text.assert_called_with("Could not load — see message")
-    ctrl.refs.uploader["el"].reset.assert_called()
+    cast(MagicMock, ctrl.refs.upload_status.set_text).assert_called_with("Could not load — see message")
+    cast(MagicMock, ctrl.refs.uploader["el"].reset).assert_called()
 
 
 @pytest.mark.asyncio
@@ -173,7 +175,7 @@ async def test_handle_upload_rejects_oversized_file() -> None:
 
     await ctrl.handle_upload(event)
 
-    ctrl.refs.upload_status.set_text.assert_called_with("Upload rejected — file too large")
+    cast(MagicMock, ctrl.refs.upload_status.set_text).assert_called_with("Upload rejected — file too large")
 
 
 @pytest.mark.asyncio
@@ -193,8 +195,8 @@ async def test_reparse_schema_on_tabular_fixture(monkeypatch: pytest.MonkeyPatch
 
     await ctrl.reparse_schema()
 
-    ctrl.refs.upload_status.set_text.assert_called()
-    assert "OK:" in str(ctrl.refs.upload_status.set_text.call_args)
+    cast(MagicMock, ctrl.refs.upload_status.set_text).assert_called()
+    assert "OK:" in str(cast(MagicMock, ctrl.refs.upload_status.set_text).call_args)
 
 
 @pytest.mark.asyncio

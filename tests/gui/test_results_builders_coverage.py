@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -66,9 +68,9 @@ def test_refresh_metrics_single_exam() -> None:
 
     ctrl.refresh_metrics()
 
-    ctrl.refs.psd_metric.set_text.assert_called_with("12.34 mGy")
-    ctrl.refs.kerma_metric.set_text.assert_called_with("56.7 mGy")
-    ctrl.refs.events_metric.set_text.assert_called_with("8")
+    cast(MagicMock, ctrl.refs.psd_metric.set_text).assert_called_with("12.34 mGy")
+    cast(MagicMock, ctrl.refs.kerma_metric.set_text).assert_called_with("56.7 mGy")
+    cast(MagicMock, ctrl.refs.events_metric.set_text).assert_called_with("8")
 
 
 def test_refresh_corr_table_populates_rows() -> None:
@@ -87,7 +89,7 @@ def test_refresh_corr_table_populates_rows() -> None:
 
     assert len(ctrl.refs.corr_table.rows) == 2
     assert ctrl.refs.corr_table.rows[0]["event"] == 1
-    ctrl.refs.corr_table.update.assert_called_once()
+    cast(MagicMock, ctrl.refs.corr_table.update).assert_called_once()
 
 
 def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -117,8 +119,8 @@ def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPa
 
     ctrl.refresh_multi_exam_results()
 
-    ctrl.refs.agg_psd_metric.set_text.assert_called_with("20.00 mGy")
-    ctrl.refs.agg_events_metric.set_text.assert_called_with("across 2 exams")
+    cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("20.00 mGy")
+    cast(MagicMock, ctrl.refs.agg_events_metric.set_text).assert_called_with("across 2 exams")
     assert ctrl.last_rendered_run_id == 1
     assert built["accordion"] == 1
     assert built["checkboxes"] == 1
@@ -146,7 +148,7 @@ def test_subset_toggle_updates_aggregate_psd(monkeypatch: pytest.MonkeyPatch) ->
     event = SimpleNamespace(value=False)
     ctrl.on_subset_toggle(event, 0)
 
-    ctrl.refs.agg_psd_metric.set_text.assert_called_with("40.00 mGy (subset)")
+    cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("40.00 mGy (subset)")
 
 
 def test_set_subset_all_refreshes_aggregate(monkeypatch: pytest.MonkeyPatch) -> None:

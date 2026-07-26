@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -80,7 +82,7 @@ def test_set_transform_defaults_clears_flags_for_non_ge() -> None:
     assert state.swap_lat_lon is False
     assert state.flip_ap1 is False
     assert state.loaded_exam_meta[0]["swap_lat_lon"] is False
-    ctrl.coord_auto_label.set_text.assert_called_with("")
+    cast(MagicMock, ctrl.coord_auto_label.set_text).assert_called_with("")
 
 
 def test_set_transform_defaults_ge_shows_normalization_hint() -> None:
@@ -92,7 +94,7 @@ def test_set_transform_defaults_ge_shows_normalization_hint() -> None:
 
     ctrl.set_transform_defaults()
 
-    ctrl.coord_auto_label.set_text.assert_called_with("· GE lat/lon handled in normalization")
+    cast(MagicMock, ctrl.coord_auto_label.set_text).assert_called_with("· GE lat/lon handled in normalization")
 
 
 def test_refresh_populates_metadata_and_sample() -> None:
@@ -105,9 +107,9 @@ def test_refresh_populates_metadata_and_sample() -> None:
 
     ctrl.refresh()
 
-    ctrl.schema_badge.set_text.assert_called_with(prov.schema_name.upper().replace("_", " "))
-    ctrl.col_map_table.update.assert_called()
-    ctrl.event_sample_table.update.assert_called()
+    cast(MagicMock, ctrl.schema_badge.set_text).assert_called_with(prov.schema_name.upper().replace("_", " "))
+    cast(MagicMock, ctrl.col_map_table.update).assert_called()
+    cast(MagicMock, ctrl.event_sample_table.update).assert_called()
     assert len(ctrl.event_sample_table.rows) <= 5
 
 
@@ -119,7 +121,7 @@ def test_refresh_hides_coord_card_for_normalized_schema() -> None:
 
     ctrl.refresh()
 
-    ctrl.coord_card.set_visibility.assert_called_with(False)
+    cast(MagicMock, ctrl.coord_card.set_visibility).assert_called_with(False)
 
 
 def test_on_swap_toggle_ignored_for_normalized_schema(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -155,4 +157,4 @@ async def test_on_sheet_change_reparses_file(monkeypatch: pytest.MonkeyPatch) ->
     await ctrl.on_sheet_change()
 
     assert refreshed["n"] == 1
-    ctrl.upload_status.set_text.assert_called()
+    cast(MagicMock, ctrl.upload_status.set_text).assert_called()

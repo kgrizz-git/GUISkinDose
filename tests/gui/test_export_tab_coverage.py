@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -117,4 +119,4 @@ async def test_export_rich_report_multi_exam_payload(monkeypatch, _capture_notif
 
     await ctrl.export_rich_report()
 
-    ctrl._render_rich_report.assert_awaited_once_with("pdf", None)
+    cast(MagicMock, ctrl._render_rich_report).assert_awaited_once_with("pdf", None)
