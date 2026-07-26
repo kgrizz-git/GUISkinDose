@@ -1,12 +1,34 @@
 # MyPySkinDose
 
-Modified from the upstream PySkinDose project: https://github.com/rvbCMTS/PySkinDose
+**Independently maintained fork** of [PySkinDose](https://github.com/rvbCMTS/PySkinDose).
+Original author: Max Hellström. This fork is **not** an official or endorsed
+PySkinDose release unless upstream maintainers say otherwise.
 
-Original author: Max Hellström
+Current maintainer: [@kgrizz-git](https://github.com/kgrizz-git) — see
+[SUPPORT.md](SUPPORT.md) and [GOVERNANCE.md](GOVERNANCE.md).
 
-This repository keeps the PySkinDose codebase for estimating 3D skin dose maps from DICOM X-ray Radiation Dose Structured Reports (RDSR), while allowing local modifications and further development in this fork.
+This repository estimates peak skin dose (PSD) and 3D skin dose maps from DICOM
+X-ray Radiation Dose Structured Reports (RDSR) and supported tabular exports,
+while allowing local modifications beyond upstream.
 
-The package name in code is `mypyskindose`.
+The distribution and import package name is `mypyskindose` (distinct from upstream).
+
+## Intended use and responsibility
+
+MyPySkinDose is intended for **research, education, development, and
+institutional quality-assurance** workflows. It is **not FDA-cleared** (or
+otherwise certified) as a medical device, and results are **not** independently
+validated for making patient-care decisions on their own.
+
+**Physicists and physicians remain responsible** for reviewing outputs,
+confirming that inputs and geometry settings are appropriate, and making any
+clinical or patient-care decisions. Do not treat dose maps or PSD values as a
+substitute for professional judgment, institutional policy, or regulatory
+clearance.
+
+Never commit or attach real patient data to issues, pull requests, or the
+repository — see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md).
 
 ## Requirements
 
@@ -131,7 +153,7 @@ pip install -e ".[docs]"
 
 ## What this code is for
 
-PySkinDose is meant to be used in a few different ways:
+Within the intended-use boundary above, MyPySkinDose is meant to be used in a few different ways:
 
 1. Inspect or debug the examination geometry before doing dose calculations.
 2. Step through irradiation events from an RDSR study to understand beam orientation and positioning.
@@ -149,7 +171,7 @@ The main user-facing workflow is:
 
 ## Quick Start with Jupyter Notebook
 
-**New to PySkinDose?** The easiest way to learn is to start with the interactive getting-started notebook:
+**New to MyPySkinDose?** The easiest way to learn is to start with the interactive getting-started notebook:
 
 📓 **[docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb)**
 
@@ -273,11 +295,11 @@ Common phantom models are:
 
 Documentation sources live under [docs/source](docs/source), including the getting-started notebook and user guide material.
 
-To build the HTML documentation locally from this repository:
+To build the HTML documentation locally from this repository (use the `docs`
+optional extra — there are no `requirements*.txt` files):
 
 ```bash
-pip install -e .
-pip install -r docs/requirements.txt
+pip install -e ".[docs]"
 python -m sphinx -b html docs/source docs/build/html
 ```
 
@@ -287,6 +309,9 @@ Then open the built site locally (path exists only after the Sphinx step above):
 
 ## Notes for this fork
 
-- This repository is a modified fork of the upstream PySkinDose project.
-- Upstream project page: https://github.com/rvbCMTS/PySkinDose
-- This fork can evolve independently while still preserving attribution to the original project.
+- Independently maintained fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose); MIT license and upstream copyright preserved.
+- Package identity: `mypyskindose` (see [dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md](dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md)).
+- How we maintain the fork: [dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md).
+- Bugs and features: [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) (templates enforce no PHI/PII).
+- Questions and contribution ideas: [GitHub Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions). Ideas welcome — prefer Issues/Discussions over cold PRs ([CONTRIBUTING.md](CONTRIBUTING.md)).
+- Security: [SECURITY.md](SECURITY.md). Support channels: [SUPPORT.md](SUPPORT.md).

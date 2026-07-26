@@ -1,0 +1,62 @@
+name: Feature request
+description: Suggest an improvement for MyPySkinDose
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the capability you want and why it helps.
+
+        **Do not attach or paste** real patient data, raw clinical RDSRs, identified screenshots,
+        credentials, private URLs, or PHI/PII. Security issues belong in
+        [private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new).
+
+        This software is **not FDA-cleared**. Feature ideas should respect research / education /
+        development / QA use; clinicians remain responsible for reviewing results used near patient care.
+  - type: checkboxes
+    id: no-phi
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I confirm this request contains no PHI/PII, real clinical RDSRs, credentials, or private institutional identifiers.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or workflow gap
+      description: What is hard or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like MyPySkinDose to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Workarounds, upstream PySkinDose behavior, or other tools.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dose calculation / physics
+        - Input adapters (RDSR / tabular)
+        - GUI / UX
+        - Exports / reporting
+        - Phantoms / geometry
+        - Docs / help
+        - Packaging / CI / maintainer tooling
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Optional. Keep examples synthetic or de-identified.

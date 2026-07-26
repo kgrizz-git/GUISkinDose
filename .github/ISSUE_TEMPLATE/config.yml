@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions or contribution ideas
+    url: https://github.com/kgrizz-git/MyPySkinDose/discussions
+    about: Ideas and submissions welcome here. Prefer Discussions/Issues over opening a cold PR.
+  - name: Security vulnerability
+    url: https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new
+    about: Report security issues privately. Do not open a public issue for vulnerabilities or patient data.
+  - name: Support policy
+    url: https://github.com/kgrizz-git/MyPySkinDose/blob/main/SUPPORT.md
+    about: Read SUPPORT.md for channels, intended use, and what not to attach.

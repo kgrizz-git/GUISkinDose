@@ -104,6 +104,12 @@ in a torso band below the arms while `scale_lat` still scales the full lateral m
 
 **Goal: make the code easier to use and more user-friendly, including an intuitive GUI.**
 
+Public contribution and support docs: [CONTRIBUTING.md](CONTRIBUTING.md), [SUPPORT.md](SUPPORT.md),
+[SECURITY.md](SECURITY.md). Fork stewardship: [dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md).
+Intended use is research / education / development / institutional QA — **not FDA-cleared**;
+physicists and physicians remain responsible for reviewing results and patient-care decisions.
+Unsolicited cold PRs are discouraged; ideas and submissions are welcome via Issues or Discussions.
+
 See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implementation plan. The short version:
 
 1. A NiceGUI app now exists in `src/mypyskindose/gui/`. `app.py` (~245 lines) builds layout and `PageContext`; each tab lives under `gui/tabs/` (`upload`, `data`, `settings`, `geometry`, `calculate`, `results`, `export`); upload widgets under `gui/widgets/`.

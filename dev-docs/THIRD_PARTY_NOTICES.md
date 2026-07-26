@@ -7,7 +7,7 @@ full declared dependency set (all extras), pinned by `uv.lock`:
 uv sync --all-extras
 ```
 
-Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-22).
+Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-26).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -98,7 +98,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | jupyter_core | 5.9.1 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyter_server | 2.20.0 | BSD-3-Clause | Homepage, https://jupyter-server.readthedocs.io |
 | jupyter_server_terminals | 0.5.4 | BSD-3-Clause | Homepage, https://jupyter.org |
-| jupyterlab | 4.6.0 | BSD-3-Clause | Homepage, https://jupyter.org |
+| jupyterlab | 4.6.2 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyterlab_pygments | 0.3.0 | BSD-3-Clause | Homepage, https://github.com/jupyterlab/jupyterlab_pygments |
 | jupyterlab_server | 2.28.0 | BSD-3-Clause | Homepage, https://jupyterlab-server.readthedocs.io |
 | jupyterlab_widgets | 3.0.16 | BSD-3-Clause | Homepage, https://github.com/jupyter-widgets/ipywidgets |

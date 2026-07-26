@@ -12,6 +12,13 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md) | Shared workflow guidance for coding agents; tool-specific pointer files should refer here instead of duplicating rules. |
 | [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) | Practical upstream-attribution, GitHub governance, privacy, release, and worktree guidance for maintaining this PySkinDose fork. |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor setup, PR workflow, privacy rules, and pointers to agent playbooks. |
+| [../SUPPORT.md](../SUPPORT.md) | Support channels, intended-use boundary, and no-PHI rules. |
+| [../SECURITY.md](../SECURITY.md) | Private vulnerability reporting and supported-version policy. |
+| [../GOVERNANCE.md](../GOVERNANCE.md) | Solo-maintainer decisions and release ownership. |
+| [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 community standards. |
+| [../CITATION.cff](../CITATION.cff) | Machine-readable citation; credits upstream PySkinDose. |
+| [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Historical namespace rename notes; corrected for extras/`uv.lock` packaging. |
 | [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | Repository harness principles, golden rules, **documentation conventions** (master vs execution plans), validation commands, CI expectations, doc-gardening cadence, and known gaps. |
 | [LICENSE_COMPLIANCE.md](LICENSE_COMPLIANCE.md) | Third-party license policy, `scripts/check_licenses.py`, and `THIRD_PARTY_NOTICES.md` workflow. |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |

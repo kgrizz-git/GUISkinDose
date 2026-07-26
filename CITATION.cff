@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: MyPySkinDose
+message: >-
+  If you use this software, please cite it and also credit the upstream
+  PySkinDose project as appropriate.
+type: software
+authors:
+  - family-names: Hellström
+    given-names: Max
+  - name: "MyPySkinDose contributors"
+repository-code: "https://github.com/kgrizz-git/MyPySkinDose"
+url: "https://github.com/kgrizz-git/MyPySkinDose"
+abstract: >-
+  Independently maintained fork of PySkinDose for estimating peak skin dose and
+  3D skin dose maps from fluoroscopic RDSR and tabular inputs. Not FDA-cleared;
+  intended for research, education, development, and institutional QA.
+license: MIT
+keywords:
+  - skin dose
+  - fluoroscopy
+  - RDSR
+  - DICOM
+  - medical physics
+references:
+  - type: software
+    title: PySkinDose
+    repository-code: "https://github.com/rvbCMTS/PySkinDose"
+    authors:
+      - family-names: Hellström
+        given-names: Max
+    notes: Upstream project that this fork is based on.

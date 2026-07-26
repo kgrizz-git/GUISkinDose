@@ -1,6 +1,6 @@
 # Maintaining an ethical, healthy fork of PySkinDose
 
-_Reviewed: 2026-07-15. This is practical maintainer guidance, not legal, regulatory, or medical-device advice._
+_Reviewed: 2026-07-26. This is practical maintainer guidance, not legal, regulatory, or medical-device advice._
 
 ## Purpose
 
@@ -23,28 +23,54 @@ The following are already in good shape:
 |---|---|---|
 | Fork relationship | GitHub identifies MyPySkinDose as a fork of rvbCMTS/PySkinDose. | Preserves the connection to the original project and its history. |
 | Git remotes | origin points to MyPySkinDose and upstream points to PySkinDose. | This is the conventional remote layout for a maintained fork. |
-| Upstream divergence | At review, main was 240 commits ahead of upstream/master and 0 commits behind it. | There is no urgent upstream merge; continue to monitor upstream. |
+| Upstream divergence | 2026-07-26: main was 346 commits ahead of upstream/master and 0 commits behind it. | There is no urgent upstream merge; continue to monitor upstream. |
 | License and credit | The upstream MIT license and original copyright notice remain, and README links to PySkinDose and names the original author. | MIT requires preservation of its notice; this is the respectful approach too. |
 | Distinct package identity | The distribution and import package are named mypyskindose. | Avoids impersonating or colliding with the upstream PyPI package. |
 | Engineering hygiene | CI, tests, a changelog, Dependabot, dependency license checks, and secret scanning are present. | These provide a solid foundation for safe contributions. |
+| Community files | CONTRIBUTING, SECURITY, SUPPORT, CODE_OF_CONDUCT, GOVERNANCE, CITATION.cff, issue forms, and PR template are present (2026-07-26). | Contributors and reporters have clear, privacy-aware channels. |
+| Intended use | README / SUPPORT state research–education–QA use, not FDA-cleared, clinician responsibility. | Reduces misuse risk for clinical-looking dose software. |
+| Issues | Enabled with no-PHI issue forms; Bug Tracker URL matches. | Package metadata and support policy stay coherent. |
+| Main ruleset | Active ruleset requires PRs; blocks force-push and branch deletion. | Protects the integration branch. |
+| Private vulnerability reporting | Enabled; SECURITY.md points reporters there. | Avoids public disclosure of security issues. |
+| Release publishing | release.yml uses PyPI Trusted Publishing (OIDC); no `PYPI_DEPLOY_API_KEY` secret present. | Prefer short-lived credentials; register a PyPI trusted publisher before the first real publish. |
 
-The review was made from main at commit 3dc983b. It intentionally does not
-assess unmerged work on security/phi-pii-repo-guardrails; review that branch
-through its own pull request before merging it.
+### Fork baseline (record syncs here)
+
+```text
+Upstream: https://github.com/rvbCMTS/PySkinDose
+Upstream branch followed: master
+Fork distribution/import name: mypyskindose
+Last assessed upstream comparison: 2026-07-26 — 0 behind / 346 ahead of upstream/master
+Local policy: upstream syncs arrive through a reviewed PR; main is never force-pushed.
+```
+
+Full Git history is retained from the fork. Begin recording each verified upstream sync
+below after the next sync PR.
+
+| Date | Upstream revision | Sync branch / PR | Notes |
+|---|---|---|---|
+| 2026-07-26 | (comparison only; no merge) | — | Still 0 commits behind upstream/master. |
 
 ## Highest-priority actions
 
-Do these in roughly this order. The first four make the public project clearer
-and safer without changing its scientific logic.
+Status as of 2026-07-26 (priorities 1–4 and most of 5–6 addressed in-repo; remaining
+ops notes below).
 
-| Priority | Action | Reason |
+| Priority | Action | Status |
 |---|---|---|
-| 1 | Decide the public support route: enable GitHub Issues or change the Bug Tracker project URL to a real support channel. | Current package metadata links to Issues, but Issues are disabled. |
-| 2 | Add a ruleset protecting main, then use pull requests even for your own changes. | Main currently has no branch protection. Required CI checks catch mistakes before integration. |
-| 3 | Add CONTRIBUTING.md, SECURITY.md, SUPPORT.md, and CODE_OF_CONDUCT.md. | Contributors need clear expectations, and security reporters need a private route. |
-| 4 | Clearly state the intended-use boundary for dose results. | A clinical-looking tool must not leave users guessing whether results are research, educational, quality-assurance, or clinically validated. |
-| 5 | Modernize release publication: use PyPI Trusted Publishing, pin the publishing action, and remove the long-lived PyPI token after verifying the new path. | Reduces credential and supply-chain risk. |
-| 6 | Repair stale documentation statements in README and MYPYSKINDOSE_MIGRATION_STATUS.md. | Accurate installation and maintenance instructions are part of a trustworthy public project. |
+| 1 | Public support route (Issues + templates, or alternate URL) | Done — Issues enabled with privacy-aware forms; Bug Tracker URL valid. |
+| 2 | Protect main; use PRs | Done — active ruleset; keep using PRs for your own work. |
+| 3 | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT | Done (plus GOVERNANCE, CITATION.cff, PR template). |
+| 4 | Intended-use boundary | Done — README / SUPPORT / issue templates. |
+| 5 | PyPI Trusted Publishing | Mostly done — OIDC in release.yml; register publisher on PyPI before first publish; revoke any leftover PyPI token if one still exists on the PyPI account. |
+| 6 | Stale README / migration-status docs | Done — docs extra install path; migration status corrected. |
+
+### Remaining maintainer ops (not blocking community files)
+
+- Confirm delete-branch-on-merge stays enabled in GitHub settings.
+- Optionally require named CI checks in the main ruleset if CodeQL/coverage alone are not enough.
+- Before first PyPI publish: register trusted publisher; delete any legacy PyPI API token.
+- Monthly: re-check upstream per §3 and §8.
 
 ### Do not over-correct
 
@@ -277,18 +303,14 @@ privacy or clinical-data rules differ.
 
 ### Choose a support channel deliberately
 
-At review, GitHub Issues are disabled while the project metadata points users to
-the repository Issues URL. Choose one coherent option:
-
-1. Enable Issues and add privacy-aware issue forms. This is usually best if you
-   want public bug reports and feature requests.
-2. Keep Issues disabled and change the Bug Tracker project URL to an active
-   Discussion, support page, contact form, or email route.
-3. Keep the repository effectively read-only and say clearly in README and
-   SUPPORT.md that unsolicited support is not available.
-
-Do not enable a channel you cannot monitor. A quiet but accurate support policy
-is better than an apparently open project with unanswered or unsafe reports.
+**Decision (2026-07-26):** GitHub Issues and Discussions are **enabled**. Issue
+forms are privacy-aware. The maintainer is open to ideas and considering
+submissions via Issues/Discussions; prefer those over cold PRs
+([CONTRIBUTING.md](../CONTRIBUTING.md)). The Bug Tracker URL in `pyproject.toml`
+matches Issues. SECURITY.md points security reporters to private vulnerability
+reporting. SUPPORT.md states best-effort support and the no-PHI rule. GitHub has
+no general private DM channel; the maintainer profile link is for identity, not
+inbox messaging.
 
 ### Use a small repeatable pull-request checklist
 
@@ -394,14 +416,10 @@ support-channel decision, not as an unrelated cosmetic edit.
 
 ### Documentation items to repair
 
-These are known main-branch inaccuracies as of the review:
+Resolved 2026-07-26:
 
-- README says to run pip install -r docs/requirements.txt to build documentation,
-  but the repository intentionally removed requirements files. Use the docs
-  optional extra described in pyproject.toml instead.
-- MYPYSKINDOSE_MIGRATION_STATUS.md says requirements files were updated even
-  though they were removed. Update it to the current package/lockfile workflow,
-  or archive it if it is historical only.
+- README docs build now uses `pip install -e ".[docs]"` (no `requirements*.txt`).
+- `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` corrected for extras / `uv.lock` packaging.
 
 When changing behavior, settings, exports, or GUI help, follow the documented
 checks. In particular, update dev-docs/index.md whenever adding or retiring a
