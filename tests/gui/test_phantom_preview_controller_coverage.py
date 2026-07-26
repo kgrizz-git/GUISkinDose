@@ -9,6 +9,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
+import mypyskindose.gui.phantom_preview_controller as phantom_preview_controller  # noqa: E402
 from mypyskindose.gui.phantom_preview_controller import PhantomPreviewController  # noqa: E402
 from mypyskindose.gui.state import state  # noqa: E402
 
@@ -44,11 +45,8 @@ async def test_run_refresh_applies_figure(monkeypatch: pytest.MonkeyPatch) -> No
     async def _fake_io_bound(fn, *args, **kwargs):
         return fig
 
-    monkeypatch.setattr(
-        "mypyskindose.gui.phantom_preview_controller.capture_phantom_preview_snapshot",
-        lambda st: {"mesh": "hudfrid"},
-    )
-    monkeypatch.setattr("mypyskindose.gui.phantom_preview_controller.run.io_bound", _fake_io_bound)
+    monkeypatch.setattr(phantom_preview_controller, "capture_phantom_preview_snapshot", lambda st: {"mesh": "hudfrid"})
+    monkeypatch.setattr(phantom_preview_controller.run, "io_bound", _fake_io_bound)
 
     await ctrl._run_refresh(ctrl.preview_request_id)
 
@@ -64,11 +62,8 @@ async def test_run_refresh_unavailable_when_fig_none(monkeypatch: pytest.MonkeyP
     async def _fake_io_bound(fn, *args, **kwargs):
         return None
 
-    monkeypatch.setattr(
-        "mypyskindose.gui.phantom_preview_controller.capture_phantom_preview_snapshot",
-        lambda st: {},
-    )
-    monkeypatch.setattr("mypyskindose.gui.phantom_preview_controller.run.io_bound", _fake_io_bound)
+    monkeypatch.setattr(phantom_preview_controller, "capture_phantom_preview_snapshot", lambda st: {})
+    monkeypatch.setattr(phantom_preview_controller.run, "io_bound", _fake_io_bound)
 
     await ctrl._run_refresh(ctrl.preview_request_id)
 
