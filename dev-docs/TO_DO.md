@@ -85,6 +85,13 @@ their corresponding plan exit criteria pass.
   source RDSRs before expanding vendor adapters. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Patient orientation support (head-first vs feet-first, prone vs supine)** — investigate whether the code and GUI allow choosing patient orientation (head-first / feet-first) and positioning (prone / supine). See [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
 - [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
+- [ ] **Kerma-meter correction factors (per equipment × tube)** — apply a user-supplied calibration factor
+  `CF = (real measured dose) / (unit reported dose)` to each event's `K_IRP`, keyed by individual unit
+  (`StationName` / `DeviceSerialNumber`, currently dropped by `rdsr_parser`) and tube (existing
+  `acquisition_plane` = Plane A / Plane B / Single Plane). Unresolved equipment or tube → `CF = 1.0`
+  (fail-soft, identical philosophy to `k_tab` in `corrections.py`). Supply CFs via a runtime lookup file
+  (CSV/TSV/XLSX/JSON) or a pre-calculation GUI prompt. Plan:
+  [plans/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/KERMA_METER_CORRECTION_FACTORS_PLAN.md).
 
 
 ### GUI / UX
