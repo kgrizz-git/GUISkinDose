@@ -27,7 +27,7 @@ class TranslationOffset:
 
         """
         if offset is None:
-            offset = dict()
+            offset = {}
 
         self.x: float = float(offset.get("x", 0.0) or 0.0)
         self.y: float = float(offset.get("y", 0.0) or 0.0)

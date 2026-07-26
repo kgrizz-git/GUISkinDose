@@ -15,12 +15,12 @@ import numpy as np
 # phantom axis is visible. In the unified frame +Y is posterior (toward the
 # floor for head-first supine), so the two presets face OPPOSITE Y sides — one
 # frames the posterior (typical beam-entrance) surface, the other the anterior.
-DORSAL = dict(x=1.5, y=1.8, z=1.4)     # posterior-facing (beam entrance side)
-ANTERIOR = dict(x=1.5, y=-1.8, z=1.4)  # anterior-facing
+DORSAL = {"x": 1.5, "y": 1.8, "z": 1.4}  # posterior-facing (beam entrance side)
+ANTERIOR = {"x": 1.5, "y": -1.8, "z": 1.4}  # anterior-facing
 
 # Two-tier resolution budget (§10): high-res cumulative vs compact per-exam.
-CUMULATIVE_DIMS = dict(width=1600, height=1000, scale=1.5)
-THUMBNAIL_DIMS = dict(width=800, height=600, scale=1.0)
+CUMULATIVE_DIMS = {"width": 1600, "height": 1000, "scale": 1.5}
+THUMBNAIL_DIMS = {"width": 800, "height": 600, "scale": 1.0}
 
 
 def eye_facing(xyz: tuple[float, float, float] | None, distance: float = 2.5) -> dict[str, float]:
@@ -30,11 +30,11 @@ def eye_facing(xyz: tuple[float, float, float] | None, distance: float = 2.5) ->
     so that surface point faces the camera. Falls back to :data:`ANTERIOR`.
     """
     if xyz is None:
-        return dict(ANTERIOR)
+        return ANTERIOR.copy()
     v = np.array(xyz, dtype=float)
     norm = float(np.linalg.norm(v))
     if not norm:
-        return dict(ANTERIOR)
+        return ANTERIOR.copy()
     u = v / norm
     return {"x": float(u[0] * distance), "y": float(u[1] * distance), "z": float(u[2] * distance)}
 
@@ -97,22 +97,37 @@ def render_dosemap_plotly_figure(
         intensity=dose_map, intensitymode="vertex",
         colorscale=colorscale, cmin=0.0, cmax=cmax, showscale=True,
         hoverinfo="text", text=hover,
-        colorbar=dict(title=dict(text="Skin dose [mGy]", font=dict(size=12))),
+        colorbar={"title": {"text": "Skin dose [mGy]", "font": {"size": 12}}},
     )
     layout = go.Layout(
         paper_bgcolor=bg, plot_bgcolor=bg,
-        font=dict(color=txt, family="Inter, sans-serif"),
-        margin=dict(l=0, r=0, b=40, t=40),
+        font={"color": txt, "family": "Inter, sans-serif"},
+        margin={"l": 0, "r": 0, "b": 40, "t": 40},
         annotations=[coordinate_frame_annotation(txt)],
-        scene=dict(
-            aspectmode="data" if ranges is None else "cube",
-            xaxis=dict(title="X - LON / PT L-R [cm]", backgroundcolor=bg, color=txt, gridcolor=grid,
-                       range=(ranges[0] if ranges else None)),
-            yaxis=dict(title="Y - VER / PT A-P [cm]", backgroundcolor=bg, color=txt, gridcolor=grid,
-                       range=(ranges[1] if ranges else None)),
-            zaxis=dict(title="Z - LAT / PT S-I [cm]", backgroundcolor=bg, color=txt, gridcolor=grid,
-                       range=(ranges[2] if ranges else None)),
-        ),
+        scene={
+            "aspectmode": "data" if ranges is None else "cube",
+            "xaxis": {
+                "title": "X - LON / PT L-R [cm]",
+                "backgroundcolor": bg,
+                "color": txt,
+                "gridcolor": grid,
+                "range": (ranges[0] if ranges else None),
+            },
+            "yaxis": {
+                "title": "Y - VER / PT A-P [cm]",
+                "backgroundcolor": bg,
+                "color": txt,
+                "gridcolor": grid,
+                "range": (ranges[1] if ranges else None),
+            },
+            "zaxis": {
+                "title": "Z - LAT / PT S-I [cm]",
+                "backgroundcolor": bg,
+                "color": txt,
+                "gridcolor": grid,
+                "range": (ranges[2] if ranges else None),
+            },
+        },
     )
     return go.Figure(data=[mesh], layout=layout)
 
@@ -138,7 +153,7 @@ def render_dosemap_png(
     try:
         ranges = dose_bbox(dose_map, patient_dict) if zoom_to_dose else None
         fig = render_dosemap_plotly_figure(dose_map, patient_dict, colorscale, dark=dark, ranges=ranges)
-        fig.update_layout(scene_camera=dict(eye=camera_eye))
+        fig.update_layout(scene_camera={"eye": camera_eye})
         return fig.to_image(format="png", width=width, height=height, scale=scale)
     except Exception:
         return None

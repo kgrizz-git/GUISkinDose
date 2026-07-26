@@ -36,6 +36,9 @@ _CF_SUSPICIOUS_HI = 2.0
 _MAX_TABLE_ROWS = 10_000
 
 _REQUIRED_COLUMNS = frozenset({"equipment", "tube", "correction_factor"})
+_CF_MUST_BE_POSITIVE_FINITE = (
+    "Kerma-meter correction table: correction_factor must be a finite float > 0."
+)
 _TUBE_ALIASES = {
     "single": "single",
     "single plane": "single",
@@ -203,19 +206,13 @@ def _rows_to_factor_dict(
         if equip is None:
             raise ValueError("Kerma-meter correction table: equipment column has an empty value.")
         if raw_cf is None:
-            raise ValueError(
-                "Kerma-meter correction table: correction_factor must be a finite float > 0."
-            )
+            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
         try:
             factor = float(raw_cf)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "Kerma-meter correction table: correction_factor must be a finite float > 0."
-            ) from exc
+            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE) from exc
         if not math.isfinite(factor) or factor <= 0:
-            raise ValueError(
-                "Kerma-meter correction table: correction_factor must be a finite float > 0."
-            )
+            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
         key = (equip, tube)
         if key in table:
             duplicates += 1

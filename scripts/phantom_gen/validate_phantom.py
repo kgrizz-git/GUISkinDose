@@ -22,6 +22,9 @@ if str(_REPO_ROOT) not in sys.path:
 
 from scripts.phantom_gen.path_safety import resolve_under_roots  # noqa: E402
 
+# Shared einsum subscripts for Moller-Trumbore pairwise dots (python:S1192).
+_EINSUM_PAIRWISE_DOT = "ij,ij->i"
+
 
 def load_vertices(path: Path) -> np.ndarray:
     from stl import mesh as stl_mesh
@@ -261,15 +264,15 @@ def _first_hit_face(
     e1 = triangles[:, 1, :] - v0
     e2 = triangles[:, 2, :] - v0
     pvec = np.cross(direction, e2)
-    det = np.einsum("ij,ij->i", e1, pvec)
+    det = np.einsum(_EINSUM_PAIRWISE_DOT, e1, pvec)
     valid = np.abs(det) > eps
     inv_det = np.zeros_like(det)
     inv_det[valid] = 1.0 / det[valid]
     tvec = origin - v0
-    u = np.einsum("ij,ij->i", tvec, pvec) * inv_det
+    u = np.einsum(_EINSUM_PAIRWISE_DOT, tvec, pvec) * inv_det
     qvec = np.cross(tvec, e1)
     v = np.einsum("j,ij->i", direction, qvec) * inv_det
-    t = np.einsum("ij,ij->i", e2, qvec) * inv_det
+    t = np.einsum(_EINSUM_PAIRWISE_DOT, e2, qvec) * inv_det
     hit = valid & (u >= -eps) & (v >= -eps) & (u + v <= 1.0 + eps) & (t > eps)
     if not hit.any():
         return None

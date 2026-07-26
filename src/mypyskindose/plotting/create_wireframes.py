@@ -146,5 +146,5 @@ def _create_wireframe_scatter3d(
         mode="lines",
         hoverinfo="skip",
         visible=visible,
-        line=dict(color=color, width=line_width),
+        line={"color": color, "width": line_width},
     )

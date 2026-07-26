@@ -68,7 +68,7 @@ def create_irradiation_event_procedure_plot_data(
             obj=patient,
             color=COLOR_PATIENT,
             mesh_text=patient_text or [],
-            lighting=dict(diffuse=0.5, ambient=0.5),
+            lighting={"diffuse": 0.5, "ambient": 0.5},
             visible_status=visible_status,
         )
 
@@ -80,7 +80,7 @@ def create_irradiation_event_procedure_plot_data(
         mode="markers",
         hoverinfo="text",
         visible=visible_status,
-        marker=dict(size=8, color=COLOR_SOURCE),
+        marker={"size": 8, "color": COLOR_SOURCE},
         text=source_text,
     )
 

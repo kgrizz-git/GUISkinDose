@@ -10,6 +10,15 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Fixed
+
+- **SonarQube bugs and easy wins** (2026-07-26) — cleared the three open BUG findings in
+  `gui/app.py` (propagate `asyncio` cancellation by not swallowing `CancelledError`; keep a
+  strong reference to browser disconnect shutdown tasks). Also fixed confusing adjacent-string
+  concatenations, duplicated string literals, dead/commented code, an empty help-button block,
+  and preferred `{...}`/`[]` literals over `dict(...)`/`list()` across plot/export helpers
+  (python:S7497, S7502, S5799, S1192, S125, S108, S1854, S7498).
+
 ### Added
 
 - **Kerma-meter correction factors** (2026-07-26) — optional per-(equipment × tube)

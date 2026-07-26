@@ -76,10 +76,9 @@ class HelpButton:
 
     def _create_button(self) -> None:
         """Create the help button and dialog."""
-        with ui.button(self.button_text, icon=self.icon, on_click=self._show_dialog).props(
+        ui.button(self.button_text, icon=self.icon, on_click=self._show_dialog).props(
             'flat round size=sm color="grey-7"'
-        ).tooltip(copy_text("help.button.tooltip")):
-            pass
+        ).tooltip(copy_text("help.button.tooltip"))
 
     def _show_dialog(self) -> None:
         """Show the help dialog."""

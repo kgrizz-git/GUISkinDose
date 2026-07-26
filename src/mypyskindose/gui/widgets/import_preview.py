@@ -32,6 +32,7 @@ _COMPACT_ROW_CLASSES = "items-center gap-3 q-mb-xs"
 _MUTED_CAPTION_CLASSES = "text-caption text-grey-5"
 _MODEL_VALUE_EVENT = "update:model-value"
 _COORDINATE_LABEL_CLASSES = "text-caption text-grey-5 font-mono"
+_MONO_FULL_WIDTH_CLASSES = "w-full mono-text"
 
 
 @dataclass
@@ -289,7 +290,7 @@ def _build_mapping_and_sample(controller: ImportPreviewController) -> None:
         ],
         rows=[],
         row_key="source",
-    ).classes("w-full mono-text")
+    ).classes(_MONO_FULL_WIDTH_CLASSES)
     col_map_table.props("dense flat")
     controller.col_map_table = col_map_table
 
@@ -304,13 +305,13 @@ def _build_mapping_and_sample(controller: ImportPreviewController) -> None:
             ],
             rows=[],
             row_key="field",
-        ).classes("w-full mono-text")
+        ).classes(_MONO_FULL_WIDTH_CLASSES)
         unit_conv_table.props("dense flat")
     controller.unit_conv_row = unit_conv_row
     controller.unit_conv_table = unit_conv_table
 
     ui.label("First 5 events (normalized)").classes("text-caption text-grey-6 q-mt-sm q-mb-xs")
-    event_sample_table = ui.table(columns=[], rows=[], row_key="__idx").classes("w-full mono-text")
+    event_sample_table = ui.table(columns=[], rows=[], row_key="__idx").classes(_MONO_FULL_WIDTH_CLASSES)
     event_sample_table.props("dense flat virtual-scroll")
     controller.event_sample_table = event_sample_table
 

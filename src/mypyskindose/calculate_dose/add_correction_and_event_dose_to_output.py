@@ -88,7 +88,9 @@ def add_corrections_and_event_dose_to_output(
     output[c.OUTPUT_KEY_CORRECTION_MEDIUM][event] = k_med
     output[c.OUTPUT_KEY_CORRECTION_TABLE][event] = k_tab[event]
 
-    logger.debug("Calculating event skin dose by applying each correction" "factor to the reference point air kerma")
+    logger.debug(
+        "Calculating event skin dose by applying each correction factor to the reference point air kerma"
+    )
 
     # Reported K_IRP × kerma-meter CF (do not mutate normalized_data.K_IRP).
     event_dose[hits] += float(normalized_data.K_IRP[event]) * float(kerma_cf)

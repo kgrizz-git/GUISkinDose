@@ -201,7 +201,7 @@ def make_phantom_preview_fig(snapshot: PreviewSnapshot) -> dict | None:
             obj=patient,
             color=c.COLOR_PATIENT,
             mesh_text=patient_text,
-            lighting=dict(diffuse=c.PLOT_LIGHTNING_DIFFUSE, ambient=c.PLOT_LIGHTNING_AMBIENT),
+            lighting={"diffuse": c.PLOT_LIGHTNING_DIFFUSE, "ambient": c.PLOT_LIGHTNING_AMBIENT},
         )
         table_mesh = create_mesh_3d_general(obj=table, color=c.COLOR_TABLE, mesh_text=table_text)
         pad_mesh = create_mesh_3d_general(
@@ -224,7 +224,7 @@ def make_phantom_preview_fig(snapshot: PreviewSnapshot) -> dict | None:
             uirevision=logical_stem,
             height=360,
             width=None,
-            margin=dict(l=0, r=0, t=40, b=0),
+            margin={"l": 0, "r": 0, "t": 40, "b": 0},
         )
         # Compact Settings panel: drop fixed width from default layout.
         fig.layout.width = None

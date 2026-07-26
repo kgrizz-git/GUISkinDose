@@ -378,10 +378,7 @@ def _register_native_geometry_tracking(
             commit_task.cancel()
 
         async def _commit_after_settle() -> None:
-            try:
-                await asyncio.sleep(0.3)
-            except asyncio.CancelledError:
-                return
+            await asyncio.sleep(0.3)
             _apply_pending_commit_sync()
 
         commit_task = asyncio.create_task(_commit_after_settle())
@@ -392,10 +389,7 @@ def _register_native_geometry_tracking(
             save_task.cancel()
 
         async def _wait_and_save() -> None:
-            try:
-                await asyncio.sleep(1.0)
-            except asyncio.CancelledError:
-                return
+            await asyncio.sleep(1.0)
             save_native_window_prefs(current)
 
         save_task = asyncio.create_task(_wait_and_save())
@@ -461,6 +455,9 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
 
     logging.getLogger("nicegui").setLevel(logging.ERROR)
 
+    # Keep strong refs so disconnect-scheduled shutdown tasks are not GC'd (python:S7502).
+    browser_shutdown_tasks: list[asyncio.Task[None]] = []
+
     if not native:
 
         @app.on_disconnect
@@ -471,7 +468,7 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
                     dprint("GUI", "Last browser window closed; shutting down server.")
                     app.shutdown()
 
-            asyncio.create_task(_shutdown_if_idle())
+            browser_shutdown_tasks.append(asyncio.create_task(_shutdown_if_idle()))
 
     window_size: tuple[int, int] | None = None
     if native:
