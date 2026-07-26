@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from scripts.phantom_gen.path_safety import (  # noqa: E402
     resolve_under_roots,
     trusted_path_under_roots,
+    write_text_under_roots,
 )
 
 
@@ -53,3 +54,21 @@ def test_trusted_path_under_roots_repo_relative() -> None:
     trusted = trusted_path_under_roots(rel, roots=(ROOT,))
     assert trusted == (ROOT / "tmp" / "catalog_report.json").resolve()
     assert trusted.parts[-2:] == ("tmp", "catalog_report.json")
+
+
+def test_write_text_under_roots_writes_payload(tmp_path: Path) -> None:
+    """write_text_under_roots confines the path then writes via open().write."""
+    target = tmp_path / "reports" / "out.json"
+    written = write_text_under_roots(target, '{"ok": true}', roots=(tmp_path,))
+    assert written == (tmp_path / "reports" / "out.json").resolve()
+    assert written.read_text(encoding="utf-8") == '{"ok": true}'
+
+
+def test_write_text_under_roots_rejects_escape(tmp_path: Path) -> None:
+    """Escape attempts fail before any file is created."""
+    outside = tmp_path / "escape.json"
+    other_root = tmp_path / "allowed"
+    other_root.mkdir()
+    with pytest.raises(ValueError, match="escaped"):
+        write_text_under_roots(outside, "{}", roots=(other_root,))
+    assert not outside.exists()

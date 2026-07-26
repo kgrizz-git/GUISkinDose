@@ -660,7 +660,8 @@ job with `needs: [privacy-gates]` so review is requested as soon as admission pa
 | **PR1b / manual** | Confirm plan type; if custom gates work, B2-A (50% gate) instead of/after badge removal; D7 disable Automatic Analysis | Maintainer UI |
 | **PR2** | Phase C + D (privacy-gates, OWASP split, Sonar on PR+main with combined coverage) | Medium |
 | **PR3** | Phase E (CodeRabbit after privacy) | Medium |
-| **Follow-ups** | Re-add badge when green is honest; B2.R* raise custom gate if using B2-A | Low |
+| **Follow-ups** | Re-add badge when green is honest; B2.R* raise custom gate if using B2-A; **post-merge main:** clear residual S8707 + push new_coverage past 80% (branch `fix/sonar-s8707-and-coverage`, 2026-07-26) | Low |
+
 
 Default merge train assumes **B2-B** (no README badge) unless you confirm custom gates.
 

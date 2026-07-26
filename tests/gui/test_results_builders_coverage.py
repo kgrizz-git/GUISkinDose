@@ -198,3 +198,71 @@ async def test_refresh_dosemap_skips_multi_exam(monkeypatch: pytest.MonkeyPatch)
     await ctrl.maybe_auto_refresh_dosemap()
 
     assert called["n"] == 0
+
+
+@pytest.mark.asyncio
+async def test_refresh_dosemap_updates_plot(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+
+    await ctrl.refresh_dosemap()
+
+    assert ctrl.refs.dosemap_spinner.visible is False
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
+
+
+def test_refresh_aggregate_dosemap_empty_exams() -> None:
+    ctrl = _controller()
+    state.calc_run_id = 9
+    ctrl.refresh_aggregate_dosemap(SimpleNamespace(exams=[]))
+    cast(MagicMock, ctrl.refs.agg_dosemap_plot.update_figure).assert_called_with({})
+    assert ctrl.last_agg_map_run_id == 9
+
+
+def test_refresh_aggregate_subset_none_selected(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    exam0 = _mock_exam_output(10.0, [(0, 5.0)], num_cells=2)
+    state.multi_exam_result = SimpleNamespace(
+        aggregate_psd=10.0,
+        aggregate_dose_map=np.array([5.0, 0.0]),
+        exams=[exam0],
+    )
+    state.aggregate_subset_exams = [False]
+    state.calc_run_id = 11
+    monkeypatch.setattr(rb, "compute_subset_aggregate", lambda *a, **k: (None, 0.0))
+
+    ctrl.refresh_aggregate_dosemap_subset()
+
+    cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("— mGy (no exams selected)")
+
+
+def test_show_exam_dosemap_dialog_missing_notifies(monkeypatch: pytest.MonkeyPatch) -> None:
+    from nicegui import ui
+
+    messages: list[str] = []
+    monkeypatch.setattr(ui, "notify", lambda msg, **k: messages.append(str(msg)))
+    ctrl = _controller()
+    state.multi_exam_result = None
+
+    ctrl.show_exam_dosemap_dialog(0)
+
+    assert any("No dose map" in m for m in messages)
+
+
+def test_multi_exam_results_clears_when_incomplete() -> None:
+    ctrl = _controller()
+    ctrl.last_rendered_run_id = 5
+    state.is_multi_exam = True
+    state.calculation_done = False
+    state.multi_exam_result = None
+
+    ctrl.refresh_multi_exam_results()
+
+    assert ctrl.last_rendered_run_id is None
+    cast(MagicMock, ctrl.refs.agg_dosemap_plot.update_figure).assert_called_with({})
