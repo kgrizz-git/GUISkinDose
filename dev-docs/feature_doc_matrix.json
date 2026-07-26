@@ -62,6 +62,27 @@
         "docs/source/gui_help/calculation_workflow.md"
       ]
     },
+    "kerma_meter_correction": {
+      "status": "shipped",
+      "code": [
+        "src/mypyskindose/kerma_correction.py",
+        "src/mypyskindose/calculate_dose",
+        "src/mypyskindose/gui/tabs/settings.py",
+        "src/mypyskindose/gui/tabs/calculate.py"
+      ],
+      "tests": [
+        "tests/unittests/test_kerma_correction.py",
+        "tests/unittests/test_dose_kerma_correction.py",
+        "tests/unittests/test_rdsr_parser_station.py",
+        "tests/unittests/test_equipment_identity_adapters.py"
+      ],
+      "docs": [
+        "dev-docs/FEATURE_INVENTORY.md",
+        "dev-docs/CODEBASE_OVERVIEW.md",
+        "CHANGELOG.md"
+      ],
+      "help": ["docs/source/gui_help/kerma_meter_correction.md"]
+    },
     "body_habitus_scaling": {
       "status": "shipped",
       "code": [

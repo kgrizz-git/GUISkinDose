@@ -16,9 +16,11 @@ from mypyskindose.safe_output import atomic_write_private
 
 from .._format import (
     CORRECTION_HEADER,
+    KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
     collect_alert_lines,
     correction_row,
+    corrections_use_kerma_meter,
     dosimetric_rows,
 )
 from ..models import ExportPayload
@@ -39,6 +41,7 @@ def _shade(cell, color: RGBColor) -> None:
 
 
 def _table(doc, rows: list[list], *, header: bool = True):
+    """Append a simple DOCX table from row data."""
     t = doc.add_table(rows=0, cols=len(rows[0]))
     t.style = "Light Grid Accent 1"
     for i, row in enumerate(rows):
@@ -53,6 +56,7 @@ def _table(doc, rows: list[list], *, header: bool = True):
 
 
 def _alerts(doc, payload: ExportPayload) -> None:
+    """Add the executive-alerts section to a DOCX document."""
     doc.add_heading("Executive alerts", level=2)
     for text, severity in collect_alert_lines(payload):
         t = doc.add_table(rows=1, cols=1)
@@ -65,6 +69,7 @@ def _alerts(doc, payload: ExportPayload) -> None:
 
 
 def _settings_rows(exam) -> list[list[str]]:
+    """Build Setting/Value rows for one exam's settings block."""
     rows = [["Setting", "Value"]]
     for key, value in exam.settings.items():
         if key in ("phantom", "patient_offset"):
@@ -82,6 +87,7 @@ def _settings_rows(exam) -> list[list[str]]:
 
 
 def build_document(payload: ExportPayload):
+    """Assemble the full rich-export DOCX document."""
     doc = Document()
     doc.add_heading(payload.meta.report_title, level=0)
     p = doc.add_paragraph()
@@ -119,6 +125,8 @@ def build_document(payload: ExportPayload):
             _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections])
         doc.add_paragraph("Cumulative (kerma-weighted)")
     _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections])
+    if corrections_use_kerma_meter(payload):
+        doc.add_paragraph(KERMA_METER_WEIGHTING_FOOTNOTE)
 
     if payload.images:
         doc.add_heading("Dose-map images", level=2)
@@ -132,10 +140,12 @@ def build_document(payload: ExportPayload):
 
 
 def render_docx_bytes(payload: ExportPayload) -> bytes:
+    """Render the DOCX report to an in-memory bytes payload."""
     buf = io.BytesIO()
     build_document(payload).save(buf)
     return buf.getvalue()
 
 
 def write_docx(payload: ExportPayload, path: Path) -> None:
+    """Atomically write the DOCX report to *path*."""
     atomic_write_private(path, render_docx_bytes(payload))

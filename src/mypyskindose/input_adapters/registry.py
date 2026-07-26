@@ -16,7 +16,7 @@ from mypyskindose.input_adapters.column_mapper import _normalize_str, detect_hea
 from mypyskindose.input_adapters.dosetrack import DOSETRACK_COLUMN_NAMES
 from mypyskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
 from mypyskindose.input_adapters.models import InputAdapterResult
-from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
+from mypyskindose.input_adapters.normalized import NORMALIZED_HEADER_NAMES
 from mypyskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
 from mypyskindose.input_adapters.tabular_loader import _RawLoad, load
 
@@ -50,7 +50,7 @@ _AUTO_MIN_MARGIN = 0.20  # required score gap between best and runner-up
 
 # Ordered list of (schema_name, known_names) used for auto-detection scoring.
 _SCHEMA_KNOWN_NAMES: list[tuple[str, frozenset[str]]] = [
-    ("normalized", NORMALIZED_COLUMN_NAMES),
+    ("normalized", NORMALIZED_HEADER_NAMES),
     ("generic_rdsr_like", GENERIC_RDSR_COLUMN_NAMES),
     ("radimetrics", RADIMETRICS_COLUMN_NAMES),
     ("dosetrack", DOSETRACK_COLUMN_NAMES),
@@ -124,7 +124,9 @@ def read_and_normalize_input(
     ],
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
-) -> InputAdapterResult: ...
+) -> InputAdapterResult:
+    """Load and normalize a known vendor tabular schema (overload)."""
+    ...
 
 @overload
 def read_and_normalize_input(
@@ -133,7 +135,9 @@ def read_and_normalize_input(
     input_schema: Literal["normalized", "auto"] | None = ...,
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
-) -> InputAdapterResult | list[InputAdapterResult]: ...
+) -> InputAdapterResult | list[InputAdapterResult]:
+    """Load and normalize a normalized/auto tabular schema (overload)."""
+    ...
 
 @overload
 def read_and_normalize_input(
@@ -142,7 +146,9 @@ def read_and_normalize_input(
     input_schema: str | None = ...,
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
-) -> InputAdapterResult | list[InputAdapterResult]: ...
+) -> InputAdapterResult | list[InputAdapterResult]:
+    """Load and normalize a tabular input file (overload)."""
+    ...
 
 def read_and_normalize_input(
     file_path: str | Path,

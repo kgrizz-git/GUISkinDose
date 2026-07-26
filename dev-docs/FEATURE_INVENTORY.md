@@ -218,6 +218,7 @@ scales the full lateral mesh axis.
 | Backscatter | k_bs | Benmakhlouf et al. polynomial (kVp, HVL, field size) | Cubic spline interpolation over 5 field sizes |
 | Medium | k_med | Air kerma → tissue dose (μ_en/ρ ratio) | Lookup table in SQLite DB by kVp, HVL, field size |
 | Table + pad attenuation | k_tab | Beam attenuation through table/pad | Measured values from SQLite DB (exact-match first, then (kVp, Cu) interpolation with edge clamping; unknown device/plane fails soft to k_tab=1.0), or user-specified constant |
+| Kerma-meter calibration | k_meter | Convert reported K_IRP → lab-traceable kerma | User CF table/prompt keyed by equipment × tube; fail-soft to `default_factor` (1.0). Applied once before physics corrections. |
 
 ### 5.4 Geometry optimisation
 - Events with identical geometry (Tx, Ty, Tz, FS_lat, FS_long, Ap1, Ap2, Ap3, At1, At2, At3) reuse previous hit/field/k_isq results — no redundant recalculation

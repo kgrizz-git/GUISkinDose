@@ -164,7 +164,8 @@ Phased detail derived from diagnostics or master plans.
 ## Archived plans (`plans/archive/`)
 
 | File | Purpose |
-|---|---|
+|---|---|| [plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md) | **Shipped** (2026-07-26) — per-(unit×tube) kerma-meter CF; reported kerma additive-compatible; file/GUI prompt. |
+
 | [plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Completed** (2026-07-22) — Demo phantoms v1: Cosmic Buddha, Ramesses II, Steamboat Willie shipped; Petite Herculanaise blocked (login/NC). Fun ingest + face-up `flip_y` gate + GUI `(demo)` labels. |
 | [plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) — MakeHuman GUI master plan; replaced by [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). Phase sub-plans `MAKEHUMAN_PHASE1_*` … `MAKEHUMAN_PHASE5_*` archived alongside. |
 | [plans/archive/refactor_check_sensitive_content_plan.md](plans/archive/refactor_check_sensitive_content_plan.md) | **Completed** (2026-07-18) — Privacy scan script complexity split into `check_sensitive_content.py` + `check_sensitive_helpers.py`. |

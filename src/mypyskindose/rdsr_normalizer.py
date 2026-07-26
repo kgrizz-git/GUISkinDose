@@ -9,6 +9,7 @@ from .constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_ACQUISITION_TYPE,
     KEY_NORMALIZATION_AIR_KERMA,
+    KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_DISTANCE_ISOCENTER_DETECTOR,
     KEY_NORMALIZATION_DISTANCE_SOURCE_DETECTOR,
     KEY_NORMALIZATION_DISTANCE_SOURCE_IRP,
@@ -16,12 +17,15 @@ from .constants import (
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
     KEY_NORMALIZATION_FILTER_SIZE_COPPER,
     KEY_NORMALIZATION_MODEL_NAME,
+    KEY_NORMALIZATION_STATION_NAME,
+    KEY_RDSR_DEVICE_SERIAL,
     KEY_RDSR_DISTANCE_SOURCE_DETECTOR,
     KEY_RDSR_FILTER_MATERIAL,
     KEY_RDSR_FILTER_MATERIAL_ALUMINUM,
     KEY_RDSR_FILTER_MATERIAL_COPPER,
     KEY_RDSR_FILTER_MAX,
     KEY_RDSR_FILTER_MIN,
+    KEY_RDSR_STATION_NAME,
 )
 from .geom_calc import calculate_field_size
 from .settings import PyskindoseSettings
@@ -218,8 +222,19 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
 def _normalize_machine_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize manufacturer/model and related machine identity fields."""
 
     data_norm[KEY_NORMALIZATION_MODEL_NAME] = data_parsed.ManufacturerModelName
+
+    # Per-unit identity for kerma-meter correction (optional; None when absent).
+    if KEY_RDSR_STATION_NAME in data_parsed.columns:
+        data_norm[KEY_NORMALIZATION_STATION_NAME] = data_parsed[KEY_RDSR_STATION_NAME]
+    else:
+        data_norm[KEY_NORMALIZATION_STATION_NAME] = None
+    if KEY_RDSR_DEVICE_SERIAL in data_parsed.columns:
+        data_norm[KEY_NORMALIZATION_DEVICE_SERIAL] = data_parsed[KEY_RDSR_DEVICE_SERIAL]
+    else:
+        data_norm[KEY_NORMALIZATION_DEVICE_SERIAL] = None
 
     # Find indices of nans in DistanceSourcetoDetector
     if "nan" in str(data_parsed[KEY_RDSR_DISTANCE_SOURCE_DETECTOR]).lower():
@@ -243,6 +258,7 @@ def _normalize_machine_parameters(
 def _normalize_table_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize table position fields into the internal centimetre frame."""
 
     table_longitudinal_mm = data_parsed.TableLongitudinalPosition_mm
     table_lateral_mm = data_parsed.TableLateralPosition_mm
@@ -267,6 +283,7 @@ def _normalize_table_parameters(
 def _normalize_xray_filter_materials(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize X-ray filter materials and thicknesses."""
     # parse filter material and thickness
 
     # Load filter min and max, and fill all NANs with zeros
@@ -322,6 +339,7 @@ def _normalize_xray_filter_materials(
 def _normalize_beam_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
+    """Normalize beam angulation, FS, and related beam geometry fields."""
 
     # beam angulation
     data_norm["Ap1"] = norm.rot_dir.Ap1 * data_parsed.PositionerPrimaryAngle_deg

@@ -203,6 +203,9 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
             manufacturer = model_name
         data_df["Manufacturer"] = manufacturer
         data_df["ManufacturerModelName"] = model_name
+        # Persist Equipment Name as StationName before drop so kerma-meter CF
+        # can key on the tabular unit identity (often the model — see §6.1).
+        data_df["StationName"] = data_df["_dt_equipment_name"]
         data_df = data_df.drop(columns=["_dt_equipment_name"])
     elif "Manufacturer" not in data_df.columns:
         raise ValueError(

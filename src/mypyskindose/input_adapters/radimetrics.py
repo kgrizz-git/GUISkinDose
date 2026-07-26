@@ -38,6 +38,7 @@ RADIMETRICS_COLUMN_NAMES: frozenset[str] = frozenset(
         # shared (no unit suffix in either generation)
         "manufacturer",
         "device",
+        "equipment",
         "kvp kv",
         # current export — unit suffixes present
         "dap (total) gy-cm2",
@@ -65,9 +66,11 @@ RADIMETRICS_COLUMN_NAMES: frozenset[str] = frozenset(
 )
 
 # Maps rdsr_parser() column name → Radimetrics header patterns (lowercase).
+# Equipment = room/unit identity (CF key); Device = model. Do not collapse them.
 RADIMETRICS_PATTERNS: dict[str, list[str]] = {
     "Manufacturer": ["manufacturer", "vendor"],
-    "ManufacturerModelName": ["device", "device model", "equipment name"],
+    "ManufacturerModelName": ["device model", "device"],
+    "StationName": ["equipment"],
     "AcquisitionPlane": ["acquisition plane code", "acquisition plane"],
     "IrradiationEventType": ["irradiation event type"],
     "PositionerPrimaryAngle_deg": ["primary angle (rf)", "primary angle"],

@@ -7,11 +7,13 @@ from mypyskindose.constants import (
     KEY_RDSR_CONCEPT_CODE_SEQUENCE,
     KEY_RDSR_CONTENT_SEQUENCE,
     KEY_RDSR_DETECTORSIZE_MM,
+    KEY_RDSR_DEVICE_SERIAL,
     KEY_RDSR_EVENT_XRAY_DATA,
     KEY_RDSR_II_DIAMETER_SRDATA,
     KEY_RDSR_MANUFACTURER,
     KEY_RDSR_MANUFACTURER_MODEL_NAME,
     KEY_RDSR_MEASURED_VALUE_SEQUENCE,
+    KEY_RDSR_STATION_NAME,
     KEY_RDSR_TEXT_VALUE,
     KEY_RDSR_UID,
 )
@@ -118,11 +120,21 @@ def _parse_event_content(parsed: dict, content: pydicom.Dataset) -> None:
         _store_content_value(parsed, content, nested=False)
 
 
+def _top_level_attr(data_raw: pydicom.Dataset, attr: str) -> object | None:
+    """Return a top-level DICOM attribute, or None when absent."""
+    if attr in data_raw:
+        return getattr(data_raw, attr, None)
+    return None
+
+
 def _parse_irradiation_event(data_raw: pydicom.FileDataset, event: pydicom.Dataset) -> dict:
     """Extract the legacy flat dictionary for one irradiation event."""
     parsed = {
         KEY_RDSR_MANUFACTURER: data_raw.Manufacturer,
         KEY_RDSR_MANUFACTURER_MODEL_NAME: data_raw.ManufacturerModelName,
+        # Study-level unit identity (constant across events when present).
+        KEY_RDSR_STATION_NAME: _top_level_attr(data_raw, KEY_RDSR_STATION_NAME),
+        KEY_RDSR_DEVICE_SERIAL: _top_level_attr(data_raw, KEY_RDSR_DEVICE_SERIAL),
     }
     for content in event.ContentSequence:
         _parse_event_content(parsed, content)

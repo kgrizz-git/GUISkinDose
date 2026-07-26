@@ -43,6 +43,13 @@
       "required": true
     },
     {
+      "id": "settings_kerma_meter_correction",
+      "title": "Kerma-meter correction",
+      "source": "kerma_meter_correction.md",
+      "gui_files": ["src/mypyskindose/gui/tabs/settings.py"],
+      "required": true
+    },
+    {
       "id": "geometry",
       "title": "Geometry workflow",
       "source": "geometry_workflow.md",

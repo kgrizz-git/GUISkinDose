@@ -29,7 +29,10 @@ class ExamView:
     k_isq: list[Any]  # per-event per-hit lists or per-event scalar
     k_med: list[float]  # per-event scalar
     k_tab: list[float]  # per-event scalar
-    kerma: list[float]  # per-event air kerma
+    kerma: list[float]  # per-event air kerma used for dose-weighted stats
+    k_meter: list[float] | None = None  # per-event kerma-meter CF when present
+    air_kerma_corrected: float | None = None
+    kerma_reported: list[float] | None = None
 
     def peak_vertex(self) -> tuple[int | None, float]:
         """Return ``(vertex_index, dose)`` of the peak dose cell.
@@ -45,6 +48,7 @@ class ExamView:
         return idx, dose
 
     def skin_cell_xyz(self, index: int) -> tuple[float, float, float] | None:
+        """Return skin-cell XYZ (cm) for *index*, or None if out of range."""
         cells = self.patient.get("patient_skin_cells")
         if not cells or index >= len(cells["x"]):
             return None
@@ -52,6 +56,7 @@ class ExamView:
 
 
 def _dense_from_sparse(sparse: list[Any], num_cells: int) -> np.ndarray:
+    """Expand sparse (index, dose) pairs into a dense length-*num_cells* array."""
     dense = np.zeros(num_cells)
     for idx, dose in sparse:
         dense[int(idx)] = dose
@@ -59,6 +64,7 @@ def _dense_from_sparse(sparse: list[Any], num_cells: int) -> np.ndarray:
 
 
 def _to_list(value: Any) -> list[Any]:
+    """Coerce None/ndarray/scalar values to a plain Python list."""
     if value is None:
         return []
     if isinstance(value, np.ndarray):
@@ -72,6 +78,12 @@ def view_from_dict(output: dict[str, Any]) -> ExamView:
     num_cells = len(patient["patient_skin_cells"]["x"])
     dense = _dense_from_sparse(output.get("dose_map", []), num_cells)
     corr = output.get("corrections", {})
+    kerma_reported = [float(v) for v in corr.get("kerma", [])]
+    kerma_corrected = corr.get("kerma_corrected")
+    weight_kerma = (
+        [float(v) for v in kerma_corrected] if kerma_corrected is not None else kerma_reported
+    )
+    k_meter = corr.get("kerma_meter")
     return ExamView(
         psd=float(output.get("psd", 0.0)),
         air_kerma=float(output.get("air_kerma", 0.0)),
@@ -82,13 +94,23 @@ def view_from_dict(output: dict[str, Any]) -> ExamView:
         k_isq=[ev if isinstance(ev, (int, float)) else _to_list(ev) for ev in corr.get("inverse_square_law", [])],
         k_med=[float(v) for v in corr.get("medium", [])],
         k_tab=[float(v) for v in corr.get("table", [])],
-        kerma=[float(v) for v in corr.get("kerma", [])],
+        kerma=weight_kerma,
+        k_meter=[float(v) for v in k_meter] if k_meter is not None else None,
+        air_kerma_corrected=(
+            float(output["air_kerma_corrected"])
+            if "air_kerma_corrected" in output
+            else None
+        ),
+        kerma_reported=kerma_reported,
     )
 
 
 def view_from_output(obj: Any) -> ExamView:
     """Build an ``ExamView`` from a ``PySkinDoseOutput`` object (multi-exam path)."""
     patient = obj.Patient["patient"].to_dict()
+    kerma_reported = [float(v) for v in _to_list(obj.Events.kerma)]
+    kerma_corrected = [float(v) for v in getattr(obj, "KermaCorrected", kerma_reported)]
+    k_meter = getattr(obj, "KermaMeterCorrection", None)
     return ExamView(
         psd=float(obj.PSD),
         air_kerma=float(obj.AirKerma),
@@ -99,5 +121,8 @@ def view_from_output(obj: Any) -> ExamView:
         k_isq=[ev if isinstance(ev, (int, float)) else _to_list(ev) for ev in obj.InverseSquareLawCorrection],
         k_med=[float(v) for v in obj.MediumCorrection],
         k_tab=[float(v) for v in obj.TableCorrection],
-        kerma=[float(v) for v in _to_list(obj.Events.kerma)],
+        kerma=kerma_corrected,
+        k_meter=[float(v) for v in k_meter] if k_meter is not None else None,
+        air_kerma_corrected=float(getattr(obj, "AirKermaCorrected", obj.AirKerma)),
+        kerma_reported=kerma_reported,
     )

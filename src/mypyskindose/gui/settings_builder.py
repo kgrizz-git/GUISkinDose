@@ -11,6 +11,7 @@ from .state import AppState
 
 
 def fallback_normalization_exam_count(app_state: AppState) -> int:
+    """Count loaded exams still using fallback normalization."""
     return sum(1 for m in app_state.loaded_exam_meta if m.get("normalization_method") == "Fallback")
 
 
@@ -32,6 +33,16 @@ def build_settings(
     base["below_floor_kvp_manual"] = app_state.below_floor_kvp_manual
     base["beam_miss_warn"] = app_state.beam_miss_warn
     base["silence_pydicom_warnings"] = True
+
+    base["kerma_meter_correction"] = {
+        "enable": app_state.kerma_meter_enable,
+        "mode": app_state.kerma_meter_mode,
+        "file": app_state.kerma_meter_file or None,
+        "file_sheet": app_state.kerma_meter_file_sheet or None,
+        "default_factor": app_state.kerma_meter_default_factor,
+        "explicit_label": app_state.kerma_meter_explicit_label or None,
+        "prompt_at_calc": app_state.kerma_meter_prompt_at_calc,
+    }
 
     base["phantom"]["model"] = app_state.phantom_model
     from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem

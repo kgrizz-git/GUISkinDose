@@ -338,6 +338,7 @@ Per-event processing:
 | `k_bs` | `calculate_k_bs()` | Backscatter (Benmakhlouf et al., field size + kVp) |
 | `k_med` | `calculate_k_med()` | Medium correction (air kerma → tissue dose) |
 | `k_tab` | `calculate_k_tab()` | Table/pad attenuation (measured or estimated; (kVp, Cu) interpolation + edge clamping, fail-soft to 1.0 for unknown device/plane) |
+| `k_meter` | `kerma_correction.resolve_correction_factors()` | Kerma-meter CF (optional; reported K_IRP × CF before physics corrections; fail-soft to `default_factor`) |
 
 ---
 
@@ -392,7 +393,8 @@ When `output_format` is `"dict"` or `"json"`, `main()` returns a structured obje
 | Key | Description |
 |-----|-------------|
 | `psd` | Peak skin dose (mGy) — `max(dose_map)` |
-| `air_kerma` | PSD without correction factors |
+| `air_kerma` | Sum of reported (uncorrected) per-event K_IRP |
+| `air_kerma_corrected` | Sum of kerma-meter-corrected K_IRP (equals `air_kerma` when CF disabled) |
 | `dose_map` | Sparse list of `(cell_index, dose)` tuples |
 | `patient` | Phantom geometry (skin cell positions, vertex indices, reference position) |
 | `table` | Table phantom geometry |

@@ -23,6 +23,7 @@ from mypyskindose.constants import (
     RUN_ARGUMENTS_VALID_OUTPUT_FORMATS,
 )
 
+from .kerma_meter_correction_settings import KermaMeterCorrectionSettings
 from .normalization_settings import NormalizationSettings
 from .phantom_settings import PhantomSettings
 from .plot_settings import Plotsettings
@@ -134,8 +135,14 @@ class PyskindoseSettings:
 
         self.beam_miss_warn: str = tmp.get(KEY_PARAM_BEAM_MISS_WARN, "per_event")
 
+        km_raw = tmp.get("kerma_meter_correction")
+        self.kerma_meter_correction = KermaMeterCorrectionSettings(
+            km_raw if isinstance(km_raw, dict) else None
+        )
+
     @staticmethod
     def _initialize_output_path(output_path: Optional[str | Path], output_format: str) -> Path:
+        """Resolve the plot/output directory for the chosen output_format."""
         if output_path is None:
             output = Path.cwd() / "PlotOutputs"
 
@@ -160,6 +167,7 @@ class PyskindoseSettings:
     def _initialize_normalization_settings(
         normalization_settings: Optional[Path | str | dict | NormalizationSettings]
     ) -> NormalizationSettings:
+        """Load NormalizationSettings from path, dict, or existing instance."""
         if normalization_settings is None:
             normalization_settings = Path(__file__).parent.parent / "normalization_settings.json"
 
@@ -214,6 +222,7 @@ class PyskindoseSettings:
 
 
 def initialize_settings(settings: str | dict | PyskindoseSettings) -> PyskindoseSettings:
+    """Coerce str/dict/settings input into a PyskindoseSettings instance."""
     valid_input_settings = settings is not None and isinstance(settings, (str, dict, PyskindoseSettings))
 
     if not valid_input_settings:

@@ -17,6 +17,7 @@ import pandas as pd
 
 @dataclass
 class AppState:
+    """Mutable GUI application state shared across NiceGUI pages."""
     # ── RDSR data ──────────────────────────────────────────────────────────
     rdsr_df: pd.DataFrame | None = None
     rdsr_raw_df: pd.DataFrame | None = None
@@ -78,6 +79,16 @@ class AppState:
     below_floor_prompt_suppressed: bool = False
     beam_miss_warn: str = "summary"
 
+    # Kerma-meter correction (CF = measured / reported), per equipment × tube.
+    kerma_meter_enable: bool = False
+    kerma_meter_mode: str = "file"
+    kerma_meter_file: str | None = None
+    kerma_meter_file_sheet: str | None = None
+    kerma_meter_default_factor: float = 1.0
+    kerma_meter_explicit_label: str | None = None
+    kerma_meter_prompt_at_calc: bool = False
+    kerma_meter_in_memory_table: dict[tuple[str, str], float] | None = None
+
     plot_dosemap: bool = True
     dark_mode: bool = True
     colorscale: str = "jet"
@@ -134,10 +145,12 @@ def reset_results() -> None:
 
 
 def is_ready_to_calculate() -> bool:
+    """True when an RDSR/tabular dataset is loaded and ready to calculate."""
     return state.rdsr_df is not None
 
 
 def event_count() -> int:
+    """Return the number of events in the loaded dataset, or 0."""
     if state.rdsr_df is None:
         return 0
     return len(state.rdsr_df)

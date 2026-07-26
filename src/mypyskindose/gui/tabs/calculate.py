@@ -23,10 +23,37 @@ _MAX_TOASTS: int = 5
 _SUMMARY_LABEL_CLASSES = "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
 _SUMMARY_VALUE_CLASSES = "font-bold text-[13px]"
 _SUMMARY_ROW_CLASSES = "items-baseline gap-2"
+_DIALOG_TITLE_CLASSES = "text-lg font-bold"
+_DIALOG_BODY_CLASSES = "text-sm text-grey-7"
+_DIALOG_ACTIONS_CLASSES = "w-full justify-end gap-2"
+_PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
 
 
 def _format_patient_offsets() -> str:
+    """Format the current patient-offset summary string for the Calculate card."""
     return format_patient_offsets(state)
+
+
+def _normalized_data_frames() -> list:
+    """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""
+    frames = []
+    if state.rdsr_df is not None:
+        frames.append(state.rdsr_df)
+    for exam in state.loaded_exams:
+        nd = getattr(exam, "normalized_data", None)
+        if nd is not None:
+            frames.append(nd)
+    return frames
+
+
+def _collect_equipment_tube_keys() -> list[tuple[str, str]]:
+    """Sorted unique (equipment, tube) pairs across loaded normalized frames."""
+    from mypyskindose.kerma_correction import unique_equipment_tube_keys
+
+    return unique_equipment_tube_keys(
+        _normalized_data_frames(),
+        explicit_label=state.kerma_meter_explicit_label,
+    )
 
 
 async def below_floor_prompt(n_below: int) -> bool:
@@ -38,11 +65,11 @@ async def below_floor_prompt(n_below: int) -> bool:
     to proceed with the calculation, ``False`` if the user cancels.
     """
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
-        ui.label("Events below the 25 kV HVL floor").classes("text-lg font-bold")
+        ui.label("Events below the 25 kV HVL floor").classes(_DIALOG_TITLE_CLASSES)
         ui.label(
             f"{n_below} loaded event(s) have a kVp below the 25 kV HVL table floor. "
             "Choose how to handle them for this calculation."
-        ).classes("text-sm text-grey-7")
+        ).classes(_DIALOG_BODY_CLASSES)
 
         policy_select = ui.select(
             BELOW_FLOOR_KVP_OPTIONS,
@@ -57,9 +84,9 @@ async def below_floor_prompt(n_below: int) -> bool:
 
         dont_ask = ui.checkbox("Don't ask again this session")
 
-        with ui.row().classes("w-full justify-end gap-2"):
+        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
             ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
-            ui.button("Run", on_click=lambda: dialog.submit("run")).classes("modern-btn modern-btn-teal")
+            ui.button("Run", on_click=lambda: dialog.submit("run")).classes(_PRIMARY_BTN_CLASSES)
 
     result = await dialog
     if result != "run":
@@ -72,8 +99,58 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
+async def kerma_meter_prompt() -> None:
+    """Collect per-(equipment, tube) CF values before calculation when mode=prompt.
+
+    Confirm stores the entered factors in ``state.kerma_meter_in_memory_table``.
+    Cancel clears that table so ``default_factor`` applies. Calculation always
+    continues after the dialog (this prompt never blocks the run).
+    """
+    sorted_keys = _collect_equipment_tube_keys()
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-xl gap-3"):
+        ui.label("Kerma-meter correction factors").classes(_DIALOG_TITLE_CLASSES)
+        ui.label(
+            "Enter CF = (real measured dose) / (unit reported dose) for each "
+            "detected (equipment, tube) pair. Cancel uses the default factor."
+        ).classes(_DIALOG_BODY_CLASSES)
+        inputs: dict[tuple[str, str], ui.number] = {}
+        for equip, tube in sorted_keys:
+            inputs[(equip, tube)] = ui.number(
+                label=f"{equip} / {tube}",
+                value=state.kerma_meter_default_factor,
+                min=0.01,
+                step=0.01,
+            ).classes("w-full")
+        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Confirm", on_click=lambda: dialog.submit("ok")).classes(_PRIMARY_BTN_CLASSES)
+
+    if (await dialog) != "ok":
+        state.kerma_meter_in_memory_table = None
+        return
+    state.kerma_meter_in_memory_table = {
+        key: float(inp.value or state.kerma_meter_default_factor) for key, inp in inputs.items()
+    }
+
+
+async def explicit_label_collapse_confirm(n_keys: int, label: str) -> bool:
+    """Blocking confirmation when explicit_label would collapse distinct units."""
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
+        ui.label("Collapse multiple equipment keys?").classes(_DIALOG_TITLE_CLASSES)
+        ui.label(
+            f"An explicit equipment label would force {n_keys} distinct auto-resolved "
+            f"units onto one label for this calculation. Continue only if intentional."
+        ).classes(_DIALOG_BODY_CLASSES)
+        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Apply label", on_click=lambda: dialog.submit("ok")).classes(_PRIMARY_BTN_CLASSES)
+    return (await dialog) == "ok"
+
+
 @dataclass
 class _CalculationControls:
+    """Run button, progress bar, and status label owned by the Calculate tab."""
+
     button: ui.button
     progress: ui.linear_progress
     status_label: ui.label
@@ -83,10 +160,12 @@ class _CalculationController:
     """Own Calculate-tab references while application state remains in ``state``."""
 
     def __init__(self, ctx: PageContext) -> None:
+        """Bind this controller to the page chrome in ``ctx``."""
         self.ctx = ctx
         self.controls: _CalculationControls | None = None
 
     async def do_calculate(self) -> None:
+        """Validate inputs, run pre-calc prompts, then execute the dose calculation."""
         if state.rdsr_df is None:
             ui.notify("Load a file first (tab 1)", color="warning")
             return
@@ -94,6 +173,8 @@ class _CalculationController:
             ui.notify("Fix import errors before calculating (tab 1)", color="warning")
             return
         if not await self._below_floor_policy_is_ready():
+            return
+        if not await self._kerma_meter_is_ready():
             return
 
         with operation_guard("starting a calculation") as proceed:
@@ -103,12 +184,38 @@ class _CalculationController:
         self._finish_calculation(ok, message)
 
     async def _below_floor_policy_is_ready(self) -> bool:
+        """Return True when below-floor policy is set or the user confirms the prompt."""
         if state.below_floor_prompt_suppressed:
             return True
         n_below = below_floor_event_count(state)
         return n_below <= 0 or await below_floor_prompt(n_below)
 
+    async def _explicit_label_collapse_ok(self) -> bool:
+        """True unless the user cancels collapsing multiple units onto one label."""
+        label = (state.kerma_meter_explicit_label or "").strip()
+        if not label:
+            return True
+        from mypyskindose.kerma_correction import distinct_auto_resolved_equipment_keys
+
+        auto: set[str] = set()
+        for df in _normalized_data_frames():
+            auto |= distinct_auto_resolved_equipment_keys(df)
+        if len(auto) <= 1:
+            return True
+        return await explicit_label_collapse_confirm(len(auto), label)
+
+    async def _kerma_meter_is_ready(self) -> bool:
+        """Confirm explicit-label collapse and optional CF prompt; never blocks on Cancel."""
+        if not state.kerma_meter_enable:
+            return True
+        if not await self._explicit_label_collapse_ok():
+            return False
+        if state.kerma_meter_mode == "prompt" or state.kerma_meter_prompt_at_calc:
+            await kerma_meter_prompt()
+        return True
+
     async def _run_calculation(self) -> tuple[bool, str]:
+        """Disable controls, run ``run_calculation`` on a worker thread, then re-enable."""
         controls = self._require_controls()
         controls.button.disable()
         self.ctx.run_btn_drawer.disable()
@@ -124,11 +231,13 @@ class _CalculationController:
             self.ctx.run_btn_drawer.enable()
 
     def _update_progress(self, fraction: float, label: str) -> None:
+        """Update the Calculate progress bar and status caption."""
         controls = self._require_controls()
         controls.progress.set_value(fraction)
         controls.status_label.set_text(label)
 
     def _finish_calculation(self, ok: bool, message: str) -> None:
+        """Apply success or failure UI after a calculation attempt."""
         if ok:
             self._show_success(message)
             return
@@ -143,6 +252,7 @@ class _CalculationController:
         ui.notify(f"Error: {message[:300]}", type="negative", timeout=10000)
 
     def _show_success(self, message: str) -> None:
+        """Update PSD chrome, switch to Results, and surface any calc warnings."""
         self.ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
         self.ctx.clear_offset_stale_caption()
         ui.notify(f"✓ {message}", color="positive")
@@ -156,6 +266,7 @@ class _CalculationController:
         self._show_calculation_warnings()
 
     def _show_calculation_warnings(self) -> None:
+        """Toast up to ``_MAX_TOASTS`` calc warnings, then a remainder notice."""
         for index, warning in enumerate(state.calc_warnings):
             if index < _MAX_TOASTS:
                 ui.notify(warning, type="warning", timeout=12000, multi_line=True)
@@ -168,12 +279,14 @@ class _CalculationController:
             break
 
     def _require_controls(self) -> _CalculationControls:
+        """Return initialized Calculate controls or raise if ``build`` has not run."""
         if self.controls is None:
             raise RuntimeError("Calculate controls are not initialized.")
         return self.controls
 
 
 def _build_input_data_summary() -> None:
+    """Render the Calculate card's input-data summary column."""
     with ui.column().classes("gap-2"):
         ui.label("INPUT DATA").classes(
             "text-sm text-aurora-teal font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
@@ -200,6 +313,7 @@ def _build_input_data_summary() -> None:
 
 
 def _build_phantom_setup_summary() -> None:
+    """Render the Calculate card's phantom / offsets summary column."""
     with ui.column().classes("gap-2"):
         ui.label("PHANTOM SETUP").classes(
             "text-sm text-aurora-purple font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
@@ -233,6 +347,7 @@ def _build_phantom_setup_summary() -> None:
 
 
 def _build_physics_summary() -> None:
+    """Render the Calculate card's physics-parameters summary column."""
     with ui.column().classes("gap-2"):
         ui.label("PHYSICS PARAMETERS").classes(
             "text-sm text-aurora-pink font-bold tracking-widest border-b border-white/10 w-full q-pb-xs"
@@ -251,6 +366,7 @@ def _build_physics_summary() -> None:
 
 
 def _build_settings_summary_card() -> None:
+    """Build the three-column settings summary card above the Run button."""
     with ui.card().classes("modern-card w-full border border-blue-100 shadow-sm"):
         with ui.row().classes("items-center justify-between w-full"):
             ui.label("Current settings").classes("text-xl font-bold q-mb-md")
@@ -268,6 +384,7 @@ def _build_settings_summary_card() -> None:
 
 
 def build(ctx: PageContext) -> None:
+    """Construct the Calculate tab panel and wire the drawer Run button."""
     controller = _CalculationController(ctx)
     with ui.tab_panel("calculate"):
         with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):

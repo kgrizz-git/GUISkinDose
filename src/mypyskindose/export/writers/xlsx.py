@@ -22,9 +22,11 @@ from .._format import (
     COLOR_ERROR,
     COLOR_WARNING,
     CORRECTION_HEADER,
+    KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
     collect_alert_lines,
     correction_row,
+    corrections_use_kerma_meter,
     dosimetric_rows,
 )
 from mypyskindose.spreadsheet_safety import neutralize_spreadsheet_value
@@ -39,6 +41,7 @@ _WRAP = Alignment(wrap_text=True, vertical="top")
 
 
 def _new_sheet(wb: Workbook, title: str) -> Worksheet:
+    """Create a named worksheet with optional freeze panes."""
     return cast(Worksheet, wb.create_sheet(title))
 
 
@@ -56,6 +59,7 @@ def _autofit(ws: Worksheet) -> None:
 
 
 def _write_rows(ws: Worksheet, rows, start_row: int = 1, *, header: bool = False) -> int:
+    """Write tabular rows into a worksheet starting at A1."""
     r = start_row
     for i, row in enumerate(rows):
         for c, value in enumerate(row, start=1):
@@ -67,6 +71,7 @@ def _write_rows(ws: Worksheet, rows, start_row: int = 1, *, header: bool = False
 
 
 def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
+    """Populate the Overview sheet from the export payload."""
     ws = cast(Worksheet, wb.active)
     ws.title = "Overview"
     ws.sheet_view.showGridLines = True
@@ -103,6 +108,7 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
 
 
 def _results_sheet(wb: Workbook, payload: ExportPayload) -> None:
+    """Populate the Results sheet with per-exam metrics."""
     ws = _new_sheet(wb, "Results")
     ws.sheet_view.showGridLines = True
     if payload.is_multi_exam:
@@ -122,6 +128,7 @@ def _results_sheet(wb: Workbook, payload: ExportPayload) -> None:
 
 
 def _settings_block(exam: ExamSection) -> list[list[str]]:
+    """Write a settings key/value block into a worksheet."""
     rows: list[list[str]] = [["Setting", "Value"]]
     for key, value in exam.settings.items():
         if key in ("phantom", "patient_offset"):
@@ -146,6 +153,7 @@ def _settings_block(exam: ExamSection) -> list[list[str]]:
 
 
 def _settings_sheet(wb: Workbook, payload: ExportPayload) -> None:
+    """Populate the Settings sheet for all exams."""
     ws = _new_sheet(wb, "Equipment & Settings" if payload.is_multi_exam else "Settings")
     ws.sheet_view.showGridLines = True
     r = 1
@@ -159,6 +167,7 @@ def _settings_sheet(wb: Workbook, payload: ExportPayload) -> None:
 
 
 def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
+    """Populate the Corrections sheet with factor stats."""
     ws = _new_sheet(wb, "Corrections")
     ws.sheet_view.showGridLines = True
     r = 1
@@ -172,11 +181,15 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
         ws.cell(row=r, column=1, value=neutralize_spreadsheet_value("--- Cumulative (kerma-weighted) ---")).font = _BOLD
         r += 1
     rows = [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections]
-    _write_rows(ws, rows, start_row=r, header=True)
+    r = _write_rows(ws, rows, start_row=r, header=True)
+    if corrections_use_kerma_meter(payload):
+        r += 1
+        ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(KERMA_METER_WEIGHTING_FOOTNOTE))
     _autofit(ws)
 
 
 def _warnings_sheet(wb: Workbook, payload: ExportPayload) -> None:
+    """Populate the Warnings sheet from payload alerts."""
     ws = _new_sheet(wb, "Warnings")
     ws.sheet_view.showGridLines = True
     r = 1
@@ -196,6 +209,7 @@ def _warnings_sheet(wb: Workbook, payload: ExportPayload) -> None:
 
 
 def _images_sheet(wb: Workbook, payload: ExportPayload) -> None:
+    """Populate the Images sheet with dose-map references."""
     ws = _new_sheet(wb, "Images")
     ws.sheet_view.showGridLines = True
     row = 1
@@ -218,6 +232,7 @@ def _images_sheet(wb: Workbook, payload: ExportPayload) -> None:
 
 
 def build_workbook(payload: ExportPayload) -> Workbook:
+    """Assemble the full rich-export workbook."""
     wb = Workbook()
     _overview_sheet(wb, payload)
     _results_sheet(wb, payload)
@@ -229,10 +244,12 @@ def build_workbook(payload: ExportPayload) -> Workbook:
 
 
 def render_xlsx_bytes(payload: ExportPayload) -> bytes:
+    """Render the XLSX report to an in-memory bytes payload."""
     buf = io.BytesIO()
     build_workbook(payload).save(buf)
     return buf.getvalue()
 
 
 def write_xlsx(payload: ExportPayload, path: Path) -> None:
+    """Atomically write the XLSX report to *path*."""
     atomic_write_private(path, render_xlsx_bytes(payload))

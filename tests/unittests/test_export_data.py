@@ -32,6 +32,7 @@ _EXPECTED_TOP_KEYS = {
     "schema_version",
     "psd",
     "air_kerma",
+    "air_kerma_corrected",
     "patient",
     "table",
     "pad",
@@ -86,6 +87,7 @@ def test_dict_export_has_expected_structure():
     assert isinstance(out["schema_version"], int)
     assert isinstance(out["psd"], float) and out["psd"] > 0
     assert isinstance(out["air_kerma"], float) and out["air_kerma"] > 0
+    assert isinstance(out["air_kerma_corrected"], float) and out["air_kerma_corrected"] > 0
 
 
 def test_dict_export_is_json_serializable_without_nan():

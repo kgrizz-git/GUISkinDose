@@ -12,6 +12,15 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **Kerma-meter correction factors** (2026-07-26) — optional per-(equipment × tube)
+  calibration `CF = (real measured dose) / (unit reported dose)` applied to reported
+  `K_IRP` before physics corrections. Lookup via CSV/TSV/XLSX/JSON or GUI prompt;
+  fail-soft to `default_factor` (1.0). Reported `air_kerma` / `OUTPUT_KEY_KERMA` stay
+  backward-compatible; corrected values are additive (`air_kerma_corrected`,
+  `kerma_corrected`, `k_meter`). CLI: `--kerma-meter-correction`,
+  `--kerma-meter-correction-file`, `--kerma-meter-correction-mode`,
+  `--kerma-meter-explicit-label`. When CF is enabled, kerma-weighted export correction
+  stats use corrected K_IRP (see footnote in Rich Export corrections section).
 - **Fork maintainer community baseline** (2026-07-26) — `CONTRIBUTING.md`,
   `SECURITY.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`,
   `CITATION.cff`, privacy-aware GitHub issue forms, and a PR template. README
@@ -113,6 +122,24 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **Local Sonar smells on kerma-meter CF paths** (2026-07-26) — cleared BLOCKER S3516
+  (`kerma_meter_prompt` no longer always-returns-bool; dialog is fire-and-continue),
+  duplicated dialog CSS literals (S1192), unused warn-helper params (S1172), and cognitive
+  complexity on CF table load / Calculate kerma readiness helpers. Behavior unchanged.
+  Also tightened basedpyright types on CF table load and identity-adapter tests so
+  pre-push typecheck passes.
+- **Kerma CF duplicate-row test logging capture** (2026-07-26) — `test_duplicate_rows_first_wins`
+  attaches a dedicated WARNING handler instead of relying on pytest `caplog` (flaky on
+  CI Python 3.14 when suite logging state blocks root propagation).
+- **CodeRabbit kerma-CF hardening** (2026-07-26) — broader fail-soft on CF file load errors;
+  invalid in-memory/table factors fall back to `default_factor`; CF prompt keys honor
+  `explicit_label`; header aliases for `device_serial_number` / `AcquisitionPlane`; no
+  filenames in CF not-found errors/debug logs; export validates kerma list lengths;
+  docstrings added across Calculate-tab / kerma tests and remaining branch-touched
+  src helpers (export writers, analyze_data, adapters, settings).
+- **Export kerma-array validation** (2026-07-26) — `PySkinDoseOutput` uses `len(data_norm)` as
+  the event count, rejects hits/kerma length mismatches, and requires
+  `kerma_meter_correction` / `kerma_corrected` to be both provided or both omitted.
 - **SonarCloud new-code Security Rating** (2026-07-24) — Confined the remaining CLI-derived
   filesystem paths in dev scripts through path validation and added git-ref / audit-arg
   allowlisting so SonarCloud stops rating new code below A. `mpfb_generate` and `run_catalog`

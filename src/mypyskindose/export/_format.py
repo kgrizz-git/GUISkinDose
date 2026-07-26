@@ -16,7 +16,21 @@ CORRECTION_LABELS = {
     "k_isq": "Inverse-square law (k_isq)",
     "k_med": "Medium (k_med)",
     "k_tab": "Table (k_tab)",
+    "k_meter": "Kerma-meter (k_meter)",
 }
+
+KERMA_METER_WEIGHTING_FOOTNOTE = (
+    "Dose-weighted means use kerma-meter-corrected K_IRP when a correction "
+    "table/prompt was applied."
+)
+
+
+def corrections_use_kerma_meter(payload: ExportPayload) -> bool:
+    """True when any exam/cumulative correction list includes ``k_meter``."""
+    for exam in payload.exams:
+        if any(s.key == "k_meter" for s in exam.corrections):
+            return True
+    return any(s.key == "k_meter" for s in payload.cumulative.corrections)
 
 # Patient-offset field → clear anatomical direction. The offset fields carry the
 # axis in their name: d_lon = longitudinal (superior-inferior), d_ver = vertical
@@ -29,6 +43,7 @@ OFFSET_LABELS = {
 
 
 def fmt_float(value: Any, digits: int = 2) -> str:
+    """Format a numeric value to *digits* decimals, or N/A."""
     if value is None:
         return "N/A"
     try:
@@ -38,10 +53,12 @@ def fmt_float(value: Any, digits: int = 2) -> str:
 
 
 def fmt_dose(value: Any) -> str:
+    """Format a dose value to one decimal place."""
     return fmt_float(value, 1)
 
 
 def fmt_correction(value: Any) -> str:
+    """Format a correction factor to four decimal places."""
     return fmt_float(value, 4)
 
 
@@ -64,6 +81,7 @@ def fmt_duration(seconds: float | None) -> str:
 
 
 def fmt_xyz(xyz: tuple[float, float, float] | None) -> str:
+    """Format an XYZ tuple as a centimetre coordinate string."""
     if xyz is None:
         return "N/A"
     return f"({xyz[0]:.2f}, {xyz[1]:.2f}, {xyz[2]:.2f}) cm"

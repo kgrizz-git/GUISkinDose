@@ -56,10 +56,12 @@ COMPACT_FULL_WIDTH_COLUMN_CLASSES = "w-full gap-1"
 
 
 def _format_table_offset_line() -> str:
+    """Format the table-offset summary line for Settings/Calculate."""
     return format_table_offset_line(state)
 
 
 def _format_scale_cm(scale_factor: float, axis: int | None) -> str:
+    """Format a habitus scale factor as centimetres for UI captions."""
     baseline_cm = (
         get_mesh_baseline_torso_width(state.human_mesh)
         if axis is None
@@ -69,7 +71,9 @@ def _format_scale_cm(scale_factor: float, axis: int | None) -> str:
 
 
 def build(ctx: PageContext) -> None:
+    """Construct the Settings tab panel and wire control callbacks."""
     def _on_phantom_pose_change() -> None:
+        """Reset results and refresh geometry/phantom previews after pose changes."""
         reset_results()
         ctx.refresh_geometry_preview()
         ctx.refresh_phantom_preview()
@@ -101,6 +105,7 @@ def build(ctx: PageContext) -> None:
                         )
 
                         def _on_human_mesh_change() -> None:
+                            """Validate human-mesh selection and refresh the phantom preview."""
                             if state.human_mesh == DEMO_MESH_SECTION_KEY:
                                 # Separator is not a mesh; snap back to a real stem.
                                 state.human_mesh = next(
@@ -114,6 +119,7 @@ def build(ctx: PageContext) -> None:
 
                     # show/hide mesh selector based on model
                     def _update_mesh_visibility():
+                        """Show the human-mesh selector only when phantom model is human."""
                         mesh_select.visible = state.phantom_model == "human"
 
                     ui.timer(0.5, _update_mesh_visibility)
@@ -189,6 +195,7 @@ def build(ctx: PageContext) -> None:
                         offset_range_hint = ui.label("").classes("text-caption text-grey-5 italic")
 
                         def _update_offset_range_hint() -> None:
+                            """Warn when patient offsets exceed Geometry slider range."""
                             mx = max(abs(state.d_lon), abs(state.d_ver), abs(state.d_lat))
                             if mx > PATIENT_OFFSET_SLIDER_RANGE_CM:
                                 offset_range_hint.set_text(
@@ -199,6 +206,7 @@ def build(ctx: PageContext) -> None:
                                 offset_range_hint.set_text("")
 
                         def _on_patient_offset_change() -> None:
+                            """Propagate global patient-offset edits and refresh the range hint."""
                             on_global_patient_offset_change(ctx)
                             _update_offset_range_hint()
 
@@ -308,6 +316,7 @@ def build(ctx: PageContext) -> None:
                         ).classes("w-full")
 
                         def _update_manual_kvp_visibility():
+                            """Show the manual kVp field only when policy is manual."""
                             manual_kvp.visible = state.below_floor_kvp_policy == "manual"
 
                         ui.timer(0.5, _update_manual_kvp_visibility)
@@ -319,6 +328,50 @@ def build(ctx: PageContext) -> None:
                     ).bind_value(state, "beam_miss_warn").on(
                         _MODEL_VALUE_EVENT, reset_results
                     ).classes("w-full")
+
+                    with ui.column().classes("w-full gap-2"):
+                        with ui.row().classes("w-full items-center justify-between"):
+                            ui.label("Kerma-meter correction").classes("text-subtitle2")
+                            HelpButton(
+                                title="Kerma-meter correction",
+                                content_path="kerma_meter_correction.md",
+                                help_id="settings_kerma_meter_correction",
+                            )
+                        ui.checkbox(
+                            "Enable kerma-meter correction factors",
+                            value=state.kerma_meter_enable,
+                        ).bind_value(state, "kerma_meter_enable").on(_MODEL_VALUE_EVENT, reset_results)
+                        ui.select(
+                            {"file": "Lookup file", "prompt": "Prompt before calculation"},
+                            label="Correction mode",
+                            value=state.kerma_meter_mode,
+                        ).bind_value(state, "kerma_meter_mode").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.input(
+                            label="Correction table path (CSV/TSV/XLSX/JSON)",
+                            value=state.kerma_meter_file or "",
+                        ).bind_value(state, "kerma_meter_file").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.number(
+                            label="Default factor (unresolved / table miss)",
+                            value=state.kerma_meter_default_factor,
+                            min=0.01,
+                            step=0.01,
+                        ).bind_value(state, "kerma_meter_default_factor").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.input(
+                            label="Explicit equipment label (optional override)",
+                            value=state.kerma_meter_explicit_label or "",
+                        ).bind_value(state, "kerma_meter_explicit_label").on(
+                            _MODEL_VALUE_EVENT, reset_results
+                        ).classes("w-full")
+                        ui.label(
+                            "CF = (real measured dose) / (unit reported dose). "
+                            "Radimetrics Equipment = room; DoseTrack Equipment Name is often the model."
+                        ).classes("text-xs text-grey-6")
 
             with ui.expansion("Visual Settings", icon="palette").classes(_SETTINGS_EXPANSION_CLASSES):
                 with ui.column().classes(_SETTINGS_SECTION_CLASSES):
