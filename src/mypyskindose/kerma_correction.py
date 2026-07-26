@@ -132,7 +132,8 @@ def distinct_auto_resolved_equipment_keys(data_norm: pd.DataFrame) -> set[str]:
     return {eq for eq, _ in keys if eq is not None}
 
 
-def _warn_suspicious_factor(equipment: str, tube: str, factor: float) -> None:
+def _warn_suspicious_factor(factor: float) -> None:
+    """Warn when a CF falls outside the typical band (privacy: no equipment labels)."""
     if not (_CF_SUSPICIOUS_LO <= factor <= _CF_SUSPICIOUS_HI):
         logger.warning(
             "kerma-meter correction: factor %.4g for one (equipment, tube) pair "
@@ -197,7 +198,7 @@ def _rows_to_factor_dict(
             duplicates += 1
             continue
         table[key] = factor
-        _warn_suspicious_factor(equip, tube, factor)
+        _warn_suspicious_factor(factor)
     if duplicates:
         logger.warning(
             "kerma-meter correction: %d duplicate (equipment, tube) row(s); first wins.",
@@ -208,30 +209,29 @@ def _rows_to_factor_dict(
     return table
 
 
-def load_correction_table(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], float]:
-    """Load a CF lookup table from CSV/TSV/XLSX/JSON.
+def _ensure_row_budget(n_rows: int) -> None:
+    if n_rows > _MAX_TABLE_ROWS:
+        raise ValueError(f"Kerma-meter correction table exceeds {_MAX_TABLE_ROWS} rows.")
 
-    Raises ValueError on missing file, empty data, oversized tables, or invalid values.
-    """
-    path = Path(path)
-    if not path.is_file():
-        raise ValueError(f"Kerma-meter correction file not found or not a regular file: {path.name}")
 
+def _load_json_correction_rows(path: Path) -> list[dict[str, Any]]:
+    """Parse JSON CF payload into a non-empty list of row dicts."""
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    if isinstance(payload, dict) and "factors" in payload:
+        rows = payload["factors"]
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        raise ValueError('Kerma-meter correction JSON must be a list or {"factors": [...]}.')
+    if not isinstance(rows, list) or len(rows) == 0:
+        raise ValueError("Kerma-meter correction JSON has no factor rows.")
+    _ensure_row_budget(len(rows))
+    return rows
+
+
+def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataFrame:
+    """Load CSV/TSV/XLSX into a DataFrame with required CF columns present."""
     suffix = path.suffix.lower()
-    if suffix == ".json":
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-        if isinstance(payload, dict) and "factors" in payload:
-            rows = payload["factors"]
-        elif isinstance(payload, list):
-            rows = payload
-        else:
-            raise ValueError("Kerma-meter correction JSON must be a list or {\"factors\": [...]}.")
-        if not isinstance(rows, list) or len(rows) == 0:
-            raise ValueError("Kerma-meter correction JSON has no factor rows.")
-        if len(rows) > _MAX_TABLE_ROWS:
-            raise ValueError(f"Kerma-meter correction table exceeds {_MAX_TABLE_ROWS} rows.")
-        return _rows_to_factor_dict(rows, source_stem=path.stem)
-
     if suffix == ".xlsx":
         sheet_arg: str | int = 0 if sheet is None else sheet
         try:
@@ -251,8 +251,7 @@ def load_correction_table(path: Path | str, sheet: str | int | None = None) -> d
 
     if df.empty:
         raise ValueError("Kerma-meter correction table is empty (no data rows).")
-    if len(df) > _MAX_TABLE_ROWS:
-        raise ValueError(f"Kerma-meter correction table exceeds {_MAX_TABLE_ROWS} rows.")
+    _ensure_row_budget(len(df))
 
     df = _normalize_table_columns(df)
     missing = _REQUIRED_COLUMNS - set(df.columns)
@@ -260,8 +259,22 @@ def load_correction_table(path: Path | str, sheet: str | int | None = None) -> d
         raise ValueError(
             f"Kerma-meter correction table missing required column(s): {sorted(missing)}."
         )
+    return df
 
-    rows = df.to_dict(orient="records")
+
+def load_correction_table(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], float]:
+    """Load a CF lookup table from CSV/TSV/XLSX/JSON.
+
+    Raises ValueError on missing file, empty data, oversized tables, or invalid values.
+    """
+    path = Path(path)
+    if not path.is_file():
+        raise ValueError(f"Kerma-meter correction file not found or not a regular file: {path.name}")
+
+    if path.suffix.lower() == ".json":
+        rows = _load_json_correction_rows(path)
+    else:
+        rows = _load_tabular_correction_df(path, sheet).to_dict(orient="records")
     return _rows_to_factor_dict(rows, source_stem=path.stem)
 
 
