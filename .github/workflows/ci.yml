@@ -1,9 +1,9 @@
 # Job DAG (privacy-first): schedule-gate → privacy-gates → {static-analysis, owasp-semgrep,
-# gui-smoke, build, gitleaks (PRs), codeql, coverage-pr (PRs)} → sonar-scan (opt-in protected-main only).
+# gui-smoke, build, scan-for-secrets (PRs), codeql, coverage-pr (PRs)} → sonar-scan (opt-in protected-main only).
 # Safety stays main-only in cloud-scans-main.
 #
 # External PR scanners that previously ran before privacy-gates:
-#   gitleaks.yml — pull_request trigger removed; PR scanning now in the gitleaks job below.
+#   gitleaks.yml — pull_request trigger removed; PR scanning now in the Scan for secrets job below.
 #   phi-scan.yml — pull_request trigger removed; weekly schedule + push:main remain.
 #   CodeQL       — handled by the codeql job below (needs privacy-gates). If GitHub Default
 #                   Setup is enabled in repo settings, disable it: Settings → Security →
@@ -418,7 +418,7 @@ jobs:
   gitleaks:
     # PR secret scanning, gated behind privacy-gates. The standalone gitleaks.yml
     # retains push:main only; this job handles all PR branches.
-    name: Gitleaks secret scan (PRs)
+    name: Scan for secrets
     needs: [schedule-gate, privacy-gates]
     if: >
       needs.schedule-gate.outputs.should_run == 'true' &&

@@ -14,7 +14,7 @@ on:
 
 jobs:
   gitleaks:
-    name: Scan for secrets (post-merge)
+    name: Scan for secrets
     runs-on: ubuntu-latest
     permissions:
       contents: read
