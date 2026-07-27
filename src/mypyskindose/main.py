@@ -530,13 +530,14 @@ def run_cli_export(
 
 
 def get_argument_parser(arguments) -> argparse.Namespace:
-    """Parse CLI argv into an argparse Namespace for PySkinDose."""
+    """Parse CLI argv into an argparse Namespace for mypyskindose."""
     parser = argparse.ArgumentParser(
-        prog="PySkinDose",
+        prog="mypyskindose",
         description=(
-            "PySkinDose is a Python version 3.8 based program for patient peak"
-            " skin dose (PSD) estimations from fluoroscopic procedures in"
-            " interventional radiology."
+            "MyPySkinDose is a Python 3.11+ program for patient peak skin dose"
+            " (PSD) estimations and 3D skin dose maps from fluoroscopic procedures"
+            " in interventional radiology. Accepts DICOM RDSR files (.dcm),"
+            " pre-parsed JSON exports, or tabular event-table exports (.csv, .tsv, .xlsx)."
         ),
         epilog=(
             "Beam-miss warnings: events that deposit zero dose because the beam does "
