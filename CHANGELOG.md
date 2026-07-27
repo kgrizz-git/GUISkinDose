@@ -17,7 +17,28 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `coverage-pr` job (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base); the job
   now runs Safety only.
 
+### Changed
+
+- **Faster CI test runs** (2026-07-27) — migrated the coverage jobs from `coverage run -m pytest`
+  to `pytest --cov` (pytest-cov, so xdist worker processes are measured) and added `pytest-xdist`
+  with `-n auto` on the non-GUI suite (GUI stays serial for asyncio/nicegui). ~2x faster locally
+  with identical coverage; combined gate stays ≥80%. Added `pytest-xdist` to the `dev` extra and
+  `uv.lock`. No tests removed.
+- **Fail-fast CLI export** (2026-07-27) — `run_cli_export` now validates the destination
+  (exists / directory / tracked / ignored) via `validate_output_path` *before* the dose
+  calculation and report render, so an existing-file/`--force` error returns immediately instead
+  of after a full compute. `write_report` still re-validates atomically.
+- **PHI-filename name list expanded** (2026-07-27) — grew `phi_filename.name_tokens` from ~132 to
+  243 curated given/surname tokens (modern SSA names + distinct surnames), deliberately excluding
+  common English/code words to avoid false positives on a blocking gate; verified zero collisions
+  across the current tree.
+
 ### Fixed
+
+- **PHI-filename allowlist case-insensitivity** (2026-07-27) — `phi_filename_findings` now matches
+  `allowlist_patterns` with `fnmatch.fnmatchcase` over lowercased path and pattern, so exemptions
+  are deterministically case-insensitive on every OS (`fnmatch.fnmatch` applied `os.path.normcase`,
+  which is case-sensitive on Linux). Reported by CodeRabbit on PR #37.
 
 - **SonarQube bugs and easy wins** (2026-07-26) — cleared the three open BUG findings in
   `gui/app.py` (propagate `asyncio` cancellation by not swallowing `CancelledError`; keep a

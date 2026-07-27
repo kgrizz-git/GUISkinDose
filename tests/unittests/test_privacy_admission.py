@@ -95,7 +95,7 @@ def test_phi_filename_findings_flag_structural_and_name_tokens() -> None:
 
     # Build the SSN-format token at runtime so no SSN-shaped literal appears in
     # source (the repo's sensitive-content gate would flag it as US_SSN).
-    ssn_name = "fixtures/ssn_" + "-".join(("123", "45", "6789")) + ".txt"
+    ssn_name = Path("fixtures", f"ssn_{'-'.join(('123', '45', '6789'))}.txt").as_posix()
 
     findings = phi_filename_findings(
         policy,
@@ -137,6 +137,22 @@ def test_phi_filename_findings_respect_allowlist_and_word_boundaries() -> None:
             "docs/contributors/mark_bio.md",
         ],
     ) == []
+
+
+def test_phi_filename_allowlist_is_case_insensitive_on_every_os() -> None:
+    # A mixed-case allowlist glob must exempt a differently-cased path
+    # deterministically, regardless of the host filesystem's case sensitivity.
+    policy = {
+        "phi_filename": {
+            "structural_patterns": [],
+            "name_tokens": ["mark"],
+            "allowlist_patterns": ["docs/Contributors/Mark_*.md"],
+        }
+    }
+
+    assert phi_filename_findings(policy, ["docs/contributors/mark_bio.md"]) == []
+    # A non-allowlisted name-token path is still flagged.
+    assert phi_filename_findings(policy, ["data/mark_case.csv"]) == ["data/mark_case.csv"]
 
 
 def test_repository_policy_blocks_phi_like_filenames() -> None:

@@ -203,13 +203,15 @@ def phi_filename_findings(policy: dict[str, Any], paths: Sequence[str]) -> list[
         return []
     structural = [re.compile(pattern, re.IGNORECASE) for pattern in config.get("structural_patterns", [])]
     name_tokens = frozenset(str(token).lower() for token in config.get("name_tokens", []))
-    allowlist = tuple(str(pattern) for pattern in config.get("allowlist_patterns", []))
+    allowlist = tuple(str(pattern).lower() for pattern in config.get("allowlist_patterns", []))
     findings: list[str] = []
     for path in paths:
         normalized = normalize_path(path)
-        if any(fnmatch.fnmatch(normalized, pattern) for pattern in allowlist):
-            continue
         lowered = normalized.lower()
+        # fnmatchcase (not fnmatch) skips os.path.normcase, so lowering both sides
+        # gives deterministic case-insensitive allowlist matching on every OS.
+        if any(fnmatch.fnmatchcase(lowered, pattern) for pattern in allowlist):
+            continue
         if any(pattern.search(lowered) for pattern in structural):
             findings.append(normalized)
             continue
