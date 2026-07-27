@@ -60,7 +60,7 @@ class KermaMeterCorrection:
     table_metadata: dict[str, Any] | None = None
 
 
-def normalize_equipment_label(raw: str | None) -> str | None:
+def normalize_equipment_label(raw: str | float | None) -> str | None:
     """Strip, NFKC-normalize, and casefold an equipment label; empty → None."""
     if raw is None:
         return None
@@ -75,7 +75,7 @@ def normalize_equipment_label(raw: str | None) -> str | None:
     return text.casefold()
 
 
-def normalize_tube(acquisition_plane: str | None) -> str:
+def normalize_tube(acquisition_plane: str | float | None) -> str:
     """Map acquisition_plane to ``single`` | ``A`` | ``B`` (default ``single``)."""
     if acquisition_plane is None:
         return "single"
