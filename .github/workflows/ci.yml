@@ -282,7 +282,8 @@ jobs:
     - name: Lint with ruff
       run: uv run --no-sync ruff check src tests
     - name: Test with pytest
-      run: uv run --no-sync coverage run -m pytest --ignore=tests/gui
+      # pytest-cov (not `coverage run`) so xdist worker processes are measured; -n auto parallelizes.
+      run: uv run --no-sync pytest --ignore=tests/gui -n auto --cov=src/mypyskindose --cov-report=
     - name: Coverage threshold (≥65%, non-GUI)
       run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=65
 
@@ -316,10 +317,15 @@ jobs:
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
     - name: Generate combined coverage (non-GUI + GUI)
+      # pytest-cov keeps xdist workers measured; non-GUI runs parallel (-n auto),
+      # GUI stays serial (asyncio/nicegui). --cov spans src+scripts+tests so
+      # diff-cover sees changed lines in all three.
       run: |
         uv run --no-sync coverage erase
-        uv run --no-sync coverage run -m pytest --ignore=tests/gui
-        uv run --no-sync coverage run --append -m pytest tests/gui/
+        uv run --no-sync pytest --ignore=tests/gui -n auto \
+          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-report=
+        uv run --no-sync pytest tests/gui/ \
+          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     - name: Combined coverage threshold (≥80%)
       run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=80
@@ -360,10 +366,13 @@ jobs:
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
     - name: Generate combined coverage (non-GUI + GUI)
+      # pytest-cov + xdist (see coverage-pr); Sonar reads the resulting coverage.xml.
       run: |
         uv run --no-sync coverage erase
-        uv run --no-sync coverage run -m pytest --ignore=tests/gui
-        uv run --no-sync coverage run --append -m pytest tests/gui/
+        uv run --no-sync pytest --ignore=tests/gui -n auto \
+          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-report=
+        uv run --no-sync pytest tests/gui/ \
+          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     # CI-based analysis is authoritative (Automatic Analysis disabled). Reads
     # sonar-project.properties. This job stays disabled until a repository administrator
