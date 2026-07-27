@@ -12,6 +12,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **ci-latest type error on `main`** (2026-07-27) — `check_table_hits` returned
+  `hits.tolist()` from a bool ndarray; newer numpy stubs type `ndarray.tolist()` as not
+  assignable to the declared `List[bool]`, failing basedpyright in the `latest-deps` job.
+  Now builds an explicit `list[bool]` (`[bool(hit) for hit in hits]`); behavior unchanged.
+
 - **SonarQube bugs and easy wins** (2026-07-26) — cleared the three open BUG findings in
   `gui/app.py` (propagate `asyncio` cancellation by not swallowing `CancelledError`; keep a
   strong reference to browser disconnect shutdown tasks). Also fixed confusing adjacent-string
