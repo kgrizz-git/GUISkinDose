@@ -4,7 +4,7 @@
 
 ## What the project does
 
-MyPySkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM Radiation Dose Structured Report (RDSR) file, reconstructs the 3D geometry of each irradiation event (beam angle, table position, field size, kVp, filtration), places a computational patient phantom in that geometry, and accumulates dose to each skin cell across all events using physics-based correction factors.
+MyPySkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM Radiation Dose Structured Report (RDSR) file or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`), reconstructs the 3D geometry of each irradiation event (beam angle, table position, field size, kVp, filtration), places a computational patient phantom in that geometry, and accumulates dose to each skin cell across all events using physics-based correction factors.
 
 It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose) project, renamed `mypyskindose` to allow independent development.
 
@@ -156,10 +156,14 @@ output = main(file_path="path/to/file.dcm", settings=settings)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `file_path` | `str \| Path \| None` | Path to RDSR `.dcm` file or pre-parsed `.json` |
+| `file_path` | `str \| Path \| list \| None` | Path to RDSR `.dcm`, pre-parsed `.json`, or tabular export (`.csv`, `.tsv`, `.xlsx`). Pass a list of paths for multi-exam mode. |
 | `settings` | `str \| dict \| PyskindoseSettings` | Settings (JSON string, dict, or settings object) |
 
 Returns the output dict/JSON when `output_format` is `"dict"` or `"json"`, otherwise `None` (plots are rendered inline or saved to file).
+
+### `analyze_input_file()` — `main.py` (public API)
+
+The primary public function exported from `mypyskindose`. Accepts a file path (RDSR, JSON, or tabular), a settings object, and optional schema/export parameters. Prefer this over `main()` in library usage.
 
 ### `analyze_normalized_data_with_custom_settings_object()` — `main.py`
 
@@ -168,8 +172,34 @@ For headless use when you already have a normalised `pd.DataFrame`.
 ### CLI
 
 ```bash
-python -m mypyskindose.main --file-path path/to/file.dcm --settings path/to/settings.json
+python -m mypyskindose --mode headless --file-path path/to/file.dcm --settings path/to/settings.json
+python -m mypyskindose --mode gui          # launch GUI
 ```
+
+Key flags (see `python -m mypyskindose --help` for the full list):
+
+| Flag | Purpose |
+|------|---------|
+| `--mode` / `-m` | `headless` (default) or `gui` |
+| `--file-path` / `-f` | One or more input files (`.dcm`, `.csv`, `.tsv`, `.xlsx`) |
+| `--settings` / `-s` | Path to settings JSON file |
+| `--input-schema` | Tabular schema: `auto`, `normalized`, `generic_rdsr_like`, `radimetrics`, `dosetrack` |
+| `--sheet-name` | Sheet name or 0-based index for Excel inputs |
+| `--input-preview-only` | Print a value-safe input summary without running dose calculation |
+| `--aggregate` | In multi-exam mode: print only the aggregate PSD |
+| `--export-format` | Generate a rich audit report: `xlsx`, `pdf`, `html`, or `docx` |
+| `--export-path` | Required output path when `--export-format` is set |
+| `--force` | Allow overwriting an existing untracked export file |
+| `--export-title` | Optional report title |
+| `--include-source-identifiers` | Include source filenames in reports (may contain PHI) |
+| `--allow-ignored-checkout-output` | Allow export to a gitignored path inside the checkout |
+| `--kerma-meter-correction` | Enable kerma-meter correction factors |
+| `--kerma-meter-correction-file` | Path to CF lookup table (CSV/TSV/XLSX/JSON) |
+| `--kerma-meter-correction-mode` | CF resolution mode: `file` or `prompt` (GUI-only) |
+| `--kerma-meter-explicit-label` | Force all events to this equipment label for CF lookup |
+| `--native` | Open GUI in a native desktop window (requires `[gui-native]` extra) |
+| `--host` | GUI server bind address (default `127.0.0.1`; requires `--allow-network` for non-loopback) |
+| `--allow-network` | Acknowledge non-loopback GUI binding |
 
 ---
 
@@ -281,11 +311,16 @@ Key attributes:
 
 Key methods: `rotate()`, `translate()`, `save_position()`, `position()`
 
-Human phantoms are loaded from STL files in `phantom_data/`. Available meshes:
-- `hudfrid` — adult male, optimised for skin dose
-- `adult_male`, `adult_female`
-- `junior_male`, `junior_female`
-- `*_reduced_1000t` variants — lower-resolution versions for speed
+Human phantoms are loaded from STL files in `phantom_data/`. The catalog is large (~130+ stems) and is **discovered at runtime** — use `print_available_human_phantoms()` or the GUI mesh selector for the authoritative list. Family groupings include:
+
+- **Adult standard:** `adult_ecto_*`, `adult_endo_*` (male/female)
+- **Adult bariatric:** `adult_bariatric_{1,2,3}_{male,female}` and `*_arms_down` variants
+- **Pediatric:** `ped_preschool_*`, `ped_5y_*`, `ped_10y_*`, `ped_15y_*`
+- **Senior:** `senior_{male,female}`
+- **Legacy/compat:** `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`
+- **Resolution variants:** `*_reduced_1000t` (speed), `*_reduced_3000t` (GUI preview)
+
+See [FEATURE_INVENTORY.md §2.2](FEATURE_INVENTORY.md) for the complete family table and alias list.
 
 ### `Beam` — `beam_class.py`
 
@@ -451,6 +486,8 @@ from mypyskindose import (
 
 ## Dependencies
 
+### Core (always installed)
+
 | Package | Purpose |
 |---------|---------|
 | `numpy` | Array math |
@@ -458,9 +495,21 @@ from mypyskindose import (
 | `scipy` | Cubic spline interpolation for corrections |
 | `pydicom` | DICOM RDSR parsing |
 | `numpy-stl` | STL mesh loading for human phantoms |
+| `openpyxl` | Tabular `.xlsx` input reading |
 | `plotly` | Interactive 3D visualisation |
 | `tqdm` | Progress bar during dose calculation |
 | `rich` | Coloured terminal output for `print_parameters()` |
 | `kaleido` | Static image export from Plotly |
 | `pillow` | Image handling |
 | `psutil` | System resource monitoring |
+
+### Optional extras
+
+| Extra | Package(s) | Purpose |
+|-------|------------|---------|
+| `[export]` | `reportlab>=4.0`, `python-docx>=1.1` | PDF and DOCX rich audit report export |
+| `[gui]` | `nicegui>=2.0.0` | Browser-based GUI |
+| `[gui-native]` | `nicegui>=2.0.0`, `pywebview` | Native desktop window GUI |
+| `[dev]` | ruff, pytest, basedpyright, bandit, etc. | Development tooling |
+| `[docs]` | Sphinx and extensions | Documentation build |
+| `[notebooks]` | JupyterLab | Getting-started notebook |

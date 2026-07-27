@@ -19,6 +19,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **CLI `--help` corrected** (2026-07-27) — `prog` was still `"PySkinDose"` (upstream name) and
+  the description said "Python version 3.8"; now reads `mypyskindose` and "Python 3.11+" with an
+  expanded description that lists accepted input types (RDSR, JSON, tabular). Pure user-facing text;
+  no behaviour change.
+
 - **Single 80% coverage standard** (2026-07-27) — removed the matrix `build` job's separate
   non-GUI `--fail-under=65` coverage step; it now runs the non-GUI suite for test-pass only
   (`pytest --ignore=tests/gui -n auto`, also faster). Coverage is enforced at one 80% standard by

@@ -34,7 +34,7 @@ repository — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 - Python 3.11 or above
 - A settings configuration, typically based on [src/mypyskindose/settings_example.json](src/mypyskindose/settings_example.json)
-- An RDSR DICOM file, or a normalized/pre-parsed JSON export of RDSR data
+- A DICOM RDSR file (`.dcm`), a pre-parsed JSON export, or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`)
 
 ## Installation
 
@@ -158,7 +158,7 @@ Within the intended-use boundary above, MyPySkinDose is meant to be used in a fe
 1. Inspect or debug the examination geometry before doing dose calculations.
 2. Step through irradiation events from an RDSR study to understand beam orientation and positioning.
 3. Calculate a skin dose map on a mathematical or human phantom.
-4. Export the calculation result as HTML, JSON, or a Python dictionary for downstream processing.
+4. Export the calculation result as HTML, JSON, XLSX, PDF, or DOCX rich audit report, or as a Python dictionary for downstream processing.
 5. Run the analysis headlessly from your own Python scripts.
 
 The main user-facing workflow is:
@@ -166,7 +166,7 @@ The main user-facing workflow is:
 1. Load or create a `PyskindoseSettings` object.
 2. Choose a phantom and positioning.
 3. Select a mode such as `plot_setup`, `plot_procedure`, `plot_event`, or `calculate_dose`.
-4. Run `main()` with a path to an RDSR file.
+4. Run `main()` with a path to an RDSR file, a JSON export, or a tabular file (`.csv`, `.tsv`, `.xlsx`).
 5. Review the interactive plot or exported result.
 
 ## Quick Start with Jupyter Notebook
@@ -208,7 +208,7 @@ main(settings=settings)
 
 This is useful for checking the initial geometry, patient/table positioning, and phantom choice before loading a real study.
 
-### 2. Examine a procedure from an RDSR file
+### 2. Examine a procedure from an RDSR file or tabular export
 
 ```python
 from mypyskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
