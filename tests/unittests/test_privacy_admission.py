@@ -14,6 +14,7 @@ from scripts.privacy_admission import (
     forbidden_paths,
     missing_ignore_patterns,
     normalize_path,
+    phi_filename_findings,
     receipt_path,
     required_rules,
     verify_receipt,
@@ -76,6 +77,125 @@ def test_never_track_policy_blocks_force_added_roots_and_names() -> None:
             "coverage.xml",
         ],
     ) == [".scannerwork/task.txt", "coverage.xml", "docs/.DS_Store", "logs/debug.trace", "tmp/report.json"]
+
+
+def test_phi_filename_findings_flag_structural_and_name_tokens() -> None:
+    policy = {
+        "phi_filename": {
+            "structural_patterns": [
+                r"(?<![a-z0-9])mrn[ _\-]?\d",
+                r"(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)",
+                r"patient[ _\-]?(name|id|mrn)",
+                r"(?<![a-z0-9])accession[ _\-]?(#|\d)",
+                r"(?<![a-z0-9])acc[ _\-]?(#|\d{5,})",
+            ],
+            "name_tokens": ["john", "smith"],
+            "allowlist_patterns": [],
+        }
+    }
+
+    # Build the SSN-format token at runtime so no SSN-shaped literal appears in
+    # source (the repo's sensitive-content gate would flag it as US_SSN).
+    ssn_name = Path("fixtures", f"ssn_{'-'.join(('123', '45', '6789'))}.txt").as_posix()
+
+    findings = phi_filename_findings(
+        policy,
+        [
+            "src/mypyskindose/beam_class.py",
+            "exports/MRN_00123_rdsr.dcm",
+            "data/john_smith_case.csv",
+            "cases/patient_name_list.xlsx",
+            ssn_name,
+            "exports/acc-987654321.json",
+        ],
+    )
+
+    assert findings == [
+        "cases/patient_name_list.xlsx",
+        "data/john_smith_case.csv",
+        "exports/MRN_00123_rdsr.dcm",
+        "exports/acc-987654321.json",
+        ssn_name,
+    ]
+
+
+def test_phi_filename_findings_respect_allowlist_and_word_boundaries() -> None:
+    policy = {
+        "phi_filename": {
+            "structural_patterns": [r"(?<![a-z0-9])mrn[ _\-]?\d"],
+            "name_tokens": ["mark"],
+            "allowlist_patterns": ["docs/contributors/mark_bio.md"],
+        }
+    }
+
+    # "mark" only matches as a whole token, not inside "watermark"/"benchmark";
+    # the allowlisted path is exempt even though it contains a name token.
+    assert phi_filename_findings(
+        policy,
+        [
+            "src/plotting/watermark.py",
+            "tests/benchmark_dose.py",
+            "docs/contributors/mark_bio.md",
+        ],
+    ) == []
+
+
+def test_phi_filename_allowlist_is_case_insensitive_on_every_os() -> None:
+    # A mixed-case allowlist glob must exempt a differently-cased path
+    # deterministically, regardless of the host filesystem's case sensitivity.
+    policy = {
+        "phi_filename": {
+            "structural_patterns": [],
+            "name_tokens": ["mark"],
+            "allowlist_patterns": ["docs/Contributors/Mark_*.md"],
+        }
+    }
+
+    assert phi_filename_findings(policy, ["docs/contributors/mark_bio.md"]) == []
+    # A non-allowlisted name-token path is still flagged.
+    assert phi_filename_findings(policy, ["data/mark_case.csv"]) == ["data/mark_case.csv"]
+
+
+def test_repository_policy_blocks_phi_like_filenames() -> None:
+    root = Path(__file__).resolve().parents[2]
+    policy = json.loads((root / "dev-docs/privacy_admission_policy.json").read_text(encoding="utf-8"))
+
+    flagged = phi_filename_findings(
+        policy,
+        ["exports/MRN_9981_rdsr.dcm", "data/anna_garcia_events.csv"],
+    )
+
+    assert flagged == ["data/anna_garcia_events.csv", "exports/MRN_9981_rdsr.dcm"]
+
+
+def test_repository_policy_accession_floor_ignores_year_tags() -> None:
+    # The 'acc' abbreviation uses a 5-digit floor so year-tag fixtures like
+    # acc-2024 do not false-positive, while the unambiguous full word
+    # 'accession' keeps a 1-digit floor and long accession runs still block.
+    root = Path(__file__).resolve().parents[2]
+    policy = json.loads((root / "dev-docs/privacy_admission_policy.json").read_text(encoding="utf-8"))
+
+    flagged = phi_filename_findings(
+        policy,
+        [
+            "reports/acc-2024_summary.csv",  # year tag -> not PHI
+            "reports/access_log.txt",  # abbreviation collision -> not PHI
+            "exports/acc-987654321.dcm",  # long accession run -> PHI
+            "exports/accession-42.dcm",  # unambiguous keyword -> PHI
+        ],
+    )
+
+    assert flagged == ["exports/acc-987654321.dcm", "exports/accession-42.dcm"]
+
+
+def test_repository_policy_name_tokens_scan_directory_components() -> None:
+    # Deliberate design: name tokens are matched over the whole path, not just
+    # the basename, so a patient name embedded in a directory (common in
+    # imaging exports) still blocks. See phi_filename._comment in the policy.
+    root = Path(__file__).resolve().parents[2]
+    policy = json.loads((root / "dev-docs/privacy_admission_policy.json").read_text(encoding="utf-8"))
+
+    assert phi_filename_findings(policy, ["patients/anna_garcia/scan.dcm"]) == ["patients/anna_garcia/scan.dcm"]
 
 
 def test_route_requires_matching_extension_prefix_and_diff_signal() -> None:

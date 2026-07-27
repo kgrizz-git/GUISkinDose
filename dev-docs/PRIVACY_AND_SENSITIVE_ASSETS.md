@@ -113,7 +113,7 @@ messages. Do not attach diagnostic logs to issues or commits without reviewing t
 ## Protected paths and conditional scanner receipts
 
 [`privacy_admission_policy.json`](privacy_admission_policy.json) defines privacy-critical ignore entries,
-never-track paths, and the file/diff criteria that require secondary scanners. Run:
+never-track paths, PHI-like filename heuristics, and the file/diff criteria that require secondary scanners. Run:
 
 ```bash
 python scripts/privacy_admission.py route --mode staged
@@ -126,6 +126,17 @@ an index snapshot, not arbitrary working-tree files, and writes only a content-b
 and expiry; they contain neither paths nor matched values and become invalid when inputs or scanner configuration
 change. Commit and pre-push hooks fail when a required receipt is absent, stale, expired, or not clean. Standard Git
 has no portable pre-`git add` hook, so the commit hook is the first enforceable admission boundary.
+
+`python scripts/privacy_admission.py check` (wired into the pre-commit, pre-push, and CI `privacy-gates` stages)
+additionally blocks committing any file whose **name or path** looks like it embeds PHI — either a structural
+identifier pattern (`MRN_…`, an SSN-format run, `patient_name`/`patient_id`, `dob…`, an accession number, etc.) or a
+whole-token match against the curated `phi_filename.name_tokens` common-name list. Matching is case-insensitive over
+the full POSIX path — directory components included, so a patient name embedded in a folder (`patients/SMITH_JOHN/…`)
+also blocks; name tokens match only as complete tokens (so `watermark.py` is fine but `john_smith.csv` is
+blocked). The accession abbreviation `acc` uses a 5-digit floor so year-tags like `acc-2024` are not flagged, while
+the unambiguous full word `accession` keeps a 1-digit floor. Errors report a non-reversible `path_token=` rather than
+the sensitive name. A genuine false positive (e.g. a surname-bearing org directory) is resolved by renaming the file
+or adding an fnmatch glob to `phi_filename.allowlist_patterns`.
 
 The same policy prevents tracking local logs, scanner reports/state, coverage output, build output, and known local
 data directories. It also fails if required privacy ignore lines are deleted. Never weaken the protected list merely
