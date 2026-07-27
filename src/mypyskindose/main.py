@@ -507,9 +507,14 @@ def run_cli_export(
     """Build a Rich report from a headless run and write it to disk. Returns the path."""
     from mypyskindose.export import collect_export_payload
     from mypyskindose.export.writers import write_report
+    from mypyskindose.safe_output import validate_output_path
 
     if export_path is None:
         raise ValueError("--export-path is required for filesystem report exports.")
+
+    # Fail fast on an invalid/forbidden/existing destination before the expensive
+    # dose calculation and report render. write_report re-validates atomically.
+    validate_output_path(export_path, force=force, allow_ignored_checkout=allow_ignored_checkout)
 
     source = build_cli_export_source(
         file_paths,
@@ -520,13 +525,7 @@ def run_cli_export(
         include_source_identifiers=include_source_identifiers,
     )
     payload = collect_export_payload(source)
-    write_report(
-        payload,
-        export_path,
-        export_format,
-        force=force,
-        allow_ignored_checkout=allow_ignored_checkout,
-    )
+    write_report(payload, export_path, export_format, force=force, allow_ignored_checkout=allow_ignored_checkout)
     return Path(export_path)
 
 

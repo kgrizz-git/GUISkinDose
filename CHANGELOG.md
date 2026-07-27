@@ -10,12 +10,51 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Removed
+
+- **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the
+  `cloud-scans-main` CI job and deleted `codecov.yml`. Enforced PR coverage remains the GHA
+  `coverage-pr` job (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base); the job
+  now runs Safety only.
+
+### Changed
+
+- **Single 80% coverage standard** (2026-07-27) — removed the matrix `build` job's separate
+  non-GUI `--fail-under=65` coverage step; it now runs the non-GUI suite for test-pass only
+  (`pytest --ignore=tests/gui -n auto`, also faster). Coverage is enforced at one 80% standard by
+  `coverage-pr` (PRs: combined ≥80% + `diff-cover` ≥80%) and `sonar-scan` (main: ≥80% new-code),
+  eliminating the earlier 65%-vs-80% split and the GUI-0% package-scope workaround.
+- **Faster CI test runs** (2026-07-27) — the `coverage-pr` and `sonar-scan` combined-coverage
+  jobs migrated from `coverage run -m pytest` to `pytest --cov` (pytest-cov, so xdist worker
+  processes are measured) with `pytest-xdist -n auto` on the non-GUI suite (GUI stays serial for
+  asyncio/nicegui). ~2x faster locally with identical coverage; combined gate stays ≥80%. Added
+  `pytest-xdist` to the `dev` extra and `uv.lock`. No tests removed.
+- **Fail-fast CLI export** (2026-07-27) — `run_cli_export` now validates the destination
+  (exists / directory / tracked / ignored) via `validate_output_path` *before* the dose
+  calculation and report render, so an existing-file/`--force` error returns immediately instead
+  of after a full compute. `write_report` still re-validates atomically.
+- **PHI-filename name list expanded** (2026-07-27) — grew `phi_filename.name_tokens` from ~132 to
+  269 curated given/surname tokens (modern SSA names + distinct US/international surnames), deliberately
+  excluding the worst English/code collisions to limit false positives on a blocking gate; the latest
+  batch folded in common UK/Indian surnames (e.g. `davies`, `hughes`, `kumar`, `sharma`); verified zero
+  collisions across the current tree.
+- **PHI-filename accession floor tightened** (2026-07-27) — split the accession structural pattern
+  so the abbreviation `acc` requires a 5-digit run (avoids year-tag false positives like `acc-2024`),
+  while the unambiguous full word `accession` keeps a 1-digit floor. Documented the deliberate
+  decision to scan name tokens over the full path (directory components included) for maximal PHI
+  recall in a medical-imaging repo, with `allowlist_patterns` as the org-directory escape hatch.
+  Verified still zero hits across the tree.
+
 ### Fixed
 
 - **ci-latest type error on `main`** (2026-07-27) — `check_table_hits` returned
   `hits.tolist()` from a bool ndarray; newer numpy stubs type `ndarray.tolist()` as not
   assignable to the declared `List[bool]`, failing basedpyright in the `latest-deps` job.
   Now builds an explicit `list[bool]` (`[bool(hit) for hit in hits]`); behavior unchanged.
+- **PHI-filename allowlist case-insensitivity** (2026-07-27) — `phi_filename_findings` now matches
+  `allowlist_patterns` with `fnmatch.fnmatchcase` over lowercased path and pattern, so exemptions
+  are deterministically case-insensitive on every OS (`fnmatch.fnmatch` applied `os.path.normcase`,
+  which is case-sensitive on Linux). Reported by CodeRabbit on PR #37.
 
 - **SonarQube bugs and easy wins** (2026-07-26) — cleared the three open BUG findings in
   `gui/app.py` (propagate `asyncio` cancellation by not swallowing `CancelledError`; keep a
@@ -38,6 +77,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **PHI-like filename admission guard** (2026-07-26) — `scripts/privacy_admission.py check` (pre-commit,
+  pre-push, and CI `privacy-gates`) now blocks committing files whose name/path resembles PHI: structural
+  identifier patterns (`MRN_…`, SSN format, `patient_name`/`patient_id`, `dob…`, accession numbers) and
+  whole-token matches against a curated common-name list. Configured under `phi_filename` in
+  `dev-docs/privacy_admission_policy.json` (with an `allowlist_patterns` escape hatch); errors report a
+  non-reversible `path_token=` instead of the sensitive name. Verified zero false positives across the
+  current tree.
 - **Kerma-meter correction factors** (2026-07-26) — optional per-(equipment × tube)
   calibration `CF = (real measured dose) / (unit reported dose)` applied to reported
   `K_IRP` before physics corrections. Lookup via CSV/TSV/XLSX/JSON or GUI prompt;
