@@ -32,6 +32,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 - **Kerma-meter Codecov patch coverage** (2026-07-26) — added CLI flag wiring tests plus
   settings/validation and table-loader edge cases so `codecov/patch` on the kerma-CF diff
   clears the ~84% target (was 83.87%).
+- **Refactor patch coverage** (2026-07-26) — added `tests/unittests/test_refactor_coverage.py`
+  exercising the GUI-free helpers extracted during the Sonar complexity refactor
+  (`export/metrics.py` mean/scalar/acquisition helpers, `export/cli_source.py` multi/empty
+  builders, `kerma_correction._rows_to_factor_dict` error paths) so the `coverage-pr`
+  `diff-cover` gate clears 80% (was 78%).
 
 ### Added
 
