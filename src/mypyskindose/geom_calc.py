@@ -653,7 +653,9 @@ def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray
     hits[hit_t_r] = True
     hits[hit_b_l] = True
 
-    return hits.tolist()
+    # Build an explicit list[bool]: newer numpy stubs type ndarray.tolist() as a
+    # value not assignable to List[bool], which fails basedpyright on latest deps.
+    return [bool(hit) for hit in hits]
 
 
 def convert_from_mm_to_cm(val_in_mm: float) -> float:

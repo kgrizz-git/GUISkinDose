@@ -47,6 +47,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Fixed
 
+- **ci-latest type error on `main`** (2026-07-27) — `check_table_hits` returned
+  `hits.tolist()` from a bool ndarray; newer numpy stubs type `ndarray.tolist()` as not
+  assignable to the declared `List[bool]`, failing basedpyright in the `latest-deps` job.
+  Now builds an explicit `list[bool]` (`[bool(hit) for hit in hits]`); behavior unchanged.
 - **PHI-filename allowlist case-insensitivity** (2026-07-27) — `phi_filename_findings` now matches
   `allowlist_patterns` with `fnmatch.fnmatchcase` over lowercased path and pattern, so exemptions
   are deterministically case-insensitive on every OS (`fnmatch.fnmatch` applied `os.path.normcase`,
