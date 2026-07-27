@@ -3,7 +3,7 @@
 #
 # Job DAG (privacy-first): schedule-gate → privacy-gates → {static-analysis, owasp-semgrep,
 # gui-smoke, build, coverage-pr (PRs)} → sonar-scan (opt-in protected-main only).
-# Codecov/Safety stay main-only in cloud-scans-main (Codecov statuses are informational).
+# Safety stays main-only in cloud-scans-main.
 
 name: ci
 
@@ -287,8 +287,8 @@ jobs:
       run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=65
 
   coverage-pr:
-    # Combined non-GUI + GUI coverage with a patch gate vs origin/main. Prefer this over
-    # Codecov Free's auto patch target (which tracks project coverage and can fail a green PR).
+    # Combined non-GUI + GUI coverage with a patch gate vs origin/main. This is the
+    # authoritative PR coverage gate.
     name: PR coverage (combined + diff)
     needs: [schedule-gate, privacy-gates]
     if: >
@@ -377,7 +377,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   cloud-scans-main:
-    name: Main-only Codecov + Safety
+    name: Main-only Safety scan
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [privacy-gates, static-analysis, gui-smoke, build]
     runs-on: ubuntu-latest
@@ -399,16 +399,6 @@ jobs:
         python-version: '3.12'
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
-    - name: Generate combined coverage for Codecov
-      run: |
-        uv run --no-sync coverage erase
-        uv run --no-sync coverage run -m pytest --ignore=tests/gui
-        uv run --no-sync coverage run --append -m pytest tests/gui/
-        uv run --no-sync coverage xml
-    - name: Upload coverage to Codecov (main only)
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
-      with:
-        files: coverage.xml
     - name: Run Safety cloud scan (main only; skipped without key)
       if: env.SAFETY_API_KEY != ''
       run: uv run --no-sync safety scan --detailed-output

@@ -33,7 +33,7 @@ uv run --no-sync coverage xml
 
 The matrix `build` job still runs non-GUI only (`--ignore=tests/gui`, `fail-under=65`). PRs also get
 `coverage-pr` (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base). `gui-smoke` remains the
-dedicated NiceGUI job; the combined coverage pass is for Sonar (and Codecov on `main`).
+dedicated NiceGUI job; the combined coverage pass is for Sonar on `main`.
 
 ## README Quality Gate badge
 
