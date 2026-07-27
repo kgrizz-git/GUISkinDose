@@ -282,13 +282,9 @@ jobs:
     - name: Lint with ruff
       run: uv run --no-sync ruff check src tests
     - name: Test with pytest
-      # Measure-by-execution (coverage run, not pytest-cov --cov=PKG): this job installs no gui
-      # extra and skips tests/gui, so package-scoped --cov would count src/mypyskindose/gui/** as
-      # 0% and sink the total. The parallelized pytest-cov path lives in coverage-pr/sonar, which
-      # install gui and --cov-append the GUI run.
-      run: uv run --no-sync coverage run -m pytest --ignore=tests/gui
-    - name: Coverage threshold (≥65%, non-GUI)
-      run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=65
+      # Cross-version test-pass matrix only (no coverage gate). Coverage is enforced at a single
+      # 80% standard by coverage-pr (PRs) and sonar-scan (main); -n auto parallelizes.
+      run: uv run --no-sync pytest --ignore=tests/gui -n auto
 
   coverage-pr:
     # Combined non-GUI + GUI coverage with a patch gate vs origin/main. This is the

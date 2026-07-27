@@ -19,13 +19,16 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **Single 80% coverage standard** (2026-07-27) — removed the matrix `build` job's separate
+  non-GUI `--fail-under=65` coverage step; it now runs the non-GUI suite for test-pass only
+  (`pytest --ignore=tests/gui -n auto`, also faster). Coverage is enforced at one 80% standard by
+  `coverage-pr` (PRs: combined ≥80% + `diff-cover` ≥80%) and `sonar-scan` (main: ≥80% new-code),
+  eliminating the earlier 65%-vs-80% split and the GUI-0% package-scope workaround.
 - **Faster CI test runs** (2026-07-27) — the `coverage-pr` and `sonar-scan` combined-coverage
   jobs migrated from `coverage run -m pytest` to `pytest --cov` (pytest-cov, so xdist worker
   processes are measured) with `pytest-xdist -n auto` on the non-GUI suite (GUI stays serial for
-  asyncio/nicegui). ~2x faster locally with identical coverage; combined gate stays ≥80%. The
-  non-GUI `build` matrix job keeps measure-by-execution (`coverage run`) because it installs no
-  `gui` extra, so package-scoped `--cov` would count `gui/**` as 0%. Added `pytest-xdist` to the
-  `dev` extra and `uv.lock`. No tests removed.
+  asyncio/nicegui). ~2x faster locally with identical coverage; combined gate stays ≥80%. Added
+  `pytest-xdist` to the `dev` extra and `uv.lock`. No tests removed.
 - **Fail-fast CLI export** (2026-07-27) — `run_cli_export` now validates the destination
   (exists / directory / tracked / ignored) via `validate_output_path` *before* the dose
   calculation and report render, so an existing-file/`--force` error returns immediately instead

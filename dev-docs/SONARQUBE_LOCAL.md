@@ -31,9 +31,10 @@ uv run --no-sync coverage run --append -m pytest tests/gui/
 uv run --no-sync coverage xml
 ```
 
-The matrix `build` job still runs non-GUI only (`--ignore=tests/gui`, `fail-under=65`). PRs also get
-`coverage-pr` (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base). `gui-smoke` remains the
-dedicated NiceGUI job; the combined coverage pass is for Sonar on `main`.
+The matrix `build` job runs the non-GUI suite for test-pass only (`--ignore=tests/gui -n auto`, no
+coverage gate). Coverage uses a single 80% standard: PRs get `coverage-pr` (combined non-GUI+GUI
+≥80% plus `diff-cover` ≥80% vs the PR base), and `sonar-scan` enforces ≥80% new-code coverage on
+`main`. `gui-smoke` remains the dedicated NiceGUI job; the combined coverage pass is for Sonar on `main`.
 
 ## README Quality Gate badge
 
