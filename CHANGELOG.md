@@ -37,6 +37,12 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   243 curated given/surname tokens (modern SSA names + distinct surnames), deliberately excluding
   common English/code words to avoid false positives on a blocking gate; verified zero collisions
   across the current tree.
+- **PHI-filename accession floor tightened** (2026-07-27) — split the accession structural pattern
+  so the abbreviation `acc` requires a 5-digit run (avoids year-tag false positives like `acc-2024`),
+  while the unambiguous full word `accession` keeps a 1-digit floor. Documented the deliberate
+  decision to scan name tokens over the full path (directory components included) for maximal PHI
+  recall in a medical-imaging repo, with `allowlist_patterns` as the org-directory escape hatch.
+  Verified still zero hits across the tree.
 
 ### Fixed
 

@@ -86,7 +86,8 @@ def test_phi_filename_findings_flag_structural_and_name_tokens() -> None:
                 r"(?<![a-z0-9])mrn[ _\-]?\d",
                 r"(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)",
                 r"patient[ _\-]?(name|id|mrn)",
-                r"(?<![a-z0-9])acc(ession)?[ _\-]?(#|\d)",
+                r"(?<![a-z0-9])accession[ _\-]?(#|\d)",
+                r"(?<![a-z0-9])acc[ _\-]?(#|\d{5,})",
             ],
             "name_tokens": ["john", "smith"],
             "allowlist_patterns": [],
@@ -165,6 +166,36 @@ def test_repository_policy_blocks_phi_like_filenames() -> None:
     )
 
     assert flagged == ["data/anna_garcia_events.csv", "exports/MRN_9981_rdsr.dcm"]
+
+
+def test_repository_policy_accession_floor_ignores_year_tags() -> None:
+    # The 'acc' abbreviation uses a 5-digit floor so year-tag fixtures like
+    # acc-2024 do not false-positive, while the unambiguous full word
+    # 'accession' keeps a 1-digit floor and long accession runs still block.
+    root = Path(__file__).resolve().parents[2]
+    policy = json.loads((root / "dev-docs/privacy_admission_policy.json").read_text(encoding="utf-8"))
+
+    flagged = phi_filename_findings(
+        policy,
+        [
+            "reports/acc-2024_summary.csv",  # year tag -> not PHI
+            "reports/access_log.txt",  # abbreviation collision -> not PHI
+            "exports/acc-987654321.dcm",  # long accession run -> PHI
+            "exports/accession-42.dcm",  # unambiguous keyword -> PHI
+        ],
+    )
+
+    assert flagged == ["exports/acc-987654321.dcm", "exports/accession-42.dcm"]
+
+
+def test_repository_policy_name_tokens_scan_directory_components() -> None:
+    # Deliberate design: name tokens are matched over the whole path, not just
+    # the basename, so a patient name embedded in a directory (common in
+    # imaging exports) still blocks. See phi_filename._comment in the policy.
+    root = Path(__file__).resolve().parents[2]
+    policy = json.loads((root / "dev-docs/privacy_admission_policy.json").read_text(encoding="utf-8"))
+
+    assert phi_filename_findings(policy, ["patients/anna_garcia/scan.dcm"]) == ["patients/anna_garcia/scan.dcm"]
 
 
 def test_route_requires_matching_extension_prefix_and_diff_signal() -> None:
