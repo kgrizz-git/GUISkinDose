@@ -1,18 +1,20 @@
 # Secret scanning with Gitleaks (Harness — supply-chain hygiene).
 # https://github.com/gitleaks/gitleaks-action
+#
+# PR scanning has been intentionally moved into ci.yml as a job that needs
+# [schedule-gate, privacy-gates], so Gitleaks never runs on a PR before the
+# privacy admission gate passes. This file retains the post-merge push:main
+# check only (code reaching main has already cleared PR CI).
 
 name: gitleaks
 
-# Scope push to main only; PR branches are covered by the pull_request trigger,
-# so a push to a branch that has an open PR is not scanned twice.
 on:
   push:
     branches: [ main ]
-  pull_request:
 
 jobs:
   gitleaks:
-    name: Scan for secrets
+    name: Scan for secrets (post-merge)
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,9 +1,13 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-#
 # Job DAG (privacy-first): schedule-gate → privacy-gates → {static-analysis, owasp-semgrep,
-# gui-smoke, build, coverage-pr (PRs)} → sonar-scan (opt-in protected-main only).
+# gui-smoke, build, gitleaks (PRs), codeql, coverage-pr (PRs)} → sonar-scan (opt-in protected-main only).
 # Safety stays main-only in cloud-scans-main.
+#
+# External PR scanners that previously ran before privacy-gates:
+#   gitleaks.yml — pull_request trigger removed; PR scanning now in the gitleaks job below.
+#   phi-scan.yml — pull_request trigger removed; weekly schedule + push:main remain.
+#   CodeQL       — handled by the codeql job below (needs privacy-gates). If GitHub Default
+#                   Setup is enabled in repo settings, disable it: Settings → Security →
+#                   Code security → Code scanning → CodeQL → Switch to Advanced.
 
 name: ci
 
@@ -410,3 +414,49 @@ jobs:
     - name: Run Safety cloud scan (main only; skipped without key)
       if: env.SAFETY_API_KEY != ''
       run: uv run --no-sync safety scan --detailed-output
+
+  gitleaks:
+    # PR secret scanning, gated behind privacy-gates. The standalone gitleaks.yml
+    # retains push:main only; this job handles all PR branches.
+    name: Gitleaks secret scan (PRs)
+    needs: [schedule-gate, privacy-gates]
+    if: >
+      needs.schedule-gate.outputs.should_run == 'true' &&
+      github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        fetch-depth: 0
+    - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    # CodeQL Python SAST, gated behind privacy-gates so it never runs on a PR
+    # before privacy admission clears. Runs on PRs and push:main.
+    # NOTE: If GitHub Default Setup (code scanning) is enabled in repository settings,
+    # disable it to avoid a parallel ungated run: Settings → Security → Code security
+    # → Code scanning → CodeQL → Switch to Advanced.
+    name: CodeQL analysis (Python)
+    needs: [schedule-gate, privacy-gates]
+    if: needs.schedule-gate.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@4187e74d05793876e9989daffde9c3e66b4acd07  # v3.37.3
+      with:
+        languages: python
+        queries: security-extended
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@4187e74d05793876e9989daffde9c3e66b4acd07  # v3.37.3
+      with:
+        category: "/language:python"

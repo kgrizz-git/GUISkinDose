@@ -1,12 +1,9 @@
 name: phi-scan (secondary privacy review)
 
+# PR trigger removed intentionally: this advisory scan was running before the
+# privacy-gates job in ci.yml had a chance to pass. The weekly schedule and
+# workflow_dispatch remain for periodic full-repo coverage.
 on:
-  pull_request:
-    paths:
-      - '**.csv'
-      - '**.tsv'
-      - '.phi-scanner.yml'
-      - '.github/workflows/phi-scan.yml'
   push:
     branches: [ main ]
   schedule:
