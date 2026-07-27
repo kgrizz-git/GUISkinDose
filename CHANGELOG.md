@@ -19,11 +19,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
-- **Faster CI test runs** (2026-07-27) — migrated the coverage jobs from `coverage run -m pytest`
-  to `pytest --cov` (pytest-cov, so xdist worker processes are measured) and added `pytest-xdist`
-  with `-n auto` on the non-GUI suite (GUI stays serial for asyncio/nicegui). ~2x faster locally
-  with identical coverage; combined gate stays ≥80%. Added `pytest-xdist` to the `dev` extra and
-  `uv.lock`. No tests removed.
+- **Faster CI test runs** (2026-07-27) — the `coverage-pr` and `sonar-scan` combined-coverage
+  jobs migrated from `coverage run -m pytest` to `pytest --cov` (pytest-cov, so xdist worker
+  processes are measured) with `pytest-xdist -n auto` on the non-GUI suite (GUI stays serial for
+  asyncio/nicegui). ~2x faster locally with identical coverage; combined gate stays ≥80%. The
+  non-GUI `build` matrix job keeps measure-by-execution (`coverage run`) because it installs no
+  `gui` extra, so package-scoped `--cov` would count `gui/**` as 0%. Added `pytest-xdist` to the
+  `dev` extra and `uv.lock`. No tests removed.
 - **Fail-fast CLI export** (2026-07-27) — `run_cli_export` now validates the destination
   (exists / directory / tracked / ignored) via `validate_output_path` *before* the dose
   calculation and report render, so an existing-file/`--force` error returns immediately instead
