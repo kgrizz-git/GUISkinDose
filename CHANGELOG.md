@@ -22,6 +22,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `src/` functions: correction-value handlers in `export/metrics.py`, native geometry tracking
   into `gui/native_geometry.py`, `run_gui` setup helpers, CLI export source builders, and
   exam coordinate-transform helpers (python:S3776).
+- **Kerma-meter Codecov patch coverage** (2026-07-26) — added CLI flag wiring tests plus
+  settings/validation and table-loader edge cases so `codecov/patch` on the kerma-CF diff
+  clears the ~84% target (was 83.87%).
 
 ### Added
 
@@ -60,6 +63,11 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **PR coverage gate via GitHub Actions** (2026-07-26) — matrix `build` raises non-GUI
+  `coverage report --fail-under` from 60→65. New `coverage-pr` job (PRs only) runs combined
+  non-GUI + GUI coverage (≥80%) and `diff-cover` ≥80% vs the PR base. Codecov stays main-only
+  upload with `codecov.yml` project/patch statuses set to **informational** so Free `codecov/patch`
+  no longer blocks merges; the GHA gate is authoritative.
 - **Sonar quality-gate README badge removed** (2026-07-25) — dropped the SonarCloud
   `alert_status` badge from `README.md`. On Free / read-only Sonar way the new-code coverage
   gate stays at 80% and cannot be lowered, so the badge was advertising a red status we cannot

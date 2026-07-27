@@ -56,7 +56,8 @@ Treat PHI/PII exposure as a first-class defect — in committed content **and** 
     (`python scripts/run_semgrep_privacy.py`, also a pre-push/CI hook) and required local HoundDog receipt when routed.
   - Adding or changing a DICOM/image asset → the route requires the safe local DICOM or image-OCR wrapper before
     recording the review in `dev-docs/approved_asset_inventory.json`.
-- **Cadence:** phi-scan and calibrated Presidio run weekly. Run phi-scan/Presidio for new tracked CSV/TSV or likely
+- **Cadence:** phi-scan (Thu) and calibrated Presidio (Mon) run on a weekly schedule + manual dispatch;
+  Presidio no longer auto-runs on PRs (removed Jul 2026). Run phi-scan/Presidio for new tracked CSV/TSV or likely
   identifier-bearing text; run Semgrep plus HoundDog for logging/write/export/ingestion/API/database changes; run the
   DICOM scanner and full human checklist for every added or changed DICOM.
 - **Advisory ≠ optional.** Every advisory finding must be fixed, or annotated as a reviewed false positive with a

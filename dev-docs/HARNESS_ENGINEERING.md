@@ -447,8 +447,9 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `privacy-gates` job + pre-commit; strict asset/content admission with value-safe output |
 | `python scripts/privacy_admission.py check/route` | Ubuntu `privacy-gates` job + local hooks; protected paths and conditional scanner routing |
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `privacy-gates` job + pre-push; blocking project privacy SAST |
-| phi-scan / Presidio | Scheduled secondary workflows; Presidio also supports manual dispatch. Both are value-suppressed with no report upload. |
-| GUI smoke tests | `python -m pytest tests/gui/` | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
+| phi-scan / Presidio | Scheduled secondary workflows (`phi-scan.yml` Thu; `presidio.yml` Mon) + manual dispatch. Presidio PR path triggers were removed in the Jul 2026 privacy-streamline change — it no longer runs on every PR. Both are value-suppressed with no report upload. |
+| CodeQL (GitHub code scanning) | GitHub default setup (`dynamic/github-code-scanning/codeql`) on PRs and `main`. Separate from the “GitHub Advanced Security” **AI findings** agent, which only runs when there are code-scanning AI findings to post on a PR. |
+| GUI smoke tests (`pytest tests/gui/`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
@@ -456,7 +457,8 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | SonarCloud CI scan | Disabled until an administrator protects `main` and sets repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`; then `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled. No tokenized scanner runs on a PR head. |
-| Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed |
+| Codecov / `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed. Codecov project/patch commit statuses are **informational** (`codecov.yml`); enforced PR coverage is the GHA `coverage-pr` job. |
+| PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/mypyskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base. Matrix `build` still enforces non-GUI ≥65%. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on non-draft PRs (deduped per head SHA). Manual CodeRabbit requests bypass the CI ordering, so this is not a trusted privacy boundary. |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
