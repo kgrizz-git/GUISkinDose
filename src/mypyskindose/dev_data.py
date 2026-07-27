@@ -1,18 +1,18 @@
 from . import constants as c
 
-DEVELOPMENT_PARAMETERS = dict(
+DEVELOPMENT_PARAMETERS = {
     # modes: 'calculate_dose', 'plot_setup', 'plot_event', 'plot_procedure'
-    mode=c.MODE_PLOT_PROCEDURE,
+    "mode": c.MODE_PLOT_PROCEDURE,
     # RDSR filename
-    rdsr_filename="siemens_axiom_example_procedure.dcm",
+    "rdsr_filename": "siemens_axiom_example_procedure.dcm",
     # Set True to estimate table correction, or False to use measured k_tab
-    estimate_k_tab=False,
+    "estimate_k_tab": False,
     # Numeric value of estimated table correction
-    k_tab_val=0.8,
+    "k_tab_val": 0.8,
     # x-ray tube inherent filtration in mmAl
-    inherent_filtration=3.1,
+    "inherent_filtration": 3.1,
     # plot settings
-    plot={
+    "plot": {
         # dark mode for plots
         c.MODE_DARK_MODE: True,
         # notebook mode
@@ -28,15 +28,15 @@ DEVELOPMENT_PARAMETERS = dict(
         c.PLOT_EVENT_INDEX_KEY: 12,
     },
     # Phantom settings:
-    phantom=dict(
+    "phantom": {
         # Phantom model, valid selections: 'plane', 'cylinder', or 'human'
-        model=c.PHANTOM_MODEL_CYLINDER,
+        "model": c.PHANTOM_MODEL_CYLINDER,
         # Human phantom .stl filename, without .stl ending.
-        human_mesh=c.PHANTOM_MESH_ADULT_MALE,
+        "human_mesh": c.PHANTOM_MESH_ADULT_MALE,
         # Patient offset from table isocenter (centered at head end side).
-        patient_offset={c.OFFSET_LONGITUDINAL_KEY: 0, c.OFFSET_VERTICAL_KEY: 0, c.OFFSET_LATERAL_KEY: -35},
-        patient_orientation=c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
-        dimension={
+        "patient_offset": {c.OFFSET_LONGITUDINAL_KEY: 0, c.OFFSET_VERTICAL_KEY: 0, c.OFFSET_LATERAL_KEY: -35},
+        "patient_orientation": c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
+        "dimension": {
             # Length of plane phantom
             c.DIMENSION_PLANE_LENGTH: 120,
             # Width of plane phantom
@@ -62,6 +62,6 @@ DEVELOPMENT_PARAMETERS = dict(
             c.DIMENSION_PAD_WIDTH: 45,  # Support pad width
             c.DIMENSION_PAD_THICKNESS: 4,
         },
-    ),
-    silence_pydicom_warnings=False,
-)
+    },
+    "silence_pydicom_warnings": False,
+}

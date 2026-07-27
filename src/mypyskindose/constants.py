@@ -185,8 +185,8 @@ PLOT_EVENT_INDEX_KEY = "plot_event_index"
 PLOT_SLIDER_BORDER_WIDTH = 3
 PLOT_SLIDER_FONT_SIZE_CURRENT = 18
 PLOT_SLIDER_FONT_SIZE_GENERAL = 14
-PLOT_SLIDER_PADDING = dict(b=0, t=0, l=25, r=25)
-PLOT_SLIDER_PADDING_NOTEBOOK = dict(b=0, t=0, l=20, r=20)
+PLOT_SLIDER_PADDING = {"b": 0, "t": 0, "l": 25, "r": 25}
+PLOT_SLIDER_PADDING_NOTEBOOK = {"b": 0, "t": 0, "l": 20, "r": 20}
 
 PLOT_WIREFRAME_LINE_WIDTH = 4
 PLOT_DRAGMODE = "orbit"
@@ -217,12 +217,10 @@ PLOT_FILE_TYPE_STATIC = ".png"
 PLOT_LIGHTNING_DIFFUSE = 0.5
 PLOT_LIGHTNING_AMBIENT = 0.5
 
-PLOT_SLIDER_TRANSITION = dict(duration=300, easing="quad-in-out")
+PLOT_SLIDER_TRANSITION = {"duration": 300, "easing": "quad-in-out"}
 
 PLOT_ZERO_LINE_WIDTH = 5
 
-# PLOT_HEIGHT_NOTEBOOK = 800
-# PLOT_WIDTH_NOTEBOOK = None
 PLOT_HEIGHT_NOTEBOOK = 900
 PLOT_WIDTH_NOTEBOOK = 600
 
@@ -230,14 +228,14 @@ PLOT_WIDTH_NOTEBOOK = 600
 PLOT_HEIGHT = None
 PLOT_WIDTH = None
 
-PLOT_MARGIN_NOTEBOOK = dict(l=5, r=5, b=5, t=40)
-PLOT_MARGIN = dict(l=0, r=0, b=100, t=40)
+PLOT_MARGIN_NOTEBOOK = {"l": 5, "r": 5, "b": 5, "t": 40}
+PLOT_MARGIN = {"l": 0, "r": 0, "b": 100, "t": 40}
 
 # plot camera angles for static dosemaps
-PLOT_EYE_BACK = dict(eye=dict(x=0, y=+2.5, z=0))
-PLOT_EYE_FRONT = dict(eye=dict(x=0, y=-2.5, z=0))
-PLOT_EYE_LEFT = dict(eye=dict(x=2.5, y=+1.5, z=0))
-PLOT_EYE_RIGHT = dict(eye=dict(x=-2.5, y=+1.5, z=0))
+PLOT_EYE_BACK = {"eye": {"x": 0, "y": +2.5, "z": 0}}
+PLOT_EYE_FRONT = {"eye": {"x": 0, "y": -2.5, "z": 0}}
+PLOT_EYE_LEFT = {"eye": {"x": 2.5, "y": +1.5, "z": 0}}
+PLOT_EYE_RIGHT = {"eye": {"x": -2.5, "y": +1.5, "z": 0}}
 
 PLOT_TRACE_ORDER_PHANTOM_WIREFRAME = [0, 4, 5, 1, 0, 3, 7, 4, 7, 6, 5, 1, 2, 3, 2, 6]
 PLOT_TRACE_ORDER_BEAM_WIREFRAME = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 1, 4, 0]

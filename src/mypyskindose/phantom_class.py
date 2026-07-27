@@ -87,7 +87,7 @@ class Phantom:
         self.phantom_model = phantom_model.lower()
         # Raise error if invalid phantom model selected
         if self.phantom_model not in VALID_PHANTOM_MODELS:
-            raise ValueError(f"Unknown phantom model selected. Valid type:" f"{'.'.join(VALID_PHANTOM_MODELS)}")
+            raise ValueError(f"Unknown phantom model selected. Valid type: {'.'.join(VALID_PHANTOM_MODELS)}")
 
         self.human_model = None
 
@@ -124,8 +124,6 @@ class Phantom:
 
             # Create phantom in form of rectangular grid
             x_plane, z_plane = np.meshgrid(x, z)
-
-            t = phantom_dim.plane_width
 
             # Create index vectors for plotly mesh3d plotting
             i2: List[int] = []

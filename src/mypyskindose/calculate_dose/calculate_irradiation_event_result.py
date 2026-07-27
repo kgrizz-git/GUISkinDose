@@ -22,6 +22,71 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _default_mutable_event_state(
+    *,
+    table_hits: List[bool] | None,
+    field_area: List[float] | None,
+    k_isq: np.ndarray | None,
+    kerma_cf: List[float] | None,
+    total_events: int,
+) -> tuple[List[bool], List[float], np.ndarray, List[float]]:
+    """Normalize optional mutable per-event buffers for the event loop."""
+    return (
+        [] if table_hits is None else table_hits,
+        [] if field_area is None else field_area,
+        np.array([]) if k_isq is None else k_isq,
+        ([1.0] * total_events if kerma_cf is None else kerma_cf),
+    )
+
+
+def _beam_miss_event_message(
+    normalized_data: pd.DataFrame,
+    *,
+    event: int,
+    total_events: int,
+    exam_id: str | None,
+) -> str:
+    """Build the per-event beam-miss warning text for one irradiation event."""
+    kVp = float(normalized_data[c.KEY_NORMALIZATION_KVP].iloc[event])
+    filter_desc = (
+        f"{normalized_data.filter_thickness_Cu.iloc[event]:g} mm Cu + "
+        f"{normalized_data.filter_thickness_Al.iloc[event]:g} mm Al"
+    )
+    field_area_cm2 = (
+        float(normalized_data.FS_lat.iloc[event]) * float(normalized_data.FS_long.iloc[event])
+    )
+    exam_str = f"exam {exam_id}, " if exam_id else ""
+    return (
+        f"Event {event + 1}/{total_events} ({exam_str}{kVp:.0f} kVp, "
+        f"{filter_desc}, field {field_area_cm2:.1f} cm²): "
+        f"beam does not intersect patient — check patient offsets and vendor coordinate frame."
+    )
+
+
+def _emit_beam_miss_summary(
+    missed_event_indices: list[int],
+    *,
+    total_events: int,
+    settings: "PyskindoseSettings | None",
+) -> None:
+    """Emit post-loop diagnostics for events that missed the patient phantom."""
+    missed_count = len(missed_event_indices)
+    if total_events > 0 and missed_count == total_events:
+        logger.warning(
+            "All %d events missed the patient phantom — "
+            "dose map is all zeros; check patient offsets and vendor coordinate frame.",
+            total_events,
+        )
+        return
+    if settings is not None and settings.beam_miss_warn == "summary" and 0 < missed_count < total_events:
+        logger.warning(
+            "Run %d events; %d event(s) missed the patient phantom: %s.",
+            total_events,
+            missed_count,
+            format_event_indices(missed_event_indices),
+        )
+
+
 def calculate_irradiation_event_result(
     normalized_data: pd.DataFrame,
     event: int,
@@ -97,14 +162,13 @@ def calculate_irradiation_event_result(
         Dictionary containing skin dose calculation results.
 
     """
-    if table_hits is None:
-        table_hits = []
-    if field_area is None:
-        field_area = []
-    if k_isq is None:
-        k_isq = np.array([])
-    if kerma_cf is None:
-        kerma_cf = [1.0] * total_events
+    table_hits, field_area, k_isq, kerma_cf = _default_mutable_event_state(
+        table_hits=table_hits,
+        field_area=field_area,
+        k_isq=k_isq,
+        kerma_cf=kerma_cf,
+        total_events=total_events,
+    )
 
     missed_event_indices: list[int] = []
 
@@ -126,27 +190,8 @@ def calculate_irradiation_event_result(
 
         if not any(hits):
             missed_event_indices.append(ev)
-
-            # positional .iloc — safer than label-based [ev] (redundant given
-            # rdsr_normalizer's guaranteed RangeIndex, but defensive for warnings)
-            kVp = float(normalized_data[c.KEY_NORMALIZATION_KVP].iloc[ev])
-            filter_desc = (
-                f"{normalized_data.filter_thickness_Cu.iloc[ev]:g} mm Cu + "
-                f"{normalized_data.filter_thickness_Al.iloc[ev]:g} mm Al"
-            )
-            # float() wraps guard against NaN in corrupted data (rare but defensive)
-            # Note: float(np.nan) → nan, which displays as "field nan cm²" — acceptable
-            # in a warning context; the value won't crash the format string.
-            field_area_cm2 = (
-                float(normalized_data.FS_lat.iloc[ev])
-                * float(normalized_data.FS_long.iloc[ev])
-            )
-
-            exam_str = f"exam {exam_id}, " if exam_id else ""
-            msg = (
-                f"Event {ev + 1}/{total_events} ({exam_str}{kVp:.0f} kVp, "
-                f"{filter_desc}, field {field_area_cm2:.1f} cm²): "
-                f"beam does not intersect patient — check patient offsets and vendor coordinate frame."
+            msg = _beam_miss_event_message(
+                normalized_data, event=ev, total_events=total_events, exam_id=exam_id
             )
             if settings is not None and settings.beam_miss_warn == "per_event":
                 logger.warning(msg)
@@ -181,22 +226,8 @@ def calculate_irradiation_event_result(
     if pbar is not None:
         pbar.refresh()
 
-    # Post-loop diagnostics
-    K = len(missed_event_indices)
-    if total_events > 0 and K == total_events:
-        logger.warning(
-            "All %d events missed the patient phantom — "
-            "dose map is all zeros; check patient offsets and vendor coordinate frame.",
-            total_events,
-        )
-    elif settings is not None and settings.beam_miss_warn == "summary" and 0 < K < total_events:
-        logger.warning(
-            "Run %d events; %d event(s) missed the patient phantom: %s.",
-            total_events,
-            K,
-            format_event_indices(missed_event_indices),
-        )
-
+    _emit_beam_miss_summary(
+        missed_event_indices, total_events=total_events, settings=settings
+    )
     output["missed_event_indices"] = missed_event_indices
-
     return output

@@ -50,7 +50,7 @@ def create_setup_and_event_plot(
         obj=patient,
         color=COLOR_PATIENT,
         mesh_text=patient_text,
-        lighting=dict(diffuse=PLOT_LIGHTNING_DIFFUSE, ambient=PLOT_LIGHTNING_AMBIENT),
+        lighting={"diffuse": PLOT_LIGHTNING_DIFFUSE, "ambient": PLOT_LIGHTNING_AMBIENT},
     )
 
     source_mesh = go.Scatter3d(
@@ -59,7 +59,7 @@ def create_setup_and_event_plot(
         z=[beam.r[0, 2], beam.r[0, 2]],
         hoverinfo="text",
         mode="markers",
-        marker=dict(size=PLOT_SOURCE_SIZE, color=COLOR_SOURCE),
+        marker={"size": PLOT_SOURCE_SIZE, "color": COLOR_SOURCE},
         text=source_text,
     )
 

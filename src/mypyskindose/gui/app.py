@@ -20,7 +20,6 @@ from typing import Any, cast
 os.environ["COLORAMA_DISABLE"] = "1"
 
 from nicegui import Client, app, ui
-from nicegui.events import NativeEventArguments
 
 from mypyskindose.privacy import opaque_exam_label, safe_error_event
 
@@ -28,6 +27,7 @@ from mypyskindose.debug import configure_logging, dprint
 
 from .notifications import install_notification_defaults
 from .onboarding import dismiss_onboarding, is_onboarding_dismissed
+from .native_geometry import register_native_geometry_tracking
 from .page_context import PageContext
 from .styles import MODERN_CSS
 from .state import state
@@ -43,7 +43,6 @@ from .window_prefs import (
     NativeWindowPrefs,
     ScreenBounds,
     default_normal_bounds,
-    geometry_looks_maximized,
     load_native_window_prefs,
     primary_screen,
     save_native_window_prefs,
@@ -341,94 +340,68 @@ def _normalize_macos_maximized_startup(
         y=y,
     )
 
+def _register_native_focus_handler() -> None:
+    """Bring the native window forward when a client connects."""
 
-def _register_native_geometry_tracking(
-    screens: list[ScreenBounds],
-    initial: NativeWindowPrefs,
+    @app.on_connect
+    def _handle_native_focus():
+        try:
+            if app.native.main_window is not None:
+                set_on_top = getattr(app.native.main_window, "set_on_top", None)
+                if callable(set_on_top):
+                    set_on_top(True)
+        except Exception as exc:
+            safe_error_event(logger, "native_window_focus", exc, level=logging.DEBUG)
+
+
+def _register_browser_shutdown_handler(
+    shutdown_tasks: list[asyncio.Task[None]],
 ) -> None:
-    current = NativeWindowPrefs(
-        maximized=initial.maximized,
-        width=initial.width,
-        height=initial.height,
-        x=initial.x,
-        y=initial.y,
+    """Shut down the server when the last browser client disconnects."""
+
+    @app.on_disconnect
+    def _shutdown_when_last_window_closes() -> None:
+        async def _shutdown_if_idle() -> None:
+            await asyncio.sleep(4.0)
+            if not any(c.has_socket_connection for c in Client.instances.values()):
+                dprint("GUI", "Last browser window closed; shutting down server.")
+                app.shutdown()
+
+        shutdown_tasks.append(asyncio.create_task(_shutdown_if_idle()))
+
+
+def _configure_native_window() -> tuple[int, int]:
+    """Resolve prefs, apply window_args, and start geometry tracking."""
+    screens = _detect_native_screens()
+    prefs = _resolve_native_window_prefs(screens)
+    original_maximized = prefs.maximized
+    prefs = _normalize_macos_maximized_startup(prefs, screens)
+    app.native.window_args.update(
+        width=prefs.width,
+        height=prefs.height,
+        x=prefs.x,
+        y=prefs.y,
     )
-    commit_task: asyncio.Task | None = None
-    save_task: asyncio.Task | None = None
-    pending_commit: NativeEventArguments | None = None
+    if prefs.maximized:
+        app.native.window_args["maximized"] = True
+    elif original_maximized and sys.platform == "darwin":
+        save_native_window_prefs(prefs)
+    register_native_geometry_tracking(screens, prefs)
+    return prefs.width, prefs.height
 
-    def _apply_pending_commit_sync() -> None:
-        nonlocal pending_commit
-        if pending_commit is None or current.maximized:
-            return
-        event = pending_commit
-        pending_commit = None
-        if event.type == "resized":
-            width, height = int(event.args["width"]), int(event.args["height"])
-            if geometry_looks_maximized(width, height, screens):
-                return
-            current.width, current.height = width, height
-        elif event.type == "moved":
-            current.x, current.y = int(event.args["x"]), int(event.args["y"])
 
-    def _schedule_geometry_commit(event: NativeEventArguments) -> None:
-        nonlocal commit_task, pending_commit
-        pending_commit = event
-        if commit_task is not None:
-            commit_task.cancel()
+def _resolve_bind_host(host: str | None, *, allow_network: bool) -> str:
+    """Return the GUI bind host, requiring an explicit network acknowledgement."""
+    bind_host = host or "127.0.0.1"
+    if bind_host not in ("127.0.0.1", "localhost"):
+        if not allow_network:
+            raise ValueError("network_gui_binding_requires_explicit_acknowledgement")
+        logger.warning("non_loopback_gui_binding_requested")
+    return bind_host
 
-        async def _commit_after_settle() -> None:
-            try:
-                await asyncio.sleep(0.3)
-            except asyncio.CancelledError:
-                return
-            _apply_pending_commit_sync()
 
-        commit_task = asyncio.create_task(_commit_after_settle())
-
-    def _schedule_debounced_save() -> None:
-        nonlocal save_task
-        if save_task is not None:
-            save_task.cancel()
-
-        async def _wait_and_save() -> None:
-            try:
-                await asyncio.sleep(1.0)
-            except asyncio.CancelledError:
-                return
-            save_native_window_prefs(current)
-
-        save_task = asyncio.create_task(_wait_and_save())
-
-    def _apply_native_event(event: NativeEventArguments) -> None:
-        nonlocal commit_task
-        if event.type == "maximized":
-            current.maximized = True
-            if commit_task is not None:
-                commit_task.cancel()
-                commit_task = None
-        elif event.type == "restored":
-            current.maximized = False
-        elif event.type in ("resized", "moved"):
-            _schedule_geometry_commit(event)
-        _schedule_debounced_save()
-
-    def _on_native_closed(_event: NativeEventArguments) -> None:
-        nonlocal commit_task, save_task
-        if commit_task is not None:
-            commit_task.cancel()
-            commit_task = None
-        _apply_pending_commit_sync()
-        if save_task is not None:
-            save_task.cancel()
-            save_task = None
-        save_native_window_prefs(current)
-
-    app.native.on("resized", _apply_native_event)
-    app.native.on("moved", _apply_native_event)
-    app.native.on("maximized", _apply_native_event)
-    app.native.on("restored", _apply_native_event)
-    app.native.on("closed", _on_native_closed)
+# Re-export for tests that patch the former private registration helper.
+_register_native_geometry_tracking = register_native_geometry_tracking
 
 
 # ── entry point ────────────────────────────────────────────────────────────
@@ -448,55 +421,20 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
     dprint("GUI", f"Starting run_gui, native={native}")
 
     if native:
-
-        @app.on_connect
-        def _handle_native_focus():
-            try:
-                if app.native.main_window is not None:
-                    set_on_top = getattr(app.native.main_window, "set_on_top", None)
-                    if callable(set_on_top):
-                        set_on_top(True)
-            except Exception as exc:
-                safe_error_event(logger, "native_window_focus", exc, level=logging.DEBUG)
+        _register_native_focus_handler()
 
     logging.getLogger("nicegui").setLevel(logging.ERROR)
 
+    # Keep strong refs so disconnect-scheduled shutdown tasks are not GC'd (python:S7502).
+    browser_shutdown_tasks: list[asyncio.Task[None]] = []
     if not native:
-
-        @app.on_disconnect
-        def _shutdown_when_last_window_closes() -> None:
-            async def _shutdown_if_idle() -> None:
-                await asyncio.sleep(4.0)
-                if not any(c.has_socket_connection for c in Client.instances.values()):
-                    dprint("GUI", "Last browser window closed; shutting down server.")
-                    app.shutdown()
-
-            asyncio.create_task(_shutdown_if_idle())
+        _register_browser_shutdown_handler(browser_shutdown_tasks)
 
     window_size: tuple[int, int] | None = None
     if native:
-        screens = _detect_native_screens()
-        prefs = _resolve_native_window_prefs(screens)
-        original_maximized = prefs.maximized
-        prefs = _normalize_macos_maximized_startup(prefs, screens)
-        app.native.window_args.update(
-            width=prefs.width,
-            height=prefs.height,
-            x=prefs.x,
-            y=prefs.y,
-        )
-        if prefs.maximized:
-            app.native.window_args["maximized"] = True
-        elif original_maximized and sys.platform == "darwin":
-            save_native_window_prefs(prefs)
-        window_size = (prefs.width, prefs.height)
-        _register_native_geometry_tracking(screens, prefs)
+        window_size = _configure_native_window()
 
-    bind_host = host or "127.0.0.1"
-    if bind_host not in ("127.0.0.1", "localhost"):
-        if not allow_network:
-            raise ValueError("network_gui_binding_requires_explicit_acknowledgement")
-        logger.warning("non_loopback_gui_binding_requested")
+    bind_host = _resolve_bind_host(host, allow_network=allow_network)
 
     try:
         ui.run(

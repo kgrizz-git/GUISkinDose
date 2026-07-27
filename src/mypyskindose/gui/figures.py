@@ -103,12 +103,12 @@ def make_geometry_fig(
             fig.update_layout(
                 paper_bgcolor=bg,
                 plot_bgcolor=bg,
-                font=dict(color=txt, family="Inter, sans-serif"),
-                scene=dict(
-                    xaxis=dict(gridcolor="#262626"),
-                    yaxis=dict(gridcolor="#262626"),
-                    zaxis=dict(gridcolor="#262626"),
-                ),
+                font={"color": txt, "family": "Inter, sans-serif"},
+                scene={
+                    "xaxis": {"gridcolor": "#262626"},
+                    "yaxis": {"gridcolor": "#262626"},
+                    "zaxis": {"gridcolor": "#262626"},
+                },
             )
             return fig.to_dict()
         return None
@@ -187,7 +187,7 @@ def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
         import plotly.graph_objects as go
 
         fig = go.Figure(fig_dict)
-        fig.update_layout(scene_camera=dict(eye=dict(x=-2.5, y=1.5, z=0)))
+        fig.update_layout(scene_camera={"eye": {"x": -2.5, "y": 1.5, "z": 0}})
         return fig.to_image(format="png")
     except Exception as exc:
         safe_error_event(logger, "dosemap_png_render", exc)

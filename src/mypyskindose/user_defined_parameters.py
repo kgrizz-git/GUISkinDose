@@ -1,18 +1,18 @@
 from mypyskindose import constants as c
 
-PARAMETERS = dict(
+PARAMETERS = {
     # modes: 'calculate_dose', 'plot_setup', 'plot_event', 'plot_procedure'
-    mode=c.MODE_PLOT_PROCEDURE,
+    "mode": c.MODE_PLOT_PROCEDURE,
     # RDSR filename
-    rdsr_filename="S1.dcm",
+    "rdsr_filename": "S1.dcm",
     # Irrading event index for mode='plot_event'
-    plot_event_index=12,
+    "plot_event_index": 12,
     # Set True to estimate table correction, or False to use measured k_tab
-    estimate_k_tab=False,
+    "estimate_k_tab": False,
     # Numeric value of estimated table correction
-    k_tab_val=0.8,
+    "k_tab_val": 0.8,
     # plot settings
-    plot={
+    "plot": {
         # dark mode for plots
         c.MODE_DARK_MODE: True,
         # notebook mode
@@ -28,20 +28,20 @@ PARAMETERS = dict(
         c.PLOT_EVENT_INDEX_KEY: 12,
     },
     # Phantom settings:
-    phantom=dict(
+    "phantom": {
         # Phantom model, valid selections: 'plane', 'cylinder', or 'human'
-        model=c.PHANTOM_MODEL_HUMAN,
+        "model": c.PHANTOM_MODEL_HUMAN,
         # Human phantom .stl filename, without .stl ending.
-        human_mesh=c.PHANTOM_MESH_ADULT_MALE,
+        "human_mesh": c.PHANTOM_MESH_ADULT_MALE,
         # Patient offset from table isocenter (centered at head end side).
-        patient_offset={
+        "patient_offset": {
             c.OFFSET_LONGITUDINAL_KEY: 0,
             c.OFFSET_VERTICAL_KEY: 0,
             c.OFFSET_LATERAL_KEY: -35,
         },
         # Dimensions of matematical phantoms (except model='human')
-        patient_orientation=c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
-        dimension={
+        "patient_orientation": c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
+        "dimension": {
             # Length of plane phantom
             c.DIMENSION_PLANE_LENGTH: 120,
             # Width of plane phantom
@@ -69,5 +69,5 @@ PARAMETERS = dict(
             # Support pad thickness
             c.DIMENSION_PAD_THICKNESS: 4,
         },
-    ),
-)
+    },
+}

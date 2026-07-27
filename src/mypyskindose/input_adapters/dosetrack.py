@@ -171,18 +171,8 @@ def _parse_philips_filter(val: object) -> tuple[float, float]:
         return float("nan"), float("nan")
 
 
-def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
-    """DoseTrack-specific processing: ffill, manufacturer inference, units, CFA.
-
-    Raises ValueError on blocking errors (missing Equipment Name, bad plane codes).
-    """
-    warnings = ctx.warnings
-
-    # Forward-fill: DoseTrack uses hierarchical rows where parent values are only
-    # written when they change (study/series level fields).
-    data_df = data_df.ffill()
-
-    # Infer Manufacturer/ManufacturerModelName from the Equipment Name sentinel.
+def _infer_manufacturer_from_equipment(data_df: pd.DataFrame, warnings: list[str]) -> pd.DataFrame:
+    """Infer Manufacturer/Model/StationName from DoseTrack Equipment Name."""
     if "_dt_equipment_name" in data_df.columns:
         model_names = data_df["_dt_equipment_name"].dropna().unique()
         if len(model_names) == 0:
@@ -206,24 +196,18 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
         # Persist Equipment Name as StationName before drop so kerma-meter CF
         # can key on the tabular unit identity (often the model — see §6.1).
         data_df["StationName"] = data_df["_dt_equipment_name"]
-        data_df = data_df.drop(columns=["_dt_equipment_name"])
-    elif "Manufacturer" not in data_df.columns:
+        return data_df.drop(columns=["_dt_equipment_name"])
+    if "Manufacturer" not in data_df.columns:
         raise ValueError(
             "DoseTrack adapter requires an 'Equipment Name' column to infer Manufacturer/Model. "
             "Column not found in the export."
         )
+    return data_df
 
-    # Normalize AcquisitionPlane from integer Plane Code values.
-    if "AcquisitionPlane" in data_df.columns:
-        try:
-            data_df["AcquisitionPlane"] = _normalize_plane_code(data_df["AcquisitionPlane"])
-        except ValueError as exc:
-            raise ValueError(
-                f"DoseTrack plane code normalization failed (error_type={exception_class_name(exc)})."
-            ) from exc
 
-    # Coerce numeric columns, plus the DAP sentinel.
-    coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, warnings)
+def _convert_dosetrack_units(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
+    """Coerce numerics and apply header-aware DoseTrack unit conversions."""
+    coerce_numeric_columns(data_df, _NUMERIC_COLUMNS, ctx.warnings)
     if "_dt_dap" in data_df.columns:
         data_df["_dt_dap"] = pd.to_numeric(data_df["_dt_dap"].astype(str).str.strip(), errors="coerce")
 
@@ -242,40 +226,48 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
     ):
         convert_field_with_header_units(data_df, col, kind, ctx)
 
-    # DAP → Gy·m², reading the unit from the original source header (falls back to
-    # an assume-Gy·cm²-and-flag path when the header carries no recognisable unit).
     if "_dt_dap" in data_df.columns:
         dap_src = next((s for s, t in ctx.column_map.items() if t == "_dt_dap"), None)
         data_df["DoseAreaProduct_Gym2"] = convert_dap_series_to_gym2(data_df["_dt_dap"], dap_src, ctx)
         data_df = data_df.drop(columns=["_dt_dap"])
+    return data_df
 
-    # Filter thickness handling (Philips: 'Al;Cu' string; Siemens: single Cu value).
-    manufacturer_val = str(data_df["Manufacturer"].dropna().iloc[0]) if "Manufacturer" in data_df.columns else ""
-    is_philips = manufacturer_val.lower() == "philips"
-    if "XRayFilterThicknessMinimum_mm" in data_df.columns:
-        if is_philips:
-            pairs = data_df["XRayFilterThicknessMinimum_mm"].apply(_parse_philips_filter)
-            data_df["XRayFilterThicknessMinimum_mm"] = pairs.apply(lambda x: x[0])  # Al
-            data_df["XRayFilterThicknessMaximum_mm"] = pairs.apply(lambda x: x[1])  # Cu
-            ctx.unit_conversions["XRayFilterThicknessMinimum_mm"] = "Philips Al;Cu split → Min=Al, Max=Cu"
-        else:
-            data_df["XRayFilterThicknessMaximum_mm"] = data_df["XRayFilterThicknessMinimum_mm"]
 
-    # Derive CollimatedFieldArea_m2 from the DAP formula (matches reference):
-    #     CFA = DAP / (DoseRP * ((DSI - 150) / DSD)^2)
-    if (
-        "DoseAreaProduct_Gym2" in data_df.columns
-        and "DoseRP_Gy" in data_df.columns
-        and "DistanceSourcetoDetector_mm" in data_df.columns
-        and "DistanceSourcetoIsocenter_mm" in data_df.columns
-    ):
-        dsd = data_df["DistanceSourcetoDetector_mm"]
-        dsi = data_df["DistanceSourcetoIsocenter_mm"]
-        data_df["CollimatedFieldArea_m2"] = data_df["DoseAreaProduct_Gym2"] / (
-            data_df["DoseRP_Gy"] * ((dsi - 150) / dsd) ** 2
-        )
+def _apply_filter_thickness(data_df: pd.DataFrame, ctx: AdapterContext) -> None:
+    """Normalize Philips Al;Cu or Siemens single-Cu filter thickness columns."""
+    if "XRayFilterThicknessMinimum_mm" not in data_df.columns:
+        return
+    manufacturer_val = (
+        str(data_df["Manufacturer"].dropna().iloc[0]) if "Manufacturer" in data_df.columns else ""
+    )
+    if manufacturer_val.lower() == "philips":
+        pairs = data_df["XRayFilterThicknessMinimum_mm"].apply(_parse_philips_filter)
+        data_df["XRayFilterThicknessMinimum_mm"] = pairs.apply(lambda x: x[0])  # Al
+        data_df["XRayFilterThicknessMaximum_mm"] = pairs.apply(lambda x: x[1])  # Cu
+        ctx.unit_conversions["XRayFilterThicknessMinimum_mm"] = "Philips Al;Cu split → Min=Al, Max=Cu"
+    else:
+        data_df["XRayFilterThicknessMaximum_mm"] = data_df["XRayFilterThicknessMinimum_mm"]
 
-    # Fallback values for columns rdsr_normalizer() requires but DoseTrack may omit.
+
+def _derive_collimated_field_area(data_df: pd.DataFrame) -> None:
+    """Derive CollimatedFieldArea_m2 from the DoseTrack DAP formula when possible."""
+    required = (
+        "DoseAreaProduct_Gym2",
+        "DoseRP_Gy",
+        "DistanceSourcetoDetector_mm",
+        "DistanceSourcetoIsocenter_mm",
+    )
+    if not all(col in data_df.columns for col in required):
+        return
+    dsd = data_df["DistanceSourcetoDetector_mm"]
+    dsi = data_df["DistanceSourcetoIsocenter_mm"]
+    data_df["CollimatedFieldArea_m2"] = data_df["DoseAreaProduct_Gym2"] / (
+        data_df["DoseRP_Gy"] * ((dsi - 150) / dsd) ** 2
+    )
+
+
+def _fill_dosetrack_defaults(data_df: pd.DataFrame, warnings: list[str]) -> None:
+    """Supply defaults for columns rdsr_normalizer requires but DoseTrack may omit."""
     if "IrradiationEventType" not in data_df.columns:
         data_df["IrradiationEventType"] = "Fluoroscopy"
         warnings.append("Column 'IrradiationEventType' not in DoseTrack export; defaulted to 'Fluoroscopy'.")
@@ -283,6 +275,32 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
         data_df["XRayFilterMaterial"] = "Cu"
         warnings.append("Column 'XRayFilterMaterial' not in DoseTrack export; defaulted to 'Cu'.")
 
+
+def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
+    """DoseTrack-specific processing: ffill, manufacturer inference, units, CFA.
+
+    Raises ValueError on blocking errors (missing Equipment Name, bad plane codes).
+    """
+    warnings = ctx.warnings
+
+    # Forward-fill: DoseTrack uses hierarchical rows where parent values are only
+    # written when they change (study/series level fields).
+    data_df = data_df.ffill()
+    data_df = _infer_manufacturer_from_equipment(data_df, warnings)
+
+    # Normalize AcquisitionPlane from integer Plane Code values.
+    if "AcquisitionPlane" in data_df.columns:
+        try:
+            data_df["AcquisitionPlane"] = _normalize_plane_code(data_df["AcquisitionPlane"])
+        except ValueError as exc:
+            raise ValueError(
+                f"DoseTrack plane code normalization failed (error_type={exception_class_name(exc)})."
+            ) from exc
+
+    data_df = _convert_dosetrack_units(data_df, ctx)
+    _apply_filter_thickness(data_df, ctx)
+    _derive_collimated_field_area(data_df)
+    _fill_dosetrack_defaults(data_df, warnings)
     return data_df
 
 

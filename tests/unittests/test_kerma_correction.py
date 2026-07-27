@@ -211,3 +211,91 @@ def test_invalid_lookup_factor_replaced_with_default():
         default_factor=1.11,
     )
     assert result.factors == [pytest.approx(1.11)]
+
+
+def test_json_factors_wrapper_and_list_payloads(tmp_path: Path):
+    """JSON CF tables accept both a bare list and a {\"factors\": [...]} wrapper."""
+    from mypyskindose.kerma_correction import distinct_auto_resolved_equipment_keys
+
+    wrapped = tmp_path / "wrapped.json"
+    wrapped.write_text(
+        json.dumps({"factors": [{"equipment": "unit-a", "tube": "single", "correction_factor": 1.2}]}),
+        encoding="utf-8",
+    )
+    bare = tmp_path / "bare.json"
+    bare.write_text(
+        json.dumps([{"equipment": "unit-b", "tube": "A", "correction_factor": 0.9}]),
+        encoding="utf-8",
+    )
+    assert load_correction_table(wrapped) == {("unit-a", "single"): pytest.approx(1.2)}
+    assert load_correction_table(bare) == {("unit-b", "A"): pytest.approx(0.9)}
+
+    df = _frame(
+        **{
+            KEY_NORMALIZATION_DEVICE_SERIAL: ["Unit-A", None],
+            KEY_NORMALIZATION_STATION_NAME: [None, "Station-B"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: ["Single Plane", "Plane B"],
+        }
+    )
+    assert distinct_auto_resolved_equipment_keys(df) == {"unit-a", "station-b"}
+
+
+def test_load_rejects_bad_json_shape_and_empty_equipment(tmp_path: Path):
+    """Invalid JSON shape / empty equipment raise ValueError without leaking paths."""
+    bad_shape = tmp_path / "bad-shape.json"
+    bad_shape.write_text(json.dumps({"not_factors": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="list or"):
+        load_correction_table(bad_shape)
+
+    empty_rows = tmp_path / "empty-rows.json"
+    empty_rows.write_text(json.dumps({"factors": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="no factor rows"):
+        load_correction_table(empty_rows)
+
+    empty_equip = tmp_path / "empty-equip.json"
+    empty_equip.write_text(
+        json.dumps([{"equipment": "  ", "tube": "single", "correction_factor": 1.0}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="empty value"):
+        load_correction_table(empty_equip)
+
+    unsupported = tmp_path / "factors.txt"
+    unsupported.write_text("nope", encoding="utf-8")
+    with pytest.raises(ValueError, match="Unsupported"):
+        load_correction_table(unsupported)
+
+
+def test_normalize_nan_inputs_and_suspicious_factor_warning(tmp_path: Path):
+    """NaN equipment/tube normalize safely; out-of-band CF values warn.
+
+    Use a dedicated handler (not ``caplog``) so suite-wide logging state cannot
+    swallow the WARNING.
+    """
+    assert normalize_equipment_label(float("nan")) is None
+    assert normalize_tube(float("nan")) == "single"
+
+    path = tmp_path / "wide.json"
+    path.write_text(
+        json.dumps([{"equipment": "unit-01", "tube": "single", "correction_factor": 3.5}]),
+        encoding="utf-8",
+    )
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        """Collect log record messages for assertions."""
+
+        def emit(self, record: logging.LogRecord) -> None:
+            """Append the formatted log message to the capture list."""
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("mypyskindose.kerma_correction")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        table = load_correction_table(path)
+    finally:
+        logger.removeHandler(handler)
+
+    assert table[("unit-01", "single")] == pytest.approx(3.5)
+    assert any("outside the typical" in msg for msg in messages)

@@ -33,6 +33,9 @@ from ..state import reset_results, state
 from ..ui_copy import copy_text
 from ._per_exam import build_per_exam_section
 
+# Shared Quasar/Tailwind row class for Settings section headers (python:S1192).
+_SETTINGS_HEADER_ROW_CLASSES = "w-full items-center justify-between"
+
 # Below-floor kVp policy → human-readable labels for the Settings select. Values
 # match mypyskindose.constants.BELOW_FLOOR_KVP_POLICIES.
 BELOW_FLOOR_KVP_OPTIONS = {
@@ -84,7 +87,7 @@ def build(ctx: PageContext) -> None:
 
             with ui.expansion("Phantom Settings", icon="person", value=True).classes(_SETTINGS_EXPANSION_CLASSES):
                 with ui.column().classes(_SETTINGS_SECTION_CLASSES):
-                    with ui.row().classes("w-full items-center justify-between"):
+                    with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
                         ui.label("Phantom model and positioning").classes("text-subtitle2")
                         HelpButton(
                             title="Phantom Positioning Offsets",
@@ -128,7 +131,7 @@ def build(ctx: PageContext) -> None:
                         state, "patient_orientation"
                     ).on(_MODEL_VALUE_EVENT, _on_phantom_pose_change).classes("w-full")
 
-                    with ui.row().classes("w-full items-center justify-between"):
+                    with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
                         ui.label("Phantom preview").classes("text-subtitle2")
                         HelpButton(
                             title="Settings phantom preview",
@@ -243,7 +246,7 @@ def build(ctx: PageContext) -> None:
                             ("Superior-inferior length scale", "phantom_scale_lon", 2),
                         ):
                             with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
-                                with ui.row().classes("w-full items-center justify-between gap-3"):
+                                with ui.row().classes(f"{_SETTINGS_HEADER_ROW_CLASSES} gap-3"):
                                     ui.label(label).classes("text-body2 font-medium")
                                     scale_label = ui.label().classes("shrink-0 text-caption mono-text text-right")
                                     scale_label.bind_text_from(
@@ -294,7 +297,7 @@ def build(ctx: PageContext) -> None:
                     ).on(_MODEL_VALUE_EVENT, reset_results)
 
                     with ui.column().classes("w-full gap-2"):
-                        with ui.row().classes("w-full items-center justify-between"):
+                        with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
                             ui.label("Below-floor kVp handling (< 25 kV)").classes("text-subtitle2")
                             HelpButton(
                                 title="Below-floor kVp handling",
@@ -330,7 +333,7 @@ def build(ctx: PageContext) -> None:
                     ).classes("w-full")
 
                     with ui.column().classes("w-full gap-2"):
-                        with ui.row().classes("w-full items-center justify-between"):
+                        with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
                             ui.label("Kerma-meter correction").classes("text-subtitle2")
                             HelpButton(
                                 title="Kerma-meter correction",

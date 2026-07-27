@@ -106,3 +106,39 @@ def test_settings_example_block_loads():
     settings = PyskindoseSettings(settings=load_settings_example_json())
     assert settings.kerma_meter_correction.enable is False
     assert settings.kerma_meter_correction.mode == "file"
+
+
+def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
+    """Settings reject bad mode/default_factor and serialize without in_memory_table."""
+    from mypyskindose.settings.kerma_meter_correction_settings import (
+        KermaMeterCorrectionSettings,
+    )
+
+    with pytest.raises(ValueError, match="mode must be"):
+        KermaMeterCorrectionSettings({"mode": "auto"})
+    with pytest.raises(ValueError, match="default_factor"):
+        KermaMeterCorrectionSettings({"default_factor": 0.0})
+
+    cf = tmp_path / "cf.csv"
+    km = KermaMeterCorrectionSettings(
+        {
+            "enable": True,
+            "mode": "prompt",
+            "file": str(cf),
+            "file_sheet": "Sheet1",
+            "default_factor": 3.0,
+            "explicit_label": "lab-1",
+            "prompt_at_calc": True,
+            "in_memory_table": {("a", "single"): 1.1},
+        }
+    )
+    assert km.file == cf
+    assert km.file_sheet == "Sheet1"
+    assert km.explicit_label == "lab-1"
+    assert km.default_factor == pytest.approx(3.0)
+    assert km.in_memory_table == {("a", "single"): 1.1}
+    payload = km.to_dict()
+    assert payload["enable"] is True
+    assert payload["mode"] == "prompt"
+    assert payload["file"] == str(cf)
+    assert "in_memory_table" not in payload

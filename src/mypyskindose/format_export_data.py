@@ -387,22 +387,22 @@ class PySkinDoseOutput:
         if len(inverse_square_law_correction) != len(hits):
             error = True
             error_message.append(
-                (
-                    "Inverse square law correction:\n"
-                    "\tThe inverse square law correction list is not the same length as the number of events"
-                )
+                "Inverse square law correction:\n"
+                "\tThe inverse square law correction list is not the same length as the number of events"
             )
 
         if len(medium_correction) != len(hits):
             error = True
             error_message.append(
-                ("Medium correction:\n" "\tThe medium correction list is not the same length as the number of events")
+                "Medium correction:\n"
+                "\tThe medium correction list is not the same length as the number of events"
             )
 
         if len(table_correction) != len(hits):
             error = True
             error_message.append(
-                ("Table correction:\n" "\tThe table correction list is not the same length as the number of events")
+                "Table correction:\n"
+                "\tThe table correction list is not the same length as the number of events"
             )
 
         has_kerma_meter = kerma_meter_correction is not None

@@ -26,6 +26,62 @@ def _offset_tuple(settings: Any) -> tuple[float, float, float]:
     return (float(off.d_lon), float(off.d_ver), float(off.d_lat))
 
 
+def _empty_df():
+    import pandas as pd
+
+    return pd.DataFrame()
+
+
+def _exam_source_from_multi_result(
+    settings: "PyskindoseSettings",
+    multi_exam_result: "MultiExamResult",
+    inputs: "list[InputAdapterResult] | None",
+) -> list[ExportExamSource]:
+    """Build per-exam export sources from a multi-exam calculation result."""
+    exams: list[ExportExamSource] = []
+    for i, er in enumerate(multi_exam_result.exams):
+        adapter = inputs[i] if inputs and i < len(inputs) else None
+        exams.append(
+            ExportExamSource(
+                exam_id=er.exam_id,
+                normalized_data=(adapter.normalized_data if adapter is not None else _empty_df()),
+                provenance=(adapter.provenance if adapter is not None else None),
+                source_file=er.source_file,
+                effective_settings=settings,
+                patient_offset=tuple(er.patient_offset),  # type: ignore[arg-type]
+                transform_meta={},
+                extra_warnings=list(er.warnings),
+            )
+        )
+    return exams
+
+
+def _exam_source_from_single(
+    settings: "PyskindoseSettings",
+    *,
+    inputs: "list[InputAdapterResult] | None",
+    single_normalized_data: "pd.DataFrame | None",
+    single_source_file: str | None,
+    file_name: str | None,
+) -> list[ExportExamSource]:
+    """Build the single-exam export source list for CLI export."""
+    adapter = inputs[0] if inputs else None
+    normalized = single_normalized_data
+    if normalized is None:
+        normalized = adapter.normalized_data if adapter is not None else _empty_df()
+    return [
+        ExportExamSource(
+            exam_id=opaque_exam_label(0),
+            normalized_data=normalized,
+            provenance=(adapter.provenance if adapter is not None else None),
+            source_file=single_source_file or file_name,
+            effective_settings=settings,
+            patient_offset=_offset_tuple(settings),
+            transform_meta={},
+        )
+    ]
+
+
 def build_export_source_from_cli(
     settings: "PyskindoseSettings",
     *,
@@ -47,41 +103,18 @@ def build_export_source_from_cli(
     + ``inputs`` (one ``InputAdapterResult`` per exam, parallel to the result's
     ``exams``).
     """
-    exams: list[ExportExamSource] = []
-
     if multi_exam_result is not None:
-        result_exams = multi_exam_result.exams
-        for i, er in enumerate(result_exams):
-            adapter = inputs[i] if inputs and i < len(inputs) else None
-            exams.append(
-                ExportExamSource(
-                    exam_id=er.exam_id,
-                    normalized_data=(adapter.normalized_data if adapter is not None else _empty_df()),
-                    provenance=(adapter.provenance if adapter is not None else None),
-                    source_file=er.source_file,
-                    effective_settings=settings,
-                    patient_offset=tuple(er.patient_offset),  # type: ignore[arg-type]
-                    transform_meta={},
-                    extra_warnings=list(er.warnings),
-                )
-            )
+        exams = _exam_source_from_multi_result(settings, multi_exam_result, inputs)
     elif output_dict is not None:
-        adapter = inputs[0] if inputs else None
-        exams.append(
-            ExportExamSource(
-                exam_id=opaque_exam_label(0),
-                normalized_data=(
-                    single_normalized_data
-                    if single_normalized_data is not None
-                    else (adapter.normalized_data if adapter is not None else _empty_df())
-                ),
-                provenance=(adapter.provenance if adapter is not None else None),
-                source_file=single_source_file or file_name,
-                effective_settings=settings,
-                patient_offset=_offset_tuple(settings),
-                transform_meta={},
-            )
+        exams = _exam_source_from_single(
+            settings,
+            inputs=inputs,
+            single_normalized_data=single_normalized_data,
+            single_source_file=single_source_file,
+            file_name=file_name,
         )
+    else:
+        exams = []
 
     return ExportSource(
         execution_context="cli",
@@ -95,9 +128,3 @@ def build_export_source_from_cli(
         report_title=report_title,
         include_source_identifiers=include_source_identifiers,
     )
-
-
-def _empty_df():
-    import pandas as pd
-
-    return pd.DataFrame()

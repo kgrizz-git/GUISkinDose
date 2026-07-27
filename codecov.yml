@@ -1,0 +1,17 @@
+# Codecov Free stays informational. Enforced PR coverage lives in GHA
+# (`coverage-pr`: combined ≥80% + diff-cover ≥80% vs the PR base).
+# See https://docs.codecov.com/docs/commit-status
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false

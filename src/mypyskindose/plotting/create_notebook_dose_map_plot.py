@@ -44,18 +44,18 @@ def create_notebook_dose_map_plot(names: List[Path]):
 
         # Add image
         fig.add_layout_image(
-            dict(
-                x=placement,
-                sizex=img_width,
-                y=1 * img_height,
-                sizey=img_height,
-                xref="x",
-                yref="y",
-                opacity=1,
-                layer="above",
-                sizing="stretch",
-                source=source,
-            )
+            {
+                "x": placement,
+                "sizex": img_width,
+                "y": 1 * img_height,
+                "sizey": img_height,
+                "xref": "x",
+                "yref": "y",
+                "opacity": 1,
+                "layer": "above",
+                "sizing": "stretch",
+                "source": source,
+            }
         )
 
     axes_visability = False

@@ -119,26 +119,26 @@ def default_procedure_sliders(
     color_plot_text, color_slider_tick, color_slider_border = fetch_slider_colors(dark_mode=dark_mode)
     plot_slider_padding = fetch_slider_padding(notebook_mode=notebook_mode)
     return [
-        dict(
-            active=0,
-            transition=PLOT_SLIDER_TRANSITION,
-            bordercolor=color_slider_border,
-            borderwidth=PLOT_SLIDER_BORDER_WIDTH,
-            tickcolor=color_slider_tick,
-            bgcolor=COLOR_SLIDER_BACKGROUND,
-            currentvalue=dict(
-                prefix="Active event: ",
-                suffix=f" of {total_events}",
-                font=dict(color=color_plot_text, size=PLOT_SLIDER_FONT_SIZE_CURRENT),
-            ),
-            font=dict(
-                family=PLOT_FONT_FAMILY,
-                color=color_plot_text,
-                size=PLOT_SLIDER_FONT_SIZE_GENERAL,
-            ),
-            pad=plot_slider_padding,
-            steps=steps,
-        )
+        {
+            "active": 0,
+            "transition": PLOT_SLIDER_TRANSITION,
+            "bordercolor": color_slider_border,
+            "borderwidth": PLOT_SLIDER_BORDER_WIDTH,
+            "tickcolor": color_slider_tick,
+            "bgcolor": COLOR_SLIDER_BACKGROUND,
+            "currentvalue": {
+                "prefix": "Active event: ",
+                "suffix": f" of {total_events}",
+                "font": {"color": color_plot_text, "size": PLOT_SLIDER_FONT_SIZE_CURRENT},
+            },
+            "font": {
+                "family": PLOT_FONT_FAMILY,
+                "color": color_plot_text,
+                "size": PLOT_SLIDER_FONT_SIZE_GENERAL,
+            },
+            "pad": plot_slider_padding,
+            "steps": steps,
+        }
     ]
 
 
@@ -159,48 +159,48 @@ def default_geometry_layout(
         height=plot_height,
         width=plot_width,
         margin=plot_margin,
-        font=dict(family=PLOT_FONT_FAMILY, size=PLOT_FONT_SIZE, color=color_plot_text),
-        title=dict(
-            font=dict(
-                family=PLOT_TITLE_FONT_FAMILY,
-                size=PLOT_TITLE_FONT_SIZE,
-                color=color_plot_text,
-            ),
-            text=title,
-        ),
-        hoverlabel=dict(
-            font=dict(
-                family=PLOT_HOVERLABEL_FONT_FAMILY,
-                size=PLOT_HOVERLABEL_FONT_SIZE,
-                color=color_plot_text,
-            )
-        ),
+        font={"family": PLOT_FONT_FAMILY, "size": PLOT_FONT_SIZE, "color": color_plot_text},
+        title={
+            "font": {
+                "family": PLOT_TITLE_FONT_FAMILY,
+                "size": PLOT_TITLE_FONT_SIZE,
+                "color": color_plot_text,
+            },
+            "text": title,
+        },
+        hoverlabel={
+            "font": {
+                "family": PLOT_HOVERLABEL_FONT_FAMILY,
+                "size": PLOT_HOVERLABEL_FONT_SIZE,
+                "color": color_plot_text,
+            }
+        },
         paper_bgcolor=color_canvas,
         annotations=[coordinate_frame_annotation(color_plot_text)],
         showlegend=False,
         dragmode=PLOT_DRAGMODE,
-        scene=dict(
-            aspectmode=aspectmode,
-            camera=camera if camera is not None else get_camera_view(),
-            xaxis=_geometry_scene_axis(
+        scene={
+            "aspectmode": aspectmode,
+            "camera": camera if camera is not None else get_camera_view(),
+            "xaxis": _geometry_scene_axis(
                 PLOT_AXIS_TITLE_X,
                 color_grid=color_grid,
                 color_canvas=color_canvas,
                 color_zero_line=color_zero_line,
             ),
-            yaxis=_geometry_scene_axis(
+            "yaxis": _geometry_scene_axis(
                 PLOT_AXIS_TITLE_Y,
                 color_grid=color_grid,
                 color_canvas=color_canvas,
                 color_zero_line=color_zero_line,
             ),
-            zaxis=_geometry_scene_axis(
+            "zaxis": _geometry_scene_axis(
                 PLOT_AXIS_TITLE_Z,
                 color_grid=color_grid,
                 color_canvas=color_canvas,
                 color_zero_line=color_zero_line,
             ),
-        ),
+        },
     )
 
 
@@ -223,24 +223,26 @@ def default_procedure_layout(
         sliders=default_procedure_sliders(
             total_events, dark_mode=dark_mode, notebook_mode=notebook_mode
         ),
-        font=dict(family=PLOT_FONT_FAMILY, size=PLOT_FONT_SIZE, color=color_plot_text),
-        hoverlabel=dict(font=dict(family=PLOT_HOVERLABEL_FONT_FAMILY, size=PLOT_SLIDER_FONT_SIZE_GENERAL)),
+        font={"family": PLOT_FONT_FAMILY, "size": PLOT_FONT_SIZE, "color": color_plot_text},
+        hoverlabel={
+            "font": {"family": PLOT_HOVERLABEL_FONT_FAMILY, "size": PLOT_SLIDER_FONT_SIZE_GENERAL}
+        },
         showlegend=False,
         dragmode=PLOT_DRAGMODE,
-        title=dict(
-            text=title,
-            font=dict(
-                family=PLOT_TITLE_FONT_FAMILY,
-                size=PLOT_TITLE_FONT_SIZE,
-                color=color_plot_text,
-            ),
-        ),
+        title={
+            "text": title,
+            "font": {
+                "family": PLOT_TITLE_FONT_FAMILY,
+                "size": PLOT_TITLE_FONT_SIZE,
+                "color": color_plot_text,
+            },
+        },
         paper_bgcolor=color_canvas,
         annotations=[coordinate_frame_annotation(color_plot_text)],
-        scene=dict(
-            aspectmode=PLOT_ASPECTMODE_PLOT_PROCEDURE,
-            camera=get_camera_view(),
-            xaxis=_geometry_scene_axis(
+        scene={
+            "aspectmode": PLOT_ASPECTMODE_PLOT_PROCEDURE,
+            "camera": get_camera_view(),
+            "xaxis": _geometry_scene_axis(
                 PLOT_AXIS_TITLE_X,
                 color_grid=color_grid,
                 color_canvas=color_canvas,
@@ -248,7 +250,7 @@ def default_procedure_layout(
                 color_plot_text=color_plot_text,
                 axis_range=PLOT_PROCEDURE_AXIS_RANGE_X,
             ),
-            yaxis=_geometry_scene_axis(
+            "yaxis": _geometry_scene_axis(
                 PLOT_AXIS_TITLE_Y,
                 color_grid=color_grid,
                 color_canvas=color_canvas,
@@ -256,7 +258,7 @@ def default_procedure_layout(
                 color_plot_text=color_plot_text,
                 axis_range=PLOT_PROCEDURE_AXIS_RANGE_Y,
             ),
-            zaxis=_geometry_scene_axis(
+            "zaxis": _geometry_scene_axis(
                 PLOT_AXIS_TITLE_Z,
                 color_grid=color_grid,
                 color_canvas=color_canvas,
@@ -264,7 +266,7 @@ def default_procedure_layout(
                 color_plot_text=color_plot_text,
                 axis_range=PLOT_PROCEDURE_AXIS_RANGE_Z,
             ),
-        ),
+        },
     )
 
 
@@ -295,32 +297,34 @@ def default_dosemap_layout(
         height=plot_height,
         width=plot_width,
         margin=plot_margin,
-        font=dict(family=PLOT_FONT_FAMILY, color=color_plot_text, size=PLOT_FONT_SIZE),
-        hoverlabel=dict(font=dict(family=PLOT_HOVERLABEL_FONT_FAMILY, size=PLOT_HOVERLABEL_FONT_SIZE)),
-        title=dict(font=dict(family=PLOT_FONT_FAMILY, size=PLOT_FONT_SIZE, color=color_plot_text)),
+        font={"family": PLOT_FONT_FAMILY, "color": color_plot_text, "size": PLOT_FONT_SIZE},
+        hoverlabel={
+            "font": {"family": PLOT_HOVERLABEL_FONT_FAMILY, "size": PLOT_HOVERLABEL_FONT_SIZE}
+        },
+        title={"font": {"family": PLOT_FONT_FAMILY, "size": PLOT_FONT_SIZE, "color": color_plot_text}},
         paper_bgcolor=color_canvas,
-        scene=dict(
-            aspectmode=PLOT_ASPECTMODE_PLOT_DOSEMAP,
-            xaxis=dict(
-                title="",
-                backgroundcolor=color_canvas,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-            ),
-            yaxis=dict(
-                title="",
-                backgroundcolor=color_canvas,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-            ),
-            zaxis=dict(
-                title="",
-                backgroundcolor=color_canvas,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-            ),
-        ),
+        scene={
+            "aspectmode": PLOT_ASPECTMODE_PLOT_DOSEMAP,
+            "xaxis": {
+                "title": "",
+                "backgroundcolor": color_canvas,
+                "showgrid": False,
+                "zeroline": False,
+                "showticklabels": False,
+            },
+            "yaxis": {
+                "title": "",
+                "backgroundcolor": color_canvas,
+                "showgrid": False,
+                "zeroline": False,
+                "showticklabels": False,
+            },
+            "zaxis": {
+                "title": "",
+                "backgroundcolor": color_canvas,
+                "showgrid": False,
+                "zeroline": False,
+                "showticklabels": False,
+            },
+        },
     )

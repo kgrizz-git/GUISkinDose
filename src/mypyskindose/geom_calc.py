@@ -475,17 +475,17 @@ def check_new_geometry(data_norm: pd.DataFrame) -> List[bool]:
         geometry since the preceding irradiation event.
 
     """
-    logger.info("Checking which irradiation events contain changes in geometry" "compared to previous event")
+    logger.info("Checking which irradiation events contain changes in geometry compared to previous event")
 
     logger.debug("Listing all RDSR geometry parameters")
     geom_params = data_norm[["Tx", "Ty", "Tz", "FS_lat", "FS_long", "Ap1", "Ap2", "Ap3", "At1", "At2", "At3"]]
 
-    logger.debug("Checking which irradiation events that does not have same" "parameters as previous")
+    logger.debug("Checking which irradiation events that does not have same parameters as previous")
     changed_geometry = [
         not geom_params.iloc[event].equals(geom_params.iloc[event - 1]) for event in range(1, len(geom_params))
     ]
 
-    logger.debug("Insert True to the first event to indicate that it has a" "new geometry")
+    logger.debug("Insert True to the first event to indicate that it has a new geometry")
 
     changed_geometry.insert(0, True)
 
