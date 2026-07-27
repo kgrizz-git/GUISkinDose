@@ -187,6 +187,38 @@ def forbidden_paths(policy: dict[str, Any], paths: Sequence[str]) -> list[str]:
     )
 
 
+_PHI_NAME_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
+
+
+def phi_filename_findings(policy: dict[str, Any], paths: Sequence[str]) -> list[str]:
+    """Return tracked paths whose name/path looks like it embeds PHI.
+
+    Matches two heuristics over the full normalized (lower-cased) POSIX path:
+    structural identifier patterns (e.g. ``MRN_``, SSN format, ``patient_name``)
+    and whole-token matches against a curated list of common person names. Paths
+    matching any ``allowlist_patterns`` glob are exempt.
+    """
+    config = policy.get("phi_filename")
+    if not config:
+        return []
+    structural = [re.compile(pattern, re.IGNORECASE) for pattern in config.get("structural_patterns", [])]
+    name_tokens = frozenset(str(token).lower() for token in config.get("name_tokens", []))
+    allowlist = tuple(str(pattern) for pattern in config.get("allowlist_patterns", []))
+    findings: list[str] = []
+    for path in paths:
+        normalized = normalize_path(path)
+        if any(fnmatch.fnmatch(normalized, pattern) for pattern in allowlist):
+            continue
+        lowered = normalized.lower()
+        if any(pattern.search(lowered) for pattern in structural):
+            findings.append(normalized)
+            continue
+        tokens = {token for token in _PHI_NAME_TOKEN_SPLIT.split(lowered) if token}
+        if tokens & name_tokens:
+            findings.append(normalized)
+    return sorted(findings)
+
+
 def missing_ignore_patterns(ignore_bytes: bytes, policy: dict[str, Any]) -> list[str]:
     lines = {
         line.strip()
@@ -420,11 +452,19 @@ def command_check(root: Path, mode: Mode) -> int:
     else:
         paths = sorted(head_entries(root))
     forbidden = forbidden_paths(policy, paths)
+    phi_names = phi_filename_findings(policy, paths)
     for _pattern in missing:
         print("ERROR: required privacy ignore rule is missing (value suppressed).", file=sys.stderr)
     for path in forbidden:
         print(f"ERROR: forbidden tracked path path_token={path_token(path)}.", file=sys.stderr)
-    if missing or forbidden:
+    for path in phi_names:
+        print(
+            "ERROR: filename resembles PHI (patient identifier or person name) "
+            f"path_token={path_token(path)}. Rename it, or if it is a false positive add a glob to "
+            "phi_filename.allowlist_patterns in dev-docs/privacy_admission_policy.json.",
+            file=sys.stderr,
+        )
+    if missing or forbidden or phi_names:
         return 1
     print("Privacy admission policy check OK.")
     return 0

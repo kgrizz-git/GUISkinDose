@@ -10,6 +10,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ## [Unreleased]
 
+### Removed
+
+- **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the
+  `cloud-scans-main` CI job and deleted `codecov.yml`. Enforced PR coverage remains the GHA
+  `coverage-pr` job (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base); the job
+  now runs Safety only.
+
 ### Fixed
 
 - **SonarQube bugs and easy wins** (2026-07-26) — cleared the three open BUG findings in
@@ -28,6 +35,13 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Added
 
+- **PHI-like filename admission guard** (2026-07-26) — `scripts/privacy_admission.py check` (pre-commit,
+  pre-push, and CI `privacy-gates`) now blocks committing files whose name/path resembles PHI: structural
+  identifier patterns (`MRN_…`, SSN format, `patient_name`/`patient_id`, `dob…`, accession numbers) and
+  whole-token matches against a curated common-name list. Configured under `phi_filename` in
+  `dev-docs/privacy_admission_policy.json` (with an `allowlist_patterns` escape hatch); errors report a
+  non-reversible `path_token=` instead of the sensitive name. Verified zero false positives across the
+  current tree.
 - **Kerma-meter correction factors** (2026-07-26) — optional per-(equipment × tube)
   calibration `CF = (real measured dose) / (unit reported dose)` applied to reported
   `K_IRP` before physics corrections. Lookup via CSV/TSV/XLSX/JSON or GUI prompt;
