@@ -20,6 +20,8 @@ def test_tokenized_sonar_is_opt_in_and_never_runs_on_pr_heads() -> None:
     assert "github.ref == 'refs/heads/main'" in sonar
     assert "vars.SONAR_PROTECTED_MAIN_ENABLED == 'true'" in sonar
     assert "github.event_name == 'pull_request'" not in sonar
+    assert "SONAR_TOKEN_AVAILABLE: ${{ secrets.SONAR_TOKEN != '' }}" in sonar
+    assert "if: env.SONAR_TOKEN_AVAILABLE == 'true'" in sonar
     assert "SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}" in sonar
 
 

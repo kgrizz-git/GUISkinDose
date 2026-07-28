@@ -381,7 +381,7 @@ jobs:
     # sonar-project.properties. This job stays disabled until a repository administrator
     # protects main and then explicitly sets SONAR_PROTECTED_MAIN_ENABLED=true. It is also
     # skipped when SONAR_TOKEN is absent.
-    - name: SonarQube Cloud scan (skipped without token)
+    - name: SonarQube Cloud scan (requires token)
       if: env.SONAR_TOKEN_AVAILABLE == 'true'
       uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f  # v8.2.1
       env:

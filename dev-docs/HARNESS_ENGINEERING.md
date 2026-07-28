@@ -262,7 +262,7 @@ Locally, `basedpyright --baselinefile .basedpyright/baseline.json` uses **auto**
 
 ### Secret scanning
 
-Gitleaks runs on every push/PR via `.github/workflows/gitleaks.yml` (full repository history). Do not commit credentials; see CodeGuard hardcoded-credentials rules in `.cursor/rules/`.
+Gitleaks scans full repository history on every pull request through the `gitleaks` job in `ci.yml` (after `privacy-gates`) and on every `main` push through `.github/workflows/gitleaks.yml`. Do not commit credentials; see CodeGuard hardcoded-credentials rules in `.cursor/rules/`.
 
 ### Sensitive-content and asset admission
 
@@ -442,21 +442,21 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python -m compileall src/mypyskindose` | `build` job (matrix policy above) |
 | `python -m pytest` | `build` job (matrix policy above) |
 | `python -m ruff check src tests` | `build` job (matrix policy above) |
-| `python -m build` | Ubuntu `package-build` job (Python 3.12) |
-| `python scripts/check_doc_freshness.py` | Ubuntu `doc-freshness` job |
+| `uv build` | Ubuntu `static-analysis` job (Python 3.12) |
+| `python scripts/check_doc_freshness.py` | Ubuntu `static-analysis` job |
 | `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `privacy-gates` job + pre-commit; strict asset/content admission with value-safe output |
 | `python scripts/privacy_admission.py check/route` | Ubuntu `privacy-gates` job + local hooks; protected paths and conditional scanner routing |
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `privacy-gates` job + pre-push; blocking project privacy SAST |
 | phi-scan / Presidio | Scheduled secondary workflows (`phi-scan.yml` Thu; `presidio.yml` Mon) + manual dispatch. Presidio PR path triggers were removed in the Jul 2026 privacy-streamline change — it no longer runs on every PR. Both are value-suppressed with no report upload. |
-| CodeQL (GitHub code scanning) | GitHub default setup (`dynamic/github-code-scanning/codeql`) on PRs and `main`. Separate from the “GitHub Advanced Security” **AI findings** agent, which only runs when there are code-scanning AI findings to post on a PR. |
+| CodeQL (GitHub code scanning) | `CodeQL analysis (Python)` job in `ci.yml` on PRs and `main`, after `privacy-gates`. GitHub Default Setup is disabled to avoid a parallel ungated run. |
 | GUI smoke tests (`pytest tests/gui/`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
-| gitleaks secret scan | `.github/workflows/gitleaks.yml` on push/PR |
+| gitleaks secret scan | Pull requests: `gitleaks` job in `ci.yml` after `privacy-gates`; `main` pushes: separate `.github/workflows/gitleaks.yml` workflow |
 | `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
-| SonarCloud CI scan | **Enabled**: `main` is protected by a ruleset and repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`, so `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled (CI-based analysis is authoritative). No tokenized scanner runs on a PR head; the job skips if `SONAR_TOKEN` is absent. |
+| SonarCloud CI scan | **Enabled**: `main` is protected by a ruleset and repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`, so `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled (CI-based analysis is authoritative). The scan requires the `SONAR_TOKEN` repository secret; no tokenized scanner runs on a PR head. |
 | `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed. Enforced PR coverage is the GHA `coverage-pr` job. |
 | PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/mypyskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base. This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
