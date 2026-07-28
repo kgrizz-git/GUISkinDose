@@ -83,8 +83,7 @@ jobs:
           const prNumber = pr.number;
           const headSha = pr.head.sha;
           const { owner, repo } = context.repo;
-          const marker = `@coderabbitai review`;
-          const shaMarker = `<!-- mypyskindose-coderabbit:${headSha} -->`;
+          const shaMarker = `<!-- coderabbit-privacy-gate:${headSha} -->`;
 
           const comments = await github.paginate(github.rest.issues.listComments, {
             owner,
@@ -105,7 +104,7 @@ jobs:
             owner,
             repo,
             issue_number: prNumber,
-            body: `${marker}\n${shaMarker}`,
+            body: `@coderabbitai review\n\nPrivacy gate passed for ${headSha}.\n\n${shaMarker}`,
           });
           core.info(`Requested CodeRabbit review on PR #${prNumber} after privacy-gates (${headSha}).`);
 

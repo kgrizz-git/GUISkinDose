@@ -34,6 +34,8 @@ def test_coderabbit_remains_requested_only_after_the_privacy_gate() -> None:
     assert "github.event_name == 'pull_request'" in coderabbit
     assert "github.event.pull_request.draft == false" in coderabbit
     assert "@coderabbitai review" in coderabbit
+    assert "Privacy gate passed for ${headSha}." in coderabbit
+    assert "<!-- coderabbit-privacy-gate:${headSha} -->" in coderabbit
 
 
 def test_no_workflow_uses_privileged_pull_request_target() -> None:
