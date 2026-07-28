@@ -15,6 +15,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
     - cron: '15 5 * * 0'
   workflow_dispatch:

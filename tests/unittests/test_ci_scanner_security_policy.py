@@ -29,8 +29,10 @@ def test_coderabbit_remains_requested_only_after_the_privacy_gate() -> None:
     workflow = CI_WORKFLOW.read_text(encoding="utf-8")
     coderabbit = job_section(workflow, "request-coderabbit", "static-analysis")
 
+    assert "types: [opened, synchronize, reopened, ready_for_review]" in workflow
     assert "needs: [schedule-gate, privacy-gates]" in coderabbit
     assert "github.event_name == 'pull_request'" in coderabbit
+    assert "github.event.pull_request.draft == false" in coderabbit
     assert "@coderabbitai review" in coderabbit
 
 

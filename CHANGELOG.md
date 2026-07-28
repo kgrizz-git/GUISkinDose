@@ -20,8 +20,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 ### Changed
 
 - **Protected scanner CI clarified** (2026-07-28) — renamed the token-gated SonarCloud step to state that it
-  requires `SONAR_TOKEN`, added a regression assertion for that guard, and corrected harness/privacy documentation
-  for the protected-`main` Sonar and split PR-versus-`main` Gitleaks workflows.
+  requires `SONAR_TOKEN`, added regression assertions for that guard and the privacy-gated CodeRabbit trigger, and
+  corrected harness/privacy documentation for the protected-`main` Sonar and split PR-versus-`main` Gitleaks
+  workflows. Moving a draft PR to ready now triggers the privacy-gated CodeRabbit request without an extra push.
 
 - **CLI `--help` corrected** (2026-07-27) — `prog` was still `"PySkinDose"` (upstream name) and
   the description said "Python version 3.8"; now reads `mypyskindose` and "Python 3.11+" with an
