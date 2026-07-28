@@ -38,6 +38,7 @@ def test_coderabbit_remains_requested_only_after_the_privacy_gate() -> None:
     assert "@coderabbitai review" in coderabbit
     assert "Privacy gate passed for ${context.payload.pull_request.head.sha}." in coderabbit
     assert "<!-- coderabbit-privacy-gate:${context.payload.pull_request.head.sha} -->" in coderabbit
+    assert "comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker)" in coderabbit
 
 
 def test_no_workflow_uses_privileged_pull_request_target() -> None:
