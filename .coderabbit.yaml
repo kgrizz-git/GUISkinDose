@@ -1,13 +1,12 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # CodeRabbit: auto-review off; path filters exclude sensitive surfaces from cloud review.
 # Reviews are requested from ci.yml `request-coderabbit` only after privacy-gates succeeds
-# (draft PRs are skipped). Manual `@coderabbitai review` requests bypass that CI ordering,
+# (including draft PRs). Manual `@coderabbitai review` requests bypass that CI ordering,
 # so these filters are defense in depth rather than an admission-control boundary.
 language: en-US
 reviews:
   auto_review:
     enabled: false
-    drafts: false
   path_filters:
     - "!src/**/example_data/**"
     - "!src/**/phantom_data/**"
