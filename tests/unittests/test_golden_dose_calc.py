@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pydicom
@@ -51,7 +52,8 @@ def _run_dict() -> dict:
     settings = PyskindoseSettings(settings=base, output_format="dict")
     parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
     norm = rdsr_normalizer(parsed, settings=settings)
-    return analyze_data(normalized_data=norm.copy(), settings=settings)
+    # output_format="dict" guarantees a dict result (not str / PySkinDoseOutput).
+    return cast(dict, analyze_data(normalized_data=norm.copy(), settings=settings))
 
 
 def test_golden_psd_value_unchanged_after_phases() -> None:

@@ -401,14 +401,14 @@ class PySkinDoseOutput:
                 "\tkerma_meter_correction and kerma_corrected must both be provided or both omitted"
             )
 
-        if has_kerma_meter and len(self.kerma_meter_correction) != n_events:
+        if self.kerma_meter_correction is not None and len(self.kerma_meter_correction) != n_events:
             error = True
             error_message.append(
                 "Kerma-meter correction:\n"
                 "\tThe kerma-meter correction list is not the same length as the number of events"
             )
 
-        if has_kerma_corrected and len(self.kerma_corrected) != n_events:
+        if self.kerma_corrected is not None and len(self.kerma_corrected) != n_events:
             error = True
             error_message.append(
                 "Kerma corrected:\n"
