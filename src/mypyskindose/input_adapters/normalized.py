@@ -221,9 +221,11 @@ def _coerce_numeric_and_units(data_df: pd.DataFrame, warnings: list[str]) -> pd.
 def _validate_normalized(data_df: pd.DataFrame, column_map: dict[str, str]) -> list[str]:
     """Return blocking validation errors for the renamed, coerced DataFrame.
 
-    Empty list means valid. Currently checks that every canonical name in
-    ``column_map`` is present among ``data_df``'s columns — a defensive guard
-    that the rename + column-select step produced the expected schema.
+    Empty list means valid. Checks that every canonical name in ``column_map``
+    is present among ``data_df``'s columns. For well-formed input this always
+    holds by construction (every mapped source header is a real column), so the
+    guard only fires on pathological input — e.g. duplicate raw headers that
+    collapse a canonical column during the rename + column-select step.
     """
     if not set(column_map.values()).issubset(set(data_df.columns)):
         return [f"Expected column names (case-insensitive): {sorted(NORMALIZED_COLUMN_NAMES)}."]

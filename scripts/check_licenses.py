@@ -86,10 +86,11 @@ FORBIDDEN_LICENSES = frozenset(
     }
 )
 
-LICENSE_CLASSIFIER_RE = re.compile(
-    r"^License :: OSI Approved :: (?P<name>.+)$",
-    re.IGNORECASE,
-)
+# Trove license classifiers look like "License :: OSI Approved :: MIT License".
+# We split on "::" and compare stripped segments rather than using a regex, so
+# non-canonical whitespace around the separators still parses and there is no
+# backtracking risk (Sonar S8786).
+LICENSE_CLASSIFIER_PREFIX = ("license", "osi approved")
 
 # Map common PyPI classifier / metadata names to SPDX-style identifiers.
 LICENSE_ALIASES = {
@@ -177,9 +178,14 @@ def _normalize_token(value: str) -> str:
 def _license_from_classifiers(classifiers: list[str]) -> list[str]:
     licenses: list[str] = []
     for classifier in classifiers:
-        match = LICENSE_CLASSIFIER_RE.match(classifier.strip())
-        if match:
-            licenses.append(_normalize_token(match.group("name")))
+        segments = [segment.strip() for segment in classifier.split("::")]
+        if len(segments) < 3:
+            continue
+        if tuple(segment.lower() for segment in segments[:2]) != LICENSE_CLASSIFIER_PREFIX:
+            continue
+        name = " :: ".join(segments[2:]).strip()
+        if name:
+            licenses.append(_normalize_token(name))
     return licenses
 
 

@@ -107,31 +107,44 @@ def validate_ui_copy(repo_root: Path, *, strict: bool = False) -> ValidationResu
             result.errors.append(f"{joined}: copy_text key is not in catalog: {key}")
 
     for key, item in keys.items():
-        if not isinstance(item, dict):
-            result.errors.append(f"{key}: catalog entry must be an object")
-            continue
-        text = item.get("text")
-        owner = item.get("owner")
-        if not _is_non_empty_string(text):
-            result.errors.append(f"{key}: text must be a non-empty string")
-        if not _is_non_empty_string(owner):
-            result.errors.append(f"{key}: owner must be a non-empty string")
-            continue
-        owner_path = _resolve_owner(repo_root, str(owner))
-        if not owner_path.is_file():
-            result.errors.append(f"{key}: owner file does not exist: {owner}")
-            continue
-        owner_text = owner_path.read_text(encoding="utf-8")
-        if key not in used_keys:
-            message = f"{key}: unused UI copy key"
-            if strict:
-                result.errors.append(message)
-            else:
-                result.warnings.append(message)
-        if isinstance(text, str) and text and text in owner_text:
-            result.errors.append(f"{key}: literal catalog text remains in {owner}")
+        _validate_copy_entry(repo_root, key, item, used_keys, result, strict=strict)
 
     return result
+
+
+def _validate_copy_entry(
+    repo_root: Path,
+    key: str,
+    item: Any,
+    used_keys: dict[str, Any],
+    result: ValidationResult,
+    *,
+    strict: bool,
+) -> None:
+    """Validate a single UI-copy catalog entry, appending any findings to *result*."""
+    if not isinstance(item, dict):
+        result.errors.append(f"{key}: catalog entry must be an object")
+        return
+    text = item.get("text")
+    owner = item.get("owner")
+    if not _is_non_empty_string(text):
+        result.errors.append(f"{key}: text must be a non-empty string")
+    if not _is_non_empty_string(owner):
+        result.errors.append(f"{key}: owner must be a non-empty string")
+        return
+    owner_path = _resolve_owner(repo_root, str(owner))
+    if not owner_path.is_file():
+        result.errors.append(f"{key}: owner file does not exist: {owner}")
+        return
+    owner_text = owner_path.read_text(encoding="utf-8")
+    if key not in used_keys:
+        message = f"{key}: unused UI copy key"
+        if strict:
+            result.errors.append(message)
+        else:
+            result.warnings.append(message)
+    if isinstance(text, str) and text and text in owner_text:
+        result.errors.append(f"{key}: literal catalog text remains in {owner}")
 
 
 def validate_glossary(repo_root: Path, *, strict: bool = False) -> ValidationResult:

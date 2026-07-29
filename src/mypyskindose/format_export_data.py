@@ -268,7 +268,11 @@ class EventOutput:
         }
 
 
-@dataclass
+# eq=False keeps identity-based equality/hashing (the pre-dataclass behaviour).
+# A generated __eq__ would compare ndarray/DataFrame fields (dose_map, data_norm)
+# element-wise and raise "ambiguous truth value", and would also make instances
+# unhashable.
+@dataclass(eq=False)
 class PySkinDoseOutput:
     """A collection of the information resulting from the PySkinDose analysis
 
