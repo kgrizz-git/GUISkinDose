@@ -190,6 +190,94 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: List[float], event: int
     return k_med
 
 
+def _match_device_rows(tab: pd.DataFrame, model: str, plane: str) -> pd.DataFrame:
+    """Filter the attenuation table to the rows for ``model`` (or its de-spaced
+    form) on ``plane``. Pure row filter; no caching."""
+    return tab[
+        tab["device_model"].isin([model, model.replace(" ", "")]) & (tab["acquisition_plane"] == plane)
+    ]
+
+
+def _interpolate_off_grid(
+    rows: pd.DataFrame,
+    model: str,
+    plane: str,
+    kvp: float,
+    cu: float,
+    al: float,
+    pivot_cache: dict[tuple[str, str, float], pd.DataFrame],
+) -> tuple[float, str]:
+    """Snap Al to the nearest measured grid value, build-or-reuse the
+    ``(kVp × Cu)`` pivot for this ``(model, plane, Al)`` slice, and run a
+    clamped ``RegularGridInterpolator`` lookup.
+
+    ``pivot_cache`` is initialised by ``calculate_k_tab`` and threaded through
+    each event so the pivot table is only built once per ``(model, plane,
+    Al-snapped)`` key. The key is derived from the *input* ``model``/``plane``
+    (not ``rows``) so callers using a spaced alias and the de-spaced DB form
+    share a single cache slot, matching the pre-refactor behaviour.
+
+    Returns ``(value, status)`` where ``status`` is ``STATUS_CLAMPED`` if Al was
+    snapped off the query or the rgi lookup clamped, else the underlying
+    ``STATUS_EXACT`` / ``STATUS_INTERPOLATED``.
+    """
+    al_grid = np.sort(np.unique(rows["filtration_added_mmal"].to_numpy(dtype=float)))
+    al_snap = float(al_grid[int(np.abs(al_grid - round(al)).argmin())])
+
+    cache_key = (model, str(plane), al_snap)
+    piv = pivot_cache.get(cache_key)
+    if piv is None:
+        sl = rows[rows["filtration_added_mmal"] == al_snap]
+        piv = sl.pivot_table(index="kvp_kv", columns="filtration_added_mmcu", values="k_patient_support")
+        pivot_cache[cache_key] = piv
+
+    cu_axis = piv.columns.to_numpy(dtype=float)
+    al_clamped = al_snap != round(al)
+    if len(cu_axis) >= 2:
+        kv_axis = piv.index.to_numpy(dtype=float)
+        rgi = RegularGridInterpolator((kv_axis, cu_axis), piv.to_numpy(dtype=float))
+        value, status = clamped_rgi_lookup(rgi, kv_axis, cu_axis, kvp, cu)
+    else:
+        # Single Cu column — no Cu axis to interpolate; the integer kVp node is
+        # exact after clamping to the table's kVp range.
+        kv_axis = piv.index.to_numpy(dtype=float)
+        kv_c = float(np.clip(round(kvp), kv_axis[0], kv_axis[-1]))
+        value = float(np.interp(kv_c, kv_axis, piv.to_numpy(dtype=float)[:, 0]))
+        status = STATUS_CLAMPED if (kv_c != round(kvp) or cu != cu_axis[0]) else STATUS_EXACT
+
+    return value, STATUS_CLAMPED if (al_clamped or status == STATUS_CLAMPED) else status
+
+
+def _log_k_tab_warnings(
+    n: int,
+    no_device: List[int],
+    interpolated: List[int],
+    clamped: List[int],
+) -> None:
+    """Emit the three per-class k_tab WARNING summaries (no_device / interpolated /
+    clamped). Message strings are pinned by ``test_corrections.py`` and the golden
+    status classification — do not paraphrase."""
+    if no_device:
+        logger.warning(
+            "k_tab: %d of %d event(s) had no table-attenuation data for their "
+            "device model / acquisition plane and fall back to k_tab=1.0 (no table "
+            "correction). Affected event index(es): %s.",
+            len(no_device), n, format_event_indices(no_device),
+        )
+    if interpolated:
+        logger.warning(
+            "k_tab: %d of %d event(s) had a beam quality between tabulated grid "
+            "points and were linearly interpolated. Affected event index(es): %s.",
+            len(interpolated), n, format_event_indices(interpolated),
+        )
+    if clamped:
+        logger.warning(
+            "k_tab: %d of %d event(s) fell outside the tabulated grid and were "
+            "clamped to the nearest edge. Affected event index(es): %s.",
+            len(clamped), n, format_event_indices(clamped),
+        )
+
+
 def calculate_k_tab(
     data_norm: pd.DataFrame, corrections_db: str, estimate_k_tab: bool = False, k_tab_val: float = 0.8
 ) -> List[float]:
@@ -248,9 +336,7 @@ def calculate_k_tab(
         al = float(data_norm.filter_thickness_Al[event])
 
         # Match the device the same way the old SQL did: model or its de-spaced form.
-        rows = tab[
-            tab["device_model"].isin([model, model.replace(" ", "")]) & (tab["acquisition_plane"] == plane)
-        ]
+        rows = _match_device_rows(tab, model, plane)
         if len(rows) == 0:
             # Unknown device/plane — no measured correction. Fail soft to k_tab=1.0
             # (no table attenuation) rather than crashing.
@@ -267,57 +353,16 @@ def calculate_k_tab(
             k_tab[event] = float(cast(pd.Series, exact["k_patient_support"]).iloc[0])
             continue
 
-        # Off-grid within this device/plane: snap Al to the nearest measured value,
-        # then interpolate over (kVp, Cu) with edge clamping.
-        al_grid = np.sort(np.unique(rows["filtration_added_mmal"].to_numpy(dtype=float)))
-        al_snap = float(al_grid[int(np.abs(al_grid - round(al)).argmin())])
-
-        cache_key = (model, str(plane), al_snap)
-        piv = pivot_cache.get(cache_key)
-        if piv is None:
-            sl = rows[rows["filtration_added_mmal"] == al_snap]
-            piv = sl.pivot_table(index="kvp_kv", columns="filtration_added_mmcu", values="k_patient_support")
-            pivot_cache[cache_key] = piv
-
-        cu_axis = piv.columns.to_numpy(dtype=float)
-        al_clamped = al_snap != round(al)
-        if len(cu_axis) >= 2:
-            kv_axis = piv.index.to_numpy(dtype=float)
-            rgi = RegularGridInterpolator((kv_axis, cu_axis), piv.to_numpy(dtype=float))
-            value, status = clamped_rgi_lookup(rgi, kv_axis, cu_axis, kvp, cu)
-        else:
-            # Single Cu column — no Cu axis to interpolate; the integer kVp node is
-            # exact after clamping to the table's kVp range.
-            kv_axis = piv.index.to_numpy(dtype=float)
-            kv_c = float(np.clip(round(kvp), kv_axis[0], kv_axis[-1]))
-            value = float(np.interp(kv_c, kv_axis, piv.to_numpy(dtype=float)[:, 0]))
-            status = STATUS_CLAMPED if (kv_c != round(kvp) or cu != cu_axis[0]) else STATUS_EXACT
+        # Off-grid within this device/plane: snap Al, then interpolate over (kVp,
+        # Cu) with edge clamping.
+        value, status = _interpolate_off_grid(rows, model, plane, kvp, cu, al, pivot_cache)
         k_tab[event] = value
 
-        if status == STATUS_CLAMPED or al_clamped:
+        if status == STATUS_CLAMPED:
             clamped_events.append(event)
         elif status == STATUS_INTERPOLATED:
             interpolated_events.append(event)
 
-    n = len(data_norm)
-    if no_device_events:
-        logger.warning(
-            "k_tab: %d of %d event(s) had no table-attenuation data for their "
-            "device model / acquisition plane and fall back to k_tab=1.0 (no table "
-            "correction). Affected event index(es): %s.",
-            len(no_device_events), n, format_event_indices(no_device_events),
-        )
-    if interpolated_events:
-        logger.warning(
-            "k_tab: %d of %d event(s) had a beam quality between tabulated grid "
-            "points and were linearly interpolated. Affected event index(es): %s.",
-            len(interpolated_events), n, format_event_indices(interpolated_events),
-        )
-    if clamped_events:
-        logger.warning(
-            "k_tab: %d of %d event(s) fell outside the tabulated grid and were "
-            "clamped to the nearest edge. Affected event index(es): %s.",
-            len(clamped_events), n, format_event_indices(clamped_events),
-        )
+    _log_k_tab_warnings(len(data_norm), no_device_events, interpolated_events, clamped_events)
 
     return k_tab
