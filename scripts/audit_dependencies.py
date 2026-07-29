@@ -78,80 +78,83 @@ def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:
     return argv
 
 
-def main():
-    repo_root = Path(__file__).resolve().parent.parent
+def _probe_uv_audit(repo_root: Path) -> str | None:
+    """Return the uv binary path if it supports ``uv audit``, else None.
 
-    # Check if uv is installed in the system PATH
+    Contains the version-check (requires uv >= 0.11.19, the release that unhid
+    ``uv audit``), the ``uv.lock`` presence check, and the ``uv audit --help``
+    availability probe.
+    """
     uv_bin = shutil.which("uv")
+    if not uv_bin:
+        return None
 
-    # Check if uv.lock exists
     lock_file = repo_root / "uv.lock"
-    if uv_bin and not lock_file.exists():
+    if not lock_file.exists():
         print("INFO: 'uv.lock' not found. Falling back to active environment scan using pip-audit...")
         sys.stdout.flush()
-        uv_bin = None
+        return None
 
-    # Check uv version and availability (requires uv >= 0.11.19, the release that unhid 'uv audit')
-    if uv_bin:
-        try:
-            version_out = subprocess.run([uv_bin, "--version"], capture_output=True, text=True, check=True).stdout
-            match = re.search(r"uv\s+(\d+)\.(\d+)\.(\d+)", version_out)
-            if match:
-                major, minor, patch = map(int, match.groups())
-                if (major, minor, patch) < (0, 11, 19):
-                    print(
-                        f"INFO: 'uv' version {major}.{minor}.{patch} is too old "
-                        f"(requires 0.11.19+ for 'uv audit'). Falling back to pip-audit..."
-                    )
-                    sys.stdout.flush()
-                    uv_bin = None
-            else:
-                uv_bin = None
-        except Exception:
-            uv_bin = None
-
-    # Probe if uv audit subcommand is available
-    if uv_bin:
-        try:
-            probe = subprocess.run([uv_bin, "audit", "--help"], capture_output=True, text=True, cwd=repo_root)
-            if probe.returncode != 0:
-                print("INFO: 'uv audit' subcommand is not supported by this uv installation. Falling back to pip-audit...")
+    try:
+        version_out = subprocess.run([uv_bin, "--version"], capture_output=True, text=True, check=True).stdout
+        match = re.search(r"uv\s+(\d+)\.(\d+)\.(\d+)", version_out)
+        if match:
+            major, minor, patch = map(int, match.groups())
+            if (major, minor, patch) < (0, 11, 19):
+                print(
+                    f"INFO: 'uv' version {major}.{minor}.{patch} is too old "
+                    f"(requires 0.11.19+ for 'uv audit'). Falling back to pip-audit..."
+                )
                 sys.stdout.flush()
-                uv_bin = None
-        except Exception:
-            uv_bin = None
+                return None
+        else:
+            return None
+    except Exception:
+        return None
 
+    try:
+        probe = subprocess.run([uv_bin, "audit", "--help"], capture_output=True, text=True, cwd=repo_root)
+        if probe.returncode != 0:
+            print("INFO: 'uv audit' subcommand is not supported by this uv installation. Falling back to pip-audit...")
+            sys.stdout.flush()
+            return None
+    except Exception:
+        return None
+
+    return uv_bin
+
+
+def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str]) -> int:
+    """Build and run ``uv audit``; fall back to pip-audit on FileNotFoundError."""
+    print("Using 'uv audit' to check locked dependencies...")
+    sys.stdout.flush()
+
+    # In CI, enforce --locked so a stale uv.lock fails loudly. Locally, use --frozen to audit
+    # the committed lockfile as-is and avoid 'uv audit' relocking / downloading a CPython interpreter.
+    uv_extra = list(extra_args)
+    if os.environ.get("CI"):
+        if "--locked" not in uv_extra and "--frozen" not in uv_extra:
+            uv_extra.append("--locked")
+    else:
+        if "--frozen" not in uv_extra and "--locked" not in uv_extra:
+            uv_extra.append("--frozen")
+
+    audit_argv = build_uv_audit_argv(uv_bin, uv_extra)
+    try:
+        result = subprocess.run(audit_argv, cwd=repo_root)
+        return result.returncode
+    except FileNotFoundError:
+        # Fallback if shutil.which returned a path that is not executable
+        return _run_pip_audit_fallback(repo_root, extra_args)
+
+
+def _run_pip_audit_fallback(repo_root: Path, extra_args: list[str]) -> int:
+    """Run ``pip-audit`` mirroring tracked suppressions; exit non-zero if missing."""
     # Print general fallback message if uv was never found in the first place
-    if not uv_bin and shutil.which("uv") is None:
+    if shutil.which("uv") is None:
         print("INFO: 'uv' not found in PATH. Auditing active Python environment instead using pip-audit...")
         sys.stdout.flush()
 
-    # Pass any extra command line arguments (e.g. ignores) through
-    extra_args = sys.argv[1:]
-
-    if uv_bin:
-        print("Using 'uv audit' to check locked dependencies...")
-        sys.stdout.flush()
-
-        # In CI, enforce --locked so a stale uv.lock fails loudly. Locally, use --frozen to audit
-        # the committed lockfile as-is and avoid 'uv audit' relocking / downloading a CPython interpreter.
-        uv_extra = list(extra_args)
-        if os.environ.get("CI"):
-            if "--locked" not in uv_extra and "--frozen" not in uv_extra:
-                uv_extra.append("--locked")
-        else:
-            if "--frozen" not in uv_extra and "--locked" not in uv_extra:
-                uv_extra.append("--frozen")
-
-        audit_argv = build_uv_audit_argv(uv_bin, uv_extra)
-        try:
-            result = subprocess.run(audit_argv, cwd=repo_root)
-            sys.exit(result.returncode)
-        except FileNotFoundError:
-            # Fallback if shutil.which returned a path that is not executable
-            pass
-
-    # Fallback to pip-audit
     try:
         # Default to include descriptions, but allow overriding/extending via extra_args
         cmd = ["pip-audit"]
@@ -168,13 +171,25 @@ def main():
         cmd.extend(extra_args)
 
         result = subprocess.run(cmd, cwd=repo_root)
-        sys.exit(result.returncode)
+        return result.returncode
     except FileNotFoundError:
         print("ERROR: 'pip-audit' is not installed or not found in PATH.", file=sys.stderr)
         print("Please install pip-audit or uv to run dependency auditing:", file=sys.stderr)
         print("  pip install pip-audit", file=sys.stderr)
         print("  or install development dependencies: pip install -e '.[dev]'", file=sys.stderr)
-        sys.exit(1)
+        return 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    repo_root = Path(__file__).resolve().parent.parent
+    uv_bin = _probe_uv_audit(repo_root)
+    extra_args = sys.argv[1:] if argv is None else list(argv)
+
+    if uv_bin:
+        code = _run_uv_audit(uv_bin, repo_root, extra_args)
+    else:
+        code = _run_pip_audit_fallback(repo_root, extra_args)
+    sys.exit(code)
 
 if __name__ == "__main__":
     main()

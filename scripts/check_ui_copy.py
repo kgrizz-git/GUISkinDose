@@ -144,41 +144,68 @@ def validate_glossary(repo_root: Path, *, strict: bool = False) -> ValidationRes
         return result
     if data.get("schema_version") != 1:
         result.errors.append(f"{GLOSSARY_PATH}: schema_version must be 1")
+
     terms = data.get("terms")
     if not isinstance(terms, dict):
         result.errors.append(f"{GLOSSARY_PATH}: terms must be an object")
         return result
 
-    aliases: dict[str, str] = {}
+    collected_aliases: dict[str, str] = {}
     for term, item in terms.items():
-        if not isinstance(item, dict):
-            result.errors.append(f"{term}: glossary entry must be an object")
-            continue
-        for field_name in ("preferred", "definition", "aliases"):
-            if field_name != "aliases" and not _is_non_empty_string(item.get(field_name)):
-                result.errors.append(f"{term}: {field_name} must be a non-empty string")
-        definition = item.get("definition")
-        if isinstance(definition, str):
-            if not definition.endswith("."):
-                result.errors.append(f"{term}: definition must end with a period")
-            if len(definition) > 240:
-                result.errors.append(f"{term}: definition must be 240 characters or fewer")
-        entry_aliases = item.get("aliases")
-        if not isinstance(entry_aliases, list) or not all(_is_non_empty_string(alias) for alias in entry_aliases):
-            result.errors.append(f"{term}: aliases must be a list of non-empty strings")
-            continue
-        for alias in entry_aliases:
-            lowered = str(alias).lower()
-            if lowered in aliases:
-                result.errors.append(f"{term}: duplicate glossary alias {alias!r} also used by {aliases[lowered]}")
-            aliases[lowered] = str(term)
+        _validate_glossary_entry(term, item, collected_aliases, result, strict)
 
     warnings = _scan_terminology(repo_root)
-    if strict:
-        result.errors.extend(warnings)
-    else:
-        result.warnings.extend(warnings)
+    result.errors.extend(warnings if strict else [])
+    result.warnings.extend(warnings if not strict else [])
     return result
+
+
+def _validate_glossary_entry(
+    term: str,
+    item: dict,
+    aliases: dict[str, str],
+    result: ValidationResult,
+    strict: bool,
+) -> None:
+    if not isinstance(item, dict):
+        result.errors.append(f"{term}: glossary entry must be an object")
+        return
+
+    _check_mandatory_text_field(term, item, "preferred", result)
+    _check_definition(term, item, result)
+    _check_alias_duplicates(term, item, aliases, result)
+
+
+def _check_mandatory_text_field(
+    term: str, item: dict, field: str, result: ValidationResult
+) -> None:
+    if not _is_non_empty_string(item.get(field)):
+        result.errors.append(f"{term}: {field} must be a non-empty string")
+
+
+def _check_definition(term: str, item: dict, result: ValidationResult) -> None:
+    definition = item.get("definition")
+    if not isinstance(definition, str) or not definition:
+        result.errors.append(f"{term}: definition must be a non-empty string")
+        return
+    if not definition.endswith("."):
+        result.errors.append(f"{term}: definition must end with a period")
+    if len(definition) > 240:
+        result.errors.append(f"{term}: definition must be 240 characters or fewer")
+
+
+def _check_alias_duplicates(
+    term: str, item: dict, aliases: dict[str, str], result: ValidationResult
+) -> None:
+    raw_aliases = item.get("aliases")
+    if not isinstance(raw_aliases, list) or not all(_is_non_empty_string(a) for a in raw_aliases):
+        result.errors.append(f"{term}: aliases must be a list of non-empty strings")
+        return
+    for alias in raw_aliases:
+        lowered = str(alias).lower()
+        if lowered in aliases:
+            result.errors.append(f"{term}: duplicate glossary alias {alias!r} also used by {aliases[lowered]}")
+        aliases[lowered] = str(term)
 
 
 def _terminology_scan_files(repo_root: Path) -> list[Path]:

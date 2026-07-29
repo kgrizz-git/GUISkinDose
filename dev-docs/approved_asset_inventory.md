@@ -14,7 +14,7 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 171
+**Assets tracked:** 173
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
@@ -189,3 +189,5 @@ file revision.
 | [`src/mypyskindose/phantom_data/senior_female_reduced_3000t.stl`](../src/mypyskindose/phantom_data/senior_female_reduced_3000t.stl) | Opaque binary | Reduced (~3000 triangle) preview of human phantom mesh (senior_female) | ✅ Approved — KG (2026-07-24) | — | `a640957bcd21` |
 | [`src/mypyskindose/phantom_data/senior_male_arms_down_reduced_3000t.stl`](../src/mypyskindose/phantom_data/senior_male_arms_down_reduced_3000t.stl) | Opaque binary | Reduced (~3000 triangle) preview of human phantom mesh (senior_male_arms_down) | ✅ Approved — KG (2026-07-24) | — | `2dae9e1001e5` |
 | [`src/mypyskindose/phantom_data/senior_male_reduced_3000t.stl`](../src/mypyskindose/phantom_data/senior_male_reduced_3000t.stl) | Opaque binary | Reduced (~3000 triangle) preview of human phantom mesh (senior_male) | ✅ Approved — KG (2026-07-24) | — | `59bff7961b3e` |
+| [`tests/fixtures/golden/phantom_hudfrid_vertices.npy`](../tests/fixtures/golden/phantom_hudfrid_vertices.npy) | Opaque binary | Numeric-only human-phantom vertex golden fixture (float64 promoted from float32 source mesh) | ✅ Approved — KG (2026-07-28) | — | `8b2271f7c192` |
+| [`tests/fixtures/golden/phantom_hudfrid_normals.npy`](../tests/fixtures/golden/phantom_hudfrid_normals.npy) | Opaque binary | Numeric-only human-phantom per-vertex normals golden fixture (float64 promoted from float32 source mesh) | ✅ Approved — KG (2026-07-28) | — | `a2819181f1be` |

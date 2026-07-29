@@ -1920,6 +1920,28 @@
         "reviewer": "KG",
         "reviewed_on": "2026-07-24"
       }
+    },
+    {
+      "path": "tests/fixtures/golden/phantom_hudfrid_vertices.npy",
+      "sha256": "8b2271f7c192ba0f58772aa7b6d269713da3787a1f43163af9e75a726cd03d07",
+      "kind": "opaque_binary",
+      "purpose": "Numeric-only human-phantom vertex golden fixture (float64 promoted from float32 source mesh)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-28"
+      }
+    },
+    {
+      "path": "tests/fixtures/golden/phantom_hudfrid_normals.npy",
+      "sha256": "a2819181f1beb817d2ceec70ba24d549e476088ad5b252481d1435e39c2a041f",
+      "kind": "opaque_binary",
+      "purpose": "Numeric-only human-phantom per-vertex normals golden fixture (float64 promoted from float32 source mesh)",
+      "review": {
+        "status": "approved",
+        "reviewer": "KG",
+        "reviewed_on": "2026-07-28"
+      }
     }
   ]
 }

@@ -31,9 +31,9 @@ MODERN_CSS_RE = re.compile(
     r'MODERN_CSS\s*=\s*r"""(.*?)"""',
     re.DOTALL,
 )
-CSS_VAR_RE = re.compile(r"^\s*(--[\w-]+)\s*:\s*([^;]+);", re.MULTILINE)
+CSS_VAR_RE = re.compile(r"^\s*(--[\w-]+)\s*:\s*([^;\n]+);", re.MULTILINE)
 RADIAL_GRADIENT_RE = re.compile(
-    r"radial-gradient\(\s*at\s+([^,]+),\s*rgba\(([^)]+)\)\s+([^,]+),\s*transparent\s+([^)]+)\)",
+    r"radial-gradient\(\s*at\s+([^,\n]+),\s*rgba\(([^)\n]+)\)\s+([^,\n]+),\s*transparent\s+([^)\n]+)\)",
     re.IGNORECASE,
 )
 
