@@ -114,6 +114,39 @@ def _detect_schema(loaded: _RawLoad) -> str:
     return best_name
 
 
+def _dispatch_to_adapter(
+    schema: str,
+    loaded: _RawLoad,
+    path: Path,
+    settings: PyskindoseSettings | None,
+) -> InputAdapterResult | list[InputAdapterResult]:
+    """Run the adapter selected for *schema* and return its result.
+
+    Validates the per-schema ``settings`` requirement (the vendor adapters need
+    a PyskindoseSettings for manufacturer/model lookup) and dispatches to the
+    matching adapter's ``adapt``. Stub vendors raise NotImplementedError with
+    implementation guidance; an unrecognised schema raises ValueError.
+    """
+    if schema == "normalized":
+        return normalized_adapter.adapt(loaded, original_filename=path.name)
+    if schema in ("generic_rdsr_like", "radimetrics", "dosetrack"):
+        if settings is None:
+            raise ValueError(
+                f"settings is required for {schema} schema "
+                "(needed by rdsr_normalizer for manufacturer/model lookup)."
+            )
+        if schema == "generic_rdsr_like":
+            return generic_rdsr_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+        if schema == "radimetrics":
+            return radimetrics_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+        return dosetrack_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+    if schema in stubs.STUB_VENDORS:
+        stubs.raise_not_implemented(schema)
+    raise ValueError(
+        f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."
+    )
+
+
 @overload
 def read_and_normalize_input(
     file_path: str | Path,
@@ -200,36 +233,7 @@ def read_and_normalize_input(
     if schema == "auto":
         schema = _detect_schema(loaded)
 
-    if schema == "normalized":
-        result = normalized_adapter.adapt(loaded, original_filename=path.name)
-    elif schema == "generic_rdsr_like":
-        if settings is None:
-            raise ValueError(
-                "settings is required for generic_rdsr_like schema "
-                "(needed by rdsr_normalizer for manufacturer/model lookup)."
-            )
-        result = generic_rdsr_adapter.adapt(loaded, original_filename=path.name, settings=settings)
-    elif schema == "radimetrics":
-        if settings is None:
-            raise ValueError(
-                "settings is required for radimetrics schema "
-                "(needed by rdsr_normalizer for manufacturer/model lookup)."
-            )
-        result = radimetrics_adapter.adapt(loaded, original_filename=path.name, settings=settings)
-    elif schema == "dosetrack":
-        if settings is None:
-            raise ValueError(
-                "settings is required for dosetrack schema "
-                "(needed by rdsr_normalizer for manufacturer/model lookup)."
-            )
-        result = dosetrack_adapter.adapt(loaded, original_filename=path.name, settings=settings)
-    elif schema in stubs.STUB_VENDORS:
-        # Placeholder vendors — raises NotImplementedError with instructions.
-        stubs.raise_not_implemented(schema)
-    else:
-        raise ValueError(
-            f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."
-        )
+    result = _dispatch_to_adapter(schema, loaded, path, settings)
 
     # Propagate sheet_name into provenance for Excel files
     if suffix in (".xlsx", ".xlsm"):
