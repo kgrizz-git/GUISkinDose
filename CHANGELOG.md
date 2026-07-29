@@ -19,6 +19,17 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
 
 ### Changed
 
+- **SonarQube/Lizard Phase 4 — UI/CLI oversized functions** (2026-07-29) — decomposed three
+  high-NLOC flagged functions: `gui/tabs/settings.py:build` (246 → 9 NLOC) into
+  `_build_phantom_section` / `_build_physics_section` / `_build_visual_section`;
+  `gui/exam_loaders.py:load_tabular` (162 NLOC / CCN 15 → 14 NLOC / CCN 3) into
+  `_parse_tabular` / `_collect_preserved_flags` / `_append_multi_study_exams` /
+  `_append_single_study_exam` / `_finalize_tabular_state` / `_wrap_tabular_schema_detection`;
+  and `main.py:get_argument_parser` (158 NLOC) into a new `cli_args.py` module
+  (`_add_top_level_args` / `_add_input_args` / `_add_export_args` / `_add_gui_args`),
+  re-exported via `main.py` for API stability. No public API or `--help` output changes.
+  `main.py` dropped from 820 → 631 lines (under the 800-line CI gate).
+
 - **Protected scanner CI clarified** (2026-07-28) — renamed the token-gated SonarCloud step to state that it
   requires `SONAR_TOKEN`, added regression assertions for that guard and the privacy-gated CodeRabbit trigger, and
   corrected harness/privacy documentation for the protected-`main` Sonar and split PR-versus-`main` Gitleaks

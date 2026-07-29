@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pydicom
@@ -215,192 +216,245 @@ def load_tabular(
 
     Returns ``(ok, message)``.
     """
-    from mypyskindose.input_adapters.registry import (
-        SchemaDetectionError,
-        read_and_normalize_input,
-    )
+    from mypyskindose.input_adapters.registry import SchemaDetectionError
 
     try:
-        # T20: capture globals before reset; on re-parse keep current globals.
-        seed_d_lon = state.d_lon
-        seed_d_ver = state.d_ver
-        seed_d_lat = state.d_lat
-        if not replace_existing:
-            reset_global_offsets_on_new_load(state)
-        settings = build_settings(state, mode="calculate_dose")
-        schema = state.input_schema or "auto"
-
-        _raw = read_and_normalize_input(
-            file_path,
-            input_schema=schema,
-            settings=settings,
-            sheet_name=state.input_sheet_name,
-        )
-
-        # Re-parse of an existing entry (schema/sheet change): preserve the user's
-        # per-exam coordinate-transform flags across the re-parse, then drop the
-        # stale exam(s) now that the new parse has succeeded so the result replaces
-        # rather than duplicates them.
-        preserved_flags: list[dict] = []
-        if replace_existing:
-            preserved_flags = [
-                {
-                    "swap_lat_lon": m.get("swap_lat_lon", False),
-                    "flip_ap1": m.get("flip_ap1", False),
-                    "flip_ap2": m.get("flip_ap2", False),
-                    "flip_tx": m.get("flip_tx", False),
-                    "flip_ty": m.get("flip_ty", False),
-                    "flip_tz": m.get("flip_tz", False),
-                }
-                for m in state.loaded_exam_meta
-                if m.get("file_path") == file_path
-            ]
-            _drop_exams_for_path(state, file_path)
-
-        if isinstance(_raw, list):
-            # Multi-study file: append all exams. Coordinate transforms are applied
-            # per-exam (Phase 2.2): each exam keeps a pristine ``base_data`` copy
-            # and its own manual swap/flip flags (preserved across a re-parse).
-            new_exams = _raw
-            for j, exam in enumerate(new_exams):
-                schema_name = exam.provenance.schema_name
-                base = exam.normalized_data.copy()
-                if j < len(preserved_flags):
-                    flags = preserved_flags[j]
-                else:
-                    flags = {
-                        "swap_lat_lon": False,
-                        "flip_ap1": False,
-                        "flip_ap2": False,
-                        "flip_tx": False,
-                        "flip_ty": False,
-                        "flip_tz": False,
-                    }
-                exam.normalized_data = _apply_transform_flags(
-                    base, flags["swap_lat_lon"], flags["flip_ap1"],
-                    flags["flip_ap2"], schema_name,
-                    flip_tx=flags.get("flip_tx", False),
-                    flip_ty=flags.get("flip_ty", False),
-                    flip_tz=flags.get("flip_tz", False),
-                )
-                state.loaded_exams.append(exam)
-                state.loaded_exam_meta.append({
-                    "file_name": file_path.name,
-                    "file_path": file_path,
-                    "source_type": file_path.suffix.lstrip("."),
-                    "schema": schema_name,
-                    "sheet": state.input_sheet_name,
-                    "provenance": exam.provenance,
-                    "warnings": list(exam.warnings),
-                    "base_data": base,
-                    "swap_lat_lon": flags["swap_lat_lon"],
-                    "flip_ap1": flags["flip_ap1"],
-                    "flip_ap2": flags["flip_ap2"],
-                    "flip_tx": flags.get("flip_tx", False),
-                    "flip_ty": flags.get("flip_ty", False),
-                    "flip_tz": flags.get("flip_tz", False),
-                    # Tabular exports carry no normalization trans_offset, so the
-                    # auto-detected origin is zero; a manual override (Phase 2.5) is
-                    # then an absolute table-origin shift.
-                    "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
-                    "table_origin_override": None,
-                    "d_lon": seed_d_lon,
-                    "d_ver": seed_d_ver,
-                    "d_lat": seed_d_lat,
-                    "normalization_method": "Tabular",
-                })
-            result = _raw[0]  # use first exam's provenance for UI hints
-            total_events = sum(len(e.normalized_data) for e in new_exams)
-            msg = f"Loaded {len(new_exams)} exams, {total_events} total events"
-        else:
-            # Single-study file: keep a pristine base copy and apply the current
-            # global coordinate-transform flags (which _set_transform_defaults()
-            # finalises after this call). Storing base_data keeps the single-exam
-            # entry consistent with the per-exam engine, so it transitions cleanly
-            # if more files are added (Phase 2.2).
-            result = _raw
-            base = result.normalized_data.copy()
-            if replace_existing and preserved_flags:
-                flags = preserved_flags[0]
-            else:
-                flags = {
-                    "swap_lat_lon": state.swap_lat_lon,
-                    "flip_ap1": state.flip_ap1,
-                    "flip_ap2": state.flip_ap2,
-                    "flip_tx": False,
-                    "flip_ty": False,
-                    "flip_tz": False,
-                }
-            result.normalized_data = _apply_transform_flags(
-                base, flags["swap_lat_lon"], flags["flip_ap1"],
-                flags["flip_ap2"], result.provenance.schema_name,
-                flip_tx=flags.get("flip_tx", False),
-                flip_ty=flags.get("flip_ty", False),
-                flip_tz=flags.get("flip_tz", False),
-            )
-            state.loaded_exams.append(result)
-            state.loaded_exam_meta.append({
-                "file_name": file_path.name,
-                "file_path": file_path,
-                "source_type": file_path.suffix.lstrip("."),
-                "schema": result.provenance.schema_name,
-                "sheet": state.input_sheet_name,
-                "provenance": result.provenance,
-                "warnings": list(result.warnings),
-                "base_data": base,
-                "swap_lat_lon": flags["swap_lat_lon"],
-                "flip_ap1": flags["flip_ap1"],
-                "flip_ap2": flags["flip_ap2"],
-                "flip_tx": flags.get("flip_tx", False),
-                "flip_ty": flags.get("flip_ty", False),
-                "flip_tz": flags.get("flip_tz", False),
-                "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
-                "table_origin_override": None,
-                "d_lon": seed_d_lon,
-                "d_ver": seed_d_ver,
-                "d_lat": seed_d_lat,
-                "normalization_method": "Tabular",
-            })
-            msg = f"Loaded {len(result.normalized_data)} events ({result.provenance.schema_name})"
-
-        # Rebuild concat event preview from all loaded exams.
-        rebuild_rdsr_df(state)
-        on_exams_loaded(state)
-        state.is_multi_exam = len(state.loaded_exams) > 1
-
-        # Per-file state used by the import preview and schema re-parse path.
-        # The raw *view* shows the extracted source values (real headers, no
-        # pre-header banner/blank rows), not the verbatim header=None dump.
-        state.rdsr_raw_df = _raw_extracted_view(result)
-        state.file_path = file_path
-        if len(state.loaded_exams) == 1:
-            state.file_name = file_path.name
-        else:
-            state.file_name = f"{len(state.loaded_exams)} files"
-        state.import_provenance = result.provenance
-        state.import_warnings = list(result.warnings)
-        state.import_has_errors = False
-
-        state.manufacturer = ""
-        state.model = ""
-        state.normalization_method = "Tabular"
-        state.table_offset_x = 0.0
-        state.table_offset_y = 0.0
-        state.table_offset_z = 0.0
-        state.normalization_warnings = []
-
-        return True, msg
+        result, msg = _parse_tabular(file_path, state, replace_existing=replace_existing)
+        # Finalize stays inside the try so failures in the post-load state wiring
+        # (concat rebuild, provenance) surface as the graceful error below rather
+        # than propagating uncaught, matching the pre-refactor behaviour.
+        _finalize_tabular_state(state, file_path, result)
     except SchemaDetectionError as exc:
-        # Not a real parse error — the file just didn't clearly match a known
-        # vendor format. Record only its type, then guide the user to pick one.
-        _record_load_failure("TABULAR_SCHEMA_DETECTION", exc)
-        state.import_has_errors = True
-        return False, (
-            "Couldn't auto-detect this file's format. Open the “Input schema” "
-            "selector below and choose the matching format (e.g. Radimetrics CSV, "
-            "DoseTrack, Raw RDSR-like, or Normalized), then upload the file again."
-        )
+        return _wrap_tabular_schema_detection(state, exc)
     except Exception as exc:
         _record_load_failure("TABULAR_LOAD", exc)
         state.import_has_errors = True
         return False, "Could not read this file. Check the file and try again."
+
+    return True, msg
+
+
+def _parse_tabular(
+    file_path: Path,
+    state: AppState,
+    *,
+    replace_existing: bool = False,
+) -> tuple[Any, str]:
+    """Read a tabular file, build per-exam meta, append to ``state`` exam list.
+
+    Returns ``(result_for_finalize, message)`` where ``result_for_finalize`` is
+    the adapter result used by :func:`_finalize_tabular_state` for provenance /
+    raw view wiring. Raises ``SchemaDetectionError`` or any adapter error to be
+    translated by the caller.
+    """
+    from mypyskindose.input_adapters.registry import read_and_normalize_input
+
+    # T20: capture globals before reset; on re-parse keep current globals.
+    seed_d_lon = state.d_lon
+    seed_d_ver = state.d_ver
+    seed_d_lat = state.d_lat
+    if not replace_existing:
+        reset_global_offsets_on_new_load(state)
+    settings = build_settings(state, mode="calculate_dose")
+    schema = state.input_schema or "auto"
+
+    raw = read_and_normalize_input(
+        file_path,
+        input_schema=schema,
+        settings=settings,
+        sheet_name=state.input_sheet_name,
+    )
+
+    preserved_flags = _collect_preserved_flags(state, file_path, replace_existing)
+    if replace_existing:
+        _drop_exams_for_path(state, file_path)
+
+    if isinstance(raw, list):
+        return _append_multi_study_exams(raw, state, file_path, seed_d_lon, seed_d_ver, seed_d_lat, preserved_flags)
+    return _append_single_study_exam(raw, state, file_path, seed_d_lon, seed_d_ver, seed_d_lat, preserved_flags)
+
+
+def _collect_preserved_flags(
+    state: AppState, file_path: Path, replace_existing: bool
+) -> list[dict]:
+    """Collect per-exam coordinate-transform flags from prior loads of file_path."""
+    if not replace_existing:
+        return []
+    return [
+        {
+            "swap_lat_lon": m.get("swap_lat_lon", False),
+            "flip_ap1": m.get("flip_ap1", False),
+            "flip_ap2": m.get("flip_ap2", False),
+            "flip_tx": m.get("flip_tx", False),
+            "flip_ty": m.get("flip_ty", False),
+            "flip_tz": m.get("flip_tz", False),
+        }
+        for m in state.loaded_exam_meta
+        if m.get("file_path") == file_path
+    ]
+
+
+def _default_transform_flags(state: AppState) -> dict:
+    return {
+        "swap_lat_lon": state.swap_lat_lon,
+        "flip_ap1": state.flip_ap1,
+        "flip_ap2": state.flip_ap2,
+        "flip_tx": False,
+        "flip_ty": False,
+        "flip_tz": False,
+    }
+
+
+def _blank_transform_flags() -> dict:
+    return {
+        "swap_lat_lon": False,
+        "flip_ap1": False,
+        "flip_ap2": False,
+        "flip_tx": False,
+        "flip_ty": False,
+        "flip_tz": False,
+    }
+
+
+def _build_exam_meta_entry(
+    state: AppState,
+    file_path: Path,
+    schema_name: str,
+    base: pd.DataFrame,
+    provenance,
+    warnings,
+    flags: dict,
+    seed_d_lon: float,
+    seed_d_ver: float,
+    seed_d_lat: float,
+) -> dict:
+    """Construct a per-exam meta entry shared by single and multi-study paths."""
+    return {
+        "file_name": file_path.name,
+        "file_path": file_path,
+        "source_type": file_path.suffix.lstrip("."),
+        "schema": schema_name,
+        "sheet": state.input_sheet_name,
+        "provenance": provenance,
+        "warnings": list(warnings),
+        "base_data": base,
+        "swap_lat_lon": flags["swap_lat_lon"],
+        "flip_ap1": flags["flip_ap1"],
+        "flip_ap2": flags["flip_ap2"],
+        "flip_tx": flags.get("flip_tx", False),
+        "flip_ty": flags.get("flip_ty", False),
+        "flip_tz": flags.get("flip_tz", False),
+        # Tabular exports carry no normalization trans_offset, so the
+        # auto-detected origin is zero; a manual override (Phase 2.5) is
+        # then an absolute table-origin shift.
+        "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "table_origin_override": None,
+        "d_lon": seed_d_lon,
+        "d_ver": seed_d_ver,
+        "d_lat": seed_d_lat,
+        "normalization_method": "Tabular",
+    }
+
+
+def _append_multi_study_exams(
+    raw_exams: list,
+    state: AppState,
+    file_path: Path,
+    seed_d_lon: float,
+    seed_d_ver: float,
+    seed_d_lat: float,
+    preserved_flags: list[dict],
+) -> tuple[Any, str]:
+    """Append every exam from a multi-study tabular file and rebuild concat preview."""
+    new_exams = raw_exams
+    for j, exam in enumerate(new_exams):
+        schema_name = exam.provenance.schema_name
+        base = exam.normalized_data.copy()
+        flags = preserved_flags[j] if j < len(preserved_flags) else _blank_transform_flags()
+        exam.normalized_data = _apply_transform_flags(
+            base, flags["swap_lat_lon"], flags["flip_ap1"],
+            flags["flip_ap2"], schema_name,
+            flip_tx=flags.get("flip_tx", False),
+            flip_ty=flags.get("flip_ty", False),
+            flip_tz=flags.get("flip_tz", False),
+        )
+        state.loaded_exams.append(exam)
+        state.loaded_exam_meta.append(
+            _build_exam_meta_entry(
+                state, file_path, schema_name, base, exam.provenance, exam.warnings,
+                flags, seed_d_lon, seed_d_ver, seed_d_lat,
+            )
+        )
+    result_for_finalize = raw_exams[0]  # use first exam's provenance for UI hints
+    total_events = sum(len(e.normalized_data) for e in new_exams)
+    msg = f"Loaded {len(new_exams)} exams, {total_events} total events"
+    return result_for_finalize, msg
+
+
+def _append_single_study_exam(
+    result,
+    state: AppState,
+    file_path: Path,
+    seed_d_lon: float,
+    seed_d_ver: float,
+    seed_d_lat: float,
+    preserved_flags: list[dict],
+) -> tuple[Any, str]:
+    """Append a single-exam tabular file and rebuild concat preview."""
+    base = result.normalized_data.copy()
+    flags = preserved_flags[0] if (preserved_flags) else _default_transform_flags(state)
+    result.normalized_data = _apply_transform_flags(
+        base, flags["swap_lat_lon"], flags["flip_ap1"],
+        flags["flip_ap2"], result.provenance.schema_name,
+        flip_tx=flags.get("flip_tx", False),
+        flip_ty=flags.get("flip_ty", False),
+        flip_tz=flags.get("flip_tz", False),
+    )
+    state.loaded_exams.append(result)
+    state.loaded_exam_meta.append(
+        _build_exam_meta_entry(
+            state, file_path, result.provenance.schema_name, base, result.provenance, result.warnings,
+            flags, seed_d_lon, seed_d_ver, seed_d_lat,
+        )
+    )
+    msg = f"Loaded {len(result.normalized_data)} events ({result.provenance.schema_name})"
+    return result, msg
+
+
+def _finalize_tabular_state(state: AppState, file_path: Path, result) -> None:
+    """Apply shared post-load state: concat preview, file naming, provenance, offsets."""
+    rebuild_rdsr_df(state)
+    on_exams_loaded(state)
+    state.is_multi_exam = len(state.loaded_exams) > 1
+
+    # Per-file state used by the import preview and schema re-parse path.
+    # The raw *view* shows the extracted source values (real headers, no
+    # pre-header banner/blank rows), not the verbatim header=None dump.
+    state.rdsr_raw_df = _raw_extracted_view(result)
+    state.file_path = file_path
+    if len(state.loaded_exams) == 1:
+        state.file_name = file_path.name
+    else:
+        state.file_name = f"{len(state.loaded_exams)} files"
+    state.import_provenance = result.provenance
+    state.import_warnings = list(result.warnings)
+    state.import_has_errors = False
+
+    state.manufacturer = ""
+    state.model = ""
+    state.normalization_method = "Tabular"
+    state.table_offset_x = 0.0
+    state.table_offset_y = 0.0
+    state.table_offset_z = 0.0
+    state.normalization_warnings = []
+
+
+def _wrap_tabular_schema_detection(state: AppState, exc: BaseException) -> tuple[bool, str]:
+    """Translate a SchemaDetectionError into the user-facing retry hint."""
+    _record_load_failure("TABULAR_SCHEMA_DETECTION", exc)
+    state.import_has_errors = True
+    return False, (
+        "Couldn't auto-detect this file's format. Open the “Input schema” "
+        "selector below and choose the matching format (e.g. Radimetrics CSV, "
+        "DoseTrack, Raw RDSR-like, or Normalized), then upload the file again."
+    )

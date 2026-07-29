@@ -231,7 +231,7 @@ The per-vendor column name sets belong in their respective adapter modules. `col
 
 **`plotting/` fragmentation:** 15 files for plotting, many with 1–2 functions each. No shared base for common figure styling (colors, fonts, layout defaults). Style changes require touching every file.
 
-**`main.py` CLI parsing (274 lines):** The argparse setup is long but not a refactoring priority — it's mostly inert declarative code.
+**`main.py` CLI parsing (274 lines):** The argparse setup is long but not a refactoring priority — it's mostly inert declarative code. _Resolved 2026-07-29 — Phase 4c extracted the parser into `cli_args.py` (per-flag helpers) and `main.py` dropped below the 800-line ceiling; see `tmp/20260728T193500Z_sonar_lizard_issues_plan.md`._
 
 **`phantom_class.py`:** `Phantom` class has methods that do geometric computation and methods that do visualization. These are different concerns and could be separated, but the class is 367 lines and manageable as-is.
 
