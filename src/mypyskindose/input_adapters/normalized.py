@@ -193,12 +193,121 @@ def _build_column_map(
     return column_map, errors
 
 
+def _parse_column_map(
+    raw_headers: list[str], warnings: list[str]
+) -> tuple[dict[str, str], list[str]]:
+    """Thin wrapper over :func:`_build_column_map` for the normalized schema.
+
+    Returns ``(column_map, errors)`` exactly as produced by the underlying
+    case-insensitive exact-match mapper.
+    """
+    return _build_column_map(raw_headers, warnings)
+
+
+def _coerce_numeric_and_units(data_df: pd.DataFrame, warnings: list[str]) -> pd.DataFrame:
+    """Coerce every :data:`_NUMERIC_COLUMNS` member present in ``data_df``.
+
+    Delegates per-column coercion to :func:`_coerce_numeric`, which handles
+    decimal-comma replacement and emits NaN-replacement warnings. The data is
+    already in internal units at this layer, so no unit conversion is applied
+    here — see :func:`base.convert_dap_series_to_gym2` for the DAP special case.
+    """
+    for col in _NUMERIC_COLUMNS:
+        if col in data_df.columns:
+            data_df[col] = _coerce_numeric(data_df[col].astype(str), col, warnings)
+    return data_df
+
+
+def _validate_normalized(data_df: pd.DataFrame, column_map: dict[str, str]) -> list[str]:
+    """Return blocking validation errors for the renamed, coerced DataFrame.
+
+    Empty list means valid. Currently checks that every canonical name in
+    ``column_map`` is present among ``data_df``'s columns — a defensive guard
+    that the rename + column-select step produced the expected schema.
+    """
+    if not set(column_map.values()).issubset(set(data_df.columns)):
+        return [f"Expected column names (case-insensitive): {sorted(NORMALIZED_COLUMN_NAMES)}."]
+    return []
+
+
+def _locate_study_id_values(
+    raw_headers: list[str],
+    raw_df: "pd.DataFrame",
+    data_df: pd.DataFrame,
+    header_idx: int,
+) -> pd.Series | None:
+    """Locate the study-identifier column in priority order; return its values aligned to data_df.
+
+    Returns None when no priority column is present in the raw headers.
+    The returned Series is index-aligned to ``data_df`` so a downstream
+    ``groupby`` keeps the right rows together.
+    """
+    raw_headers_lower = {h.strip().lower() for h in raw_headers}
+    for sid_col in _STUDY_ID_PRIORITY:
+        if sid_col not in raw_headers_lower:
+            continue
+        actual_col = next(h for h in raw_headers if h.strip().lower() == sid_col)
+        if actual_col in data_df.columns:
+            return data_df[actual_col].astype(str).str.strip()
+        # Study-ID column was not mapped into canonical data_df.
+        # Reconstruct from raw and align to data_df's (possibly non-contiguous) index.
+        raw_data_df = raw_df.iloc[header_idx + 1 :].copy()
+        raw_data_df.columns = pd.Index(raw_headers)
+        raw_data_df = raw_data_df.reset_index(drop=True)
+        sid_all = raw_data_df[actual_col].astype(str).str.strip()
+        return sid_all.loc[data_df.index]
+    return None
+
+
+def _split_multi_study(
+    data_df: pd.DataFrame,
+    sid_values: pd.Series,
+    provenance: InputProvenance,
+    warnings: list[str],
+) -> list[InputAdapterResult]:
+    """Build one InputAdapterResult per distinct study id, in order of first appearance."""
+    temp_col = "__study_id__"
+    data_df = data_df.copy()
+    data_df[temp_col] = sid_values  # index-aligned; pandas aligns by index
+    results: list[InputAdapterResult] = []
+    for study_id_val, group_df in data_df.groupby(temp_col, sort=False):
+        group_df = group_df.drop(columns=[temp_col]).reset_index(drop=True)
+        results.append(
+            InputAdapterResult(
+                normalized_data=group_df,
+                raw_data=None,
+                provenance=InputProvenance(
+                    source_type=provenance.source_type,
+                    schema_name=provenance.schema_name,
+                    original_filename=provenance.original_filename,
+                    header_row_index=provenance.header_row_index,
+                    detected_encoding=provenance.detected_encoding,
+                    detected_delimiter=provenance.detected_delimiter,
+                    sheet_name=provenance.sheet_name,
+                    column_map=dict(provenance.column_map),
+                    unit_conversions=dict(provenance.unit_conversions),
+                    warnings=list(warnings),
+                ),
+                warnings=list(warnings),
+                study_id=str(study_id_val),
+            )
+        )
+    return results
+
+
 def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list[InputAdapterResult]:
     """Convert a raw-loaded file to a normalized InputAdapterResult.
 
     Returns a list of InputAdapterResult when multiple study identifiers are
     detected (one per distinct study ID, in order of first appearance).
     Raises ValueError on blocking errors (missing required columns, duplicates).
+
+    No vendor coordinate correction is applied here: ``swap_lateral_longitudinal``
+    and the ``Ap1``/``Ap2`` sign flips are applied downstream in
+    :mod:`rdsr_normalizer` (or the GUI), and the DAP Gy·cm² → Gy·m² conversion
+    runs in the base adapter pipeline (:func:`base.convert_dap_series_to_gym2`).
+    The provenance ``unit_conversions`` is therefore left empty — the data is
+    already in internal units.
     """
     warnings: list[str] = []
     raw_df = loaded.raw_df
@@ -206,46 +315,27 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list
     # 1. Detect header row
     header_idx = detect_header_row(raw_df, NORMALIZED_HEADER_NAMES)
 
-    # 2. Extract headers and data (shared with the rdsr-normalizer pipeline)
+    # 2. Extract headers and data
     raw_headers, data_df = extract_table(raw_df, header_idx)
 
     # 3. Map columns (case-insensitive exact match for normalized schema)
-    column_map, errors = _build_column_map(raw_headers, warnings)
+    column_map, errors = _parse_column_map(raw_headers, warnings)
     if errors:
         raise ValueError("\n".join(errors))
 
-    # Rename to canonical names
+    # Rename to canonical names and keep only mapped columns
     rename = {src: canon for src, canon in column_map.items() if src in data_df.columns}
     data_df = data_df.rename(columns=rename)
-
-    # Keep only mapped columns
     canonical_cols = list(column_map.values())
     data_df = data_df[[c for c in canonical_cols if c in data_df.columns]]
 
-    # 4. Locate study-identifier column for multi-study split detection.
-    #    Iterate in priority order; stop at the first match.
-    raw_headers_lower = {h.strip().lower() for h in raw_headers}
-    _sid_values: pd.Series | None = None
-    for sid_col in _STUDY_ID_PRIORITY:
-        if sid_col not in raw_headers_lower:
-            continue
-        actual_col = next(h for h in raw_headers if h.strip().lower() == sid_col)
-        if actual_col in data_df.columns:
-            _sid_values = data_df[actual_col].astype(str).str.strip()
-        else:
-            # Study-ID column was not mapped into canonical data_df.
-            # Reconstruct from raw and align to data_df's (possibly non-contiguous) index.
-            raw_data_df = raw_df.iloc[header_idx + 1 :].copy()
-            raw_data_df.columns = pd.Index(raw_headers)
-            raw_data_df = raw_data_df.reset_index(drop=True)
-            sid_all = raw_data_df[actual_col].astype(str).str.strip()
-            _sid_values = sid_all.loc[data_df.index]
-        break
+    # 4. Coerce numeric columns (decimal-comma handling, NaN fallback)
+    data_df = _coerce_numeric_and_units(data_df, warnings)
 
-    # 5. Coerce numeric columns
-    for col in _NUMERIC_COLUMNS:
-        if col in data_df.columns:
-            data_df[col] = _coerce_numeric(data_df[col].astype(str), col, warnings)
+    # 5. Validate the renamed/coerced frame
+    val_errors = _validate_normalized(data_df, column_map)
+    if val_errors:
+        raise ValueError("\n".join(val_errors))
 
     # 6. Build provenance
     provenance = InputProvenance(
@@ -262,34 +352,9 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list
     )
 
     # 7. Multi-study split: if >1 distinct study IDs, return one result per group.
-    if _sid_values is not None and _sid_values.nunique() > 1:
-        temp_col = "__study_id__"
-        data_df = data_df.copy()
-        data_df[temp_col] = _sid_values  # index-aligned; pandas aligns by index
-        results: list[InputAdapterResult] = []
-        for study_id_val, group_df in data_df.groupby(temp_col, sort=False):
-            group_df = group_df.drop(columns=[temp_col]).reset_index(drop=True)
-            results.append(
-                InputAdapterResult(
-                    normalized_data=group_df,
-                    raw_data=None,
-                    provenance=InputProvenance(
-                        source_type=provenance.source_type,
-                        schema_name=provenance.schema_name,
-                        original_filename=provenance.original_filename,
-                        header_row_index=provenance.header_row_index,
-                        detected_encoding=provenance.detected_encoding,
-                        detected_delimiter=provenance.detected_delimiter,
-                        sheet_name=provenance.sheet_name,
-                        column_map=dict(provenance.column_map),
-                        unit_conversions=dict(provenance.unit_conversions),
-                        warnings=list(warnings),
-                    ),
-                    warnings=list(warnings),
-                    study_id=str(study_id_val),
-                )
-            )
-        return results
+    sid_values = _locate_study_id_values(raw_headers, raw_df, data_df, header_idx)
+    if sid_values is not None and sid_values.nunique() > 1:
+        return _split_multi_study(data_df, sid_values, provenance, warnings)
 
     return InputAdapterResult(
         normalized_data=data_df,
