@@ -167,7 +167,9 @@ def _check_entry_files(
     if not source_path.is_file():
         result.errors.append(f"{context}: missing source help file {source_dir / source}")
     if not target_path.is_file():
-        result.errors.append(f"{context}: missing mirrored help file {target_dir / source}; run scripts/sync_gui_help.py")
+        result.errors.append(
+            f"{context}: missing mirrored help file {target_dir / source}; run scripts/sync_gui_help.py"
+        )
     elif source_path.is_file() and source_path.read_text(encoding="utf-8") != target_path.read_text(encoding="utf-8"):
         result.errors.append(f"{context}: mirrored help file is stale; run scripts/sync_gui_help.py")
 
@@ -181,15 +183,24 @@ def _check_gui_references(
     result: ValidationResult,
     strict: bool,
 ) -> None:
-    gui_files = entry.get("gui_files", [])
+    if "gui_files" in entry:
+        gui_files = entry["gui_files"]
+        if not isinstance(gui_files, list):
+            result.errors.append(f"{context}: 'gui_files' must be a list of file paths")
+            return
+    else:
+        gui_files = []
+
     gui_texts: list[str] = []
-    if isinstance(gui_files, list):
-        for gui_file in gui_files:
-            gui_path = repo_root / str(gui_file)
-            if not gui_path.is_file():
-                result.errors.append(f"{context}: missing GUI file {gui_file}")
-                continue
-            gui_texts.append(gui_path.read_text(encoding="utf-8"))
+    for gui_file in gui_files:
+        if not isinstance(gui_file, (str, Path)):
+            result.errors.append(f"{context}: GUI file paths must be strings, got {type(gui_file)}")
+            continue
+        gui_path = repo_root / str(gui_file)
+        if not gui_path.is_file():
+            result.errors.append(f"{context}: missing GUI file {gui_file}")
+            continue
+        gui_texts.append(gui_path.read_text(encoding="utf-8"))
 
     if not gui_texts:
         return

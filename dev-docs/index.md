@@ -160,6 +160,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/sonarqube_remediation_plan.md](plans/sonarqube_remediation_plan.md) | Phased remediation plan to address the 292 open SonarQube issues in the MyPySkinDose codebase, prioritizing bug fixes and core complexity reduction. |
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
+| [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
 
 ## Archived plans (`plans/archive/`)
 

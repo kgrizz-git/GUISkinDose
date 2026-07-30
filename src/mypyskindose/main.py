@@ -1,7 +1,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, TYPE_CHECKING
 
 import pandas as pd
 
@@ -23,6 +23,9 @@ from mypyskindose.helpers.parse_settings_to_settings_class import (
 from mypyskindose.helpers.read_and_normalize_rdsr_data import read_and_normalise_rdsr_data
 from mypyskindose.privacy import install_value_safe_excepthook, opaque_exam_label, safe_user_error, safe_warning
 from mypyskindose.settings import PyskindoseSettings
+
+if TYPE_CHECKING:
+    import argparse
 
 logger = logging.getLogger(__name__)
 
@@ -528,7 +531,7 @@ def run_cli_export(
     return Path(export_path)
 
 
-def get_argument_parser(arguments):
+def get_argument_parser(arguments) -> "argparse.Namespace":
     """Parse CLI argv into an argparse Namespace for mypyskindose.
 
     Thin re-export of :func:`mypyskindose.cli_args.get_argument_parser` (Phase 4c
