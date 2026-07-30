@@ -2,7 +2,7 @@
 
 Reference for expanding MyPySkinDose’s human STL library: what is already shipped, preferred generation paths, external sources, and the mesh requirements the dose engine depends on.
 
-For the **agent-executable generation pipeline** (catalog, headless MPFB/Blender, validation gates), see [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). This page is the broader source survey and integration checklist; that plan is the runbook.
+For the **agent-executable generation pipeline** (catalog, headless MPFB/Blender, validation gates), see [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). This page is the broader source survey and integration checklist; that plan is the runbook.
 
 Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDINATE_SYSTEMS.md`](VENDOR_COORDINATE_SYSTEMS.md) and [`INPUT_DATA_FLOW_AND_OFFSETS.md`](INPUT_DATA_FLOW_AND_OFFSETS.md).
 
@@ -40,7 +40,7 @@ not for shipping new body shapes (see below).
 
 **Policy:** shipped phantoms must have **true shape variety** (parametric phenotype / regional morph targets), not global affine stretches of existing STLs.
 
-1. **Headless MPFB under Blender** — primary path. Catalog presets + `scripts/phantom_gen/` produce full-body meshes in the MyPySkinDose frame. See [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phases 0–4 complete; v1 catalog meshes shipped).
+1. **Headless MPFB under Blender** — primary path. Catalog presets + `scripts/phantom_gen/` produce full-body meshes in the MyPySkinDose frame. See [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phases 0–4 complete; v1 catalog meshes shipped).
 2. **MakeHuman standalone GUI** — same asset family as MPFB; use only if headless automation is blocked and a hybrid hand-export path is explicitly approved. Extreme-weight models are not Class-III bariatric fidelity.
 3. **GUI `scale_*` on a shipped mesh** — acceptable for interactive “what if” habitus checks; **not** a shipping method for new catalog rows.
 
@@ -208,7 +208,7 @@ With a known anterior LAO (or similar) projection on a trusted RDSR, PSD should 
 
 - [`plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — **completed v1** (Petite blocked): Cosmic Buddha, Ramesses II, Steamboat
 - [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](plans/FUN_DEMO_PHANTOMS_PLAN.md) — broader backlog (Venus/David D1, Phase 2 PD cartoons)
-- [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — generation runbook and catalog policy
+- [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — generation runbook and catalog policy
 - [`assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md`](assessments/MPFB_HEADLESS_SPIKE_2026-07-21.md) — Phase 0 headless spike result
 - [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) — stylized, cartoon, and public-domain figure mesh sources
 - [`VENDOR_COORDINATE_SYSTEMS.md`](VENDOR_COORDINATE_SYSTEMS.md) — physical vs plot-label coordinates

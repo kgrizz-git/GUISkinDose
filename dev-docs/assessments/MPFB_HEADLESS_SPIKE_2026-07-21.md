@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-21  
 **Status:** **PASS**  
-**Plan:** [`dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)
+**Plan:** [`dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)
 
 ## Environment
 

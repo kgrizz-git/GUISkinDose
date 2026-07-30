@@ -398,6 +398,10 @@ secret, also review:
 
 ## 6. Packaging, releases, and documentation
 
+**Hub:** [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) — channels (PyPI, GitHub Release,
+source install, deferred portable GUI), changelog vs user-facing Release notes, and the condensed
+checklist. PyPI Trusted Publishing detail: [PUBLISHING.md](../PUBLISHING.md).
+
 ### Package metadata
 
 Before each release, review pyproject.toml:
@@ -427,7 +431,7 @@ maintainer document.
 
 ### Release checklist
 
-Use a release pull request or written checklist:
+Prefer the hub checklist in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Summary:
 
 1. Sync or explicitly compare upstream and record the result.
 2. Confirm main is green and every included pull request has a clear review trail.
@@ -439,8 +443,9 @@ Use a release pull request or written checklist:
    validate package metadata.
 6. Verify no fixture, report, screenshot, release artifact, log, or Action
    output contains identifiers, private paths, credentials, or unapproved assets.
-7. Create a reviewed tag from the exact main commit. Verify the release workflow
-   published the expected version and retained expected artifacts.
+7. Create a reviewed GitHub Release from the exact main commit with **user-facing**
+   notes (not a dump of every CI/refactor CHANGELOG line — see the hub). Verify
+   `release.yml` published the expected version and retained expected artifacts.
 8. Publish concise release notes: changes, upgrade notes, validation limits,
    known issues, and contributor credit.
 

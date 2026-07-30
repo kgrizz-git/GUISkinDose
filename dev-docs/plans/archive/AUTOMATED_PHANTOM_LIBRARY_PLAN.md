@@ -1,5 +1,8 @@
 # Automated Phantom Library Plan
 
+> **Status:** **Completed** (Phases 0–4; archived 2026-07-30). Further phantom expansion and
+> custom-mesh import remain in `dev-docs/TO_DO.md` / `ADDITIONAL_PHANTOMS.md`.
+>
 > **For agentic workers:** Execute task-by-task. Prefer headless automation over GUI tools.
 > Steps use checkbox (`- [ ]`) syntax. Mark a checkbox only after the step is fully done and verified.
 >

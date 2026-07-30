@@ -5,6 +5,9 @@
 > and stays **inert** unless you deliberately create a GitHub Release. You do not need
 > to do anything here for normal development.
 
+For the full release map (changelog vs GitHub notes, SemVer, portable executables, checklist), see
+[dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
+
 ## How releasing works now
 
 `.github/workflows/release.yml` runs only on a **GitHub Release (`created`)** event. It:
@@ -38,8 +41,9 @@ Trusted Publishing needs a one-time registration on PyPI so it will trust this r
    "no `PYPI_*` secret" state actually true.
 
 That's it — no long-lived secret once the cleanup above is done. To cut a release afterward: bump
-the version in `pyproject.toml`, create a GitHub Release, and the workflow builds, scans, and
-publishes.
+the version in `pyproject.toml`, fold `CHANGELOG.md`, write **user-facing** GitHub Release notes
+(see [RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md) — do not dump every CI/refactor
+bullet), create the GitHub Release, and the workflow builds, scans, and publishes.
 
 ## If you never plan to publish
 

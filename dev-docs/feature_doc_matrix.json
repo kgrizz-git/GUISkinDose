@@ -16,6 +16,7 @@
       "docs": [
         "dev-docs/INPUT_SCHEMA_DETECTION.md",
         "dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md",
+        "dev-docs/INPUT_FIELD_REFERENCE.md",
         "dev-docs/FEATURE_INVENTORY.md",
         "AGENTS.md"
       ],

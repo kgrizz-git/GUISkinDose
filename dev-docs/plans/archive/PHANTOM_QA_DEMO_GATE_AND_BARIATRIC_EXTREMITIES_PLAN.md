@@ -30,7 +30,7 @@ isProject: false
 
 **Goal:** Improve shipped phantom UX: demos off by default behind a local flag, Ramesses never listed, Steamboat re-rolled supine, pediatric 5y male face-up fixed, and new bariatric “thick extremities” variants alongside the current class-II meshes.
 
-**Architecture:** GUI mesh options become an ordered clinical list + optional Demo section controlled by `show_demo_phantoms` in existing [`~/.mypyskindose/gui.json`](../../src/mypyskindose/gui/window_prefs.py) (not committed; default missing/false). Mesh binaries stay on disk; loaders still accept known stems. Clinical orientation fixes go through `transform_to_psd_frame` / catalog regenerate; Steamboat via fun-manifest `rotate_deg` rediscovery. Bariatric limb-bulk rows are new `catalog_v1.json` IDs generated with MPFB detail targets, keeping `bariatric_class2_*` unchanged.
+**Architecture:** GUI mesh options become an ordered clinical list + optional Demo section controlled by `show_demo_phantoms` in existing [`~/.mypyskindose/gui.json`](../../../src/mypyskindose/gui/window_prefs.py) (not committed; default missing/false). Mesh binaries stay on disk; loaders still accept known stems. Clinical orientation fixes go through `transform_to_psd_frame` / catalog regenerate; Steamboat via fun-manifest `rotate_deg` rediscovery. Bariatric limb-bulk rows are new `catalog_v1.json` IDs generated with MPFB detail targets, keeping `bariatric_class2_*` unchanged.
 
 **Tech stack:** NiceGUI `ui.select`, `window_prefs.load_gui_config` / `save_gui_config`, `scripts/phantom_gen/` (fun ingest + MPFB catalog), pytest.
 
@@ -50,13 +50,13 @@ isProject: false
 
 | File | Role |
 |------|------|
-| [`src/mypyskindose/gui/window_prefs.py`](../../src/mypyskindose/gui/window_prefs.py) | Read/write `show_demo_phantoms` on existing `gui.json` |
-| [`src/mypyskindose/gui/helpers.py`](../../src/mypyskindose/gui/helpers.py) | `GUI_HIDDEN_HUMAN_MESHES`, ordered `get_human_mesh_options()`, demo gate |
-| [`src/mypyskindose/gui/tabs/settings.py`](../../src/mypyskindose/gui/tabs/settings.py) | Wire select options; reject selecting separator key |
-| [`scripts/phantom_gen/fun_mesh_manifest.json`](../../scripts/phantom_gen/fun_mesh_manifest.json) | Steamboat `rotate_deg` rediscovery + lock |
-| [`scripts/phantom_gen/catalog_v1.json`](../../scripts/phantom_gen/catalog_v1.json) | New thick-extremities rows; pediatric regen if needed |
-| [`scripts/phantom_gen/run_catalog.py`](../../scripts/phantom_gen/run_catalog.py) | Clinical face-up validation step |
-| [`scripts/phantom_gen/validate_phantom.py`](../../scripts/phantom_gen/validate_phantom.py) | Optional side-lying / face-up helpers for clinical path |
+| [`src/mypyskindose/gui/window_prefs.py`](../../../src/mypyskindose/gui/window_prefs.py) | Read/write `show_demo_phantoms` on existing `gui.json` |
+| [`src/mypyskindose/gui/helpers.py`](../../../src/mypyskindose/gui/helpers.py) | `GUI_HIDDEN_HUMAN_MESHES`, ordered `get_human_mesh_options()`, demo gate |
+| [`src/mypyskindose/gui/tabs/settings.py`](../../../src/mypyskindose/gui/tabs/settings.py) | Wire select options; reject selecting separator key |
+| [`scripts/phantom_gen/fun_mesh_manifest.json`](../../../scripts/phantom_gen/fun_mesh_manifest.json) | Steamboat `rotate_deg` rediscovery + lock |
+| [`scripts/phantom_gen/catalog_v1.json`](../../../scripts/phantom_gen/catalog_v1.json) | New thick-extremities rows; pediatric regen if needed |
+| [`scripts/phantom_gen/run_catalog.py`](../../../scripts/phantom_gen/run_catalog.py) | Clinical face-up validation step |
+| [`scripts/phantom_gen/validate_phantom.py`](../../../scripts/phantom_gen/validate_phantom.py) | Optional side-lying / face-up helpers for clinical path |
 | Docs: `CHANGELOG`, `AGENTS`, `ADDITIONAL_PHANTOMS`, `FEATURE_INVENTORY`, help, `TO_DO`, `index.md` | Status + how to enable demos |
 
 ```mermaid
@@ -123,7 +123,7 @@ def show_demo_phantoms_enabled() -> bool:
 **Files:** `run_catalog.py` / transform path, possibly `catalog_v1.json`, shipped `pediatric_5y_male*.stl`, inventory, assessments note
 
 - Confirm in Settings preview vs `pediatric_5y_female` (current numeric face-up heuristic alone can be misleading).
-- Fix by regenerating through catalog with corrected AP flip (today [`run_catalog.py`](../../scripts/phantom_gen/run_catalog.py) always `force_flip_y=True` — add per-entry override if only male is wrong, e.g. `"force_flip_y": false` in catalog expect/meta).
+- Fix by regenerating through catalog with corrected AP flip (today [`run_catalog.py`](../../../scripts/phantom_gen/run_catalog.py) always `force_flip_y=True` — add per-entry override if only male is wrong, e.g. `"force_flip_y": false` in catalog expect/meta).
 - Add **clinical** face-up check in `run_catalog` validate (reuse `face_up_ok` from `validate_phantom.py`) so P0 regen fails closed if face-down.
 - Reinstall STL + reduced, update inventory hashes, short assessment or provenance note.
 - Unit/integration: mesh still loads; optional synthetic test for catalog face-up step.
@@ -149,7 +149,7 @@ def show_demo_phantoms_enabled() -> bool:
 
 ### Task 5: Docs / plan registration close-out
 
-- Update [`dev-docs/TO_DO.md`](../TO_DO.md), [`dev-docs/index.md`](../index.md), [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md), [`FEATURE_INVENTORY.md`](../FEATURE_INVENTORY.md), `feature_doc_matrix` if needed.
+- Update [`dev-docs/TO_DO.md`](../../TO_DO.md), [`dev-docs/index.md`](../../index.md), [`ADDITIONAL_PHANTOMS.md`](../../ADDITIONAL_PHANTOMS.md), [`FEATURE_INVENTORY.md`](../../FEATURE_INVENTORY.md), `feature_doc_matrix` if needed.
 - Note Ramesses still on disk for CLI/`Phantom(human_mesh=...)` but GUI-hidden; demos opt-in via local prefs.
 - Register this plan under active plans in `index.md`.
 

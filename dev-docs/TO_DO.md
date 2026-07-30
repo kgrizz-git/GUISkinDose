@@ -1,7 +1,9 @@
 # TO DO
 
 Short active backlog for MyPySkinDose. Keep this file focused on actionable work and open questions; use
-`CHANGELOG.md`, archived plans, and `dev-docs/index.md` for historical traceability.
+`CHANGELOG.md`, archived plans, and `dev-docs/index.md` for historical traceability. Release/distribution
+map (PyPI, GitHub notes vs changelog, deferred portable executables):
+[RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md).
 
 For harness rules, validation commands, and plan conventions, see [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md).
 
@@ -9,20 +11,19 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Now / Next
 
-Privacy hardening implementation is coordinated by
-[PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md); the individual privacy items below remain open until
-their corresponding plan exit criteria pass.
+Privacy hardening is implemented through Phase 9
+([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 (private history/release-object audit)
+still needs an approved private environment. Remaining privacy bullets below are follow-on evaluations or
+policy decisions, not a restart of Phases 0–9.
 
-- [ ] **Complete sensitive-asset baseline review** — manually clear every `pending` entry in
-  `approved_asset_inventory.json`, including rendered-image and DICOM burned-in-text review. Record reviewer/date,
-  then switch CI to `python scripts/check_sensitive_content.py --require-approved-assets`.
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
   gate scans first-level text and requires manual embedded-file/image/DICOM clearance.
-- [ ] **Local OCR evaluation for rendered assets** — evaluate conventional local OCR (for example Tesseract) and a
-  local-only ML OCR option against synthetic image, PDF, Office/iWork preview, and DICOM burned-in-text fixtures.
-  Keep source files, models, caches, intermediate images, and value-suppressed findings on an approved local machine;
-  do not upload reports or add OCR to CI until false positives, misses, runtime, and report safety are documented.
+- [ ] **Local OCR quality bake-off** — `scripts/run_image_privacy_advisory.py` already runs local Tesseract OCR
+  (value-suppressed) for admission of rendered assets. Remaining: benchmark Tesseract vs a local-only ML OCR option
+  on synthetic image/PDF/Office/iWork/DICOM burned-in fixtures; record false positives/misses, runtime, and report
+  safety; decide whether to keep Tesseract-only, add ML OCR, or change admission gating. Do not upload reports or
+  add OCR to CI until that write-up exists. See [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md).
 - [ ] **Local PII/PHI detector evaluation** — use
   [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md)'s synthetic-fixture protocol to benchmark the existing
   Presidio runner against Fastino GLiNER2. Record false positives/misses, thresholds, elapsed time, and peak memory
@@ -31,34 +32,33 @@ their corresponding plan exit criteria pass.
   [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md), verify local Python/PyTorch execution, MPS/CPU behavior,
   model-license fit, download/cache location, throughput, and memory on the 128-GB Mac. Keep it local and advisory;
   do not add it to CI or use LM Studio as its runtime unless the trial establishes a supported path.
-- [ ] **HoundDog local privacy-code-scanner proof of concept** — follow the isolated local-only procedure in
-  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md): use a pinned standalone release with no API key, cloud,
-  GitHub App, managed scans, PR comments, report upload, or optional AI analysis. Assess Python dataflow coverage,
-  false positives, report safety, and license terms. It remains local-only until a maintainer explicitly changes the
-  policy; do not add CI, cloud, GitHub App, managed scan, PR comments, report upload, or AI analysis.
-- [ ] **DICOM pixel-PHI scanner evaluation** — source/dependency-review `dicom-phi-scan` and test it only against
-  synthetic DICOM fixtures. Confirm its OCR/report output cannot leak findings before deciding on any local workflow;
-  it must never replace human DICOM inventory clearance or run in public CI without a separate approval.
+- [ ] **DICOM pixel-PHI scanner keep/drop** — `scripts/run_dicom_phi_advisory.py` already wraps `dicom-phi-scan`
+  (CPU, ephemeral raw report, count-only summary) for conditional admission. Remaining: run it only on synthetic
+  DICOM fixtures, confirm report output cannot leak findings, and decide whether to keep it as a local advisory
+  step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
 - [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
   `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
 - [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results
   accordion in the GUI.
-- [x] **Geometry tab per-exam event selection** — let users select or step through events per exam; account for
-  Plotly trace count and large datasets.
-- [x] **Dose map per-exam checkbox controls** — show cumulative dose or selected exam subsets and update PSD/dose
-  map live. See [DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md).
-- [ ] **Fix download/export HTML button** — `require_io_result` conflates "callback returned None" with "task cancelled"; `make_dosemap_html`/`make_dosemap_png` swallow exceptions with no log (Results aggregate map can render while HTML export fails). Plan: [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment: [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
+- [ ] **Settings phantom preview — manual smoke** — code + docs shipped
+  ([SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md)); run the plan’s acceptance checklist
+  (no RDSR; mesh/habitus/orientation/offsets), then archive the plan.
+- [ ] **Finish HTML/PNG export fix** — Phase 1 (raise + actionable errors) shipped; Phase 0 did not capture the
+  original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
+  [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
+  [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
 
 ## Product Backlog
 
 ### Input Data And Calculation
 
-- [ ] **Explore additional phantoms** — investigate and add support for new anthropomorphic phantoms. See [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md). **Demo v1 complete** (gated in GUI): [archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md). **QA / demo gate / thick bariatric:** [PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) (completed 2026-07-22). Broader fun/demo backlog (Venus/David D1, Phase 2 cartoons, optional Petite unblock): [FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md).
-- [x] **Rescale pediatric 5y/10y stature toward CDC medians** — Done 2026-07-23 (option 2): short meshes kept as `pediatric_preschool_*`; former 10y → `pediatric_5y_*`; new `pediatric_10y_*` ~137–139 cm. See [assessments/PEDIATRIC_PHANTOM_STATURE_REVIEW_2026-07-23.md](assessments/PEDIATRIC_PHANTOM_STATURE_REVIEW_2026-07-23.md).
-- [x] **Organize phantom mesh naming** (`ped_` / `adult_` / `demo_`) — Done 2026-07-23: canonical stems + aliases; keep `adult_male`/`junior_*`/`hudfrid`; bariatrics → `adult_bariatric_{sex}_{1,2,3}`. Plan: [plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md](plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md).
-- [x] **Arms-down phantom variants (additive)** — `_arms_down` for **all clinical** (incl. legacy via MPFB approx); never replace A-pose. Shipped 2026-07-23. Plan: [plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md](plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md).
+- [ ] **Explore additional phantoms** — keep expanding anthropomorphic coverage beyond the shipped MPFB v1
+  catalog (Phases 0–4 complete; see
+  [archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)). Survey and
+  integration notes: [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md). Fun/demo backlog:
+  [FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md). Demo v1 + QA/demo gate / thick bariatric are
+  archived under `plans/archive/`.
 - [ ] **Consider user-imported custom meshes** — explore a GUI/CLI pipeline so users can bring their own STL (or similar) meshes as patient phantoms: upload → unit/orientation/scale into the PSD frame → watertight/face-up validate → local (non-committed) cache → Settings selector + preview. Reuse ideas from `scripts/phantom_gen/ingest_fun_mesh.py` / `validate_phantom.py`; keep license/redistribution responsibility with the user (see [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md) for shippable vs local-only mesh policy).
-- [ ] **Settings phantom preview** — live 3D human-mesh preview on Settings (no RDSR; habitus scales + offsets; reduced mesh). **Code + docs shipped; needs manual smoke** then archive plan. Plan: [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md).
 - [ ] **Simplified DICOM-only estimate** — investigate a fast pre-scan/fallback estimate from DICOM fields without
   the full phantom-mesh pipeline.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
@@ -73,7 +73,6 @@ their corresponding plan exit criteria pass.
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **Input field reference artifact** — check whether a clear list or table of fields expected/required by imported RDSR or tabular input (including fields mapped from those sources) already exists; if not, create a simple standalone file artifact that users can easily consult.
 - [ ] **Fix raw_events_cleaned example RDSR parsing** — investigate and fix the parsing issue that led to the problematic `raw_events_cleaned example RDSR (old) csv export from mypyskindose.csv` in `test_data_gitignored/`.
 - [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
   case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
@@ -83,17 +82,10 @@ their corresponding plan exit criteria pass.
 - [ ] **Beam lateral/longitudinal position usage** — check whether beam lateral and longitudinal position fields (similar to those used for table position) are used elsewhere in the codebase, and document or fill any gaps.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
   source RDSRs before expanding vendor adapters. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
-- [ ] **Patient orientation support (head-first vs feet-first, prone vs supine)** — investigate whether the code and GUI allow choosing patient orientation (head-first / feet-first) and positioning (prone / supine). See [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
+- [ ] **Patient orientation support (prone / decubitus + auto-detect)** — HFS/FFS already exist in settings, GUI, and
+  geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
+  [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
 - [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
-- [x] **Kerma-meter correction factors (per equipment × tube)** — apply a user-supplied calibration factor
-  `CF = (real measured dose) / (unit reported dose)` to each event's `K_IRP`, keyed by individual unit
-  (`StationName` / `DeviceSerialNumber` for DICOM RDSR; for tabular inputs the unit/room column —
-  e.g. Radimetrics "Equipment" (not "Device", which is the model), DoseTrack "Equipment Name" —
-  currently dropped or collapsed during model inference) and tube
-  (existing `acquisition_plane` = Plane A / Plane B / Single Plane). Unresolved equipment or tube → `CF = 1.0`
-  (fail-soft, identical philosophy to `k_tab` in `corrections.py`). Supply CFs via a runtime lookup file
-  (CSV/TSV/XLSX/JSON) or a pre-calculation GUI prompt. Plan:
-  [plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md) (shipped 2026-07-26).
 
 
 ### GUI / UX
@@ -102,42 +94,30 @@ their corresponding plan exit criteria pass.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
-- [ ] **Rich export phantom dimensions** — report phantom dimensions (anterior-posterior, left-right, superior-inferior) in cm using max values (thickest parts) rather than a scale factor.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
-- [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
-  browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
-- [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
-  accessibility + alt text, HTML already sets `alt` (7.2); extract user-visible strings to a localization module
-  (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); add a per-tab
-  GUI help page for the Export tab once a help loader exists.
-- [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
-  (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
-  replace the baseline `ui.download()` fallback). (GUI native "Open file / Open folder" success actions — **done**
-  2026-07-02; still needs Windows manual smoke.)
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).
-- [ ] **Default example RDSR** — change the Upload tab default away from `fake-scanner`.
-- [ ] **Central Help entry point** — add a Help menu/item accessible from the left navigation bar and/or as a dedicated GUI tab, linking to the in-app help files under `gui/help/` and the online docs.
-- [ ] **Make offsets more visible and configurable for the user** — surface table-origin and coordinate offsets prominently in the GUI (e.g. per-exam offset summary, inline hints on the Geometry tab) and allow easy override without digging into nested settings.
+- [ ] **Central Help entry point** — per-tab `HelpButton`s and the help harness already ship. Remaining: add a
+  left-nav Help item and/or dedicated Help tab that indexes in-app help (`gui/help/`) and links to the online docs.
+- [ ] **Offset UX polish** — Geometry patient/table-origin sliders and Settings → Per-exam corrections already
+  support interactive overrides (single- and multi-exam). Remaining: clearer per-exam offset summary, inline
+  Geometry hints, and less nesting for advanced coordinate fixes. Optional arrow graphic is deferred separately.
 - [ ] **Reproducible settings export** — export `PyskindoseSettings` or GUI state as JSON to easily reload and reproduce runs.
 - [ ] **3D mesh export** — export the patient phantom mesh with vertex colors (e.g., PLY format) for use in external 3D tools.
 - [ ] **DICOM export** — export a DICOM Secondary Capture of the dose map or a DICOM SR to push results back to PACS.
 
 ### Harness / Repo Hygiene
 
-- [x] **Adopt the fork-maintenance baseline** — community files, Issues + no-PHI
-  templates, intended-use / not-FDA-cleared disclaimer, README docs-extra fix,
-  migration-status correction, fork baseline record, and GitHub Issues enabled
-  (2026-07-26). Ongoing ops (monthly upstream check, first-PyPI trusted-publisher
-  registration) remain in [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md).
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `mypyskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
   inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,
-  and release documentation audit checklist generation. Original brainstorm:
+  and release documentation audit checklist generation (fold into
+  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
-- [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
+- [ ] **Re-check ignored dependency advisories** — quarterly (or before each release; see release checklist in
+  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
   (2026-07-09: bumped transitive dev-only `nltk` 3.9.4 → 3.10.0 and removed
   `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.
@@ -149,13 +129,14 @@ their corresponding plan exit criteria pass.
   alerts are informational and should stay open until semgrep bumps/relaxes its `mcp==1.23.3` pin
   (patched versions are `mcp >=1.27.2` / `>=1.28.1`). Context: `mcp` is transitive via the optional Semgrep MCP server
   path and is not imported or run by MyPySkinDose runtime code, so the CVEs are not exploitable in this repo.)
-- [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
+- [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
-  Trufflehog only if needed beyond gitleaks.
+  Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
 - [ ] **Doc-freshness follow-ups** — add intentional stale-word excludes, extend inventory contradiction rules, and
-  consider release-only strict stale-pattern checks.
+  consider release-only strict stale-pattern checks (candidate release gate; see
+  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)).
 - [ ] **Optional doc-pruning release gate** — run `python scripts/check_doc_pruning.py --strict` before releases
-  once the team is comfortable with the advisory workflow.
+  once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
@@ -170,6 +151,26 @@ their corresponding plan exit criteria pass.
 - [ ] **Narrow broad `except Exception` sites** — avoid repo-wide sweeps; tighten only where a broad catch masks a
   bug or when already editing that boundary.
 - [ ] **Full GUI observability stack** — defer until smoke/tab tests show a concrete observability gap.
+- [ ] **Geometry offset arrow (interactive offsets Phase 3)** — optional visual arrow for offsets; deferred when
+  Phases 0–2b shipped. See
+  [archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md).
+- [ ] **Rich export — phantom dimensions** — report AP / L-R / S-I phantom extents in cm (max/thickest) in rich
+  reports rather than scale factors only. See [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md).
+- [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
+  browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
+- [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
+  accessibility + alt text, HTML already sets `alt` (7.2); extract user-visible strings to a localization module
+  (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); Export-tab help
+  page if a central Help index lands.
+- [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
+  (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
+  replace the baseline `ui.download()` fallback). Native "Open file / Open folder" shipped 2026-07-02; Windows
+  manual smoke still pending.
+- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research:
+  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md);
+  release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
+  non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
+  (phantoms, `corrections.db`, help). Not a Java wrap.
 
 ## Research Ideas
 
@@ -181,5 +182,8 @@ their corresponding plan exit criteria pass.
 
 - **Original flow inputs** — Do examples need JSON sidecars, different normalization settings, or other files to
   avoid unexpected body-region projections?
-- **K_IRP column** — Results table shows K_IRP as `-` in some runs. Is this intended to represent correction
-  factors rather than kerma?
+- **Results “—” vs kerma (likely resolved)** — Older note: “Results table shows K_IRP as `-`.” Current GUI:
+  Data Table has a real `K_IRP (mGy)` column from the normalized events; Results shows **Total Air Kerma**
+  (sum of reported K_IRP) and a **Correction factors per event** table (`k_isq` / `k_bs` / `k_tab`) that uses
+  `—` for missing/empty correction slots (e.g. zero-hit events), not as a stand-in for kerma. Metric cards also
+  show `—` before a calculation finishes. Confirm in a manual Results smoke, then delete this question.

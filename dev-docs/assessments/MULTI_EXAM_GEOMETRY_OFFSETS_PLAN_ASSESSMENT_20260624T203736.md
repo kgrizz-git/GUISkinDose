@@ -1,5 +1,10 @@
 # `MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md` — Gap & Clarity Review (Round 8)
 
+> **Historical (2026-07-30):** Parts I–V of the plan shipped and the plan is archived under
+> `dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md`. This Round 8 assessment is retained
+> for decision history; open findings below were addressed in subsequent commits unless noted in
+> `TO_DO.md` (manual multi-exam smoke).
+
 **Date:** 2026-06-24 20:37 UTC
 **Scope:** Independent gap/clarity review of the in-progress plan, with
 emphasis on the remaining phases (Part V cross-cutting formatters/docs and

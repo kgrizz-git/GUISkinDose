@@ -12,6 +12,8 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md) | Shared workflow guidance for coding agents; tool-specific pointer files should refer here instead of duplicating rules. |
 | [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) | Practical upstream-attribution, GitHub governance, privacy, release, and worktree guidance for maintaining this PySkinDose fork. |
+| [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) | **Hub** — distribution channels, changelog vs GitHub Release notes, SemVer, release checklist; links PyPI and deferred portable executables. |
+| [../PUBLISHING.md](../PUBLISHING.md) | PyPI Trusted Publishing detail (`release.yml`); inert until a GitHub Release is created. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor setup, PR workflow, privacy rules, and pointers to agent playbooks. |
 | [../SUPPORT.md](../SUPPORT.md) | Support channels, intended-use boundary, and no-PHI rules. |
 | [../SECURITY.md](../SECURITY.md) | Private vulnerability reporting and supported-version policy. |
@@ -38,6 +40,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md) | Public-repository privacy policy, DICOM/image review requirements, approved-asset inventory, and scanner use. |
 | [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Private evidence, historical audit, containment, rewrite/notification, verification, and privacy release checklist runbook. |
 | [references/LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md) | Local advisory PII/PHI model comparison, macOS/LM Studio boundaries, and synthetic-fixture evaluation protocol. |
+| [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) | Research note: NiceGUI/`nicegui-pack` portable GUI executables; Java-wrap non-goals; deferred spike criteria. |
 | [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md) | Optional loopback-only SonarQube Community Build runner, private result tracking, and local quality-gate workflow. |
 | [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |
 | [../scripts/check_ui_copy.py](../scripts/check_ui_copy.py) | Validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`; checks `copy_text()` usage and terminology warnings. |
@@ -78,7 +81,6 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
-| [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Source of truth** — agent-executable full-body phantom library with **true shape variety** via headless MPFB/Blender (Phases 0–4 complete; 10 new meshes shipped in 25.2.0). |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, fully rename the product/distribution/import package to GUISkinDose/`guiskindose`, and retain the GitHub fork history. |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
@@ -102,6 +104,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | RDSR and JSON input flow, normalization settings, patient offsets, and internal DataFrame contract. |
+| [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md) | Standalone cheat sheet: required normalized columns, optional identity fields, and where each input schema maps from. |
 | [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md) | Tabular schema auto-detection (default `auto`, recall scoring, per-schema fingerprints) and the DAP-unit / manufacturer caveat. Machine-checked by `tests/unittests/test_input_schema_doc.py`. |
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor-specific coordinate conventions, normalization mapping, and Mermaid coordinate-system diagrams. |
 | [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) | GE coordinate convention record: confirmed table-travel directions, normalization-level `Tx`/`Tz` correction, and deferred matched DICOM/export fixture notes. |
@@ -125,8 +128,8 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/BARIATRIC_EXTRA_THICK_EXTREMITIES_2026-07-23.md](assessments/BARIATRIC_EXTRA_THICK_EXTREMITIES_2026-07-23.md) | Class-II extra-thick neck/extremities variants (additive; base + thick unchanged). |
 | [assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md](assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 3 class-II bariatric male/female meshes; abdomen anti-balloon gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
-| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
-| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |
+| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | **Historical** — Round 7 mid-plan review (Parts I–III verified; IV/V then open). Plan since completed and archived. |
+| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | **Historical** — Round 8 mid-plan review (Parts I–IV verified; Part V then open). Plan since completed and archived. |
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md) | Round 1 API review: shutdown timing, multi-monitor validation; NiceGUI proxy/event APIs confirmed. |
 | [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) | Geometry tab render-cycle root cause; review of the original fix (regression in 7 external `ctx.refresh_per_exam()` callers); revised fix uses an `_in_render_chain` flag. |
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md) | Round 2 gap review: restore-from-maximize, title-bar validation, maximized event filtering, debounce lifecycle, CI-safe tests, `Path.replace`. |
@@ -143,13 +146,9 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
-| [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. |
-| [plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) — Demo gate (`gui.json`), Steamboat supine, pediatric 5y male fix, bariatric thick-extremities variants. |
-| [plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md](plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md) | **Implemented** (2026-07-23) — `ped_*` / `adult_ecto|endo_*` / `adult_bariatric_{sex}_{1,2,3}` / `demo_*` + aliases. |
+| [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. Manual smoke then archive. |
 | [plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md](plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md) | **Complete** — additive `_arms_down` for all clinical stems (23 twins; legacy via MPFB approx). |
 | [plans/FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md) | Broader fun-demo survey: nude classical (Venus/David, D1-gated), Phase 2 cartoons, bust fallbacks. v1 clothed+Steamboat execution archived (see archive entry). |
-| [plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | Single-exam Geometry offset sliders, Settings table-offset display, load-reset fixes (Phases 0–2b). |
-| [plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | Multi-exam exam selector + Geometry sliders bound to `loaded_exam_meta[active]`; preview semantics. |
 | [plans/gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md) | Transition GUI from Aurora-Brutalist to Sleek Modern/Material aesthetic. |
 | [plans/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/NATIVE_WINDOW_GEOMETRY_PLAN.md) | Native window geometry persistence: restore last size/position/maximized state on `--native` launch; first run maximized. |
 | [plans/SECURITY_TOOLS_CI_PLAN.md](plans/SECURITY_TOOLS_CI_PLAN.md) | Phased plan to wire semgrep and safety into CI/pre-push; gitleaks already done. |
@@ -165,10 +164,15 @@ Phased detail derived from diagnostics or master plans.
 ## Archived plans (`plans/archive/`)
 
 | File | Purpose |
-|---|---|| [plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md) | **Shipped** (2026-07-26) — per-(unit×tube) kerma-meter CF; reported kerma additive-compatible; file/GUI prompt. |
-
+|---|---|
+| [plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md) | **Shipped** (2026-07-26) — per-(unit×tube) kerma-meter CF; reported kerma additive-compatible; file/GUI prompt. |
+| [plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Completed** (2026-07-21) — headless MPFB/Blender true-shape phantom library Phases 0–4; 10 new meshes shipped in 25.2.0. Further phantoms: [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) + `TO_DO.md`. |
+| [plans/archive/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/archive/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) — Demo gate (`gui.json`), Steamboat supine, pediatric 5y male fix, bariatric thick-extremities variants. |
+| [plans/archive/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md](plans/archive/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md) | **Completed** (2026-07-23) — `ped_*` / `adult_ecto|endo_*` / `adult_bariatric_{sex}_{1,2,3}` / `demo_*` + aliases. |
+| [plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | **Completed** (2026-06-24) — Parts I–V: multi-exam Geometry selector, per-active patient/table-origin sliders, composite preview, Calculate/Settings summaries. Manual smoke remains in `TO_DO.md`. |
+| [plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md) | **Completed** (2026-06-24) — Phases 0–2b single-exam Geometry patient/table-origin sliders. Phase 3 offset arrow deferred in `TO_DO.md`. |
 | [plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Completed** (2026-07-22) — Demo phantoms v1: Cosmic Buddha, Ramesses II, Steamboat Willie shipped; Petite Herculanaise blocked (login/NC). Fun ingest + face-up `flip_y` gate + GUI `(demo)` labels. |
-| [plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) — MakeHuman GUI master plan; replaced by [plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). Phase sub-plans `MAKEHUMAN_PHASE1_*` … `MAKEHUMAN_PHASE5_*` archived alongside. |
+| [plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](plans/archive/MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) — MakeHuman GUI master plan; replaced by [plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). Phase sub-plans `MAKEHUMAN_PHASE1_*` … `MAKEHUMAN_PHASE5_*` archived alongside. |
 | [plans/archive/refactor_check_sensitive_content_plan.md](plans/archive/refactor_check_sensitive_content_plan.md) | **Completed** (2026-07-18) — Privacy scan script complexity split into `check_sensitive_content.py` + `check_sensitive_helpers.py`. |
 | [plans/archive/refactor_geometry_tab_complexity.md](plans/archive/refactor_geometry_tab_complexity.md) | **Completed** (2026-07-18) — Geometry tab complexity split into `geometry.py` + `geometry_builders.py`. |
 | [plans/archive/refactor_results_tab_complexity.md](plans/archive/refactor_results_tab_complexity.md) | **Completed** (2026-07-18) — Results tab complexity split into `results.py` + `results_builders.py`. |

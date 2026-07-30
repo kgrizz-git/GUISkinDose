@@ -94,8 +94,10 @@ pre-commit run --all-files
 python -m pytest tests/ -q
 ```
 
-Update [CHANGELOG.md](CHANGELOG.md) for user- or maintainer-visible behavior.
-Version bumps belong in `pyproject.toml` at release time.
+Update [CHANGELOG.md](CHANGELOG.md) for notable user- or maintainer-visible behavior
+(including significant CI/harness/refactor work). Version bumps belong in
+`pyproject.toml` at release time. GitHub Release notes stay user-facing — see
+[dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
 ## Upstream attribution
 

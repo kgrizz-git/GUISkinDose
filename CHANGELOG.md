@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`).
-This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml` when releasing.
+Bump `pyproject.toml` when releasing.
+
+This file records **notable** user-facing *and* maintainer-facing changes (features, fixes,
+CI/harness, refactors, privacy gates). That keeps SemVer and contributor history honest.
+
+**GitHub Release notes are narrower:** summarize what end users need when upgrading; collapse or
+omit pure CI/refactor bullets and point readers here. See
+[dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
 ## [Unreleased]
 
@@ -18,6 +25,26 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   now runs Safety only.
 
 ### Changed
+
+- **Backlog / plan archive cleanup** (2026-07-30) — trimmed `dev-docs/TO_DO.md` completed items
+  (already shipped in prior releases) and archived finished plans under `dev-docs/plans/archive/`:
+  `AUTOMATED_PHANTOM_LIBRARY_PLAN`, `PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN`,
+  `PHANTOM_MESH_NAMING_CONVENTION_PLAN`, `MULTI_EXAM_GEOMETRY_OFFSETS_PLAN`,
+  `INTERACTIVE_TABLE_OFFSETS_PLAN` (Phases 0–2b; Phase 3 offset arrow deferred). Confirmed and
+  removed from the active backlog: sensitive-asset baseline review (all inventory entries
+  approved; CI already uses `--require-approved-assets`), HoundDog local PoC (advisory wrapper
+  integrated), Upload-tab default example demoting `fake_scanner.dcm`, Geometry per-exam event
+  stepper, multi-exam dose-map checkboxes, pediatric stature relabel, mesh naming, arms-down
+  variants, kerma-meter CFs, and the fork-maintainer community baseline. Further phantom work
+  and custom-mesh import remain open in `TO_DO.md`. Follow-up: rewrote partial backlog items
+  (OCR/DICOM-phi wrappers already ship; Central Help / offset UX reduced to remaining gaps) and
+  clarified the Results `K_IRP`/`—` open question against current Results vs Data Table UI.
+  Also: moved Rich Export Phase 4.3/7 leftovers to Deferred; added
+  `dev-docs/INPUT_FIELD_REFERENCE.md` and
+  `dev-docs/references/PORTABLE_EXECUTABLE_PACKAGING.md`; marked multi-exam geometry
+  assessments historical now that the plan is archived. Added
+  `dev-docs/RELEASES_AND_DISTRIBUTION.md` as the release/distribution hub (changelog vs GitHub
+  Release notes, PyPI, deferred portable executables).
 
 - **SonarQube/Lizard Phase 4 — UI/CLI oversized functions** (2026-07-29) — decomposed three
   high-NLOC flagged functions: `gui/tabs/settings.py:build` (246 → 9 NLOC) into
@@ -343,7 +370,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `adult_male` / `junior_*` / `hudfrid`; rename MPFB pediatrics to `ped_*`; ecto/endo to
   `adult_ecto_*` / `adult_endo_*`; bariatrics to `adult_bariatric_{sex}_{1,2,3}`; demos to
   `demo_*`. Migrate later with aliases. See
-  `dev-docs/plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md`.
+  `dev-docs/plans/archive/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md`.
 
 - **Arms-down clinical variants** (2026-07-23) — Additive `*_arms_down` meshes for all clinical
   stems (23 twins), including MPFB stature approximations of legacy `junior_*` / `adult_male|female` /
@@ -475,7 +502,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   bariatric options, and a single integration checklist; registered in `dev-docs/index.md`.
 
 - **Automated phantom library plan** (2026-07-21) — replaced the MakeHuman GUI generation master/sub-plans with
-  `dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
+  `dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
   parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
   docs archived under `dev-docs/plans/archive/`. Phases 0–4 complete (spike, catalog, P0/P1 generation, install).
 
@@ -862,7 +889,7 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   `--strict` available) to flag duplicated or drifting agent instructions, overgrown `TO_DO.md`, and
   completed-looking active execution plans.
 - **Beam-miss warnings** (2026-06-24) — when an irradiation event deposits zero dose (beam does not intersect the patient phantom), a per-event `WARNING` identifies the event index, kVp, filtration, and field area. Configurable via `beam_miss_warn` setting (`"per_event"` / `"summary"` / `"off"`; CLI default `"per_event"`, GUI default `"summary"`); an all-miss sentinel always fires. Multi-exam auto-downgrades per-event to `"summary"`. GUI toast throttle at 5 messages (`_MAX_TOASTS`). Plan: `dev-docs/plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md`.
-- **Interactive Geometry offset sliders** (2026-06-24) — single-exam **patient offset** sliders and **table-origin override** sliders in the Geometry tab with debounced live 3D preview; read-only auto-detected table offsets in Settings and Calculate tabs; reset buttons. Plan: `dev-docs/plans/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
+- **Interactive Geometry offset sliders** (2026-06-24) — single-exam **patient offset** sliders and **table-origin override** sliders in the Geometry tab with debounced live 3D preview; read-only auto-detected table offsets in Settings and Calculate tabs; reset buttons. Plan: `dev-docs/plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
 - **Human phantom body-habitus scaling** (2026-06-25) — human STL phantoms can be directionally scaled with `phantom.scale_lat`, `phantom.scale_ap`, and `phantom.scale_lon` (defaults `1.0`, clamped to `0.5–2.0`). Scaling is applied before patient/table positioning, non-uniform scaling recomputes normals, and Settings → Phantom exposes human-only sliders that refresh Geometry preview and invalidate prior results. Plan: `dev-docs/plans/archive/PATIENT_SIZE_SCALING_PLAN.md`.
 
 ### Fixed

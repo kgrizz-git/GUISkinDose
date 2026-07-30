@@ -1,5 +1,7 @@
 # Interactive Table Offsets & Settings Display Plan
 
+> **Status:** **Completed / archived 2026-07-30** for Phases 0–2b. Phase 3 offset arrow remains deferred in `TO_DO.md`.
+>
 > **Filename note:** Phase 1 = read-only **auto-detected** table offsets. Phase 2 = interactive **patient** sliders. **Phase 2b** = interactive **table-origin** override in Geometry (writes `table_origin_override` in per-exam meta). Settings → Per-exam corrections spinboxes remain; Geometry is the 3D workflow.
 
 ## Overview

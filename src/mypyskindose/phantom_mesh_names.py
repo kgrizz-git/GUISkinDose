@@ -6,7 +6,7 @@ stems from before the 2026-07-23 naming convention resolve via
 persist until a future SemVer **major** drop.
 
 Arms-down variants append ``_arms_down`` and sort immediately after their
-A-pose sibling. See ``dev-docs/plans/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md``
+A-pose sibling. See ``dev-docs/plans/archive/PHANTOM_MESH_NAMING_CONVENTION_PLAN.md``
 and ``dev-docs/plans/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md``.
 """
 
