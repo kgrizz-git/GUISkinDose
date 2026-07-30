@@ -17,15 +17,22 @@ MyPySkinDose is maintained by a **solo maintainer** on a best-effort basis.
 - The maintainer’s own changes still land through pull requests into `main`
   (branch rules).
 - Calculation-affecting, privacy, security, and release changes should be
-  documented in the PR and `CHANGELOG.md`.
+  documented in the PR and `CHANGELOG.md`. User-facing GitHub Release notes are
+  a shorter subset — see [RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 - There is no formal steering committee.
 
 ## Releases
 
-Releases are maintainer-triggered (see [PUBLISHING.md](PUBLISHING.md) and
-[dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md)). The
+Releases are maintainer-triggered. See
+[dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md) (hub),
+[PUBLISHING.md](PUBLISHING.md) (PyPI), and
+[dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md). The
 project may or may not publish to PyPI depending on maintainer readiness; the
 release workflow stays inert until a GitHub Release is created.
+
+Record calculation-, privacy-, security-, and release-affecting work in
+`CHANGELOG.md`. GitHub Release notes should stay **user-facing** (see the hub);
+do not paste every CI/refactor changelog bullet into the Release body.
 
 ## Changing maintainership
 

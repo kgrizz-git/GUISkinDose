@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`).
-This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml` when releasing.
+Bump `pyproject.toml` when releasing.
+
+This file records **notable** user-facing *and* maintainer-facing changes (features, fixes,
+CI/harness, refactors, privacy gates). That keeps SemVer and contributor history honest.
+
+**GitHub Release notes are narrower:** summarize what end users need when upgrading; collapse or
+omit pure CI/refactor bullets and point readers here. See
+[dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
 ## [Unreleased]
 
@@ -35,7 +42,9 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   Also: moved Rich Export Phase 4.3/7 leftovers to Deferred; added
   `dev-docs/INPUT_FIELD_REFERENCE.md` and
   `dev-docs/references/PORTABLE_EXECUTABLE_PACKAGING.md`; marked multi-exam geometry
-  assessments historical now that the plan is archived.
+  assessments historical now that the plan is archived. Added
+  `dev-docs/RELEASES_AND_DISTRIBUTION.md` as the release/distribution hub (changelog vs GitHub
+  Release notes, PyPI, deferred portable executables).
 
 - **SonarQube/Lizard Phase 4 — UI/CLI oversized functions** (2026-07-29) — decomposed three
   high-NLOC flagged functions: `gui/tabs/settings.py:build` (246 → 9 NLOC) into

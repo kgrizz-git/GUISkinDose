@@ -25,7 +25,8 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 - **[dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)
 - **[dev-docs/LICENSE_COMPLIANCE.md](dev-docs/LICENSE_COMPLIANCE.md)** — third-party license policy, audit commands, and notices workflow
 - **[dev-docs/assessments/](dev-docs/assessments/)** — diagnostics and assessments of code quality, refactoring, bug checks, or security
-- **[CHANGELOG.md](CHANGELOG.md)** — release history; version source of truth is `pyproject.toml`
+- **[CHANGELOG.md](CHANGELOG.md)** — notable changes per version; version source of truth is `pyproject.toml`
+- **[dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md)** — release/distribution hub (PyPI, GitHub notes vs changelog, deferred portable executables)
 
 ## Quick orientation
 

@@ -12,6 +12,8 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md) | Shared workflow guidance for coding agents; tool-specific pointer files should refer here instead of duplicating rules. |
 | [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) | Practical upstream-attribution, GitHub governance, privacy, release, and worktree guidance for maintaining this PySkinDose fork. |
+| [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) | **Hub** — distribution channels, changelog vs GitHub Release notes, SemVer, release checklist; links PyPI and deferred portable executables. |
+| [../PUBLISHING.md](../PUBLISHING.md) | PyPI Trusted Publishing detail (`release.yml`); inert until a GitHub Release is created. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor setup, PR workflow, privacy rules, and pointers to agent playbooks. |
 | [../SUPPORT.md](../SUPPORT.md) | Support channels, intended-use boundary, and no-PHI rules. |
 | [../SECURITY.md](../SECURITY.md) | Private vulnerability reporting and supported-version policy. |

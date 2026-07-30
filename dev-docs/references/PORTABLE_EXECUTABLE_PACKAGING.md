@@ -2,13 +2,15 @@
 
 _Status: research only — not an active implementation plan._  
 _Created: 2026-07-30._  
+_Parent hub: [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)._  
 _Related backlog: Deferred item in [TO_DO.md](../TO_DO.md)._
 
 ## Summary
 
 MyPySkinDose today ships as a **Python package**: `pip install`, then
 `python -m mypyskindose --mode gui` (optional `--native` / `gui-native` via pywebview).
-There is **no** frozen-app or installer pipeline in this repository.
+There is **no** frozen-app or installer pipeline in this repository. PyPI / GitHub
+Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md).
 
 A **portable desktop executable** is feasible in principle via NiceGUI’s
 [`nicegui-pack`](https://nicegui.io/documentation/section_configuration_deployment)

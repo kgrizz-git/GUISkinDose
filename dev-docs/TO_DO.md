@@ -1,7 +1,9 @@
 # TO DO
 
 Short active backlog for MyPySkinDose. Keep this file focused on actionable work and open questions; use
-`CHANGELOG.md`, archived plans, and `dev-docs/index.md` for historical traceability.
+`CHANGELOG.md`, archived plans, and `dev-docs/index.md` for historical traceability. Release/distribution
+map (PyPI, GitHub notes vs changelog, deferred portable executables):
+[RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md).
 
 For harness rules, validation commands, and plan conventions, see [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md).
 
@@ -111,9 +113,11 @@ policy decisions, not a restart of Phases 0–9.
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
   inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,
-  and release documentation audit checklist generation. Original brainstorm:
+  and release documentation audit checklist generation (fold into
+  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
-- [ ] **Re-check ignored dependency advisories** — quarterly (or before each release), run
+- [ ] **Re-check ignored dependency advisories** — quarterly (or before each release; see release checklist in
+  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)), run
   `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
   (2026-07-09: bumped transitive dev-only `nltk` 3.9.4 → 3.10.0 and removed
   `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.
@@ -125,13 +129,14 @@ policy decisions, not a restart of Phases 0–9.
   alerts are informational and should stay open until semgrep bumps/relaxes its `mcp==1.23.3` pin
   (patched versions are `mcp >=1.27.2` / `>=1.28.1`). Context: `mcp` is transitive via the optional Semgrep MCP server
   path and is not imported or run by MyPySkinDose runtime code, so the CVEs are not exploitable in this repo.)
-- [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically.
+- [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
-  Trufflehog only if needed beyond gitleaks.
+  Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
 - [ ] **Doc-freshness follow-ups** — add intentional stale-word excludes, extend inventory contradiction rules, and
-  consider release-only strict stale-pattern checks.
+  consider release-only strict stale-pattern checks (candidate release gate; see
+  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)).
 - [ ] **Optional doc-pruning release gate** — run `python scripts/check_doc_pruning.py --strict` before releases
-  once the team is comfortable with the advisory workflow.
+  once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
@@ -161,8 +166,9 @@ policy decisions, not a restart of Phases 0–9.
   (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
   replace the baseline `ui.download()` fallback). Native "Open file / Open folder" shipped 2026-07-02; Windows
   manual smoke still pending.
-- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research note:
-  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Spike only when a
+- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research:
+  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md);
+  release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
   non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
   (phantoms, `corrections.db`, help). Not a Java wrap.
 
