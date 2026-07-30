@@ -93,7 +93,7 @@ dev = [
     "pytest-cov>=5.0",
     "pytest-xdist>=3.5",
     "diff-cover>=10.0",
-    "ruff>=0.15,<0.16",
+    "ruff>=0.15,<0.17",
     "playwright>=1.40",
     "pytest-playwright>=0.4",
 ]
