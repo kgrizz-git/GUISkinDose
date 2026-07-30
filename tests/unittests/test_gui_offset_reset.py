@@ -27,9 +27,11 @@ from mypyskindose.gui.helpers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
+from mypyskindose.gui.exam_loaders import _append_multi_study_exams
 from mypyskindose.gui.tabs.geometry import geometry_vendor_notice
 from mypyskindose.gui.page_context import PageContext
 from mypyskindose.gui.state import AppState
+from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 
 
 def _minimal_ctx() -> PageContext:
@@ -79,6 +81,44 @@ def test_load_tabular_replace_existing_preserves_global_patient_offset():
     assert st.d_lon == 8.0
     assert st.d_ver == 1.0
     assert st.d_lat == 2.0
+
+
+def test_multi_study_reparse_only_preserves_matching_study_id_flags():
+    """Reordered mixed-ID reparses must never borrow another study's flags."""
+    provenance = InputProvenance(
+        source_type="csv", schema_name="generic_rdsr_like", original_filename="reparse.csv",
+        header_row_index=0, detected_encoding="utf-8", detected_delimiter=",", sheet_name=None,
+        column_map={}, unit_conversions={},
+    )
+
+    def exam(study_id: str | None) -> InputAdapterResult:
+        frame = pd.DataFrame({"Tx": [1.0], "Ty": [2.0], "Tz": [3.0], "Ap1": [4.0], "Ap2": [5.0]})
+        return InputAdapterResult(frame, None, provenance, study_id=study_id)
+
+    def flags(study_id: str | None, **enabled: bool) -> dict:
+        return {
+            "study_id": study_id,
+            "swap_lat_lon": False,
+            "flip_ap1": False,
+            "flip_ap2": False,
+            "flip_tx": False,
+            "flip_ty": False,
+            "flip_tz": False,
+            **enabled,
+        }
+
+    state = AppState()
+    _append_multi_study_exams(
+        [exam("B"), exam(None), exam("A"), exam("new")], state, Path("reparse.csv"),
+        0.0, 0.0, 0.0,
+        [flags(None, flip_ap2=True), flags("A", swap_lat_lon=True), flags("B", flip_ap1=True)],
+    )
+
+    restored = {meta["study_id"]: meta for meta in state.loaded_exam_meta}
+    assert restored["A"]["swap_lat_lon"] is True
+    assert restored["B"]["flip_ap1"] is True
+    assert restored[None]["flip_ap2"] is True
+    assert all(not restored["new"][name] for name in ("swap_lat_lon", "flip_ap1", "flip_ap2", "flip_tx", "flip_ty", "flip_tz"))
 
 
 def test_new_load_resets_coordinate_flags_not_replace_existing():

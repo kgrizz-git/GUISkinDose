@@ -323,6 +323,40 @@ def test_pip_audit_validation_rejects_unknown(ad):
             ad.main(["--unknown-flag"])
 
 
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--desc", "garbage"],
+        ["--format=garbage"],
+        ["-f=garbage"],
+        ["--format"],
+        ["columns"],
+    ],
+)
+def test_audit_argv_builders_reject_invalid_option_values(ad, args):
+    """Neither audit engine may accept or silently discard malformed values."""
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_pip_audit_argv(args)
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_uv_audit_argv("/path/to/uv", args)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--desc", "off"],
+        ["--desc=on"],
+        ["--vulnerability-service", "osv"],
+        ["--format=json"],
+        ["-f", "cyclonedx-json"],
+    ],
+)
+def test_audit_argv_builders_accept_valid_option_values(ad, args):
+    """Supported separated and equals-form values remain usable."""
+    assert ad.build_pip_audit_argv(args) == args
+    assert ad.build_uv_audit_argv("/path/to/uv", args) == ["/path/to/uv", "audit"]
+
+
 def test_main_pip_audit_missing_error(ad):
     """Test that if pip-audit is missing, FileNotFoundError is caught, prints error, and exits with 1."""
     with patch("shutil.which", return_value=None), \

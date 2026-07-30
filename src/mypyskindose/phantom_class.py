@@ -16,6 +16,15 @@ from mypyskindose.settings.phantom_dimensions import PhantomDimensions
 VALID_PHANTOM_MODELS = ["plane", "cylinder", "human", "table", "pad"]
 
 
+def _validated_resolution(value: object, setting_name: str) -> str:
+    """Return a supported phantom resolution or raise a user-facing error."""
+    if not isinstance(value, str) or value.lower() not in {"dense", "sparse"}:
+        raise ValueError(
+            f"Unsupported {setting_name}: '{value}'. Allowed values are 'dense' or 'sparse'."
+        )
+    return value.lower()
+
+
 class Phantom:
     """Create and handle phantoms for patient, support table and pad.
 
@@ -112,18 +121,13 @@ class Phantom:
         res_length: float
         res_width: float
 
+        resolution = _validated_resolution(phantom_dim.plane_resolution, "plane_resolution")
         # Use a dense grid if specified by user
-        if phantom_dim.plane_resolution.lower() == "dense":
+        if resolution == "dense":
             res_length = res_width = 2.0
 
-        elif phantom_dim.plane_resolution.lower() == "sparse":
+        else:  # resolution == "sparse"; validated above
             res_length = res_width = 1.0
-
-        else:
-            raise ValueError(
-                f"Unsupported plane_resolution: '{phantom_dim.plane_resolution}'. "
-                "Allowed values are 'dense' or 'sparse'."
-            )
 
         # Linearly spaced points along the longitudinal direction
         x = np.linspace(
@@ -157,20 +161,15 @@ class Phantom:
         res_length: float
         res_width: float
 
+        resolution = _validated_resolution(phantom_dim.cylinder_resolution, "cylinder_resolution")
         # Use a dense grid if specified by user
-        if phantom_dim.cylinder_resolution.lower() == "dense":
+        if resolution == "dense":
             res_length = 4.0
             res_width = 0.05
 
-        elif phantom_dim.cylinder_resolution.lower() == "sparse":
+        else:  # resolution == "sparse"; validated above
             res_length = 1.0
             res_width = 0.1
-
-        else:
-            raise ValueError(
-                f"Unsupported cylinder_resolution: '{phantom_dim.cylinder_resolution}'. "
-                "Allowed values are 'dense' or 'sparse'."
-            )
 
         # Creates linearly spaced points along an ellipse
         #  in the lateral direction
@@ -242,6 +241,8 @@ class Phantom:
 
         self.r = np.asarray([el for el_list in r for el in el_list])
         self.n = np.asarray([x for pair in zip(n, n, n) for x in pair])
+        if len(self.r) == 0 or len(self.r) % 3:
+            raise ValueError("Human mesh must contain a non-empty whole number of triangles.")
         self._apply_human_scale(human_scale)
 
         # Create index vectors for plotly mesh3d plotting

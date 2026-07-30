@@ -221,7 +221,7 @@ def test_calculate_k_tab_clamps_out_of_range_kvp():
 
 def test_interpolate_off_grid_degenerate_kv_axis() -> None:
     from mypyskindose.corrections import _interpolate_off_grid
-    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED
+    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_EXACT, STATUS_INTERPOLATED
 
     piv = pd.DataFrame(
         data=[[0.8, 0.9]], 
@@ -232,7 +232,7 @@ def test_interpolate_off_grid_degenerate_kv_axis() -> None:
     piv.columns.name = "filtration_added_mmcu"
 
     cache_key = ("AXIOM-Artis", "Single Plane", 0.0)
-    pivot_cache = {cache_key: piv}
+    pivot_cache: dict[tuple[str, str, float], pd.DataFrame] = {cache_key: piv}
 
     dummy_rows = pd.DataFrame({"filtration_added_mmal": [0.0]})
 
@@ -244,6 +244,14 @@ def test_interpolate_off_grid_degenerate_kv_axis() -> None:
     assert abs(val - 0.85) < 1e-5
     assert status == STATUS_INTERPOLATED
 
+    # Query directly on the only kVp row and a Cu grid node.
+    val, status = _interpolate_off_grid(
+        rows=dummy_rows, model="AXIOM-Artis", plane="Single Plane",
+        kvp=80.0, cu=0.3, al=0.0, pivot_cache=pivot_cache
+    )
+    assert abs(val - 0.8) < 1e-5
+    assert status == STATUS_EXACT
+
     # Query with KVp out of bounds (clamped to 80.0)
     val, status = _interpolate_off_grid(
         rows=dummy_rows, model="AXIOM-Artis", plane="Single Plane", 
@@ -252,3 +260,27 @@ def test_interpolate_off_grid_degenerate_kv_axis() -> None:
     assert abs(val - 0.85) < 1e-5
     assert status == STATUS_CLAMPED
 
+
+def test_interpolate_off_grid_degenerate_cu_axis() -> None:
+    """A one-Cu-column pivot supports kVp lookup and clamps other Cu values."""
+    from mypyskindose.corrections import _interpolate_off_grid
+    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_EXACT
+
+    piv = pd.DataFrame(data=[[0.8], [0.9]], index=[70.0, 80.0], columns=[0.3])
+    cache_key = ("AXIOM-Artis", "Single Plane", 0.0)
+    pivot_cache: dict[tuple[str, str, float], pd.DataFrame] = {cache_key: piv}
+    dummy_rows = pd.DataFrame({"filtration_added_mmal": [0.0]})
+
+    value, status = _interpolate_off_grid(
+        rows=dummy_rows, model="AXIOM-Artis", plane="Single Plane",
+        kvp=80.0, cu=0.3, al=0.0, pivot_cache=pivot_cache
+    )
+    assert value == pytest.approx(0.9)
+    assert status == STATUS_EXACT
+
+    value, status = _interpolate_off_grid(
+        rows=dummy_rows, model="AXIOM-Artis", plane="Single Plane",
+        kvp=80.0, cu=0.6, al=0.0, pivot_cache=pivot_cache
+    )
+    assert value == pytest.approx(0.9)
+    assert status == STATUS_CLAMPED

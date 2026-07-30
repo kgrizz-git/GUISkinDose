@@ -15,6 +15,7 @@ mesh).
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -112,8 +113,40 @@ def test_invalid_cylinder_resolution_raises_value_error() -> None:
         Phantom(phantom_model="cylinder", phantom_dim=dim)
 
 
+@pytest.mark.parametrize("resolution", [None, 1])
+@pytest.mark.parametrize(
+    ("phantom_model", "setting_name"),
+    [("plane", "plane_resolution"), ("cylinder", "cylinder_resolution")],
+)
+def test_non_string_resolution_raises_value_error(
+    phantom_model: str, setting_name: str, resolution: object
+) -> None:
+    """Malformed deserialized resolutions must not leak AttributeError."""
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    dim = settings.phantom.dimension
+    setattr(dim, setting_name, resolution)
+    with pytest.raises(ValueError, match=f"Unsupported {setting_name}"):
+        Phantom(phantom_model=phantom_model, phantom_dim=dim)
+
+
 def test_missing_human_mesh_raises_value_error_with_correct_spacing() -> None:
     settings = PyskindoseSettings(settings=load_settings_example_json())
     dim = settings.phantom.dimension
     with pytest.raises(ValueError, match=r'Human model needs to be specified for phantom_model = "human"'):
         Phantom(phantom_model="human", phantom_dim=dim, human_mesh=None)
+
+
+def test_human_mesh_with_partial_triangle_raises_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tuple-supplied meshes must provide complete triangles before indexing."""
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    malformed_mesh = SimpleNamespace(
+        vectors=np.zeros((1, 2, 3)),
+        normals=np.zeros((1, 3)),
+    )
+    monkeypatch.setattr(
+        Phantom,
+        "_get_phantom_mesh_from_tuple",
+        staticmethod(lambda _mesh_tuple: ("malformed", malformed_mesh)),
+    )
+    with pytest.raises(ValueError, match="whole number of triangles"):
+        Phantom(phantom_model="human", phantom_dim=settings.phantom.dimension, human_mesh=("malformed", "unused"))

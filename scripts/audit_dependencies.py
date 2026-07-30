@@ -21,19 +21,12 @@ _UV_AUDIT_RESERVED_FLAGS = frozenset({
     "--skip-uv-lock",  # uv-specific flag to skip lock file check
 })
 _PIP_AUDIT_ONLY_FLAGS = frozenset({"--desc", "--vulnerability-service", "--format", "-f"})
-_PIP_AUDIT_ONLY_PREFIXES = ("--desc=", "--vulnerability-service=", "--format=", "-f=")
-_PIP_AUDIT_ALLOWED_VALUES = frozenset({
-    "--desc", "on", "off",
-    "--vulnerability-service", "osv", "pypi",
-    "--format", "columns", "json", "cyclonedx-json", "cyclonedx-xml",
-    "-f",
-})
-_PIP_AUDIT_ALLOWED_PREFIXES = (
-    "--desc=",
-    "--vulnerability-service=",
-    "--format=",
-    "-f=",
-)
+_PIP_AUDIT_OPTION_VALUES = {
+    "--desc": frozenset({"on", "off"}),
+    "--vulnerability-service": frozenset({"osv", "pypi"}),
+    "--format": frozenset({"columns", "json", "cyclonedx-json", "cyclonedx-xml"}),
+    "-f": frozenset({"columns", "json", "cyclonedx-json", "cyclonedx-xml"}),
+}
 
 
 def _load_audit_ignores(repo_root: Path) -> list[str]:
@@ -71,12 +64,46 @@ def _strip_pip_audit_only_flags(extra_args: list[str]) -> list[str]:
             if i < len(extra_args) and not extra_args[i].startswith("-"):
                 i += 1
             continue
-        if arg.startswith(_PIP_AUDIT_ONLY_PREFIXES):
+        if any(arg.startswith(f"{option}=") for option in _PIP_AUDIT_ONLY_FLAGS):
             i += 1
             continue
         kept.append(arg)
         i += 1
     return kept
+
+
+def _validate_audit_extra_args(extra_args: list[str]) -> None:
+    """Validate supported audit options, including complete pip-audit pairs.
+
+    Both command builders call this before filtering options for their selected
+    engine, so invalid pip-audit-only arguments cannot be silently ignored by
+    the ``uv audit`` path.
+    """
+    i = 0
+    while i < len(extra_args):
+        arg = extra_args[i]
+        if any(ch in arg for ch in "\n\r\x00") or arg.strip() != arg:
+            raise ValueError("unsupported or unsafe audit argument")
+        if arg in _UV_AUDIT_RESERVED_FLAGS:
+            i += 1
+            continue
+        if "=" in arg:
+            option, value = arg.split("=", 1)
+            allowed_values = _PIP_AUDIT_OPTION_VALUES.get(option)
+            if allowed_values is None or value not in allowed_values:
+                raise ValueError(f"unsupported or unsafe audit argument: {arg}")
+            i += 1
+            continue
+        allowed_values = _PIP_AUDIT_OPTION_VALUES.get(arg)
+        if allowed_values is not None:
+            if i + 1 >= len(extra_args):
+                raise ValueError(f"unsupported or unsafe audit argument: {arg}")
+            value = extra_args[i + 1]
+            if any(ch in value for ch in "\n\r\x00") or value.strip() != value or value not in allowed_values:
+                raise ValueError(f"unsupported or unsafe audit argument: {value}")
+            i += 2
+            continue
+        raise ValueError(f"unsupported or unsafe audit argument: {arg}")
 
 
 def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:
@@ -85,10 +112,9 @@ def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:
     Do not append raw ``sys.argv`` fragments to ``subprocess.run``. Only
     ``--frozen`` / ``--locked`` (after stripping pip-audit-only flags) are accepted.
     """
+    _validate_audit_extra_args(extra_args)
     argv = [uv_bin, "audit"]
     for arg in _strip_pip_audit_only_flags(extra_args):
-        if any(ch in arg for ch in "\n\r\x00") or arg.strip() != arg:
-            raise ValueError("unsupported or unsafe audit argument")
         if arg not in _ALLOWED_UV_AUDIT_FLAGS:
             raise ValueError("unsupported or unsafe audit argument")
         argv.append(arg)
@@ -97,36 +123,8 @@ def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:
 
 def build_pip_audit_argv(extra_args: list[str]) -> list[str]:
     """Build a trusted list of extra arguments for pip-audit (similar to build_uv_audit_argv)."""
-    cmd_args: list[str] = []
-    i = 0
-    while i < len(extra_args):
-        arg = extra_args[i]
-        # Check for control characters or whitespace injection (safety gate)
-        if any(ch in arg for ch in "\n\r\x00") or arg.strip() != arg:
-            raise ValueError("unsupported or unsafe audit argument")
-        # Skip uv-only flags so they don't get passed to pip-audit
-        if arg in _UV_AUDIT_RESERVED_FLAGS:
-            i += 1
-            continue
-
-        if arg in _PIP_AUDIT_ALLOWED_VALUES:
-            # ``--desc`` / ``--vulnerability-service`` / ``--format`` / ``-f`` take a value
-            # token; consume the next argument if it is not itself a flag.
-            if arg in _PIP_AUDIT_ONLY_FLAGS and i + 1 < len(extra_args) and not extra_args[i + 1].startswith("-"):
-                cmd_args.append(arg)
-                cmd_args.append(extra_args[i + 1])
-                i += 2
-                continue
-            cmd_args.append(arg)
-            i += 1
-            continue
-        elif arg.startswith(_PIP_AUDIT_ALLOWED_PREFIXES):
-            cmd_args.append(arg)
-            i += 1
-            continue
-        else:
-            raise ValueError(f"unsupported or unsafe audit argument: {arg}")
-    return cmd_args
+    _validate_audit_extra_args(extra_args)
+    return [arg for arg in extra_args if arg not in _UV_AUDIT_RESERVED_FLAGS]
 
 
 def _probe_uv_audit(repo_root: Path) -> str | None:
