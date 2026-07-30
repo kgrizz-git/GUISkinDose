@@ -109,8 +109,8 @@ class Phantom:
     def _init_plane(self, phantom_dim: PhantomDimensions) -> None:
         """Create a plane phantom (2D rectangular grid); set self.r, self.ijk, self.dose."""
         # Resolution variables — set below depending on the plane_resolution setting.
-        res_length: float | None = None
-        res_width: float | None = None
+        res_length: float
+        res_width: float
 
         # Use a dense grid if specified by user
         if phantom_dim.plane_resolution.lower() == "dense":
@@ -119,9 +119,13 @@ class Phantom:
         elif phantom_dim.plane_resolution.lower() == "sparse":
             res_length = res_width = 1.0
 
+        else:
+            raise ValueError(
+                f"Unsupported plane_resolution: '{phantom_dim.plane_resolution}'. "
+                "Allowed values are 'dense' or 'sparse'."
+            )
+
         # Linearly spaced points along the longitudinal direction
-        assert res_width is not None, "res_width must be set for plane phantom"
-        assert res_length is not None, "res_length must be set for plane phantom"
         x = np.linspace(
             -phantom_dim.plane_width / 2, +phantom_dim.plane_width / 2, int(res_width * phantom_dim.plane_width + 1)
         )
@@ -150,20 +154,23 @@ class Phantom:
     def _init_cylinder(self, phantom_dim: PhantomDimensions) -> None:
         """Create an elliptic cylinder phantom; set self.r, self.ijk, self.dose, self.n."""
         # Resolution variables — set below depending on the cylinder_resolution setting.
-        res_length: float | None = None
-        res_width: float | None = None
+        res_length: float
+        res_width: float
 
         # Use a dense grid if specified by user
         if phantom_dim.cylinder_resolution.lower() == "dense":
-            res_length = 4
+            res_length = 4.0
             res_width = 0.05
 
         elif phantom_dim.cylinder_resolution.lower() == "sparse":
             res_length = 1.0
             res_width = 0.1
 
-        assert res_width is not None, "res_width must be set for cylinder phantom"
-        assert res_length is not None, "res_length must be set for cylinder phantom"
+        else:
+            raise ValueError(
+                f"Unsupported cylinder_resolution: '{phantom_dim.cylinder_resolution}'. "
+                "Allowed values are 'dense' or 'sparse'."
+            )
 
         # Creates linearly spaced points along an ellipse
         #  in the lateral direction
@@ -214,7 +221,7 @@ class Phantom:
     ) -> None:
         """Load STL or tuple-supplied human mesh; set self.r, self.n, self.ijk, self.dose, self.human_model."""
         if human_mesh is None:
-            raise ValueError("Human model needs to be specified for" 'phantom_model = "human"')
+            raise ValueError('Human model needs to be specified for phantom_model = "human"')
 
         if isinstance(human_mesh, str):
             # load selected phantom model from binary .stl file

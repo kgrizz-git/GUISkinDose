@@ -17,6 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from mypyskindose import load_settings_example_json
 from mypyskindose import constants as c
@@ -92,3 +93,26 @@ def test_human_mesh_dose_starts_zero() -> None:
     dose = np.asarray(p.dose)
     assert dose.shape == (len(p.r),)
     assert np.all(dose == 0.0)
+
+
+def test_invalid_plane_resolution_raises_value_error() -> None:
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    dim = settings.phantom.dimension
+    dim.plane_resolution = "invalid_res"
+    with pytest.raises(ValueError, match="Unsupported plane_resolution"):
+        Phantom(phantom_model="plane", phantom_dim=dim)
+
+
+def test_invalid_cylinder_resolution_raises_value_error() -> None:
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    dim = settings.phantom.dimension
+    dim.cylinder_resolution = "invalid_res"
+    with pytest.raises(ValueError, match="Unsupported cylinder_resolution"):
+        Phantom(phantom_model="cylinder", phantom_dim=dim)
+
+
+def test_missing_human_mesh_raises_value_error_with_correct_spacing() -> None:
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    dim = settings.phantom.dimension
+    with pytest.raises(ValueError, match=r'Human model needs to be specified for phantom_model = "human"'):
+        Phantom(phantom_model="human", phantom_dim=dim, human_mesh=None)
