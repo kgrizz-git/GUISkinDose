@@ -81,7 +81,7 @@ STALE_PATTERN_RE = re.compile(
     re.IGNORECASE,
 )
 
-INVENTORY_NOT_IMPLEMENTED_RE = re.compile(
+INVENTORY_NOT_IMPLEMENTED_RE = re.compile(  # NOSONAR: S8786 false positive — capture bounded by literal |.
     r"\|\s*(?P<feature>[^|]+?)\s*\|\s*Planned,\s*not implemented\s*\|",
     re.IGNORECASE,
 )
@@ -304,44 +304,63 @@ def archive_candidate_for_path(target: str, repo_root: Path) -> str | None:
     return None
 
 
+def _iter_non_fenced_lines(md_file: Path):
+    """Yield ``(line_number, line)`` for ``md_file``, skipping fenced code blocks."""
+    in_fenced_block = False
+    for line_number, line in enumerate(md_file.read_text(encoding="utf-8").splitlines(), start=1):
+        if line.lstrip().startswith("```"):
+            in_fenced_block = not in_fenced_block
+            continue
+        if in_fenced_block:
+            continue
+        yield line_number, line
+
+
+def _build_path_reference_hit(
+    raw_target: str,
+    context: str,
+    md_file: Path,
+    rel_source: Path,
+    line_number: int,
+    repo_root: Path,
+) -> PathReference | None:
+    """Resolve a single path reference; return a ``PathReference`` hit if it is broken."""
+    if is_external_link(raw_target):
+        return None
+    path_part, _anchor = split_link_target(raw_target)
+    if not path_part:
+        return None
+    resolved = resolve_path_reference(md_file, path_part, repo_root)
+    if resolved.exists():
+        return None
+    archive_candidate = archive_candidate_for_path(raw_target, repo_root)
+    message = f"stale path `{raw_target}`"
+    if archive_candidate:
+        message += f"; archived candidate: {archive_candidate}"
+    else:
+        message += f" -> {resolved}"
+    return PathReference(
+        source=rel_source,
+        line_number=line_number,
+        target=raw_target,
+        context=context,
+        message=message,
+    )
+
+
 def find_broken_path_references(markdown_files: list[Path], repo_root: Path) -> list[PathReference]:
     broken: list[PathReference] = []
     for md_file in markdown_files:
         rel_source = md_file.relative_to(repo_root)
         if skip_path_reference_scan(rel_source):
             continue
-        lines = md_file.read_text(encoding="utf-8").splitlines()
-        in_fenced_block = False
-        for line_number, line in enumerate(lines, start=1):
-            if line.lstrip().startswith("```"):
-                in_fenced_block = not in_fenced_block
-                continue
-            if in_fenced_block:
-                continue
+        for line_number, line in _iter_non_fenced_lines(md_file):
             for raw_target, context, _span in extract_path_references(line):
-                if is_external_link(raw_target):
-                    continue
-                path_part, _anchor = split_link_target(raw_target)
-                if not path_part:
-                    continue
-                resolved = resolve_path_reference(md_file, path_part, repo_root)
-                if resolved.exists():
-                    continue
-                archive_candidate = archive_candidate_for_path(raw_target, repo_root)
-                message = f"stale path `{raw_target}`"
-                if archive_candidate:
-                    message += f"; archived candidate: {archive_candidate}"
-                else:
-                    message += f" -> {resolved}"
-                broken.append(
-                    PathReference(
-                        source=rel_source,
-                        line_number=line_number,
-                        target=raw_target,
-                        context=context,
-                        message=message,
-                    )
+                hit = _build_path_reference_hit(
+                    raw_target, context, md_file, rel_source, line_number, repo_root
                 )
+                if hit is not None:
+                    broken.append(hit)
     return broken
 
 

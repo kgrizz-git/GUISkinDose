@@ -50,10 +50,9 @@ def test_main_uv_audit_success(ad):
             
         mock_run.side_effect = mock_run_impl
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main()
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
         assert called_cmd[0] == "/path/to/uv"
         assert called_cmd[1] == "audit"
@@ -64,15 +63,14 @@ def test_main_uv_missing_fallback(ad):
     """Test fallback to pip-audit when uv is missing."""
     with patch("shutil.which", return_value=None), \
          patch("subprocess.run") as mock_run:
-         
+        
         mock_audit = MagicMock()
         mock_audit.returncode = 0
         mock_run.return_value = mock_audit
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main([])
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args[0][0]
         assert called_cmd[0] == "pip-audit"
 
@@ -82,15 +80,14 @@ def test_main_uv_lock_missing_fallback(ad):
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=False), \
          patch("subprocess.run") as mock_run:
-         
+        
         mock_audit = MagicMock()
         mock_audit.returncode = 0
         mock_run.return_value = mock_audit
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main([])
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args[0][0]
         assert called_cmd[0] == "pip-audit"
 
@@ -116,10 +113,9 @@ def test_main_uv_audit_unsupported_fallback(ad):
             
         mock_run.side_effect = mock_run_impl
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main([])
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
         assert called_cmd[0] == "pip-audit"
 
@@ -129,7 +125,7 @@ def test_main_uv_too_old_fallback(ad):
     with patch("shutil.which", return_value="/path/to/uv"), \
          patch("pathlib.Path.exists", return_value=True), \
          patch("subprocess.run") as mock_run:
-         
+        
         def mock_run_impl(cmd, *args, **kwargs):
             res = MagicMock()
             if "--version" in cmd:
@@ -142,10 +138,9 @@ def test_main_uv_too_old_fallback(ad):
             
         mock_run.side_effect = mock_run_impl
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main([])
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
         assert called_cmd[0] == "pip-audit"
 
@@ -223,10 +218,9 @@ def test_main_allowlisted_passthrough(ad):
 
         mock_run.side_effect = mock_run_impl
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main()
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
         assert called_cmd == ["/path/to/uv", "audit", "--frozen"]
 
@@ -238,7 +232,7 @@ def test_main_ci_enforcement(ad):
          patch("subprocess.run") as mock_run, \
          patch("sys.argv", ["audit_dependencies.py"]), \
          patch.dict(os.environ, {"CI": "true"}):
-         
+          
         def mock_run_impl(cmd, *args, **kwargs):
             res = MagicMock()
             res.returncode = 0
@@ -250,10 +244,9 @@ def test_main_ci_enforcement(ad):
             
         mock_run.side_effect = mock_run_impl
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main()
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
         assert called_cmd[0] == "/path/to/uv"
         assert called_cmd[1] == "audit"
@@ -285,11 +278,10 @@ def test_main_uv_audit_exec_filenotfound_fallback(ad):
             
         mock_run.side_effect = mock_run_impl
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main()
 
         # The exit code should be 0 from the successful fallback to pip-audit
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args_list[-1][0][0]
         assert called_cmd[0] == "pip-audit"
 
@@ -312,10 +304,9 @@ def test_pip_audit_fallback_mirrors_tracked_ignores(ad):
         mock_audit.returncode = 0
         mock_run.return_value = mock_audit
 
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
+        code = ad.main([])
 
-        assert excinfo.value.code == 0
+        assert code == 0
         called_cmd = mock_run.call_args[0][0]
         assert called_cmd[0] == "pip-audit"
         assert "--ignore-vuln" in called_cmd
@@ -325,12 +316,53 @@ def test_pip_audit_fallback_mirrors_tracked_ignores(ad):
         assert called_cmd[idx + 1] == "GHSA-TEST-0001"
 
 
+def test_pip_audit_validation_rejects_unknown(ad):
+    """Non-allowlisted tokens (including --ignore) must raise ValueError on pip-audit fallback path."""
+    with patch("shutil.which", return_value=None):
+        with pytest.raises(ValueError, match="unsupported or unsafe"):
+            ad.main(["--unknown-flag"])
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--desc", "garbage"],
+        ["--format=garbage"],
+        ["-f=garbage"],
+        ["--format"],
+        ["columns"],
+        ["--skip-uv-lock"],
+    ],
+)
+def test_audit_argv_builders_reject_invalid_option_values(ad, args):
+    """Neither audit engine may accept or silently discard malformed values."""
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_pip_audit_argv(args)
+    with pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.build_uv_audit_argv("/path/to/uv", args)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--desc", "off"],
+        ["--desc=on"],
+        ["--vulnerability-service", "osv"],
+        ["--format=json"],
+        ["-f", "cyclonedx-json"],
+    ],
+)
+def test_audit_argv_builders_accept_valid_option_values(ad, args):
+    """Supported separated and equals-form values remain usable."""
+    assert ad.build_pip_audit_argv(args) == args
+    assert ad.build_uv_audit_argv("/path/to/uv", args) == ["/path/to/uv", "audit"]
+
+
 def test_main_pip_audit_missing_error(ad):
     """Test that if pip-audit is missing, FileNotFoundError is caught, prints error, and exits with 1."""
     with patch("shutil.which", return_value=None), \
          patch("subprocess.run", side_effect=FileNotFoundError):
-         
-        with pytest.raises(SystemExit) as excinfo:
-            ad.main()
 
-        assert excinfo.value.code == 1
+        code = ad.main([])
+
+        assert code == 1

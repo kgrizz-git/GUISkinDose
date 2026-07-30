@@ -104,52 +104,135 @@ def validate_help_registry(repo_root: Path, *, strict: bool = False) -> Validati
     seen_ids: set[str] = set()
     registered_sources: set[str] = set()
     for index, entry in enumerate(entries):
-        context = _entry_context(index, entry)
-        help_id = str(entry.get("id", ""))
-        source = str(entry.get("source", ""))
-        gui_files = entry.get("gui_files", [])
-        if help_id in seen_ids:
-            result.errors.append(f"{context}: duplicate help id {help_id!r}")
-        seen_ids.add(help_id)
-        if source:
-            registered_sources.add(source)
-
-        source_path = source_root / source
-        target_path = target_root / source
-        if not source_path.is_file():
-            result.errors.append(f"{context}: missing source help file {source_dir / source}")
-        if not target_path.is_file():
-            result.errors.append(f"{context}: missing mirrored help file {target_dir / source}; run scripts/sync_gui_help.py")
-        elif source_path.is_file() and source_path.read_text(encoding="utf-8") != target_path.read_text(encoding="utf-8"):
-            result.errors.append(f"{context}: mirrored help file is stale; run scripts/sync_gui_help.py")
-
-        gui_texts: list[str] = []
-        if isinstance(gui_files, list):
-            for gui_file in gui_files:
-                gui_path = repo_root / str(gui_file)
-                if not gui_path.is_file():
-                    result.errors.append(f"{context}: missing GUI file {gui_file}")
-                    continue
-                gui_texts.append(gui_path.read_text(encoding="utf-8"))
-        if gui_texts and source and not _source_is_referenced(source, gui_texts):
-            result.errors.append(f"{context}: GUI files do not reference content_path={source!r}")
-        if gui_texts and help_id and not _help_id_is_referenced(help_id, gui_texts):
-            message = f"{context}: GUI files do not reference help_id={help_id!r}"
-            if strict:
-                result.errors.append(message)
-            else:
-                result.warnings.append(message)
+        _check_entry(
+            index,
+            entry,
+            source_root,
+            target_root,
+            source_dir,
+            target_dir,
+            repo_root,
+            result,
+            strict,
+            seen_ids,
+            registered_sources,
+        )
 
     if source_root.is_dir():
-        for source_path in sorted(source_root.glob("*.md")):
-            if source_path.name not in registered_sources:
-                message = f"orphaned source help file {source_dir / source_path.name}"
-                if strict:
-                    result.errors.append(message)
-                else:
-                    result.warnings.append(message)
+        _check_orphaned_sources(source_root, source_dir, registered_sources, result, strict)
 
     return result
+
+
+def _check_entry(
+    index: int,
+    entry: dict[str, Any],
+    source_root: Path,
+    target_root: Path,
+    source_dir: Path,
+    target_dir: Path,
+    repo_root: Path,
+    result: ValidationResult,
+    strict: bool,
+    seen_ids: set[str],
+    registered_sources: set[str],
+) -> None:
+    context = _entry_context(index, entry)
+    help_id = str(entry.get("id", ""))
+    source = str(entry.get("source", ""))
+
+    if help_id in seen_ids:
+        result.errors.append(f"{context}: duplicate help id {help_id!r}")
+    seen_ids.add(help_id)
+    if source:
+        registered_sources.add(source)
+
+    _check_entry_files(source, source_root, target_root, source_dir, target_dir, context, result)
+    _check_gui_references(entry, repo_root, source, help_id, context, result, strict)
+
+
+def _check_entry_files(
+    source: str,
+    source_root: Path,
+    target_root: Path,
+    source_dir: Path,
+    target_dir: Path,
+    context: str,
+    result: ValidationResult,
+) -> None:
+    if not source:
+        return
+    source_path = source_root / source
+    target_path = target_root / source
+    if not source_path.is_file():
+        result.errors.append(f"{context}: missing source help file {source_dir / source}")
+    if not target_path.is_file():
+        result.errors.append(
+            f"{context}: missing mirrored help file {target_dir / source}; run scripts/sync_gui_help.py"
+        )
+    elif source_path.is_file() and source_path.read_text(encoding="utf-8") != target_path.read_text(encoding="utf-8"):
+        result.errors.append(f"{context}: mirrored help file is stale; run scripts/sync_gui_help.py")
+
+
+def _check_gui_references(
+    entry: dict[str, Any],
+    repo_root: Path,
+    source: str,
+    help_id: str,
+    context: str,
+    result: ValidationResult,
+    strict: bool,
+) -> None:
+    if "gui_files" in entry:
+        gui_files = entry["gui_files"]
+        if not isinstance(gui_files, list):
+            result.errors.append(f"{context}: 'gui_files' must be a list of file paths")
+            return
+    else:
+        gui_files = []
+
+    gui_texts: list[str] = []
+    for gui_file in gui_files:
+        if not isinstance(gui_file, (str, Path)):
+            result.errors.append(f"{context}: GUI file paths must be strings, got {type(gui_file)}")
+            continue
+        gui_path = repo_root / str(gui_file)
+        if not gui_path.is_file():
+            result.errors.append(f"{context}: missing GUI file {gui_file}")
+            continue
+        gui_texts.append(gui_path.read_text(encoding="utf-8"))
+
+    if not gui_texts:
+        return
+    if source and not _source_is_referenced(source, gui_texts):
+        result.errors.append(f"{context}: GUI files do not reference content_path={source!r}")
+    if help_id and not _help_id_is_referenced(help_id, gui_texts):
+        message = f"{context}: GUI files do not reference help_id={help_id!r}"
+        _append_ref_error(result, message, strict)
+
+
+def _append_ref_error(result: ValidationResult, message: str, strict: bool) -> None:
+    if strict:
+        result.errors.append(message)
+    else:
+        result.warnings.append(message)
+
+
+def _check_orphaned_sources(
+    source_root: Path,
+    source_dir: Path,
+    registered_sources: set[str],
+    result: ValidationResult,
+    strict: bool,
+) -> None:
+    for source_path in sorted(source_root.glob("*.md")):
+        if source_path.name in registered_sources:
+            continue
+        message = f"orphaned source help file {source_dir / source_path.name}"
+        if strict:
+            result.errors.append(message)
+        else:
+            result.warnings.append(message)
 
 
 def main(argv: list[str] | None = None) -> int:

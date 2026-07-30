@@ -46,7 +46,9 @@ print(output["psd"])  # peak skin dose in mGy
 
 | File | Role |
 |------|------|
-| `src/mypyskindose/main.py` | Entry point: `main()`, CLI |
+| `src/mypyskindose/main.py` | Entry point: `main()`, CLI dispatch; re-exports `get_argument_parser` |
+| `src/mypyskindose/__main__.py` | `python -m mypyskindose` entry (re-runs `get_argument_parser`) |
+| `src/mypyskindose/cli_args.py` | argparse construction (extracted from `main.py`); per-flag helpers |
 | `src/mypyskindose/analyze_data.py` | Core orchestration |
 | `src/mypyskindose/phantom_class.py` | Patient/table/pad phantom mesh |
 | `src/mypyskindose/beam_class.py` | X-ray beam geometry |

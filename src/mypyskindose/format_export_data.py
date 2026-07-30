@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict
 
 import numpy as np
@@ -268,6 +268,11 @@ class EventOutput:
         }
 
 
+# eq=False keeps identity-based equality/hashing (the pre-dataclass behaviour).
+# A generated __eq__ would compare ndarray/DataFrame fields (dose_map, data_norm)
+# element-wise and raise "ambiguous truth value", and would also make instances
+# unhashable.
+@dataclass(eq=False)
 class PySkinDoseOutput:
     """A collection of the information resulting from the PySkinDose analysis
 
@@ -310,167 +315,148 @@ class PySkinDoseOutput:
 
     """
 
-    def __init__(
-        self,
-        patient: Phantom,
-        table: Phantom,
-        pad: Phantom,
-        dose_map: np.ndarray,
-        hits: list[list[float]],
-        backscatter_correction: list[list[float]],
-        inverse_square_law_correction: list[list[float] | float],
-        medium_correction: list[float],
-        table_correction: list[float],
-        settings: PyskindoseSettings,
-        data_norm: pd.DataFrame,
-        kerma_meter_correction: list[float] | None = None,
-        kerma_corrected: list[float] | None = None,
-    ):
-        """Create a PySkinDose output instance based on data from the PySkinDose run
+    patient: Phantom
+    table: Phantom
+    pad: Phantom
+    dose_map: np.ndarray
+    hits: list[list[float]]
+    backscatter_correction: list[list[float]]
+    inverse_square_law_correction: list[list[float] | float]
+    medium_correction: list[float]
+    table_correction: list[float]
+    settings: PyskindoseSettings
+    data_norm: pd.DataFrame
+    kerma_meter_correction: list[float] | None = None
+    kerma_corrected: list[float] | None = None
 
-        Parameters
-        ----------
-        patient : Phantom
-            An instance of the Phantom class that represents the patient
-        table : Phantom
-            An instance of the Phantom class that represents the treatment table
-        pad : Phantom
-            An instance of the Phantom class that represents the pad
-        dose_map : np.array
-            A numpy array containing the calculated dose map
-        hits : list[np.array]
-            The numpy arrays containing information on which of the phantom cells are hit by the beam at each
-            irradiation event
-        backscatter_correction : list[list[float]]
-            A list with a numpy array for each irradiation event containing the backscatter correction determined for
-            each phantom cell
-        inverse_square_law_correction : list[np.array]
-            A list with a numpy array for each irradiation event containing the inverse square law correction determined
-            for each phantom cell
-        medium_correction : list[np.array]
-            A list with a numpy array for each irradiation event containing the medium correction determined for
-            each phantom cell
-        table_correction : list[np.array]
-            A list with a numpy array for each irradiation event containing the table correction determined for
-            each phantom cell
-        settings : PyskindoseSettings
-            The instance of the settings class used in the PySkinDose run for the current data
-        data_norm : pd.DataFrame
-            The RDSR data, normalized for compliance with PySkinDose's use of units etc.
-        kerma_meter_correction : list[float], optional
-            Per-event kerma-meter CF (``k_meter``). Defaults to all 1.0.
-        kerma_corrected : list[float], optional
-            Per-event corrected air kerma (reported × CF). Defaults to reported.
-        """
+    # Derived in __post_init__ — never settable from the constructor.
+    PSD: float = field(init=False)
+    AirKerma: float = field(init=False)
+    Events: "EventOutput" = field(init=False)
+    KermaMeterCorrection: list[float] = field(init=False)
+    KermaCorrected: list[float] = field(init=False)
+    AirKermaCorrected: float = field(init=False)
+    PatientOffsets: dict = field(init=False)
+    Patient: dict = field(init=False)
+    PadThickness: float = field(init=False)
+    DoseMap: np.ndarray = field(init=False)
+    Hits: list = field(init=False)
+    BackscatterCorrection: list[list[float]] = field(init=False)
+    InverseSquareLawCorrection: list[list[float] | float] = field(init=False)
+    MediumCorrection: list[float] = field(init=False)
+    TableCorrection: list[float] = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Validate inputs and compute the derived export fields."""
+        n_events = len(self.data_norm)
+        self._validate_lengths(n_events)
+        self._compute_derived(n_events)
+
+    def _validate_lengths(self, n_events: int) -> None:
+        """Reject mismatched list lengths with a ValueError naming the offending field."""
         error = False
-        error_message = [""]
-        n_events = len(data_norm)
+        error_message: list[str] = [""]
 
-        if len(hits) != n_events:
+        if len(self.hits) != n_events:
             error = True
             error_message.append(
-                (
-                    "Hits:\n"
-                    "\tThe hits list is not the same length as the number of normalized events"
-                )
+                "Hits:\n"
+                "\tThe hits list is not the same length as the number of normalized events"
             )
 
-        if len(backscatter_correction) != len(hits):
+        if len(self.backscatter_correction) != len(self.hits):
             error = True
             error_message.append(
-                (
-                    "Backscatter correction:\n"
-                    "\tThe backscatter correction list is not the same length as the number of events"
-                )
+                "Backscatter correction:\n"
+                "\tThe backscatter correction list is not the same length as the number of events"
             )
 
-        if len(inverse_square_law_correction) != len(hits):
+        if len(self.inverse_square_law_correction) != len(self.hits):
             error = True
             error_message.append(
                 "Inverse square law correction:\n"
                 "\tThe inverse square law correction list is not the same length as the number of events"
             )
 
-        if len(medium_correction) != len(hits):
+        if len(self.medium_correction) != len(self.hits):
             error = True
             error_message.append(
                 "Medium correction:\n"
                 "\tThe medium correction list is not the same length as the number of events"
             )
 
-        if len(table_correction) != len(hits):
+        if len(self.table_correction) != len(self.hits):
             error = True
             error_message.append(
                 "Table correction:\n"
                 "\tThe table correction list is not the same length as the number of events"
             )
 
-        has_kerma_meter = kerma_meter_correction is not None
-        has_kerma_corrected = kerma_corrected is not None
+        has_kerma_meter = self.kerma_meter_correction is not None
+        has_kerma_corrected = self.kerma_corrected is not None
         if has_kerma_meter != has_kerma_corrected:
             error = True
             error_message.append(
-                (
-                    "Kerma correction:\n"
-                    "\tkerma_meter_correction and kerma_corrected must both be provided or both omitted"
-                )
+                "Kerma correction:\n"
+                "\tkerma_meter_correction and kerma_corrected must both be provided or both omitted"
             )
 
-        if has_kerma_meter and len(kerma_meter_correction) != n_events:
+        if self.kerma_meter_correction is not None and len(self.kerma_meter_correction) != n_events:
             error = True
             error_message.append(
-                (
-                    "Kerma-meter correction:\n"
-                    "\tThe kerma-meter correction list is not the same length as the number of events"
-                )
+                "Kerma-meter correction:\n"
+                "\tThe kerma-meter correction list is not the same length as the number of events"
             )
 
-        if has_kerma_corrected and len(kerma_corrected) != n_events:
+        if self.kerma_corrected is not None and len(self.kerma_corrected) != n_events:
             error = True
             error_message.append(
-                (
-                    "Kerma corrected:\n"
-                    "\tThe kerma-corrected list is not the same length as the number of events"
-                )
+                "Kerma corrected:\n"
+                "\tThe kerma-corrected list is not the same length as the number of events"
             )
 
         if error:
             raise ValueError("\n\n".join(error_message))
 
-        self.PSD: float = dose_map.max()
-        self.AirKerma: float = data_norm[KEY_NORMALIZATION_AIR_KERMA].sum()
-        self.Events: EventOutput = EventOutput(data_norm=data_norm)
-        if kerma_meter_correction is None:
-            self.KermaMeterCorrection: list[float] = [1.0] * n_events
-            self.KermaCorrected: list[float] = list(self.Events.kerma)
+    def _compute_derived(self, n_events: int) -> None:
+        """Populate the public derived fields after validation passes."""
+        self.PSD = float(self.dose_map.max())
+        self.AirKerma = float(self.data_norm[KEY_NORMALIZATION_AIR_KERMA].sum())
+        self.Events = EventOutput(data_norm=self.data_norm)
+        if self.kerma_meter_correction is None:
+            self.KermaMeterCorrection = [1.0] * n_events
+            self.KermaCorrected = list(self.Events.kerma)
         else:
-            assert kerma_corrected is not None  # paired by validation above
-            self.KermaMeterCorrection = [float(v) for v in kerma_meter_correction]
-            self.KermaCorrected = [float(v) for v in kerma_corrected]
-        self.AirKermaCorrected: float = float(sum(self.KermaCorrected))
-        self.PatientOffsets: dict = {
-            "long": settings.phantom.patient_offset.d_lon,
-            "vert": settings.phantom.patient_offset.d_ver,
-            "lat": settings.phantom.patient_offset.d_lat,
+            assert self.kerma_corrected is not None  # paired by validation above
+            self.KermaMeterCorrection = [float(v) for v in self.kerma_meter_correction]
+            self.KermaCorrected = [float(v) for v in self.kerma_corrected]
+        self.AirKermaCorrected = float(sum(self.KermaCorrected))
+        self.PatientOffsets = {
+            "long": self.settings.phantom.patient_offset.d_lon,
+            "vert": self.settings.phantom.patient_offset.d_ver,
+            "lat": self.settings.phantom.patient_offset.d_lat,
         }
-        self.Patient: dict = {
-            "patient_type": patient.phantom_model,
+        self.Patient = {
+            "patient_type": self.patient.phantom_model,
             "patient": (
-                HumanPhantomOutput(patient)
-                if patient.phantom_model == PHANTOM_MODEL_HUMAN
-                else NonHumanPhantomOutput(patient)
+                HumanPhantomOutput(self.patient)
+                if self.patient.phantom_model == PHANTOM_MODEL_HUMAN
+                else NonHumanPhantomOutput(self.patient)
             ),
-            "orientation": settings.phantom.patient_orientation,
+            "orientation": self.settings.phantom.patient_orientation,
         }
-        self.Table: Phantom = table
-        self.Pad: Phantom = pad
-        self.PadThickness: float = settings.phantom.dimension.pad_thickness
-        self.DoseMap: np.ndarray = dose_map
-        self.Hits = [[ind for ind, hit in enumerate(event_hits) if hit] for event_hits in hits]
-        self.BackscatterCorrection = backscatter_correction
-        self.InverseSquareLawCorrection = inverse_square_law_correction
-        self.MediumCorrection = medium_correction
-        self.TableCorrection = table_correction
+        self.Table = self.table
+        self.Pad = self.pad
+        self.PadThickness = float(self.settings.phantom.dimension.pad_thickness)
+        self.DoseMap = self.dose_map
+        self.Hits = [
+            [ind for ind, hit in enumerate(event_hits) if hit]
+            for event_hits in self.hits
+        ]
+        self.BackscatterCorrection = self.backscatter_correction
+        self.InverseSquareLawCorrection = self.inverse_square_law_correction
+        self.MediumCorrection = self.medium_correction
+        self.TableCorrection = self.table_correction
 
     def to_dict(self) -> dict[str, Any]:
         """Converts the output data into a dict
@@ -540,6 +526,20 @@ class PySkinDoseOutput:
             A JSON formatted string containing the output data
         """
         return json.dumps(self.to_dict())
+
+    def __repr__(self) -> str:
+        def safe_number(name: str) -> str:
+            value = getattr(self, name, "<unavailable>")
+            try:
+                return f"{value:.4f}"
+            except (TypeError, ValueError):
+                return "<unavailable>"
+
+        return (
+            f"PySkinDoseOutput(PSD={safe_number('PSD')}, AirKerma={safe_number('AirKerma')}, "
+            f"AirKermaCorrected={safe_number('AirKermaCorrected')}, PadThickness={safe_number('PadThickness')}, "
+            f"PatientOffsets={getattr(self, 'PatientOffsets', '<unavailable>')!r})"
+        )
 
 
 @dataclass

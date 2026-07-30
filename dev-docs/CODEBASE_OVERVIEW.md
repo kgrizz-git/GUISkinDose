@@ -14,7 +14,9 @@ It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose)
 
 ```
 src/mypyskindose/          # Main package
-  main.py                  # Entry point: main() and CLI
+  main.py                  # Entry point: main() and CLI dispatch
+  __main__.py              # `python -m mypyskindose` entry; re-uses get_argument_parser
+  cli_args.py              # argparse construction (extracted from main.py); re-exported via main.py
   analyze_data.py          # Core orchestration function
   phantom_class.py         # Phantom (patient / table / pad) model
   beam_class.py            # X-ray beam and detector model
@@ -53,7 +55,7 @@ MyPySkinDose is organized in layers so settings, dose physics, and presentation 
 | **L4 — Dose pipeline** | `calculate_dose/` | Per-event dose accumulation (uses L3) |
 | **L5 — Presentation** | `plotting/`, `format_export_data.py` | Plotly plots and export formatting |
 | **L6 — Orchestration** | `analyze_data.py` | Mode dispatch: geometry plots vs dose calculation |
-| **L7 — Entry** | `main.py`, `__main__.py` | CLI and public `main()` API |
+| **L7 — Entry** | `main.py`, `__main__.py`, `cli_args.py` | CLI argparse and public `main()` API |
 | **L8 — GUI (optional extra)** | `gui/` | NiceGUI app; uses orchestration and input, not dose internals |
 
 **Multi-exam Geometry (GUI):** `gui/tabs/geometry.py` binds offset sliders to `loaded_exam_meta[active_exam_index]`; `gui/geometry_preview.py` slices `rdsr_df` via `EXAM_INDEX_COLUMN`; composite preview pauses at >30 events (`composite_live_preview_paused`). Calculate/Settings summaries use `gui/summary_formatters.py` and `per_exam_offsets_version` on `AppState`.

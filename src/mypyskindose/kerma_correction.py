@@ -316,53 +316,46 @@ def merge_tables(
     return merged
 
 
-def resolve_correction_factors(
-    data_norm: pd.DataFrame,
+def _lookup_correction(
+    equip: str | None,
+    tube: str,
+    lookup: dict[tuple[str, str], float],
+    default_factor: float,
+    index: int,
+    unresolved: list[int],
+    table_miss: list[int],
+) -> float:
+    """Per-event lookup: returns factor, appends to ``unresolved``/``table_miss`` as needed."""
+    if equip is None:
+        unresolved.append(index)
+        return default_factor
+    cf = lookup.get((equip, tube))
+    if cf is None:
+        table_miss.append(index)
+        return default_factor
+    try:
+        value = float(cf)
+    except (TypeError, ValueError):
+        value = float("nan")
+    if not math.isfinite(value) or value <= 0:
+        logger.warning(
+            "kerma-meter correction: invalid factor for event index %d; "
+            "using default_factor=%.4g.",
+            index,
+            default_factor,
+        )
+        return default_factor
+    return value
+
+
+def _log_kerma_warnings(
+    n: int,
     table: dict[tuple[str, str], float] | None,
-    *,
-    explicit_label: str | None = None,
-    default_factor: float = 1.0,
-    table_metadata: dict[str, Any] | None = None,
-) -> KermaMeterCorrection:
-    """Resolve per-event CF list from keys + lookup table.
-
-    Absent table or missing key → ``default_factor``. Never mutates ``data_norm``.
-    """
-    if not math.isfinite(default_factor) or default_factor <= 0:
-        raise ValueError("default_factor must be a finite float > 0.")
-
-    keys = resolve_correction_keys(data_norm, explicit_label=explicit_label)
-    factors: list[float] = []
-    unresolved: list[int] = []
-    table_miss: list[int] = []
-    lookup = table or {}
-
-    for i, (equip, tube) in enumerate(keys):
-        if equip is None:
-            factors.append(default_factor)
-            unresolved.append(i)
-            continue
-        cf = lookup.get((equip, tube))
-        if cf is None:
-            factors.append(default_factor)
-            table_miss.append(i)
-            continue
-        try:
-            value = float(cf)
-        except (TypeError, ValueError):
-            value = float("nan")
-        if not math.isfinite(value) or value <= 0:
-            logger.warning(
-                "kerma-meter correction: invalid factor for event index %d; "
-                "using default_factor=%.4g.",
-                i,
-                default_factor,
-            )
-            factors.append(default_factor)
-        else:
-            factors.append(value)
-
-    n = len(factors)
+    unresolved: list[int],
+    table_miss: list[int],
+    default_factor: float,
+) -> None:
+    """Emit the unresolved / table_miss / no-table-supplied warnings."""
     if unresolved:
         logger.warning(
             "kerma-meter correction: %d of %d event(s) had unresolved equipment "
@@ -388,6 +381,33 @@ def resolve_correction_factors(
             default_factor,
             n,
         )
+
+
+def resolve_correction_factors(
+    data_norm: pd.DataFrame,
+    table: dict[tuple[str, str], float] | None,
+    *,
+    explicit_label: str | None = None,
+    default_factor: float = 1.0,
+    table_metadata: dict[str, Any] | None = None,
+) -> KermaMeterCorrection:
+    """Resolve per-event CF list from keys + lookup table.
+
+    Absent table or missing key → ``default_factor``. Never mutates ``data_norm``.
+    """
+    if not math.isfinite(default_factor) or default_factor <= 0:
+        raise ValueError("default_factor must be a finite float > 0.")
+
+    keys = resolve_correction_keys(data_norm, explicit_label=explicit_label)
+    lookup = table or {}
+    unresolved: list[int] = []
+    table_miss: list[int] = []
+    factors = [
+        _lookup_correction(equip, tube, lookup, default_factor, i, unresolved, table_miss)
+        for i, (equip, tube) in enumerate(keys)
+    ]
+
+    _log_kerma_warnings(len(factors), table, unresolved, table_miss, default_factor)
 
     return KermaMeterCorrection(
         factors=factors,

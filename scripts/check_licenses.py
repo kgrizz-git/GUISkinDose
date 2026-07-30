@@ -86,10 +86,11 @@ FORBIDDEN_LICENSES = frozenset(
     }
 )
 
-LICENSE_CLASSIFIER_RE = re.compile(
-    r"^License\s*::\s*OSI Approved\s*::\s*(?P<name>.+)$",
-    re.IGNORECASE,
-)
+# Trove license classifiers look like "License :: OSI Approved :: MIT License".
+# We split on "::" and compare stripped segments rather than using a regex, so
+# non-canonical whitespace around the separators still parses and there is no
+# backtracking risk (Sonar S8786).
+LICENSE_CLASSIFIER_PREFIX = ("license", "osi approved")
 
 # Map common PyPI classifier / metadata names to SPDX-style identifiers.
 LICENSE_ALIASES = {
@@ -177,9 +178,14 @@ def _normalize_token(value: str) -> str:
 def _license_from_classifiers(classifiers: list[str]) -> list[str]:
     licenses: list[str] = []
     for classifier in classifiers:
-        match = LICENSE_CLASSIFIER_RE.match(classifier.strip())
-        if match:
-            licenses.append(_normalize_token(match.group("name")))
+        segments = [segment.strip() for segment in classifier.split("::")]
+        if len(segments) < 3:
+            continue
+        if tuple(segment.lower() for segment in segments[:2]) != LICENSE_CLASSIFIER_PREFIX:
+            continue
+        name = " :: ".join(segments[2:]).strip()
+        if name:
+            licenses.append(_normalize_token(name))
     return licenses
 
 
@@ -191,12 +197,12 @@ def _meta_get(meta: metadata.PackageMetadata, key: str, default: str = "") -> st
 def _license_from_metadata(meta: metadata.PackageMetadata) -> tuple[str, tuple[str, ...]]:
     expression = _meta_get(meta, "License-Expression").strip()
     if expression:
-        if re.search(r"\sOR\s", expression, flags=re.IGNORECASE):
+        if re.search(r"\s+\bOR\b\s+", expression, flags=re.IGNORECASE):
             operator = "OR"
-            parts = re.split(r"\s+OR\s+", expression, flags=re.IGNORECASE)
-        elif re.search(r"\sAND\s", expression, flags=re.IGNORECASE):
+            parts = re.split(r"\s+\bOR\b\s+", expression, flags=re.IGNORECASE)
+        elif re.search(r"\s+\bAND\b\s+", expression, flags=re.IGNORECASE):
             operator = "AND"
-            parts = re.split(r"\s+AND\s+", expression, flags=re.IGNORECASE)
+            parts = re.split(r"\s+\bAND\b\s+", expression, flags=re.IGNORECASE)
         else:
             operator = "SINGLE"
             parts = [expression]
@@ -212,8 +218,8 @@ def _license_from_metadata(meta: metadata.PackageMetadata) -> tuple[str, tuple[s
 
     raw = _meta_get(meta, "License").strip()
     if raw:
-        if re.search(r"\s+or\s+", raw, flags=re.IGNORECASE):
-            parts = re.split(r"\s+or\s+", raw, flags=re.IGNORECASE)
+        if re.search(r"\s+\bor\b\s+", raw, flags=re.IGNORECASE):
+            parts = re.split(r"\s+\bor\b\s+", raw, flags=re.IGNORECASE)
             licenses = tuple(_normalize_token(part) for part in parts if part.strip())
             return "OR", licenses or ("UNKNOWN",)
         return "SINGLE", (_normalize_token(raw),)

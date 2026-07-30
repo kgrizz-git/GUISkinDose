@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "_captured": "2026-07-28 against calculate_k_tab baseline (status verified with clean capture handler at logger NOTSET)",
+  "cases": [
+    {
+      "model": "AXIOM-Artis",
+      "plane": "Single Plane",
+      "kvp": 80,
+      "cu": 0.3,
+      "al": 0,
+      "expected_k_tab": 0.7319,
+      "expected_status": "exact",
+      "note": "Tabulated (model, plane, kvp, cu, al) \u2014 exact lookup, no warning"
+    },
+    {
+      "model": "AXIOM-Artis",
+      "plane": "Single Plane",
+      "kvp": 80,
+      "cu": 0.45,
+      "al": 0,
+      "expected_k_tab": 0.7398,
+      "expected_status": "interpolated",
+      "note": "cu between two tabulated points \u2014 linearly interpolated (value strictly between bracketing entries), warning 'interpolated'"
+    },
+    {
+      "model": "AXIOM-Artis",
+      "plane": "Single Plane",
+      "kvp": 125,
+      "cu": 0.3,
+      "al": 0,
+      "expected_k_tab": 0.7563,
+      "expected_status": "exact",
+      "note": "Top-of-grid kVp (exact edge), no 'clamped' warning"
+    },
+    {
+      "model": "AXIOM-Artis",
+      "plane": "Single Plane",
+      "kvp": 200,
+      "cu": 0.3,
+      "al": 0,
+      "expected_k_tab": 0.7563,
+      "expected_status": "clamped",
+      "note": "kVp above grid ceiling \u2014 clamped to the edge value (no extrapolation), warning 'clamped'"
+    },
+    {
+      "model": "AlluraClarity",
+      "plane": "Plane A",
+      "kvp": 80,
+      "cu": 0.4,
+      "al": 1.0,
+      "expected_k_tab": 0.8,
+      "expected_status": "exact",
+      "note": "AlluraClarity Plane A: rows resolve to a valid k_tab value (0.8) without an off-grid warning"
+    },
+    {
+      "model": "GE Innova",
+      "plane": "Single Plane",
+      "kvp": 80,
+      "cu": 0.3,
+      "al": 0,
+      "expected_k_tab": 1.0,
+      "expected_status": "fallback_1.0",
+      "note": "Unknown device/plane combination \u2014 fallback to k_tab=1.0, warning 'no table-attenuation'"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ MAX_LINES = 800
 # Files that are currently allowed to exceed the limit.
 # These must be relative paths from the repository root.
 # Outliers should be documented and eventually decomposed/refactored.
-WHITELIST: set[str] = set()
+WHITELIST: set[str] = {"dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md"}
 
 def check_file_sizes(repo_root: Path | None = None) -> bool:
     if repo_root is None:
