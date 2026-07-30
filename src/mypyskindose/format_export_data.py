@@ -527,6 +527,13 @@ class PySkinDoseOutput:
         """
         return json.dumps(self.to_dict())
 
+    def __repr__(self) -> str:
+        return (
+            f"PySkinDoseOutput(PSD={self.PSD:.4f}, AirKerma={self.AirKerma:.4f}, "
+            f"AirKermaCorrected={self.AirKermaCorrected:.4f}, PadThickness={self.PadThickness:.4f}, "
+            f"PatientOffsets={self.PatientOffsets})"
+        )
+
 
 @dataclass
 class ExamResult:

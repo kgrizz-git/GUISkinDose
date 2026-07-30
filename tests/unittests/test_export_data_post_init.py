@@ -176,3 +176,22 @@ def test_missing_kerma_defaults_to_unmetered(settings, trio, data_norm) -> None:
     assert out.KermaMeterCorrection == [1.0] * len(data_norm)
     assert out.AirKermaCorrected == pytest.approx(out.AirKerma)
 
+
+def test_pyskindose_output_lightweight_repr() -> None:
+    from mypyskindose.format_export_data import PySkinDoseOutput
+
+    # Bypass __init__ and __post_init__ validations since fields have init=False
+    out = object.__new__(PySkinDoseOutput)
+    out.PSD = 1.2345
+    out.AirKerma = 4.5678
+    out.AirKermaCorrected = 4.0
+    out.PadThickness = 2.0
+    out.PatientOffsets = {"long": 10.0, "vert": 5.0, "lat": -2.0}
+
+    repr_str = repr(out)
+    assert "PSD=1.2345" in repr_str
+    assert "AirKerma=4.5678" in repr_str
+    assert "data_norm" not in repr_str
+    assert "dose_map" not in repr_str
+
+
