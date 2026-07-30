@@ -15,8 +15,25 @@ from pathlib import Path
 
 # Only these flags may be appended to ``uv audit`` after argv rebuild (Sonar S8705).
 _ALLOWED_UV_AUDIT_FLAGS = frozenset({"--frozen", "--locked"})
+_UV_AUDIT_RESERVED_FLAGS = frozenset({
+    "--frozen",
+    "--locked",
+    "--skip-uv-lock",  # uv-specific flag to skip lock file check
+})
 _PIP_AUDIT_ONLY_FLAGS = frozenset({"--desc", "--vulnerability-service", "--format", "-f"})
 _PIP_AUDIT_ONLY_PREFIXES = ("--desc=", "--vulnerability-service=", "--format=", "-f=")
+_PIP_AUDIT_ALLOWED_VALUES = frozenset({
+    "--desc", "on", "off",
+    "--vulnerability-service", "osv", "pypi",
+    "--format", "columns", "json", "cyclonedx-json", "cyclonedx-xml",
+    "-f",
+})
+_PIP_AUDIT_ALLOWED_PREFIXES = (
+    "--desc=",
+    "--vulnerability-service=",
+    "--format=",
+    "-f=",
+)
 
 
 def _load_audit_ignores(repo_root: Path) -> list[str]:
@@ -78,6 +95,40 @@ def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:
     return argv
 
 
+def build_pip_audit_argv(extra_args: list[str]) -> list[str]:
+    """Build a trusted list of extra arguments for pip-audit (similar to build_uv_audit_argv)."""
+    cmd_args: list[str] = []
+    i = 0
+    while i < len(extra_args):
+        arg = extra_args[i]
+        # Check for control characters or whitespace injection (safety gate)
+        if any(ch in arg for ch in "\n\r\x00") or arg.strip() != arg:
+            raise ValueError("unsupported or unsafe audit argument")
+        # Skip uv-only flags so they don't get passed to pip-audit
+        if arg in _UV_AUDIT_RESERVED_FLAGS:
+            i += 1
+            continue
+
+        if arg in _PIP_AUDIT_ALLOWED_VALUES:
+            # ``--desc`` / ``--vulnerability-service`` / ``--format`` / ``-f`` take a value
+            # token; consume the next argument if it is not itself a flag.
+            if arg in _PIP_AUDIT_ONLY_FLAGS and i + 1 < len(extra_args) and not extra_args[i + 1].startswith("-"):
+                cmd_args.append(arg)
+                cmd_args.append(extra_args[i + 1])
+                i += 2
+                continue
+            cmd_args.append(arg)
+            i += 1
+            continue
+        elif arg.startswith(_PIP_AUDIT_ALLOWED_PREFIXES):
+            cmd_args.append(arg)
+            i += 1
+            continue
+        else:
+            raise ValueError(f"unsupported or unsafe audit argument: {arg}")
+    return cmd_args
+
+
 def _probe_uv_audit(repo_root: Path) -> str | None:
     """Return the uv binary path if it supports ``uv audit``, else None.
 
@@ -96,7 +147,9 @@ def _probe_uv_audit(repo_root: Path) -> str | None:
         return None
 
     try:
-        version_out = subprocess.run([uv_bin, "--version"], capture_output=True, text=True, check=True).stdout
+        version_out = subprocess.run(
+            [uv_bin, "--version"], capture_output=True, text=True, check=True, timeout=10.0
+        ).stdout
         match = re.search(r"uv\s+(\d+)\.(\d+)\.(\d+)", version_out)
         if match:
             major, minor, patch = map(int, match.groups())
@@ -113,7 +166,9 @@ def _probe_uv_audit(repo_root: Path) -> str | None:
         return None
 
     try:
-        probe = subprocess.run([uv_bin, "audit", "--help"], capture_output=True, text=True, cwd=repo_root)
+        probe = subprocess.run(
+            [uv_bin, "audit", "--help"], capture_output=True, text=True, cwd=repo_root, timeout=10.0
+        )
         if probe.returncode != 0:
             print("INFO: 'uv audit' subcommand is not supported by this uv installation. Falling back to pip-audit...")
             sys.stdout.flush()
@@ -141,7 +196,7 @@ def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str]) -> int:
 
     audit_argv = build_uv_audit_argv(uv_bin, uv_extra)
     try:
-        result = subprocess.run(audit_argv, cwd=repo_root)
+        result = subprocess.run(audit_argv, cwd=repo_root, timeout=300.0)
         return result.returncode
     except FileNotFoundError:
         # Fallback if shutil.which returned a path that is not executable
@@ -168,9 +223,12 @@ def _run_pip_audit_fallback(repo_root: Path, extra_args: list[str]) -> int:
             sys.stdout.flush()
             for vuln_id in tracked_ignores:
                 cmd.extend(["--ignore-vuln", vuln_id])
-        cmd.extend(extra_args)
 
-        result = subprocess.run(cmd, cwd=repo_root)
+        # Validate and append arguments
+        validated_args = build_pip_audit_argv(extra_args)
+        cmd.extend(validated_args)
+
+        result = subprocess.run(cmd, cwd=repo_root, timeout=300.0)
         return result.returncode
     except FileNotFoundError:
         print("ERROR: 'pip-audit' is not installed or not found in PATH.", file=sys.stderr)
@@ -189,7 +247,8 @@ def main(argv: list[str] | None = None) -> int:
         code = _run_uv_audit(uv_bin, repo_root, extra_args)
     else:
         code = _run_pip_audit_fallback(repo_root, extra_args)
-    sys.exit(code)
+    return code
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
