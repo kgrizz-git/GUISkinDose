@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-21  
 **Status:** **PASS** (tmp only; not yet installed into `phantom_data/`)  
-**Plan:** [`../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)
+**Plan:** [`../plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)
 
 ## Outputs
 

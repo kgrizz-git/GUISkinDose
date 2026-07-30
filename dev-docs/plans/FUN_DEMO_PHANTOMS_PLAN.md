@@ -11,7 +11,7 @@
 >
 > **Related:** [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md),
 > [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](../references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).
-> Clinical habitus expansion remains [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+> Clinical habitus expansion remains [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 >
 > **Plan review (2026-07-21):** Incorporates constructive criticism on transform defaults,
 > `Phantom` ctor, validate/watertight policy, GUI label binding, license NOTICE packaging,

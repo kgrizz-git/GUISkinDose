@@ -2,7 +2,7 @@
 
 > **TO_DO item:** *"Geometry tab per-exam event selection — let users select or step through events per exam; account for Plotly trace count and large datasets."*
 >
-> **Prerequisite context:** [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](../MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) Parts I–V shipped. The Geometry tab already has an exam selector (`geometry.py:188-192`), a bare `ui.number` event input (`geometry.py:395-397`), preview slicing (`geometry_preview.py:78-95`), event clamping (`geometry_preview.py:161-178`), three preview-mode buttons, a composite toggle (`geometry.py:198-201`), and a composite-only live-pause threshold (30 events pause / 100 spinner) at `geometry_preview.py:181-199` and `geometry.py:497-500`. **Single-exam and non-composite `plot_procedure` are currently unguarded** (see Part III). This plan is a UX/polish layer on that foundation — no new architecture, plus a small behavior extension to the trace-count guard.
+> **Prerequisite context:** [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) Parts I–V shipped. The Geometry tab already has an exam selector (`geometry.py:188-192`), a bare `ui.number` event input (`geometry.py:395-397`), preview slicing (`geometry_preview.py:78-95`), event clamping (`geometry_preview.py:161-178`), three preview-mode buttons, a composite toggle (`geometry.py:198-201`), and a composite-only live-pause threshold (30 events pause / 100 spinner) at `geometry_preview.py:181-199` and `geometry.py:497-500`. **Single-exam and non-composite `plot_procedure` are currently unguarded** (see Part III). This plan is a UX/polish layer on that foundation — no new architecture, plus a small behavior extension to the trace-count guard.
 >
 > **Index-number convention:** Internal dataframe indexing and 0-based Python functions remain 0-based (`0 .. N-1`). The user-facing `geom_event_input` value and stepper caption are **1-based** (`1 .. N`, where `1` is the first event of `N`). Consumers feeding `make_geometry_fig` convert the 1-based input value to a 0-based internal index via `max(0, int(geom_event_input.value or 1) - 1)`.
 
@@ -657,7 +657,7 @@ pytest tests/gui/ -v
 
 ## Related
 
-- [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](../MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) — source of the per-exam foundation this plan builds on.
+- [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) — source of the per-exam foundation this plan builds on.
 - [archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md) — sibling TO_DO item (completed) that added per-exam dose-map controls in the Results tab.
 - [TO_DO.md](../../TO_DO.md) — origin item.
 - `docs/source/gui_help/geometry_workflow.md` — help file updated in Phase 4.

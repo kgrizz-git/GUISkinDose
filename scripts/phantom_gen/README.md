@@ -1,6 +1,6 @@
 # Phantom generation scripts
 
-Implement per [`dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../../dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+Implement per [`dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../../dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 
 **Policy:** shipped phantoms must use **true shape variety** (MPFB/MakeHuman parametric
 targets via headless Blender). Global affine stretching of existing STLs is not an allowed

@@ -4,8 +4,13 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 
 | File | Status | Notes |
 |---|---|---|
+| [AUTOMATED_PHANTOM_LIBRARY_PLAN.md](AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Completed** (2026-07-21) | Headless MPFB/Blender true-shape library Phases 0–4; 10 meshes in 25.2.0. Further phantoms tracked in `ADDITIONAL_PHANTOMS.md` / `TO_DO.md`. |
+| [PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) | Demo gate, Steamboat supine, pediatric 5y male fix, bariatric thick-extremities. |
+| [PHANTOM_MESH_NAMING_CONVENTION_PLAN.md](PHANTOM_MESH_NAMING_CONVENTION_PLAN.md) | **Completed** (2026-07-23) | Canonical `ped_*` / `adult_*` / `demo_*` stems + aliases. |
+| [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | **Completed** (2026-06-24) | Parts I–V multi-exam Geometry offsets; manual smoke remains in `TO_DO.md`. |
+| [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) | **Completed** (2026-06-24) | Phases 0–2b single-exam Geometry sliders; Phase 3 offset arrow deferred in `TO_DO.md`. |
 | [DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md](DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) | **Completed** (2026-07-22) | Demo phantoms v1: Cosmic Buddha, Ramesses II, Steamboat Willie shipped; Petite Herculanaise blocked. Fun ingest + face-up gate + GUI `(demo)` labels. Broader backlog: [`../FUN_DEMO_PHANTOMS_PLAN.md`](../FUN_DEMO_PHANTOMS_PLAN.md). |
-| [MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) | MakeHuman GUI master + Phases 1–5; replaced by [`../AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md). |
+| [MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md](MAKEHUMAN_PHANTOM_GENERATION_MASTER_PLAN.md) | **Superseded** (2026-07-21) | MakeHuman GUI master + Phases 1–5; replaced by [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](AUTOMATED_PHANTOM_LIBRARY_PLAN.md). |
 | [basedpyright-fix-plan.md](basedpyright-fix-plan.md) | **Completed** (2026) | 147 errors resolved; CI runs strict `basedpyright`. Moved from `src/mypyskindose/dev-docs/`. |
 | [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md) | **Superseded** (2026-07-04) | Brainstorming and high-level documentation/help infrastructure ideas folded into [DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md); deferred experience ideas tracked in `TO_DO.md`. |
 | [DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md) | **Completed** (2026-07-04) | Documentation/help harness checks: stale paths, GUI help registry, UI copy catalog, glossary, feature-doc matrix, hooks, and CI. |

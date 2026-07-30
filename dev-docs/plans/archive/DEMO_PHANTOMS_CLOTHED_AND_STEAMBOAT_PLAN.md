@@ -4,7 +4,7 @@
 > Steamboat Willie. **Not shipped:** Petite Herculanaise (Cults login/Cloudflare; NC mirrors).
 > Broader survey / Venus–David D1 backlog:
 > [`FUN_DEMO_PHANTOMS_PLAN.md`](../FUN_DEMO_PHANTOMS_PLAN.md). Clinical habitus:
-> [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+> [`AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 >
 > **Related:** [`ADDITIONAL_PHANTOMS.md`](../../ADDITIONAL_PHANTOMS.md),
 > [`references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](../../references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md).

@@ -4,7 +4,7 @@
 
 **Execution order:** **Part I (commit)** → **Part II (Phase 0)** → **Part III (Phase 1)** → **Part IV-a (patient math)** → **Part IV-b (preview UX)** → **Part V (cross-cutting)**. Grep **Appendix A (T-items)** while coding. **Checklist** and **Appendix B (testing)** are exit gates. Part VI is optional polish.
 
-**Plan status (2026-06-24):** Parts **I–IV (a + b) shipped** and verified in source (Round 8). **Part V** is the remaining user-facing payoff before archive. Latest reviews: [Round 7](../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) · [Round 8](../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md).
+**Plan status:** **Completed / archived 2026-07-30.** Parts **I–V shipped** (2026-06-24). Manual multi-exam GUI smoke remains in `TO_DO.md`. Latest reviews: [Round 7](../../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) · [Round 8](../../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md).
 
 **Terminology:** In this plan, **scrub** = slider tick path (each value change). **Debounced render** = `_schedule_debounced_render` trigger; **live preview** = `live_preview_allowed` gate + render. **Composite** = all exams' **events** in the Geometry preview (not the multi-exam dose map).
 
@@ -270,7 +270,7 @@ def _sync_patient_sliders_from_meta(active_index=None):
 
 ## Out of scope
 
-Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) Phase 3 — after this plan); per-exam dose map toggles; persisting Geometry UI across reload (session-only); incremental table-origin preview. **Already in [TO_DO.md](../TO_DO.md):** per-exam event stepping, per-exam dose-map toggles, export `table_origin_override` in `data.py`. Copy remaining out-of-scope bullets to TO_DO when archiving.
+Offset arrow (deferred [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) Phase 3 — after this plan); per-exam dose map toggles; persisting Geometry UI across reload (session-only); incremental table-origin preview. **Already in [TO_DO.md](../../TO_DO.md):** per-exam event stepping, per-exam dose-map toggles, export `table_origin_override` in `data.py`. Copy remaining out-of-scope bullets to TO_DO when archiving.
 
 **Performance:** Multi-exam composite only (`is_multi_exam and _resolve_composite_for_render()`): pause when `preview_event_count(..., composite=True) > 30`; spinner when `> 100`. Single-exam `plot_procedure`: no pause (R12).
 
@@ -306,7 +306,7 @@ Part I committed; Parts II–III committed; Parts IV-a/b + V complete; Appendix 
 
 ## Related
 
-- [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) · [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) · [TO_DO.md](../TO_DO.md)
+- [INTERACTIVE_TABLE_OFFSETS_PLAN.md](INTERACTIVE_TABLE_OFFSETS_PLAN.md) · [INPUT_DATA_FLOW_AND_OFFSETS.md](../../INPUT_DATA_FLOW_AND_OFFSETS.md) · [TO_DO.md](../../TO_DO.md)
 
 ---
 

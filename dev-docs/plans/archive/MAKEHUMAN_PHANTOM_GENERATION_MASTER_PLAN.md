@@ -1,7 +1,7 @@
 # MakeHuman Phantom Generation - Master Plan
 
 > **SUPERSEDED (2026-07-21).** Replaced by
-> [`dev-docs/plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+> [`dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 > Kept for historical reference only. Do not execute these MakeHuman GUI phases for new work.
 
 ## Overview

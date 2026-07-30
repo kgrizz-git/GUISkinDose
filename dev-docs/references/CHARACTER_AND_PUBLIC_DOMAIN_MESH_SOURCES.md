@@ -2,7 +2,7 @@
 
 Survey of free / open-license **full-body or humanoid** meshes that could be fun MyPySkinDose phantoms: realistic parametric humans, stylized game characters, and public-domain historical / classical figures.
 
-This is a **candidate-source list**, not a commitment to ship any of these. Clinical dosimetry still prefers anatomical libraries and the MPFB catalog — see [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) and [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
+This is a **candidate-source list**, not a commitment to ship any of these. Clinical dosimetry still prefers anatomical libraries and the MPFB catalog — see [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) and [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 
 **Out of scope here:** isolated organs, bones, prosthetic/engineering mannequins, and **modern trademarked cartoon IPs**. Prefer original CC0 characters or clearly licensed sculpture scans. **Mickey Mouse:** only the **1928 Steamboat Willie** design is public domain in the US (as of 2024); later Mickey designs remain under copyright, and Disney trademarks still apply to branding / source confusion — treat Mickey as a legal special case, not a default fun phantom.
 
@@ -216,6 +216,6 @@ Broader backlog: [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_
 - [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) — clinical sources + integration checklist + short summary of this page
 - [`plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md) — v1 complete: Cosmic Buddha, Ramesses II, Steamboat shipped; Petite blocked
 - [`plans/FUN_DEMO_PHANTOMS_PLAN.md`](../plans/FUN_DEMO_PHANTOMS_PLAN.md) — Venus/David (D1), Phase 2 PD cartoons
-- [`plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — MPFB generation runbook
+- [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) — MPFB generation runbook
 - [`LICENSE_COMPLIANCE.md`](../LICENSE_COMPLIANCE.md) — third-party license policy
 - [`PRIVACY_AND_SENSITIVE_ASSETS.md`](../PRIVACY_AND_SENSITIVE_ASSETS.md) — binary STL admission

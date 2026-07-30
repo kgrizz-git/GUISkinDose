@@ -1,4 +1,4 @@
-# Assessment: `dev-docs/plans/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md`
+# Assessment: `dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md`
 
 **Date:** 2026-06-24 16:21
 **Scope:** Gap and clarity review of the in-progress multi-exam geometry offsets
