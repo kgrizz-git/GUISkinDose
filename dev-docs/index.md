@@ -38,6 +38,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md) | Public-repository privacy policy, DICOM/image review requirements, approved-asset inventory, and scanner use. |
 | [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Private evidence, historical audit, containment, rewrite/notification, verification, and privacy release checklist runbook. |
 | [references/LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md) | Local advisory PII/PHI model comparison, macOS/LM Studio boundaries, and synthetic-fixture evaluation protocol. |
+| [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) | Research note: NiceGUI/`nicegui-pack` portable GUI executables; Java-wrap non-goals; deferred spike criteria. |
 | [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md) | Optional loopback-only SonarQube Community Build runner, private result tracking, and local quality-gate workflow. |
 | [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |
 | [../scripts/check_ui_copy.py](../scripts/check_ui_copy.py) | Validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`; checks `copy_text()` usage and terminology warnings. |
@@ -101,6 +102,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | RDSR and JSON input flow, normalization settings, patient offsets, and internal DataFrame contract. |
+| [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md) | Standalone cheat sheet: required normalized columns, optional identity fields, and where each input schema maps from. |
 | [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md) | Tabular schema auto-detection (default `auto`, recall scoring, per-schema fingerprints) and the DAP-unit / manufacturer caveat. Machine-checked by `tests/unittests/test_input_schema_doc.py`. |
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor-specific coordinate conventions, normalization mapping, and Mermaid coordinate-system diagrams. |
 | [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) | GE coordinate convention record: confirmed table-travel directions, normalization-level `Tx`/`Tz` correction, and deferred matched DICOM/export fixture notes. |
@@ -124,8 +126,8 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/BARIATRIC_EXTRA_THICK_EXTREMITIES_2026-07-23.md](assessments/BARIATRIC_EXTRA_THICK_EXTREMITIES_2026-07-23.md) | Class-II extra-thick neck/extremities variants (additive; base + thick unchanged). |
 | [assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md](assessments/P1_BARIATRIC_PHANTOM_GENERATION_2026-07-21.md) | **PASS** — Phase 3 class-II bariatric male/female meshes; abdomen anti-balloon gates. |
 | [assessments/REFACTOR_ASSESSMENT.md](assessments/REFACTOR_ASSESSMENT.md) | Point-in-time diagnostic: largest files/functions, modularity/robustness/security findings. Execution plan archived in [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md). |
-| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | Round 7 gap review: Parts I–III verified shipped; IV-a critical path; Part V spec gaps; appendix T-item corrections. |
-| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | Round 8 gap review: Parts I–IV verified shipped; Part V underspecs (formatters, N4 `refresh_per_exam` gap, C6 placement, docs list); 20-item execution order. |
+| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) | **Historical** — Round 7 mid-plan review (Parts I–III verified; IV/V then open). Plan since completed and archived. |
+| [assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md](assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md) | **Historical** — Round 8 mid-plan review (Parts I–IV verified; Part V then open). Plan since completed and archived. |
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625.md) | Round 1 API review: shutdown timing, multi-monitor validation; NiceGUI proxy/event APIs confirmed. |
 | [assessments/GEO_TAB_SPINNING_WHEEL_20260625.md](assessments/GEO_TAB_SPINNING_WHEEL_20260625.md) | Geometry tab render-cycle root cause; review of the original fix (regression in 7 external `ctx.refresh_per_exam()` callers); revised fix uses an `_in_render_chain` flag. |
 | [assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md](assessments/NATIVE_WINDOW_GEOMETRY_PLAN_ASSESSMENT_20260625T010005.md) | Round 2 gap review: restore-from-maximize, title-bar validation, maximized event filtering, debounce lifecycle, CI-safe tests, `Path.replace`. |

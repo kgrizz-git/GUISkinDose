@@ -1,5 +1,9 @@
 # Assessment: `dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md`
 
+> **Historical (2026-07-30):** Parts I–V of the plan shipped and the plan is archived. This Round 7
+> assessment remains for traceability of the mid-implementation review; do not treat “NOT shipped”
+> findings below as current backlog. Manual multi-exam GUI smoke is still tracked in `TO_DO.md`.
+
 **Date:** 2026-06-24 16:21
 **Scope:** Gap and clarity review of the in-progress multi-exam geometry offsets
 plan, with emphasis on remaining phases (Part IV, V, VI) and unresolved appendix

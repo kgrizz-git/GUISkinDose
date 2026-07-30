@@ -71,7 +71,6 @@ policy decisions, not a restart of Phases 0–9.
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **Input field reference artifact** — check whether a clear list or table of fields expected/required by imported RDSR or tabular input (including fields mapped from those sources) already exists; if not, create a simple standalone file artifact that users can easily consult.
 - [ ] **Fix raw_events_cleaned example RDSR parsing** — investigate and fix the parsing issue that led to the problematic `raw_events_cleaned example RDSR (old) csv export from mypyskindose.csv` in `test_data_gitignored/`.
 - [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
   case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
@@ -93,18 +92,7 @@ policy decisions, not a restart of Phases 0–9.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
   export metadata.
-- [ ] **Rich export phantom dimensions** — report phantom dimensions (anterior-posterior, left-right, superior-inferior) in cm using max values (thickest parts) rather than a scale factor.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
-- [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
-  browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
-- [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
-  accessibility + alt text, HTML already sets `alt` (7.2); extract user-visible strings to a localization module
-  (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); add a per-tab
-  GUI help page for the Export tab once a help loader exists.
-- [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
-  (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
-  replace the baseline `ui.download()` fallback). (GUI native "Open file / Open folder" success actions — **done**
-  2026-07-02; still needs Windows manual smoke.)
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
   per [DESIGN.md](../DESIGN.md).
@@ -161,6 +149,22 @@ policy decisions, not a restart of Phases 0–9.
 - [ ] **Geometry offset arrow (interactive offsets Phase 3)** — optional visual arrow for offsets; deferred when
   Phases 0–2b shipped. See
   [archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md).
+- [ ] **Rich export — phantom dimensions** — report AP / L-R / S-I phantom extents in cm (max/thickest) in rich
+  reports rather than scale factors only. See [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md).
+- [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
+  browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
+- [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
+  accessibility + alt text, HTML already sets `alt` (7.2); extract user-visible strings to a localization module
+  (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); Export-tab help
+  page if a central Help index lands.
+- [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
+  (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
+  replace the baseline `ui.download()` fallback). Native "Open file / Open folder" shipped 2026-07-02; Windows
+  manual smoke still pending.
+- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research note:
+  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Spike only when a
+  non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
+  (phantoms, `corrections.db`, help). Not a Java wrap.
 
 ## Research Ideas
 

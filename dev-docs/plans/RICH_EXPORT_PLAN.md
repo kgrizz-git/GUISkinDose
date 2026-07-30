@@ -1,7 +1,8 @@
 # Rich Report Export — Master Plan
 
-_Status: **Phases 1–6 shipped** (XLSX + PDF + HTML + DOCX, GUI modal, CLI flags). Phase 7 (polish) mostly complete._  
-_Last updated: 2026-07-02_  
+_Status: **Phases 1–6 shipped** (XLSX + PDF + HTML + DOCX, GUI modal, CLI flags). Phase 7 leftovers and
+manual save smoke are **deferred** in [TO_DO.md](../TO_DO.md) (Deferred Until Needed)._  
+_Last updated: 2026-07-30_  
 _Supersedes draft [RICH_EXPORT_SPEC.md](archive/RICH_EXPORT_SPEC.md) and folds in prior ad-hoc assessments_
 
 ## Implementation status (2026-07-02)

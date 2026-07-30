@@ -32,6 +32,10 @@ This changelog tracks user- and maintainer-visible changes; bump `pyproject.toml
   and custom-mesh import remain open in `TO_DO.md`. Follow-up: rewrote partial backlog items
   (OCR/DICOM-phi wrappers already ship; Central Help / offset UX reduced to remaining gaps) and
   clarified the Results `K_IRP`/`—` open question against current Results vs Data Table UI.
+  Also: moved Rich Export Phase 4.3/7 leftovers to Deferred; added
+  `dev-docs/INPUT_FIELD_REFERENCE.md` and
+  `dev-docs/references/PORTABLE_EXECUTABLE_PACKAGING.md`; marked multi-exam geometry
+  assessments historical now that the plan is archived.
 
 - **SonarQube/Lizard Phase 4 — UI/CLI oversized functions** (2026-07-29) — decomposed three
   high-NLOC flagged functions: `gui/tabs/settings.py:build` (246 → 9 NLOC) into

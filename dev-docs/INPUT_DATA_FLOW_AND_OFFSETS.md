@@ -2,7 +2,7 @@
 
 This document summarizes how MyPySkinDose handles RDSR inputs, normalization settings, and patient offsets, and outlines recommendations for how the GUI can better handle these parameters to improve user transparency.
 
-Coordinate terminology lives in [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md). This file explains data flow and offset hierarchy; it should not redefine axis semantics independently.
+Coordinate terminology lives in [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md). This file explains data flow and offset hierarchy; it should not redefine axis semantics independently. For a compact required-field cheat sheet, see [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md).
 
 ## 1. Original Flow Inputs
 

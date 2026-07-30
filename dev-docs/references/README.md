@@ -12,6 +12,8 @@ _Index of authoritative documentation for major MyPySkinDose dependencies. Expan
 
 **Phantom mesh sources (candidates):** [`CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md`](CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) — stylized/game characters, MakeHuman, classical sculpture scans, Smithsonian Open Access; summarized from [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md).
 
+**Portable GUI executables (research):** [`PORTABLE_EXECUTABLE_PACKAGING.md`](PORTABLE_EXECUTABLE_PACKAGING.md) — NiceGUI/`nicegui-pack` feasibility, bundle requirements, Java-wrap non-goals; deferred in `TO_DO.md`.
+
 **Harness note:** Optional `LLMS.txt` or per-library cheat sheets can live in this directory when a dependency upgrade needs focused agent context. Until then, link here from `AGENTS.md` only when adding new integration surfaces.
 
 ---
