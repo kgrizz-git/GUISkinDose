@@ -18,7 +18,6 @@ _ALLOWED_UV_AUDIT_FLAGS = frozenset({"--frozen", "--locked"})
 _UV_AUDIT_RESERVED_FLAGS = frozenset({
     "--frozen",
     "--locked",
-    "--skip-uv-lock",  # uv-specific flag to skip lock file check
 })
 _PIP_AUDIT_ONLY_FLAGS = frozenset({"--desc", "--vulnerability-service", "--format", "-f"})
 _PIP_AUDIT_OPTION_VALUES = {

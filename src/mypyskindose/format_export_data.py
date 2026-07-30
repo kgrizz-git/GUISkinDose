@@ -528,10 +528,17 @@ class PySkinDoseOutput:
         return json.dumps(self.to_dict())
 
     def __repr__(self) -> str:
+        def safe_number(name: str) -> str:
+            value = getattr(self, name, "<unavailable>")
+            try:
+                return f"{value:.4f}"
+            except (TypeError, ValueError):
+                return "<unavailable>"
+
         return (
-            f"PySkinDoseOutput(PSD={self.PSD:.4f}, AirKerma={self.AirKerma:.4f}, "
-            f"AirKermaCorrected={self.AirKermaCorrected:.4f}, PadThickness={self.PadThickness:.4f}, "
-            f"PatientOffsets={self.PatientOffsets})"
+            f"PySkinDoseOutput(PSD={safe_number('PSD')}, AirKerma={safe_number('AirKerma')}, "
+            f"AirKermaCorrected={safe_number('AirKermaCorrected')}, PadThickness={safe_number('PadThickness')}, "
+            f"PatientOffsets={getattr(self, 'PatientOffsets', '<unavailable>')!r})"
         )
 
 

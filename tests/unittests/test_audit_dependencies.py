@@ -331,6 +331,7 @@ def test_pip_audit_validation_rejects_unknown(ad):
         ["-f=garbage"],
         ["--format"],
         ["columns"],
+        ["--skip-uv-lock"],
     ],
 )
 def test_audit_argv_builders_reject_invalid_option_values(ad, args):

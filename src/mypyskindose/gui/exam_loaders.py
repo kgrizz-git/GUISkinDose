@@ -371,7 +371,9 @@ def _append_multi_study_exams(
     """Append every exam from a multi-study tabular file and rebuild concat preview."""
     new_exams = raw_exams
     preserved_map = {f["study_id"]: f for f in preserved_flags if f.get("study_id") is not None}
-    preserved_without_study_id = iter(f for f in preserved_flags if f.get("study_id") is None)
+    idless_flags = [f for f in preserved_flags if f.get("study_id") is None]
+    idless_exam_count = sum(exam.study_id is None for exam in new_exams)
+    preserved_without_study_id = iter(idless_flags) if len(idless_flags) == idless_exam_count else iter(())
     for j, exam in enumerate(new_exams):
         schema_name = exam.provenance.schema_name
         base = exam.normalized_data.copy()

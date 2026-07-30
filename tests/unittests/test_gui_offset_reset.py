@@ -121,6 +121,45 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
     assert all(not restored["new"][name] for name in ("swap_lat_lon", "flip_ap1", "flip_ap2", "flip_tx", "flip_ty", "flip_tz"))
 
 
+def test_multi_study_reparse_blanks_idless_flags_when_cardinality_changes():
+    """Reordered ID-less exams cannot be reliably matched after a count change."""
+    provenance = InputProvenance(
+        source_type="csv", schema_name="generic_rdsr_like", original_filename="reparse.csv",
+        header_row_index=0, detected_encoding="utf-8", detected_delimiter=",", sheet_name=None,
+        column_map={}, unit_conversions={},
+    )
+
+    def exam(study_id: str | None) -> InputAdapterResult:
+        frame = pd.DataFrame({"Tx": [1.0], "Ty": [2.0], "Tz": [3.0], "Ap1": [4.0], "Ap2": [5.0]})
+        return InputAdapterResult(frame, None, provenance, study_id=study_id)
+
+    def flags(study_id: str | None, **enabled: bool) -> dict:
+        return {
+            "study_id": study_id,
+            "swap_lat_lon": False,
+            "flip_ap1": False,
+            "flip_ap2": False,
+            "flip_tx": False,
+            "flip_ty": False,
+            "flip_tz": False,
+            **enabled,
+        }
+
+    state = AppState()
+    _append_multi_study_exams(
+        [exam(None), exam("A"), exam(None), exam(None)], state, Path("reparse.csv"),
+        0.0, 0.0, 0.0,
+        [flags(None, flip_ap1=True), flags("A", swap_lat_lon=True), flags(None, flip_ap2=True)],
+    )
+
+    assert state.loaded_exam_meta[1]["swap_lat_lon"] is True
+    for index in (0, 2, 3):
+        assert all(
+            not state.loaded_exam_meta[index][name]
+            for name in ("swap_lat_lon", "flip_ap1", "flip_ap2", "flip_tx", "flip_ty", "flip_tz")
+        )
+
+
 def test_new_load_resets_coordinate_flags_not_replace_existing():
     st = AppState()
     st.swap_lat_lon = True

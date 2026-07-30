@@ -195,3 +195,13 @@ def test_pyskindose_output_lightweight_repr() -> None:
     assert "dose_map" not in repr_str
 
 
+def test_pyskindose_output_repr_tolerates_uninitialized_derived_fields() -> None:
+    """An exception formatter must not mask construction validation failures."""
+    out = object.__new__(PySkinDoseOutput)
+
+    assert repr(out) == (
+        "PySkinDoseOutput(PSD=<unavailable>, AirKerma=<unavailable>, "
+        "AirKermaCorrected=<unavailable>, PadThickness=<unavailable>, "
+        "PatientOffsets='<unavailable>')"
+    )
+
