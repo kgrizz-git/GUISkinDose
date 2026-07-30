@@ -282,6 +282,7 @@ def _collect_preserved_flags(
         return []
     return [
         {
+            "study_id": m.get("study_id"),
             "swap_lat_lon": m.get("swap_lat_lon", False),
             "flip_ap1": m.get("flip_ap1", False),
             "flip_ap2": m.get("flip_ap2", False),
@@ -327,6 +328,7 @@ def _build_exam_meta_entry(
     seed_d_lon: float,
     seed_d_ver: float,
     seed_d_lat: float,
+    study_id: str | None = None,
 ) -> dict:
     """Construct a per-exam meta entry shared by single and multi-study paths."""
     return {
@@ -338,6 +340,7 @@ def _build_exam_meta_entry(
         "provenance": provenance,
         "warnings": list(warnings),
         "base_data": base,
+        "study_id": study_id,
         "swap_lat_lon": flags["swap_lat_lon"],
         "flip_ap1": flags["flip_ap1"],
         "flip_ap2": flags["flip_ap2"],
@@ -367,10 +370,15 @@ def _append_multi_study_exams(
 ) -> tuple[Any, str]:
     """Append every exam from a multi-study tabular file and rebuild concat preview."""
     new_exams = raw_exams
+    preserved_map = {f["study_id"]: f for f in preserved_flags if f.get("study_id") is not None}
     for j, exam in enumerate(new_exams):
         schema_name = exam.provenance.schema_name
         base = exam.normalized_data.copy()
-        flags = preserved_flags[j] if j < len(preserved_flags) else _blank_transform_flags()
+        flags = _blank_transform_flags()
+        if exam.study_id is not None and exam.study_id in preserved_map:
+            flags = preserved_map[exam.study_id]
+        elif j < len(preserved_flags):
+            flags = preserved_flags[j]
         exam.normalized_data = _apply_transform_flags(
             base, flags["swap_lat_lon"], flags["flip_ap1"],
             flags["flip_ap2"], schema_name,
@@ -382,7 +390,7 @@ def _append_multi_study_exams(
         state.loaded_exam_meta.append(
             _build_exam_meta_entry(
                 state, file_path, schema_name, base, exam.provenance, exam.warnings,
-                flags, seed_d_lon, seed_d_ver, seed_d_lat,
+                flags, seed_d_lon, seed_d_ver, seed_d_lat, exam.study_id,
             )
         )
     result_for_finalize = raw_exams[0]  # use first exam's provenance for UI hints
@@ -414,7 +422,7 @@ def _append_single_study_exam(
     state.loaded_exam_meta.append(
         _build_exam_meta_entry(
             state, file_path, result.provenance.schema_name, base, result.provenance, result.warnings,
-            flags, seed_d_lon, seed_d_ver, seed_d_lat,
+            flags, seed_d_lon, seed_d_ver, seed_d_lat, result.study_id,
         )
     )
     msg = f"Loaded {len(result.normalized_data)} events ({result.provenance.schema_name})"
