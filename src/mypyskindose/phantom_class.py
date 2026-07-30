@@ -246,7 +246,7 @@ class Phantom:
 
         # Create index vectors for plotly mesh3d plotting
         self.ijk = np.column_stack(
-            (np.arange(0, len(self.r) - 3, 3), np.arange(1, len(self.r) - 2, 3), np.arange(2, len(self.r) - 1, 3))
+            (np.arange(0, len(self.r), 3), np.arange(1, len(self.r), 3), np.arange(2, len(self.r), 3))
         )
         self.dose = np.zeros(len(self.r))
 

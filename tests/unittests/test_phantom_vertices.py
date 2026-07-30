@@ -84,7 +84,8 @@ def test_human_mesh_index_vectors_present_after_refactor() -> None:
     ijk = np.asarray(p.ijk)
     assert ijk.ndim == 2
     assert ijk.shape[1] == 3
-    assert ijk.shape[0] * 3 == ijk.shape[0] * 3  # invariant placeholder; degenerate check removed
+    # Verify triangle count: vertices = triangles × 3
+    assert len(p.r) == ijk.shape[0] * 3
 
 
 def test_human_mesh_dose_starts_zero() -> None:
