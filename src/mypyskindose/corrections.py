@@ -235,17 +235,33 @@ def _interpolate_off_grid(
     al_clamped = al_snap != round(al)
     if len(cu_axis) >= 2:
         kv_axis = piv.index.to_numpy(dtype=float)
-        rgi = RegularGridInterpolator((kv_axis, cu_axis), piv.to_numpy(dtype=float))
-        value, status = clamped_rgi_lookup(rgi, kv_axis, cu_axis, kvp, cu)
+        if len(kv_axis) >= 2:
+            rgi = RegularGridInterpolator((kv_axis, cu_axis), piv.to_numpy(dtype=float))
+            value, status = clamped_rgi_lookup(rgi, kv_axis, cu_axis, kvp, cu)
+        else:
+            # Single kVp row, multiple Cu columns
+            kv_c = kv_axis[0]
+            cu_c = float(np.clip(cu, cu_axis[0], cu_axis[-1]))
+            value = float(np.interp(cu_c, cu_axis, piv.to_numpy(dtype=float)[0, :]))
+            was_clamped = (kv_c != round(kvp)) or (cu_c != cu)
+            if was_clamped:
+                status = STATUS_CLAMPED
+            elif bool(np.any(np.isclose(cu_axis, cu_c))):
+                status = STATUS_EXACT
+            else:
+                status = STATUS_INTERPOLATED
     else:
         # Single Cu column — no Cu axis to interpolate; the integer kVp node is
         # exact after clamping to the table's kVp range.
         kv_axis = piv.index.to_numpy(dtype=float)
         kv_c = float(np.clip(round(kvp), kv_axis[0], kv_axis[-1]))
         value = float(np.interp(kv_c, kv_axis, piv.to_numpy(dtype=float)[:, 0]))
-        status = STATUS_CLAMPED if (kv_c != round(kvp) or cu != cu_axis[0]) else STATUS_EXACT
+        # For single Cu column, cu must match the only available value
+        cu_single = cu_axis[0] if len(cu_axis) > 0 else 0.0
+        status = STATUS_CLAMPED if (kv_c != round(kvp) or cu != cu_single) else STATUS_EXACT
 
     return value, STATUS_CLAMPED if (al_clamped or status == STATUS_CLAMPED) else status
+
 
 
 def _log_k_tab_warnings(

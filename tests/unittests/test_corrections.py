@@ -217,3 +217,38 @@ def test_calculate_k_tab_clamps_out_of_range_kvp():
     beyond, messages = _k_tab(kvp=200, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
     assert beyond == edge
     assert any("clamped" in m.lower() for m in messages)
+
+
+def test_interpolate_off_grid_degenerate_kv_axis() -> None:
+    from mypyskindose.corrections import _interpolate_off_grid
+    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED
+
+    piv = pd.DataFrame(
+        data=[[0.8, 0.9]], 
+        index=[80.0], 
+        columns=[0.3, 0.6]
+    )
+    piv.index.name = "kvp_kv"
+    piv.columns.name = "filtration_added_mmcu"
+
+    cache_key = ("AXIOM-Artis", "Single Plane", 0.0)
+    pivot_cache = {cache_key: piv}
+
+    dummy_rows = pd.DataFrame({"filtration_added_mmal": [0.0]})
+
+    # Interpolate along Cu axis only (midway between 0.8 and 0.9 is 0.85)
+    val, status = _interpolate_off_grid(
+        rows=dummy_rows, model="AXIOM-Artis", plane="Single Plane", 
+        kvp=80.0, cu=0.45, al=0.0, pivot_cache=pivot_cache
+    )
+    assert abs(val - 0.85) < 1e-5
+    assert status == STATUS_INTERPOLATED
+
+    # Query with KVp out of bounds (clamped to 80.0)
+    val, status = _interpolate_off_grid(
+        rows=dummy_rows, model="AXIOM-Artis", plane="Single Plane", 
+        kvp=90.0, cu=0.45, al=0.0, pivot_cache=pivot_cache
+    )
+    assert abs(val - 0.85) < 1e-5
+    assert status == STATUS_CLAMPED
+
