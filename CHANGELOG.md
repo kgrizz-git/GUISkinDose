@@ -17,6 +17,15 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+### Fixed
+
+- **Below-floor kVp `skip` export length desync** (2026-08-02) — when
+  `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
+  export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam
+  GUI/API runs raised a Hits length `ValueError`; multi-exam runs caught that error
+  and silently omitted the exam from aggregate PSD. `calculate_dose` now hands the
+  post-policy event frame to `analyze_data` / `_process_exam` for export packaging.
+
 ### Removed
 
 - **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the

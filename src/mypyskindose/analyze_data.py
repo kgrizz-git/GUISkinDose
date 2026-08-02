@@ -25,6 +25,22 @@ from mypyskindose.debug import dprint
 logger = logging.getLogger(__name__)
 
 
+def _take_effective_data_norm(
+    raw_output: dict[str, Any],
+    fallback: pd.DataFrame,
+) -> pd.DataFrame:
+    """Pop the post-below-floor-policy frame from dose output, or use *fallback*.
+
+    ``calculate_dose`` attaches the frame it actually looped over under
+    :data:`constants.OUTPUT_KEY_EFFECTIVE_DATA_NORM`. Export / multi-exam packaging
+    must use that frame so event-array lengths stay aligned after policy ``skip``.
+    """
+    effective = raw_output.pop(c.OUTPUT_KEY_EFFECTIVE_DATA_NORM, None)
+    if isinstance(effective, pd.DataFrame):
+        return effective
+    return fallback
+
+
 def analyze_data(
     normalized_data: pd.DataFrame,
     settings: str | dict | PyskindoseSettings,
@@ -71,8 +87,9 @@ def analyze_data(
         if output is None or patient is None:
             raise RuntimeError("Dose calculation did not produce output in calculate_dose mode.")
         dprint("PROCESSING", "Formatting analysis result for export")
+        export_data_norm = _take_effective_data_norm(output, normalized_data)
         mypyskindose_output: PySkinDoseOutput | dict[str, Any] | str = format_analysis_result_for_export(
-            output, patient=patient, table=table, pad=pad, data_norm=normalized_data, settings=settings
+            output, patient=patient, table=table, pad=pad, data_norm=export_data_norm, settings=settings
         )
 
         return mypyskindose_output
@@ -80,6 +97,8 @@ def analyze_data(
     dprint("RENDERING", "Creating dose map plot")
     dose_map = None
     if output is not None and settings.mode in (c.MODE_CALCULATE_DOSE, c.MODE_PLOT_DOSEMAP):
+        # Drop internal hand-off key before returning raw HTML output.
+        output.pop(c.OUTPUT_KEY_EFFECTIVE_DATA_NORM, None)
         dose_map = output[c.OUTPUT_KEY_DOSE_MAP]
     if patient is not None and dose_map is not None:
         create_dose_map_plot(
@@ -269,11 +288,12 @@ def _process_exam(
         warnings.append(f"{exam_id}: no output (check mode setting).")
         return None
 
-    _add_missed_event_warnings(warnings, exam_id, raw_output, len(data_norm))
-    output = _multi_exam_output(patient, table, pad, raw_output, settings, data_norm)
+    export_data_norm = _take_effective_data_norm(raw_output, data_norm)
+    _add_missed_event_warnings(warnings, exam_id, raw_output, len(export_data_norm))
+    output = _multi_exam_output(patient, table, pad, raw_output, settings, export_data_norm)
     dprint("RENDERING", f"{exam_id}: creating dose map plot")
     create_dose_map_plot(patient=patient, settings=settings, dose_map=output.DoseMap)
-    return _exam_result(exam, exam_id, effective_offset, settings, output, data_norm, warnings)
+    return _exam_result(exam, exam_id, effective_offset, settings, output, export_data_norm, warnings)
 
 
 def analyze_multiple_exams(

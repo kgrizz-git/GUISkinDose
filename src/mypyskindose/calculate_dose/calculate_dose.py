@@ -190,6 +190,10 @@ def calculate_dose(
         kerma_cf=kerma_cf,
     )
 
+    # Hand the post-policy event frame to analyze_data/export so PySkinDoseOutput
+    # lengths match after below-floor ``skip`` (callers must pop this key).
+    output[c.OUTPUT_KEY_EFFECTIVE_DATA_NORM] = normalized_data
+
     return patient, output
 
 
