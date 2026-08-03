@@ -66,7 +66,7 @@ Agents working in this repository should be able to answer three questions quick
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
-| Dependency and Actions updates | `.github/dependabot.yml` |
+| Dependency and Actions updates | `.github/dependabot.yml` (weekly Monday; minor/patch grouped per ecosystem; majors ungrouped) |
 
 ## Documentation conventions
 

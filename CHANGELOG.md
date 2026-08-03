@@ -39,6 +39,14 @@ omit pure CI/refactor bullets and point readers here. See
   exams are preserved on the run warning list (they previously dropped because no
   `ExamResult` was created).
 
+### Changed
+
+- **Dependabot weekly grouped minor/patch bumps** (2026-08-03) — `.github/dependabot.yml`
+  still runs weekly (Monday) for `pip` and `github-actions`, but routine minor/patch
+  updates are grouped into one PR per ecosystem (`python-minor-and-patch`,
+  `github-actions-minor-and-patch`). Major version bumps stay ungrouped for individual
+  review.
+
 ### Removed
 
 - **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the
