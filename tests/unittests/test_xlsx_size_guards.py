@@ -18,6 +18,7 @@ from mypyskindose.input_adapters.tabular_loader import (
 def _write_sheet(path: Path, rows: list[list[object]], sheet_title: str = "Sheet1") -> None:
     workbook = Workbook()
     worksheet = workbook.active
+    assert worksheet is not None
     worksheet.title = sheet_title
     for row in rows:
         worksheet.append(row)
