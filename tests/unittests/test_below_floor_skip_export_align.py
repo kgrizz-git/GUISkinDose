@@ -1,8 +1,7 @@
 """Regression: below-floor kVp policy ``skip`` must keep export event lengths aligned.
 
-``calculate_dose`` drops below-floor rows under policy ``skip``, but export used to
-pass the pre-skip ``data_norm`` into ``PySkinDoseOutput``. That raised ``ValueError``
-on single-exam dict/JSON export (GUI path) and silently dropped multi-exam results.
+``calculate_dose`` drops below-floor rows under policy ``skip``. Export packaging must
+use that post-policy frame so event-array lengths stay aligned with dose-loop output.
 """
 
 from __future__ import annotations
@@ -82,8 +81,7 @@ def _fake_calculate_dose(normalized_data, settings, table, pad, exam_id=None):
     output[c.OUTPUT_KEY_CORRECTION_TABLE] = [1.0] * n_events
     output[c.OUTPUT_KEY_CORRECTION_KERMA_METER] = [1.0] * n_events
     output[c.OUTPUT_KEY_KERMA_CORRECTED] = [1.0] * n_events
-    output[c.OUTPUT_KEY_EFFECTIVE_DATA_NORM] = filtered
-    return patient, output
+    return patient, output, filtered
 
 
 def test_single_exam_skip_policy_passes_aligned_data_norm_to_export() -> None:
@@ -128,7 +126,7 @@ def test_multi_exam_skip_policy_keeps_exam_with_aligned_lengths() -> None:
         column_map={},
         unit_conversions={},
     )
-    # Allowlisted synthetic label — digit-bearing study_id= values trip
+    # Allowlisted synthetic label — digit-bearing study label assignments trip
     # scripts/check_sensitive_content.py CONTEXTUAL_PATIENT_IDENTIFIER.
     exam = InputAdapterResult(_two_event_frame(), None, provenance, study_id="test")
     captured: dict[str, int] = {}
@@ -164,21 +162,21 @@ def test_multi_exam_skip_policy_keeps_exam_with_aligned_lengths() -> None:
     assert multi.warnings == []
 
 
-def test_calculate_dose_attaches_post_skip_effective_data_norm() -> None:
-    """Real calculate_dose must attach the post-policy frame under the hand-off key."""
+def test_calculate_dose_returns_post_skip_event_frame() -> None:
+    """Real calculate_dose must return the post-policy frame as the third value."""
     settings = _settings_skip()
     norm = generate_synthetic_normalized_events(2, seed=7)
     norm.loc[1, "kVp"] = 10.0
     table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
     pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
 
-    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    _, output, effective = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
 
     assert output is not None
-    effective = output[c.OUTPUT_KEY_EFFECTIVE_DATA_NORM]
     assert isinstance(effective, pd.DataFrame)
     assert len(effective) == 1
     assert len(output[c.OUTPUT_KEY_HITS]) == 1
+    assert "_effective_data_norm" not in output
 
 
 def test_all_events_skipped_dict_export_succeeds() -> None:
@@ -197,3 +195,50 @@ def test_all_events_skipped_dict_export_succeeds() -> None:
     assert result["psd"] == 0.0
     assert result["events"]["number_of_events"] == 0
     assert result["air_kerma"] == 0.0
+
+
+def test_multi_exam_failure_warning_is_explicit_about_exclusion() -> None:
+    """Failed exams must produce clear exclusion warnings for users and exports."""
+    provenance = InputProvenance(
+        source_type="csv",
+        schema_name="normalized",
+        original_filename="skip.csv",
+        header_row_index=0,
+        detected_encoding="utf-8",
+        detected_delimiter=",",
+        sheet_name=None,
+        column_map={},
+        unit_conversions={},
+    )
+    good = InputAdapterResult(_two_event_frame(), None, provenance, study_id="test")
+    bad = InputAdapterResult(_two_event_frame(), None, provenance, study_id="test")
+
+    def _sometimes_fail(normalized_data, settings, table, pad, exam_id=None):
+        if exam_id == "Exam 2":
+            raise ValueError("Hits length mismatch")
+        return _fake_calculate_dose(normalized_data, settings, table, pad, exam_id=exam_id)
+
+    with (
+        patch("mypyskindose.analyze_data.calculate_dose", side_effect=_sometimes_fail),
+        patch("mypyskindose.analyze_data.create_geometry_plot"),
+        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch(
+            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            side_effect=lambda frame: frame,
+        ),
+        patch(
+            "mypyskindose.analyze_data._multi_exam_output",
+            side_effect=lambda patient, table, pad, raw_output, settings, data_norm: MagicMock(
+                DoseMap=raw_output[c.OUTPUT_KEY_DOSE_MAP]
+            ),
+        ),
+    ):
+        multi = analyze_multiple_exams([good, bad], _settings_skip())
+
+    assert len(multi.exams) == 1
+    assert any("1 of 2 exam(s) were excluded" in warning for warning in multi.warnings)
+    assert any(
+        warning.startswith("Exam 2:") and "excluded from the aggregate peak skin dose" in warning
+        for warning in multi.warnings
+    )
+    assert any("error_type=ValueError" in warning for warning in multi.warnings)

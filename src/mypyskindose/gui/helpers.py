@@ -224,10 +224,25 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 # sum of air kerma across exams
                 state.air_kerma = sum(float(e.output.AirKerma) for e in multi_result.exams)
 
-                # Surface calc warnings from the orchestrator run
-                state.calc_warnings = list(_collector.messages)
+                # Prefer explicit orchestrator run warnings (failed-exam exclusions)
+                # over the opaque privacy-safe logger twin from safe_error_event.
+                opaque_prefix = "multi_exam_analysis failed"
+                state.calc_warnings = [
+                    message for message in _collector.messages if not message.startswith(opaque_prefix)
+                ]
+                state.calc_warnings.extend(list(multi_result.warnings))
 
-                return True, f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {len(state.loaded_exams)} exams"
+                n_ok = len(multi_result.exams)
+                n_total = len(state.loaded_exams)
+                n_failed = n_total - n_ok
+                if n_failed > 0:
+                    return True, (
+                        f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy from {n_ok} of {n_total} exams "
+                        f"({n_failed} excluded after calculation failure — see warnings)"
+                    )
+                return True, (
+                    f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {n_ok} exams"
+                )
             else:
                 # analyze_data internally calls calculate_rotation_matrices.
                 # Drop the display-only exam tag if present (defensive — single-exam

@@ -55,11 +55,11 @@ def test_disabled_matches_baseline_psd():
     settings = _settings(enable=False)
     data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
     table, pad = _table_pad(settings)
-    _, out_off = calculate_dose(data_norm.copy(), settings, table, pad)
+    _, out_off, _ = calculate_dose(data_norm.copy(), settings, table, pad)
 
     settings_on = _settings(enable=True, default_factor=1.0, file=None)
     table2, pad2 = _table_pad(settings_on)
-    _, out_on = calculate_dose(data_norm.copy(), settings_on, table2, pad2)
+    _, out_on, _ = calculate_dose(data_norm.copy(), settings_on, table2, pad2)
 
     assert out_off is not None and out_on is not None
     assert np.allclose(out_off[c.OUTPUT_KEY_DOSE_MAP], out_on[c.OUTPUT_KEY_DOSE_MAP])
@@ -72,14 +72,14 @@ def test_constant_cf_scales_psd_and_preserves_reported_kerma():
     settings = _settings(enable=False)
     data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
     table, pad = _table_pad(settings)
-    _, out_base = calculate_dose(data_norm.copy(), settings, table, pad)
+    _, out_base, _ = calculate_dose(data_norm.copy(), settings, table, pad)
 
     # Distinct default_factor so a missed lookup cannot silently look correct.
     settings_cf = _settings(enable=True, default_factor=2.0, file=None)
     settings_cf.kerma_meter_correction.in_memory_table = {("146278", "single"): 1.5}
     table2, pad2 = _table_pad(settings_cf)
     k_irp_before = data_norm[c.KEY_NORMALIZATION_AIR_KERMA].tolist()
-    _, out_cf = calculate_dose(data_norm.copy(), settings_cf, table2, pad2)
+    _, out_cf, _ = calculate_dose(data_norm.copy(), settings_cf, table2, pad2)
 
     assert out_base is not None and out_cf is not None
     assert data_norm[c.KEY_NORMALIZATION_AIR_KERMA].tolist() == pytest.approx(k_irp_before)

@@ -23,12 +23,17 @@ omit pure CI/refactor bullets and point readers here. See
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam
   GUI/API runs raised a Hits length `ValueError`; multi-exam runs caught that error
-  and silently omitted the exam from aggregate PSD. `calculate_dose` now hands the
-  post-policy event frame to `analyze_data` / `_process_exam` for export packaging.
+  and silently omitted the exam from aggregate PSD. `calculate_dose` now returns the
+  post-policy event frame as a third value for `analyze_data` / `_process_exam` export
+  packaging (no internal `_effective_data_norm` key on the output dict).
 - **Below-floor kVp `skip` of all events** (2026-08-03) — dict/JSON export crashed in
   `EventOutput` (`zip(*[])` / event-0 setup beam) when every irradiation event was
   dropped. Empty post-skip frames now export as zero-event results (PSD / air kerma
   0) instead of raising.
+- **Multi-exam calculation failure warnings** (2026-08-03) — when one exam raises during
+  a multi-exam run, warnings now state that the exam was excluded from the aggregate
+  PSD (with `error_type`), the Calculate success line reports `N of M` exams, and the
+  Results tab surfaces the run-warning list.
 
 ### Removed
 

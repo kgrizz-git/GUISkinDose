@@ -156,8 +156,6 @@ OUTPUT_KEY_DOSE_MAP = "dose_map"
 OUTPUT_KEY_HITS = "hits"
 OUTPUT_KEY_KERMA = "kerma"
 OUTPUT_KEY_KERMA_CORRECTED = "kerma_corrected"
-# Internal hand-off: post-below-floor-policy frame used by the dose loop (popped before export).
-OUTPUT_KEY_EFFECTIVE_DATA_NORM = "_effective_data_norm"
 
 PHANTOM_MESH_ADULT_MALE = "hudfrid"
 

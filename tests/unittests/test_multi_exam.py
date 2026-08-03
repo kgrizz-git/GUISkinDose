@@ -319,6 +319,8 @@ class TestAnalyzeMultipleExams:
 
         assert len(result.exams) == 1, "only the good exam should succeed"
         assert len(result.warnings) >= 1, "failure should be recorded in warnings"
+        assert any("excluded from the aggregate peak skin dose" in w for w in result.warnings)
+        assert any("error_type=" in w for w in result.warnings)
 
     @pytest.mark.usefixtures("_suppress_plots")
     def test_to_dict_and_to_json_roundtrip(self):

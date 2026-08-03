@@ -25,20 +25,13 @@ from mypyskindose.debug import dprint
 logger = logging.getLogger(__name__)
 
 
-def _take_effective_data_norm(
-    raw_output: dict[str, Any],
-    fallback: pd.DataFrame,
-) -> pd.DataFrame:
-    """Pop the post-below-floor-policy frame from dose output, or use *fallback*.
-
-    ``calculate_dose`` attaches the frame it actually looped over under
-    :data:`constants.OUTPUT_KEY_EFFECTIVE_DATA_NORM`. Export / multi-exam packaging
-    must use that frame so event-array lengths stay aligned after policy ``skip``.
-    """
-    effective = raw_output.pop(c.OUTPUT_KEY_EFFECTIVE_DATA_NORM, None)
-    if isinstance(effective, pd.DataFrame):
-        return effective
-    return fallback
+def _format_multi_exam_failure_warning(exam_id: str, exc: BaseException) -> str:
+    """Build a user-facing warning when one multi-exam calculation is excluded."""
+    return (
+        f"{exam_id}: calculation failed and was excluded from the aggregate peak skin dose "
+        f"(error_type={exception_class_name(exc)}). "
+        "Review this exam's offsets, input data, and settings, then recalculate."
+    )
 
 
 def analyze_data(
@@ -81,13 +74,14 @@ def analyze_data(
     create_geometry_plot(normalized_data=normalized_data, table=table, pad=pad, settings=settings)
 
     dprint("CALCULATION", "Calculating dose")
-    patient, output = calculate_dose(normalized_data=normalized_data, settings=settings, table=table, pad=pad, exam_id=None)
+    patient, output, export_data_norm = calculate_dose(
+        normalized_data=normalized_data, settings=settings, table=table, pad=pad, exam_id=None
+    )
 
     if settings.output_format in [c.RUN_ARGUMENTS_OUTPUT_DICT, c.RUN_ARGUMENTS_OUTPUT_JSON]:
-        if output is None or patient is None:
+        if output is None or patient is None or export_data_norm is None:
             raise RuntimeError("Dose calculation did not produce output in calculate_dose mode.")
         dprint("PROCESSING", "Formatting analysis result for export")
-        export_data_norm = _take_effective_data_norm(output, normalized_data)
         mypyskindose_output: PySkinDoseOutput | dict[str, Any] | str = format_analysis_result_for_export(
             output, patient=patient, table=table, pad=pad, data_norm=export_data_norm, settings=settings
         )
@@ -97,8 +91,6 @@ def analyze_data(
     dprint("RENDERING", "Creating dose map plot")
     dose_map = None
     if output is not None and settings.mode in (c.MODE_CALCULATE_DOSE, c.MODE_PLOT_DOSEMAP):
-        # Drop internal hand-off key before returning raw HTML output.
-        output.pop(c.OUTPUT_KEY_EFFECTIVE_DATA_NORM, None)
         dose_map = output[c.OUTPUT_KEY_DOSE_MAP]
     if patient is not None and dose_map is not None:
         create_dose_map_plot(
@@ -281,14 +273,13 @@ def _process_exam(
     create_geometry_plot(normalized_data=data_norm, table=table, pad=pad, settings=settings)
 
     dprint("CALCULATION", f"{exam_id}: calculating dose")
-    patient, raw_output = calculate_dose(
+    patient, raw_output, export_data_norm = calculate_dose(
         normalized_data=data_norm, settings=settings, table=table, pad=pad, exam_id=exam_id
     )
-    if raw_output is None or patient is None:
+    if raw_output is None or patient is None or export_data_norm is None:
         warnings.append(f"{exam_id}: no output (check mode setting).")
         return None
 
-    export_data_norm = _take_effective_data_norm(raw_output, data_norm)
     _add_missed_event_warnings(warnings, exam_id, raw_output, len(export_data_norm))
     output = _multi_exam_output(patient, table, pad, raw_output, settings, export_data_norm)
     dprint("RENDERING", f"{exam_id}: creating dose map plot")
@@ -332,17 +323,31 @@ def analyze_multiple_exams(
             result = _process_exam(exam, exam_id, effective_offset, exam_settings, warnings)
         except Exception as exc:
             safe_error_event(logger, "multi_exam_analysis", exc, level=logging.WARNING)
-            run_warnings.append(f"{exam_id}: processing failed (error_type={exception_class_name(exc)}).")
+            run_warnings.append(_format_multi_exam_failure_warning(exam_id, exc))
             continue
 
         if result is None:
-            run_warnings.extend(warnings[-1:])
+            # Preserve the most recent process-exam note (e.g. mode produced no output).
+            if warnings:
+                run_warnings.append(warnings[-1])
             continue
 
         exam_results.append(result)
         exam_dose_map = result.output.DoseMap
         aggregate_dose_map = exam_dose_map.copy() if aggregate_dose_map is None else aggregate_dose_map + exam_dose_map
         total_events += result.event_count
+
+    n_loaded = len(exams)
+    n_ok = len(exam_results)
+    n_failed = n_loaded - n_ok
+    if n_failed > 0:
+        run_warnings.insert(
+            0,
+            (
+                f"{n_failed} of {n_loaded} exam(s) were excluded from the aggregate peak skin dose "
+                "after calculation failure. Per-exam details follow."
+            ),
+        )
 
     aggregate_dose_map = np.array([]) if aggregate_dose_map is None else aggregate_dose_map
     return MultiExamResult(

@@ -68,6 +68,7 @@ class TestGuiPerExamOffsets:
             result = MagicMock()
             result.aggregate_psd = 1.0
             result.exams = [MagicMock(output=MagicMock(AirKerma=0.0)) for _ in exams]
+            result.warnings = []
             return result
 
         with patch(
