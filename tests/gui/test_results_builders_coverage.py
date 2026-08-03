@@ -51,6 +51,7 @@ def _controller() -> rb.ResultsTabController:
     ctrl.refs.agg_psd_metric = MagicMock()
     ctrl.refs.agg_events_metric = MagicMock()
     ctrl.refs.agg_totals_metric = MagicMock()
+    ctrl.refs.run_warnings_label = MagicMock()
     ctrl.refs.agg_dosemap_plot = MagicMock()
     ctrl.refs.agg_dosemap_spinner = MagicMock(visible=False)
     ctrl.refs.multi_exam_accordion_container = MagicMock(clear=MagicMock())
@@ -103,6 +104,7 @@ def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPa
         aggregate_psd=20.0,
         aggregate_dose_map=np.array([5.0, 8.0, 0.0]),
         exams=[exam0, exam1],
+        warnings=[],
     )
     state.rdsr_df = MagicMock()
     state.visible_exam_dosemaps = []
@@ -121,6 +123,7 @@ def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPa
 
     cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("20.00 mGy")
     cast(MagicMock, ctrl.refs.agg_events_metric.set_text).assert_called_with("across 2 exams")
+    cast(MagicMock, ctrl.refs.run_warnings_label.set_visibility).assert_called_with(False)
     assert ctrl.last_rendered_run_id == 1
     assert built["accordion"] == 1
     assert built["checkboxes"] == 1
@@ -138,6 +141,7 @@ def test_subset_toggle_updates_aggregate_psd(monkeypatch: pytest.MonkeyPatch) ->
         aggregate_psd=40.0,
         aggregate_dose_map=np.zeros(3),
         exams=[exam0, exam1],
+        warnings=[],
     )
     state.aggregate_subset_exams = [True, True]
     ctrl.last_rendered_run_id = 2
@@ -161,6 +165,7 @@ def test_set_subset_all_refreshes_aggregate(monkeypatch: pytest.MonkeyPatch) -> 
         aggregate_psd=5.0,
         aggregate_dose_map=np.array([5.0, 0.0]),
         exams=[exam0],
+        warnings=[],
     )
     state.aggregate_subset_exams = [False]
     cb = MagicMock()
@@ -232,6 +237,7 @@ def test_refresh_aggregate_subset_none_selected(monkeypatch: pytest.MonkeyPatch)
         aggregate_psd=10.0,
         aggregate_dose_map=np.array([5.0, 0.0]),
         exams=[exam0],
+        warnings=[],
     )
     state.aggregate_subset_exams = [False]
     state.calc_run_id = 11
@@ -266,3 +272,4 @@ def test_multi_exam_results_clears_when_incomplete() -> None:
 
     assert ctrl.last_rendered_run_id is None
     cast(MagicMock, ctrl.refs.agg_dosemap_plot.update_figure).assert_called_with({})
+    cast(MagicMock, ctrl.refs.run_warnings_label.set_visibility).assert_called_with(False)
