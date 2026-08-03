@@ -19,6 +19,19 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Fixed
 
+- **AppSec: spreadsheet formula injection via export headers** (2026-08-03) —
+  `neutralize_dataframe()` now prefixes dangerous formula characters on column
+  names and index labels (not only cell values), so Data-tab CSV/XLSX/TXT exports
+  cannot emit live Excel formulas from attacker-controlled tabular headers
+  (CWE-1236).
+- **AppSec: `human_mesh` path traversal** (2026-08-03) — string mesh stems are
+  allow-listed as simple basenames and resolved with `Path.resolve()` +
+  `is_relative_to(phantom_data/)`; unknown or escaping stems are rejected before
+  STL load (custom meshes remain the trusted tuple form).
+- **AppSec: XLSX decompression bomb bypass of upload size cap** (2026-08-03) —
+  tabular Excel reads enforce uncompressed ZIP member/total budgets and a streamed
+  row×column/cell budget before full sheet materialization, so a crafted workbook
+  cannot OOM the process solely by high compression ratio (CWE-409).
 - **Below-floor kVp `skip` export length desync** (2026-08-02) — when
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam

@@ -12,8 +12,12 @@ and ``dev-docs/plans/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md``.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Iterable
+
+# Stems are package-relative basenames only (no separators, dots, or parent refs).
+_SAFE_HUMAN_MESH_STEM = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 # Content-preserving renames (old stem → canonical on-disk stem).
 HUMAN_MESH_ALIASES: dict[str, str] = {
@@ -155,42 +159,86 @@ _CLINICAL_SORT_ORDER: tuple[str, ...] = (
 )
 
 
+def package_phantom_data_dir() -> Path:
+    """Return the resolved package ``phantom_data/`` directory."""
+    return Path(__file__).resolve().parent / "phantom_data"
+
+
+def assert_safe_human_mesh_stem(stem: str) -> str:
+    """Return *stem* when it is a safe phantom basename; otherwise raise ``ValueError``.
+
+    Rejects empty values, path separators, parent-directory references, and any
+    characters outside the allow-listed stem alphabet so callers never join
+    attacker-controlled path fragments under ``phantom_data/``.
+    """
+    if not isinstance(stem, str) or not stem:
+        raise ValueError("human_mesh stem must be a non-empty string.")
+    if Path(stem).name != stem or not _SAFE_HUMAN_MESH_STEM.fullmatch(stem):
+        raise ValueError("human_mesh stem must be a simple phantom basename.")
+    return stem
+
+
 def resolve_human_mesh_stem(stem: str) -> str:
     """Return the canonical full-res or reduced stem for ``stem``.
 
     Legacy aliases map to new basenames. ``_reduced_3000t`` and legacy
     ``_reduced_1000t`` suffixes are preserved on the canonical base (both may
-    ship). Unknown stems pass through unchanged.
+    ship). Unknown stems pass through unchanged after safety validation.
     """
     if not stem:
         return stem
+    assert_safe_human_mesh_stem(stem)
     for suffix in _PREVIEW_REDUCED_SUFFIXES:
         if stem.endswith(suffix):
             base = stem[: -len(suffix)]
+            assert_safe_human_mesh_stem(base)
             canonical = HUMAN_MESH_ALIASES.get(base, base)
             return f"{canonical}{suffix}"
     canonical = HUMAN_MESH_ALIASES.get(stem, stem)
     return canonical
 
 
+def resolve_human_mesh_stl_path(stem: str, *, phantom_data_dir: Path | None = None) -> Path:
+    """Resolve *stem* to an STL path confined under package ``phantom_data/``.
+
+    Raises
+    ------
+    ValueError
+        If *stem* contains path separators / parent references, resolves outside
+        ``phantom_data/``, or does not name an existing ``.stl`` file.
+    """
+    resolved = resolve_human_mesh_stem(stem)
+    assert_safe_human_mesh_stem(resolved)
+    data_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    candidate = (data_dir / f"{resolved}.stl").resolve()
+    if not candidate.is_relative_to(data_dir):
+        raise ValueError("human_mesh path escaped phantom_data/.")
+    if not candidate.is_file():
+        raise ValueError("Unknown human mesh stem.")
+    return candidate
+
+
 def prefer_reduced_preview_stem(stem: str, *, phantom_data_dir: Path | None = None) -> str:
     """Return the best available reduced companion for ``stem``, else the stem.
 
     Prefers ``_reduced_3000t`` over ``_reduced_1000t`` when both exist under
-    package ``phantom_data/``.
+    package ``phantom_data/``. Existence checks stay confined under that root.
     """
-    from mypyskindose import __file__ as _pkg_file
-
     if not stem:
         return stem
     stem = resolve_human_mesh_stem(stem)
     for suffix in _PREVIEW_REDUCED_SUFFIXES:
         if stem.endswith(suffix):
             return stem
-    data_dir = phantom_data_dir or (Path(_pkg_file).resolve().parent / "phantom_data")
+    data_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
     for suffix in _PREVIEW_REDUCED_SUFFIXES:
         candidate = f"{stem}{suffix}"
-        if (data_dir / f"{candidate}.stl").is_file():
+        try:
+            assert_safe_human_mesh_stem(candidate)
+        except ValueError:
+            continue
+        path = (data_dir / f"{candidate}.stl").resolve()
+        if path.is_relative_to(data_dir) and path.is_file():
             return candidate
     return stem
 

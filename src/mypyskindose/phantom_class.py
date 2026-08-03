@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from stl import mesh
 
+from mypyskindose.phantom_mesh_names import resolve_human_mesh_stl_path
 from mypyskindose.plotting.create_ploty_ijk_indices import (
     _create_plotly_ijk_indices_for_cuboid_objects,
 )
@@ -223,14 +224,12 @@ class Phantom:
             raise ValueError('Human model needs to be specified for phantom_model = "human"')
 
         if isinstance(human_mesh, str):
-            # load selected phantom model from binary .stl file
-            # Resolve legacy aliases to canonical on-disk stems (incl. reduced).
-            from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
-
-            resolved = resolve_human_mesh_stem(human_mesh)
-            self.human_model = resolved
-            phantom_path = Path(__file__).parent / f"phantom_data/{resolved}.stl"
-            phantom_mesh = mesh.Mesh.from_file(str(phantom_path.absolute()))
+            # Load a package phantom only. Stems are allow-listed basenames resolved
+            # under phantom_data/ (rejects ../ and unknown meshes). Custom meshes use
+            # the tuple form below, which is an intentional trusted-caller path.
+            phantom_path = resolve_human_mesh_stl_path(human_mesh)
+            self.human_model = phantom_path.stem
+            phantom_mesh = mesh.Mesh.from_file(str(phantom_path))
         elif isinstance(human_mesh, tuple):
             self.human_model, phantom_mesh = self._get_phantom_mesh_from_tuple(human_mesh)
         else:

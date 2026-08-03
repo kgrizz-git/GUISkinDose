@@ -5,17 +5,32 @@ all values as str/object). Callers are responsible for header detection,
 column mapping, and type coercion.
 
 Each function also returns encoding/delimiter metadata needed for provenance.
+
+Excel workbooks (``.xlsx`` / ``.xlsm``) are ZIP containers. Before materializing
+a sheet, readers enforce uncompressed-member budgets and a row×column/cell
+budget so a crafted workbook cannot bypass the compressed upload size cap
+(CWE-409 / zip bomb).
 """
 
 from __future__ import annotations
 
 import csv
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+from openpyxl import load_workbook
 
 _ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
+
+# Post-decompress budgets for OOXML workbooks (compressed uploads may still be
+# within the GUI 64 MiB cap while inflating far beyond process memory).
+MAX_XLSX_UNCOMPRESSED_MEMBER_BYTES = 32 * 1024 * 1024
+MAX_XLSX_UNCOMPRESSED_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_XLSX_ROWS = 100_000
+MAX_XLSX_COLS = 512
+MAX_XLSX_CELLS = 2_000_000
 
 
 @dataclass
@@ -85,18 +100,88 @@ def read_tsv(path: Path | str) -> _RawLoad:
     raise ValueError("Could not read TSV input with any supported encoding.") from last_exc
 
 
+def _cell_to_str(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float) and pd.isna(value):
+        return ""
+    return str(value)
+
+
+def assert_xlsx_zip_within_budget(path: Path) -> None:
+    """Reject OOXML workbooks whose declared uncompressed sizes exceed budgets.
+
+    Uses central-directory ``file_size`` values (uncompressed) so a high
+    compression-ratio zip bomb is refused before openpyxl/pandas inflate it.
+    """
+    try:
+        with zipfile.ZipFile(path) as archive:
+            total_uncompressed = 0
+            for info in archive.infolist():
+                if info.is_dir():
+                    continue
+                if info.file_size > MAX_XLSX_UNCOMPRESSED_MEMBER_BYTES:
+                    raise ValueError(
+                        "Excel workbook member exceeds the maximum allowed uncompressed size."
+                    )
+                total_uncompressed += info.file_size
+                if total_uncompressed > MAX_XLSX_UNCOMPRESSED_TOTAL_BYTES:
+                    raise ValueError(
+                        "Excel workbook exceeds the maximum allowed uncompressed size."
+                    )
+    except zipfile.BadZipFile as exc:
+        raise ValueError("Invalid Excel workbook.") from exc
+
+
+def _select_worksheet(workbook, sheet_name: str | int):
+    if isinstance(sheet_name, int):
+        try:
+            return workbook.worksheets[sheet_name]
+        except IndexError as exc:
+            raise ValueError("Excel sheet index is out of range.") from exc
+    try:
+        return workbook[sheet_name]
+    except KeyError as exc:
+        raise ValueError("Excel sheet name was not found.") from exc
+
+
+def _read_excel_rows(path: Path, sheet_name: str | int) -> list[list[str]]:
+    """Stream one sheet in read-only mode and enforce row/column/cell budgets."""
+    workbook = load_workbook(path, read_only=True, data_only=False)
+    try:
+        worksheet = _select_worksheet(workbook, sheet_name)
+        rows: list[list[str]] = []
+        cell_count = 0
+        for row_idx, row in enumerate(worksheet.iter_rows(values_only=True), start=1):
+            if row_idx > MAX_XLSX_ROWS:
+                raise ValueError("Excel sheet exceeds the maximum allowed number of rows.")
+            values = list(row)
+            if len(values) > MAX_XLSX_COLS:
+                raise ValueError("Excel sheet exceeds the maximum allowed number of columns.")
+            cell_count += len(values)
+            if cell_count > MAX_XLSX_CELLS:
+                raise ValueError("Excel sheet exceeds the maximum allowed cell budget.")
+            rows.append([_cell_to_str(value) for value in values])
+        return rows
+    finally:
+        workbook.close()
+
+
 def read_excel(path: Path | str, sheet_name: str | int = 0) -> _RawLoad:
-    """Read an XLSX/XLSM file with header=None so all rows are returned."""
+    """Read an XLSX/XLSM file with header=None so all rows are returned.
+
+    Enforces uncompressed ZIP member budgets and a streamed row×column/cell
+    budget before building the full DataFrame.
+    """
     path = Path(path)
-    raw_df = pd.read_excel(
-        path,
-        sheet_name=sheet_name,
-        header=None,
-        dtype=object,
-        keep_default_na=False,
-    )
-    # Coerce every cell to str (openpyxl returns mixed types)
-    raw_df = raw_df.map(lambda x: "" if pd.isna(x) else str(x))  # type: ignore[operator]
+    assert_xlsx_zip_within_budget(path)
+    rows = _read_excel_rows(path, sheet_name)
+    if not rows:
+        raw_df = pd.DataFrame()
+    else:
+        width = max(len(row) for row in rows)
+        normalized = [row + [""] * (width - len(row)) for row in rows]
+        raw_df = pd.DataFrame(normalized)
     return _RawLoad(raw_df=raw_df, encoding="utf-8", delimiter=None)
 
 

