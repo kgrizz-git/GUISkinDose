@@ -309,7 +309,8 @@ def _process_exam(
         normalized_data=data_norm, settings=settings, table=table, pad=pad, exam_id=exam_id
     )
     if raw_output is None or patient is None or export_data_norm is None:
-        warnings.append(f"{exam_id}: no output (check mode setting).")
+        # Caller appends the exclusion warning to run_warnings and also
+        # preserves any import / per-exam warnings collected so far.
         return None
 
     _add_missed_event_warnings(warnings, exam_id, raw_output, len(export_data_norm))
@@ -355,10 +356,14 @@ def analyze_multiple_exams(
             result = _process_exam(exam, exam_id, effective_offset, exam_settings, warnings)
         except Exception as exc:
             safe_error_event(logger, "multi_exam_analysis", exc, level=logging.WARNING)
+            # Excluded exams never become ExamResult rows, so import / per-exam
+            # warnings must be copied onto the run warning list here.
+            run_warnings.extend(warnings)
             run_warnings.append(_format_multi_exam_failure_warning(exam_id, exc))
             continue
 
         if result is None:
+            run_warnings.extend(warnings)
             run_warnings.append(_format_multi_exam_no_output_warning(exam_id))
             continue
 

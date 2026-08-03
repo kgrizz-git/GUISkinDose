@@ -244,3 +244,113 @@ def test_multi_exam_failure_warning_is_explicit_about_exclusion() -> None:
         for warning in multi.warnings
     )
     assert any("ValueError" in warning for warning in multi.warnings)
+
+
+def test_multi_exam_exclusion_preserves_import_warnings() -> None:
+    """Excluded exams must keep import / per-exam warnings on the run list."""
+    provenance = InputProvenance(
+        source_type="csv",
+        schema_name="normalized",
+        original_filename="skip.csv",
+        header_row_index=0,
+        detected_encoding="utf-8",
+        detected_delimiter=",",
+        sheet_name=None,
+        column_map={},
+        unit_conversions={},
+    )
+    good = InputAdapterResult(
+        _two_event_frame(),
+        None,
+        provenance,
+        study_id="test",
+        warnings=["good import note"],
+    )
+    bad = InputAdapterResult(
+        _two_event_frame(),
+        None,
+        provenance,
+        study_id="test",
+        warnings=["bad import note"],
+    )
+
+    def _fail_second(normalized_data, settings, table, pad, exam_id=None):
+        if exam_id == "Exam 2":
+            raise ValueError("Hits length mismatch")
+        return _fake_calculate_dose(normalized_data, settings, table, pad, exam_id=exam_id)
+
+    with (
+        patch("mypyskindose.analyze_data.calculate_dose", side_effect=_fail_second),
+        patch("mypyskindose.analyze_data.create_geometry_plot"),
+        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch(
+            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            side_effect=lambda frame: frame,
+        ),
+        patch(
+            "mypyskindose.analyze_data._multi_exam_output",
+            side_effect=lambda patient, table, pad, raw_output, settings, data_norm: MagicMock(
+                DoseMap=raw_output[c.OUTPUT_KEY_DOSE_MAP]
+            ),
+        ),
+    ):
+        multi = analyze_multiple_exams(
+            [good, bad],
+            _settings_skip(),
+            per_exam_extra_warnings=[[], ["extra offset note"]],
+        )
+
+    assert multi.exams_excluded == 1
+    assert "bad import note" in multi.warnings
+    assert "extra offset note" in multi.warnings
+    assert any(
+        warning.startswith("Exam 2:") and "excluded from the aggregate peak skin dose" in warning
+        for warning in multi.warnings
+    )
+    # Successful exam warnings stay on ExamResult, not the run list.
+    assert "good import note" not in multi.warnings
+    assert "good import note" in multi.exams[0].warnings
+
+
+def test_multi_exam_no_output_preserves_import_warnings() -> None:
+    """No-output exclusions must keep import warnings and use the no-output message."""
+    provenance = InputProvenance(
+        source_type="csv",
+        schema_name="normalized",
+        original_filename="skip.csv",
+        header_row_index=0,
+        detected_encoding="utf-8",
+        detected_delimiter=",",
+        sheet_name=None,
+        column_map={},
+        unit_conversions={},
+    )
+    exam = InputAdapterResult(
+        _two_event_frame(),
+        None,
+        provenance,
+        study_id="test",
+        warnings=["no-output import note"],
+    )
+
+    with (
+        patch(
+            "mypyskindose.analyze_data.calculate_dose",
+            return_value=(None, None, None),
+        ),
+        patch("mypyskindose.analyze_data.create_geometry_plot"),
+        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch(
+            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            side_effect=lambda frame: frame,
+        ),
+    ):
+        multi = analyze_multiple_exams([exam], _settings_skip())
+
+    assert multi.exams == []
+    assert multi.exams_excluded == 1
+    assert "no-output import note" in multi.warnings
+    assert any(
+        warning.startswith("Exam 1:") and "produced no dose output" in warning
+        for warning in multi.warnings
+    )

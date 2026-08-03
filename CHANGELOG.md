@@ -35,7 +35,9 @@ omit pure CI/refactor bullets and point readers here. See
   PSD (with exception class), no-output exclusions use distinct wording, Calculate
   reports `N of M` successes, and the Results tab surfaces the run-warning list.
   `MultiExamResult` exposes `exams_attempted` / `exams_excluded` so GUI/export do not
-  recompute those counts from warning text.
+  recompute those counts from warning text. Import / per-exam warnings for excluded
+  exams are preserved on the run warning list (they previously dropped because no
+  `ExamResult` was created).
 
 ### Removed
 
