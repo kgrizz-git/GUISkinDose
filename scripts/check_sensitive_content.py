@@ -59,6 +59,7 @@ if __package__:
         mapping_has_visual_mime,
         pdf_reader_text,
     )
+    from .git_identity_trailers import is_allowlisted_git_identity_trailer
 else:  # pragma: no cover - exercised by running this file directly.
     from check_sensitive_helpers import (
         BZIP2_CONTAINER_SUFFIXES,
@@ -79,6 +80,7 @@ else:  # pragma: no cover - exercised by running this file directly.
         mapping_has_visual_mime,
         pdf_reader_text,
     )
+    from git_identity_trailers import is_allowlisted_git_identity_trailer
 
 
 INVENTORY_RELATIVE_PATH = Path("dev-docs/approved_asset_inventory.json")
@@ -475,30 +477,6 @@ def _is_escaped_fastapi_decorator_email(line: str, match: re.Match[str]) -> bool
     )
 
 
-# Git identity trailers used by Dependabot / GitHub merge UI / Cursor co-authors.
-# These are automation noreply addresses, not patient or institutional contacts.
-_GIT_IDENTITY_TRAILER_LINE = re.compile(
-    r"(?i)^\s*(Signed-off-by|Co-authored-by|Reviewed-by|Acked-by):\s+"
-    r".+\s+<(?P<email>[^<>\s]+)>\s*$"
-)
-_ALLOWED_GIT_TRAILER_EMAIL = re.compile(
-    r"(?i)^(?:support@github\.com|noreply@github\.com|[^@\s]+@users\.noreply\.github\.com)$"
-)
-
-
-def is_allowlisted_git_identity_trailer(line: str) -> bool:
-    """Return True for allowlisted Git identity trailers with noreply/bot emails.
-
-    Used only when scanning commit messages / CI push metadata so Dependabot
-    ``Signed-off-by`` and GitHub ``Co-authored-by`` noreply trailers do not trip
-    ``EMAIL_ADDRESS``. Real institutional emails in the same trailers still fail.
-    """
-    match = _GIT_IDENTITY_TRAILER_LINE.match(line)
-    if match is None:
-        return False
-    return _ALLOWED_GIT_TRAILER_EMAIL.match(match.group("email")) is not None
-
-
 def text_findings(
     path: str,
     text: str,
@@ -508,18 +486,8 @@ def text_findings(
 ) -> list[Finding]:
     """Scan text for sensitive-content rules without echoing matched values.
 
-    Parameters
-    ----------
-    path :
-        Logical source label used in findings (file path or ``COMMIT_MESSAGE``).
-    text :
-        UTF-8 text to scan.
-    location_prefix :
-        Optional prefix prepended to line numbers in finding locations.
-    allow_git_identity_trailers :
-        When True, skip ``EMAIL_ADDRESS`` hits on allowlisted Git identity
-        trailer lines (Dependabot / GitHub noreply). Keep False for tracked
-        file content so those addresses still fail if committed into docs.
+    Set ``allow_git_identity_trailers=True`` only for commit messages / push
+    metadata so Dependabot and GitHub noreply trailers skip ``EMAIL_ADDRESS``.
     """
     findings: list[Finding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
