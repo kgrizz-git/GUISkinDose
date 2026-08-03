@@ -475,14 +475,68 @@ def _is_escaped_fastapi_decorator_email(line: str, match: re.Match[str]) -> bool
     )
 
 
-def text_findings(path: str, text: str, location_prefix: str = "") -> list[Finding]:
+# Git identity trailers used by Dependabot / GitHub merge UI / Cursor co-authors.
+# These are automation noreply addresses, not patient or institutional contacts.
+_GIT_IDENTITY_TRAILER_LINE = re.compile(
+    r"(?i)^\s*(Signed-off-by|Co-authored-by|Reviewed-by|Acked-by):\s+"
+    r".+\s+<(?P<email>[^<>\s]+)>\s*$"
+)
+_ALLOWED_GIT_TRAILER_EMAIL = re.compile(
+    r"(?i)^(?:support@github\.com|noreply@github\.com|[^@\s]+@users\.noreply\.github\.com)$"
+)
+
+
+def is_allowlisted_git_identity_trailer(line: str) -> bool:
+    """Return True for allowlisted Git identity trailers with noreply/bot emails.
+
+    Used only when scanning commit messages / CI push metadata so Dependabot
+    ``Signed-off-by`` and GitHub ``Co-authored-by`` noreply trailers do not trip
+    ``EMAIL_ADDRESS``. Real institutional emails in the same trailers still fail.
+    """
+    match = _GIT_IDENTITY_TRAILER_LINE.match(line)
+    if match is None:
+        return False
+    return _ALLOWED_GIT_TRAILER_EMAIL.match(match.group("email")) is not None
+
+
+def text_findings(
+    path: str,
+    text: str,
+    location_prefix: str = "",
+    *,
+    allow_git_identity_trailers: bool = False,
+) -> list[Finding]:
+    """Scan text for sensitive-content rules without echoing matched values.
+
+    Parameters
+    ----------
+    path :
+        Logical source label used in findings (file path or ``COMMIT_MESSAGE``).
+    text :
+        UTF-8 text to scan.
+    location_prefix :
+        Optional prefix prepended to line numbers in finding locations.
+    allow_git_identity_trailers :
+        When True, skip ``EMAIL_ADDRESS`` hits on allowlisted Git identity
+        trailer lines (Dependabot / GitHub noreply). Keep False for tracked
+        file content so those addresses still fail if committed into docs.
+    """
     findings: list[Finding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
         for rule, pattern in SENSITIVE_PATTERNS:
             match = pattern.search(line)
-            if match and not (rule == "EMAIL_ADDRESS" and _is_escaped_fastapi_decorator_email(line, match)):
-                location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
-                findings.append(Finding(path=path, rule=rule, level="error", location=location))
+            if not match:
+                continue
+            if rule == "EMAIL_ADDRESS" and _is_escaped_fastapi_decorator_email(line, match):
+                continue
+            if (
+                allow_git_identity_trailers
+                and rule == "EMAIL_ADDRESS"
+                and is_allowlisted_git_identity_trailer(line)
+            ):
+                continue
+            location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
+            findings.append(Finding(path=path, rule=rule, level="error", location=location))
     return findings
 
 

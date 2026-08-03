@@ -420,6 +420,30 @@ def test_commit_message_is_scanned_without_allowlist_or_value_echo(tmp_path: Pat
     assert "scanner.internal" not in findings[0].render()
 
 
+def test_commit_message_allows_github_noreply_identity_trailers(tmp_path: Path) -> None:
+    bot = "support@" + "github.com"
+    noreply = "maintainer@" + "users.noreply.github.com"
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text(
+        "chore: bump action\n\n"
+        f"Signed-off-by: dependabot[bot] <{bot}>\n"
+        f"Co-authored-by: maintainer <{noreply}>\n",
+        encoding="utf-8",
+    )
+    assert scan_commit_message(message) == []
+
+
+def test_commit_message_still_flags_institutional_email_in_trailer(tmp_path: Path) -> None:
+    value = "physicist" + "@hospital.test"
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text(f"fix: offsets\n\nCo-authored-by: Physicist <{value}>\n", encoding="utf-8")
+    findings = scan_commit_message(message)
+    assert [(finding.path, finding.rule, finding.location) for finding in findings] == [
+        ("COMMIT_MESSAGE", "EMAIL_ADDRESS", "3")
+    ]
+    assert value not in findings[0].render()
+
+
 def test_resolve_commit_message_path_supports_worktree_git_dir(tmp_path: Path, monkeypatch) -> None:
     import tempfile
 

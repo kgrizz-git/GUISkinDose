@@ -19,6 +19,13 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Fixed
 
+- **Main-push privacy gate on Dependabot / noreply Git trailers** (2026-08-03) —
+  `check_ci_metadata.py` failed `main` CI after merging Dependabot or Cursor PRs
+  because commit messages include Dependabot `Signed-off-by` and GitHub
+  `Co-authored-by` noreply identity trailers. Those known GitHub automation /
+  `users.noreply.github.com` trailers are now ignored for `EMAIL_ADDRESS` in
+  commit-message and push-metadata scans only; institutional emails and PR
+  title/body scans stay strict.
 - **Below-floor kVp `skip` export length desync** (2026-08-02) — when
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam

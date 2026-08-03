@@ -20,3 +20,35 @@ def test_ci_metadata_scans_pr_and_push_without_values() -> None:
 
 def test_ci_metadata_accepts_value_free_event() -> None:
     assert scan_event_payload({"pull_request": {"title": "Privacy hardening", "body": None}}) == []
+
+
+def test_ci_metadata_allows_dependabot_signed_off_by_trailer() -> None:
+    """Dependabot always appends Signed-off-by with the GitHub support address on push."""
+    bot = "support@" + "github.com"
+    message = "chore(deps): bump astral-sh/setup-uv from 8.3.2 to 9.0.0\n\n" f"Signed-off-by: dependabot[bot] <{bot}>\n"
+    assert scan_event_payload({"commits": [{"message": message}]}) == []
+
+
+def test_ci_metadata_allows_github_noreply_coauthored_trailer() -> None:
+    noreply = "maintainer@" + "users.noreply.github.com"
+    message = "fix: preserve import warnings\n\n" f"Co-authored-by: maintainer <{noreply}>\n"
+    assert scan_event_payload({"commits": [{"message": message}]}) == []
+
+
+def test_ci_metadata_still_flags_institutional_email_in_commit() -> None:
+    value = "physicist" + "@hospital.test"
+    findings = scan_event_payload({"commits": [{"message": f"Notes for {value}\n"}]})
+    assert [(finding.source, finding.line, finding.rule) for finding in findings] == [
+        ("push_commit_1", "1", "EMAIL_ADDRESS")
+    ]
+    assert value not in repr(findings)
+
+
+def test_ci_metadata_still_flags_institutional_email_in_coauthored_trailer() -> None:
+    value = "physicist" + "@hospital.test"
+    message = f"fix: offsets\n\nCo-authored-by: Physicist <{value}>\n"
+    findings = scan_event_payload({"commits": [{"message": message}]})
+    assert [(finding.source, finding.line, finding.rule) for finding in findings] == [
+        ("push_commit_1", "3", "EMAIL_ADDRESS")
+    ]
+    assert value not in repr(findings)
