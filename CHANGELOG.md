@@ -25,6 +25,10 @@ omit pure CI/refactor bullets and point readers here. See
   GUI/API runs raised a Hits length `ValueError`; multi-exam runs caught that error
   and silently omitted the exam from aggregate PSD. `calculate_dose` now hands the
   post-policy event frame to `analyze_data` / `_process_exam` for export packaging.
+- **Below-floor kVp `skip` of all events** (2026-08-03) — dict/JSON export crashed in
+  `EventOutput` (`zip(*[])` / event-0 setup beam) when every irradiation event was
+  dropped. Empty post-skip frames now export as zero-event results (PSD / air kerma
+  0) instead of raising.
 
 ### Removed
 

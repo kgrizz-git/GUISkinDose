@@ -11,12 +11,12 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-import pytest
 
+from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 from mypyskindose import constants as c
 from mypyskindose import load_settings_example_json
 from mypyskindose.analyze_data import analyze_data, analyze_multiple_exams
-from mypyskindose.calculate_dose.calculate_dose import _build_output_template
+from mypyskindose.calculate_dose.calculate_dose import _build_output_template, calculate_dose
 from mypyskindose.geom_calc import apply_below_floor_kvp_policy
 from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from mypyskindose.phantom_class import Phantom
@@ -128,7 +128,9 @@ def test_multi_exam_skip_policy_keeps_exam_with_aligned_lengths() -> None:
         column_map={},
         unit_conversions={},
     )
-    exam = InputAdapterResult(_two_event_frame(), None, provenance, study_id="S1")
+    # Allowlisted synthetic label — digit-bearing study_id= values trip
+    # scripts/check_sensitive_content.py CONTEXTUAL_PATIENT_IDENTIFIER.
+    exam = InputAdapterResult(_two_event_frame(), None, provenance, study_id="test")
     captured: dict[str, int] = {}
 
     def _capture_multi(patient, table, pad, raw_output, settings, data_norm):
@@ -160,3 +162,38 @@ def test_multi_exam_skip_policy_keeps_exam_with_aligned_lengths() -> None:
     assert multi.exams[0].event_count == 1
     assert multi.total_events == 1
     assert multi.warnings == []
+
+
+def test_calculate_dose_attaches_post_skip_effective_data_norm() -> None:
+    """Real calculate_dose must attach the post-policy frame under the hand-off key."""
+    settings = _settings_skip()
+    norm = generate_synthetic_normalized_events(2, seed=7)
+    norm.loc[1, "kVp"] = 10.0
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+
+    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+
+    assert output is not None
+    effective = output[c.OUTPUT_KEY_EFFECTIVE_DATA_NORM]
+    assert isinstance(effective, pd.DataFrame)
+    assert len(effective) == 1
+    assert len(output[c.OUTPUT_KEY_HITS]) == 1
+
+
+def test_all_events_skipped_dict_export_succeeds() -> None:
+    """Skip-all must export zero events instead of crashing in EventOutput."""
+    frame = _two_event_frame()
+    frame["kVp"] = [10.0, 10.0]
+    settings = _settings_skip()
+
+    with (
+        patch("mypyskindose.analyze_data.create_geometry_plot"),
+        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+    ):
+        result = analyze_data(frame, settings)
+
+    assert isinstance(result, dict)
+    assert result["psd"] == 0.0
+    assert result["events"]["number_of_events"] == 0
+    assert result["air_kerma"] == 0.0
