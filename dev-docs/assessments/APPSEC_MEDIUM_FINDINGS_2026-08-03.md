@@ -13,10 +13,11 @@ addressed upstream of this note.
   Data-tab CSV/XLSX/TXT exports and could become live Excel formulas
   (`data_type='f'`).
 - **Now:** `mypyskindose.spreadsheet_safety.neutralize_dataframe()` also
-  neutralizes column names and index labels (including MultiIndex parts) with
-  the same dangerous-prefix rules (`=`, `+`, `-`, `@`, tab, CR).
-- **Tests:** `tests/unittests/test_spreadsheet_safety.py` (header + index cases;
-  openpyxl asserts header `data_type == "s"`).
+  neutralizes column names and index labels (including MultiIndex parts and
+  column-/index-axis `name`/`names`) with the same dangerous-prefix rules
+  (`=`, `+`, `-`, `@`, tab, CR).
+- **Tests:** `tests/unittests/test_spreadsheet_safety.py` (header + index +
+  column-axis name cases; openpyxl asserts header `data_type == "s"`).
 
 ## 2. `human_mesh` path traversal outside `phantom_data/`
 
@@ -35,10 +36,13 @@ addressed upstream of this note.
   `pd.read_excel` / openpyxl inflated without a post-decompress size or cell
   budget.
 - **Now:** `input_adapters.tabular_loader` checks ZIP central-directory
-  uncompressed member/total budgets, then streams the selected sheet in
-  openpyxl `read_only` mode under row / column / cell caps before building the
-  DataFrame.
-- **Tests:** `tests/unittests/test_xlsx_size_guards.py` (monkeypatched budgets).
+  uncompressed sizes, then stream-inflates each member to count actual bytes
+  (so forged `ZipInfo.file_size` cannot bypass the cap), then streams the selected
+  sheet in openpyxl `read_only` mode under row / column / cell caps before building
+  the DataFrame. Formula cells keep `data_only=False` (prior `pd.read_excel`
+  behavior; uncached formulas would otherwise become empty).
+- **Tests:** `tests/unittests/test_xlsx_size_guards.py` (monkeypatched budgets,
+  underreported inflate).
 
 ## SemVer impact
 

@@ -32,16 +32,30 @@ def _neutralize_label(label: Any) -> Any:
     return neutralize_spreadsheet_value(label)
 
 
+def _neutralize_axis(labels: pd.Index) -> pd.Index:
+    """Return a neutralized Index/MultiIndex, preserving axis ``name`` / ``names``."""
+    if isinstance(labels, pd.MultiIndex):
+        neutralized = [
+            tuple(neutralize_spreadsheet_value(part) for part in levels) for levels in labels
+        ]
+        names = [_neutralize_label(name) for name in labels.names]
+        return pd.MultiIndex.from_tuples(neutralized, names=names)
+    return pd.Index(
+        [_neutralize_label(label) for label in labels],
+        name=_neutralize_label(labels.name),
+    )
+
+
 def neutralize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of *df* with values, column names, and index labels neutralized.
 
     Cell values in string/object columns are neutralized, and so are column names
-    and index labels (including the index name). Callers that export with
-    ``index=True`` must use this helper so formula-shaped headers cannot become
+    and index labels (including column- and index-axis names). Callers that export
+    with ``index=True`` must use this helper so formula-shaped headers cannot become
     live Excel formulas (``data_type='f'``).
     """
     out = df.copy()
-    out.columns = [_neutralize_label(col) for col in out.columns]
+    out.columns = _neutralize_axis(out.columns)
 
     if out.index.nlevels == 1:
         names = _neutralize_label(out.index.name)
@@ -53,11 +67,7 @@ def neutralize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         else:
             out.index = out.index.set_names(names)
     else:
-        out.index = out.index.set_names([_neutralize_label(name) for name in out.index.names])
-        neutralized_tuples = [
-            tuple(neutralize_spreadsheet_value(part) for part in levels) for levels in out.index
-        ]
-        out.index = pd.MultiIndex.from_tuples(neutralized_tuples, names=out.index.names)
+        out.index = _neutralize_axis(out.index)
 
     for col in out.columns:
         if pd.api.types.is_string_dtype(out[col]) or pd.api.types.is_object_dtype(out[col]):
