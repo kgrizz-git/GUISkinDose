@@ -233,12 +233,14 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 state.calc_warnings.extend(list(multi_result.warnings))
 
                 n_ok = len(multi_result.exams)
-                n_total = len(state.loaded_exams)
-                n_failed = n_total - n_ok
-                if n_failed > 0:
+                n_total = multi_result.exams_attempted or len(state.loaded_exams)
+                n_excluded = multi_result.exams_excluded
+                if n_excluded <= 0 and n_total > n_ok:
+                    n_excluded = n_total - n_ok
+                if n_excluded > 0:
                     return True, (
                         f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy from {n_ok} of {n_total} exams "
-                        f"({n_failed} excluded after calculation failure — see warnings)"
+                        f"({n_excluded} excluded — see warnings)"
                     )
                 return True, (
                     f"Aggregate PSD = {multi_result.aggregate_psd:.2f} mGy across {n_ok} exams"

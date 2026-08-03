@@ -113,6 +113,7 @@ class ResultsTabController:
         self.refs.corr_table.update()
 
     def refresh_multi_exam_results(self) -> None:
+        """Refresh aggregate metrics, run warnings, accordion, and dose-map subset."""
         if (
             not state.is_multi_exam
             or not state.calculation_done
@@ -132,10 +133,10 @@ class ResultsTabController:
         res = state.multi_exam_result
         self.refs.agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
         n_ok = len(res.exams)
-        n_failed = sum(1 for warning in res.warnings if "excluded from the aggregate" in warning and warning.startswith("Exam "))
-        if n_failed > 0:
+        n_excluded = int(getattr(res, "exams_excluded", 0) or 0)
+        if n_excluded > 0:
             self.refs.agg_events_metric.set_text(
-                f"from {n_ok} exam(s); {n_failed} excluded after calculation failure"
+                f"from {n_ok} exam(s); {n_excluded} excluded from aggregate"
             )
         else:
             self.refs.agg_events_metric.set_text(f"across {n_ok} exams")
@@ -485,6 +486,7 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
 
 
 def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
+    """Build aggregate PSD, run-warning, per-exam accordion, and dose-map controls."""
     with ui.column().bind_visibility_from(state, "is_multi_exam").classes(
         _METRIC_ROW_CLASSES
     ):

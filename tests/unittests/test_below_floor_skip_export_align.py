@@ -236,9 +236,11 @@ def test_multi_exam_failure_warning_is_explicit_about_exclusion() -> None:
         multi = analyze_multiple_exams([good, bad], _settings_skip())
 
     assert len(multi.exams) == 1
+    assert multi.exams_attempted == 2
+    assert multi.exams_excluded == 1
     assert any("1 of 2 exam(s) were excluded" in warning for warning in multi.warnings)
     assert any(
         warning.startswith("Exam 2:") and "excluded from the aggregate peak skin dose" in warning
         for warning in multi.warnings
     )
-    assert any("error_type=ValueError" in warning for warning in multi.warnings)
+    assert any("ValueError" in warning for warning in multi.warnings)

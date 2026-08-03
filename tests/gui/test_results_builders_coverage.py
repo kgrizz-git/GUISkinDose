@@ -105,6 +105,8 @@ def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPa
         aggregate_dose_map=np.array([5.0, 8.0, 0.0]),
         exams=[exam0, exam1],
         warnings=[],
+        exams_attempted=2,
+        exams_excluded=0,
     )
     state.rdsr_df = MagicMock()
     state.visible_exam_dosemaps = []
@@ -128,6 +130,49 @@ def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPa
     assert built["accordion"] == 1
     assert built["checkboxes"] == 1
     assert len(state.visible_exam_dosemaps) == 2
+
+
+def test_refresh_multi_exam_results_shows_exclusion_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Non-empty run warnings must surface on Results and update the exam caption."""
+    ctrl = _controller()
+    exam0 = _mock_exam_output(10.0, [(0, 5.0)], num_cells=3)
+    warning = (
+        "Exam 2: calculation raised ValueError and was excluded from the "
+        "aggregate peak skin dose. Review this exam's offsets, input data, "
+        "and settings, then recalculate."
+    )
+    state.is_multi_exam = True
+    state.calculation_done = True
+    state.calc_run_id = 4
+    state.multi_exam_result = SimpleNamespace(
+        aggregate_psd=10.0,
+        aggregate_dose_map=np.array([5.0, 0.0, 0.0]),
+        exams=[exam0],
+        warnings=[
+            "1 of 2 exam(s) were excluded from the aggregate peak skin dose. Per-exam details follow.",
+            warning,
+        ],
+        exams_attempted=2,
+        exams_excluded=1,
+    )
+    state.rdsr_df = MagicMock()
+    state.visible_exam_dosemaps = []
+    state.aggregate_subset_exams = []
+    monkeypatch.setattr(ctrl, "_build_multi_exam_accordion", lambda res: None)
+    monkeypatch.setattr(ctrl, "_build_subset_checkboxes", lambda res: None)
+    monkeypatch.setattr(ctrl, "refresh_aggregate_dosemap_subset", lambda: None)
+
+    ctrl.refresh_multi_exam_results()
+
+    cast(MagicMock, ctrl.refs.agg_events_metric.set_text).assert_called_with(
+        "from 1 exam(s); 1 excluded from aggregate"
+    )
+    cast(MagicMock, ctrl.refs.run_warnings_label.set_visibility).assert_called_with(True)
+    cast(MagicMock, ctrl.refs.run_warnings_label.set_text).assert_called()
+    shown = cast(MagicMock, ctrl.refs.run_warnings_label.set_text).call_args.args[0]
+    assert warning in shown
 
 
 def test_subset_toggle_updates_aggregate_psd(monkeypatch: pytest.MonkeyPatch) -> None:

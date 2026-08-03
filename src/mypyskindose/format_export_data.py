@@ -576,13 +576,19 @@ class ExamResult:
 
 @dataclass
 class MultiExamResult:
-    """Result of a multi-exam run: per-exam outputs plus an aggregate dose map."""
+    """Result of a multi-exam run: per-exam outputs plus an aggregate dose map.
+
+    ``exams_attempted`` / ``exams_excluded`` record how many loaded exams were
+    processed vs omitted from the aggregate (exception or no-output paths).
+    """
 
     exams: list[ExamResult]
     aggregate_dose_map: np.ndarray
     aggregate_psd: float
     total_events: int
     warnings: list[str]
+    exams_attempted: int = 0
+    exams_excluded: int = 0
 
     def to_dict(self, *, include_source_identifiers: bool = False) -> dict[str, Any]:
         """Serialize results, excluding source filenames by default."""
@@ -606,6 +612,8 @@ class MultiExamResult:
             "aggregate_psd": self.aggregate_psd,
             "total_events": self.total_events,
             "warnings": self.warnings,
+            "exams_attempted": self.exams_attempted,
+            "exams_excluded": self.exams_excluded,
         }
 
     def to_json(self, *, include_source_identifiers: bool = False) -> str:

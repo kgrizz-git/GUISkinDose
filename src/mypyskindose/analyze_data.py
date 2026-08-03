@@ -26,11 +26,43 @@ logger = logging.getLogger(__name__)
 
 
 def _format_multi_exam_failure_warning(exam_id: str, exc: BaseException) -> str:
-    """Build a user-facing warning when one multi-exam calculation is excluded."""
+    """Build a user-facing warning when an exam raises during multi-exam calculation.
+
+    Parameters
+    ----------
+    exam_id :
+        Opaque exam label (for example ``Exam 2``).
+    exc :
+        Exception raised while processing that exam.
+
+    Returns
+    -------
+    str
+        Warning stating the exam was excluded from the aggregate PSD.
+    """
     return (
-        f"{exam_id}: calculation failed and was excluded from the aggregate peak skin dose "
-        f"(error_type={exception_class_name(exc)}). "
+        f"{exam_id}: calculation raised {exception_class_name(exc)} and was excluded "
+        "from the aggregate peak skin dose. "
         "Review this exam's offsets, input data, and settings, then recalculate."
+    )
+
+
+def _format_multi_exam_no_output_warning(exam_id: str) -> str:
+    """Build a user-facing warning when an exam returns no dose output.
+
+    Parameters
+    ----------
+    exam_id :
+        Opaque exam label (for example ``Exam 2``).
+
+    Returns
+    -------
+    str
+        Warning stating the exam was excluded because calculation produced no output.
+    """
+    return (
+        f"{exam_id}: produced no dose output and was excluded from the aggregate "
+        "peak skin dose (check mode setting)."
     )
 
 
@@ -327,9 +359,7 @@ def analyze_multiple_exams(
             continue
 
         if result is None:
-            # Preserve the most recent process-exam note (e.g. mode produced no output).
-            if warnings:
-                run_warnings.append(warnings[-1])
+            run_warnings.append(_format_multi_exam_no_output_warning(exam_id))
             continue
 
         exam_results.append(result)
@@ -337,15 +367,14 @@ def analyze_multiple_exams(
         aggregate_dose_map = exam_dose_map.copy() if aggregate_dose_map is None else aggregate_dose_map + exam_dose_map
         total_events += result.event_count
 
-    n_loaded = len(exams)
-    n_ok = len(exam_results)
-    n_failed = n_loaded - n_ok
-    if n_failed > 0:
+    exams_attempted = len(exams)
+    exams_excluded = exams_attempted - len(exam_results)
+    if exams_excluded > 0:
         run_warnings.insert(
             0,
             (
-                f"{n_failed} of {n_loaded} exam(s) were excluded from the aggregate peak skin dose "
-                "after calculation failure. Per-exam details follow."
+                f"{exams_excluded} of {exams_attempted} exam(s) were excluded from the "
+                "aggregate peak skin dose. Per-exam details follow."
             ),
         )
 
@@ -356,4 +385,6 @@ def analyze_multiple_exams(
         aggregate_psd=float(aggregate_dose_map.max()) if aggregate_dose_map.size else 0.0,
         total_events=total_events,
         warnings=run_warnings,
+        exams_attempted=exams_attempted,
+        exams_excluded=exams_excluded,
     )

@@ -32,8 +32,10 @@ omit pure CI/refactor bullets and point readers here. See
   0) instead of raising.
 - **Multi-exam calculation failure warnings** (2026-08-03) — when one exam raises during
   a multi-exam run, warnings now state that the exam was excluded from the aggregate
-  PSD (with `error_type`), the Calculate success line reports `N of M` exams, and the
-  Results tab surfaces the run-warning list.
+  PSD (with exception class), no-output exclusions use distinct wording, Calculate
+  reports `N of M` successes, and the Results tab surfaces the run-warning list.
+  `MultiExamResult` exposes `exams_attempted` / `exams_excluded` so GUI/export do not
+  recompute those counts from warning text.
 
 ### Removed
 
