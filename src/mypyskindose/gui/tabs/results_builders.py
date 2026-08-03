@@ -113,6 +113,7 @@ class ResultsTabController:
         self.refs.corr_table.update()
 
     def refresh_multi_exam_results(self) -> None:
+        """Refresh aggregate metrics, run warnings, accordion, and dose-map subset."""
         if (
             not state.is_multi_exam
             or not state.calculation_done
@@ -125,11 +126,27 @@ class ResultsTabController:
                 self.last_rendered_run_id = None
                 self.last_agg_map_run_id = None
                 self.refs.agg_dosemap_plot.update_figure({})
+                self.refs.run_warnings_label.set_text("")
+                self.refs.run_warnings_label.set_visibility(False)
             return
 
         res = state.multi_exam_result
         self.refs.agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
-        self.refs.agg_events_metric.set_text(f"across {len(res.exams)} exams")
+        n_ok = len(res.exams)
+        n_excluded = int(getattr(res, "exams_excluded", 0) or 0)
+        if n_excluded > 0:
+            self.refs.agg_events_metric.set_text(
+                f"from {n_ok} exam(s); {n_excluded} excluded from aggregate"
+            )
+        else:
+            self.refs.agg_events_metric.set_text(f"across {n_ok} exams")
+
+        if res.warnings:
+            self.refs.run_warnings_label.set_text("\n".join(res.warnings))
+            self.refs.run_warnings_label.set_visibility(True)
+        else:
+            self.refs.run_warnings_label.set_text("")
+            self.refs.run_warnings_label.set_visibility(False)
 
         from mypyskindose.export._format import fmt_duration
         from mypyskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
@@ -375,6 +392,7 @@ class ResultsViewRefs:
     agg_psd_metric: ui.label = None  # type: ignore[assignment]
     agg_events_metric: ui.label = None  # type: ignore[assignment]
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
+    run_warnings_label: ui.label = None  # type: ignore[assignment]
     agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     multi_exam_accordion_container: ui.column = None  # type: ignore[assignment]
@@ -468,6 +486,7 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
 
 
 def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
+    """Build aggregate PSD, run-warning, per-exam accordion, and dose-map controls."""
     with ui.column().bind_visibility_from(state, "is_multi_exam").classes(
         _METRIC_ROW_CLASSES
     ):
@@ -485,6 +504,11 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
                 "text-sm text-grey-4"
             )
             ctrl.refs.agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
+
+        ctrl.refs.run_warnings_label = ui.label("").classes(
+            "text-sm text-orange-400 whitespace-pre-wrap w-full"
+        )
+        ctrl.refs.run_warnings_label.set_visibility(False)
 
         ui.label("Per-Exam Results").classes("text-xl font-bold tracking-tight q-mt-md")
         ctrl.refs.multi_exam_accordion_container = ui.column().classes("w-full gap-2")

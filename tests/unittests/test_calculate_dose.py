@@ -182,7 +182,7 @@ def test_calculate_dose_delegates_to_build_output_template():
         ),
         patch("tqdm.tqdm", return_value=MagicMock()),
     ):
-        patient, output = calculate_dose(
+        patient, output, _ = calculate_dose(
             normalized_data=norm, settings=settings, table=table, pad=pad
         )
 
@@ -337,7 +337,7 @@ def _run_calculate_dose():
     parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
     norm = rdsr_normalizer(parsed, settings=settings)
     norm = calculate_rotation_matrices(norm)
-    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     assert output is not None
     return output
 
@@ -394,7 +394,7 @@ def test_calculate_dose_handles_1100_events_without_recursion_error():
     pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
     norm = generate_synthetic_normalized_events(n_events)
 
-    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     assert output is not None
     assert len(output[c.OUTPUT_KEY_HITS]) == n_events
     assert np.any(output[c.OUTPUT_KEY_DOSE_MAP] > 0.0)
@@ -414,7 +414,7 @@ def _run_calculate_dose_with_offset(d_lon: float = 0.0, d_ver: float = 0.0, d_la
     parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
     norm = rdsr_normalizer(parsed, settings=settings)
     norm = calculate_rotation_matrices(norm)
-    _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+    _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     assert output is not None
     return output
 
@@ -471,7 +471,7 @@ def test_beam_miss_off_dial_suppresses_per_event_but_not_sentinel():
 
     logger, handler, messages = _capture_mypyskindose_warnings()
     try:
-        _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+        _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     finally:
         logger.removeHandler(handler)
     assert output is not None
@@ -494,7 +494,7 @@ def test_beam_miss_summary_mode():
 
     logger, handler, messages = _capture_mypyskindose_warnings()
     try:
-        _, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+        _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     finally:
         logger.removeHandler(handler)
     assert output is not None

@@ -177,26 +177,45 @@ class EventOutput:
     """
 
     def __init__(self, data_norm: pd.DataFrame):
-        """Extract per-event geometry fields from normalized RDSR data."""
+        """Extract per-event geometry fields from normalized RDSR data.
+
+        An empty *data_norm* (e.g. after ``below_floor_kvp_policy=skip`` drops every
+        event) yields empty geometry lists and empty setup meshes so dict/JSON export
+        can still succeed with zero events.
+        """
         self.events = len(data_norm)
 
         self.rotation = {
-            "x": data_norm["Rx"].tolist(),
-            "y": data_norm["Ry"].tolist(),
-            "z": data_norm["Rz"].tolist(),
+            "x": data_norm["Rx"].tolist() if self.events else [],
+            "y": data_norm["Ry"].tolist() if self.events else [],
+            "z": data_norm["Rz"].tolist() if self.events else [],
         }
         self.translation = {
-            "x": data_norm.Tx.tolist(),
-            "y": data_norm.Ty.tolist(),
-            "z": data_norm.Tz.tolist(),
+            "x": data_norm.Tx.tolist() if self.events else [],
+            "y": data_norm.Ty.tolist() if self.events else [],
+            "z": data_norm.Tz.tolist() if self.events else [],
         }
-        self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist()
-        self.beam_positions, self.beam_vertex_indices, self.detector_positions, self.detector_vertex_indices = zip(
-            *[self._extract_beam_data_list(data_norm=data_norm, event=event) for event in range(len(data_norm))]
-        )
+        self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist() if self.events else []
         self.phantom_object_trace_order = PLOT_TRACE_ORDER_PHANTOM_WIREFRAME
         self.beam_wireframe_trace_order = PLOT_TRACE_ORDER_BEAM_WIREFRAME
         self.detector_wireframe_trace_order = PLOT_TRACE_ORDER_DETECTOR_WIREFRAME
+
+        if self.events == 0:
+            empty_position = Position(x=[], y=[], z=[])
+            empty_indices = VertexIndices(i=[], j=[], k=[])
+            self.beam_positions = []
+            self.beam_vertex_indices = []
+            self.detector_positions = []
+            self.detector_vertex_indices = []
+            self.setup_beam_positions = empty_position
+            self.setup_beam_vertex_indices = empty_indices
+            self.setup_detector_positions = empty_position
+            self.setup_detector_vertex_indices = empty_indices
+            return
+
+        self.beam_positions, self.beam_vertex_indices, self.detector_positions, self.detector_vertex_indices = zip(
+            *[self._extract_beam_data_list(data_norm=data_norm, event=event) for event in range(len(data_norm))]
+        )
         (
             self.setup_beam_positions,
             self.setup_beam_vertex_indices,
@@ -557,13 +576,19 @@ class ExamResult:
 
 @dataclass
 class MultiExamResult:
-    """Result of a multi-exam run: per-exam outputs plus an aggregate dose map."""
+    """Result of a multi-exam run: per-exam outputs plus an aggregate dose map.
+
+    ``exams_attempted`` / ``exams_excluded`` record how many loaded exams were
+    processed vs omitted from the aggregate (exception or no-output paths).
+    """
 
     exams: list[ExamResult]
     aggregate_dose_map: np.ndarray
     aggregate_psd: float
     total_events: int
     warnings: list[str]
+    exams_attempted: int = 0
+    exams_excluded: int = 0
 
     def to_dict(self, *, include_source_identifiers: bool = False) -> dict[str, Any]:
         """Serialize results, excluding source filenames by default."""
@@ -587,6 +612,8 @@ class MultiExamResult:
             "aggregate_psd": self.aggregate_psd,
             "total_events": self.total_events,
             "warnings": self.warnings,
+            "exams_attempted": self.exams_attempted,
+            "exams_excluded": self.exams_excluded,
         }
 
     def to_json(self, *, include_source_identifiers: bool = False) -> str:

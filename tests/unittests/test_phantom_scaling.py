@@ -152,7 +152,7 @@ def test_calculate_dose_constructs_human_patient_with_scale_values():
         ),
         patch("tqdm.tqdm", return_value=MagicMock()),
     ):
-        patient, output = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
+        patient, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
 
     assert patient is not None
     assert output is not None

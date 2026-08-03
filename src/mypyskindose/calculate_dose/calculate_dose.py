@@ -85,7 +85,7 @@ def calculate_dose(
     table: Phantom,
     pad: Phantom,
     exam_id: str | None = None,
-) -> Tuple[Optional[Phantom], Optional[Dict[str, Any]]]:
+) -> Tuple[Optional[Phantom], Optional[Dict[str, Any]], Optional[pd.DataFrame]]:
     """Calculate skin dose.
 
     This function initializes the skin dose calculations.
@@ -103,13 +103,15 @@ def calculate_dose(
 
     Returns
     -------
-    Tuple[Phantom, Optional[Dict[str, Any]]]
-        [description]
+    Tuple[Optional[Phantom], Optional[Dict[str, Any]], Optional[pd.DataFrame]]
+        Patient phantom, dose-loop output dict, and the post-below-floor-policy
+        event frame actually used by the dose loop (for export length alignment).
+        When the mode does not calculate dose, all three values are ``None``.
 
     """
     if settings.mode != c.MODE_CALCULATE_DOSE and settings.mode != c.MODE_PLOT_DOSEMAP:
         logger.debug("Mode not set to calculate dose. Returning without doing anything")
-        return None, None
+        return None, None, None
 
     logger.info("Start performing dose calculations")
     patient = Phantom(
@@ -190,7 +192,10 @@ def calculate_dose(
         kerma_cf=kerma_cf,
     )
 
-    return patient, output
+    # Return the post-policy frame separately so export packaging can match
+    # dose-loop event lengths after below-floor ``skip`` without stuffing a
+    # DataFrame into the public output dict.
+    return patient, output, normalized_data
 
 
 def _make_progress_bar(notebook_mode: bool, total: int):
