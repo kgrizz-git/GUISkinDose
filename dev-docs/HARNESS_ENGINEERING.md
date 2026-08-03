@@ -51,6 +51,7 @@ Agents working in this repository should be able to answer three questions quick
 | Project packaging and tool configuration | `pyproject.toml` |
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
+| Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install; soft-fails with issue notify so `main` stays green) |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
 | Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
