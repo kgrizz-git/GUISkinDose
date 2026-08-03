@@ -112,7 +112,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.12'
     # Install the exact versions pinned in uv.lock so PR/main runs are reproducible.
@@ -175,7 +175,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.12'
     - name: Install dependencies (locked)
@@ -207,7 +207,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.12'
     # Locked install (see static-analysis). dev+gui gives pytest, pytest-asyncio, and nicegui.
@@ -262,7 +262,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: ${{ matrix.python-version }}
     # Install the exact versions pinned in uv.lock so PR/main runs are reproducible;
@@ -303,7 +303,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.12'
     - name: Install dependencies (locked)
@@ -352,7 +352,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.12'
     - name: Install dependencies (locked)
@@ -395,7 +395,7 @@ jobs:
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.12'
     - name: Install dependencies (locked)
