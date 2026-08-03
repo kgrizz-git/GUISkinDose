@@ -46,6 +46,10 @@ omit pure CI/refactor bullets and point readers here. See
   updates are grouped into one PR per ecosystem (`python-minor-and-patch`,
   `github-actions-minor-and-patch`). Major version bumps stay ungrouped for individual
   review.
+- **CI base-branch fetch for coverage/changelog** (2026-08-03) — `coverage-pr` and the
+  changelog check fetch the PR base with full history instead of `--depth=1`, so
+  `diff-cover` / range diffs keep a merge-base when `main` advances after the branch
+  was opened.
 
 ### Removed
 
