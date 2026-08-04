@@ -17,6 +17,13 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+### Changed
+
+- **Locked dependency audit** (2026-08-04) — `uv.lock` bumps `aiohttp` 3.14.1→3.14.3 and
+  `cryptography` 49.0.0→50.0.0 so `static-analysis` / `uv audit` clears newly published
+  advisories (GHSA-mfx4-hv73-q22v, GHSA-cq5v-8q36-5273, GHSA-mq44-7p77-q5h7,
+  GHSA-g6cj-pr64-35w5).
+
 ### Fixed
 
 - **AppSec: spreadsheet formula injection via export headers** (2026-08-03) —
