@@ -26,7 +26,8 @@ omit pure CI/refactor bullets and point readers here. See
   `users.noreply.github.com` trailers are now ignored for `EMAIL_ADDRESS` in
   commit-message and push-metadata scans only (helper:
   `scripts/git_identity_trailers.py`); institutional emails and PR title/body
-  scans stay strict.
+  scans stay strict. Trailer display names must not contain `@`, so an
+  institutional address cannot hide behind an allowlisted bracketed noreply.
 - **Below-floor kVp `skip` export length desync** (2026-08-02) — when
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam

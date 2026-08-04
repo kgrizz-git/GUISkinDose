@@ -20,9 +20,11 @@ from __future__ import annotations
 import re
 
 # Git identity trailers used by Dependabot / GitHub merge UI / Cursor co-authors.
+# Display-name text must not contain "@" so an institutional address cannot hide
+# behind an allowlisted bracketed noreply address on the same trailer line.
 _GIT_IDENTITY_TRAILER_LINE = re.compile(
     r"(?i)^\s*(Signed-off-by|Co-authored-by|Reviewed-by|Acked-by):\s+"
-    r".+\s+<(?P<email>[^<>\s]+)>\s*$"
+    r"[^@<>\n]+<(?P<email>[^<>\s]+)>\s*$"
 )
 _ALLOWED_GIT_TRAILER_EMAIL = re.compile(
     r"(?i)^(?:support@github\.com|noreply@github\.com|[^@\s]+@users\.noreply\.github\.com)$"
