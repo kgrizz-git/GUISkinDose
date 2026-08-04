@@ -28,6 +28,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
 | [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate (policy/CLI). |
 | [../scripts/check_sensitive_helpers.py](../scripts/check_sensitive_helpers.py) | Notebook/PDF/container reader helpers for the sensitive-content gate. |
+| [../scripts/git_identity_trailers.py](../scripts/git_identity_trailers.py) | Allowlisted Dependabot / GitHub noreply identity trailers for commit-message privacy scans. |
 | [privacy_admission_policy.json](privacy_admission_policy.json) | Machine-enforced protected-ignore, never-track, conditional scanner, receipt-expiry, and scanner-configuration policy. |
 | [../scripts/privacy_admission.py](../scripts/privacy_admission.py) | Staged/range privacy router, protected-path gate, scanner runner, and content-bound private receipt verifier. |
 | [../scripts/check_commit_message.py](../scripts/check_commit_message.py) | Local `commit-msg` gate for value-free sensitive-content checks before the message enters history. |

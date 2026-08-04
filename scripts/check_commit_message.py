@@ -72,13 +72,17 @@ def resolve_commit_message_path(
 
 
 def scan_commit_message(path: Path, *, allowed_roots: Sequence[Path] | None = None) -> list[Finding]:
-    """Scan a UTF-8 git commit-message file without allowing exemptions."""
+    """Scan a UTF-8 git commit-message file for sensitive-content rules.
+
+    Path-based content allowlists do not apply. Only Git identity trailers with
+    known GitHub noreply/bot addresses are ignored for ``EMAIL_ADDRESS``.
+    """
     confined = resolve_commit_message_path(path, allowed_roots=allowed_roots)
     try:
         message = confined.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise ValueError(f"cannot read commit-message file: {exc}") from exc
-    return text_findings("COMMIT_MESSAGE", message)
+    return text_findings("COMMIT_MESSAGE", message, allow_git_identity_trailers=True)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
