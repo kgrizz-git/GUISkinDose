@@ -80,11 +80,14 @@ def test_ci_metadata_still_flags_institutional_email_in_coauthored_trailer() -> 
     assert value not in repr(findings)
 
 
-def test_text_findings_reports_institutional_address_hiding_in_trailer_display_name() -> None:
+@pytest.mark.parametrize("trailer_type", ["Signed-off-by", "Co-authored-by"])
+def test_text_findings_reports_institutional_address_hiding_in_trailer_display_name(
+    trailer_type: str,
+) -> None:
     """An institutional address in the display name must not be suppressed."""
     institutional = "employee@" + "hospital.example"
     noreply = "123@" + "users.noreply.github.com"
-    line = f"Signed-off-by: {institutional} <{noreply}>"
+    line = f"{trailer_type}: {institutional} <{noreply}>"
     assert is_allowlisted_git_identity_trailer(line) is False
     findings = text_findings("COMMIT_MESSAGE", line + "\n", allow_git_identity_trailers=True)
     assert [(finding.rule, finding.location) for finding in findings] == [("EMAIL_ADDRESS", "1")]

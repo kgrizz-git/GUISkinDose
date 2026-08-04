@@ -28,6 +28,9 @@ omit pure CI/refactor bullets and point readers here. See
   `scripts/git_identity_trailers.py`); institutional emails and PR title/body
   scans stay strict. Trailer display names must not contain `@`, so an
   institutional address cannot hide behind an allowlisted bracketed noreply.
+- **Locked dependency advisories** (2026-08-04) — bumped `aiohttp` 3.14.1→3.14.3
+  and `cryptography` 49.0.0→50.0.0 in `uv.lock` so `uv audit` / static-analysis
+  pass after newly published GHSA fixes.
 - **Below-floor kVp `skip` export length desync** (2026-08-02) — when
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam
