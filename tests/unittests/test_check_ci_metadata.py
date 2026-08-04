@@ -48,9 +48,12 @@ def test_ci_metadata_flags_approved_trailers_in_pull_request_fields(field: str) 
         "title": f"Signed-off-by: dependabot[bot] <{bot}>",
         "body": f"Co-authored-by: maintainer <{noreply}>",
     }
-    payload = {"pull_request": {"title": "Privacy hardening", "body": "synthetic body"}}
-    payload["pull_request"][field] = trailer_lines[field]
-    findings = scan_event_payload(payload)
+    pull_request: dict[str, object] = {
+        "title": "Privacy hardening",
+        "body": "synthetic body",
+    }
+    pull_request[field] = trailer_lines[field]
+    findings = scan_event_payload({"pull_request": pull_request})
     assert [(finding.source, finding.line, finding.rule) for finding in findings] == [
         (f"pull_request_{field}", "1", "EMAIL_ADDRESS")
     ]
