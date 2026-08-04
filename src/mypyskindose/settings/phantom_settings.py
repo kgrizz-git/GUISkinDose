@@ -30,8 +30,9 @@ class PhantomSettings:
     human_mesh: str
         Select which MakeHuman phantom to represent the patient when
         model = "human" is selected. Valid selections: Any of the .stl files
-        in the folder phantom_data. Enter as a string without the .stl file
-        ending.
+        in the folder phantom_data. Enter as a simple basename string without
+        the .stl ending (no path separators or ``..``); unknown or escaping
+        stems are rejected. Custom meshes use the trusted Phantom tuple API.
     patient_offset : PhantomOffset
         Instance of class PhantomOffset containing patient - table isocenter
         offset.

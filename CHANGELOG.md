@@ -17,8 +17,29 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+### Changed
+
+- **Locked dependency audit** (2026-08-04) — `uv.lock` bumps `aiohttp` 3.14.1→3.14.3 and
+  `cryptography` 49.0.0→50.0.0 so `static-analysis` / `uv audit` clears newly published
+  advisories (GHSA-mfx4-hv73-q22v, GHSA-cq5v-8q36-5273, GHSA-mq44-7p77-q5h7,
+  GHSA-g6cj-pr64-35w5).
+
 ### Fixed
 
+- **AppSec: spreadsheet formula injection via export headers** (2026-08-03) —
+  `neutralize_dataframe()` now prefixes dangerous formula characters on column
+  names and index labels (not only cell values), so Data-tab CSV/XLSX/TXT exports
+  cannot emit live Excel formulas from attacker-controlled tabular headers
+  (CWE-1236).
+- **AppSec: `human_mesh` path traversal** (2026-08-03) — string mesh stems are
+  allow-listed as simple basenames and resolved with `Path.resolve()` +
+  `is_relative_to(phantom_data/)`; unknown or escaping stems are rejected before
+  STL load (custom meshes remain the trusted tuple form).
+- **AppSec: XLSX decompression bomb bypass of upload size cap** (2026-08-03) —
+  tabular Excel reads enforce uncompressed ZIP member/total budgets (declared
+  sizes plus streamed inflate-byte counts) and a streamed row×column/cell budget
+  before full sheet materialization, so a crafted workbook cannot OOM the process
+  solely by high compression ratio or forged ZIP size metadata (CWE-409).
 - **Main-push privacy gate on Dependabot / noreply Git trailers** (2026-08-03) —
   `check_ci_metadata.py` failed `main` CI after merging Dependabot or Cursor PRs
   because commit messages include Dependabot `Signed-off-by` and GitHub
@@ -28,9 +49,6 @@ omit pure CI/refactor bullets and point readers here. See
   `scripts/git_identity_trailers.py`); institutional emails and PR title/body
   scans stay strict. Trailer display names must not contain `@`, so an
   institutional address cannot hide behind an allowlisted bracketed noreply.
-- **Locked dependency advisories** (2026-08-04) — bumped `aiohttp` 3.14.1→3.14.3
-  and `cryptography` 49.0.0→50.0.0 in `uv.lock` so `uv audit` / static-analysis
-  pass after newly published GHSA fixes.
 - **Below-floor kVp `skip` export length desync** (2026-08-02) — when
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam
