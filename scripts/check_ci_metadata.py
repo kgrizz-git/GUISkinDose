@@ -40,9 +40,12 @@ def scan_event_payload(payload: dict[str, object]) -> list[MetadataFinding]:
 
     findings: list[MetadataFinding] = []
     for source, text in sources:
+        # Push commit messages may include Dependabot Signed-off-by /
+        # GitHub Co-authored-by noreply trailers; PR title/body stay strict.
+        allow_trailers = source.startswith("push_commit_")
         findings.extend(
             MetadataFinding(source=source, line=finding.location, rule=finding.rule)
-            for finding in text_findings(source, text)
+            for finding in text_findings(source, text, allow_git_identity_trailers=allow_trailers)
         )
     return findings
 

@@ -56,7 +56,7 @@ Agents working in this repository should be able to answer three questions quick
 | Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
-| Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py` (policy/CLI), `scripts/check_sensitive_helpers.py` (notebook/PDF/container readers), `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
+| Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py` (policy/CLI), `scripts/check_sensitive_helpers.py` (notebook/PDF/container readers), `scripts/git_identity_trailers.py` (Dependabot/GitHub noreply commit trailers), `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
 | Conditional privacy admission | `scripts/privacy_admission.py`, `dev-docs/privacy_admission_policy.json`; receipts stay under `.git/privacy-scan-receipts/` |
 | Privacy tool inventory | `dev-docs/privacy_tool_inventory.json`, generated `dev-docs/privacy_tool_inventory.md`, `scripts/render_privacy_tool_inventory.py` |
 | Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `scripts/run_dicom_phi_advisory.py`, `scripts/run_image_privacy_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |

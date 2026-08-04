@@ -59,6 +59,7 @@ if __package__:
         mapping_has_visual_mime,
         pdf_reader_text,
     )
+    from .git_identity_trailers import is_allowlisted_git_identity_trailer
 else:  # pragma: no cover - exercised by running this file directly.
     from check_sensitive_helpers import (
         BZIP2_CONTAINER_SUFFIXES,
@@ -79,6 +80,7 @@ else:  # pragma: no cover - exercised by running this file directly.
         mapping_has_visual_mime,
         pdf_reader_text,
     )
+    from git_identity_trailers import is_allowlisted_git_identity_trailer
 
 
 INVENTORY_RELATIVE_PATH = Path("dev-docs/approved_asset_inventory.json")
@@ -475,14 +477,34 @@ def _is_escaped_fastapi_decorator_email(line: str, match: re.Match[str]) -> bool
     )
 
 
-def text_findings(path: str, text: str, location_prefix: str = "") -> list[Finding]:
+def text_findings(
+    path: str,
+    text: str,
+    location_prefix: str = "",
+    *,
+    allow_git_identity_trailers: bool = False,
+) -> list[Finding]:
+    """Scan text for sensitive-content rules without echoing matched values.
+
+    Set ``allow_git_identity_trailers=True`` only for commit messages / push
+    metadata so Dependabot and GitHub noreply trailers skip ``EMAIL_ADDRESS``.
+    """
     findings: list[Finding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
         for rule, pattern in SENSITIVE_PATTERNS:
             match = pattern.search(line)
-            if match and not (rule == "EMAIL_ADDRESS" and _is_escaped_fastapi_decorator_email(line, match)):
-                location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
-                findings.append(Finding(path=path, rule=rule, level="error", location=location))
+            if not match:
+                continue
+            if rule == "EMAIL_ADDRESS" and _is_escaped_fastapi_decorator_email(line, match):
+                continue
+            if (
+                allow_git_identity_trailers
+                and rule == "EMAIL_ADDRESS"
+                and is_allowlisted_git_identity_trailer(line)
+            ):
+                continue
+            location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
+            findings.append(Finding(path=path, rule=rule, level="error", location=location))
     return findings
 
 

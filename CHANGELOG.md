@@ -40,6 +40,15 @@ omit pure CI/refactor bullets and point readers here. See
   sizes plus streamed inflate-byte counts) and a streamed row×column/cell budget
   before full sheet materialization, so a crafted workbook cannot OOM the process
   solely by high compression ratio or forged ZIP size metadata (CWE-409).
+- **Main-push privacy gate on Dependabot / noreply Git trailers** (2026-08-03) —
+  `check_ci_metadata.py` failed `main` CI after merging Dependabot or Cursor PRs
+  because commit messages include Dependabot `Signed-off-by` and GitHub
+  `Co-authored-by` noreply identity trailers. Those known GitHub automation /
+  `users.noreply.github.com` trailers are now ignored for `EMAIL_ADDRESS` in
+  commit-message and push-metadata scans only (helper:
+  `scripts/git_identity_trailers.py`); institutional emails and PR title/body
+  scans stay strict. Trailer display names must not contain `@`, so an
+  institutional address cannot hide behind an allowlisted bracketed noreply.
 - **Below-floor kVp `skip` export length desync** (2026-08-02) — when
   `below_floor_kvp_policy=skip` dropped events inside `calculate_dose`, dict/JSON
   export still passed the pre-skip `data_norm` into `PySkinDoseOutput`. Single-exam
