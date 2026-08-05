@@ -27,8 +27,8 @@ def _mock_exam_output(psd: float, dose_pairs: list[tuple[int, float]], num_cells
         }
     }
     output = SimpleNamespace(
-        PSD=psd,
-        AirKerma=psd * 2,
+        psd=psd,
+        air_kerma=psd * 2,
         to_dict=MagicMock(return_value={"dose_map": dose_pairs, "patient": patient_dict}),
     )
     return SimpleNamespace(

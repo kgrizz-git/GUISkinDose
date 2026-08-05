@@ -198,29 +198,37 @@ def find_broken_links(markdown_files: list[Path], repo_root: Path) -> list[Broke
     broken: list[BrokenLink] = []
     for md_file in markdown_files:
         rel_source = md_file.relative_to(repo_root)
-        lines = md_file.read_text(encoding="utf-8").splitlines()
-        for line_number, line in enumerate(lines, start=1):
-            for match in MARKDOWN_LINK_RE.finditer(line):
-                raw_target = match.group(1).strip()
-                if not raw_target or is_external_link(raw_target):
-                    continue
+        for line_number, line in enumerate(md_file.read_text(encoding="utf-8").splitlines(), start=1):
+            broken.extend(_broken_links_in_line(md_file, rel_source, line_number, line, repo_root))
+    return broken
 
-                path_part, _anchor = split_link_target(raw_target)
-                if not path_part:
-                    continue
 
-                resolved = resolve_relative_link(md_file, path_part, repo_root)
-                if link_target_exists(resolved):
-                    continue
-
-                broken.append(
-                    BrokenLink(
-                        source=rel_source,
-                        line_number=line_number,
-                        target=raw_target,
-                        message=f"broken link [{raw_target}] -> {resolved}",
-                    )
+def _broken_links_in_line(
+    source_file: Path,
+    relative_source: Path,
+    line_number: int,
+    line: str,
+    repo_root: Path,
+) -> list[BrokenLink]:
+    """Return missing local Markdown targets from one line in stable source order."""
+    broken: list[BrokenLink] = []
+    for match in MARKDOWN_LINK_RE.finditer(line):
+        raw_target = match.group(1).strip()
+        if not raw_target or is_external_link(raw_target):
+            continue
+        path_part, _anchor = split_link_target(raw_target)
+        if not path_part:
+            continue
+        resolved = resolve_relative_link(source_file, path_part, repo_root)
+        if not link_target_exists(resolved):
+            broken.append(
+                BrokenLink(
+                    source=relative_source,
+                    line_number=line_number,
+                    target=raw_target,
+                    message=f"broken link [{raw_target}] -> {resolved}",
                 )
+            )
     return broken
 
 
@@ -527,43 +535,44 @@ def main(argv: list[str] | None = None) -> int:
         report_stale_patterns=not args.no_stale_warnings,
         scan_path_references=not args.no_path_reference_scan,
     )
-
-    exit_code = 0
-
-    if broken:
-        print("Broken relative links:", file=sys.stderr)
-        for item in broken:
-            print(format_broken_link(item), file=sys.stderr)
-        exit_code = 1
-
-    if path_references:
-        print("Broken path references:", file=sys.stderr)
-        for item in path_references:
-            print(format_path_reference(item), file=sys.stderr)
-        exit_code = 1
-
-    if absolute:
-        print("Forbidden absolute filesystem paths in docs:", file=sys.stderr)
-        for item in absolute:
-            print(format_absolute_path_hit(item), file=sys.stderr)
-        exit_code = 1
-
-    if contradictions:
-        print("FEATURE_INVENTORY contradictions:", file=sys.stderr)
-        for item in contradictions:
-            print(format_inventory_contradiction(item), file=sys.stderr)
-        exit_code = 1
-
-    if stale:
-        print("Advisory stale-pattern hits (does not fail CI):", file=sys.stderr)
-        for item in stale:
-            print(format_stale_hit(item), file=sys.stderr)
-
-    if exit_code == 0:
+    has_errors = _report_blocking_findings(broken, path_references, absolute, contradictions)
+    _report_stale_findings(stale)
+    if not has_errors:
         scanned = len(collect_markdown_files(repo_root))
         print(f"Doc freshness OK ({scanned} markdown files scanned).")
+    return int(has_errors)
 
-    return exit_code
+
+def _report_blocking_findings(
+    broken: list[BrokenLink],
+    path_references: list[PathReference],
+    absolute: list[AbsolutePathHit],
+    contradictions: list[InventoryContradiction],
+) -> bool:
+    """Render all blocking finding groups and report whether any were present."""
+    groups = (
+        ("Broken relative links:", [format_broken_link(item) for item in broken]),
+        ("Broken path references:", [format_path_reference(item) for item in path_references]),
+        ("Forbidden absolute filesystem paths in docs:", [format_absolute_path_hit(item) for item in absolute]),
+        ("FEATURE_INVENTORY contradictions:", [format_inventory_contradiction(item) for item in contradictions]),
+    )
+    has_errors = False
+    for heading, messages in groups:
+        if messages:
+            print(heading, file=sys.stderr)
+            for message in messages:
+                print(message, file=sys.stderr)
+            has_errors = True
+    return has_errors
+
+
+def _report_stale_findings(stale: list[StaleHit]) -> None:
+    """Render advisory stale-pattern findings without changing the exit status."""
+    if not stale:
+        return
+    print("Advisory stale-pattern hits (does not fail CI):", file=sys.stderr)
+    for item in stale:
+        print(format_stale_hit(item), file=sys.stderr)
 
 
 if __name__ == "__main__":

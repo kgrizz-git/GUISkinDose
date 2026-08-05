@@ -139,7 +139,7 @@ def test_multi_exam_skip_policy_keeps_exam_with_aligned_lengths() -> None:
                 "Hits:\n\tThe hits list is not the same length as the number of normalized events"
             )
         out = MagicMock()
-        out.DoseMap = raw_output[c.OUTPUT_KEY_DOSE_MAP]
+        out.dose_map = raw_output[c.OUTPUT_KEY_DOSE_MAP]
         return out
 
     with (
@@ -229,7 +229,7 @@ def test_multi_exam_failure_warning_is_explicit_about_exclusion() -> None:
         patch(
             "mypyskindose.analyze_data._multi_exam_output",
             side_effect=lambda patient, table, pad, raw_output, settings, data_norm: MagicMock(
-                DoseMap=raw_output[c.OUTPUT_KEY_DOSE_MAP]
+                dose_map=raw_output[c.OUTPUT_KEY_DOSE_MAP]
             ),
         ),
     ):
@@ -290,7 +290,7 @@ def test_multi_exam_exclusion_preserves_import_warnings() -> None:
         patch(
             "mypyskindose.analyze_data._multi_exam_output",
             side_effect=lambda patient, table, pad, raw_output, settings, data_norm: MagicMock(
-                DoseMap=raw_output[c.OUTPUT_KEY_DOSE_MAP]
+                dose_map=raw_output[c.OUTPUT_KEY_DOSE_MAP]
             ),
         ),
     ):

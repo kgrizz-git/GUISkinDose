@@ -67,25 +67,19 @@ def diff_files(source: Path, target: Path) -> bool:
         return True
 
 
-def sync(
-    source_dir: Path,
-    target_dir: Path,
-    *,
-    check: bool,
-) -> int:
-    sources = validate_source(source_dir)
+def _prepare_target(target_dir: Path, *, check: bool) -> None:
+    """Create a write target or fail safely when a check target is missing."""
     if not check and not target_dir.exists():
         target_dir.mkdir(parents=True, exist_ok=True)
     elif check and not target_dir.exists():
         sys.stderr.write(f"error: target directory does not exist: {target_dir}\n")
         sys.exit(1)
 
-    source_basenames = {path.name for path in sources}
-    target_paths = list(target_dir.glob("*.md"))
 
+def _sync_source_files(sources: list[Path], target_dir: Path, *, check: bool) -> tuple[list[str], list[str]]:
+    """Mirror changed source files and return drift names with completed actions."""
     drift: list[str] = []
     actions: list[str] = []
-
     for source_path in sources:
         target_path = target_dir / source_path.name
         if diff_files(source_path, target_path):
@@ -93,13 +87,35 @@ def sync(
             if not check:
                 write_text(target_path, read_text(source_path))
                 actions.append(f"mirrored {source_path.name}")
+    return drift, actions
 
-    for target_path in target_paths:
+
+def _remove_stale_targets(target_dir: Path, source_basenames: set[str], *, check: bool) -> tuple[list[str], list[str]]:
+    """Report or remove target-only help files without changing output ordering."""
+    drift: list[str] = []
+    actions: list[str] = []
+    for target_path in target_dir.glob("*.md"):
         if target_path.name not in source_basenames:
             drift.append(f"stale {target_path.name}")
             if not check:
                 target_path.unlink()
                 actions.append(f"removed stale {target_path.name}")
+    return drift, actions
+
+
+def sync(
+    source_dir: Path,
+    target_dir: Path,
+    *,
+    check: bool,
+) -> int:
+    sources = validate_source(source_dir)
+    _prepare_target(target_dir, check=check)
+    source_basenames = {path.name for path in sources}
+    source_drift, source_actions = _sync_source_files(sources, target_dir, check=check)
+    stale_drift, stale_actions = _remove_stale_targets(target_dir, source_basenames, check=check)
+    drift = [*source_drift, *stale_drift]
+    actions = [*source_actions, *stale_actions]
 
     if check:
         if drift:

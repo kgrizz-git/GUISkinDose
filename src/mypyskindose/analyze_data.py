@@ -316,7 +316,7 @@ def _process_exam(
     _add_missed_event_warnings(warnings, exam_id, raw_output, len(export_data_norm))
     output = _multi_exam_output(patient, table, pad, raw_output, settings, export_data_norm)
     dprint("RENDERING", f"{exam_id}: creating dose map plot")
-    create_dose_map_plot(patient=patient, settings=settings, dose_map=output.DoseMap)
+    create_dose_map_plot(patient=patient, settings=settings, dose_map=output.dose_map)
     return _exam_result(exam, exam_id, effective_offset, settings, output, export_data_norm, warnings)
 
 
@@ -368,7 +368,7 @@ def analyze_multiple_exams(
             continue
 
         exam_results.append(result)
-        exam_dose_map = result.output.DoseMap
+        exam_dose_map = result.output.dose_map
         aggregate_dose_map = exam_dose_map.copy() if aggregate_dose_map is None else aggregate_dose_map + exam_dose_map
         total_events += result.event_count
 

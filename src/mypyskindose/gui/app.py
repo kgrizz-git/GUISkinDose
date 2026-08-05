@@ -13,6 +13,7 @@ import asyncio
 import logging
 import os
 import sys
+from collections.abc import Callable
 from textwrap import dedent
 from typing import Any, cast
 
@@ -54,6 +55,98 @@ logger = logging.getLogger(__name__)
 GUI_VERSION = "1.1.0"
 
 
+def _update_nav_classes(nav_buttons: list[tuple[ui.button, str]]) -> None:
+    """Synchronize drawer navigation styling with the active workflow tab."""
+    for button, target in nav_buttons:
+        if state.active_tab == target:
+            button.classes(add="active", remove="text-grey-4")
+        else:
+            button.classes(remove="active", add="text-grey-4")
+
+
+def _on_tab_changed(ctx: PageContext, nav_buttons: list[tuple[ui.button, str]], tab_name: str) -> None:
+    """Persist a tab selection and refresh previews that depend on it."""
+    state.active_tab = tab_name
+    _update_nav_classes(nav_buttons)
+    if tab_name == "geometry":
+        ctx.refresh_geometry_tab()
+        ctx.refresh_geometry_preview()
+    elif tab_name == "settings":
+        ctx.refresh_phantom_preview()
+
+
+def _add_navigation_button(
+    nav_buttons: list[tuple[ui.button, str]], tab_selector: Callable[[str], None], label: str, target: str
+) -> None:
+    """Add a drawer button that selects one fixed workflow tab."""
+    button = ui.button(label, on_click=lambda: tab_selector(target)).props("flat align=left dense no-caps").classes(
+        "nav-item full-width text-left py-2 text-grey-4"
+    )
+    nav_buttons.append((button, target))
+
+
+def _restore_loaded_state(ctx: PageContext) -> None:
+    """Restore labels and active UI content after a previously loaded exam."""
+    if state.rdsr_df is None:
+        return
+    dprint("GUI", "Restoring UI state from loaded data")
+    n_exams = len(state.loaded_exams)
+    if n_exams <= 1:
+        ctx.file_label.set_text(opaque_exam_label(0).upper() if n_exams == 1 else "No file loaded")
+    else:
+        ctx.file_label.set_text(f"{n_exams} FILES")
+    ctx.events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
+    ctx.refresh_event_table()
+    ctx.refresh_exams_table()
+    if state.active_tab:
+        ctx.tabs.set_value(state.active_tab)
+
+
+def _show_onboarding_dialog() -> None:
+    """Schedule the one-time onboarding dialog unless the user already dismissed it."""
+    if is_onboarding_dismissed():
+        return
+    with ui.dialog().props("persistent") as dialog, ui.card().classes("modern-card w-full max-w-md max-h-[80vh] p-6"):
+        with ui.row().classes("w-full justify-between items-center q-mb-sm"):
+            ui.label("Welcome to MyPySkinDose").classes("text-h5")
+
+        with ui.scroll_area().classes("w-full"):
+            ui.markdown(
+                dedent(
+                    f"""
+                    MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
+
+                    **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
+                    CSV/TSV/XLSX data.
+
+                    **2. Settings** — Choose a phantom model and adjust physics parameters
+                    (defaults usually work).
+
+                    **3. Geometry** — Preview beam geometry before calculating.
+
+                    **4. Calculate** — Run the dose calculation.
+
+                    **5. Results** — View the 3D dose map and peak skin dose (PSD).
+
+                    **6. Export** — Download results as JSON, HTML, or PNG.
+
+                    **Privacy** — {copy_text("onboarding.privacy_notice")}
+                    """
+                ).strip()
+            )
+        dont_show = ui.checkbox("Don't show this again").classes("q-mt-md")
+
+        def on_ok() -> None:
+            if dont_show.value:
+                dismiss_onboarding()
+            dialog.close()
+
+        with ui.row().classes("justify-end q-mt-md w-full"):
+            ui.button("Got it", on_click=on_ok).classes("modern-btn-primary text-white")
+
+    ui.timer(0.1, dialog.open, once=True)
+
+
 # ── page ───────────────────────────────────────────────────────────────────
 @ui.page("/")
 def index():
@@ -81,12 +174,9 @@ def index():
 
     nav_buttons: list[tuple[ui.button, str]] = []
 
-    def _update_nav_classes():
-        for btn, target in nav_buttons:
-            if state.active_tab == target:
-                btn.classes(add="active", remove="text-grey-4")
-            else:
-                btn.classes(remove="active", add="text-grey-4")
+    def tab_selector(target: str) -> None:
+        """Select a tab after NiceGUI finishes creating its tab container."""
+        tabs.set_value(target)
 
     with ui.left_drawer(fixed=True).classes("q-pa-md") as left_drawer:
         ui.label("Status").classes("text-caption text-grey-6 q-mb-xs")
@@ -97,39 +187,20 @@ def index():
         ui.separator().classes("q-my-sm bg-zinc-800")
         ui.label("Navigation").classes("text-caption text-grey-6 q-mb-0")
 
-        def go(name: str):
-            tabs.set_value(name)
-
-        def nav_btn(label: str, target: str) -> ui.button:
-            btn = ui.button(label, on_click=lambda: go(target)).props(
-                "flat align=left dense no-caps"
-            ).classes("nav-item full-width text-left py-2 text-grey-4")
-            nav_buttons.append((btn, target))
-            return btn
-
-        nav_btn("1 · Upload", "upload")
-        nav_btn("2 · Data Table", "data")
-        nav_btn("3 · Settings", "settings")
-        nav_btn("4 · Geometry", "geometry")
-        nav_btn("5 · Calculate", "calculate")
-        nav_btn("6 · Results", "results")
-        nav_btn("7 · Export", "export")
+        _add_navigation_button(nav_buttons, tab_selector, "1 · Upload", "upload")
+        _add_navigation_button(nav_buttons, tab_selector, "2 · Data Table", "data")
+        _add_navigation_button(nav_buttons, tab_selector, "3 · Settings", "settings")
+        _add_navigation_button(nav_buttons, tab_selector, "4 · Geometry", "geometry")
+        _add_navigation_button(nav_buttons, tab_selector, "5 · Calculate", "calculate")
+        _add_navigation_button(nav_buttons, tab_selector, "6 · Results", "results")
+        _add_navigation_button(nav_buttons, tab_selector, "7 · Export", "export")
         ui.separator().classes("q-my-md bg-zinc-800")
         run_btn_drawer = ui.button("Run Calculation", icon="play_arrow").classes(
             "full-width modern-btn icon-outlined"
         )
 
-    def _on_tab_changed(tab_name: str) -> None:
-        state.active_tab = tab_name
-        _update_nav_classes()
-        if tab_name == "geometry":
-            ctx.refresh_geometry_tab()
-            ctx.refresh_geometry_preview()
-        elif tab_name == "settings":
-            ctx.refresh_phantom_preview()
-
     with ui.tabs().classes("w-full").on(
-        "update:model-value", lambda e: _on_tab_changed(e.args)
+        "update:model-value", lambda e: _on_tab_changed(ctx, nav_buttons, e.args)
     ) as tabs:
         ui.tab("upload", label="1 · Upload")
         ui.tab("data", label="2 · Data Table")
@@ -156,61 +227,8 @@ def index():
         results_tab.build(ctx)
         export_tab.build(ctx)
 
-    if state.rdsr_df is not None:
-        dprint("GUI", "Restoring UI state from loaded data")
-        n_exams = len(state.loaded_exams)
-        if n_exams <= 1:
-            ctx.file_label.set_text(opaque_exam_label(0).upper() if n_exams == 1 else "No file loaded")
-        else:
-            ctx.file_label.set_text(f"{n_exams} FILES")
-        ctx.events_label.set_text(f"{len(state.rdsr_df)} EVENTS")
-        ctx.refresh_event_table()
-        ctx.refresh_exams_table()
-        if state.active_tab:
-            ctx.tabs.set_value(state.active_tab)
-
-    if not is_onboarding_dismissed():
-        with ui.dialog().props("persistent") as dialog, ui.card().classes(
-            "modern-card w-full max-w-md max-h-[80vh] p-6"
-        ):
-            with ui.row().classes("w-full justify-between items-center q-mb-sm"):
-                ui.label("Welcome to MyPySkinDose").classes("text-h5")
-
-            with ui.scroll_area().classes("w-full"):
-                ui.markdown(
-                    dedent(
-                        f"""
-                        MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
-
-                        **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
-                        CSV/TSV/XLSX data.
-
-                        **2. Settings** — Choose a phantom model and adjust physics parameters
-                        (defaults usually work).
-
-                        **3. Geometry** — Preview beam geometry before calculating.
-
-                        **4. Calculate** — Run the dose calculation.
-
-                        **5. Results** — View the 3D dose map and peak skin dose (PSD).
-
-                        **6. Export** — Download results as JSON, HTML, or PNG.
-
-                        **Privacy** — {copy_text("onboarding.privacy_notice")}
-                        """
-                    ).strip()
-                )
-            dont_show = ui.checkbox("Don't show this again").classes("q-mt-md")
-
-            def on_ok() -> None:
-                if dont_show.value:
-                    dismiss_onboarding()
-                dialog.close()
-
-            with ui.row().classes("justify-end q-mt-md w-full"):
-                ui.button("Got it", on_click=on_ok).classes("modern-btn-primary text-white")
-
-        ui.timer(0.1, dialog.open, once=True)
+    _restore_loaded_state(ctx)
+    _show_onboarding_dialog()
 
 
 # ── native window geometry ───────────────────────────────────────────────────

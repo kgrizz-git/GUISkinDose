@@ -227,40 +227,49 @@ def _interpolate_off_grid(
     cache_key = (model, str(plane), al_snap)
     piv = pivot_cache.get(cache_key)
     if piv is None:
-        sl = rows[rows["filtration_added_mmal"] == al_snap]
-        piv = sl.pivot_table(index="kvp_kv", columns="filtration_added_mmcu", values="k_patient_support")
+        selected_rows = rows[rows["filtration_added_mmal"] == al_snap]
+        piv = selected_rows.pivot_table(index="kvp_kv", columns="filtration_added_mmcu", values="k_patient_support")
         pivot_cache[cache_key] = piv
-
-    cu_axis = piv.columns.to_numpy(dtype=float)
+    value, status = _lookup_pivot(piv, kvp, cu)
     al_clamped = al_snap != round(al)
-    if len(cu_axis) >= 2:
-        kv_axis = piv.index.to_numpy(dtype=float)
-        if len(kv_axis) >= 2:
-            rgi = RegularGridInterpolator((kv_axis, cu_axis), piv.to_numpy(dtype=float))
-            value, status = clamped_rgi_lookup(rgi, kv_axis, cu_axis, kvp, cu)
-        else:
-            # Single kVp row, multiple Cu columns
-            kv_c = kv_axis[0]
-            cu_c = float(np.clip(cu, cu_axis[0], cu_axis[-1]))
-            value = float(np.interp(cu_c, cu_axis, piv.to_numpy(dtype=float)[0, :]))
-            was_clamped = (kv_c != round(kvp)) or (cu_c != cu)
-            if was_clamped:
-                status = STATUS_CLAMPED
-            elif bool(np.any(np.isclose(cu_axis, cu_c))):
-                status = STATUS_EXACT
-            else:
-                status = STATUS_INTERPOLATED
-    else:
-        # Single Cu column — no Cu axis to interpolate; the integer kVp node is
-        # exact after clamping to the table's kVp range.
-        kv_axis = piv.index.to_numpy(dtype=float)
-        kv_c = float(np.clip(round(kvp), kv_axis[0], kv_axis[-1]))
-        value = float(np.interp(kv_c, kv_axis, piv.to_numpy(dtype=float)[:, 0]))
-        # For single Cu column, cu must match the only available value
-        cu_single = cu_axis[0] if len(cu_axis) > 0 else 0.0
-        status = STATUS_CLAMPED if (kv_c != round(kvp) or cu != cu_single) else STATUS_EXACT
-
     return value, STATUS_CLAMPED if (al_clamped or status == STATUS_CLAMPED) else status
+
+
+def _lookup_pivot(pivot: pd.DataFrame, kvp: float, cu: float) -> tuple[float, str]:
+    """Look up a correction value from a pivot table with 2D/degenerate handling."""
+    cu_axis = pivot.columns.to_numpy(dtype=float)
+    kv_axis = pivot.index.to_numpy(dtype=float)
+    if len(cu_axis) < 2:
+        return _lookup_single_cu(pivot, kv_axis, cu_axis, kvp, cu)
+    if len(kv_axis) < 2:
+        return _lookup_single_kvp(pivot, kv_axis, cu_axis, kvp, cu)
+    interpolator = RegularGridInterpolator((kv_axis, cu_axis), pivot.to_numpy(dtype=float))
+    return clamped_rgi_lookup(interpolator, kv_axis, cu_axis, kvp, cu)
+
+
+def _lookup_single_kvp(
+    pivot: pd.DataFrame, kv_axis: np.ndarray, cu_axis: np.ndarray, kvp: float, cu: float
+) -> tuple[float, str]:
+    """Interpolate the copper axis when the table has one kVp row."""
+    kvp_node = kv_axis[0]
+    cu_node = float(np.clip(cu, cu_axis[0], cu_axis[-1]))
+    value = float(np.interp(cu_node, cu_axis, pivot.to_numpy(dtype=float)[0, :]))
+    if kvp_node != round(kvp) or cu_node != cu:
+        return value, STATUS_CLAMPED
+    if bool(np.any(np.isclose(cu_axis, cu_node))):
+        return value, STATUS_EXACT
+    return value, STATUS_INTERPOLATED
+
+
+def _lookup_single_cu(
+    pivot: pd.DataFrame, kv_axis: np.ndarray, cu_axis: np.ndarray, kvp: float, cu: float
+) -> tuple[float, str]:
+    """Interpolate the kVp axis when the table has one copper column."""
+    kvp_node = float(np.clip(round(kvp), kv_axis[0], kv_axis[-1]))
+    value = float(np.interp(kvp_node, kv_axis, pivot.to_numpy(dtype=float)[:, 0]))
+    cu_node = cu_axis[0] if len(cu_axis) > 0 else 0.0
+    status = STATUS_CLAMPED if (kvp_node != round(kvp) or cu != cu_node) else STATUS_EXACT
+    return value, status
 
 
 

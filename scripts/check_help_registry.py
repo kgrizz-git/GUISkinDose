@@ -59,18 +59,25 @@ def _validate_registry_shape(data: object, result: ValidationResult) -> tuple[Pa
 
     entries: list[dict[str, Any]] = []
     for index, entry in enumerate(entries_raw):
-        context = _entry_context(index, entry)
-        if not isinstance(entry, dict):
-            result.errors.append(f"{context}: entry must be an object")
-            continue
-        for field_name in ("id", "title", "source"):
-            if not _is_non_empty_string(entry.get(field_name)):
-                result.errors.append(f"{context}: {field_name} must be a non-empty string")
-        gui_files = entry.get("gui_files")
-        if not isinstance(gui_files, list) or not all(_is_non_empty_string(item) for item in gui_files):
-            result.errors.append(f"{context}: gui_files must be a list of non-empty strings")
-        entries.append(entry)
+        validated = _validate_registry_entry(index, entry, result)
+        if validated is not None:
+            entries.append(validated)
     return Path(str(source_dir_raw)), Path(str(target_dir_raw)), entries
+
+
+def _validate_registry_entry(index: int, entry: object, result: ValidationResult) -> dict[str, Any] | None:
+    """Validate one registry entry while preserving malformed-entry recovery."""
+    context = _entry_context(index, entry)
+    if not isinstance(entry, dict):
+        result.errors.append(f"{context}: entry must be an object")
+        return None
+    for field_name in ("id", "title", "source"):
+        if not _is_non_empty_string(entry.get(field_name)):
+            result.errors.append(f"{context}: {field_name} must be a non-empty string")
+    gui_files = entry.get("gui_files")
+    if not isinstance(gui_files, list) or not all(_is_non_empty_string(item) for item in gui_files):
+        result.errors.append(f"{context}: gui_files must be a list of non-empty strings")
+    return entry
 
 
 def _source_is_referenced(source: str, gui_texts: list[str]) -> bool:

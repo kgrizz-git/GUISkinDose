@@ -484,36 +484,43 @@ def text_findings(
     *,
     allow_git_identity_trailers: bool = False,
 ) -> list[Finding]:
-    """Scan text for sensitive-content rules without echoing matched values.
-
-    Set ``allow_git_identity_trailers=True`` only for commit messages / push
-    metadata so Dependabot and GitHub noreply trailers skip ``EMAIL_ADDRESS``.
-    """
+    """Scan text without echoing values; only Git metadata may allowlist email trailers."""
     findings: list[Finding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
-        for rule, pattern in SENSITIVE_PATTERNS:
-            match = pattern.search(line)
-            if not match:
-                continue
-            if rule == "EMAIL_ADDRESS" and _is_escaped_fastapi_decorator_email(line, match):
-                continue
-            if (
-                allow_git_identity_trailers
-                and rule == "EMAIL_ADDRESS"
-                and is_allowlisted_git_identity_trailer(line)
-            ):
-                continue
-            location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
-            findings.append(Finding(path=path, rule=rule, level="error", location=location))
+        findings.extend(_line_text_findings(path, line, line_number, location_prefix, allow_git_identity_trailers))
     return findings
 
 
+def _line_text_findings(
+    path: str, line: str, line_number: int, location_prefix: str, allow_git_identity_trailers: bool
+) -> list[Finding]:
+    findings: list[Finding] = []
+    for rule, pattern in SENSITIVE_PATTERNS:
+        match = pattern.search(line)
+        if match is None or _skip_email_match(line, match, rule, allow_git_identity_trailers):
+            continue
+        location = f"{location_prefix}{line_number}" if location_prefix else str(line_number)
+        findings.append(Finding(path=path, rule=rule, level="error", location=location))
+    return findings
+
+
+def _skip_email_match(line: str, match: re.Match[str], rule: str, allow_git_identity_trailers: bool) -> bool:
+    return rule == "EMAIL_ADDRESS" and (_is_escaped_fastapi_decorator_email(line, match) or (
+        allow_git_identity_trailers and is_allowlisted_git_identity_trailer(line)
+    ))
+
+
 def sensitive_path_rule(path: str) -> str | None:
-    """Return a rule for a PHI-like path component without returning its value."""
     for component in PurePosixPath(normalize_path(path)).parts:
-        for rule, pattern in SENSITIVE_PATH_PATTERNS:
-            if pattern.search(component):
-                return rule
+        if rule := _sensitive_component_rule(component):
+            return rule
+    return None
+
+
+def _sensitive_component_rule(component: str) -> str | None:
+    for rule, pattern in SENSITIVE_PATH_PATTERNS:
+        if pattern.search(component):
+            return rule
     return None
 
 

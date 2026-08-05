@@ -253,8 +253,8 @@ class TestAnalyzeMultipleExams:
         result = analyze_multiple_exams([exam, exam], settings)
 
         assert len(result.exams) == 2
-        dm1 = result.exams[0].output.DoseMap
-        dm2 = result.exams[1].output.DoseMap
+        dm1 = result.exams[0].output.dose_map
+        dm2 = result.exams[1].output.dose_map
         np.testing.assert_array_almost_equal(result.aggregate_dose_map, dm1 + dm2)
 
     @pytest.mark.usefixtures("_suppress_plots")
@@ -280,8 +280,8 @@ class TestAnalyzeMultipleExams:
         assert len(result.exams) == 2
         assert result.exams[0].patient_offset == [0.0, 0.0, 0.0]
         assert result.exams[1].patient_offset == [0.0, 0.0, -35.0]
-        dm1 = result.exams[0].output.DoseMap
-        dm2 = result.exams[1].output.DoseMap
+        dm1 = result.exams[0].output.dose_map
+        dm2 = result.exams[1].output.dose_map
         # Different offsets → different dose distributions (not identical arrays)
         assert not np.array_equal(dm1, dm2)
 
@@ -367,7 +367,7 @@ class TestMultiExamIntegration:
         }
         assert result.aggregate_psd > 0
         # Aggregate is the element-wise sum across exams.
-        summed = sum(np.asarray(e.output.DoseMap) for e in result.exams)
+        summed = sum(np.asarray(e.output.dose_map) for e in result.exams)
         assert np.allclose(result.aggregate_dose_map, summed)
         assert result.aggregate_psd == pytest.approx(float(np.max(summed)))
 

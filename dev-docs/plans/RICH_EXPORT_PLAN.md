@@ -75,7 +75,7 @@ The payload and writer pipeline should stay **separate from the existing JSON/di
 | `gui/io_helpers.py` | Reuse `_get_save_path` (native only) and `_tabular_input_meta`; browser mode must continue to rely on `ui.download()` rather than a fake path picker. |
 | `format_export_data.py` | `PySkinDoseOutput`, `MultiExamResult`, `ExamResult`; Rich Export should avoid an unnecessary public schema bump and use a separate payload model. |
 | `gui/state.py` | Session state; **single-exam** uses `state.output` (dict); **multi-exam** uses `state.multi_exam_result` (`MultiExamResult`). Collector must branch on `state.multi_exam_result is not None` (or `state.is_multi_exam`). |
-| `gui/helpers.py` | Multi-exam cumulative air kerma: `sum(e.output.AirKerma for e in multi_result.exams)` — not stored on `MultiExamResult`. |
+| `gui/helpers.py` | Multi-exam cumulative air kerma: `sum(e.output.air_kerma for e in multi_result.exams)` — not stored on `MultiExamResult`. |
 | `gui/figures.py` | Interactive dose-map figures; refactor image export into `export/images.py` to avoid GUI coupling. |
 | `input_adapters/models.py` | `InputAdapterResult` / `InputProvenance` already carry normalized data and provenance; prefer reusing them in the export source bundle instead of copying DataFrames onto result models. |
 | `main.py` | CLI currently has separate single/multi-file execution branches and no report flags; Rich Export should unify export-capable dispatch instead of bolting logic onto only one branch. |
@@ -155,15 +155,15 @@ Report **per exam** and **cumulative** columns.
 | Path | Carrier | `dose_map` shape | Access style |
 |------|---------|------------------|--------------|
 | Single-exam | `source.output_dict` (a **dict**, `state.output`) | **Sparse**: `[(vertex_index, dose), …]` for `dose > 0` only (see `PySkinDoseOutput.to_dict()`); `psd` is a top-level scalar | dict keys (`output_dict["psd"]`, `["air_kerma"]`) |
-| Multi-exam | `MultiExamResult.exams[].output` (**`PySkinDoseOutput` objects**); `aggregate_dose_map` is a full `np.ndarray` | Full dense `np.ndarray` on `.DoseMap` / `aggregate_dose_map` | attributes (`.PSD`, `.AirKerma`, `.DoseMap`) |
+| Multi-exam | `MultiExamResult.exams[].output` (**`PySkinDoseOutput` objects**); `aggregate_dose_map` is a full `np.ndarray` | Full dense `np.ndarray` on `.dose_map` / `aggregate_dose_map` | canonical lowercase attributes (`.psd`, `.air_kerma`, `.dose_map`) |
 
 Because the single-exam `dose_map` is sparse, **`argmax` over a dense array does not apply there** — the peak vertex index is the first element of the max-dose tuple, not a positional argmax. Normalize both forms in `resolve_calculation_result` (1.2.1) so downstream metrics code sees a consistent `(psd, air_kerma, dense_or_sparse-aware peak lookup)` interface.
 
 | Metric | Unit | Collection notes |
 |--------|------|------------------|
-| Peak skin dose (PSD) | mGy | Per exam: `output.psd` / `ExamResult.output.PSD`. Cumulative: `aggregate_psd` / `max(aggregate_dose_map)`. |
+| Peak skin dose (PSD) | mGy | Per exam: `output.psd` / `ExamResult.output.psd`. Cumulative: `aggregate_psd` / `max(aggregate_dose_map)`. |
 | PSD peak location | cm | Vertex index `i` on dose-map grid + physical (X,Y,Z). See **PSD peak frame** below. |
-| Reference air kerma $K_{a,r}$ | mGy | Per exam: `ExamResult.output.AirKerma`. **Cumulative: `sum(e.output.AirKerma for e in exams)`** — not on `MultiExamResult` today. |
+| Reference air kerma $K_{a,r}$ | mGy | Per exam: `ExamResult.output.air_kerma`. **Cumulative: `sum(e.output.air_kerma for e in exams)`** — not on `MultiExamResult` today. |
 | Total DAP | Gy·cm² | Sum `DoseAreaProduct_Gym2` from event DataFrame when column exists and multiply by $10,000$ ($1 \text{ Gy}\cdot\text{m}^2 = 10^4 \text{ Gy}\cdot\text{cm}^2$); else `N/A`. |
 | Total fluoro time | s or `N/A` | Only report when the normalized/source data exposes a trustworthy duration column. v1 must **not** infer total fluoro time from pulse width alone. |
 | Events processed / discarded | count | With reason codes (read from structured `discarded_events` dict) |
@@ -173,7 +173,7 @@ Because the single-exam `dose_map` is sparse, **`argmax` over a dense array does
 
 1. Peak vertex index `i`
 2. Physical (X, Y, Z) from `patient_skin_cells` at index `i`
-3. For cumulative PSD under differing per-exam patient offsets: compare `exam.output.DoseMap[i]` across all exams to identify the **Primary Contributing Exam** (the exam delivering the highest dose fraction to vertex `i`). Report both the physical $(X, Y, Z)$ coordinates in the baseline (Exam 1) frame and in the primary contributing exam's frame, along with the percentage of total PSD contributed by that exam vs. remaining exams.
+3. For cumulative PSD under differing per-exam patient offsets: compare `exam.output.dose_map[i]` across all exams to identify the **Primary Contributing Exam** (the exam delivering the highest dose fraction to vertex `i`). Report both the physical $(X, Y, Z)$ coordinates in the baseline (Exam 1) frame and in the primary contributing exam's frame, along with the percentage of total PSD contributed by that exam vs. remaining exams.
 
 Anatomical region labels: deferred (coordinates only in v1).
 
@@ -183,14 +183,14 @@ Four factors: `k_bs`, `k_isq`, `k_med`, `k_tab` (the `OUTPUT_KEY_CORRECTION_*` c
 
 **Dict-key naming caveat (must read before coding the collector):** the `k_bs`/`k_isq`/`k_med`/`k_tab` names are only the *internal* `analysis_result` keys. `PySkinDoseOutput.to_dict()["corrections"]` uses **different** key names:
 
-| Physics factor | `to_dict()["corrections"]` key | `PySkinDoseOutput` attribute |
+| Physics factor | `to_dict()["corrections"]` key | `PySkinDoseOutput` canonical object API |
 |----------------|-------------------------------|------------------------------|
-| `k_bs` | `backscatter` | `.BackscatterCorrection` |
-| `k_isq` | `inverse_square_law` | `.InverseSquareLawCorrection` |
-| `k_med` | `medium` | `.MediumCorrection` |
-| `k_tab` | `table` | `.TableCorrection` |
-| hit cell indices | `correction_value_index` | `.Hits` |
-| per-event kerma | `kerma` | `.Events.kerma` |
+| `k_bs` | `backscatter` | `.backscatter_correction` |
+| `k_isq` | `inverse_square_law` | `.inverse_square_law_correction` |
+| `k_med` | `medium` | `.medium_correction` |
+| `k_tab` | `table` | `.table_correction` |
+| hit cell indices | `correction_value_index` | `.sparse_hit_indices()` |
+| per-event kerma | `kerma` | `.events.kerma` |
 
 Prefer reading from the **attributes** (multi-exam `ExamResult.output` objects) and from these exact dict keys (single-exam `output_dict`) — do **not** look up `corrections["k_bs"]` etc.; those keys do not exist in the exported dict.
 
@@ -198,8 +198,8 @@ Prefer reading from the **attributes** (multi-exam `ExamResult.output` objects) 
 
 | Factor | Storage | Per-event aggregation |
 |--------|---------|---------------------|
-| `k_med`, `k_tab` | Per-event scalars (`.MediumCorrection[i]`, `.TableCorrection[i]` are floats) | Use value directly |
-| `k_bs`, `k_isq` | Sparse per-hit lists aligned with `Hits` | Per event: arithmetic mean across hit cells ($\bar{k}_{event,i}$); if `len(hits[i]) == 0`, define $\bar{k}_{event,i} = \text{None}$ and exclude from averaging |
+| `k_med`, `k_tab` | Per-event scalars (`.medium_correction[i]`, `.table_correction[i]` are floats) | Use value directly |
+| `k_bs`, `k_isq` | Sparse per-hit lists aligned with `.sparse_hit_indices()` | Per event: arithmetic mean across hit cells ($\bar{k}_{event,i}$); if `len(hits[i]) == 0`, define $\bar{k}_{event,i} = \text{None}$ and exclude from averaging |
 
 **Per-exam dose-weighted mean:**
 
@@ -582,7 +582,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 | PDF library | `reportlab` in `export` extra |
 | XLSX images | `openpyxl` anchored cells |
 | Existing JSON/dict export schema | Keep report-layout data out; additive enrichment is allowed for broadly useful fields only |
-| Cumulative air kerma | Sum per-exam `AirKerma` in collector |
+| Cumulative air kerma | Sum per-exam `air_kerma` in collector |
 | Cumulative corrections | Kerma-weighted mean of per-exam weighted means |
 | GUI result source | `multi_exam_result` takes precedence over `output` |
 | DICOM provenance | Dedicated branch when `import_provenance is None`, but schema naming stays aligned with current `rdsr` / `dicom` usage |

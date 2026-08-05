@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from pypdf import PdfWriter
 
+from scripts import run_image_privacy_advisory as image_advisory
 from scripts.run_image_privacy_advisory import notebook_images, office_images, render_pdf
 
 
@@ -51,6 +52,70 @@ def test_notebook_extraction_handles_embedded_png_without_retaining_text(tmp_pat
 
     assert len(images) == 1
     assert images[0].read_bytes() == image_bytes
+
+
+def test_unreviewed_image_findings_remain_actionable(tmp_path: Path, monkeypatch) -> None:
+    """The reporting helper must retain findings that lack exact-hash approval."""
+    monkeypatch.setattr(image_advisory, "is_hash_pinned_approved", lambda *_args, **_kwargs: False)
+
+    assert image_advisory._report_image_findings(tmp_path, Path("fixture.png"), 2) == (2, 0)
+
+
+def test_image_scan_helpers_cover_success_error_and_reviewed_paths(tmp_path: Path, monkeypatch) -> None:
+    """The scanner keeps extracted OCR text transient while classifying all receipt outcomes."""
+    root = tmp_path / "snapshot"
+    root.mkdir()
+    source = root / "fixture.png"
+    source.write_bytes(b"synthetic")
+
+    def fake_convert(_source: Path, destination: Path) -> None:
+        destination.write_bytes(b"png")
+
+    monkeypatch.setattr(image_advisory, "extracted_images", lambda path, _directory: [path])
+    monkeypatch.setattr(image_advisory, "convert_to_png", fake_convert)
+    monkeypatch.setattr(image_advisory, "ocr_image", lambda _path: "synthetic text")
+    monkeypatch.setattr(image_advisory, "text_findings", lambda *_args: [object()])
+    monkeypatch.setattr(image_advisory, "presidio_count", lambda *_args: 2)
+    monkeypatch.setattr(image_advisory, "is_hash_pinned_approved", lambda *_args: True)
+
+    normalized, findings = image_advisory._scan_image_asset(object(), root, Path("fixture.png"))
+
+    assert (normalized, findings) == (Path("fixture.png"), 3)
+    assert image_advisory._report_image_findings(root, normalized, findings) == (0, 3)
+    assert image_advisory._report_image_findings(root, normalized, 0) == (0, 0)
+    assert image_advisory._print_summary([normalized], 0, 3) == 0
+    assert image_advisory._print_summary([normalized], 1, 0) == 1
+    assert image_advisory._print_summary([normalized], 0, 0) == 0
+
+    def failing_convert(_source: Path, _destination: Path) -> None:
+        raise RuntimeError("bad")
+
+    monkeypatch.setattr(image_advisory, "convert_to_png", failing_convert)
+    with pytest.raises(image_advisory.ImageScanError, match="image privacy scan failed"):
+        image_advisory._scan_image_asset(object(), root, Path("fixture.png"))
+
+
+def test_image_main_accumulates_scanned_results(tmp_path: Path, monkeypatch, capsys) -> None:
+    """The CLI reports an actionable exit status when its helper returns findings."""
+    root = tmp_path / "snapshot"
+    root.mkdir()
+    first_source = root / "fixture-one.png"
+    second_source = root / "fixture-two.png"
+    first_source.write_bytes(b"synthetic")
+    second_source.write_bytes(b"synthetic")
+    results = iter([(Path("fixture-one.png"), 2), (Path("fixture-two.png"), 3)])
+
+    def scan_stub(*_args):
+        return next(results)
+
+    monkeypatch.setattr(image_advisory, "make_engine", object)
+    monkeypatch.setattr(image_advisory, "_scan_image_asset", scan_stub)
+    monkeypatch.setattr(image_advisory, "is_hash_pinned_approved", lambda *_args: False)
+
+    assert image_advisory.main(
+        [str(first_source.relative_to(root)), str(second_source.relative_to(root)), "--scan-root", str(root)]
+    ) == 1
+    assert "5 finding(s); triage required." in capsys.readouterr().out
 
 
 @pytest.mark.skipif(shutil.which("pdftoppm") is None, reason="Poppler is an optional local OCR prerequisite")

@@ -60,11 +60,12 @@ def _fake_obj(out):
     for i, d in out["dose_map"]:
         dense[i] = d
     return SimpleNamespace(
-        PSD=out["psd"], AirKerma=out["air_kerma"],
-        Patient={"patient": SimpleNamespace(to_dict=lambda p=out["patient"]["patient"]: p)},
-        DoseMap=dense, Hits=c["correction_value_index"], BackscatterCorrection=c["backscatter"],
-        InverseSquareLawCorrection=c["inverse_square_law"], MediumCorrection=c["medium"],
-        TableCorrection=c["table"], Events=SimpleNamespace(kerma=c["kerma"]),
+        psd=out["psd"], air_kerma=out["air_kerma"],
+        patient_export=lambda: {"patient": SimpleNamespace(to_dict=lambda p=out["patient"]["patient"]: p)},
+        dose_map=dense, sparse_hit_indices=lambda: c["correction_value_index"], backscatter_correction=c["backscatter"],
+        inverse_square_law_correction=c["inverse_square_law"], medium_correction=c["medium"],
+        table_correction=c["table"], events=SimpleNamespace(kerma=c["kerma"]),
+        kerma_corrected=None, kerma_meter_correction=None, air_kerma_corrected=out["air_kerma"],
     )
 
 

@@ -97,11 +97,21 @@ def cell_data_mappings(cell: object) -> Iterable[Mapping[str, object]]:
     """
     if not isinstance(cell, dict):
         return
+    yield from _attachment_data_mappings(cell)
+    yield from _output_data_mappings(cell)
+
+
+def _attachment_data_mappings(cell: Mapping[str, object]) -> Iterator[Mapping[str, object]]:
+    """Yield valid MIME maps from notebook attachments in source order."""
     attachments = cell.get("attachments")
     if isinstance(attachments, dict):
         for value in attachments.values():
             if isinstance(value, Mapping):
                 yield value
+
+
+def _output_data_mappings(cell: Mapping[str, object]) -> Iterator[Mapping[str, object]]:
+    """Yield valid MIME maps from notebook outputs in source order."""
     outputs = cell.get("outputs")
     if isinstance(outputs, list):
         for output in outputs:

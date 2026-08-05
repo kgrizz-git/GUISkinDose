@@ -45,14 +45,23 @@ def _table(doc, rows: list[list], *, header: bool = True):
     t = doc.add_table(rows=0, cols=len(rows[0]))
     t.style = "Light Grid Accent 1"
     for i, row in enumerate(rows):
-        cells = t.add_row().cells
-        for c, value in enumerate(row):
-            cells[c].text = str(value)
-            if header and i == 0:
-                for p in cells[c].paragraphs:
-                    for run in p.runs:
-                        run.font.bold = True
+        _add_table_row(t, row, bold=header and i == 0)
     return t
+
+
+def _add_table_row(table, row: list, *, bold: bool) -> None:
+    """Add one DOCX table row and optionally emphasize every cell value."""
+    for cell, value in zip(table.add_row().cells, row, strict=True):
+        cell.text = str(value)
+        if bold:
+            _bold_cell_runs(cell)
+
+
+def _bold_cell_runs(cell) -> None:
+    """Apply bold styling to the runs generated for a header cell."""
+    for paragraph in cell.paragraphs:
+        for run in paragraph.runs:
+            run.font.bold = True
 
 
 def _alerts(doc, payload: ExportPayload) -> None:
@@ -89,6 +98,17 @@ def _settings_rows(exam) -> list[list[str]]:
 def build_document(payload: ExportPayload):
     """Assemble the full rich-export DOCX document."""
     doc = Document()
+    _add_document_header(doc, payload)
+    _alerts(doc, payload)
+    _add_result_sections(doc, payload)
+    _add_settings_section(doc, payload)
+    _add_corrections_section(doc, payload)
+    _add_image_section(doc, payload)
+    return doc
+
+
+def _add_document_header(doc, payload: ExportPayload) -> None:
+    """Add the report title and compact provenance line."""
     doc.add_heading(payload.meta.report_title, level=0)
     p = doc.add_paragraph()
     run = p.add_run(
@@ -98,26 +118,37 @@ def build_document(payload: ExportPayload):
     run.font.size = Pt(9)
     run.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
 
-    _alerts(doc, payload)
 
+def _add_result_sections(doc, payload: ExportPayload) -> None:
+    """Add cumulative and, when applicable, per-exam dosimetric tables."""
     doc.add_heading("Cumulative summary", level=2)
     _table(doc, [["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics))
-
     if payload.is_multi_exam:
-        doc.add_heading("Per-exam results", level=2)
-        headers = ["Metric"] + [e.exam_id for e in payload.exams] + ["Cumulative"]
-        names = [r[0] for r in dosimetric_rows(payload.cumulative.metrics)]
-        cols = [{r[0]: r[1] for r in dosimetric_rows(e.metrics)} for e in payload.exams]
-        cum = {r[0]: r[1] for r in dosimetric_rows(payload.cumulative.metrics)}
-        summary = [headers] + [[n, *[c.get(n, "N/A") for c in cols], cum.get(n, "N/A")] for n in names]
-        _table(doc, summary)
+        _add_per_exam_results(doc, payload)
 
+
+def _add_per_exam_results(doc, payload: ExportPayload) -> None:
+    """Add the multi-exam comparison table in stable metric order."""
+    doc.add_heading("Per-exam results", level=2)
+    headers = ["Metric"] + [e.exam_id for e in payload.exams] + ["Cumulative"]
+    names = [row[0] for row in dosimetric_rows(payload.cumulative.metrics)]
+    exam_columns = [{row[0]: row[1] for row in dosimetric_rows(exam.metrics)} for exam in payload.exams]
+    cumulative = {row[0]: row[1] for row in dosimetric_rows(payload.cumulative.metrics)}
+    rows = [[name, *[column.get(name, "N/A") for column in exam_columns], cumulative.get(name, "N/A")] for name in names]
+    _table(doc, [headers, *rows])
+
+
+def _add_settings_section(doc, payload: ExportPayload) -> None:
+    """Add one settings table per exam, retaining multi-exam headings."""
     doc.add_heading("Settings & equipment", level=2)
     for exam in payload.exams:
         if payload.is_multi_exam:
             doc.add_heading(f"Exam {exam.exam_id}", level=3)
         _table(doc, _settings_rows(exam))
 
+
+def _add_corrections_section(doc, payload: ExportPayload) -> None:
+    """Add correction-factor tables and optional kerma-meter footnote."""
     doc.add_heading("Correction factors", level=2)
     if payload.is_multi_exam:
         for exam in payload.exams:
@@ -128,6 +159,9 @@ def build_document(payload: ExportPayload):
     if corrections_use_kerma_meter(payload):
         doc.add_paragraph(KERMA_METER_WEIGHTING_FOOTNOTE)
 
+
+def _add_image_section(doc, payload: ExportPayload) -> None:
+    """Add available images or their safe error notices."""
     if payload.images:
         doc.add_heading("Dose-map images", level=2)
         for entry in payload.images:
@@ -136,7 +170,6 @@ def build_document(payload: ExportPayload):
                 doc.add_picture(io.BytesIO(entry.png_bytes), width=Inches(6.0))
             else:
                 doc.add_paragraph(entry.error_message or "Image unavailable (kaleido/export error)")
-    return doc
 
 
 def render_docx_bytes(payload: ExportPayload) -> bytes:

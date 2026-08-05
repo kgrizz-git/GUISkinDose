@@ -42,12 +42,14 @@ class HelpButton:
         self.button_text = button_text
         self.help_id = help_id
 
-        # Load content
+        # Inline content intentionally takes precedence when both are supplied.
         if content is not None:
             self.content = content
         elif content_path is not None:
             self.content = self._load_content(content_path)
         else:
+            # Keep this guard local to the branch so a future change cannot pass None
+            # to the file loader.
             raise ValueError("Either content or content_path must be provided")
 
         # Create the button

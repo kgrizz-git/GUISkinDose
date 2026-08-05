@@ -223,15 +223,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
-    if args.max_displayed_findings < 0:
-        print("ERROR: --max-displayed-findings must be zero or greater", file=sys.stderr)
-        return 2
-    root = (args.scan_root or repo_root()).resolve()
-    if not root.is_dir():
-        print("ERROR: scan root is unavailable", file=sys.stderr)
-        return 2
+def _select_paths(args: argparse.Namespace, root: Path) -> list[Path] | None:
+    """Validate requested paths against the tracked-file set without echoing values."""
     all_tracked_paths = tracked_paths(root, require_git=args.scan_root is None)
     tracked_by_resolved_path = {path.resolve(): path for path in all_tracked_paths}
     requested_paths = [root / path for path in args.paths] if args.paths else all_tracked_paths
@@ -242,11 +235,42 @@ def main(argv: Sequence[str] | None = None) -> int:
             resolved_path.relative_to(root)
         except ValueError:
             print("ERROR: requested path is outside the repository", file=sys.stderr)
-            return 2
+            return None
         if resolved_path not in tracked_by_resolved_path:
             print("ERROR: requested path is not a tracked regular file", file=sys.stderr)
-            return 2
+            return None
         paths.append(tracked_by_resolved_path[resolved_path])
+    return paths
+
+
+def _render_findings(findings: list[Finding], args: argparse.Namespace, path_count: int) -> int:
+    """Render value-suppressed findings and return the requested advisory exit code."""
+    for finding in findings[: args.max_displayed_findings]:
+        path_label = str(finding.path) if args.verbose_paths else f"path_token={path_token(finding.path)}"
+        print(
+            f"ADVISORY: {path_label}:{finding.line}: Presidio {finding.entity_type} "
+            f"(score {finding.score:.2f}); value suppressed"
+        )
+    suppressed_count = len(findings) - min(len(findings), args.max_displayed_findings)
+    if suppressed_count:
+        print(f"ADVISORY: suppressed {suppressed_count} additional finding summary/summaries.")
+    print(f"Presidio advisory scan complete: {len(findings)} finding(s) across {path_count} tracked file(s).")
+    return 1 if findings and args.fail_on_findings else 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the local advisory while preserving containment and value-safety checks."""
+    args = parse_args(argv)
+    if args.max_displayed_findings < 0:
+        print("ERROR: --max-displayed-findings must be zero or greater", file=sys.stderr)
+        return 2
+    root = (args.scan_root or repo_root()).resolve()
+    if not root.is_dir():
+        print("ERROR: scan root is unavailable", file=sys.stderr)
+        return 2
+    paths = _select_paths(args, root)
+    if paths is None:
+        return 2
 
     try:
         engine = make_engine()
@@ -266,17 +290,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except RuntimeError as exc:
         print(f"ERROR: Presidio scan did not complete ({type(exc).__name__})", file=sys.stderr)
         return 2
-    for finding in findings[: args.max_displayed_findings]:
-        path_label = str(finding.path) if args.verbose_paths else f"path_token={path_token(finding.path)}"
-        print(
-            f"ADVISORY: {path_label}:{finding.line}: Presidio {finding.entity_type} "
-            f"(score {finding.score:.2f}); value suppressed"
-        )
-    suppressed_count = len(findings) - min(len(findings), args.max_displayed_findings)
-    if suppressed_count:
-        print(f"ADVISORY: suppressed {suppressed_count} additional finding summary/summaries.")
-    print(f"Presidio advisory scan complete: {len(findings)} finding(s) across {len(paths)} tracked file(s).")
-    return 1 if findings and args.fail_on_findings else 0
+    return _render_findings(findings, args, len(paths))
 
 
 if __name__ == "__main__":

@@ -276,7 +276,7 @@ def _first_hit_face(
     hit = valid & (u >= -eps) & (v >= -eps) & (u + v <= 1.0 + eps) & (t > eps)
     if not hit.any():
         return None
-    hit_idx = np.where(hit)[0]
+    hit_idx = np.nonzero(hit)[0]
     return int(hit_idx[np.argmin(t[hit_idx])])
 
 
@@ -381,6 +381,112 @@ def phantom_load_ok(path: Path, name: str) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}:{exc}"
 
 
+def _confined_validation_paths(stl_path: Path, compare_affine: Path | None) -> tuple[Path, Path | None]:
+    """Resolve validator inputs under approved roots before opening either file."""
+    safe_stl_path = resolve_under_roots(stl_path, must_exist=False)
+    safe_compare = None
+    if compare_affine is not None:
+        safe_compare = resolve_under_roots(compare_affine, must_be_file=True)
+    return safe_stl_path, safe_compare
+
+
+def _new_validation_result(stl_path: Path, require_trimesh: bool) -> dict:
+    """Return the stable top-level validation payload before adding checks."""
+    return {"file": str(stl_path), "passed": False, "require_trimesh": require_trimesh, "checks": {}}
+
+
+def _record_mesh_checks(results: dict, stl_path: Path, require_trimesh: bool) -> np.ndarray:
+    """Populate structural mesh checks and return the vertices used by later gates."""
+    checks = results["checks"]
+    max_faces = FUN_MAX_FACES if require_trimesh else CLINICAL_MAX_FACES
+    faces = face_count(stl_path)
+    checks["face_count"] = faces
+    checks["face_count_ok"] = 1000 <= faces <= max_faces
+    checks["face_count_ceiling"] = max_faces
+
+    verts = load_vertices(stl_path)
+    ext = extents(verts)
+    checks["extents"] = ext
+    checks["anchors_ok"] = abs(ext["y_max"]) < 1.0 and abs(ext["z_max"]) < 1.0 and abs(ext["x_mid"]) < 1.0
+    checks["scale_ok"] = 50.0 < ext["height_z"] < 220.0
+
+    watertight = is_watertight(stl_path)
+    checks["watertight"] = watertight
+    checks["watertight_ok"] = watertight is True if require_trimesh else watertight is True or watertight is None
+    checks["head_ratio"] = head_ratio(verts)
+    checks["abdomen_bulk"] = abdomen_bulk(verts)
+    return verts
+
+
+def _record_fun_mode_checks(
+    results: dict, stl_path: Path, verts: np.ndarray, face_up_frac: float, face_up_band_frac: float
+) -> bool:
+    """Populate strict demo-phantom gates and return whether they all pass."""
+    face_up_passed, face_up_detail = face_up_ok(verts, face_up_frac=face_up_frac, band_frac=face_up_band_frac)
+    results["checks"]["face_up"] = face_up_detail
+    results["checks"]["face_up_ok"] = face_up_passed
+
+    side_passed, side_detail = not_side_lying_ok(verts, band_frac=face_up_band_frac)
+    results["checks"]["not_side_lying"] = side_detail
+    results["checks"]["not_side_lying_ok"] = side_passed
+
+    try:
+        normals_passed, normals_detail = outward_normals_ok(stl_path)
+    except ImportError as exc:
+        normals_passed, normals_detail = False, {"reason": f"trimesh_missing:{exc}", "passed": False}
+    results["checks"]["outward_normals"] = normals_detail
+    results["checks"]["outward_normals_ok"] = normals_passed
+    return face_up_passed and side_passed and normals_passed
+
+
+def _record_phantom_load_check(results: dict, stl_path: Path, skip_phantom_load: bool) -> None:
+    """Record either the Phantom construction result or the explicit skip."""
+    if skip_phantom_load:
+        results["checks"]["phantom_load_ok"] = True
+        results["checks"]["phantom_load_detail"] = "skipped"
+        return
+    ok, detail = phantom_load_ok(stl_path, stl_path.stem)
+    results["checks"]["phantom_load_ok"] = ok
+    results["checks"]["phantom_load_detail"] = detail
+
+
+def _shape_comparison_ok(
+    results: dict, compare_affine: Path | None, metric: str | None, metric_margin: float
+) -> bool:
+    """Record an optional affine-control comparison and return its result."""
+    if compare_affine is None or metric is None:
+        return True
+    metric_function = {"head_ratio": head_ratio, "abdomen_bulk": abdomen_bulk}.get(metric)
+    if metric_function is None:
+        results["checks"]["shape_compare"] = {"error": f"unknown metric {metric}"}
+        return False
+    candidate = results["checks"][metric]
+    control = metric_function(load_vertices(compare_affine))
+    passed = candidate > control * (1.0 + metric_margin)
+    results["checks"]["shape_compare"] = {
+        "metric": metric,
+        "candidate": candidate,
+        "affine_control": control,
+        "required_margin": metric_margin,
+        "passed": passed,
+    }
+    return passed
+
+
+def _validation_passed(results: dict, shape_ok: bool, fun_ok: bool) -> bool:
+    """Return whether the stable mandatory and optional validation checks all pass."""
+    checks = results["checks"]
+    return bool(
+        checks["face_count_ok"]
+        and checks["anchors_ok"]
+        and checks["scale_ok"]
+        and checks["watertight_ok"]
+        and checks["phantom_load_ok"]
+        and shape_ok
+        and fun_ok
+    )
+
+
 def validate(
     stl_path: Path,
     *,
@@ -402,9 +508,7 @@ def validate(
     ``dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md``.
     """
     try:
-        stl_path = resolve_under_roots(stl_path, must_exist=False)
-        if compare_affine is not None:
-            compare_affine = resolve_under_roots(compare_affine, must_be_file=True)
+        stl_path, compare_affine = _confined_validation_paths(stl_path, compare_affine)
     except ValueError as exc:
         return {
             "file": str(stl_path),
@@ -413,107 +517,18 @@ def validate(
             "checks": {"path_confined": False, "path_error": str(exc)},
         }
 
-    results: dict = {"file": str(stl_path), "passed": False, "require_trimesh": require_trimesh, "checks": {}}
+    results = _new_validation_result(stl_path, require_trimesh)
     if not stl_path.exists():
         results["checks"]["exists"] = False
         return results
     results["checks"]["exists"] = True
     results["checks"]["path_confined"] = True
 
-    max_faces = FUN_MAX_FACES if require_trimesh else CLINICAL_MAX_FACES
-    faces = face_count(stl_path)
-    results["checks"]["face_count"] = faces
-    results["checks"]["face_count_ok"] = 1000 <= faces <= max_faces
-    results["checks"]["face_count_ceiling"] = max_faces
-
-    verts = load_vertices(stl_path)
-    ext = extents(verts)
-    results["checks"]["extents"] = ext
-    results["checks"]["anchors_ok"] = (
-        abs(ext["y_max"]) < 1.0 and abs(ext["z_max"]) < 1.0 and abs(ext["x_mid"]) < 1.0
-    )
-    results["checks"]["scale_ok"] = 50.0 < ext["height_z"] < 220.0
-
-    wt = is_watertight(stl_path)
-    results["checks"]["watertight"] = wt
-    if require_trimesh:
-        # Fun mode: trimesh must be installed (wt is None -> import failed) and
-        # the mesh must be watertight. Never let an unrepaired mesh pass.
-        results["checks"]["watertight_ok"] = wt is True
-    else:
-        results["checks"]["watertight_ok"] = wt is True or wt is None
-
-    results["checks"]["head_ratio"] = head_ratio(verts)
-    results["checks"]["abdomen_bulk"] = abdomen_bulk(verts)
-
-    # Fun / demo gates: face-up orientation + outward normals.
-    fun_ok = True
-    if require_trimesh:
-        fu_pass, fu_detail = face_up_ok(
-            verts, face_up_frac=face_up_frac, band_frac=face_up_band_frac
-        )
-        results["checks"]["face_up"] = fu_detail
-        results["checks"]["face_up_ok"] = fu_pass
-
-        side_pass, side_detail = not_side_lying_ok(verts, band_frac=face_up_band_frac)
-        results["checks"]["not_side_lying"] = side_detail
-        results["checks"]["not_side_lying_ok"] = side_pass
-
-        try:
-            on_pass, on_detail = outward_normals_ok(stl_path)
-        except ImportError as exc:
-            on_pass, on_detail = False, {"reason": f"trimesh_missing:{exc}", "passed": False}
-        results["checks"]["outward_normals"] = on_detail
-        results["checks"]["outward_normals_ok"] = on_pass
-
-        fun_ok = fu_pass and side_pass and on_pass
-
-    if not skip_phantom_load:
-        ok, detail = phantom_load_ok(stl_path, stl_path.stem)
-        results["checks"]["phantom_load_ok"] = ok
-        results["checks"]["phantom_load_detail"] = detail
-    else:
-        results["checks"]["phantom_load_ok"] = True
-        results["checks"]["phantom_load_detail"] = "skipped"
-
-    shape_ok = True
-    if compare_affine is not None and metric:
-        c_verts = load_vertices(compare_affine)
-        if metric == "head_ratio":
-            a = results["checks"]["head_ratio"]
-            b = head_ratio(c_verts)
-            shape_ok = a > b * (1.0 + metric_margin)
-            results["checks"]["shape_compare"] = {
-                "metric": metric,
-                "candidate": a,
-                "affine_control": b,
-                "required_margin": metric_margin,
-                "passed": shape_ok,
-            }
-        elif metric == "abdomen_bulk":
-            a = results["checks"]["abdomen_bulk"]
-            b = abdomen_bulk(c_verts)
-            shape_ok = a > b * (1.0 + metric_margin)
-            results["checks"]["shape_compare"] = {
-                "metric": metric,
-                "candidate": a,
-                "affine_control": b,
-                "required_margin": metric_margin,
-                "passed": shape_ok,
-            }
-        else:
-            results["checks"]["shape_compare"] = {"error": f"unknown metric {metric}"}
-            shape_ok = False
-
-    results["passed"] = bool(
-        results["checks"]["face_count_ok"]
-        and results["checks"]["anchors_ok"]
-        and results["checks"]["scale_ok"]
-        and results["checks"]["watertight_ok"]
-        and results["checks"]["phantom_load_ok"]
-        and shape_ok
-        and fun_ok
-    )
+    verts = _record_mesh_checks(results, stl_path, require_trimesh)
+    fun_ok = _record_fun_mode_checks(results, stl_path, verts, face_up_frac, face_up_band_frac) if require_trimesh else True
+    _record_phantom_load_check(results, stl_path, skip_phantom_load)
+    shape_ok = _shape_comparison_ok(results, compare_affine, metric, metric_margin)
+    results["passed"] = _validation_passed(results, shape_ok, fun_ok)
     return results
 
 

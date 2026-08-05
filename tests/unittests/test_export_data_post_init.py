@@ -18,6 +18,7 @@ golden dose-calc pipeline test.
 from __future__ import annotations
 
 import logging
+import json
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -101,7 +102,61 @@ def test_aligned_real_inputs_construct_without_error(settings, trio, data_norm) 
     patient, table, pad = trio
     out = _build(patient, table, pad, settings, data_norm)
     assert isinstance(out, PySkinDoseOutput)
-    assert out.AirKerma == pytest.approx(1.35)
+    assert out.air_kerma == pytest.approx(1.35)
+
+
+def test_output_uses_only_canonical_lowercase_object_fields(settings, trio, data_norm) -> None:
+    """The object API must not retain case-colliding legacy aliases."""
+    patient, table, pad = trio
+    out = _build(patient, table, pad, settings, data_norm)
+
+    field_names = tuple(PySkinDoseOutput.__dataclass_fields__)
+    assert len({name.casefold() for name in field_names}) == len(field_names)
+    for legacy_name in (
+        "PSD",
+        "AirKerma",
+        "Events",
+        "Patient",
+        "Table",
+        "Pad",
+        "DoseMap",
+        "Hits",
+        "BackscatterCorrection",
+        "InverseSquareLawCorrection",
+        "MediumCorrection",
+        "TableCorrection",
+    ):
+        assert not hasattr(out, legacy_name)
+
+
+def test_serialized_export_shape_remains_stable(settings, trio, data_norm) -> None:
+    """The lowercase object migration must not alter dict/JSON schema semantics."""
+    patient, table, pad = trio
+    exported = _build(patient, table, pad, settings, data_norm).to_dict()
+
+    assert set(exported) == {
+        "schema_version",
+        "psd",
+        "air_kerma",
+        "air_kerma_corrected",
+        "patient",
+        "table",
+        "pad",
+        "dose_map",
+        "corrections",
+        "events",
+    }
+    assert set(exported["corrections"]) == {
+        "correction_value_index",
+        "backscatter",
+        "medium",
+        "table",
+        "inverse_square_law",
+        "kerma",
+        "kerma_corrected",
+        "kerma_meter",
+    }
+    assert json.loads(_build(patient, table, pad, settings, data_norm).to_json()) == exported
 
 
 def test_rejects_hits_length_mismatch(settings, trio, data_norm) -> None:
@@ -164,17 +219,17 @@ def test_accepts_aligned_kerma_args(settings, trio, data_norm) -> None:
     out = _build(patient, table, pad, settings, data_norm,
                  kerma_meter_correction=[1.0] * n,
                  kerma_corrected=[0.1] * n)
-    assert out.KermaMeterCorrection == [1.0] * n
-    assert out.KermaCorrected == [0.1] * n
-    assert out.AirKermaCorrected == pytest.approx(0.1 * n)
+    assert out.kerma_meter_correction == [1.0] * n
+    assert out.kerma_corrected == [0.1] * n
+    assert out.air_kerma_corrected == pytest.approx(0.1 * n)
 
 
 def test_missing_kerma_defaults_to_unmetered(settings, trio, data_norm) -> None:
     """Omitting both kerma args must construct with AirKerma == AirKermaCorrected."""
     patient, table, pad = trio
     out = _build(patient, table, pad, settings, data_norm)
-    assert out.KermaMeterCorrection == [1.0] * len(data_norm)
-    assert out.AirKermaCorrected == pytest.approx(out.AirKerma)
+    assert out.kerma_meter_correction == [1.0] * len(data_norm)
+    assert out.air_kerma_corrected == pytest.approx(out.air_kerma)
 
 
 def test_pyskindose_output_lightweight_repr() -> None:
@@ -182,15 +237,15 @@ def test_pyskindose_output_lightweight_repr() -> None:
 
     # Bypass __init__ and __post_init__ validations since fields have init=False
     out = object.__new__(PySkinDoseOutput)
-    out.PSD = 1.2345
-    out.AirKerma = 4.5678
-    out.AirKermaCorrected = 4.0
-    out.PadThickness = 2.0
-    out.PatientOffsets = {"long": 10.0, "vert": 5.0, "lat": -2.0}
+    out.psd = 1.2345
+    out.air_kerma = 4.5678
+    out.air_kerma_corrected = 4.0
+    out.pad_thickness = 2.0
+    out.patient_offsets = {"long": 10.0, "vert": 5.0, "lat": -2.0}
 
     repr_str = repr(out)
-    assert "PSD=1.2345" in repr_str
-    assert "AirKerma=4.5678" in repr_str
+    assert "psd=1.2345" in repr_str
+    assert "air_kerma=4.5678" in repr_str
     assert "data_norm" not in repr_str
     assert "dose_map" not in repr_str
 
@@ -200,8 +255,7 @@ def test_pyskindose_output_repr_tolerates_uninitialized_derived_fields() -> None
     out = object.__new__(PySkinDoseOutput)
 
     assert repr(out) == (
-        "PySkinDoseOutput(PSD=<unavailable>, AirKerma=<unavailable>, "
-        "AirKermaCorrected=<unavailable>, PadThickness=<unavailable>, "
-        "PatientOffsets='<unavailable>')"
+        "PySkinDoseOutput(psd=<unavailable>, air_kerma=<unavailable>, "
+        "air_kerma_corrected=<unavailable>, pad_thickness=<unavailable>, "
+        "patient_offsets='<unavailable>')"
     )
-

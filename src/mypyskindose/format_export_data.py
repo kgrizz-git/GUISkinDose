@@ -297,39 +297,40 @@ class PySkinDoseOutput:
     Attributes
     __________
 
-    PSD : float
+    psd : float
         The peak skin dose found in the dose map
-    AirKerma : float
+    air_kerma : float
         The total air KERMA of the
-    Events : EventOutput
+    events : EventOutput
         The event data for the examination
-    Patient : dict[str, str | HumanPhantomOutput | NonHumanPhantomOutput]
-        Information on the patient used in the calculations
-    PatientOffsets : dict[str, float]
+    patient : Phantom
+        The patient phantom used in the calculations.
+    patient_export() : dict[str, str | HumanPhantomOutput | NonHumanPhantomOutput]
+        Build the serialized patient envelope used by ``to_dict()`` and rich export.
+    patient_offsets : dict[str, float]
         The base offsets in the long, vert, and lat direction
-    Table : Phantom
+    table : Phantom
         The treatment table as an instance of the Phantom class
-    Pad : Phantom
+    pad : Phantom
         The treatment table pad as an instance of the Phantom class
-    PadThickness : float
+    pad_thickness : float
         The thickness of the treatment table pad
-    DoseMap : np.array
+    dose_map : np.ndarray
         The total dose map given as a numpy array where the values correspond to the resulting dose in Gy
-    Hits : list[int, int]
-        A list of all the hits of the radiation fields on the phantom cells given as a list of tuples on the form
-        [(event_index, phantom_cell_index), ...]
-    BackscatterCorrection : list[float]
+    sparse_hit_indices() : list[list[int]]
+        Build one cell-index list for each radiation event, aligned with correction arrays.
+    backscatter_correction : list[list[float]]
         The backscatter corrections used for each cell hit given as a list of floats where the event and cell index of
-        each float is given by getting the same list index element from the Hist attribute.
-    InverseSquareLawCorrection : list[float]
+        each float is given by getting the same list index element from ``sparse_hit_indices()``.
+    inverse_square_law_correction : list[float]
         The inverse square law corrections used for each cell hit given as a list of floats where the event and cell
-        index of each float is given by getting the same list index element from the Hist attribute.
-    MediumCorrection : list[float]
+        index of each float is given by getting the same list index element from ``sparse_hit_indices()``.
+    medium_correction : list[float]
         The corrections for the irradiated medium/-s used for each cell hit given as a list of floats where the event
-        and cell index of each float is given by getting the same list index element from the Hist attribute.
-    TableCorrection : list[float]
+        and cell index of each float is given by getting the same list index element from ``sparse_hit_indices()``.
+    table_correction : list[float]
         The corrections for the treatment table used for each cell hit given as a list of floats where the event and
-        cell index of each float is given by getting the same list index element from the Hist attribute.
+        cell index of each float is given by getting the same list index element from ``sparse_hit_indices()``.
 
     """
 
@@ -347,22 +348,13 @@ class PySkinDoseOutput:
     kerma_meter_correction: list[float] | None = None
     kerma_corrected: list[float] | None = None
 
-    # Derived in __post_init__ — never settable from the constructor.
-    PSD: float = field(init=False)
-    AirKerma: float = field(init=False)
-    Events: "EventOutput" = field(init=False)
-    KermaMeterCorrection: list[float] = field(init=False)
-    KermaCorrected: list[float] = field(init=False)
-    AirKermaCorrected: float = field(init=False)
-    PatientOffsets: dict = field(init=False)
-    Patient: dict = field(init=False)
-    PadThickness: float = field(init=False)
-    DoseMap: np.ndarray = field(init=False)
-    Hits: list = field(init=False)
-    BackscatterCorrection: list[list[float]] = field(init=False)
-    InverseSquareLawCorrection: list[list[float] | float] = field(init=False)
-    MediumCorrection: list[float] = field(init=False)
-    TableCorrection: list[float] = field(init=False)
+    # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
+    psd: float = field(init=False)
+    air_kerma: float = field(init=False)
+    events: "EventOutput" = field(init=False)
+    air_kerma_corrected: float = field(init=False)
+    patient_offsets: dict[str, float] = field(init=False)
+    pad_thickness: float = field(init=False)
 
     def __post_init__(self) -> None:
         """Validate inputs and compute the derived export fields."""
@@ -437,24 +429,33 @@ class PySkinDoseOutput:
             raise ValueError("\n\n".join(error_message))
 
     def _compute_derived(self, n_events: int) -> None:
-        """Populate the public derived fields after validation passes."""
-        self.PSD = float(self.dose_map.max())
-        self.AirKerma = float(self.data_norm[KEY_NORMALIZATION_AIR_KERMA].sum())
-        self.Events = EventOutput(data_norm=self.data_norm)
-        if self.kerma_meter_correction is None:
-            self.KermaMeterCorrection = [1.0] * n_events
-            self.KermaCorrected = list(self.Events.kerma)
+        """Populate canonical derived values after validation passes."""
+        self.psd = float(self.dose_map.max())
+        self.air_kerma = float(self.data_norm[KEY_NORMALIZATION_AIR_KERMA].sum())
+        self.events = EventOutput(data_norm=self.data_norm)
+        kerma_meter_correction = self.kerma_meter_correction
+        kerma_corrected = self.kerma_corrected
+        if kerma_meter_correction is None and kerma_corrected is None:
+            self.kerma_meter_correction = [1.0] * n_events
+            self.kerma_corrected = list(self.events.kerma)
+        elif kerma_meter_correction is not None and kerma_corrected is not None:
+            self.kerma_meter_correction = [float(v) for v in kerma_meter_correction]
+            self.kerma_corrected = [float(v) for v in kerma_corrected]
         else:
-            assert self.kerma_corrected is not None  # paired by validation above
-            self.KermaMeterCorrection = [float(v) for v in self.kerma_meter_correction]
-            self.KermaCorrected = [float(v) for v in self.kerma_corrected]
-        self.AirKermaCorrected = float(sum(self.KermaCorrected))
-        self.PatientOffsets = {
+            # _validate_lengths() rejects this pair, but retain a clear invariant
+            # failure if this method is ever called independently.
+            raise ValueError("kerma_meter_correction and kerma_corrected must be paired")
+        self.air_kerma_corrected = float(sum(self.kerma_corrected))
+        self.patient_offsets = {
             "long": self.settings.phantom.patient_offset.d_lon,
             "vert": self.settings.phantom.patient_offset.d_ver,
             "lat": self.settings.phantom.patient_offset.d_lat,
         }
-        self.Patient = {
+        self.pad_thickness = float(self.settings.phantom.dimension.pad_thickness)
+
+    def patient_export(self) -> dict[str, str | HumanPhantomOutput | NonHumanPhantomOutput]:
+        """Build the patient envelope used by serialized and rich exports."""
+        return {
             "patient_type": self.patient.phantom_model,
             "patient": (
                 HumanPhantomOutput(self.patient)
@@ -463,18 +464,13 @@ class PySkinDoseOutput:
             ),
             "orientation": self.settings.phantom.patient_orientation,
         }
-        self.Table = self.table
-        self.Pad = self.pad
-        self.PadThickness = float(self.settings.phantom.dimension.pad_thickness)
-        self.DoseMap = self.dose_map
-        self.Hits = [
+
+    def sparse_hit_indices(self) -> list[list[int]]:
+        """Build sparse hit-cell indices aligned with per-event corrections."""
+        return [
             [ind for ind, hit in enumerate(event_hits) if hit]
             for event_hits in self.hits
         ]
-        self.BackscatterCorrection = self.backscatter_correction
-        self.InverseSquareLawCorrection = self.inverse_square_law_correction
-        self.MediumCorrection = self.medium_correction
-        self.TableCorrection = self.table_correction
 
     def to_dict(self) -> dict[str, Any]:
         """Converts the output data into a dict
@@ -485,54 +481,58 @@ class PySkinDoseOutput:
             A dict containing the output data for the PySkinDose analysis where the lists of hits and corrections have
             been made sparse in order to save space.
         """
+        patient_export = self.patient_export()
+        patient = patient_export["patient"]
+        if not isinstance(patient, (HumanPhantomOutput, NonHumanPhantomOutput)):
+            raise TypeError("patient_export() returned an unsupported patient payload")
         return {
             "schema_version": EXPORT_SCHEMA_VERSION,
-            "psd": self.PSD,
-            "air_kerma": self.AirKerma,
-            "air_kerma_corrected": self.AirKermaCorrected,
+            "psd": self.psd,
+            "air_kerma": self.air_kerma,
+            "air_kerma_corrected": self.air_kerma_corrected,
             "patient": {
-                "patient_type": self.Patient["patient_type"],
-                "patient": self.Patient["patient"].to_dict(),
-                "orientation": self.Patient["orientation"],
-                "offsets": self.PatientOffsets,
+                "patient_type": patient_export["patient_type"],
+                "patient": patient.to_dict(),
+                "orientation": patient_export["orientation"],
+                "offsets": self.patient_offsets,
             },
             "table": {
                 "table_surface": {
-                    "x": self.Table.r[:, 0].tolist(),
-                    "y": self.Table.r[:, 1].tolist(),
-                    "z": self.Table.r[:, 2].tolist(),
+                    "x": self.table.r[:, 0].tolist(),
+                    "y": self.table.r[:, 1].tolist(),
+                    "z": self.table.r[:, 2].tolist(),
                 },
                 "triangle_vertex_indices": {
-                    "i": self.Table.ijk[:, 0].tolist(),
-                    "j": self.Table.ijk[:, 1].tolist(),
-                    "k": self.Table.ijk[:, 2].tolist(),
+                    "i": self.table.ijk[:, 0].tolist(),
+                    "j": self.table.ijk[:, 1].tolist(),
+                    "k": self.table.ijk[:, 2].tolist(),
                 },
-                "table_length": self.Table.table_length,
+                "table_length": self.table.table_length,
             },
             "pad": {
                 "pad_surface": {
-                    "x": self.Pad.r[:, 0].tolist(),
-                    "y": self.Pad.r[:, 1].tolist(),
-                    "z": self.Pad.r[:, 2].tolist(),
+                    "x": self.pad.r[:, 0].tolist(),
+                    "y": self.pad.r[:, 1].tolist(),
+                    "z": self.pad.r[:, 2].tolist(),
                 },
                 "triangle_vertex_indices": {
-                    "i": self.Pad.ijk[:, 0].tolist(),
-                    "j": self.Pad.ijk[:, 1].tolist(),
-                    "k": self.Pad.ijk[:, 2].tolist(),
+                    "i": self.pad.ijk[:, 0].tolist(),
+                    "j": self.pad.ijk[:, 1].tolist(),
+                    "k": self.pad.ijk[:, 2].tolist(),
                 },
             },
-            "dose_map": [(ind, dose) for ind, dose in enumerate(self.DoseMap.tolist()) if dose > 0.0],
+            "dose_map": [(ind, dose) for ind, dose in enumerate(self.dose_map.tolist()) if dose > 0.0],
             "corrections": {
-                "correction_value_index": self.Hits,
-                "backscatter": self.BackscatterCorrection,
-                "medium": self.MediumCorrection,
-                "table": self.TableCorrection,
-                "inverse_square_law": self.InverseSquareLawCorrection,
-                "kerma": self.Events.to_dict().get("kerma", []),
-                "kerma_corrected": self.KermaCorrected,
-                "kerma_meter": self.KermaMeterCorrection,
+                "correction_value_index": self.sparse_hit_indices(),
+                "backscatter": self.backscatter_correction,
+                "medium": self.medium_correction,
+                "table": self.table_correction,
+                "inverse_square_law": self.inverse_square_law_correction,
+                "kerma": self.events.to_dict().get("kerma", []),
+                "kerma_corrected": self.kerma_corrected,
+                "kerma_meter": self.kerma_meter_correction,
             },
-            "events": self.Events.to_dict(),
+            "events": self.events.to_dict(),
         }
 
     def to_json(self) -> str:
@@ -554,9 +554,9 @@ class PySkinDoseOutput:
                 return "<unavailable>"
 
         return (
-            f"PySkinDoseOutput(PSD={safe_number('PSD')}, AirKerma={safe_number('AirKerma')}, "
-            f"AirKermaCorrected={safe_number('AirKermaCorrected')}, PadThickness={safe_number('PadThickness')}, "
-            f"PatientOffsets={getattr(self, 'PatientOffsets', '<unavailable>')!r})"
+            f"PySkinDoseOutput(psd={safe_number('psd')}, air_kerma={safe_number('air_kerma')}, "
+            f"air_kerma_corrected={safe_number('air_kerma_corrected')}, pad_thickness={safe_number('pad_thickness')}, "
+            f"patient_offsets={getattr(self, 'patient_offsets', '<unavailable>')!r})"
         )
 
 

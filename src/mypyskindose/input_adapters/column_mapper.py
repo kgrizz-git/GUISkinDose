@@ -143,26 +143,19 @@ def map_columns(
     Returns (column_map, warnings).
     column_map: {source_col → normalized_var}
     """
-    # Pass 1: find the best variable for each source column, tracking score.
-    raw_map: dict[str, tuple[str, int]] = {}  # src_col → (best_var, best_score)
     warnings: list[str] = []
+    raw_map = _best_matches(headers, patterns, warnings)
+    column_map = _resolve_duplicate_matches(raw_map, warnings)
+    return column_map, warnings
 
+
+def _best_matches(
+    headers: list[str], patterns: dict[str, list[str]], warnings: list[str]
+) -> dict[str, tuple[str, int]]:
+    """Return each unambiguous header's highest-scoring normalized variable."""
+    raw_map: dict[str, tuple[str, int]] = {}
     for header in headers:
-        header_norm = _normalize_str(header)
-        best_var: str | None = None
-        best_score: int = 0
-        tie: bool = False
-
-        for var_name, var_patterns in patterns.items():
-            for pattern in var_patterns:
-                score = _match_score(header_norm, pattern)
-                if score > best_score:
-                    best_score = score
-                    best_var = var_name
-                    tie = False
-                elif score == best_score and score > 0 and var_name != best_var:
-                    tie = True
-
+        best_var, best_score, tie = _best_variable(_normalize_str(header), patterns)
         if tie:
             warnings.append(
                 f"Column {header!r} matched multiple variables with equal confidence; "
@@ -170,13 +163,30 @@ def map_columns(
             )
         elif best_var is not None:
             raw_map[header] = (best_var, best_score)
+    return raw_map
 
-    # Pass 2: resolve duplicates — multiple source columns → same target variable.
-    # Keep the one with the highest score; drop the rest with a warning.
+
+def _best_variable(header_norm: str, patterns: dict[str, list[str]]) -> tuple[str | None, int, bool]:
+    """Return the best mapping candidate and whether an equal-score tie occurred."""
+    best_var: str | None = None
+    best_score = 0
+    tie = False
+    for var_name, var_patterns in patterns.items():
+        for pattern in var_patterns:
+            score = _match_score(header_norm, pattern)
+            if score > best_score:
+                best_var, best_score, tie = var_name, score, False
+            elif score == best_score and score > 0 and var_name != best_var:
+                tie = True
+    return best_var, best_score, tie
+
+def _resolve_duplicate_matches(
+    raw_map: dict[str, tuple[str, int]], warnings: list[str]
+) -> dict[str, str]:
+    """Retain the best source header for each normalized target variable."""
     target_to_candidates: dict[str, list[tuple[str, int]]] = {}
     for src, (tgt, score) in raw_map.items():
         target_to_candidates.setdefault(tgt, []).append((src, score))
-
     column_map: dict[str, str] = {}
     for tgt, candidates in target_to_candidates.items():
         if len(candidates) == 1:
@@ -192,7 +202,7 @@ def map_columns(
                 "If this is wrong, pass an explicit column override."
             )
 
-    return column_map, warnings
+    return column_map
 
 
 def check_duplicate_mappings(column_map: dict[str, str]) -> list[str]:
