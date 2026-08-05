@@ -31,6 +31,7 @@ from .exam_transforms import (
     _table_origin_override_note,  # noqa: F401 — tests import via helpers
     apply_exam_transforms,
     clear_multi_exam_state,
+    commit_table_origin_transform,
     exam_supports_table_origin,
     exam_supports_transforms,
     rebuild_rdsr_df,
@@ -40,18 +41,15 @@ from .offset_handlers import (
     any_table_origin_override,
     apply_patient_offset_slider_tick,
     bump_per_exam_offsets_version,
-    commit_table_origin_transform,
-    detected_table_origin,
-    effective_table_origin,
     on_global_patient_offset_change,
     on_global_patient_offset_scrub,
     read_patient_offset_value,
     reset_global_offsets_on_new_load,
     reset_patient_offset_for_active,
     restore_globals_from_exam_meta,
-    stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
+from .table_origins import detected_table_origin, effective_table_origin, stage_table_origin_axis
 from .geometry_preview import (
     adjust_active_exam_index_after_remove,
     clamp_active_exam_index,

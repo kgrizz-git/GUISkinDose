@@ -70,7 +70,7 @@ def test_run_gui_native_persists_normalized_macos_startup(monkeypatch) -> None:
         "_normalize_macos_maximized_startup",
         lambda prefs, screens: NativeWindowPrefs(maximized=False, width=1512, height=945, x=20, y=38),
     )
-    monkeypatch.setattr(gui_app, "_register_native_geometry_tracking", lambda screens, prefs: None)
+    monkeypatch.setattr(gui_app, "register_native_geometry_tracking", lambda screens, prefs: None)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kwargs: None)
     monkeypatch.setattr(gui_app.app.native, "window_args", {}, raising=False)
 

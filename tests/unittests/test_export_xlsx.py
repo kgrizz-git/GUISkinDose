@@ -87,7 +87,7 @@ def _multi_payload():
         aggregate_dose_map=np.array([1.0, 2.0, 0.6]), aggregate_psd=2.0, total_events=4, warnings=[],
     )
     src = ExportSource(
-        execution_context="cli", multi_exam_result=cast("Any", result),
+        execution_context="cli", multi_exam_result=cast(Any, result),
         exams=[
             ExportExamSource("Exam 1", pd.DataFrame(), None, "a.dcm", _settings(), (0, 0, 0)),
             ExportExamSource("Exam 2", pd.DataFrame(), None, "b.dcm", _settings(), (0, 0, 0)),
@@ -115,7 +115,7 @@ def test_write_xlsx_images_embedded():
     payload = _single_payload()
     payload.images = [ImageEntry(label="Dorsal", view="dorsal", exam_id=None, png_bytes=_PNG)]
     wb = load_workbook(io.BytesIO(render_xlsx_bytes(payload)))
-    assert cast("Any", wb["Images"])._images  # anchored drawings present
+    assert cast(Any, wb["Images"])._images  # anchored drawings present
 
 
 def test_write_xlsx_missing_images():
@@ -126,4 +126,4 @@ def test_write_xlsx_missing_images():
     ]
     data = render_xlsx_bytes(payload)  # must not raise
     wb = load_workbook(io.BytesIO(data))
-    assert not cast("Any", wb["Images"])._images
+    assert not cast(Any, wb["Images"])._images

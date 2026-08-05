@@ -110,12 +110,6 @@ _NUMERIC_COLUMNS = frozenset(
     }
 )
 
-# Columns that contain study/patient identifiers whose uniqueness implies
-# multiple procedures were exported into a single file.
-_STUDY_ID_COLUMNS = frozenset(
-    {"study_id", "accession_number", "patient_id", "study_uid", "studyinstanceuid"}
-)
-
 # Priority order for study-identifier column detection (most canonical first).
 _STUDY_ID_PRIORITY = ("studyinstanceuid", "study_id", "accession_number", "patient_id", "study_uid")
 

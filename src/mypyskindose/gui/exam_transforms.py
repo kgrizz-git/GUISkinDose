@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .offset_handlers import detected_table_origin, effective_table_origin
 from .state import AppState
+from .table_origins import detected_table_origin, effective_table_origin
 
 # Display-only column added to the concatenated multi-exam preview frame
 # (state.rdsr_df) so the Data Table can show which exam each row came from. It is
@@ -227,6 +227,11 @@ def apply_exam_transforms(state: AppState, index: int) -> None:
         flip_tz=meta.get("flip_tz", False),
     )
     rebuild_rdsr_df(state)
+
+
+def commit_table_origin_transform(app_state: AppState, exam_index: int) -> None:
+    """Re-derive normalized event data after a debounced table-origin update."""
+    apply_exam_transforms(app_state, exam_index)
 
 
 def _drop_exams_for_path(state: AppState, file_path: Path) -> None:

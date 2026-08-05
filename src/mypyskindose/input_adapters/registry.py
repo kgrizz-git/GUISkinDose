@@ -159,7 +159,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
 ) -> InputAdapterResult:
     """Load and normalize a known vendor tabular schema (overload)."""
-    ...
+    pass
 
 @overload
 def read_and_normalize_input(
@@ -170,7 +170,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a normalized/auto tabular schema (overload)."""
-    ...
+    pass
 
 @overload
 def read_and_normalize_input(
@@ -181,7 +181,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a tabular input file (overload)."""
-    ...
+    pass
 
 def read_and_normalize_input(
     file_path: str | Path,

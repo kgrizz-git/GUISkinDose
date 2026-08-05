@@ -36,7 +36,7 @@ def _git_dir_roots() -> list[Path]:
                 if p not in roots:
                     roots.append(p)
         except (OSError, ValueError, subprocess.SubprocessError):
-            pass
+            continue
     return roots
 
 

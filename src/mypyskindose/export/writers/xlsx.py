@@ -103,7 +103,7 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r += 1
     ws.cell(row=r, column=1, value="Cumulative summary").font = _BOLD
     r += 1
-    r = _write_rows(ws, dosimetric_rows(payload.cumulative.metrics), start_row=r)
+    _write_rows(ws, dosimetric_rows(payload.cumulative.metrics), start_row=r)
     _autofit(ws)
 
 

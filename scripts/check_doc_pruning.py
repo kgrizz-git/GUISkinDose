@@ -37,7 +37,7 @@ class PruningCandidate:
 
 class GitAgeProvider(Protocol):
     def __call__(self, relative_path: str) -> GitAge | None:
-        ...
+        raise NotImplementedError
 
 
 def repo_root_from_script() -> Path:

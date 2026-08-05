@@ -10,6 +10,7 @@ keeps the rest of the suite collectable without the GUI dependencies.
 from __future__ import annotations
 
 import hashlib
+from importlib import import_module
 import os
 import subprocess
 from pathlib import Path
@@ -19,7 +20,7 @@ import pytest
 pytest_plugins: list[str] = []
 
 try:
-    import nicegui  # noqa: F401
+    import_module("nicegui")
 except ImportError:
     pass
 else:

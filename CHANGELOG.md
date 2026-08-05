@@ -19,6 +19,10 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **CodeQL quality-alert cleanup** (2026-08-04) — removed dead assignments and imports,
+  made intentional cleanup and fall-through paths explicit, and separated GUI table-origin
+  coordinate utilities from offset handlers to break their import cycle. No user-facing
+  behavior changed.
 - **Locked dependency audit** (2026-08-04) — `uv.lock` bumps `aiohttp` 3.14.1→3.14.3 and
   `cryptography` 49.0.0→50.0.0 so `static-analysis` / `uv audit` clears newly published
   advisories (GHSA-mfx4-hv73-q22v, GHSA-cq5v-8q36-5273, GHSA-mq44-7p77-q5h7,

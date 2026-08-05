@@ -60,7 +60,7 @@ def _exam_source_from_single(
     settings: "PyskindoseSettings",
     *,
     inputs: "list[InputAdapterResult] | None",
-    single_normalized_data: "pd.DataFrame | None",
+    single_normalized_data: pd.DataFrame | None,
     single_source_file: str | None,
     file_name: str | None,
 ) -> list[ExportExamSource]:
@@ -88,7 +88,7 @@ def build_export_source_from_cli(
     output_dict: dict[str, Any] | None = None,
     multi_exam_result: "MultiExamResult | None" = None,
     inputs: "list[InputAdapterResult] | None" = None,
-    single_normalized_data: "pd.DataFrame | None" = None,
+    single_normalized_data: pd.DataFrame | None = None,
     single_source_file: str | None = None,
     calc_warnings: list[str] | None = None,
     import_warnings: list[str] | None = None,

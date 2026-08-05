@@ -15,9 +15,6 @@ pytest.importorskip("docx")
 
 from mypyskindose.export.writers.docx import render_docx_bytes  # noqa: E402
 
-_PNG = None
-
-
 def _payload():
     out = {
         "psd": 1.0, "air_kerma": 3.0,

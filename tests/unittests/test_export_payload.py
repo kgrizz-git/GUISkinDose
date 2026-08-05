@@ -158,7 +158,7 @@ def test_payload_multi_exam_object():
     )
     src = ExportSource(
         execution_context="cli",
-        multi_exam_result=cast("Any", result),
+        multi_exam_result=cast(Any, result),
         exams=[
             ExportExamSource("A", pd.DataFrame(), None, "a.dcm", _settings(), (0, 0, 0)),
             ExportExamSource("B", pd.DataFrame(), None, "b.dcm", _settings(), (0, 0, 0)),

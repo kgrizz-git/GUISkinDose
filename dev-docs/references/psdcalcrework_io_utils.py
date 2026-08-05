@@ -1,5 +1,6 @@
 import csv
 import os
+import unicodedata
 from typing import List, Dict, Any, Optional, Tuple
 
 
@@ -77,13 +78,8 @@ def _normalize_header(s: str) -> str:
     s = s.translate(superscripts)
     # Strip common encoding artifacts and degree symbols before normalization.
     s = s.replace('Â', '').replace('°', '').replace('º', '')
-    try:
-        import unicodedata
-
-        s = unicodedata.normalize('NFKD', s)
-        s = s.encode('ascii', 'ignore').decode('ascii')
-    except Exception:
-        pass
+    s = unicodedata.normalize('NFKD', s)
+    s = s.encode('ascii', 'ignore').decode('ascii')
     return ''.join(ch for ch in s.lower() if ch.isalnum())
 
 

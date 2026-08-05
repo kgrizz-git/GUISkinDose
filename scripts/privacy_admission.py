@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 import fnmatch
 import hashlib
 import io
@@ -508,7 +509,6 @@ def command_run(root: Path, mode: Mode) -> int:
     if mode == "all":
         print("ERROR: scanner execution requires --mode staged or --mode range.", file=sys.stderr)
         return 2
-    policy, _rules = load_policy(root, mode)
     required, paths = command_route(root, mode)
     if not required:
         print("No conditional privacy scanners are required.")
@@ -534,10 +534,8 @@ def command_run(root: Path, mode: Mode) -> int:
             payload = {**expected, "completed_at": datetime.now(timezone.utc).isoformat()}
             target = receipt_path(root, rule.scanner_id, str(expected["input_sha256"]))
             target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            try:
+            with suppress(OSError):
                 target.chmod(0o600)
-            except OSError:
-                pass
     print("Required privacy scanner receipts recorded under Git metadata.")
     return 0
 

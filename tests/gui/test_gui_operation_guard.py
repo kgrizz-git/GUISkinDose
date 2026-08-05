@@ -50,12 +50,16 @@ def test_reentrant_entry_is_denied():
     assert state.busy is False
 
 
+def _raise_while_busy() -> None:
+    with operation_guard("boom") as proceed:
+        assert proceed is True
+        assert state.busy is True
+        raise RuntimeError("boom")
+
+
 def test_busy_cleared_on_exception():
     with pytest.raises(RuntimeError):
-        with operation_guard("boom") as proceed:
-            assert proceed is True
-            assert state.busy is True
-            raise RuntimeError("boom")
+        _raise_while_busy()
     assert state.busy is False, "busy must be cleared even when the body raises"
 
 

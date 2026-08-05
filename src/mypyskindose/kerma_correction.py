@@ -64,11 +64,8 @@ def normalize_equipment_label(raw: str | float | None) -> str | None:
     """Strip, NFKC-normalize, and casefold an equipment label; empty → None."""
     if raw is None:
         return None
-    try:
-        if isinstance(raw, float) and math.isnan(raw):
-            return None
-    except TypeError:
-        pass
+    if isinstance(raw, float) and math.isnan(raw):
+        return None
     text = unicodedata.normalize("NFKC", str(raw)).strip()
     if not text or text.lower() in {"nan", "none", "<na>"}:
         return None
@@ -79,11 +76,8 @@ def normalize_tube(acquisition_plane: str | float | None) -> str:
     """Map acquisition_plane to ``single`` | ``A`` | ``B`` (default ``single``)."""
     if acquisition_plane is None:
         return "single"
-    try:
-        if isinstance(acquisition_plane, float) and math.isnan(acquisition_plane):
-            return "single"
-    except TypeError:
-        pass
+    if isinstance(acquisition_plane, float) and math.isnan(acquisition_plane):
+        return "single"
     text = unicodedata.normalize("NFKC", str(acquisition_plane)).strip().casefold()
     if not text:
         return "single"
