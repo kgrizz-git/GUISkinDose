@@ -374,9 +374,10 @@ supply-chain practice. Make two improvements through a dedicated, tested pull
 request:
 
 1. Declare least-privilege permissions in each workflow or job. The scheduled
-   ci-latest workflow already declares contents: read, and ci.yml, release.yml,
-   phi-scan.yml, and presidio.yml all declare job/workflow permissions. As of
-   2026-07-18, gitleaks.yml now declares `contents: read` and
+   ci-latest workflow declares `contents: read` and `issues: write` (failure
+   opens/updates a tracking issue instead of failing the branch check), and
+   ci.yml, release.yml, phi-scan.yml, and presidio.yml all declare job/workflow
+   permissions. As of 2026-07-18, gitleaks.yml now declares `contents: read` and
    `pull-requests: write` (the latter is required by gitleaks-action v2 to post
    PR review comments via `pulls.createReviewComment`). Confirm post-merge that
    PR commenting still works and that GitHub Code Scanning alert #3

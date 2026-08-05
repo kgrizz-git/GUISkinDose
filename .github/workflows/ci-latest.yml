@@ -4,10 +4,13 @@
 # random upstream release cannot turn an unrelated PR red. The trade-off is that upstream
 # breakage (e.g. a new nicegui tightening its type annotations) would otherwise go
 # unnoticed until someone bumps the lock. This workflow closes that gap: it runs on a
-# weekly schedule (and on demand) with an unpinned install, so a breaking upstream release
-# surfaces here as a failed scheduled run — GitHub emails the workflow's last editor — and
-# you can then fix the code and bump uv.lock deliberately (`uv lock --upgrade`), rather
-# than being ambushed mid-PR.
+# weekly schedule (and on demand) with an unpinned install.
+#
+# Failures are advisory for branch status: probe steps use continue-on-error so a broken
+# upstream release does not paint `main` red. Instead the workflow opens (or updates) a
+# GitHub issue that @-mentions the repository owner so maintainers are notified, then you
+# can fix the code and bump uv.lock deliberately (`uv lock --upgrade`). A later green run
+# auto-closes open ci-latest tracking issues.
 
 name: ci-latest
 
@@ -18,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: ci-latest-${{ github.ref }}
@@ -33,14 +37,142 @@ jobs:
       with:
         python-version: '3.14'
     - name: Install latest dependencies (unpinned — NOT from uv.lock)
+      id: install
+      continue-on-error: true
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev,gui]"
     - name: Show resolved versions
+      if: steps.install.outcome == 'success'
       run: pip freeze
     - name: Basedpyright (strict — catches type-stub drift)
+      id: basedpyright
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
       run: basedpyright
     - name: GUI test placement (core suite collects with nicegui blocked)
+      id: gui_placement
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
       run: python scripts/check_gui_test_placement.py
     - name: Full test suite (core + gui) against latest deps
+      id: pytest
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
       run: python -m pytest -q
+    - name: Open issue and notify on failure
+      if: >
+        always() &&
+        (steps.install.outcome == 'failure' ||
+         steps.basedpyright.outcome == 'failure' ||
+         steps.gui_placement.outcome == 'failure' ||
+         steps.pytest.outcome == 'failure')
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+      env:
+        INSTALL_OUTCOME: ${{ steps.install.outcome }}
+        BASEDPRIGHT_OUTCOME: ${{ steps.basedpyright.outcome }}
+        GUI_PLACEMENT_OUTCOME: ${{ steps.gui_placement.outcome }}
+        PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
+      with:
+        script: |
+          const marker = '<!-- ci-latest-failure -->';
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+          const sha = context.sha;
+          const failed = [
+            ['install', process.env.INSTALL_OUTCOME],
+            ['basedpyright', process.env.BASEDPRIGHT_OUTCOME],
+            ['gui_placement', process.env.GUI_PLACEMENT_OUTCOME],
+            ['pytest', process.env.PYTEST_OUTCOME],
+          ].filter(([, outcome]) => outcome === 'failure').map(([name]) => name);
+
+          const summary = [
+            marker,
+            '',
+            `@${owner} — scheduled/manual \`ci-latest\` reported probe failures.`,
+            '',
+            'This workflow installs **unpinned** latest dependencies (not `uv.lock`) to catch',
+            'upstream breakage without turning `main` red. Investigate, fix code and/or bump',
+            'the lock with `uv lock --upgrade`, then re-run **ci-latest** (or wait for Monday).',
+            '',
+            `**Failed steps:** ${failed.join(', ') || 'unknown'}`,
+            `**Commit:** \`${sha}\``,
+            `**Run:** ${runUrl}`,
+            '',
+            'A later green \`ci-latest\` run will auto-close open issues with this marker.',
+          ].join('\n');
+
+          const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+            owner,
+            repo,
+            state: 'open',
+            labels: 'github_actions',
+            per_page: 100,
+          });
+          const existing = openIssues.find((issue) =>
+            !issue.pull_request && (issue.body || '').includes(marker)
+          );
+
+          if (existing) {
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: existing.number,
+              body: summary,
+            });
+            core.info(`Updated existing ci-latest issue #${existing.number}`);
+            return;
+          }
+
+          const issue = await github.rest.issues.create({
+            owner,
+            repo,
+            title: 'ci-latest: latest-dependency probe failed',
+            body: summary,
+            labels: ['github_actions', 'dependencies'],
+            assignees: [owner],
+          });
+          core.info(`Opened ci-latest issue #${issue.data.number}`);
+
+    - name: Close ci-latest tracking issues on success
+      if: >
+        always() &&
+        steps.install.outcome == 'success' &&
+        steps.basedpyright.outcome == 'success' &&
+        steps.gui_placement.outcome == 'success' &&
+        steps.pytest.outcome == 'success'
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+      with:
+        script: |
+          const marker = '<!-- ci-latest-failure -->';
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+          const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+            owner,
+            repo,
+            state: 'open',
+            labels: 'github_actions',
+            per_page: 100,
+          });
+          for (const issue of openIssues) {
+            if (issue.pull_request || !(issue.body || '').includes(marker)) {
+              continue;
+            }
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issue.number,
+              body: `\`ci-latest\` is green again (${runUrl}). Closing this tracking issue.`,
+            });
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: issue.number,
+              state: 'closed',
+              state_reason: 'completed',
+            });
+            core.info(`Closed ci-latest issue #${issue.number}`);
+          }

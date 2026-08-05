@@ -71,6 +71,11 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **ci-latest soft-fail + issue notify** (2026-08-03) — scheduled/manual `ci-latest`
+  probe steps use `continue-on-error` so upstream dependency breakage no longer paints
+  `main` red. Failures open (or comment on) a GitHub issue labeled `github_actions` /
+  `dependencies`, @-mention and assign the repository owner, and include the Actions
+  run URL; a later green run auto-closes open tracking issues with the same marker.
 - **Dependabot weekly grouped minor/patch bumps** (2026-08-03) — `.github/dependabot.yml`
   still runs weekly (Monday) for `pip` and `github-actions`, but routine minor/patch
   updates are grouped into one PR per ecosystem (`python-minor-and-patch`,

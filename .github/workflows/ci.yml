@@ -117,7 +117,7 @@ jobs:
         python-version: '3.12'
     # Install the exact versions pinned in uv.lock so PR/main runs are reproducible.
     # `uv sync --locked` fails if uv.lock is stale relative to pyproject.toml. Upstream
-    # releases are caught deliberately by the scheduled ci-latest workflow, not by random
+    # releases are caught deliberately by the scheduled ci-latest workflow (issue notify), not by random
     # PRs. `uv sync` writes the environment to ./.venv, which we add to PATH below so the
     # remaining steps invoke the pinned tools without a `uv run` prefix.
     - name: Install dependencies (locked)
