@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import suppress
 import hashlib
 import json
 import os
@@ -158,10 +159,8 @@ def write_state(root: Path, payload: dict[str, object]) -> None:
     target = git_path(root, "sonarqube/last-run.json")
     target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    try:
+    with suppress(OSError):
         target.chmod(0o600)
-    except OSError:
-        pass
 
 
 def classify_failure(log_path: Path) -> str:

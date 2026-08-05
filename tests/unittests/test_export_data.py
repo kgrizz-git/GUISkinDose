@@ -155,7 +155,6 @@ def test_tabular_input_meta_shape_and_serializable():
 
 def test_inject_html_meta_inserts_comment_after_head():
     import base64
-    import json
 
     html = b"<html><head><title>x</title></head><body>map</body></html>"
     meta = {"schema": "dosetrack", "warnings": []}

@@ -400,10 +400,6 @@ def _resolve_bind_host(host: str | None, *, allow_network: bool) -> str:
     return bind_host
 
 
-# Re-export for tests that patch the former private registration helper.
-_register_native_geometry_tracking = register_native_geometry_tracking
-
-
 # ── entry point ────────────────────────────────────────────────────────────
 
 

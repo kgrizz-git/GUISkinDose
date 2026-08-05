@@ -10,7 +10,6 @@ must keep these golden values within tolerance.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import cast
 
 import numpy as np
@@ -33,7 +32,6 @@ _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 _GOLDEN_PSD_MGY = 1.3020214659058027
 _GOLDEN_AIR_KERMA_GY = 1.35
 _GOLDEN_N_EVENTS = 21
-_GOLDEN_SCHEMA_VERSION_FILE = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "format_export_data.py"
 
 
 @pytest.fixture(autouse=True)

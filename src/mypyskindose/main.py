@@ -149,6 +149,7 @@ def main(
 
     if settings.output_format in ("dict", "json"):
         return output
+    return None
 
 def analyze_input_file(
     file_path: str | Path,
@@ -583,7 +584,7 @@ if __name__ == "__main__":
                 )
             except ValueError as exc:
                 raise SystemExit(safe_user_error("invalid_export_options")) from exc
-            out_path = run_cli_export(
+            run_cli_export(
                 file_paths,
                 run_settings,
                 export_format,
@@ -595,7 +596,6 @@ if __name__ == "__main__":
                 force=getattr(args, "force", False),
                 allow_ignored_checkout=getattr(args, "allow_ignored_checkout_output", False),
             )
-            del out_path
             print("Report written successfully.")
         elif len(file_paths) > 1:
             result = analyze_multiple_input_files(

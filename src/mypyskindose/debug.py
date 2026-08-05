@@ -18,6 +18,7 @@ is never silently dropped.
 
 from __future__ import annotations
 
+from contextlib import suppress
 import json
 import logging
 import os
@@ -132,10 +133,8 @@ def _purge_log_files(target: str) -> None:
     base = Path(target)
     candidates = [base] + [base.with_name(f"{base.name}.{i}") for i in range(1, _LOG_BACKUP_COUNT + 1)]
     for path in candidates:
-        try:
+        with suppress(OSError):
             path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def _add_file_handler(log_file: str | Path) -> None:

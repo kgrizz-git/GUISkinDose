@@ -130,10 +130,8 @@ def dosetrack_parser(
     model_name = df["Equipment Name"].unique()[0]
     manufacturer = MODEL2MANUF[model_name]
 
-    if manufacturer == "Siemens":
-        return parse_axiom_artis(df)
-    elif manufacturer == "Philips":
-        return parse_philips(df)
+    parser = {"Siemens": parse_axiom_artis, "Philips": parse_philips}[manufacturer]
+    return parser(df)
 
 
 def read_and_normalize_dosetrack_data(

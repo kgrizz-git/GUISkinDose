@@ -145,7 +145,6 @@ class NonHumanPhantomOutput(HumanPhantomOutput):
     def __init__(self, phantom: Phantom):
         """Capture non-human (plane/cylinder) phantom geometry for export."""
         super().__init__(phantom)
-        self.human_model = None
 
 
 class EventOutput:

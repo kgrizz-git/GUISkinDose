@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+from contextlib import suppress
 import logging
 import os
 import shutil
@@ -99,8 +100,6 @@ def cleanup_temp_uploads() -> None:
     global _session_dir
     clear_all_temp_uploads()
     if _session_dir is not None:
-        try:
+        with suppress(OSError):
             _session_dir.rmdir()
-        except OSError:
-            pass
         _session_dir = None

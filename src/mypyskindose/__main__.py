@@ -88,7 +88,7 @@ if __name__ == "__main__":
             except ValueError:
                 print(safe_user_error("invalid_export_options"), file=sys.stderr)
                 sys.exit(1)
-            out_path = run_cli_export(
+            run_cli_export(
                 file_paths,
                 run_settings,
                 export_format,
@@ -100,7 +100,6 @@ if __name__ == "__main__":
                 force=getattr(args, "force", False),
                 allow_ignored_checkout=getattr(args, "allow_ignored_checkout_output", False),
             )
-            del out_path
             print("Report written successfully.")
         elif len(file_paths) > 1:
             from mypyskindose.main import analyze_multiple_input_files
