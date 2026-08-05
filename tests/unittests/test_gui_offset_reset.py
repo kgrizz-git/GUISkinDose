@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -245,6 +246,24 @@ def test_stage_table_origin_axis_does_not_call_apply():
         stage_table_origin_axis(meta, "x", 5.0)
     mock_apply.assert_not_called()
     assert meta["table_origin_override"]["x"] == 5.0
+
+
+def test_stage_table_origin_axis_invalid_axis_leaves_meta_unchanged():
+    meta = {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
+
+    with pytest.raises(KeyError, match="Unknown table-origin axis"):
+        stage_table_origin_axis(meta, "invalid", 5.0)
+
+    assert meta == {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
+
+
+def test_stage_table_origin_axis_invalid_value_leaves_meta_unchanged():
+    meta = {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
+
+    with pytest.raises(ValueError):
+        stage_table_origin_axis(meta, "x", cast(float, "not-a-number"))
+
+    assert meta == {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
 
 
 def test_table_origin_display_uses_final_frame_after_manual_swap():

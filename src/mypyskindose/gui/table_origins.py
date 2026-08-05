@@ -43,8 +43,9 @@ def effective_table_origin(meta: dict) -> dict[str, float]:
 
 def stage_table_origin_axis(meta: dict, axis: str, value: float) -> None:
     """Update one final-frame table-origin axis without rebuilding event data."""
+    source_axis = _final_axis_to_source_axis(meta, axis)
+    numeric_value = float(value)
     detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
     if meta.get("table_origin_override") is None:
         meta["table_origin_override"] = dict(detected)
-    source_axis = _final_axis_to_source_axis(meta, axis)
-    meta["table_origin_override"][source_axis] = float(value)
+    meta["table_origin_override"][source_axis] = numeric_value
