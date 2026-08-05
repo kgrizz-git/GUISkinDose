@@ -15,6 +15,7 @@ def _origin_source_to_final(meta: dict, origin: dict) -> dict[str, float]:
 
 
 def _final_axis_to_source_axis(meta: dict, axis: str) -> str:
+    """Return the stored-source axis corresponding to a final plotted axis."""
     if axis not in _TABLE_ORIGIN_AXES:
         raise KeyError(f"Unknown table-origin axis {axis!r}")
     if meta.get("swap_lat_lon", False) and axis in ("x", "z"):
@@ -23,6 +24,7 @@ def _final_axis_to_source_axis(meta: dict, axis: str) -> str:
 
 
 def _table_origin_source_values(meta: dict) -> dict[str, float]:
+    """Return override values when present, otherwise detected source-frame values."""
     detected = meta.get("table_origin_detected") or {"x": 0.0, "y": 0.0, "z": 0.0}
     override = meta.get("table_origin_override")
     if override is not None:
