@@ -45,30 +45,53 @@ def validate(inventory: dict[str, Any], policy: dict[str, Any]) -> list[str]:
     tools = inventory.get("tools")
     if not isinstance(tools, list):
         return [*errors, "tools must be a list"]
+    tool_errors, ids = _validate_tools(tools)
+    errors.extend(tool_errors)
+    if len(ids) != len(set(ids)):
+        errors.append("tool ids must be unique")
+    scanners = policy.get("scanners")
+    if not isinstance(scanners, list):
+        return [*errors, "policy scanners must be a list"]
+    errors.extend(_validate_scanner_tools(scanners, set(ids)))
+    return errors
+
+
+def _validate_tools(tools: list[Any]) -> tuple[list[str], list[str]]:
+    """Return validation errors and usable ids for the inventory tool entries."""
+    errors: list[str] = []
     ids: list[str] = []
     for index, item in enumerate(tools):
         if not isinstance(item, dict):
             errors.append(f"tool entry {index} is not an object")
             continue
-        missing = sorted(REQUIRED_FIELDS - set(item))
-        if missing:
-            errors.append(f"tool entry {index} missing fields: {','.join(missing)}")
-        tool_id = item.get("id")
-        if not isinstance(tool_id, str) or not tool_id:
-            errors.append(f"tool entry {index} has invalid id")
-        else:
+        entry_errors, tool_id = _validate_tool_entry(item, index)
+        errors.extend(entry_errors)
+        if tool_id is not None:
             ids.append(tool_id)
-        if item.get("status") not in ALLOWED_STATUSES:
-            errors.append(f"tool entry {index} has invalid status")
-        source = item.get("source")
-        if not isinstance(source, str) or not source.startswith("https://"):
-            errors.append(f"tool entry {index} must use an HTTPS source")
-    if len(ids) != len(set(ids)):
-        errors.append("tool ids must be unique")
-    known_ids = set(ids)
-    scanners = policy.get("scanners")
-    if not isinstance(scanners, list):
-        return [*errors, "policy scanners must be a list"]
+    return errors, ids
+
+
+def _validate_tool_entry(item: dict[str, Any], index: int) -> tuple[list[str], str | None]:
+    """Validate one inventory object and return its id only when usable."""
+    errors: list[str] = []
+    missing = sorted(REQUIRED_FIELDS - set(item))
+    if missing:
+        errors.append(f"tool entry {index} missing fields: {','.join(missing)}")
+    tool_id = item.get("id")
+    if not isinstance(tool_id, str) or not tool_id:
+        errors.append(f"tool entry {index} has invalid id")
+        tool_id = None
+    if item.get("status") not in ALLOWED_STATUSES:
+        errors.append(f"tool entry {index} has invalid status")
+    source = item.get("source")
+    if not isinstance(source, str) or not source.startswith("https://"):
+        errors.append(f"tool entry {index} must use an HTTPS source")
+    return errors, tool_id
+
+
+def _validate_scanner_tools(scanners: list[Any], known_ids: set[str]) -> list[str]:
+    """Return errors for policy scanner references absent from the inventory."""
+    errors: list[str] = []
     for scanner in scanners:
         if not isinstance(scanner, dict):
             continue

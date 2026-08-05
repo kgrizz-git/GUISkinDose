@@ -93,19 +93,29 @@ def validate_feature_doc_matrix(repo_root: Path) -> ValidationResult:
     assert isinstance(features, dict)
 
     for feature_name, raw_feature in features.items():
-        if not isinstance(raw_feature, dict):
-            result.errors.append(f"{feature_name}: feature entry must be an object")
-            continue
-        status = raw_feature.get("status")
-        if not _is_non_empty_string(status):
-            result.errors.append(f"{feature_name}: status must be a non-empty string")
-        elif status not in ALLOWED_STATUSES:
-            result.errors.append(f"{feature_name}: unknown status {status!r}")
-        for field_name in ("code", "tests", "docs", "help"):
-            for rel_path in _path_list(feature_name, raw_feature, field_name, result):
-                if not (repo_root / rel_path).exists():
-                    result.errors.append(f"{feature_name}: missing {field_name} path {rel_path}")
+        _validate_feature_entry(feature_name, raw_feature, repo_root, result)
     return result
+
+
+def _validate_feature_entry(
+    feature_name: str,
+    raw_feature: object,
+    repo_root: Path,
+    result: ValidationResult,
+) -> None:
+    """Validate one feature entry while retaining all matrix error wording."""
+    if not isinstance(raw_feature, dict):
+        result.errors.append(f"{feature_name}: feature entry must be an object")
+        return
+    status = raw_feature.get("status")
+    if not _is_non_empty_string(status):
+        result.errors.append(f"{feature_name}: status must be a non-empty string")
+    elif status not in ALLOWED_STATUSES:
+        result.errors.append(f"{feature_name}: unknown status {status!r}")
+    for field_name in ("code", "tests", "docs", "help"):
+        for rel_path in _path_list(feature_name, raw_feature, field_name, result):
+            if not (repo_root / rel_path).exists():
+                result.errors.append(f"{feature_name}: missing {field_name} path {rel_path}")
 
 
 def _feature_paths(feature: dict[str, Any], fields: tuple[str, ...]) -> set[str]:

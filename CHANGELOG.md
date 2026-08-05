@@ -19,6 +19,11 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **PySkinDoseOutput canonical lowercase API** (2026-08-05) — multi-exam and rich-export
+  consumers now use lowercase object attributes (`psd`, `air_kerma`, `dose_map`, correction
+  arrays, `events`) plus `patient_export()` and `sparse_hit_indices()`. The former uppercase
+  object attributes have been deliberately removed to eliminate case-insensitive field
+  collisions. Dict/JSON export keys, values, and schema version are unchanged.
 - **CodeQL quality-alert cleanup** (2026-08-04) — removed dead assignments and imports,
   made intentional cleanup and fall-through paths explicit, and separated GUI table-origin
   coordinate utilities from offset handlers to break their import cycle. No user-facing

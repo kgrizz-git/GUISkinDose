@@ -105,16 +105,19 @@ def _fake_output_obj(output_dict):
     for idx, dose in output_dict["dose_map"]:
         dense[idx] = dose
     return SimpleNamespace(
-        PSD=output_dict["psd"],
-        AirKerma=output_dict["air_kerma"],
-        Patient={"patient": SimpleNamespace(to_dict=lambda p=output_dict["patient"]["patient"]: p)},
-        DoseMap=dense,
-        Hits=corr["correction_value_index"],
-        BackscatterCorrection=corr["backscatter"],
-        InverseSquareLawCorrection=corr["inverse_square_law"],
-        MediumCorrection=corr["medium"],
-        TableCorrection=corr["table"],
-        Events=SimpleNamespace(kerma=corr["kerma"]),
+        psd=output_dict["psd"],
+        air_kerma=output_dict["air_kerma"],
+        patient_export=lambda: {"patient": SimpleNamespace(to_dict=lambda p=output_dict["patient"]["patient"]: p)},
+        dose_map=dense,
+        sparse_hit_indices=lambda: corr["correction_value_index"],
+        backscatter_correction=corr["backscatter"],
+        inverse_square_law_correction=corr["inverse_square_law"],
+        medium_correction=corr["medium"],
+        table_correction=corr["table"],
+        events=SimpleNamespace(kerma=corr["kerma"]),
+        kerma_corrected=None,
+        kerma_meter_correction=None,
+        air_kerma_corrected=output_dict["air_kerma"],
     )
 
 

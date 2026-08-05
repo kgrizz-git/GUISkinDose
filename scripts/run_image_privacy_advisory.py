@@ -127,35 +127,53 @@ def notebook_images(source: Path, directory: Path) -> list[Path]:
     images: list[Path] = []
     index = 0
     for cell in notebook.get("cells", []) if isinstance(notebook, dict) else []:
-        if not isinstance(cell, dict):
-            continue
-        mappings: list[object] = []
-        attachments = cell.get("attachments", {})
-        if isinstance(attachments, dict):
-            mappings.extend(attachments.values())
-        outputs = cell.get("outputs", [])
-        if isinstance(outputs, list):
-            mappings.extend(output.get("data", {}) for output in outputs if isinstance(output, dict))
-        for mapping in mappings:
-            if not isinstance(mapping, dict):
-                continue
-            for mime, encoded in mapping.items():
-                suffix = {"image/png": ".png", "image/jpeg": ".jpg"}.get(str(mime))
-                if suffix is None or not isinstance(encoded, str):
-                    continue
-                try:
-                    data = base64.b64decode(encoded, validate=True)
-                except ValueError as exc:
-                    raise RuntimeError("notebook_image_invalid") from exc
-                if len(data) > MAX_EMBEDDED_IMAGE_BYTES:
-                    raise RuntimeError("notebook_image_too_large")
-                if len(images) >= MAX_RENDERED_IMAGES:
-                    raise RuntimeError("notebook_image_count_exceeded")
-                target = directory / f"notebook-{index}{suffix}"
-                target.write_bytes(data)
-                images.append(target)
-                index += 1
+        for mapping in _notebook_cell_mappings(cell):
+            for suffix, data in _notebook_image_data(mapping):
+                index = _append_notebook_image(images, directory, index, suffix, data)
     return images
+
+
+def _notebook_cell_mappings(cell: object) -> list[object]:
+    """Return attachment and output-data mappings from one notebook cell."""
+    if not isinstance(cell, dict):
+        return []
+    mappings: list[object] = []
+    attachments = cell.get("attachments", {})
+    if isinstance(attachments, dict):
+        mappings.extend(attachments.values())
+    outputs = cell.get("outputs", [])
+    if isinstance(outputs, list):
+        mappings.extend(output.get("data", {}) for output in outputs if isinstance(output, dict))
+    return mappings
+
+
+def _notebook_image_data(mapping: object) -> Iterable[tuple[str, bytes]]:
+    """Yield validated PNG/JPEG notebook payloads without retaining text outputs."""
+    if not isinstance(mapping, dict):
+        return
+    for mime, encoded in mapping.items():
+        suffix = {"image/png": ".png", "image/jpeg": ".jpg"}.get(str(mime))
+        if suffix is None or not isinstance(encoded, str):
+            continue
+        try:
+            data = base64.b64decode(encoded, validate=True)
+        except ValueError as exc:
+            raise RuntimeError("notebook_image_invalid") from exc
+        if len(data) > MAX_EMBEDDED_IMAGE_BYTES:
+            raise RuntimeError("notebook_image_too_large")
+        yield suffix, data
+
+
+def _append_notebook_image(
+    images: list[Path], directory: Path, index: int, suffix: str, data: bytes
+) -> int:
+    """Write one bounded extracted image and return the next output index."""
+    if len(images) >= MAX_RENDERED_IMAGES:
+        raise RuntimeError("notebook_image_count_exceeded")
+    target = directory / f"notebook-{index}{suffix}"
+    target.write_bytes(data)
+    images.append(target)
+    return index + 1
 
 
 def extracted_images(source: Path, directory: Path) -> list[Path]:
@@ -185,6 +203,73 @@ def presidio_count(engine: Any, texts: Iterable[str]) -> int:
     return count
 
 
+class ImageScanError(RuntimeError):
+    """A value-safe image-scanner failure suitable for user-visible reporting."""
+
+
+def _scan_image_asset(engine: Any, root: Path, relative: Path) -> tuple[Path, int]:
+    """Scan one confined rendered asset and return its normalized path and finding count."""
+    normalized = Path(relative.as_posix())
+    source = (root / normalized).resolve()
+    if not source.is_relative_to(root):
+        raise ImageScanError("ERROR: image path escaped the private snapshot.")
+    if not source.is_file():
+        raise ImageScanError(f"ERROR: image input unavailable path_token={path_token(normalized)}.")
+    try:
+        with tempfile.TemporaryDirectory(prefix="image-privacy-private-") as temp_dir:
+            private = Path(temp_dir)
+            images = extracted_images(source, private)
+            texts = _ocr_images(images, private)
+            deterministic = sum(len(text_findings(normalized.as_posix(), text)) for text in texts)
+            return normalized, deterministic + presidio_count(engine, texts)
+    except Exception as exc:
+        raise ImageScanError(
+            f"ERROR: image privacy scan failed path_token={path_token(normalized)} ({type(exc).__name__})."
+        ) from exc
+
+
+def _ocr_images(images: Iterable[Path], directory: Path) -> list[str]:
+    """Convert extracted assets to PNG and return only transient OCR text."""
+    texts: list[str] = []
+    for index, image in enumerate(images):
+        converted = directory / f"converted-{index}.png"
+        convert_to_png(image, converted)
+        texts.append(ocr_image(converted))
+    return texts
+
+
+def _report_image_findings(root: Path, normalized: Path, findings: int) -> tuple[int, int]:
+    """Print an advisory and split a finding count into unreviewed and reviewed totals."""
+    if not findings:
+        return 0, 0
+    if is_hash_pinned_approved(root, normalized):
+        print(
+            f"ADVISORY: image privacy finding(s) explicitly triaged by exact-hash inventory review "
+            f"path_token={path_token(normalized)}; OCR text and values suppressed."
+        )
+        return 0, findings
+    print(
+        f"ADVISORY: image privacy scan found {findings} potential finding(s) "
+        f"path_token={path_token(normalized)}; OCR text and values suppressed."
+    )
+    return findings, 0
+
+
+def _print_summary(paths: Sequence[Path], total_findings: int, reviewed_findings: int) -> int:
+    """Print the value-safe image summary and return its advisory exit status."""
+    if total_findings:
+        print(f"Image privacy advisory complete: {total_findings} finding(s); triage required.")
+        return 1
+    if reviewed_findings:
+        print(
+            f"Image privacy advisory complete: {reviewed_findings} finding(s) explicitly triaged "
+            "by exact-hash human review."
+        )
+    else:
+        print(f"Image privacy advisory clean: {len(paths)} asset(s).")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     root = args.scan_root.resolve()
@@ -200,59 +285,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     total_findings = 0
     reviewed_findings = 0
     for relative in args.paths:
-        normalized = Path(relative.as_posix())
-        source = (root / normalized).resolve()
         try:
-            source.relative_to(root)
-        except ValueError:
-            print("ERROR: image path escaped the private snapshot.", file=sys.stderr)
+            normalized, findings = _scan_image_asset(engine, root, relative)
+        except ImageScanError as exc:
+            print(str(exc), file=sys.stderr)
             return 2
-        if not source.is_file():
-            print(f"ERROR: image input unavailable path_token={path_token(normalized)}.", file=sys.stderr)
-            return 2
-        try:
-            with tempfile.TemporaryDirectory(prefix="image-privacy-private-") as temp_dir:
-                private = Path(temp_dir)
-                images = extracted_images(source, private)
-                texts: list[str] = []
-                for index, image in enumerate(images):
-                    converted = private / f"converted-{index}.png"
-                    convert_to_png(image, converted)
-                    texts.append(ocr_image(converted))
-                deterministic = sum(len(text_findings(normalized.as_posix(), text)) for text in texts)
-                nlp = presidio_count(engine, texts)
-        except Exception as exc:
-            print(
-                f"ERROR: image privacy scan failed path_token={path_token(normalized)} "
-                f"({type(exc).__name__}).",
-                file=sys.stderr,
-            )
-            return 2
-        findings = deterministic + nlp
-        if findings:
-            if is_hash_pinned_approved(root, normalized):
-                reviewed_findings += findings
-                print(
-                    f"ADVISORY: image privacy finding(s) explicitly triaged by exact-hash inventory review "
-                    f"path_token={path_token(normalized)}; OCR text and values suppressed."
-                )
-                continue
-            total_findings += findings
-            print(
-                f"ADVISORY: image privacy scan found {findings} potential finding(s) "
-                f"path_token={path_token(normalized)}; OCR text and values suppressed."
-            )
-    if total_findings:
-        print(f"Image privacy advisory complete: {total_findings} finding(s); triage required.")
-        return 1
-    if reviewed_findings:
-        print(
-            f"Image privacy advisory complete: {reviewed_findings} finding(s) explicitly triaged "
-            "by exact-hash human review."
-        )
-    else:
-        print(f"Image privacy advisory clean: {len(args.paths)} asset(s).")
-    return 0
+        unreviewed, reviewed = _report_image_findings(root, normalized, findings)
+        total_findings += unreviewed
+        reviewed_findings += reviewed
+    return _print_summary(args.paths, total_findings, reviewed_findings)
 
 
 if __name__ == "__main__":

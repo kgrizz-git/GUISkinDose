@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 from types import SimpleNamespace
 
+from scripts import run_presidio_advisory
 from scripts.run_presidio_advisory import MAX_TEXT_BYTES, PII_ENTITIES, Finding, read_text, scan_paths, tracked_paths
 
 
@@ -68,3 +69,11 @@ def test_materialized_snapshot_discovery_does_not_require_git(tmp_path: Path) ->
     (tmp_path / "opaque.bin").write_bytes(b"binary\x00")
 
     assert tracked_paths(tmp_path, require_git=False) == [included]
+
+
+def test_main_rejects_negative_display_limit() -> None:
+    assert run_presidio_advisory.main(["--max-displayed-findings", "-1"]) == 2
+
+
+def test_main_rejects_path_outside_materialized_snapshot(tmp_path: Path) -> None:
+    assert run_presidio_advisory.main(["--scan-root", str(tmp_path), "../outside.txt"]) == 2

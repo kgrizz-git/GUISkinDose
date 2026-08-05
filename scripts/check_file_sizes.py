@@ -10,52 +10,44 @@ MAX_LINES = 800
 # Outliers should be documented and eventually decomposed/refactored.
 WHITELIST: set[str] = {"dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md"}
 
+
+def _iter_checked_files(repo_root: Path):
+    """Yield supported files under the repository roots checked by this gate."""
+    for directory_name in ("src", "scripts", "dev-docs"):
+        directory = repo_root / directory_name
+        if directory.exists():
+            yield from (path for path in directory.rglob("*") if path.is_file() and path.suffix in {".py", ".md"})
+
+
+def _check_file_size(file_path: Path, repo_root: Path) -> bool:
+    """Check one file, returning false only for a non-whitelisted size violation."""
+    try:
+        relative_path = file_path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return True
+    try:
+        with file_path.open("r", encoding="utf-8", errors="surrogateescape") as file_handle:
+            line_count = sum(1 for _ in file_handle)
+    except OSError as exc:
+        print(f"Error reading {relative_path}: {exc}", file=sys.stderr)
+        return True
+    if line_count <= MAX_LINES:
+        return True
+    if relative_path in WHITELIST:
+        print(f"INFO: Whitelisted outlier {relative_path} has {line_count} lines (limit: {MAX_LINES})")
+        return True
+    print(f"ERROR: {relative_path} exceeds line limit: {line_count} lines (max: {MAX_LINES})", file=sys.stderr)
+    return False
+
+
 def check_file_sizes(repo_root: Path | None = None) -> bool:
+    """Return whether every checked source/document file fits the line budget."""
     if repo_root is None:
         repo_root = Path(__file__).resolve().parent.parent
     has_errors = False
-
-    # Directories to scan
-    scan_dirs = ["src", "scripts", "dev-docs"]
-
-    # File patterns to check
-    extensions = {".py", ".md"}
-
-    for dir_name in scan_dirs:
-        target_dir = repo_root / dir_name
-        if not target_dir.exists():
-            continue
-
-        for file_path in target_dir.rglob("*"):
-            if not file_path.is_file():
-                continue
-            if file_path.suffix not in extensions:
-                continue
-
-            # Get relative path for whitelist checking
-            try:
-                rel_path = file_path.relative_to(repo_root)
-                rel_path_str = rel_path.as_posix()
-            except ValueError:
-                continue
-
-            # Read line count
-            try:
-                # Use utf-8 with surrogateescape to avoid decoding issues on non-standard characters
-                with open(file_path, "r", encoding="utf-8", errors="surrogateescape") as f:
-                    lines = sum(1 for _ in f)
-            except Exception as e:
-                print(f"Error reading {rel_path_str}: {e}", file=sys.stderr)
-                continue
-
-            if lines > MAX_LINES:
-                if rel_path_str in WHITELIST:
-                    # Permitted outlier, print an advisory note
-                    print(f"INFO: Whitelisted outlier {rel_path_str} has {lines} lines (limit: {MAX_LINES})")
-                else:
-                    print(f"ERROR: {rel_path_str} exceeds line limit: {lines} lines (max: {MAX_LINES})", file=sys.stderr)
-                    has_errors = True
-
+    for file_path in _iter_checked_files(repo_root):
+        if not _check_file_size(file_path, repo_root):
+            has_errors = True
     return not has_errors
 
 if __name__ == "__main__":

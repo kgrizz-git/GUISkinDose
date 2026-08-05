@@ -1,12 +1,28 @@
 # SonarQube Quality Gate Remediation Plan
 
-**Status:** Active, multi-PR remediation programme. The live local Quality Gate is
-currently a **new-code** gate; its status is useful evidence, but neither a
-passing gate nor complete historical-backlog removal is a delivery prerequisite
-for this programme.
+**Status:** High-severity remediation complete; historical MAJOR/MINOR backlog
+remains separately scoped. The live local Quality Gate is currently a
+**new-code** gate; its status is useful evidence, but neither a passing gate nor
+complete historical-backlog removal is a delivery prerequisite for this programme.
 
-This plan addresses the local-only SonarQube findings for `GUISkinDose`. SonarQube
-remains an optional second opinion: it does not replace the repository's tests,
+**2026-08-05 execution note:** the HelpButton unreachable-branch fix and the
+`PySkinDoseOutput` case-collision remediation are implemented on the dedicated
+remediation branch with focused regression tests. The object API is now
+deliberately lowercase-only; the serialized dict/JSON schema is unchanged. An
+authenticated loopback scan (run through `direnv exec .`) confirms those two
+target rules are absent. The first scan of the configured repository project
+(`kgrizz-git_MyPySkinDose`, rather than the obsolete `GUISkinDose` project) found
+22 unresolved current `python:S3776` findings. The final scan on this branch
+reports zero `python:S3776`, zero `python:S6729`, and zero BLOCKER/CRITICAL
+findings. Its local quality gate still fails from 20 MAJOR and 54 MINOR
+historical findings; these are follow-up code-quality debt, not a claim that
+the high-severity plan is unfinished. The historical inventory and candidate
+locations below should therefore be remapped against the configured project
+before each subsequent tranche; do not claim Cloud resolution from a
+branch-local scan.
+
+This plan addresses the local-only SonarQube findings for
+`kgrizz-git_MyPySkinDose`. SonarQube remains an optional second opinion: it does not replace the repository's tests,
 Ruff, Basedpyright, Bandit, Semgrep, dependency audits, or privacy-admission
 controls. See [SONARQUBE_LOCAL.md](../SONARQUBE_LOCAL.md) and
 [HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md) for the operational policy.

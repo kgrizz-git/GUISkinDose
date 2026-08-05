@@ -465,7 +465,8 @@ def select_ids(
     return ids
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse catalog-run arguments without beginning any external work."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
@@ -476,74 +477,106 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-shape", action="store_true", help="Skip affine anti-balloon checks")
     parser.add_argument("--json-report", type=Path, default=None)
     parser.add_argument("--blender", type=str, default=None)
-    args = parser.parse_args(argv)
+    return parser.parse_args(argv)
 
+
+def _prepare_catalog_run(args: argparse.Namespace) -> tuple[dict[str, Any], list[str], Path] | None:
+    """Load the selected catalog and verify Blender/MPFB before processing entries."""
     catalog = load_catalog(args.catalog)
     try:
         ids = select_ids(catalog, only=args.only, priority=args.priority)
     except KeyError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
-        return 2
+        return None
 
     if not ids:
         print("ERROR: no catalog ids selected", file=sys.stderr)
-        return 2
+        return None
 
     try:
         blender = validate_blender_binary(args.blender or resolve_blender())
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
-        return 2
+        return None
 
     ok_mpfb, detail = blender_mpfb_available(str(blender))
     if not ok_mpfb:
         print(f"ERROR: Blender/MPFB unavailable ({detail})", file=sys.stderr)
-        return 2
+        return None
+    return catalog, ids, blender
 
+
+def _report_failed_entry(report: dict[str, Any]) -> None:
+    """Print bounded validation diagnostics for one failed catalog entry."""
+    steps = report["steps"]
+    expected_failures = steps.get("expect_ranges", {}).get("failures")
+    if expected_failures:
+        print(f"  expect: {expected_failures}")
+    validation = steps.get("validate", {})
+    if not validation.get("passed"):
+        print(f"  validate checks: {validation.get('checks')}")
+
+
+def _install_passing_entry(catalog: dict[str, Any], catalog_id: str, report: dict[str, Any]) -> None:
+    """Install a passing shipped entry, retaining the prior reference-skip behavior."""
+    entry = catalog["entries"][catalog_id]
+    if entry.get("ship", True) is False or entry.get("priority") == "REF":
+        print(f"  skip install (non-shipped ref): {catalog_id}")
+        return
+    destination = install_stl(Path(report["stl"]), catalog_id)
+    report["installed"] = destination.name
+    print(f"  installed → phantom_data/{destination.name}")
+
+
+def _process_catalog_entry(
+    args: argparse.Namespace, catalog: dict[str, Any], catalog_id: str, blender: Path
+) -> dict[str, Any]:
+    """Generate, validate, and optionally install one catalog entry with its own failure record."""
+    print(f"=== {catalog_id} ===")
+    try:
+        report = process_entry(
+            catalog_id,
+            catalog,
+            catalog_path=args.catalog,
+            out_dir=args.out_dir,
+            blender=str(blender),
+            skip_phantom_load=args.skip_phantom_load,
+            skip_shape=args.skip_shape,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface per-id failure, continue others
+        failed_report = {"id": catalog_id, "passed": False, "error": f"{type(exc).__name__}:{exc}"}
+        print(f"FAIL {catalog_id}: {failed_report['error']}")
+        return failed_report
+
+    print(f"{'PASS' if report['passed'] else 'FAIL'} {catalog_id}")
+    if not report["passed"]:
+        _report_failed_entry(report)
+    elif args.install:
+        _install_passing_entry(catalog, catalog_id, report)
+    return report
+
+
+def _process_catalog_entries(
+    args: argparse.Namespace, catalog: dict[str, Any], ids: list[str], blender: Path
+) -> tuple[list[dict[str, Any]], int]:
+    """Process every selected entry and return reports plus the number that failed."""
     reports: list[dict[str, Any]] = []
     failures = 0
     for catalog_id in ids:
-        print(f"=== {catalog_id} ===")
-        try:
-            report = process_entry(
-                catalog_id,
-                catalog,
-                catalog_path=args.catalog,
-                out_dir=args.out_dir,
-                blender=str(blender),
-                skip_phantom_load=args.skip_phantom_load,
-                skip_shape=args.skip_shape,
-            )
-        except Exception as exc:  # noqa: BLE001 — surface per-id failure, continue others
-            report = {
-                "id": catalog_id,
-                "passed": False,
-                "error": f"{type(exc).__name__}:{exc}",
-            }
-            print(f"FAIL {catalog_id}: {report['error']}")
-            failures += 1
-            reports.append(report)
-            continue
-
-        status = "PASS" if report["passed"] else "FAIL"
-        print(f"{status} {catalog_id}")
-        if not report["passed"]:
-            failures += 1
-            if report["steps"].get("expect_ranges", {}).get("failures"):
-                print(f"  expect: {report['steps']['expect_ranges']['failures']}")
-            if not report["steps"].get("validate", {}).get("passed"):
-                print(f"  validate checks: {report['steps']['validate'].get('checks')}")
-
-        if args.install and report["passed"]:
-            entry = catalog["entries"][catalog_id]
-            if entry.get("ship", True) is False or entry.get("priority") == "REF":
-                print(f"  skip install (non-shipped ref): {catalog_id}")
-            else:
-                dest = install_stl(Path(report["stl"]), catalog_id)
-                report["installed"] = dest.name
-                print(f"  installed → phantom_data/{dest.name}")
-
+        report = _process_catalog_entry(args, catalog, catalog_id, blender)
+        failures += not report["passed"]
         reports.append(report)
+    return reports, failures
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    prepared = _prepare_catalog_run(args)
+    if prepared is None:
+        return 2
+    catalog, ids, blender = prepared
+
+    reports, failures = _process_catalog_entries(args, catalog, ids, blender)
 
     summary = {"passed": failures == 0, "n_fail": failures, "reports": reports}
     if args.json_report:

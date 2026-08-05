@@ -220,7 +220,7 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 state.calc_run_id += 1
                 state.psd = float(multi_result.aggregate_psd)
                 # sum of air kerma across exams
-                state.air_kerma = sum(float(e.output.AirKerma) for e in multi_result.exams)
+                state.air_kerma = sum(float(e.output.air_kerma) for e in multi_result.exams)
 
                 # Prefer explicit orchestrator run warnings (failed-exam exclusions)
                 # over the opaque privacy-safe logger twin from safe_error_event.

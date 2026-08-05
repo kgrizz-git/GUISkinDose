@@ -32,6 +32,29 @@ def _git_root(parent: Path) -> Path | None:
     return Path(value).resolve() if value else None
 
 
+def _validate_checkout_destination(target: Path, root: Path, *, allow_ignored_checkout: bool) -> None:
+    """Reject tracked or non-ignored destinations under a Git checkout."""
+    try:
+        relative = target.relative_to(root)
+    except ValueError:
+        return
+    rel = relative.as_posix()
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", rel],
+        check=False,
+        capture_output=True,
+    ).returncode == 0
+    if tracked:
+        raise UnsafeOutputPathError("export_tracked_path_forbidden")
+    ignored = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "-q", "--", rel],
+        check=False,
+        capture_output=True,
+    ).returncode == 0
+    if not (allow_ignored_checkout and ignored):
+        raise UnsafeOutputPathError("export_checkout_path_forbidden")
+
+
 def validate_output_path(
     path: str | Path,
     *,
@@ -51,26 +74,7 @@ def validate_output_path(
 
     root = _git_root(parent)
     if root is not None:
-        try:
-            relative = target.relative_to(root)
-        except ValueError:
-            relative = None
-        if relative is not None:
-            rel = relative.as_posix()
-            tracked = subprocess.run(
-                ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", rel],
-                check=False,
-                capture_output=True,
-            ).returncode == 0
-            if tracked:
-                raise UnsafeOutputPathError("export_tracked_path_forbidden")
-            ignored = subprocess.run(
-                ["git", "-C", str(root), "check-ignore", "-q", "--", rel],
-                check=False,
-                capture_output=True,
-            ).returncode == 0
-            if not (allow_ignored_checkout and ignored):
-                raise UnsafeOutputPathError("export_checkout_path_forbidden")
+        _validate_checkout_destination(target, root, allow_ignored_checkout=allow_ignored_checkout)
     return target
 
 

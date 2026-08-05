@@ -33,6 +33,9 @@ def cl():
         ("Apache License 2.0", "Apache-2.0"),
         ("BSD License", "BSD-3-Clause"),
         ("GNU General Public License v3 (GPLv3)", "GPL-3.0-or-later"),
+        ("GPL licensed project", "GPL-2.0-or-later"),
+        ("GNU Affero General Public License", "AGPL-3.0-or-later"),
+        ("unrecognised proprietary terms", "UNKNOWN"),
         ("", "UNKNOWN"),
     ],
 )

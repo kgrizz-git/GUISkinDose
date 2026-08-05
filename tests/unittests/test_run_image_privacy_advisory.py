@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from pypdf import PdfWriter
 
+from scripts import run_image_privacy_advisory as image_advisory
 from scripts.run_image_privacy_advisory import notebook_images, office_images, render_pdf
 
 
@@ -51,6 +52,13 @@ def test_notebook_extraction_handles_embedded_png_without_retaining_text(tmp_pat
 
     assert len(images) == 1
     assert images[0].read_bytes() == image_bytes
+
+
+def test_unreviewed_image_findings_remain_actionable(tmp_path: Path, monkeypatch) -> None:
+    """The reporting helper must retain findings that lack exact-hash approval."""
+    monkeypatch.setattr(image_advisory, "is_hash_pinned_approved", lambda *_args, **_kwargs: False)
+
+    assert image_advisory._report_image_findings(tmp_path, Path("fixture.png"), 2) == (2, 0)
 
 
 @pytest.mark.skipif(shutil.which("pdftoppm") is None, reason="Poppler is an optional local OCR prerequisite")

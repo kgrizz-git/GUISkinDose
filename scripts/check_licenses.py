@@ -160,6 +160,11 @@ def _normalize_token(value: str) -> str:
     for pattern, spdx in LICENSE_ALIASES.items():
         if pattern in lowered:
             return spdx
+    return _keyword_license(lowered)
+
+
+def _keyword_license(lowered: str) -> str:
+    """Classify free-form license text after exact aliases have been exhausted."""
     if "mit" in lowered:
         return "MIT"
     if "apache" in lowered and "2" in lowered:
@@ -167,9 +172,7 @@ def _normalize_token(value: str) -> str:
     if "bsd" in lowered:
         return "BSD-3-Clause"
     if "gnu general public license" in lowered or re.search(r"\bgpl\b", lowered):
-        if "3" in lowered:
-            return "GPL-3.0-or-later"
-        return "GPL-2.0-or-later"
+        return "GPL-3.0-or-later" if "3" in lowered else "GPL-2.0-or-later"
     if "gnu affero" in lowered or "agpl" in lowered:
         return "AGPL-3.0-or-later"
     return "UNKNOWN"

@@ -67,7 +67,7 @@ class TestGuiPerExamOffsets:
             captured["per_exam_extra_warnings"] = per_exam_extra_warnings
             result = MagicMock()
             result.aggregate_psd = 1.0
-            result.exams = [MagicMock(output=MagicMock(AirKerma=0.0)) for _ in exams]
+            result.exams = [MagicMock(output=MagicMock(air_kerma=0.0)) for _ in exams]
             result.warnings = []
             result.exams_attempted = len(exams)
             result.exams_excluded = 0

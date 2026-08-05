@@ -80,29 +80,45 @@ def _validate_audit_extra_args(extra_args: list[str]) -> None:
     """
     i = 0
     while i < len(extra_args):
-        arg = extra_args[i]
-        if any(ch in arg for ch in "\n\r\x00") or arg.strip() != arg:
-            raise ValueError("unsupported or unsafe audit argument")
-        if arg in _UV_AUDIT_RESERVED_FLAGS:
-            i += 1
-            continue
-        if "=" in arg:
-            option, value = arg.split("=", 1)
-            allowed_values = _PIP_AUDIT_OPTION_VALUES.get(option)
-            if allowed_values is None or value not in allowed_values:
-                raise ValueError(f"unsupported or unsafe audit argument: {arg}")
-            i += 1
-            continue
-        allowed_values = _PIP_AUDIT_OPTION_VALUES.get(arg)
-        if allowed_values is not None:
-            if i + 1 >= len(extra_args):
-                raise ValueError(f"unsupported or unsafe audit argument: {arg}")
-            value = extra_args[i + 1]
-            if any(ch in value for ch in "\n\r\x00") or value.strip() != value or value not in allowed_values:
-                raise ValueError(f"unsupported or unsafe audit argument: {value}")
-            i += 2
-            continue
+        i += _validate_audit_extra_arg(extra_args, i)
+
+
+def _validate_audit_extra_arg(extra_args: list[str], index: int) -> int:
+    """Validate one allowed argument form and return its token width."""
+    arg = extra_args[index]
+    if _unsafe_audit_argument(arg):
+        raise ValueError("unsupported or unsafe audit argument")
+    if arg in _UV_AUDIT_RESERVED_FLAGS:
+        return 1
+    if "=" in arg:
+        _validate_pip_audit_assignment(arg)
+        return 1
+    return _validate_pip_audit_pair(extra_args, index)
+
+
+def _unsafe_audit_argument(value: str) -> bool:
+    """Return whether a command token has whitespace or control-character ambiguity."""
+    return any(ch in value for ch in "\n\r\x00") or value.strip() != value
+
+
+def _validate_pip_audit_assignment(arg: str) -> None:
+    """Validate a complete ``--option=value`` pip-audit argument."""
+    option, value = arg.split("=", 1)
+    allowed_values = _PIP_AUDIT_OPTION_VALUES.get(option)
+    if allowed_values is None or value not in allowed_values:
         raise ValueError(f"unsupported or unsafe audit argument: {arg}")
+
+
+def _validate_pip_audit_pair(extra_args: list[str], index: int) -> int:
+    """Validate a complete ``--option value`` pip-audit argument pair."""
+    arg = extra_args[index]
+    allowed_values = _PIP_AUDIT_OPTION_VALUES.get(arg)
+    if allowed_values is None or index + 1 >= len(extra_args):
+        raise ValueError(f"unsupported or unsafe audit argument: {arg}")
+    value = extra_args[index + 1]
+    if _unsafe_audit_argument(value) or value not in allowed_values:
+        raise ValueError(f"unsupported or unsafe audit argument: {value}")
+    return 2
 
 
 def build_uv_audit_argv(uv_bin: str, extra_args: list[str]) -> list[str]:

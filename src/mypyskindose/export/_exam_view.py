@@ -2,8 +2,8 @@
 
 Single-exam results arrive as a **dict** (``PySkinDoseOutput.to_dict()``) with a
 *sparse* ``dose_map`` (``[(vertex_index, dose), ...]``). Multi-exam results arrive
-as ``PySkinDoseOutput`` **objects** with a dense ``np.ndarray`` ``DoseMap`` and
-attribute access. ``ExamView`` normalizes both into one interface so the metrics
+as ``PySkinDoseOutput`` **objects** with a dense ``np.ndarray`` ``dose_map`` and
+canonical lowercase attributes. ``ExamView`` normalizes both into one interface so the metrics
 and image code never branch on dict-vs-object. See §7 of the Rich Export plan.
 """
 
@@ -107,22 +107,22 @@ def view_from_dict(output: dict[str, Any]) -> ExamView:
 
 def view_from_output(obj: Any) -> ExamView:
     """Build an ``ExamView`` from a ``PySkinDoseOutput`` object (multi-exam path)."""
-    patient = obj.Patient["patient"].to_dict()
-    kerma_reported = [float(v) for v in _to_list(obj.Events.kerma)]
-    kerma_corrected = [float(v) for v in getattr(obj, "KermaCorrected", kerma_reported)]
-    k_meter = getattr(obj, "KermaMeterCorrection", None)
+    patient = obj.patient_export()["patient"].to_dict()
+    kerma_reported = [float(v) for v in _to_list(obj.events.kerma)]
+    kerma_corrected = [float(v) for v in (obj.kerma_corrected or kerma_reported)]
+    k_meter = obj.kerma_meter_correction
     return ExamView(
-        psd=float(obj.PSD),
-        air_kerma=float(obj.AirKerma),
+        psd=float(obj.psd),
+        air_kerma=float(obj.air_kerma),
         patient=patient,
-        dense_dose_map=np.asarray(obj.DoseMap, dtype=float),
-        hits=[list(map(int, h)) for h in obj.Hits],
-        k_bs=[_to_list(ev) for ev in obj.BackscatterCorrection],
-        k_isq=[ev if isinstance(ev, (int, float)) else _to_list(ev) for ev in obj.InverseSquareLawCorrection],
-        k_med=[float(v) for v in obj.MediumCorrection],
-        k_tab=[float(v) for v in obj.TableCorrection],
+        dense_dose_map=np.asarray(obj.dose_map, dtype=float),
+        hits=[list(map(int, h)) for h in obj.sparse_hit_indices()],
+        k_bs=[_to_list(ev) for ev in obj.backscatter_correction],
+        k_isq=[ev if isinstance(ev, (int, float)) else _to_list(ev) for ev in obj.inverse_square_law_correction],
+        k_med=[float(v) for v in obj.medium_correction],
+        k_tab=[float(v) for v in obj.table_correction],
         kerma=kerma_corrected,
         k_meter=[float(v) for v in k_meter] if k_meter is not None else None,
-        air_kerma_corrected=float(getattr(obj, "AirKermaCorrected", obj.AirKerma)),
+        air_kerma_corrected=float(obj.air_kerma_corrected),
         kerma_reported=kerma_reported,
     )

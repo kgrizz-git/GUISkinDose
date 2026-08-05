@@ -119,18 +119,31 @@ class ResultsTabController:
             or not state.calculation_done
             or state.multi_exam_result is None
         ):
-            if self.last_rendered_run_id is not None:
-                self._clear_multi_exam_accordion()
-                self.refs.subset_checkboxes_container.clear()
-                self.subset_checkboxes.clear()
-                self.last_rendered_run_id = None
-                self.last_agg_map_run_id = None
-                self.refs.agg_dosemap_plot.update_figure({})
-                self.refs.run_warnings_label.set_text("")
-                self.refs.run_warnings_label.set_visibility(False)
+            self._reset_multi_exam_view()
             return
 
         res = state.multi_exam_result
+        self._set_multi_exam_summary(res)
+        self._set_multi_exam_totals()
+        self._rebuild_multi_exam_view_when_stale(res)
+        if multi_exam_results_ui_stale(self.last_agg_map_run_id, state.calc_run_id):
+            self.refresh_aggregate_dosemap_subset()
+
+    def _reset_multi_exam_view(self) -> None:
+        """Clear multi-exam controls after a completed multi-exam result disappears."""
+        if self.last_rendered_run_id is None:
+            return
+        self._clear_multi_exam_accordion()
+        self.refs.subset_checkboxes_container.clear()
+        self.subset_checkboxes.clear()
+        self.last_rendered_run_id = None
+        self.last_agg_map_run_id = None
+        self.refs.agg_dosemap_plot.update_figure({})
+        self.refs.run_warnings_label.set_text("")
+        self.refs.run_warnings_label.set_visibility(False)
+
+    def _set_multi_exam_summary(self, res: Any) -> None:
+        """Render aggregate dose, exam-count, and warning summaries."""
         self.refs.agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
         n_ok = len(res.exams)
         n_excluded = int(getattr(res, "exams_excluded", 0) or 0)
@@ -148,6 +161,8 @@ class ResultsTabController:
             self.refs.run_warnings_label.set_text("")
             self.refs.run_warnings_label.set_visibility(False)
 
+    def _set_multi_exam_totals(self) -> None:
+        """Render DAP and fluoroscopy totals when those values are available."""
         from mypyskindose.export._format import fmt_duration
         from mypyskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
 
@@ -160,6 +175,8 @@ class ResultsTabController:
             parts.append(f"Fluoro {fmt_duration(fluoro)}")
         self.refs.agg_totals_metric.set_text("  ·  ".join(parts))
 
+    def _rebuild_multi_exam_view_when_stale(self, res: Any) -> None:
+        """Recreate per-exam controls only for a new calculation run."""
         if multi_exam_results_ui_stale(self.last_rendered_run_id, state.calc_run_id):
             n = len(res.exams)
             if len(state.visible_exam_dosemaps) != n:
@@ -170,9 +187,6 @@ class ResultsTabController:
             self._build_multi_exam_accordion(res)
             self._build_subset_checkboxes(res)
             self.last_rendered_run_id = state.calc_run_id
-
-        if multi_exam_results_ui_stale(self.last_agg_map_run_id, state.calc_run_id):
-            self.refresh_aggregate_dosemap_subset()
 
     def refresh_aggregate_dosemap(self, res: Any) -> None:
         if not res.exams:
@@ -291,12 +305,12 @@ class ResultsTabController:
                 with ui.row().classes("gap-4"):
                     with ui.column().classes("gap-0"):
                         ui.label("PSD").classes(_EXAM_METRIC_LABEL_CLASSES)
-                        ui.label(f"{exam_res.output.PSD:.2f} mGy").classes(
+                        ui.label(f"{exam_res.output.psd:.2f} mGy").classes(
                             "text-aurora-purple font-bold"
                         )
                     with ui.column().classes("gap-0"):
                         ui.label("Air Kerma").classes(_EXAM_METRIC_LABEL_CLASSES)
-                        ui.label(f"{exam_res.output.AirKerma:.1f} mGy").classes(
+                        ui.label(f"{exam_res.output.air_kerma:.1f} mGy").classes(
                             "text-white font-bold"
                         )
                     with ui.column().classes("gap-0"):
