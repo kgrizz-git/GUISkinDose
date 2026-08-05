@@ -87,22 +87,35 @@ def test_image_scan_helpers_cover_success_error_and_reviewed_paths(tmp_path: Pat
     assert image_advisory._print_summary([normalized], 1, 0) == 1
     assert image_advisory._print_summary([normalized], 0, 0) == 0
 
-    monkeypatch.setattr(image_advisory, "extracted_images", lambda *_args: (_ for _ in ()).throw(RuntimeError("bad")))
+    def failing_convert(_source: Path, _destination: Path) -> None:
+        raise RuntimeError("bad")
+
+    monkeypatch.setattr(image_advisory, "convert_to_png", failing_convert)
     with pytest.raises(image_advisory.ImageScanError, match="image privacy scan failed"):
         image_advisory._scan_image_asset(object(), root, Path("fixture.png"))
 
 
-def test_image_main_accumulates_scanned_results(tmp_path: Path, monkeypatch) -> None:
+def test_image_main_accumulates_scanned_results(tmp_path: Path, monkeypatch, capsys) -> None:
     """The CLI reports an actionable exit status when its helper returns findings."""
     root = tmp_path / "snapshot"
     root.mkdir()
-    source = root / "fixture.png"
-    source.write_bytes(b"synthetic")
-    monkeypatch.setattr(image_advisory, "make_engine", lambda: object())
-    monkeypatch.setattr(image_advisory, "_scan_image_asset", lambda *_args: (Path("fixture.png"), 2))
+    first_source = root / "fixture-one.png"
+    second_source = root / "fixture-two.png"
+    first_source.write_bytes(b"synthetic")
+    second_source.write_bytes(b"synthetic")
+    results = iter([(Path("fixture-one.png"), 2), (Path("fixture-two.png"), 3)])
+
+    def scan_stub(*_args):
+        return next(results)
+
+    monkeypatch.setattr(image_advisory, "make_engine", object)
+    monkeypatch.setattr(image_advisory, "_scan_image_asset", scan_stub)
     monkeypatch.setattr(image_advisory, "is_hash_pinned_approved", lambda *_args: False)
 
-    assert image_advisory.main([str(source.relative_to(root)), "--scan-root", str(root)]) == 1
+    assert image_advisory.main(
+        [str(first_source.relative_to(root)), str(second_source.relative_to(root)), "--scan-root", str(root)]
+    ) == 1
+    assert "5 finding(s); triage required." in capsys.readouterr().out
 
 
 @pytest.mark.skipif(shutil.which("pdftoppm") is None, reason="Poppler is an optional local OCR prerequisite")
