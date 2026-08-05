@@ -23,6 +23,7 @@ from mypyskindose.export import (
     ExportSource,
     collect_export_payload,
 )
+from mypyskindose.export._exam_view import view_from_output
 from mypyskindose.input_adapters.models import InputProvenance
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "export" / "single_exam_siemens.json"
@@ -180,6 +181,14 @@ def test_payload_multi_exam_object():
     assert pce.exam_id in {"A", "B"}
     assert pce.dose_fraction == pytest.approx(0.5)
     assert "run warning" in payload.warnings.run_warnings
+
+
+def test_object_view_keeps_an_explicit_empty_corrected_kerma() -> None:
+    """Only None, not an explicit empty sequence, falls back to reported kerma."""
+    output = _fake_output_obj(_two_event_output())
+    output.kerma_corrected = []
+
+    assert view_from_output(output).kerma == []
 
 
 # ── 1.8.3 / 1.8.4 provenance branches ──────────────────────────────────────────

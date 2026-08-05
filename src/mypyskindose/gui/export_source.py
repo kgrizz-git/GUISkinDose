@@ -40,8 +40,9 @@ def build_export_source_from_gui(
 
 def _multi_exam_export_source(state: AppState, *, include_source_identifiers: bool) -> ExportSource:
     """Build a GUI export source from the current per-exam result objects."""
-    assert state.multi_exam_result is not None
     result = state.multi_exam_result
+    if result is None:
+        raise ValueError("A multi-exam result is required for multi-exam export")
     exams: list[ExportExamSource] = []
     for index, exam_result in enumerate(result.exams):
         adapter = state.loaded_exams[index] if index < len(state.loaded_exams) else None

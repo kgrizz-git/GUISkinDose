@@ -23,7 +23,9 @@ omit pure CI/refactor bullets and point readers here. See
   consumers now use lowercase object attributes (`psd`, `air_kerma`, `dose_map`, correction
   arrays, `events`) plus `patient_export()` and `sparse_hit_indices()`. The former uppercase
   object attributes have been deliberately removed to eliminate case-insensitive field
-  collisions. Dict/JSON export keys, values, and schema version are unchanged.
+  collisions. `kerma_meter_correction` and `kerma_corrected` are now normalized to
+  `list[float]` after construction; when both are omitted, the object populates unmetered
+  defaults. Dict/JSON export keys, values, and schema version are unchanged.
 - **CodeQL quality-alert cleanup** (2026-08-04) — removed dead assignments and imports,
   made intentional cleanup and fall-through paths explicit, and separated GUI table-origin
   coordinate utilities from offset handlers to break their import cycle. No user-facing

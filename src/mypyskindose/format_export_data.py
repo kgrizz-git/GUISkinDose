@@ -348,7 +348,6 @@ class PySkinDoseOutput:
     kerma_meter_correction: list[float] | None = None
     kerma_corrected: list[float] | None = None
 
-    # Derived in __post_init__ — never settable from the constructor.
     # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
     psd: float = field(init=False)
     air_kerma: float = field(init=False)
@@ -434,14 +433,18 @@ class PySkinDoseOutput:
         self.psd = float(self.dose_map.max())
         self.air_kerma = float(self.data_norm[KEY_NORMALIZATION_AIR_KERMA].sum())
         self.events = EventOutput(data_norm=self.data_norm)
-        if self.kerma_meter_correction is None:
+        kerma_meter_correction = self.kerma_meter_correction
+        kerma_corrected = self.kerma_corrected
+        if kerma_meter_correction is None and kerma_corrected is None:
             self.kerma_meter_correction = [1.0] * n_events
             self.kerma_corrected = list(self.events.kerma)
+        elif kerma_meter_correction is not None and kerma_corrected is not None:
+            self.kerma_meter_correction = [float(v) for v in kerma_meter_correction]
+            self.kerma_corrected = [float(v) for v in kerma_corrected]
         else:
-            assert self.kerma_corrected is not None  # paired by validation above
-            self.kerma_meter_correction = [float(v) for v in self.kerma_meter_correction]
-            self.kerma_corrected = [float(v) for v in self.kerma_corrected]
-        assert self.kerma_corrected is not None
+            # _validate_lengths() rejects this pair, but retain a clear invariant
+            # failure if this method is ever called independently.
+            raise ValueError("kerma_meter_correction and kerma_corrected must be paired")
         self.air_kerma_corrected = float(sum(self.kerma_corrected))
         self.patient_offsets = {
             "long": self.settings.phantom.patient_offset.d_lon,
@@ -480,7 +483,8 @@ class PySkinDoseOutput:
         """
         patient_export = self.patient_export()
         patient = patient_export["patient"]
-        assert isinstance(patient, (HumanPhantomOutput, NonHumanPhantomOutput))
+        if not isinstance(patient, (HumanPhantomOutput, NonHumanPhantomOutput)):
+            raise TypeError("patient_export() returned an unsupported patient payload")
         return {
             "schema_version": EXPORT_SCHEMA_VERSION,
             "psd": self.psd,

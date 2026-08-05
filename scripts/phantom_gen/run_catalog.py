@@ -564,7 +564,7 @@ def _process_catalog_entries(
     failures = 0
     for catalog_id in ids:
         report = _process_catalog_entry(args, catalog, catalog_id, blender)
-        failures += not report["passed"]
+        failures += int(not report["passed"])
         reports.append(report)
     return reports, failures
 

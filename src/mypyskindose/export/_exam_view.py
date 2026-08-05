@@ -109,7 +109,8 @@ def view_from_output(obj: Any) -> ExamView:
     """Build an ``ExamView`` from a ``PySkinDoseOutput`` object (multi-exam path)."""
     patient = obj.patient_export()["patient"].to_dict()
     kerma_reported = [float(v) for v in _to_list(obj.events.kerma)]
-    kerma_corrected = [float(v) for v in (obj.kerma_corrected or kerma_reported)]
+    corrected_values = obj.kerma_corrected
+    kerma_corrected = [float(v) for v in (kerma_reported if corrected_values is None else corrected_values)]
     k_meter = obj.kerma_meter_correction
     return ExamView(
         psd=float(obj.psd),
