@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ import pytest
 from stl import mesh as stl_mesh
 
 from scripts.phantom_gen.affine_control import build_affine_control
+from scripts.phantom_gen import run_catalog as catalog_runner
 from scripts.phantom_gen.path_safety import resolve_under_roots
 from scripts.phantom_gen.run_catalog import (
     build_blender_generate_argv,
@@ -522,3 +524,62 @@ def test_ingest_fun_mesh_writes_and_validates_sphere(tmp_path: Path):
     assert out.is_file()
     assert out.name == "unit_sphere.stl"
     assert report["validation_passed"], report["validation"]["checks"]
+
+
+def _catalog_run_args(tmp_path: Path) -> argparse.Namespace:
+    """Return the minimal parsed-argument shape used by catalog orchestration helpers."""
+    return argparse.Namespace(
+        catalog=tmp_path / "catalog.json",
+        out_dir=tmp_path / "out",
+        only=None,
+        priority=None,
+        install=False,
+        skip_phantom_load=True,
+        skip_shape=False,
+        json_report=None,
+        blender=None,
+    )
+
+
+def test_catalog_prepare_and_main_cover_successful_orchestration(tmp_path: Path, monkeypatch) -> None:
+    """Catalog orchestration accepts a prepared Blender/MPFB context and reports success."""
+    args = _catalog_run_args(tmp_path)
+    catalog = {"entries": {"adult": {"ship": True}}}
+    blender = tmp_path / "blender"
+    monkeypatch.setattr(catalog_runner, "load_catalog", lambda _path: catalog)
+    monkeypatch.setattr(catalog_runner, "select_ids", lambda *_args, **_kwargs: ["adult"])
+    monkeypatch.setattr(catalog_runner, "resolve_blender", lambda: str(blender))
+    monkeypatch.setattr(catalog_runner, "validate_blender_binary", lambda _binary: blender)
+    monkeypatch.setattr(catalog_runner, "blender_mpfb_available", lambda _binary: (True, "available"))
+
+    assert catalog_runner._prepare_catalog_run(args) == (catalog, ["adult"], blender)
+
+    monkeypatch.setattr(catalog_runner, "parse_args", lambda _argv: args)
+    monkeypatch.setattr(catalog_runner, "_prepare_catalog_run", lambda _args: (catalog, ["adult"], blender))
+    monkeypatch.setattr(catalog_runner, "_process_catalog_entries", lambda *_args: ([{"passed": True}], 0))
+
+    assert catalog_runner.main([]) == 0
+
+
+def test_catalog_entry_helpers_cover_failure_and_install_paths(tmp_path: Path, monkeypatch) -> None:
+    """Entry helpers preserve validation diagnostics and only install shipped passing meshes."""
+    args = _catalog_run_args(tmp_path)
+    catalog = {"entries": {"adult": {"ship": True}, "reference": {"priority": "REF"}}}
+    failed_report = {
+        "id": "adult",
+        "passed": False,
+        "steps": {"expect_ranges": {"failures": ["range"]}, "validate": {"passed": False, "checks": {}}},
+    }
+    monkeypatch.setattr(catalog_runner, "process_entry", lambda *_args, **_kwargs: failed_report)
+
+    assert catalog_runner._process_catalog_entry(args, catalog, "adult", tmp_path / "blender") == failed_report
+
+    reference_report = {"stl": str(tmp_path / "reference.stl")}
+    catalog_runner._install_passing_entry(catalog, "reference", reference_report)
+    assert "installed" not in reference_report
+
+    destination = tmp_path / "adult.stl"
+    monkeypatch.setattr(catalog_runner, "install_stl", lambda *_args: destination)
+    installed_report = {"stl": str(tmp_path / "adult.stl")}
+    catalog_runner._install_passing_entry(catalog, "adult", installed_report)
+    assert installed_report["installed"] == "adult.stl"
