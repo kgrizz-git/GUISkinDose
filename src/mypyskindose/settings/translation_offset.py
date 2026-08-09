@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 
 
 class TranslationOffset:
@@ -16,7 +15,7 @@ class TranslationOffset:
 
     """
 
-    def __init__(self, offset: Optional[Dict[str, float]] = None):
+    def __init__(self, offset: dict[str, float] | None = None):
         """Initialize class attributes.
 
         Parameters
@@ -33,7 +32,7 @@ class TranslationOffset:
         self.y: float = float(offset.get("y", 0.0) or 0.0)
         self.z: float = float(offset.get("z", 0.0) or 0.0)
 
-    def update_translation_offset(self, offset: Dict[str, float]):
+    def update_translation_offset(self, offset: dict[str, float]):
         self.x = float(offset["x"])
         self.y = float(offset["y"])
         self.z = float(offset["z"])

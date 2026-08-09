@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -7,14 +7,14 @@ from scipy.interpolate import CubicSpline
 from tqdm import tqdm
 
 from mypyskindose import constants as c
-from mypyskindose.grid_interp import format_event_indices
-from mypyskindose.phantom_class import Phantom
 from mypyskindose.calculate_dose.add_correction_and_event_dose_to_output import (
     add_corrections_and_event_dose_to_output,
 )
 from mypyskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
+from mypyskindose.grid_interp import format_event_indices
+from mypyskindose.phantom_class import Phantom
 
 if TYPE_CHECKING:
     from mypyskindose.settings import PyskindoseSettings
@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 
 def _default_mutable_event_state(
     *,
-    table_hits: List[bool] | None,
-    field_area: List[float] | None,
+    table_hits: list[bool] | None,
+    field_area: list[float] | None,
     k_isq: np.ndarray | None,
-    kerma_cf: List[float] | None,
+    kerma_cf: list[float] | None,
     total_events: int,
-) -> tuple[List[bool], List[float], np.ndarray, List[float]]:
+) -> tuple[list[bool], list[float], np.ndarray, list[float]]:
     """Normalize optional mutable per-event buffers for the event loop."""
     return (
         [] if table_hits is None else table_hits,
@@ -91,23 +91,23 @@ def calculate_irradiation_event_result(
     normalized_data: pd.DataFrame,
     event: int,
     total_events: int,
-    new_geometry: List[bool],
-    k_tab: List[float],
-    hits: List[bool],
+    new_geometry: list[bool],
+    k_tab: list[float],
+    hits: list[bool],
     patient: Phantom,
     table: Phantom,
     pad: Phantom,
-    back_scatter_interpolation: List[CubicSpline],
-    output: Dict[str, Any],
+    back_scatter_interpolation: list[CubicSpline],
+    output: dict[str, Any],
     corrections_db: str,
-    table_hits: List[bool] | None = None,
-    field_area: List[float] | None = None,
+    table_hits: list[bool] | None = None,
+    field_area: list[float] | None = None,
     k_isq: np.ndarray | None = None,
     pbar: tqdm | None = None,
     settings: "PyskindoseSettings | None" = None,
     exam_id: str | None = None,
-    kerma_cf: List[float] | None = None,
-) -> Dict[str, Any]:
+    kerma_cf: list[float] | None = None,
+) -> dict[str, Any]:
     """Conducts skin dose calculation.
 
     This function loops though all irradiation events in the the normalized data, and

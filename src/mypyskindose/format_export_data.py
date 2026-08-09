@@ -1,12 +1,11 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from mypyskindose.beam_class import Beam
-from mypyskindose.phantom_class import Phantom
 from mypyskindose.constants import (
     KEY_NORMALIZATION_AIR_KERMA,
     OUTPUT_KEY_CORRECTION_BACK_SCATTER,
@@ -24,6 +23,7 @@ from mypyskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_JSON,
 )
+from mypyskindose.phantom_class import Phantom
 from mypyskindose.settings import PyskindoseSettings
 
 # Export JSON schema version — increment when ``PySkinDoseOutput.to_dict()`` (or
@@ -213,7 +213,8 @@ class EventOutput:
             return
 
         self.beam_positions, self.beam_vertex_indices, self.detector_positions, self.detector_vertex_indices = zip(
-            *[self._extract_beam_data_list(data_norm=data_norm, event=event) for event in range(len(data_norm))]
+            *[self._extract_beam_data_list(data_norm=data_norm, event=event) for event in range(len(data_norm))],
+            strict=True,
         )
         (
             self.setup_beam_positions,
@@ -621,7 +622,7 @@ class MultiExamResult:
 
 
 def format_analysis_result_for_export(
-    analysis_result: Dict[str, Any],
+    analysis_result: dict[str, Any],
     data_norm: pd.DataFrame,
     patient: Phantom,
     table: Phantom,

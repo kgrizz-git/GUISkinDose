@@ -1,12 +1,13 @@
 import copy
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from mypyskindose import constants as c
 from mypyskindose.calculate_dose.calculate_dose import calculate_dose
+from mypyskindose.debug import dprint
 from mypyskindose.format_export_data import (
     ExamResult,
     MultiExamResult,
@@ -20,7 +21,6 @@ from mypyskindose.plotting.create_dose_map_plot import create_dose_map_plot
 from mypyskindose.plotting.create_geometry_plot import create_geometry_plot
 from mypyskindose.privacy import exception_class_name, opaque_exam_label, safe_error_event
 from mypyskindose.settings import PyskindoseSettings, initialize_settings
-from mypyskindose.debug import dprint
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def _format_multi_exam_no_output_warning(exam_id: str) -> str:
 def analyze_data(
     normalized_data: pd.DataFrame,
     settings: str | dict | PyskindoseSettings,
-) -> Dict[str, Any] | str | PySkinDoseOutput:
+) -> dict[str, Any] | str | PySkinDoseOutput:
     """Analyze data och settings, and runs PySkinDose in desired mode.
 
     Parameters

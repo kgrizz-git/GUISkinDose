@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 _TABLE_ORIGIN_AXES = ("x", "y", "z")
 
 

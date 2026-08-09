@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 from rich import print
 
@@ -81,8 +81,8 @@ class PyskindoseSettings:
     def __init__(
         self,
         settings: str | dict,
-        normalization_settings: Optional[Path | str | dict | NormalizationSettings] = None,
-        file_result_output_path: Optional[str | Path] = None,
+        normalization_settings: Path | str | dict | NormalizationSettings | None = None,
+        file_result_output_path: str | Path | None = None,
         output_format: str = RUN_ARGUMENTS_OUTPUT_HTML,
     ):
         """Initialize settings class.
@@ -95,10 +95,7 @@ class PyskindoseSettings:
             in /settings/ for example.
 
         """
-        if isinstance(settings, str):
-            tmp = json.loads(settings)
-        else:
-            tmp = settings
+        tmp = json.loads(settings) if isinstance(settings, str) else settings
 
         if (output_format := output_format.lower()) not in RUN_ARGUMENTS_VALID_OUTPUT_FORMATS:
             raise ValueError(
@@ -141,7 +138,7 @@ class PyskindoseSettings:
         )
 
     @staticmethod
-    def _initialize_output_path(output_path: Optional[str | Path], output_format: str) -> Path:
+    def _initialize_output_path(output_path: str | Path | None, output_format: str) -> Path:
         """Resolve the plot/output directory for the chosen output_format."""
         if output_path is None:
             output = Path.cwd() / "PlotOutputs"
@@ -165,7 +162,7 @@ class PyskindoseSettings:
 
     @staticmethod
     def _initialize_normalization_settings(
-        normalization_settings: Optional[Path | str | dict | NormalizationSettings]
+        normalization_settings: Path | str | dict | NormalizationSettings | None
     ) -> NormalizationSettings:
         """Load NormalizationSettings from path, dict, or existing instance."""
         if normalization_settings is None:
@@ -181,7 +178,7 @@ class PyskindoseSettings:
             settings_dict = normalization_settings
             if "normalization_settings" in settings_dict:
                 settings_dict = settings_dict["normalization_settings"]
-            normalization_settings = NormalizationSettings(cast(List[Dict[str, Any]], settings_dict))
+            normalization_settings = NormalizationSettings(cast(list[dict[str, Any]], settings_dict))
 
         if isinstance(normalization_settings, NormalizationSettings):
             return normalization_settings

@@ -1,5 +1,5 @@
 import logging
-from typing import List, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -53,7 +53,7 @@ def calculate_k_isq(source: np.ndarray, cells: np.ndarray, dref: float) -> np.nd
     return np.square(dref / np.linalg.norm(cells - source, axis=1))
 
 
-def calculate_k_bs(data_norm: pd.DataFrame) -> List[CubicSpline]:
+def calculate_k_bs(data_norm: pd.DataFrame) -> list[CubicSpline]:
     """Calculate backscatter correction.
 
     This function calculates the backscatter correction factor for all events, at field
@@ -111,7 +111,7 @@ def calculate_k_bs(data_norm: pd.DataFrame) -> List[CubicSpline]:
     return bs_interp
 
 
-def calculate_k_med(data_norm: pd.DataFrame, field_area: List[float], event: int, corrections_db: str) -> float:
+def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int, corrections_db: str) -> float:
     """Calculate medium correction.
 
     This function calculates and appends the medium correction factor for all skin cells
@@ -275,9 +275,9 @@ def _lookup_single_cu(
 
 def _log_k_tab_warnings(
     n: int,
-    no_device: List[int],
-    interpolated: List[int],
-    clamped: List[int],
+    no_device: list[int],
+    interpolated: list[int],
+    clamped: list[int],
 ) -> None:
     """Emit the three per-class k_tab WARNING summaries (no_device / interpolated /
     clamped). Message strings are pinned by ``test_corrections.py`` and the golden
@@ -305,7 +305,7 @@ def _log_k_tab_warnings(
 
 def calculate_k_tab(
     data_norm: pd.DataFrame, corrections_db: str, estimate_k_tab: bool = False, k_tab_val: float = 0.8
-) -> List[float]:
+) -> list[float]:
     """Fetch table correction factor from database.
 
     This function fetches measured table correction factor as a function of
@@ -345,9 +345,9 @@ def calculate_k_tab(
     conn.close()
 
     k_tab = [1.0] * len(data_norm)
-    no_device_events: List[int] = []
-    interpolated_events: List[int] = []
-    clamped_events: List[int] = []
+    no_device_events: list[int] = []
+    interpolated_events: list[int] = []
+    clamped_events: list[int] = []
 
     # Cache the (kVp × Cu) pivot per (device, plane, Al) slice — built only when an
     # off-grid event actually needs interpolation (exact matches skip it).

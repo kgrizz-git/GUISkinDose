@@ -1,13 +1,13 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from scipy.interpolate import CubicSpline
 
 from mypyskindose import constants as c
-from mypyskindose.phantom_class import Phantom
 from mypyskindose.corrections import calculate_k_med
+from mypyskindose.phantom_class import Phantom
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +15,16 @@ logger = logging.getLogger(__name__)
 def add_corrections_and_event_dose_to_output(
     normalized_data: pd.DataFrame,
     event: int,
-    hits: List[bool],
-    table_hits: List[bool],
+    hits: list[bool],
+    table_hits: list[bool],
     patient: Phantom,
-    back_scatter_interpolation: List[CubicSpline],
-    field_area: List[float],
-    k_tab: List[float],
+    back_scatter_interpolation: list[CubicSpline],
+    field_area: list[float],
+    k_tab: list[float],
     corrections_db: str,
-    output: Dict[str, Any],
+    output: dict[str, Any],
     kerma_cf: float = 1.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Add correction factors and event dose to output dictionary.
 
     Parameters

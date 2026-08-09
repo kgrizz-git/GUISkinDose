@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 
 
 class RotationDirection:
@@ -13,7 +12,7 @@ class RotationDirection:
 
     """
 
-    def __init__(self, directions: Optional[Dict[str, str]] = None):
+    def __init__(self, directions: dict[str, str] | None = None):
         """Initialize class attributes.
 
         Parameters
@@ -30,7 +29,7 @@ class RotationDirection:
         self.At2: int = 1 if directions is None else self._get_direction_as_value(directions["At2"])
         self.At3: int = 1 if directions is None else self._get_direction_as_value(directions["At3"])
 
-    def update_rotation_direction(self, directions: Dict[str, str]):
+    def update_rotation_direction(self, directions: dict[str, str]):
         self.Ap1 = self._get_direction_as_value(directions["Ap1"])
         self.Ap2 = self._get_direction_as_value(directions["Ap2"])
         self.Ap3 = self._get_direction_as_value(directions["Ap3"])

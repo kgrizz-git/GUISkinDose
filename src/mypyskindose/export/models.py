@@ -64,10 +64,10 @@ class ExportExamSource:
     """One exam's inputs for export, populated by GUI or CLI adapters."""
 
     exam_id: str
-    normalized_data: "pd.DataFrame"
-    provenance: "InputProvenance | None"
+    normalized_data: pd.DataFrame
+    provenance: InputProvenance | None
     source_file: str | None
-    effective_settings: "PyskindoseSettings"
+    effective_settings: PyskindoseSettings
     patient_offset: tuple[float, float, float]
     transform_meta: dict[str, Any] = field(default_factory=dict)
     extra_warnings: list[str] = field(default_factory=list)
@@ -83,7 +83,7 @@ class ExportSource:
 
     execution_context: Literal["gui", "cli"]
     output_dict: dict[str, Any] | None = None
-    multi_exam_result: "MultiExamResult | None" = None
+    multi_exam_result: MultiExamResult | None = None
     exams: list[ExportExamSource] = field(default_factory=list)
     calc_warnings: list[str] = field(default_factory=list)
     import_warnings: list[str] = field(default_factory=list)

@@ -13,10 +13,11 @@ from typing import cast
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Font, PatternFill
-
-from mypyskindose.safe_output import atomic_write_private
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+
+from mypyskindose.safe_output import atomic_write_private
+from mypyskindose.spreadsheet_safety import neutralize_spreadsheet_value
 
 from .._format import (
     COLOR_ERROR,
@@ -29,8 +30,6 @@ from .._format import (
     corrections_use_kerma_meter,
     dosimetric_rows,
 )
-from mypyskindose.spreadsheet_safety import neutralize_spreadsheet_value
-
 from ..models import ExamSection, ExportPayload
 
 _BOLD = Font(bold=True)
@@ -122,7 +121,7 @@ def _results_sheet(wb: Workbook, payload: ExportPayload) -> None:
             rows.append([name, *row_vals, str(cum_col.get(name, "N/A"))])
         _write_rows(ws, rows, header=True)
     else:
-        rows = [["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics)
+        rows = [["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)]
         _write_rows(ws, rows, header=True)
     _autofit(ws)
 

@@ -1,10 +1,10 @@
 from .analyze_data import analyze_data as analyze_data
-from .main import analyze_input_file as analyze_input_file
 from .beam_class import Beam as Beam
 from .geom_calc import check_new_geometry as check_new_geometry
 from .geom_calc import fetch_and_append_hvl as fetch_and_append_hvl
 from .geom_calc import position_patient_phantom_on_table as position_patient_phantom_on_table
 from .geom_calc import scale_field_area as scale_field_area
+from .main import analyze_input_file as analyze_input_file
 from .phantom_class import Phantom as Phantom
 from .plotting import plot_geometry as plot_geometry
 from .rdsr_normalizer import rdsr_normalizer as rdsr_normalizer

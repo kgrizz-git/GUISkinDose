@@ -14,7 +14,6 @@ import traceback
 from pathlib import Path
 from typing import Final
 
-
 _CODE_RE: Final = re.compile(r"^[A-Za-z][A-Za-z0-9_.:-]{0,63}$")
 _SAFE_EXCEPTION_RE: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,79}$")
 # Frame function names are code identifiers (incl. <module>, <lambda>, <listcomp>).
@@ -125,7 +124,7 @@ def safe_error_event(
         logger.debug("%s traceback (value-free):\n%s", op, detail)
 
 
-def safe_warning(logger: logging.Logger, code: str, **metrics: int | float | bool | None) -> None:
+def safe_warning(logger: logging.Logger, code: str, **metrics: float | bool | None) -> None:
     """Log a warning code with allowlisted scalar metrics only.
 
     String metrics are deliberately not accepted: even apparently harmless

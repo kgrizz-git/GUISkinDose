@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Optional
 
 from mypyskindose.settings import PyskindoseSettings, initialize_settings
 
@@ -8,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_settings_to_settings_class(
-    settings: Optional[str | dict | PyskindoseSettings] = None,
+    settings: str | dict | PyskindoseSettings | None = None,
 ) -> PyskindoseSettings:
     if settings is not None:
         try:

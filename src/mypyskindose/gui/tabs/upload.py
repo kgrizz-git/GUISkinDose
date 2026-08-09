@@ -8,7 +8,7 @@ so existing import paths (tests, ``app.py``) continue to work.
 
 from __future__ import annotations
 
-from .upload_builders import (  # noqa: F401  (re-exports)
+from .upload_builders import (
     MAX_UPLOAD_BYTES,
     build,
     upload_exceeds_limit,

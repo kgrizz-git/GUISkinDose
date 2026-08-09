@@ -1,4 +1,3 @@
-from typing import List
 
 import plotly.graph_objects as go
 
@@ -132,9 +131,9 @@ def _create_detector_wire_frame(beam: Beam, line_width: int, visible: bool) -> g
 
 
 def _create_wireframe_scatter3d(
-    x: List[float],
-    y: List[float],
-    z: List[float],
+    x: list[float],
+    y: list[float],
+    z: list[float],
     line_width: int,
     visible: bool,
     color: str,

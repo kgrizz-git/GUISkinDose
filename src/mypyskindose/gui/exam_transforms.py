@@ -244,7 +244,7 @@ def _drop_exams_for_path(state: AppState, file_path: Path) -> None:
     """
     keep_exams: list = []
     keep_meta: list[dict] = []
-    for exam, meta in zip(state.loaded_exams, state.loaded_exam_meta):
+    for exam, meta in zip(state.loaded_exams, state.loaded_exam_meta, strict=True):
         if meta.get("file_path") == file_path:
             continue
         keep_exams.append(exam)

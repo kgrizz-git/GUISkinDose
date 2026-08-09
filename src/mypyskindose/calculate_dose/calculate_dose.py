@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -85,7 +85,7 @@ def calculate_dose(
     table: Phantom,
     pad: Phantom,
     exam_id: str | None = None,
-) -> Tuple[Optional[Phantom], Optional[Dict[str, Any]], Optional[pd.DataFrame]]:
+) -> tuple[Phantom | None, dict[str, Any] | None, pd.DataFrame | None]:
     """Calculate skin dose.
 
     This function initializes the skin dose calculations.
@@ -220,7 +220,7 @@ def _make_progress_bar(notebook_mode: bool, total: int):
     return tqdm(**kwargs)
 
 
-def _build_output_template(total_number_of_events: int, dose_map_size: int) -> Dict[str, Any]:
+def _build_output_template(total_number_of_events: int, dose_map_size: int) -> dict[str, Any]:
     """Build the per-event output dictionary with type-accurate placeholders.
 
     Each per-event slot is overwritten by :func:`calculate_irradiation_event_result`

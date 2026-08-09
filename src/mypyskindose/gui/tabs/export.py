@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from nicegui import run, ui
@@ -76,7 +76,7 @@ def _open_path(path: Path, *, reveal: bool = False) -> bool:
             else:
                 import os
 
-                os.startfile(str(target))  # type: ignore[attr-defined]  # noqa: S606 — Windows-only
+                os.startfile(str(target))  # type: ignore[attr-defined]
             return True
         if sys.platform == "darwin":
             args = ["open", "-R", str(target)] if reveal else ["open", str(target)]
@@ -310,7 +310,7 @@ class ExportTabController:
             return
         fmt = self.fmt_select.value
         title = (self.title_input.value or "").strip() or None
-        stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        stamp = datetime.now(UTC).strftime("%Y-%m-%d_%H%M%S")
         default_name = f"mypyskindose_report_{stamp}.{fmt}"
         save_path = await _get_save_path(default_name, fmt)
         if save_path is None and _is_native_mode():
@@ -403,8 +403,7 @@ def _build_rich_report_dialog(controller: ExportTabController) -> None:
 
 def build(_ctx: PageContext) -> None:
     controller = ExportTabController()
-    with ui.tab_panel("export"):
-        with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            _build_export_header(controller)
-            _build_rich_report_dialog(controller)
-            _build_export_cards(controller)
+    with ui.tab_panel("export"), ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
+        _build_export_header(controller)
+        _build_rich_report_dialog(controller)
+        _build_export_cards(controller)

@@ -1,15 +1,13 @@
 import logging
-from typing import List
 
 import numpy as np
 import pandas as pd
 
 from mypyskindose import constants as c
 from mypyskindose.beam_class import Beam
-from mypyskindose.geom_calc import scale_field_area
-from mypyskindose.phantom_class import Phantom
 from mypyskindose.corrections import calculate_k_isq
-from mypyskindose.geom_calc import check_table_hits
+from mypyskindose.geom_calc import check_table_hits, scale_field_area
+from mypyskindose.phantom_class import Phantom
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +19,9 @@ def perform_calculations_for_new_geometries(
     patient: Phantom,
     table: Phantom,
     pad: Phantom,
-    hits: List[bool],
-    table_hits: List[bool],
-    field_area: List[float],
+    hits: list[bool],
+    table_hits: list[bool],
+    field_area: list[float],
     k_isq: np.ndarray,
 ):
     if not new_geometry:

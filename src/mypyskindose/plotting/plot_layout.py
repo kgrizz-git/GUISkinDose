@@ -6,7 +6,8 @@ dose-map plots. Does **not** cover ``gui/figures.py`` (NiceGUI app plots).
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import plotly.graph_objects as go
 
