@@ -293,6 +293,7 @@ class TestRegistry:
 
 def _default_settings():
     from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+
     from mypyskindose.settings import PyskindoseSettings
 
     return PyskindoseSettings(DEVELOPMENT_PARAMETERS)
@@ -440,7 +441,7 @@ class TestSchemaAutoDetect:
 
         # Header = every radimetrics known name (full recall) + a single stray
         # generic_rdsr column + many unrelated filler columns (drives precision down).
-        stray_generic = sorted(GENERIC_RDSR_COLUMN_NAMES)[0]
+        stray_generic = min(GENERIC_RDSR_COLUMN_NAMES)
         header = (
             sorted(RADIMETRICS_COLUMN_NAMES)
             + [stray_generic]

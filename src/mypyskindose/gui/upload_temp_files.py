@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import atexit
-from contextlib import suppress
 import logging
 import os
 import shutil
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 
 from mypyskindose.privacy import safe_error_event

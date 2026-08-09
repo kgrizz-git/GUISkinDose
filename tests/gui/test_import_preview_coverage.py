@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest

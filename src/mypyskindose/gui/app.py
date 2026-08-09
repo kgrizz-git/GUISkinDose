@@ -22,16 +22,15 @@ os.environ["COLORAMA_DISABLE"] = "1"
 
 from nicegui import Client, app, ui
 
+from mypyskindose.debug import configure_logging, dprint
 from mypyskindose.privacy import opaque_exam_label, safe_error_event
 
-from mypyskindose.debug import configure_logging, dprint
-
+from .native_geometry import register_native_geometry_tracking
 from .notifications import install_notification_defaults
 from .onboarding import dismiss_onboarding, is_onboarding_dismissed
-from .native_geometry import register_native_geometry_tracking
 from .page_context import PageContext
-from .styles import MODERN_CSS
 from .state import state
+from .styles import MODERN_CSS
 from .tabs import calculate as calculate_tab
 from .tabs import data as data_tab
 from .tabs import export as export_tab

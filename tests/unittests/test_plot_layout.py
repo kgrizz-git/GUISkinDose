@@ -77,7 +77,7 @@ def test_default_dosemap_layout_hides_scene_ticks():
 
 def test_create_layout_for_dose_map_plots_preserves_explicit_dimensions():
     """Legacy wrapper must forward caller-supplied size, margin, and colors."""
-    custom_margin = dict(l=11, r=22, b=33, t=44)
+    custom_margin = {"l": 11, "r": 22, "b": 33, "t": 44}
     custom_height = 720
     custom_width = 1280
 

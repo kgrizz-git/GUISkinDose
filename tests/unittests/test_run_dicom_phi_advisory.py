@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 from scripts import run_dicom_phi_advisory as dicom_advisory
 from scripts.run_dicom_phi_advisory import finding_count

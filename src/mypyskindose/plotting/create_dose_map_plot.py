@@ -1,20 +1,19 @@
 import logging
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import plotly.graph_objects as go
 from PIL import Image
 
 from mypyskindose.phantom_class import Phantom
-from mypyskindose.privacy import safe_error_event
-from mypyskindose.safe_output import atomic_write_private
 from mypyskindose.plotting.create_layout_for_dose_map_plots import (
     create_layout_for_dose_map_plots,
 )
 from mypyskindose.plotting.create_notebook_dose_map_plot import (
     create_notebook_dose_map_plot,
 )
+from mypyskindose.privacy import safe_error_event
+from mypyskindose.safe_output import atomic_write_private
 from mypyskindose.settings import PyskindoseSettings
 
 from ..constants import (
@@ -72,7 +71,7 @@ def create_dose_map_plot(patient: Phantom, settings: PyskindoseSettings, dose_ma
     # append dosemap to patient
     patient.dose = dose_map
 
-    COLOR_CANVAS, COLOR_PLOT_TEXT, COLOR_GRID, COLOR_ZERO_LINE = fetch_plot_colors(dark_mode=settings.plot.dark_mode)
+    COLOR_CANVAS, COLOR_PLOT_TEXT, _COLOR_GRID, _COLOR_ZERO_LINE = fetch_plot_colors(dark_mode=settings.plot.dark_mode)
 
     PLOT_HEIGHT, PLOT_WIDTH = fetch_plot_size(notebook_mode=settings.plot.notebook_mode)
 
@@ -131,7 +130,7 @@ def create_dose_map_plot(patient: Phantom, settings: PyskindoseSettings, dose_ma
     # proceed with creating static dose map
     eyes = [PLOT_EYE_RIGHT, PLOT_EYE_BACK, PLOT_EYE_LEFT, PLOT_EYE_FRONT]
 
-    names: List[Path] = [
+    names: list[Path] = [
         settings.file_result_output_path / f"{filename}{PLOT_FILE_TYPE_STATIC}" for filename in PLOT_ORDER_STATIC
     ]
 

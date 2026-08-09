@@ -19,6 +19,11 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **Ruff 0.16.2 development-tool upgrade** (2026-08-09) — refreshed the locked
+  linter and pre-commit hook, then applied its safe modernization fixes. Ruff 0.16
+  expands its implicit default rule set substantially, so the project's existing
+  Flake8-compatible `E4`/`E7`/`E9`/`F` baseline is now explicit; no broader lint
+  policy was adopted as part of this dependency upgrade.
 - **PySkinDoseOutput canonical lowercase API** (2026-08-05) — multi-exam and rich-export
   consumers now use lowercase object attributes (`psd`, `air_kerma`, `dose_map`, correction
   arrays, `events`) plus `patient_export()` and `sparse_hit_indices()`. The former uppercase

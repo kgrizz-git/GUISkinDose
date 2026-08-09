@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import pandas as pd
 
@@ -20,7 +19,7 @@ def plot_procedure(
     table: Phantom,
     pad: Phantom,
     include_patient: bool,
-    patient: Optional[Phantom] = None,
+    patient: Phantom | None = None,
     dark_mode: bool = True,
     notebook_mode: bool = False,
 ):
@@ -56,7 +55,7 @@ def plot_procedure(
 
     if include_patient and patient is None:
         logger.error("Plot procedure called with include patient but no patient input")
-        raise IOError("Patient object must be given when include_patient set to True")
+        raise OSError("Patient object must be given when include_patient set to True")
 
     logger.info(f"Plotting entire procedure with {len(data_norm)} irradiation events")
 
@@ -77,7 +76,7 @@ def plot_procedure(
 
     data = [
         trace
-        for plot_object in meshes[0].keys()
+        for plot_object in meshes[0]
         for event in meshes
         for trace in [event.get(plot_object)]
         if trace is not None

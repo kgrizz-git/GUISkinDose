@@ -10,8 +10,8 @@ from pathlib import Path
 
 from reportlab.pdfgen import canvas
 
-from scripts.check_commit_message import scan_commit_message
 from scripts import check_sensitive_content
+from scripts.check_commit_message import scan_commit_message
 from scripts.check_sensitive_content import asset_kind, is_probably_binary, run_checks, sha256
 
 
@@ -502,7 +502,7 @@ def test_resolve_worktree_roots_do_not_widen_to_arbitrary_paths(tmp_path: Path, 
 
 def test_full_utf8_file_is_not_binary(tmp_path: Path) -> None:
     markdown = tmp_path / "notes.md"
-    markdown.write_bytes(b"a" * 8191 + "—".encode("utf-8"))
+    markdown.write_bytes(b"a" * 8191 + "—".encode())
 
     assert is_probably_binary(markdown) is False
 

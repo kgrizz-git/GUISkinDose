@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -11,11 +11,11 @@ from mypyskindose.constants import (
     KEY_RDSR_MANUFACTURER,
     KEY_RDSR_MANUFACTURER_MODEL_NAME,
 )
+from mypyskindose.debug import dprint
 from mypyskindose.helpers.create_attributes_string import create_attributes_string
 from mypyskindose.settings.rotation_direction import RotationDirection
 from mypyskindose.settings.translation_direction import TranslationDirection
 from mypyskindose.settings.translation_offset import TranslationOffset
-from mypyskindose.debug import dprint
 
 _GE_MANUFACTURER_ALIASES = frozenset(
     {
@@ -95,14 +95,14 @@ class NormalizationSettings:
 
     """
 
-    def __init__(self, normalization_settings: List[Dict[str, Any]]):
+    def __init__(self, normalization_settings: list[dict[str, Any]]):
         """Initialize class attributes."""
-        self.normalization_settings_list: List[Dict[str, Any]] = normalization_settings
+        self.normalization_settings_list: list[dict[str, Any]] = normalization_settings
         self.trans_offset: TranslationOffset = TranslationOffset()
         self.trans_dir: TranslationDirection = TranslationDirection()
         self.rot_dir: RotationDirection = RotationDirection()
-        self.field_size_mode: Optional[str] = None
-        self.detector_side_length: Optional[str] = None
+        self.field_size_mode: str | None = None
+        self.detector_side_length: str | None = None
         self.normalization_method: str = "Unknown"
         self.matched_manufacturer: str = ""
         self.matched_model: str = ""

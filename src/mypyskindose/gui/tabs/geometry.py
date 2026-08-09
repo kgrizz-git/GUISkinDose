@@ -8,7 +8,7 @@ import paths (``app.py``, tests) continue to work.
 
 from __future__ import annotations
 
-from ..geometry_preview import geometry_vendor_notice  # noqa: F401  (re-export)
-from .geometry_builders import build  # noqa: F401  (re-export)
+from ..geometry_preview import geometry_vendor_notice
+from .geometry_builders import build
 
 __all__ = ["build", "geometry_vendor_notice"]

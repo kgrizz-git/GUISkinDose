@@ -8,7 +8,7 @@ All layout, controller, and callback logic lives in
 
 from __future__ import annotations
 
-from .results_builders import (  # noqa: F401  (re-exports)
+from .results_builders import (
     build,
     can_show_more_inline,
     compute_subset_aggregate,

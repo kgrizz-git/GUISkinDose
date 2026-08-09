@@ -9,9 +9,9 @@ from typing import Any
 import pandas as pd
 import pydicom
 
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
 from mypyskindose.privacy import safe_error_event
+from mypyskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
+from mypyskindose.rdsr_parser import rdsr_parser
 
 from .exam_transforms import (
     _apply_transform_flags,
@@ -22,7 +22,6 @@ from .geometry_preview import on_exams_loaded
 from .offset_handlers import reset_global_offsets_on_new_load
 from .settings_builder import build_settings
 from .state import AppState
-
 
 logger = logging.getLogger(__name__)
 

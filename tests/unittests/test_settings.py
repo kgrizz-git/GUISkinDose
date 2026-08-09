@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from mypyskindose.settings import PyskindoseSettings
 from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+
+from mypyskindose.settings import PyskindoseSettings
 
 settings = PyskindoseSettings(settings=DEVELOPMENT_PARAMETERS)
 

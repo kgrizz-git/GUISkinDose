@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import cast
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -13,6 +13,7 @@ import pytest
 pytest.importorskip("nicegui")
 
 from mypyskindose import get_path_to_example_rdsr_files
+from mypyskindose.gui.exam_loaders import _append_multi_study_exams
 from mypyskindose.gui.helpers import (
     build_settings,
     commit_table_origin_transform,
@@ -28,10 +29,9 @@ from mypyskindose.gui.helpers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
-from mypyskindose.gui.exam_loaders import _append_multi_study_exams
-from mypyskindose.gui.tabs.geometry import geometry_vendor_notice
 from mypyskindose.gui.page_context import PageContext
 from mypyskindose.gui.state import AppState
+from mypyskindose.gui.tabs.geometry import geometry_vendor_notice
 from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
 
 

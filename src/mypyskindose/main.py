@@ -1,7 +1,8 @@
 import logging
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Optional, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -33,7 +34,7 @@ _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 
 def _settings_with_output_format(
-    settings: Optional[str | dict | PyskindoseSettings], output_format: str
+    settings: str | dict | PyskindoseSettings | None, output_format: str
 ) -> PyskindoseSettings:
     """Parse settings and force the requested output_format."""
     settings_obj = parse_settings_to_settings_class(settings=settings)
@@ -55,7 +56,7 @@ def _warn_for_tabular_input(result: Any) -> None:
 def _read_input_for_analysis(
     file_path: str | Path,
     settings: PyskindoseSettings,
-    input_schema: Optional[str],
+    input_schema: str | None,
     sheet_name: str | int,
 ) -> Any:
     """Load either a tabular input through its adapter or a legacy RDSR/JSON input."""
@@ -112,8 +113,8 @@ def _print_input_preview(result: Any, exam_index: int, include_sensitive_values:
 
 
 def main(
-    file_path: Optional[str] = None,
-    settings: Optional[str | dict | PyskindoseSettings] = None,
+    file_path: str | None = None,
+    settings: str | dict | PyskindoseSettings | None = None,
 ):
     """Run PySkinDose.
 
@@ -153,9 +154,9 @@ def main(
 
 def analyze_input_file(
     file_path: str | Path,
-    settings: Optional[str | dict | PyskindoseSettings] = None,
+    settings: str | dict | PyskindoseSettings | None = None,
     *,
-    input_schema: Optional[str] = None,
+    input_schema: str | None = None,
     sheet_name: str | int = 0,
     output_format: str = RUN_ARGUMENTS_OUTPUT_DICT,
 ) -> Any:
@@ -189,9 +190,9 @@ def analyze_input_file(
 
 def analyze_multiple_input_files(
     file_paths: Sequence[str | Path],
-    settings: Optional[str | dict | PyskindoseSettings] = None,
+    settings: str | dict | PyskindoseSettings | None = None,
     *,
-    input_schema: Optional[str] = None,
+    input_schema: str | None = None,
     sheet_name: str | int = 0,
     per_exam_offsets: list[list[float]] | None = None,
 ) -> MultiExamResult:
@@ -274,7 +275,7 @@ def analyze_multiple_input_files(
 def preview_input_file(
     file_path: str | Path,
     *,
-    input_schema: Optional[str] = None,
+    input_schema: str | None = None,
     sheet_name: str | int = 0,
     include_sensitive_values: bool = False,
 ) -> None:
@@ -300,7 +301,7 @@ def preview_input_file(
 def analyze_normalized_data_with_custom_settings_object(
     data_norm: pd.DataFrame,
     settings: PyskindoseSettings | str | dict,
-    output_format: Optional[str] = RUN_ARGUMENTS_OUTPUT_JSON,
+    output_format: str | None = RUN_ARGUMENTS_OUTPUT_JSON,
 ) -> str | dict[str, Any] | PySkinDoseOutput:
     """Run PySkinDose with custom normalized data and a custom specified settings objects.
 
@@ -356,9 +357,9 @@ def build_cli_export_source(
     file_paths: Sequence[str | Path],
     settings: str | dict | PyskindoseSettings | None,
     *,
-    input_schema: Optional[str] = None,
+    input_schema: str | None = None,
     sheet_name: str | int = 0,
-    report_title: Optional[str] = None,
+    report_title: str | None = None,
     include_source_identifiers: bool = False,
 ):
     """Run a calculation for export and assemble an ``ExportSource`` (no GUI).
@@ -473,7 +474,7 @@ def _load_inputs_for_export(resolved_paths, settings_obj, input_schema, sheet_na
 
 
 def validate_export_flags(
-    export_format: Optional[str],
+    export_format: str | None,
     *,
     aggregate_only: bool,
     input_preview_only: bool,
@@ -499,9 +500,9 @@ def run_cli_export(
     settings: str | dict | PyskindoseSettings | None,
     export_format: str,
     *,
-    export_path: Optional[Path] = None,
-    export_title: Optional[str] = None,
-    input_schema: Optional[str] = None,
+    export_path: Path | None = None,
+    export_title: str | None = None,
+    input_schema: str | None = None,
     sheet_name: str | int = 0,
     include_source_identifiers: bool = False,
     force: bool = False,

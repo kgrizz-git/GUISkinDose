@@ -5,12 +5,11 @@ from __future__ import annotations
 import base64
 import io
 from types import SimpleNamespace
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
-
-from typing import Any, cast
 
 from mypyskindose import PyskindoseSettings, load_settings_example_json
 from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload

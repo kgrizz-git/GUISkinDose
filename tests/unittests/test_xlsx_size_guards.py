@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
+from typing import Self
 
 import pytest
 from openpyxl import Workbook
@@ -138,7 +139,7 @@ def test_count_decompressed_member_enforces_streamed_budget(
             self._offset += len(chunk)
             return chunk
 
-        def __enter__(self) -> "_FakeMember":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *args: object) -> None:

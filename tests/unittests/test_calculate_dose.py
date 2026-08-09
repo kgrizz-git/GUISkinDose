@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 import pydicom
 import pytest
-
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
 from mypyskindose import constants as c

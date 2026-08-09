@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -13,8 +12,8 @@ def create_geometry_plot_texts(
     beam: Beam,
     table: Phantom,
     pad: Phantom,
-    patient: Optional[Phantom] = None,
-) -> Tuple[List[str], List[str], List[str], List[str], List[str], Optional[List[str]]]:
+    patient: Phantom | None = None,
+) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str] | None]:
     """Create lists text strings to show when hovering in geometry plots
 
     Parameters

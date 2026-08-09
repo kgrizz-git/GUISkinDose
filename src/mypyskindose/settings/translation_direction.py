@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 
 
 class TranslationDirection:
@@ -17,7 +16,7 @@ class TranslationDirection:
     y: int
     z: int
 
-    def __init__(self, directions: Optional[Dict[str, str]] = None):
+    def __init__(self, directions: dict[str, str] | None = None):
         """Initialize class attributes.
 
         Parameters
@@ -31,7 +30,7 @@ class TranslationDirection:
         self.y = 1 if directions is None else self._get_direction_as_value(directions["y"])
         self.z = 1 if directions is None else self._get_direction_as_value(directions["z"])
 
-    def update_translation_direction(self, directions: Dict[str, str]):
+    def update_translation_direction(self, directions: dict[str, str]):
         self.x = self._get_direction_as_value(directions["x"])
         self.y = self._get_direction_as_value(directions["y"])
         self.z = self._get_direction_as_value(directions["z"])

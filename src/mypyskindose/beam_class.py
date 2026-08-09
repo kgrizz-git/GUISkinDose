@@ -1,4 +1,3 @@
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -180,7 +179,7 @@ class Beam:
             )
         )
 
-    def check_hit(self, patient: Phantom) -> List[bool]:
+    def check_hit(self, patient: Phantom) -> list[bool]:
         """Calculate which patient entrance skin cells are hit by the beam.
 
         A description of this algoritm is presented in the wiki, please visit

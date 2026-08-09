@@ -22,10 +22,10 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from nicegui import run, ui  # noqa: E402
+from nicegui import run, ui
 
-from mypyskindose.gui.state import state  # noqa: E402
-from mypyskindose.gui.tabs import export as export_tab  # noqa: E402
+from mypyskindose.gui.state import state
+from mypyskindose.gui.tabs import export as export_tab
 
 
 @pytest.fixture(autouse=True)
@@ -41,7 +41,7 @@ def _messages(calls: list[tuple[tuple, dict]]) -> list[str]:
 
 async def _fake_cancelled_io_bound(callback, *args, **kwargs):
     """Mirror NiceGUI's real cancel/shutdown contract: return None, call nothing."""
-    return None
+    return
 
 
 @pytest.mark.asyncio

@@ -12,7 +12,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-import mypyskindose.gui.exam_loaders as exam_loaders
+from mypyskindose.gui import exam_loaders
 from mypyskindose.gui.state import AppState
 from mypyskindose.rdsr_normalizer import RdsrUnitError
 

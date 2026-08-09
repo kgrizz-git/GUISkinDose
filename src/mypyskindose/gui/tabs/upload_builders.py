@@ -28,12 +28,12 @@ from ..helpers import (
     restore_globals_from_exam_meta,
 )
 from ..state import reset_results, state
+from ..ui_copy import copy_text
 from ..upload_temp_files import (
     clear_all_temp_uploads,
     create_temp_upload,
     remove_temp_upload,
 )
-from ..ui_copy import copy_text
 from ..widgets.event_table import build as build_event_table
 from ..widgets.import_preview import build as build_import_preview
 
@@ -475,14 +475,13 @@ def _build_normalization_warning() -> None:
         "modern-card w-full border-red-900 bg-red-950/20"
     ).bind_visibility_from(
         state, "normalization_method", backward=lambda v: v == "Fallback"
-    ):
-        with ui.row().classes("items-center gap-3"):
-            ui.icon("warning", color="negative").classes("text-xl icon-outlined")
-            ui.label().bind_text_from(
-                state,
-                "normalization_warnings",
-                backward=lambda ws: f"NORMALIZATION ALERT: {ws[0]}" if ws else "",
-            ).classes("mono-text text-xs font-bold text-red-400")
+    ), ui.row().classes("items-center gap-3"):
+        ui.icon("warning", color="negative").classes("text-xl icon-outlined")
+        ui.label().bind_text_from(
+            state,
+            "normalization_warnings",
+            backward=lambda ws: f"NORMALIZATION ALERT: {ws[0]}" if ws else "",
+        ).classes("mono-text text-xs font-bold text-red-400")
 
 
 def _build_upload_card(ctrl: UploadTabController) -> None:
@@ -541,13 +540,12 @@ def build_upload_panel(ctx: PageContext) -> None:
     """Construct and wire the complete Upload tab."""
     ctrl = UploadTabController(ctx)
 
-    with ui.tab_panel("upload"):
-        with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            _build_header()
-            _build_normalization_warning()
-            _build_upload_card(ctrl)
-            ctrl.refs.import_preview = build_import_preview(ctx, ctrl.refs.upload_status)
-            ctrl.refs.event_table = build_event_table()
+    with ui.tab_panel("upload"), ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
+        _build_header()
+        _build_normalization_warning()
+        _build_upload_card(ctrl)
+        ctrl.refs.import_preview = build_import_preview(ctx, ctrl.refs.upload_status)
+        ctrl.refs.event_table = build_event_table()
 
     ctx.refresh_event_table = ctrl.refs.event_table.refresh
     ctx.refresh_import_preview = ctrl.refs.import_preview.refresh

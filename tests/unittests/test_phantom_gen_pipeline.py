@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 from stl import mesh as stl_mesh
 
-from scripts.phantom_gen.affine_control import build_affine_control
 from scripts.phantom_gen import run_catalog as catalog_runner
+from scripts.phantom_gen.affine_control import build_affine_control
 from scripts.phantom_gen.path_safety import resolve_under_roots
 from scripts.phantom_gen.run_catalog import (
     build_blender_generate_argv,

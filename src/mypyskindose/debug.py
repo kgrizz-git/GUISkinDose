@@ -18,10 +18,10 @@ is never silently dropped.
 
 from __future__ import annotations
 
-from contextlib import suppress
 import json
 import logging
 import os
+from contextlib import suppress
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 

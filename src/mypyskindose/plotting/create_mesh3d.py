@@ -1,4 +1,3 @@
-from typing import Dict, List, Optional
 
 import plotly.graph_objects as go
 
@@ -10,12 +9,12 @@ from .get_visual_offset import _get_visual_offset
 def create_mesh_3d_general(
     obj: Phantom | Beam,
     color: str,
-    mesh_text: List[str],
-    opacity: Optional[float] = None,
-    mesh_name: Optional[str] = None,
-    lighting: Optional[Dict] = None,
+    mesh_text: list[str],
+    opacity: float | None = None,
+    mesh_name: str | None = None,
+    lighting: dict | None = None,
     detector_mesh: bool = False,
-    visible_status: Optional[bool] = True,
+    visible_status: bool | None = True,
 ) -> go.Mesh3d:
 
     if opacity is None:

@@ -1,7 +1,6 @@
 import copy
 from itertools import chain
 from pathlib import Path
-from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -66,7 +65,7 @@ class Phantom:
         self,
         phantom_model: str,
         phantom_dim: PhantomDimensions,
-        human_mesh: Optional[str | tuple[str, mesh.Mesh | str | Path]] = None,
+        human_mesh: str | tuple[str, mesh.Mesh | str | Path] | None = None,
         human_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
     ):
         """Create the phantom of choice.
@@ -141,7 +140,7 @@ class Phantom:
         x_plane, z_plane = np.meshgrid(x, z)
 
         # Create index vectors for plotly mesh3d plotting
-        i2: List[int] = []
+        i2: list[int] = []
         i1 = j1 = k1 = i2
 
         for i in range(len(x) - 1):
@@ -202,10 +201,10 @@ class Phantom:
         }
 
         # Create index vectors for plotly mesh3d plotting
-        i1 = list(range(0, len(output["x"]) - len(t)))
+        i1 = list(range(len(output["x"]) - len(t)))
         j1 = list(range(1, len(output["x"]) - len(t) + 1))
         k1 = list(range(len(t), len(output["x"])))
-        i2 = list(range(0, len(output["x"]) - len(t)))
+        i2 = list(range(len(output["x"]) - len(t)))
         k2 = list(range(len(t) - 1, len(output["x"]) - 1))
         j2 = list(range(len(t), len(output["x"])))
 
@@ -216,7 +215,7 @@ class Phantom:
 
     def _load_human_mesh(
         self,
-        human_mesh: Optional[str | tuple[str, mesh.Mesh | str | Path]],
+        human_mesh: str | tuple[str, mesh.Mesh | str | Path] | None,
         human_scale: tuple[float, float, float],
     ) -> None:
         """Load STL or tuple-supplied human mesh; set self.r, self.n, self.ijk, self.dose, self.human_model."""
@@ -315,7 +314,7 @@ class Phantom:
         normals[nonzero] = normals[nonzero] / lengths[nonzero, None]
         self.n = np.repeat(normals, 3, axis=0)
 
-    def rotate(self, angles: List[int]) -> None:
+    def rotate(self, angles: list[int]) -> None:
         """Rotate the phantom about the angles specified in rotation.
 
         Parameters

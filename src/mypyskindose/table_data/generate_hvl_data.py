@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 import spekpy as sp  # Note: Not included in PySkinDose,
@@ -7,10 +6,10 @@ from tqdm import tqdm
 
 
 def generate_hvl_data(
-    kvp_range: List[float],
-    filtration_inherent_mmal: List[float],
-    filtration_added_mmal: List[float],
-    filtration_added_mmcu: List[float],
+    kvp_range: list[float],
+    filtration_inherent_mmal: list[float],
+    filtration_added_mmal: list[float],
+    filtration_added_mmcu: list[float],
     anode_angle_deg: int,
     path_results: Path,
     filter_name: str,
@@ -46,7 +45,7 @@ def generate_hvl_data(
         "hvl_mmal",
     ]
 
-    res = dict()
+    res = {}
     for i in index:
         res[i] = []
 

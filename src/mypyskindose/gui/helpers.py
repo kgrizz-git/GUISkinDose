@@ -13,7 +13,6 @@ from pathlib import Path
 
 from stl import mesh as stl_mesh
 
-from mypyskindose.privacy import safe_error_event
 from mypyskindose.phantom_mesh_names import (
     DEMO_HUMAN_MESHES,
     DEMO_MESH_SECTION_KEY,
@@ -23,18 +22,33 @@ from mypyskindose.phantom_mesh_names import (
     resolve_human_mesh_stem,
     sort_clinical_mesh_stems,
 )
+from mypyskindose.privacy import safe_error_event
 
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
     EXAM_COLUMN,
     EXAM_INDEX_COLUMN,
-    _table_origin_override_note,  # noqa: F401 — tests import via helpers
+    _table_origin_override_note,
     apply_exam_transforms,
     clear_multi_exam_state,
     commit_table_origin_transform,
     exam_supports_table_origin,
     exam_supports_transforms,
     rebuild_rdsr_df,
+)
+from .geometry_preview import (
+    adjust_active_exam_index_after_remove,
+    clamp_active_exam_index,
+    clamp_geometry_event_index,
+    composite_preview_after_exam_mode_change,
+    effective_patient_offset_for_preview,
+    exam_select_value,
+    geometry_preview_caption,
+    on_exams_loaded,
+    preview_event_count,
+    procedure_live_preview_paused,
+    rdsr_df_for_geometry_preview,
+    resolve_composite_for_render,
 )
 from .offset_handlers import (
     active_exam_index_for_offsets,
@@ -49,23 +63,9 @@ from .offset_handlers import (
     restore_globals_from_exam_meta,
     sync_global_patient_offset_to_single_exam_meta,
 )
-from .table_origins import detected_table_origin, effective_table_origin, stage_table_origin_axis
-from .geometry_preview import (
-    adjust_active_exam_index_after_remove,
-    clamp_active_exam_index,
-    clamp_geometry_event_index,
-    procedure_live_preview_paused,
-    composite_preview_after_exam_mode_change,
-    effective_patient_offset_for_preview,
-    exam_select_value,
-    geometry_preview_caption,
-    on_exams_loaded,
-    preview_event_count,
-    resolve_composite_for_render,
-    rdsr_df_for_geometry_preview,
-)
 from .settings_builder import build_settings, fallback_normalization_exam_count
 from .state import AppState
+from .table_origins import detected_table_origin, effective_table_origin, stage_table_origin_axis
 
 _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
 _FUN_MESH_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
@@ -79,8 +79,12 @@ _gui_logger = logging.getLogger("mypyskindose.gui.helpers")
 # (canonical stems after the 2026-07-23 naming migration).
 
 __all__ = [
+    "DEMO_HUMAN_MESHES",
+    "DEMO_MESH_SECTION_KEY",
+    "DEMO_MESH_SECTION_LABEL",
     "EXAM_COLUMN",
     "EXAM_INDEX_COLUMN",
+    "GUI_HIDDEN_HUMAN_MESHES",
     "active_exam_index_for_offsets",
     "adjust_active_exam_index_after_remove",
     "any_table_origin_override",
@@ -89,11 +93,11 @@ __all__ = [
     "below_floor_event_count",
     "build_settings",
     "bump_per_exam_offsets_version",
+    "canonicalize_human_mesh_selection",
     "clamp_active_exam_index",
     "clamp_geometry_event_index",
     "clear_multi_exam_state",
     "commit_table_origin_transform",
-    "procedure_live_preview_paused",
     "composite_preview_after_exam_mode_change",
     "detected_table_origin",
     "effective_patient_offset_for_preview",
@@ -106,11 +110,6 @@ __all__ = [
     "geometry_preview_caption",
     "get_example_rdsr_files",
     "get_excel_sheets",
-    "DEMO_HUMAN_MESHES",
-    "DEMO_MESH_SECTION_KEY",
-    "DEMO_MESH_SECTION_LABEL",
-    "GUI_HIDDEN_HUMAN_MESHES",
-    "canonicalize_human_mesh_selection",
     "get_human_mesh_names",
     "get_human_mesh_options",
     "get_mesh_baseline_extents",
@@ -121,6 +120,7 @@ __all__ = [
     "on_global_patient_offset_change",
     "on_global_patient_offset_scrub",
     "preview_event_count",
+    "procedure_live_preview_paused",
     "rdsr_df_for_geometry_preview",
     "read_patient_offset_value",
     "rebuild_rdsr_df",

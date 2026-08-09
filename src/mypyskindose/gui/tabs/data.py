@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import io
 import logging
+
 import pandas as pd
 from nicegui import ui
 
-from mypyskindose.spreadsheet_safety import neutralize_dataframe
 from mypyskindose.privacy import safe_error_event, safe_user_error
 from mypyskindose.safe_output import atomic_write_private
+from mypyskindose.spreadsheet_safety import neutralize_dataframe
 
 from ..components import HelpButton
 from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
@@ -157,15 +158,14 @@ def _build_data_header() -> ui.toggle:
 
 
 def build(_ctx: PageContext) -> None:
-    with ui.tab_panel("data"):
-        with ui.column().classes("w-full gap-4"):
-            view_toggle = _build_data_header()
-            with ui.card().classes("modern-card w-full p-0 overflow-hidden sticky-header"):
-                raw_data_table = ui.table(columns=[], rows=[], row_key="index").classes("w-full h-[600px]")
-                raw_data_table.props("flat bordered dense virtual-scroll")
+    with ui.tab_panel("data"), ui.column().classes("w-full gap-4"):
+        view_toggle = _build_data_header()
+        with ui.card().classes("modern-card w-full p-0 overflow-hidden sticky-header"):
+            raw_data_table = ui.table(columns=[], rows=[], row_key="index").classes("w-full h-[600px]")
+            raw_data_table.props("flat bordered dense virtual-scroll")
 
-            def refresh_table() -> None:
-                _refresh_raw_table(raw_data_table)
+        def refresh_table() -> None:
+            _refresh_raw_table(raw_data_table)
 
-            ui.timer(2.0, refresh_table)
-            view_toggle.on("update:model-value", refresh_table)
+        ui.timer(2.0, refresh_table)
+        view_toggle.on("update:model-value", refresh_table)

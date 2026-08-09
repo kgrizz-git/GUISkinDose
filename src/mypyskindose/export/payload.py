@@ -8,15 +8,15 @@ view, then assembles every report section (§1–§10). Writers consume the retu
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
 
-from ._exam_view import ExamView, view_from_dict, view_from_output
 from . import images as _images
 from . import metrics as _metrics
 from . import sections as _sections
+from ._exam_view import ExamView, view_from_dict, view_from_output
 from .models import (
     APP_NAME,
     RICH_EXPORT_SCHEMA_VERSION,
@@ -199,7 +199,7 @@ def collect_export_payload(source: ExportSource, *, with_images: bool = True) ->
         execution_context=source.execution_context,
         report_title=(
             source.report_title
-            or f"MyPySkinDose report — {datetime.now(timezone.utc).astimezone():%Y-%m-%d %H:%M}"
+            or f"MyPySkinDose report — {datetime.now(UTC).astimezone():%Y-%m-%d %H:%M}"
         ),
     )
 
