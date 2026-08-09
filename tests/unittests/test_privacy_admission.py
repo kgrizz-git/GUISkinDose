@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from scripts.privacy_admission import (
@@ -268,14 +268,14 @@ def test_receipt_expiry_and_configuration_mismatch_fail_closed(tmp_path: Path) -
     target = receipt_path(tmp_path, "presidio", "input")
     target.parent.mkdir(parents=True)
     target.write_text(
-        json.dumps({**expected, "completed_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()}),
+        json.dumps({**expected, "completed_at": (datetime.now(UTC) - timedelta(hours=2)).isoformat()}),
         encoding="utf-8",
     )
 
     assert verify_receipt(tmp_path, expected, 1) == "expired"
 
     target.write_text(
-        json.dumps({**expected, "completed_at": datetime.now(timezone.utc).isoformat()}),
+        json.dumps({**expected, "completed_at": datetime.now(UTC).isoformat()}),
         encoding="utf-8",
     )
     assert verify_receipt(tmp_path, expected, 1) is None

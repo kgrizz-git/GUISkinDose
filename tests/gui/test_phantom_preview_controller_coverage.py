@@ -9,9 +9,9 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-import mypyskindose.gui.phantom_preview_controller as phantom_preview_controller  # noqa: E402
-from mypyskindose.gui.phantom_preview_controller import PhantomPreviewController  # noqa: E402
-from mypyskindose.gui.state import state  # noqa: E402
+from mypyskindose.gui import phantom_preview_controller
+from mypyskindose.gui.phantom_preview_controller import PhantomPreviewController
+from mypyskindose.gui.state import state
 
 
 def _controller() -> PhantomPreviewController:

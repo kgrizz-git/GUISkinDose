@@ -16,6 +16,7 @@ from nicegui.testing.general import prepare_simulation
 
 prepare_simulation()
 
-import mypyskindose.gui.app as gui_app  # noqa: E402 — prepare_simulation() must run first
+# This must stay after prepare_simulation(), which initializes the user-test state.
+import mypyskindose.gui.app as gui_app
 
 importlib.reload(gui_app)

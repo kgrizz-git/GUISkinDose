@@ -119,7 +119,7 @@ def test_dose_map_is_sparse_positive_entries():
 pytest.importorskip("nicegui")
 # The provenance helpers were relocated from app.py to io_helpers.py (refactor
 # plan Phase 3.3b); io_helpers has no nicegui dependency of its own.
-import mypyskindose.gui.io_helpers as gui_io  # noqa: E402
+import mypyskindose.gui.io_helpers as gui_io
 
 
 def _fake_provenance():

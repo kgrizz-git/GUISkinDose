@@ -318,9 +318,8 @@ def test_pip_audit_fallback_mirrors_tracked_ignores(ad):
 
 def test_pip_audit_validation_rejects_unknown(ad):
     """Non-allowlisted tokens (including --ignore) must raise ValueError on pip-audit fallback path."""
-    with patch("shutil.which", return_value=None):
-        with pytest.raises(ValueError, match="unsupported or unsafe"):
-            ad.main(["--unknown-flag"])
+    with patch("shutil.which", return_value=None), pytest.raises(ValueError, match="unsupported or unsafe"):
+        ad.main(["--unknown-flag"])
 
 
 @pytest.mark.parametrize(

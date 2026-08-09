@@ -12,23 +12,23 @@ pytest.importorskip("nicegui")
 from mypyskindose.gui.geometry_preview import (
     adjust_active_exam_index_after_remove,
     clamp_active_exam_index,
-    procedure_live_preview_paused,
     composite_preview_after_exam_mode_change,
     effective_patient_offset_for_preview,
     event_context_caption,
     exam_select_value,
     geometry_preview_caption,
     preview_event_count,
-    resolve_composite_for_render,
+    procedure_live_preview_paused,
     rdsr_df_for_geometry_preview,
+    resolve_composite_for_render,
 )
 from mypyskindose.gui.helpers import (
     EXAM_COLUMN,
     EXAM_INDEX_COLUMN,
     apply_patient_offset_slider_tick,
     read_patient_offset_value,
-    reset_patient_offset_for_active,
     rebuild_rdsr_df,
+    reset_patient_offset_for_active,
 )
 from mypyskindose.gui.state import AppState, reset_results
 

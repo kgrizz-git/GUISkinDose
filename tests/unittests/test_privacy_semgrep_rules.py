@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 _RULES = Path(__file__).resolve().parents[2] / ".semgrep" / "mypyskindose-privacy.yml"
 
 

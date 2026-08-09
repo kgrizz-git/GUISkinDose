@@ -134,8 +134,11 @@ line-length = 120
 
 [tool.ruff.lint]
 # Ruff 0.16 expands its implicit default from 59 to 413 rules. Keep the
-# established Flake8-compatible baseline explicit during this upgrade.
-select = ["E4", "E7", "E9", "F"]
+# established baseline explicit and opt into reviewed modernization rules only.
+select = ["E4", "E7", "E9", "F", "B", "C4", "FURB", "I", "PYI", "RUF", "SIM", "UP"]
+# Mathematical symbols are intentional in clinical/scientific UI text and documentation.
+# SIM117 has no safe fix and affects nested NiceGUI context-manager scopes.
+ignore = ["RUF001", "RUF002", "RUF003", "SIM117"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/gui/nicegui_main.py" = ["E402"]

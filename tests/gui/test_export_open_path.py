@@ -9,7 +9,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.tabs.export import _open_path  # noqa: E402
+from mypyskindose.gui.tabs.export import _open_path
 
 
 def _capture(monkeypatch):

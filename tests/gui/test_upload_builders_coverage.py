@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from nicegui.testing import User
 
 from mypyskindose.gui.constants import EXAMPLE_FILES
-from mypyskindose.gui.tabs.upload_builders import MAX_UPLOAD_BYTES
 from mypyskindose.gui.helpers import load_tabular
 from mypyskindose.gui.page_context import PageContext
 from mypyskindose.gui.state import state
 from mypyskindose.gui.tabs import upload_builders as ub
+from mypyskindose.gui.tabs.upload_builders import MAX_UPLOAD_BYTES
 
 pytest.importorskip("nicegui")
 

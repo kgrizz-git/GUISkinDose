@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
+
 from mypyskindose import constants as c
 from mypyskindose import load_settings_example_json
 from mypyskindose.analyze_data import analyze_data, analyze_multiple_exams

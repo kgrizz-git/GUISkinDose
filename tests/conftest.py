@@ -10,9 +10,9 @@ keeps the rest of the suite collectable without the GUI dependencies.
 from __future__ import annotations
 
 import hashlib
-from importlib import import_module
 import os
 import subprocess
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -56,9 +56,7 @@ def _is_excluded_artifact(path: Path) -> bool:
     if path.name in _EXCLUDED_FILENAMES or path.name.startswith(".coverage"):
         return True
     # db_connect() auto-builds this SQLite cache from committed CSV tables; it is gitignored.
-    if path.name == "corrections.db" or path.name.startswith("corrections.db-"):
-        return True
-    return False
+    return bool(path.name == "corrections.db" or path.name.startswith("corrections.db-"))
 
 
 def _digest(path: Path) -> str:
@@ -122,7 +120,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
     changed = sorted(
         path
-        for group_before, group_after in zip(before, after)
+        for group_before, group_after in zip(before, after, strict=True)
         for path in set(group_before) | set(group_after)
         if group_before.get(path) != group_after.get(path)
     )

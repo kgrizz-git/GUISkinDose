@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import pandas as pd
 import pydicom
@@ -13,7 +12,7 @@ from mypyskindose.settings import PyskindoseSettings
 
 @pytest.fixture(scope="function")
 def example_settings() -> PyskindoseSettings:
-    settings_dict: Dict = {
+    settings_dict: dict = {
         "mode": c.MODE_PLOT_PROCEDURE,
         "rdsr_filename": "siemens_axiom_example_procedure.dcm",
         "plot_event_index": 12,

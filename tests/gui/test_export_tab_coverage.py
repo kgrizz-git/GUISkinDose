@@ -2,20 +2,19 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import json
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 pytest.importorskip("nicegui")
 
-from nicegui import ui  # noqa: E402
+from nicegui import ui
 
-from mypyskindose.gui.state import state  # noqa: E402
-from mypyskindose.gui.tabs import export as export_tab  # noqa: E402
+from mypyskindose.gui.state import state
+from mypyskindose.gui.tabs import export as export_tab
 
 
 @pytest.fixture(autouse=True)

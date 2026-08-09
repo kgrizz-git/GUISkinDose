@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import mypyskindose.constants as c
 from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+
+import mypyskindose.constants as c
 from mypyskindose.phantom_class import Phantom
 from mypyskindose.settings import PyskindoseSettings
 
