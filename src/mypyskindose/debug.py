@@ -56,7 +56,7 @@ def _load_debug_json() -> None:
     if not debug_file.exists():
         return
     try:
-        with open(debug_file, "r", encoding="utf-8") as f:
+        with open(debug_file, encoding="utf-8") as f:
             user_flags = json.load(f)
     except (OSError, json.JSONDecodeError) as exc:
         safe_error_event(logging.getLogger(_LOGGER_ROOT), "debug_configuration_read", exc, level=logging.WARNING)

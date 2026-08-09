@@ -5,7 +5,7 @@ def test_calculate_rotation_matrices_returns_the_same_dataframe_with_new_columns
     axiom_artis_normalized,
 ):
     # Arrange
-    expected = list(axiom_artis_normalized.columns) + ["Rx", "Ry", "Rz"]
+    expected = [*list(axiom_artis_normalized.columns), "Rx", "Ry", "Rz"]
 
     # Act
     result = calculate_rotation_matrices(axiom_artis_normalized)

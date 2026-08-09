@@ -44,7 +44,7 @@ def test_make_dosemap_html_raises_when_fig_unavailable(monkeypatch):
     from mypyskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
-    with pytest.raises(RuntimeError, match="could not be built|Dose map"):
+    with pytest.raises(RuntimeError, match=r"could not be built|Dose map"):
         figures.make_dosemap_html(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
 
 
@@ -62,7 +62,7 @@ def test_make_dosemap_png_raises_when_fig_unavailable(monkeypatch):
     from mypyskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
-    with pytest.raises(RuntimeError, match="could not be built|Dose map"):
+    with pytest.raises(RuntimeError, match=r"could not be built|Dose map"):
         figures.make_dosemap_png(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
 
 

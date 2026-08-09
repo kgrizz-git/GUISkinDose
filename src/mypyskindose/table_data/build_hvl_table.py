@@ -11,6 +11,6 @@ file_names = [
 data_path = Path(os.path.abspath(__file__)).parent
 
 data = [pd.read_csv(data_path / file_name) for file_name in file_names]
-data_combined = pd.concat([dat for dat in data])
+data_combined = pd.concat(data)
 
 data_combined.to_csv(data_path / "hvl_tables/hvl_combined.csv", index=False)

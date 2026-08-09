@@ -95,10 +95,7 @@ class PyskindoseSettings:
             in /settings/ for example.
 
         """
-        if isinstance(settings, str):
-            tmp = json.loads(settings)
-        else:
-            tmp = settings
+        tmp = json.loads(settings) if isinstance(settings, str) else settings
 
         if (output_format := output_format.lower()) not in RUN_ARGUMENTS_VALID_OUTPUT_FORMATS:
             raise ValueError(

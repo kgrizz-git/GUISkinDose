@@ -226,7 +226,7 @@ class GeometryTabController:
             composite=composite,
         )
         self.refs.spinner.visible = False
-        self.refs.plot.update_figure(fig if fig else {})
+        self.refs.plot.update_figure(fig or {})
 
     def _resolve_composite_for_render(self) -> bool:
         return resolve_composite_for_render(

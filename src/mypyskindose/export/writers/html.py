@@ -106,7 +106,7 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
         f'schema {m.schema_version}</div>'),
         _alerts(payload),
         "<h2>Cumulative summary</h2>",
-        _table([["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics)),
+        _table([["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)]),
     ]
 
     if payload.is_multi_exam:

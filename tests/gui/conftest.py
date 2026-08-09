@@ -10,6 +10,8 @@ nested conftest. This file just skips the GUI tests when NiceGUI is absent.
 
 from __future__ import annotations
 
+from contextlib import suppress
+
 import pytest
 
 pytest.importorskip("nicegui")
@@ -31,10 +33,8 @@ def _cancel_leaked_timers() -> None:
     for client in list(Client.instances.values()):
         for element in list(client.elements.values()):
             if isinstance(element, Timer):
-                try:
+                with suppress(Exception):  # pragma: no cover - best-effort teardown
                     element.cancel()
-                except Exception:  # pragma: no cover - best-effort teardown
-                    pass
 
 
 def _reset_state_singleton() -> None:

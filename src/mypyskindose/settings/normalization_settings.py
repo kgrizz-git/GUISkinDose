@@ -139,7 +139,7 @@ class NormalizationSettings:
             setting = [
                 setting
                 for setting in self.normalization_settings_list
-                if "default" == setting[KEY_NORMALIZATION_MANUFACTURER].casefold()
+                if setting[KEY_NORMALIZATION_MANUFACTURER].casefold() == "default"
             ]
             self.normalization_method = "Fallback"
         else:

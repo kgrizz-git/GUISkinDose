@@ -128,7 +128,7 @@ def _alert_box(payload: ExportPayload) -> list:
 
 def _dosimetric_table(payload: ExportPayload) -> Table:
     """Build the cumulative dosimetric metrics table."""
-    rows = [["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics)
+    rows = [["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)]
     return _table(rows, [_CONTENT_WIDTH * 0.5, _CONTENT_WIDTH * 0.5])
 
 

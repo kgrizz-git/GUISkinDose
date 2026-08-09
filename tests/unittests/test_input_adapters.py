@@ -22,7 +22,7 @@ class TestDetectHeaderRow:
         from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
 
         rows = [
-            list(NORMALIZED_COLUMN_NAMES)[:5] + ["extra"],
+            [*list(NORMALIZED_COLUMN_NAMES)[:5], "extra"],
             ["AXIOM-Artis", "107.1", "78.5", "28.6", "63.5", "x"],
         ]
         df = self._make_df(rows)

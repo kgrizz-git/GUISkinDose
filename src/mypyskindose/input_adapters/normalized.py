@@ -342,7 +342,7 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list
         detected_encoding=loaded.encoding,
         detected_delimiter=loaded.delimiter,
         sheet_name=None,
-        column_map={src: canon for src, canon in column_map.items()},
+        column_map=dict(column_map),
         unit_conversions={},  # no conversions; data is already in internal units
         warnings=warnings,
     )

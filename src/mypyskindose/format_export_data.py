@@ -213,7 +213,8 @@ class EventOutput:
             return
 
         self.beam_positions, self.beam_vertex_indices, self.detector_positions, self.detector_vertex_indices = zip(
-            *[self._extract_beam_data_list(data_norm=data_norm, event=event) for event in range(len(data_norm))]
+            *[self._extract_beam_data_list(data_norm=data_norm, event=event) for event in range(len(data_norm))],
+            strict=True,
         )
         (
             self.setup_beam_positions,

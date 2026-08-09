@@ -177,7 +177,7 @@ def _render_images(resolved: _Resolved, source: ExportSource) -> list[ImageEntry
         add("Cumulative dose map (whole body)", "context", None, agg, patient0, _images.CUMULATIVE_DIMS, _images.DORSAL, False)
         add("Cumulative dose map (irradiated region)", "dose", None, agg, patient0, _images.CUMULATIVE_DIMS, _images.DORSAL, True)
         if len(views) <= 10:
-            for view, exam_id in zip(views, resolved.exam_ids):
+            for view, exam_id in zip(views, resolved.exam_ids, strict=True):
                 add(f"Exam {exam_id} (irradiated region)", "dose", exam_id, view.dense_dose_map, view.patient,
                     _images.THUMBNAIL_DIMS, _images.DORSAL, True)
     else:
@@ -212,7 +212,7 @@ def collect_export_payload(source: ExportSource, *, with_images: bool = True) ->
 
     exam_sections = [
         _build_exam_section(view, _exam_source_for(source, i), exam_id)
-        for i, (view, exam_id) in enumerate(zip(resolved.views, resolved.exam_ids))
+        for i, (view, exam_id) in enumerate(zip(resolved.views, resolved.exam_ids, strict=True))
     ]
 
     warnings = WarningsBlock(

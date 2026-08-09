@@ -120,7 +120,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
     changed = sorted(
         path
-        for group_before, group_after in zip(before, after)
+        for group_before, group_after in zip(before, after, strict=True)
         for path in set(group_before) | set(group_after)
         if group_before.get(path) != group_after.get(path)
     )

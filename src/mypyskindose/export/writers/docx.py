@@ -122,7 +122,7 @@ def _add_document_header(doc, payload: ExportPayload) -> None:
 def _add_result_sections(doc, payload: ExportPayload) -> None:
     """Add cumulative and, when applicable, per-exam dosimetric tables."""
     doc.add_heading("Cumulative summary", level=2)
-    _table(doc, [["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics))
+    _table(doc, [["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)])
     if payload.is_multi_exam:
         _add_per_exam_results(doc, payload)
 

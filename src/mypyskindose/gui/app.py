@@ -239,7 +239,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
         try:
             import AppKit  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pyobjc)
 
-            ns_screen = cast(Any, getattr(AppKit, "NSScreen"))
+            ns_screen = cast(Any, AppKit).NSScreen
             main_screen = ns_screen.mainScreen()
             screens = [
                 ScreenBounds(
@@ -289,7 +289,7 @@ def _detect_macos_visible_primary_bounds() -> ScreenBounds | None:
     try:
         import AppKit  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pyobjc)
 
-        ns_screen = cast(Any, getattr(AppKit, "NSScreen"))
+        ns_screen = cast(Any, AppKit).NSScreen
         screens = list(ns_screen.screens())
         if not screens:
             return None

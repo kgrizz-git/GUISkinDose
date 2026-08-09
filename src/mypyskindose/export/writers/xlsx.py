@@ -121,7 +121,7 @@ def _results_sheet(wb: Workbook, payload: ExportPayload) -> None:
             rows.append([name, *row_vals, str(cum_col.get(name, "N/A"))])
         _write_rows(ws, rows, header=True)
     else:
-        rows = [["Metric", "Value"]] + dosimetric_rows(payload.cumulative.metrics)
+        rows = [["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)]
         _write_rows(ws, rows, header=True)
     _autofit(ws)
 

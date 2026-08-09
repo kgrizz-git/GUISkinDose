@@ -145,10 +145,10 @@ class Phantom:
 
         for i in range(len(x) - 1):
             for j in range(len(z) - 1):
-                i1 = i1 + [j * len(x) + i]
-                j1 = j1 + [j * len(x) + i + 1]
-                k1 = k1 + [j * len(x) + i + len(x)]
-                i2 = i2 + [j * len(x) + i + len(x) + 1]
+                i1 = [*i1, j * len(x) + i]
+                j1 = [*j1, j * len(x) + i + 1]
+                k1 = [*k1, j * len(x) + i + len(x)]
+                i2 = [*i2, j * len(x) + i + len(x) + 1]
 
         self.r = np.column_stack((x_plane.ravel(), np.zeros(len(x_plane.ravel())), z_plane.ravel()))
 
@@ -238,7 +238,7 @@ class Phantom:
         n = phantom_mesh.normals
 
         self.r = np.asarray([el for el_list in r for el in el_list])
-        self.n = np.asarray([x for pair in zip(n, n, n) for x in pair])
+        self.n = np.asarray([x for pair in zip(n, n, n, strict=True) for x in pair])
         if len(self.r) == 0 or len(self.r) % 3:
             raise ValueError("Human mesh must contain a non-empty whole number of triangles.")
         self._apply_human_scale(human_scale)

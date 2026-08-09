@@ -114,7 +114,7 @@ def test_assert_xlsx_zip_within_budget_rejects_underreported_inflate(
             return infos
 
     monkeypatch.setattr(tabular_loader.zipfile, "ZipFile", LyingZipFile)
-    with pytest.raises(ValueError, match="uncompressed size|Invalid Excel workbook"):
+    with pytest.raises(ValueError, match=r"uncompressed size|Invalid Excel workbook"):
         assert_xlsx_zip_within_budget(path)
 
 
