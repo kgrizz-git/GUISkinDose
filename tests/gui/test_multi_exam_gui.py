@@ -92,8 +92,9 @@ class TestGuiPerExamTransforms:
     independently. Pins the helpers.py engine contract without the NiceGUI runtime."""
 
     def _state_with_two_exams(self, schema="radimetrics"):
-        import pandas as pd
         from types import SimpleNamespace
+
+        import pandas as pd
 
         from mypyskindose.gui.state import AppState
 
@@ -216,8 +217,9 @@ class TestGuiTableOriginOverride:
     applied per exam through the same engine, and is auditable via a warning."""
 
     def _state_one_exam(self, detected, schema="dicom_rdsr", source="dicom"):
-        import pandas as pd
         from types import SimpleNamespace
+
+        import pandas as pd
 
         from mypyskindose.gui.state import AppState
 
@@ -313,8 +315,9 @@ class TestGuiAxisDirectionFlips:
     auto-detected origin, default off, and compose with swap and origin override."""
 
     def _state_with_two_exams(self, schema="radimetrics", detected=None):
-        import pandas as pd
         from types import SimpleNamespace
+
+        import pandas as pd
 
         from mypyskindose.gui.state import AppState
 

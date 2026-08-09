@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-
 from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+
 from mypyskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,

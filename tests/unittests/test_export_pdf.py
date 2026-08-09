@@ -11,7 +11,7 @@ from mypyskindose.export.models import ImageEntry
 
 pytest.importorskip("reportlab")
 
-from mypyskindose.export.writers.pdf import render_pdf_bytes  # noqa: E402
+from mypyskindose.export.writers.pdf import render_pdf_bytes
 
 
 def _settings():

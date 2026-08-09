@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-import mypyskindose.gui.window_prefs as window_prefs
+from mypyskindose.gui import window_prefs
 from mypyskindose.gui.window_prefs import (
     NativeWindowPrefs,
     ScreenBounds,

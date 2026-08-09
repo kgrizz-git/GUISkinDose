@@ -1,6 +1,8 @@
 """Unit tests for scripts/check_file_sizes.py."""
 from pathlib import Path
-from scripts.check_file_sizes import check_file_sizes, MAX_LINES
+
+from scripts.check_file_sizes import MAX_LINES, check_file_sizes
+
 
 def test_check_file_sizes_under_limit(tmp_path: Path):
     # Setup folders

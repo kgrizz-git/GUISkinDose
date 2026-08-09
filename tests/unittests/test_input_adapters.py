@@ -22,7 +22,7 @@ class TestDetectHeaderRow:
         from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
 
         rows = [
-            list(NORMALIZED_COLUMN_NAMES)[:5] + ["extra"],
+            [*list(NORMALIZED_COLUMN_NAMES)[:5], "extra"],
             ["AXIOM-Artis", "107.1", "78.5", "28.6", "63.5", "x"],
         ]
         df = self._make_df(rows)
@@ -293,6 +293,7 @@ class TestRegistry:
 
 def _default_settings():
     from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+
     from mypyskindose.settings import PyskindoseSettings
 
     return PyskindoseSettings(DEVELOPMENT_PARAMETERS)
@@ -440,7 +441,7 @@ class TestSchemaAutoDetect:
 
         # Header = every radimetrics known name (full recall) + a single stray
         # generic_rdsr column + many unrelated filler columns (drives precision down).
-        stray_generic = sorted(GENERIC_RDSR_COLUMN_NAMES)[0]
+        stray_generic = min(GENERIC_RDSR_COLUMN_NAMES)
         header = (
             sorted(RADIMETRICS_COLUMN_NAMES)
             + [stray_generic]

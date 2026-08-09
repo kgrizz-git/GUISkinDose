@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from typing import cast
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 
 pytest.importorskip("nicegui")
 
-from nicegui import ui  # noqa: E402
+from nicegui import ui
 
-from mypyskindose.gui.page_context import PageContext  # noqa: E402
-from mypyskindose.gui.state import state  # noqa: E402
-from mypyskindose.gui.tabs import _per_exam as pe  # noqa: E402
+from mypyskindose.gui.page_context import PageContext
+from mypyskindose.gui.state import state
+from mypyskindose.gui.tabs import _per_exam as pe
 
 
 def _ctx() -> PageContext:

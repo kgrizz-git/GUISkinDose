@@ -1,20 +1,20 @@
 from mypyskindose import constants as c
 
-DEVELOPMENT_PARAMETERS = dict(
+DEVELOPMENT_PARAMETERS = {
     # modes: 'calculate_dose', 'plot_setup', 'plot_event', 'plot_procedure'
-    mode=c.MODE_PLOT_PROCEDURE,
+    "mode": c.MODE_PLOT_PROCEDURE,
     # RDSR filename
-    rdsr_filename="siemens_axiom_example_procedure.dcm",
+    "rdsr_filename": "siemens_axiom_example_procedure.dcm",
     # Set True to estimate table correction, or False to use measured k_tab
-    estimate_k_tab=False,
+    "estimate_k_tab": False,
     # Numeric value of estimated table correction
-    k_tab_val=0.8,
+    "k_tab_val": 0.8,
     # plot settings
     # x-ray tube inherent filtration in mmAl
-    inherent_filtration=3.1,
+    "inherent_filtration": 3.1,
     # Silence reading_validation_mode warnings in pydicom
-    silence_pydicom_warnings=True,
-    plot={
+    "silence_pydicom_warnings": True,
+    "plot": {
         # toggle interactive/static dose map mode.
         c.MODE_INTERACTIVITY: True,
         # dark mode for plots
@@ -32,20 +32,20 @@ DEVELOPMENT_PARAMETERS = dict(
         c.PLOT_EVENT_INDEX_KEY: 12,
     },
     # Phantom settings:
-    phantom=dict(
+    "phantom": {
         # Phantom model, valid selections: 'plane', 'cylinder', or 'human'
-        model=c.PHANTOM_MODEL_HUMAN,
+        "model": c.PHANTOM_MODEL_HUMAN,
         # Human phantom .stl filename, without .stl ending.
-        human_mesh=c.PHANTOM_MESH_ADULT_MALE,
+        "human_mesh": c.PHANTOM_MESH_ADULT_MALE,
         # Patient offset from table isocenter (centered at head end side).
-        patient_offset={
+        "patient_offset": {
             c.OFFSET_LONGITUDINAL_KEY: 0,
             c.OFFSET_VERTICAL_KEY: 0,
             c.OFFSET_LATERAL_KEY: -35,
         },
-        patient_orientation=c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
+        "patient_orientation": c.PATIENT_ORIENTATION_HEAD_FIRST_SUPINE,
         # Dimensions of matematical phantoms (except model='human')
-        dimension={
+        "dimension": {
             # Length of plane phantom
             c.DIMENSION_PLANE_LENGTH: 120,
             # Width of plane phantom
@@ -74,5 +74,5 @@ DEVELOPMENT_PARAMETERS = dict(
             c.DIMENSION_PAD_THICKNESS: 4,
             # unit of dimension. Only 'cm' is supported.
         },
-    ),
-)
+    },
+}

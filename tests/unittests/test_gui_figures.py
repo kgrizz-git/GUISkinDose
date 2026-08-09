@@ -8,7 +8,6 @@ pytest.importorskip("nicegui")
 
 from mypyskindose.plotting.plot_layout import COORDINATE_FRAME_NOTE
 
-
 _PATIENT_FOR_EXPORT_TESTS = {
     "patient": {
         "patient_skin_cells": {
@@ -45,7 +44,7 @@ def test_make_dosemap_html_raises_when_fig_unavailable(monkeypatch):
     from mypyskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
-    with pytest.raises(RuntimeError, match="could not be built|Dose map"):
+    with pytest.raises(RuntimeError, match=r"could not be built|Dose map"):
         figures.make_dosemap_html(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
 
 
@@ -63,7 +62,7 @@ def test_make_dosemap_png_raises_when_fig_unavailable(monkeypatch):
     from mypyskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
-    with pytest.raises(RuntimeError, match="could not be built|Dose map"):
+    with pytest.raises(RuntimeError, match=r"could not be built|Dose map"):
         figures.make_dosemap_png(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
 
 
@@ -89,9 +88,11 @@ def _assert_logs_operation_code(monkeypatch, caplog, render_fn, operation_code: 
     target_logger = logging.getLogger("mypyskindose.gui.figures")
     target_logger.addHandler(caplog.handler)
     try:
-        with caplog.at_level("ERROR", logger="mypyskindose.gui.figures"):
-            with pytest.raises(ValueError, match="synthetic render failure"):
-                render_fn(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
+        with (
+            caplog.at_level("ERROR", logger="mypyskindose.gui.figures"),
+            pytest.raises(ValueError, match="synthetic render failure"),
+        ):
+            render_fn(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
     finally:
         target_logger.removeHandler(caplog.handler)
     assert any(operation_code in rec.message for rec in caplog.records)

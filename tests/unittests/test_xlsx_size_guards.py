@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
+from typing import Self
 
 import pytest
 from openpyxl import Workbook
@@ -113,7 +114,7 @@ def test_assert_xlsx_zip_within_budget_rejects_underreported_inflate(
             return infos
 
     monkeypatch.setattr(tabular_loader.zipfile, "ZipFile", LyingZipFile)
-    with pytest.raises(ValueError, match="uncompressed size|Invalid Excel workbook"):
+    with pytest.raises(ValueError, match=r"uncompressed size|Invalid Excel workbook"):
         assert_xlsx_zip_within_budget(path)
 
 
@@ -138,7 +139,7 @@ def test_count_decompressed_member_enforces_streamed_budget(
             self._offset += len(chunk)
             return chunk
 
-        def __enter__(self) -> "_FakeMember":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *args: object) -> None:

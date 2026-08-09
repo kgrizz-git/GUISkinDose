@@ -11,8 +11,8 @@ from mypyskindose.phantom_class import Phantom
 from mypyskindose.phantom_mesh_names import (
     assert_safe_human_mesh_stem,
     prefer_reduced_preview_stem,
-    resolve_human_mesh_stl_path,
     resolve_human_mesh_stem,
+    resolve_human_mesh_stl_path,
 )
 from mypyskindose.settings import PyskindoseSettings
 

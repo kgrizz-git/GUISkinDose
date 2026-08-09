@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.phantom_gen.path_safety import (  # noqa: E402
+# The repository root must be importable before loading this non-installed script module.
+from scripts.phantom_gen.path_safety import (
     resolve_under_roots,
     trusted_path_under_roots,
     write_text_under_roots,

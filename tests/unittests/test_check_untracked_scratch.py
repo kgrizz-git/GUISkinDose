@@ -1,6 +1,7 @@
 """Unit tests for scripts/check_untracked_scratch.py."""
 from scripts.check_untracked_scratch import check_untracked_scratch
 
+
 def test_check_untracked_scratch_no_scratch_files():
     # Mock git output with no scratch files
     git_output = (

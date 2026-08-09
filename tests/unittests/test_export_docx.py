@@ -13,7 +13,8 @@ from mypyskindose.export.models import ImageEntry
 
 pytest.importorskip("docx")
 
-from mypyskindose.export.writers.docx import render_docx_bytes  # noqa: E402
+from mypyskindose.export.writers.docx import render_docx_bytes
+
 
 def _payload():
     out = {

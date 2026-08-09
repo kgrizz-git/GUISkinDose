@@ -63,7 +63,7 @@ def test_margin_matches_code(doc_text: str):
 
 
 def test_marker_columns_exist_in_fingerprints():
-    known_by_name = {name: known for name, known in _SCHEMA_KNOWN_NAMES}
+    known_by_name = dict(_SCHEMA_KNOWN_NAMES)
     for schema, markers in MARKERS.items():
         norm_fingerprint = {_normalize_str(c) for c in known_by_name[schema]}
         for marker in markers:

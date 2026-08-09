@@ -20,8 +20,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from mypyskindose import load_settings_example_json
 from mypyskindose import constants as c
+from mypyskindose import load_settings_example_json
 from mypyskindose.phantom_class import Phantom
 from mypyskindose.settings import PyskindoseSettings
 

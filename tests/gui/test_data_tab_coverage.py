@@ -10,10 +10,10 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from nicegui import ui  # noqa: E402
+from nicegui import ui
 
-from mypyskindose.gui.state import state  # noqa: E402
-from mypyskindose.gui.tabs import data as data_tab  # noqa: E402
+from mypyskindose.gui.state import state
+from mypyskindose.gui.tabs import data as data_tab
 
 
 @pytest.fixture(autouse=True)

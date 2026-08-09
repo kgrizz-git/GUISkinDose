@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pydicom
 import pytest
 
 from mypyskindose import constants as c
@@ -15,8 +16,6 @@ from mypyskindose.phantom_class import Phantom
 from mypyskindose.rdsr_normalizer import rdsr_normalizer
 from mypyskindose.rdsr_parser import rdsr_parser
 from mypyskindose.settings import PyskindoseSettings
-
-import pydicom
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "example_data" / "RDSR"
 
