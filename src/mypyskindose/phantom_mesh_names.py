@@ -13,8 +13,8 @@ and ``dev-docs/plans/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md``.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 # Stems are package-relative basenames only (no separators, dots, or parent refs).
 _SAFE_HUMAN_MESH_STEM = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")

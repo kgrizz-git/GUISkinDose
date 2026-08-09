@@ -40,7 +40,7 @@ def _install_hint(package: str) -> str:
     )
 
 
-def render_bytes(payload: "ExportPayload", fmt: str) -> bytes:
+def render_bytes(payload: ExportPayload, fmt: str) -> bytes:
     """Render a payload to bytes for the given format (lazy writer import).
 
     Raises :class:`~mypyskindose.export.models.MissingExportDependencyError` with
@@ -77,7 +77,7 @@ def render_bytes(payload: "ExportPayload", fmt: str) -> bytes:
 
 
 def write_report(
-    payload: "ExportPayload",
+    payload: ExportPayload,
     path: Path,
     fmt: str,
     *,

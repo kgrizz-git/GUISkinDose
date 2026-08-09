@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import List
 
 import plotly.graph_objects as go
 from PIL import Image
@@ -14,7 +13,7 @@ from ..constants import (
 logger = logging.getLogger(__name__)
 
 
-def create_notebook_dose_map_plot(names: List[Path]):
+def create_notebook_dose_map_plot(names: list[Path]):
 
     fig = go.Figure()
 
@@ -75,5 +74,3 @@ def create_notebook_dose_map_plot(names: List[Path]):
     )
 
     fig.show(config={"doubleClick": "reset"})
-
-    return

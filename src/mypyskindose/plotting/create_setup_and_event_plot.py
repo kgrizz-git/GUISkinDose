@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import plotly.graph_objects as go
 
@@ -33,12 +32,12 @@ def create_setup_and_event_plot(
     pad: Phantom,
     beam: Beam,
     mode: str,
-    patient_text: List[str],
-    source_text: List[str],
-    table_text: List[str],
-    detectors_text: List[str],
-    pad_text: List[str],
-    beam_text: List[str],
+    patient_text: list[str],
+    source_text: list[str],
+    table_text: list[str],
+    detectors_text: list[str],
+    pad_text: list[str],
+    beam_text: list[str],
     title: str,
     dark_mode=True,
     notebook_mode: bool = False,

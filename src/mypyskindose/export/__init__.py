@@ -13,6 +13,7 @@ optional ``reportlab`` dependency is only required when a PDF is produced.
 
 from __future__ import annotations
 
+from .cli_source import build_export_source_from_cli
 from .models import (
     RICH_EXPORT_SCHEMA_VERSION,
     ExportError,
@@ -22,16 +23,15 @@ from .models import (
     MissingExportDependencyError,
 )
 from .payload import collect_export_payload, resolve_calculation_result
-from .cli_source import build_export_source_from_cli
 
 __all__ = [
     "RICH_EXPORT_SCHEMA_VERSION",
     "ExportError",
-    "MissingExportDependencyError",
     "ExportExamSource",
     "ExportPayload",
     "ExportSource",
+    "MissingExportDependencyError",
+    "build_export_source_from_cli",
     "collect_export_payload",
     "resolve_calculation_result",
-    "build_export_source_from_cli",
 ]

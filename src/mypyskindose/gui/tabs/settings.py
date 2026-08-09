@@ -7,7 +7,7 @@ the Settings phantom preview and (where needed) the Geometry preview.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from nicegui import ui
 
@@ -30,8 +30,8 @@ from ..helpers import (
 )
 from ..page_context import PageContext
 from ..phantom_preview_controller import PhantomPreviewController
-from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..state import reset_results, state
+from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..ui_copy import copy_text
 from ._per_exam import build_per_exam_section
 
@@ -84,18 +84,17 @@ def build(ctx: PageContext) -> None:
         ctx.refresh_geometry_preview()
         ctx.refresh_phantom_preview()
 
-    with ui.tab_panel("settings"):
-        with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            ui.label("Calculation Settings").classes("text-2xl font-bold tracking-tight")
+    with ui.tab_panel("settings"), ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
+        ui.label("Calculation Settings").classes("text-2xl font-bold tracking-tight")
 
-            _build_phantom_section(ctx, _on_phantom_pose_change)
+        _build_phantom_section(ctx, _on_phantom_pose_change)
 
-            # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
-            # editable block per loaded exam; registers ctx.refresh_per_exam.
-            build_per_exam_section(ctx)
+        # Per-exam corrections (offsets, coordinate fixes, table-origin) — one
+        # editable block per loaded exam; registers ctx.refresh_per_exam.
+        build_per_exam_section(ctx)
 
-            _build_physics_section()
-            _build_visual_section()
+        _build_physics_section()
+        _build_visual_section()
 
 
 def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> None:

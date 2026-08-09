@@ -7,7 +7,7 @@ full declared dependency set (all extras), pinned by `uv.lock`:
 uv sync --all-extras
 ```
 
-Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-07-27).
+Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: 2026-08-09).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -176,6 +176,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | PyJWT | 2.13.0 | MIT | Homepage, https://github.com/jpadilla/pyjwt |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
 | pypdf | 6.14.2 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
+| pyproject_hooks | 1.2.0 | MIT | Changelog, https://pyproject-hooks.readthedocs.io/en/latest/changelog.html |
 | pytest | 9.0.3 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
 | pytest-asyncio | 1.4.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-base-url | 2.1.0 | MPL-2.0 | Homepage, https://github.com/pytest-dev/pytest-base-url |

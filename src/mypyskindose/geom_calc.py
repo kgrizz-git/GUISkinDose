@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -169,8 +169,8 @@ def vector(start: np.ndarray, stop: np.ndarray, normalization=False) -> np.ndarr
 
 
 def scale_field_area(
-    data_norm: pd.DataFrame, event: int, patient: Phantom, hits: List[bool], source: np.ndarray
-) -> List[float]:
+    data_norm: pd.DataFrame, event: int, patient: Phantom, hits: list[bool], source: np.ndarray
+) -> list[float]:
     """Scale X-ray field area from image detector, to phantom skin cells.
 
     This function scales the X-ray field size from the point where it is stated
@@ -222,7 +222,7 @@ def scale_field_area(
     return field_area
 
 
-def count_below_floor_events(data_norm: pd.DataFrame, floor: float = c.HVL_KVP_FLOOR) -> List[int]:
+def count_below_floor_events(data_norm: pd.DataFrame, floor: float = c.HVL_KVP_FLOOR) -> list[int]:
     """Return the positional indices of events with kVp below the HVL table floor.
 
     Events below ``floor`` kV have no tabulated beam quality; without an explicit
@@ -417,9 +417,9 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
 
     inh_snap = _nearest(inh_grid, round(inherent_filtration, 1))
 
-    hvl: List[float] = []
-    interpolated_events: List[int] = []
-    clamped_events: List[int] = []
+    hvl: list[float] = []
+    interpolated_events: list[int] = []
+    clamped_events: list[int] = []
     for event in range(len(data_norm)):
         cu = float(data_norm.filter_thickness_Cu[event])
         al_snap = _nearest(al_grid, float(data_norm.filter_thickness_Al[event]))
@@ -432,7 +432,7 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
         elif status == STATUS_INTERPOLATED:
             interpolated_events.append(event)
 
-    def _fmt(idx: List[int]) -> str:
+    def _fmt(idx: list[int]) -> str:
         extra = f" (+{len(idx) - 20} more)" if len(idx) > 20 else ""
         return f"{idx[:20]}{extra}"
 
@@ -456,7 +456,7 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
     return data_norm
 
 
-def check_new_geometry(data_norm: pd.DataFrame) -> List[bool]:
+def check_new_geometry(data_norm: pd.DataFrame) -> list[bool]:
     """Check which events has unchanged geometry since the event before.
 
     This function is intended to calculate if new geometry parameters needs
@@ -520,7 +520,7 @@ class Triangle:
         n = np.cross(self.p1, self.p2)
         self.n = n / np.sqrt(n.dot(n))
 
-    def check_intersection(self, start: np.ndarray, stop: np.ndarray) -> bool | List[bool]:
+    def check_intersection(self, start: np.ndarray, stop: np.ndarray) -> bool | list[bool]:
         """Check if a 3D segment intercepts with the triangle.
 
         Check if a 3D segment intercepts with the triangle. For our purpose,
@@ -575,7 +575,7 @@ class Triangle:
         return hits.tolist()
 
 
-def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray) -> List[bool]:
+def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray) -> list[bool]:
     """Check which skin cells are blocket by the patient support table.
 
     This fuctions creates two triangles covering the entire surface of the

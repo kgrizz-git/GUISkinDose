@@ -9,9 +9,9 @@ from typing import Any
 import pandas as pd
 import pydicom
 
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
 from mypyskindose.privacy import safe_error_event
+from mypyskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
+from mypyskindose.rdsr_parser import rdsr_parser
 
 from .exam_transforms import (
     _apply_transform_flags,
@@ -22,7 +22,6 @@ from .geometry_preview import on_exams_loaded
 from .offset_handlers import reset_global_offsets_on_new_load
 from .settings_builder import build_settings
 from .state import AppState
-
 
 logger = logging.getLogger(__name__)
 
@@ -374,7 +373,7 @@ def _append_multi_study_exams(
     idless_flags = [f for f in preserved_flags if f.get("study_id") is None]
     idless_exam_count = sum(exam.study_id is None for exam in new_exams)
     preserved_without_study_id = iter(idless_flags) if len(idless_flags) == idless_exam_count else iter(())
-    for j, exam in enumerate(new_exams):
+    for _j, exam in enumerate(new_exams):
         schema_name = exam.provenance.schema_name
         base = exam.normalized_data.copy()
         flags = _blank_transform_flags()

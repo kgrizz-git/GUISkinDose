@@ -13,8 +13,8 @@ upload tab keeps its existing interface.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from nicegui import run, ui
 

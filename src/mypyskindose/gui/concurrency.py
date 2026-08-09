@@ -16,8 +16,9 @@ of tripping the busy-guard.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator, TypeVar
+from typing import TypeVar
 
 from nicegui import ui
 

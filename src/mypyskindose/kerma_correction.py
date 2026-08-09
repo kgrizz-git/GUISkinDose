@@ -14,9 +14,9 @@ import json
 import logging
 import math
 import unicodedata
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 import pandas as pd

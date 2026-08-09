@@ -226,7 +226,7 @@ class GeometryTabController:
             composite=composite,
         )
         self.refs.spinner.visible = False
-        self.refs.plot.update_figure(fig if fig else {})
+        self.refs.plot.update_figure(fig or {})
 
     def _resolve_composite_for_render(self) -> bool:
         return resolve_composite_for_render(
@@ -756,24 +756,23 @@ def build_geometry_tab(ctx: PageContext) -> None:
     """Construct and wire the complete Geometry tab."""
     ctrl = GeometryTabController(ctx)
 
-    with ui.tab_panel("geometry"):
-        with ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
-            _build_header(ctrl)
-            _build_multi_exam_controls(ctrl)
+    with ui.tab_panel("geometry"), ui.column().classes("max-w-6xl mx-auto w-full gap-6"):
+        _build_header(ctrl)
+        _build_multi_exam_controls(ctrl)
 
-            offset_controls = ui.column().classes("w-full gap-4")
-            offset_controls.bind_visibility_from(
-                state, "rdsr_df", backward=lambda v: v is not None
-            )
-            with offset_controls:
-                _build_patient_offset_controls(ctrl)
-                _build_table_origin_controls(ctrl)
+        offset_controls = ui.column().classes("w-full gap-4")
+        offset_controls.bind_visibility_from(
+            state, "rdsr_df", backward=lambda v: v is not None
+        )
+        with offset_controls:
+            _build_patient_offset_controls(ctrl)
+            _build_table_origin_controls(ctrl)
 
-            with ui.row().classes("w-full items-end gap-4"):
-                _build_event_controls(ctrl)
-                _build_preview_controls(ctrl)
+        with ui.row().classes("w-full items-end gap-4"):
+            _build_event_controls(ctrl)
+            _build_preview_controls(ctrl)
 
-            _build_plot(ctrl)
+        _build_plot(ctrl)
 
     ctrl.refs.geom_event_select.on_value_change(ctrl.on_event_select_change)
     ctrl.refs.exam_select.on_value_change(ctrl.on_exam_select_change)

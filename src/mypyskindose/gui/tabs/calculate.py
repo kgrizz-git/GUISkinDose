@@ -15,8 +15,8 @@ from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result
 from ..helpers import below_floor_event_count, run_calculation
 from ..page_context import PageContext
-from ..summary_formatters import format_patient_offsets
 from ..state import state
+from ..summary_formatters import format_patient_offsets
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
 _MAX_TOASTS: int = 5
@@ -386,25 +386,24 @@ def _build_settings_summary_card() -> None:
 def build(ctx: PageContext) -> None:
     """Construct the Calculate tab panel and wire the drawer Run button."""
     controller = _CalculationController(ctx)
-    with ui.tab_panel("calculate"):
-        with ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
-            with ui.row().classes("w-full items-center justify-between"):
-                ui.label("Run Dose Calculation").classes("text-2xl font-bold tracking-tight")
-                HelpButton(
-                    title="Calculation Workflow",
-                    content_path="calculation_workflow.md",
-                    help_id="calculate",
-                )
+    with ui.tab_panel("calculate"), ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label("Run Dose Calculation").classes("text-2xl font-bold tracking-tight")
+            HelpButton(
+                title="Calculation Workflow",
+                content_path="calculation_workflow.md",
+                help_id="calculate",
+            )
 
-            _build_settings_summary_card()
+        _build_settings_summary_card()
 
-            with ui.column().classes("w-full items-center gap-4 q-mt-xl"):
-                calc_btn = ui.button(
-                    "▶  Run Calculation", on_click=controller.do_calculate, icon="bolt"
-                ).classes("modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined")
-                ctx.run_btn_drawer.on("click", controller.do_calculate)
+        with ui.column().classes("w-full items-center gap-4 q-mt-xl"):
+            calc_btn = ui.button(
+                "▶  Run Calculation", on_click=controller.do_calculate, icon="bolt"
+            ).classes("modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined")
+            ctx.run_btn_drawer.on("click", controller.do_calculate)
 
-                calc_progress = ui.linear_progress(value=0, color="indigo").classes("w-full")
-                calc_progress.visible = False
-                calc_status_label = ui.label("Waiting...").classes("text-caption text-grey-5")
-                controller.controls = _CalculationControls(calc_btn, calc_progress, calc_status_label)
+            calc_progress = ui.linear_progress(value=0, color="indigo").classes("w-full")
+            calc_progress.visible = False
+            calc_status_label = ui.label("Waiting...").classes("text-caption text-grey-5")
+            controller.controls = _CalculationControls(calc_btn, calc_progress, calc_status_label)

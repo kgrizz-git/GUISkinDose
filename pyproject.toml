@@ -93,7 +93,7 @@ dev = [
     "pytest-cov>=5.0",
     "pytest-xdist>=3.5",
     "diff-cover>=10.0",
-    "ruff>=0.15,<0.16",
+    "ruff>=0.15,<0.17",
     "playwright>=1.40",
     "pytest-playwright>=0.4",
 ]
@@ -131,6 +131,16 @@ markers = [
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+# Ruff 0.16 expands its implicit default from 59 to 413 rules. Keep the
+# established Flake8-compatible baseline explicit during this upgrade.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/gui/nicegui_main.py" = ["E402"]
+"tests/unittests/test_export_data.py" = ["E402"]
+"tests/unittests/test_path_safety.py" = ["E402"]
 
 [tool.basedpyright]
 pythonVersion = "3.11"

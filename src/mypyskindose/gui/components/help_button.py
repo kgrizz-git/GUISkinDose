@@ -1,7 +1,6 @@
 """Reusable help button component for displaying markdown help content."""
 
 from pathlib import Path
-from typing import Optional
 
 from nicegui import ui
 
@@ -28,11 +27,11 @@ class HelpButton:
     def __init__(
         self,
         title: str,
-        content: Optional[str] = None,
-        content_path: Optional[str] = None,
+        content: str | None = None,
+        content_path: str | None = None,
         icon: str = "help",
         button_text: str = "",
-        help_id: Optional[str] = None,
+        help_id: str | None = None,
     ):
         if content is None and content_path is None:
             raise ValueError("Either content or content_path must be provided")

@@ -33,9 +33,9 @@ def _empty_df():
 
 
 def _exam_source_from_multi_result(
-    settings: "PyskindoseSettings",
-    multi_exam_result: "MultiExamResult",
-    inputs: "list[InputAdapterResult] | None",
+    settings: PyskindoseSettings,
+    multi_exam_result: MultiExamResult,
+    inputs: list[InputAdapterResult] | None,
 ) -> list[ExportExamSource]:
     """Build per-exam export sources from a multi-exam calculation result."""
     exams: list[ExportExamSource] = []
@@ -57,9 +57,9 @@ def _exam_source_from_multi_result(
 
 
 def _exam_source_from_single(
-    settings: "PyskindoseSettings",
+    settings: PyskindoseSettings,
     *,
-    inputs: "list[InputAdapterResult] | None",
+    inputs: list[InputAdapterResult] | None,
     single_normalized_data: pd.DataFrame | None,
     single_source_file: str | None,
     file_name: str | None,
@@ -83,11 +83,11 @@ def _exam_source_from_single(
 
 
 def build_export_source_from_cli(
-    settings: "PyskindoseSettings",
+    settings: PyskindoseSettings,
     *,
     output_dict: dict[str, Any] | None = None,
-    multi_exam_result: "MultiExamResult | None" = None,
-    inputs: "list[InputAdapterResult] | None" = None,
+    multi_exam_result: MultiExamResult | None = None,
+    inputs: list[InputAdapterResult] | None = None,
     single_normalized_data: pd.DataFrame | None = None,
     single_source_file: str | None = None,
     calc_warnings: list[str] | None = None,

@@ -1,7 +1,6 @@
-from typing import Dict
 
 
-def get_camera_view() -> Dict[str, Dict[str, float]]:
+def get_camera_view() -> dict[str, dict[str, float]]:
     return {
         "up": {"x": 0, "y": -1, "z": 0},
         "center": {"x": 0, "y": 0, "z": 0},
