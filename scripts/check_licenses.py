@@ -7,9 +7,9 @@ Purpose:
     third-party notices file.
 
 Inputs:
-    Active Python environment with the full declared dependency set installed.
-    For a reproducible inventory, sync from the lockfile so versions are pinned:
-        uv sync --all-extras
+    Active Python environment matching CI static analysis (the ``dev`` and ``gui``
+    extras). For a reproducible inventory, run it through the lockfile:
+        uv run --extra dev --extra gui --locked python scripts/check_licenses.py
 
 Outputs:
     Exit code 0 when policy passes; 1 when forbidden or (with --strict)
@@ -17,10 +17,10 @@ Outputs:
     ``dev-docs/THIRD_PARTY_NOTICES.md``.
 
 Usage:
-    python scripts/check_licenses.py
-    python scripts/check_licenses.py --strict
-    python scripts/check_licenses.py --write-notices
-    python scripts/check_licenses.py --check-notices
+    uv run --extra dev --extra gui --locked python scripts/check_licenses.py
+    uv run --extra dev --extra gui --locked python scripts/check_licenses.py --strict
+    uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
+    uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices
 """
 
 from __future__ import annotations
@@ -40,10 +40,10 @@ from packaging.utils import canonicalize_name
 PROJECT_NAME = "mypyskindose"
 NOTICES_PATH = Path("dev-docs/THIRD_PARTY_NOTICES.md")
 APACHE_2_LICENSE = "Apache-2.0"
-# Inventory the full declared dependency set so the notices file is reproducible
-# regardless of which extras a given developer happened to install. Keep in sync
-# with the [project.optional-dependencies] keys in pyproject.toml.
-SELECTED_EXTRAS = frozenset({"dev", "gui", "gui-native", "docs", "notebooks"})
+LOCKED_LICENSE_COMMAND = "uv run --extra dev --extra gui --locked python scripts/check_licenses.py"
+# Match the locked ``dev`` + ``gui`` environment used by CI static analysis and
+# the ``license-notices`` hook. Do not broaden this set without updating both.
+SELECTED_EXTRAS = frozenset({"dev", "gui"})
 BOOTSTRAP_PACKAGES = frozenset(
     {
         "pip",
@@ -325,14 +325,14 @@ def render_notices(packages: list[PackageLicense], _root: Path) -> str:
     lines = [
         "# Third-party notices",
         "",
-        "Auto-generated inventory of Python packages resolved when installing the",
-        "full declared dependency set (all extras), pinned by `uv.lock`:",
+        "Auto-generated inventory of Python packages resolved in the locked CI",
+        "static-analysis environment (`dev` + `gui` extras):",
         "",
         "```bash",
-        "uv sync --all-extras",
+        f"{LOCKED_LICENSE_COMMAND} --write-notices",
         "```",
         "",
-        f"Regenerate with `python scripts/check_licenses.py --write-notices` (last updated: {today}).",
+        f"Regenerate with `{LOCKED_LICENSE_COMMAND} --write-notices` (last updated: {today}).",
         "",
         "Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).",
         "",
@@ -379,13 +379,13 @@ def check_licenses(
     if check_notices:
         notices_path = root / NOTICES_PATH
         if not notices_path.exists():
-            print(f"Missing {NOTICES_PATH}. Run: python scripts/check_licenses.py --write-notices", file=sys.stderr)
+            print(f"Missing {NOTICES_PATH}. Run: {LOCKED_LICENSE_COMMAND} --write-notices", file=sys.stderr)
             return 1
         expected = render_notices(packages, root)
         actual = notices_path.read_text(encoding="utf-8")
         if _normalize_notices_for_compare(actual) != _normalize_notices_for_compare(expected):
             print(
-                f"{NOTICES_PATH} is out of date. Run: python scripts/check_licenses.py --write-notices",
+                f"{NOTICES_PATH} is out of date. Run: {LOCKED_LICENSE_COMMAND} --write-notices",
                 file=sys.stderr,
             )
             return 1

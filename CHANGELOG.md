@@ -46,6 +46,10 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Fixed
 
+- **Locked dependency audit and license inventory** (2026-08-24) — upgraded the locked
+  `pip` package to 26.2.1 to remediate PYSEC-2026-3721. License-notice generation now
+  uses the same locked `dev` and `gui` environment as CI, preventing host Python
+  packages from entering the third-party inventory.
 - **AppSec: spreadsheet formula injection via export headers** (2026-08-03) —
   `neutralize_dataframe()` now prefixes dangerous formula characters on column
   names and index labels (not only cell values), so Data-tab CSV/XLSX/TXT exports

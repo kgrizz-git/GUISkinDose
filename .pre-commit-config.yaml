@@ -205,7 +205,7 @@ repos:
 
       - id: license-notices
         name: third-party notices (stale check)
-        entry: python scripts/check_licenses.py --check-notices
+        entry: uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices
         language: system
         pass_filenames: false
         files: ^(pyproject\.toml|uv\.lock|dev-docs/THIRD_PARTY_NOTICES\.md)$
