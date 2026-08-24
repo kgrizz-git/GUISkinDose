@@ -212,7 +212,7 @@ validation only.
 | After GUI help/copy changes | Run `python scripts/sync_gui_help.py --check`, `python scripts/check_help_registry.py`, and `python scripts/check_ui_copy.py` |
 | After feature docs or implementation mapping changes | Run `python scripts/check_feature_doc_matrix.py` |
 | After GUI CSS changes | Run `python scripts/generate_ui_values.py` (or `--check` in CI later) |
-| After dependency changes | Run `python scripts/check_licenses.py --write-notices` and commit `dev-docs/THIRD_PARTY_NOTICES.md` |
+| After dependency changes | Run `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` and commit `dev-docs/THIRD_PARTY_NOTICES.md` |
 | Monthly / before release | Run `python scripts/check_doc_pruning.py`; archive or intentionally keep stale candidates |
 | **Before each release** | Re-run full doc-freshness; resolve stale-pattern warnings; bump `pyproject.toml` and `CHANGELOG.md`; verify harness rows in `FEATURE_INVENTORY.md` §0 match `[Unreleased]` |
 
@@ -335,12 +335,12 @@ Policy and workflow: [`dev-docs/LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
 ```bash
 pip install -e ".[dev,gui]"
-python scripts/check_licenses.py
-python scripts/check_licenses.py --write-notices   # after dependency changes
-python scripts/check_licenses.py --check-notices   # verify tracked inventory
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices   # after dependency changes
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices   # verify tracked inventory
 ```
 
-A pre-commit hook (`license-notices`) runs `--check-notices` automatically on every commit, blocking if `THIRD_PARTY_NOTICES.md` is stale. This prevents forgetting to update the file after dependency changes. CI runs the same check (plus `python scripts/audit_dependencies.py`) in the `static-analysis` job.
+A pre-commit hook (`license-notices`) runs the locked `dev` + `gui` environment's `--check-notices` automatically on every commit, blocking if `THIRD_PARTY_NOTICES.md` is stale. This prevents a global interpreter from producing a different inventory. CI runs the same check (plus `python scripts/audit_dependencies.py`) in the `static-analysis` job.
 
 **Policy:**
 
@@ -400,7 +400,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **feature-doc-matrix** | `python scripts/check_feature_doc_matrix.py` |
 | **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
-| **license-notices** | `python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
+| **license-notices** | `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
 
 **Pre-push hook:**
 

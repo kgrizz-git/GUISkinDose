@@ -22,6 +22,10 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
 - Use `dev-docs/index.md` to find the source-of-truth doc before changing behavior or docs.
 - Search existing code and tests before adding abstractions.
 - Check `git status --short` and avoid overwriting unrelated user changes.
+- Do not use bare `python` for the third-party license inventory: it may select a
+  global interpreter. Use `uv run --extra dev --extra gui --locked python
+  scripts/check_licenses.py` (add `--write-notices` or `--check-notices` as needed)
+  so local results match CI.
 
 ## While Editing
 

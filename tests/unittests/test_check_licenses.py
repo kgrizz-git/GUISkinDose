@@ -120,3 +120,10 @@ def test_check_notices_detects_stale_file(cl, tmp_path):
         cl.NOTICES_PATH = original_path
 
     assert exit_code == 1
+
+
+def test_check_notices_missing_file_reports_locked_command(cl, tmp_path, capsys):
+    exit_code = cl.check_licenses(tmp_path, check_notices=True)
+
+    assert exit_code == 1
+    assert f"Run: {cl.LOCKED_LICENSE_COMMAND} --write-notices" in capsys.readouterr().err

@@ -4,10 +4,10 @@ MyPySkinDose is distributed under the **MIT License** (see [`LICENSE`](../LICENS
 
 ## Scope
 
-License checks apply to the **full declared dependency set** (all extras), pinned by `uv.lock`:
+License checks use the same locked **dev + GUI** dependency set as CI static analysis:
 
 ```bash
-uv sync --all-extras
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py
 ```
 
 That includes core runtime dependencies, GUI extras (`gui`, `gui-native`), dev/CI tooling
@@ -56,17 +56,17 @@ derivative** only, not to the application code. Do **not** run
 ## Commands
 
 ```bash
-# Audit licenses in the current environment (matches CI)
-python scripts/check_licenses.py
+# Audit licenses in the locked CI-equivalent environment
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py
 
 # Regenerate the tracked notices file after dependency changes
-python scripts/check_licenses.py --write-notices
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 
 # Fail if THIRD_PARTY_NOTICES.md is stale (optional local/CI check)
-python scripts/check_licenses.py --check-notices
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices
 
 # Treat unknown/review licenses as failures (stricter gate)
-python scripts/check_licenses.py --strict
+uv run --extra dev --extra gui --locked python scripts/check_licenses.py --strict
 ```
 
 ## When to update
