@@ -2626,7 +2626,7 @@ requires-dist = [
     { name = "networkx", marker = "extra == 'phantom-gen'", specifier = ">=3" },
     { name = "nicegui", marker = "extra == 'gui'", specifier = ">=2.0.0" },
     { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=2.0.0" },
-    { name = "nltk", marker = "extra == 'dev'", specifier = ">=3.10.2" },
+    { name = "nltk", marker = "extra == 'dev'", specifier = ">=3.10.3" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "numpy-stl", specifier = ">=3.2.0" },
     { name = "openpyxl" },

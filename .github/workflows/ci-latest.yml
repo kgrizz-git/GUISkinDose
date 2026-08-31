@@ -102,7 +102,7 @@ jobs:
             },
             pytest: {
               summary: 'unpinned pytest failed',
-              action: 'reproduce locally with `pip install -e ".[dev,gui]" && pytest --ignore=tests/gui`; fix or wait for upstream',
+              action: 'reproduce locally with `pip install -e ".[dev,gui]" && python -m pytest -q`; fix or wait for upstream',
             },
           };
 

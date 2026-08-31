@@ -19,11 +19,10 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Fixed
 
-- **PYSEC-2026-3726: bumped transitive dev-only `nltk`** (2026-08-30) — added
-  explicit `nltk>=3.10.2` pin to `[project.optional-dependencies].dev` so the
-  lockfile no longer pins the vulnerable `3.10.0` (transitive via `safety`).
-  The pin is project-visible in `pyproject.toml` and survives future
-  `uv lock --upgrade` runs.
+- **PYSEC-2026-3726 / GHSA-vp2x-qp44-57v7: bumped transitive dev-only `nltk`** (2026-08-30) — added
+  explicit `nltk>=3.10.3` minimum-version constraint to `[project.optional-dependencies].dev` so the
+  lockfile no longer pins the vulnerable `3.10.0` (transitive via `safety`; `3.10.2` remains vulnerable).
+  The pin is project-visible in `pyproject.toml` and survives future `uv lock --upgrade` runs.
 
 - **Basedpyright `corrections.py` type error** (2026-08-30) — replaced
   `min(fsl_tab, key=lambda x: abs(x - fsl_mean))` with an `np.argmin` idiom
