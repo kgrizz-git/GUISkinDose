@@ -17,7 +17,33 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+### Fixed
+
+- **PYSEC-2026-3726: bumped transitive dev-only `nltk`** (2026-08-30) — added
+  explicit `nltk>=3.10.2` pin to `[project.optional-dependencies].dev` so the
+  lockfile no longer pins the vulnerable `3.10.0` (transitive via `safety`).
+  The pin is project-visible in `pyproject.toml` and survives future
+  `uv lock --upgrade` runs.
+
+- **Basedpyright `corrections.py` type error** (2026-08-30) — replaced
+  `min(fsl_tab, key=lambda x: abs(x - fsl_mean))` with an `np.argmin` idiom
+  to eliminate a `SupportsAbs` typing friction between `numpy.floating` and
+  stdlib `abs()`. Semantically identical; no behavior change.
+
 ### Changed
+
+- **`ci-latest` issue body now includes per-step triage guidance** (2026-08-30) —
+  the tracking-issue body explains what each failure mode means and what action
+  to take, instead of a bare failure list.
+
+- **`ci.yml` now opens tracking issues on scheduled/dispatch failures**
+  (2026-08-30) — mirrors the `ci-latest` pattern with a distinct
+  `<!-- ci-failure -->` marker. Auto-closes when a later run is fully green.
+  Only fires on scheduled/dispatch runs, not PR failures.
+
+- **AGENTS.md: added git-hooks bypass convention** (2026-08-30) — agents must
+  never bypass pre-commit/pre-push hooks with `--no-verify` without explicit
+  user permission.
 
 - **Ruff 0.16.2 development-tool upgrade** (2026-08-09) — refreshed the locked
   linter and pre-commit hook, then applied its safe modernization fixes. Ruff 0.16

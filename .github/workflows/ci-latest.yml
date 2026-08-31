@@ -87,20 +87,55 @@ jobs:
             ['pytest', process.env.PYTEST_OUTCOME],
           ].filter(([, outcome]) => outcome === 'failure').map(([name]) => name);
 
+          const stepGuidance = {
+            install: {
+              summary: 'unpinned `pip install` failed — likely an upstream release broke installation',
+              action: 're-run **ci-latest** Monday; if still red, pin the offending dep in `pyproject.toml`',
+            },
+            basedpyright: {
+              summary: 'upstream tightened type annotations under unpinned deps',
+              action: 'reproduce locally with `pip install -e ".[dev,gui]" && basedpyright`; fix or `# pyright: ignore`',
+            },
+            gui_placement: {
+              summary: 'GUI test placement check failed under unpinned deps',
+              action: 'reproduce with `python scripts/check_gui_test_placement.py`; fix or move the test',
+            },
+            pytest: {
+              summary: 'unpinned pytest failed',
+              action: 'reproduce locally with `pip install -e ".[dev,gui]" && pytest --ignore=tests/gui`; fix or wait for upstream',
+            },
+          };
+
+          const guidanceLines = failed.map(name => {
+            const g = stepGuidance[name];
+            return g ? `- **${name}** — ${g.summary}\n  → ${g.action}` : `- **${name}** — unknown step (see run log)`;
+          }).join('\n');
+
           const summary = [
             marker,
             '',
             `@${owner} — scheduled/manual \`ci-latest\` reported probe failures.`,
             '',
-            'This workflow installs **unpinned** latest dependencies (not `uv.lock`) to catch',
-            'upstream breakage without turning `main` red. Investigate, fix code and/or bump',
-            'the lock with `uv lock --upgrade`, then re-run **ci-latest** (or wait for Monday).',
+            '**This is the unpinned-deps canary**, *not* the lockfile. The lockfile and PR CI are unaffected.',
+            '`ci.yml` (pinned, blocking) is authoritative; `ci-latest` is the early warning.',
             '',
-            `**Failed steps:** ${failed.join(', ') || 'unknown'}`,
-            `**Commit:** \`${sha}\``,
+            '**Failed steps + what to do:**',
+            '',
+            guidanceLines,
+            '',
+            '**Default:** do nothing — most issues self-correct when upstream ships a fix by next Monday.',
+            '',
+            '**Triage commands:**',
+            '```',
+            `gh run view ${context.runId}`,
+            `gh run view ${context.runId} --log | grep -A5 -E 'FAIL|ERROR|fail'`,
+            `gh run rerun ${context.runId}     # only after you've decided to act`,
+            '```',
+            '',
             `**Run:** ${runUrl}`,
+            `**Commit:** \`${sha}\``,
             '',
-            'A later green \`ci-latest\` run will auto-close open issues with this marker.',
+            'A later green `ci-latest` run will auto-close this issue.',
           ].join('\n');
 
           const openIssues = await github.paginate(github.rest.issues.listForRepo, {

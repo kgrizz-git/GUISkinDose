@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-08-24).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-08-30).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -86,7 +86,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | multidict | 6.7.1 | Apache-2.0 | https://github.com/aio-libs/multidict |
 | narwhals | 2.22.1 | MIT | Homepage, https://github.com/narwhals-dev/narwhals |
 | nicegui | 3.14.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
-| nltk | 3.10.0 | Apache-2.0 | https://www.nltk.org/ |
+| nltk | 3.10.3 | Apache-2.0 | https://www.nltk.org/ |
 | nodeenv | 1.10.0 | BSD-3-Clause | https://github.com/ekalinin/nodeenv |
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | numpy | 2.4.6 | BSD-3-Clause, 0BSD, MIT, Zlib, CC0-1.0 | homepage, https://numpy.org |
