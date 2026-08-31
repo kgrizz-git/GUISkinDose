@@ -151,7 +151,7 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int
     fsl_mean = np.mean(np.sqrt(field_area))
 
     # Select the closest available tabulated field size length.
-    fsl = min(fsl_tab, key=lambda x: abs(x - fsl_mean))
+    fsl = fsl_tab[int(np.argmin(np.abs(np.asarray(fsl_tab) - fsl_mean)))]
 
     # Connect to database
     conn = db_connect(db_name=corrections_db)[0]

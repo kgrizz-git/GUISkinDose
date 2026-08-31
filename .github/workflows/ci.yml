@@ -455,3 +455,180 @@ jobs:
       uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3  # v4.37.6
       with:
         category: "/language:python"
+
+  # ── Tracking-issue notification (scheduled/dispatch only, never PRs) ──
+  # Mirrors the ci-latest pattern with a distinct marker so the two issue
+  # streams stay separate. Never embed raw logs — only job names, SHA, run URL.
+  ci-issue-notify:
+    name: Open / update tracking issue on failure
+    needs: [schedule-gate, privacy-gates, static-analysis, owasp-semgrep,
+            gui-smoke, build, coverage-pr, gitleaks, codeql,
+            cloud-scans-main, sonar-scan]
+    if: >
+      always() &&
+      needs.schedule-gate.outputs.should_run == 'true' &&
+      github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+    - name: Compose failure summary
+      id: summary
+      env:
+        PRIVACY_GATES: ${{ needs.privacy-gates.result }}
+        STATIC_ANALYSIS: ${{ needs.static-analysis.result }}
+        OWASP_SEMGREP: ${{ needs.owasp-semgrep.result }}
+        GUI_SMOKE: ${{ needs.gui-smoke.result }}
+        BUILD: ${{ needs.build.result }}
+        COVERAGE_PR: ${{ needs.coverage-pr.result }}
+        GITLEAKS: ${{ needs.gitleaks.result }}
+        CODEQL: ${{ needs.codeql.result }}
+        CLOUD_SCANS_MAIN: ${{ needs.cloud-scans-main.result }}
+        SONAR_SCAN: ${{ needs.sonar-scan.result }}
+      run: |
+        # Count only result == 'failure'. 'skipped' (job gated off — e.g.
+        # coverage-pr on push:main, sonar-scan without SONAR_TOKEN) and
+        # 'cancelled' (concurrency cancel-in-progress) are non-failures.
+        failed=""
+        for pair in \
+          "privacy-gates:$PRIVACY_GATES" \
+          "static-analysis:$STATIC_ANALYSIS" \
+          "owasp-semgrep:$OWASP_SEMGREP" \
+          "gui-smoke:$GUI_SMOKE" \
+          "build:$BUILD" \
+          "coverage-pr:$COVERAGE_PR" \
+          "gitleaks:$GITLEAKS" \
+          "codeql:$CODEQL" \
+          "cloud-scans-main:$CLOUD_SCANS_MAIN" \
+          "sonar-scan:$SONAR_SCAN"; do
+          name="${pair%%:*}"
+          result="${pair#*:}"
+          if [ "$result" = "failure" ]; then
+            failed="${failed:+$failed, }$name"
+          fi
+        done
+        if [ -z "$failed" ]; then
+          echo "has_failures=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_failures=true" >> "$GITHUB_OUTPUT"
+          echo "failed_jobs=$failed" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Open or update tracking issue
+      if: steps.summary.outputs.has_failures == 'true'
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+      env:
+        FAILED_JOBS: ${{ steps.summary.outputs.failed_jobs }}
+      with:
+        script: |
+          const marker = '<!-- ci-failure -->';
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+          const sha = context.sha;
+          const failedJobs = process.env.FAILED_JOBS;
+
+          const summary = [
+            marker,
+            '',
+            `@${owner} — scheduled/manual \`ci\` reported failures.`,
+            '',
+            '**This is the pinned (lockfile) CI.** These failures affect PR merges and `main` status.',
+            '',
+            `**Failed jobs:** ${failedJobs}`,
+            '',
+            '**Triage commands:**',
+            '```',
+            `gh run view ${context.runId}`,
+            `gh run rerun ${context.runId}`,
+            '```',
+            '',
+            `**Run:** ${runUrl}`,
+            `**Commit:** \`${sha}\``,
+            '',
+            'A later green `ci` run will auto-close this issue.',
+          ].join('\n');
+
+          const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+            owner,
+            repo,
+            state: 'open',
+            labels: 'github_actions',
+            per_page: 100,
+          });
+          const existing = openIssues.find((issue) =>
+            !issue.pull_request && (issue.body || '').includes(marker)
+          );
+
+          if (existing) {
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: existing.number,
+              body: summary,
+            });
+            core.info(`Updated existing ci issue #${existing.number}`);
+            return;
+          }
+
+          const issue = await github.rest.issues.create({
+            owner,
+            repo,
+            title: 'ci: pinned CI reported failures',
+            body: summary,
+            labels: ['github_actions', 'dependencies'],
+            assignees: [owner],
+          });
+          core.info(`Opened ci issue #${issue.data.number}`);
+
+  ci-issue-close:
+    name: Close ci tracking issues on success
+    needs: [schedule-gate, privacy-gates, static-analysis, owasp-semgrep,
+            gui-smoke, build, coverage-pr, gitleaks, codeql,
+            cloud-scans-main, sonar-scan]
+    if: >
+      always() &&
+      needs.schedule-gate.outputs.should_run == 'true' &&
+      github.event_name != 'pull_request' &&
+      !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+    - name: Close open ci tracking issues
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+      with:
+        script: |
+          const marker = '<!-- ci-failure -->';
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+          const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+            owner,
+            repo,
+            state: 'open',
+            labels: 'github_actions',
+            per_page: 100,
+          });
+          for (const issue of openIssues) {
+            if (issue.pull_request || !(issue.body || '').includes(marker)) {
+              continue;
+            }
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issue.number,
+              body: `\`ci\` is green again (${runUrl}). Closing this tracking issue.`,
+            });
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: issue.number,
+              state: 'closed',
+              state_reason: 'completed',
+            });
+            core.info(`Closed ci issue #${issue.number}`);
+          }
