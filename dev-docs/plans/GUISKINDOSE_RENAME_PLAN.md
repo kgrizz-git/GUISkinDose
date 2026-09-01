@@ -3,8 +3,8 @@
 **Scope:** Rename the Python package from `mypyskindose` to `guiskindose` and the user-facing
 brand from "MyPySkinDose" to "GUISkinDose".
 
-**Scale:** ~250 files, ~2,400 `mypyskindose` occurrences, plus ~2,850 total variant occurrences
-(including upstream `PySkinDose` attribution, which is intentionally preserved).
+**Scale:** ~320 git-tracked files containing `mypyskindose`, ~2,140 total lines, plus upstream
+`PySkinDose` attribution lines (intentionally preserved).
 
 ---
 
@@ -35,6 +35,11 @@ All references to the upstream **PySkinDose** project (by `rvbCMTS`) are preserv
 - Upstream URLs (`github.com/rvbCMTS/PySkinDose`)
 - `geom_calc.py` / `calculate_dose.py` normalization comments ("normalized for compliance with PySkinDose")
 - `dev-docs/references/dhen2714_*.py` reference implementations
+- **Semgrep rule IDs** in `.semgrep/mypyskindose-privacy.yml` — keep rule IDs as-is (e.g.
+  `mypyskindose-identifier-attr-to-log-or-stdout`) to avoid breaking every `# nosemgrep:` directive.
+  Only rename the file itself to `.semgrep/guiskindose-privacy.yml` and update references in
+  `scripts/run_semgrep_privacy.py`. Cross-check all `# nosemgrep:` comments in the repo to ensure
+  the referenced rule IDs remain valid after the file rename.
 
 ---
 
@@ -89,6 +94,7 @@ exact string `mypyskindose` in Python files (`.py`) must become `guiskindose` **
 | `"MyPySkinDose"` (display name) | `"GUISkinDose"` | `export/models.py:APP_NAME`, `gui/app.py`, `docs/source/conf.py`, `CITATION.cff:2,10`, `README.md` (selective) |
 | `.mypyskindose` | `.guiskindose` | `.env.example`, `gui/window_prefs.py` |
 | `mypyskindose_version` | `guiskindose_version` | `export/writers/html.py` HTML meta tag |
+| `src/mypyskindose` | `src/guiskindose` | `dev-docs/UI_values.md` (auto-generated paths) |
 
 ### Phase 3 — Documentation updates
 
@@ -137,13 +143,13 @@ Update all files under `dev-docs/` that reference `mypyskindose`:
   - `ui_copy.json` — if any paths referenced
   - `glossary.json` — if any references
 
-**Do NOT update** files under `plans/archive/` or `assessments/` — these are historical.
+**Do NOT update** files under `plans/archive/`, `assessments/`, or `backups/` — these are historical.
 
 #### 3c. GUI help files
 
-Update `docs/source/gui_help/*.md` (5 source files). The mirrored copies under
-`src/guiskindose/gui/help/` will be updated by the `scripts/sync_gui_help.py` script after the
-source files are edited.
+Update `docs/source/gui_help/*.md` (10 source files; 5 contain the `MyPySkinDose` brand string
+and need updating). The mirrored copies under `src/guiskindose/gui/help/` will be updated by
+the `scripts/sync_gui_help.py` script after the source files are edited.
 
 #### 3d. Sphinx docs
 
@@ -179,8 +185,8 @@ All test files under `tests/` use `from mypyskindose.X import Y` imports. Bulk-r
 - `tests/unittests/` (~70 files, ~500 imports)
 - `tests/gui/` (~20 files)
 - `tests/integrationtests/` (5 files)
-- `tests/manual_tests/` (9 .py files + 6 .ipynb notebooks)
-- `tests/scripts/` (1 file)
+- `tests/manual_tests/` (9 .py files + 5 .ipynb notebooks under `notebook_tests/`)
+- `tests/scripts/launch_gui_headless.py` — contains `MyPySkinDose` reference
 - `tests/calculate_dose_recursion_helpers.py`
 
 For `.ipynb` notebooks, the replacement must target cell source strings containing
@@ -207,20 +213,25 @@ Update all scripts under `scripts/`:
 - `scripts/check_ui_copy.py` — path constant
 - `scripts/check_doc_freshness.py` — any path references
 - `scripts/check_licenses.py` — any path references
-- `scripts/run_hounddog_advisory.py` — temp dir prefix
-- `scripts/run_semgrep_privacy.py` — any references
+- `scripts/run_hounddog_advisory.py` — temp dir prefix (`"mypyskindose-hounddog-"`)
+- `scripts/run_semgrep_privacy.py` — update reference to `.semgrep/mypyskindose-privacy.yml` (rename file to `.semgrep/guiskindose-privacy.yml`; rule IDs inside stay unchanged)
 - `scripts/phantom_gen/validate_phantom.py` — import + instantiation
 - Other `scripts/phantom_gen/*.py` files — imports
 
-### Phase 6 — Launcher and config files
+### Phase 6 — Launcher, config, and CI files
 
-- `run_gui.sh` — all `mypyskindose` references (12 occurrences)
-- `run_gui.bat` — all `mypyskindose` references (12 occurrences)
+- `run_gui.sh` — all `mypyskindose` references
+- `run_gui.bat` — all `mypyskindose` references
 - `build_documentation.bat` — apidoc output path
 - `.env.example` — env var names and config path references
 - `.pre-commit-config.yaml` — bandit hook `files` regex, help sync hook name
 - `.gitignore` — path patterns
 - `sonar-project.properties` — project key/name (if repo is renamed)
+- `uv.lock` — regenerate with `uv lock` after `pyproject.toml` rename (commit the regenerated lockfile)
+- `.phi-scanner.yml` — contains `src/mypyskindose/table_data/hvl_tables/...` paths; update after rename
+- `.phi-scanbaseline` — contains `file_path: src/mypyskindose/table_data/...` entries; re-run baseline update after rename so CI accepts the new paths
+- `.github/workflows/ci.yml` — five occurrences: `bandit -c pyproject.toml -r src/mypyskindose`, `python -m compileall src/mypyskindose`, `--cov=src/mypyskindose` paths, `coverage report --include="src/mypyskindose/*"`
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — contains `import mypyskindose` instruction
 
 ### Phase 7 — String literal audit
 
@@ -241,6 +252,13 @@ Beyond bulk find-and-replace, audit these user-facing string literals individual
 13. **`cli_args.py`** — argparse `prog` and description
 14. **`debug.py`** — `_LOGGER_ROOT` constant
 15. **All `logging.getLogger("mypyskindose...")` calls** — update root and sub-loggers
+16. **`beam_class.py`** — update `mypyskindose.readthedocs.io` URL if ReadTheDocs project is renamed
+17. **Brand-string assertions in tests** — these assert on literal `"MyPySkinDose"` and need updating:
+    - `tests/gui/test_gui_smoke.py:31` — `user.should_see("MyPySkinDose")`
+    - `tests/unittests/test_export_docx.py:44` — `assert "MyPySkinDose" in text`
+    - `tests/unittests/test_input_adapters.py:38` — `["Source: MyPySkinDose"]`
+    - `tests/gui/test_rdsr_unit_error.py:32` — error message containing `MyPySkinDose`
+    - `tests/gui/test_gui_security.py` — docstring
 
 ### Phase 8 — Validation
 
@@ -279,6 +297,8 @@ python scripts/sync_gui_help.py  # re-mirror GUI help files
 python scripts/check_doc_pruning.py
 ```
 
+Regenerate `dev-docs/UI_values.md` (auto-generated by `scripts/generate_ui_values.py` reading
+`src/guiskindose/gui/styles.py`).
 Update `dev-docs/index.md` to reference the new plan name.
 
 ---
