@@ -7,6 +7,11 @@ pywebview so unit tests can run without the ``gui-native`` extra.
 Demo / non-clinical mesh visibility (``show_demo_phantoms``) can also be enabled
 via process env, a repo ``.env``, or a gitignored repo-local JSON — see
 ``show_demo_phantoms_enabled``.
+
+Config paths support the in-progress GUISkinDose rename: reads fall back to
+the new ``~/.guiskindose/`` and ``.guiskindose.local.json`` locations when the
+old ``~/.mypyskindose/`` and ``.mypyskindose.local.json`` files are absent.
+Writes still target the legacy paths until the rename is complete.
 """
 
 from __future__ import annotations
@@ -34,7 +39,9 @@ MAXIMIZED_FILL_RATIO = 0.90
 
 # Local opt-in for Settings Demo meshes (never commit true in shared configs).
 SHOW_DEMO_PHANTOMS_ENV = "MYPYSKINDOSE_SHOW_DEMO_PHANTOMS"
+SHOW_DEMO_PHANTOMS_ENV_NEW = "GUISKINDOSE_SHOW_DEMO_PHANTOMS"
 REPO_LOCAL_GUI_CONFIG_NAME = ".mypyskindose.local.json"
+REPO_LOCAL_GUI_CONFIG_NAME_NEW = ".guiskindose.local.json"
 
 
 @dataclass
@@ -88,18 +95,20 @@ def _backup_bad_gui_config(path: Path) -> None:
 
 def load_gui_config() -> dict[str, Any]:
     """Load the raw GUI config dict, defaulting safely on missing/invalid files."""
-    path = config_path()
+    new_path = Path.home() / ".guiskindose" / "gui.json"
+    old_path = config_path()
+    target = new_path if new_path.exists() else old_path
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(target.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
     except Exception as exc:
         safe_error_event(logger, "gui_config_load", exc, level=logging.DEBUG)
-        _backup_bad_gui_config(path)
+        _backup_bad_gui_config(target)
         return {}
     if not isinstance(data, dict):
         logger.debug("gui_config_non_object")
-        _backup_bad_gui_config(path)
+        _backup_bad_gui_config(target)
         return {}
     return data
 
@@ -159,11 +168,17 @@ def find_repo_root(start: Path | None = None) -> Path | None:
 
 
 def repo_local_gui_config_path(start: Path | None = None) -> Path | None:
-    """Path to gitignored ``.mypyskindose.local.json`` under the repo root, if any."""
+    """Path to gitignored repo-local GUI config (new name preferred if present)."""
     root = find_repo_root(start)
     if root is None:
         return None
-    return root / REPO_LOCAL_GUI_CONFIG_NAME
+    new = root / REPO_LOCAL_GUI_CONFIG_NAME_NEW
+    if new.is_file():
+        return new
+    old = root / REPO_LOCAL_GUI_CONFIG_NAME
+    if old.is_file():
+        return old
+    return None
 
 
 def _load_repo_local_gui_config(start: Path | None = None) -> dict[str, Any]:
@@ -183,14 +198,22 @@ def show_demo_phantoms_enabled(*, start: Path | None = None) -> bool:
 
     First source that explicitly sets the flag wins (later sources ignored):
 
-    1. Process env ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
-    2. Repo ``.env`` (same key; only if process env unset)
-    3. Gitignored ``.mypyskindose.local.json`` in the repo root
-       (``{"show_demo_phantoms": true}``)
-    4. ``~/.mypyskindose/gui.json`` (``show_demo_phantoms``)
+    1. Process env ``GUISKINDOSE_SHOW_DEMO_PHANTOMS``
+    2. Process env ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
+    3. Repo ``.env`` key ``GUISKINDOSE_SHOW_DEMO_PHANTOMS``
+    4. Repo ``.env`` key ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
+    5. Gitignored ``.guiskindose.local.json`` or ``.mypyskindose.local.json`` in the
+       repo root (``{"show_demo_phantoms": true}``)
+    6. ``~/.mypyskindose/gui.json`` or ``~/.guiskindose/gui.json``
+       (``show_demo_phantoms``)
 
     Missing / unrecognized values fall through. Default is ``False``.
     """
+    env_raw = os.environ.get(SHOW_DEMO_PHANTOMS_ENV_NEW)
+    parsed = _parse_boolish(env_raw)
+    if parsed is not None:
+        return parsed
+
     env_raw = os.environ.get(SHOW_DEMO_PHANTOMS_ENV)
     parsed = _parse_boolish(env_raw)
     if parsed is not None:
@@ -198,6 +221,11 @@ def show_demo_phantoms_enabled(*, start: Path | None = None) -> bool:
 
     root = find_repo_root(start)
     if root is not None:
+        dotenv_raw = _read_dotenv_value(root / ".env", SHOW_DEMO_PHANTOMS_ENV_NEW)
+        parsed = _parse_boolish(dotenv_raw)
+        if parsed is not None:
+            return parsed
+
         dotenv_raw = _read_dotenv_value(root / ".env", SHOW_DEMO_PHANTOMS_ENV)
         parsed = _parse_boolish(dotenv_raw)
         if parsed is not None:
