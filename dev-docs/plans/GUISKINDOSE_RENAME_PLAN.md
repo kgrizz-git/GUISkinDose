@@ -250,7 +250,10 @@ Update all scripts under `scripts/`:
 - `.phi-scanner.yml` — contains `src/mypyskindose/table_data/hvl_tables/...` paths; update after rename
 - `.phi-scanbaseline` — contains `file_path: src/mypyskindose/table_data/...` entries; re-run baseline update after rename so CI accepts the new paths
 - `.github/workflows/ci.yml` — 7 occurrences (lines 162, 275, 321, 323, 326, 368, 370): `bandit -c pyproject.toml -r src/mypyskindose`, `python -m compileall src/mypyskindose`, `--cov=src/mypyskindose` paths, `coverage report --include="src/mypyskindose/*"`
-- `.github/ISSUE_TEMPLATE/bug_report.yml` — contains `import mypyskindose` instruction
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — contains `import mypyskindose` instruction and links to repo URLs
+- `.github/ISSUE_TEMPLATE/feature_request.yml` — contains links to repo URLs and brand strings
+- `.github/ISSUE_TEMPLATE/config.yml` — contains links to repo URLs
+- `.github/pull_request_template.md` — contains links to repo URLs
 
 ### Phase 7 — String literal audit
 
@@ -426,7 +429,7 @@ Each phase should be a separate commit for clean `git bisect` if something break
 
 3. **PyPI name reservation** — Confirm `guiskindose` is available on PyPI before starting.
 
-4. **Notebook execution** — The 6 `.ipynb` files under `tests/manual_tests/` contain
+4. **Notebook execution** — The 5 `.ipynb` notebooks under `tests/manual_tests/notebook_tests/` contain
    `mypyskindose` imports in cell source. These need JSON-level editing. Verify notebooks
    still execute after the rename.
 
