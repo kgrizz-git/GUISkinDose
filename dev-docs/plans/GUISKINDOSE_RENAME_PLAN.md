@@ -91,8 +91,10 @@ reset.
 Required behavior:
 
 1. Prefer `~/.guiskindose/` and `.guiskindose.local.json` when they exist.
-2. If the new dir/file is absent, read the old path privately (no raw-path logging) and write
-   subsequent saves to the new path.
+2. If the new dir/file is absent, read the old path privately (no raw-path logging).
+   **PR 0** still writes subsequent saves to the **old** path so this slice stays
+   independently green. **PR 1** flips writes to the new path (this section's
+   long-term contract). Do not create `~/.guiskindose/` by hand until that flip.
 3. `show_demo_phantoms_enabled` must accept `GUISKINDOSE_SHOW_DEMO_PHANTOMS` first, then
    `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS`, then `.env` / local JSON / `gui.json` as today.
 4. Do not delete the old directory from the user's home as part of this change.

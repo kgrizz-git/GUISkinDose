@@ -22,7 +22,7 @@ ALLOWED_PATHS = [
     "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
     "dev-docs/COORD_TRANSFORM_COMPARISON.md",
-    "GUISKINDOSE_MIGRATION_STATUS.md",
+    "GUISKINDOSE_MIGRATION_STATUS.md",  # created in PR 1; allowlist it now
     "scripts/check_stale_brand.py",
     "tests/unittests/test_check_stale_brand.py",
     "scripts/rewrite_package_paths.py",
@@ -51,13 +51,23 @@ def get_git_files(repo_root: Path) -> list[str]:
             ["git", "ls-files"], cwd=repo_root, text=True, stderr=subprocess.DEVNULL
         )
         return output.splitlines()
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
         # Fallback if git fails (e.g. not in a git repo)
         return [
             p.relative_to(repo_root).as_posix()
             for p in repo_root.rglob("*")
             if p.is_file() and ".git" not in p.parts and ".venv" not in p.parts
         ]
+
+
+def _is_probably_text(path: Path) -> bool:
+    """Skip NUL-containing files so the gate does not scan binaries."""
+    try:
+        sample = path.read_bytes()[:4096]
+    except OSError:
+        return False
+    return b"\x00" not in sample
+
 
 def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE_PACKAGE_NAME) -> list[str]:
     """Check a file and return a list of error lines."""
@@ -67,6 +77,8 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
         return []
 
     if is_path_allowed(rel_path):
+        return []
+    if not _is_probably_text(path):
         return []
 
     errors = []

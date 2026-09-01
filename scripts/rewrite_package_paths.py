@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,12 @@ _ALLOWLIST_FILE_PATHS: tuple[str, ...] = (
     "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
     "dev-docs/COORD_TRANSFORM_COMPARISON.md",
+    "CHANGELOG.md",
+    "GUISKINDOSE_MIGRATION_STATUS.md",
+    "scripts/check_stale_brand.py",
+    "tests/unittests/test_check_stale_brand.py",
+    "scripts/rewrite_package_paths.py",
+    "tests/unittests/test_rewrite_package_paths.py",
 )
 
 # Compiled line-content allowlist patterns. A line matching any of these is subtracted
@@ -183,7 +190,24 @@ def _load_inventory(path: Path) -> Any:
 
 
 def _dump_inventory(data: Any, path: Path) -> None:
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    """Atomically write inventory JSON (indent 2, trailing newline)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            delete=False,
+            suffix=".tmp",
+        ) as tmp:
+            tmp_path = Path(tmp.name)
+            tmp.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        tmp_path.replace(path)
+    except Exception:
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -239,6 +263,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         _dump_inventory(rewritten, inventory_path)
         print(f"Rewrote {len(changes)} path(s) in {inventory_path}.")
+        print("Re-run: python scripts/render_asset_inventory.py --write")
+        print("Stage both the JSON and generated Markdown together.")
         return 0
 
     # scan
@@ -250,9 +276,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("No leftover brand hits found (after allowlist).")
         return 0
     print(f"Leftover brand hits: {len(hits)} (after allowlist):")
-    for path, number, line in hits:
-        rel = path.relative_to(repo_root) if path.is_absolute() else path
-        print(f"  {rel}:{number}: {line}")
+    try:
+        for path, number, line in hits:
+            rel = path.relative_to(repo_root) if path.is_absolute() else path
+            print(f"  {rel}:{number}: {line}")
+    except BrokenPipeError:
+        return 0
     return 0
 
 

@@ -28,16 +28,6 @@ PRIMARY = ScreenBounds(0, 0, 1920, 1080, is_primary=True)
 SECONDARY = ScreenBounds(1920, 0, 1280, 720)
 
 
-@pytest.fixture(autouse=True)
-def _isolate_new_gui_config_path(tmp_path, monkeypatch):
-    """Keep load_gui_config() from reading a real ~/.guiskindose/gui.json."""
-    monkeypatch.setattr(
-        window_prefs,
-        "new_config_path",
-        lambda: tmp_path / "missing-guiskindose" / "gui.json",
-    )
-
-
 def test_load_missing_file_returns_none(tmp_path, monkeypatch):
     monkeypatch.setattr(
         window_prefs,

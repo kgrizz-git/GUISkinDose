@@ -73,3 +73,11 @@ def test_stale_brand_temp_prefixes_not_allowed(tmp_path: Path):
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert len(errors) == 1
     assert "mypyskindose-uploads" in errors[0]
+
+
+def test_stale_brand_skips_nul_files(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    file_path = repo_root / "src" / "guiskindose" / "data.bin"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_bytes(b"mypyskindose\x00rest")
+    assert check_file(file_path, repo_root, live_package_name="guiskindose") == []

@@ -177,6 +177,7 @@ def test_cli_rewrite_apply_writes(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert rewritten["assets"][0]["review"]["reviewer"] == "KG"
     captured = capsys.readouterr()
     assert "Rewrote" in captured.out
+    assert "render_asset_inventory.py --write" in captured.out
 
 
 def test_cli_rewrite_no_changes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -345,3 +346,12 @@ def test_is_file_allowlisted_matches(repo_rel: str) -> None:
 
 def test_is_line_allowlisted_rejects_bare_reference() -> None:
     assert _is_line_allowlisted("import mypyskindose") is False
+
+
+def test_scan_allowlist_covers_stale_brand_gate_paths() -> None:
+    """Keep rewrite scan and the CI gate allowlisting the same helper files."""
+    from scripts.check_stale_brand import ALLOWED_PATHS
+    from scripts.rewrite_package_paths import _is_file_allowlisted
+
+    for allowed in ALLOWED_PATHS:
+        assert _is_file_allowlisted(allowed), allowed

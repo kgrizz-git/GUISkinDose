@@ -22,10 +22,11 @@ omit pure CI/refactor bullets and point readers here. See
 - **GUISkinDose rename PR 0 prerequisites** (2026-09-01) — green, mergeable helpers that do
   not rename the Python package: extract `cli()` from `__main__.py` for a future console
   script; dual-read `~/.guiskindose/` / `.guiskindose.local.json` /
-  `GUISKINDOSE_SHOW_DEMO_PHANTOMS` while still writing the legacy mypyskindose paths;
+  `GUISKINDOSE_SHOW_DEMO_PHANTOMS` while still writing the legacy mypyskindose paths
+  (do not create `~/.guiskindose/` by hand until PR 1 starts writing that path);
   `scripts/rewrite_package_paths.py` (inventory `path` rewrite + leftover-brand report);
-  `scripts/check_stale_brand.py` wired into pre-commit and CI (still allows the live
-  `mypyskindose` name until PR 1 tightens `LIVE_PACKAGE_NAME`).
+  `scripts/check_stale_brand.py` wired into pre-commit and CI (effectively a no-op until
+  PR 1 flips `LIVE_PACKAGE_NAME`; fail-closed behavior is covered by tests).
 
 ### Fixed
 
