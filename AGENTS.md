@@ -22,6 +22,7 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 - **[dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)** — public-repository PII/PHI safeguards, DICOM/image review policy, and approved-asset inventory
 - **[dev-docs/PRIVACY_INCIDENT_RESPONSE.md](dev-docs/PRIVACY_INCIDENT_RESPONSE.md)** — private evidence handling, history/release audit, containment, remediation, and release checklist
 - **[dev-docs/plans/PRIVACY_HARDENING_PLAN.md](dev-docs/plans/PRIVACY_HARDENING_PLAN.md)** — phased plan for runtime diagnostics, de-identified exports, test/write containment, scanner cadence, asset review, and release privacy gates
+- **[dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md)** — in-repo rename to GUISkinDose / `guiskindose` (not yet executed; re-count inventories if other work lands first)
 - **[dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)
 - **[dev-docs/LICENSE_COMPLIANCE.md](dev-docs/LICENSE_COMPLIANCE.md)** — third-party license policy, audit commands, and notices workflow
 - **[dev-docs/assessments/](dev-docs/assessments/)** — diagnostics and assessments of code quality, refactoring, bug checks, or security

@@ -1,10 +1,32 @@
 # GUISkinDose Rename Plan
 
-**Scope:** Rename the Python package from `mypyskindose` to `guiskindose` and the user-facing
-brand from "MyPySkinDose" to "GUISkinDose".
+**Scope:** In-repo rename of the Python package from `mypyskindose` to `guiskindose` and the
+user-facing brand from "MyPySkinDose" to "GUISkinDose".
 
-**Scale:** ~320 git-tracked files containing `mypyskindose`, ~2,140 total lines, plus upstream
-`PySkinDose` attribution lines (intentionally preserved).
+**Does not include:** GitHub repository rename, PyPI first publish, fixture sanitization, or
+Trusted Publishing. Those stay in
+[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md)
+(Phases 5B–7). This file is the mechanical-rename execution plan that republication Phase 5A
+points at.
+
+**Scale (re-count immediately before execution):** git-tracked files containing `mypyskindose`,
+plus upstream `PySkinDose` attribution lines (intentionally preserved). Snapshot from plan
+authoring was ~320 files / ~2,140 matching lines; that count drifts as other work lands.
+
+---
+
+## Ownership vs the republication plan
+
+| Work | Owner |
+|------|--------|
+| `src/` directory rename, imports, tests, scripts, CI paths, docs brand strings, config migration, stale-brand check | **This plan** |
+| `[project.scripts]` `guiskindose` console command (new; today only `python -m`) | **This plan** (identity) |
+| Wheel/sdist clean-install verification, TestPyPI, version-line decision, Trusted Publishing | Republication Phase 5B |
+| NOTICE/provenance, GitHub fork rename, fork-banner preservation | Republication Phases 5C and 7 |
+| DICOM/tabular sanitization and scanner gates | Republication Phases 1–4, 6 |
+
+Do not re-list replacement tables in the republication plan. If the two documents disagree,
+this file wins for mechanical rename; republication wins for publication and GitHub rename.
 
 ---
 
@@ -16,37 +38,95 @@ brand from "MyPySkinDose" to "GUISkinDose".
 | PyPI distribution name | `mypyskindose` | `guiskindose` |
 | User-facing brand / display | "MyPySkinDose" | "GUISkinDose" |
 | CLI invocation | `python -m mypyskindose` | `python -m guiskindose` |
+| Console script (new) | *(none)* | `guiskindose` via `[project.scripts]` |
 | Logger root | `"mypyskindose"` | `"guiskindose"` |
-| Config directory | `~/.mypyskindose/` | `~/.guiskindose/` |
-| Config file | `.mypyskindose.local.json` | `.guiskindose.local.json` |
+| Config directory | `~/.mypyskindose/` | `~/.guiskindose/` (migrate; do not hard-cut) |
+| Config file | `.mypyskindose.local.json` | `.guiskindose.local.json` (migrate) |
 | Temp dir prefix | `mypyskindose-uploads` | `guiskindose-uploads` |
 | Export temp prefix | `.mypyskindose-export-` | `.guiskindose-export-` |
+| Semgrep / HoundDog temp prefixes | `mypyskindose-semgrep-`, `mypyskindose-hounddog-` | `guiskindose-semgrep-`, `guiskindose-hounddog-` |
 | Default filenames | `mypyskindose_*.json` | `guiskindose_*.json` |
+| HTML comment marker | `mypyskindose:tabular_input` | `guiskindose:tabular_input` |
 | HTML meta tag | `mypyskindose_version` | `guiskindose_version` |
-| Environment variable | `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS` | `GUISKINDOSE_SHOW_DEMO_PHANTOMS` |
-| GitHub URLs | `github.com/kgrizz-git/MyPySkinDose` | `github.com/kgrizz-git/GUISkinDose` (if repo is renamed) |
+| Environment variable | `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS` | `GUISKINDOSE_SHOW_DEMO_PHANTOMS` (keep reading the old name) |
+| GitHub URLs / Sonar project key | `kgrizz-git/MyPySkinDose` | **Only after** the GitHub/SonarCloud projects are actually renamed |
 
-### What stays as-is (upstream attribution)
+### What stays as-is (upstream attribution and Semgrep IDs)
 
-All references to the upstream **PySkinDose** project (by `rvbCMTS`) are preserved:
-- `PySkinDoseOutput` class name (it is the upstream's public API name)
-- Fork attribution in `pyproject.toml`, `README.md`, `CONTRIBUTING.md`, `CITATION.cff`
-- Historical `CHANGELOG.md` entries
-- `dev-docs/FORK_MAINTAINER_GUIDE.md` references
-- Upstream URLs (`github.com/rvbCMTS/PySkinDose`)
-- `geom_calc.py` / `calculate_dose.py` normalization comments ("normalized for compliance with PySkinDose")
-- `dev-docs/references/dhen2714_*.py` reference implementations
-- **Semgrep rule IDs** in `.semgrep/mypyskindose-privacy.yml` — keep rule IDs as-is (e.g.
-  `mypyskindose-identifier-attr-to-log-or-stdout`) to avoid breaking every `# nosemgrep:` directive.
-  Only rename the file itself to `.semgrep/guiskindose-privacy.yml` and update references in
-  `scripts/run_semgrep_privacy.py`. **Also update the 7 path exclusions** inside the file
-  (`src/mypyskindose/gui/tabs/data.py`, `src/mypyskindose/gui/tabs/export.py`,
-  `src/mypyskindose/export/writers/**`, `src/mypyskindose/plotting/create_dose_map_plot.py`,
-  `src/mypyskindose/gui/tabs/**`, `src/mypyskindose/gui/widgets/**`,
-  `src/mypyskindose/gui/upload_temp_files.py`) from `src/mypyskindose` to `src/guiskindose`.
-  Cross-check all `# nosemgrep:` comments in the repo to ensure the referenced rule IDs remain
-  valid after the file rename. Note: `# nosemgrep: mypyskindose-*` comments in source files
-  should NOT be changed — they reference rule IDs, not the file name.
+Preserve all references to upstream **PySkinDose** (`rvbCMTS`): `PySkinDoseOutput`, fork
+attribution, historical `CHANGELOG.md` entries, `FORK_MAINTAINER_GUIDE.md`, upstream URLs,
+normalization comments, and `dev-docs/references/dhen2714_*.py`.
+
+**Semgrep rule IDs stay `mypyskindose-*`.** Rename the rules file to
+`.semgrep/guiskindose-privacy.yml` and update `scripts/run_semgrep_privacy.py` plus
+`tests/unittests/test_privacy_semgrep_rules.py` `_RULES`. Do **not** rewrite `# nosemgrep:
+mypyskindose-*` comments or test assertions of those check IDs.
+
+The YAML `paths.include` filters (not exclusions) must move with the package:
+
+- `src/mypyskindose/gui/tabs/data.py`
+- `src/mypyskindose/gui/tabs/export.py`
+- `src/mypyskindose/export/writers/**`
+- `src/mypyskindose/plotting/create_dose_map_plot.py`
+- `src/mypyskindose/gui/tabs/**`
+- `src/mypyskindose/gui/widgets/**`
+- `src/mypyskindose/gui/upload_temp_files.py`
+
+`test_privacy_semgrep_rules.py` writes fixtures at `src/mypyskindose/gui/tabs/export.py`
+relative to a temp root so those includes match. Update that fixture path to
+`src/guiskindose/...` in the same commit as the YAML includes.
+
+Treat `dev-docs/COORD_TRANSFORM_COMPARISON.md` as historical: keep "MyPySkinDose" as the
+name of this fork in that comparison. At execution time add one sentence that the current
+product name is GUISkinDose; do not bulk-replace the table.
+
+---
+
+## Config and env migration (required)
+
+`gui/window_prefs.py` persists window geometry, onboarding dismissal, and demo-mesh visibility
+under `~/.mypyskindose/gui.json`. A hard cut to `~/.guiskindose/` would look like a first-run
+reset.
+
+Required behavior:
+
+1. Prefer `~/.guiskindose/` and `.guiskindose.local.json` when they exist.
+2. If the new dir/file is absent, read the old path privately (no raw-path logging) and write
+   subsequent saves to the new path.
+3. `show_demo_phantoms_enabled` must accept `GUISKINDOSE_SHOW_DEMO_PHANTOMS` first, then
+   `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS`, then `.env` / local JSON / `gui.json` as today.
+4. Do not delete the old directory from the user's home as part of this change.
+
+---
+
+## Re-count before execution
+
+If **any** other work lands on `main` (or this branch is rebased) before implementation, re-run
+the inventories below and refresh the file lists in this plan. Do not trust the authoring-time
+counts or line numbers.
+
+```bash
+rg -l mypyskindose --glob '!dev-docs/plans/archive/**' --glob '!dev-docs/assessments/**'
+rg -l MyPySkinDose --glob '!dev-docs/plans/archive/**' --glob '!dev-docs/assessments/**'
+rg MYPYSKINDOSE_ src tests scripts pyproject.toml .env.example
+rg -l 'from mypyskindose|import mypyskindose|patch\("mypyskindose|import_module\("mypyskindose|__import__\("mypyskindose' tests
+```
+
+Also re-check:
+
+- `git grep -n 'src/mypyskindose'` in `.github/`, `pyproject.toml`, `MANIFEST.in`,
+  `.pre-commit-config.yaml`, `.phi-scanner.yml`, `.phi-scanbaseline`,
+  `dev-docs/approved_asset_inventory.json`, `dev-docs/help_registry.json`,
+  `dev-docs/feature_doc_matrix.json`, `dev-docs/privacy_admission_policy.json`
+- New `# nosemgrep: mypyskindose-*` comments (keep IDs)
+- New `patch("mypyskindose…")` / `importlib.import_module("mypyskindose…")` call sites
+- Whether `guiskindose` is still free on PyPI and TestPyPI
+- Whether hashed DICOM/STL paths in the approved-asset inventory still match HEAD (privacy
+  admission may treat `git mv` of those binaries as new paths even when hashes are unchanged)
+- `.phi-scanbaseline` expiry (currently 2026-10-14) — regenerate after path updates
+- `docs/source/conf.py` `release` vs `pyproject.toml` version (already drifted to `25.1.1` vs
+  `25.2.0`; bump both together with the rename version)
+- Active plans under `dev-docs/plans/` that gained new `src/mypyskindose` paths
 
 ---
 
@@ -54,287 +134,192 @@ All references to the upstream **PySkinDose** project (by `rvbCMTS`) are preserv
 
 ### Phase 0 — Preparation (no code changes)
 
-1. **Create a working branch** (`rename/guiskindose`).
-2. **Verify CI is green** on `main` before branching.
-3. **Snapshot the current state** — record the full `git log --oneline -5` and a `git diff --stat main` baseline.
-4. **Decide on `PySkinDoseOutput`** — keep the upstream class name (recommended; it is a public API and the class is used pervasively in `format_export_data.py`, `analyze_data.py`, `export/`). If a rename is desired later, it should be a separate PR.
+1. Create or update working branch (`rename/guiskindose`).
+2. Verify CI is green on the merge base.
+3. Re-count inventories (section above). Record `git log --oneline -5` and `git diff --stat main`.
+4. Confirm `guiskindose` is available on PyPI/TestPyPI (this fork has **not** published
+   `mypyskindose` yet — see [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)).
+5. Keep `PySkinDoseOutput` (public upstream API). A later rename is a separate PR.
+6. Decide the first GUISkinDose version in `pyproject.toml` (breaking identity change; do not
+   ship it as a silent patch). Record the choice in `CHANGELOG.md` Unreleased before merge.
 
 ### Phase 1 — Source directory rename
 
-**Single atomic step:**
+`git mv src/mypyskindose src/guiskindose`
 
-1. `git mv src/mypyskindose src/guiskindose`
+This breaks imports until Phase 2. **Commit Phase 1 and Phase 2 together** so `main` never
+contains an unbuildable tree. Later phases may be separate commits.
 
-This immediately breaks all imports, which is expected. All subsequent phases fix the fallout.
-
-**Important:** Commit Phase 1 + Phase 2 together as a single atomic commit. If the bulk
-replacement is interrupted partway through, the repo is unbuildable. After completing Phase 2,
-run `python -c "import guiskindose"` as a mid-phase smoke test before committing.
+After Phase 2, smoke: `python -c "import guiskindose"` from an editable install.
 
 ### Phase 2 — Bulk import/require updates
 
-Use `sed` or a scripted find-and-replace across the entire repo. Every occurrence of the
-exact string `mypyskindose` in Python files (`.py`) must become `guiskindose` **except**:
+Replace the exact string `mypyskindose` in `.py` files **except**:
 
-- Upstream attribution comments mentioning "PySkinDose" (the upstream project name).
-- `CHANGELOG.md` historical entries (these describe what happened under the old name).
-- `dev-docs/plans/archive/` files (historical plans).
-- `dev-docs/assessments/` files (historical assessments).
-- `CITATION.cff` upstream reference entry (lines 26-27).
+- Upstream attribution mentioning "PySkinDose"
+- Historical `CHANGELOG.md` entries (Unreleased/migration notes **are** updated)
+- `dev-docs/plans/archive/` and `dev-docs/assessments/`
+- `CITATION.cff` upstream reference (lines 26–27)
+- **Semgrep rule IDs and `# nosemgrep: mypyskindose-*` comments**
+- Test assertions of those rule IDs (`test_privacy_semgrep_rules.py`)
+- `dev-docs/COORD_TRANSFORM_COMPARISON.md` historical table cells (add a current-name sentence)
 
-**Replacement patterns (Python files):**
+A naive `sed` of every `mypyskindose` token **will break privacy suppressions**. Prefer
+pattern-limited replacements (`from mypyskindose`, `import mypyskindose`, path prefixes,
+logger names) plus a manual pass for leftovers.
 
 | Old pattern | New pattern | Scope |
 |-------------|-------------|-------|
 | `from mypyskindose` | `from guiskindose` | All `.py` files |
 | `import mypyskindose` | `import guiskindose` | All `.py` files |
-| `"mypyskindose"` (logger, strings) | `"guiskindose"` | Logger names, string literals |
-| `mypyskindose` in f-strings | `guiskindose` | Default filenames, error messages |
+| `"mypyskindose"` (logger, strings) | `"guiskindose"` | Logger names, string literals — not rule IDs |
 | `prog="mypyskindose"` | `prog="guiskindose"` | `cli_args.py` |
 | `version("mypyskindose")` | `version("guiskindose")` | `export/payload.py` |
 | `python -m mypyskindose` | `python -m guiskindose` | Docstrings, comments |
-| `pip install mypyskindose` | `pip install guiskindose` | User-facing hints |
-| `__import__("mypyskindose` | `__import__("guiskindose` | Dynamic imports in tests |
-| `MYPYSKINDOSE_` | `GUISKINDOSE_` | Environment variables |
+| `__import__("mypyskindose` | `__import__("guiskindose` | Dynamic imports |
+| `import_module("mypyskindose` | `import_module("guiskindose` | `test_multi_exam.py` |
+| `patch("mypyskindose.` | `patch("guiskindose.` | Unit/GUI tests |
+| `MYPYSKINDOSE_` | keep as fallback; add `GUISKINDOSE_` | `window_prefs.py` |
 
-**Replacement patterns (non-Python files):**
-
-| Old pattern | New pattern | Files |
-|-------------|-------------|-------|
-| `src/mypyskindose` | `src/guiskindose` | `pyproject.toml`, `MANIFEST.in`, `.gitignore`, `.pre-commit-config.yaml`, `scripts/*.py`, `run_gui.sh`, `run_gui.bat`, `build_documentation.bat` |
-| `mypyskindose` in `pyproject.toml` | `guiskindose` | Package name, include/exclude, ruff per-file-ignores, basedpyright paths, bandit exclude, and `pip install mypyskindose[export]` comment |
-| `"MyPySkinDose"` (display name) | `"GUISkinDose"` | `export/models.py:APP_NAME`, `gui/app.py`, `docs/source/conf.py`, `CITATION.cff:2,10`, `README.md` (selective) |
-| `.mypyskindose` | `.guiskindose` | `.env.example`, `gui/window_prefs.py` |
-| `mypyskindose_version` | `guiskindose_version` | `export/writers/html.py` HTML meta tag |
-| `src/mypyskindose` | `src/guiskindose` | `dev-docs/UI_values.md` (auto-generated paths) |
+Non-Python: `src/mypyskindose` → `src/guiskindose` in `pyproject.toml` (including
+`[tool.setuptools.packages.find] include = ["guiskindose*"]` — missing this ships an empty
+wheel), `MANIFEST.in`, `.gitignore`, `.pre-commit-config.yaml`, scripts, launchers,
+`build_documentation.bat`, `.phi-scanner.yml`, JSON metadata, `privacy_admission_policy.json`.
 
 ### Phase 3 — Documentation updates
 
 #### 3a. Top-level Markdown
 
-Update all `.md` files under the repo root that reference `mypyskindose`:
-
-- `AGENTS.md` — package name, import examples, key file paths
-- `README.md` — install command, import examples, description (keep upstream fork attribution)
-- `CONTRIBUTING.md` — brand strings and GitHub URLs
-- `SECURITY.md` — brand strings and GitHub URLs
-- `SUPPORT.md` — brand strings, GitHub URLs, and fork reference
-- `PUBLISHING.md` — repository name
-- `GOVERNANCE.md` — brand strings and GitHub URLs (upstream credit stays)
+`AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `PUBLISHING.md`,
+`GOVERNANCE.md`, **`CODE_OF_CONDUCT.md`** (GitHub advisory URL). Keep upstream fork credit.
+Rewrite `github.com/kgrizz-git/MyPySkinDose` **only if** the GitHub repo has been renamed;
+otherwise leave those URLs (GitHub will redirect later).
 
 #### 3b. `dev-docs/` Markdown
 
-Update all files under `dev-docs/` that reference `mypyskindose`:
+Update current (non-archive, non-assessment) docs that reference the **package path or live
+brand**, including: `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `VENDOR_COORDINATE_SYSTEMS.md`,
+`ADDITIONAL_PHANTOMS.md`, `FORK_MAINTAINER_GUIDE.md`, `HARNESS_ENGINEERING.md`, `AGENT_PLAYBOOK.md`,
+`TO_DO.md`, `index.md`, `INPUT_*.md`, `MYPYSKINDOSE_MIGRATION_STATUS.md` (rename the file to
+`GUISKINDOSE_MIGRATION_STATUS.md`), `info/PACKAGE_INSTALL.md`, privacy/release/license docs,
+non-archive `plans/`, `references/`, and JSON metadata (`approved_asset_inventory.*`,
+`feature_doc_matrix.json`, `help_registry.json`, `privacy_admission_policy.json`).
 
-- `CODEBASE_OVERVIEW.md` — import paths, file paths, class references
-- `FEATURE_INVENTORY.md` — feature descriptions
-- `VENDOR_COORDINATE_SYSTEMS.md` — import paths
-- `ADDITIONAL_PHANTOMS.md` — import paths
-- `FORK_MAINTAINER_GUIDE.md` — import paths (keep upstream attribution)
-- `HARNESS_ENGINEERING.md` — validation commands, paths
-- `AGENT_PLAYBOOK.md` — import paths
-- `TO_DO.md` — current item references
-- `INPUT_FIELD_REFERENCE.md` — source file paths
-- `INPUT_SCHEMA_DETECTION.md` — source file paths
-- `INPUT_DATA_FLOW_AND_OFFSETS.md` — source file paths
-- `MYPYSKINDOSE_MIGRATION_STATUS.md` — rename title and references
-- `info/PACKAGE_INSTALL.md` — install command, import paths
-- `PRIVACY_AND_SENSITIVE_ASSETS.md` — path references
-- `PRIVACY_INCIDENT_RESPONSE.md` — path references
-- `RELEASES_AND_DISTRIBUTION.md` — path references
-- `LICENSE_COMPLIANCE.md` — path references
-- `PRIVACY_AND_SENSITIVE_ASSETS.md` — path references
-- All files under `plans/` (non-archive) — import paths, file paths
-- All files under `references/` — import paths
-- All JSON metadata files:
-  - `approved_asset_inventory.json` — ~143 phantom data paths
-  - `approved_asset_inventory.md` — ~143 phantom data paths
-  - `feature_doc_matrix.json` — ~32 source paths
-  - `help_registry.json` — ~12 GUI file paths
-  - `privacy_admission_policy.json` — path reference
-  - `ui_copy.json` — if any paths referenced
-  - `glossary.json` — if any references
+**Do not bulk-update** `plans/archive/`, `assessments/`, or `backups/`.
+**Do not bulk-replace** `COORD_TRANSFORM_COMPARISON.md` (historical comparison; add one
+current-name sentence).
 
-**Do NOT update** files under `plans/archive/`, `assessments/`, or `backups/` — these are historical.
+#### 3c–3e. GUI help, Sphinx, CITATION
 
-#### 3c. GUI help files
+Edit `docs/source/gui_help/*.md` then `scripts/sync_gui_help.py`.
+Delete `docs/source/mypyskindose*.rst`, regenerate with `sphinx-apidoc -o docs/source src/guiskindose`.
+Update `docs/source/conf.py` (`project = "GUISkinDose"` **and** `release` to match
+`pyproject.toml`), `index.rst`, `modules.rst`, user install/guide, getting-started notebook.
+`CITATION.cff` title/contributor name; keep upstream reference; GitHub URLs only if the repo
+is renamed.
 
-Update `docs/source/gui_help/*.md` (10 source files; 5 contain the `MyPySkinDose` brand string
-and need updating). The mirrored copies under `src/guiskindose/gui/help/` will be updated by
-the `scripts/sync_gui_help.py` script after the source files are edited.
+### Phase 4 — Tests (update existing)
 
-#### 3d. Sphinx docs
+Bulk-replace imports under `tests/`. Special cases:
 
-The RST files under `docs/source/` are autogenerated and named after the package:
+- `test_architecture_layers.py` — `PACKAGE_ROOT` and forbidden-prefix strings
+- `test_debug_logging.py`, `test_kerma_correction.py` — logger names
+- `test_window_prefs.py` — `config_path().parent.name == ".mypyskindose"` plus migration tests
+- `test_privacy.py` — logger names; assert `guiskindose/privacy.py` stripping; keep recognizing
+  `mypyskindose` in `Path.parts` as a fallback
+- `test_privacy_semgrep_rules.py` — rules **filename** and fixture **path**; **keep** check IDs
+- `test_privacy_admission.py` — negative-control path `src/mypyskindose/beam_class.py`
+- `test_multi_exam.py` — `importlib.import_module("mypyskindose.analyze_data")`
+- `tests/gui/test_upload_builders_coverage.py` — `__import__("mypyskindose.gui.helpers", ...)`
+- `tests/gui/test_multi_exam_gui.py` — `patch("mypyskindose.analyze_data…")`
+- `tests/gui/test_rdsr_unit_error.py` — Path fragment and `MyPySkinDose` error text
+- Brand assertions: `test_gui_smoke.py`, `test_export_docx.py`, `test_input_adapters.py`,
+  `test_export_data.py` (`mypyskindose:tabular_input` bytes)
+- Notebooks under `tests/manual_tests/notebook_tests/` (JSON-aware cell edits)
 
-- `docs/source/mypyskindose.rst` → `docs/source/guiskindose.rst`
-- `docs/source/mypyskindose.calculate_dose.rst` → `docs/source/guiskindose.calculate_dose.rst`
-- `docs/source/mypyskindose.helpers.rst` → `docs/source/guiskindose.helpers.rst`
-- `docs/source/mypyskindose.plotting.rst` → `docs/source/guiskindose.plotting.rst`
-- `docs/source/mypyskindose.settings.rst` → `docs/source/guiskindose.settings.rst`
-- `docs/source/modules.rst` — contains `mypyskindose` references
+### Phase 4b — Tests to **add** (not only update)
 
-After the source directory rename, regenerate with:
-```bash
-python -m sphinx.ext.apidoc -o docs/source src/guiskindose
-```
-
-Update `docs/source/conf.py`: `project = "GUISkinDose"`.
-Update `docs/source/index.rst` if it references the old module name.
-Update `docs/source/modules.rst` if it references the old module name.
-Update `docs/source/user/install.md` and `docs/source/user/user_guide.md`.
-
-#### 3e. `CITATION.cff`
-
-- Line 2: `title: GUISkinDose`
-- Line 10: `name: "GUISkinDose contributors"`
-- Lines 11-12: Update repository URLs if the repo is renamed
-- Keep lines 26-27 (upstream PySkinDose reference) unchanged
-
-### Phase 4 — Tests
-
-All test files under `tests/` use `from mypyskindose.X import Y` imports. Bulk-replace:
-
-- `tests/unittests/` (~70 files, ~500 imports)
-- `tests/gui/` (~23 files)
-- `tests/integrationtests/` (5 files)
-- `tests/manual_tests/` (10 .py files + 5 .ipynb notebooks under `notebook_tests/`)
-- `tests/scripts/launch_gui_headless.py` — contains `MyPySkinDose` reference
-- `tests/calculate_dose_recursion_helpers.py`
-
-For `.ipynb` notebooks, the replacement must target cell source strings containing
-`mypyskindose`. Use a JSON-aware tool or script to edit notebook cells.
-
-**Special test considerations:**
-
-- `test_architecture_layers.py` — contains module name strings in layer rules; update those strings.
-- `test_debug_logging.py` — logger name assertions; update `"mypyskindose"` → `"guiskindose"`.
-- `test_kerma_correction.py` — logger name assertions.
-- `test_check_doc_freshness.py` — path strings in test data.
-- `test_check_file_sizes.py` — path string.
-- `test_check_ignored_asset_files.py` — path strings.
-- `test_check_ui_copy.py` — path string.
-- `test_sync_gui_help.py` — path strings.
-- `tests/gui/test_upload_builders_coverage.py:136` — dynamic `__import__("mypyskindose.gui.helpers", ...)` (not caught by `from mypyskindose` bulk replace)
-- `tests/gui/test_multi_exam_gui.py:77` — mock target string `"mypyskindose.analyze_data.analyze_multiple_exams"`
-- `tests/gui/test_rdsr_unit_error.py:22` — path fragment `/ "mypyskindose"` in Path construction
-
-**Dynamic import pattern:** Also replace string arguments to `__import__()` containing `mypyskindose` (e.g. `__import__("mypyskindose...")` → `__import__("guiskindose...")`).
+1. **Stale-brand allowlist check** — pytest or `scripts/check_stale_brand.py` that fails if
+   `mypyskindose` / `MyPySkinDose` / `MYPYSKINDOSE_` appear outside an explicit allowlist:
+   historical changelog sections, `plans/archive/`, `assessments/`, Semgrep rule IDs,
+   `# nosemgrep: mypyskindose-*`, upstream PySkinDose attribution, this plan, the
+   republication plan, `COORD_TRANSFORM_COMPARISON.md`, and `GUISKINDOSE_MIGRATION_STATUS.md`
+   migration examples. Wire it into pre-commit and CI. A one-shot `rg` in Phase 8 is not enough.
+2. **Config migration** — old `gui.json` / env var still honored when the new path is absent;
+   new path wins when both exist; saves go to the new path.
+3. **Packaging smoke** — `importlib.metadata.version("guiskindose")`, `python -m guiskindose
+   --help`, console script `guiskindose --help`, logger root, and load `settings_example.json`
+   plus one phantom STL from a **wheel install** (not the editable checkout).
+4. **User-facing literals** — `APP_NAME == "GUISkinDose"`, HTML meta `guiskindose_version`,
+   HTML comment `guiskindose:tabular_input`.
 
 ### Phase 5 — Scripts
 
-Update all scripts under `scripts/`:
+`sync_gui_help.py`, `generate_ui_values.py`, `check_ui_copy.py`, `check_doc_freshness.py`,
+`check_licenses.py` (`PROJECT_NAME`), `run_hounddog_advisory.py`, `run_semgrep_privacy.py`
+(rules path **and** `mypyskindose-semgrep-` temp prefix), `run_sonarqube_local.py`,
+`phantom_gen/*`, `check_gui_test_placement.py`. Gitignored `scripts/scratch_*` need not be
+edited.
 
-- `scripts/sync_gui_help.py` — path constants (`"src/mypyskindose/gui/help"` → `"src/guiskindose/gui/help"`)
-- `scripts/generate_ui_values.py` — path constant (`"src/mypyskindose/gui/styles.py"`)
-- `scripts/check_gui_test_placement.py` — docstring references
-- `scripts/check_ui_copy.py` — path constant
-- `scripts/check_doc_freshness.py` — `MyPySkinDose` brand strings in docstrings
-- `scripts/check_licenses.py` — `PROJECT_NAME = "mypyskindose"` (line 40)
-- `scripts/run_hounddog_advisory.py` — temp dir prefix (`"mypyskindose-hounddog-"`)
-- `scripts/run_semgrep_privacy.py` — update reference to `.semgrep/mypyskindose-privacy.yml` (rename file to `.semgrep/guiskindose-privacy.yml`; rule IDs inside stay unchanged)
-- `scripts/scratch_check_phantom.py` — 4 `mypyskindose` imports
-- `scripts/run_sonarqube_local.py` — `EXCLUDED_PREFIXES` with `src/mypyskindose/example_data/` and `src/mypyskindose/phantom_data/`
-- `scripts/phantom_gen/run_catalog.py` — `PHANTOM_DATA` path (line 56) and hardcoded path string (line 325)
-- `scripts/phantom_gen/affine_control.py` — `--base src/mypyskindose/phantom_data/` in docstring (line 9)
-- `scripts/phantom_gen/validate_phantom.py` — `from mypyskindose import ...`
-- Other `scripts/phantom_gen/*.py` files — imports
+### Phase 6 — Launcher, config, and CI
 
-### Phase 6 — Launcher, config, and CI files
+`run_gui.sh` / `run_gui.bat`, `build_documentation.bat`, `.env.example`, **`.envrc`** (comment
+brand only), `.pre-commit-config.yaml`, `.gitignore`, `uv.lock` (`uv lock` after
+`pyproject.toml`; do not `--upgrade` as part of the rename), `.phi-scanner.yml`, regenerate
+`.phi-scanbaseline`, `.github/workflows/ci.yml` coverage/bandit/compileall paths.
 
-- `run_gui.sh` — all `mypyskindose` references
-- `run_gui.bat` — all `mypyskindose` references
-- `build_documentation.bat` — apidoc output path
-- `.env.example` — env var names and config path references
-- `.pre-commit-config.yaml` — bandit hook `files` regex, help sync hook name
-- `.gitignore` — path patterns
-- `sonar-project.properties` — update project key and name brand strings (`kgrizz-git_MyPySkinDose` → `kgrizz-git_GUISkinDose`, `MyPySkinDose` → `GUISkinDose`)
-- `uv.lock` — regenerate with `uv lock` after `pyproject.toml` rename (commit the regenerated lockfile)
-- `.phi-scanner.yml` — contains `src/mypyskindose/table_data/hvl_tables/...` paths; update after rename
-- `.phi-scanbaseline` — contains `file_path: src/mypyskindose/table_data/...` entries; re-run baseline update after rename so CI accepts the new paths
-- `.github/workflows/ci.yml` — 7 occurrences (lines 162, 275, 321, 323, 326, 368, 370): `bandit -c pyproject.toml -r src/mypyskindose`, `python -m compileall src/mypyskindose`, `--cov=src/mypyskindose` paths, `coverage report --include="src/mypyskindose/*"`
-- `.github/ISSUE_TEMPLATE/bug_report.yml` — contains `import mypyskindose` instruction and links to repo URLs
-- `.github/ISSUE_TEMPLATE/feature_request.yml` — contains links to repo URLs and brand strings
-- `.github/ISSUE_TEMPLATE/config.yml` — contains links to repo URLs
-- `.github/pull_request_template.md` — contains links to repo URLs
+**Do not** change `sonar.projectKey` / `sonar.projectName` until the SonarCloud project is
+renamed to match; a key change without that UI rename breaks `sonar-scan`. GitHub issue
+templates: update `import mypyskindose` instructions and brand strings; leave
+`github.com/kgrizz-git/MyPySkinDose` links until the GitHub repo is renamed.
+
+Add `[project.scripts] guiskindose = "guiskindose.__main__:cli"` (extract a `cli()` from
+`__main__.py` if needed). Republication Phase 5B still verifies the wheel exposes it.
 
 ### Phase 7 — String literal audit
 
-Beyond bulk find-and-replace, audit these user-facing string literals individually:
-
-1. **`export/models.py:34`** — `APP_NAME = "GUISkinDose"`
-2. **`gui/tabs/export.py`** — default filenames, pip install hint
-3. **`gui/tabs/data.py`** — default export filename
-4. **`gui/app.py`** — window title, welcome message
-5. **`gui/window_prefs.py`** — env var name, config paths
-6. **`gui/upload_temp_files.py`** — temp dir name
-7. **`gui/io_helpers.py`** — HTML comment marker
-8. **`safe_output.py`** — temp file prefix
-9. **`privacy.py`** — path detection string (`"mypyskindose" in parts`)
-10. **`export/writers/html.py`** — HTML meta tag name
-11. **`__init__.py`** — print message
-12. **`__main__.py`** — module docstring
-13. **`cli_args.py`** — argparse `prog` and description
-14. **`debug.py`** — `_LOGGER_ROOT` constant
-15. **All `logging.getLogger("mypyskindose...")` calls** — update root and sub-loggers
-16. **`beam_class.py`** — update `mypyskindose.readthedocs.io` URL if ReadTheDocs project is renamed
-17. **Brand-string assertions in tests** — these assert on literal `"MyPySkinDose"` and need updating:
-    - `tests/gui/test_gui_smoke.py:31` — `user.should_see("MyPySkinDose")`
-    - `tests/unittests/test_export_docx.py:44` — `assert "MyPySkinDose" in text`
-    - `tests/unittests/test_input_adapters.py:38` — `["Source: MyPySkinDose"]`
-    - `tests/gui/test_rdsr_unit_error.py:32` — error message containing `MyPySkinDose`
-    - `tests/gui/test_gui_security.py` — docstring
-    - `tests/unittests/test_check_doc_freshness.py:127` — test data string containing `MyPySkinDose` in a path example
-18. **Source file brand strings** (bulk `MyPySkinDose` → `GUISkinDose`):
-    - `export/payload.py` — default report title `"MyPySkinDose report — ..."` (line ~202)
-    - `cli_args.py:22` — argparse description `"MyPySkinDose is a Python 3.11+ program..."`
-    - `rdsr_normalizer.py:82` — error message `"MyPySkinDose expects..."`
-    - `input_adapters/radimetrics.py:204` — warning string `"MyPySkinDose"`
-    - `gui/io_helpers.py:63` — HTML comment marker `"mypyskindose:tabular_input"` (paired test: `test_export_data.py:162-190` asserts on this byte string — update both together)
-    - `input_adapters/stubs.py:38` — docstring reference to `src/mypyskindose/input_adapters/stubs.py`
-    - Multiple `scripts/*.py` files — `scripts/__init__.py`, `scripts/check_doc_freshness.py`, `scripts/check_licenses.py`, `scripts/generate_ui_values.py`, `scripts/phantom_gen/ingest_fun_mesh.py`, `scripts/phantom_gen/transform_to_psd_frame.py`, `scripts/phantom_gen/validate_phantom.py` all contain brand strings.
-19. **GUI module docstrings** — `debug.py`, `state.py`, `__init__.py`, `styles.py`, `components/__init__.py`, `app.py` all contain `MyPySkinDose` in module docstrings; bulk replacement covers these
+Manual pass of `APP_NAME`, export filenames, window title, config paths, temp prefixes,
+`privacy.py` path detection (recognize **both** `guiskindose` and `mypyskindose` in
+`Path.parts`), HTML meta, argparse `prog`, `_LOGGER_ROOT`, ReadTheDocs URL only if the RTD
+project is renamed (`mypyskindose.readthedocs.io` otherwise). Brand strings listed in the
+previous revision of this plan remain in scope (`cli_args.py`, `rdsr_normalizer.py`,
+`radimetrics.py`, `export/payload.py`, GUI module docstrings).
 
 ### Phase 8 — Validation
 
-1. **Lint:** `pre-commit run --all-files`
-2. **Type check:** `pre-commit run --hook-stage pre-push --all-files` (basedpyright)
-3. **Unit tests:** `pytest tests/unittests/ -x -q`
-4. **GUI tests:** `pytest tests/gui/ -x -q`
-5. **Integration tests:** `pytest tests/integrationtests/ -x -q`
-6. **Import smoke:** `python -c "from guiskindose import PyskindoseSettings; print('OK')"`
-7. **Module invocation:** `python -m guiskindose --help`
-8. **Version check:** `python -c "from importlib.metadata import version; print(version('guiskindose'))"`
-9. **Logger check:** `python -c "import logging; print(logging.getLogger('guiskindose').name)"`
-10. **Sphinx build:** `python -m sphinx -b html docs/source docs/_build/html` (if docs are in scope)
-11. **Grep audit:** `rg -c mypyskindose src/ tests/ scripts/` — should return zero hits
-12. **Grep audit (non-historical):** `rg mypyskindose --type py` — should return zero hits outside `CHANGELOG.md`, `plans/archive/`, `assessments/`
+Lint, basedpyright, unit/GUI/integration tests, import/`-m`/`version()`/logger smokes, Sphinx
+if docs are in the PR, **plus** the new stale-brand check and a wheel install smoke.
+
+Grep is **allowlisted**, not zero-hit:
+
+```bash
+rg mypyskindose src tests scripts pyproject.toml MANIFEST.in .github
+```
+
+Allowed leftovers: Semgrep rule IDs, `# nosemgrep: mypyskindose-*`, and (until GitHub/Sonar/RTD
+rename) those hostnames. Everything else in `src/`, `tests/`, `scripts/` is a defect.
 
 ### Phase 9 — Pre-commit hooks
 
-After the rename, verify that pre-commit hooks still work:
+Bandit `files:` regex `^(src/guiskindose|scripts)/`, GUI help sync hook path, `commit-msg`
+resolution, pre-push basedpyright/gui-test-placement against the new package.
 
-- **bandit** hook `files` regex in `.pre-commit-config.yaml` must match `src/guiskindose`
-- **GUI help sync** hook name must reference the new path
-- **`commit-msg`** hook — verify it resolves correctly (uses `resolve_commit_message_path`)
-- **`pre-push`** hooks (basedpyright, gui-test-placement) — verify they find the correct package
-
-### Phase 10 — Documentation freshness
-
-Run the doc-freshness checks:
+### Phase 10 — Documentation freshness and release notes
 
 ```bash
 python scripts/check_doc_freshness.py
 python scripts/check_file_sizes.py
 python scripts/check_help_registry.py
 python scripts/check_ui_copy.py
-python scripts/sync_gui_help.py  # re-mirror GUI help files
+python scripts/sync_gui_help.py
 python scripts/check_doc_pruning.py
+python scripts/generate_ui_values.py
 ```
 
-Regenerate `dev-docs/UI_values.md` (auto-generated by `scripts/generate_ui_values.py` reading
-`src/guiskindose/gui/styles.py`).
-Update `dev-docs/index.md` to reference the new plan name.
+Unreleased `CHANGELOG.md` must document the breaking rename, import/CLI substitutions, config
+migration, absence of a `mypyskindose` shim, and that this fork had not published the old name
+to PyPI. Rename `MYPYSKINDOSE_MIGRATION_STATUS.md` and add a short migration section to
+`README.md`.
 
 ---
 
@@ -342,104 +327,79 @@ Update `dev-docs/index.md` to reference the new plan name.
 
 ### Backward compatibility
 
-- **No `mypyskindose` alias package** — this is a hard rename. Users must update their imports.
-  A compatibility shim is not planned. If backward compat is later deemed necessary, it can be
-  added as a separate small package or a `__init__.py` re-export hack.
+No `mypyskindose` alias package. Users update imports. Config/env migration (above) is the only
+compatibility shim.
 
-- **PyPI `mypyskindose` name** — the old PyPI name will remain with whatever version was last
-  published. The new package publishes as `guiskindose`. Users must `pip install guiskindose`
-  instead of `pip install mypyskindose`.
+This fork has not published `mypyskindose` to PyPI. First publish should be `guiskindose`. If a
+third party occupies that name, stop and re-decide before merging.
 
-### Importlib.metadata
+### Importlib.metadata and empty wheels
 
-`export/payload.py:40` calls `version("mypyskindose")`. After rename, this must call
-`version("guiskindose")`. If the package is not installed (e.g. running from source), this
-raises `PackageNotFoundError`. The existing try/except around this call handles that; verify
-it still works.
+`export/payload.py` `version("guiskindose")` already has try/except for `PackageNotFoundError`.
+`[tool.setuptools.packages.find] include` **must** be `guiskindose*` or the wheel contains no
+package. Verify with a non-editable install, not `pip install -e .`.
 
 ### Sphinx autodoc
 
-The RST files are generated by `sphinx-apidoc` and named after the package. After renaming the
-source directory, the old RST files become stale. **Delete all old RST files first:**
+Delete `docs/source/mypyskindose*.rst` then regenerate. Update
+`docs/source/getting_started/getting_started.ipynb`.
 
-```bash
-rm docs/source/mypyskindose*.rst
-```
+### Privacy admission of moved binaries
 
-Then regenerate with `sphinx-apidoc -o docs/source src/guiskindose` (or let
-`build_documentation.bat` handle it). Update the script's output path. Also update
-`docs/source/getting_started/getting_started.ipynb` (8 references to `mypyskindose`: PyPI URL,
-ReadTheDocs URL, imports, output).
+`git mv` of STL/DICOM changes inventory **paths** with unchanged hashes. Update
+`approved_asset_inventory.json` in the same commit. If admission treats the new path as a new
+asset, run the documented local DICOM/image review route rather than force-adding.
 
-### Pre-commit hook scope
+### Pre-commit and gitignore
 
-The bandit hook in `.pre-commit-config.yaml` uses a `files:` regex scoped to
-`^(src/mypyskindose|scripts)/`. This must become `^(src/guiskindose|scripts)/`.
-
-### `.gitignore` patterns
-
-Patterns like `src/mypyskindose/.ipynb_checkpoints/` must become
-`src/guiskindose/.ipynb_checkpoints/`. Other patterns to update:
-- `src/mypyskindose/example_data/RDSR/clinical*`
-- `src/mypyskindose/phantom_data/old/`
-- `.mypyskindose.local.json`
-The legacy `*/pyskindose.egg*` pattern can be kept or
-dropped (it excludes the old upstream egg-info). Regenerate `src/guiskindose.egg-info/` by running `pip install -e .` after the rename instead of renaming it manually.
-
-### Temporary backward-compat notes
-
-If there is a transition period where users may have both old and new installed, add a note
-in `CHANGELOG.md` and `README.md` documenting the rename and migration steps.
+Bandit files regex and `.gitignore` package paths as in Phase 6. Keep or drop
+`*/pyskindose.egg*`. Regenerate `src/guiskindose.egg-info/` via `pip install -e .` rather than
+renaming egg-info by hand.
 
 ---
 
-## Execution order
+## Execution order and commits
 
-The recommended execution order minimizes broken intermediate states:
+1. Phase 0 — inventories and version decision
+2. Phases 1+2 — **one commit** (`git mv` + Python imports/strings except rule IDs)
+3. Phase 4 + 4b — tests (existing updates + new checks)
+4. Phase 5 — scripts
+5. Phase 6 — config/launchers/CI (GitHub/Sonar URLs gated)
+6. Phases 3, 7, 10 — docs, audit, freshness, changelog
+7. Phases 8–9 — validation and hooks
 
-1. Phase 0 — Branch and snapshot
-2. Phase 1 — `git mv src/mypyskindose src/guiskindose`
-3. Phase 2 — Bulk Python import/string replace (all `.py` files)
-4. Phase 4 — Bulk test file replace (all `tests/**/*.py`)
-5. Phase 5 — Scripts replace
-6. Phase 6 — Config/launcher replace
-7. Phase 3 — Documentation updates
-8. Phase 7 — String literal audit (manual review)
-9. Phase 8 — Validation (run all checks)
-10. Phase 9 — Pre-commit hook verification
-11. Phase 10 — Documentation freshness
-
-Each phase should be a separate commit for clean `git bisect` if something breaks.
-
-### Suggested commit sequence
-
-1. `refactor: rename src/mypyskindose → src/guiskindose (directory only)`
-2. `refactor: update all Python imports mypyskindose → guiskindose`
-3. `refactor: update logger names and string literals`
-4. `refactor: update test imports and assertions`
-5. `refactor: update scripts paths and references`
-6. `refactor: update config files, launchers, .gitignore`
-7. `docs: update all documentation for guiskindose rename`
-8. `docs: regenerate Sphinx autodoc RST files`
-9. `chore: final audit — zero mypyskindose hits outside historical files`
+Suggested commit subjects after the atomic directory+import commit: tests, scripts, config/CI,
+docs/Sphinx, stale-brand check.
 
 ---
 
 ## Open questions
 
-1. **`PySkinDoseOutput` class rename?** — The upstream class name is used in ~50 places. Renaming
-   it to `GUISkinDoseOutput` would be a larger change and break the public API. Recommendation:
-   defer to a separate PR if desired.
+1. **`PySkinDoseOutput`?** Keep. Separate PR if ever renamed.
+2. **GitHub repo rename?** Independent of this PR. Do not rewrite live
+   `github.com/kgrizz-git/MyPySkinDose` links or the Sonar project key in the mechanical-rename
+   PR. Republication Phase 7 owns the GitHub rename.
+3. **PyPI `guiskindose` availability?** Confirm before starting Phase 1. This fork has not
+   published `mypyskindose`.
+4. **First GUISkinDose version?** Record in Phase 0. Prefer a documented breaking bump of the
+   current `25.2.0` line over pretending this is a patch.
+5. **Notebooks** under `tests/manual_tests/notebook_tests/` need JSON-aware edits and a
+   post-rename execution check.
+6. **`[project.scripts]`?** Yes — add `guiskindose` in this rename (new surface, not a
+   publication-only concern). Republication 5B still smoke-tests the wheel.
 
-2. **Repository rename on GitHub?** — If the GitHub repo is renamed from `MyPySkinDose` to
-   `GUISkinDose`, update `CITATION.cff` URLs, and all GitHub links
-   in docs. This can happen independently of the package rename. Note: `sonar-project.properties` should be updated regardless since it contains brand strings.
+---
 
-3. **PyPI name reservation** — Confirm `guiskindose` is available on PyPI before starting.
+## Timing
 
-4. **Notebook execution** — The 5 `.ipynb` notebooks under `tests/manual_tests/notebook_tests/` contain
-   `mypyskindose` imports in cell source. These need JSON-level editing. Verify notebooks
-   still execute after the rename.
+Prefer executing this plan **before the first PyPI publish** and **before more large features
+land**. Every week of GUI/privacy work adds `mypyskindose` strings and mock targets. Waiting
+for republication Phases 1–4 (fixture sanitization) is unnecessary: those can land before or
+after the import rename. Waiting for the GitHub repository rename is also unnecessary and
+would block the package rename on an unrelated operations step.
 
-5. **`dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md`** — This file tracks migration status. It
-   should be renamed to `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` and its content updated.
+Downsides of doing it now: a ~300-file PR that conflicts with any parallel `src/` work;
+privacy-admission friction on moved STL/DICOM paths; local scripts and worktree editable
+installs break until reinstalled; users with `~/.mypyskindose/` depend on the migration code
+being correct. Downsides of waiting: the same PR grows, and publishing `mypyskindose` first
+would create a name we then have to deprecate.

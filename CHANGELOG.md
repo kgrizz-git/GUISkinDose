@@ -31,6 +31,12 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **GUISkinDose rename and republication plans aligned** (2026-09-01) — mechanical in-repo rename
+  (`mypyskindose` → `guiskindose`) is specified in `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` and
+  catalogued in `dev-docs/index.md`. The privacy republication plan now points Phase 5A at that file,
+  requires config-directory migration, keeps Semgrep rule IDs, and gates GitHub/Sonar URL rewrites
+  on the actual external renames. No runtime rename in this change.
+
 - **`ci-latest` issue body now includes per-step triage guidance** (2026-08-30) —
   the tracking-issue body explains what each failure mode means and what action
   to take, instead of a bare failure list.

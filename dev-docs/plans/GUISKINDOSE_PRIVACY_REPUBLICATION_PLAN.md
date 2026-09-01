@@ -4,15 +4,16 @@ _Status: Proposed_
 _Created: 2026-07-16_
 _Owners: Maintainers; coding agents may implement individual phases_
 _Predecessor: [PRIVACY_HARDENING_PLAN.md](PRIVACY_HARDENING_PLAN.md)_
+_Mechanical rename: [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) — execute that file for Phase 5A; do not duplicate replacement tables here._
 _Policy: [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md)_
 _Incident response: [PRIVACY_INCIDENT_RESPONSE.md](../PRIVACY_INCIDENT_RESPONSE.md)_
 
 ## 1. Objective
 
 Finish the current privacy hardening, replace the public DICOM regression fixtures with conservatively sanitized
-derivatives, add targeted person-name and image/DICOM review tooling, rename the project and canonical Python import
-namespace to **GUISkinDose** / `guiskindose`, and publish the renamed project by updating the existing GitHub fork
-without rewriting its history.
+derivatives, add targeted person-name and image/DICOM review tooling, complete the **GUISkinDose** / `guiskindose`
+identity change (mechanical steps live in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)), and publish
+the renamed project by updating the existing GitHub fork without rewriting its history.
 
 The result should remain fully attributed to PySkinDose and retain GitHub's technical fork-network relationship.
 
@@ -102,8 +103,11 @@ rewriting; do not restart history merely as a cosmetic measure.
 
 ## 4. Delivery order
 
-Do not publish intermediate DICOMs, OCR reports, scanner reports, UID mappings, or a partially renamed repository.
-Work locally or in an approved private environment until Phase 7.
+Do not publish intermediate DICOMs, OCR reports, scanner reports, UID mappings, or unsanitized fixture bytes.
+The in-repo package rename ([GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)) **may merge to the public
+`MyPySkinDose` GitHub repository** before Phase 7; that is an identity change in code, not a GitHub rename.
+Do not rename the GitHub repository or publish to PyPI until Phase 7 / 5B exit criteria pass.
+Work on fixture sanitization locally or in an approved private environment until those artifacts are admitted.
 
 ### Phase 0 — Freeze, recoverability, and decision lock
 
@@ -113,11 +117,13 @@ Work locally or in an approved private environment until Phase 7.
 3. Create a private, access-controlled recovery bundle or clone outside the future publication tree. Do not add it to
    this repository or a cloud-synced scratch directory.
 4. Record the selected publication choice: retain and rename the existing GitHub fork without rewriting history.
-5. Lock the breaking rename boundary: product/repository `GUISkinDose`; distribution, import namespace, module
-   launcher, and CLI `guiskindose`; no permanent old-namespace shim by default.
+5. Lock the breaking rename boundary (details in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)): product
+   `GUISkinDose`; distribution, import namespace, module launcher, and CLI `guiskindose`; no permanent old-namespace
+   shim by default; private migration from `~/.mypyskindose/` settings. The GitHub repository rename remains Phase 7
+   and is not a prerequisite for the in-repo package rename.
 6. Check availability and ownership of the `GUISkinDose` GitHub name, `guiskindose` distribution name, documentation
    hostname, and any package-publishing identities. Do not reserve or mutate external services without explicit
-   maintainer authorization.
+   maintainer authorization. Re-check immediately before Phase 5A if other work delayed execution.
 7. Capture the current passing test and scanner results as counts/status codes only.
 
 **Exit criteria**
@@ -316,27 +322,27 @@ moment a path enters the index. An optional `git add` wrapper may warn earlier, 
 
 ### Phase 5 — Rename the product, import package, and distribution to GUISkinDose
 
+The in-repo mechanical rename **may land before Phases 1–4** (fixture sanitization) and **does not require** the
+GitHub repository rename in Phase 7. Prefer completing it before the first PyPI publish. If other commits land first,
+re-run the inventories in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) § Re-count before execution.
+
 #### 5A. Mechanical and behavioral rename
 
-1. Move `src/mypyskindose/` to `src/guiskindose/` and apply the Phase 0 rename consistently to:
-   - README, application title, GUI copy, docs, examples, screenshots/alt text, notices, and citations;
-   - `pyproject.toml` distribution metadata and project URLs;
-   - CLI command/module launcher and help output;
-   - GUI config/cache/application-directory naming, with a private migration path from old settings;
-   - package/release workflows, artifact names, documentation hosting, badges, issue templates, and repository links;
-   - changelog and migration guide.
-2. Preserve all PySkinDose and original-author attribution. Do not rewrite copyright or authorship merely to simplify
-   the renamed project's identity.
-3. Update every internal import, type-check/lint/coverage path, resource lookup, package-data rule, test, notebook,
-   documentation example, entry point, and plugin/tool configuration to `guiskindose`.
-4. Do not ship both source trees. Test imports, `importlib.resources`, serialized settings, any pickle assumptions,
-   subprocess/module launch, GUI startup, and installed-not-editable operation so the source checkout cannot mask a
-   packaging error.
-5. Add a repository-wide stale-brand check with narrow allowlist entries for historical/provenance references where
-   `MyPySkinDose` or `PySkinDose` is intentionally retained.
-6. Update privacy path rules so neither old nor new config/cache/log locations may expose source filenames or PHI.
-7. Add a migration document covering import changes, CLI/module changes, extras, configuration migration, environment
-   variables, output metadata, repository URLs, and the absence of a permanent compatibility shim.
+Execute [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) in full. That file is the source of truth for
+directory/import replacement, Semgrep rule-ID exceptions, config/env migration, tests to add, commit grouping,
+and GitHub/Sonar URL gating. Do not copy replacement tables here.
+
+Exit criteria that this phase still owns (must be true after the rename PR merges):
+
+1. PySkinDose and original-author attribution are preserved; copyright is not rewritten for branding.
+2. Only one source tree ships (`src/guiskindose/`). Editable-checkout smokes are not accepted as packaging proof —
+   the rename plan's wheel-install tests must pass.
+3. The stale-brand allowlist check from the rename plan is wired into pre-commit/CI.
+4. Privacy path rules cover both old and new config/cache locations without logging raw paths.
+5. A migration document (README plus changelog Unreleased) covers imports, CLI/module/console script, extras,
+   configuration migration, environment variables, output metadata, and the absence of a permanent compatibility shim.
+6. Live `github.com/kgrizz-git/MyPySkinDose` URLs and the SonarCloud project key are left unchanged until Phase 7
+   actually renames those external projects.
 
 #### 5B. Python packaging and release hygiene
 
@@ -344,13 +350,13 @@ moment a path enters the index. An optional `git add` wrapper may warn earlier, 
    unless independently developed frontend code later creates a real Node package boundary.
 2. Confirm the normalized `guiskindose` name is available and appropriate on PyPI and TestPyPI, and confirm ownership
    or nonexistence of any prior `mypyskindose` project. A pending trusted publisher does not reserve a name.
-3. Decide and record the first GUISkinDose version. Prefer a clearly documented fresh product line or a semantically
-   justified continuation; do not choose a version solely to imitate upstream history.
-4. Modernize and verify `pyproject.toml`:
-   - `[project].name = "guiskindose"`, accurate description, Python requirement, license expression/files,
-     maintainers, classifiers, keywords, dependencies/extras, and current project URLs;
-   - package discovery includes only `guiskindose*` from `src/`;
-   - a `[project.scripts]` entry exposes `guiskindose`;
+3. Decide and record the first GUISkinDose version (the rename plan Phase 0 records the same decision). Prefer a
+   clearly documented breaking bump of the current `25.2.0` line; do not choose a version solely to imitate upstream
+   history.
+4. Modernize and verify `pyproject.toml` (the rename plan already requires name, `guiskindose*` package discovery,
+   and `[project.scripts] guiskindose`). This phase still verifies before publish:
+   - accurate description, Python requirement, license expression/files, maintainers, classifiers, keywords,
+     dependencies/extras, and current project URLs (GitHub URLs still match the live repo name until Phase 7);
    - package data explicitly includes required JSON, database, help, mesh, and example assets and excludes caches,
      `.DS_Store`, generated egg-info, tests, scanner output, and original unsanitized fixture bytes.
 5. Remove obsolete source-root packaging artifacts such as an unnecessary `src/__init__.py`; confirm generated
@@ -422,8 +428,12 @@ moment a path enters the index. An optional `git add` wrapper may warn earlier, 
 
 ### Phase 7 — Verify and rename the existing fork
 
-1. Complete the full product/import/package rename and privacy changes on the existing branch without rewriting any
-   parent commit, tag, or ref.
+1. Confirm the in-repo product/import/package rename from
+   [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) is merged (or complete it here) and that remaining
+   privacy changes are on the existing branch without rewriting any parent commit, tag, or ref.
+   After the GitHub rename, update live `github.com/kgrizz-git/MyPySkinDose` links, `CITATION.cff` URLs,
+   `sonar.projectKey` / `sonar.projectName` (only after the SonarCloud project is renamed to match), and
+   ReadTheDocs if that project is renamed.
 2. Create reviewed commits with value-safe messages; do not force-push, orphan, squash the public lineage, or run a
    history filter unless a newly validated incident specifically requires it.
 3. Before the GitHub rename, verify the complete gate from a fresh clone of the existing fork and inspect build/release
