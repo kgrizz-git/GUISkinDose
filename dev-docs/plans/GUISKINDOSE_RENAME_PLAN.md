@@ -401,7 +401,8 @@ name: `git mv`, Python imports/strings (except Semgrep rule IDs), tests (includi
 assertions if APP_NAME changes here), scripts, `MANIFEST.in`, `pyproject.toml`, CI, hooks,
 inventory path rewrite + render, phi-scan config/baseline, Semgrep includes, help registry,
 feature-doc matrix, doc-freshness paths, Sphinx RST regen, changelog Unreleased, version
-bump. Multiple commits **inside** this PR are fine (directory+imports+inventory first so a
+bump, and set `LIVE_PACKAGE_NAME` in `scripts/check_stale_brand.py` to `"guiskindose"` or
+`None` (search `TODO(PR1)`). Multiple commits **inside** this PR are fine (directory+imports+inventory first so a
 mid-PR checkout can be made buildable; then scripts/CI/docs). Do not open a second PR to
 `main` until this tip is green.
 

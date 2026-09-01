@@ -2,7 +2,15 @@
 
 from pathlib import Path
 
-from scripts.check_stale_brand import check_file
+from scripts.check_stale_brand import LIVE_PACKAGE_NAME, check_file
+
+
+def test_live_package_name_pr1_todo_is_present() -> None:
+    """PR 0 gate is a no-op until LIVE_PACKAGE_NAME is tightened; keep the marker."""
+    source = Path(__file__).resolve().parents[2] / "scripts" / "check_stale_brand.py"
+    text = source.read_text(encoding="utf-8")
+    assert "TODO(PR1)" in text
+    assert LIVE_PACKAGE_NAME == "mypyskindose"
 
 
 def test_stale_brand_live_package_allowance(tmp_path: Path):

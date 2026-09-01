@@ -262,6 +262,23 @@ def test_save_gui_config_still_writes_old_path(tmp_path, monkeypatch):
     assert not new_path.exists()
 
 
+def test_load_prefers_new_path_but_save_still_writes_old_path(tmp_path, monkeypatch):
+    """PR 0 contract: both files exist → read new content, write still goes to old path."""
+    new_cfg = tmp_path / "new" / "gui.json"
+    old_cfg = tmp_path / "old" / "gui.json"
+    new_cfg.parent.mkdir()
+    old_cfg.parent.mkdir()
+    new_cfg.write_text('{"from": "new"}', encoding="utf-8")
+    old_cfg.write_text('{"from": "old"}', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+
+    assert load_gui_config() == {"from": "new"}
+    save_gui_config({"saved": True})
+    assert json.loads(old_cfg.read_text(encoding="utf-8")) == {"saved": True}
+    assert json.loads(new_cfg.read_text(encoding="utf-8")) == {"from": "new"}
+
+
 def test_window_prefs_source_has_no_webview_import():
     from pathlib import Path
 

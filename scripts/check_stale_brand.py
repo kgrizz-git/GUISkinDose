@@ -6,8 +6,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-# PR 0 live-package allowance.
-# PR 1 will delete this constant or change it to "guiskindose" / None.
+# TODO(PR1): set LIVE_PACKAGE_NAME to "guiskindose" or None after src/ is renamed.
+# While this equals "mypyskindose", check_file() strips every BAD_STRINGS token and
+# the hook is a no-op on live package/brand hits (intentional so PR 0 stays green).
+# Forgetting this in PR 1 leaves leftover mypyskindose imports invisible to CI.
 LIVE_PACKAGE_NAME = "mypyskindose"
 
 BAD_STRINGS = ["mypyskindose", "MyPySkinDose", "MYPYSKINDOSE_"]
