@@ -47,6 +47,9 @@ policy decisions, not a restart of Phases 0–9.
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
+- [ ] **Rename from mypyskindose to GUISkinDose** — rebrand the package/import name, CLI entry points, README,
+  docs, and all user-facing references. Plan:
+  [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
 
 ## Product Backlog
 
