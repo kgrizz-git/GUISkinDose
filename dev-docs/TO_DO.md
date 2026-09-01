@@ -38,6 +38,11 @@ policy decisions, not a restart of Phases 0–9.
   step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
 - [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
   `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
+- [ ] **Exhaustive docstring and doc review** — sweep all Python source files under `src/` for outdated,
+  missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs
+  (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior.
+  Flag leftover `mypyskindose` in docstrings after the GUISkinDose rename, or any docstring that
+  describes behavior that has changed since it was written.
 - [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results
   accordion in the GUI.
 - [ ] **Settings phantom preview — manual smoke** — code + docs shipped
@@ -47,6 +52,10 @@ policy decisions, not a restart of Phases 0–9.
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
+- [ ] **Rename from mypyskindose to GUISkinDose** — in-repo package/import/CLI rebrand with config migration
+  and a stale-brand CI check. Prefer before first PyPI publish; does not require the GitHub repo rename.
+  Plan: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). Publication/fixture work remains in
+  [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
 
 ## Product Backlog
 
