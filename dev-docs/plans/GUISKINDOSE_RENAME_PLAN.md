@@ -38,8 +38,14 @@ All references to the upstream **PySkinDose** project (by `rvbCMTS`) are preserv
 - **Semgrep rule IDs** in `.semgrep/mypyskindose-privacy.yml` — keep rule IDs as-is (e.g.
   `mypyskindose-identifier-attr-to-log-or-stdout`) to avoid breaking every `# nosemgrep:` directive.
   Only rename the file itself to `.semgrep/guiskindose-privacy.yml` and update references in
-  `scripts/run_semgrep_privacy.py`. Cross-check all `# nosemgrep:` comments in the repo to ensure
-  the referenced rule IDs remain valid after the file rename.
+  `scripts/run_semgrep_privacy.py`. **Also update the 7 path exclusions** inside the file
+  (`src/mypyskindose/gui/tabs/data.py`, `src/mypyskindose/gui/tabs/export.py`,
+  `src/mypyskindose/export/writers/**`, `src/mypyskindose/plotting/create_dose_map_plot.py`,
+  `src/mypyskindose/gui/tabs/**`, `src/mypyskindose/gui/widgets/**`,
+  `src/mypyskindose/gui/upload_temp_files.py`) from `src/mypyskindose` to `src/guiskindose`.
+  Cross-check all `# nosemgrep:` comments in the repo to ensure the referenced rule IDs remain
+  valid after the file rename. Note: `# nosemgrep: mypyskindose-*` comments in source files
+  should NOT be changed — they reference rule IDs, not the file name.
 
 ---
 
@@ -59,6 +65,10 @@ All references to the upstream **PySkinDose** project (by `rvbCMTS`) are preserv
 1. `git mv src/mypyskindose src/guiskindose`
 
 This immediately breaks all imports, which is expected. All subsequent phases fix the fallout.
+
+**Important:** Commit Phase 1 + Phase 2 together as a single atomic commit. If the bulk
+replacement is interrupted partway through, the repo is unbuildable. After completing Phase 2,
+run `python -c "import guiskindose"` as a mid-phase smoke test before committing.
 
 ### Phase 2 — Bulk import/require updates
 
@@ -83,6 +93,7 @@ exact string `mypyskindose` in Python files (`.py`) must become `guiskindose` **
 | `version("mypyskindose")` | `version("guiskindose")` | `export/payload.py` |
 | `python -m mypyskindose` | `python -m guiskindose` | Docstrings, comments |
 | `pip install mypyskindose` | `pip install guiskindose` | User-facing hints |
+| `__import__("mypyskindose` | `__import__("guiskindose` | Dynamic imports in tests |
 | `MYPYSKINDOSE_` | `GUISKINDOSE_` | Environment variables |
 
 **Replacement patterns (non-Python files):**
@@ -202,6 +213,11 @@ For `.ipynb` notebooks, the replacement must target cell source strings containi
 - `test_check_ignored_asset_files.py` — path strings.
 - `test_check_ui_copy.py` — path string.
 - `test_sync_gui_help.py` — path strings.
+- `tests/gui/test_upload_builders_coverage.py:136` — dynamic `__import__("mypyskindose.gui.helpers", ...)` (not caught by `from mypyskindose` bulk replace)
+- `tests/gui/test_multi_exam_gui.py:77` — mock target string `"mypyskindose.analyze_data.analyze_multiple_exams"`
+- `tests/gui/test_rdsr_unit_error.py:22` — path fragment `/ "mypyskindose"` in Path construction
+
+**Dynamic import pattern:** Also replace string arguments to `__import__()` containing `mypyskindose` (e.g. `__import__("mypyskindose...")` → `__import__("guiskindose...")`).
 
 ### Phase 5 — Scripts
 
@@ -212,10 +228,13 @@ Update all scripts under `scripts/`:
 - `scripts/check_gui_test_placement.py` — docstring references
 - `scripts/check_ui_copy.py` — path constant
 - `scripts/check_doc_freshness.py` — any path references
-- `scripts/check_licenses.py` — any path references
+- `scripts/check_licenses.py` — `PROJECT_NAME = "mypyskindose"` (line 40)
 - `scripts/run_hounddog_advisory.py` — temp dir prefix (`"mypyskindose-hounddog-"`)
 - `scripts/run_semgrep_privacy.py` — update reference to `.semgrep/mypyskindose-privacy.yml` (rename file to `.semgrep/guiskindose-privacy.yml`; rule IDs inside stay unchanged)
-- `scripts/phantom_gen/validate_phantom.py` — import + instantiation
+- `scripts/scratch_check_phantom.py` — 4 `mypyskindose` imports
+- `scripts/run_sonarqube_local.py` — `EXCLUDED_PREFIXES` with `src/mypyskindose/example_data/` and `src/mypyskindose/phantom_data/`
+- `scripts/phantom_gen/run_catalog.py` — `PHANTOM_DATA` path (line 56) and hardcoded path string (line 325)
+- `scripts/phantom_gen/affine_control.py` — `--base src/mypyskindose/phantom_data/` in docstring (line 9)
 - Other `scripts/phantom_gen/*.py` files — imports
 
 ### Phase 6 — Launcher, config, and CI files
@@ -230,7 +249,7 @@ Update all scripts under `scripts/`:
 - `uv.lock` — regenerate with `uv lock` after `pyproject.toml` rename (commit the regenerated lockfile)
 - `.phi-scanner.yml` — contains `src/mypyskindose/table_data/hvl_tables/...` paths; update after rename
 - `.phi-scanbaseline` — contains `file_path: src/mypyskindose/table_data/...` entries; re-run baseline update after rename so CI accepts the new paths
-- `.github/workflows/ci.yml` — five occurrences: `bandit -c pyproject.toml -r src/mypyskindose`, `python -m compileall src/mypyskindose`, `--cov=src/mypyskindose` paths, `coverage report --include="src/mypyskindose/*"`
+- `.github/workflows/ci.yml` — 7 occurrences (lines 162, 275, 321, 323, 326, 368, 370): `bandit -c pyproject.toml -r src/mypyskindose`, `python -m compileall src/mypyskindose`, `--cov=src/mypyskindose` paths, `coverage report --include="src/mypyskindose/*"`
 - `.github/ISSUE_TEMPLATE/bug_report.yml` — contains `import mypyskindose` instruction
 
 ### Phase 7 — String literal audit
@@ -259,6 +278,15 @@ Beyond bulk find-and-replace, audit these user-facing string literals individual
     - `tests/unittests/test_input_adapters.py:38` — `["Source: MyPySkinDose"]`
     - `tests/gui/test_rdsr_unit_error.py:32` — error message containing `MyPySkinDose`
     - `tests/gui/test_gui_security.py` — docstring
+    - `tests/unittests/test_check_doc_freshness.py:127` — test data string containing `MyPySkinDose` in a path example
+18. **Source file brand strings** (bulk `MyPySkinDose` → `GUISkinDose`):
+    - `export/payload.py` — default report title `"MyPySkinDose report — ..."` (line ~202)
+    - `cli_args.py:22` — argparse description `"MyPySkinDose is a Python 3.11+ program..."`
+    - `rdsr_normalizer.py:82` — error message `"MyPySkinDose expects..."`
+    - `input_adapters/radimetrics.py:204` — warning string `"MyPySkinDose"`
+    - `gui/io_helpers.py:63` — HTML comment marker `"mypyskindose:tabular_input"` (paired test: `test_export_data.py:162-190` asserts on this byte string — update both together)
+    - `input_adapters/stubs.py:38` — docstring reference to `src/mypyskindose/input_adapters/stubs.py`
+19. **GUI module docstrings** — `debug.py`, `state.py`, `__init__.py`, `styles.py`, `components/__init__.py`, `app.py` all contain `MyPySkinDose` in module docstrings; bulk replacement covers these
 
 ### Phase 8 — Validation
 
@@ -308,9 +336,8 @@ Update `dev-docs/index.md` to reference the new plan name.
 ### Backward compatibility
 
 - **No `mypyskindose` alias package** — this is a hard rename. Users must update their imports.
-  A compatibility shim (`mypyskindose` that re-exports `guiskindose`) is not planned; it would
-  add maintenance burden and confuse the namespace. If backward compat is later deemed
-  necessary, it can be added as a separate small package or a `__init__.py` re-export hack.
+  A compatibility shim is not planned. If backward compat is later deemed necessary, it can be
+  added as a separate small package or a `__init__.py` re-export hack.
 
 - **PyPI `mypyskindose` name** — the old PyPI name will remain with whatever version was last
   published. The new package publishes as `guiskindose`. Users must `pip install guiskindose`
@@ -326,8 +353,16 @@ it still works.
 ### Sphinx autodoc
 
 The RST files are generated by `sphinx-apidoc` and named after the package. After renaming the
-source directory, the old RST files become stale. Delete them and regenerate. The
-`build_documentation.bat` script runs apidoc — update its output path.
+source directory, the old RST files become stale. **Delete all old RST files first:**
+
+```bash
+rm docs/source/mypyskindose*.rst
+```
+
+Then regenerate with `sphinx-apidoc -o docs/source src/guiskindose` (or let
+`build_documentation.bat` handle it). Update the script's output path. Also update
+`docs/source/getting_started/getting_started.ipynb` (6 references to `mypyskindose`: PyPI URL,
+ReadTheDocs URL, imports, output).
 
 ### Pre-commit hook scope
 
