@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -49,7 +50,7 @@ def test_rewrite_path_prefix_leaves_others_untouched(path: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_inventory() -> dict[str, object]:
+def _make_inventory() -> dict[str, Any]:
     return {
         "version": 1,
         "assets": [
