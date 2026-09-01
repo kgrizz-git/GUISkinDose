@@ -23,6 +23,8 @@ ALLOWED_PATHS = [
     "GUISKINDOSE_MIGRATION_STATUS.md",
     "scripts/check_stale_brand.py",
     "tests/unittests/test_check_stale_brand.py",
+    "scripts/rewrite_package_paths.py",
+    "tests/unittests/test_rewrite_package_paths.py",
 ]
 
 # Patterns within a line that are permanently allowed.

@@ -119,10 +119,6 @@ def _rewrite_inventory_recursive(data: Any, changes: list[tuple[str, str]]) -> A
     return data
 
 
-def _is_line_allowlisted(line: str) -> bool:
-    return any(pattern.search(line) is not None for pattern in _ALLOWLIST_LINE_PATTERNS)
-
-
 def scan_leftover_brand(
     repo_root: Path,
     roots: Sequence[Path],
