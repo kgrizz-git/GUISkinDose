@@ -8,10 +8,11 @@ Demo / non-clinical mesh visibility (``show_demo_phantoms``) can also be enabled
 via process env, a repo ``.env``, or a gitignored repo-local JSON — see
 ``show_demo_phantoms_enabled``.
 
-Config paths support the in-progress GUISkinDose rename: reads fall back to
-the new ``~/.guiskindose/`` and ``.guiskindose.local.json`` locations when the
-old ``~/.mypyskindose/`` and ``.mypyskindose.local.json`` files are absent.
-Writes still target the legacy paths until the rename is complete.
+Config paths support the in-progress GUISkinDose rename: reads prefer
+``~/.guiskindose/gui.json`` and ``.guiskindose.local.json`` when those files
+exist, and otherwise fall back to ``~/.mypyskindose/gui.json`` and
+``.mypyskindose.local.json``. Writes still target the legacy paths until the
+rename is complete.
 """
 
 from __future__ import annotations
@@ -79,7 +80,13 @@ class NativeWindowPrefs:
 
 
 def config_path() -> Path:
+    """Write path (and read fallback) for the legacy home GUI JSON."""
     return Path.home() / ".mypyskindose" / "gui.json"
+
+
+def new_config_path() -> Path:
+    """Preferred read path for the GUISkinDose home GUI JSON (PR 0 dual-read)."""
+    return Path.home() / ".guiskindose" / "gui.json"
 
 
 def _backup_bad_gui_config(path: Path) -> None:
@@ -95,7 +102,7 @@ def _backup_bad_gui_config(path: Path) -> None:
 
 def load_gui_config() -> dict[str, Any]:
     """Load the raw GUI config dict, defaulting safely on missing/invalid files."""
-    new_path = Path.home() / ".guiskindose" / "gui.json"
+    new_path = new_config_path()
     old_path = config_path()
     target = new_path if new_path.exists() else old_path
     try:
@@ -204,7 +211,7 @@ def show_demo_phantoms_enabled(*, start: Path | None = None) -> bool:
     4. Repo ``.env`` key ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
     5. Gitignored ``.guiskindose.local.json`` or ``.mypyskindose.local.json`` in the
        repo root (``{"show_demo_phantoms": true}``)
-    6. ``~/.mypyskindose/gui.json`` or ``~/.guiskindose/gui.json``
+    6. ``~/.guiskindose/gui.json`` if present, else ``~/.mypyskindose/gui.json``
        (``show_demo_phantoms``)
 
     Missing / unrecognized values fall through. Default is ``False``.

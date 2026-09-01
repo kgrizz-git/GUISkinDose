@@ -13,6 +13,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
+from mypyskindose.gui import window_prefs as _window_prefs_for_isolation
 from mypyskindose.gui.helpers import (
     DEMO_HUMAN_MESHES,
     DEMO_MESH_SECTION_KEY,
@@ -20,6 +21,17 @@ from mypyskindose.gui.helpers import (
     get_human_mesh_names,
     get_human_mesh_options,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_new_gui_config_path(tmp_path, monkeypatch):
+    """Keep load_gui_config() from reading a real ~/.guiskindose/gui.json."""
+    monkeypatch.setattr(
+        _window_prefs_for_isolation,
+        "new_config_path",
+        lambda: tmp_path / "missing-guiskindose" / "gui.json",
+    )
+
 
 PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"
 KNOWN_DEMO_STEMS = sorted(DEMO_HUMAN_MESHES | GUI_HIDDEN_HUMAN_MESHES)
