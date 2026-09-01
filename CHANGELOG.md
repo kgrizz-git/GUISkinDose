@@ -19,6 +19,18 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Fixed
 
+- **GHSA-763m-79hh-57f2 / GHSA-23w6-3w8w-8484 / GHSA-jp53-mhqp-8xcg: bumped core `pypdf`** (2026-09-01) —
+  raised the minimum to `pypdf>=6.16.1` so the lockfile no longer pins the vulnerable `6.15.0`
+  (resolved `6.16.2`).
+  Privacy admission uses `pypdf` to parse PDFs (`PdfReader`, text/metadata/attachments); runtime
+  export PDFs still use reportlab. The pin is project-visible in `pyproject.toml` and survives
+  future `uv lock --upgrade` runs.
+
+- **GHSA-8423-8fgw-73vq / GHSA-wwv5-g3v4-889x / GHSA-mpf4-983q-p7j4: bumped transitive `tornado`**
+  (2026-09-01) — added explicit `tornado>=6.5.8` to the `docs` and `notebooks` extras (pulled by
+  `ipykernel` / JupyterLab, not the NiceGUI GUI server) so the lockfile no longer pins `6.5.7`.
+  The pin is project-visible in `pyproject.toml` and survives future `uv lock --upgrade` runs.
+
 - **PYSEC-2026-3726 / GHSA-vp2x-qp44-57v7: bumped transitive dev-only `nltk`** (2026-08-30) — added
   explicit `nltk>=3.10.3` minimum-version constraint to `[project.optional-dependencies].dev` so the
   lockfile no longer pins the vulnerable `3.10.0` (transitive via `safety`; `3.10.2` remains vulnerable).
