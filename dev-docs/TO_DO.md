@@ -38,6 +38,11 @@ policy decisions, not a restart of Phases 0–9.
   step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
 - [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
   `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
+- [ ] **Exhaustive docstring and doc review** — sweep all Python source files under `src/` for outdated,
+  missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs
+  (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior.
+  Flag any docstring that references the old `mypyskindose` name (pre-rename) or describes behavior
+  that has changed since the doc was written.
 - [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results
   accordion in the GUI.
 - [ ] **Settings phantom preview — manual smoke** — code + docs shipped
