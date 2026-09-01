@@ -35,7 +35,10 @@ omit pure CI/refactor bullets and point readers here. See
   (`mypyskindose` → `guiskindose`) is specified in `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` and
   catalogued in `dev-docs/index.md`. The privacy republication plan now points Phase 5A at that file,
   requires config-directory migration, keeps Semgrep rule IDs, and gates GitHub/Sonar URL rewrites
-  on the actual external renames. No runtime rename in this change.
+  on the actual external renames. The rename plan documents a green PR-0 prerequisite slice, one
+  CI-green mechanical PR 1 (partial path splits would fail `privacy-gates`), and a local
+  `privacy_admission.py run --mode staged` runbook (path-only inventory rewrite; unchanged hashes
+  do not need a new human review). No runtime rename in this change.
 
 - **`ci-latest` issue body now includes per-step triage guidance** (2026-08-30) —
   the tracking-issue body explains what each failure mode means and what action

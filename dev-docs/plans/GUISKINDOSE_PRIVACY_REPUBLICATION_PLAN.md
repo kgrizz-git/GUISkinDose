@@ -329,8 +329,10 @@ re-run the inventories in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.m
 #### 5A. Mechanical and behavioral rename
 
 Execute [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) in full. That file is the source of truth for
-directory/import replacement, Semgrep rule-ID exceptions, config/env migration, tests to add, commit grouping,
-and GitHub/Sonar URL gating. Do not copy replacement tables here.
+directory/import replacement, Semgrep rule-ID exceptions, config/env migration, tests to add, **PR sequencing**
+(green prerequisites vs one CI-green mechanical PR; do not merge a partial `src/` rename), commit grouping,
+GitHub/Sonar URL gating, and the privacy-admission runbook (inventory path rewrite with unchanged hashes;
+`privacy_admission.py run --mode staged` after staging). Do not copy replacement tables here.
 
 Exit criteria that this phase still owns (must be true after the rename PR merges):
 

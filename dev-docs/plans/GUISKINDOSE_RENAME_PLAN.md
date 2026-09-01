@@ -346,9 +346,26 @@ Delete `docs/source/mypyskindose*.rst` then regenerate. Update
 
 ### Privacy admission of moved binaries
 
-`git mv` of STL/DICOM changes inventory **paths** with unchanged hashes. Update
-`approved_asset_inventory.json` in the same commit. If admission treats the new path as a new
-asset, run the documented local DICOM/image review route rather than force-adding.
+The approved-asset gate keys by **path + SHA-256**, not path alone
+(`ASSET_NOT_IN_APPROVED_INVENTORY` / `INVENTORY_ENTRY_NOT_A_TRACKED_ASSET` /
+`ASSET_HASH_NOT_APPROVED`). A changed **hash** is a new human review; a changed **path** with
+the same hash is not. In the same commit as `git mv`:
+
+1. Rewrite `path` prefixes in `approved_asset_inventory.json` (`src/mypyskindose/` →
+   `src/guiskindose/`). Copy `sha256`, `review`, and `dicom_review` unchanged.
+2. `python scripts/render_asset_inventory.py --write`
+3. Stage JSON + generated Markdown together.
+
+Do **not** clear review fields or re-inspect pixels. Local hooks will still **run**
+`dicom-phi-scan` because `--diff-filter=ACMR` treats the five `.dcm` files as renamed;
+that is a receipt, not a new inventory approval. STL files do not trigger image-ocr.
+Editing `.ipynb` cells **does** trigger image-ocr — expect that receipt when notebooks
+are in the same staged set.
+
+Update `dev-docs/privacy_admission_policy.json` `never_track_patterns` entry
+`src/mypyskindose/example_data/RDSR/clinical*` in that same commit. Rewrite
+`.phi-scanner.yml` / regenerate `.phi-scanbaseline` or the next scheduled phi-scan on
+`main` will fail.
 
 ### Pre-commit and gitignore
 
@@ -358,18 +375,86 @@ renaming egg-info by hand.
 
 ---
 
-## Execution order and commits
+## PR sequencing (what can split vs what would go red)
 
-1. Phase 0 — inventories and version decision
-2. Phases 1+2 — **one commit** (`git mv` + Python imports/strings except rule IDs)
-3. Phase 4 + 4b — tests (existing updates + new checks)
-4. Phase 5 — scripts
-5. Phase 6 — config/launchers/CI (GitHub/Sonar URLs gated)
-6. Phases 3, 7, 10 — docs, audit, freshness, changelog
-7. Phases 8–9 — validation and hooks
+**Do not merge a partial package-path rename to `main`.** CI and hooks assume one consistent
+tree. A PR that `git mv`s `src/` without also updating tests, `pyproject.toml` package
+discovery, CI `--cov`/`compileall`/`bandit` paths, help/feature-doc JSON, doc-freshness path
+references, Semgrep `paths.include`, and the asset inventory will fail `privacy-gates` first
+(then tests, coverage, basedpyright, help-registry). Intermediate **commits** on one branch
+may be red; only the branch **tip** that merges needs to be green.
 
-Suggested commit subjects after the atomic directory+import commit: tests, scripts, config/CI,
-docs/Sphinx, stale-brand check.
+### PR 0 — green prerequisites (optional, recommended)
+
+Land these on `main` first. Each is independently green and shrinks risk in PR 1:
+
+| Slice | Why it can merge alone |
+|-------|------------------------|
+| Dual-read config/env (`~/.guiskindose/` and `GUISKINDOSE_SHOW_DEMO_PHANTOMS` as fallbacks; still default-write to today’s paths) | No import rename; tests assert the old default until PR 1 flips it |
+| Extract `cli()` from `__main__.py` without a new console script name | Behavior-preserving; `[project.scripts]` waits for PR 1 |
+| Stale-brand allowlist checker that currently passes (allowlist includes live `mypyskindose`) | Fails closed after PR 1 once the allowlist is tightened |
+
+### PR 1 — one CI-green mechanical rename (required)
+
+Everything that would break if `src/mypyskindose` vanished while callers still used that
+name: `git mv`, Python imports/strings (except Semgrep rule IDs), tests (including brand
+assertions if APP_NAME changes here), scripts, `MANIFEST.in`, `pyproject.toml`, CI, hooks,
+inventory path rewrite + render, phi-scan config/baseline, Semgrep includes, help registry,
+feature-doc matrix, doc-freshness paths, Sphinx RST regen, changelog Unreleased, version
+bump. Multiple commits **inside** this PR are fine (directory+imports+inventory first so a
+mid-PR checkout can be made buildable; then scripts/CI/docs). Do not open a second PR to
+`main` until this tip is green.
+
+Optional split **after** PR 1 (also green): display-only leftover `MyPySkinDose` →
+`GUISkinDose` if PR 1 kept `APP_NAME` on the old brand. Prefer doing brand + package
+together unless the PR 1 diff is unreviewable.
+
+### PR 2+ — not this plan
+
+GitHub repo rename, SonarCloud project key, ReadTheDocs slug, TestPyPI/Trusted Publishing:
+republication Phases 5B–7. Those stay red/wrong if done in PR 1 without the matching
+external rename.
+
+---
+
+## Agent / automation runbook (PR 1)
+
+Prefer one agent owning the branch tip through green CI rather than several agents each
+merging a red slice.
+
+1. **Re-count** (Phase 0 inventories). Confirm `guiskindose` is free on PyPI/TestPyPI.
+2. **Mechanical rewrite** in a worktree, pattern-limited (not a blanket `sed` of
+   `mypyskindose`, which would smash Semgrep rule IDs):
+   - `git mv src/mypyskindose src/guiskindose`
+   - replace `from/import/patch/import_module/__import__` and `src/mypyskindose` paths
+   - rewrite inventory `path` prefixes only; keep hashes and review metadata
+   - `python scripts/render_asset_inventory.py --write`
+3. **Stage the full consistent set** (`git add` package, tests, CI, inventories, docs
+   paths). Do not commit a directory-only snapshot to a branch you will push for CI.
+4. **Privacy receipts, once per staged snapshot** (do not `--no-verify`):
+
+   ```bash
+   python scripts/privacy_admission.py route --mode staged
+   python scripts/privacy_admission.py run --mode staged
+   ```
+
+   Expected route for PR 1: `presidio` (md/json), `hounddog` (src/scripts `.py` with
+   log/write/export diffs), `dicom-phi-scan` (renamed `.dcm`). Add `image-ocr` if `.ipynb`
+   (or other image-ocr extensions) are staged. Receipts live under Git metadata; CI
+   `privacy-gates` **routes** but does not require those local receipts — pre-commit and
+   pre-push do. If the hook says `required … receipt unavailable`, re-run `run --mode
+   staged` after restaging; do not skip the hook.
+5. **Commit** with hooks on. If a hook auto-touches files (ruff, inventory markdown),
+   amend only when the amend rules in the agent playbook allow it; otherwise a follow-up
+   commit.
+6. **Validate** Phase 8 on the tip (`pytest`, coverage include path, `python -m
+   guiskindose --help`, stale-brand check, wheel install if time).
+7. **Push / PR** against `main`. If CI is red, fix on this branch; do not land a
+   “docs-only follow-up” that leaves `main` unable to import `guiskindose`.
+
+A small helper (optional, can be PR 0) that rewrites inventory paths and prints leftover
+`rg mypyskindose` hits with the allowlist applied will save a review round. Do not add a
+permanent `mypyskindose` shim package.
 
 ---
 
@@ -398,8 +483,9 @@ for republication Phases 1–4 (fixture sanitization) is unnecessary: those can 
 after the import rename. Waiting for the GitHub repository rename is also unnecessary and
 would block the package rename on an unrelated operations step.
 
-Downsides of doing it now: a ~300-file PR that conflicts with any parallel `src/` work;
-privacy-admission friction on moved STL/DICOM paths; local scripts and worktree editable
-installs break until reinstalled; users with `~/.mypyskindose/` depend on the migration code
-being correct. Downsides of waiting: the same PR grows, and publishing `mypyskindose` first
-would create a name we then have to deprecate.
+Downsides of doing it now: a large but **single** CI-green PR 1 that conflicts with any
+parallel `src/` work; local privacy receipts (Presidio/HoundDog/DICOM) on that staged set;
+editable installs break until `pip install -e .` / `uv sync`; users with `~/.mypyskindose/`
+depend on migration (land dual-read in PR 0 to de-risk). Downsides of waiting: the same PR
+grows, and publishing `mypyskindose` first would create a name we then have to deprecate.
+Splitting PR 1 across merges to `main` does not make CI easier — it makes `main` red.
