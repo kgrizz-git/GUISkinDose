@@ -29,7 +29,7 @@ _EXAMPLE_RDSR = (
 def test_load_rdsr_surfaces_unit_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
     def _raise(*_args, **_kwargs):
         raise RdsrUnitError(
-            "This RDSR reports reference point dose in 'mGy', but MyPySkinDose expects 'Gy'."
+            "This RDSR reports reference point dose in 'mGy', but GUISkinDose expects 'Gy'."
         )
 
     monkeypatch.setattr(exam_loaders, "rdsr_normalizer", _raise)

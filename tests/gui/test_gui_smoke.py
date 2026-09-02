@@ -1,5 +1,5 @@
 """
-GUI smoke tests for MyPySkinDose NiceGUI app (Harness Phase 5).
+GUI smoke tests for the GUISkinDose NiceGUI app (Harness Phase 5).
 
 Verifies the production page module loads and the primary index route renders
 key UI chrome using NiceGUI user simulation (no browser).
@@ -28,6 +28,6 @@ def test_gui_module_imports() -> None:
 async def test_index_page_renders(user: User) -> None:
     """Primary '/' route shows app title and first workflow tab."""
     await user.open("/")
-    await user.should_see("MyPySkinDose")
+    await user.should_see("GUISkinDose")
     await user.should_see("1 · Upload")
     await user.should_see("Run Calculation")

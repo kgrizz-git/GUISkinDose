@@ -35,7 +35,7 @@ class TestDetectHeaderRow:
         header = list(NORMALIZED_COLUMN_NAMES)
         rows = [
             ["Export date: 2026-06-09"] + [""] * (len(header) - 1),
-            ["Source: MyPySkinDose"] + [""] * (len(header) - 1),
+            ["Source: GUISkinDose"] + [""] * (len(header) - 1),
             header,
             ["AXIOM-Artis"] + ["0.0"] * (len(header) - 1),
         ]

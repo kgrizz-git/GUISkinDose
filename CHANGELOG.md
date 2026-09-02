@@ -80,7 +80,8 @@ omit pure CI/refactor bullets and point readers here. See
   Markdown links and backtick paths that pointed at `src/mypyskindose` now point at
   `src/guiskindose`. User-facing brand (GUI title, CLI description, export `APP_NAME`,
   launchers, Sphinx, install guide, issue templates) is **GUISkinDose** / `guiskindose`.
-  Tests, console script, and `LIVE_PACKAGE_NAME` are later slices.
+  Tests now import `guiskindose` so the suite can collect. Console script and
+  `LIVE_PACKAGE_NAME` remain later slices.
   Semgrep rule IDs and live GitHub/Sonar URLs are unchanged.
   Bandit pre-commit `files:` and CI bandit/compileall/coverage now scan `src/guiskindose`.
   Blocking Semgrep `paths.include` filters and `.phi-scanner.yml` HVL exclusions now

@@ -1,5 +1,5 @@
 """
-Structural tests for MyPySkinDose package layer dependency rules (Harness Phase 4).
+Structural tests for GUISkinDose package layer dependency rules (Harness Phase 4).
 
 Scans import statements via AST (no import-linter dependency). Fails CI when
 high-value layer boundaries are violated.

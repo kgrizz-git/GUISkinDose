@@ -96,7 +96,7 @@ def test_show_demo_phantoms_unrecognized_new_env_falls_through_to_old_env(monkey
 def test_show_demo_phantoms_new_local_json_wins_over_old_local_json(monkeypatch, tmp_path):
     from guiskindose.gui import window_prefs
 
-    (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "guiskindose"\n', encoding="utf-8")
     home_cfg = tmp_path / "home_gui.json"
     home_cfg.write_text("{}\n", encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: home_cfg)
@@ -122,7 +122,7 @@ def test_show_demo_phantoms_new_local_json_wins_over_old_local_json(monkeypatch,
 def test_show_demo_phantoms_new_dotenv_wins_over_old_dotenv(monkeypatch, tmp_path):
     from guiskindose.gui import window_prefs
 
-    (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "guiskindose"\n', encoding="utf-8")
     home_cfg = tmp_path / "home_gui.json"
     home_cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: home_cfg)

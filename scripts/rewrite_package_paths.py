@@ -55,7 +55,7 @@ _ALLOWLIST_FILE_PATHS: tuple[str, ...] = (
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
     "dev-docs/COORD_TRANSFORM_COMPARISON.md",
     "CHANGELOG.md",
-    "GUISKINDOSE_MIGRATION_STATUS.md",
+    "dev-docs/GUISKINDOSE_MIGRATION_STATUS.md",
     "scripts/check_stale_brand.py",
     "tests/unittests/test_check_stale_brand.py",
     "scripts/rewrite_package_paths.py",

@@ -41,7 +41,7 @@ def test_write_docx_smoke():
     assert data[:2] == b"PK"  # docx is a zip
     doc = Document(io.BytesIO(data))
     text = "\n".join(p.text for p in doc.paragraphs)
-    assert "MyPySkinDose" in text
+    assert "GUISkinDose" in text
 
 
 def test_write_docx_missing_image_notice():

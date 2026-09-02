@@ -1,5 +1,5 @@
 """
-Security regression tests for the MyPySkinDose GUI.
+Security regression tests for the GUISkinDose GUI.
 
 Covers two hardening fixes:
   1. Browser-mode server binds to localhost (127.0.0.1) by default, so PHI-derived
