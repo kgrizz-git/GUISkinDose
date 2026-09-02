@@ -54,6 +54,12 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **GUISkinDose rename PR 1 test contract** (2026-09-02) — `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md`
+  now requires inverting PR 0 locks in the mechanical-rename PR: config load–modify–save must
+  persist to `~/.guiskindose/` when that file exists, `LIVE_PACKAGE_NAME` must not remain
+  `"mypyskindose"`, and `[project.scripts] guiskindose` needs an entry-point test. No extra
+  tests-only PR between PR 0 and PR 1.
+
 - **GUISkinDose rename and republication plans aligned** (2026-09-01) — mechanical in-repo rename
   (`mypyskindose` → `guiskindose`) is specified in `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` and
   catalogued in `dev-docs/index.md`. The privacy republication plan now points Phase 5A at that file,

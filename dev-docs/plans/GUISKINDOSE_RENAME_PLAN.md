@@ -408,6 +408,22 @@ bump, and set `LIVE_PACKAGE_NAME` in `scripts/check_stale_brand.py` to `"guiskin
 mid-PR checkout can be made buildable; then scripts/CI/docs). Do not open a second PR to
 `main` until this tip is green.
 
+#### PR 1 test contract (required)
+
+PR 0 tests freeze today's write-old / live-`mypyskindose` behavior. Invert or replace them
+in the **same** mechanical-rename PR. Do not keep assertions that saves still go to
+`~/.mypyskindose/` or that `LIVE_PACKAGE_NAME == "mypyskindose"`. Do not open a separate
+tests-only PR between PR 0 and PR 1.
+
+| Area | Current PR 0 lock | Required on the PR 1 tip |
+|------|-------------------|--------------------------|
+| Config write | `test_save_gui_config_still_writes_old_path`, `test_load_prefers_new_path_but_save_still_writes_old_path` | When both home files exist, a load–modify–save (onboarding dismiss or native-window prefs) updates the **new** path so the next startup reads it. New missing → still reads old. |
+| Stale-brand default | `test_live_package_name_pr1_todo_is_present` requires `LIVE_PACKAGE_NAME == "mypyskindose"` | Default is `"guiskindose"` or `None` so the live-tree gate is no longer a no-op. Keep fail-closed coverage (`test_stale_brand_fails_closed`). |
+| Console script | `cli()` exists; no `[project.scripts]` | `[project.scripts] guiskindose` points at `cli()`; a small entry-point test plus `python -m guiskindose --help` (runbook). |
+
+Bounded leftover-brand I/O and empty-`except` skipping already merged with PR 0; do not
+re-test those as a PR 1 prerequisite.
+
 Optional split **after** PR 1 (also green): display-only leftover `MyPySkinDose` →
 `GUISkinDose` if PR 1 kept `APP_NAME` on the old brand. Prefer doing brand + package
 together unless the PR 1 diff is unreviewable.
@@ -450,14 +466,14 @@ merging a red slice.
 5. **Commit** with hooks on. If a hook auto-touches files (ruff, inventory markdown),
    amend only when the amend rules in the agent playbook allow it; otherwise a follow-up
    commit.
-6. **Validate** Phase 8 on the tip (`pytest`, coverage include path, `python -m
-   guiskindose --help`, stale-brand check, wheel install if time).
+6. **Validate** Phase 8 on the tip (`pytest` including the PR 1 test contract above,
+   coverage include path, `python -m guiskindose --help`, stale-brand check, wheel
+   install if time).
 7. **Push / PR** against `main`. If CI is red, fix on this branch; do not land a
    “docs-only follow-up” that leaves `main` unable to import `guiskindose`.
 
-A small helper (optional, can be PR 0) that rewrites inventory paths and prints leftover
-`rg mypyskindose` hits with the allowlist applied will save a review round. Do not add a
-permanent `mypyskindose` shim package.
+The leftover-brand scan helper (`scripts/rewrite_package_paths.py`) already landed in PR 0.
+Do not add a permanent `mypyskindose` shim package.
 
 ---
 
