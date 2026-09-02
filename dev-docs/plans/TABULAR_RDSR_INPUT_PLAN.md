@@ -10,7 +10,7 @@ _Last updated: 2026-06-10_
 
 ## Objective
 
-Allow MyPySkinDose to run from exported irradiation-event tables in addition to current DICOM RDSR and normalized JSON inputs.
+Allow GUISkinDose to run from exported irradiation-event tables in addition to current DICOM RDSR and normalized JSON inputs.
 The target formats are:
 
 - `.csv` — comma-separated event tables (e.g. Radimetrics exports)
@@ -34,7 +34,7 @@ raw vendor table (CSV/TSV/XLSX) ──→ column map ──→ unit convert ─�
                                                           raw-RDSR-like DataFrame ──→ rdsr_normalizer()
                                                                                                  │
 already-normalized table (CSV/TSV/XLSX) ─────────────────────────────────────────┐              ▼
-   (typically produced by MyPySkinDose itself)                                    └──→ normalized DataFrame ──→ analyze_data()
+   (typically produced by GUISkinDose itself)                                    └──→ normalized DataFrame ──→ analyze_data()
 ```
 
 The substantive work for real vendor data is **column mapping + unit conversion + vendor coordinate normalization** (the left/middle of the diagram). Reading an already-normalized table (bottom-left) is the trivial endpoint — few users have such files; it is primarily an internal/test contract and the target every vendor adapter produces.
@@ -158,7 +158,7 @@ The answer determines which normalization path to use:
 | Input data frame | Normalization path | Result |
 |---|---|---|
 | Raw DICOM coordinates (like `rdsr_parser()` output) | Call `rdsr_normalizer(data_parsed, settings)` | Corrections from `normalization_settings.json` apply once — correct |
-| Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter | No corrections — correct |
+| Already fully normalized (e.g., by GUISkinDose itself) | Use `normalized` schema adapter | No corrections — correct |
 | Already transformed by vendor software (unknown convention) | **Must investigate** before writing adapter | Risk of double-correction or missed correction — wrong |
 
 **Radimetrics** is expected to pass coordinate values through from the underlying RDSR verbatim and mainly change field names/units. The `generic_rdsr_like`/Radimetrics path (calling `rdsr_normalizer()`) is therefore correct and all existing per-manufacturer corrections in `normalization_settings.json` apply exactly once. Keep one matched source-RDSR/export comparison as deferred fixture confirmation, not as a current reason to suspect a coordinate-frame transform.
@@ -264,7 +264,7 @@ It must **not** import from L3+ (domain models, dose pipeline, plotting, GUI, or
 ## Proposed architecture
 
 ```text
-src/mypyskindose/input_adapters/
+src/guiskindose/input_adapters/
   __init__.py
   models.py           — InputAdapterResult, ParsedEventTable dataclasses
   column_mapper.py    — header detection, substring pattern dict, duplicate check
@@ -354,12 +354,12 @@ Keeps `main()` backward compatible. Once adapter behavior is stable, let `main()
 ## CLI changes
 
 ```bash
-python -m mypyskindose \
+python -m guiskindose \
   --file-path exported_events.csv \
   --settings settings.json \
   --input-schema normalized
 
-python -m mypyskindose \
+python -m guiskindose \
   --file-path dose_track_export.xlsx \
   --settings settings.json \
   --input-schema dosetrack \
@@ -388,7 +388,7 @@ Flags to add:
 - [x] Add coordinate correction options in the import preview step: _(shipped 2026-06-10)_
   - [x] **Lat/lon swap toggle** — swaps `Tx ↔ Tz` on the normalized DataFrame (post-normalization). ✓
   - [ ] **Skip-manufacturer-transforms toggle** — bypass `rdsr_normalizer()` coordinate corrections. _Not yet implemented._
-- [x] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports. _(shipped 2026-06-10; JSON gets `tabular_input` key; HTML gets `<!-- mypyskindose:tabular_input ... -->` comment in `<head>`)_
+- [x] Preserve tabular-input provenance (schema, column map, warnings) in exported JSON/HTML reports. _(shipped 2026-06-10; JSON gets `tabular_input` key; HTML gets `<!-- guiskindose:tabular_input ... -->` comment in `<head>`)_
 - [x] Core calculation exports include top-level `schema_version` (shipped 2026-06-23; see `format_export_data.EXPORT_SCHEMA_VERSION`).
 - [x] Show schema/source type in the Data Table tab header. _(shipped 2026-06-10)_
 
@@ -447,7 +447,7 @@ Tests to write:
 Foundational plumbing plus the simplest schema as a walking skeleton (see Phase sequencing rationale). Builds everything that does not require vendor samples. The `normalized` schema expects columns already matching the internal contract in [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) — do not invent a column list; anchor to that doc.
 
 - [x] Add `openpyxl` to core `dependencies` in `pyproject.toml`.
-- [x] Create `src/mypyskindose/input_adapters/__init__.py`.
+- [x] Create `src/guiskindose/input_adapters/__init__.py`.
 - [x] Create `models.py` with `InputProvenance`, `InputAdapterResult`, `ParsedEventTable`.
 - [x] Create `column_mapper.py`:
   - [x] Implement `detect_header_row(df_raw, patterns, n=10) -> int` (error if no row clears the threshold).
@@ -465,7 +465,7 @@ Foundational plumbing plus the simplest schema as a walking skeleton (see Phase 
   - [x] Detect multiple study/accession/device IDs (if present) → warn and error by default (single-procedure assumption).
   - [x] Return `InputAdapterResult` with a populated `InputProvenance`.
 - [x] Create `registry.py` with `read_and_normalize_input()` routing by suffix (explicit schema only; `auto` raises "not yet supported" in Phase 1).
-- [x] Add `analyze_input_file()` to `src/mypyskindose/__init__.py` public API.
+- [x] Add `analyze_input_file()` to `src/guiskindose/__init__.py` public API.
 - [x] Add `--input-schema` (explicit values only) and `--sheet-name` CLI flags to `__main__.py` / `main.py`.
 - [x] Add `--input-preview-only` CLI flag (prints header row, encoding/delimiter, column map, missing required columns, unit assumptions; no dose calc).
 - [x] Add fixtures: `normalized_events.csv`, `normalized_events.tsv`, `normalized_events.xlsx`, `normalized_events_metadata_header.xlsx`, `normalized_events_semicolon_decimalcomma.csv`, `normalized_events_multistudy.csv`.
@@ -502,7 +502,7 @@ Foundational plumbing plus the simplest schema as a walking skeleton (see Phase 
 ### Phase 4 — DoseTrack adapter _(shipped 2026-06-10; synthetic fixture only)_
 
 - [x] Study `dhen2714/PySkinDose` `dosetrack.py`; document differences.
-- [x] Create `src/mypyskindose/input_adapters/dosetrack.py` adapter:
+- [x] Create `src/guiskindose/input_adapters/dosetrack.py` adapter:
   - [x] Equipment Name → Manufacturer/ManufacturerModelName inference via `MODEL2MANUF`.
   - [x] `ffill()` for DoseTrack hierarchical row format.
   - [x] Integer Plane Code → "Single Plane" / "Plane A" / "Plane B" normalization.
@@ -524,7 +524,7 @@ No column map, reference implementation, or real export available. Do not implem
 
 - [ ] Obtain a Qaelum export sample and document its column headers.
 - [ ] Build column map (`QAELUM_COLUMN_NAMES`, `QAELUM_PATTERNS`) in `column_mapper.py`.
-- [ ] Create `src/mypyskindose/input_adapters/qaelum.py` using the adapter infrastructure already in place.
+- [ ] Create `src/guiskindose/input_adapters/qaelum.py` using the adapter infrastructure already in place.
 - [ ] Add fixture and tests.
 
 ### Phase 5+ — DoseMonitor adapter _(placeholder — needs fixture)_
@@ -533,7 +533,7 @@ No column map, reference implementation, or real export available. Do not implem
 
 - [ ] Obtain a DoseMonitor export sample and document its column headers.
 - [ ] Build column map (`DOSEMONITOR_COLUMN_NAMES`, `DOSEMONITOR_PATTERNS`) in `column_mapper.py`.
-- [ ] Create `src/mypyskindose/input_adapters/dosemonitor.py` using the adapter infrastructure already in place.
+- [ ] Create `src/guiskindose/input_adapters/dosemonitor.py` using the adapter infrastructure already in place.
 - [ ] Add fixture and tests.
 
 ### Phase 5 — GUI import workflow (partially shipped 2026-06-10)
@@ -546,7 +546,7 @@ See GUI changes section above for the full checklist. Key tasks:
 - [x] Block dose calculation on unresolved mapping errors.
 - [x] Add lat/lon swap and (UI-only) skip-transforms coordinate correction toggles.
 - [x] Show schema/source type in Data Table tab header.
-- [x] Preserve provenance in exports (JSON key `tabular_input`; HTML `<!-- mypyskindose:tabular_input -->` comment). _(shipped 2026-06-10)_
+- [x] Preserve provenance in exports (JSON key `tabular_input`; HTML `<!-- guiskindose:tabular_input -->` comment). _(shipped 2026-06-10)_
 - [ ] Sheet picker for `.xlsx`/`.xlsm` (deferred; defaults to sheet 0).
 - [ ] GUI smoke test covering CSV/XLSX upload path.
 

@@ -201,7 +201,7 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
         if seen_mfrs & _GE_VARIANTS:
             ctx.warnings.append(
                 "GE manufacturer detected. GE equipment stores lateral and longitudinal table "
-                "positions in the opposite convention to MyPySkinDose. "
+                "positions in the opposite convention to GUISkinDose. "
                 "The normalization layer applies the GE lateral/longitudinal correction; "
                 "do not also enable the GUI swap unless validating a site-specific export."
             )

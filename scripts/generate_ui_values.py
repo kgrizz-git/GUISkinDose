@@ -83,7 +83,7 @@ def render_markdown(
     gradients: list[tuple[str, str, str, str]],
 ) -> str:
     lines = [
-        "# UI Values — MyPySkinDose",
+        "# UI Values — GUISkinDose",
         "",
         "> **Auto-generated** — do not edit by hand. Regenerate with:",
         "> `python scripts/generate_ui_values.py`",

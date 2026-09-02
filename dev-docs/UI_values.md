@@ -1,4 +1,4 @@
-# UI Values — MyPySkinDose
+# UI Values — GUISkinDose
 
 > **Auto-generated** — do not edit by hand. Regenerate with:
 > `python scripts/generate_ui_values.py`

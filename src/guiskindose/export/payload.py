@@ -199,7 +199,7 @@ def collect_export_payload(source: ExportSource, *, with_images: bool = True) ->
         execution_context=source.execution_context,
         report_title=(
             source.report_title
-            or f"MyPySkinDose report — {datetime.now(UTC).astimezone():%Y-%m-%d %H:%M}"
+            or f"GUISkinDose report — {datetime.now(UTC).astimezone():%Y-%m-%d %H:%M}"
         ),
     )
 

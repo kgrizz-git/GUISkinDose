@@ -21,12 +21,12 @@ sys.path.insert(0, str(project_root.absolute()))
 
 # -- Project information -----------------------------------------------------
 
-project = "MyPySkinDose"
+project = "GUISkinDose"
 copyright = "2020, Max Hellström"
 author = "Max Hellström"
 
 # The full version, including alpha/beta/rc tags
-release = "25.1.1"
+release = "25.2.0"
 
 
 # -- General configuration ---------------------------------------------------

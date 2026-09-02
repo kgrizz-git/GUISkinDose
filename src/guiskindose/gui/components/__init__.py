@@ -1,4 +1,4 @@
-"""GUI components for MyPySkinDose."""
+"""GUI components for GUISkinDose."""
 
 from .help_button import HelpButton
 

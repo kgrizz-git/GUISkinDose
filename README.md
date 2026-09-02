@@ -1,4 +1,4 @@
-# MyPySkinDose
+# GUISkinDose
 
 **Independently maintained fork** of [PySkinDose](https://github.com/rvbCMTS/PySkinDose).
 Original author: Max Hellström. This fork is **not** an official or endorsed
@@ -11,11 +11,11 @@ This repository estimates peak skin dose (PSD) and 3D skin dose maps from DICOM
 X-ray Radiation Dose Structured Reports (RDSR) and supported tabular exports,
 while allowing local modifications beyond upstream.
 
-The distribution and import package name is `mypyskindose` (distinct from upstream).
+The distribution and import package name is `guiskindose` (distinct from upstream).
 
 ## Intended use and responsibility
 
-MyPySkinDose is intended for **research, education, development, and
+GUISkinDose is intended for **research, education, development, and
 institutional quality-assurance** workflows. It is **not FDA-cleared** (or
 otherwise certified) as a medical device, and results are **not** independently
 validated for making patient-care decisions on their own.
@@ -60,7 +60,7 @@ pip install -e ".[dev,gui,docs,notebooks]"   # everything (docs + JupyterLab)
 
 ## Running the GUI
 
-MyPySkinDose includes a NiceGUI-based graphical interface.
+GUISkinDose includes a NiceGUI-based graphical interface.
 
 **Quick launch (macOS/Linux):**
 
@@ -74,8 +74,8 @@ The script prompts you to run in browser mode (default) or native window mode.
 **Direct Python command:**
 
 ```bash
-python -m mypyskindose --mode gui              # browser mode
-python -m mypyskindose --mode gui --native     # native window (requires pywebview)
+python -m guiskindose --mode gui              # browser mode
+python -m guiskindose --mode gui --native     # native window (requires pywebview)
 ```
 
 Native window mode remembers the last window size, position, and maximized state in
@@ -92,7 +92,7 @@ on.
 Serving it to other hosts is opt-in via `--host`:
 
 ```bash
-python -m mypyskindose --mode gui --host 0.0.0.0   # serve on the LAN
+python -m guiskindose --mode gui --host 0.0.0.0   # serve on the LAN
 ```
 
 Only do this on a trusted network, and behind your own access controls, since
@@ -105,7 +105,7 @@ The CLI and browser-mode GUI log to the console only. **Native** mode has no
 console, so it also writes a diagnostic log to your system temp directory:
 
 ```
-<tempdir>/mypyskindose-gui.log
+<tempdir>/guiskindose-gui.log
 ```
 
 This file is **truncated at each launch** and **size-capped** (rotating, ~4 MB
@@ -153,7 +153,7 @@ pip install -e ".[docs]"
 
 ## What this code is for
 
-Within the intended-use boundary above, MyPySkinDose is meant to be used in a few different ways:
+Within the intended-use boundary above, GUISkinDose is meant to be used in a few different ways:
 
 1. Inspect or debug the examination geometry before doing dose calculations.
 2. Step through irradiation events from an RDSR study to understand beam orientation and positioning.
@@ -171,7 +171,7 @@ The main user-facing workflow is:
 
 ## Quick Start with Jupyter Notebook
 
-**New to MyPySkinDose?** The easiest way to learn is to start with the interactive getting-started notebook:
+**New to GUISkinDose?** The easiest way to learn is to start with the interactive getting-started notebook:
 
 📓 **[docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb)**
 
@@ -196,8 +196,8 @@ If you prefer to learn by example with code snippets instead, continue to the se
 ### 1. Start from the example settings
 
 ```python
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.main import main
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.main import main
 
 settings = PyskindoseSettings(settings=load_settings_example_json())
 settings.mode = "plot_setup"
@@ -211,8 +211,8 @@ This is useful for checking the initial geometry, patient/table positioning, and
 ### 2. Examine a procedure from an RDSR file or tabular export
 
 ```python
-from mypyskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.main import main
+from guiskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.main import main
 
 settings = PyskindoseSettings(settings=load_settings_example_json())
 settings.mode = "plot_procedure"
@@ -228,8 +228,8 @@ Use `plot_procedure` to scroll through irradiation events and understand how the
 ### 3. Calculate a dose map
 
 ```python
-from mypyskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.main import main
+from guiskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.main import main
 
 settings = PyskindoseSettings(settings=load_settings_example_json())
 settings.mode = "calculate_dose"
@@ -252,8 +252,8 @@ If you already have normalized RDSR data in a pandas `DataFrame`, use `analyze_n
 
 ```python
 import pandas as pd
-from mypyskindose import load_settings_example_json
-from mypyskindose.main import analyze_normalized_data_with_custom_settings_object
+from guiskindose import load_settings_example_json
+from guiskindose.main import analyze_normalized_data_with_custom_settings_object
 
 settings = load_settings_example_json()
 normalized_data = pd.DataFrame(...)  # your normalized RDSR data
@@ -310,7 +310,7 @@ Then open the built site locally (path exists only after the Sphinx step above):
 ## Notes for this fork
 
 - Independently maintained fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose); MIT license and upstream copyright preserved.
-- Package identity: `mypyskindose` (see [dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md](dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md)).
+- Package identity: `guiskindose` (see [dev-docs/GUISKINDOSE_MIGRATION_STATUS.md](dev-docs/GUISKINDOSE_MIGRATION_STATUS.md)).
 - How we maintain the fork: [dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md).
 - Bugs and features: [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) (templates require a no-PHI/PII confirmation; see [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)).
 - Questions and contribution ideas: [GitHub Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions). Ideas welcome — prefer Issues/Discussions over cold PRs ([CONTRIBUTING.md](CONTRIBUTING.md)).

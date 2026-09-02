@@ -7,8 +7,8 @@ _Related backlog: Deferred item in [TO_DO.md](../TO_DO.md)._
 
 ## Summary
 
-MyPySkinDose today ships as a **Python package**: `pip install`, then
-`python -m mypyskindose --mode gui` (optional `--native` / `gui-native` via pywebview).
+GUISkinDose today ships as a **Python package**: `pip install`, then
+`python -m guiskindose --mode gui` (optional `--native` / `gui-native` via pywebview).
 There is **no** frozen-app or installer pipeline in this repository. PyPI / GitHub
 Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md).
 
@@ -30,7 +30,7 @@ codebase — not a one-afternoon packaging tweak.
 
 1. **Tooling:** `nicegui-pack` / PyInstaller; call `ui.run(reload=False, …)`; use `native=True` only with
    `--windowed` when a console-less window is desired (see NiceGUI packaging tips).
-2. **Entry:** freeze the existing GUI entry (`python -m mypyskindose --mode gui` path / `run_gui`), not a
+2. **Entry:** freeze the existing GUI entry (`python -m guiskindose --mode gui` path / `run_gui`), not a
    separate toy script.
 3. **Must bundle as data:**
    - `src/guiskindose/phantom_data/` STLs (full + reduced previews)
@@ -49,7 +49,7 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
 ## Out of scope / not recommended
 
 - **Java / JVM wrap** of the dose engine or GUI — Jython cannot run this stack; a JVM rewrite would
-  be a different product. If a Java host (PACS, hospital app) must drive MyPySkinDose, prefer:
+  be a different product. If a Java host (PACS, hospital app) must drive GUISkinDose, prefer:
   - subprocess to CLI or a frozen GUI/CLI, or
   - a local HTTP API with a Java client.
 - Embedding via GraalPy / Jep / Py4J for the full NiceGUI + scipy + Plotly stack — high friction,
@@ -67,5 +67,5 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
 ## Pointers
 
 - NiceGUI: [Package for Installation](https://nicegui.io/documentation/section_configuration_deployment)
-- Current GUI launch: `run_gui.sh` / `run_gui.bat`, `python -m mypyskindose --mode gui [--native]`
+- Current GUI launch: `run_gui.sh` / `run_gui.bat`, `python -m guiskindose --mode gui [--native]`
 - GUI goals (non-Python users, still Python install today): [plans/GUI_PLAN.md](../plans/GUI_PLAN.md)

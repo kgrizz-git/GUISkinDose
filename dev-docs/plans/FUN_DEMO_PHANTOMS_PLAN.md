@@ -153,8 +153,8 @@ Full-body draped: scale height to a plausible table-phantom cm extent (or keep n
 | `scripts/phantom_gen/transform_to_psd_frame.py` | Existing; call with `--no-obj-y-up`; optional `--rotate` if convenient |
 | `scripts/phantom_gen/generate_reduced.py` | Already has `--target-faces` — **reuse** `decimate_to_target_faces` (do not reinvent) |
 | `scripts/phantom_gen/validate_phantom.py` | Frame + scale + faces + watertight + Phantom load; add `--allow-non-watertight` **only if D2=(b)** |
-| `src/mypyskindose/phantom_data/{id}.stl` + `_reduced_1000t.stl` | Shipped meshes |
-| `src/mypyskindose/phantom_data/NOTICE_*.txt` | BY / BY-SA attribution sidecars |
+| `src/guiskindose/phantom_data/{id}.stl` + `_reduced_1000t.stl` | Shipped meshes |
+| `src/guiskindose/phantom_data/NOTICE_*.txt` | BY / BY-SA attribution sidecars |
 | `dev-docs/references/fun_phantom_provenance.md` (new) | Credits, retrieval dates, repair notes, NoAI decision |
 | `AGENTS.md`, `ADDITIONAL_PHANTOMS.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | Lists + demo labeling |
 | `dev-docs/approved_asset_inventory.json` | Hash + human review metadata |
@@ -293,8 +293,8 @@ Behavior: load STL/OBJ/PLY; apply XYZ Euler **degrees**; scale height axis; call
 - [ ] **Step 2: Unit tests** — follow `tests/unittests/test_phantom_library_integration.py`:
 
 ```python
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.settings import PyskindoseSettings, load_settings_example_json
+from guiskindose.phantom_class import Phantom
+from guiskindose.settings import PyskindoseSettings, load_settings_example_json
 # exact imports as in test_phantom_library_integration.py
 
 settings = PyskindoseSettings(settings=load_settings_example_json())

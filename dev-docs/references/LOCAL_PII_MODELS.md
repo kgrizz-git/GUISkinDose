@@ -88,7 +88,7 @@ layers if the HoundDog trial is successful.
 The 2026-07-16 local check with HoundDog 3.3.0 detected a synthetic `patient_email` parameter flowing to
 `logging.info`, but reported zero risky flows for the repository even before all project-specific identifier sinks
 were removed. That confirms the generic engine works and also confirms its current rules do not recognize enough of
-MyPySkinDose's DICOM/provenance vocabulary. Keep it as a required local second opinion for logging/write/ingestion
+GUISkinDose's DICOM/provenance vocabulary. Keep it as a required local second opinion for logging/write/ingestion
 changes, with project Semgrep as the blocking source-specific control.
 
 **Policy status: local-only until further notice.** A cloud account, GitHub App, CI job, managed scan, automated PR

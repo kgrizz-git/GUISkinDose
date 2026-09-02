@@ -1,4 +1,4 @@
-# Project-specific, blocking privacy SAST rules for MyPySkinDose.
+# Project-specific, blocking privacy SAST rules for GUISkinDose.
 #
 # Findings must be fixed or documented inline with a narrow `nosemgrep` comment
 # that explains why the value is deliberately user-visible. The rules avoid

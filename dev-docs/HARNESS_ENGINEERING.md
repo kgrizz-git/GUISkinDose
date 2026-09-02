@@ -9,7 +9,7 @@ This document turns the repository into a more reliable harness for AI agents an
 Agents working in this repository should be able to answer three questions quickly:
 
 1. **What is this system?**
-   MyPySkinDose estimates peak skin dose and 3D skin dose maps from fluoroscopic irradiation event data.
+   GUISkinDose estimates peak skin dose and 3D skin dose maps from fluoroscopic irradiation event data.
 2. **Where is the authoritative context?**
    `AGENTS.md` is the short entry point. Detailed context lives in `dev-docs/`.
 3. **How do I validate changes?**
@@ -45,7 +45,7 @@ Agents working in this repository should be able to answer three questions quick
 | In-repo GUISkinDose / `guiskindose` rename (not yet executed) | `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` |
 | GitHub/Sonar/live-URL follow-up after that rename | `dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md` |
 | Privacy republication, fixture sanitization, PyPI publish | `dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md` |
-| Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
+| Fork vs upstream migration status | `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
 | Diagnostics and assessments (refactoring, code quality, etc.) | `dev-docs/assessments/` |
 | Active plans folder | `dev-docs/plans/` |
@@ -313,7 +313,7 @@ CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed).
 
 - **Scope:** PyPI-resolved packages for core dependencies plus `[dev]` and `[gui]` extras (widest maintained install surface).
 - **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (via `uv audit` when `uv` is available, otherwise `pip-audit`).
-- **Local editable install:** `mypyskindose` itself is skipped (not published on PyPI); this is expected.
+- **Local editable install:** `guiskindose` itself is skipped (not published on PyPI); this is expected.
 - **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented entry under
   `[tool.uv.audit]` in `pyproject.toml` only after maintainer review (avoid silent ignores). Use
   `ignore-until-fixed` when no patched release exists yet so the audit re-fails automatically once
@@ -403,7 +403,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **help-registry** | `python scripts/check_help_registry.py` |
 | **ui-copy** | `python scripts/check_ui_copy.py` |
 | **feature-doc-matrix** | `python scripts/check_feature_doc_matrix.py` |
-| **check-stale-brand** | `python scripts/check_stale_brand.py` (leftover `mypyskindose` / `MyPySkinDose` / `MYPYSKINDOSE_` outside the allowlist; PR 0 is a no-op until `LIVE_PACKAGE_NAME` is flipped) |
+| **check-stale-brand** | `python scripts/check_stale_brand.py` (leftover `guiskindose` / `GUISkinDose` / `MYPYSKINDOSE_` outside the allowlist; PR 0 is a no-op until `LIVE_PACKAGE_NAME` is flipped) |
 | **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 | **license-notices** | `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |

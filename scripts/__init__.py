@@ -1,1 +1,1 @@
-"""Repository maintenance scripts for MyPySkinDose."""
+"""Repository maintenance scripts for GUISkinDose."""

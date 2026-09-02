@@ -79,7 +79,7 @@ def _verify_expected_units(data_parsed: pd.DataFrame) -> None:
         if siblings:
             found_unit = siblings[0][len(prefix):]
             raise RdsrUnitError(
-                f"This RDSR reports {label} in '{found_unit}', but MyPySkinDose expects "
+                f"This RDSR reports {label} in '{found_unit}', but GUISkinDose expects "
                 f"'{expected_unit}'. The report uses a unit this pipeline does not convert; "
                 "verify the acquisition device's dose-report configuration."
             )

@@ -20,7 +20,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [../GOVERNANCE.md](../GOVERNANCE.md) | Solo-maintainer decisions and release ownership. |
 | [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 community standards. |
 | [../CITATION.cff](../CITATION.cff) | Machine-readable citation; credits upstream PySkinDose. |
-| [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Historical namespace rename notes; corrected for extras/`uv.lock` packaging. |
+| [GUISKINDOSE_MIGRATION_STATUS.md](GUISKINDOSE_MIGRATION_STATUS.md) | Historical namespace rename notes; corrected for extras/`uv.lock` packaging. |
 | [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | Repository harness principles, golden rules, **documentation conventions** (master vs execution plans), validation commands, CI expectations, doc-gardening cadence, and known gaps. |
 | [LICENSE_COMPLIANCE.md](LICENSE_COMPLIANCE.md) | Third-party license policy, `scripts/check_licenses.py`, and `THIRD_PARTY_NOTICES.md` workflow. |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
@@ -68,7 +68,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | Full architecture, data flow, **package layering rules**, settings, classes, functions, and repository layout. |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | Feature status ledger: calculations, rendering, settings, outputs, CLI, API, and **harness/CI §0**. |
-| [MYPYSKINDOSE_MIGRATION_STATUS.md](MYPYSKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
+| [GUISKINDOSE_MIGRATION_STATUS.md](GUISKINDOSE_MIGRATION_STATUS.md) | Fork vs upstream PySkinDose migration status and PyPI namespace rename progress. |
 | [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) | Shipped human-mesh inventory, preferred MPFB generation path, external phantom sources, fun/stylized/historical summary, and STL integration checklist (normals, frame, triangle budget, license/privacy). |
 | [references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md](references/CHARACTER_AND_PUBLIC_DOMAIN_MESH_SOURCES.md) | Free/open-license candidate meshes for stylized characters, parametric humans, and public-domain classical/historical figures (license tiers for shipping). |
 | [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md) | Source, license, retrieval date, locked ingest transform, repair notes, and validate/smoke results for shipped **demo / non-clinical** phantoms; also blocked candidates (Petite Herculanaise, Louvre Cults/STW NC batch). |
@@ -110,7 +110,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor-specific coordinate conventions, normalization mapping, and Mermaid coordinate-system diagrams. |
 | [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) | GE coordinate convention record: confirmed table-travel directions, normalization-level `Tx`/`Tz` correction, and deferred matched DICOM/export fixture notes. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | See **Master plans** above. |
-| [COORD_TRANSFORM_COMPARISON.md](COORD_TRANSFORM_COMPARISON.md) | Side-by-side comparison of coordinate transforms and preprocessing across MyPySkinDose, dhen2714/PySkinDose, and PSDCalcReworkTemp. |
+| [COORD_TRANSFORM_COMPARISON.md](COORD_TRANSFORM_COMPARISON.md) | Side-by-side comparison of coordinate transforms and preprocessing across GUISkinDose, dhen2714/PySkinDose, and PSDCalcReworkTemp. |
 
 ---
 
@@ -157,10 +157,10 @@ Phased detail derived from diagnostics or master plans.
 | [plans/DEPENDENCY_AUDIT_PLAN.md](plans/DEPENDENCY_AUDIT_PLAN.md) | Update pre-push hooks and CI to audit project lockfile (uv audit) with fallback to active environment (pip-audit). |
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
 | [plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](plans/2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | Move Show all exams checkbox next to Full procedure, fix composite state leakage, upgrade event selection to searchable select with exam context. |
-| [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md) | **Active** — in-repo rename `mypyskindose` → `guiskindose` (imports, CLI, config migration, tests, stale-brand check). **First version `1.0.0`** (new identity, not MyPySkinDose `25.2.0`+1). GitHub/Sonar/URLs: [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md). PyPI publication stays in the republication plan. |
+| [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md) | **Active** — in-repo rename `guiskindose` → `guiskindose` (imports, CLI, config migration, tests, stale-brand check). **First version `1.0.0`** (new identity, not GUISkinDose `25.2.0`+1). GitHub/Sonar/URLs: [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md). PyPI publication stays in the republication plan. |
 | [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md) | **Active** — after PR 1 on `main`: rename GitHub fork to `GUISkinDose`, then SonarCloud key, then live URLs/`origin`. Not blocked on PyPI. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | Ordered execution plan for DICOM/tabular sanitization, enforceable privacy scanners, fork-preserving publication, and cautious PyPI publication. First `guiskindose` version is **`1.0.0`**. Mechanical rename: [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar/URLs: [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md). |
-| [plans/sonarqube_remediation_plan.md](plans/sonarqube_remediation_plan.md) | Phased remediation plan to address the 292 open SonarQube issues in the MyPySkinDose codebase, prioritizing bug fixes and core complexity reduction. |
+| [plans/sonarqube_remediation_plan.md](plans/sonarqube_remediation_plan.md) | Phased remediation plan to address the 292 open SonarQube issues in the GUISkinDose codebase, prioritizing bug fixes and core complexity reduction. |
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
@@ -218,4 +218,4 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
-| [info/PACKAGE_INSTALL.md](info/PACKAGE_INSTALL.md) | Why and how to install MyPySkinDose as an editable package (`pip install -e .`). |
+| [info/PACKAGE_INSTALL.md](info/PACKAGE_INSTALL.md) | Why and how to install GUISkinDose as an editable package (`pip install -e .`). |

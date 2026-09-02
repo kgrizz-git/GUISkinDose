@@ -4,7 +4,7 @@
 > (recommended) or `superpowers:executing-plans` to implement this plan task-by-task.
 > Steps use checkbox (`- [ ]`) syntax. Mark a checkbox only after the step is fully done and verified.
 >
-> **Related:** Settings UI in `src/mypyskindose/gui/tabs/settings.py`; contrast (do **not** reuse)
+> **Related:** Settings UI in `src/guiskindose/gui/tabs/settings.py`; contrast (do **not** reuse)
 > RDSR Geometry path in `gui/figures.py` / `plotting/plot_setup.py`; positioning in
 > `geom_calc.position_patient_phantom_on_table`.
 >
@@ -42,7 +42,7 @@ refresh. Prefer a small preview controller module so `settings.py` stays layout-
 `create_mesh_3d_general` (`plotting/create_mesh3d.py`), consume `default_geometry_layout` /
 `get_camera_view` (do not expand their APIs for Settings-only `uirevision`), `build_settings`,
 `effective_patient_offset_for_preview`, `GEOMETRY_DEBOUNCE_SEC`, `safe_error_event`,
-`mypyskindose.constants` colors, `copy_text` for catalogued UI strings.
+`guiskindose.constants` colors, `copy_text` for catalogued UI strings.
 
 ## Global constraints
 
@@ -136,21 +136,21 @@ Helper: `capture_phantom_preview_snapshot(app_state) -> PreviewSnapshot`.
 
 | Path | Role |
 |------|------|
-| `src/mypyskindose/gui/phantom_preview.py` (new) | `PreviewSnapshot`, `capture_phantom_preview_snapshot`, `resolve_preview_mesh`, `make_phantom_preview_fig` |
-| `src/mypyskindose/gui/phantom_preview_controller.py` (new, preferred) | Debounce, request id, `io_bound`, `update_figure` / status label; exposes `schedule_refresh` for `ctx` |
-| `src/mypyskindose/gui/tabs/settings.py` | Mount plot + status label + caption; wire shared handlers; register `ctx.refresh_phantom_preview`; call schedule once on mount |
-| `src/mypyskindose/gui/page_context.py` | Add `refresh_phantom_preview` no-op field |
-| `src/mypyskindose/gui/offset_handlers.py` | From `on_global_patient_offset_change`, also `ctx.refresh_phantom_preview()` (and keep Geometry refresh if added there) |
-| `src/mypyskindose/gui/tabs/geometry_builders.py` | Patient-offset slider commit / reset paths call `ctx.refresh_phantom_preview()` |
-| `src/mypyskindose/gui/app.py` | Any restore/preset path that already calls `refresh_geometry_preview` also calls `refresh_phantom_preview` |
-| `src/mypyskindose/gui/constants.py` | Consume `GEOMETRY_DEBOUNCE_SEC` (no second debounce constant) |
-| `src/mypyskindose/plotting/create_mesh3d.py` | Consume `create_mesh_3d_general` |
-| `src/mypyskindose/plotting/plot_layout.py` | **Consume-only** `default_geometry_layout` |
-| `src/mypyskindose/plotting/get_camera_view.py` | **Consume-only** |
-| `src/mypyskindose/geom_calc.py` | Consume `position_patient_phantom_on_table` |
-| `src/mypyskindose/gui/settings_builder.py` | Consume `build_settings` |
-| `src/mypyskindose/gui/geometry_preview.py` | Consume `effective_patient_offset_for_preview` when capturing snapshot |
-| `src/mypyskindose/constants.py` | `COLOR_PATIENT` / `COLOR_TABLE` / `COLOR_PAD` |
+| `src/guiskindose/gui/phantom_preview.py` (new) | `PreviewSnapshot`, `capture_phantom_preview_snapshot`, `resolve_preview_mesh`, `make_phantom_preview_fig` |
+| `src/guiskindose/gui/phantom_preview_controller.py` (new, preferred) | Debounce, request id, `io_bound`, `update_figure` / status label; exposes `schedule_refresh` for `ctx` |
+| `src/guiskindose/gui/tabs/settings.py` | Mount plot + status label + caption; wire shared handlers; register `ctx.refresh_phantom_preview`; call schedule once on mount |
+| `src/guiskindose/gui/page_context.py` | Add `refresh_phantom_preview` no-op field |
+| `src/guiskindose/gui/offset_handlers.py` | From `on_global_patient_offset_change`, also `ctx.refresh_phantom_preview()` (and keep Geometry refresh if added there) |
+| `src/guiskindose/gui/tabs/geometry_builders.py` | Patient-offset slider commit / reset paths call `ctx.refresh_phantom_preview()` |
+| `src/guiskindose/gui/app.py` | Any restore/preset path that already calls `refresh_geometry_preview` also calls `refresh_phantom_preview` |
+| `src/guiskindose/gui/constants.py` | Consume `GEOMETRY_DEBOUNCE_SEC` (no second debounce constant) |
+| `src/guiskindose/plotting/create_mesh3d.py` | Consume `create_mesh_3d_general` |
+| `src/guiskindose/plotting/plot_layout.py` | **Consume-only** `default_geometry_layout` |
+| `src/guiskindose/plotting/get_camera_view.py` | **Consume-only** |
+| `src/guiskindose/geom_calc.py` | Consume `position_patient_phantom_on_table` |
+| `src/guiskindose/gui/settings_builder.py` | Consume `build_settings` |
+| `src/guiskindose/gui/geometry_preview.py` | Consume `effective_patient_offset_for_preview` when capturing snapshot |
+| `src/guiskindose/constants.py` | `COLOR_PATIENT` / `COLOR_TABLE` / `COLOR_PAD` |
 | `tests/unittests/test_gui_phantom_preview.py` (new) | Fig + scale + offset + mesh resolve + orientation + snapshot (no NiceGUI; not under `tests/gui/`) |
 | Help / `ui_copy.json` / `help_registry.json` / `feature_doc_matrix.json` / glossary / CHANGELOG / FEATURE_INVENTORY | Docs + harness |
 
@@ -191,7 +191,7 @@ position_patient_phantom_on_table(
 
 `resolve_preview_mesh(stem)`:
 
-1. Resolve against package `src/mypyskindose/phantom_data/` (same directory `Phantom` loads from),
+1. Resolve against package `src/guiskindose/phantom_data/` (same directory `Phantom` loads from),
    not CWD / repo root.
 2. If `{stem}_reduced_1000t.stl` exists → return `f"{stem}_reduced_1000t"`.
 3. Else return `stem`.
@@ -207,7 +207,7 @@ long as the live singleton is untouched on the worker.
 ### Task 1: Preview figure builder + scale tests
 
 **Files:**
-- Create: `src/mypyskindose/gui/phantom_preview.py`
+- Create: `src/guiskindose/gui/phantom_preview.py`
 - Test: `tests/unittests/test_gui_phantom_preview.py`
 
 **Interfaces:**
@@ -244,7 +244,7 @@ long as the live singleton is untouched on the worker.
 ### Task 2: Mount on Settings + PageContext + async debounce + cross-tab wiring
 
 **Files:**
-- Create: `src/mypyskindose/gui/phantom_preview_controller.py` (preferred)
+- Create: `src/guiskindose/gui/phantom_preview_controller.py` (preferred)
 - Modify: `page_context.py`, `tabs/settings.py`, `offset_handlers.py`,
   `tabs/geometry_builders.py`, and `app.py` where pose-affecting restore already refreshes Geometry
 

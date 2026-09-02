@@ -1,12 +1,12 @@
 # Data Input Flow and Offsets
 
-This document summarizes how MyPySkinDose handles RDSR inputs, normalization settings, and patient offsets, and outlines recommendations for how the GUI can better handle these parameters to improve user transparency.
+This document summarizes how GUISkinDose handles RDSR inputs, normalization settings, and patient offsets, and outlines recommendations for how the GUI can better handle these parameters to improve user transparency.
 
 Coordinate terminology lives in [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md). This file explains data flow and offset hierarchy; it should not redefine axis semantics independently. For a compact required-field cheat sheet, see [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md).
 
 ## 1. Original Flow Inputs
 
-MyPySkinDose accepts two primary forms of input data:
+GUISkinDose accepts two primary forms of input data:
 - **DICOM RDSR (`.dcm`)**: The standard input format. It runs through `rdsr_parser.py` (extracts tags) and `rdsr_normalizer.py` (standardizes the coordinate space and parameters).
 - **Pre-parsed JSON files (`.json`)**: Found in `example_data/RDSR/` (e.g., `beam_collimations.json`, `table_translations.json`). These bypass the parser and normalizer entirely. They are loaded directly into Pandas DataFrames and are primarily used for testing specific geometry and mathematical edge cases.
 
@@ -20,7 +20,7 @@ Tabular exports (`.csv`, `.tsv`, `.xlsx`) are additionally supported via `input_
 
 ## 2. Normalization Settings
 
-Different X-ray manufacturers define their reference coordinates differently. `rdsr_normalizer.py` uses `normalization_settings.json` to map these to MyPySkinDose's standardized coordinate system. It matches the RDSR's `Manufacturer` and `ManufacturerModelName` to apply:
+Different X-ray manufacturers define their reference coordinates differently. `rdsr_normalizer.py` uses `normalization_settings.json` to map these to GUISkinDose's standardized coordinate system. It matches the RDSR's `Manufacturer` and `ManufacturerModelName` to apply:
 - **`translation_offset`**: Shifts the machine's table coordinates to match a standard isocenter.
 - **Directional Signs**: Ensures rotations (Ap1, At1, etc.) and translations move the phantom in the correct directions.
 - **Field Size Mode & Detector Length**: Ensures beam spread is calculated correctly.
@@ -31,7 +31,7 @@ If dose projects onto strange parts of the 3D human mesh (e.g., the beam hitting
 
 ### Table Offsets (Vendor-Specific Machine Coordinates)
 
-**Purpose**: Transform manufacturer-specific coordinates into MyPySkinDose's unified coordinate system.
+**Purpose**: Transform manufacturer-specific coordinates into GUISkinDose's unified coordinate system.
 
 **Applied**: Automatically during RDSR normalization via `normalization_settings.json`.
 

@@ -1,4 +1,4 @@
-# GUI Plan — MyPySkinDose
+# GUI Plan — GUISkinDose
 
 > See also: [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [FEATURE_INVENTORY.md](../FEATURE_INVENTORY.md) | [DESIGN.md](../../DESIGN.md) | [UI_values.md](../UI_values.md) | [AGENTS.md](../../AGENTS.md)
 
@@ -32,14 +32,14 @@ Interactivity: rotate/zoom/pan, hover dose values, procedure slider, dark/light 
 ### 0.3 CLI
 
 ```bash
-python -m mypyskindose --mode headless|gui [--file-path PATH] [--settings PATH] [--native]
+python -m guiskindose --mode headless|gui [--file-path PATH] [--settings PATH] [--native]
 ```
 
 `--mode gui` launches the NiceGUI app; `--native` opens a desktop window via `pywebview`.
 
 ### 0.4 NiceGUI web application (implemented)
 
-Location: `src/mypyskindose/gui/app.py`. Default URL: http://localhost:8765.
+Location: `src/guiskindose/gui/app.py`. Default URL: http://localhost:8765.
 
 | Aspect | Detail |
 |--------|--------|
@@ -148,7 +148,7 @@ nicegui>=2.0.0
 Install:
 
 ```bash
-pip install "mypyskindose[gui]"
+pip install "guiskindose[gui]"
 # or for development:
 pip install nicegui
 ```
@@ -158,7 +158,7 @@ pip install nicegui
 ## 3. Proposed app structure
 
 ```
-src/mypyskindose/gui/
+src/guiskindose/gui/
   __init__.py
   app.py              # Entry point — ui.run() lives here
   pages/
@@ -178,16 +178,16 @@ src/mypyskindose/gui/
 ### Entry point
 
 ```bash
-python -m mypyskindose --gui
+python -m guiskindose --gui
 # or directly:
-python src/mypyskindose/gui/app.py
+python src/guiskindose/gui/app.py
 ```
 
 Wire `--gui` in `main.py`:
 
 ```python
 elif args.mode == "gui":
-    from mypyskindose.gui.app import run_gui
+    from guiskindose.gui.app import run_gui
     run_gui()
 ```
 
@@ -303,7 +303,7 @@ NiceGUI uses a left-drawer + main-area pattern naturally:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  MyPySkinDose                          [dark mode 🌙] │
+│  GUISkinDose                          [dark mode 🌙] │
 ├──────────────┬──────────────────────────────────────┤
 │              │                                       │
 │  📁 File     │   Main content area                   │
@@ -333,7 +333,7 @@ NiceGUI is reactive — state lives in plain Python objects. A simple dataclass 
 ```python
 from dataclasses import dataclass, field
 import pandas as pd
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.settings import PyskindoseSettings
 
 @dataclass
 class AppState:
@@ -377,7 +377,7 @@ In `main.py`:
 
 ```python
 elif args.mode == "gui":
-    from mypyskindose.gui.app import run_gui
+    from guiskindose.gui.app import run_gui
     run_gui()
 ```
 
@@ -388,15 +388,15 @@ from nicegui import ui
 
 def run_gui(native: bool = False):
     # ... build all pages ...
-    ui.run(title="MyPySkinDose", native=native, reload=False)
+    ui.run(title="GUISkinDose", native=native, reload=False)
 ```
 
 Users can do:
 
 ```bash
-python -m mypyskindose --gui
+python -m guiskindose --gui
 # or for desktop window mode (optional, requires pywebview):
-python -m mypyskindose --gui --native
+python -m guiskindose --gui --native
 ```
 
 ---
@@ -408,9 +408,9 @@ python -m mypyskindose --gui --native
 Goal: upload RDSR → configure phantom → run calculation → see PSD + dose map.
 
 Files to create:
-- `src/mypyskindose/gui/__init__.py`
-- `src/mypyskindose/gui/app.py` — single-file NiceGUI app
-- `src/mypyskindose/gui/state.py` — shared state dataclass
+- `src/guiskindose/gui/__init__.py`
+- `src/guiskindose/gui/app.py` — single-file NiceGUI app
+- `src/guiskindose/gui/state.py` — shared state dataclass
 
 Functionality:
 - File upload + example file selector
@@ -439,7 +439,7 @@ Functionality:
 
 - PDF report via `reportlab` (pure Python, wheels for Windows/macOS/Linux — do **not** use `weasyprint`)
 - Report template: dose map image, metadata, correction table, PSD value
-- Add `report` optional dependency: `pip install "mypyskindose[report]"`
+- Add `report` optional dependency: `pip install "guiskindose[report]"`
 
 ### Phase 4 — Polish (~1–2 days)
 
@@ -466,8 +466,8 @@ Functionality:
 
 1. Add `nicegui>=2.0.0` to `requirements.txt` and as `[gui]` optional dep in `pyproject.toml`
 2. Install: `pip install nicegui`
-3. Create `src/mypyskindose/gui/__init__.py` (empty)
-4. Create `src/mypyskindose/gui/state.py`
-5. Create `src/mypyskindose/gui/app.py` — Phase 1 single-page app
+3. Create `src/guiskindose/gui/__init__.py` (empty)
+4. Create `src/guiskindose/gui/state.py`
+5. Create `src/guiskindose/gui/app.py` — Phase 1 single-page app
 6. Test with bundled example RDSR files
 7. Wire `--gui` in `main.py`

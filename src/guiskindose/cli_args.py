@@ -19,7 +19,7 @@ def get_argument_parser(arguments) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="guiskindose",
         description=(
-            "MyPySkinDose is a Python 3.11+ program for patient peak skin dose"
+            "GUISkinDose is a Python 3.11+ program for patient peak skin dose"
             " (PSD) estimations and 3D skin dose maps from fluoroscopic procedures"
             " in interventional radiology. Accepts DICOM RDSR files (.dcm),"
             " pre-parsed JSON exports, or tabular event-table exports (.csv, .tsv, .xlsx)."

@@ -9,7 +9,7 @@ _Follow-on republication plan: [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISK
 
 ## 1. Objective
 
-Prevent MyPySkinDose application code, tests, tooling, exports, logs, temporary files, CI output, and tracked assets
+Prevent GUISkinDose application code, tests, tooling, exports, logs, temporary files, CI output, and tracked assets
 from exposing unredacted filenames, paths, DICOM identifiers, study identifiers, or other PHI/PII without an explicit
 and informed user action.
 

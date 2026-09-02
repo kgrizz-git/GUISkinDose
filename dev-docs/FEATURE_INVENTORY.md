@@ -1,4 +1,4 @@
-# Feature Inventory — MyPySkinDose
+# Feature Inventory — GUISkinDose
 
 > See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](plans/GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
@@ -304,7 +304,7 @@ When `interactivity=False`:
 - Static PNG: `PlotOutputs/right.png`, `back.png`, `left.png`, `front.png`
 - Output directory configurable via `file_result_output_path`
 
-### 7.7 Rich Report Export (`mypyskindose.export`)
+### 7.7 Rich Report Export (`guiskindose.export`)
 Single self-contained audit document from a completed dose calculation, additive to the
 JSON/HTML/PNG downloads. Formats: **XLSX** (`openpyxl`), **PDF** (`reportlab`), **HTML** (stdlib),
 **DOCX** (`python-docx`). All backing libraries are now core dependencies (the `export` extra is
@@ -469,7 +469,7 @@ Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_
 ## 10. CLI (`main.py`)
 
 ```bash
-python -m mypyskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
+python -m guiskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
 ```
 
 | Argument | Description |
@@ -496,7 +496,7 @@ Falls back to `DEVELOPMENT_PARAMETERS` from `dev_data.py` if no settings given.
 ## 11. Public Python API (`__init__.py`)
 
 ```python
-from mypyskindose import (
+from guiskindose import (
     PyskindoseSettings,
     load_settings_example_json,          # → dict
     print_available_human_phantoms,      # prints STL names
@@ -530,7 +530,7 @@ from mypyskindose import (
 | CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | `qaelum.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real Qaelum export fixture. |
 | CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | `dosemonitor.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseMonitor export fixture. |
 | CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | `dosewatch.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseWatch export fixture. |
-| PDF/Word/XLSX/HTML report export | Shipped (2026-07-02) | Rich Report Export — see §7.7; `mypyskindose.export`. GUI modal + CLI `--export-format`. |
+| PDF/Word/XLSX/HTML report export | Shipped (2026-07-02) | Rich Report Export — see §7.7; `guiskindose.export`. GUI modal + CLI `--export-format`. |
 | Side-by-side procedure comparison | Open backlog | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |
 | New vendor RDSR support | Manual JSON edit required | No UI for adding vendors |

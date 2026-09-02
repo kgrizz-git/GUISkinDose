@@ -4,7 +4,7 @@ _Reviewed: 2026-07-26. This is practical maintainer guidance, not legal, regulat
 
 ## Purpose
 
-MyPySkinDose is a continuing, independent fork of
+GUISkinDose is a continuing, independent fork of
 [PySkinDose](https://github.com/rvbCMTS/PySkinDose). A fork may evolve
 independently, but responsible stewardship means clearly crediting its origin,
 preserving the upstream license, respecting contributors and users, and keeping
@@ -21,11 +21,11 @@ The following are already in good shape:
 
 | Area | Observed state | Why it matters |
 |---|---|---|
-| Fork relationship | GitHub identifies MyPySkinDose as a fork of rvbCMTS/PySkinDose. | Preserves the connection to the original project and its history. |
-| Git remotes | origin points to MyPySkinDose and upstream points to PySkinDose. | This is the conventional remote layout for a maintained fork. |
+| Fork relationship | GitHub identifies GUISkinDose as a fork of rvbCMTS/PySkinDose. | Preserves the connection to the original project and its history. |
+| Git remotes | origin points to GUISkinDose and upstream points to PySkinDose. | This is the conventional remote layout for a maintained fork. |
 | Upstream divergence | 2026-07-26: main was 346 commits ahead of upstream/master and 0 commits behind it. | There is no urgent upstream merge; continue to monitor upstream. |
 | License and credit | The upstream MIT license and original copyright notice remain, and README links to PySkinDose and names the original author. | MIT requires preservation of its notice; this is the respectful approach too. |
-| Distinct package identity | The distribution and import package are named mypyskindose. | Avoids impersonating or colliding with the upstream PyPI package. |
+| Distinct package identity | The distribution and import package are named guiskindose. | Avoids impersonating or colliding with the upstream PyPI package. |
 | Engineering hygiene | CI, tests, a changelog, Dependabot, dependency license checks, and secret scanning are present. | These provide a solid foundation for safe contributions. |
 | Community files | CONTRIBUTING, SECURITY, SUPPORT, CODE_OF_CONDUCT, GOVERNANCE, CITATION.cff, issue forms, and PR template are present (2026-07-26). | Contributors and reporters have clear, privacy-aware channels. |
 | Intended use | README / SUPPORT state research–education–QA use, not FDA-cleared, clinician responsibility. | Reduces misuse risk for clinical-looking dose software. |
@@ -39,7 +39,7 @@ The following are already in good shape:
 ```text
 Upstream: https://github.com/rvbCMTS/PySkinDose
 Upstream branch followed: master
-Fork distribution/import name: mypyskindose
+Fork distribution/import name: guiskindose
 Last assessed upstream comparison: 2026-07-26 — 0 behind / 346 ahead of upstream/master
 Local policy: upstream syncs arrive through a reviewed PR; main is never force-pushed.
 ```
@@ -86,10 +86,10 @@ harder.
 
 Keep a short origin-and-maintenance section in README. It should say:
 
-- MyPySkinDose is an independently maintained fork of PySkinDose.
+- GUISkinDose is an independently maintained fork of PySkinDose.
 - Link to the upstream repository.
 - The original authors retain credit for the upstream work.
-- MyPySkinDose is not presented as an official or endorsed PySkinDose release
+- GUISkinDose is not presented as an official or endorsed PySkinDose release
   unless the upstream maintainers explicitly say so.
 - Name the current maintainer or provide a durable maintainer contact route.
 
@@ -184,7 +184,7 @@ FORK_BASELINE.md:
 ~~~text
 Upstream: https://github.com/rvbCMTS/PySkinDose
 Upstream branch followed: master
-Fork distribution/import name: mypyskindose
+Fork distribution/import name: guiskindose
 Last assessed upstream revision/date: <commit or release/date>
 Local policy: upstream syncs arrive through a reviewed PR; main is never force-pushed.
 ~~~
@@ -196,7 +196,7 @@ next verified upstream comparison.
 ### Contributing improvements back upstream
 
 A fork can send useful fixes upstream. That is considerate when a change is
-general-purpose rather than specific to MyPySkinDose branding, packaging,
+general-purpose rather than specific to GUISkinDose branding, packaging,
 privacy policy, or local product direction.
 
 - Read the upstream contribution instructions first.
@@ -263,7 +263,7 @@ already working on another branch.
 
 ~~~bash
 # From any clean checkout, create a sibling worktree from main.
-git worktree add ../MyPySkinDose-fork-docs -b docs/fork-maintainer-guide main
+git worktree add ../GUISkinDose-fork-docs -b docs/fork-maintainer-guide main
 
 # See every active worktree before removing anything.
 git worktree list
@@ -410,7 +410,7 @@ Before each release, review pyproject.toml:
 - Distribution name and import package remain distinct from upstream.
 - Version follows the project SemVer policy and agrees with CHANGELOG.md.
   **First GUISkinDose / `guiskindose` version is `1.0.0`** (new identity; live package
-  remains MyPySkinDose `25.2.0` until the rename packaging commit). See
+  remains GUISkinDose `25.2.0` until the rename packaging commit). See
   [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
 - Homepage, documentation, and bug-tracker URLs work. After the GitHub fork is renamed,
   follow [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md)
@@ -429,7 +429,7 @@ support-channel decision, not as an unrelated cosmetic edit.
 Resolved 2026-07-26:
 
 - README docs build now uses `pip install -e ".[docs]"` (no `requirements*.txt`).
-- `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` corrected for extras / `uv.lock` packaging.
+- `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` corrected for extras / `uv.lock` packaging.
 
 When changing behavior, settings, exports, or GUI help, follow the documented
 checks. In particular, update dev-docs/index.md whenever adding or retiring a

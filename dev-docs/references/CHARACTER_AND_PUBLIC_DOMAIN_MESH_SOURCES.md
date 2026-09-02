@@ -1,12 +1,12 @@
 # Character, Stylized, and Public-Domain Mesh Sources
 
-Survey of free / open-license **full-body or humanoid** meshes that could be fun MyPySkinDose phantoms: realistic parametric humans, stylized game characters, and public-domain historical / classical figures.
+Survey of free / open-license **full-body or humanoid** meshes that could be fun GUISkinDose phantoms: realistic parametric humans, stylized game characters, and public-domain historical / classical figures.
 
 This is a **candidate-source list**, not a commitment to ship any of these. Clinical dosimetry still prefers anatomical libraries and the MPFB catalog — see [`ADDITIONAL_PHANTOMS.md`](../ADDITIONAL_PHANTOMS.md) and [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](../plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md).
 
 **Out of scope here:** isolated organs, bones, prosthetic/engineering mannequins, and **modern trademarked cartoon IPs**. Prefer original CC0 characters or clearly licensed sculpture scans. **Mickey Mouse:** only the **1928 Steamboat Willie** design is public domain in the US (as of 2024); later Mickey designs remain under copyright, and Disney trademarks still apply to branding / source confusion — treat Mickey as a legal special case, not a default fun phantom.
 
-**Formats:** MyPySkinDose ships and loads **binary `.stl`**. Upstream files may be `.stl`, `.obj`, `.ply`, `.fbx`, or `.glTF` — convert with Blender or MeshLab, strip textures/colors, then follow the integration checklist.
+**Formats:** GUISkinDose ships and loads **binary `.stl`**. Upstream files may be `.stl`, `.obj`, `.ply`, `.fbx`, or `.glTF` — convert with Blender or MeshLab, strip textures/colors, then follow the integration checklist.
 
 **Before committing any STL to this repo:** verify the **per-model** license, convert to binary STL, run the [integration checklist](../ADDITIONAL_PHANTOMS.md#integration-checklist), and hash-pin the file per [`PRIVACY_AND_SENSITIVE_ASSETS.md`](../PRIVACY_AND_SENSITIVE_ASSETS.md).
 
@@ -14,7 +14,7 @@ This is a **candidate-source list**, not a commitment to ship any of these. Clin
 
 ## License cheat sheet (for shipping in a public repo)
 
-| Tier | Examples | Shipping in MyPySkinDose |
+| Tier | Examples | Shipping in GUISkinDose |
 |------|----------|--------------------------|
 | **Safest** | CC0 / public domain / PDM | Redistribute with provenance note |
 | **OK with care** | CC-BY, CC-BY-SA | Attribution (and share-alike for SA) on the **mesh asset** in notices / catalog metadata — does not relicense MIT app code |
@@ -24,7 +24,7 @@ This is a **candidate-source list**, not a commitment to ship any of these. Clin
 
 Always re-check the model page — aggregators mix licenses.
 
-**Conversion:** `.obj` / `.ply` / `.fbx` / `.glTF` → binary `.stl` in Blender or MeshLab. Scale to centimeters and re-anchor to the MyPySkinDose frame.
+**Conversion:** `.obj` / `.ply` / `.fbx` / `.glTF` → binary `.stl` in Blender or MeshLab. Scale to centimeters and re-anchor to the GUISkinDose frame.
 
 ---
 
@@ -91,7 +91,7 @@ Good for demos, teaching, and “fun” phantom selectors. Expect low poly count
 - **Site:** [daz3d.com/free-3d-models](https://www.daz3d.com/free-3d-models)
 - **Formats:** Export via Daz Studio (`.obj` / `.fbx`)
 - **License:** Per-product EULA — typically **not** open-source redistributable bases
-- **Fit:** Personal rendering only; not a shipping source for MyPySkinDose
+- **Fit:** Personal rendering only; not a shipping source for GUISkinDose
 
 ---
 
@@ -109,7 +109,7 @@ These make memorable phantoms (David on the table, Cosmic Buddha draped, etc.). 
 | **Venus (Louvre scan)** | [Scan the World on Commons](https://commons.wikimedia.org/wiki/File:Scan_the_World_-_Venus_de_Milo.stl) (~29 MB) | **CC BY-SA 4.0** | Attribution + share-alike on mesh derivatives |
 | **David** | [Scan the World on Commons](https://commons.wikimedia.org/wiki/File:David_(Michelangelo).stl) (~57 MB); also [MyMiniFactory object 2052](https://www.myminifactory.com/object/3d-print-michelangelo-s-david-in-florence-italy-2052) (Credit / Remix / **Commercial**) | **CC BY-SA 4.0** on Commons | **Easy to obtain**; large. Credit Scan the World; keep mesh derivatives SA-compatible |
 
-**Integration effort (both):** low for acquisition, moderate for MyPySkinDose readiness — lay supine, scale height to a plausible table-phantom extent (or accept giant/miniature as a joke demo), close holes if needed, decimate to ~3k–8k faces, re-orient normals, smoke-test entrance/exit.
+**Integration effort (both):** low for acquisition, moderate for GUISkinDose readiness — lay supine, scale height to a plausible table-phantom extent (or accept giant/miniature as a joke demo), close holes if needed, decimate to ~3k–8k faces, re-orient normals, smoke-test entrance/exit.
 
 ### Clothed / draped full-body statues (preferred for dose demos)
 

@@ -36,13 +36,13 @@
     },
     {
       "path": "docs/source/getting_started/getting_started.ipynb",
-      "sha256": "693bc67d57657fdc0096812be151bdb8c13acfad8e06d8b3574cec0232304f51",
+      "sha256": "f4b98a5805c15a2e75ae55f716f8673d4b1488bdcc7f458579a8dffa0d821060",
       "kind": "notebook_embedded_visual",
       "purpose": "Getting-started notebook with rendered visual outputs",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-15"
+        "reviewed_on": "2026-09-02"
       },
       "notebook_review": {
         "embedded_images_reviewed": true,

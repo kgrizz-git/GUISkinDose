@@ -265,7 +265,7 @@ list but should be on it:
   harness map) — does not need a multi-exam section but should be
   cross-checked for any wording that contradicts "one patient offset
   per exam" semantics.
-- **`dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md`** — the PySkinDose
+- **`dev-docs/GUISKINDOSE_MIGRATION_STATUS.md`** — the PySkinDose
   fork has a single global patient offset; the migration doc should
   note the new per-exam semantics so the fork-vs-upstream comparison
   stays accurate.

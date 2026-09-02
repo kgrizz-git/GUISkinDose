@@ -73,7 +73,7 @@ Open HIGH vulnerabilities (drive Security Rating C):
    (`subprocess.run([uv_bin, "audit"] + uv_args, ...)`). Taint from `sys.argv`. Existing
    control-character / whitespace checks are not recognized as a sanitizer.
 
-Coverage drag: ~2,103 of ~2,214 uncovered new lines are under `src/mypyskindose/gui/`.
+Coverage drag: ~2,103 of ~2,214 uncovered new lines are under `src/guiskindose/gui/`.
 Non-GUI new code is already ~80.8%. Sonar’s uploaded `coverage.xml` currently comes from
 `pytest --ignore=tests/gui`, so existing GUI smoke tests do not count toward the gate.
 Scripts remain in `sonar.coverage.exclusions` (dev tooling only).
@@ -224,7 +224,7 @@ Use this as the checklist when reviewing each tool. Patterns match today’s Son
 | `**/__pycache__/**`, `**/*.pyc` | Build noise |
 | `tmp/**`, `PlotOutputs/**`, `htmlcov/**`, `coverage.xml` | Runtime/coverage outputs (usually gitignored) |
 
-Do **not** put `src/mypyskindose/gui/**` on this list (coverage / review of GUI code is wanted).
+Do **not** put `src/guiskindose/gui/**` on this list (coverage / review of GUI code is wanted).
 
 ### Per-tool policy (what “makes most sense”)
 
@@ -376,7 +376,7 @@ Only if a post-merge Sonar analysis still reports S8707/S8705:
 ### Why 50% (not 80%) as the temporary gate
 
 Live new-code totals (~2026-07-25): **2,689** lines to cover, **475** covered → **17.7%**.
-About **2,110** of those lines are under `src/mypyskindose/gui/`, almost all at **0%**, because
+About **2,110** of those lines are under `src/guiskindose/gui/`, almost all at **0%**, because
 Sonar’s `coverage.xml` is produced with `--ignore=tests/gui`.
 
 | If GUI coverage reaches… | Approx overall new coverage |
@@ -416,7 +416,7 @@ Keep `gui-smoke` as the dedicated NiceGUI job; Sonar’s combined coverage is se
 
 - [x] **B1.1** Change Sonar coverage steps to `dev+gui` and `--append` GUI tests
 - [x] **B1.2** Document the two-pass coverage command in `SONARQUBE_LOCAL.md`
-- [x] **B1.3** Confirm `coverage.xml` includes `src/mypyskindose/gui/` paths
+- [x] **B1.3** Confirm `coverage.xml` includes `src/guiskindose/gui/` paths
 
 ### Task B2: Quality gate threshold **or** remove README badge
 
@@ -669,7 +669,7 @@ Default merge train assumes **B2-B** (no README badge) unless you confirm custom
 
 ## 4. Out of scope
 
-- Excluding `src/mypyskindose/gui/**` from Sonar coverage (explicitly rejected)
+- Excluding `src/guiskindose/gui/**` from Sonar coverage (explicitly rejected)
 - Making Safety/Codecov run on PRs
 - Closing all historical Sonar code smells (see `sonarqube_remediation_plan.md`)
 - Changing Semgrep pre-push hooks’ local ordering

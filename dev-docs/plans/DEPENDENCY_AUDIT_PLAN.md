@@ -14,7 +14,7 @@ Currently, both the pre-push git hook and the CI use:
 ```yaml
 pip-audit --desc on
 ```
-This audits the entire active Python environment. If a developer has other global packages or secondary dependencies installed in their local environment (like `torch` or `transformers`), they receive warning flags and hook failures for packages that MyPySkinDose does not use or declare.
+This audits the entire active Python environment. If a developer has other global packages or secondary dependencies installed in their local environment (like `torch` or `transformers`), they receive warning flags and hook failures for packages that GUISkinDose does not use or declare.
 
 ---
 

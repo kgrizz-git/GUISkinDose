@@ -1,6 +1,6 @@
 # Releases and distribution
 
-_Hub for how MyPySkinDose is versioned, published, and (optionally) packaged for end users._  
+_Hub for how GUISkinDose is versioned, published, and (optionally) packaged for end users._  
 _Created: 2026-07-30._
 
 This page is the map. Detailed how-tos stay in the linked sources of truth.
@@ -9,7 +9,7 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 
 | Channel | Status | Source of truth |
 |---------|--------|-----------------|
-| **Python package** (`pip install mypyskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
+| **Python package** (`pip install guiskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
 | **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is created | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
 | **Source / editable install** | Default for developers and most users today | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
 | **Portable GUI executable** (PyInstaller / `nicegui-pack`) | Research / deferred — no freeze pipeline yet | [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) |
@@ -41,7 +41,7 @@ These are **not** the same audience.
 ## Versioning
 
 - **SemVer** via `pyproject.toml` (source of truth for the package version).
-- **Live package today:** MyPySkinDose `25.2.0` (calendar-style line inherited from this fork).
+- **Live package today:** GUISkinDose `25.2.0` (calendar-style line inherited from this fork).
 - **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
   not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose. Set
   `name = "guiskindose"` and `version = "1.0.0"` in the same packaging commit. Changelog

@@ -12,7 +12,7 @@ In this normalized frame, **+Y points down** (toward the floor) and the `(0, 0, 
 
 `LON`, `VER`, and `LAT` are retained because they match the historical PySkinDose/DICOM table-position naming after vendor normalization. `PT L-R`, `PT A-P`, and `PT S-I` are the patient-anatomy directions of the plotted axes for the standard head-first supine convention.
 
-Siemens and Philips use the DICOM/operator table convention for table longitudinal and lateral. GE raw data uses patient-anatomy longitudinal and lateral naming instead; MyPySkinDose handles that during GE normalization by swapping the raw lateral/longitudinal assignment into the common plotted frame.
+Siemens and Philips use the DICOM/operator table convention for table longitudinal and lateral. GE raw data uses patient-anatomy longitudinal and lateral naming instead; GUISkinDose handles that during GE normalization by swapping the raw lateral/longitudinal assignment into the common plotted frame.
 
 Internally, manual table-origin overrides are stored in the GUI transform source frame, before any expert-only `Tx ↔ Tz` correction toggle is applied. The app maps those stored values to the plotted frame for display and maps edits back before recalculating geometry, so the `X/DICOM LON/PT L-R` control moves plotted X even when a site-specific manual swap is enabled.
 

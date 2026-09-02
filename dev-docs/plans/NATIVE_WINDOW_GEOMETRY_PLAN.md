@@ -29,13 +29,13 @@ In `--native` mode, restore the window’s last size, position, and maximized st
 
 ## Implementation
 
-### 1. `src/mypyskindose/gui/window_prefs.py`
+### 1. `src/guiskindose/gui/window_prefs.py`
 
 | Symbol | Purpose |
 |--------|---------|
 | `ScreenBounds` | `x`, `y`, `width`, `height` as `int` (coerce floats at construction); no pywebview import |
 | `NativeWindowPrefs` | `maximized`, `width`, `height`, `x`, `y` |
-| `config_path()` | `Path.home() / ".mypyskindose" / "gui.json"` |
+| `config_path()` | `Path.home() / ".guiskindose" / "gui.json"` |
 | `load_native_window_prefs()` | Parse JSON; if `schema_version != 1`, missing/invalid keys, or any error → `None` |
 | `save_native_window_prefs()` | `mkdir(parents=True)` → write temp → `tmp_path.replace(config_path)` |
 | `primary_screen(screens)` | Prefer screen with `is_primary` when present; else largest `width × height` |

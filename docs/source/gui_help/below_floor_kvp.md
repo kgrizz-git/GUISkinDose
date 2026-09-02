@@ -4,7 +4,7 @@ The half-value-layer (HVL) table that drives the backscatter (`k_bs`) and medium
 (`k_med`) corrections is tabulated down to a **floor of 25 kV**. Events recorded
 below that floor have no tabulated beam quality.
 
-Pick how MyPySkinDose should handle such events:
+Pick how GUISkinDose should handle such events:
 
 - **Substitute the exam-average kVp (default)** — replace every below-floor kVp with
   the mean kVp of that exam's in-floor events. Computed per exam, so multi-exam runs do

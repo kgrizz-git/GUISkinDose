@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# MyPySkinDose GUI Launcher for macOS/Linux
+# GUISkinDose GUI Launcher for macOS/Linux
 #
 # USAGE:
 #   1. Make this script executable (one-time setup):
@@ -31,7 +31,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "=========================================="
-echo "      MyPySkinDose GUI Launcher"
+echo "      GUISkinDose GUI Launcher"
 echo "=========================================="
 echo ""
 
@@ -100,7 +100,7 @@ setup_venv() {
 # Check if package is installed
 check_package_installed() {
     local PYTHON="$1"
-    if $PYTHON -c "import mypyskindose" 2>/dev/null; then
+    if $PYTHON -c "import guiskindose" 2>/dev/null; then
         return 0
     fi
     return 1
@@ -111,12 +111,12 @@ setup_dependencies() {
     local PYTHON="$1"
     
     if check_package_installed "$PYTHON"; then
-        echo -e "${GREEN}✓${NC} mypyskindose package is installed"
+        echo -e "${GREEN}✓${NC} guiskindose package is installed"
         return 0
     fi
     
     echo ""
-    echo -e "${YELLOW}mypyskindose package not installed.${NC}"
+    echo -e "${YELLOW}guiskindose package not installed.${NC}"
     echo "Install options:"
     echo "  [1] Core + GUI (browser mode)      - pip install -e \".[gui]\""
     echo "  [2] Core + GUI + Native window     - pip install -e \".[gui-native]\""
@@ -127,7 +127,7 @@ setup_dependencies() {
     local install_status=0
     case "$install_choice" in
         2)
-            echo "Installing mypyskindose with GUI and native window support..."
+            echo "Installing guiskindose with GUI and native window support..."
             $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
         3)
@@ -135,7 +135,7 @@ setup_dependencies() {
             return 1
             ;;
         *)
-            echo "Installing mypyskindose with GUI..."
+            echo "Installing guiskindose with GUI..."
             $PYTHON -m pip install -e ".[gui]" || install_status=$?
             ;;
     esac
@@ -229,12 +229,12 @@ fi
 launch_status=0
 if [ "$choice" == "2" ]; then
     echo ""
-    echo "Starting MyPySkinDose in Native Window mode..."
-    $PYTHON -m mypyskindose --mode gui --native || launch_status=$?
+    echo "Starting GUISkinDose in Native Window mode..."
+    $PYTHON -m guiskindose --mode gui --native || launch_status=$?
 else
     echo ""
-    echo "Starting MyPySkinDose in Browser mode..."
-    $PYTHON -m mypyskindose --mode gui || launch_status=$?
+    echo "Starting GUISkinDose in Browser mode..."
+    $PYTHON -m guiskindose --mode gui || launch_status=$?
 fi
 
 if [ "$launch_status" -ne 0 ]; then

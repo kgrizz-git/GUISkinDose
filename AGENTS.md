@@ -1,10 +1,10 @@
-# AGENTS.md — MyPySkinDose
+# AGENTS.md — GUISkinDose
 
 This file provides orientation for AI agents (and new developers) working on this codebase.
 
 ## What this project is
 
-MyPySkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM RDSR file, reconstructs the 3D geometry of each irradiation event, places a computational patient phantom in that geometry, and accumulates dose to each skin cell using physics-based correction factors.
+GUISkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM RDSR file, reconstructs the 3D geometry of each irradiation event, places a computational patient phantom in that geometry, and accumulates dose to each skin cell using physics-based correction factors.
 
 It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package name in code is `guiskindose` (formerly `mypyskindose`). First GUISkinDose version is **`1.0.0`**.
 

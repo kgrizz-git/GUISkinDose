@@ -1,4 +1,4 @@
-"""Modern/Material design CSS for the MyPySkinDose GUI.
+"""Modern/Material design CSS for the GUISkinDose GUI.
 
 Single source of truth for the app's design tokens. After editing, regenerate
 dev-docs/UI_values.md:

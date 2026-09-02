@@ -4,7 +4,7 @@ The Calculate tab uses the normalized event table and the current per-exam posit
 
 ## Coordinate Labels
 
-RDSR table-position fields are named `TableLongitudinalPosition`, `TableHeightPosition`, and `TableLateralPosition`; RDSRs do not name these fields `X`, `Y`, or `Z`. MyPySkinDose maps those vendor-specific table-position fields into a common plotted/calculation frame:
+RDSR table-position fields are named `TableLongitudinalPosition`, `TableHeightPosition`, and `TableLateralPosition`; RDSRs do not name these fields `X`, `Y`, or `Z`. GUISkinDose maps those vendor-specific table-position fields into a common plotted/calculation frame:
 
 | Plot label | Calculation column | Patient direction for head-first supine |
 |---|---|---|
@@ -14,7 +14,7 @@ RDSR table-position fields are named `TableLongitudinalPosition`, `TableHeightPo
 
 The `LON`, `VER`, and `LAT` text in the GUI is retained because it matches the historical PySkinDose/DICOM table-position naming after vendor normalization. The `PT` text is the patient-anatomy meaning of the plotted axis for a head-first supine patient.
 
-Siemens and Philips use the DICOM/operator table convention for longitudinal and lateral table positions. GE uses patient-anatomy longitudinal and lateral naming in the raw data; MyPySkinDose handles that with the GE normalizer-level lateral/longitudinal swap before the Geometry and Calculate tabs use the data.
+Siemens and Philips use the DICOM/operator table convention for longitudinal and lateral table positions. GE uses patient-anatomy longitudinal and lateral naming in the raw data; GUISkinDose handles that with the GE normalizer-level lateral/longitudinal swap before the Geometry and Calculate tabs use the data.
 
 The manual `Tx ↔ Tz` import toggle is an expert correction for non-DICOM tabular inputs. It is not normally needed for GE DICOM RDSR data because GE handling is already applied during normalization.
 

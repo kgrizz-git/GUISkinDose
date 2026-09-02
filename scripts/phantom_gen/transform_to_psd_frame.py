@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Transform an MPFB/Blender standing mesh into MyPySkinDose phantom frame.
+"""Transform an MPFB/Blender standing mesh into GUISkinDose phantom frame.
 
 Assumes Blender/MPFB Z-up standing humans with posterior toward +Y (typical).
 Converts meters→cm when the height span is < 3.0, re-anchors to:

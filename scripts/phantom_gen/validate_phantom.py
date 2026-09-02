@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a phantom STL against MyPySkinDose frame + optional shape metrics.
+"""Validate a phantom STL against GUISkinDose frame + optional shape metrics.
 
 Usage::
 
@@ -363,7 +363,7 @@ def outward_normals_ok(
 
 def phantom_load_ok(path: Path, name: str) -> tuple[bool, str]:
     try:
-        from mypyskindose import Phantom, PyskindoseSettings, load_settings_example_json
+        from guiskindose import Phantom, PyskindoseSettings, load_settings_example_json
     except Exception as exc:  # noqa: BLE001
         return False, f"import_failed:{type(exc).__name__}"
     try:
@@ -498,7 +498,7 @@ def validate(
     face_up_frac: float = 0.55,
     face_up_band_frac: float = 0.12,
 ) -> dict:
-    """Validate a phantom STL against the MyPySkinDose frame.
+    """Validate a phantom STL against the GUISkinDose frame.
 
     Clinical mode (default) checks anchors, scale, a <=40k face ceiling, and
     optional shape metrics. Fun / demo mode (``require_trimesh=True``) is

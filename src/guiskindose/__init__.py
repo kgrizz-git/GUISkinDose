@@ -40,7 +40,7 @@ def print_example_rdsr_files():
         # nosemgrep: mypyskindose-filename-var-to-log-or-stdout -- bundled public fixture name shown on request; reviewed 2026-07-16
         print(f"\t{filename}")
 
-    print("\nFiles are packaged with MyPySkinDose example data.")
+    print("\nFiles are packaged with GUISkinDose example data.")
 
 
 def get_path_to_example_rdsr_files():

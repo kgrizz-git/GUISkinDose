@@ -1,6 +1,6 @@
 # Governance
 
-MyPySkinDose is maintained by a **solo maintainer** on a best-effort basis.
+GUISkinDose is maintained by a **solo maintainer** on a best-effort basis.
 
 | Role | Who | Notes |
 |---|---|---|

@@ -39,7 +39,7 @@ gui = ["nicegui>=2.0.0", "pytest-asyncio>=0.24"]
 gui-native = ["nicegui>=2.0.0", "pywebview", "pytest-asyncio>=0.24"]
 # Rich report export backends (PDF via reportlab, DOCX via python-docx) are now
 # core dependencies so exports work out of the box. This extra is retained as a
-# no-op alias so existing `pip install mypyskindose[export]` commands still work.
+# no-op alias so existing `pip install guiskindose[export]` commands still work.
 export = ["reportlab>=4.0", "python-docx>=1.1"]
 # Sphinx site (docs/source/conf.py); nbsphinx executes the getting-started
 # notebook, so it needs a kernel + ipywidgets at build time. Used by
@@ -218,7 +218,7 @@ ignore = [
     "PYSEC-2026-2132",
     # mcp 1.23.3 is pinned exactly by semgrep; GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
     # are fixed in mcp >=1.27.2 / >=1.28.1. Suppress until semgrep relaxes or bumps the pin. mcp is only
-    # pulled in for the optional Semgrep MCP server path and is not used by MyPySkinDose runtime code.
+    # pulled in for the optional Semgrep MCP server path and is not used by GUISkinDose runtime code.
     "GHSA-jpw9-pfvf-9f58",
     "GHSA-hvrp-rf83-w775",
     "GHSA-vj7q-gjh5-988w",

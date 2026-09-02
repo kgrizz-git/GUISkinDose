@@ -1,6 +1,6 @@
 # License compliance
 
-MyPySkinDose is distributed under the **MIT License** (see [`LICENSE`](../LICENSE)). This document describes how we track and review licenses for third-party Python dependencies.
+GUISkinDose is distributed under the **MIT License** (see [`LICENSE`](../LICENSE)). This document describes how we track and review licenses for third-party Python dependencies.
 
 ## Scope
 

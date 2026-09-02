@@ -1,4 +1,4 @@
-"""MyPySkinDose — NiceGUI app entry point.
+"""GUISkinDose — NiceGUI app entry point.
 
 Run with:
     python src/guiskindose/main.py --mode gui
@@ -107,13 +107,13 @@ def _show_onboarding_dialog() -> None:
         return
     with ui.dialog().props("persistent") as dialog, ui.card().classes("modern-card w-full max-w-md max-h-[80vh] p-6"):
         with ui.row().classes("w-full justify-between items-center q-mb-sm"):
-            ui.label("Welcome to MyPySkinDose").classes("text-h5")
+            ui.label("Welcome to GUISkinDose").classes("text-h5")
 
         with ui.scroll_area().classes("w-full"):
             ui.markdown(
                 dedent(
                     f"""
-                    MyPySkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
+                    GUISkinDose estimates peak skin dose from fluoroscopic X-ray procedures.
 
                     **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
                     CSV/TSV/XLSX data.
@@ -162,7 +162,7 @@ def index():
 
     with ui.header().classes("items-center justify-between px-6 py-2 modern-header"):
         with ui.row().classes("items-center gap-3"):
-            ui.label("MyPySkinDose").classes("text-h6 font-bold text-white")
+            ui.label("GUISkinDose").classes("text-h6 font-bold text-white")
             ui.label(f"v{GUI_VERSION}").style(
                 "color: #F8FAFC; font-weight: bold; font-size: 10px; opacity: 0.3; margin-top: 4px;"
             )
@@ -421,7 +421,7 @@ def _resolve_bind_host(host: str | None, *, allow_network: bool) -> str:
 
 
 def run_gui(native: bool = False, host: str | None = None, *, allow_network: bool = False) -> None:
-    """Launch the MyPySkinDose NiceGUI app.
+    """Launch the GUISkinDose NiceGUI app.
 
     Binds to 127.0.0.1 (localhost only) by default. The GUI has no authentication
     and loads PHI-derived RDSR data into a single process-global, shared state, so
@@ -451,7 +451,7 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
 
     try:
         ui.run(
-            title="MyPySkinDose",
+            title="GUISkinDose",
             native=native,
             host=bind_host,
             window_size=window_size,

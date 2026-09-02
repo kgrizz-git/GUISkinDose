@@ -114,7 +114,7 @@ def exam_supports_transforms(exam, meta: dict) -> bool:
     """True if per-exam coordinate-transform toggles are meaningful for this exam.
 
     Only non-normalized tabular exams qualify: DICOM conventions are applied at
-    normalization, and the ``normalized`` schema is already in MyPySkinDose
+    normalization, and the ``normalized`` schema is already in GUISkinDose
     convention.
     """
     src = (meta.get("source_type") or "").lower()

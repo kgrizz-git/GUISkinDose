@@ -1,4 +1,4 @@
-"""Logging and debug configuration for MyPySkinDose.
+"""Logging and debug configuration for GUISkinDose.
 
 Historically this module exposed ``dprint(category, *args)``, a flag-gated
 ``print``. It is now a thin shim over the standard library ``logging`` framework:

@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement for MyPySkinDose
+description: Suggest an improvement for GUISkinDose
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
@@ -32,7 +32,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: What would you like MyPySkinDose to do?
+      description: What would you like GUISkinDose to do?
     validations:
       required: true
   - type: textarea

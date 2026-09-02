@@ -7,7 +7,7 @@ _Supersedes draft [RICH_EXPORT_SPEC.md](archive/RICH_EXPORT_SPEC.md) and folds i
 
 ## Implementation status (2026-07-02)
 
-**Shipped:** `src/mypyskindose/export/` package — `payload.py` (`collect_export_payload`,
+**Shipped:** `src/guiskindose/export/` package — `payload.py` (`collect_export_payload`,
 `resolve_calculation_result`), `_exam_view.py` (single-dict / multi-object normalizer),
 `metrics.py`, `sections.py`, `provenance.py`, `images.py` (+ zoom-to-dose), `models.py`,
 `cli_source.py`, and `writers/{xlsx,pdf,html,docx}.py` + a `render_bytes`/`write_report` dispatcher.
@@ -105,12 +105,12 @@ Warnings and discarded events must appear prominently on the first page / overvi
 
 ### 1. Title and software identity
 
-- Application name: **MyPySkinDose**
+- Application name: **GUISkinDose**
 - Package version (`pyproject.toml`)
 - Rich export schema version (new payload-specific constant, separate from `EXPORT_SCHEMA_VERSION`)
 - Export timestamp (ISO-8601, local offset when available)
 - Execution context: `gui` or `cli`
-- Report title: user-supplied, or default `MyPySkinDose report — {YYYY-MM-DD HH:MM}`
+- Report title: user-supplied, or default `GUISkinDose report — {YYYY-MM-DD HH:MM}`
 
 ### 2. Input provenance
 
@@ -237,7 +237,7 @@ Camera presets and dimensions live in `export/images.py` (not hardcoded only in 
 ## Default filename and save location
 
 ```
-mypyskindose_report_{YYYY-MM-DD}_{HHMMSS}.{ext}
+guiskindose_report_{YYYY-MM-DD}_{HHMMSS}.{ext}
 ```
 
 Default directory: first input file's directory for CLI and native GUI. In browser-mode GUI there is **no explicit path chooser**; the app provides a download filename and the browser handles the destination.
@@ -257,7 +257,7 @@ Default directory: first input file's directory for CLI and native GUI. In brows
 ## CLI (Phase 5)
 
 ```bash
-python -m mypyskindose --file-path file.dcm --settings settings.json \
+python -m guiskindose --file-path file.dcm --settings settings.json \
   --export-format xlsx --export-path ./report.xlsx \
   --export-title "Case audit report"
 ```
@@ -269,7 +269,7 @@ python -m mypyskindose --file-path file.dcm --settings settings.json \
 ## Data architecture
 
 ```text
-src/mypyskindose/export/
+src/guiskindose/export/
   __init__.py
   payload.py          # ExportPayload + collect_export_payload()
   provenance.py       # tabular + DICOM provenance branches
@@ -335,13 +335,13 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 ### 1.1 Package scaffold
 
-- [ ] **1.1.1** Create `src/mypyskindose/export/` package and empty writer subpackage.
+- [ ] **1.1.1** Create `src/guiskindose/export/` package and empty writer subpackage.
 - [ ] **1.1.2** Define `ExportPayload` and nested dataclasses mirroring §1–§10 (title, provenance, exams[], cumulative metrics, corrections, warnings, images as `bytes | None` + metadata), plus a payload-specific schema-version constant. Keep report-layout data out of the existing JSON/dict export schema; additive schema enrichment is allowed only for fields that are broadly useful outside Rich Export.
 - [ ] **1.1.3** Define `ExportExamSource` / `ExportSource` input bundles (see Data architecture).
 - [ ] **1.1.4** Public API: `collect_export_payload(source) -> ExportPayload`.
 - [ ] **1.1.5** Build export sources from existing GUI/CLI input bundles (`InputAdapterResult`, GUI per-exam meta, effective settings objects) instead of copying full normalized DataFrames into public result models.
 - [ ] **1.1.6** If structured discarded-event counts cannot be recovered from the source bundle alone, add the **minimal** in-memory metadata needed on `ExamResult` (for example `discarded_events: dict[str, int]`) without expanding `PySkinDoseOutput.to_dict()` for report-only needs. **`ExamResult` is multi-exam only** — for the single-exam path (no `ExamResult`), carry the same `discarded_events` on the single-exam source bundle (`ExportExamSource` / `ExportSource`) or fall back to the warning-capture helper (1.1.7); never fabricate a zero count when unavailable (report `N/A`).
-- [ ] **1.1.7** Implement a reusable warning-capture helper for GUI and CLI code paths so calculation-level QA warnings emitted via the `mypyskindose` logger are preserved for export without mutating the existing export JSON schema.
+- [ ] **1.1.7** Implement a reusable warning-capture helper for GUI and CLI code paths so calculation-level QA warnings emitted via the `guiskindose` logger are preserved for export without mutating the existing export JSON schema.
 
 ### 1.2 Source resolution (GUI vs CLI, single vs multi)
 
@@ -505,7 +505,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 - [ ] **4.2.1** New Export tab card: "Rich report…" with format description text.
 - [ ] **4.2.2** Modal: format `ui.select`, optional title field, Export / Cancel; path `ui.input` + Browse button only when `_is_native_mode()`.
-- [ ] **4.2.3** Default filename from `mypyskindose_report_{date}_{time}.{ext}` (browser download name or native save-path basename).
+- [ ] **4.2.3** Default filename from `guiskindose_report_{date}_{time}.{ext}` (browser download name or native save-path basename).
 - [ ] **4.2.4** Export handler: `build_export_source_from_gui(state)` → `collect_export_payload` → `render_*_bytes` on `run.io_bound`; native mode optionally writes via `write_*`, browser mode tries `showSaveFilePicker()` when supported and falls back to `ui.download()`. The fallback path is the required baseline and must remain the authoritative behavior during implementation.
 - [ ] **4.2.5** Disable Export when `not state.calculation_done`.
 - [ ] **4.2.6** Progress: spinner or `ui.notify('Generating report…')` for multi-exam.
@@ -540,7 +540,7 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 - [ ] **5.2.1** Add `--export-format {xlsx,pdf,html}`, optional `--export-path PATH`, and optional `--export-title TEXT` (align CLI examples with existing parser arguments `--file-path` / `-f`).
 - [ ] **5.2.2** When `--export-format` is set, force `settings.output_format = 'dict'` before calculation to ensure structured output. Route through a shared export-capable execution path that also captures warnings and provenance, then build `ExportSource(execution_context="cli", ...)`.
-- [ ] **5.2.3** If `--export-path` is omitted, automatically derive output path: `mypyskindose_report_{YYYY-MM-DD}_{HHMMSS}.{ext}` in the same directory as the input file.
+- [ ] **5.2.3** If `--export-path` is omitted, automatically derive output path: `guiskindose_report_{YYYY-MM-DD}_{HHMMSS}.{ext}` in the same directory as the input file.
 - [ ] **5.2.4** Reject incompatible flag combinations such as `--export-format` with `--aggregate` or `--input-preview-only`.
 - [ ] **5.2.5** Print confirmation path on success (stdout).
 
@@ -615,6 +615,6 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 - Draft spec: [RICH_EXPORT_SPEC.md](archive/RICH_EXPORT_SPEC.md)
 - Coordinates: [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md)
 - Input flow: [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md)
-- Data model: `src/mypyskindose/format_export_data.py`
-- Input adapters: `src/mypyskindose/input_adapters/models.py`
-- GUI export: `src/mypyskindose/gui/tabs/export.py`
+- Data model: `src/guiskindose/format_export_data.py`
+- Input adapters: `src/guiskindose/input_adapters/models.py`
+- GUI export: `src/guiskindose/gui/tabs/export.py`

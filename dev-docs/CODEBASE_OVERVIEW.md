@@ -1,12 +1,12 @@
-# MyPySkinDose — Codebase Overview
+# GUISkinDose — Codebase Overview
 
 > See also: [GUI_PLAN.md](plans/GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
 ## What the project does
 
-MyPySkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM Radiation Dose Structured Report (RDSR) file or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`), reconstructs the 3D geometry of each irradiation event (beam angle, table position, field size, kVp, filtration), places a computational patient phantom in that geometry, and accumulates dose to each skin cell across all events using physics-based correction factors.
+GUISkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM Radiation Dose Structured Report (RDSR) file or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`), reconstructs the 3D geometry of each irradiation event (beam angle, table position, field size, kVp, filtration), places a computational patient phantom in that geometry, and accumulates dose to each skin cell across all events using physics-based correction factors.
 
-It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose) project, renamed `mypyskindose` to allow independent development.
+It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose) project, renamed `guiskindose` to allow independent development.
 
 ---
 
@@ -15,7 +15,7 @@ It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose)
 ```
 src/guiskindose/          # Main package
   main.py                  # Entry point: main() and CLI dispatch
-  __main__.py              # `python -m mypyskindose` entry; re-uses get_argument_parser
+  __main__.py              # `python -m guiskindose` entry; re-uses get_argument_parser
   cli_args.py              # argparse construction (extracted from main.py); re-exported via main.py
   analyze_data.py          # Core orchestration function
   phantom_class.py         # Phantom (patient / table / pad) model
@@ -42,7 +42,7 @@ corrections.db             # SQLite database (correction factors, HVL tables)
 
 ## Package layering and dependency rules
 
-MyPySkinDose is organized in layers so settings, dose physics, and presentation stay separable. Higher layers orchestrate lower ones; lower layers must not depend on GUI or plotting entry points.
+GUISkinDose is organized in layers so settings, dose physics, and presentation stay separable. Higher layers orchestrate lower ones; lower layers must not depend on GUI or plotting entry points.
 
 ### Layer map
 
@@ -152,7 +152,7 @@ analyze_data.py         — creates Phantom objects, dispatches to mode handler
 The primary callable for all use cases.
 
 ```python
-from mypyskindose.main import main
+from guiskindose.main import main
 output = main(file_path="path/to/file.dcm", settings=settings)
 ```
 
@@ -165,7 +165,7 @@ Returns the output dict/JSON when `output_format` is `"dict"` or `"json"`, other
 
 ### `analyze_input_file()` — `main.py` (public API)
 
-The primary public function exported from `mypyskindose`. Accepts a file path (RDSR, JSON, or tabular), a settings object, and optional schema/export parameters. Prefer this over `main()` in library usage.
+The primary public function exported from `guiskindose`. Accepts a file path (RDSR, JSON, or tabular), a settings object, and optional schema/export parameters. Prefer this over `main()` in library usage.
 
 ### `analyze_normalized_data_with_custom_settings_object()` — `main.py`
 
@@ -174,11 +174,11 @@ For headless use when you already have a normalised `pd.DataFrame`.
 ### CLI
 
 ```bash
-python -m mypyskindose --mode headless --file-path path/to/file.dcm --settings path/to/settings.json
-python -m mypyskindose --mode gui          # launch GUI
+python -m guiskindose --mode headless --file-path path/to/file.dcm --settings path/to/settings.json
+python -m guiskindose --mode gui          # launch GUI
 ```
 
-Key flags (see `python -m mypyskindose --help` for the full list):
+Key flags (see `python -m guiskindose --help` for the full list):
 
 | Flag | Purpose |
 |------|---------|
@@ -210,7 +210,7 @@ Key flags (see `python -m mypyskindose --help` for the full list):
 ### Loading settings
 
 ```python
-from mypyskindose import load_settings_example_json, PyskindoseSettings
+from guiskindose import load_settings_example_json, PyskindoseSettings
 
 settings = PyskindoseSettings(settings=load_settings_example_json())
 ```
@@ -475,7 +475,7 @@ All visualisation uses [Plotly](https://plotly.com/python/) for interactive 3D r
 ## Public API helpers — `__init__.py`
 
 ```python
-from mypyskindose import (
+from guiskindose import (
     load_settings_example_json,       # → dict
     print_available_human_phantoms,   # prints STL names
     get_path_to_example_rdsr_files,   # → Path

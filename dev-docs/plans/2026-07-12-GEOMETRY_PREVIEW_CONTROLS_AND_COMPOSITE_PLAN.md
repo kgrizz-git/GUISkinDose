@@ -5,7 +5,7 @@
 **Goal:** Relocate the "Show all exams in preview" checkbox and its caption above the plot next to the "Full procedure" button, prevent `last_table_origin_scrub` from leaking into procedure preview mode, and replace the event number box with searchable/typable dropdowns (`ui.select(with_input=True)`).
 
 **Architecture:**
-- Relocate `_GE_WARNING_TOKEN` and `geometry_vendor_notice` (`geometry.py:57, 66-98`, ~34 lines) to `src/mypyskindose/gui/geometry_preview.py` and keep a 1-line re-export alias in `geometry.py` so existing tests in `test_gui_offset_reset.py` remain green. Net drop in `geometry.py`: ~33 lines down to ~763 lines.
+- Relocate `_GE_WARNING_TOKEN` and `geometry_vendor_notice` (`geometry.py:57, 66-98`, ~34 lines) to `src/guiskindose/gui/geometry_preview.py` and keep a 1-line re-export alias in `geometry.py` so existing tests in `test_gui_offset_reset.py` remain green. Net drop in `geometry.py`: ~33 lines down to ~763 lines.
 - Move `composite_checkbox` and `preview_caption` from `preview_controls` into the top control bar (`ui.row()`) immediately to the right of the `Full procedure` button wrapped in a column bound to `state.is_multi_exam`. Remove the now-empty `preview_controls` sidebar container.
 - In `preview_procedure()` (`geometry.py:675`), add `last_table_origin_scrub` to line 676's `nonlocal` statement (`nonlocal last_preview_mode, live_preview_requested, last_table_origin_scrub`). Assigning `last_table_origin_scrub = False` prevents previous table-slider scrubbing from unintentionally forcing composite mode during Full procedure rendering.
 - Define `event_select_guard = {"suppress": False}` alongside `exam_selector_guard` (`geometry.py:125`).
@@ -29,8 +29,8 @@
 ### Task 1: Headroom Extraction, Composite Checkbox Relocation & Nonlocal Reset Fix
 
 **Files:**
-- Modify: `src/mypyskindose/gui/geometry_preview.py`
-- Modify: `src/mypyskindose/gui/tabs/geometry.py`
+- Modify: `src/guiskindose/gui/geometry_preview.py`
+- Modify: `src/guiskindose/gui/tabs/geometry.py`
 - Test: `tests/unittests/test_gui_multi_exam_geometry_offsets.py`
 - Test: `tests/unittests/test_gui_offset_reset.py`
 
@@ -40,14 +40,14 @@
 
 - [ ] **Step 1: Write failing test in `test_gui_multi_exam_geometry_offsets.py`**
 
-Add unit test verifying `from mypyskindose.gui.geometry_preview import geometry_vendor_notice`.
+Add unit test verifying `from guiskindose.gui.geometry_preview import geometry_vendor_notice`.
 
 - [ ] **Step 2: Run test to verify failure**
 
 Run: `pytest tests/unittests/test_gui_multi_exam_geometry_offsets.py -v`
 
 - [ ] **Step 3: Relocate `geometry_vendor_notice` and modify `geometry.py` layout**
-  - Move `_GE_WARNING_TOKEN` and `geometry_vendor_notice` (`geometry.py:57, 66-98`) into `geometry_preview.py` and keep a 1-line re-export alias `from mypyskindose.gui.geometry_preview import geometry_vendor_notice` in `geometry.py`.
+  - Move `_GE_WARNING_TOKEN` and `geometry_vendor_notice` (`geometry.py:57, 66-98`) into `geometry_preview.py` and keep a 1-line re-export alias `from guiskindose.gui.geometry_preview import geometry_vendor_notice` in `geometry.py`.
   - Move `composite_checkbox` and `preview_caption` into the top bar next to `Full procedure` bound to `state.is_multi_exam`. Delete the empty `preview_controls` sidebar definition.
   - In `preview_procedure()` (`geometry.py:675`), add `last_table_origin_scrub` to line 676's `nonlocal` statement: `nonlocal last_preview_mode, live_preview_requested, last_table_origin_scrub` and assign `last_table_origin_scrub = False` before calling `_render_preview("plot_procedure")`.
 
@@ -58,7 +58,7 @@ Run: `pytest tests/unittests/test_gui_multi_exam_geometry_offsets.py tests/unitt
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/gui/geometry_preview.py src/mypyskindose/gui/tabs/geometry.py tests/unittests/test_gui_multi_exam_geometry_offsets.py
+git add src/guiskindose/gui/geometry_preview.py src/guiskindose/gui/tabs/geometry.py tests/unittests/test_gui_multi_exam_geometry_offsets.py
 git commit -m "feat(gui): relocate composite checkbox above plot, extract vendor notice, and fix nonlocal scrub reset"
 ```
 
@@ -67,8 +67,8 @@ git commit -m "feat(gui): relocate composite checkbox above plot, extract vendor
 ### Task 2: Implement Searchable Exam & Event Dropdowns (`ui.select(with_input=True)`)
 
 **Files:**
-- Modify: `src/mypyskindose/gui/tabs/geometry.py`
-- Modify: `src/mypyskindose/gui/geometry_preview.py`
+- Modify: `src/guiskindose/gui/tabs/geometry.py`
+- Modify: `src/guiskindose/gui/geometry_preview.py`
 - Test: `tests/unittests/test_gui_multi_exam_geometry_offsets.py`
 
 **Interfaces:**
@@ -102,6 +102,6 @@ Run: `pytest tests/unittests/test_gui_multi_exam_geometry_offsets.py -v`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/gui/geometry_preview.py src/mypyskindose/gui/tabs/geometry.py tests/unittests/test_gui_multi_exam_geometry_offsets.py
+git add src/guiskindose/gui/geometry_preview.py src/guiskindose/gui/tabs/geometry.py tests/unittests/test_gui_multi_exam_geometry_offsets.py
 git commit -m "feat(gui): replace event number box with searchable Exam and Event dropdowns with guarded sync"
 ```

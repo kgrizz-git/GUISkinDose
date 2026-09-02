@@ -1,14 +1,13 @@
 (install/installation)=
 # Installation
 
-Installing PySkinDose provides access to two interfaces.
+Installing GUISkinDose (this independently maintained fork of PySkinDose) provides access to two interfaces.
 
 * A python script that parses an RDSR DICOM file and creates output according to the settings used
-* A scriptable interface for customizing the use of PySkinDose to enable performing calculations on already parsed data dose reports
+* A scriptable interface for customizing calculations on already parsed dose reports
 
-To install PySkinDose, run the following, preferably in a virtual environment:
+To install GUISkinDose, run the following, preferably in a virtual environment:
 
 ```bash
-pip install mypyskindose
+pip install guiskindose
 ```
-

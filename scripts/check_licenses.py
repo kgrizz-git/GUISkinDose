@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""License compliance checker for MyPySkinDose third-party dependencies.
+"""License compliance checker for GUISkinDose third-party dependencies.
 
 Purpose:
     Inventory installed Python packages (core + optional extras), classify

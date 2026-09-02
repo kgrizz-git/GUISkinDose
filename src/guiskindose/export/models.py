@@ -31,7 +31,7 @@ if TYPE_CHECKING:  # avoid importing heavy deps at module import time
 # incompatibly.
 RICH_EXPORT_SCHEMA_VERSION = 1
 
-APP_NAME = "MyPySkinDose"
+APP_NAME = "GUISkinDose"
 
 
 class ExportError(Exception):

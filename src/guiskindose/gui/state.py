@@ -1,4 +1,4 @@
-"""Shared application state for the MyPySkinDose GUI.
+"""Shared application state for the GUISkinDose GUI.
 
 A single AppState instance is created at import time and shared across all
 pages. NiceGUI's reactive model means UI elements bind directly to these

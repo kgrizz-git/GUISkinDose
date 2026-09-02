@@ -78,7 +78,9 @@ omit pure CI/refactor bullets and point readers here. See
   until the packaging commit that sets `1.0.0`. Legacy config reads still use
   `~/.mypyskindose/gui.json` and `.mypyskindose.local.json` when the new files are absent.
   Markdown links and backtick paths that pointed at `src/mypyskindose` now point at
-  `src/guiskindose`. Tests, console script, and `LIVE_PACKAGE_NAME` are later slices.
+  `src/guiskindose`. User-facing brand (GUI title, CLI description, export `APP_NAME`,
+  launchers, Sphinx, install guide, issue templates) is **GUISkinDose** / `guiskindose`.
+  Tests, console script, and `LIVE_PACKAGE_NAME` are later slices.
   Semgrep rule IDs and live GitHub/Sonar URLs are unchanged.
   Bandit pre-commit `files:` and CI bandit/compileall/coverage now scan `src/guiskindose`.
   Blocking Semgrep `paths.include` filters and `.phi-scanner.yml` HVL exclusions now

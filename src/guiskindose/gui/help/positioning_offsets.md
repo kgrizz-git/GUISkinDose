@@ -10,7 +10,7 @@ The patient offset settings shift the phantom position from its default location
 
 ## Coordinate System
 
-MyPySkinDose uses a normalized calculation frame plus historical PySkinDose/DICOM table-position aliases. RDSRs name the source fields `TableLongitudinalPosition`, `TableHeightPosition`, and `TableLateralPosition`; they do not call those fields `X`, `Y`, or `Z`. For detailed vendor-specific coordinate transformations, see the technical documentation on <a href="../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md" target="_blank">Vendor Coordinate Systems</a>.
+GUISkinDose uses a normalized calculation frame plus historical PySkinDose/DICOM table-position aliases. RDSRs name the source fields `TableLongitudinalPosition`, `TableHeightPosition`, and `TableLateralPosition`; they do not call those fields `X`, `Y`, or `Z`. For detailed vendor-specific coordinate transformations, see the technical documentation on <a href="../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md" target="_blank">Vendor Coordinate Systems</a>.
 
 ### Quick Reference
 
@@ -21,7 +21,7 @@ MyPySkinDose uses a normalized calculation frame plus historical PySkinDose/DICO
 | Patient AP / vertical | `d_ver` / patient scale | `Y - VER / PT A-P` | Up-down placement |
 | Rotation | patient rotation setting | about vertical axis | Rotates patient around the table-height axis |
 
-The `LON`, `VER`, and `LAT` plot aliases are historical PySkinDose labels inherited from DICOM/operator table-coordinate names after vendor normalization. Siemens and Philips use that DICOM/operator convention. GE raw data uses patient-anatomy longitudinal and lateral naming instead; MyPySkinDose swaps GE raw lateral/longitudinal into the common plotted frame during normalization. For developer-level details, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
+The `LON`, `VER`, and `LAT` plot aliases are historical PySkinDose labels inherited from DICOM/operator table-coordinate names after vendor normalization. Siemens and Philips use that DICOM/operator convention. GE raw data uses patient-anatomy longitudinal and lateral naming instead; GUISkinDose swaps GE raw lateral/longitudinal into the common plotted frame during normalization. For developer-level details, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
 
 All values are in **centimeters**. In the normalized frame, **+Y (vertical) points down** toward the floor, and the `(0, 0, 0)` origin is the beam isocenter, which coincides with the table head-end when the table-position readout is zero.
 

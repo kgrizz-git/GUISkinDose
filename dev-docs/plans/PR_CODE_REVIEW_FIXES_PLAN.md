@@ -36,7 +36,7 @@ Before starting implementation, complete these verification steps:
 ### Task 1: Phantom Class Resolution and Error Message Fixes
 
 **Files:**
-- Modify: `src/mypyskindose/phantom_class.py`
+- Modify: `src/guiskindose/phantom_class.py`
 - Test: `tests/unittests/test_phantom_vertices.py`
 
 **Interfaces:**
@@ -47,14 +47,14 @@ Before starting implementation, complete these verification steps:
 
 Add the following tests to `tests/unittests/test_phantom_vertices.py` (ensure `import pytest` is present at the top of the file):
 
-*Pre-flight verification:* Verify that `PhantomDimensions.__init__` signature in `src/mypyskindose/settings/phantom_dimensions.py` accepts a `ptm_dim: dict` parameter, not keyword arguments. The test must mutate an existing settings instance rather than construct with keyword arguments.
+*Pre-flight verification:* Verify that `PhantomDimensions.__init__` signature in `src/guiskindose/settings/phantom_dimensions.py` accepts a `ptm_dim: dict` parameter, not keyword arguments. The test must mutate an existing settings instance rather than construct with keyword arguments.
 
 ```python
 import pytest
 
 def test_invalid_plane_resolution_raises_value_error() -> None:
-    from mypyskindose.phantom_class import Phantom
-    from mypyskindose.settings import PyskindoseSettings, load_settings_example_json
+    from guiskindose.phantom_class import Phantom
+    from guiskindose.settings import PyskindoseSettings, load_settings_example_json
     settings = PyskindoseSettings(settings=load_settings_example_json())
     dim = settings.phantom.dimension
     dim.plane_resolution = "invalid_res"
@@ -62,8 +62,8 @@ def test_invalid_plane_resolution_raises_value_error() -> None:
         Phantom(phantom_model="plane", phantom_dim=dim)
 
 def test_invalid_cylinder_resolution_raises_value_error() -> None:
-    from mypyskindose.phantom_class import Phantom
-    from mypyskindose.settings import PyskindoseSettings, load_settings_example_json
+    from guiskindose.phantom_class import Phantom
+    from guiskindose.settings import PyskindoseSettings, load_settings_example_json
     settings = PyskindoseSettings(settings=load_settings_example_json())
     dim = settings.phantom.dimension
     dim.cylinder_resolution = "invalid_res"
@@ -78,7 +78,7 @@ Expected: FAIL (raises AssertionError due to the old assert validation in `phant
 
 - [ ] **Step 3: Update resolution checks and fix spacing in `phantom_class.py`**
 
-In `_init_plane` of `src/mypyskindose/phantom_class.py`, add the `else: raise ValueError` block, delete the now-redundant `assert res_width is not None` and `assert res_length is not None` lines (lines 123-124), and add proper type annotations to avoid static analysis errors:
+In `_init_plane` of `src/guiskindose/phantom_class.py`, add the `else: raise ValueError` block, delete the now-redundant `assert res_width is not None` and `assert res_length is not None` lines (lines 123-124), and add proper type annotations to avoid static analysis errors:
 
 ```python
     def _init_plane(self, phantom_dim: PhantomDimensions) -> None:
@@ -101,7 +101,7 @@ In `_init_plane` of `src/mypyskindose/phantom_class.py`, add the `else: raise Va
             )
 ```
 
-Also, fix the space typo in `_load_human_mesh` error message in `src/mypyskindose/phantom_class.py`:
+Also, fix the space typo in `_load_human_mesh` error message in `src/guiskindose/phantom_class.py`:
 
 ```python
         if human_mesh is None:
@@ -116,7 +116,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/phantom_class.py tests/unittests/test_phantom_vertices.py
+git add src/guiskindose/phantom_class.py tests/unittests/test_phantom_vertices.py
 git commit -m "fix: replace phantom resolution asserts with ValueError, add type annotations, and fix error message spacing"
 ```
 
@@ -125,7 +125,7 @@ git commit -m "fix: replace phantom resolution asserts with ValueError, add type
 ### Task 2: Human Mesh Index and Test Repair
 
 **Files:**
-- Modify: `src/mypyskindose/phantom_class.py`
+- Modify: `src/guiskindose/phantom_class.py`
 - Modify: `tests/unittests/test_phantom_vertices.py`
 
 **Interfaces:**
@@ -154,7 +154,7 @@ Expected: FAIL (test will fail due to incorrect triangle count; actual failure m
 
 - [ ] **Step 3: Fix bounds of `np.arange` calls in `_load_human_mesh`**
 
-Update `self.ijk` calculation in `src/mypyskindose/phantom_class.py`:
+Update `self.ijk` calculation in `src/guiskindose/phantom_class.py`:
 
 ```python
         # Create index vectors for plotly mesh3d plotting
@@ -171,7 +171,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/phantom_class.py tests/unittests/test_phantom_vertices.py
+git add src/guiskindose/phantom_class.py tests/unittests/test_phantom_vertices.py
 git commit -m "fix: correct human mesh triangle indexing bounds and check count in test"
 ```
 
@@ -180,7 +180,7 @@ git commit -m "fix: correct human mesh triangle indexing bounds and check count 
 ### Task 3: Degenerate Interpolation Handling
 
 **Files:**
-- Modify: `src/mypyskindose/corrections.py`
+- Modify: `src/guiskindose/corrections.py`
 - Modify: `tests/unittests/test_corrections.py`
 
 **Interfaces:**
@@ -191,12 +191,12 @@ git commit -m "fix: correct human mesh triangle indexing bounds and check count 
 
 Add the following test to `tests/unittests/test_corrections.py`:
 
-*Pre-flight verification:* Confirm that `STATUS_CLAMPED`, `STATUS_INTERPOLATED`, and `STATUS_EXACT` constants exist in `src/mypyskindose/grid_interp.py`. Adjust import if needed. Also verify that `clamped_rgi_lookup` is defined in `src/mypyskindose/grid_interp.py` or `src/mypyskindose/corrections.py`. If it doesn't exist, add it to the corrections module.
+*Pre-flight verification:* Confirm that `STATUS_CLAMPED`, `STATUS_INTERPOLATED`, and `STATUS_EXACT` constants exist in `src/guiskindose/grid_interp.py`. Adjust import if needed. Also verify that `clamped_rgi_lookup` is defined in `src/guiskindose/grid_interp.py` or `src/guiskindose/corrections.py`. If it doesn't exist, add it to the corrections module.
 
 ```python
 def test_interpolate_off_grid_degenerate_kv_axis() -> None:
-    from mypyskindose.corrections import _interpolate_off_grid
-    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED, STATUS_EXACT
+    from guiskindose.corrections import _interpolate_off_grid
+    from guiskindose.grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED, STATUS_EXACT
     import pandas as pd
     import numpy as np
 
@@ -235,7 +235,7 @@ def test_interpolate_off_grid_degenerate_kv_axis() -> None:
 Run: `pytest tests/unittests/test_corrections.py::test_interpolate_off_grid_degenerate_kv_axis -v`
 Expected: FAIL (raises ValueError/TypeError from `RegularGridInterpolator` due to dimension mismatch)
 
-- [ ] **Step 3: Update `_interpolate_off_grid` in `src/mypyskindose/corrections.py` to handle 1D kVp grids**
+- [ ] **Step 3: Update `_interpolate_off_grid` in `src/guiskindose/corrections.py` to handle 1D kVp grids**
 
 Show the full updated `_interpolate_off_grid` function to avoid context dependency errors:
 
@@ -313,7 +313,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/corrections.py tests/unittests/test_corrections.py
+git add src/guiskindose/corrections.py tests/unittests/test_corrections.py
 git commit -m "fix: handle degenerate 1-row kVp grids in off-grid attenuation interpolation"
 ```
 
@@ -322,7 +322,7 @@ git commit -m "fix: handle degenerate 1-row kVp grids in off-grid attenuation in
 ### Task 4: Lightweight Repr for Export Output
 
 **Files:**
-- Modify: `src/mypyskindose/format_export_data.py`
+- Modify: `src/guiskindose/format_export_data.py`
 - Test: `tests/unittests/test_export_data_post_init.py`
 
 **Interfaces:**
@@ -333,11 +333,11 @@ git commit -m "fix: handle degenerate 1-row kVp grids in off-grid attenuation in
 
 Add the following test to `tests/unittests/test_export_data_post_init.py`:
 
-*Pre-flight verification:* Verify that `PySkinDoseOutput` in `src/mypyskindose/format_export_data.py` has fields with `field(init=False)` and cannot be constructed directly. The test must bypass `__init__` using `object.__new__()`. Also confirm the type and default value of `PatientOffsets` in `PySkinDoseOutput` to ensure the repr will render correctly.
+*Pre-flight verification:* Verify that `PySkinDoseOutput` in `src/guiskindose/format_export_data.py` has fields with `field(init=False)` and cannot be constructed directly. The test must bypass `__init__` using `object.__new__()`. Also confirm the type and default value of `PatientOffsets` in `PySkinDoseOutput` to ensure the repr will render correctly.
 
 ```python
 def test_pyskindose_output_lightweight_repr() -> None:
-    from mypyskindose.format_export_data import PySkinDoseOutput
+    from guiskindose.format_export_data import PySkinDoseOutput
 
     # Bypass __init__ and __post_init__ validations since fields have init=False
     out = object.__new__(PySkinDoseOutput)
@@ -361,7 +361,7 @@ Expected: FAIL (or returns standard huge dataclass representation containing all
 
 - [ ] **Step 3: Define `__repr__` method on `PySkinDoseOutput`**
 
-Add `__repr__` method to the end of the `PySkinDoseOutput` class in `src/mypyskindose/format_export_data.py`:
+Add `__repr__` method to the end of the `PySkinDoseOutput` class in `src/guiskindose/format_export_data.py`:
 
 ```python
     def __repr__(self) -> str:
@@ -380,7 +380,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/format_export_data.py tests/unittests/test_export_data_post_init.py
+git add src/guiskindose/format_export_data.py tests/unittests/test_export_data_post_init.py
 git commit -m "feat: implement lightweight safe __repr__ on PySkinDoseOutput"
 ```
 
@@ -389,7 +389,7 @@ git commit -m "feat: implement lightweight safe __repr__ on PySkinDoseOutput"
 ### Task 5: GUI Exam Loader Study ID Association
 
 **Files:**
-- Modify: `src/mypyskindose/gui/exam_loaders.py`
+- Modify: `src/guiskindose/gui/exam_loaders.py`
 
 **Interfaces:**
 - Consumes: Re-parsed input tables
@@ -397,10 +397,10 @@ git commit -m "feat: implement lightweight safe __repr__ on PySkinDoseOutput"
 
 - [ ] **Step 1: Update metadata entry construction with study ID**
 
-*Pre-flight validation check:* Verify that the `InputAdapterResult` dataclass exposes `study_id: str | None = field(default=None)` in `src/mypyskindose/input_adapters/models.py`. (Confirmed: it is already present in `models.py:30`).
+*Pre-flight validation check:* Verify that the `InputAdapterResult` dataclass exposes `study_id: str | None = field(default=None)` in `src/guiskindose/input_adapters/models.py`. (Confirmed: it is already present in `models.py:30`).
 *Ordering constraint:* Note that Step 1 (updating the signature and dictionary returned by `_build_exam_meta_entry`) must be applied before Step 3 (updating `_append_multi_study_exams` and `_append_single_study_exam` callers) to prevent keyword argument `TypeError` failures.
 
-In `src/mypyskindose/gui/exam_loaders.py`, update the full function `_build_exam_meta_entry` to avoid truncation. Ensure `"normalization_method": "Tabular"` is retained:
+In `src/guiskindose/gui/exam_loaders.py`, update the full function `_build_exam_meta_entry` to avoid truncation. Ensure `"normalization_method": "Tabular"` is retained:
 
 ```python
 def _build_exam_meta_entry(
@@ -447,7 +447,7 @@ def _build_exam_meta_entry(
 
 - [ ] **Step 2: Verify helper functions exist and collect `study_id` in `_collect_preserved_flags`**
 
-*Pre-flight verification:* Confirm that `_blank_transform_flags()` and `_default_transform_flags(state)` exist in `src/mypyskindose/gui/exam_loaders.py`. If `_blank_transform_flags()` doesn't exist, add it. **Important:** Do NOT overwrite `_default_transform_flags(state)` if it already exists - it reads user settings and should be preserved. If `_default_transform_flags` exists with a different signature (e.g., no `state` parameter), report the difference and adjust the step accordingly.
+*Pre-flight verification:* Confirm that `_blank_transform_flags()` and `_default_transform_flags(state)` exist in `src/guiskindose/gui/exam_loaders.py`. If `_blank_transform_flags()` doesn't exist, add it. **Important:** Do NOT overwrite `_default_transform_flags(state)` if it already exists - it reads user settings and should be preserved. If `_default_transform_flags` exists with a different signature (e.g., no `state` parameter), report the difference and adjust the step accordingly.
 
 ```python
 def _blank_transform_flags() -> dict:
@@ -462,7 +462,7 @@ def _blank_transform_flags() -> dict:
     }
 ```
 
-Then update `_collect_preserved_flags` in `src/mypyskindose/gui/exam_loaders.py`:
+Then update `_collect_preserved_flags` in `src/guiskindose/gui/exam_loaders.py`:
 
 ```python
 def _collect_preserved_flags(
@@ -486,9 +486,9 @@ def _collect_preserved_flags(
     ]
 ```
 
-- [ ] **Step 3: Update re-parsing and appending functions in `src/mypyskindose/gui/exam_loaders.py`**
+- [ ] **Step 3: Update re-parsing and appending functions in `src/guiskindose/gui/exam_loaders.py`**
 
-*Pre-flight verification:* Run `grep -rn "_append_multi_study_exams\|_append_single_study_exam" src/ tests/` to find all callers. Update any callers outside this step (e.g., unit tests, other tabs) in the same commit to prevent breakage. Also verify that `_apply_transform_flags` accepts `flip_tx`, `flip_ty`, `flip_tz` keyword arguments by checking its signature in `src/mypyskindose/gui/exam_loaders.py`.
+*Pre-flight verification:* Run `grep -rn "_append_multi_study_exams\|_append_single_study_exam" src/ tests/` to find all callers. Update any callers outside this step (e.g., unit tests, other tabs) in the same commit to prevent breakage. Also verify that `_apply_transform_flags` accepts `flip_tx`, `flip_ty`, `flip_tz` keyword arguments by checking its signature in `src/guiskindose/gui/exam_loaders.py`.
 
 Provide full implementations for both `_append_multi_study_exams` and `_append_single_study_exam` to prevent function truncation:
 
@@ -575,7 +575,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/mypyskindose/gui/exam_loaders.py
+git add src/guiskindose/gui/exam_loaders.py
 git commit -m "fix: map re-parsed coordinate transformation flags by study ID"
 ```
 
@@ -800,7 +800,7 @@ git commit -m "fix: validate pip-audit args, add finite timeouts to subprocess c
 
 **Files:**
 - Modify: `scripts/check_help_registry.py`
-- Modify: `src/mypyskindose/main.py`
+- Modify: `src/guiskindose/main.py`
 - Modify: `dev-docs/index.md`
 
 **Interfaces:**
@@ -844,7 +844,7 @@ In `_check_gui_references` in `scripts/check_help_registry.py`, validate that `g
 
 - [ ] **Step 2: Add `argparse` type annotation to `get_argument_parser`**
 
-In `src/mypyskindose/main.py`, merge the `TYPE_CHECKING` import on line 4 rather than adding a duplicate import statement:
+In `src/guiskindose/main.py`, merge the `TYPE_CHECKING` import on line 4 rather than adding a duplicate import statement:
 
 ```python
 from typing import Any, Optional, Sequence, TYPE_CHECKING
@@ -876,14 +876,14 @@ Expected: PASS
 
 Also run basedpyright to verify type annotations:
 ```bash
-basedpyright src/mypyskindose/main.py
+basedpyright src/guiskindose/main.py
 ```
 Expected: PASS (no type errors for argparse.Namespace forward reference)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/check_help_registry.py src/mypyskindose/main.py dev-docs/index.md
+git add scripts/check_help_registry.py src/guiskindose/main.py dev-docs/index.md
 git commit -m "style: address help registry line length and type hint get_argument_parser"
 ```
 

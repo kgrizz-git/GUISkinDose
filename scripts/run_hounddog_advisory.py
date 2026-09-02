@@ -58,7 +58,7 @@ def _scan_report(binary: str, scan_root: Path) -> tuple[int, object]:
     """Run the local binary and return its exit status with parsed private report."""
     # Plain local scan only: no cloud/API/upload/AI flags are ever passed. JSON
     # stays in a private ephemeral directory because it can contain code context.
-    with tempfile.TemporaryDirectory(prefix="mypyskindose-hounddog-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="guiskindose-hounddog-") as temp_dir:
         report_path = Path(temp_dir) / "report.json"
         command = [
             binary,

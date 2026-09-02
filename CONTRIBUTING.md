@@ -1,4 +1,4 @@
-# Contributing to MyPySkinDose
+# Contributing to GUISkinDose
 
 Thanks for your interest in this fork of
 [PySkinDose](https://github.com/rvbCMTS/PySkinDose).
@@ -24,7 +24,7 @@ asked to open one.
 
 ## Intended use (read first)
 
-MyPySkinDose estimates peak skin dose and 3D skin dose maps for research,
+GUISkinDose estimates peak skin dose and 3D skin dose maps for research,
 education, development, and institutional quality-assurance workflows. It is
 **not FDA-cleared** (or otherwise certified) as a medical device. Physicists and
 physicians remain responsible for reviewing results and for any patient-care
