@@ -17,8 +17,8 @@ pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 def test_gui_module_imports() -> None:
     """GUI package and page module import without starting ui.run()."""
-    import mypyskindose.gui  # noqa: F401
-    import mypyskindose.gui.app as gui_app
+    import guiskindose.gui  # noqa: F401
+    import guiskindose.gui.app as gui_app
 
     assert gui_app.GUI_VERSION
     assert callable(gui_app.run_gui)

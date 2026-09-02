@@ -5,13 +5,13 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
-from mypyskindose.export.models import ImageEntry
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.export import ExportExamSource, ExportSource, collect_export_payload
+from guiskindose.export.models import ImageEntry
 
 pytest.importorskip("reportlab")
 
-from mypyskindose.export.writers.pdf import render_pdf_bytes
+from guiskindose.export.writers.pdf import render_pdf_bytes
 
 
 def _settings():

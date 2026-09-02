@@ -8,16 +8,16 @@ import numpy as np
 import pydicom
 import pytest
 
-from mypyskindose import constants as c
-from mypyskindose import load_settings_example_json
-from mypyskindose.calculate_dose.calculate_dose import calculate_dose
-from mypyskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import constants as c
+from guiskindose import load_settings_example_json
+from guiskindose.calculate_dose.calculate_dose import calculate_dose
+from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
+from guiskindose.phantom_class import Phantom
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
-EXAMPLE = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "example_data" / "RDSR"
+EXAMPLE = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "example_data" / "RDSR"
 
 
 def _settings(**km_overrides) -> PyskindoseSettings:
@@ -109,7 +109,7 @@ def test_settings_example_block_loads():
 
 def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
     """Settings reject bad mode/default_factor and serialize without in_memory_table."""
-    from mypyskindose.settings.kerma_meter_correction_settings import (
+    from guiskindose.settings.kerma_meter_correction_settings import (
         KermaMeterCorrectionSettings,
     )
 

@@ -8,9 +8,9 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui import window_prefs
-from mypyskindose.gui.onboarding import dismiss_onboarding, is_onboarding_dismissed, reset_onboarding
-from mypyskindose.gui.window_prefs import NativeWindowPrefs, save_native_window_prefs
+from guiskindose.gui import window_prefs
+from guiskindose.gui.onboarding import dismiss_onboarding, is_onboarding_dismissed, reset_onboarding
+from guiskindose.gui.window_prefs import NativeWindowPrefs, save_native_window_prefs
 
 
 def test_is_onboarding_dismissed_false_for_missing_file(tmp_path, monkeypatch):

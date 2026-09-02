@@ -6,12 +6,12 @@ import argparse
 import logging
 from pathlib import Path
 
-from mypyskindose import load_settings_example_json
-from mypyskindose.cli_kerma_meter import (
+from guiskindose import load_settings_example_json
+from guiskindose.cli_kerma_meter import (
     add_kerma_meter_cli_arguments,
     apply_kerma_meter_cli_flags,
 )
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.settings import PyskindoseSettings
 
 
 def _settings() -> PyskindoseSettings:
@@ -95,7 +95,7 @@ def test_prompt_mode_warns_on_cli():
             """Append the formatted log message to the capture list."""
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose.cli_kerma_meter")
+    logger = logging.getLogger("guiskindose.cli_kerma_meter")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:

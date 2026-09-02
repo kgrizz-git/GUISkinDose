@@ -36,7 +36,7 @@ from scripts.phantom_gen.validate_phantom import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CATALOG_V1 = REPO_ROOT / "scripts" / "phantom_gen" / "catalog_v1.json"
 FUN_MANIFEST = REPO_ROOT / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
-ADULT_MALE = REPO_ROOT / "src" / "mypyskindose" / "phantom_data" / "adult_male.stl"
+ADULT_MALE = REPO_ROOT / "src" / "guiskindose" / "phantom_data" / "adult_male.stl"
 FUN_MESH_IDS = ("demo_cosmic_buddha", "petite_herculanaise", "demo_ramesses_ii", "demo_steamboat_willie")
 
 

@@ -15,8 +15,8 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-import mypyskindose.gui.app as gui_app
-from mypyskindose.gui.tabs.upload import MAX_UPLOAD_BYTES, upload_exceeds_limit
+import guiskindose.gui.app as gui_app
+from guiskindose.gui.tabs.upload import MAX_UPLOAD_BYTES, upload_exceeds_limit
 
 pytest.importorskip("nicegui")
 

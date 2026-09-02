@@ -13,7 +13,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.helpers import (
+from guiskindose.gui.helpers import (
     DEMO_HUMAN_MESHES,
     DEMO_MESH_SECTION_KEY,
     GUI_HIDDEN_HUMAN_MESHES,
@@ -21,7 +21,7 @@ from mypyskindose.gui.helpers import (
     get_human_mesh_options,
 )
 
-PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"
+PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "phantom_data"
 KNOWN_DEMO_STEMS = sorted(DEMO_HUMAN_MESHES | GUI_HIDDEN_HUMAN_MESHES)
 
 
@@ -45,7 +45,7 @@ def test_discovered_meshes_exclude_demo_stems():
 
 
 def test_show_demo_phantoms_enabled_defaults_false(monkeypatch, tmp_path):
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     cfg = tmp_path / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: cfg)
@@ -57,7 +57,7 @@ def test_show_demo_phantoms_enabled_defaults_false(monkeypatch, tmp_path):
 
 
 def test_show_demo_phantoms_env_overrides_home_gui_json(monkeypatch, tmp_path):
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     cfg = tmp_path / "gui.json"
     cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
@@ -70,7 +70,7 @@ def test_show_demo_phantoms_env_overrides_home_gui_json(monkeypatch, tmp_path):
 
 
 def test_show_demo_phantoms_new_env_wins_over_old_env(monkeypatch, tmp_path):
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     cfg = tmp_path / "gui.json"
     cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
@@ -82,7 +82,7 @@ def test_show_demo_phantoms_new_env_wins_over_old_env(monkeypatch, tmp_path):
 
 
 def test_show_demo_phantoms_unrecognized_new_env_falls_through_to_old_env(monkeypatch, tmp_path):
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     cfg = tmp_path / "gui.json"
     cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
@@ -94,7 +94,7 @@ def test_show_demo_phantoms_unrecognized_new_env_falls_through_to_old_env(monkey
 
 
 def test_show_demo_phantoms_new_local_json_wins_over_old_local_json(monkeypatch, tmp_path):
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
     home_cfg = tmp_path / "home_gui.json"
@@ -120,7 +120,7 @@ def test_show_demo_phantoms_new_local_json_wins_over_old_local_json(monkeypatch,
 
 
 def test_show_demo_phantoms_new_dotenv_wins_over_old_dotenv(monkeypatch, tmp_path):
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
     home_cfg = tmp_path / "home_gui.json"

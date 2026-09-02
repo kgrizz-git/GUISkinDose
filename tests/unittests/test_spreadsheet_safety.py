@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from openpyxl import load_workbook
 
-from mypyskindose.spreadsheet_safety import neutralize_dataframe, neutralize_spreadsheet_value
+from guiskindose.spreadsheet_safety import neutralize_dataframe, neutralize_spreadsheet_value
 
 
 @pytest.mark.parametrize(

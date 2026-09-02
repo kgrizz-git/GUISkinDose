@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import results_builders as rb
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import results_builders as rb
 
 pytest.importorskip("nicegui")
 

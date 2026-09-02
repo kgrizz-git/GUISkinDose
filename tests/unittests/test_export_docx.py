@@ -7,13 +7,13 @@ import io
 import pandas as pd
 import pytest
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
-from mypyskindose.export.models import ImageEntry
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.export import ExportExamSource, ExportSource, collect_export_payload
+from guiskindose.export.models import ImageEntry
 
 pytest.importorskip("docx")
 
-from mypyskindose.export.writers.docx import render_docx_bytes
+from guiskindose.export.writers.docx import render_docx_bytes
 
 
 def _payload():

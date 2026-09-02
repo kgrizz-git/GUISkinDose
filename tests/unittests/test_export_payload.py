@@ -16,15 +16,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.export import (
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.export import (
     ExportError,
     ExportExamSource,
     ExportSource,
     collect_export_payload,
 )
-from mypyskindose.export._exam_view import view_from_output
-from mypyskindose.input_adapters.models import InputProvenance
+from guiskindose.export._exam_view import view_from_output
+from guiskindose.input_adapters.models import InputProvenance
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "export" / "single_exam_siemens.json"
 
@@ -283,8 +283,8 @@ def test_export_without_kaleido(monkeypatch):
 
 
 def test_build_export_source_from_gui():
-    from mypyskindose.gui.export_source import build_export_source_from_gui
-    from mypyskindose.gui.state import AppState
+    from guiskindose.gui.export_source import build_export_source_from_gui
+    from guiskindose.gui.state import AppState
 
     # single-exam branch
     st = AppState()
@@ -311,7 +311,7 @@ def test_build_export_source_from_gui():
 
 
 def test_build_export_source_from_cli():
-    from mypyskindose.export import build_export_source_from_cli
+    from guiskindose.export import build_export_source_from_cli
 
     src = build_export_source_from_cli(
         _settings(), output_dict=_two_event_output(), single_source_file="c.dcm", file_name="c.dcm"

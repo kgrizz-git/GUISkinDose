@@ -17,13 +17,13 @@ def _base_registry() -> dict[str, object]:
     return {
         "schema_version": 1,
         "source_dir": "docs/source/gui_help",
-        "target_dir": "src/mypyskindose/gui/help",
+        "target_dir": "src/guiskindose/gui/help",
         "entries": [
             {
                 "id": "upload",
                 "title": "Upload help",
                 "source": "upload_workflow.md",
-                "gui_files": ["src/mypyskindose/gui/tabs/upload.py"],
+                "gui_files": ["src/guiskindose/gui/tabs/upload.py"],
                 "required": True,
             }
         ],
@@ -33,8 +33,8 @@ def _base_registry() -> dict[str, object]:
 def _write_valid_repo(tmp_path: Path) -> None:
     _write_json(tmp_path / "dev-docs" / "help_registry.json", _base_registry())
     source = tmp_path / "docs" / "source" / "gui_help" / "upload_workflow.md"
-    target = tmp_path / "src" / "mypyskindose" / "gui" / "help" / "upload_workflow.md"
-    gui = tmp_path / "src" / "mypyskindose" / "gui" / "tabs" / "upload.py"
+    target = tmp_path / "src" / "guiskindose" / "gui" / "help" / "upload_workflow.md"
+    gui = tmp_path / "src" / "guiskindose" / "gui" / "tabs" / "upload.py"
     source.parent.mkdir(parents=True, exist_ok=True)
     target.parent.mkdir(parents=True, exist_ok=True)
     gui.parent.mkdir(parents=True, exist_ok=True)
@@ -66,7 +66,7 @@ def test_validate_help_registry_reports_missing_source(tmp_path: Path) -> None:
 
 def test_validate_help_registry_reports_missing_mirror(tmp_path: Path) -> None:
     _write_valid_repo(tmp_path)
-    (tmp_path / "src" / "mypyskindose" / "gui" / "help" / "upload_workflow.md").unlink()
+    (tmp_path / "src" / "guiskindose" / "gui" / "help" / "upload_workflow.md").unlink()
 
     result = validate_help_registry(tmp_path)
 
@@ -88,7 +88,7 @@ def test_validate_help_registry_reports_duplicate_id(tmp_path: Path) -> None:
 
 def test_validate_help_registry_reports_missing_gui_file(tmp_path: Path) -> None:
     _write_valid_repo(tmp_path)
-    (tmp_path / "src" / "mypyskindose" / "gui" / "tabs" / "upload.py").unlink()
+    (tmp_path / "src" / "guiskindose" / "gui" / "tabs" / "upload.py").unlink()
 
     result = validate_help_registry(tmp_path)
 
@@ -97,7 +97,7 @@ def test_validate_help_registry_reports_missing_gui_file(tmp_path: Path) -> None
 
 def test_validate_help_registry_reports_mismatched_gui_reference(tmp_path: Path) -> None:
     _write_valid_repo(tmp_path)
-    (tmp_path / "src" / "mypyskindose" / "gui" / "tabs" / "upload.py").write_text(
+    (tmp_path / "src" / "guiskindose" / "gui" / "tabs" / "upload.py").write_text(
         'HelpButton(title="Upload help", content_path="wrong.md", help_id="wrong")\n',
         encoding="utf-8",
     )

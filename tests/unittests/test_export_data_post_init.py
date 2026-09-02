@@ -26,19 +26,19 @@ import pandas as pd
 import pydicom
 import pytest
 
-from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.format_export_data import PySkinDoseOutput
-from mypyskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.format_export_data import PySkinDoseOutput
+from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 
 
 @pytest.fixture(autouse=True)
 def _quiet_logs():
-    logging.getLogger("mypyskindose").setLevel(logging.WARNING)
+    logging.getLogger("guiskindose").setLevel(logging.WARNING)
     yield
 
 
@@ -233,7 +233,7 @@ def test_missing_kerma_defaults_to_unmetered(settings, trio, data_norm) -> None:
 
 
 def test_pyskindose_output_lightweight_repr() -> None:
-    from mypyskindose.format_export_data import PySkinDoseOutput
+    from guiskindose.format_export_data import PySkinDoseOutput
 
     # Bypass __init__ and __post_init__ validations since fields have init=False
     out = object.__new__(PySkinDoseOutput)

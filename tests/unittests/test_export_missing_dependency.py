@@ -7,8 +7,8 @@ import sys
 
 import pytest
 
-from mypyskindose.export import MissingExportDependencyError
-from mypyskindose.export.writers import render_bytes
+from guiskindose.export import MissingExportDependencyError
+from guiskindose.export.writers import render_bytes
 
 
 def _block_import(monkeypatch: pytest.MonkeyPatch, blocked: str, writer_submodule: str) -> None:
@@ -17,7 +17,7 @@ def _block_import(monkeypatch: pytest.MonkeyPatch, blocked: str, writer_submodul
     for name in list(sys.modules):
         if name == blocked or name.startswith(f"{blocked}."):
             monkeypatch.delitem(sys.modules, name, raising=False)
-    monkeypatch.delitem(sys.modules, f"mypyskindose.export.writers.{writer_submodule}", raising=False)
+    monkeypatch.delitem(sys.modules, f"guiskindose.export.writers.{writer_submodule}", raising=False)
 
     real_import = builtins.__import__
 
@@ -37,7 +37,7 @@ def test_pdf_missing_reportlab_raises_actionable_error(monkeypatch: pytest.Monke
     exc = excinfo.value
     assert exc.format == "pdf"
     assert exc.package == "reportlab"
-    assert "mypyskindose[export]" in exc.install_hint
+    assert "guiskindose[export]" in exc.install_hint
     assert "reportlab" in str(exc)
 
 

@@ -19,9 +19,9 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-from mypyskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import geometry_builders
+from guiskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import geometry_builders
 
 pytest.importorskip("nicegui")
 

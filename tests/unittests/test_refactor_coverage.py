@@ -12,15 +12,15 @@ from typing import Any, cast
 import pandas as pd
 import pytest
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.constants import (
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_TYPE,
     KEY_NORMALIZATION_AIR_KERMA,
 )
-from mypyskindose.export.cli_source import build_export_source_from_cli
-from mypyskindose.export.metrics import _mean_or_none, _scalar_at, acquisition_breakdown
-from mypyskindose.format_export_data import ExamResult, MultiExamResult
-from mypyskindose.kerma_correction import _rows_to_factor_dict
+from guiskindose.export.cli_source import build_export_source_from_cli
+from guiskindose.export.metrics import _mean_or_none, _scalar_at, acquisition_breakdown
+from guiskindose.format_export_data import ExamResult, MultiExamResult
+from guiskindose.kerma_correction import _rows_to_factor_dict
 
 
 def _settings() -> PyskindoseSettings:

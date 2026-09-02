@@ -10,12 +10,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from nicegui.testing import User
 
-from mypyskindose.gui.constants import EXAMPLE_FILES
-from mypyskindose.gui.helpers import load_tabular
-from mypyskindose.gui.page_context import PageContext
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import upload_builders as ub
-from mypyskindose.gui.tabs.upload_builders import MAX_UPLOAD_BYTES
+from guiskindose.gui.constants import EXAMPLE_FILES
+from guiskindose.gui.helpers import load_tabular
+from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import upload_builders as ub
+from guiskindose.gui.tabs.upload_builders import MAX_UPLOAD_BYTES
 
 pytest.importorskip("nicegui")
 
@@ -133,7 +133,7 @@ async def test_load_example_success(monkeypatch: pytest.MonkeyPatch) -> None:
     ctrl = _upload_controller()
     ctrl.refs.example_select.value = _PHILIPS_NAME
     path = EXAMPLE_FILES[_PHILIPS_NAME]
-    ok, msg = __import__("mypyskindose.gui.helpers", fromlist=["load_rdsr"]).load_rdsr(path, state)
+    ok, msg = __import__("guiskindose.gui.helpers", fromlist=["load_rdsr"]).load_rdsr(path, state)
     assert ok, msg
     state.file_name = ""
     state.rdsr_df = None

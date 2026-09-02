@@ -9,7 +9,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.tabs.export import _open_path
+from guiskindose.gui.tabs.export import _open_path
 
 
 def _capture(monkeypatch):

@@ -9,7 +9,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.geometry_preview import (
+from guiskindose.gui.geometry_preview import (
     adjust_active_exam_index_after_remove,
     clamp_active_exam_index,
     composite_preview_after_exam_mode_change,
@@ -22,7 +22,7 @@ from mypyskindose.gui.geometry_preview import (
     rdsr_df_for_geometry_preview,
     resolve_composite_for_render,
 )
-from mypyskindose.gui.helpers import (
+from guiskindose.gui.helpers import (
     EXAM_COLUMN,
     EXAM_INDEX_COLUMN,
     apply_patient_offset_slider_tick,
@@ -30,7 +30,7 @@ from mypyskindose.gui.helpers import (
     rebuild_rdsr_df,
     reset_patient_offset_for_active,
 )
-from mypyskindose.gui.state import AppState, reset_results
+from guiskindose.gui.state import AppState, reset_results
 
 
 def _exam(n_events: int, kvp: float) -> SimpleNamespace:
@@ -128,7 +128,7 @@ def test_reset_results_preserves_active_exam_index():
 
 
 def test_commit_table_origin_transform_uses_exam_index():
-    from mypyskindose.gui.helpers import commit_table_origin_transform
+    from guiskindose.gui.helpers import commit_table_origin_transform
 
     st = _multi_exam_state()
     base = pd.DataFrame({"kVp": [70.0], "Tx": [1.0], "Ty": [0.0], "Tz": [0.0]})
@@ -385,21 +385,21 @@ def test_procedure_pause_threshold_param():
 
 
 def test_geometry_vendor_notice_exported_from_preview():
-    from mypyskindose.gui.geometry_preview import geometry_vendor_notice as preview_notice
-    from mypyskindose.gui.tabs.geometry import geometry_vendor_notice as tab_notice
+    from guiskindose.gui.geometry_preview import geometry_vendor_notice as preview_notice
+    from guiskindose.gui.tabs.geometry import geometry_vendor_notice as tab_notice
 
     assert preview_notice is tab_notice
 
 
 def test_event_select_options():
-    from mypyskindose.gui.geometry_preview import event_select_options
+    from guiskindose.gui.geometry_preview import event_select_options
 
     assert event_select_options(5) == {1: "1", 2: "2", 3: "3", 4: "4", 5: "5"}
     assert event_select_options(0) == {1: "1"}
 
 
 def test_exam_selector_options():
-    from mypyskindose.gui.geometry_preview import exam_selector_options
+    from guiskindose.gui.geometry_preview import exam_selector_options
 
     st = AppState()
     st.loaded_exam_meta = [{"file_name": "exam1.dcm"}, {"file_name": "exam2.dcm"}]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import plotly.graph_objects as go
 
-from mypyskindose.constants import (
+from guiskindose.constants import (
     COLOR_CANVAS_DARK,
     COLOR_CANVAS_LIGHT,
     COLOR_PLOT_TEXT_DARK,
@@ -14,10 +14,10 @@ from mypyskindose.constants import (
     PLOT_FONT_FAMILY,
     PLOT_MARGIN,
 )
-from mypyskindose.plotting.create_layout_for_dose_map_plots import (
+from guiskindose.plotting.create_layout_for_dose_map_plots import (
     create_layout_for_dose_map_plots,
 )
-from mypyskindose.plotting.plot_layout import (
+from guiskindose.plotting.plot_layout import (
     COORDINATE_FRAME_NOTE,
     default_dosemap_layout,
     default_geometry_layout,

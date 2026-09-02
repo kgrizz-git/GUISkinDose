@@ -20,7 +20,7 @@ def _isolate_new_gui_config_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ``config_path`` would otherwise leak to the developer's real new file.
     Tests that need the new path present re-patch ``new_config_path``.
     """
-    from mypyskindose.gui import window_prefs
+    from guiskindose.gui import window_prefs
 
     monkeypatch.setattr(
         window_prefs,

@@ -1,4 +1,4 @@
-from mypyskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
+from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
 
 
 def test_calculate_rotation_matrices_returns_the_same_dataframe_with_new_columns_for_rotation_matrices(

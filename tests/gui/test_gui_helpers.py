@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mypyskindose.gui import helpers
+from guiskindose.gui import helpers
 
 
 @pytest.fixture(autouse=True)

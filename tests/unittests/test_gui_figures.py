@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.plotting.plot_layout import COORDINATE_FRAME_NOTE
+from guiskindose.plotting.plot_layout import COORDINATE_FRAME_NOTE
 
 _PATIENT_FOR_EXPORT_TESTS = {
     "patient": {
@@ -21,7 +21,7 @@ _PATIENT_FOR_EXPORT_TESTS = {
 
 
 def test_make_dosemap_fig_includes_coordinate_frame_annotation():
-    from mypyskindose.gui.figures import make_dosemap_fig
+    from guiskindose.gui.figures import make_dosemap_fig
 
     fig = make_dosemap_fig(explicit_dose_map=[1.0, 2.0, 3.0], explicit_patient=_PATIENT_FOR_EXPORT_TESTS)
 
@@ -33,7 +33,7 @@ def test_make_dosemap_fig_includes_coordinate_frame_annotation():
 
 
 def test_make_dosemap_html_returns_html_bytes():
-    from mypyskindose.gui.figures import make_dosemap_html
+    from guiskindose.gui.figures import make_dosemap_html
 
     content = make_dosemap_html(explicit_dose_map=[1.0, 2.0, 3.0], explicit_patient=_PATIENT_FOR_EXPORT_TESTS)
     assert isinstance(content, bytes)
@@ -41,7 +41,7 @@ def test_make_dosemap_html_returns_html_bytes():
 
 
 def test_make_dosemap_html_raises_when_fig_unavailable(monkeypatch):
-    from mypyskindose.gui import figures
+    from guiskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
     with pytest.raises(RuntimeError, match=r"could not be built|Dose map"):
@@ -49,7 +49,7 @@ def test_make_dosemap_html_raises_when_fig_unavailable(monkeypatch):
 
 
 def test_make_dosemap_png_returns_png_bytes():
-    from mypyskindose.gui.figures import make_dosemap_png
+    from guiskindose.gui.figures import make_dosemap_png
 
     content = make_dosemap_png(
         explicit_dose_map=[1.0, 2.0, 3.0], explicit_patient=_PATIENT_FOR_EXPORT_TESTS
@@ -59,7 +59,7 @@ def test_make_dosemap_png_returns_png_bytes():
 
 
 def test_make_dosemap_png_raises_when_fig_unavailable(monkeypatch):
-    from mypyskindose.gui import figures
+    from guiskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
     with pytest.raises(RuntimeError, match=r"could not be built|Dose map"):
@@ -69,27 +69,27 @@ def test_make_dosemap_png_raises_when_fig_unavailable(monkeypatch):
 def _assert_logs_operation_code(monkeypatch, caplog, render_fn, operation_code: str) -> None:
     """Run ``render_fn`` and assert it both raises and logs ``operation_code``.
 
-    Attaches ``caplog``'s handler directly to the ``mypyskindose.gui.figures``
+    Attaches ``caplog``'s handler directly to the ``guiskindose.gui.figures``
     logger instead of relying on root-logger propagation: other test modules in
     this suite exercise the CLI, which calls ``debug.configure_logging()`` and
-    permanently sets ``mypyskindose.propagate = False`` for the rest of the test
+    permanently sets ``guiskindose.propagate = False`` for the rest of the test
     session (it is idempotent via a module-level flag, so nothing resets it).
     Depending on propagation-to-root would make this test's outcome depend on
     unrelated test ordering; attaching the handler here keeps it order-independent.
     """
     import logging
 
-    from mypyskindose.gui import figures
+    from guiskindose.gui import figures
 
     def _boom(*a, **k):
         raise ValueError("synthetic render failure")
 
     monkeypatch.setattr(figures, "make_dosemap_fig", _boom)
-    target_logger = logging.getLogger("mypyskindose.gui.figures")
+    target_logger = logging.getLogger("guiskindose.gui.figures")
     target_logger.addHandler(caplog.handler)
     try:
         with (
-            caplog.at_level("ERROR", logger="mypyskindose.gui.figures"),
+            caplog.at_level("ERROR", logger="guiskindose.gui.figures"),
             pytest.raises(ValueError, match="synthetic render failure"),
         ):
             render_fn(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
@@ -100,12 +100,12 @@ def _assert_logs_operation_code(monkeypatch, caplog, render_fn, operation_code: 
 
 def test_make_dosemap_html_raises_and_logs_on_render_exception(monkeypatch, caplog):
     """A downstream failure (not just a None fig) must also raise, not swallow."""
-    from mypyskindose.gui.figures import make_dosemap_html
+    from guiskindose.gui.figures import make_dosemap_html
 
     _assert_logs_operation_code(monkeypatch, caplog, make_dosemap_html, "dosemap_html_render")
 
 
 def test_make_dosemap_png_raises_and_logs_on_render_exception(monkeypatch, caplog):
-    from mypyskindose.gui.figures import make_dosemap_png
+    from guiskindose.gui.figures import make_dosemap_png
 
     _assert_logs_operation_code(monkeypatch, caplog, make_dosemap_png, "dosemap_png_render")

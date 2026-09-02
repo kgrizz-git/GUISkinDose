@@ -12,14 +12,14 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui import exam_loaders
-from mypyskindose.gui.state import AppState
-from mypyskindose.rdsr_normalizer import RdsrUnitError
+from guiskindose.gui import exam_loaders
+from guiskindose.gui.state import AppState
+from guiskindose.rdsr_normalizer import RdsrUnitError
 
 _EXAMPLE_RDSR = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "mypyskindose"
+    / "guiskindose"
     / "example_data"
     / "RDSR"
     / "siemens_axiom_artis.dcm"

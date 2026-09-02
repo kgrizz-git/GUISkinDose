@@ -7,8 +7,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.rdsr_normalizer import rdsr_normalizer
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -63,7 +63,7 @@ def test_dicom_table_position_attributes_map_to_tx_ty_tz_without_axis_relabeling
 
 
 def test_current_plot_axis_titles_are_historical_pyskindose_aliases():
-    from mypyskindose.constants import PLOT_AXIS_TITLE_X, PLOT_AXIS_TITLE_Y, PLOT_AXIS_TITLE_Z
+    from guiskindose.constants import PLOT_AXIS_TITLE_X, PLOT_AXIS_TITLE_Y, PLOT_AXIS_TITLE_Z
 
     assert PLOT_AXIS_TITLE_X == "X - LON / PT L-R [cm]"
     assert PLOT_AXIS_TITLE_Y == "Y - VER / PT A-P [cm]"

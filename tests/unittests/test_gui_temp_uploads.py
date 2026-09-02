@@ -18,7 +18,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-import mypyskindose.gui.upload_temp_files as temp_files
+import guiskindose.gui.upload_temp_files as temp_files
 
 
 def _make_temp(suffix: str = ".csv") -> Path:

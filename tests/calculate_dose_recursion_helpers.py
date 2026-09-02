@@ -2,7 +2,7 @@
 
 Builds synthetic normalized event tables for stress tests. ``new_geometry`` is
 not a DataFrame column — it is derived at runtime by
-:func:`mypyskindose.geom_calc.check_new_geometry` from geometry columns, so
+:func:`guiskindose.geom_calc.check_new_geometry` from geometry columns, so
 synthetic rows vary ``Tx`` / ``Ap1`` (and related fields) to simulate C-arm
 repositioning between events.
 """
@@ -13,11 +13,11 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
 _SIEMENS_RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 

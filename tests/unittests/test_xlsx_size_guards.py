@@ -9,8 +9,8 @@ from typing import Self
 import pytest
 from openpyxl import Workbook
 
-from mypyskindose.input_adapters import tabular_loader
-from mypyskindose.input_adapters.tabular_loader import (
+from guiskindose.input_adapters import tabular_loader
+from guiskindose.input_adapters.tabular_loader import (
     assert_xlsx_zip_within_budget,
     read_excel,
 )

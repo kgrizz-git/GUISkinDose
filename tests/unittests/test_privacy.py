@@ -7,7 +7,7 @@ import logging
 
 import pytest
 
-from mypyskindose.privacy import (
+from guiskindose.privacy import (
     innermost_location,
     install_value_safe_excepthook,
     opaque_exam_label,
@@ -28,7 +28,7 @@ def _captured_logger(name: str) -> tuple[logging.Logger, logging.StreamHandler[i
 
 def test_safe_error_event_suppresses_exception_message_and_path() -> None:
     sentinel = "PATIENT-SENTINEL-/Users/private/exam.dcm"
-    logger, handler, stream = _captured_logger("mypyskindose.test.privacy")
+    logger, handler, stream = _captured_logger("guiskindose.test.privacy")
 
     try:
         safe_error_event(logger, "dose_calculation", RuntimeError(sentinel))
@@ -53,7 +53,7 @@ def _raise_with_sentinels(sentinel: str) -> RuntimeError:
 def test_safe_error_event_logs_value_free_location_but_not_message() -> None:
     sentinel = "PATIENT-SENTINEL-/Users/private/exam.dcm"
     exc = _raise_with_sentinels(sentinel)
-    logger, handler, stream = _captured_logger("mypyskindose.test.privacy.loc")
+    logger, handler, stream = _captured_logger("guiskindose.test.privacy.loc")
     logger.setLevel(logging.DEBUG)
 
     try:
@@ -64,7 +64,7 @@ def test_safe_error_event_logs_value_free_location_but_not_message() -> None:
     output = stream.getvalue()
     # Value-free diagnostics gained: exception type + our source location + DEBUG trace.
     assert "RuntimeError" in output
-    assert "mypyskindose/privacy.py" not in output  # raised from the test module, not here
+    assert "guiskindose/privacy.py" not in output  # raised from the test module, not here
     assert "test_privacy.py:" in output
     assert "in _raise_with_sentinels" in output
     assert "traceback (value-free)" in output
@@ -106,7 +106,7 @@ def test_safe_traceback_honors_suppressed_context() -> None:
 
 
 def test_safe_warning_accepts_only_non_sensitive_scalars() -> None:
-    logger, handler, stream = _captured_logger("mypyskindose.test.privacy.warning")
+    logger, handler, stream = _captured_logger("guiskindose.test.privacy.warning")
     try:
         safe_warning(logger, "beam_miss_summary", missed=2, total=4)
     finally:
@@ -128,7 +128,7 @@ def test_opaque_exam_label_and_user_error_are_source_independent() -> None:
 def test_value_safe_excepthook_suppresses_traceback_and_exception_text(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    logger = logging.getLogger("mypyskindose.test.privacy.hook")
+    logger = logging.getLogger("guiskindose.test.privacy.hook")
     original = __import__("sys").excepthook
     monkeypatch.setattr(__import__("sys"), "excepthook", original)
     install_value_safe_excepthook(logger, "cli_run")

@@ -1,4 +1,4 @@
-"""Tests for mypyskindose.input_adapters (Phase 1 — normalized schema)."""
+"""Tests for guiskindose.input_adapters (Phase 1 — normalized schema)."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ class TestDetectHeaderRow:
         return pd.DataFrame(rows)
 
     def test_header_at_row_0(self):
-        from mypyskindose.input_adapters.column_mapper import detect_header_row
-        from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
+        from guiskindose.input_adapters.column_mapper import detect_header_row
+        from guiskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
 
         rows = [
             [*list(NORMALIZED_COLUMN_NAMES)[:5], "extra"],
@@ -29,8 +29,8 @@ class TestDetectHeaderRow:
         assert detect_header_row(df, NORMALIZED_COLUMN_NAMES) == 0
 
     def test_header_at_row_2(self):
-        from mypyskindose.input_adapters.column_mapper import detect_header_row
-        from mypyskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
+        from guiskindose.input_adapters.column_mapper import detect_header_row
+        from guiskindose.input_adapters.normalized import NORMALIZED_COLUMN_NAMES
 
         header = list(NORMALIZED_COLUMN_NAMES)
         rows = [
@@ -43,7 +43,7 @@ class TestDetectHeaderRow:
         assert detect_header_row(df, NORMALIZED_COLUMN_NAMES) == 2
 
     def test_no_header_found_raises(self):
-        from mypyskindose.input_adapters.column_mapper import detect_header_row
+        from guiskindose.input_adapters.column_mapper import detect_header_row
 
         df = pd.DataFrame([["1.0", "2.0", "3.0"], ["4.0", "5.0", "6.0"]])
         with pytest.raises(ValueError, match="Could not locate a header row"):
@@ -51,7 +51,7 @@ class TestDetectHeaderRow:
 
     def test_large_export_with_many_unmapped_columns(self):
         """A 100-column export where only 6 columns are known must still succeed."""
-        from mypyskindose.input_adapters.column_mapper import detect_header_row
+        from guiskindose.input_adapters.column_mapper import detect_header_row
 
         known = frozenset({"model", "dsd", "dsi", "kvp", "k irp", "ap1"})
         # 94 unknown columns + 6 known
@@ -66,7 +66,7 @@ class TestDetectHeaderRow:
 class TestMapColumns:
     def test_word_boundary_prevents_dap_to_tube_a_collision(self):
         """'Dose Area Product' must map to total dose, NOT to reference_dose_a."""
-        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+        from guiskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
 
         column_map, warnings = map_columns(["Dose Area Product", "Dose A"], COLUMN_PATTERNS)
         assert column_map.get("Dose Area Product") == "reference_dose_total"
@@ -74,25 +74,25 @@ class TestMapColumns:
         assert not warnings
 
     def test_best_match_picks_longest_pattern(self):
-        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+        from guiskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
 
         column_map, _ = map_columns(["Reference Dose A"], COLUMN_PATTERNS)
         assert column_map.get("Reference Dose A") == "reference_dose_a"
 
     def test_bare_kv_not_matched(self):
-        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+        from guiskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
 
         column_map, _ = map_columns(["kv filter"], COLUMN_PATTERNS)
         assert "kv filter" not in column_map
 
     def test_kvp_matched(self):
-        from mypyskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
+        from guiskindose.input_adapters.column_mapper import COLUMN_PATTERNS, map_columns
 
         column_map, _ = map_columns(["kVp"], COLUMN_PATTERNS)
         assert column_map.get("kVp") == "kvp"
 
     def test_tie_skipped_with_warning(self):
-        from mypyskindose.input_adapters.column_mapper import map_columns
+        from guiskindose.input_adapters.column_mapper import map_columns
 
         # Craft patterns where one column matches two vars equally
         patterns = {"var_a": ["foo"], "var_b": ["foo"]}
@@ -103,7 +103,7 @@ class TestMapColumns:
 
 class TestCheckDuplicateMappings:
     def test_duplicate_detected(self):
-        from mypyskindose.input_adapters.column_mapper import check_duplicate_mappings
+        from guiskindose.input_adapters.column_mapper import check_duplicate_mappings
 
         column_map = {"Col A": "kvp", "Col B": "kvp", "Col C": "model"}
         errors = check_duplicate_mappings(column_map)
@@ -111,7 +111,7 @@ class TestCheckDuplicateMappings:
         assert "kvp" in errors[0]
 
     def test_no_duplicates(self):
-        from mypyskindose.input_adapters.column_mapper import check_duplicate_mappings
+        from guiskindose.input_adapters.column_mapper import check_duplicate_mappings
 
         column_map = {"Col A": "kvp", "Col B": "model"}
         assert check_duplicate_mappings(column_map) == []
@@ -122,7 +122,7 @@ class TestCheckDuplicateMappings:
 
 class TestTabularLoader:
     def test_read_csv_comma(self):
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         result = read_csv(FIXTURES / "normalized_events.csv")
         assert result.delimiter == ","
@@ -130,33 +130,33 @@ class TestTabularLoader:
         assert len(result.raw_df) == 3  # header + 2 data rows
 
     def test_read_tsv(self):
-        from mypyskindose.input_adapters.tabular_loader import read_tsv
+        from guiskindose.input_adapters.tabular_loader import read_tsv
 
         result = read_tsv(FIXTURES / "normalized_events.tsv")
         assert result.delimiter == "\t"
         assert len(result.raw_df) == 3
 
     def test_read_excel(self):
-        from mypyskindose.input_adapters.tabular_loader import read_excel
+        from guiskindose.input_adapters.tabular_loader import read_excel
 
         result = read_excel(FIXTURES / "normalized_events.xlsx")
         assert result.delimiter is None
         assert len(result.raw_df) == 3  # header + 2 data rows
 
     def test_read_semicolon_csv(self):
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         result = read_csv(FIXTURES / "normalized_events_semicolon_decimalcomma.csv")
         assert result.delimiter == ";"
 
     def test_unsupported_suffix_raises(self):
-        from mypyskindose.input_adapters.tabular_loader import load
+        from guiskindose.input_adapters.tabular_loader import load
 
         with pytest.raises(ValueError, match="Unsupported file suffix"):
             load(Path("data.xyz"))
 
     def test_read_excel_metadata_header(self):
-        from mypyskindose.input_adapters.tabular_loader import read_excel
+        from guiskindose.input_adapters.tabular_loader import read_excel
 
         result = read_excel(FIXTURES / "normalized_events_metadata_header.xlsx")
         assert len(result.raw_df) == 5  # 2 metadata + header + 2 data
@@ -167,9 +167,9 @@ class TestTabularLoader:
 
 class TestNormalizedAdapter:
     def _load_and_adapt(self, filename: str):
-        from mypyskindose.input_adapters import normalized as adapter
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.tabular_loader import load
+        from guiskindose.input_adapters import normalized as adapter
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.tabular_loader import load
 
         loaded = load(FIXTURES / filename)
         result = adapter.adapt(loaded, original_filename=filename)
@@ -213,8 +213,8 @@ class TestNormalizedAdapter:
         assert len(prov.column_map) == 23
 
     def test_missing_required_column_raises(self, tmp_path):
-        from mypyskindose.input_adapters import normalized as adapter
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters import normalized as adapter
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         # CSV missing kVp column
         csv_text = "model,DSD,DSI,DID,DSIRP,acquisition_type,acquisition_plane\nX,1,2,3,4,Fluoro,Single\n"
@@ -225,8 +225,8 @@ class TestNormalizedAdapter:
             adapter.adapt(loaded, original_filename="bad.csv")
 
     def test_multistudy_splits(self):
-        from mypyskindose.input_adapters import normalized as adapter
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters import normalized as adapter
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         loaded = read_csv(FIXTURES / "normalized_events_multistudy.csv")
         results = adapter.adapt(loaded, original_filename="normalized_events_multistudy.csv")
@@ -252,8 +252,8 @@ class TestNormalizedAdapter:
 
 class TestRegistry:
     def test_csv_routes_to_normalized(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.csv")
         assert isinstance(result, InputAdapterResult)
@@ -261,28 +261,28 @@ class TestRegistry:
         assert len(result.normalized_data) == 2
 
     def test_xlsx_routes_to_normalized(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.xlsx")
         assert isinstance(result, InputAdapterResult)
         assert len(result.normalized_data) == 2
 
     def test_multistudy_csv_returns_list(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events_multistudy.csv")
         assert isinstance(result, list)
         assert len(result) == 2
 
     def test_unknown_schema_raises(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         with pytest.raises(ValueError, match="Unknown schema"):
             read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="bogus")
 
     def test_dicom_suffix_raises(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         with pytest.raises(ValueError, match="Unsupported suffix"):
             read_and_normalize_input(Path("scan.dcm"))
@@ -294,7 +294,7 @@ class TestRegistry:
 def _default_settings():
     from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
 
-    from mypyskindose.settings import PyskindoseSettings
+    from guiskindose.settings import PyskindoseSettings
 
     return PyskindoseSettings(DEVELOPMENT_PARAMETERS)
 
@@ -304,7 +304,7 @@ GENERIC_RDSR_FIXTURE = FIXTURES / "generic_rdsr_events.csv"
 
 class TestGenericRdsrAdapter:
     def test_csv_round_trip(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             GENERIC_RDSR_FIXTURE,
@@ -315,7 +315,7 @@ class TestGenericRdsrAdapter:
         assert len(result.normalized_data) == 21
 
     def test_normalized_columns_present(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             GENERIC_RDSR_FIXTURE,
@@ -326,7 +326,7 @@ class TestGenericRdsrAdapter:
         assert expected.issubset(set(result.normalized_data.columns))
 
     def test_kvp_numeric(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             GENERIC_RDSR_FIXTURE,
@@ -337,7 +337,7 @@ class TestGenericRdsrAdapter:
         assert (result.normalized_data["kVp"] > 0).all()
 
     def test_provenance_populated(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             GENERIC_RDSR_FIXTURE,
@@ -351,14 +351,14 @@ class TestGenericRdsrAdapter:
         assert "DoseRP_Gy" in prov.column_map.values()
 
     def test_missing_settings_raises(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         with pytest.raises(ValueError, match="settings is required"):
             read_and_normalize_input(GENERIC_RDSR_FIXTURE, input_schema="generic_rdsr_like")
 
     def test_missing_required_column_raises(self, tmp_path):
-        from mypyskindose.input_adapters import generic_rdsr as adapter
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters import generic_rdsr as adapter
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         # CSV missing Manufacturer column
         csv_text = (
@@ -382,16 +382,16 @@ class TestGenericRdsrAdapter:
 
 class TestSchemaAutoDetect:
     def test_auto_detects_normalized(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="auto")
         assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "normalized"
 
     def test_auto_detects_generic_rdsr(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             GENERIC_RDSR_FIXTURE,
@@ -402,7 +402,7 @@ class TestSchemaAutoDetect:
         assert result.provenance.schema_name == "generic_rdsr_like"
 
     def test_auto_raises_on_no_match(self, tmp_path):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         p = tmp_path / "random.csv"
         p.write_text("col_a,col_b,col_c\n1,2,3\n4,5,6\n", encoding="utf-8")
@@ -413,7 +413,7 @@ class TestSchemaAutoDetect:
         """Auto-detection failures raise the specific SchemaDetectionError subclass
         (still a ValueError) so callers like the GUI can show a "choose a schema"
         hint instead of treating it as a parse error."""
-        from mypyskindose.input_adapters.registry import (
+        from guiskindose.input_adapters.registry import (
             SchemaDetectionError,
             read_and_normalize_input,
         )
@@ -434,10 +434,10 @@ class TestSchemaAutoDetect:
         """
         import pandas as pd
 
-        from mypyskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
-        from mypyskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
-        from mypyskindose.input_adapters.registry import _detect_schema
-        from mypyskindose.input_adapters.tabular_loader import _RawLoad
+        from guiskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
+        from guiskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
+        from guiskindose.input_adapters.registry import _detect_schema
+        from guiskindose.input_adapters.tabular_loader import _RawLoad
 
         # Header = every radimetrics known name (full recall) + a single stray
         # generic_rdsr column + many unrelated filler columns (drives precision down).
@@ -461,7 +461,7 @@ DOSETRACK_FIXTURE = FIXTURES / "dosetrack_events.csv"
 
 class TestRadimetricsAdapter:
     def test_csv_round_trip(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_FIXTURE,
@@ -472,7 +472,7 @@ class TestRadimetricsAdapter:
         assert len(result.normalized_data) == 5
 
     def test_normalized_columns_present(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_FIXTURE,
@@ -484,7 +484,7 @@ class TestRadimetricsAdapter:
 
     def test_unit_conversions_applied(self):
         """DoseRP should be in Gy after /1000 conversion from mGy."""
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_FIXTURE,
@@ -497,7 +497,7 @@ class TestRadimetricsAdapter:
         assert result.provenance.unit_conversions.get("CollimatedFieldArea_m2", "").startswith("cm² → m²")
 
     def test_kvp_numeric_and_positive(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_FIXTURE,
@@ -508,7 +508,7 @@ class TestRadimetricsAdapter:
         assert (result.normalized_data["kVp"] > 0).all()
 
     def test_provenance_populated(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_FIXTURE,
@@ -522,14 +522,14 @@ class TestRadimetricsAdapter:
         assert "DoseRP_Gy" in prov.column_map.values()
 
     def test_missing_settings_raises(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         with pytest.raises(ValueError, match="settings is required"):
             read_and_normalize_input(RADIMETRICS_FIXTURE, input_schema="radimetrics")
 
     def test_missing_required_column_raises(self, tmp_path):
-        from mypyskindose.input_adapters import radimetrics as adapter
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters import radimetrics as adapter
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         # CSV missing kVp kV column
         csv_text = (
@@ -547,8 +547,8 @@ class TestRadimetricsAdapter:
             adapter.adapt(loaded, original_filename="bad.csv", settings=_default_settings())
 
     def test_auto_detects_radimetrics(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_FIXTURE,
@@ -569,8 +569,8 @@ RADIMETRICS_LEGACY_FIXTURE = FIXTURES / "radimetrics_events_legacy.csv"
 
 class TestRadimetricsLegacyFormat:
     def test_auto_detects_and_loads(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_LEGACY_FIXTURE,
@@ -588,8 +588,8 @@ class TestRadimetricsLegacyFormat:
     def test_total_reference_dose_mapped_not_per_plane(self):
         """The bare total column maps to DoseRP_Gy; the per-plane (A)/(B) columns
         do not. K_IRP follows the total (30/20/50), not (A) 18/12/30."""
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             RADIMETRICS_LEGACY_FIXTURE,
@@ -605,7 +605,7 @@ class TestRadimetricsLegacyFormat:
 
 class TestDoseTrackAdapter:
     def test_csv_round_trip(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -616,7 +616,7 @@ class TestDoseTrackAdapter:
         assert len(result.normalized_data) == 5
 
     def test_normalized_columns_present(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -628,7 +628,7 @@ class TestDoseTrackAdapter:
 
     def test_unit_conversions_applied(self):
         """Air Kerma should be converted mGy→Gy; DAP Gy·cm²→Gy·m²."""
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -639,7 +639,7 @@ class TestDoseTrackAdapter:
         assert "DoseAreaProduct_Gym2" in result.provenance.unit_conversions
 
     def test_manufacturer_inferred_from_equipment_name(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -650,7 +650,7 @@ class TestDoseTrackAdapter:
 
     def test_plane_code_normalized(self):
         """Integer Plane Code 1 → 'Single Plane' before rdsr_normalizer."""
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -661,7 +661,7 @@ class TestDoseTrackAdapter:
         assert len(result.normalized_data) == 5
 
     def test_kvp_numeric_and_positive(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -672,7 +672,7 @@ class TestDoseTrackAdapter:
         assert (result.normalized_data["kVp"] > 0).all()
 
     def test_provenance_populated(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,
@@ -686,14 +686,14 @@ class TestDoseTrackAdapter:
         assert "DoseRP_Gy" in prov.column_map.values()
 
     def test_missing_settings_raises(self):
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         with pytest.raises(ValueError, match="settings is required"):
             read_and_normalize_input(DOSETRACK_FIXTURE, input_schema="dosetrack")
 
     def test_missing_equipment_name_raises(self, tmp_path):
-        from mypyskindose.input_adapters import dosetrack as adapter
-        from mypyskindose.input_adapters.tabular_loader import read_csv
+        from guiskindose.input_adapters import dosetrack as adapter
+        from guiskindose.input_adapters.tabular_loader import read_csv
 
         # CSV without Equipment Name → cannot infer manufacturer
         csv_text = (
@@ -711,8 +711,8 @@ class TestDoseTrackAdapter:
             adapter.adapt(loaded, original_filename="no_equip.csv", settings=_default_settings())
 
     def test_auto_detects_dosetrack(self):
-        from mypyskindose.input_adapters.models import InputAdapterResult
-        from mypyskindose.input_adapters.registry import read_and_normalize_input
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
             DOSETRACK_FIXTURE,

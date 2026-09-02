@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from mypyskindose import Phantom, PyskindoseSettings, load_settings_example_json
-from mypyskindose.phantom_mesh_names import resolve_human_mesh_stem
+from guiskindose import Phantom, PyskindoseSettings, load_settings_example_json
+from guiskindose.phantom_mesh_names import resolve_human_mesh_stem
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.helpers import get_human_mesh_names
+from guiskindose.gui.helpers import get_human_mesh_names
 
 NEW_MESHES = [
     "ped_preschool_male",
@@ -61,7 +61,7 @@ ARMS_DOWN_MESHES = [
     ]
 ]
 
-PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"
+PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "phantom_data"
 
 
 @pytest.mark.parametrize("mesh_name", NEW_MESHES + ARMS_DOWN_MESHES)
@@ -127,7 +127,7 @@ def test_new_mesh_scale_hook_smoke(mesh_name: str):
 
 
 def test_arms_down_label_and_sort_order():
-    from mypyskindose.phantom_mesh_names import human_mesh_display_label, sort_clinical_mesh_stems
+    from guiskindose.phantom_mesh_names import human_mesh_display_label, sort_clinical_mesh_stems
 
     assert human_mesh_display_label("ped_5y_male_arms_down") == "Pediatric 5y Male (arms down)"
     ordered = sort_clinical_mesh_stems(["ped_5y_male_arms_down", "ped_5y_female", "ped_5y_male"])

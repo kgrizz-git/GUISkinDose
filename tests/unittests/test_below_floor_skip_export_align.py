@@ -12,14 +12,14 @@ import numpy as np
 import pandas as pd
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
-from mypyskindose import constants as c
-from mypyskindose import load_settings_example_json
-from mypyskindose.analyze_data import analyze_data, analyze_multiple_exams
-from mypyskindose.calculate_dose.calculate_dose import _build_output_template, calculate_dose
-from mypyskindose.geom_calc import apply_below_floor_kvp_policy
-from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import constants as c
+from guiskindose import load_settings_example_json
+from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
+from guiskindose.calculate_dose.calculate_dose import _build_output_template, calculate_dose
+from guiskindose.geom_calc import apply_below_floor_kvp_policy
+from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
+from guiskindose.phantom_class import Phantom
+from guiskindose.settings import PyskindoseSettings
 
 
 def _settings_skip() -> PyskindoseSettings:
@@ -94,15 +94,15 @@ def test_single_exam_skip_policy_passes_aligned_data_norm_to_export() -> None:
         return {"psd": 0.0, "events": captured["n_data"]}
 
     with (
-        patch("mypyskindose.analyze_data.calculate_dose", side_effect=_fake_calculate_dose),
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch("guiskindose.analyze_data.calculate_dose", side_effect=_fake_calculate_dose),
+        patch("guiskindose.analyze_data.create_geometry_plot"),
+        patch("guiskindose.analyze_data.create_dose_map_plot"),
         patch(
-            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            "guiskindose.analyze_data.calculate_rotation_matrices",
             side_effect=lambda frame: frame,
         ),
         patch(
-            "mypyskindose.analyze_data.format_analysis_result_for_export",
+            "guiskindose.analyze_data.format_analysis_result_for_export",
             side_effect=_capture_format,
         ),
     ):
@@ -143,14 +143,14 @@ def test_multi_exam_skip_policy_keeps_exam_with_aligned_lengths() -> None:
         return out
 
     with (
-        patch("mypyskindose.analyze_data.calculate_dose", side_effect=_fake_calculate_dose),
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch("guiskindose.analyze_data.calculate_dose", side_effect=_fake_calculate_dose),
+        patch("guiskindose.analyze_data.create_geometry_plot"),
+        patch("guiskindose.analyze_data.create_dose_map_plot"),
         patch(
-            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            "guiskindose.analyze_data.calculate_rotation_matrices",
             side_effect=lambda frame: frame,
         ),
-        patch("mypyskindose.analyze_data._multi_exam_output", side_effect=_capture_multi),
+        patch("guiskindose.analyze_data._multi_exam_output", side_effect=_capture_multi),
     ):
         multi = analyze_multiple_exams([exam], _settings_skip())
 
@@ -186,8 +186,8 @@ def test_all_events_skipped_dict_export_succeeds() -> None:
     settings = _settings_skip()
 
     with (
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch("guiskindose.analyze_data.create_geometry_plot"),
+        patch("guiskindose.analyze_data.create_dose_map_plot"),
     ):
         result = analyze_data(frame, settings)
 
@@ -219,15 +219,15 @@ def test_multi_exam_failure_warning_is_explicit_about_exclusion() -> None:
         return _fake_calculate_dose(normalized_data, settings, table, pad, exam_id=exam_id)
 
     with (
-        patch("mypyskindose.analyze_data.calculate_dose", side_effect=_sometimes_fail),
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch("guiskindose.analyze_data.calculate_dose", side_effect=_sometimes_fail),
+        patch("guiskindose.analyze_data.create_geometry_plot"),
+        patch("guiskindose.analyze_data.create_dose_map_plot"),
         patch(
-            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            "guiskindose.analyze_data.calculate_rotation_matrices",
             side_effect=lambda frame: frame,
         ),
         patch(
-            "mypyskindose.analyze_data._multi_exam_output",
+            "guiskindose.analyze_data._multi_exam_output",
             side_effect=lambda patient, table, pad, raw_output, settings, data_norm: MagicMock(
                 dose_map=raw_output[c.OUTPUT_KEY_DOSE_MAP]
             ),
@@ -280,15 +280,15 @@ def test_multi_exam_exclusion_preserves_import_warnings() -> None:
         return _fake_calculate_dose(normalized_data, settings, table, pad, exam_id=exam_id)
 
     with (
-        patch("mypyskindose.analyze_data.calculate_dose", side_effect=_fail_second),
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch("guiskindose.analyze_data.calculate_dose", side_effect=_fail_second),
+        patch("guiskindose.analyze_data.create_geometry_plot"),
+        patch("guiskindose.analyze_data.create_dose_map_plot"),
         patch(
-            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            "guiskindose.analyze_data.calculate_rotation_matrices",
             side_effect=lambda frame: frame,
         ),
         patch(
-            "mypyskindose.analyze_data._multi_exam_output",
+            "guiskindose.analyze_data._multi_exam_output",
             side_effect=lambda patient, table, pad, raw_output, settings, data_norm: MagicMock(
                 dose_map=raw_output[c.OUTPUT_KEY_DOSE_MAP]
             ),
@@ -335,13 +335,13 @@ def test_multi_exam_no_output_preserves_import_warnings() -> None:
 
     with (
         patch(
-            "mypyskindose.analyze_data.calculate_dose",
+            "guiskindose.analyze_data.calculate_dose",
             return_value=(None, None, None),
         ),
-        patch("mypyskindose.analyze_data.create_geometry_plot"),
-        patch("mypyskindose.analyze_data.create_dose_map_plot"),
+        patch("guiskindose.analyze_data.create_geometry_plot"),
+        patch("guiskindose.analyze_data.create_dose_map_plot"),
         patch(
-            "mypyskindose.analyze_data.calculate_rotation_matrices",
+            "guiskindose.analyze_data.calculate_rotation_matrices",
             side_effect=lambda frame: frame,
         ),
     ):

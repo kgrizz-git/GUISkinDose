@@ -1,4 +1,4 @@
-"""Unit tests for the logging shim in mypyskindose.debug (refactor plan Phase 0.2).
+"""Unit tests for the logging shim in guiskindose.debug (refactor plan Phase 0.2).
 
 dprint() is now a back-compat shim over the stdlib logging framework. These
 tests pin the contract: category gating, message format, file sink, handler
@@ -15,14 +15,14 @@ import os
 
 import pytest
 
-from mypyskindose import debug as dbg
+from guiskindose import debug as dbg
 
 
 @pytest.fixture
 def clean_logging(monkeypatch, tmp_path):
-    """Reset the mypyskindose logger tree and run from a debug.json-free cwd."""
+    """Reset the guiskindose logger tree and run from a debug.json-free cwd."""
     monkeypatch.chdir(tmp_path)
-    root = logging.getLogger("mypyskindose")
+    root = logging.getLogger("guiskindose")
     saved_handlers = root.handlers[:]
     saved_level = root.level
     saved_propagate = root.propagate
@@ -68,14 +68,14 @@ def test_enabled_category_emits_with_name(clean_logging):
     dbg.dprint("GUI", "visible", "joined", "args")
     out = buf.getvalue()
     assert "visible joined args" in out
-    assert "mypyskindose.GUI" in out
+    assert "guiskindose.GUI" in out
 
 
 def test_existing_module_logger_is_configured(clean_logging):
     """Modules that call getLogger(__name__) now have a handler via the tree."""
     dbg.configure_logging(force=True)
     buf = _capture(clean_logging)
-    logging.getLogger("mypyskindose.rdsr_normalizer").warning("module level warning")
+    logging.getLogger("guiskindose.rdsr_normalizer").warning("module level warning")
     assert "module level warning" in buf.getvalue()
 
 
@@ -135,10 +135,10 @@ def test_module_debug_does_not_leak_to_file_by_default(clean_logging, tmp_path):
     reach the file sink — the handler defaults to INFO."""
     log_file = tmp_path / "gui.log"
     dbg.configure_logging(log_file=log_file, force=True)
-    logging.getLogger("mypyskindose.helpers.read_and_normalize_rdsr_data").debug(
+    logging.getLogger("guiskindose.helpers.read_and_normalize_rdsr_data").debug(
         "SECRET /patients/Smith_MRN123.dcm"
     )
-    logging.getLogger("mypyskindose.GUI").info("benign info")
+    logging.getLogger("guiskindose.GUI").info("benign info")
     for h in clean_logging.handlers:
         h.flush()
     contents = log_file.read_text()

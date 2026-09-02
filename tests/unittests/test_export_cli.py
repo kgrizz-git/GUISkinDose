@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 from openpyxl import load_workbook
 
-from mypyskindose.main import run_cli_export, validate_export_flags
+from guiskindose.main import run_cli_export, validate_export_flags
 
-_RDSR = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "example_data" / "RDSR" / "siemens_axiom_artis.dcm"
-_SETTINGS = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "settings_example.json"
+_RDSR = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "example_data" / "RDSR" / "siemens_axiom_artis.dcm"
+_SETTINGS = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "settings_example.json"
 
 
 @pytest.mark.skipif(not _RDSR.exists(), reason="example RDSR missing")

@@ -1,4 +1,4 @@
-from mypyskindose import constants as c
+from guiskindose import constants as c
 
 DEVELOPMENT_PARAMETERS = {
     # modes: 'calculate_dose', 'plot_setup', 'plot_event', 'plot_procedure'

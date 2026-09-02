@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mypyskindose import constants as c
-from mypyskindose import load_settings_example_json
-from mypyskindose.calculate_dose.calculate_dose import calculate_dose
-from mypyskindose.corrections import calculate_k_isq
-from mypyskindose.geom_calc import position_patient_phantom_on_table
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.plotting.create_geometry_plot import create_geometry_plot
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import constants as c
+from guiskindose import load_settings_example_json
+from guiskindose.calculate_dose.calculate_dose import calculate_dose
+from guiskindose.corrections import calculate_k_isq
+from guiskindose.geom_calc import position_patient_phantom_on_table
+from guiskindose.phantom_class import Phantom
+from guiskindose.plotting.create_geometry_plot import create_geometry_plot
+from guiskindose.settings import PyskindoseSettings
 
 
 def _human_phantom(*, human_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> Phantom:
@@ -138,16 +138,16 @@ def test_calculate_dose_constructs_human_patient_with_scale_values():
         return output
 
     with (
-        patch("mypyskindose.calculate_dose.calculate_dose.position_patient_phantom_on_table"),
+        patch("guiskindose.calculate_dose.calculate_dose.position_patient_phantom_on_table"),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.fetch_and_append_hvl",
+            "guiskindose.calculate_dose.calculate_dose.fetch_and_append_hvl",
             side_effect=lambda data_norm, **_kw: data_norm,
         ),
-        patch("mypyskindose.calculate_dose.calculate_dose.check_new_geometry", return_value=[True]),
-        patch("mypyskindose.calculate_dose.calculate_dose.calculate_k_bs", return_value=[MagicMock()]),
-        patch("mypyskindose.calculate_dose.calculate_dose.calculate_k_tab", return_value=[0.8]),
+        patch("guiskindose.calculate_dose.calculate_dose.check_new_geometry", return_value=[True]),
+        patch("guiskindose.calculate_dose.calculate_dose.calculate_k_bs", return_value=[MagicMock()]),
+        patch("guiskindose.calculate_dose.calculate_dose.calculate_k_tab", return_value=[0.8]),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.calculate_irradiation_event_result",
+            "guiskindose.calculate_dose.calculate_dose.calculate_irradiation_event_result",
             side_effect=_return_output_unchanged,
         ),
         patch("tqdm.tqdm", return_value=MagicMock()),
@@ -171,7 +171,7 @@ def test_create_geometry_plot_constructs_human_patient_with_scale_values():
     unscaled = _human_phantom()
     expected_extent = 1.5 * (unscaled.r[:, 0].max() - unscaled.r[:, 0].min())
 
-    with patch("mypyskindose.plotting.create_geometry_plot.plot_geometry") as plot_geometry:
+    with patch("guiskindose.plotting.create_geometry_plot.plot_geometry") as plot_geometry:
         create_geometry_plot(
             normalized_data=pd.DataFrame({"kVp": [80.0]}),
             table=table,
@@ -221,7 +221,7 @@ def test_phantom_settings_scale_values_are_clamped_with_warning():
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose.settings.phantom_settings")
+    logger = logging.getLogger("guiskindose.settings.phantom_settings")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:

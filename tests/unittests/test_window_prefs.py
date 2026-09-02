@@ -8,8 +8,8 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui import window_prefs
-from mypyskindose.gui.window_prefs import (
+from guiskindose.gui import window_prefs
+from guiskindose.gui.window_prefs import (
     NativeWindowPrefs,
     ScreenBounds,
     config_path,
@@ -274,7 +274,7 @@ def test_load_prefers_new_path_and_save_updates_new_path(tmp_path, monkeypatch):
 
 def test_load_modify_save_dismiss_onboarding_with_both_files_existing(tmp_path, monkeypatch):
     """dismiss_onboarding() must persist to the new file when both exist."""
-    from mypyskindose.gui.onboarding import dismiss_onboarding
+    from guiskindose.gui.onboarding import dismiss_onboarding
 
     new_cfg = tmp_path / "new" / "gui.json"
     old_cfg = tmp_path / "old" / "gui.json"
@@ -294,7 +294,7 @@ def test_load_modify_save_dismiss_onboarding_with_both_files_existing(tmp_path, 
     # Next load sees the new file.
     monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
     monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
-    from mypyskindose.gui.onboarding import is_onboarding_dismissed
+    from guiskindose.gui.onboarding import is_onboarding_dismissed
     assert is_onboarding_dismissed() is True
 
 
@@ -345,7 +345,7 @@ def test_load_modify_save_native_window_prefs_with_both_files_existing(tmp_path,
 def test_window_prefs_source_has_no_webview_import():
     from pathlib import Path
 
-    import mypyskindose.gui.window_prefs as wp
+    import guiskindose.gui.window_prefs as wp
 
     source = Path(wp.__file__).read_text(encoding="utf-8")
     assert "import webview" not in source

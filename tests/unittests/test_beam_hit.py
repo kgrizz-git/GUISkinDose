@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from mypyskindose.beam_class import Beam
+from guiskindose.beam_class import Beam
 
 
 def _beam_for_hit_tests() -> Beam:
