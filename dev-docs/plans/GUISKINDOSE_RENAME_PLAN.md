@@ -91,8 +91,10 @@ reset.
 Required behavior:
 
 1. Prefer `~/.guiskindose/` and `.guiskindose.local.json` when they exist.
-2. If the new dir/file is absent, read the old path privately (no raw-path logging) and write
-   subsequent saves to the new path.
+2. If the new dir/file is absent, read the old path privately (no raw-path logging).
+   **PR 0** still writes subsequent saves to the **old** path so this slice stays
+   independently green. **PR 1** flips writes to the new path (this section's
+   long-term contract). Do not create `~/.guiskindose/` by hand until that flip.
 3. `show_demo_phantoms_enabled` must accept `GUISKINDOSE_SHOW_DEMO_PHANTOMS` first, then
    `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS`, then `.env` / local JSON / `gui.json` as today.
 4. Do not delete the old directory from the user's home as part of this change.
@@ -401,7 +403,8 @@ name: `git mv`, Python imports/strings (except Semgrep rule IDs), tests (includi
 assertions if APP_NAME changes here), scripts, `MANIFEST.in`, `pyproject.toml`, CI, hooks,
 inventory path rewrite + render, phi-scan config/baseline, Semgrep includes, help registry,
 feature-doc matrix, doc-freshness paths, Sphinx RST regen, changelog Unreleased, version
-bump. Multiple commits **inside** this PR are fine (directory+imports+inventory first so a
+bump, and set `LIVE_PACKAGE_NAME` in `scripts/check_stale_brand.py` to `"guiskindose"` or
+`None` (search `TODO(PR1)`). Multiple commits **inside** this PR are fine (directory+imports+inventory first so a
 mid-PR checkout can be made buildable; then scripts/CI/docs). Do not open a second PR to
 `main` until this tip is green.
 

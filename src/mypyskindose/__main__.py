@@ -1,4 +1,13 @@
-"""Allow running mypyskindose as a module: python -m mypyskindose"""
+"""Allow running mypyskindose as a module or via the future ``cli()`` console script.
+
+Two equivalent entry points share this body:
+
+- ``python -m mypyskindose`` (today; guarded by ``if __name__ == "__main__":``).
+- A console script wired to ``cli()`` (planned for the GUISkinDose rename). Extracting
+  the body into a plain function keeps ``python -m`` behavior identical and lets a
+  later ``[project.scripts]`` entry point reuse it without going through
+  ``runpy``.
+"""
 
 import logging
 import sys
@@ -20,7 +29,14 @@ logger = logging.getLogger(__name__)
 
 _TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
-if __name__ == "__main__":
+
+def cli() -> None:
+    """Run the mypyskindose CLI.
+
+    Reads ``sys.argv`` and dispatches to the GUI, preview, export, or dose-calculation
+    paths exactly like ``python -m mypyskindose``. Exits the process via ``sys.exit``
+    on invalid export combinations and on ``--input-preview-only`` without a file.
+    """
     install_value_safe_excepthook(logger)
     args = get_argument_parser(sys.argv[1:])
 
@@ -127,3 +143,7 @@ if __name__ == "__main__":
                 main(file_path=single_path, settings=run_settings)
         else:
             main(file_path=None, settings=run_settings)
+
+
+if __name__ == "__main__":
+    cli()

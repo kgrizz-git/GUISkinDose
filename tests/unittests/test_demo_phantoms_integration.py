@@ -69,25 +69,75 @@ def test_show_demo_phantoms_env_overrides_home_gui_json(monkeypatch, tmp_path):
     assert window_prefs.show_demo_phantoms_enabled() is True
 
 
-def test_show_demo_phantoms_repo_local_json_and_dotenv(monkeypatch, tmp_path):
+def test_show_demo_phantoms_new_env_wins_over_old_env(monkeypatch, tmp_path):
+    from mypyskindose.gui import window_prefs
+
+    cfg = tmp_path / "gui.json"
+    cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: cfg)
+    monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: None)
+    monkeypatch.setenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, "1")
+    monkeypatch.setenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV_NEW, "0")
+    assert window_prefs.show_demo_phantoms_enabled() is False
+
+
+def test_show_demo_phantoms_unrecognized_new_env_falls_through_to_old_env(monkeypatch, tmp_path):
+    from mypyskindose.gui import window_prefs
+
+    cfg = tmp_path / "gui.json"
+    cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: cfg)
+    monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: None)
+    monkeypatch.setenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV_NEW, "bogus")
+    monkeypatch.setenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, "1")
+    assert window_prefs.show_demo_phantoms_enabled() is True
+
+
+def test_show_demo_phantoms_new_local_json_wins_over_old_local_json(monkeypatch, tmp_path):
     from mypyskindose.gui import window_prefs
 
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
     home_cfg = tmp_path / "home_gui.json"
     home_cfg.write_text("{}\n", encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: home_cfg)
+    monkeypatch.delenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV_NEW, raising=False)
     monkeypatch.delenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, raising=False)
     monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: tmp_path)
 
-    local = tmp_path / window_prefs.REPO_LOCAL_GUI_CONFIG_NAME
-    local.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
+    new_local = tmp_path / window_prefs.REPO_LOCAL_GUI_CONFIG_NAME_NEW
+    new_local.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
     assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is True
 
-    local.write_text("{}\n", encoding="utf-8")
+    # New file present but without the key wins the path slot; old file is not consulted.
+    new_local.write_text("{}\n", encoding="utf-8")
+    old_local = tmp_path / window_prefs.REPO_LOCAL_GUI_CONFIG_NAME
+    old_local.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
     assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is False
+
+    # Removing the new file falls back to the old one.
+    new_local.unlink()
+    assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is True
+
+
+def test_show_demo_phantoms_new_dotenv_wins_over_old_dotenv(monkeypatch, tmp_path):
+    from mypyskindose.gui import window_prefs
+
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "mypyskindose"\n', encoding="utf-8")
+    home_cfg = tmp_path / "home_gui.json"
+    home_cfg.write_text('{"show_demo_phantoms": true}\n', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: home_cfg)
+    monkeypatch.delenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV_NEW, raising=False)
+    monkeypatch.delenv(window_prefs.SHOW_DEMO_PHANTOMS_ENV, raising=False)
+    monkeypatch.setattr(window_prefs, "find_repo_root", lambda start=None: tmp_path)
 
     (tmp_path / ".env").write_text(
         f"# local\n{window_prefs.SHOW_DEMO_PHANTOMS_ENV}=true\n",
         encoding="utf-8",
     )
     assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is True
+
+    (tmp_path / ".env").write_text(
+        f"# local\n{window_prefs.SHOW_DEMO_PHANTOMS_ENV_NEW}=false\n",
+        encoding="utf-8",
+    )
+    assert window_prefs.show_demo_phantoms_enabled(start=tmp_path) is False

@@ -148,6 +148,8 @@ jobs:
       run: python scripts/check_feature_doc_matrix.py
     - name: Check file sizes (<800 lines)
       run: python scripts/check_file_sizes.py
+    - name: Check for stale brand strings
+      run: python scripts/check_stale_brand.py
     - name: Check GUI test placement (no nicegui imports outside tests/gui)
       run: python scripts/check_gui_test_placement.py
     - name: Build sdist and wheel

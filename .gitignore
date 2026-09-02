@@ -99,3 +99,4 @@ sonar-project.properties.local
 
 # Per-checkout GUI / developer prefs (e.g. show_demo_phantoms); never commit
 .mypyskindose.local.json
+.guiskindose.local.json

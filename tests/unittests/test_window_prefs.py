@@ -223,6 +223,52 @@ def test_config_path_under_home():
     assert config_path().parent.name == ".mypyskindose"
 
 
+def test_load_gui_config_prefers_new_home_path_when_both_exist(tmp_path, monkeypatch):
+    new_cfg = tmp_path / "new" / "gui.json"
+    old_cfg = tmp_path / "old" / "gui.json"
+    new_cfg.parent.mkdir()
+    old_cfg.parent.mkdir()
+    new_cfg.write_text('{"new": true}', encoding="utf-8")
+    old_cfg.write_text('{"old": true}', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+    assert load_gui_config() == {"new": True}
+
+
+def test_load_gui_config_falls_back_to_old_home_path_when_new_missing(tmp_path, monkeypatch):
+    old_cfg = tmp_path / "old" / "gui.json"
+    old_cfg.parent.mkdir()
+    old_cfg.write_text('{"old": true}', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+    assert load_gui_config() == {"old": True}
+
+
+def test_save_gui_config_still_writes_old_path(tmp_path, monkeypatch):
+    target = tmp_path / "nested" / "gui.json"
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    save_gui_config({"k": "v"})
+    assert json.loads(target.read_text(encoding="utf-8")) == {"k": "v"}
+    new_path = tmp_path / ".guiskindose" / "gui.json"
+    assert not new_path.exists()
+
+
+def test_load_prefers_new_path_but_save_still_writes_old_path(tmp_path, monkeypatch):
+    """PR 0 contract: both files exist → read new content, write still goes to old path."""
+    new_cfg = tmp_path / "new" / "gui.json"
+    old_cfg = tmp_path / "old" / "gui.json"
+    new_cfg.parent.mkdir()
+    old_cfg.parent.mkdir()
+    new_cfg.write_text('{"from": "new"}', encoding="utf-8")
+    old_cfg.write_text('{"from": "old"}', encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+
+    assert load_gui_config() == {"from": "new"}
+    save_gui_config({"saved": True})
+    assert json.loads(old_cfg.read_text(encoding="utf-8")) == {"saved": True}
+    assert json.loads(new_cfg.read_text(encoding="utf-8")) == {"from": "new"}
+
+
 def test_window_prefs_source_has_no_webview_import():
     from pathlib import Path
 

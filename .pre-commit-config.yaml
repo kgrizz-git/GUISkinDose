@@ -152,6 +152,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-stale-brand
+        name: check for stale brand strings
+        entry: python scripts/check_stale_brand.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-gui-test-placement
         name: GUI test placement (no nicegui imports outside tests/gui)
         entry: python scripts/check_gui_test_placement.py
