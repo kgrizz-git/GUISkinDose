@@ -38,7 +38,7 @@ repos:
         name: bandit (src + scripts, medium+ severity)
         # Pre-commit passes staged file paths; do not use -r here (CI scans directories).
         args: ["-c", "pyproject.toml", "--severity-level", "medium"]
-        files: ^(src/mypyskindose|scripts)/
+        files: ^(src/guiskindose|scripts)/
 
   - repo: local
     hooks:

@@ -161,7 +161,7 @@ jobs:
         python scripts/audit_dependencies.py
         python scripts/check_licenses.py
     - name: Bandit (Python SAST, medium+ severity)
-      run: bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+      run: bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)
       run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
 
@@ -274,7 +274,7 @@ jobs:
     - name: Install dependencies (locked)
       run: uv sync --extra dev --locked --python ${{ matrix.python-version }}
     - name: Compile check
-      run: uv run --no-sync python -m compileall src/mypyskindose
+      run: uv run --no-sync python -m compileall src/guiskindose
     - name: Lint with ruff
       run: uv run --no-sync ruff check src tests
     - name: Test with pytest
@@ -320,12 +320,12 @@ jobs:
       run: |
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
         uv run --no-sync pytest tests/gui/ \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-append --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     - name: Combined coverage threshold (≥80%)
-      run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=80
+      run: uv run --no-sync coverage report --include="src/guiskindose/*" --fail-under=80
     - name: Diff coverage vs base (≥80% of changed lines)
       env:
         BASE_REF: ${{ github.base_ref }}
@@ -367,9 +367,9 @@ jobs:
       run: |
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
         uv run --no-sync pytest tests/gui/ \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-append --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     # CI-based analysis is authoritative (Automatic Analysis disabled). Reads
     # sonar-project.properties. This job stays disabled until a repository administrator

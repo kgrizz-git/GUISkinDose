@@ -80,6 +80,9 @@ omit pure CI/refactor bullets and point readers here. See
   Markdown links and backtick paths that pointed at `src/mypyskindose` now point at
   `src/guiskindose`. Tests, console script, and `LIVE_PACKAGE_NAME` are later slices.
   Semgrep rule IDs and live GitHub/Sonar URLs are unchanged.
+  Bandit pre-commit `files:` and CI bandit/compileall/coverage now scan `src/guiskindose`
+  (they still targeted `src/mypyskindose` after the `git mv`). Semgrep YAML includes and
+  `.phi-scanner.yml` paths remain a later slice so rule IDs stay `mypyskindose-*`.
 
 - **GUI config saves now write `~/.guiskindose/gui.json`** (2026-09-02) — `save_gui_config()`
   persists to the new home path (creating the directory as needed). Reads still fall back to
