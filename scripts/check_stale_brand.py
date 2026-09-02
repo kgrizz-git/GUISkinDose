@@ -6,11 +6,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-# TODO(PR1): set LIVE_PACKAGE_NAME to "guiskindose" or None after src/ is renamed.
-# While this equals "mypyskindose", check_file() strips every BAD_STRINGS token and
-# the hook is a no-op on live package/brand hits (intentional so PR 0 stays green).
-# Forgetting this in PR 1 leaves leftover mypyskindose imports invisible to CI.
-LIVE_PACKAGE_NAME = "mypyskindose"
+# After the src/ rename, any value other than "mypyskindose" (including None) makes
+# leftover pre-rename package/brand tokens fail this gate. Dual-read fallbacks and
+# historical identity phrases are allowlisted in ALLOWED_PATTERNS, not here.
+LIVE_PACKAGE_NAME = "guiskindose"
 
 BAD_STRINGS = ["mypyskindose", "MyPySkinDose", "MYPYSKINDOSE_"]
 
@@ -40,7 +39,19 @@ ALLOWED_PATTERNS = [
     # Rule IDs in tests (e.g., "mypyskindose-unsafe-gui-export-write")
     # Exclude temp prefixes and the semgrep yaml file name itself that must be renamed.
     re.compile(r"[\"']mypyskindose-(?!uploads|export|semgrep|hounddog|privacy)[a-zA-Z0-9_-]+[\"']"),
+    # Dual-read config/env leftovers that must remain until users migrate.
+    re.compile(r"MYPYSKINDOSE_SHOW_DEMO_PHANTOMS"),
+    re.compile(r"\.mypyskindose"),
+    re.compile(r"mypyskindose-privacy\.yml"),
+    # Historical identity (formerly the MyPySkinDose / mypyskindose names).
+    re.compile(r"formerly\s+[`']?mypyskindose[`']?"),
+    re.compile(r"formerly\s+MyPySkinDose"),
+    re.compile(r"MyPySkinDose\s+[`']?25\.2\.0[`']?"),
+    # Dual-read traceback sanitizer: package dir names in Path.parts.
+    re.compile(r"""\(['\"]guiskindose['\"],\s*['\"]mypyskindose['\"]\)"""),
+    re.compile(r"``mypyskindose/?``"),
 ]
+
 
 def is_path_allowed(rel_path: str) -> bool:
     """Return True when *rel_path* is an allowlisted file or under an allowlisted directory.
@@ -49,16 +60,14 @@ def is_path_allowed(rel_path: str) -> bool:
     File entries match exactly so a suffix such as ``CHANGELOG.md.bak`` is not exempt.
     """
     return any(
-        rel_path.startswith(allowed) if allowed.endswith("/") else rel_path == allowed
-        for allowed in ALLOWED_PATHS
+        rel_path.startswith(allowed) if allowed.endswith("/") else rel_path == allowed for allowed in ALLOWED_PATHS
     )
+
 
 def get_git_files(repo_root: Path) -> list[str]:
     """Return all git-tracked files."""
     try:
-        output = subprocess.check_output(
-            ["git", "ls-files"], cwd=repo_root, text=True, stderr=subprocess.DEVNULL
-        )
+        output = subprocess.check_output(["git", "ls-files"], cwd=repo_root, text=True, stderr=subprocess.DEVNULL)
         return output.splitlines()
     except (subprocess.CalledProcessError, OSError):
         # Fallback if git fails (e.g. not in a git repo)
@@ -103,8 +112,8 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
                 # Strip permanently allowed patterns
                 for pattern in ALLOWED_PATTERNS:
                     line_to_check = pattern.sub("", line_to_check)
-                
-                # If PR 0 live-package allowance is active, strip all bad strings.
+
+                # PR 0 no-op: only when the live name is still the old package.
                 if live_package_name == "mypyskindose":
                     for bad in BAD_STRINGS:
                         line_to_check = line_to_check.replace(bad, "")
@@ -124,10 +133,11 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
 
     return errors
 
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     files = get_git_files(repo_root)
-    
+
     all_errors = []
     for rel_path in files:
         # Skip binary noise
@@ -136,15 +146,16 @@ def main() -> int:
         file_path = repo_root / rel_path
         if file_path.exists():
             all_errors.extend(check_file(file_path, repo_root))
-            
+
     if all_errors:
         print("ERROR: Stale brand strings found:", file=sys.stderr)
         for error in all_errors:
             print(error, file=sys.stderr)
         return 1
-        
+
     print("SUCCESS: No disallowed stale brand strings found.")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

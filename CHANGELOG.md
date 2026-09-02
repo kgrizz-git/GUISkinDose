@@ -5,10 +5,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`;
-`name` is already `guiskindose`). **First GUISkinDose version is `1.0.0`** — a new
-distribution identity, not a continuation of the `25.2.0` calendar line. Do not bump
-`pyproject.toml` to `1.0.0` until the packaging commit. Bump `pyproject.toml` when releasing.
+**Version source of truth:** the package version in `pyproject.toml` (currently `1.0.0`).
+**First GUISkinDose version is `1.0.0`** — a new distribution identity, formerly
+MyPySkinDose `25.2.0` / a fork of PySkinDose. Historical sections through `[25.2.0]`
+remain MyPySkinDose history. Bump `pyproject.toml` when releasing.
 
 This file records **notable** user-facing *and* maintainer-facing changes (features, fixes,
 CI/harness, refactors, privacy gates). That keeps SemVer and contributor history honest.
@@ -19,10 +19,9 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
-> **Identity lock:** the first GUISkinDose / `guiskindose` release is **`1.0.0`**. Live
-> `pyproject.toml` `name` is already `guiskindose`; version stays `25.2.0` until the
-> packaging commit that sets `1.0.0`. Historical sections through `[25.2.0]` below remain
-> MyPySkinDose history.
+> **Identity lock:** `pyproject.toml` is `guiskindose` **`1.0.0`**. This is a new
+> distribution identity, formerly MyPySkinDose `25.2.0` / a fork of PySkinDose.
+> Historical sections through `[25.2.0]` below remain MyPySkinDose history.
 
 ### Added
 
@@ -60,6 +59,13 @@ omit pure CI/refactor bullets and point readers here. See
   stdlib `abs()`. Semantically identical; no behavior change.
 
 ### Changed
+
+- **First `guiskindose` package version is `1.0.0`** (2026-09-02) — `pyproject.toml`
+  `version` and Sphinx `release` set together; `[project.scripts] guiskindose` points at
+  `guiskindose.__main__:cli`. `LIVE_PACKAGE_NAME` is `guiskindose` so leftover pre-rename
+  brand strings fail CI. Dual-read of `~/.mypyskindose/` and
+  `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS` remains. Formerly MyPySkinDose `25.2.0` / a fork of
+  PySkinDose.
 
 - **First GUISkinDose version locked at `1.0.0`** (2026-09-02) — new PyPI/import identity,
   not MyPySkinDose `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream

@@ -154,7 +154,7 @@ twine upload dist/*
 Before uploading a new version, update the version in `pyproject.toml`:
 
 ```toml
-version = "25.2.0"  # was 25.1.1
+version = "1.0.0"  # first GUISkinDose identity; was MyPySkinDose 25.2.0
 ```
 
 PyPI does not allow re-uploading the same version number.
@@ -168,7 +168,7 @@ You can also automate PyPI uploads via GitHub Actions. The project already has a
 | Aspect | Without Package | With Package |
 |--------|-----------------|--------------|
 | Imports | Manual `sys.path` manipulation | Just works |
-| CLI | Full path to `__main__.py` | `python -m guiskindose` |
+| CLI | Full path to `__main__.py` | `guiskindose` or `python -m guiskindose` |
 | Dependencies | Install manually | Automatic |
 | Distribution | Clone repo + manual setup | `pip install ...` |
 | Versioning | Ad-hoc | Built-in metadata |

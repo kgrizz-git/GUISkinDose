@@ -8,8 +8,9 @@
 For the full release map (changelog vs GitHub notes, SemVer, portable executables, checklist), see
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
-**First GUISkinDose / `guiskindose` version is `1.0.0`** (new distribution identity; live package
-is still GUISkinDose `25.2.0`). Do not publish `guiskindose` as `1.0.0`. Details:
+**First GUISkinDose / `guiskindose` version is `1.0.0`** (new distribution identity;
+formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). This fork is **not currently
+published** to PyPI. Details:
 [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
 
 ## How releasing works now

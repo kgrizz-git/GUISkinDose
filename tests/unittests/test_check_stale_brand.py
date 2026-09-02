@@ -5,12 +5,13 @@ from pathlib import Path
 from scripts.check_stale_brand import LIVE_PACKAGE_NAME, check_file, is_path_allowed
 
 
-def test_live_package_name_pr1_todo_is_present() -> None:
-    """PR 0 gate is a no-op until LIVE_PACKAGE_NAME is tightened; keep the marker."""
+def test_live_package_name_is_not_noop() -> None:
+    """PR 1: leftover pre-rename tokens fail the live-tree gate."""
     source = Path(__file__).resolve().parents[2] / "scripts" / "check_stale_brand.py"
     text = source.read_text(encoding="utf-8")
-    assert "TODO(PR1)" in text
-    assert LIVE_PACKAGE_NAME == "mypyskindose"
+    assert "TODO(PR1)" not in text
+    assert LIVE_PACKAGE_NAME in ("guiskindose", None)
+    assert LIVE_PACKAGE_NAME != "mypyskindose"
 
 
 def test_stale_brand_live_package_allowance(tmp_path: Path):
@@ -19,10 +20,11 @@ def test_stale_brand_live_package_allowance(tmp_path: Path):
     file_path = repo_root / "src" / "mypyskindose" / "foo.py"
     file_path.parent.mkdir(parents=True)
     file_path.write_text("import mypyskindose\nfrom MyPySkinDose import MYPYSKINDOSE_VAR\n")
-    
+
     # Check with live package name allowed (PR 0 mode)
     errors = check_file(file_path, repo_root, live_package_name="mypyskindose")
     assert not errors
+
 
 def test_stale_brand_fails_closed(tmp_path: Path):
     """When LIVE_PACKAGE_NAME is guiskindose, stray strings fail."""
@@ -30,18 +32,19 @@ def test_stale_brand_fails_closed(tmp_path: Path):
     file_path = repo_root / "src" / "guiskindose" / "foo.py"
     file_path.parent.mkdir(parents=True)
     file_path.write_text("import mypyskindose\nprint('MyPySkinDose')\n")
-    
+
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert len(errors) == 2
     assert "import mypyskindose" in errors[0]
     assert "print('MyPySkinDose')" in errors[1]
+
 
 def test_stale_brand_permanent_allowlist(tmp_path: Path):
     """Even when LIVE_PACKAGE_NAME is guiskindose, permanent allowlist rules apply."""
     repo_root = tmp_path
     file_path = repo_root / "src" / "guiskindose" / "foo.py"
     file_path.parent.mkdir(parents=True)
-    
+
     file_content = (
         "# nosemgrep: mypyskindose-some-rule\n"
         "rule = 'mypyskindose-unsafe-gui-export-write'\n"
@@ -50,16 +53,17 @@ def test_stale_brand_permanent_allowlist(tmp_path: Path):
         "key = 'kgrizz-git_MyPySkinDose'\n"
     )
     file_path.write_text(file_content)
-    
+
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert not errors
+
 
 def test_stale_brand_excludes_paths(tmp_path: Path):
     """Entire paths on the allowlist are skipped."""
     repo_root = tmp_path
     file_path = repo_root / "CHANGELOG.md"
     file_path.write_text("This mentions MyPySkinDose and mypyskindose freely.\n")
-    
+
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert not errors
 
@@ -73,13 +77,14 @@ def test_stale_brand_allowlist_matches_files_exactly() -> None:
     assert is_path_allowed("dev-docs/plans/archive/old.md") is True
     assert is_path_allowed("dev-docs/plans/archive_extra/old.md") is False
 
+
 def test_stale_brand_temp_prefixes_not_allowed(tmp_path: Path):
     """Temp prefixes like mypyskindose-uploads should fail closed after PR 1."""
     repo_root = tmp_path
     file_path = repo_root / "src" / "guiskindose" / "foo.py"
     file_path.parent.mkdir(parents=True)
     file_path.write_text("prefix = 'mypyskindose-uploads'\n")
-    
+
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert len(errors) == 1
     assert "mypyskindose-uploads" in errors[0]
@@ -91,3 +96,39 @@ def test_stale_brand_skips_nul_files(tmp_path: Path) -> None:
     file_path.parent.mkdir(parents=True)
     file_path.write_bytes(b"mypyskindose\x00rest")
     assert check_file(file_path, repo_root, live_package_name="guiskindose") == []
+
+
+def test_stale_brand_allows_dual_read_and_historical_identity(tmp_path: Path) -> None:
+    """Config/env fallbacks and 'formerly MyPySkinDose 25.2.0' remain allowed."""
+    repo_root = tmp_path
+    file_path = repo_root / "src" / "guiskindose" / "window_prefs.py"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_text(
+        "\n".join(
+            [
+                'SHOW = "MYPYSKINDOSE_SHOW_DEMO_PHANTOMS"',
+                'path = Path.home() / ".mypyskindose" / "gui.json"',
+                'rules = ".semgrep/mypyskindose-privacy.yml"',
+                "The package name in code is guiskindose (formerly `mypyskindose`).",
+                "formerly MyPySkinDose, a fork of PySkinDose.",
+                "not a continuation of MyPySkinDose `25.2.0`.",
+                'for package_name in ("guiskindose", "mypyskindose"):',
+                "legacy ``mypyskindose/`` traceback frames",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert errors == []
+
+
+def test_stale_brand_still_rejects_import_of_old_package(tmp_path: Path) -> None:
+    """Quoted dual-read names are allowed; an unquoted import is not."""
+    repo_root = tmp_path
+    file_path = repo_root / "src" / "guiskindose" / "oops.py"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_text("import mypyskindose\n", encoding="utf-8")
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert len(errors) == 1
+    assert "import mypyskindose" in errors[0]

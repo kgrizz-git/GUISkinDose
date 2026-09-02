@@ -4,7 +4,7 @@
 
 ## Objective
 
-In `--native` mode, restore the window’s last size, position, and maximized state from `~/.mypyskindose/gui.json`. First launch: start **maximized** with normal bounds set to **75% of the largest detected screen, centered** so Restore works immediately. Browser mode is unchanged.
+In `--native` mode, restore the window’s last size, position, and maximized state from `~/.guiskindose/gui.json` (read fallback: `~/.mypyskindose/gui.json`). First launch: start **maximized** with normal bounds set to **75% of the largest detected screen, centered** so Restore works immediately. Browser mode is unchanged.
 
 `main.py` is unchanged — `--native` is already plumbed to `run_gui(native=True)`.
 

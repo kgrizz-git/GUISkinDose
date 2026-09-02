@@ -1,12 +1,9 @@
-"""Allow running guiskindose as a module or via the future ``cli()`` console script.
+"""Allow running guiskindose as a module or via the ``guiskindose`` console script.
 
 Two equivalent entry points share this body:
 
-- ``python -m guiskindose`` (today; guarded by ``if __name__ == "__main__":``).
-- A console script wired to ``cli()`` (planned for the GUISkinDose rename). Extracting
-  the body into a plain function keeps ``python -m`` behavior identical and lets a
-  later ``[project.scripts]`` entry point reuse it without going through
-  ``runpy``.
+- ``python -m guiskindose`` (guarded by ``if __name__ == "__main__":``).
+- The ``[project.scripts] guiskindose = "guiskindose.__main__:cli"`` console script.
 """
 
 import logging
@@ -84,6 +81,7 @@ def cli() -> None:
         file_paths_raw: list[str] = args.file_path or []
 
         from pathlib import Path
+
         file_paths: list[str] = []
         for fp in file_paths_raw:
             p = Path(fp)
@@ -119,6 +117,7 @@ def cli() -> None:
             print("Report written successfully.")
         elif len(file_paths) > 1:
             from guiskindose.main import analyze_multiple_input_files
+
             result = analyze_multiple_input_files(
                 file_paths,
                 settings=run_settings,
@@ -129,6 +128,7 @@ def cli() -> None:
                 print(f"{result.aggregate_psd:.4f}")
             else:
                 import json as _json
+
                 print(_json.dumps(result.to_dict()))
         elif len(file_paths) == 1:
             single_path = file_paths[0]

@@ -244,7 +244,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tomli | 2.4.1 | MIT | Homepage, https://github.com/hukkin/tomli |
 | tomli_w | 1.2.0 | MIT | Changelog, https://github.com/hukkin/tomli-w/blob/master/CHANGELOG.md |
 | tomlkit | 0.15.0 | MIT | Homepage, https://github.com/python-poetry/tomlkit |
-| tornado | 6.5.7 | Apache-2.0 | http://www.tornadoweb.org/ |
+| tornado | 6.5.8 | Apache-2.0 | http://www.tornadoweb.org/ |
 | tqdm | 4.68.1 | MIT | homepage, https://tqdm.github.io |
 | traitlets | 5.15.1 | BSD-3-Clause | Homepage, https://github.com/ipython/traitlets |
 | truststore | 0.10.4 | MIT | Documentation, https://truststore.readthedocs.io |

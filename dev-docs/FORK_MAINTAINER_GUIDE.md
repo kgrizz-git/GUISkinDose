@@ -409,8 +409,8 @@ Before each release, review pyproject.toml:
 
 - Distribution name and import package remain distinct from upstream.
 - Version follows the project SemVer policy and agrees with CHANGELOG.md.
-  **First GUISkinDose / `guiskindose` version is `1.0.0`** (new identity; live package
-  remains GUISkinDose `25.2.0` until the rename packaging commit). See
+  **First GUISkinDose / `guiskindose` version is `1.0.0`** (new identity; formerly
+  MyPySkinDose `25.2.0` / a fork of PySkinDose). See
   [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
 - Homepage, documentation, and bug-tracker URLs work. After the GitHub fork is renamed,
   follow [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md)

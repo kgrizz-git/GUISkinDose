@@ -79,8 +79,9 @@ python -m guiskindose --mode gui --native     # native window (requires pywebvie
 ```
 
 Native window mode remembers the last window size, position, and maximized state in
-`~/.mypyskindose/gui.json` (first launch opens maximized; Restore returns to the saved
-normal size).
+`~/.guiskindose/gui.json` (first launch opens maximized; Restore returns to the saved
+normal size). Existing `~/.mypyskindose/gui.json` is still read when the new file is
+absent.
 
 ### Network exposure (browser mode)
 

@@ -60,7 +60,7 @@ body:
     attributes:
       label: GUISkinDose version
       description: From `pyproject.toml` or `import guiskindose; print(guiskindose.__version__)` if available.
-      placeholder: "25.2.0"
+      placeholder: "1.0.0"
     validations:
       required: true
   - type: input

@@ -124,7 +124,7 @@ def test_find_absolute_path_hits_reports_file_uri_and_absolute_placeholder(tmp_p
     doc = repo_root / "README.md"
     doc.write_text(
         "[bad](file:///Users/name/project/dev-docs/index.md)\n"
-        "Do not use /path/to/MyPySkinDose/src in docs.\n",
+        "Do not use /path/to/GUISkinDose/src in docs.\n",
         encoding="utf-8",
     )
 

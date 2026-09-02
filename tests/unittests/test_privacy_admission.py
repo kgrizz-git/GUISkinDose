@@ -101,7 +101,7 @@ def test_phi_filename_findings_flag_structural_and_name_tokens() -> None:
     findings = phi_filename_findings(
         policy,
         [
-            "src/mypyskindose/beam_class.py",
+            "src/guiskindose/beam_class.py",
             "exports/MRN_00123_rdsr.dcm",
             "data/john_smith_case.csv",
             "cases/patient_name_list.xlsx",

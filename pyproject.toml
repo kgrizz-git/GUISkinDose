@@ -1,6 +1,6 @@
 [project]
 name = "guiskindose"
-version = "25.2.0"
+version = "1.0.0"
 description = "Tools and script for calculating peak skin dose and create dose maps for fluoroscopic exams from RDSR data (fork of PySkinDose)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -100,6 +100,9 @@ dev = [
     "playwright>=1.40",
     "pytest-playwright>=0.4",
 ]
+
+[project.scripts]
+guiskindose = "guiskindose.__main__:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

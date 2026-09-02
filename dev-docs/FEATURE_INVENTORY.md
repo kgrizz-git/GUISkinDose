@@ -484,7 +484,7 @@ python -m guiskindose.main [--mode headless|gui] [--file-path PATH] [--settings 
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Restore last size/position/maximized | Shipped | `~/.mypyskindose/gui.json`; first run maximized with 75% centered normal bounds |
+| Restore last size/position/maximized | Shipped | `~/.guiskindose/gui.json` (reads `~/.mypyskindose/gui.json` if the new file is absent); first run maximized with 75% centered normal bounds |
 | Event-driven save | Shipped | Debounced commits on `resized`/`moved`; flush on native `closed` |
 
 Implementation: `gui/window_prefs.py`, wired in `gui/app.py` when `native=True`.

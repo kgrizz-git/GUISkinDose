@@ -5,8 +5,8 @@ from scripts.check_untracked_scratch import check_untracked_scratch
 def test_check_untracked_scratch_no_scratch_files():
     # Mock git output with no scratch files
     git_output = (
-        " M src/mypyskindose/gui/app.py\n"
-        "?? src/mypyskindose/new_feature.py\n"
+        " M src/guiskindose/gui/app.py\n"
+        "?? src/guiskindose/new_feature.py\n"
         "?? tests/unittests/test_new_feature.py\n"
     )
     assert check_untracked_scratch(mock_git_output=git_output) is True

@@ -1,8 +1,8 @@
 """Unit tests for the ``guiskindose.__main__:cli`` entry point.
 
-These guard PR 0 of the GUISkinDose rename: a future
-``[project.scripts] guiskindose = "guiskindose.__main__:cli"`` line reuses this
-function, so it must exist, be callable, and reach the same argument parser as
+These guard the GUISkinDose console script:
+``[project.scripts] guiskindose = "guiskindose.__main__:cli"``.
+``cli()`` must exist, be callable, and reach the same argument parser as
 ``python -m guiskindose``.
 """
 
@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import inspect
 import sys
+import tomllib
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -69,3 +71,11 @@ def test_cli_help_path_does_not_require_gui(monkeypatch: pytest.MonkeyPatch) -> 
     with pytest.raises(SystemExit) as excinfo:
         cli()
     assert excinfo.value.code == 0
+
+
+def test_project_scripts_points_at_cli() -> None:
+    """``[project.scripts] guiskindose`` must invoke ``guiskindose.__main__:cli``."""
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    scripts = data["project"]["scripts"]
+    assert scripts["guiskindose"] == "guiskindose.__main__:cli"

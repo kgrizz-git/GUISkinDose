@@ -1414,7 +1414,7 @@ wheels = [
 
 [[package]]
 name = "guiskindose"
-version = "25.2.0"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "kaleido" },

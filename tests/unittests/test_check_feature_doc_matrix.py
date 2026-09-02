@@ -19,7 +19,7 @@ def _matrix() -> dict[str, object]:
         "features": {
             "tabular_input": {
                 "status": "shipped",
-                "code": ["src/mypyskindose/gui/tabs/upload.py"],
+                "code": ["src/guiskindose/gui/tabs/upload.py"],
                 "tests": ["tests/unittests/test_input_adapters.py"],
                 "docs": ["dev-docs/INPUT_SCHEMA_DETECTION.md"],
                 "help": ["docs/source/gui_help/upload_workflow.md"],
@@ -31,7 +31,7 @@ def _matrix() -> dict[str, object]:
 def _write_valid_repo(tmp_path: Path) -> None:
     _write_json(tmp_path / "dev-docs" / "feature_doc_matrix.json", _matrix())
     for rel in [
-        "src/mypyskindose/gui/tabs/upload.py",
+        "src/guiskindose/gui/tabs/upload.py",
         "tests/unittests/test_input_adapters.py",
         "dev-docs/INPUT_SCHEMA_DETECTION.md",
         "docs/source/gui_help/upload_workflow.md",
@@ -78,7 +78,7 @@ def test_evaluate_doc_impact_warns_for_changed_code_without_docs(tmp_path: Path)
 
     result = evaluate_doc_impact(
         tmp_path,
-        changed_paths=["src/mypyskindose/gui/tabs/upload.py", "tests/unittests/test_input_adapters.py"],
+        changed_paths=["src/guiskindose/gui/tabs/upload.py", "tests/unittests/test_input_adapters.py"],
     )
 
     assert any("tabular_input" in warning for warning in result.warnings)
@@ -90,7 +90,7 @@ def test_evaluate_doc_impact_strict_fails_without_doc_or_help_change(tmp_path: P
 
     result = evaluate_doc_impact(
         tmp_path,
-        changed_paths=["src/mypyskindose/gui/tabs/upload.py"],
+        changed_paths=["src/guiskindose/gui/tabs/upload.py"],
         strict_impact=True,
     )
 
@@ -102,7 +102,7 @@ def test_evaluate_doc_impact_strict_passes_with_doc_change(tmp_path: Path) -> No
 
     result = evaluate_doc_impact(
         tmp_path,
-        changed_paths=["src/mypyskindose/gui/tabs/upload.py", "dev-docs/INPUT_SCHEMA_DETECTION.md"],
+        changed_paths=["src/guiskindose/gui/tabs/upload.py", "dev-docs/INPUT_SCHEMA_DETECTION.md"],
         strict_impact=True,
     )
 

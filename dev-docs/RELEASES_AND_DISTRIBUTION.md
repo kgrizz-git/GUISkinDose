@@ -41,11 +41,11 @@ These are **not** the same audience.
 ## Versioning
 
 - **SemVer** via `pyproject.toml` (source of truth for the package version).
-- **Live package today:** GUISkinDose `25.2.0` (calendar-style line inherited from this fork).
+- **Live package today:** GUISkinDose / `guiskindose` `1.0.0` (new distribution identity;
+  formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). Not yet published to PyPI.
 - **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
-  not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose. Set
-  `name = "guiskindose"` and `version = "1.0.0"` in the same packaging commit. Changelog
-  `[1.0.0]` and GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
+  not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose.
+  Changelog `[1.0.0]` and GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
   of PySkinDose. Details: [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
 - Bump at release time (not on every docs PR). Document SemVer impact in Unreleased notes when shipping user-visible library/GUI changes.
 - `scripts/check_changelog.py` requires an Unreleased touch when `src/` or `tests/` change (pre-push).
