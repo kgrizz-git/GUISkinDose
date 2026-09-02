@@ -51,7 +51,7 @@ def _scan(root: Path) -> set[str]:
 
 
 def test_privacy_rules_detect_representative_leak_sinks(tmp_path: Path) -> None:
-    target = tmp_path / "src" / "mypyskindose" / "gui" / "tabs" / "export.py"
+    target = tmp_path / "src" / "guiskindose" / "gui" / "tabs" / "export.py"
     target.parent.mkdir(parents=True)
     target.write_text(
         """
@@ -85,7 +85,7 @@ def unsafe(exc, provenance, filename, output_path):
 
 
 def test_privacy_rules_allow_value_safe_helpers(tmp_path: Path) -> None:
-    target = tmp_path / "src" / "mypyskindose" / "gui" / "tabs" / "export.py"
+    target = tmp_path / "src" / "guiskindose" / "gui" / "tabs" / "export.py"
     target.parent.mkdir(parents=True)
     target.write_text(
         """

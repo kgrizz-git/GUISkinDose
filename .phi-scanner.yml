@@ -26,9 +26,9 @@ scan:
     - tests/fixtures/export/single_exam_siemens.json
     # These generated numeric lookup tables exceed spaCy's 1,000,000-character
     # per-document limit in phi-scan 0.7.0. The blocking gate scans all three.
-    - src/mypyskindose/table_data/hvl_tables/hvl_allura_filters_11deg.csv
-    - src/mypyskindose/table_data/hvl_tables/hvl_axiom_filters_8deg.csv
-    - src/mypyskindose/table_data/hvl_tables/hvl_combined.csv
+    - src/guiskindose/table_data/hvl_tables/hvl_allura_filters_11deg.csv
+    - src/guiskindose/table_data/hvl_tables/hvl_axiom_filters_8deg.csv
+    - src/guiskindose/table_data/hvl_tables/hvl_combined.csv
     - "*.egg-info/"
     - __pycache__/
     - .mypy_cache/

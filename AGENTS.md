@@ -34,8 +34,8 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 
 ### Entry point
 ```python
-from mypyskindose.main import main
-from mypyskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.main import main
+from guiskindose import PyskindoseSettings, load_settings_example_json
 
 settings = PyskindoseSettings(settings=load_settings_example_json())
 settings.mode = "calculate_dose"
@@ -50,7 +50,7 @@ print(output["psd"])  # peak skin dose in mGy
 | File | Role |
 |------|------|
 | `src/guiskindose/main.py` | Entry point: `main()`, CLI dispatch; re-exports `get_argument_parser` |
-| `src/guiskindose/__main__.py` | `python -m mypyskindose` entry (re-runs `get_argument_parser`) |
+| `src/guiskindose/__main__.py` | `python -m guiskindose` entry (re-runs `get_argument_parser`) |
 | `src/guiskindose/cli_args.py` | argparse construction (extracted from `main.py`); per-flag helpers |
 | `src/guiskindose/analyze_data.py` | Core orchestration |
 | `src/guiskindose/phantom_class.py` | Patient/table/pad phantom mesh |
@@ -121,7 +121,7 @@ rename to GUISkinDose / `guiskindose`: [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.m
 [dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md). The short version:
 
 1. A NiceGUI app now exists in `src/guiskindose/gui/`. `app.py` (~245 lines) builds layout and `PageContext`; each tab lives under `gui/tabs/` (`upload`, `data`, `settings`, `geometry`, `calculate`, `results`, `export`); upload widgets under `gui/widgets/`.
-2. The CLI supports `--mode gui` and optional `--native`; `python -m mypyskindose --mode gui` launches the GUI.
+2. The CLI supports `--mode gui` and optional `--native`; `python -m guiskindose --mode gui` launches the GUI.
 3. Current GUI focus: refine validation, exports, and user-facing help. **Multi-exam Geometry** (Parts I–V shipped): exam selector, per-active patient/table-origin sliders, composite preview, Calculate/Settings summaries, N4 Settings→Geometry refresh — see [dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md). Multi-exam support: the Data Table tags each row with an `Exam` column (`gui/helpers.rebuild_rdsr_df()`); editable per-exam controls live in **Settings → Per-exam corrections** (`gui/tabs/_per_exam.py`). Single-exam offsets plan: `dev-docs/plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
 4. Tabular input Phases 1–5 are **shipped**: `input_adapters/` handles `.csv`, `.tsv`, `.xlsx` via `normalized`, `generic_rdsr_like`, `radimetrics`, and `dosetrack` schemas. DoseTrack adapter: Equipment Name → Manufacturer inference (`MODEL2MANUF`), ffill, integer Plane Code normalization, unit conversions, CFA derivation from DAP formula, Siemens/Philips filter thickness, Philips lat/lon swap warning. GE lateral/longitudinal handling is now normalization-level via `swap_lateral_longitudinal`; GUI `Tx↔Tz` swap remains a manual expert override for site-specific exports. CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only` are wired. GUI Phase 5: upload tab accepts all tabular formats; import preview panel; schema selector including DoseTrack; **individual coordinate correction toggles** (Tx↔Tz swap, Ap1×−1, Ap2×−1) applied live; **XLSX sheet picker** for multi-sheet workbooks with re-parse on change. Qaelum, DoseMonitor, and DoseWatch are Phase 5+ placeholders (stub adapters exist; need real export fixtures). See `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` and `dev-docs/references/`.
 5. Robustness/physics: the HVL and `k_tab` lookups now **interpolate** off-grid filtration and **clamp** (never extrapolate) out-of-range queries, warning per event (`grid_interp.py`). Events below the 25 kV HVL floor are handled by a user-selectable policy — `below_floor_kvp_policy` ∈ `exam_average` (default) / `snap` / `skip` / `manual` (`geom_calc.apply_below_floor_kvp_policy()`), surfaced as a Physics setting + a pre-calc prompt. See `dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md`.
@@ -172,7 +172,7 @@ Example RDSR files are in `src/guiskindose/example_data/RDSR/`.
 
 Run the GUI locally:
 ```bash
-python -m mypyskindose --mode gui
+python -m guiskindose --mode gui
 ```
 
 ## Conventions
@@ -193,7 +193,7 @@ python -m mypyskindose --mode gui
 - Settings always passed as `PyskindoseSettings` object internally; JSON/dict accepted at the boundary
 - Correction factors are dimensionless floats in range 0–1 (or slightly above 1 for backscatter)
 - Coordinate conventions are nuanced: physical world geometry uses X=lateral, Y=vertical/AP, Z=longitudinal for head-first supine positioning (unified +Y points down toward the floor; the `(0,0,0)` origin is the beam isocenter, which coincides with the table head-end when the table-position readout is zero), while PySkinDose plot labels show `X - LON / PT L-R`, `Y - VER / PT A-P`, `Z - LAT / PT S-I`. RDSRs use table-position names, not x/y/z; Siemens/Philips use the DICOM/operator table convention, while GE raw data uses patient-anatomy longitudinal/lateral naming and is normalized by swapping raw long/lat into the common plotted frame. See `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` before changing normalization, plotting labels, or vendor coordinate handling.
-- GUI dependencies are optional extras: `pip install mypyskindose[gui]` — do not add them to core dependencies
+- GUI dependencies are optional extras: `pip install guiskindose[gui]` — do not add them to core dependencies
 - **Modularity:** Keep all Python source and Markdown documentation files under ~800 lines unless strictly unavoidable (checked in CI; outliers must be whitelisted in `scripts/check_file_sizes.py`).
 - **Plan lifecycle:** Completed or superseded execution plans must be archived under `dev-docs/plans/archive/` (always update `dev-docs/index.md` in the same PR).
 - **Doc paths:** Never commit absolute filesystem paths or `file://` URIs in repository docs. Use repo-relative Markdown links for tracked files and normal prose/backticks for commands or examples.
