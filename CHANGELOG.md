@@ -30,6 +30,13 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Fixed
 
+- **Multi-exam export paired surviving exams with the wrong input after exclusions**
+  (2026-09-02) — GUI/CLI export builders indexed ``loaded_exams`` / ``inputs`` by
+  position in ``MultiExamResult.exams``. When a middle exam was excluded, later
+  successful exams silently received another exam's normalized frame, provenance,
+  and transform metadata in the report. Matching now uses the opaque ``Exam N``
+  label (original load index).
+
 - **GHSA-763m-79hh-57f2 / GHSA-23w6-3w8w-8484 / GHSA-jp53-mhqp-8xcg: bumped core `pypdf`** (2026-09-01) —
   raised the minimum to `pypdf>=6.16.1` so the lockfile no longer pins the vulnerable `6.15.0`
   (resolved `6.16.2`).

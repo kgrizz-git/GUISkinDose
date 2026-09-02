@@ -10,7 +10,9 @@ import pytest
 from mypyskindose.privacy import (
     innermost_location,
     install_value_safe_excepthook,
+    opaque_exam_index,
     opaque_exam_label,
+    resolve_loaded_exam_index,
     safe_error_event,
     safe_traceback,
     safe_user_error,
@@ -120,9 +122,14 @@ def test_safe_warning_accepts_only_non_sensitive_scalars() -> None:
 def test_opaque_exam_label_and_user_error_are_source_independent() -> None:
     assert opaque_exam_label(0) == "Exam 1"
     assert opaque_exam_label(4) == "Exam 5"
+    assert opaque_exam_index("Exam 1") == 0
+    assert opaque_exam_index("Exam 5") == 4
+    assert resolve_loaded_exam_index("Exam 5", result_index=0, n_loaded=5) == 4
     assert safe_user_error("report_export") == "Operation failed (report_export)."
     with pytest.raises(ValueError):
         opaque_exam_label(-1)
+    with pytest.raises(ValueError):
+        opaque_exam_index("exam-a")
 
 
 def test_value_safe_excepthook_suppresses_traceback_and_exception_text(
