@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-08-30).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-01).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -130,7 +130,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | Pygments | 2.20.0 | BSD-2-Clause | Homepage, https://pygments.org |
 | PyJWT | 2.13.0 | MIT | Homepage, https://github.com/jpadilla/pyjwt |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
-| pypdf | 6.15.0 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
+| pypdf | 6.16.2 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
 | pytest | 9.0.3 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
 | pytest-asyncio | 1.4.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-base-url | 2.1.0 | MPL-2.0 | Homepage, https://github.com/pytest-dev/pytest-base-url |

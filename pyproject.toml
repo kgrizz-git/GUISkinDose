@@ -29,7 +29,7 @@ dependencies = [
     "kaleido",
     "rich",
     "openpyxl",
-    "pypdf>=6.15.0",
+    "pypdf>=6.16.1",
     "reportlab>=4.0",
     "python-docx>=1.1",
 ]
@@ -52,12 +52,14 @@ docs = [
     "ipykernel",
     "ipywidgets",
     "pandoc",
+    "tornado>=6.5.8",  # transitive via ipykernel; GHSA-8423-8fgw-73vq / GHSA-wwv5-g3v4-889x / GHSA-mpf4-983q-p7j4
 ]
 # Interactive notebook editing (JupyterLab); the docs build does not need this.
 notebooks = [
     "jupyterlab>=4.6.2",
     "ipykernel",
     "ipywidgets",
+    "tornado>=6.5.8",  # transitive via jupyter-client/ipykernel; same advisories as docs extra
 ]
 # Optional, local-only Presidio text scan. This is intentionally separate from
 # the core/runtime and normal dev installs; it is advisory and does not upload
