@@ -5,8 +5,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`).
-Bump `pyproject.toml` when releasing.
+**Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`;
+`name` is already `guiskindose`). **First GUISkinDose version is `1.0.0`** — a new
+distribution identity, not a continuation of the `25.2.0` calendar line. Do not bump
+`pyproject.toml` to `1.0.0` until the packaging commit. Bump `pyproject.toml` when releasing.
 
 This file records **notable** user-facing *and* maintainer-facing changes (features, fixes,
 CI/harness, refactors, privacy gates). That keeps SemVer and contributor history honest.
@@ -16,6 +18,11 @@ omit pure CI/refactor bullets and point readers here. See
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
 ## [Unreleased]
+
+> **Identity lock:** the first GUISkinDose / `guiskindose` release is **`1.0.0`**. Live
+> `pyproject.toml` `name` is already `guiskindose`; version stays `25.2.0` until the
+> packaging commit that sets `1.0.0`. Historical sections through `[25.2.0]` below remain
+> MyPySkinDose history.
 
 ### Added
 
@@ -53,6 +60,18 @@ omit pure CI/refactor bullets and point readers here. See
   stdlib `abs()`. Semantically identical; no behavior change.
 
 ### Changed
+
+- **First GUISkinDose version locked at `1.0.0`** (2026-09-02) — new PyPI/import identity,
+  not MyPySkinDose `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream
+  PySkinDose. Package `name` is already `guiskindose`; version stays `25.2.0` until the
+  packaging commit that sets `1.0.0`. GitHub Release notes and the `[1.0.0]` changelog
+  section must say this was formerly MyPySkinDose `25.2.0` / a fork of PySkinDose. Plan:
+  [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
+
+- **GitHub/Sonar/URL follow-up plan** (2026-09-02) — after the in-repo package rename is on
+  `main`, rename the GitHub fork to `GUISkinDose`, then SonarCloud, then live URLs/`origin`.
+  Not blocked on PyPI; not part of the mechanical-rename PR. Plan:
+  [dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 - **Package directory and import path are `guiskindose`** (2026-09-02) — `git mv src/mypyskindose
   src/guiskindose`; `pyproject.toml` `name` / `packages.find` follow. Version stays `25.2.0`

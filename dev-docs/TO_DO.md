@@ -53,9 +53,16 @@ policy decisions, not a restart of Phases 0–9.
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
 - [ ] **Rename from mypyskindose to GUISkinDose** — in-repo package/import/CLI rebrand with config migration
-  and a stale-brand CI check. Prefer before first PyPI publish; does not require the GitHub repo rename.
+  and a stale-brand CI check. **First `guiskindose` version is `1.0.0`** (new identity; not a continuation of
+  MyPySkinDose `25.2.0`). Prefer before first PyPI publish; does not require the GitHub repo rename.
   Plan: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). Publication/fixture work remains in
   [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
+- [ ] **Rename the GitHub repository to GUISkinDose** — after the in-repo package rename is on `main`:
+  GitHub Settings rename `MyPySkinDose` → `GUISkinDose`, confirm the PySkinDose fork banner and old-URL
+  redirect, rename SonarCloud to match **before** changing `sonar.projectKey`, then rewrite live
+  `github.com/kgrizz-git/MyPySkinDose` links (`pyproject.toml`, `CITATION.cff`, README/SUPPORT/SECURITY,
+  issue templates) and `origin`. Not blocked on PyPI. Do not do this during the mechanical-rename PR.
+  Plan: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 ## Product Backlog
 
@@ -183,7 +190,9 @@ policy decisions, not a restart of Phases 0–9.
 
 ## Research Ideas
 
-- [ ] Call it GUISkinDose?
+- [ ] Call it GUISkinDose? **Decided.** Product/GitHub: GUISkinDose; import/CLI/PyPI: `guiskindose`; first
+  version `1.0.0`. In-repo rename: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar
+  follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 - [ ] **Safety API key** — get a free Safety API key ([safetycli.com](https://safetycli.com)) and wire it as
   `SAFETY_API_KEY` GitHub secret.
 

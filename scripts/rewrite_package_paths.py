@@ -51,6 +51,7 @@ _ALLOWLIST_FILE_PATHS: tuple[str, ...] = (
     "dev-docs/plans/archive/",
     "dev-docs/assessments/",
     "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+    "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
     "dev-docs/COORD_TRANSFORM_COMPARISON.md",
     "CHANGELOG.md",

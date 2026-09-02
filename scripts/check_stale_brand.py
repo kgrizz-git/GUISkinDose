@@ -20,6 +20,7 @@ ALLOWED_PATHS = [
     "dev-docs/assessments/",
     "CHANGELOG.md",  # PR 1 should tighten this to only allow historical sections
     "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+    "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
     "dev-docs/COORD_TRANSFORM_COMPARISON.md",
     "GUISKINDOSE_MIGRATION_STATUS.md",  # created in PR 1; allowlist it now

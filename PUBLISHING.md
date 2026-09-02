@@ -8,6 +8,10 @@
 For the full release map (changelog vs GitHub notes, SemVer, portable executables, checklist), see
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
+**First GUISkinDose / `guiskindose` version is `1.0.0`** (new distribution identity; live package
+is still MyPySkinDose `25.2.0`). Do not publish `mypyskindose` as `1.0.0`. Details:
+[dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
+
 ## How releasing works now
 
 `.github/workflows/release.yml` runs only on a **GitHub Release (`created`)** event. It:

@@ -6,7 +6,7 @@ This file provides orientation for AI agents (and new developers) working on thi
 
 MyPySkinDose estimates **peak skin dose (PSD)** and generates **3D skin dose maps** for fluoroscopic X-ray procedures. It reads a DICOM RDSR file, reconstructs the 3D geometry of each irradiation event, places a computational patient phantom in that geometry, and accumulates dose to each skin cell using physics-based correction factors.
 
-It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package name in code is `mypyskindose`.
+It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package name in code is `guiskindose` (formerly `mypyskindose`). First GUISkinDose version is **`1.0.0`**.
 
 ## Detailed documentation
 
@@ -22,7 +22,8 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 - **[dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)** — public-repository PII/PHI safeguards, DICOM/image review policy, and approved-asset inventory
 - **[dev-docs/PRIVACY_INCIDENT_RESPONSE.md](dev-docs/PRIVACY_INCIDENT_RESPONSE.md)** — private evidence handling, history/release audit, containment, remediation, and release checklist
 - **[dev-docs/plans/PRIVACY_HARDENING_PLAN.md](dev-docs/plans/PRIVACY_HARDENING_PLAN.md)** — phased plan for runtime diagnostics, de-identified exports, test/write containment, scanner cadence, asset review, and release privacy gates
-- **[dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md)** — in-repo rename to GUISkinDose / `guiskindose` (not yet executed; re-count inventories if other work lands first)
+- **[dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md)** — in-repo rename to GUISkinDose / `guiskindose`. **First `guiskindose` version is `1.0.0`** (new identity, not a continuation of MyPySkinDose `25.2.0`). Re-count inventories if other work lands first.
+- **[dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md)** — after that PR is on `main`: rename the GitHub fork to `GUISkinDose`, then SonarCloud, then live URLs. Not blocked on PyPI.
 - **[dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md](dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md)** — phased plan to close harness gaps (CI parity, doc-freshness, entropy cleanup)
 - **[dev-docs/LICENSE_COMPLIANCE.md](dev-docs/LICENSE_COMPLIANCE.md)** — third-party license policy, audit commands, and notices workflow
 - **[dev-docs/assessments/](dev-docs/assessments/)** — diagnostics and assessments of code quality, refactoring, bug checks, or security
@@ -114,7 +115,10 @@ Intended use is research / education / development / institutional QA — **not 
 physicists and physicians remain responsible for reviewing results and patient-care decisions.
 Unsolicited cold PRs are discouraged; ideas and submissions are welcome via Issues or Discussions.
 
-See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implementation plan. The short version:
+See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implementation plan. In-repo
+rename to GUISkinDose / `guiskindose`: [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md)
+(**first version `1.0.0`**). GitHub/Sonar/live URLs after that PR:
+[dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md). The short version:
 
 1. A NiceGUI app now exists in `src/guiskindose/gui/`. `app.py` (~245 lines) builds layout and `PageContext`; each tab lives under `gui/tabs/` (`upload`, `data`, `settings`, `geometry`, `calculate`, `results`, `export`); upload widgets under `gui/widgets/`.
 2. The CLI supports `--mode gui` and optional `--native`; `python -m mypyskindose --mode gui` launches the GUI.
