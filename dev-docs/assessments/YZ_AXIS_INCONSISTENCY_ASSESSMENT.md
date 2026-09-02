@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-26 (updated after rebuttal review)  
 **Status:** Reviewed — rebuttal integrated, analysis revised, recommendation updated  
-**Scope:** `src/mypyskindose/`, `AGENTS.md`, related dev-docs
+**Scope:** `src/guiskindose/`, `AGENTS.md`, related dev-docs
 
 > AGENTS.md line 150 documents the coordinate system as `X = lateral, Y = longitudinal, Z = vertical`. This does not match the code.
 

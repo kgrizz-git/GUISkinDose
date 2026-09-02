@@ -11,7 +11,7 @@ compliance, evaluating what is already in place and what would add the most valu
 
 | Tool | Type | Scope | CI | Pre-commit | Notes |
 |------|------|-------|----|-----------|-------|
-| **bandit** | SAST (AST-level) | Python code | `ci.yml` `static-analysis` job | Yes | `--severity-level medium` on `src/mypyskindose` + `scripts`; configured in `pyproject.toml` |
+| **bandit** | SAST (AST-level) | Python code | `ci.yml` `static-analysis` job | Yes | `--severity-level medium` on `src/guiskindose` + `scripts`; configured in `pyproject.toml` |
 | **pip-audit** | Dependency vuln scan | Python packages | `ci.yml` `static-analysis` job | — | `--desc on`; checks against PyPI advisory feed |
 | **gitleaks** | Secret detection | Git history | `.github/workflows/gitleaks.yml` on push/PR | Yes (pre-commit stage) | Wired in both pre-commit and CI |
 
@@ -63,7 +63,7 @@ Multi-language SAST with dataflow analysis and [official OWASP Top 10 rule packs
 Or run locally:
 ```bash
 pip install semgrep safety
-semgrep --config=p/owasp-top-ten --error src/mypyskindose
+semgrep --config=p/owasp-top-ten --error src/guiskindose
 safety scan
 ```
 
@@ -127,11 +127,11 @@ existing coverage.
 
 ```bash
 # Already installed (dev deps):
-bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
 pip-audit --desc on
 
 # To add (pip install):
 pip install semgrep safety
-semgrep --config=p/owasp-top-ten --error src/mypyskindose
+semgrep --config=p/owasp-top-ten --error src/guiskindose
 safety scan
 ```

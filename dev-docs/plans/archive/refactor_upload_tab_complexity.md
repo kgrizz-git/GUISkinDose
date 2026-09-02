@@ -5,7 +5,7 @@
 
 This is the detailed companion to Phase 4.3 of
 [the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
-`build` in [upload.py](../../../src/mypyskindose/gui/tabs/upload.py#L57), whose
+`build` in [upload.py](../../../src/guiskindose/gui/tabs/upload.py#L57), whose
 baseline cognitive complexity is **97**.
 
 The Import Preview widget has its own baseline complexity finding and is covered
@@ -19,7 +19,7 @@ contract; it must not duplicate sheet-picker or coordinate-correction logic.
 Use a sibling module for the tab-local controller and layout builders:
 
 ```text
-src/mypyskindose/gui/tabs/
+src/guiskindose/gui/tabs/
 ├── upload.py              # public build(ctx), compatibility constants/helpers
 └── upload_builders.py     # UploadTabController, view refs, tab sections
 ```
@@ -104,7 +104,7 @@ uv run pytest tests/unittests/test_gui_temp_uploads.py \
 uv run pytest tests/gui/test_gui_security.py \
   tests/gui/test_gui_flows.py \
   tests/gui/test_multi_exam_gui.py
-uv run ruff check src/mypyskindose/gui/tabs tests
+uv run ruff check src/guiskindose/gui/tabs tests
 uv run basedpyright
 ```
 

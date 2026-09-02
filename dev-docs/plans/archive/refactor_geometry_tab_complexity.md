@@ -5,7 +5,7 @@
 
 This is the detailed companion to Phase 4.1 of
 [the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
-`build` in [geometry.py](../../../src/mypyskindose/gui/tabs/geometry.py#L81), whose
+`build` in [geometry.py](../../../src/guiskindose/gui/tabs/geometry.py#L81), whose
 baseline cognitive complexity is **158**. The function currently spans almost the
 whole 794-line file, so adding a controller to `geometry.py` before moving code
 would violate the repository's ~800-line size limit.
@@ -21,7 +21,7 @@ references, and layout builders, and imports domain helpers directly rather than
 importing `geometry.py` back.
 
 ```text
-src/mypyskindose/gui/tabs/
+src/guiskindose/gui/tabs/
 ├── geometry.py             # public build(ctx), compatibility imports only
 └── geometry_builders.py    # controller, view references, builders, callbacks
 ```
@@ -128,7 +128,7 @@ uv run pytest tests/unittests/test_gui_multi_exam_geometry_offsets.py \
   tests/unittests/test_gui_offset_reset.py \
   tests/unittests/test_gui_cross_tab_sync.py
 uv run pytest tests/gui/test_gui_flows.py
-uv run ruff check src/mypyskindose/gui/tabs tests
+uv run ruff check src/guiskindose/gui/tabs tests
 uv run basedpyright
 ```
 

@@ -5,7 +5,7 @@ validation exceptions for the **demo / non-clinical** phantoms from
 [`../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md`](../plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md).
 
 **Package status (2026-07-24):** these meshes are **no longer shipped** under
-`src/mypyskindose/phantom_data/`. A local recovery stash (gitignored) with attribution notes may
+`src/guiskindose/phantom_data/`. A local recovery stash (gitignored) with attribution notes may
 exist at `tmp/phantom_data_demo_stash/`. Paths below that mention `tmp/phantom_data_demo_stash/`
 are the local stash layout; the same files and `NOTICE_*.txt` sidecars remain reachable in
 **git history** from the commits that shipped them (CC BY attribution for Ramesses / Steamboat
@@ -79,7 +79,7 @@ renders (side, top, and per-face depth maps), then locked in `fun_mesh_manifest.
   Phantom load OK (18,000 cells).
 - **Anterior-beam smoke** — `mode=calculate_dose`, `phantom.model=human`,
   `phantom.human_mesh=cosmic_buddha`, against the package example
-  `src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm`:
+  `src/guiskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm`:
   PSD ≈ **16.28 mGy**; the top-30 dose cells are **all** on the anterior (**−Y**) side
   (30 negative / 0 positive, mean Y ≈ −12.3 cm; dose-weighted mean Y ≈ −9.6 cm). Entrance is on the
   anterior side, as required.

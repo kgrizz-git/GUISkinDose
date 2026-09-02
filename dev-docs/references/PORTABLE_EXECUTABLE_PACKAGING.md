@@ -33,7 +33,7 @@ codebase — not a one-afternoon packaging tweak.
 2. **Entry:** freeze the existing GUI entry (`python -m mypyskindose --mode gui` path / `run_gui`), not a
    separate toy script.
 3. **Must bundle as data:**
-   - `src/mypyskindose/phantom_data/` STLs (full + reduced previews)
+   - `src/guiskindose/phantom_data/` STLs (full + reduced previews)
    - `corrections.db` (or CSV seed path used on first run)
    - GUI help under package `gui/help/`
    - `settings_example.json` / normalization settings JSON as used at runtime

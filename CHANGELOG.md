@@ -54,6 +54,14 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **Package directory and import path are `guiskindose`** (2026-09-02) — `git mv src/mypyskindose
+  src/guiskindose`; `pyproject.toml` `name` / `packages.find` follow. Version stays `25.2.0`
+  until the packaging commit that sets `1.0.0`. Legacy config reads still use
+  `~/.mypyskindose/gui.json` and `.mypyskindose.local.json` when the new files are absent.
+  Markdown links and backtick paths that pointed at `src/mypyskindose` now point at
+  `src/guiskindose`. Tests, console script, and `LIVE_PACKAGE_NAME` are later slices.
+  Semgrep rule IDs and live GitHub/Sonar URLs are unchanged.
+
 - **GUI config saves now write `~/.guiskindose/gui.json`** (2026-09-02) — `save_gui_config()`
   persists to the new home path (creating the directory as needed). Reads still fall back to
   `~/.mypyskindose/gui.json` when the new file is absent. When both exist, load–modify–save

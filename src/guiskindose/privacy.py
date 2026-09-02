@@ -39,13 +39,14 @@ def _relative_frame_path(filename: str) -> str:
 
     Traceback frames are always Python source files (never patient data), but
     their absolute paths can embed a home-directory/username, so strip to a
-    package-relative fragment: from ``guiskindose/`` for our own code, from
-    inside ``site-packages/`` for dependencies, else the bare file name. Never
-    returns an absolute path.
+    package-relative fragment: from ``guiskindose/`` (or legacy ``mypyskindose/``)
+    for our own code, from inside ``site-packages/`` for dependencies, else the
+    bare file name. Never returns an absolute path.
     """
     parts = Path(filename).parts
-    if "guiskindose" in parts:
-        return Path(*parts[parts.index("guiskindose") :]).as_posix()
+    for package_name in ("guiskindose", "mypyskindose"):
+        if package_name in parts:
+            return Path(*parts[parts.index(package_name) :]).as_posix()
     if "site-packages" in parts:
         return Path(*parts[parts.index("site-packages") + 1 :]).as_posix()
     return Path(filename).name

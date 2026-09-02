@@ -43,7 +43,7 @@ none of it is in the source tree.
 
 ### 2.1 What is still on the table
 
-1. **Patient offset card visibility** — `src/mypyskindose/gui/tabs/geometry.py:107`:
+1. **Patient offset card visibility** — `src/guiskindose/gui/tabs/geometry.py:107`:
    ```python
    patient_offset_card.bind_visibility_from(state, "is_multi_exam", backward=lambda v: not v)
    ```
@@ -75,7 +75,7 @@ none of it is in the source tree.
 5. **`preview_caption` label does not exist (R1)** — Plan line 199:
    "dynamic label below toggle; updates when `composite_preview`,
    `last_table_origin_scrub`, or `active_exam_index` changes". Grep confirms
-   no `preview_caption` symbol in `src/mypyskindose/gui/`. The user-facing
+   no `preview_caption` symbol in `src/guiskindose/gui/`. The user-facing
    C3 captions (Appendix B lines 310–311) have no anchor in the UI.
 
 6. **`_reset_patient_offset` for multi-exam (R3, T5)** — Plan lines 201, 186:

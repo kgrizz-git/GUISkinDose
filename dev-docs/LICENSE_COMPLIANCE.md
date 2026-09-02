@@ -38,7 +38,7 @@ also carried the docs/notebook packages.
 
 ## Redistributed mesh assets (not Python deps)
 
-Some **demo / non-clinical** STL phantoms under `src/mypyskindose/phantom_data/` are third-party mesh
+Some **demo / non-clinical** STL phantoms under `src/guiskindose/phantom_data/` are third-party mesh
 binaries redistributed under Creative Commons terms (e.g. **CC BY 4.0** Ramesses II). These are
 **not** Python packages and must **not** be folded into `THIRD_PARTY_NOTICES.md` (that file is
 generated from `uv.lock` / installed packages via `check_licenses.py`).

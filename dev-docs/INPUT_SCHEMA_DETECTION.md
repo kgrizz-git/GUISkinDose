@@ -9,9 +9,9 @@ default, that test fails until this file is updated. See [Keeping this up to dat
 
 Source of truth in code:
 
-- Detection & scoring — `src/mypyskindose/input_adapters/registry.py`
+- Detection & scoring — `src/guiskindose/input_adapters/registry.py`
   (`_detect_schema`, `_score_schema`, `_SCHEMA_KNOWN_NAMES`, `_AUTO_MIN_MARGIN`).
-- Header-row location — `src/mypyskindose/input_adapters/column_mapper.py` (`detect_header_row`).
+- Header-row location — `src/guiskindose/input_adapters/column_mapper.py` (`detect_header_row`).
 - Per-schema fingerprints — each adapter's `*_COLUMN_NAMES` frozenset
   (`radimetrics.py`, `dosetrack.py`, `generic_rdsr.py`, `normalized.py`).
 

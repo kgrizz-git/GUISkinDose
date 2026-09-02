@@ -339,7 +339,7 @@ source under `docs/`, never the mirrored copies under `src/`" — the
 plan's wording is ambiguous. Tighten: "Edit
 `docs/source/gui_help/positioning_offsets.md` (canonical); run
 `python scripts/sync_gui_help.py` to mirror to
-`src/mypyskindose/gui/help/positioning_offsets.md`. Do not edit the
+`src/guiskindose/gui/help/positioning_offsets.md`. Do not edit the
 mirrored copy directly."
 
 **G2.6.b — missing help files in the sweep.**

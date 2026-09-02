@@ -48,18 +48,18 @@ print(output["psd"])  # peak skin dose in mGy
 
 | File | Role |
 |------|------|
-| `src/mypyskindose/main.py` | Entry point: `main()`, CLI dispatch; re-exports `get_argument_parser` |
-| `src/mypyskindose/__main__.py` | `python -m mypyskindose` entry (re-runs `get_argument_parser`) |
-| `src/mypyskindose/cli_args.py` | argparse construction (extracted from `main.py`); per-flag helpers |
-| `src/mypyskindose/analyze_data.py` | Core orchestration |
-| `src/mypyskindose/phantom_class.py` | Patient/table/pad phantom mesh |
-| `src/mypyskindose/beam_class.py` | X-ray beam geometry |
-| `src/mypyskindose/geom_calc.py` | Geometry calculations |
-| `src/mypyskindose/corrections.py` | Physics correction factors |
-| `src/mypyskindose/calculate_dose/` | Dose calculation pipeline |
-| `src/mypyskindose/settings/` | Settings dataclasses |
-| `src/mypyskindose/plotting/` | Plotly visualisation |
-| `src/mypyskindose/settings_example.json` | Template settings |
+| `src/guiskindose/main.py` | Entry point: `main()`, CLI dispatch; re-exports `get_argument_parser` |
+| `src/guiskindose/__main__.py` | `python -m mypyskindose` entry (re-runs `get_argument_parser`) |
+| `src/guiskindose/cli_args.py` | argparse construction (extracted from `main.py`); per-flag helpers |
+| `src/guiskindose/analyze_data.py` | Core orchestration |
+| `src/guiskindose/phantom_class.py` | Patient/table/pad phantom mesh |
+| `src/guiskindose/beam_class.py` | X-ray beam geometry |
+| `src/guiskindose/geom_calc.py` | Geometry calculations |
+| `src/guiskindose/corrections.py` | Physics correction factors |
+| `src/guiskindose/calculate_dose/` | Dose calculation pipeline |
+| `src/guiskindose/settings/` | Settings dataclasses |
+| `src/guiskindose/plotting/` | Plotly visualisation |
+| `src/guiskindose/settings_example.json` | Template settings |
 | `corrections.db` | SQLite correction-factor database |
 
 ### Run modes
@@ -86,7 +86,7 @@ Set `settings.output_format` to:
 | `"cylinder"` | Elliptic cylinder |
 | `"human"` | STL mesh (set `settings.phantom.human_mesh`) |
 
-Available human meshes live under `src/mypyskindose/phantom_data/` and are discovered
+Available human meshes live under `src/guiskindose/phantom_data/` and are discovered
 at runtime (Settings / CLI). The clinical library covers age bands (preschool through
 senior), sex variants, habitus families (ecto / endo / bariatric series), and optional
 `*_arms_down` twins for table-side posing. Exact stems may change as the catalog is
@@ -116,7 +116,7 @@ Unsolicited cold PRs are discouraged; ideas and submissions are welcome via Issu
 
 See [dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md) for the full implementation plan. The short version:
 
-1. A NiceGUI app now exists in `src/mypyskindose/gui/`. `app.py` (~245 lines) builds layout and `PageContext`; each tab lives under `gui/tabs/` (`upload`, `data`, `settings`, `geometry`, `calculate`, `results`, `export`); upload widgets under `gui/widgets/`.
+1. A NiceGUI app now exists in `src/guiskindose/gui/`. `app.py` (~245 lines) builds layout and `PageContext`; each tab lives under `gui/tabs/` (`upload`, `data`, `settings`, `geometry`, `calculate`, `results`, `export`); upload widgets under `gui/widgets/`.
 2. The CLI supports `--mode gui` and optional `--native`; `python -m mypyskindose --mode gui` launches the GUI.
 3. Current GUI focus: refine validation, exports, and user-facing help. **Multi-exam Geometry** (Parts I–V shipped): exam selector, per-active patient/table-origin sliders, composite preview, Calculate/Settings summaries, N4 Settings→Geometry refresh — see [dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](dev-docs/plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md). Multi-exam support: the Data Table tags each row with an `Exam` column (`gui/helpers.rebuild_rdsr_df()`); editable per-exam controls live in **Settings → Per-exam corrections** (`gui/tabs/_per_exam.py`). Single-exam offsets plan: `dev-docs/plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md`.
 4. Tabular input Phases 1–5 are **shipped**: `input_adapters/` handles `.csv`, `.tsv`, `.xlsx` via `normalized`, `generic_rdsr_like`, `radimetrics`, and `dosetrack` schemas. DoseTrack adapter: Equipment Name → Manufacturer inference (`MODEL2MANUF`), ffill, integer Plane Code normalization, unit conversions, CFA derivation from DAP formula, Siemens/Philips filter thickness, Philips lat/lon swap warning. GE lateral/longitudinal handling is now normalization-level via `swap_lateral_longitudinal`; GUI `Tx↔Tz` swap remains a manual expert override for site-specific exports. CLI flags `--input-schema`, `--sheet-name`, `--input-preview-only` are wired. GUI Phase 5: upload tab accepts all tabular formats; import preview panel; schema selector including DoseTrack; **individual coordinate correction toggles** (Tx↔Tz swap, Ap1×−1, Ap2×−1) applied live; **XLSX sheet picker** for multi-sheet workbooks with re-parse on change. Qaelum, DoseMonitor, and DoseWatch are Phase 5+ placeholders (stub adapters exist; need real export fixtures). See `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` and `dev-docs/references/`.
@@ -164,7 +164,7 @@ Run the getting-started notebook:
 jupyter notebook docs/source/getting_started/getting_started.ipynb
 ```
 
-Example RDSR files are in `src/mypyskindose/example_data/RDSR/`.
+Example RDSR files are in `src/guiskindose/example_data/RDSR/`.
 
 Run the GUI locally:
 ```bash
@@ -195,7 +195,7 @@ python -m mypyskindose --mode gui
 - **Doc paths:** Never commit absolute filesystem paths or `file://` URIs in repository docs. Use repo-relative Markdown links for tracked files and normal prose/backticks for commands or examples.
 - **Privacy admission:** Do not commit PHI/PII, internal PACS endpoints, private-network addresses (IPv4 or IPv6), or diagnostic artifacts. Run the sensitive-content gate; the commit message is checked separately at `commit-msg`. Protected ignore rules/never-track roots and conditional scanner receipts are enforced by `scripts/privacy_admission.py`; run `python scripts/privacy_admission.py run --mode staged` when the route requires it. Images, DICOM, PDFs, supported archive/document containers, and opaque binary files require hash-pinned human clearance; extensionless configuration files are scanned as text only when their complete contents are valid, NUL-free UTF-8. See `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` before adding fixtures or handling findings.
 - **Runtime privacy:** Never log, print, or write raw identifiers, source filenames, or absolute paths; blocking project privacy Semgrep and local HoundDog flag leaks, and every secondary finding must be triaged. See `dev-docs/AGENT_PLAYBOOK.md` → Privacy and sensitive data for scanner triggers and cadence.
-- **GUI help files:** The canonical source for in-app help markdown is `docs/source/gui_help/`. These files are mirrored to `src/mypyskindose/gui/help/` by `scripts/sync_gui_help.py` (enforced by pre-commit + CI). Edit the source under `docs/`, never the mirrored copies under `src/`.
+- **GUI help files:** The canonical source for in-app help markdown is `docs/source/gui_help/`. These files are mirrored to `src/guiskindose/gui/help/` by `scripts/sync_gui_help.py` (enforced by pre-commit + CI). Edit the source under `docs/`, never the mirrored copies under `src/`.
 - **GUI help registry / UI copy:** GUI help coverage and high-risk UI copy are checked by `scripts/check_help_registry.py` and `scripts/check_ui_copy.py`; update `dev-docs/help_registry.json`, `dev-docs/ui_copy.json`, `dev-docs/glossary.json`, and `dev-docs/feature_doc_matrix.json` when adding tabs, help pages, warnings, explanatory tooltips, or feature docs.
 - **Assessments:** Place diagnostic reports or assessments (such as for refactoring, code quality, bug checks, etc.) under `dev-docs/assessments/` (always update `dev-docs/index.md` in the same PR).
 - **Workspace cleanliness:** Temporary scratch scripts or local output files must be kept in explicitly gitignored paths (e.g. `tmp/`, `scripts/scratch_*`, `*.tmp`, `debug_*`) or deleted immediately unless they are intended for reuse. Run `python scripts/check_doc_pruning.py` during doc-gardening to review stale active plans/assessments (30 days + 10 commits by default).

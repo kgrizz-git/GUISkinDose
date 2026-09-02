@@ -1,9 +1,9 @@
 """Native window geometry preferences for ``--native`` GUI mode.
 
 Loads and saves normal (restored) window size/position and maximized state to
-``~/.guiskindose/gui.json``. Reads fall back to ``~/.guiskindose/gui.json``
+``~/.guiskindose/gui.json``. Reads fall back to ``~/.mypyskindose/gui.json``
 when the new path is absent. Repo-local JSON prefers ``.guiskindose.local.json``
-then ``.guiskindose.local.json``. This module intentionally does not import
+then ``.mypyskindose.local.json``. This module intentionally does not import
 pywebview so unit tests can run without the ``gui-native`` extra.
 
 Demo / non-clinical mesh visibility (``show_demo_phantoms``) can also be enabled
@@ -37,7 +37,7 @@ MAXIMIZED_FILL_RATIO = 0.90
 # Local opt-in for Settings Demo meshes (never commit true in shared configs).
 SHOW_DEMO_PHANTOMS_ENV = "MYPYSKINDOSE_SHOW_DEMO_PHANTOMS"
 SHOW_DEMO_PHANTOMS_ENV_NEW = "GUISKINDOSE_SHOW_DEMO_PHANTOMS"
-REPO_LOCAL_GUI_CONFIG_NAME = ".guiskindose.local.json"
+REPO_LOCAL_GUI_CONFIG_NAME = ".mypyskindose.local.json"
 REPO_LOCAL_GUI_CONFIG_NAME_NEW = ".guiskindose.local.json"
 
 
@@ -76,8 +76,8 @@ class NativeWindowPrefs:
 
 
 def config_path() -> Path:
-    """Read fallback for the legacy home GUI JSON (``~/.guiskindose/gui.json``)."""
-    return Path.home() / ".guiskindose" / "gui.json"
+    """Read fallback for the legacy home GUI JSON (``~/.mypyskindose/gui.json``)."""
+    return Path.home() / ".mypyskindose" / "gui.json"
 
 
 def new_config_path() -> Path:
@@ -205,9 +205,9 @@ def show_demo_phantoms_enabled(*, start: Path | None = None) -> bool:
     2. Process env ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
     3. Repo ``.env`` key ``GUISKINDOSE_SHOW_DEMO_PHANTOMS``
     4. Repo ``.env`` key ``MYPYSKINDOSE_SHOW_DEMO_PHANTOMS``
-    5. Gitignored ``.guiskindose.local.json`` or ``.guiskindose.local.json`` in the
+    5. Gitignored ``.guiskindose.local.json`` or ``.mypyskindose.local.json`` in the
        repo root (``{"show_demo_phantoms": true}``)
-    6. ``~/.guiskindose/gui.json`` if present, else ``~/.guiskindose/gui.json``
+    6. ``~/.guiskindose/gui.json`` if present, else ``~/.mypyskindose/gui.json``
        (``show_demo_phantoms``)
 
     Missing / unrecognized values fall through. Default is ``False``.

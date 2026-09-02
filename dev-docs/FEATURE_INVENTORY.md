@@ -34,7 +34,7 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 | pre-commit hooks (ruff, gitleaks, doc-freshness, license-notices) | Shipped | basedpyright on pre-push |
 | Stale-pattern and path-reference doc scan | Shipped | `scripts/check_doc_freshness.py`; warnings for stale terms, CI-blocking for broken links, path references, and inventory contradictions |
 | GUI help registry | Shipped | `dev-docs/help_registry.json` + `scripts/check_help_registry.py`; validates source help, mirrored bundled help, GUI references, and orphaned help pages |
-| UI copy catalog and glossary | Shipped | `dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `src/mypyskindose/gui/ui_copy.py`, and `scripts/check_ui_copy.py` |
+| UI copy catalog and glossary | Shipped | `dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `src/guiskindose/gui/ui_copy.py`, and `scripts/check_ui_copy.py` |
 | Feature documentation matrix | Shipped | `dev-docs/feature_doc_matrix.json` + `scripts/check_feature_doc_matrix.py`; metadata validation plus optional doc-impact review |
 | Plan lifecycle | Deferred | Closed Phase 6 — separate execution-plan directories are not needed at current team size |
 | `references/` external library index | Partial | `dev-docs/references/` stub; expand before next major dependency review |
@@ -51,7 +51,7 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 - Remove rows with invalid kVp = 0 (configurable)
 
 ### 1.2 Bundled example RDSR files
-Located in `src/mypyskindose/example_data/RDSR/`:
+Located in `src/guiskindose/example_data/RDSR/`:
 - `philips_allura_clarity_u104.dcm`
 - `philips_allura_clarity_u601.dcm`
 - `siemens_axiom_artis.dcm`
@@ -103,7 +103,7 @@ New vendors can be added by editing `normalization_settings.json`.
 
 ### 2.2 Human mesh files
 
-Located in `src/mypyskindose/phantom_data/` (full-resolution `.stl` plus optional
+Located in `src/guiskindose/phantom_data/` (full-resolution `.stl` plus optional
 `*_reduced_3000t` / `*_reduced_1000t` previews). The Settings / CLI mesh list is **filesystem-discovered** —
 treat the families below as the product surface, not a frozen stem census (inventory may
 be trimmed without a docs rewrite of every id).

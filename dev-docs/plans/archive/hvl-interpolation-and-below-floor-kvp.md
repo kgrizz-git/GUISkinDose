@@ -50,7 +50,7 @@ existing `state.calc_warnings` surfacing channel:
 
 ## Background — current state (verified 2026-06-19)
 
-- **HVL** — `geom_calc.fetch_and_append_hvl` ([geom_calc.py:223](../../../src/mypyskindose/geom_calc.py#L223))
+- **HVL** — `geom_calc.fetch_and_append_hvl` ([geom_calc.py:223](../../../src/guiskindose/geom_calc.py#L223))
   reads the whole `hvl_combined` table and does an **exact match** on
   `(round(kVp), round(inherent,1), Cu, round(Al))`, with a **nearest-grid snap**
   fallback (added by the crash-fix plan) and a single aggregate `logger.warning`
@@ -65,25 +65,25 @@ existing `state.calc_warnings` surfacing channel:
   - The current lookup **does not constrain anode angle** and takes `.iloc[0]`, so
     it effectively returns the first CSV row (anode 11 leads the file). Interpolation
     must pick the **same slice deterministically** to keep in-grid results identical.
-- **k_bs** — `corrections.calculate_k_bs` ([corrections.py:49](../../../src/mypyskindose/corrections.py#L49))
+- **k_bs** — `corrections.calculate_k_bs` ([corrections.py:49](../../../src/guiskindose/corrections.py#L49))
   is a **continuous polynomial** in (kVp, HVL); no table lookup. It inherits
   accuracy purely from the HVL value, so fixing HVL fixes k_bs. **No change here.**
-- **k_med** — `corrections.calculate_k_med` ([corrections.py:107](../../../src/mypyskindose/corrections.py#L107))
+- **k_med** — `corrections.calculate_k_med` ([corrections.py:107](../../../src/guiskindose/corrections.py#L107))
   already selects the **closest** tabulated kVp then HVL from the SQLite
   `correction_medium_and_backscatter` table — nearest, cannot crash. Upgrading it to
   interpolation is **optional / lower priority** (its field-size and HVL dependence
   is weak); note it, do it only if Phase 1 leaves it cheap.
-- **k_tab** — `corrections.calculate_k_tab` ([corrections.py:186](../../../src/mypyskindose/corrections.py#L186))
+- **k_tab** — `corrections.calculate_k_tab` ([corrections.py:186](../../../src/guiskindose/corrections.py#L186))
   does an **exact-match SQL** on `(round(kVp), Cu, Al, model, plane)` ending in
   `c.fetchone()[0]`. On any off-grid tuple this is `None[0]` → **`TypeError`,
   aborting the whole calc.** This is the real remaining crash surface and must be
   guarded.
 - **Warnings channel** — `_CalcWarningCollector`
-  ([gui/helpers.py:24](../../../src/mypyskindose/gui/helpers.py#L24)) attaches to the
+  ([gui/helpers.py:24](../../../src/guiskindose/gui/helpers.py#L24)) attaches to the
   `mypyskindose` logger during `run_calculation`, collecting WARNING+ into
   `state.calc_warnings`, shown on the calculate tab. **Any `logger.warning` we emit
   is already surfaced — no new plumbing needed for Phase 1.**
-- **Settings** — `build_settings` ([gui/helpers.py](../../../src/mypyskindose/gui/helpers.py))
+- **Settings** — `build_settings` ([gui/helpers.py](../../../src/guiskindose/gui/helpers.py))
   maps `state.*` → `PyskindoseSettings` JSON (`estimate_k_tab`, `k_tab_val`,
   `inherent_filtration`, `remove_invalid_rows`, …). Below-floor policy fields will be
   added here and to the settings dataclass.
@@ -107,7 +107,7 @@ small and static), interpolate within bounds, clamp + flag at the edges.
       `clamped`. An on-node query returns the tabulated value (RGI is exact at nodes)
       → label `exact` when every axis coordinate is on a node, else `interpolated`.
       Reused by both HVL (kVp × Cu) and k_tab (kVp × Cu per device/plane).
-      *Implemented as `src/mypyskindose/grid_interp.py` (`clamped_rgi_lookup` +
+      *Implemented as `src/guiskindose/grid_interp.py` (`clamped_rgi_lookup` +
       `format_event_indices`); both call sites build/cache their own RGI.*
 - [x] **HVL.** Rework `fetch_and_append_hvl` (data shape verified 2026-06-19;
       implemented + tested, golden PSD unchanged):

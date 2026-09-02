@@ -3,7 +3,7 @@
 **STATUS: Completed (2026-07-03)**
 
 > Archived after implementation. The shipped behavior lives in
-> [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
+> [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 > with regression coverage in
 > [tests/unittests/test_gui_app_native_window.py](../../../tests/unittests/test_gui_app_native_window.py),
 > [tests/unittests/test_window_prefs.py](../../../tests/unittests/test_window_prefs.py),
@@ -19,7 +19,7 @@ maximized".
 
 ## Problem Summary
 
-The current native-window flow in [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
+The current native-window flow in [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 does this on startup:
 
 1. Load `NativeWindowPrefs` from `~/.mypyskindose/gui.json`.
@@ -125,7 +125,7 @@ No platform behavior changes are intended outside macOS.
 
 ### 1. Add a macOS visible-bounds helper
 
-File: [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
+File: [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 
 Add a small helper dedicated to the startup interception path, for example:
 
@@ -144,7 +144,7 @@ test environments or non-native installs.
 
 ### 2. Adjust `_detect_native_screens()`
 
-File: [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
+File: [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 
 Refine `_detect_native_screens()` so the platform-specific order is explicit:
 
@@ -169,7 +169,7 @@ Implementation guardrail:
 
 ### 3. Add a macOS maximize-normalization helper
 
-File: [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
+File: [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 
 Create a focused helper for startup-only behavior, for example:
 
@@ -192,7 +192,7 @@ The fallback percentage path is secondary, not the primary design.
 
 ### 4. Normalize persisted state at startup
 
-File: [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
+File: [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 
 Update `run_gui(native=True)` so the sequence becomes:
 
@@ -213,8 +213,8 @@ That immediate save is required so a later manual resize is not overwritten by t
 
 Files:
 
-- [src/mypyskindose/gui/app.py](../../../src/mypyskindose/gui/app.py)
-- [src/mypyskindose/gui/window_prefs.py](../../../src/mypyskindose/gui/window_prefs.py)
+- [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
+- [src/guiskindose/gui/window_prefs.py](../../../src/guiskindose/gui/window_prefs.py)
 
 The existing `_register_native_geometry_tracking()` logic already:
 

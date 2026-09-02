@@ -63,21 +63,21 @@ The 3D preview does not display or label the current patient orientation.
 
 ## Files examined
 
-- `src/mypyskindose/constants.py`
-- `src/mypyskindose/settings/phantom_settings.py`
-- `src/mypyskindose/settings_example.json`
-- `src/mypyskindose/user_defined_parameters.py`
-- `src/mypyskindose/dev_data.py`
-- `src/mypyskindose/geom_calc.py`
-- `src/mypyskindose/rdsr_normalizer.py`
-- `src/mypyskindose/rdsr_parser.py`
-- `src/mypyskindose/phantom_class.py`
-- `src/mypyskindose/calculate_dose/calculate_dose.py`
-- `src/mypyskindose/plotting/create_geometry_plot.py`
-- `src/mypyskindose/analyze_data.py`
-- `src/mypyskindose/format_export_data.py`
-- `src/mypyskindose/gui/constants.py`
-- `src/mypyskindose/gui/state.py`
-- `src/mypyskindose/gui/tabs/settings.py`
-- `src/mypyskindose/gui/settings_builder.py`
-- `src/mypyskindose/input_adapters/*`
+- `src/guiskindose/constants.py`
+- `src/guiskindose/settings/phantom_settings.py`
+- `src/guiskindose/settings_example.json`
+- `src/guiskindose/user_defined_parameters.py`
+- `src/guiskindose/dev_data.py`
+- `src/guiskindose/geom_calc.py`
+- `src/guiskindose/rdsr_normalizer.py`
+- `src/guiskindose/rdsr_parser.py`
+- `src/guiskindose/phantom_class.py`
+- `src/guiskindose/calculate_dose/calculate_dose.py`
+- `src/guiskindose/plotting/create_geometry_plot.py`
+- `src/guiskindose/analyze_data.py`
+- `src/guiskindose/format_export_data.py`
+- `src/guiskindose/gui/constants.py`
+- `src/guiskindose/gui/state.py`
+- `src/guiskindose/gui/tabs/settings.py`
+- `src/guiskindose/gui/settings_builder.py`
+- `src/guiskindose/input_adapters/*`

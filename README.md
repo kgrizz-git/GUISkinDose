@@ -33,7 +33,7 @@ repository — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 ## Requirements
 
 - Python 3.11 or above
-- A settings configuration, typically based on [src/mypyskindose/settings_example.json](src/mypyskindose/settings_example.json)
+- A settings configuration, typically based on [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json)
 - A DICOM RDSR file (`.dcm`), a pre-parsed JSON export, or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`)
 
 ## Installation
@@ -276,7 +276,7 @@ The package includes helper functions that make exploration easier:
 
 ## Settings and modes
 
-Important settings live in [src/mypyskindose/settings_example.json](src/mypyskindose/settings_example.json) and the settings classes under [src/mypyskindose/settings](src/mypyskindose/settings).
+Important settings live in [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json) and the settings classes under [src/guiskindose/settings](src/guiskindose/settings).
 
 Common modes are:
 

@@ -130,7 +130,7 @@ Run the smallest relevant set locally before committing, and run the full set be
 ### Fast checks
 
 ```bash
-python -m compileall src/mypyskindose
+python -m compileall src/guiskindose
 python -m pytest tests/unittests
 ```
 
@@ -196,7 +196,7 @@ python scripts/check_feature_doc_matrix.py
 ```
 
 `check_help_registry.py` validates `dev-docs/help_registry.json`, confirms each source help page exists under
-`docs/source/gui_help/`, confirms bundled copies under `src/mypyskindose/gui/help/` are in sync, and checks that
+`docs/source/gui_help/`, confirms bundled copies under `src/guiskindose/gui/help/` are in sync, and checks that
 registered GUI files reference the expected `content_path` and `help_id`. Default mode warns for orphaned help files;
 `--strict` fails on them.
 
@@ -357,14 +357,14 @@ A pre-commit hook (`license-notices`) runs the locked `dev` + `gui` environment'
 
 ```bash
 pip install -e ".[dev]"
-bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
 ```
 
 CI runs the same command in the Ubuntu `bandit` job (Python 3.12).
 
 **Policy:**
 
-- **Scope:** Application code under `src/mypyskindose/` and `scripts/` (not `tests/`).
+- **Scope:** Application code under `src/guiskindose/` and `scripts/` (not `tests/`).
 - **Config:** `[tool.bandit]` in `pyproject.toml` (excludes `table_data/`, venvs, backups).
 - **Gate:** CI **fails** on **medium or high** severity findings. Low-severity items (e.g. `B110` try/except/pass in GUI helpers) are visible with `--severity-level low` but do not block CI.
 - **Overlap:** Complements gitleaks (secrets in git) and pip-audit (dependency CVEs); does not replace either.
@@ -392,7 +392,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **ruff** | `ruff check --fix` on `src/` and `tests/` |
 | **gitleaks** | Secret scan on staged changes |
 | **shellcheck** | Shell-script lint (auto-detects `*.sh` + shell shebangs) |
-| **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
+| **bandit** | Python SAST on `src/guiskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links/path refs/inventory contradictions; stale-pattern warnings only) |
 | **sensitive-content** | `python scripts/check_sensitive_content.py` (direct PII/PHI-like text, absolute paths, and hash-pinned sensitive assets) |
 | **sensitive-commit-message** | `python scripts/check_commit_message.py` (commit-message PII/PHI-like text, internal endpoints, and local paths; `commit-msg` stage only) |
@@ -445,7 +445,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 
 | Check | Where in CI |
 |---|---|
-| `python -m compileall src/mypyskindose` | `build` job (matrix policy above) |
+| `python -m compileall src/guiskindose` | `build` job (matrix policy above) |
 | `python -m pytest` | `build` job (matrix policy above) |
 | `python -m ruff check src tests` | `build` job (matrix policy above) |
 | `uv build` | Ubuntu `static-analysis` job (Python 3.12) |
@@ -458,13 +458,13 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | GUI smoke tests (`pytest tests/gui/`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | Pull requests: `gitleaks` job in `ci.yml` after `privacy-gates`; `main` pushes: separate `.github/workflows/gitleaks.yml` workflow |
-| `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | SonarCloud CI scan | **Enabled**: `main` is protected by a ruleset and repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`, so `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled (CI-based analysis is authoritative). The scan requires the `SONAR_TOKEN` repository secret; no tokenized scanner runs on a PR head. |
 | `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed. Enforced PR coverage is the GHA `coverage-pr` job. |
-| PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/mypyskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
+| PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/guiskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on same-repository PRs (including drafts; deduped per head SHA). The same-repository guard prevents CI from posting comments on fork PRs. Manual CodeRabbit requests bypass the CI ordering, so this is not a trusted privacy boundary. |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |

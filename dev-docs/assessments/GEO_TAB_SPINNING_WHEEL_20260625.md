@@ -1,7 +1,7 @@
 # Geometry Tab Spinning Wheel / Continuous Plot Reload
 
 **Date:** 2026-06-25 (initial); 2026-06-25 (review of recommended fix)
-**File:** `src/mypyskindose/gui/tabs/geometry.py`
+**File:** `src/guiskindose/gui/tabs/geometry.py`
 **Status:** Root-cause analysis confirmed; primary fix has a regression; see §10 for revised recommendation.
 
 ---

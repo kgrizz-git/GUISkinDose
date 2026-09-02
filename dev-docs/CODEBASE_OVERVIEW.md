@@ -13,7 +13,7 @@ It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose)
 ## Repository layout
 
 ```
-src/mypyskindose/          # Main package
+src/guiskindose/          # Main package
   main.py                  # Entry point: main() and CLI dispatch
   __main__.py              # `python -m mypyskindose` entry; re-uses get_argument_parser
   cli_args.py              # argparse construction (extracted from main.py); re-exported via main.py
@@ -147,7 +147,7 @@ analyze_data.py         — creates Phantom objects, dispatches to mode handler
 
 ## Entry points
 
-### `main()` — `src/mypyskindose/main.py`
+### `main()` — `src/guiskindose/main.py`
 
 The primary callable for all use cases.
 

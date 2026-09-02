@@ -48,9 +48,9 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [../scripts/check_feature_doc_matrix.py](../scripts/check_feature_doc_matrix.py) | Validates feature-to-code/test/doc/help traceability in `dev-docs/feature_doc_matrix.json`; can emit advisory doc-impact warnings from changed paths. |
 | [../scripts/check_agent_guidance.py](../scripts/check_agent_guidance.py) | Advisory drift checker for agent pointer files, `TO_DO.md` size/history, and completed-looking active plans. |
 | [../scripts/check_doc_pruning.py](../scripts/check_doc_pruning.py) | Advisory pruning review: reports old active execution plans and assessments after 30 days and 10 commits. |
-| [../scripts/sync_gui_help.py](../scripts/sync_gui_help.py) | Mirrors `docs/source/gui_help/*.md` -> `src/mypyskindose/gui/help/*.md`; enforced by pre-commit + CI (`ci.yml` `static-analysis` job). |
+| [../scripts/sync_gui_help.py](../scripts/sync_gui_help.py) | Mirrors `docs/source/gui_help/*.md` -> `src/guiskindose/gui/help/*.md`; enforced by pre-commit + CI (`ci.yml` `static-analysis` job). |
 | [../scripts/generate_ui_values.py](../scripts/generate_ui_values.py) | Regenerates `UI_values.md` from `MODERN_CSS` in `gui/styles.py`. |
-| Bandit | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job and pre-commit hook (medium+ severity on `src/mypyskindose` + `scripts`). |
+| Bandit | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job and pre-commit hook (medium+ severity on `src/guiskindose` + `scripts`). |
 | [TO_DO.md](TO_DO.md) | Short active backlog, deferred work, and open questions. Completed history lives in `CHANGELOG.md` and archived plans. |
 | [index.md](index.md) | This catalog — one-line purpose for every file under `dev-docs/`. |
 | [help_registry.json](help_registry.json) | Machine-readable map of GUI help ids to source markdown files, bundled mirror files, and GUI tabs/workflows. |
@@ -95,7 +95,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | See **Master plans** above. |
-| [UI_values.md](UI_values.md) | Auto-generated GUI design tokens from `MODERN_CSS` in `src/mypyskindose/gui/styles.py` (`scripts/generate_ui_values.py`). |
+| [UI_values.md](UI_values.md) | Auto-generated GUI design tokens from `MODERN_CSS` in `src/guiskindose/gui/styles.py` (`scripts/generate_ui_values.py`). |
 | [../DESIGN.md](../DESIGN.md) | Root GUI aesthetic spec (brutalist/modern design intent). |
 
 ---
@@ -197,7 +197,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/refactor-execution.md](plans/archive/refactor-execution.md) | **Completed** — Phased refactor (Phases 0–3): logging, busy guard, adapter consolidation, GUI decomposition (`app.py` 1275→245 lines). |
 | [plans/archive/gui-decomposition-design.md](plans/archive/gui-decomposition-design.md) | **Completed** — Wiring map and extraction design for GUI Phase 3 split. |
 | [plans/archive/positioning-help.md](plans/archive/positioning-help.md) | **Completed** — In-app help for phantom positioning; integrated with main docs as single source of truth. |
-| [plans/archive/phase-6-doc-integration.md](plans/archive/phase-6-doc-integration.md) | **Completed** — Sync mechanism for `docs/source/gui_help/` -> `src/mypyskindose/gui/help/` with pre-commit + CI enforcement. |
+| [plans/archive/phase-6-doc-integration.md](plans/archive/phase-6-doc-integration.md) | **Completed** — Sync mechanism for `docs/source/gui_help/` -> `src/guiskindose/gui/help/` with pre-commit + CI enforcement. |
 | [plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md](plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md) | **Completed** (2026-06-24) — Beam-miss warnings: per-event WARNING + all-miss sentinel + `beam_miss_warn` dial + GUI toast throttle + handler leak fix. |
 | [plans/archive/PATIENT_SIZE_SCALING_PLAN.md](plans/archive/PATIENT_SIZE_SCALING_PLAN.md) | **Completed** (2026-06-25) — Human STL body-habitus scaling with `scale_lat`/`scale_ap`/`scale_lon`, recomputed normals, Settings sliders, and geometry/dose plumbing. |
 | [plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md](plans/archive/GEO_TAB_SPINNING_WHEEL_PLAN.md) | **Completed** (2026-06-25) — Geometry tab render loop: `_in_render_chain` flag, slider `.mark(...)` markers, parametrized regression tests (patient lon/ver/lat + table-origin X). |

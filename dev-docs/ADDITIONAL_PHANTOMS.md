@@ -10,7 +10,7 @@ Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDIN
 
 ## Currently shipped meshes
 
-Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
+Human meshes live in `src/guiskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
 globs `*.stl` and **excludes** any `*_reduced_*` preview variants. Prefer the runtime mesh list
 (or `get_human_mesh_names()`) over treating any table here as a frozen census — stems may be
 trimmed as the catalog settles.
@@ -144,7 +144,7 @@ Ordered by fit for this project:
 
 ## Integration checklist
 
-Dropping a file into `src/mypyskindose/phantom_data/{name}.stl` is enough for discovery (`print_available_human_phantoms()` and the GUI mesh selector). It is **not** enough for correct PSD. Before committing:
+Dropping a file into `src/guiskindose/phantom_data/{name}.stl` is enough for discovery (`print_available_human_phantoms()` and the GUI mesh selector). It is **not** enough for correct PSD. Before committing:
 
 ### Frame and units
 
