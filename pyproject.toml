@@ -1,5 +1,5 @@
 [project]
-name = "mypyskindose"
+name = "guiskindose"
 version = "25.2.0"
 description = "Tools and script for calculating peak skin dose and create dose maps for fluoroscopic exams from RDSR data (fork of PySkinDose)"
 readme = "README.md"
@@ -108,8 +108,8 @@ zip-safe = false
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["mypyskindose*"]
-exclude = ["mypyskindose.egg-info*", "pyskindose.egg-info*"]
+include = ["guiskindose*"]
+exclude = ["guiskindose.egg-info*", "pyskindose.egg-info*"]
 
 
 [project-urls]
@@ -148,25 +148,25 @@ select = ["E4", "E7", "E9", "F", "B", "C4", "FURB", "I", "PYI", "RUF", "SIM", "U
 "tests/unittests/test_path_safety.py" = ["E402"]
 "scripts/phantom_gen/transform_to_psd_frame.py" = ["RUF002"]
 "scripts/phantom_gen/validate_phantom.py" = ["RUF002"]
-"src/mypyskindose/calculate_dose/add_correction_and_event_dose_to_output.py" = ["RUF003"]
-"src/mypyskindose/cli_kerma_meter.py" = ["RUF001"]
-"src/mypyskindose/corrections.py" = ["RUF002", "RUF003"]
-"src/mypyskindose/export/metrics.py" = ["RUF002", "RUF003"]
-"src/mypyskindose/export/models.py" = ["RUF002", "RUF003"]
-"src/mypyskindose/export/payload.py" = ["RUF002"]
-"src/mypyskindose/geom_calc.py" = ["RUF001", "RUF003"]
-"src/mypyskindose/grid_interp.py" = ["RUF002"]
-"src/mypyskindose/gui/exam_transforms.py" = ["RUF002"]
-"src/mypyskindose/gui/helpers.py" = ["RUF002"]
-"src/mypyskindose/gui/state.py" = ["RUF003"]
-"src/mypyskindose/gui/tabs/_per_exam.py" = ["RUF001", "SIM117"]
-"src/mypyskindose/gui/tabs/results_builders.py" = ["SIM117"]
-"src/mypyskindose/gui/tabs/settings.py" = ["SIM117"]
-"src/mypyskindose/gui/tabs/upload_builders.py" = ["SIM117"]
-"src/mypyskindose/gui/widgets/import_preview.py" = ["RUF001"]
-"src/mypyskindose/gui/window_prefs.py" = ["RUF002"]
-"src/mypyskindose/input_adapters/tabular_loader.py" = ["RUF002"]
-"src/mypyskindose/settings/kerma_meter_correction_settings.py" = ["RUF002"]
+"src/guiskindose/calculate_dose/add_correction_and_event_dose_to_output.py" = ["RUF003"]
+"src/guiskindose/cli_kerma_meter.py" = ["RUF001"]
+"src/guiskindose/corrections.py" = ["RUF002", "RUF003"]
+"src/guiskindose/export/metrics.py" = ["RUF002", "RUF003"]
+"src/guiskindose/export/models.py" = ["RUF002", "RUF003"]
+"src/guiskindose/export/payload.py" = ["RUF002"]
+"src/guiskindose/geom_calc.py" = ["RUF001", "RUF003"]
+"src/guiskindose/grid_interp.py" = ["RUF002"]
+"src/guiskindose/gui/exam_transforms.py" = ["RUF002"]
+"src/guiskindose/gui/helpers.py" = ["RUF002"]
+"src/guiskindose/gui/state.py" = ["RUF003"]
+"src/guiskindose/gui/tabs/_per_exam.py" = ["RUF001", "SIM117"]
+"src/guiskindose/gui/tabs/results_builders.py" = ["SIM117"]
+"src/guiskindose/gui/tabs/settings.py" = ["SIM117"]
+"src/guiskindose/gui/tabs/upload_builders.py" = ["SIM117"]
+"src/guiskindose/gui/widgets/import_preview.py" = ["RUF001"]
+"src/guiskindose/gui/window_prefs.py" = ["RUF002"]
+"src/guiskindose/input_adapters/tabular_loader.py" = ["RUF002"]
+"src/guiskindose/settings/kerma_meter_correction_settings.py" = ["RUF002"]
 "tests/gui/test_multi_exam_gui.py" = ["RUF002", "RUF003"]
 "tests/unittests/test_export_payload.py" = ["RUF002"]
 "tests/unittests/test_gui_offset_reset.py" = ["RUF002"]
@@ -176,10 +176,10 @@ select = ["E4", "E7", "E9", "F", "B", "C4", "FURB", "I", "PYI", "RUF", "SIM", "U
 
 [tool.basedpyright]
 pythonVersion = "3.11"
-include = ["src/mypyskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
+include = ["src/guiskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
 exclude = [
     "**/__pycache__",
-    "src/mypyskindose/table_data",
+    "src/guiskindose/table_data",
     "tests/manual_tests",
     # Headless Blender/MPFB tooling: bpy/trimesh/numpy-stl stubs are incomplete.
     "scripts/phantom_gen",
@@ -200,7 +200,7 @@ exclude_dirs = [
     "build",
     "dist",
     "backups",
-    "src/mypyskindose/table_data",
+    "src/guiskindose/table_data",
 ]
 # Application code only; tests excluded above. CI fails on medium+ severity (see HARNESS_ENGINEERING.md).
 skips = ["B101"]

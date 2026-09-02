@@ -37,7 +37,7 @@ from packaging.markers import default_environment
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-PROJECT_NAME = "mypyskindose"
+PROJECT_NAME = "guiskindose"
 NOTICES_PATH = Path("dev-docs/THIRD_PARTY_NOTICES.md")
 APACHE_2_LICENSE = "Apache-2.0"
 LOCKED_LICENSE_COMMAND = "uv run --extra dev --extra gui --locked python scripts/check_licenses.py"

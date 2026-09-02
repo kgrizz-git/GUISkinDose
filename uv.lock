@@ -1413,6 +1413,153 @@ wheels = [
 ]
 
 [[package]]
+name = "guiskindose"
+version = "25.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "kaleido" },
+    { name = "numpy" },
+    { name = "numpy-stl" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pillow" },
+    { name = "plotly" },
+    { name = "psutil" },
+    { name = "pydicom" },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "reportlab" },
+    { name = "rich" },
+    { name = "scipy" },
+    { name = "tqdm" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "bandit" },
+    { name = "basedpyright" },
+    { name = "diff-cover" },
+    { name = "nltk" },
+    { name = "pandas-stubs" },
+    { name = "pip-audit" },
+    { name = "playwright" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-playwright" },
+    { name = "pytest-xdist" },
+    { name = "ruff" },
+    { name = "safety" },
+    { name = "semgrep" },
+    { name = "shellcheck-py" },
+    { name = "types-pillow" },
+]
+docs = [
+    { name = "ipykernel" },
+    { name = "ipywidgets" },
+    { name = "myst-parser" },
+    { name = "nbsphinx" },
+    { name = "pandoc" },
+    { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "sphinx-rtd-theme" },
+    { name = "tornado" },
+]
+export = [
+    { name = "python-docx" },
+    { name = "reportlab" },
+]
+gui = [
+    { name = "nicegui" },
+    { name = "pytest-asyncio" },
+]
+gui-native = [
+    { name = "nicegui" },
+    { name = "pytest-asyncio" },
+    { name = "pywebview" },
+]
+notebooks = [
+    { name = "ipykernel" },
+    { name = "ipywidgets" },
+    { name = "jupyterlab" },
+    { name = "tornado" },
+]
+phantom-gen = [
+    { name = "fast-simplification" },
+    { name = "networkx" },
+    { name = "scikit-image" },
+    { name = "trimesh" },
+]
+privacy-scan = [
+    { name = "en-core-web-sm" },
+    { name = "presidio-analyzer" },
+    { name = "spacy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
+    { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.23" },
+    { name = "diff-cover", marker = "extra == 'dev'", specifier = ">=10.0" },
+    { name = "en-core-web-sm", marker = "extra == 'privacy-scan'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
+    { name = "fast-simplification", marker = "extra == 'phantom-gen'" },
+    { name = "ipykernel", marker = "extra == 'docs'" },
+    { name = "ipykernel", marker = "extra == 'notebooks'" },
+    { name = "ipywidgets", marker = "extra == 'docs'" },
+    { name = "ipywidgets", marker = "extra == 'notebooks'" },
+    { name = "jupyterlab", marker = "extra == 'notebooks'", specifier = ">=4.6.2" },
+    { name = "kaleido" },
+    { name = "myst-parser", marker = "extra == 'docs'" },
+    { name = "nbsphinx", marker = "extra == 'docs'" },
+    { name = "networkx", marker = "extra == 'phantom-gen'", specifier = ">=3" },
+    { name = "nicegui", marker = "extra == 'gui'", specifier = ">=2.0.0" },
+    { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=2.0.0" },
+    { name = "nltk", marker = "extra == 'dev'", specifier = ">=3.10.3" },
+    { name = "numpy", specifier = ">=2.2.4" },
+    { name = "numpy-stl", specifier = ">=3.2.0" },
+    { name = "openpyxl" },
+    { name = "pandas", specifier = ">=2.2.3" },
+    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.2" },
+    { name = "pandoc", marker = "extra == 'docs'" },
+    { name = "pillow", specifier = ">=10.0.1" },
+    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
+    { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.40" },
+    { name = "plotly", specifier = ">=4.13.3" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "presidio-analyzer", marker = "extra == 'privacy-scan'", specifier = ">=2.2.360,<3" },
+    { name = "psutil" },
+    { name = "pydicom", specifier = ">=2.0" },
+    { name = "pypdf", specifier = ">=6.16.1" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-asyncio", marker = "extra == 'gui'", specifier = ">=0.24" },
+    { name = "pytest-asyncio", marker = "extra == 'gui-native'", specifier = ">=0.24" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "pytest-playwright", marker = "extra == 'dev'", specifier = ">=0.4" },
+    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
+    { name = "python-docx", specifier = ">=1.1" },
+    { name = "python-docx", marker = "extra == 'export'", specifier = ">=1.1" },
+    { name = "pywebview", marker = "extra == 'gui-native'" },
+    { name = "reportlab", specifier = ">=4.0" },
+    { name = "reportlab", marker = "extra == 'export'", specifier = ">=4.0" },
+    { name = "rich" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15,<0.17" },
+    { name = "safety", marker = "extra == 'dev'", specifier = ">=3.0" },
+    { name = "scikit-image", marker = "extra == 'phantom-gen'", specifier = ">=0.22" },
+    { name = "scipy", specifier = ">=1.15.2" },
+    { name = "semgrep", marker = "extra == 'dev'", specifier = ">=1.100" },
+    { name = "shellcheck-py", marker = "extra == 'dev'", specifier = ">=0.11" },
+    { name = "spacy", marker = "extra == 'privacy-scan'", specifier = ">=3.8,<4" },
+    { name = "sphinx", marker = "extra == 'docs'" },
+    { name = "sphinx-rtd-theme", marker = "extra == 'docs'" },
+    { name = "tornado", marker = "extra == 'docs'", specifier = ">=6.5.8" },
+    { name = "tornado", marker = "extra == 'notebooks'", specifier = ">=6.5.8" },
+    { name = "tqdm" },
+    { name = "trimesh", marker = "extra == 'phantom-gen'", specifier = ">=4" },
+    { name = "types-pillow", marker = "extra == 'dev'" },
+]
+provides-extras = ["gui", "gui-native", "export", "docs", "notebooks", "privacy-scan", "phantom-gen", "dev"]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2525,153 +2672,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/31/97649680595b1096803d877ababb9a67c07f4378f177ec885eea28b9db6d/murmurhash-1.0.15-cp314-cp314t-win_amd64.whl", hash = "sha256:66395b1388f7daa5103db92debe06842ae3be4c0749ef6db68b444518666cdcc", size = 29817, upload-time = "2025-11-14T09:51:02.493Z" },
     { url = "https://files.pythonhosted.org/packages/76/66/4fce8755f25d77324401886c00017c556be7ca3039575b94037aff905385/murmurhash-1.0.15-cp314-cp314t-win_arm64.whl", hash = "sha256:c22e56c6a0b70598a66e456de5272f76088bc623688da84ef403148a6d41851d", size = 26219, upload-time = "2025-11-14T09:51:03.563Z" },
 ]
-
-[[package]]
-name = "mypyskindose"
-version = "25.2.0"
-source = { editable = "." }
-dependencies = [
-    { name = "kaleido" },
-    { name = "numpy" },
-    { name = "numpy-stl" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "pillow" },
-    { name = "plotly" },
-    { name = "psutil" },
-    { name = "pydicom" },
-    { name = "pypdf" },
-    { name = "python-docx" },
-    { name = "reportlab" },
-    { name = "rich" },
-    { name = "scipy" },
-    { name = "tqdm" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "basedpyright" },
-    { name = "diff-cover" },
-    { name = "nltk" },
-    { name = "pandas-stubs" },
-    { name = "pip-audit" },
-    { name = "playwright" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-playwright" },
-    { name = "pytest-xdist" },
-    { name = "ruff" },
-    { name = "safety" },
-    { name = "semgrep" },
-    { name = "shellcheck-py" },
-    { name = "types-pillow" },
-]
-docs = [
-    { name = "ipykernel" },
-    { name = "ipywidgets" },
-    { name = "myst-parser" },
-    { name = "nbsphinx" },
-    { name = "pandoc" },
-    { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "sphinx-rtd-theme" },
-    { name = "tornado" },
-]
-export = [
-    { name = "python-docx" },
-    { name = "reportlab" },
-]
-gui = [
-    { name = "nicegui" },
-    { name = "pytest-asyncio" },
-]
-gui-native = [
-    { name = "nicegui" },
-    { name = "pytest-asyncio" },
-    { name = "pywebview" },
-]
-notebooks = [
-    { name = "ipykernel" },
-    { name = "ipywidgets" },
-    { name = "jupyterlab" },
-    { name = "tornado" },
-]
-phantom-gen = [
-    { name = "fast-simplification" },
-    { name = "networkx" },
-    { name = "scikit-image" },
-    { name = "trimesh" },
-]
-privacy-scan = [
-    { name = "en-core-web-sm" },
-    { name = "presidio-analyzer" },
-    { name = "spacy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
-    { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.23" },
-    { name = "diff-cover", marker = "extra == 'dev'", specifier = ">=10.0" },
-    { name = "en-core-web-sm", marker = "extra == 'privacy-scan'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
-    { name = "fast-simplification", marker = "extra == 'phantom-gen'" },
-    { name = "ipykernel", marker = "extra == 'docs'" },
-    { name = "ipykernel", marker = "extra == 'notebooks'" },
-    { name = "ipywidgets", marker = "extra == 'docs'" },
-    { name = "ipywidgets", marker = "extra == 'notebooks'" },
-    { name = "jupyterlab", marker = "extra == 'notebooks'", specifier = ">=4.6.2" },
-    { name = "kaleido" },
-    { name = "myst-parser", marker = "extra == 'docs'" },
-    { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "networkx", marker = "extra == 'phantom-gen'", specifier = ">=3" },
-    { name = "nicegui", marker = "extra == 'gui'", specifier = ">=2.0.0" },
-    { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=2.0.0" },
-    { name = "nltk", marker = "extra == 'dev'", specifier = ">=3.10.3" },
-    { name = "numpy", specifier = ">=2.2.4" },
-    { name = "numpy-stl", specifier = ">=3.2.0" },
-    { name = "openpyxl" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.2" },
-    { name = "pandoc", marker = "extra == 'docs'" },
-    { name = "pillow", specifier = ">=10.0.1" },
-    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
-    { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.40" },
-    { name = "plotly", specifier = ">=4.13.3" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
-    { name = "presidio-analyzer", marker = "extra == 'privacy-scan'", specifier = ">=2.2.360,<3" },
-    { name = "psutil" },
-    { name = "pydicom", specifier = ">=2.0" },
-    { name = "pypdf", specifier = ">=6.16.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "pytest-asyncio", marker = "extra == 'gui'", specifier = ">=0.24" },
-    { name = "pytest-asyncio", marker = "extra == 'gui-native'", specifier = ">=0.24" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "pytest-playwright", marker = "extra == 'dev'", specifier = ">=0.4" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
-    { name = "python-docx", specifier = ">=1.1" },
-    { name = "python-docx", marker = "extra == 'export'", specifier = ">=1.1" },
-    { name = "pywebview", marker = "extra == 'gui-native'" },
-    { name = "reportlab", specifier = ">=4.0" },
-    { name = "reportlab", marker = "extra == 'export'", specifier = ">=4.0" },
-    { name = "rich" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15,<0.17" },
-    { name = "safety", marker = "extra == 'dev'", specifier = ">=3.0" },
-    { name = "scikit-image", marker = "extra == 'phantom-gen'", specifier = ">=0.22" },
-    { name = "scipy", specifier = ">=1.15.2" },
-    { name = "semgrep", marker = "extra == 'dev'", specifier = ">=1.100" },
-    { name = "shellcheck-py", marker = "extra == 'dev'", specifier = ">=0.11" },
-    { name = "spacy", marker = "extra == 'privacy-scan'", specifier = ">=3.8,<4" },
-    { name = "sphinx", marker = "extra == 'docs'" },
-    { name = "sphinx-rtd-theme", marker = "extra == 'docs'" },
-    { name = "tornado", marker = "extra == 'docs'", specifier = ">=6.5.8" },
-    { name = "tornado", marker = "extra == 'notebooks'", specifier = ">=6.5.8" },
-    { name = "tqdm" },
-    { name = "trimesh", marker = "extra == 'phantom-gen'", specifier = ">=4" },
-    { name = "types-pillow", marker = "extra == 'dev'" },
-]
-provides-extras = ["gui", "gui-native", "export", "docs", "notebooks", "privacy-scan", "phantom-gen", "dev"]
 
 [[package]]
 name = "myst-parser"

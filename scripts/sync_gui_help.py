@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror GUI help markdown from ``docs/source/gui_help/`` to ``src/mypyskindose/gui/help/``.
+"""Mirror GUI help markdown from ``docs/source/gui_help/`` to ``src/guiskindose/gui/help/``.
 
 The docs directory is the single source of truth for in-app help content;
 this script keeps the bundled copies in ``src/`` in sync. The standard
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 SOURCE_REPO_SUBDIR = Path("docs/source/gui_help")
-TARGET_REPO_SUBDIR = Path("src/mypyskindose/gui/help")
+TARGET_REPO_SUBDIR = Path("src/guiskindose/gui/help")
 
 
 def repo_root_from_script() -> Path:
@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Mirror docs/source/gui_help/*.md to "
-            "src/mypyskindose/gui/help/*.md (or check with --check)."
+            "src/guiskindose/gui/help/*.md (or check with --check)."
         )
     )
     parser.add_argument(

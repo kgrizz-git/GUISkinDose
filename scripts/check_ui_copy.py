@@ -14,7 +14,7 @@ from typing import Any
 UI_COPY_PATH = Path("dev-docs/ui_copy.json")
 GLOSSARY_PATH = Path("dev-docs/glossary.json")
 COPY_TEXT_RE = re.compile(r"copy_text\(\s*['\"]([^'\"]+)['\"]\s*\)")
-SOURCE_SCAN_ROOT = Path("src/mypyskindose/gui")
+SOURCE_SCAN_ROOT = Path("src/guiskindose/gui")
 
 TERMINOLOGY_RULES = (
     (re.compile(r"\bmaximum skin dose\b", re.IGNORECASE), "use 'peak skin dose'"),
@@ -70,7 +70,7 @@ def _load_metadata(path: Path, result: ValidationResult) -> Any:
 def _resolve_owner(repo_root: Path, owner: str) -> Path:
     if owner.startswith("src/"):
         return repo_root / owner
-    return repo_root / "src" / "mypyskindose" / owner
+    return repo_root / "src" / "guiskindose" / owner
 
 
 def _collect_copy_text_uses(repo_root: Path) -> dict[str, list[Path]]:
