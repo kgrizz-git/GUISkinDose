@@ -226,3 +226,9 @@ ignore = [
     "GHSA-hvrp-rf83-w775",
     "GHSA-vj7q-gjh5-988w",
 ]
+# Drop automatically once a patched nltk release exists (see uv audit --ignore-until-fixed).
+ignore-until-fixed = [
+    # Transitive via safety (dev extra). NLTK model-artifact APIs bypass pathsec (GHSA-8mgp-746c-j5xp /
+    # CVE-2026-81726). No patched release as of 2026-09-02; nltk is not used by GUISkinDose runtime.
+    "GHSA-8mgp-746c-j5xp",
+]

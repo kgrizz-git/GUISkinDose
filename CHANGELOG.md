@@ -60,6 +60,11 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **GHSA-8mgp-746c-j5xp / CVE-2026-81726: `nltk` still unpatched** (2026-09-02) —
+  added `[tool.uv.audit] ignore-until-fixed` for the new model-artifact pathsec bypass
+  in transitive dev-only `nltk` 3.10.3 (via `safety`). No patched release exists; the
+  ignore drops automatically when upstream ships a fix. Not used by GUISkinDose runtime.
+
 - **First `guiskindose` package version is `1.0.0`** (2026-09-02) — `pyproject.toml`
   `version` and Sphinx `release` set together; `[project.scripts] guiskindose` points at
   `guiskindose.__main__:cli`. `LIVE_PACKAGE_NAME` is `guiskindose` so leftover pre-rename

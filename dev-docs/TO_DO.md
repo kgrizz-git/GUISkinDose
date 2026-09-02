@@ -144,7 +144,9 @@ policy decisions, not a restart of Phases 0–9.
   advisory feed is independent of `[tool.uv.audit]` ignores. CI's `uv audit` is the gate that matters; the Dependabot
   alerts are informational and should stay open until semgrep bumps/relaxes its `mcp==1.23.3` pin
   (patched versions are `mcp >=1.27.2` / `>=1.28.1`). Context: `mcp` is transitive via the optional Semgrep MCP server
-  path and is not imported or run by GUISkinDose runtime code, so the CVEs are not exploitable in this repo.)
+  path and is not imported or run by GUISkinDose runtime code, so the CVEs are not exploitable in this repo.
+  2026-09-02: added `ignore-until-fixed` for `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 on transitive
+  dev-only `nltk` 3.10.3 — no patched release yet; remove when nltk ships a fix.)
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
