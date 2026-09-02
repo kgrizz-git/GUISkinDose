@@ -15,6 +15,7 @@ from mypyskindose.gui.window_prefs import NativeWindowPrefs, save_native_window_
 
 def test_is_onboarding_dismissed_false_for_missing_file(tmp_path, monkeypatch):
     monkeypatch.setattr(window_prefs, "config_path", lambda: tmp_path / "gui.json")
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: tmp_path / "gui.json")
 
     assert is_onboarding_dismissed() is False
 
@@ -22,6 +23,7 @@ def test_is_onboarding_dismissed_false_for_missing_file(tmp_path, monkeypatch):
 def test_is_onboarding_dismissed_false_when_key_missing_or_false(tmp_path, monkeypatch):
     target = tmp_path / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     target.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
     assert is_onboarding_dismissed() is False
@@ -34,6 +36,7 @@ def test_is_onboarding_dismissed_true_when_key_true(tmp_path, monkeypatch):
     target = tmp_path / "gui.json"
     target.write_text(json.dumps({"onboardingDismissed": True}), encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     assert is_onboarding_dismissed() is True
 
@@ -50,6 +53,7 @@ def test_dismiss_onboarding_writes_true_and_preserves_existing_keys(tmp_path, mo
         encoding="utf-8",
     )
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     dismiss_onboarding()
 
@@ -62,6 +66,7 @@ def test_reset_onboarding_writes_false_and_preserves_existing_keys(tmp_path, mon
     target = tmp_path / "gui.json"
     target.write_text(json.dumps({"schema_version": 1, "custom": "keep", "onboardingDismissed": True}), encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     reset_onboarding()
 
@@ -74,6 +79,7 @@ def test_corrupt_gui_config_defaults_to_not_dismissed(tmp_path, monkeypatch):
     target = tmp_path / "gui.json"
     target.write_text("{not json", encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     assert is_onboarding_dismissed() is False
 
@@ -81,6 +87,7 @@ def test_corrupt_gui_config_defaults_to_not_dismissed(tmp_path, monkeypatch):
 def test_native_window_save_after_dismiss_preserves_onboarding_flag(tmp_path, monkeypatch):
     target = tmp_path / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     dismiss_onboarding()
     save_native_window_prefs(NativeWindowPrefs(False, 900, 700, 10, 20))

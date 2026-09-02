@@ -1,18 +1,14 @@
 """Native window geometry preferences for ``--native`` GUI mode.
 
 Loads and saves normal (restored) window size/position and maximized state to
-``~/.mypyskindose/gui.json``. This module intentionally does not import
+``~/.guiskindose/gui.json``. Reads fall back to ``~/.mypyskindose/gui.json``
+when the new path is absent. Repo-local JSON prefers ``.guiskindose.local.json``
+then ``.mypyskindose.local.json``. This module intentionally does not import
 pywebview so unit tests can run without the ``gui-native`` extra.
 
 Demo / non-clinical mesh visibility (``show_demo_phantoms``) can also be enabled
 via process env, a repo ``.env``, or a gitignored repo-local JSON — see
 ``show_demo_phantoms_enabled``.
-
-Config paths support the in-progress GUISkinDose rename: reads prefer
-``~/.guiskindose/gui.json`` and ``.guiskindose.local.json`` when those files
-exist, and otherwise fall back to ``~/.mypyskindose/gui.json`` and
-``.mypyskindose.local.json``. Writes still target the legacy paths until the
-rename is complete.
 """
 
 from __future__ import annotations
@@ -80,12 +76,12 @@ class NativeWindowPrefs:
 
 
 def config_path() -> Path:
-    """Write path (and read fallback) for the legacy home GUI JSON."""
+    """Read fallback for the legacy home GUI JSON (``~/.mypyskindose/gui.json``)."""
     return Path.home() / ".mypyskindose" / "gui.json"
 
 
 def new_config_path() -> Path:
-    """Preferred read path for the GUISkinDose home GUI JSON (PR 0 dual-read)."""
+    """Preferred read and write path for the home GUI JSON (``~/.guiskindose/gui.json``)."""
     return Path.home() / ".guiskindose" / "gui.json"
 
 
@@ -250,8 +246,8 @@ def show_demo_phantoms_enabled(*, start: Path | None = None) -> bool:
 
 
 def save_gui_config(data: dict[str, Any]) -> None:
-    """Atomically write the raw GUI config dict."""
-    path = config_path()
+    """Atomically write the raw GUI config dict to the preferred GUISkinDose path."""
+    path = new_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path: Path | None = None
     try:

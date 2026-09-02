@@ -54,6 +54,12 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Changed
 
+- **GUI config saves now write `~/.guiskindose/gui.json`** (2026-09-02) — `save_gui_config()`
+  persists to the new home path (creating the directory as needed). Reads still fall back to
+  `~/.mypyskindose/gui.json` when the new file is absent. When both exist, load–modify–save
+  (onboarding dismiss, native-window prefs) updates the new file. The legacy directory is not
+  deleted.
+
 - **GUISkinDose rename PR 1 test contract** (2026-09-02) — `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md`
   now requires inverting PR 0 locks in the mechanical-rename PR: config load–modify–save must
   persist to `~/.guiskindose/` when that file exists, `LIVE_PACKAGE_NAME` must not remain

@@ -86,6 +86,7 @@ def test_load_gui_config_backup_failure_still_returns_empty_dict(tmp_path, monke
 def test_save_gui_config_round_trip_preserves_arbitrary_keys(tmp_path, monkeypatch):
     target = tmp_path / "nested" / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
     payload = {
         "schema_version": 1,
         "native_window": {"maximized": False, "width": 800, "height": 600, "x": 10, "y": 20},
@@ -101,6 +102,7 @@ def test_save_gui_config_failure_leaves_existing_config_and_cleans_temp(tmp_path
     target = tmp_path / "gui.json"
     target.write_text('{"existing": true}', encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     with pytest.raises(TypeError):
         save_gui_config({"bad": object()})
@@ -121,6 +123,7 @@ def test_load_wrong_schema_returns_none(tmp_path, monkeypatch):
 
 def test_load_save_round_trip(tmp_path, monkeypatch):
     monkeypatch.setattr(window_prefs, "config_path", lambda: tmp_path / "gui.json")
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: tmp_path / "gui.json")
     prefs = NativeWindowPrefs(maximized=True, width=1200, height=800, x=100, y=50)
     save_native_window_prefs(prefs)
     loaded = load_native_window_prefs()
@@ -130,6 +133,7 @@ def test_load_save_round_trip(tmp_path, monkeypatch):
 def test_save_creates_parent_directory(tmp_path, monkeypatch):
     target = tmp_path / "nested" / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
     save_native_window_prefs(NativeWindowPrefs(False, 800, 600, 0, 0))
     assert target.is_file()
 
@@ -138,6 +142,7 @@ def test_save_native_window_prefs_preserves_onboarding_flag(tmp_path, monkeypatc
     target = tmp_path / "gui.json"
     target.write_text(json.dumps({"onboardingDismissed": True}), encoding="utf-8")
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
 
     save_native_window_prefs(NativeWindowPrefs(False, 800, 600, 0, 0))
 
@@ -243,17 +248,15 @@ def test_load_gui_config_falls_back_to_old_home_path_when_new_missing(tmp_path, 
     assert load_gui_config() == {"old": True}
 
 
-def test_save_gui_config_still_writes_old_path(tmp_path, monkeypatch):
-    target = tmp_path / "nested" / "gui.json"
-    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+def test_save_gui_config_writes_new_path(tmp_path, monkeypatch):
+    target = tmp_path / ".guiskindose" / "gui.json"
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
     save_gui_config({"k": "v"})
     assert json.loads(target.read_text(encoding="utf-8")) == {"k": "v"}
-    new_path = tmp_path / ".guiskindose" / "gui.json"
-    assert not new_path.exists()
 
 
-def test_load_prefers_new_path_but_save_still_writes_old_path(tmp_path, monkeypatch):
-    """PR 0 contract: both files exist → read new content, write still goes to old path."""
+def test_load_prefers_new_path_and_save_updates_new_path(tmp_path, monkeypatch):
+    """PR 1 contract: both files exist → read new content, save updates NEW, old unchanged."""
     new_cfg = tmp_path / "new" / "gui.json"
     old_cfg = tmp_path / "old" / "gui.json"
     new_cfg.parent.mkdir()
@@ -265,8 +268,78 @@ def test_load_prefers_new_path_but_save_still_writes_old_path(tmp_path, monkeypa
 
     assert load_gui_config() == {"from": "new"}
     save_gui_config({"saved": True})
-    assert json.loads(old_cfg.read_text(encoding="utf-8")) == {"saved": True}
-    assert json.loads(new_cfg.read_text(encoding="utf-8")) == {"from": "new"}
+    assert json.loads(new_cfg.read_text(encoding="utf-8")) == {"saved": True}
+    assert json.loads(old_cfg.read_text(encoding="utf-8")) == {"from": "old"}
+
+
+def test_load_modify_save_dismiss_onboarding_with_both_files_existing(tmp_path, monkeypatch):
+    """dismiss_onboarding() must persist to the new file when both exist."""
+    from mypyskindose.gui.onboarding import dismiss_onboarding
+
+    new_cfg = tmp_path / "new" / "gui.json"
+    old_cfg = tmp_path / "old" / "gui.json"
+    new_cfg.parent.mkdir()
+    old_cfg.parent.mkdir()
+    new_cfg.write_text(json.dumps({"onboardingDismissed": False, "from": "new"}), encoding="utf-8")
+    old_cfg.write_text(json.dumps({"onboardingDismissed": False, "from": "old"}), encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+
+    dismiss_onboarding()
+
+    assert json.loads(new_cfg.read_text(encoding="utf-8"))["onboardingDismissed"] is True
+    assert json.loads(new_cfg.read_text(encoding="utf-8"))["from"] == "new"
+    assert json.loads(old_cfg.read_text(encoding="utf-8"))["onboardingDismissed"] is False
+    assert json.loads(old_cfg.read_text(encoding="utf-8"))["from"] == "old"
+    # Next load sees the new file.
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+    from mypyskindose.gui.onboarding import is_onboarding_dismissed
+    assert is_onboarding_dismissed() is True
+
+
+def test_load_modify_save_native_window_prefs_with_both_files_existing(tmp_path, monkeypatch):
+    """save_native_window_prefs() must persist to the new file when both exist."""
+    new_cfg = tmp_path / "new" / "gui.json"
+    old_cfg = tmp_path / "old" / "gui.json"
+    new_cfg.parent.mkdir()
+    old_cfg.parent.mkdir()
+    new_cfg.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "from": "new",
+                "native_window": {"maximized": False, "width": 900, "height": 600, "x": 0, "y": 0},
+            }
+        ),
+        encoding="utf-8",
+    )
+    old_cfg.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "from": "old",
+                "native_window": {"maximized": False, "width": 800, "height": 600, "x": 0, "y": 0},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+
+    save_native_window_prefs(NativeWindowPrefs(maximized=True, width=1024, height=768, x=10, y=20))
+
+    new_data = json.loads(new_cfg.read_text(encoding="utf-8"))
+    assert new_data["native_window"]["width"] == 1024
+    assert new_data["from"] == "new"
+    old_data = json.loads(old_cfg.read_text(encoding="utf-8"))
+    assert old_data["native_window"]["width"] == 800
+    assert old_data["from"] == "old"
+    # Next load sees the new file.
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: new_cfg)
+    monkeypatch.setattr(window_prefs, "config_path", lambda: old_cfg)
+    loaded = load_native_window_prefs()
+    assert loaded == NativeWindowPrefs(maximized=True, width=1024, height=768, x=10, y=20)
 
 
 def test_window_prefs_source_has_no_webview_import():
