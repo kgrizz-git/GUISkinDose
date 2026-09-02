@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from scripts.check_stale_brand import LIVE_PACKAGE_NAME, check_file
+from scripts.check_stale_brand import LIVE_PACKAGE_NAME, check_file, is_path_allowed
 
 
 def test_live_package_name_pr1_todo_is_present() -> None:
@@ -62,6 +62,16 @@ def test_stale_brand_excludes_paths(tmp_path: Path):
     
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert not errors
+
+
+def test_stale_brand_allowlist_matches_files_exactly() -> None:
+    """File allowlist entries must not match a suffix variant of the same name."""
+    assert is_path_allowed("CHANGELOG.md") is True
+    assert is_path_allowed("CHANGELOG.md.bak") is False
+    assert is_path_allowed("scripts/check_stale_brand.py") is True
+    assert is_path_allowed("scripts/check_stale_brand.py.backup") is False
+    assert is_path_allowed("dev-docs/plans/archive/old.md") is True
+    assert is_path_allowed("dev-docs/plans/archive_extra/old.md") is False
 
 def test_stale_brand_temp_prefixes_not_allowed(tmp_path: Path):
     """Temp prefixes like mypyskindose-uploads should fail closed after PR 1."""

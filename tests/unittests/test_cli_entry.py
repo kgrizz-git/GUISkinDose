@@ -10,10 +10,19 @@ from __future__ import annotations
 
 import inspect
 import sys
+from collections.abc import Iterator
 
 import pytest
 
 from mypyskindose.__main__ import cli
+
+
+@pytest.fixture(autouse=True)
+def restore_excepthook() -> Iterator[None]:
+    """``cli()`` installs a process-global ``sys.excepthook``; restore it after each test."""
+    original = sys.excepthook
+    yield
+    sys.excepthook = original
 
 
 def test_cli_is_callable_with_no_arguments():

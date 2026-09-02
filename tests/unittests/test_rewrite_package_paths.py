@@ -303,13 +303,20 @@ def test_scan_leftover_brand_reports_brand_and_env_prefix(tmp_path: Path) -> Non
     assert "MYPYSKINDOSE_" in hits[1][2]
 
 
-def test_scan_leftover_brand_exit_zero_even_with_hits(tmp_path: Path) -> None:
+def test_scan_leftover_brand_exit_zero_even_with_hits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     _write(tmp_path, "src/foo.py", "import mypyskindose\n")
     from scripts.rewrite_package_paths import main
+
+    monkeypatch.setattr("scripts.rewrite_package_paths.repo_root_from_script", lambda: tmp_path)
 
     ret = main(["scan", "--roots", "src"])
     # The helper is report-only: exit 0 even when hits exist.
     assert ret == 0
+    assert "Leftover brand hits: 1" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +350,17 @@ def test_is_file_allowlisted_matches(repo_rel: str) -> None:
     from scripts.rewrite_package_paths import _is_file_allowlisted
 
     assert _is_file_allowlisted(repo_rel) is True
+
+
+def test_is_file_allowlisted_matches_files_exactly() -> None:
+    from scripts.rewrite_package_paths import _is_file_allowlisted
+
+    assert _is_file_allowlisted("CHANGELOG.md") is True
+    assert _is_file_allowlisted("CHANGELOG.md.bak") is False
+    assert _is_file_allowlisted("scripts/rewrite_package_paths.py") is True
+    assert _is_file_allowlisted("scripts/rewrite_package_paths.py.backup") is False
+    assert _is_file_allowlisted("dev-docs/plans/archive/old.md") is True
+    assert _is_file_allowlisted("dev-docs/plans/archive_extra/old.md") is False
 
 
 def test_is_line_allowlisted_rejects_bare_reference() -> None:

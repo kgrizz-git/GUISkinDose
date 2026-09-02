@@ -42,7 +42,15 @@ ALLOWED_PATTERNS = [
 ]
 
 def is_path_allowed(rel_path: str) -> bool:
-    return any(rel_path == allowed or rel_path.startswith(allowed) for allowed in ALLOWED_PATHS)
+    """Return True when *rel_path* is an allowlisted file or under an allowlisted directory.
+
+    Directory entries in ``ALLOWED_PATHS`` end with ``/`` and match as a prefix.
+    File entries match exactly so a suffix such as ``CHANGELOG.md.bak`` is not exempt.
+    """
+    return any(
+        rel_path.startswith(allowed) if allowed.endswith("/") else rel_path == allowed
+        for allowed in ALLOWED_PATHS
+    )
 
 def get_git_files(repo_root: Path) -> list[str]:
     """Return all git-tracked files."""
@@ -63,7 +71,8 @@ def get_git_files(repo_root: Path) -> list[str]:
 def _is_probably_text(path: Path) -> bool:
     """Skip NUL-containing files so the gate does not scan binaries."""
     try:
-        sample = path.read_bytes()[:4096]
+        with path.open("rb") as handle:
+            sample = handle.read(4096)
     except OSError:
         return False
     return b"\x00" not in sample
@@ -109,8 +118,9 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
                         errors.append(f"{rel_path}:{line_no}: {snippet}")
                         break
     except OSError:
-        pass
-    
+        # Skip unreadable files so one permission error cannot abort the repo-wide gate.
+        return []
+
     return errors
 
 def main() -> int:

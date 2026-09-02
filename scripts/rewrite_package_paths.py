@@ -74,7 +74,16 @@ _ALLOWLIST_LINE_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 
 def _is_file_allowlisted(repo_rel: str) -> bool:
-    return any(allowed in repo_rel for allowed in _ALLOWLIST_FILE_PATHS)
+    """Return True when *repo_rel* is an allowlisted file or under an allowlisted directory.
+
+    Directory entries end with ``/`` and match as a prefix. File entries match
+    exactly so a suffix such as ``CHANGELOG.md.bak`` is not exempt.
+    """
+    posix = repo_rel.replace("\\", "/")
+    return any(
+        posix.startswith(allowed) if allowed.endswith("/") else posix == allowed
+        for allowed in _ALLOWLIST_FILE_PATHS
+    )
 
 
 def _is_line_allowlisted(line: str) -> bool:
@@ -157,23 +166,25 @@ def scan_leftover_brand(
             if not _is_text_file(path):
                 continue
             try:
-                text = path.read_text(encoding="utf-8")
+                with path.open("r", encoding="utf-8") as handle:
+                    for number, raw_line in enumerate(handle, start=1):
+                        line = raw_line.rstrip("\r\n")
+                        lower = line.lower()
+                        if not any(token.lower() in lower for token in tokens):
+                            continue
+                        if _is_line_allowlisted(line):
+                            continue
+                        hits.append((path, number, line))
             except (OSError, UnicodeDecodeError):
                 continue
-            for number, line in enumerate(text.splitlines(), start=1):
-                lower = line.lower()
-                if not any(token.lower() in lower for token in tokens):
-                    continue
-                if _is_line_allowlisted(line):
-                    continue
-                hits.append((path, number, line))
     hits.sort(key=lambda hit: (hit[0], hit[1]))
     return hits
 
 
 def _is_text_file(path: Path) -> bool:
     try:
-        sample = path.read_bytes()[:4096]
+        with path.open("rb") as handle:
+            sample = handle.read(4096)
     except OSError:
         return False
     if b"\x00" in sample:
