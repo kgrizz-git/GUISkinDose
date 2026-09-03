@@ -49,7 +49,10 @@ def test_sphinx_release_matches_pyproject() -> None:
 
 
 def test_wheel_contains_guiskindose_package() -> None:
-    """The newest ``dist/*.whl`` must ship ``guiskindose/`` and no ``mypyskindose/``.
+    """The newest ``dist/*.whl`` must ship the ``guiskindose/`` tree, not an empty or old-name tree.
+
+    (The legacy package name is built by concatenation below so this file holds no
+    pre-rename import-path literal.)
 
     Skipped when no wheel has been built yet (``uv build`` is a runbook step, not
     a required pytest precondition for every developer).
