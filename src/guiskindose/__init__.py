@@ -1,3 +1,6 @@
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _distribution_version
+
 from .analyze_data import analyze_data as analyze_data
 from .beam_class import Beam as Beam
 from .geom_calc import check_new_geometry as check_new_geometry
@@ -10,6 +13,11 @@ from .plotting import plot_geometry as plot_geometry
 from .rdsr_normalizer import rdsr_normalizer as rdsr_normalizer
 from .rdsr_parser import rdsr_parser as rdsr_parser
 from .settings import PyskindoseSettings as PyskindoseSettings
+
+try:
+    __version__ = _distribution_version("guiskindose")
+except PackageNotFoundError:  # source tree imported without installation
+    __version__ = "0.0.0+unknown"
 
 
 def load_settings_example_json() -> dict:

@@ -23,3 +23,10 @@ When a PyPI release exists:
 ```bash
 pip install guiskindose
 ```
+
+Installing also provides a `guiskindose` console command — equivalent to
+`python -m guiskindose`:
+
+```bash
+guiskindose --mode gui    # launch the GUI; see `guiskindose --help` for all options
+```

@@ -24,6 +24,19 @@ def test_installed_package_version_matches_pyproject() -> None:
     assert version("guiskindose") == declared
 
 
+def test_dunder_version_attribute_matches_pyproject() -> None:
+    """``guiskindose.__version__`` exists and agrees with ``pyproject.toml``.
+
+    User-facing docs (e.g. the bug-report issue template) tell users to query
+    ``guiskindose.__version__``; it must never silently disappear.
+    """
+    import guiskindose
+
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    declared = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+    assert guiskindose.__version__ == declared
+
+
 def test_sphinx_release_matches_pyproject() -> None:
     """Sphinx ``release`` in ``docs/source/conf.py`` tracks ``pyproject.toml``."""
     repo = Path(__file__).resolve().parents[2]

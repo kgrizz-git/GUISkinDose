@@ -76,6 +76,9 @@ The script prompts you to run in browser mode (default) or native window mode.
 ```bash
 python -m guiskindose --mode gui              # browser mode
 python -m guiskindose --mode gui --native     # native window (requires pywebview)
+
+# or the equivalent installed console command:
+guiskindose --mode gui [--native]
 ```
 
 Native window mode remembers the last window size, position, and maximized state in

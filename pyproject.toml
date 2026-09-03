@@ -115,7 +115,9 @@ include = ["guiskindose*"]
 exclude = ["guiskindose.egg-info*"]
 
 
-[project-urls]
+[project.urls]
+# URLs track the GitHub repository, which still carries the pre-rename
+# slug until the GUISkinDose GitHub rename plan executes (GitHub redirects).
 "Homepage" = "https://github.com/kgrizz-git/MyPySkinDose"
 "Bug Tracker" = "https://github.com/kgrizz-git/MyPySkinDose/issues"
 "Documentation" = "https://github.com/kgrizz-git/MyPySkinDose/tree/main/docs"
