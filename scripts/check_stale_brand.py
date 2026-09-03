@@ -45,8 +45,12 @@ ALLOWED_PATTERNS = [
     # Exclude temp prefixes and the semgrep yaml file name itself that must be renamed.
     re.compile(r"[\"']mypyskindose-(?!uploads|export|semgrep|hounddog|privacy)[a-zA-Z0-9_-]+[\"']"),
     # Dual-read config/env leftovers that must remain until users migrate.
+    # Scoped to the exact leftover forms so a live `from .mypyskindose import x`
+    # or `pkg.mypyskindose` still fails the gate.
     re.compile(r"MYPYSKINDOSE_SHOW_DEMO_PHANTOMS"),
-    re.compile(r"\.mypyskindose"),
+    re.compile(r"~/\.mypyskindose"),
+    re.compile(r"\.mypyskindose\.local\.json"),
+    re.compile(r"""["']\.mypyskindose["']"""),
     re.compile(r"mypyskindose-privacy\.yml"),
     # Historical identity (formerly the MyPySkinDose / mypyskindose names).
     re.compile(r"formerly\s+[`']?mypyskindose[`']?"),
@@ -71,7 +75,6 @@ CHANGELOG_CURRENT_PATTERNS = [
     re.compile(r"not MyPySkinDose"),
     re.compile(r"MyPySkinDose [`']?26\.0\.0[`']?"),
     re.compile(r"python -m mypyskindose"),
-    re.compile(r"mypyskindose\.[A-Za-z_][\w.]*"),
     re.compile(r"[`']MyPySkinDose[`']"),
     re.compile(r"remain MyPySkinDose history"),
 ]

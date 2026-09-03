@@ -185,3 +185,46 @@ def test_stale_brand_still_rejects_import_of_old_package(tmp_path: Path) -> None
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert len(errors) == 1
     assert "import mypyskindose" in errors[0]
+
+
+def test_stale_brand_rejects_relative_import_of_old_package(tmp_path: Path) -> None:
+    """A live ``from .mypyskindose import x`` must fail; the dual-read config
+    allowlist is scoped to real path/env leftovers, not any ``.mypyskindose``."""
+    repo_root = tmp_path
+    file_path = repo_root / "src" / "guiskindose" / "oops.py"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_text("from .mypyskindose import analyze_data\n", encoding="utf-8")
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert len(errors) == 1
+    assert "from .mypyskindose import analyze_data" in errors[0]
+
+
+def test_stale_brand_rejects_bare_dotted_reference(tmp_path: Path) -> None:
+    """Bare dotted leftovers like ``pkg.mypyskindose`` in live code must fail."""
+    repo_root = tmp_path
+    file_path = repo_root / "src" / "guiskindose" / "oops.py"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_text(
+        "value = pkg.mypyskindose\nOLD = getattr(pkg, 'mypyskindose')\n",
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert len(errors) == 2
+    assert "pkg.mypyskindose" in errors[0]
+    assert "'mypyskindose'" in errors[1]
+
+
+def test_stale_brand_changelog_rejects_dotted_import(tmp_path: Path) -> None:
+    """``import mypyskindose.gui`` in Unreleased must fail; dotted references in
+    historical ``## [25.`` sections are unreachable, so no changelog allowance
+    weakens the 'unquoted import fails' guarantee."""
+    repo_root = tmp_path
+    file_path = repo_root / "CHANGELOG.md"
+    file_path.write_text(
+        "## [Unreleased]\n\n- fix: still calls import mypyskindose.gui\n\n"
+        "## [25.2.0] - 2026-07-21\n\n- ``import of mypyskindose.gui`` is history\n",
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert len(errors) == 1
+    assert "import mypyskindose.gui" in errors[0]
