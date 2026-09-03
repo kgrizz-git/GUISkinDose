@@ -260,7 +260,8 @@ Bulk-replace imports under `tests/`. Special cases:
 
 1. **Stale-brand allowlist check** — pytest or `scripts/check_stale_brand.py` that fails if
    `mypyskindose` / `MyPySkinDose` / `MYPYSKINDOSE_` appear outside an explicit allowlist:
-   historical changelog sections, `plans/archive/`, `assessments/`, Semgrep rule IDs,
+   historical changelog sections (`CHANGELOG.md` Unreleased is scanned; the gate stops at
+   the first `## [25.` header), `plans/archive/`, `assessments/`, Semgrep rule IDs,
    `# nosemgrep: mypyskindose-*`, upstream PySkinDose attribution, this plan, the
    republication plan, `COORD_TRANSFORM_COMPARISON.md`, and `GUISKINDOSE_MIGRATION_STATUS.md`
    migration examples. Wire it into pre-commit and CI. A one-shot `rg` in Phase 8 is not enough.

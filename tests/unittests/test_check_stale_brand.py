@@ -61,7 +61,8 @@ def test_stale_brand_permanent_allowlist(tmp_path: Path):
 def test_stale_brand_excludes_paths(tmp_path: Path):
     """Entire paths on the allowlist are skipped."""
     repo_root = tmp_path
-    file_path = repo_root / "CHANGELOG.md"
+    file_path = repo_root / "dev-docs" / "plans" / "GUISKINDOSE_RENAME_PLAN.md"
+    file_path.parent.mkdir(parents=True)
     file_path.write_text("This mentions MyPySkinDose and mypyskindose freely.\n")
 
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
@@ -70,12 +71,64 @@ def test_stale_brand_excludes_paths(tmp_path: Path):
 
 def test_stale_brand_allowlist_matches_files_exactly() -> None:
     """File allowlist entries must not match a suffix variant of the same name."""
-    assert is_path_allowed("CHANGELOG.md") is True
+    assert is_path_allowed("CHANGELOG.md") is False
     assert is_path_allowed("CHANGELOG.md.bak") is False
+    assert is_path_allowed("dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md") is True
     assert is_path_allowed("scripts/check_stale_brand.py") is True
     assert is_path_allowed("scripts/check_stale_brand.py.backup") is False
     assert is_path_allowed("dev-docs/plans/archive/old.md") is True
     assert is_path_allowed("dev-docs/plans/archive_extra/old.md") is False
+
+
+def test_stale_brand_changelog_unreleased_stray_import(tmp_path: Path) -> None:
+    """Unreleased CHANGELOG must not hide an unquoted import of the old package."""
+    repo_root = tmp_path
+    file_path = repo_root / "CHANGELOG.md"
+    file_path.write_text(
+        "## [Unreleased]\n\n- leftover live docs still say import mypyskindose\n\n"
+        "## [25.2.0] - 2026-07-21\n\n- MyPySkinDose history\n",
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert len(errors) == 1
+    assert "import mypyskindose" in errors[0]
+
+
+def test_stale_brand_changelog_skips_historical_25_sections(tmp_path: Path) -> None:
+    """Keep a Changelog sections from ``## [25.`` onward are not scanned."""
+    repo_root = tmp_path
+    file_path = repo_root / "CHANGELOG.md"
+    file_path.write_text(
+        "## [Unreleased]\n\n- GUISkinDose 1.0.0\n\n## [25.2.0] - 2026-07-21\n\n- import mypyskindose\n- MyPySkinDose\n",
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert errors == []
+
+
+def test_stale_brand_changelog_allows_rename_prose(tmp_path: Path) -> None:
+    """Unreleased rename notes may mention the old path and dual-read leftovers."""
+    repo_root = tmp_path
+    file_path = repo_root / "CHANGELOG.md"
+    file_path.write_text(
+        "\n".join(
+            [
+                "## [Unreleased]",
+                "",
+                "- `git mv src/mypyskindose src/guiskindose`",
+                "- legacy mypyskindose paths; (`mypyskindose` → `guiskindose`)",
+                "- rule IDs stay `mypyskindose-*`; LIVE_PACKAGE_NAME must not remain",
+                '  `"mypyskindose"`',
+                "- not MyPySkinDose `26.0.0`; remain MyPySkinDose history",
+                "- python -m mypyskindose --mode gui (historical CLI)",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert errors == []
 
 
 def test_stale_brand_temp_prefixes_not_allowed(tmp_path: Path):

@@ -126,6 +126,13 @@ policy decisions, not a restart of Phases 0–9.
 ### Harness / Repo Hygiene
 
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
+- [ ] **CI wheel packaging smoke** — `test_wheel_contains_guiskindose_package` skips unless
+  `dist/*.whl` exists. Add a CI `uv build` step (or reuse the `release.yml` artifact) so the
+  wheel-contents assertion is not developer-only. `release.yml` already builds; this is
+  optional PR-CI coverage.
+- [ ] **Stale-brand CHANGELOG Unreleased pattern audit** — `CHANGELOG_CURRENT_PATTERNS` in
+  `scripts/check_stale_brand.py` allow rename-prose in Unreleased. If more patterns are added,
+  re-check that they still cannot hide an unquoted import of the pre-rename package.
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
   inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,

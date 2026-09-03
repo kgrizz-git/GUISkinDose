@@ -25,14 +25,14 @@ omit pure CI/refactor bullets and point readers here. See
 
 ### Added
 
-- **GUISkinDose rename PR 0 prerequisites** (2026-09-01) — green, mergeable helpers that do
-  not rename the Python package: extract `cli()` from `__main__.py` for a future console
-  script; dual-read `~/.guiskindose/` / `.guiskindose.local.json` /
-  `GUISKINDOSE_SHOW_DEMO_PHANTOMS` while still writing the legacy mypyskindose paths
-  (do not create `~/.guiskindose/` by hand until PR 1 starts writing that path);
+- **GUISkinDose rename PR 0 prerequisites** (2026-09-01) — green, mergeable helpers that did
+  not yet rename the Python package: extract `cli()` from `__main__.py` (the `guiskindose`
+  console script is wired in a later commit of this PR); dual-read `~/.guiskindose/` /
+  `.guiskindose.local.json` / `GUISKINDOSE_SHOW_DEMO_PHANTOMS` while still writing the
+  legacy mypyskindose paths at that slice (this PR now writes `~/.guiskindose/`);
   `scripts/rewrite_package_paths.py` (inventory `path` rewrite + leftover-brand report);
-  `scripts/check_stale_brand.py` wired into pre-commit and CI (effectively a no-op until
-  PR 1 flips `LIVE_PACKAGE_NAME`; fail-closed behavior is covered by tests).
+  `scripts/check_stale_brand.py` wired into pre-commit and CI (a no-op until this PR
+  flipped `LIVE_PACKAGE_NAME`; fail-closed behavior is covered by tests).
 
 ### Fixed
 
@@ -65,6 +65,12 @@ omit pure CI/refactor bullets and point readers here. See
   in transitive dev-only `nltk` 3.10.3 (via `safety`). No patched release exists; the
   ignore drops automatically when upstream ships a fix. Not used by GUISkinDose runtime.
 
+- **Stale-brand CHANGELOG scan tightened** (2026-09-02) — `CHANGELOG.md` is no longer a
+  whole-file stale-brand exemption. Unreleased is scanned (rename-prose patterns allowed);
+  historical `## [25.` sections remain skipped. Sphinx `docs/source/user/install.md` now
+  leads with GitHub install until PyPI exists; `PACKAGE_INSTALL.md` examples use `1.0.0`.
+  Dropped leftover `pyskindose.egg-info*` from setuptools `exclude`.
+
 - **First `guiskindose` package version is `1.0.0`** (2026-09-02) — `pyproject.toml`
   `version` and Sphinx `release` set together; `[project.scripts] guiskindose` points at
   `guiskindose.__main__:cli`. `LIVE_PACKAGE_NAME` is `guiskindose` so leftover pre-rename
@@ -74,8 +80,8 @@ omit pure CI/refactor bullets and point readers here. See
 
 - **First GUISkinDose version locked at `1.0.0`** (2026-09-02) — new PyPI/import identity,
   not MyPySkinDose `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream
-  PySkinDose. Package `name` is already `guiskindose`; version stays `25.2.0` until the
-  packaging commit that sets `1.0.0`. GitHub Release notes and the `[1.0.0]` changelog
+  PySkinDose. Package `name` was already `guiskindose`; version was `25.2.0` until the
+  packaging commit in this PR set `1.0.0`. GitHub Release notes and the `[1.0.0]` changelog
   section must say this was formerly MyPySkinDose `25.2.0` / a fork of PySkinDose. Plan:
   [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
 
@@ -85,14 +91,14 @@ omit pure CI/refactor bullets and point readers here. See
   [dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 - **Package directory and import path are `guiskindose`** (2026-09-02) — `git mv src/mypyskindose
-  src/guiskindose`; `pyproject.toml` `name` / `packages.find` follow. Version stays `25.2.0`
-  until the packaging commit that sets `1.0.0`. Legacy config reads still use
+  src/guiskindose`; `pyproject.toml` `name` / `packages.find` follow. Version was `25.2.0`
+  until the packaging commit in this PR set `1.0.0`. Legacy config reads still use
   `~/.mypyskindose/gui.json` and `.mypyskindose.local.json` when the new files are absent.
   Markdown links and backtick paths that pointed at `src/mypyskindose` now point at
   `src/guiskindose`. User-facing brand (GUI title, CLI description, export `APP_NAME`,
   launchers, Sphinx, install guide, issue templates) is **GUISkinDose** / `guiskindose`.
-  Tests now import `guiskindose` so the suite can collect. Console script and
-  `LIVE_PACKAGE_NAME` remain later slices.
+  Tests now import `guiskindose` so the suite can collect. The console script and
+  `LIVE_PACKAGE_NAME = "guiskindose"` landed in later commits of this PR.
   Semgrep rule IDs and live GitHub/Sonar URLs are unchanged.
   Bandit pre-commit `files:` and CI bandit/compileall/coverage now scan `src/guiskindose`.
   Blocking Semgrep `paths.include` filters and `.phi-scanner.yml` HVL exclusions now

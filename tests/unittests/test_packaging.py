@@ -6,6 +6,7 @@ wheel contains the ``guiskindose`` package (not an empty or old-name tree).
 
 from __future__ import annotations
 
+import re
 import tomllib
 import zipfile
 from importlib.metadata import version
@@ -21,6 +22,17 @@ def test_installed_package_version_matches_pyproject() -> None:
     declared = data["project"]["version"]
     assert declared == "1.0.0"
     assert version("guiskindose") == declared
+
+
+def test_sphinx_release_matches_pyproject() -> None:
+    """Sphinx ``release`` in ``docs/source/conf.py`` tracks ``pyproject.toml``."""
+    repo = Path(__file__).resolve().parents[2]
+    pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    declared = pyproject["project"]["version"]
+    conf = (repo / "docs" / "source" / "conf.py").read_text(encoding="utf-8")
+    match = re.search(r'^release\s*=\s*["\']([^"\']+)["\']', conf, re.MULTILINE)
+    assert match is not None
+    assert match.group(1) == declared
 
 
 def test_wheel_contains_guiskindose_package() -> None:

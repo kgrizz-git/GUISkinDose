@@ -92,7 +92,7 @@ The package version is defined in one place (`pyproject.toml`) and can be querie
 
 ```python
 import importlib.metadata
-print(importlib.metadata.version("guiskindose"))  # 25.1.1
+print(importlib.metadata.version("guiskindose"))  # 1.0.0
 ```
 
 This is useful for logging, reproducibility, and debugging.
@@ -114,8 +114,8 @@ pip install guiskindose
 **Local wheel/sdist:**
 ```bash
 pip install build
-python -m build  # creates dist/guiskindose-25.1.1-py3-none-any.whl
-pip install dist/guiskindose-25.1.1-py3-none-any.whl
+python -m build  # creates dist/guiskindose-1.0.0-py3-none-any.whl
+pip install dist/guiskindose-1.0.0-py3-none-any.whl
 ```
 
 Without the package structure, users would need to clone the repo, understand the directory layout, and manually configure their environment.

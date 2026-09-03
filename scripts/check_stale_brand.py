@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Check for stale MyPySkinDose brand strings."""
+"""Check for stale MyPySkinDose brand strings.
+
+Scans git-tracked text files. ``CHANGELOG.md`` is not wholly exempt: Unreleased
+(and any later ``1.x`` sections) are scanned, then the gate stops at the first
+``## [25.`` historical header. Dual-read leftovers and rename-prose phrases are
+allowlisted; an unquoted ``import mypyskindose`` in Unreleased still fails.
+"""
 
 import re
 import subprocess
@@ -17,7 +23,6 @@ BAD_STRINGS = ["mypyskindose", "MyPySkinDose", "MYPYSKINDOSE_"]
 ALLOWED_PATHS = [
     "dev-docs/plans/archive/",
     "dev-docs/assessments/",
-    "CHANGELOG.md",  # PR 1 should tighten this to only allow historical sections
     "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
@@ -52,12 +57,31 @@ ALLOWED_PATTERNS = [
     re.compile(r"``mypyskindose/?``"),
 ]
 
+# Keep a Changelog MyPySkinDose version sections (## [25.x.x] and older).
+CHANGELOG_HISTORICAL_START = re.compile(r"^## \[25\.")
+
+# Extra allowances only in CHANGELOG.md before the first historical 25.x header.
+# These describe the rename and pre-rename Unreleased work; they must not hide
+# an unquoted ``import mypyskindose``.
+CHANGELOG_CURRENT_PATTERNS = [
+    re.compile(r"src/mypyskindose"),
+    re.compile(r"legacy mypyskindose"),
+    re.compile(r"mypyskindose → guiskindose"),
+    re.compile(r"[`'\"]mypyskindose(?:-\*)?[`'\"]"),
+    re.compile(r"not MyPySkinDose"),
+    re.compile(r"MyPySkinDose [`']?26\.0\.0[`']?"),
+    re.compile(r"python -m mypyskindose"),
+    re.compile(r"mypyskindose\.[A-Za-z_][\w.]*"),
+    re.compile(r"[`']MyPySkinDose[`']"),
+    re.compile(r"remain MyPySkinDose history"),
+]
+
 
 def is_path_allowed(rel_path: str) -> bool:
     """Return True when *rel_path* is an allowlisted file or under an allowlisted directory.
 
     Directory entries in ``ALLOWED_PATHS`` end with ``/`` and match as a prefix.
-    File entries match exactly so a suffix such as ``CHANGELOG.md.bak`` is not exempt.
+    File entries match exactly so a suffix such as ``scripts/check_stale_brand.py.backup`` is not exempt.
     """
     return any(
         rel_path.startswith(allowed) if allowed.endswith("/") else rel_path == allowed for allowed in ALLOWED_PATHS
@@ -101,9 +125,12 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
         return []
 
     errors = []
+    changelog_current = rel_path == "CHANGELOG.md"
     try:
         with path.open("r", encoding="utf-8", errors="surrogateescape") as f:
             for line_no, line in enumerate(f, start=1):
+                if changelog_current and CHANGELOG_HISTORICAL_START.match(line):
+                    break
                 # We skip checking very long lines to save time, unless they contain bad strings anyway.
                 if not any(bad in line for bad in BAD_STRINGS):
                     continue
@@ -112,8 +139,12 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
                 # Strip permanently allowed patterns
                 for pattern in ALLOWED_PATTERNS:
                     line_to_check = pattern.sub("", line_to_check)
+                if changelog_current:
+                    for pattern in CHANGELOG_CURRENT_PATTERNS:
+                        line_to_check = pattern.sub("", line_to_check)
 
-                # PR 0 no-op: only when the live name is still the old package.
+                # Kept for tests (test_stale_brand_live_package_allowance) and PR 0 mode;
+                # production LIVE_PACKAGE_NAME is guiskindose.
                 if live_package_name == "mypyskindose":
                     for bad in BAD_STRINGS:
                         line_to_check = line_to_check.replace(bad, "")

@@ -112,7 +112,7 @@ zip-safe = false
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["guiskindose*"]
-exclude = ["guiskindose.egg-info*", "pyskindose.egg-info*"]
+exclude = ["guiskindose.egg-info*"]
 
 
 [project-urls]

@@ -57,7 +57,7 @@ Agents working in this repository should be able to answer three questions quick
 | Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install; soft-fails with issue notify so `main` stays green) |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
-| Stale-brand allowlist (GUISkinDose rename) | `scripts/check_stale_brand.py` (live-tree gate is active; dual-read config/env and historical identity phrases are allowlisted) |
+| Stale-brand allowlist (GUISkinDose rename) | `scripts/check_stale_brand.py` (live-tree gate is active; dual-read config/env and historical identity phrases are allowlisted; `CHANGELOG.md` Unreleased is scanned, then the gate stops at the first `## [25.` historical header) |
 | Inventory path rewrite helper (GUISkinDose rename) | `scripts/rewrite_package_paths.py` (`rewrite` dry-run/apply; `scan` report-only) |
 | Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
@@ -403,7 +403,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **help-registry** | `python scripts/check_help_registry.py` |
 | **ui-copy** | `python scripts/check_ui_copy.py` |
 | **feature-doc-matrix** | `python scripts/check_feature_doc_matrix.py` |
-| **check-stale-brand** | `python scripts/check_stale_brand.py` (leftover pre-rename package/brand tokens outside the allowlist; live-tree gate is active) |
+| **check-stale-brand** | `python scripts/check_stale_brand.py` (leftover pre-rename package/brand tokens outside the allowlist; live-tree gate is active; CHANGELOG Unreleased is scanned, historical `## [25.` sections are not) |
 | **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 | **license-notices** | `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
