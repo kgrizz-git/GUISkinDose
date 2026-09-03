@@ -13,7 +13,7 @@ def job_section(workflow: str, job: str, next_job: str) -> str:
 
 def test_tokenized_sonar_is_opt_in_and_never_runs_on_pr_heads() -> None:
     workflow = CI_WORKFLOW.read_text(encoding="utf-8")
-    sonar = job_section(workflow, "sonar-scan", "cloud-scans-main")
+    sonar = job_section(workflow, "sonar-scan", "gitleaks")
 
     assert "github.event_name == 'push'" in sonar
     assert "github.ref == 'refs/heads/main'" in sonar

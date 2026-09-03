@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-02).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-03).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -27,7 +27,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | asttokens | 3.0.1 | Apache-2.0 | https://github.com/gristlabs/asttokens |
 | async-lru | 2.3.0 | MIT | https://github.com/aio-libs/async-lru |
 | attrs | 26.1.0 | MIT | Documentation, https://www.attrs.org/ |
-| Authlib | 1.7.2 | BSD-3-Clause | Documentation, https://docs.authlib.org/ |
 | babel | 2.18.0 | BSD-3-Clause | https://babel.pocoo.org/ |
 | bandit | 1.9.4 | Apache-2.0 | https://bandit.readthedocs.io/ |
 | basedpyright | 1.39.6 | MIT | repository, https://github.com/detachhead/basedpyright |
@@ -49,7 +48,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | colorama | 0.4.6 | BSD-3-Clause | Homepage, https://github.com/tartley/colorama |
 | comm | 0.2.3 | BSD-3-Clause | Homepage, https://github.com/ipython/comm |
 | coverage | 7.15.2 | Apache-2.0 | https://github.com/coveragepy/coveragepy |
-| cryptography | 50.0.0 | Apache-2.0, BSD-3-Clause | changelog, https://cryptography.io/en/latest/changelog/ |
 | cyclonedx-python-lib | 11.8.0 | Apache-2.0 | Bug Tracker, https://github.com/CycloneDX/cyclonedx-python-lib/issues |
 | debugpy | 1.8.21 | MIT | https://aka.ms/debugpy |
 | decorator | 5.3.1 | BSD-2-Clause | BSD-2-Clause |
@@ -57,7 +55,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | diff_cover | 10.4.1 | Apache-2.0 | Homepage, https://github.com/Bachmann1234/diff-cover |
 | distlib | 0.4.1 | PSF-2.0 | https://github.com/pypa/distlib |
 | docutils | 0.22.4 | BSD-3-Clause, GPL-2.0-or-later | Changelog, https://docutils.sourceforge.io/HISTORY.html |
-| dparse | 0.6.4 | MIT | Homepage, https://github.com/pyupio/dparse |
 | et_xmlfile | 2.0.0 | MIT | https://foss.heptapod.net/openpyxl/et_xmlfile |
 | exceptiongroup | 1.2.2 | MIT | Changelog, https://github.com/agronholm/exceptiongroup/blob/main/CHANGES.rst |
 | execnet | 2.1.2 | MIT | Homepage, https://execnet.readthedocs.io/en/latest/ |
@@ -87,8 +84,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | itsdangerous | 2.2.0 | BSD-3-Clause | Changes, https://itsdangerous.palletsprojects.com/changes/ |
 | jedi | 0.20.0 | MIT | https://github.com/davidhalter/jedi |
 | Jinja2 | 3.1.6 | BSD-3-Clause | Changes, https://jinja.palletsprojects.com/changes/ |
-| joblib | 1.5.3 | BSD-3-Clause | Homepage, https://joblib.readthedocs.io |
-| joserfc | 1.7.1 | BSD-3-Clause | Documentation, https://jose.authlib.org/ |
 | json5 | 0.15.0 | Apache-2.0 | Changelog, https://github.com/dpranke/pyjson5/blob/master/README.md |
 | jsonschema | 4.25.1 | MIT | Homepage, https://github.com/python-jsonschema/jsonschema |
 | jsonschema-specifications | 2025.9.1 | MIT | Documentation, https://jsonschema-specifications.readthedocs.io/ |
@@ -111,7 +106,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | markdown-it-py | 4.2.0 | MIT | Documentation, https://markdown-it-py.readthedocs.io |
 | markdown2 | 2.5.5 | MIT | https://github.com/trentm/python-markdown2 |
 | MarkupSafe | 3.0.3 | BSD-3-Clause | Donate, https://palletsprojects.com/donate |
-| marshmallow | 4.3.0 | MIT | Changelog, https://marshmallow.readthedocs.io/en/latest/changelog.html |
 | matplotlib-inline | 0.2.2 | BSD-3-Clause | Homepage, https://github.com/ipython/matplotlib-inline |
 | mcp | 1.23.3 | MIT | Homepage, https://modelcontextprotocol.io |
 | mdurl | 0.1.2 | MIT | Homepage, https://github.com/executablebooks/mdurl |
@@ -125,7 +119,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nest-asyncio2 | 1.7.2 | BSD-3-Clause | https://github.com/Chaoses-Ib/nest-asyncio2 |
 | networkx | 3.6.1 | BSD-3-Clause | Homepage, https://networkx.org/ |
 | nicegui | 3.14.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
-| nltk | 3.10.3 | Apache-2.0 | https://www.nltk.org/ |
 | nodeenv | 1.10.0 | BSD-3-Clause | https://github.com/ekalinin/nodeenv |
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | notebook_shim | 0.2.4 | BSD-3-Clause | BSD 3-Clause License  Copyright (c) 2022 Project Jupyter Contributors All rights reserved.  Redistribution and use in so |
@@ -197,7 +190,6 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | PyYAML | 6.0.3 | MIT | https://pyyaml.org/ |
 | pyzmq | 27.1.0 | BSD-3-Clause | Homepage, https://pyzmq.readthedocs.org |
 | referencing | 0.37.0 | MIT | Documentation, https://referencing.readthedocs.io/ |
-| regex | 2026.5.9 | Apache-2.0, CNRI-Python | Homepage, https://github.com/mrabarnett/mrab-regex |
 | reportlab | 5.0.0 | BSD-3-Clause | https://www.reportlab.com/ |
 | requests | 2.34.2 | Apache-2.0 | Documentation, https://requests.readthedocs.io |
 | rfc3339-validator | 0.1.4 | MIT | https://github.com/naimetti/rfc3339-validator |
@@ -208,15 +200,12 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | ruamel.yaml | 0.19.1 | MIT | Home, https://sourceforge.net/p/ruamel-yaml/ |
 | ruamel.yaml.clib | 0.2.15 | MIT | Home, https://sourceforge.net/p/ruamel-yaml-clib/ |
 | ruff | 0.16.2 | MIT | https://docs.astral.sh/ruff |
-| safety | 3.8.1 | MIT | homepage, https://safetycli.com |
-| safety-schemas | 0.0.16 | MIT | Homepage, https://github.com/pyupio/safety_schemas |
 | scikit-image | 0.26.0 | BSD-3-Clause | homepage, https://scikit-image.org |
 | scipy | 1.17.1 | BSD-3-Clause | homepage, https://scipy.org/ |
 | semantic-version | 2.10.0 | BSD-3-Clause | https://github.com/rbarrois/python-semanticversion |
 | semgrep | 1.168.0 | LGPL-2.1-or-later | Homepage, https://semgrep.dev |
 | Send2Trash | 2.1.0 | BSD-3-Clause | Homepage, https://github.com/arsenetar/send2trash |
 | shellcheck_py | 0.11.0.1 | MIT | https://github.com/ryanrhee/shellcheck-py |
-| shellingham | 1.5.4 | ISC | https://github.com/sarugaku/shellingham |
 | simple-websocket | 1.1.0 | MIT | Homepage, https://github.com/miguelgrinberg/simple-websocket |
 | simplejson | 4.1.1 | MIT, AFL-2.1 | https://github.com/simplejson/simplejson |
 | six | 1.17.0 | MIT | https://github.com/benjaminp/six |
@@ -236,19 +225,15 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | stack-data | 0.6.3 | MIT | http://github.com/alexmojaki/stack_data |
 | starlette | 1.3.1 | BSD-3-Clause | Homepage, https://github.com/Kludex/starlette |
 | stevedore | 5.8.0 | Apache-2.0 | Homepage, https://docs.openstack.org/stevedore |
-| tenacity | 9.1.4 | Apache-2.0 | https://github.com/jd/tenacity |
 | terminado | 0.18.1 | BSD-3-Clause | Homepage, https://github.com/jupyter/terminado |
 | text-unidecode | 1.3 | UNKNOWN, GPL-2.0-or-later, GPL-2.0-or-later | https://github.com/kmike/text-unidecode/ |
 | tifffile | 2026.7.14 | BSD-3-Clause | https://www.cgohlke.com |
 | tinycss2 | 1.5.1 | BSD-3-Clause | Changelog, https://github.com/Kozea/tinycss2/releases |
 | tomli | 2.4.1 | MIT | Homepage, https://github.com/hukkin/tomli |
 | tomli_w | 1.2.0 | MIT | Changelog, https://github.com/hukkin/tomli-w/blob/master/CHANGELOG.md |
-| tomlkit | 0.15.0 | MIT | Homepage, https://github.com/python-poetry/tomlkit |
 | tornado | 6.5.8 | Apache-2.0 | http://www.tornadoweb.org/ |
 | tqdm | 4.68.1 | MIT | homepage, https://tqdm.github.io |
 | traitlets | 5.15.1 | BSD-3-Clause | Homepage, https://github.com/ipython/traitlets |
-| truststore | 0.10.4 | MIT | Documentation, https://truststore.readthedocs.io |
-| typer | 0.23.1 | MIT | Homepage, https://github.com/fastapi/typer |
 | types-Pillow | 10.2.0.20240822 | Apache-2.0 | https://github.com/python/typeshed |
 | typing-inspection | 0.4.2 | MIT | Homepage, https://github.com/pydantic/typing-inspection |
 | typing_extensions | 4.15.0 | PSF-2.0 | Bug Tracker, https://github.com/python/typing_extensions/issues |

@@ -417,7 +417,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **pip-audit** | Dependency vulnerability scan (`python scripts/audit_dependencies.py`; `uv audit` on `uv.lock` when `uv` >= 0.11.19 is available) |
 | **check-changelog** | `python scripts/check_changelog.py` when `src/` or `tests/` change |
 
-**Not in local hooks** (CI-only or manual): full pytest matrix, safety (CI when `SAFETY_API_KEY` set), license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
+**Not in local hooks** (CI-only or manual): full pytest matrix, license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
 
 Hooks can be skipped with `SKIP=gitleaks git commit ...`, `git commit --no-verify`, or `git push --no-verify` (CI remains the blocking gate on push/PR).
 
@@ -464,7 +464,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | SonarCloud CI scan | **Enabled**: `main` is protected by a ruleset and repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`, so `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled (CI-based analysis is authoritative). The scan requires the `SONAR_TOKEN` repository secret; no tokenized scanner runs on a PR head. |
-| `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed. Enforced PR coverage is the GHA `coverage-pr` job. |
+| Dependency auditors | `uv audit` on `uv.lock` with `pip-audit` fallback via `scripts/audit_dependencies.py` — runs in the Ubuntu `static-analysis` job and the local pre-push hook. (The former main-only `safety scan` cloud job was removed with the `safety` dev dependency; it duplicated the OSV/PyPA advisory data both auditors already query.) |
 | PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/guiskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on same-repository PRs (including drafts; deduped per head SHA). The same-repository guard prevents CI from posting comments on fork PRs. Manual CodeRabbit requests bypass the CI ordering, so this is not a trusted privacy boundary. |

@@ -75,7 +75,7 @@ Alternative/complement to pip-audit. Checks against Safety DB's broader advisory
 > **API key required for `safety scan`:** Safety >=3.0 requires authentication (`safety auth` or
 > `SAFETY_API_KEY` env var). Free tier available at [safetycli.com](https://safetycli.com).
 > CI skips the step when the secret is unset; `pip-audit` remains the no-key dependency gate.
-> See [SECURITY_TOOLS_CI_PLAN.md](../plans/SECURITY_TOOLS_CI_PLAN.md).
+> See [SECURITY_TOOLS_CI_PLAN.md](../plans/archive/SECURITY_TOOLS_CI_PLAN.md) (archived; the `safety` scanner it described was dropped in 1.0.0).
 
 ```bash
 pip install safety

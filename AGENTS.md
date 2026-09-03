@@ -132,7 +132,7 @@ rename to GUISkinDose / `guiskindose`: [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.m
 
 ```bash
 pip install -e .
-pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, safety, shellcheck-py, pre-commit + stubs (matches CI)
+pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, shellcheck-py, pre-commit + stubs (matches CI)
 pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-started notebook
 ```
 

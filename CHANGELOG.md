@@ -54,6 +54,8 @@ omit pure CI/refactor bullets and point readers here. See
   explicit `nltk>=3.10.3` minimum-version constraint to `[project.optional-dependencies].dev` so the
   lockfile no longer pins the vulnerable `3.10.0` (transitive via `safety`; `3.10.2` remains vulnerable).
   The pin is project-visible in `pyproject.toml` and survives future `uv lock --upgrade` runs.
+  Superseded in this release: `safety` was removed from the dev extra on 2026-09-03, taking `nltk` and
+  the pin with it (see `### Removed` below).
 
 - **Basedpyright `corrections.py` type error** (2026-08-30) — replaced
   `min(fsl_tab, key=lambda x: abs(x - fsl_mean))` with an `np.argmin` idiom
@@ -64,8 +66,9 @@ omit pure CI/refactor bullets and point readers here. See
 
 - **GHSA-8mgp-746c-j5xp / CVE-2026-81726: `nltk` still unpatched** (2026-09-02) —
   added `[tool.uv.audit] ignore-until-fixed` for the new model-artifact pathsec bypass
-  in transitive dev-only `nltk` 3.10.3 (via `safety`). No patched release exists; the
-  ignore drops automatically when upstream ships a fix. Not used by GUISkinDose runtime.
+  in transitive dev-only `nltk` 3.10.3 (via `safety`). Superseded in this release: `safety` was
+  dropped from the dev extra on 2026-09-03, which removed `nltk` — and both the ignore and the
+  pin — entirely (see `### Removed` below).
 
 - **Stale-brand CHANGELOG scan tightened** (2026-09-02) — `CHANGELOG.md` is no longer a
   whole-file stale-brand exemption. Unreleased is scanned (rename-prose patterns allowed);
@@ -720,6 +723,15 @@ omit pure CI/refactor bullets and point readers here. See
   `dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
   parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
   docs archived under `dev-docs/plans/archive/`. Phases 0–4 complete (spike, catalog, P0/P1 generation, install).
+
+### Removed
+
+- **`safety` dev dependency and main-only CI cloud scan removed** (2026-09-03) — the `safety` package was the
+  sole consumer of transitive `nltk` in the dev extra, so dropping it deletes the unpatched
+  `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
+  `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer needed).
+  Dependency auditing remains covered by `uv audit` + `pip-audit` via `scripts/audit_dependencies.py` (same
+  OSV/PyPA advisory data) in the pr-level `static-analysis` job and the local pre-push hook.
 
 ## [25.2.0] - 2026-07-21
 
