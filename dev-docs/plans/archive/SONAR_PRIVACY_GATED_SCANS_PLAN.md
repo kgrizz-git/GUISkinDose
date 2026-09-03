@@ -1,10 +1,12 @@
 # Sonar gate repair + privacy-gated external scans
 
-_Status: Active — implementation complete on PR #32 (CI + Sonar QG OK); merge when ready_
+_Status: **Archived 2026-09-03** — implementation complete (PR #32). The
+`cloud-scans-main` job this plan describes (Safety/Codecov main-only) was retired in
+GUISkinDose 1.0.0 when the `safety` dev dependency was dropped_
 _Created: 2026-07-25_
 _Branch: `plan/sonar-privacy-gated-scans`_
 _Owners: Maintainers; coding agents may implement phases in order_
-_Related: [HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md), [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md), [SONARQUBE_LOCAL.md](../SONARQUBE_LOCAL.md), [sonarqube_remediation_plan.md](sonarqube_remediation_plan.md)_
+_Related: [HARNESS_ENGINEERING.md](../../HARNESS_ENGINEERING.md), [PRIVACY_AND_SENSITIVE_ASSETS.md](../../PRIVACY_AND_SENSITIVE_ASSETS.md), [SONARQUBE_LOCAL.md](../../SONARQUBE_LOCAL.md), [sonarqube_remediation_plan.md](../sonarqube_remediation_plan.md)_
 
 > **For agentic workers:** implement phase-by-phase with checkbox tracking. Prefer
 > `superpowers:subagent-driven-development` or `superpowers:executing-plans` after the plan is approved.

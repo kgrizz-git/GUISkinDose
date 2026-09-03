@@ -240,7 +240,7 @@ omit pure CI/refactor bullets and point readers here. See
 - **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the
   `cloud-scans-main` CI job and deleted `codecov.yml`. Enforced PR coverage remains the GHA
   `coverage-pr` job (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base); the job
-  now runs Safety only.
+  then ran Safety only until the 2026-09-03 safety removal below deleted it outright.
 
 ### Changed
 

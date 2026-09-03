@@ -226,6 +226,5 @@ ignore = [
     "GHSA-hvrp-rf83-w775",
     "GHSA-vj7q-gjh5-988w",
 ]
-# `ignore-until-fixed` suppresses a finding ONLY while no patched release exists; none active.
-# (The former nltk GHSA-8mgp-746c-j5xp entry disappeared with the safety dev dependency —
-# nltk was safety-only; see CHANGELOG [1.0.0] `### Removed`.)
+# No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared
+# with the safety dev dependency (nltk was safety-only; see CHANGELOG [1.0.0] `### Removed`).

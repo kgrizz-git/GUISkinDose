@@ -86,7 +86,6 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, publish GUISkinDose, and retain the GitHub fork history. First `guiskindose` version is **`1.0.0`**. Mechanical package rename is [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar/URLs: [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md). |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
-| [plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md](plans/SONAR_PRIVACY_GATED_SCANS_PLAN.md) | **Active** — Sonar security + GUI coverage tests; README QG badge removed (Free/Sonar-way); exclusion audit for Sonar/Semgrep/CodeRabbit; Semgrep Actions not Cloud; privacy-gate Semgrep/Sonar/CodeRabbit. |
 
 ---
 
@@ -169,6 +168,7 @@ Phased detail derived from diagnostics or master plans.
 | File | Purpose |
 |---|---|
 | [plans/archive/SECURITY_TOOLS_CI_PLAN.md](plans/archive/SECURITY_TOOLS_CI_PLAN.md) | **Superseded** (2026-09-03) — semgrep/gitleaks wiring was completed; the `safety` scanner path was dropped when the `safety` dev dependency (and its main-only CI job) was removed in 1.0.0 — `uv audit` + `pip-audit` remain the dependency auditors. |
+| [plans/archive/SONAR_PRIVACY_GATED_SCANS_PLAN.md](plans/archive/SONAR_PRIVACY_GATED_SCANS_PLAN.md) | **Complete** (PR #32) — Sonar security + GUI coverage tests; privacy-gated Semgrep/Sonar/CodeRabbit. Archived 2026-09-03: its `cloud-scans-main` job design was retired with the 1.0.0 `safety` removal. |
 | [plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](plans/archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md) | **Shipped** (2026-07-26) — per-(unit×tube) kerma-meter CF; reported kerma additive-compatible; file/GUI prompt. |
 | [plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Completed** (2026-07-21) — headless MPFB/Blender true-shape phantom library Phases 0–4; 10 new meshes shipped in 25.2.0. Further phantoms: [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md) + `TO_DO.md`. |
 | [plans/archive/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](plans/archive/PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) — Demo gate (`gui.json`), Steamboat supine, pediatric 5y male fix, bariatric thick-extremities variants. |
