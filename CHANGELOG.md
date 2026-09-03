@@ -731,7 +731,7 @@ omit pure CI/refactor bullets and point readers here. See
   `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
   `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer needed).
   Dependency auditing remains covered by `uv audit` + `pip-audit` via `scripts/audit_dependencies.py` (same
-  OSV/PyPA advisory data) in the pr-level `static-analysis` job and the local pre-push hook.
+  OSV/PyPA advisory data) in the PR-level `static-analysis` job and the local pre-push hook.
 
 ## [25.2.0] - 2026-07-21
 
