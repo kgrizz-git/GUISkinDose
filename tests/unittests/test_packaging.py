@@ -62,6 +62,9 @@ def test_wheel_contains_guiskindose_package() -> None:
     with zipfile.ZipFile(wheel) as archive:
         names = archive.namelist()
     assert any(name.startswith("guiskindose/") for name in names)
+    # In-app GUI help markdown must ship in the wheel; help_button.py reads it
+    # from the installed package at runtime (MANIFEST.in recursive-include).
+    assert any(name.startswith("guiskindose/gui/help/") and name.endswith(".md") for name in names)
     # Concatenate so this file does not contain the pre-rename import path literal.
     legacy_prefix = "".join(("my", "pyskindose", "/"))
     assert not any(name.startswith(legacy_prefix) for name in names)

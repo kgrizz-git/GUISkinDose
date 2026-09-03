@@ -4,3 +4,6 @@ include src/guiskindose/table_data/hvl_tables/*.csv
 include src/guiskindose/phantom_data/*.stl
 include src/guiskindose/example_data/RDSR/*.dcm
 include src/guiskindose/normalization_settings.json
+# In-app GUI help markdown (read from the installed package at runtime by
+# gui/components/help_button.py); mirrored from docs/source/gui_help/.
+recursive-include src/guiskindose/gui/help *.md
