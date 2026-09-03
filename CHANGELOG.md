@@ -19,6 +19,8 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-03
+
 > **Identity lock:** `pyproject.toml` is `guiskindose` **`1.0.0`**. This is a new
 > distribution identity, formerly MyPySkinDose `25.2.0` / a fork of PySkinDose.
 > Historical sections through `[25.2.0]` below remain MyPySkinDose history.
@@ -1211,5 +1213,6 @@ omit pure CI/refactor bullets and point readers here. See
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
-[Unreleased]: https://github.com/kgrizz-git/MyPySkinDose/compare/v25.1.1...HEAD
+[Unreleased]: https://github.com/kgrizz-git/MyPySkinDose/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/kgrizz-git/MyPySkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/MyPySkinDose/releases/tag/v25.1.1
