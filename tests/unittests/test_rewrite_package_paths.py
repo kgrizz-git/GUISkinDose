@@ -284,6 +284,20 @@ def test_scan_leftover_brand_reports_pre_rename_github_url(tmp_path: Path) -> No
     assert hits == []
 
 
+def test_scan_leftover_brand_reports_stale_url_on_mixed_line(tmp_path: Path) -> None:
+    """The live-URL allowlist strips only its span: a line containing both the
+    live and the pre-rename URL still reports the stale token."""
+    _write(
+        tmp_path,
+        "docs/mixed.md",
+        "Moved from https://github.com/kgrizz-git/MyPySkinDose to"
+        " https://github.com/kgrizz-git/GUISkinDose.\n",
+    )
+    hits = scan_leftover_brand(tmp_path, [Path("docs")])
+    assert len(hits) == 1
+    assert "MyPySkinDose" in hits[0][2]
+
+
 def test_scan_leftover_brand_skips_changelog(tmp_path: Path) -> None:
     _write(
         tmp_path,

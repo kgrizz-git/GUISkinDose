@@ -65,11 +65,12 @@ _ALLOWLIST_FILE_PATHS: tuple[str, ...] = (
 # Compiled line-content allowlist patterns. A line matching any of these is subtracted
 # from the report even though it contains a brand token.
 _ALLOWLIST_NOSEMGREP = re.compile(r"#\s*nosemgrep:\s*mypyskindose-[\w-]+\b")
+_ALLOWLIST_URL = re.compile(r"github\.com/kgrizz-git/GUISkinDose")
 _ALLOWLIST_SONAR = re.compile(r"\bmypyskindose\b(?=.*(?:projectKey|projectName|sonar))", re.IGNORECASE)
 _ALLOWLIST_LINE_PATTERNS: tuple[re.Pattern[str], ...] = (
     _ALLOWLIST_NOSEMGREP,  # "# nosemgrep: mypyskindose-*"
     re.compile(r"\bid:\s*mypyskindose-[\w-]+\b"),  # YAML rule id:
-    re.compile(r"github\.com/kgrizz-git/GUISkinDose"),  # this repo's GitHub URL (not a src path)
+    _ALLOWLIST_URL,  # this repo's GitHub URL (not a src path)
     _ALLOWLIST_SONAR,  # Sonar projectKey/projectName
 )
 
@@ -143,8 +144,10 @@ def scan_leftover_brand(
 ) -> list[tuple[Path, int, str]]:
     """Return ``(file, line_number, line_text)`` hits for brand tokens minus the allowlist.
 
-    Files in ``_SCAN_SKIP_FILENAMES`` are skipped. Lines matching the allowlist are
-    subtracted. The returned hits are sorted by file then line number.
+    Files in ``_SCAN_SKIP_FILENAMES`` are skipped. The GitHub-URL allowlist is
+    subtracted as a span (so a line mixing the live URL with a stale one still
+    reports the stale token); the remaining allowlist patterns skip the line.
+    The returned hits are sorted by file then line number.
     """
     hits: list[tuple[Path, int, str]] = []
     for root in roots:
@@ -170,10 +173,14 @@ def scan_leftover_brand(
                 with path.open("r", encoding="utf-8") as handle:
                     for number, raw_line in enumerate(handle, start=1):
                         line = raw_line.rstrip("\r\n")
-                        lower = line.lower()
+                        # The URL allowlist applies to its span only: strip matching
+                        # URLs so a line mixing the live URL with a stale one still
+                        # reports the stale brand token.
+                        line_to_check = _ALLOWLIST_URL.sub("", line)
+                        lower = line_to_check.lower()
                         if not any(token.lower() in lower for token in tokens):
                             continue
-                        if _is_line_allowlisted(line):
+                        if _is_line_allowlisted(line_to_check):
                             continue
                         hits.append((path, number, line))
             except (OSError, UnicodeDecodeError):
