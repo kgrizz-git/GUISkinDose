@@ -12,7 +12,7 @@ attach patient data, clinical RDSRs, credentials, or other sensitive material to
 any public channel.
 
 Use GitHub
-[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new)
+[private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new)
 for this repository.
 
 Please include:
@@ -30,7 +30,7 @@ We will acknowledge reports when we can and prefer coordinated disclosure. We do
 If you believe real PHI/PII or clinical data was committed or leaked through
 this project, treat it as an incident: stop sharing copies, report it through
 GitHub
-[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new)
+[private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new)
 (the same private intake used for security reports), and follow
 [dev-docs/PRIVACY_INCIDENT_RESPONSE.md](dev-docs/PRIVACY_INCIDENT_RESPONSE.md).
 Do not paste identifiers into public issues or pull requests.

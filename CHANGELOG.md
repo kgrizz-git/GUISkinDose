@@ -19,6 +19,15 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+### Changed
+
+- **GitHub repository renamed to `GUISkinDose`** (2026-09-04) — the fork (still `rvbCMTS/PySkinDose` upstream)
+  and the SonarCloud project (key flipped automatically) now carry the product name. Live URLs, `pyproject.toml`
+  `[project.urls]`, `CITATION.cff`, community files, issue templates, the changelog footer links, and
+  `sonar-project.properties` now point at `github.com/kgrizz-git/GUISkinDose` /
+  `kgrizz-git_GUISkinDose`; the stale-brand gate rejects the old live URLs/keys instead of allowlisting them.
+  Old GitHub links keep working via redirects. Historical `[25.x]` changelog prose and upstream links are unchanged.
+
 ## [1.0.0] - 2026-09-03
 
 > **Identity lock:** `pyproject.toml` is `guiskindose` **`1.0.0`**. This is a new
@@ -443,7 +452,8 @@ omit pure CI/refactor bullets and point readers here. See
   `table_data`, `dev-docs`, `**/*.dcm`, notebooks, `**/*.log`, `**/*.txt`, images) plus build
   noise, and mirrored the same exclusions into `sonar-project.properties`; the new
   `check_sonar_properties.py` pre-commit/CI check keeps the shared scope keys in parity. Also aligned the stale
-  `sonar-project.properties` project key/name to `kgrizz-git_MyPySkinDose` / `MyPySkinDose` and
+  `sonar-project.properties` project key/name to the Sonar project key in use at the time (renamed to
+  `kgrizz-git_GUISkinDose` / `GUISkinDose` after the 2026-09-04 GitHub repository rename) and
   added `sonar.organization` so the local/CI scanner file is actually usable. Scan hygiene and
   defense-in-depth only — the real PHI/PII guard remains the commit/CI privacy gates
   (`check_sensitive_content.py` forbids `*.log`, hash-gates images/DICOM/notebook outputs, and
@@ -1225,6 +1235,6 @@ omit pure CI/refactor bullets and point readers here. See
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
-[Unreleased]: https://github.com/kgrizz-git/MyPySkinDose/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/kgrizz-git/MyPySkinDose/compare/v25.1.1...v1.0.0
-[25.1.1]: https://github.com/kgrizz-git/MyPySkinDose/releases/tag/v25.1.1
+[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/kgrizz-git/GUISkinDose/compare/v25.1.1...v1.0.0
+[25.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v25.1.1

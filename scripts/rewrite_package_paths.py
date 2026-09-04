@@ -69,7 +69,7 @@ _ALLOWLIST_SONAR = re.compile(r"\bmypyskindose\b(?=.*(?:projectKey|projectName|s
 _ALLOWLIST_LINE_PATTERNS: tuple[re.Pattern[str], ...] = (
     _ALLOWLIST_NOSEMGREP,  # "# nosemgrep: mypyskindose-*"
     re.compile(r"\bid:\s*mypyskindose-[\w-]+\b"),  # YAML rule id:
-    re.compile(r"github\.com/kgrizz-git/MyPySkinDose"),  # upstream GitHub URL
+    re.compile(r"github\.com/kgrizz-git/GUISkinDose"),  # this repo's GitHub URL (not a src path)
     _ALLOWLIST_SONAR,  # Sonar projectKey/projectName
 )
 

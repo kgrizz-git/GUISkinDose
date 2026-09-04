@@ -8,8 +8,8 @@ authors:
   - family-names: Hellström
     given-names: Max
   - name: "GUISkinDose contributors"
-repository-code: "https://github.com/kgrizz-git/MyPySkinDose"
-url: "https://github.com/kgrizz-git/MyPySkinDose"
+repository-code: "https://github.com/kgrizz-git/GUISkinDose"
+url: "https://github.com/kgrizz-git/GUISkinDose"
 abstract: >-
   Independently maintained fork of PySkinDose for estimating peak skin dose and
   3D skin dose maps from fluoroscopic RDSR and tabular inputs. Not FDA-cleared;

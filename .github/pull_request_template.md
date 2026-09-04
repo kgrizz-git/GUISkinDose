@@ -1,8 +1,8 @@
 ## Maintainer note
 
 Ideas and contribution proposals are welcome via
-[Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) or
-[Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions). Prefer
+[Issues](https://github.com/kgrizz-git/GUISkinDose/issues) or
+[Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions). Prefer
 those channels over a cold PR unless the maintainer invited this pull request.
 See [CONTRIBUTING.md](../CONTRIBUTING.md).
 

@@ -36,7 +36,7 @@ def test_rewrite_path_prefix_rewrites_src_package(old: str, new: str) -> None:
     [
         "src/mypyskindose",  # no trailing slash — not a prefix match
         "docs/source/user/figures/beam/beam_ap1.svg",
-        "github.com/kgrizz-git/MyPySkinDose",  # URL, not a src path
+        "github.com/kgrizz-git/GUISkinDose",  # URL, not a src path
         "mypyskindose-privacy",  # Semgrep rule ID fragment
         "src/guiskindose/gui/app.py",  # already renamed
     ],
@@ -267,7 +267,7 @@ def test_scan_leftover_brand_allowlists_github_url(tmp_path: Path) -> None:
     _write(
         tmp_path,
         "docs/foo.md",
-        "See https://github.com/kgrizz-git/MyPySkinDose for details.\n",
+        "See https://github.com/kgrizz-git/GUISkinDose for details.\n",
     )
     hits = scan_leftover_brand(tmp_path, [Path("docs")])
     assert hits == []
@@ -329,7 +329,7 @@ def test_scan_leftover_brand_exit_zero_even_with_hits(
     [
         "  - mypyskindose-log  # nosemgrep: mypyskindose-log",
         "id: mypyskindose-privacy",
-        "https://github.com/kgrizz-git/MyPySkinDose fork",
+        "https://github.com/kgrizz-git/GUISkinDose fork",
     ],
 )
 def test_is_line_allowlisted_matches(line: str) -> None:
