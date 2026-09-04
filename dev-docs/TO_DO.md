@@ -23,7 +23,6 @@ Privacy hardening is implemented through Phase 9
 still needs an approved private environment. Remaining privacy bullets below are follow-on evaluations or
 policy decisions, not a restart of Phases 0-9.
 
-
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
   gate scans first-level text and requires manual embedded-file/image/DICOM clearance.
@@ -109,7 +108,6 @@ policy decisions, not a restart of Phases 0-9.
   geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
   [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
 - [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
-
 
 ### GUI / UX
 
