@@ -378,6 +378,21 @@ def test_is_file_allowlisted_matches(repo_rel: str) -> None:
     assert _is_file_allowlisted(repo_rel) is True
 
 
+@pytest.mark.parametrize(
+    "repo_rel",
+    [
+        "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
+    ],
+)
+def test_is_file_allowlisted_rejects_former_active_plan_paths(repo_rel: str) -> None:
+    """The two rename plans were archived; their old active paths must no longer
+    be allowlisted so a stray brand token there would still be reported."""
+    from scripts.rewrite_package_paths import _is_file_allowlisted
+
+    assert _is_file_allowlisted(repo_rel) is False
+
+
 def test_is_file_allowlisted_matches_files_exactly() -> None:
     from scripts.rewrite_package_paths import _is_file_allowlisted
 
