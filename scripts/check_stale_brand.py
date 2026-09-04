@@ -52,8 +52,9 @@ ALLOWED_PATTERNS = [
     re.compile(r"""["']\.mypyskindose["']"""),
     re.compile(r"mypyskindose-privacy\.yml"),
     # Historical identity (formerly the MyPySkinDose / mypyskindose names).
-    re.compile(r"formerly\s+[`']?mypyskindose[`']?"),
-    re.compile(r"formerly\s+MyPySkinDose"),
+    # Case-insensitive so "Formerly MyPySkinDose" prose variants cannot slip through.
+    re.compile(r"(?i)formerly\s+[`']?mypyskindose[`']?"),
+    re.compile(r"(?i)formerly\s+MyPySkinDose"),
     re.compile(r"MyPySkinDose\s+[`']?25\.2\.0[`']?"),
     # Dual-read traceback sanitizer: package dir names in Path.parts.
     re.compile(r"""\(['\"]guiskindose['\"],\s*['\"]mypyskindose['\"]\)"""),

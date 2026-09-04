@@ -263,10 +263,21 @@ def test_scan_leftover_brand_allowlists_archive_and_plan_paths(tmp_path: Path) -
     assert hits == []
 
 
-def test_scan_leftover_brand_allowlists_github_url(tmp_path: Path) -> None:
+def test_scan_leftover_brand_reports_pre_rename_github_url(tmp_path: Path) -> None:
+    """The pre-rename GitHub URL contains a brand token and is no longer
+    allowlisted; the live post-rename URL is clean."""
     _write(
         tmp_path,
-        "docs/foo.md",
+        "docs/old.md",
+        "See https://github.com/kgrizz-git/MyPySkinDose for details.\n",
+    )
+    hits = scan_leftover_brand(tmp_path, [Path("docs")])
+    assert len(hits) == 1
+
+    (tmp_path / "docs" / "old.md").unlink()
+    _write(
+        tmp_path,
+        "docs/new.md",
         "See https://github.com/kgrizz-git/GUISkinDose for details.\n",
     )
     hits = scan_leftover_brand(tmp_path, [Path("docs")])

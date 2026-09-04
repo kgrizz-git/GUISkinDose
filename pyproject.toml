@@ -114,8 +114,8 @@ exclude = ["guiskindose.egg-info*"]
 
 
 [project.urls]
-# URLs track the GitHub repository, which still carries the pre-rename
-# slug until the GUISkinDose GitHub rename plan executes (GitHub redirects).
+# Kept in sync with the GitHub repository slug (renamed to GUISkinDose on
+# 2026-09-04); GitHub redirects keep old links working.
 "Homepage" = "https://github.com/kgrizz-git/GUISkinDose"
 "Bug Tracker" = "https://github.com/kgrizz-git/GUISkinDose/issues"
 "Documentation" = "https://github.com/kgrizz-git/GUISkinDose/tree/main/docs"
