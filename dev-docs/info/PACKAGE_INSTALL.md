@@ -103,7 +103,7 @@ Installing as a package enables several distribution methods:
 
 **GitHub install (current):**
 ```bash
-pip install git+https://github.com/kgrizz-git/MyPySkinDose.git
+pip install git+https://github.com/kgrizz-git/GUISkinDose.git
 ```
 
 **PyPI (if published):**

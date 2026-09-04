@@ -9,7 +9,7 @@ Installing GUISkinDose (this independently maintained fork of PySkinDose) provid
 This fork is **not yet published to PyPI**. Install from GitHub (or a local clone), preferably in a virtual environment:
 
 ```bash
-pip install "git+https://github.com/kgrizz-git/MyPySkinDose.git"
+pip install "git+https://github.com/kgrizz-git/GUISkinDose.git"
 ```
 
 For local development:

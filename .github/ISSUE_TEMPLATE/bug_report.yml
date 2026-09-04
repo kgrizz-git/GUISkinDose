@@ -11,7 +11,7 @@ body:
         **Do not attach or paste** real patient data, raw clinical RDSRs, identified screenshots,
         credentials, private URLs, full unredacted logs, or any PHI/PII. Use synthetic or
         documented de-identified fixtures only. Security issues belong in
-        [private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new),
+        [private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new),
         not here.
 
         This software is **not FDA-cleared**. Dose results are for research, education, development,

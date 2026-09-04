@@ -48,14 +48,30 @@ def test_stale_brand_permanent_allowlist(tmp_path: Path):
     file_content = (
         "# nosemgrep: mypyskindose-some-rule\n"
         "rule = 'mypyskindose-unsafe-gui-export-write'\n"
-        "url = 'github.com/kgrizz-git/MyPySkinDose'\n"
-        "sonar.projectName=MyPySkinDose\n"
-        "key = 'kgrizz-git_MyPySkinDose'\n"
+        # NOTE: the pre-rename GitHub URL / Sonar key lines were removed from this
+        # fixture — they are REJECTED now (no longer allowlisted); coverage for the
+        # inversion lives in test_stale_brand_rejects_live_old_github_urls_and_sonar_key.
     )
     file_path.write_text(file_content)
 
     errors = check_file(file_path, repo_root, live_package_name="guiskindose")
     assert not errors
+
+
+def test_stale_brand_rejects_live_old_github_urls_and_sonar_key(tmp_path: Path) -> None:
+    """Since the 2026-09-04 GitHub/Sonar rename, the old live URL and Sonar key are
+    stale brand strings, not allowlisted leftovers."""
+    repo_root = tmp_path
+    file_path = repo_root / "docs" / "foo.md"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_text(
+        "url = 'https://github.com/kgrizz-git/MyPySkinDose'\n"
+        "key = 'kgrizz-git_MyPySkinDose'\n"
+        "sonar.projectName=MyPySkinDose\n",
+        encoding="utf-8",
+    )
+    errors = check_file(file_path, repo_root, live_package_name="guiskindose")
+    assert len(errors) == 3
 
 
 def test_stale_brand_excludes_paths(tmp_path: Path):
@@ -164,6 +180,7 @@ def test_stale_brand_allows_dual_read_and_historical_identity(tmp_path: Path) ->
                 'rules = ".semgrep/mypyskindose-privacy.yml"',
                 "The package name in code is guiskindose (formerly `mypyskindose`).",
                 "formerly MyPySkinDose, a fork of PySkinDose.",
+                "Formerly MyPySkinDose `25.2.0`, a fork of PySkinDose.",
                 "not a continuation of MyPySkinDose `25.2.0`.",
                 'for package_name in ("guiskindose", "mypyskindose"):',
                 "legacy ``mypyskindose/`` traceback frames",

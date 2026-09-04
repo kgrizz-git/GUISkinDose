@@ -16,10 +16,10 @@ treatment, or regulatory compliance claims.
 
 | Topic | Channel |
 |---|---|
-| Bugs | [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues/new?template=bug_report.yml) (bug form) |
-| Feature ideas | [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues/new?template=feature_request.yml) (feature form) |
-| Questions / contribution proposals | [GitHub Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions) |
-| Security, privacy incidents, or private Code of Conduct reports | [GitHub private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new) — see [SECURITY.md](SECURITY.md) |
+| Bugs | [GitHub Issues](https://github.com/kgrizz-git/GUISkinDose/issues/new?template=bug_report.yml) (bug form) |
+| Feature ideas | [GitHub Issues](https://github.com/kgrizz-git/GUISkinDose/issues/new?template=feature_request.yml) (feature form) |
+| Questions / contribution proposals | [GitHub Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions) |
+| Security, privacy incidents, or private Code of Conduct reports | [GitHub private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new) — see [SECURITY.md](SECURITY.md) |
 | How contribution works | [CONTRIBUTING.md](CONTRIBUTING.md) — ideas welcome via Issue/Discussion; prefer those over cold PRs |
 | Maintainer profile | [@kgrizz-git](https://github.com/kgrizz-git) (identity only; not a private inbox) |
 
@@ -29,7 +29,7 @@ GitHub does not provide a general private messaging inbox for maintainers. Publi
 Issues/Discussions are for ordinary bugs and questions. The **only supported
 private intake** for security vulnerabilities, suspected PHI/privacy incidents,
 and Code of Conduct reports that must stay private is GitHub
-[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new).
+[private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new).
 
 ## What not to attach
 

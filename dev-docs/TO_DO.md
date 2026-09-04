@@ -57,12 +57,10 @@ policy decisions, not a restart of Phases 0–9.
   MyPySkinDose `25.2.0`). Prefer before first PyPI publish; does not require the GitHub repo rename.
   Plan: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). Publication/fixture work remains in
   [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
-- [ ] **Rename the GitHub repository to GUISkinDose** — after the in-repo package rename is on `main`:
-  GitHub Settings rename `GUISkinDose` → `GUISkinDose`, confirm the PySkinDose fork banner and old-URL
-  redirect, rename SonarCloud to match **before** changing `sonar.projectKey`, then rewrite live
-  `github.com/kgrizz-git/MyPySkinDose` links (`pyproject.toml`, `CITATION.cff`, README/SUPPORT/SECURITY,
-  issue templates) and `origin`. Not blocked on PyPI. Do not do this during the mechanical-rename PR.
-  Plan: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
+- [x] **Rename the GitHub repository to GUISkinDose** (2026-09-04) — done: GitHub Settings rename plus the
+  SonarCloud key flip, then live URLs/`sonar-project.properties` rewritten in the follow-up PR
+  ([GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md)); archive that plan when its
+  Phase D verification (fresh clone, `sonar-scan` on the new key) is green.
 
 ## Product Backlog
 

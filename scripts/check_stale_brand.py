@@ -35,10 +35,9 @@ ALLOWED_PATHS = [
 ]
 
 # Patterns within a line that are permanently allowed.
+# (The pre-rename GitHub URL / Sonar key patterns were removed 2026-09-04: the live
+# strings now point at GUISkinDose, and the gate REJECTS the old live URLs/keys.)
 ALLOWED_PATTERNS = [
-    re.compile(r"github\.com/kgrizz-git/MyPySkinDose"),
-    re.compile(r"kgrizz-git_MyPySkinDose"),
-    re.compile(r"sonar\.projectName=MyPySkinDose"),
     re.compile(r"#\s*nosemgrep:\s*mypyskindose-[a-zA-Z0-9_-]+"),
     re.compile(r"id:\s*mypyskindose-[a-zA-Z0-9_-]+"),
     # Rule IDs in tests (e.g., "mypyskindose-unsafe-gui-export-write")
@@ -53,8 +52,9 @@ ALLOWED_PATTERNS = [
     re.compile(r"""["']\.mypyskindose["']"""),
     re.compile(r"mypyskindose-privacy\.yml"),
     # Historical identity (formerly the MyPySkinDose / mypyskindose names).
-    re.compile(r"formerly\s+[`']?mypyskindose[`']?"),
-    re.compile(r"formerly\s+MyPySkinDose"),
+    # Case-insensitive so "Formerly MyPySkinDose" prose variants cannot slip through.
+    re.compile(r"(?i)formerly\s+[`']?mypyskindose[`']?"),
+    re.compile(r"(?i)formerly\s+MyPySkinDose"),
     re.compile(r"MyPySkinDose\s+[`']?25\.2\.0[`']?"),
     # Dual-read traceback sanitizer: package dir names in Path.parts.
     re.compile(r"""\(['\"]guiskindose['\"],\s*['\"]mypyskindose['\"]\)"""),

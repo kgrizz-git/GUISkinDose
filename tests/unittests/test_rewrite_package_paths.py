@@ -36,7 +36,7 @@ def test_rewrite_path_prefix_rewrites_src_package(old: str, new: str) -> None:
     [
         "src/mypyskindose",  # no trailing slash — not a prefix match
         "docs/source/user/figures/beam/beam_ap1.svg",
-        "github.com/kgrizz-git/MyPySkinDose",  # URL, not a src path
+        "github.com/kgrizz-git/GUISkinDose",  # URL, not a src path
         "mypyskindose-privacy",  # Semgrep rule ID fragment
         "src/guiskindose/gui/app.py",  # already renamed
     ],
@@ -263,14 +263,39 @@ def test_scan_leftover_brand_allowlists_archive_and_plan_paths(tmp_path: Path) -
     assert hits == []
 
 
-def test_scan_leftover_brand_allowlists_github_url(tmp_path: Path) -> None:
+def test_scan_leftover_brand_reports_pre_rename_github_url(tmp_path: Path) -> None:
+    """The pre-rename GitHub URL contains a brand token and is no longer
+    allowlisted; the live post-rename URL is clean."""
     _write(
         tmp_path,
-        "docs/foo.md",
+        "docs/old.md",
         "See https://github.com/kgrizz-git/MyPySkinDose for details.\n",
     )
     hits = scan_leftover_brand(tmp_path, [Path("docs")])
+    assert len(hits) == 1
+
+    (tmp_path / "docs" / "old.md").unlink()
+    _write(
+        tmp_path,
+        "docs/new.md",
+        "See https://github.com/kgrizz-git/GUISkinDose for details.\n",
+    )
+    hits = scan_leftover_brand(tmp_path, [Path("docs")])
     assert hits == []
+
+
+def test_scan_leftover_brand_reports_stale_url_on_mixed_line(tmp_path: Path) -> None:
+    """The live-URL allowlist strips only its span: a line containing both the
+    live and the pre-rename URL still reports the stale token."""
+    _write(
+        tmp_path,
+        "docs/mixed.md",
+        "Moved from https://github.com/kgrizz-git/MyPySkinDose to"
+        " https://github.com/kgrizz-git/GUISkinDose.\n",
+    )
+    hits = scan_leftover_brand(tmp_path, [Path("docs")])
+    assert len(hits) == 1
+    assert "MyPySkinDose" in hits[0][2]
 
 
 def test_scan_leftover_brand_skips_changelog(tmp_path: Path) -> None:
@@ -329,7 +354,7 @@ def test_scan_leftover_brand_exit_zero_even_with_hits(
     [
         "  - mypyskindose-log  # nosemgrep: mypyskindose-log",
         "id: mypyskindose-privacy",
-        "https://github.com/kgrizz-git/MyPySkinDose fork",
+        "https://github.com/kgrizz-git/GUISkinDose fork",
     ],
 )
 def test_is_line_allowlisted_matches(line: str) -> None:

@@ -11,7 +11,8 @@ remediation branch with focused regression tests. The object API is now
 deliberately lowercase-only; the serialized dict/JSON schema is unchanged. An
 authenticated loopback scan (run through `direnv exec .`) confirms those two
 target rules are absent. The first scan of the configured repository project
-(`kgrizz-git_MyPySkinDose`, rather than the obsolete `GUISkinDose` project) found
+(now `kgrizz-git_GUISkinDose` after the 2026-09-04 GitHub repository rename, rather than the
+obsolete `GUISkinDose` project) found
 22 unresolved current `python:S3776` findings. The final scan on this branch
 reports zero `python:S3776`, zero `python:S6729`, and zero BLOCKER/CRITICAL
 findings. Its local quality gate still fails from 20 MAJOR and 54 MINOR
@@ -21,8 +22,8 @@ locations below should therefore be remapped against the configured project
 before each subsequent tranche; do not claim Cloud resolution from a
 branch-local scan.
 
-This plan addresses the local-only SonarQube findings for
-`kgrizz-git_MyPySkinDose`. SonarQube remains an optional second opinion: it does not replace the repository's tests,
+This plan addresses the local-only SonarQube findings for the repository's Sonar project
+(now `kgrizz-git_GUISkinDose`; formerly the pre-rename key). SonarQube remains an optional second opinion: it does not replace the repository's tests,
 Ruff, Basedpyright, Bandit, Semgrep, dependency audits, or privacy-admission
 controls. See [SONARQUBE_LOCAL.md](../SONARQUBE_LOCAL.md) and
 [HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md) for the operational policy.

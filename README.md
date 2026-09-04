@@ -316,6 +316,6 @@ Then open the built site locally (path exists only after the Sphinx step above):
 - Independently maintained fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose); MIT license and upstream copyright preserved.
 - Package identity: `guiskindose` (see [dev-docs/GUISKINDOSE_MIGRATION_STATUS.md](dev-docs/GUISKINDOSE_MIGRATION_STATUS.md)).
 - How we maintain the fork: [dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md).
-- Bugs and features: [GitHub Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) (templates require a no-PHI/PII confirmation; see [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)).
-- Questions and contribution ideas: [GitHub Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions). Ideas welcome — prefer Issues/Discussions over cold PRs ([CONTRIBUTING.md](CONTRIBUTING.md)).
+- Bugs and features: [GitHub Issues](https://github.com/kgrizz-git/GUISkinDose/issues) (templates require a no-PHI/PII confirmation; see [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)).
+- Questions and contribution ideas: [GitHub Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions). Ideas welcome — prefer Issues/Discussions over cold PRs ([CONTRIBUTING.md](CONTRIBUTING.md)).
 - Security: [SECURITY.md](SECURITY.md). Support channels: [SUPPORT.md](SUPPORT.md).

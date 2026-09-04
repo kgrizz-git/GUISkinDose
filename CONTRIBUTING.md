@@ -9,8 +9,8 @@ Support is best-effort. Please read [SUPPORT.md](SUPPORT.md) and
 ## Ideas and submissions welcome — prefer Issues / Discussions
 
 I'm **open to hearing ideas and considering submissions** through GitHub
-[Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) and
-[Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions). Please
+[Issues](https://github.com/kgrizz-git/GUISkinDose/issues) and
+[Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions). Please
 describe the idea, bug, or proposed change there (synthetic / de-identified
 examples only — no real patient data).
 
@@ -41,7 +41,7 @@ Do **not** attach, paste, commit, or upload:
 
 Use synthetic fixtures or documented de-identified examples only. Mistaken
 commits of patient data are incidents — stop sharing, report via GitHub
-[private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new),
+[private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new),
 and follow
 [dev-docs/PRIVACY_INCIDENT_RESPONSE.md](dev-docs/PRIVACY_INCIDENT_RESPONSE.md).
 
@@ -49,9 +49,9 @@ and follow
 
 | Channel | Use for |
 |---|---|
-| [Issues](https://github.com/kgrizz-git/MyPySkinDose/issues) | Bugs and concrete feature requests (forms required) |
-| [Discussions](https://github.com/kgrizz-git/MyPySkinDose/discussions) | Questions, ideas, and contribution proposals |
-| [Private vulnerability reporting](https://github.com/kgrizz-git/MyPySkinDose/security/advisories/new) | Security, privacy incidents, and private CoC reports — see [SECURITY.md](SECURITY.md) / [SUPPORT.md](SUPPORT.md) |
+| [Issues](https://github.com/kgrizz-git/GUISkinDose/issues) | Bugs and concrete feature requests (forms required) |
+| [Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions) | Questions, ideas, and contribution proposals |
+| [Private vulnerability reporting](https://github.com/kgrizz-git/GUISkinDose/security/advisories/new) | Security, privacy incidents, and private CoC reports — see [SECURITY.md](SECURITY.md) / [SUPPORT.md](SUPPORT.md) |
 | Profile [@kgrizz-git](https://github.com/kgrizz-git) | Public profile link only — GitHub has **no** general private DM inbox |
 
 Mentioning `@kgrizz-git` in an Issue or Discussion notifies the maintainer.
