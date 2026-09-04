@@ -9,12 +9,20 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ---
 
-## Now / Next
+## Next Up
+
+- [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
+- [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
+- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section.
+- [ ] **Documentation Review** — See "Check documentation completeness and accuracy" in the Active Work section.
+
+## Active Work
 
 Privacy hardening is implemented through Phase 9
 ([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 (private history/release-object audit)
 still needs an approved private environment. Remaining privacy bullets below are follow-on evaluations or
-policy decisions, not a restart of Phases 0–9.
+policy decisions, not a restart of Phases 0-9.
+
 
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
