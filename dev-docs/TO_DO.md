@@ -126,10 +126,24 @@ policy decisions, not a restart of Phases 0–9.
 ### Harness / Repo Hygiene
 
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
-- [ ] **CI wheel packaging smoke** — `test_wheel_contains_guiskindose_package` skips unless
-  `dist/*.whl` exists. Add a CI `uv build` step (or reuse the `release.yml` artifact) so the
-  wheel-contents assertion is not developer-only. `release.yml` already builds; this is
-  optional PR-CI coverage.
+- [x] **CI wheel packaging smoke** (2026-09-03) — the `build` matrix job now runs `uv build` before
+  pytest, so `test_wheel_contains_guiskindose_package` (including the `gui/help/*.md` assertion)
+  exercises a real wheel on every OS/Python matrix entry instead of skipping.
+- [ ] **Ship `corrections.db` in the wheel and resolve it package-relatively** —
+  `src/guiskindose/gui/settings_builder.py` walks four parents up to the repo root to find
+  `corrections.db`, which only exists in a source checkout; the DB is not in `MANIFEST.in` or
+  package data, so an installed wheel silently falls back to the CWD-relative default
+  `"corrections.db"` (`settings/pyskindose_settings.py`). Move the DB into the package (like
+  `table_data/`), add it to `MANIFEST.in`, resolve via a package-relative path or
+  `importlib.resources`, and extend the wheel-content test to assert it ships.
+- [ ] **Retire the pre-rename dual-read compatibility shims** — after a suitable user-migration
+  window, remove the legacy reads (legacy home config dir, repo-local legacy config JSON, the
+  legacy env var name, and the dual traceback-prefix tuple in `privacy.py`) and prune the
+  matching stale-brand allowlist patterns in `scripts/check_stale_brand.py` (the legacy
+  home/local-path regexes, the quoted-literal, env-var, and rule-ID allowances, and the
+  backticked legacy-path docstring mention). Semgrep rule IDs may only be renamed once no
+  `# nosemgrep:` comment references the old rule-ID prefix. Config migration context:
+  `plans/GUISKINDOSE_RENAME_PLAN.md`.
 - [ ] **Stale-brand CHANGELOG Unreleased pattern audit** — `CHANGELOG_CURRENT_PATTERNS` in
   `scripts/check_stale_brand.py` allow rename-prose in Unreleased. If more patterns are added,
   re-check that they still cannot hide an unquoted import of the pre-rename package.
