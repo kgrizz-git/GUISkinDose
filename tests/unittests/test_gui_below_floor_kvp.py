@@ -15,10 +15,10 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.constants import BELOW_FLOOR_KVP_POLICIES
-from mypyskindose.gui.helpers import below_floor_event_count, build_settings
-from mypyskindose.gui.state import AppState
-from mypyskindose.gui.tabs.settings import BELOW_FLOOR_KVP_OPTIONS
+from guiskindose.constants import BELOW_FLOOR_KVP_POLICIES
+from guiskindose.gui.helpers import below_floor_event_count, build_settings
+from guiskindose.gui.state import AppState
+from guiskindose.gui.tabs.settings import BELOW_FLOOR_KVP_OPTIONS
 
 
 def _exam(kvp_list: list[float]) -> SimpleNamespace:

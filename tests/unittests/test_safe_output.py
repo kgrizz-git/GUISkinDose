@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from mypyskindose.safe_output import UnsafeOutputPathError, atomic_write_private
+from guiskindose.safe_output import UnsafeOutputPathError, atomic_write_private
 
 
 def test_atomic_write_is_private_and_requires_force_to_overwrite(tmp_path: Path) -> None:

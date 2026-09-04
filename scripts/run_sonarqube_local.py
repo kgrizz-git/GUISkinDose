@@ -22,7 +22,7 @@ ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 ALLOWED_SCANNER_NAMES = {"sonar-scanner", "sonar-scanner.bat"}
 SOURCE_ROOTS = ("src", "scripts", "tests")
 EXCLUDED_PARTS = {"__pycache__", ".scannerwork"}
-EXCLUDED_PREFIXES = ("src/mypyskindose/example_data/", "src/mypyskindose/phantom_data/", "tests/fixtures/")
+EXCLUDED_PREFIXES = ("src/guiskindose/example_data/", "src/guiskindose/phantom_data/", "tests/fixtures/")
 INVALID_HOST_URL = "invalid SonarQube host URL"
 
 

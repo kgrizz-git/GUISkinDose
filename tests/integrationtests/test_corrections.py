@@ -1,7 +1,7 @@
 import pandas as pd
 
-from mypyskindose.geom_calc import fetch_and_append_hvl
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.geom_calc import fetch_and_append_hvl
+from guiskindose.rdsr_normalizer import rdsr_normalizer
 
 
 def test_that_hvl_can_be_fetched_from_correction_database(allura_parsed, axiom_artis_parsed, example_settings):

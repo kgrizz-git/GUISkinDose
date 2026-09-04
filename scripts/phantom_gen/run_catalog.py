@@ -53,7 +53,7 @@ REPO_ROOT = _REPO_ROOT
 DEFAULT_CATALOG = Path(__file__).resolve().parent / "catalog_v1.json"
 DEFAULT_OUT = REPO_ROOT / "tmp" / "phantom_gen"
 MPFB_GENERATE = Path(__file__).resolve().parent / "mpfb_generate.py"
-PHANTOM_DATA = REPO_ROOT / "src" / "mypyskindose" / "phantom_data"
+PHANTOM_DATA = REPO_ROOT / "src" / "guiskindose" / "phantom_data"
 
 # Catalog ids and Blender basenames are allowlisted before any subprocess argv is built.
 _CATALOG_ID_RE = re.compile(r"^[A-Za-z0-9_]+$")
@@ -322,7 +322,7 @@ def ensure_affine_control_base(
     entry: dict[str, Any] | None = None,
 ) -> Path:
     """Return STL path for affine-control base (generate MPFB ref if configured)."""
-    cfg = catalog.get("affine_control_base", "src/mypyskindose/phantom_data/adult_male.stl")
+    cfg = catalog.get("affine_control_base", "src/guiskindose/phantom_data/adult_male.stl")
     if isinstance(cfg, str):
         path = REPO_ROOT / cfg
         if not path.is_file():

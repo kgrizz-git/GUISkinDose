@@ -3,7 +3,7 @@
 
 The core CI ``build`` matrix installs the package **without** the optional ``gui`` extra
 and runs ``pytest --ignore=tests/gui``. A test collected there that imports ``nicegui``
-at module load — directly or transitively via ``mypyskindose.gui.*`` — breaks collection
+at module load — directly or transitively via ``guiskindose.gui.*`` — breaks collection
 with ``ModuleNotFoundError: No module named 'nicegui'`` on every platform. The failure
 only shows up in full CI, because local dev and pre-commit have the ``gui`` extra
 installed and do not run pytest without it.
@@ -15,7 +15,7 @@ The safe patterns for a GUI-dependent test are:
 * keep a module-level ``pytest.importorskip("nicegui")`` **before** any GUI import so the
   module skips cleanly when the extra is absent.
 
-Rather than statically guess which ``mypyskindose.gui`` submodules pull in nicegui (some,
+Rather than statically guess which ``guiskindose.gui`` submodules pull in nicegui (some,
 like ``gui.state``, do not), this check installs an import hook that makes ``nicegui``
 unimportable and then runs ``pytest --collect-only`` over the non-``tests/gui`` suite in a
 subprocess. Any module that hard-imports nicegui at load time fails collection here — the

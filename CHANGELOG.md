@@ -5,8 +5,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `25.2.0`).
-Bump `pyproject.toml` when releasing.
+**Version source of truth:** the package version in `pyproject.toml` (currently `1.0.0`).
+**First GUISkinDose version is `1.0.0`** — a new distribution identity, formerly
+MyPySkinDose `25.2.0` / a fork of PySkinDose. Historical sections through `[25.2.0]`
+remain MyPySkinDose history. Bump `pyproject.toml` when releasing.
 
 This file records **notable** user-facing *and* maintainer-facing changes (features, fixes,
 CI/harness, refactors, privacy gates). That keeps SemVer and contributor history honest.
@@ -17,16 +19,22 @@ omit pure CI/refactor bullets and point readers here. See
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-03
+
+> **Identity lock:** `pyproject.toml` is `guiskindose` **`1.0.0`**. This is a new
+> distribution identity, formerly MyPySkinDose `25.2.0` / a fork of PySkinDose.
+> Historical sections through `[25.2.0]` below remain MyPySkinDose history.
+
 ### Added
 
-- **GUISkinDose rename PR 0 prerequisites** (2026-09-01) — green, mergeable helpers that do
-  not rename the Python package: extract `cli()` from `__main__.py` for a future console
-  script; dual-read `~/.guiskindose/` / `.guiskindose.local.json` /
-  `GUISKINDOSE_SHOW_DEMO_PHANTOMS` while still writing the legacy mypyskindose paths
-  (do not create `~/.guiskindose/` by hand until PR 1 starts writing that path);
+- **GUISkinDose rename PR 0 prerequisites** (2026-09-01) — green, mergeable helpers that did
+  not yet rename the Python package: extract `cli()` from `__main__.py` (the `guiskindose`
+  console script is wired in a later commit of this PR); dual-read `~/.guiskindose/` /
+  `.guiskindose.local.json` / `GUISKINDOSE_SHOW_DEMO_PHANTOMS` while still writing the
+  legacy mypyskindose paths at that slice (this PR now writes `~/.guiskindose/`);
   `scripts/rewrite_package_paths.py` (inventory `path` rewrite + leftover-brand report);
-  `scripts/check_stale_brand.py` wired into pre-commit and CI (effectively a no-op until
-  PR 1 flips `LIVE_PACKAGE_NAME`; fail-closed behavior is covered by tests).
+  `scripts/check_stale_brand.py` wired into pre-commit and CI (a no-op until this PR
+  flipped `LIVE_PACKAGE_NAME`; fail-closed behavior is covered by tests).
 
 ### Fixed
 
@@ -46,6 +54,8 @@ omit pure CI/refactor bullets and point readers here. See
   explicit `nltk>=3.10.3` minimum-version constraint to `[project.optional-dependencies].dev` so the
   lockfile no longer pins the vulnerable `3.10.0` (transitive via `safety`; `3.10.2` remains vulnerable).
   The pin is project-visible in `pyproject.toml` and survives future `uv lock --upgrade` runs.
+  Superseded in this release: `safety` was removed from the dev extra on 2026-09-03, taking `nltk` and
+  the pin with it (see `### Removed` below).
 
 - **Basedpyright `corrections.py` type error** (2026-08-30) — replaced
   `min(fsl_tab, key=lambda x: abs(x - fsl_mean))` with an `np.argmin` idiom
@@ -53,6 +63,64 @@ omit pure CI/refactor bullets and point readers here. See
   stdlib `abs()`. Semantically identical; no behavior change.
 
 ### Changed
+
+- **GHSA-8mgp-746c-j5xp / CVE-2026-81726: `nltk` still unpatched** (2026-09-02) —
+  added `[tool.uv.audit] ignore-until-fixed` for the new model-artifact pathsec bypass
+  in transitive dev-only `nltk` 3.10.3 (via `safety`). Superseded in this release: `safety` was
+  dropped from the dev extra on 2026-09-03, which removed `nltk` — and both the ignore and the
+  pin — entirely (see `### Removed` below).
+
+- **Stale-brand CHANGELOG scan tightened** (2026-09-02) — `CHANGELOG.md` is no longer a
+  whole-file stale-brand exemption. Unreleased is scanned (rename-prose patterns allowed);
+  historical `## [25.` sections remain skipped. Sphinx `docs/source/user/install.md` now
+  leads with GitHub install until PyPI exists; `PACKAGE_INSTALL.md` examples use `1.0.0`.
+  Dropped leftover `pyskindose.egg-info*` from setuptools `exclude`.
+
+- **First `guiskindose` package version is `1.0.0`** (2026-09-02) — `pyproject.toml`
+  `version` and Sphinx `release` set together; `[project.scripts] guiskindose` points at
+  `guiskindose.__main__:cli`. `LIVE_PACKAGE_NAME` is `guiskindose` so leftover pre-rename
+  brand strings fail CI. Dual-read of `~/.mypyskindose/` and
+  `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS` remains. Formerly MyPySkinDose `25.2.0` / a fork of
+  PySkinDose.
+
+- **First GUISkinDose version locked at `1.0.0`** (2026-09-02) — new PyPI/import identity,
+  not MyPySkinDose `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream
+  PySkinDose. Package `name` was already `guiskindose`; version was `25.2.0` until the
+  packaging commit in this PR set `1.0.0`. GitHub Release notes and the `[1.0.0]` changelog
+  section must say this was formerly MyPySkinDose `25.2.0` / a fork of PySkinDose. Plan:
+  [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
+
+- **GitHub/Sonar/URL follow-up plan** (2026-09-02) — after the in-repo package rename is on
+  `main`, rename the GitHub fork to `GUISkinDose`, then SonarCloud, then live URLs/`origin`.
+  Not blocked on PyPI; not part of the mechanical-rename PR. Plan:
+  [dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
+
+- **Package directory and import path are `guiskindose`** (2026-09-02) — `git mv src/mypyskindose
+  src/guiskindose`; `pyproject.toml` `name` / `packages.find` follow. Version was `25.2.0`
+  until the packaging commit in this PR set `1.0.0`. Legacy config reads still use
+  `~/.mypyskindose/gui.json` and `.mypyskindose.local.json` when the new files are absent.
+  Markdown links and backtick paths that pointed at `src/mypyskindose` now point at
+  `src/guiskindose`. User-facing brand (GUI title, CLI description, export `APP_NAME`,
+  launchers, Sphinx, install guide, issue templates) is **GUISkinDose** / `guiskindose`.
+  Tests now import `guiskindose` so the suite can collect. The console script and
+  `LIVE_PACKAGE_NAME = "guiskindose"` landed in later commits of this PR.
+  Semgrep rule IDs and live GitHub/Sonar URLs are unchanged.
+  Bandit pre-commit `files:` and CI bandit/compileall/coverage now scan `src/guiskindose`.
+  Blocking Semgrep `paths.include` filters and `.phi-scanner.yml` HVL exclusions now
+  point at `src/guiskindose` (rule IDs stay `mypyskindose-*`). `.phi-scanbaseline`
+  `file_path` entries for correction CSVs were path-rewritten; hashes unchanged.
+
+- **GUI config saves now write `~/.guiskindose/gui.json`** (2026-09-02) — `save_gui_config()`
+  persists to the new home path (creating the directory as needed). Reads still fall back to
+  `~/.mypyskindose/gui.json` when the new file is absent. When both exist, load–modify–save
+  (onboarding dismiss, native-window prefs) updates the new file. The legacy directory is not
+  deleted.
+
+- **GUISkinDose rename PR 1 test contract** (2026-09-02) — `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md`
+  now requires inverting PR 0 locks in the mechanical-rename PR: config load–modify–save must
+  persist to `~/.guiskindose/` when that file exists, `LIVE_PACKAGE_NAME` must not remain
+  `"mypyskindose"`, and `[project.scripts] guiskindose` needs an entry-point test. No extra
+  tests-only PR between PR 0 and PR 1.
 
 - **GUISkinDose rename and republication plans aligned** (2026-09-01) — mechanical in-repo rename
   (`mypyskindose` → `guiskindose`) is specified in `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` and
@@ -172,7 +240,7 @@ omit pure CI/refactor bullets and point readers here. See
 - **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the
   `cloud-scans-main` CI job and deleted `codecov.yml`. Enforced PR coverage remains the GHA
   `coverage-pr` job (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base); the job
-  now runs Safety only.
+  then ran Safety only until the 2026-09-03 safety removal below deleted it outright.
 
 ### Changed
 
@@ -655,6 +723,15 @@ omit pure CI/refactor bullets and point readers here. See
   `dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`: full-body **true shape variety** via headless MPFB/Blender
   parametric targets (affine stretch of existing STLs is out of scope for shipped meshes). MakeHuman GUI phase
   docs archived under `dev-docs/plans/archive/`. Phases 0–4 complete (spike, catalog, P0/P1 generation, install).
+
+### Removed
+
+- **`safety` dev dependency and main-only CI cloud scan removed** (2026-09-03) — the `safety` package was the
+  sole consumer of transitive `nltk` in the dev extra, so dropping it deletes the unpatched
+  `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
+  `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer needed).
+  Dependency auditing remains covered by `uv audit` + `pip-audit` via `scripts/audit_dependencies.py` (same
+  OSV/PyPA advisory data) in the PR-level `static-analysis` job and the local pre-push hook.
 
 ## [25.2.0] - 2026-07-21
 
@@ -1148,5 +1225,6 @@ omit pure CI/refactor bullets and point readers here. See
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
-[Unreleased]: https://github.com/kgrizz-git/MyPySkinDose/compare/v25.1.1...HEAD
+[Unreleased]: https://github.com/kgrizz-git/MyPySkinDose/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/kgrizz-git/MyPySkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/MyPySkinDose/releases/tag/v25.1.1

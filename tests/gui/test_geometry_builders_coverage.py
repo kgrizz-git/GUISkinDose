@@ -15,12 +15,12 @@ from unittest.mock import MagicMock
 import pytest
 from nicegui.testing import User
 
-from mypyskindose import get_path_to_example_rdsr_files
-from mypyskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
-from mypyskindose.gui.helpers import load_rdsr
-from mypyskindose.gui.page_context import PageContext
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import geometry_builders as gb
+from guiskindose import get_path_to_example_rdsr_files
+from guiskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
+from guiskindose.gui.helpers import load_rdsr
+from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import geometry_builders as gb
 
 pytest.importorskip("nicegui")
 

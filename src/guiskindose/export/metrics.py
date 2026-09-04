@@ -1,0 +1,320 @@
+"""Dosimetric and correction-factor metrics for the export payload (§7–§8).
+
+All functions consume :class:`ExamView` (shape-agnostic) plus the per-exam
+normalized DataFrame; none read GUI state.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import numpy as np
+import pandas as pd
+
+from guiskindose.constants import (
+    KEY_NORMALIZATION_ACQUISITION_TYPE,
+    KEY_NORMALIZATION_AIR_KERMA,
+)
+
+from ._exam_view import ExamView
+from .models import (
+    AcquisitionBreakdown,
+    CorrectionStat,
+    DosimetricMetrics,
+    PrimaryContributingExam,
+)
+
+_DAP_COL = "DoseAreaProduct_Gym2"  # Gy·m²; ×1e4 → Gy·cm²
+_GYM2_TO_GYCM2 = 10_000.0
+_FLUORO_TIME_COL = "fluoro_time_s"  # per-event fluoro time in seconds
+
+CORRECTION_KEYS = ("k_bs", "k_isq", "k_med", "k_tab", "k_meter")
+
+
+# ── dosimetric ────────────────────────────────────────────────────────────────
+
+
+def total_dap_gycm2(df: pd.DataFrame | None) -> float | None:
+    """Total DAP in Gy·cm² from the normalized DataFrame, or ``None``."""
+    if df is None or _DAP_COL not in df.columns:
+        return None
+    series = pd.to_numeric(df[_DAP_COL], errors="coerce").dropna()
+    if series.empty:
+        return None
+    return float(series.sum()) * _GYM2_TO_GYCM2
+
+
+def total_fluoro_time_s(df: pd.DataFrame | None) -> float | None:
+    """Total fluoro time in seconds from the normalized DataFrame, or ``None``.
+
+    Per-event values are NaN on non-fluoro (acquisition) events; those are
+    skipped so the sum is the procedure fluoro time only.
+    """
+    if df is None or _FLUORO_TIME_COL not in df.columns:
+        return None
+    series = pd.to_numeric(df[_FLUORO_TIME_COL], errors="coerce").dropna()
+    if series.empty:
+        return None
+    return float(series.sum())
+
+
+def _normalize_acquisition(raw: Any) -> str:
+    """Map raw acquisition-type labels to fluoroscopy/acquisition/other."""
+    label = str(raw).lower()
+    if "fluoro" in label:
+        return "fluoroscopy"
+    if "acq" in label:
+        return "acquisition"
+    return "other"
+
+
+def _accumulate_acquisition_row(
+    groups: dict[str, dict[str, Any]],
+    row: Any,
+    *,
+    kerma_col: str | None,
+    has_dap: bool,
+) -> None:
+    """Update acquisition-mode group buckets from one normalized-event row."""
+    raw = row[KEY_NORMALIZATION_ACQUISITION_TYPE]
+    mode = _normalize_acquisition(raw)
+    g = groups.setdefault(mode, {"raw": set(), "count": 0, "kerma": 0.0, "dap": 0.0, "dap_seen": False})
+    g["raw"].add(str(raw))
+    g["count"] += 1
+    if kerma_col is not None:
+        g["kerma"] += float(pd.to_numeric(row[kerma_col], errors="coerce") or 0.0)
+    if has_dap:
+        val = pd.to_numeric(row[_DAP_COL], errors="coerce")
+        if not pd.isna(val):
+            g["dap"] += float(val) * _GYM2_TO_GYCM2
+            g["dap_seen"] = True
+
+
+def acquisition_breakdown(df: pd.DataFrame | None) -> list[AcquisitionBreakdown]:
+    """Summarize event counts/kerma/DAP by normalized acquisition type."""
+    if df is None or KEY_NORMALIZATION_ACQUISITION_TYPE not in df.columns:
+        return []
+    kerma_col = KEY_NORMALIZATION_AIR_KERMA if KEY_NORMALIZATION_AIR_KERMA in df.columns else None
+    has_dap = _DAP_COL in df.columns
+    groups: dict[str, dict[str, Any]] = {}
+    for _, row in df.iterrows():
+        _accumulate_acquisition_row(groups, row, kerma_col=kerma_col, has_dap=has_dap)
+    order = {"fluoroscopy": 0, "acquisition": 1, "other": 2}
+    return [
+        AcquisitionBreakdown(
+            mode=mode,
+            raw_labels=sorted(g["raw"]),
+            event_count=g["count"],
+            air_kerma=round(g["kerma"], 6),
+            dap_gycm2=(round(g["dap"], 6) if g["dap_seen"] else None),
+        )
+        for mode, g in sorted(groups.items(), key=lambda kv: order.get(kv[0], 3))
+    ]
+
+
+def dosimetric_metrics(
+    view: ExamView,
+    df: pd.DataFrame | None,
+    *,
+    events_discarded: int = 0,
+) -> DosimetricMetrics:
+    """Compute cumulative dosimetric metrics for an exam view."""
+    peak_idx, _ = view.peak_vertex()
+    peak_xyz = view.skin_cell_xyz(peak_idx) if peak_idx is not None else None
+    events_processed = 0 if df is None else len(df)
+    return DosimetricMetrics(
+        psd=view.psd,
+        air_kerma=view.air_kerma,
+        dap_gycm2=total_dap_gycm2(df),
+        fluoro_time_s=total_fluoro_time_s(df),
+        events_processed=events_processed,
+        events_discarded=events_discarded,
+        peak_vertex_index=peak_idx,
+        peak_xyz=peak_xyz,
+        acquisition_breakdown=acquisition_breakdown(df),
+    )
+
+
+# ── corrections ───────────────────────────────────────────────────────────────
+
+
+def _mean_or_none(values: Any) -> float | None:
+    """Arithmetic mean of a sequence, or ``None`` when empty."""
+    if isinstance(values, (int, float)):
+        return float(values)
+    return float(np.mean(values)) if len(values) else None
+
+
+def _scalar_at(seq: Any, index: int, *, default: float | None = None) -> float | None:
+    """Float at ``index`` when in range, else ``default``."""
+    if index >= len(seq):
+        return default
+    return float(seq[index])
+
+
+def _event_value_k_med(view: ExamView, index: int) -> float | None:
+    return _scalar_at(view.k_med, index)
+
+
+def _event_value_k_tab(view: ExamView, index: int) -> float | None:
+    return _scalar_at(view.k_tab, index)
+
+
+def _event_value_k_meter(view: ExamView, index: int) -> float | None:
+    return _scalar_at(view.k_meter or [], index, default=1.0)
+
+
+def _event_value_k_bs(view: ExamView, index: int) -> float | None:
+    cells = view.k_bs[index] if index < len(view.k_bs) else []
+    return _mean_or_none(cells)
+
+
+def _event_value_k_isq(view: ExamView, index: int) -> float | None:
+    values = view.k_isq[index] if index < len(view.k_isq) else []
+    return _mean_or_none(values)
+
+
+_EVENT_VALUE_HANDLERS = {
+    "k_med": _event_value_k_med,
+    "k_tab": _event_value_k_tab,
+    "k_meter": _event_value_k_meter,
+    "k_bs": _event_value_k_bs,
+    "k_isq": _event_value_k_isq,
+}
+
+
+def _per_event_values(view: ExamView, key: str) -> list[float | None]:
+    """Representative per-event value for a factor, restricted to events with hits.
+
+    Non-hit events (``len(hits[i]) == 0``) yield ``None``. For ``k_bs`` / ``k_isq``
+    the value is the arithmetic mean across hit cells; for ``k_med`` / ``k_tab`` it
+    is the per-event scalar.
+    """
+    handler = _EVENT_VALUE_HANDLERS.get(key)
+    out: list[float | None] = []
+    for i in range(len(view.hits)):
+        if len(view.hits[i]) == 0 or handler is None:
+            out.append(None)
+            continue
+        out.append(handler(view, i))
+    return out
+
+
+def _dose_weighted_mean(values: list[float | None], kerma: list[float], hits: list[list[int]]) -> float | None:
+    """Kerma-weighted mean of per-event correction values over hit cells."""
+    num = 0.0
+    den = 0.0
+    for i, val in enumerate(values):
+        if val is None or len(hits[i]) == 0:
+            continue
+        k = kerma[i] if i < len(kerma) else 0.0
+        num += k * val
+        den += k
+    if not den:
+        return None
+    return num / den
+
+
+def correction_stats(view: ExamView) -> list[CorrectionStat]:
+    """Build min/mean/max correction-factor stats for export tables."""
+    keys = CORRECTION_KEYS
+    if view.k_meter is None:
+        keys = tuple(k for k in CORRECTION_KEYS if k != "k_meter")
+    stats: list[CorrectionStat] = []
+    for key in keys:
+        values = _per_event_values(view, key)
+        present = [v for v in values if v is not None]
+        stats.append(
+            CorrectionStat(
+                key=key,
+                minimum=(min(present) if present else None),
+                maximum=(max(present) if present else None),
+                mean=(float(np.mean(present)) if present else None),
+                dose_weighted_mean=_dose_weighted_mean(values, view.kerma, view.hits),
+            )
+        )
+    return stats
+
+
+def _pool_correction_across_views(
+    views: list[ExamView], key: str
+) -> tuple[list[float], float | None]:
+    """Pool per-event values and kerma-weighted mean for one correction key."""
+    pooled: list[float] = []
+    wnum = 0.0
+    wden = 0.0
+    for view in views:
+        values = _per_event_values(view, key)
+        pooled.extend(v for v in values if v is not None)
+        exam_dwm = _dose_weighted_mean(values, view.kerma, view.hits)
+        weight = (
+            view.air_kerma_corrected
+            if view.air_kerma_corrected is not None
+            else view.air_kerma
+        )
+        if exam_dwm is not None and weight > 0:
+            wnum += weight * exam_dwm
+            wden += weight
+    dose_weighted = wnum / wden if wden > 0 else None
+    return pooled, dose_weighted
+
+
+def cumulative_correction_stats(views: list[ExamView]) -> list[CorrectionStat]:
+    """Kerma-weighted cumulative corrections (§8): min/max/mean pool per-event
+    values across exams; dose-weighted mean is kerma-weighted across per-exam
+    weighted means.
+
+    When any exam carries kerma-meter-corrected weights, those corrected kerma
+    values are used for dose-weighted means.
+    """
+    include_meter = any(v.k_meter is not None for v in views)
+    keys = CORRECTION_KEYS if include_meter else tuple(k for k in CORRECTION_KEYS if k != "k_meter")
+    stats: list[CorrectionStat] = []
+    for key in keys:
+        pooled, dose_weighted = _pool_correction_across_views(views, key)
+        stats.append(
+            CorrectionStat(
+                key=key,
+                minimum=(min(pooled) if pooled else None),
+                maximum=(max(pooled) if pooled else None),
+                mean=(float(np.mean(pooled)) if pooled else None),
+                dose_weighted_mean=dose_weighted,
+            )
+        )
+    return stats
+
+
+# ── cumulative dosimetric ─────────────────────────────────────────────────────
+
+
+def cumulative_air_kerma(views: list[ExamView]) -> float:
+    """Explicit sum of per-exam air kerma (not stored on ``MultiExamResult``)."""
+    return float(sum(v.air_kerma for v in views))
+
+
+def primary_contributing_exam(
+    views: list[ExamView],
+    exam_ids: list[str],
+    aggregate_dose_map: np.ndarray,
+) -> PrimaryContributingExam | None:
+    """Identify the exam delivering the largest dose fraction to the cumulative
+    PSD peak vertex (§7 PSD peak frame)."""
+    if aggregate_dose_map.size == 0:
+        return None
+    peak_idx = int(np.argmax(aggregate_dose_map))
+    total = float(aggregate_dose_map[peak_idx])
+    if total <= 0.0:
+        return None
+    contribs = []
+    for view in views:
+        dm = view.dense_dose_map
+        contribs.append(float(dm[peak_idx]) if peak_idx < dm.size else 0.0)
+    best = int(np.argmax(contribs))
+    baseline_xyz = views[0].skin_cell_xyz(peak_idx) if views else None
+    primary_xyz = views[best].skin_cell_xyz(peak_idx)
+    return PrimaryContributingExam(
+        exam_id=exam_ids[best],
+        dose_fraction=contribs[best] / total,
+        peak_xyz_baseline=baseline_xyz,
+        peak_xyz_primary_frame=primary_xyz,
+    )

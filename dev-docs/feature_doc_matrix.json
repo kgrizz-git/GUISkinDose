@@ -4,9 +4,9 @@
     "tabular_input": {
       "status": "shipped",
       "code": [
-        "src/mypyskindose/input_adapters",
-        "src/mypyskindose/gui/tabs/upload.py",
-        "src/mypyskindose/gui/widgets/import_preview.py"
+        "src/guiskindose/input_adapters",
+        "src/guiskindose/gui/tabs/upload.py",
+        "src/guiskindose/gui/widgets/import_preview.py"
       ],
       "tests": [
         "tests/unittests/test_input_adapters.py",
@@ -25,9 +25,9 @@
     "vendor_coordinates": {
       "status": "shipped_with_open_validation",
       "code": [
-        "src/mypyskindose/input_adapters",
-        "src/mypyskindose/gui/helpers.py",
-        "src/mypyskindose/gui/exam_transforms.py"
+        "src/guiskindose/input_adapters",
+        "src/guiskindose/gui/helpers.py",
+        "src/guiskindose/gui/exam_transforms.py"
       ],
       "tests": [
         "tests/unittests/test_coordinate_conventions.py",
@@ -46,9 +46,9 @@
     "below_floor_kvp": {
       "status": "shipped",
       "code": [
-        "src/mypyskindose/geom_calc.py",
-        "src/mypyskindose/gui/tabs/calculate.py",
-        "src/mypyskindose/gui/tabs/settings.py"
+        "src/guiskindose/geom_calc.py",
+        "src/guiskindose/gui/tabs/calculate.py",
+        "src/guiskindose/gui/tabs/settings.py"
       ],
       "tests": [
         "tests/unittests/test_geom_calc.py",
@@ -66,10 +66,10 @@
     "kerma_meter_correction": {
       "status": "shipped",
       "code": [
-        "src/mypyskindose/kerma_correction.py",
-        "src/mypyskindose/calculate_dose",
-        "src/mypyskindose/gui/tabs/settings.py",
-        "src/mypyskindose/gui/tabs/calculate.py"
+        "src/guiskindose/kerma_correction.py",
+        "src/guiskindose/calculate_dose",
+        "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/tabs/calculate.py"
       ],
       "tests": [
         "tests/unittests/test_kerma_correction.py",
@@ -87,11 +87,11 @@
     "body_habitus_scaling": {
       "status": "shipped",
       "code": [
-        "src/mypyskindose/phantom_class.py",
-        "src/mypyskindose/gui/helpers.py",
-        "src/mypyskindose/gui/tabs/settings.py",
-        "src/mypyskindose/gui/phantom_preview.py",
-        "src/mypyskindose/gui/phantom_preview_controller.py"
+        "src/guiskindose/phantom_class.py",
+        "src/guiskindose/gui/helpers.py",
+        "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/phantom_preview.py",
+        "src/guiskindose/gui/phantom_preview_controller.py"
       ],
       "tests": [
         "tests/unittests/test_phantom_scaling.py",
@@ -116,8 +116,8 @@
         "scripts/phantom_gen/mpfb_generate.py",
         "scripts/phantom_gen/poses/arms_down_default_fk.json",
         "scripts/phantom_gen/catalog_v1.json",
-        "src/mypyskindose/phantom_mesh_names.py",
-        "src/mypyskindose/phantom_data"
+        "src/guiskindose/phantom_mesh_names.py",
+        "src/guiskindose/phantom_data"
       ],
       "tests": [
         "tests/unittests/test_phantom_gen_pose.py",
@@ -139,10 +139,10 @@
     "settings_phantom_preview": {
       "status": "shipped",
       "code": [
-        "src/mypyskindose/gui/phantom_preview.py",
-        "src/mypyskindose/gui/phantom_preview_controller.py",
-        "src/mypyskindose/gui/tabs/settings.py",
-        "src/mypyskindose/gui/page_context.py"
+        "src/guiskindose/gui/phantom_preview.py",
+        "src/guiskindose/gui/phantom_preview_controller.py",
+        "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/page_context.py"
       ],
       "tests": [
         "tests/unittests/test_gui_phantom_preview.py"
@@ -160,9 +160,9 @@
     "demo_phantoms": {
       "status": "retired",
       "code": [
-        "src/mypyskindose/gui/helpers.py",
-        "src/mypyskindose/gui/window_prefs.py",
-        "src/mypyskindose/phantom_mesh_names.py",
+        "src/guiskindose/gui/helpers.py",
+        "src/guiskindose/gui/window_prefs.py",
+        "src/guiskindose/phantom_mesh_names.py",
         "scripts/phantom_gen/ingest_fun_mesh.py",
         "scripts/phantom_gen/fun_mesh_manifest.json"
       ],
@@ -185,9 +185,9 @@
     "rich_exports": {
       "status": "shipped_with_leftovers",
       "code": [
-        "src/mypyskindose/export",
-        "src/mypyskindose/gui/tabs/export.py",
-        "src/mypyskindose/main.py"
+        "src/guiskindose/export",
+        "src/guiskindose/gui/tabs/export.py",
+        "src/guiskindose/main.py"
       ],
       "tests": [
         "tests/unittests/test_export_payload.py",
@@ -207,8 +207,8 @@
     "dose_map_per_exam": {
       "status": "shipped",
       "code": [
-        "src/mypyskindose/gui/tabs/results.py",
-        "src/mypyskindose/gui/figures.py"
+        "src/guiskindose/gui/tabs/results.py",
+        "src/guiskindose/gui/figures.py"
       ],
       "tests": [
         "tests/gui/test_results_per_exam_dosemap.py"

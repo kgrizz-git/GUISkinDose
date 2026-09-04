@@ -1,6 +1,6 @@
 # Releases and distribution
 
-_Hub for how MyPySkinDose is versioned, published, and (optionally) packaged for end users._  
+_Hub for how GUISkinDose is versioned, published, and (optionally) packaged for end users._  
 _Created: 2026-07-30._
 
 This page is the map. Detailed how-tos stay in the linked sources of truth.
@@ -9,7 +9,7 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 
 | Channel | Status | Source of truth |
 |---------|--------|-----------------|
-| **Python package** (`pip install mypyskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
+| **Python package** (`pip install guiskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
 | **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is created | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
 | **Source / editable install** | Default for developers and most users today | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
 | **Portable GUI executable** (PyInstaller / `nicegui-pack`) | Research / deferred — no freeze pipeline yet | [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) |
@@ -41,6 +41,12 @@ These are **not** the same audience.
 ## Versioning
 
 - **SemVer** via `pyproject.toml` (source of truth for the package version).
+- **Live package today:** GUISkinDose / `guiskindose` `1.0.0` (new distribution identity;
+  formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). Not yet published to PyPI.
+- **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
+  not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose.
+  Changelog `[1.0.0]` and GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
+  of PySkinDose. Details: [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
 - Bump at release time (not on every docs PR). Document SemVer impact in Unreleased notes when shipping user-visible library/GUI changes.
 - `scripts/check_changelog.py` requires an Unreleased touch when `src/` or `tests/` change (pre-push).
 
@@ -69,6 +75,8 @@ Frozen desktop apps are an optional future channel for non-Python users. Feasibi
 | Doc | Role |
 |-----|------|
 | [PUBLISHING.md](../PUBLISHING.md) | PyPI Trusted Publishing detail |
+| [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md) | In-repo package rename; first `guiskindose` version `1.0.0` |
+| [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md) | GitHub fork → `GUISkinDose`, then SonarCloud, then live URLs |
 | [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) | Full maintainer release + monthly ops rhythm |
 | [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Privacy release / history audit checklist |
 | [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | CI gates that must stay green before release |

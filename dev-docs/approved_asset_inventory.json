@@ -36,13 +36,13 @@
     },
     {
       "path": "docs/source/getting_started/getting_started.ipynb",
-      "sha256": "693bc67d57657fdc0096812be151bdb8c13acfad8e06d8b3574cec0232304f51",
+      "sha256": "f4b98a5805c15a2e75ae55f716f8673d4b1488bdcc7f458579a8dffa0d821060",
       "kind": "notebook_embedded_visual",
       "purpose": "Getting-started notebook with rendered visual outputs",
       "review": {
         "status": "approved",
         "reviewer": "KG",
-        "reviewed_on": "2026-07-15"
+        "reviewed_on": "2026-09-02"
       },
       "notebook_review": {
         "embedded_images_reviewed": true,
@@ -171,7 +171,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/example_data/RDSR/fake_scanner.dcm",
+      "path": "src/guiskindose/example_data/RDSR/fake_scanner.dcm",
       "sha256": "bd665ed347e00e9de8705dd6e3d81fc2ef4f9df870681da77c415945697f48cd",
       "kind": "dicom",
       "purpose": "Synthetic RDSR derived from public upstream PySkinDose test data; PHI-like header fields deliberately retained",
@@ -187,7 +187,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/example_data/RDSR/philips_allura_clarity_u104.dcm",
+      "path": "src/guiskindose/example_data/RDSR/philips_allura_clarity_u104.dcm",
       "sha256": "b1231b0013fed87a667fef966a0f365a49b11505731b52dc8c47f52d271914f2",
       "kind": "dicom",
       "purpose": "Public upstream PySkinDose Philips RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained",
@@ -203,7 +203,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/example_data/RDSR/philips_allura_clarity_u601.dcm",
+      "path": "src/guiskindose/example_data/RDSR/philips_allura_clarity_u601.dcm",
       "sha256": "81dddb53e3bf014572a82fcb88ed2950e89a071b99512d89ffa74f4f24f8bc43",
       "kind": "dicom",
       "purpose": "Public upstream PySkinDose Philips RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained",
@@ -219,7 +219,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/example_data/RDSR/siemens_axiom_artis.dcm",
+      "path": "src/guiskindose/example_data/RDSR/siemens_axiom_artis.dcm",
       "sha256": "896bcd035df2db097992178646cbab53a8f225fb8b772864ddbaeb3e95c9fe7c",
       "kind": "dicom",
       "purpose": "Public upstream PySkinDose Siemens RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained",
@@ -235,7 +235,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm",
+      "path": "src/guiskindose/example_data/RDSR/siemens_axiom_example_procedure.dcm",
       "sha256": "e1f70911cc29daeb272362d699f972e1dd6912203bd5282e77f8785317a95be1",
       "kind": "dicom",
       "purpose": "Public upstream PySkinDose Siemens RDSR regression fixture; likely test or phantom exam; PHI-like header fields deliberately retained",
@@ -251,7 +251,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_1.stl",
       "sha256": "00d597f1ab941b9339d575322ae4979a12819935f94f08aec9266e00ed58885d",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_female_1)",
@@ -262,7 +262,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_1_reduced_1000t.stl",
       "sha256": "8eb1e79fc0cbd0f9b259689afba93a10846cb3d2c8300e8d455da1bc6c4173ea",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_female_1)",
@@ -273,7 +273,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_2.stl",
       "sha256": "37295b9c73656ebc98ef6c0c875513654df7acefea2416399178cf1d57dc37a3",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_female_1_thick_extremities)",
@@ -284,7 +284,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_2_reduced_1000t.stl",
       "sha256": "79ac77dd9ad24bd69cd12c3e2f0589ebdd0c98a55f96b25329055430d59c142e",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_female_1_thick_extremities)",
@@ -295,7 +295,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_3.stl",
       "sha256": "8430ed82b036dd536a46580a71e415f38d72076bde26c074bfa407902cbbc01d",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_female_1_extra_thick_extremities)",
@@ -306,7 +306,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_3_reduced_1000t.stl",
       "sha256": "a6bdb1fbc558f893e7f26726189af4c9f4c964445c9df359afa7a68f69ad7966",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_female_1_extra_thick_extremities)",
@@ -317,7 +317,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_1.stl",
       "sha256": "70784eb17b2edbefacf25c8e64d2fd07e1f91dc3694e009400ba4c257e0ffd71",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_male_1)",
@@ -328,7 +328,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_1_reduced_1000t.stl",
       "sha256": "4374b59ad302e9149f520c8d43ca52bca78f4f18d71c69bb481f23e752d47c8a",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_male_1)",
@@ -339,7 +339,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_2.stl",
       "sha256": "9d711d4239f86945e563c7ea5e6358bc7788e8a70d3da03b10772b3ead3222c7",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_male_1_thick_extremities)",
@@ -350,7 +350,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_2_reduced_1000t.stl",
       "sha256": "d06eeafd93d39281aa310300261d7e517fd6de2a57e392182fe259b321e52327",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_male_1_thick_extremities)",
@@ -361,7 +361,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_3.stl",
       "sha256": "d7dced919de870055998901eea9c33a5b6a8802709418727862acac8b06ecc78",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_male_1_extra_thick_extremities)",
@@ -372,7 +372,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_3_reduced_1000t.stl",
       "sha256": "a0a4f65d432456796683384419b7c0fd1314676c4bac5878072282bff80e5bff",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_male_1_extra_thick_extremities)",
@@ -383,7 +383,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_female.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_female.stl",
       "sha256": "d8806c0158e7095f2efed21874edc4176d2f016a4c7010ecf8df6580dba52655",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_ecto_female)",
@@ -394,7 +394,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_female_reduced_1000t.stl",
       "sha256": "3ab7670b401ae5a1d5f346cf9a1a6390f522b2f51dfb69fb84a55314262be0c0",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_ecto_female)",
@@ -405,7 +405,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_male.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_male.stl",
       "sha256": "d9a44fe5e7bfa9fbd9da75d9b6c56799b1f4b64da2ef5f048c15e672a0b3e449",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_ecto_male)",
@@ -416,7 +416,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_male_reduced_1000t.stl",
       "sha256": "81e8b4a6ec69efc30ef4fc37e9908782de60711b39794a46b62b4303c51eae39",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_ecto_male)",
@@ -427,7 +427,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_female.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_female.stl",
       "sha256": "0f0f24db80c111081ab3cf508fcafd4bf9e2d562b1e72bf8fbe0fc41ca62bbc3",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_endo_female)",
@@ -438,7 +438,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_female_reduced_1000t.stl",
       "sha256": "54172e7451e33083c02edeea3eb93b394b108b6dbac7af15210bbe1e0c739b93",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_endo_female)",
@@ -449,7 +449,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_male.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_male.stl",
       "sha256": "341892ad856514a4a010053575ab8eec69a19c6c16c71a14d68e7a1989e924a6",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_endo_male)",
@@ -460,7 +460,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_male_reduced_1000t.stl",
       "sha256": "57310c3639c56e2c8ff8f2779e2aae23316b05888938fd8419244f4aec058f14",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_endo_male)",
@@ -471,7 +471,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_female.stl",
+      "path": "src/guiskindose/phantom_data/adult_female.stl",
       "sha256": "f74681f580aa4b5f281d7f6d49eb9888ffd25c25c9b129f355bf01d0b299cd91",
       "kind": "opaque_binary",
       "purpose": "Adult female phantom mesh",
@@ -482,7 +482,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_female_reduced_1000t.stl",
       "sha256": "fcb6b37d23ca2f67262f9522e50b65535b8128c9b9115f12c433d2812068f5aa",
       "kind": "opaque_binary",
       "purpose": "Reduced adult female phantom mesh",
@@ -493,7 +493,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_male.stl",
+      "path": "src/guiskindose/phantom_data/adult_male.stl",
       "sha256": "ab215e8d3a6fad5bcbe88f5125d90935a127981a1263f9617a8dd4fcad9b8332",
       "kind": "opaque_binary",
       "purpose": "Adult male phantom mesh",
@@ -504,7 +504,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_male_reduced_1000t.stl",
       "sha256": "3f087b0f05cf5bfad058609eee536f5813cf1469e804e830879eb09a24a03fe5",
       "kind": "opaque_binary",
       "purpose": "Reduced adult male phantom mesh",
@@ -515,7 +515,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/hudfrid.stl",
+      "path": "src/guiskindose/phantom_data/hudfrid.stl",
       "sha256": "808225ebf5529bcd996bd6f5840f6eb9001595d224d80b7ee88f9758da666faa",
       "kind": "opaque_binary",
       "purpose": "Hudfrid phantom mesh",
@@ -526,7 +526,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/hudfrid_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/hudfrid_reduced_1000t.stl",
       "sha256": "f846afbcbb7a75d71b659da9efad34819d0f19898f08af6148a443d3196e4b4f",
       "kind": "opaque_binary",
       "purpose": "Reduced Hudfrid phantom mesh",
@@ -537,7 +537,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_female.stl",
+      "path": "src/guiskindose/phantom_data/junior_female.stl",
       "sha256": "cbcfd41b58e22d2980faeb7b6d204685800b0225f367bed0df76c515348d12ce",
       "kind": "opaque_binary",
       "purpose": "Junior female phantom mesh",
@@ -548,7 +548,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_female_reduced_1000t.stl",
       "sha256": "1bc6cf6b2d433c8238e040124691ca4d64c4ac2cc469aa87614aa64fdf7b905f",
       "kind": "opaque_binary",
       "purpose": "Reduced junior female phantom mesh",
@@ -559,7 +559,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_male.stl",
+      "path": "src/guiskindose/phantom_data/junior_male.stl",
       "sha256": "27835869352a07892fd7640ac4b09b7ee4f0d479474ff127ef059bb9e2bab6da",
       "kind": "opaque_binary",
       "purpose": "Junior male phantom mesh",
@@ -570,7 +570,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_male_reduced_1000t.stl",
       "sha256": "e05e4d68f09ba372dadebb9bdb6d445847ac35f0e604b26bf8e1c42c3650c024",
       "kind": "opaque_binary",
       "purpose": "Reduced junior male phantom mesh",
@@ -581,7 +581,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_female.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_female.stl",
       "sha256": "d71c46dcc1db0adf904b4eb0b36fdc0e720e10b0bb763250a9145cb18b727bb1",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_10y_female; CDC-median stature regenerate)",
@@ -592,7 +592,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_female_reduced_1000t.stl",
       "sha256": "324287759a2ca75b245f05e5c1ada8d96d9e38a32fd42bd6036eb0eb27e5679f",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_10y_female)",
@@ -603,7 +603,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_male.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_male.stl",
       "sha256": "441ed79f9b299423137eb63214711ee483fd755a3a2e0f3250d043601cc2df7a",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_10y_male; CDC-median stature regenerate)",
@@ -614,7 +614,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_male_reduced_1000t.stl",
       "sha256": "533b5b1b2421191ac812e600a6339108b0d650d1ce26e31b8ae610de0bfb6869",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_10y_male)",
@@ -625,7 +625,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_female.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_female.stl",
       "sha256": "9976234931baf195867e213cd7d0fb1cacb2f77c3483b585e6aed1f1f81ba9fb",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_5y_female; promoted from former 10y)",
@@ -636,7 +636,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_female_reduced_1000t.stl",
       "sha256": "3efa8cd07d185e651844abdc726290df55330a436e6cb5cff4a9142b7eba59ed",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_5y_female)",
@@ -647,7 +647,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_male.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_male.stl",
       "sha256": "f98114a03fcf7e829f963c7ba8f8698b6af5fdf4b850c7956f7e3bad096014a2",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_5y_male; promoted from former 10y)",
@@ -658,7 +658,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_male_reduced_1000t.stl",
       "sha256": "a6e11da117ff58928235627761c5b4c1d498b0bc0e22ae55231cd93ec29b8f06",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_5y_male)",
@@ -669,7 +669,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_female.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_female.stl",
       "sha256": "22e867786300ab0ef2960e08153b66c4aa326c2fe4ec53482ee49ebd82e6590c",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_preschool_female; former short 5y)",
@@ -680,7 +680,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_female_reduced_1000t.stl",
       "sha256": "20e552b401ee9fbaee764af80e7dbb997837bb4531df67c610aac2fa29c60e0a",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_preschool_female)",
@@ -691,7 +691,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_male.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_male.stl",
       "sha256": "ec97bcc7292007928b02aae934d572e640e52811edeb4438ade4155ec25dd731",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_preschool_male; former short 5y)",
@@ -702,7 +702,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_male_reduced_1000t.stl",
       "sha256": "2067d7f4a32a52d70750099bfa6b4da5fdd6127f4485b772f0a469d3254ad8b0",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_preschool_male)",
@@ -713,7 +713,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_female.stl",
+      "path": "src/guiskindose/phantom_data/senior_female.stl",
       "sha256": "b1c67ba9bb041ae91b2a34417996de13c8de4cbdcd7f4711ef9f2e7e96111f48",
       "kind": "opaque_binary",
       "purpose": "Senior female phantom mesh",
@@ -724,7 +724,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_female_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_female_reduced_1000t.stl",
       "sha256": "a5bdb98d368059350ddd268a95f03f32e856ae79934c5d606cdff70cc7beddd9",
       "kind": "opaque_binary",
       "purpose": "Reduced senior female phantom mesh",
@@ -735,7 +735,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_male.stl",
+      "path": "src/guiskindose/phantom_data/senior_male.stl",
       "sha256": "c682b78dda25425aaff07d0a6442d3fd313a8faeb50ae5def8d9f477b7a1e6c6",
       "kind": "opaque_binary",
       "purpose": "Senior male phantom mesh",
@@ -746,7 +746,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_male_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_male_reduced_1000t.stl",
       "sha256": "87b10fcd07de37b21ffabe1f671157092316316d5d73ffd1dd061d2d7c13b3eb",
       "kind": "opaque_binary",
       "purpose": "Reduced senior male phantom mesh",
@@ -910,7 +910,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_1_arms_down.stl",
       "sha256": "8b96873e3523d7db9d6310dd78aec3254dfd6aa758687748a3c77a78869e7ffb",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_female_1_arms_down; arms-down pose)",
@@ -921,7 +921,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_1_arms_down_reduced_1000t.stl",
       "sha256": "2621acac3c87322f7ea84d4e1dfb1aebd53943c72c004940584c65cda3065a31",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_female_1_arms_down)",
@@ -932,7 +932,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_2_arms_down.stl",
       "sha256": "cf443702079bcbf2d2ab210e576eab0922e0dc56500b05717ae4e13423e49265",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_female_2_arms_down; arms-down pose)",
@@ -943,7 +943,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_2_arms_down_reduced_1000t.stl",
       "sha256": "3905bdfecadc0f226abbe01bc84473c733fafc619b09b368fe26111699d35a29",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_female_2_arms_down)",
@@ -954,7 +954,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_3_arms_down.stl",
       "sha256": "a19baca907b6ceedec180905f7b6f70d4faf322262541a0db7ae33e0d1f00303",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_female_3_arms_down; arms-down pose)",
@@ -965,7 +965,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_3_arms_down_reduced_1000t.stl",
       "sha256": "8da4d34b3726911e01072629cb4c0d7b7fb3e19a6f112cc6119d58ddde5c7fad",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_female_3_arms_down)",
@@ -976,7 +976,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_1_arms_down.stl",
       "sha256": "4a2d9d815f5fae18d322262fdfd0f2834bc11bb3545f219228eda10a3c401902",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_male_1_arms_down; arms-down pose)",
@@ -987,7 +987,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_1_arms_down_reduced_1000t.stl",
       "sha256": "ca8052d25cdf8c32fe294b50ba62115a8e607bc5dd4239471a3109a39f9e9a60",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_male_1_arms_down)",
@@ -998,7 +998,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_2_arms_down.stl",
       "sha256": "12712ce57173a005561ea4505efa08824c71c3dc4548a90083255d5044ceefe5",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_male_2_arms_down; arms-down pose)",
@@ -1009,7 +1009,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_2_arms_down_reduced_1000t.stl",
       "sha256": "5f0bab86c6745f338578f8b9ccbce985e37473864b18a8ea5cc2800e88277511",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_male_2_arms_down)",
@@ -1020,7 +1020,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_3_arms_down.stl",
       "sha256": "ae6ef141260d081f52163bbb86bc5eb30728107c6f0c56cd4702671b96fc95bc",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_bariatric_male_3_arms_down; arms-down pose)",
@@ -1031,7 +1031,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_3_arms_down_reduced_1000t.stl",
       "sha256": "185f2cf34ddecb1cd04c45011b94bb1eeeecd2989fd83362e9b4117bd9e1ebb1",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_bariatric_male_3_arms_down)",
@@ -1042,7 +1042,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_female_arms_down.stl",
       "sha256": "f8fa91dba1150865f2a75de62d9bf895607904c0d019548473f31946741466c3",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_ecto_female_arms_down; arms-down pose)",
@@ -1053,7 +1053,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_female_arms_down_reduced_1000t.stl",
       "sha256": "22609f039a30a724278c071efcde0c5e0b27f4736d9a6d87f3db9d8402d66c12",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_ecto_female_arms_down)",
@@ -1064,7 +1064,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_male_arms_down.stl",
       "sha256": "cb56b5178b0c5db47a75f88c07991183f1c4984de0d688ee4d7655461a32bc05",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_ecto_male_arms_down; arms-down pose)",
@@ -1075,7 +1075,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_male_arms_down_reduced_1000t.stl",
       "sha256": "daa70ebc3fc8b09da0c6c6b4459a19fe2825d03217e9dc46ad0fec72873668cf",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_ecto_male_arms_down)",
@@ -1086,7 +1086,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_female_arms_down.stl",
       "sha256": "31d8735649cab232f15c5e9560ed4c5ede76b60a0de8c9d10362ef9ebd402d74",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_endo_female_arms_down; arms-down pose)",
@@ -1097,7 +1097,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_female_arms_down_reduced_1000t.stl",
       "sha256": "75ab99beb3b656c2b57d0d7bef4fbb8cb78253b4f77ed852685dd9e345bdf062",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_endo_female_arms_down)",
@@ -1108,7 +1108,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_male_arms_down.stl",
       "sha256": "e43b1a0d077bccf0316fa803b46a037c7784165d20174362e501ba1e1aa5afaa",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_endo_male_arms_down; arms-down pose)",
@@ -1119,7 +1119,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_male_arms_down_reduced_1000t.stl",
       "sha256": "a9ddffccbb63d22d2ab60e3e7c7ba28a0534a3aa4de76ddf5c07e98c9f4434bb",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_endo_male_arms_down)",
@@ -1130,7 +1130,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_female_arms_down.stl",
       "sha256": "6bcce10daef62cc81641e24cdc0c26689b7db1eb85cc5c1c99004f7eab18b1ad",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_female_arms_down; arms-down pose)",
@@ -1141,7 +1141,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_female_arms_down_reduced_1000t.stl",
       "sha256": "da3df3933156ba0fb3160ee2c664f5af90b0a33b172b9f7f6c9ed100deb74b93",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_female_arms_down)",
@@ -1152,7 +1152,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/adult_male_arms_down.stl",
       "sha256": "2eae56c1a8070baac22e6dd59c57b5a79fb26b8e932eccf50ac44c9c641fb73a",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (adult_male_arms_down; arms-down pose)",
@@ -1163,7 +1163,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_male_arms_down_reduced_1000t.stl",
       "sha256": "694bd7245eb1118c926bf1701c10c623b0b59ed399e922989731878b38714613",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (adult_male_arms_down)",
@@ -1174,7 +1174,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/hudfrid_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/hudfrid_arms_down.stl",
       "sha256": "9e6695a71484912735f59404cac0d60040e354d66df784abb9092b2512006dc9",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (hudfrid_arms_down; arms-down pose)",
@@ -1185,7 +1185,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/hudfrid_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/hudfrid_arms_down_reduced_1000t.stl",
       "sha256": "d26c3d1097d2592ec6929fc38f6efa16fccef6fb29e64802d67e24df491a8884",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (hudfrid_arms_down)",
@@ -1196,7 +1196,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/junior_female_arms_down.stl",
       "sha256": "ace987096e1ca8f2249af72d0282d1f3762af5fb903b1e4aa5b5d7792fb6a0a4",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (junior_female_arms_down; arms-down pose)",
@@ -1207,7 +1207,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_female_arms_down_reduced_1000t.stl",
       "sha256": "3b870eb7e908854a811a901e5009c7683da3c1e07312929d25c03838819aaf57",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (junior_female_arms_down)",
@@ -1218,7 +1218,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/junior_male_arms_down.stl",
       "sha256": "fbe8f610d1684e26a0f16723ebe81de66c8e393f8708805b3275b0d57e5ba1ab",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (junior_male_arms_down; arms-down pose)",
@@ -1229,7 +1229,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_male_arms_down_reduced_1000t.stl",
       "sha256": "2cec00ac3b5f979294f3ea3ef3d1062f9726bc35e9166026452e8061da1f3c5b",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (junior_male_arms_down)",
@@ -1240,7 +1240,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_female_arms_down.stl",
       "sha256": "a4cdc495ccd83a70642e5d313f13e29725465fae92e81ceda80876de62935d5f",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_10y_female_arms_down; arms-down pose)",
@@ -1251,7 +1251,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_female_arms_down_reduced_1000t.stl",
       "sha256": "f9a341b1df7c3d712b99883f91bd318402e65d5a663bfac1037d902f052bb2db",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_10y_female_arms_down)",
@@ -1262,7 +1262,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_male_arms_down.stl",
       "sha256": "b22f870ed552bc7fcd17e04c190a710a1a5627b2f08828bea102e40f052da37e",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_10y_male_arms_down; arms-down pose)",
@@ -1273,7 +1273,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_male_arms_down_reduced_1000t.stl",
       "sha256": "eb931a073d9ca3af2d4e47bcb12fda13a1c8c97f94f1f2cd363f189e6be4523b",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_10y_male_arms_down)",
@@ -1284,7 +1284,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_female_arms_down.stl",
       "sha256": "a7aeffa738cb42027ec1bba82c18776b627d246127b1a90eeb7f105a8c61a16e",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_5y_female_arms_down; arms-down pose)",
@@ -1295,7 +1295,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_female_arms_down_reduced_1000t.stl",
       "sha256": "c55e6f70af236f163e84b67ad0bf7a8aedb46f9e376961ba83673fc49d31f841",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_5y_female_arms_down)",
@@ -1306,7 +1306,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_male_arms_down.stl",
       "sha256": "1c7a01dbd31bffd7cb6c875f462dc3dd0ada4d00afe6e7401faf797f2636fea9",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_5y_male_arms_down; arms-down pose)",
@@ -1317,7 +1317,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_male_arms_down_reduced_1000t.stl",
       "sha256": "34b1e7b5b8abf016f1b15126439241470c4d3dee1b2fc8f6c38089058fa1054a",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_5y_male_arms_down)",
@@ -1328,7 +1328,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_female_arms_down.stl",
       "sha256": "c69b14306b9937accf996cfc6ea596382bdaf856663ae09089ed3b4123d410a3",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_preschool_female_arms_down; arms-down pose)",
@@ -1339,7 +1339,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_female_arms_down_reduced_1000t.stl",
       "sha256": "d8c92c7a49450680c6aeb36471a325c6c3d6e3b453a04c8991cc14ba828b4932",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_preschool_female_arms_down)",
@@ -1350,7 +1350,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_male_arms_down.stl",
       "sha256": "d1b730ef1068a2e3a9c06c800461b4b7bcdc1246ccd77421085e70322b1ec277",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (ped_preschool_male_arms_down; arms-down pose)",
@@ -1361,7 +1361,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_male_arms_down_reduced_1000t.stl",
       "sha256": "d9bd921da28b85df9a6183b77c95ca3bb3575b0627a531dacde73d683ce87ffd",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (ped_preschool_male_arms_down)",
@@ -1372,7 +1372,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_female_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/senior_female_arms_down.stl",
       "sha256": "934ca981f0846cf6b9a88030b04b291dd1af193b575df16b539cfb866d8ad33e",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (senior_female_arms_down; arms-down pose)",
@@ -1383,7 +1383,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_female_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_female_arms_down_reduced_1000t.stl",
       "sha256": "85c7d9e7f23d89687a22c730e2849dd78266811f2ceedeff051a6f4889d4f82c",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (senior_female_arms_down)",
@@ -1394,7 +1394,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_male_arms_down.stl",
+      "path": "src/guiskindose/phantom_data/senior_male_arms_down.stl",
       "sha256": "cc3d2325d445bf565798fb7e4d47a3e7dce66ea4b4c3e56060a6ab9a8683b393",
       "kind": "opaque_binary",
       "purpose": "MPFB parametric human phantom mesh (senior_male_arms_down; arms-down pose)",
@@ -1405,7 +1405,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_male_arms_down_reduced_1000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_male_arms_down_reduced_1000t.stl",
       "sha256": "c275666f6a9953fb2205e59d0c27776d9b474f22637dde0346276afb9de3ccef",
       "kind": "opaque_binary",
       "purpose": "Reduced MPFB parametric human phantom mesh (senior_male_arms_down)",
@@ -1416,7 +1416,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_1_arms_down_reduced_3000t.stl",
       "sha256": "676263842c62f4153f24a6b42e269d7f16944131e69b2853a137e363d456c02c",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_1_arms_down)",
@@ -1427,7 +1427,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_1_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_1_reduced_3000t.stl",
       "sha256": "9bd84438e36f0b73452e8dad81e0bd4a5c6bf121426667a06de1e83d291823aa",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_1)",
@@ -1438,7 +1438,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_2_arms_down_reduced_3000t.stl",
       "sha256": "310f975ccf727f813aabf034cf336c0b2ef77e432f2df6e8ec0dc6b76962050c",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_2_arms_down)",
@@ -1449,7 +1449,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_2_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_2_reduced_3000t.stl",
       "sha256": "bbd97bf6a018d98342071afc1a501603f53020d35db9bd62dedba5d58e3539ca",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_2)",
@@ -1460,7 +1460,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_3_arms_down_reduced_3000t.stl",
       "sha256": "4d6cf446b18e21c12cc6ab8f6bafdff113e159d82f7a305f2a20bc68038bcb7e",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_3_arms_down)",
@@ -1471,7 +1471,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_female_3_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_female_3_reduced_3000t.stl",
       "sha256": "868f7c31ebb126c5569f1427222855926d620fc3e6d325d461781560f0036e4b",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_female_3)",
@@ -1482,7 +1482,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_1_arms_down_reduced_3000t.stl",
       "sha256": "6a5dba17fba7180b8603c6b7d9792437ffd5bb6a9a90c3d3228a279f069ad4b0",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_1_arms_down)",
@@ -1493,7 +1493,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_1_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_1_reduced_3000t.stl",
       "sha256": "2abc1bd35cdf698818c785784da101ecbe1b4eb4f400b6a696f5ff77abd304cc",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_1)",
@@ -1504,7 +1504,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_2_arms_down_reduced_3000t.stl",
       "sha256": "11226d44e45ce404a82f8a69fc91cfe4a346866bb66580958d974c16907ac65d",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_2_arms_down)",
@@ -1515,7 +1515,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_2_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_2_reduced_3000t.stl",
       "sha256": "c35c03fcf9d3d88cb110119d6038ecf98fcc06d055847057bcf98f94324c85fb",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_2)",
@@ -1526,7 +1526,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_3_arms_down_reduced_3000t.stl",
       "sha256": "90adee741089f2525e3755299679be0223a83db3d26d51d652fc5d67501b8401",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_3_arms_down)",
@@ -1537,7 +1537,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_bariatric_male_3_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_bariatric_male_3_reduced_3000t.stl",
       "sha256": "1b722a254193f2d2f559e04d8ac5eaf260f1670a6cb3d08cd2ea9023b3f47b14",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_bariatric_male_3)",
@@ -1548,7 +1548,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_female_arms_down_reduced_3000t.stl",
       "sha256": "b7bdf7f2de892c7c75e8e5bebf613100730e4555899e8868a5707532f00512d5",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_female_arms_down)",
@@ -1559,7 +1559,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_female_reduced_3000t.stl",
       "sha256": "a1a6f09bd9a5d258298beebdfb7f66ec1c3dde86b1cf02168e55125c31037288",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_female)",
@@ -1570,7 +1570,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_male_arms_down_reduced_3000t.stl",
       "sha256": "59fcbc2174dcdb942f505f16e2c43385e60782981f235ec302ce815dce3d19e5",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_male_arms_down)",
@@ -1581,7 +1581,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_ecto_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_ecto_male_reduced_3000t.stl",
       "sha256": "2343b851da72e00d2a9e671a7986bb534e048ad9848019d4104728b7b83c658e",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_ecto_male)",
@@ -1592,7 +1592,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_female_arms_down_reduced_3000t.stl",
       "sha256": "90c416c1b09096375959112da4f06a0732d7e4a854ac1d646c9f612c19bd36ba",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_female_arms_down)",
@@ -1603,7 +1603,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_female_reduced_3000t.stl",
       "sha256": "912b28c01e26dab8f998600c8eab7dd0e8b54d0a4ec66932e843493c5a094d74",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_female)",
@@ -1614,7 +1614,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_male_arms_down_reduced_3000t.stl",
       "sha256": "c8c4d41ac468fa287e9655e1207371aa484b92cc7d3abc9d670f93ec61c6fe11",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_male_arms_down)",
@@ -1625,7 +1625,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_endo_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_endo_male_reduced_3000t.stl",
       "sha256": "b10e4175b2fb3da3149456cca828dc4e937ae9d349a0be523ef3d598aa95ef51",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_endo_male)",
@@ -1636,7 +1636,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_female_arms_down_reduced_3000t.stl",
       "sha256": "bfa8482dd5128d8db0afb0406976926a56ae786b8fb05e78b893ff29251869e8",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_female_arms_down)",
@@ -1647,7 +1647,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_female_reduced_3000t.stl",
       "sha256": "95129ca25970c4d508c4112e86280b893fe762b3e14a9a3922b0f4e4986f14e5",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_female)",
@@ -1658,7 +1658,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_male_arms_down_reduced_3000t.stl",
       "sha256": "b7b295ff890840286b3d0c31e0dc9683fdae48ca1cd79eaf66c51f222ce3b62b",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_male_arms_down)",
@@ -1669,7 +1669,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/adult_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/adult_male_reduced_3000t.stl",
       "sha256": "e87989fa37b35a2da58d5a08c102792f64ee4674f75c673d262d73b8c64c0801",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (adult_male)",
@@ -1680,7 +1680,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/hudfrid_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/hudfrid_arms_down_reduced_3000t.stl",
       "sha256": "8eba45fa93c6af6c2f4b3cf4a5c987a8009b1bb921cbf9afd5ac9df173486fac",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (hudfrid_arms_down)",
@@ -1691,7 +1691,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/hudfrid_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/hudfrid_reduced_3000t.stl",
       "sha256": "d08c9a7b2cab8dc4409392ef3947cab3b76485511eff1a3ac93fa43d9440b7b0",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (hudfrid)",
@@ -1702,7 +1702,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_female_arms_down_reduced_3000t.stl",
       "sha256": "aa2b03a3f6b4a03e0b94db2d1338ec54617a723037d525bb03f208564cbaeb38",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_female_arms_down)",
@@ -1713,7 +1713,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_female_reduced_3000t.stl",
       "sha256": "ae55c3c3d0e2bdd6fd6beebcc2036debe4df7e3958868315cbeb789bbc919301",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_female)",
@@ -1724,7 +1724,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_male_arms_down_reduced_3000t.stl",
       "sha256": "1e6b9d0e5bf1aa926a328f04d9d802bc02dc9f9c51a6a5ee19ec206ff697382c",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_male_arms_down)",
@@ -1735,7 +1735,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/junior_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/junior_male_reduced_3000t.stl",
       "sha256": "f193bdf7fddd94486394380236a10d4a32e81a8671a99df63e35b92d3f4a2849",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (junior_male)",
@@ -1746,7 +1746,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_female_arms_down_reduced_3000t.stl",
       "sha256": "a88fda02601c405ade9bf02bcf2e553e3b20a18af4c6eff2f0b15c0c5e73c295",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_female_arms_down)",
@@ -1757,7 +1757,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_female_reduced_3000t.stl",
       "sha256": "c9ba51efbe05f08f1850bc82e992a5bfe0c8711e8782aca64c308874f1d9f76f",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_female)",
@@ -1768,7 +1768,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_male_arms_down_reduced_3000t.stl",
       "sha256": "8c375875185bb53d47df47d40615abd4f58b165dc83308f396bb0f5852d2a3b7",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_male_arms_down)",
@@ -1779,7 +1779,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_10y_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_10y_male_reduced_3000t.stl",
       "sha256": "b3099f234ce45b09577a97899d08b5fa24398ce34533f7f61fa605494cdb56d3",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_10y_male)",
@@ -1790,7 +1790,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_female_arms_down_reduced_3000t.stl",
       "sha256": "942d8c7c6110d18e5bc7b7de60755308dffb970bd5f6454d988ff7b69d00dcc9",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_female_arms_down)",
@@ -1801,7 +1801,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_female_reduced_3000t.stl",
       "sha256": "03e08c0119e9c04d2084a04747ec7dab50e3aa8bd9a9f32030af39e6f038ceed",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_female)",
@@ -1812,7 +1812,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_male_arms_down_reduced_3000t.stl",
       "sha256": "be8a523ad9c3ca622896eb915c9f4c97d837ad89fc6f191eabe014c9177d52c5",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_male_arms_down)",
@@ -1823,7 +1823,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_5y_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_5y_male_reduced_3000t.stl",
       "sha256": "89237b59f592f7c541180c93af041dec7c7460884cd5ed15394267bf0911815b",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_5y_male)",
@@ -1834,7 +1834,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_female_arms_down_reduced_3000t.stl",
       "sha256": "084181b89a808b3ce0a65a6208eac7ebe5afeea948f99b2f289ece4bf2e843d7",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_female_arms_down)",
@@ -1845,7 +1845,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_female_reduced_3000t.stl",
       "sha256": "4f06194076a75b8b7c0d5e8d96319dd2ee892d86f05be6ff8f4b8341c409484c",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_female)",
@@ -1856,7 +1856,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_male_arms_down_reduced_3000t.stl",
       "sha256": "3b141084f2d26f85e0c5e14faad95a2f58afcb01482519c79cc02a14420ae8e2",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_male_arms_down)",
@@ -1867,7 +1867,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/ped_preschool_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/ped_preschool_male_reduced_3000t.stl",
       "sha256": "8473e7ac1407dc530fed045d3ef49408d35cda4ec60585bef8b46629d7ba7c60",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (ped_preschool_male)",
@@ -1878,7 +1878,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_female_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_female_arms_down_reduced_3000t.stl",
       "sha256": "920f7c8613d6b467d2d7c2d3f217727a90c913d50beacde4f3e59cb2b7b0996b",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_female_arms_down)",
@@ -1889,7 +1889,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_female_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_female_reduced_3000t.stl",
       "sha256": "a640957bcd219ccb90b8ca6802065bb0b3a1aeb95049c9fe829e07caed7284c5",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_female)",
@@ -1900,7 +1900,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_male_arms_down_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_male_arms_down_reduced_3000t.stl",
       "sha256": "2dae9e1001e5e2880973f236904569ad927aaa9a848b022c896572127803d89c",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_male_arms_down)",
@@ -1911,7 +1911,7 @@
       }
     },
     {
-      "path": "src/mypyskindose/phantom_data/senior_male_reduced_3000t.stl",
+      "path": "src/guiskindose/phantom_data/senior_male_reduced_3000t.stl",
       "sha256": "59bff7961b3e39266b22d926810bc36f64a534380a71e6209a9e77c23548972f",
       "kind": "opaque_binary",
       "purpose": "Reduced (~3000 triangle) preview of human phantom mesh (senior_male)",

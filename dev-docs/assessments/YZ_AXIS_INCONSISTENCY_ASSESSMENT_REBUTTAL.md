@@ -1,7 +1,7 @@
 # Y/Z Axis Inconsistency Assessment Rebuttal
 
 **Status:** Resolved — original bug claim withdrawn based on DICOM Table Coordinate System definitions.  
-**Scope:** `src/mypyskindose/`, `AGENTS.md`, related dev-docs
+**Scope:** `src/guiskindose/`, `AGENTS.md`, related dev-docs
 
 This document serves as a rebuttal to `YZ_AXIS_INCONSISTENCY_ASSESSMENT.md`. The original assessment concluded that "The code is internally consistent — every file in the codebase uses the same convention. The bug is purely in AGENTS.md's documentation" and dismissed the table mesh orientation as a "visual paradox."
 

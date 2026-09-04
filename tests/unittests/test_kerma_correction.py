@@ -13,12 +13,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from mypyskindose.constants import (
+from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
 )
-from mypyskindose.kerma_correction import (
+from guiskindose.kerma_correction import (
     load_correction_table,
     merge_tables,
     normalize_equipment_label,
@@ -137,7 +137,7 @@ def test_memory_overrides_file():
 def test_duplicate_rows_first_wins(tmp_path: Path):
     """Duplicate CF keys keep the first value and warn (handler, not caplog).
 
-    Suite-wide ``mypyskindose`` logging / propagate state can leave WARNING on
+    Suite-wide ``guiskindose`` logging / propagate state can leave WARNING on
     stderr without landing in pytest ``caplog`` (seen on CI Python 3.14).
     """
     path = tmp_path / "dup.csv"
@@ -153,7 +153,7 @@ def test_duplicate_rows_first_wins(tmp_path: Path):
             """Append the formatted log message to the capture list."""
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose.kerma_correction")
+    logger = logging.getLogger("guiskindose.kerma_correction")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:
@@ -215,7 +215,7 @@ def test_invalid_lookup_factor_replaced_with_default():
 
 def test_json_factors_wrapper_and_list_payloads(tmp_path: Path):
     """JSON CF tables accept both a bare list and a {\"factors\": [...]} wrapper."""
-    from mypyskindose.kerma_correction import distinct_auto_resolved_equipment_keys
+    from guiskindose.kerma_correction import distinct_auto_resolved_equipment_keys
 
     wrapped = tmp_path / "wrapped.json"
     wrapped.write_text(
@@ -289,7 +289,7 @@ def test_normalize_nan_inputs_and_suspicious_factor_warning(tmp_path: Path):
             """Append the formatted log message to the capture list."""
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose.kerma_correction")
+    logger = logging.getLogger("guiskindose.kerma_correction")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:

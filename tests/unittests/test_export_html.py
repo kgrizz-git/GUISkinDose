@@ -6,11 +6,11 @@ import base64
 
 import pandas as pd
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
-from mypyskindose.export.models import ImageEntry
-from mypyskindose.export.writers import FORMATS, render_bytes
-from mypyskindose.export.writers.html import render_html_bytes
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.export import ExportExamSource, ExportSource, collect_export_payload
+from guiskindose.export.models import ImageEntry
+from guiskindose.export.writers import FORMATS, render_bytes
+from guiskindose.export.writers.html import render_html_bytes
 
 _PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="

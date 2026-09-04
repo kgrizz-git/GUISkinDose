@@ -7,7 +7,7 @@ Purpose:
 
 Inputs:
     Repository root (auto-detected as parent of ``scripts/``, or ``--repo-root``).
-    Reads ``src/mypyskindose/gui/styles.py``.
+    Reads ``src/guiskindose/gui/styles.py``.
 
 Outputs:
     Writes ``dev-docs/UI_values.md`` (or ``--check`` to verify without writing).
@@ -24,7 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-APP_REL_PATH = Path("src/mypyskindose/gui/styles.py")
+APP_REL_PATH = Path("src/guiskindose/gui/styles.py")
 OUTPUT_REL_PATH = Path("dev-docs/UI_values.md")
 
 MODERN_CSS_RE = re.compile(
@@ -83,13 +83,13 @@ def render_markdown(
     gradients: list[tuple[str, str, str, str]],
 ) -> str:
     lines = [
-        "# UI Values — MyPySkinDose",
+        "# UI Values — GUISkinDose",
         "",
         "> **Auto-generated** — do not edit by hand. Regenerate with:",
         "> `python scripts/generate_ui_values.py`",
         "",
         "Design tokens extracted from `MODERN_CSS` in "
-        + "[src/mypyskindose/gui/styles.py](../src/mypyskindose/gui/styles.py). "
+        + "[src/guiskindose/gui/styles.py](../src/guiskindose/gui/styles.py). "
         + "Aesthetic intent lives in [DESIGN.md](../DESIGN.md); "
         + "implementation plan in [GUI_PLAN.md](plans/GUI_PLAN.md).",
         "",

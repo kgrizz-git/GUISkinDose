@@ -13,14 +13,14 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.constants import COLOR_PAD, COLOR_PATIENT, COLOR_TABLE
-from mypyskindose.gui.phantom_preview import (
+from guiskindose.constants import COLOR_PAD, COLOR_PATIENT, COLOR_TABLE
+from guiskindose.gui.phantom_preview import (
     PreviewSnapshot,
     capture_phantom_preview_snapshot,
     make_phantom_preview_fig,
     resolve_preview_mesh,
 )
-from mypyskindose.gui.state import AppState
+from guiskindose.gui.state import AppState
 
 
 def _snapshot(**overrides) -> PreviewSnapshot:
@@ -61,7 +61,7 @@ def test_resolve_preview_mesh_prefers_reduced_when_present():
 def test_resolve_preview_mesh_returns_stem_when_reduced_absent(tmp_path, monkeypatch):
     # Point resolver at an empty phantom_data dir so reduced companion is missing.
     monkeypatch.setattr(
-        "mypyskindose.gui.phantom_preview._PHANTOM_DATA_DIR",
+        "guiskindose.gui.phantom_preview._PHANTOM_DATA_DIR",
         tmp_path,
     )
     (tmp_path / "only_full.stl").write_bytes(b"solid empty\nendsolid empty\n")

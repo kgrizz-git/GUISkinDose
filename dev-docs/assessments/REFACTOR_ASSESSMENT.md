@@ -1,7 +1,7 @@
 # Refactor Assessment
 
 **Date:** 2026-06-11  
-**Scope:** `src/mypyskindose/`, `scripts/`, `tests/`  
+**Scope:** `src/guiskindose/`, `scripts/`, `tests/`  
 **Excluded:** `.venv/`, `backups/`, `*.egg-info`, dev-docs
 
 > This is the diagnostic. The executable, phased plan derived from it lives in [plans/archive/refactor-execution.md](../plans/archive/refactor-execution.md) (**completed** 2026-06-23).

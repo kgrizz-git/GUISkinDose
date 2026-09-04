@@ -2,7 +2,7 @@
 ## Transitioning from "Aurora-Brutalist" to "Sleek Modern/Material"
 
 > **Status:** In Progress  
-> **Target File:** `src/mypyskindose/gui/app.py`  
+> **Target File:** `src/guiskindose/gui/app.py`  
 > **Current Version:** 1.1.0  
 > **Aesthetic:** Aurora-Brutalist → Sleek Modern/Material
 
@@ -124,7 +124,7 @@ The current GUI uses an "Aurora-Brutalist" aesthetic characterized by sharp edge
 - Apply to: upload cards, settings expansions, geometry preview cards, data table cards
 
 **Files to modify:**
-- `src/mypyskindose/gui/app.py` — replace all `.brutal-card` class references (approx. 15 occurrences)
+- `src/guiskindose/gui/app.py` — replace all `.brutal-card` class references (approx. 15 occurrences)
 
 ---
 
@@ -489,8 +489,8 @@ ui.icon("menu").props("outline style={font-weight: 300}")
 
 | File | Changes | Lines Affected (Est.) |
 |------|---------|----------------------|
-| `src/mypyskindose/gui/app.py` | CSS class replacements, navigation updates | ~100 |
-| `src/mypyskindose/gui/app.py` | New CSS variables and styles | ~150 (new) |
+| `src/guiskindose/gui/app.py` | CSS class replacements, navigation updates | ~100 |
+| `src/guiskindose/gui/app.py` | New CSS variables and styles | ~150 (new) |
 | `dev-docs/GUI_PLAN.md` | Update §0 current-state aesthetic description | ~20 |
 | `dev-docs/GUI_PLAN.md` | Note aesthetic change | ~10 |
 

@@ -47,9 +47,9 @@ flowchart TD
 
 | File | Role in this plan |
 |------|-------------------|
-| `src/mypyskindose/gui/figures.py` | `make_dosemap_html` / `make_dosemap_png` / `make_dosemap_fig` — stop silent `None`; log + raise |
-| `src/mypyskindose/gui/tabs/export.py` | `download_html` / `download_png` — catch builder errors vs cancel; fix dead notify branch |
-| `src/mypyskindose/gui/concurrency.py` | Keep `require_io_result`; optionally tighten docstring only |
+| `src/guiskindose/gui/figures.py` | `make_dosemap_html` / `make_dosemap_png` / `make_dosemap_fig` — stop silent `None`; log + raise |
+| `src/guiskindose/gui/tabs/export.py` | `download_html` / `download_png` — catch builder errors vs cancel; fix dead notify branch |
+| `src/guiskindose/gui/concurrency.py` | Keep `require_io_result`; optionally tighten docstring only |
 | `tests/unittests/test_gui_figures.py` | Unit tests for raise-on-failure + successful HTML bytes |
 | `tmp/` (gitignored) | Phase 0 scratch repro / captured logs — never commit |
 | `CHANGELOG.md` | Fixed entry under `[Unreleased]` |
@@ -61,7 +61,7 @@ flowchart TD
 ### Task 0: Phase 0 — Capture the real exception (research / experiments)
 
 **Files:**
-- Modify (temporary or permanent): `src/mypyskindose/gui/figures.py` — logging in `make_dosemap_html` / `make_dosemap_png`
+- Modify (temporary or permanent): `src/guiskindose/gui/figures.py` — logging in `make_dosemap_html` / `make_dosemap_png`
 - Optional scratch: `tmp/repro_dosemap_html_export.py` (gitignored)
 - Update: `dev-docs/assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md` (findings appendix)
 
@@ -97,7 +97,7 @@ Prefer **still returning `None` for this step only** if you want an unchanged UI
 > this done until either an interactive-GUI repro captures the exception, or Phase 1's
 > raise-on-failure change surfaces it in the wild.
 
-1. Activate `.venv`, launch GUI: `python -m mypyskindose --mode gui`
+1. Activate `.venv`, launch GUI: `python -m guiskindose --mode gui`
 2. Load the same multi-exam set that previously failed (or closest available fixtures)
 3. Calculate → confirm Results aggregate map renders
 4. Export → HTML
@@ -164,8 +164,8 @@ no `dosemap_png_render` log fired. Same outcome as HTML — no PNG/HTML asymmetr
 ### Task 1: Phase 1 — Error semantics (stop lying; raise + actionable UI)
 
 **Files:**
-- Modify: `src/mypyskindose/gui/figures.py`
-- Modify: `src/mypyskindose/gui/tabs/export.py`
+- Modify: `src/guiskindose/gui/figures.py`
+- Modify: `src/guiskindose/gui/tabs/export.py`
 - Test: `tests/unittests/test_gui_figures.py`
 
 **Interfaces:**
@@ -178,7 +178,7 @@ Append to `tests/unittests/test_gui_figures.py`:
 
 ```python
 def test_make_dosemap_html_returns_html_bytes():
-    from mypyskindose.gui.figures import make_dosemap_html
+    from guiskindose.gui.figures import make_dosemap_html
 
     patient = {
         "patient": {
@@ -196,7 +196,7 @@ def test_make_dosemap_html_returns_html_bytes():
 
 
 def test_make_dosemap_html_raises_when_fig_unavailable(monkeypatch):
-    from mypyskindose.gui import figures
+    from guiskindose.gui import figures
 
     monkeypatch.setattr(figures, "make_dosemap_fig", lambda *a, **k: None)
     with pytest.raises(RuntimeError, match="could not be built|Dose map"):
@@ -317,7 +317,7 @@ Force a failure (e.g. temporarily break patient dict in a debug branch, or expor
 - [ ] **Step 1.7: Commit** (only when user asks)
 
 ```bash
-git add src/mypyskindose/gui/figures.py src/mypyskindose/gui/tabs/export.py tests/unittests/test_gui_figures.py
+git add src/guiskindose/gui/figures.py src/guiskindose/gui/tabs/export.py tests/unittests/test_gui_figures.py
 git commit -m "$(cat <<'EOF'
 fix: report real HTML/PNG export failures instead of fake cancel
 
@@ -330,9 +330,9 @@ EOF
 ### Task 2: Phase 2 — Fix the underlying render failure (evidence-driven)
 
 **Files:** depend on Phase 0 finding (see table in Task 0). Likely candidates:
-- `src/mypyskindose/gui/figures.py`
-- `src/mypyskindose/gui/tabs/export.py`
-- Possibly `src/mypyskindose/export/images.py` if mesh/intensity sanitization is needed
+- `src/guiskindose/gui/figures.py`
+- `src/guiskindose/gui/tabs/export.py`
+- Possibly `src/guiskindose/export/images.py` if mesh/intensity sanitization is needed
 
 **Interfaces:**
 - Consumes: Phase 0 exception type + Experiment B thread result
@@ -384,7 +384,7 @@ Include exception type, branch chosen, and smoke result.
 ### Task 3: Phase 3 — Hardening, docs, changelog
 
 **Files:**
-- Optional: `src/mypyskindose/gui/tabs/export.py` — preflight length check (defense only)
+- Optional: `src/guiskindose/gui/tabs/export.py` — preflight length check (defense only)
 - Modify: `CHANGELOG.md`
 - Modify: `dev-docs/TO_DO.md` — check off HTML export item
 - Modify: `dev-docs/assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md` — mark resolved

@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from mypyskindose.input_adapters.column_mapper import _normalize_str
-from mypyskindose.input_adapters.registry import _AUTO_MIN_MARGIN, _SCHEMA_KNOWN_NAMES
+from guiskindose.input_adapters.column_mapper import _normalize_str
+from guiskindose.input_adapters.registry import _AUTO_MIN_MARGIN, _SCHEMA_KNOWN_NAMES
 
 DOC = Path(__file__).parent.parent.parent / "dev-docs" / "INPUT_SCHEMA_DETECTION.md"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -36,7 +36,7 @@ def doc_text() -> str:
 
 def test_cli_default_is_auto():
     """The CLI's --input-schema argparse default must be 'auto'."""
-    from mypyskindose.main import get_argument_parser
+    from guiskindose.main import get_argument_parser
 
     ns = get_argument_parser([])
     assert ns.input_schema == "auto", (
@@ -45,7 +45,7 @@ def test_cli_default_is_auto():
 
 
 def test_gui_default_is_auto():
-    from mypyskindose.gui.state import AppState
+    from guiskindose.gui.state import AppState
 
     assert AppState().input_schema == "auto"
 

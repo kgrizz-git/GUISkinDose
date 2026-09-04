@@ -10,11 +10,11 @@ from types import SimpleNamespace
 
 import pandas as pd
 
-from mypyskindose.gui.geometry_preview import clamp_geometry_event_index
-from mypyskindose.gui.helpers import EXAM_INDEX_COLUMN, rebuild_rdsr_df
-from mypyskindose.gui.offset_handlers import bump_per_exam_offsets_version
-from mypyskindose.gui.state import AppState
-from mypyskindose.gui.summary_formatters import format_patient_offsets, format_table_offset_line
+from guiskindose.gui.geometry_preview import clamp_geometry_event_index
+from guiskindose.gui.helpers import EXAM_INDEX_COLUMN, rebuild_rdsr_df
+from guiskindose.gui.offset_handlers import bump_per_exam_offsets_version
+from guiskindose.gui.state import AppState
+from guiskindose.gui.summary_formatters import format_patient_offsets, format_table_offset_line
 
 
 def _meta(d_lon: float = 0.0, d_ver: float = 0.0, d_lat: float = 0.0) -> dict:

@@ -4,7 +4,7 @@
 This is the orientation + repair + decimation pipeline for the demo phantoms
 (Cosmic Buddha, Petite Herculanaise, Ramesses II, Steamboat Willie). It applies
 a per-mesh Euler rotation, uniform-scales the chosen height axis to a target
-height in centimeters, caps open boundaries, re-anchors into the MyPySkinDose
+height in centimeters, caps open boundaries, re-anchors into the GUISkinDose
 PSD frame, re-fixes winding/normals **after** the flip (a Y-flip reverses
 triangle handedness), decimates to a shipping face budget, and validates the
 result with the fun-mode gates in ``validate_phantom.py``.

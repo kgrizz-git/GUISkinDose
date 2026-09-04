@@ -1,5 +1,5 @@
 """
-Security regression tests for the MyPySkinDose GUI.
+Security regression tests for the GUISkinDose GUI.
 
 Covers two hardening fixes:
   1. Browser-mode server binds to localhost (127.0.0.1) by default, so PHI-derived
@@ -15,8 +15,8 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-import mypyskindose.gui.app as gui_app
-from mypyskindose.gui.tabs.upload import MAX_UPLOAD_BYTES, upload_exceeds_limit
+import guiskindose.gui.app as gui_app
+from guiskindose.gui.tabs.upload import MAX_UPLOAD_BYTES, upload_exceeds_limit
 
 pytest.importorskip("nicegui")
 

@@ -34,7 +34,7 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
   lives under `tests/gui/`. See `AGENTS.md` → Conventions → Cross-platform.
 - Keep Python source and Markdown docs under the 800-line limit enforced by `scripts/check_file_sizes.py`.
 - Update `AGENTS.md` and the relevant `dev-docs/` page when a change adds, removes, or wires behavior.
-- Edit GUI help source under `docs/source/gui_help/`; mirrored files under `src/mypyskindose/gui/help/` are generated.
+- Edit GUI help source under `docs/source/gui_help/`; mirrored files under `src/guiskindose/gui/help/` are generated.
 - Put diagnostics and assessments under `dev-docs/assessments/` and register them in `dev-docs/index.md`.
 - Archive completed or superseded execution plans under `dev-docs/plans/archive/` and update `dev-docs/index.md`.
 - Keep scratch scripts and temporary outputs in gitignored paths such as `tmp/`, `scripts/scratch_*`, `*.tmp`, or

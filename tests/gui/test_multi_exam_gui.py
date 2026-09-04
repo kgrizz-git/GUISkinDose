@@ -1,7 +1,7 @@
 """GUI-facing multi-exam tests (per-exam offsets, transforms, table-origin, axis flips).
 
 Split out of tests/unittests/test_multi_exam.py because these classes import
-mypyskindose.gui.* (which requires nicegui). They live under tests/gui/ so the
+guiskindose.gui.* (which requires nicegui). They live under tests/gui/ so the
 core CI matrix (installed without the `gui` extra, run with --ignore=tests/gui)
 does not try to collect them; tests/gui/conftest.py skips them when nicegui is
 absent. The non-GUI multi-exam tests remain in tests/unittests/test_multi_exam.py.
@@ -25,7 +25,7 @@ class TestGuiPerExamOffsets:
     needing the NiceGUI runtime."""
 
     def _fresh_state(self, d_lon=0.0, d_ver=0.0, d_lat=0.0):
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.state import AppState
 
         st = AppState()
         st.d_lon, st.d_ver, st.d_lat = d_lon, d_ver, d_lat
@@ -34,7 +34,7 @@ class TestGuiPerExamOffsets:
         return st
 
     def test_loader_seeds_offset_defaults_from_global(self):
-        from mypyskindose.gui.helpers import load_tabular
+        from guiskindose.gui.helpers import load_tabular
 
         st = self._fresh_state(d_lon=3.0, d_ver=-2.0, d_lat=1.0)
         ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
@@ -48,7 +48,7 @@ class TestGuiPerExamOffsets:
 
     def test_run_calculation_forwards_per_exam_offsets(self):
 
-        from mypyskindose.gui.helpers import load_tabular, run_calculation
+        from guiskindose.gui.helpers import load_tabular, run_calculation
 
         st = self._fresh_state()
         ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
@@ -74,7 +74,7 @@ class TestGuiPerExamOffsets:
             return result
 
         with patch(
-            "mypyskindose.analyze_data.analyze_multiple_exams", side_effect=_fake_analyze
+            "guiskindose.analyze_data.analyze_multiple_exams", side_effect=_fake_analyze
         ):
             ok, _ = run_calculation(st)
 
@@ -96,7 +96,7 @@ class TestGuiPerExamTransforms:
 
         import pandas as pd
 
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.state import AppState
 
         st = AppState()
 
@@ -126,7 +126,7 @@ class TestGuiPerExamTransforms:
         return st
 
     def test_swap_applies_to_one_exam_only(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams()
         st.loaded_exam_meta[0]["swap_lat_lon"] = True
@@ -139,7 +139,7 @@ class TestGuiPerExamTransforms:
         assert st.loaded_exams[1].normalized_data["Tz"].iloc[0] == 4.0
 
     def test_swap_is_reversible_from_base(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams()
         st.loaded_exam_meta[0]["swap_lat_lon"] = True
@@ -152,7 +152,7 @@ class TestGuiPerExamTransforms:
         assert st.loaded_exams[0].normalized_data["Tz"].iloc[0] == 2.0
 
     def test_flip_ap1_negates_angle(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams()
         st.loaded_exam_meta[1]["flip_ap1"] = True
@@ -162,7 +162,7 @@ class TestGuiPerExamTransforms:
         assert st.loaded_exams[0].normalized_data["Ap1"].iloc[0] == 10.0
 
     def test_normalized_schema_skips_swap(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams(schema="normalized")
         st.loaded_exam_meta[0]["swap_lat_lon"] = True
@@ -173,7 +173,7 @@ class TestGuiPerExamTransforms:
         assert st.loaded_exams[0].normalized_data["Tz"].iloc[0] == 2.0
 
     def test_rebuilds_concatenated_preview(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams()
         st.loaded_exam_meta[0]["swap_lat_lon"] = True
@@ -185,7 +185,7 @@ class TestGuiPerExamTransforms:
         assert st.rdsr_df["Tx"].iloc[1] == 3.0  # exam 1 unchanged
 
     def test_supports_transforms_gating(self):
-        from mypyskindose.gui.helpers import exam_supports_transforms
+        from guiskindose.gui.helpers import exam_supports_transforms
 
         st = self._state_with_two_exams()
         assert exam_supports_transforms(st.loaded_exams[0], st.loaded_exam_meta[0])
@@ -198,8 +198,8 @@ class TestGuiPerExamTransforms:
         )
 
     def test_loader_stores_base_data(self):
-        from mypyskindose.gui.helpers import load_tabular
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.helpers import load_tabular
+        from guiskindose.gui.state import AppState
 
         st = AppState()
         st.input_schema = "auto"
@@ -221,7 +221,7 @@ class TestGuiTableOriginOverride:
 
         import pandas as pd
 
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.state import AppState
 
         st = AppState()
         df = pd.DataFrame({"Tx": [10.0], "Ty": [20.0], "Tz": [30.0]})
@@ -246,7 +246,7 @@ class TestGuiTableOriginOverride:
         return st
 
     def test_override_rebases_columns_by_delta(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         # detected origin (1, 2, 3); override to (4, 2, 3) → +3 on Tx only.
         st = self._state_one_exam({"x": 1.0, "y": 2.0, "z": 3.0})
@@ -259,7 +259,7 @@ class TestGuiTableOriginOverride:
         assert df["Tz"].iloc[0] == 30.0  # unchanged
 
     def test_reset_to_none_restores_base(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_one_exam({"x": 1.0, "y": 2.0, "z": 3.0})
         st.loaded_exam_meta[0]["table_origin_override"] = {"x": 9.0, "y": 9.0, "z": 9.0}
@@ -273,7 +273,7 @@ class TestGuiTableOriginOverride:
         assert df["Tz"].iloc[0] == 30.0
 
     def test_supports_table_origin_requires_base_with_columns(self):
-        from mypyskindose.gui.helpers import exam_supports_table_origin
+        from guiskindose.gui.helpers import exam_supports_table_origin
 
         st = self._state_one_exam({"x": 0.0, "y": 0.0, "z": 0.0})
         assert exam_supports_table_origin(st.loaded_exams[0], st.loaded_exam_meta[0])
@@ -281,7 +281,7 @@ class TestGuiTableOriginOverride:
         assert not exam_supports_table_origin(st.loaded_exams[0], {"base_data": None})
 
     def test_override_note_only_when_active(self):
-        from mypyskindose.gui.helpers import _table_origin_override_note
+        from guiskindose.gui.helpers import _table_origin_override_note
 
         meta = {
             "table_origin_detected": {"x": 1.0, "y": 0.0, "z": 0.0},
@@ -295,8 +295,8 @@ class TestGuiTableOriginOverride:
         assert "table-origin override" in note[0].lower()
 
     def test_loader_seeds_override_none_and_detected(self):
-        from mypyskindose.gui.helpers import load_tabular
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.helpers import load_tabular
+        from guiskindose.gui.state import AppState
 
         st = AppState()
         st.input_schema = "auto"
@@ -319,7 +319,7 @@ class TestGuiAxisDirectionFlips:
 
         import pandas as pd
 
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.state import AppState
 
         st = AppState()
 
@@ -356,7 +356,7 @@ class TestGuiAxisDirectionFlips:
         return st
 
     def test_flip_tx_negates_one_axis_one_exam(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams()
         st.loaded_exam_meta[0]["flip_tx"] = True
@@ -370,7 +370,7 @@ class TestGuiAxisDirectionFlips:
         assert st.loaded_exams[1].normalized_data["Tx"].iloc[0] == 3.0
 
     def test_flip_is_reversible_from_base(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams()
         st.loaded_exam_meta[0]["flip_ty"] = True
@@ -381,7 +381,7 @@ class TestGuiAxisDirectionFlips:
         assert st.loaded_exams[0].normalized_data["Ty"].iloc[0] == 5.0
 
     def test_flip_pivots_about_detected_origin(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         # Non-zero detected origin (DICOM-like): col → 2·detected − col.
         st = self._state_with_two_exams(detected={"x": 10.0, "y": 0.0, "z": 0.0})
@@ -391,7 +391,7 @@ class TestGuiAxisDirectionFlips:
         assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == 19.0  # 2*10 - 1
 
     def test_normalized_schema_skips_flip(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         st = self._state_with_two_exams(schema="normalized")
         st.loaded_exam_meta[0]["flip_tx"] = True
@@ -401,7 +401,7 @@ class TestGuiAxisDirectionFlips:
         assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == 1.0
 
     def test_flip_then_swap_compose(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         # flip_tx applied first (Tx → −1), then swap Tx ↔ Tz.
         st = self._state_with_two_exams()
@@ -414,7 +414,7 @@ class TestGuiAxisDirectionFlips:
         assert df["Tz"].iloc[0] == -1.0  # flipped Tx value moved out
 
     def test_flip_then_origin_override_compose(self):
-        from mypyskindose.gui.helpers import apply_exam_transforms
+        from guiskindose.gui.helpers import apply_exam_transforms
 
         # detected x=1, base Tx=1: flip about detected → 2*1-1 = 1; then
         # override x=4 adds (4-1)=+3 → 4.
@@ -426,8 +426,8 @@ class TestGuiAxisDirectionFlips:
         assert st.loaded_exams[0].normalized_data["Tx"].iloc[0] == 4.0
 
     def test_loader_seeds_axis_flags_off(self):
-        from mypyskindose.gui.helpers import load_tabular
-        from mypyskindose.gui.state import AppState
+        from guiskindose.gui.helpers import load_tabular
+        from guiskindose.gui.state import AppState
 
         st = AppState()
         st.input_schema = "auto"

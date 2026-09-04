@@ -328,7 +328,7 @@ Plan lists:
 > `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/plans/GUI_PLAN.md` §0,
 > `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md`, cross-check
 > `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` and
-> `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md`.
+> `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md`.
 
 **G2.6.a — "Edit `docs/source/gui_help/positioning_offsets.md`, then
 `python scripts/sync_gui_help.py`."**
@@ -339,7 +339,7 @@ source under `docs/`, never the mirrored copies under `src/`" — the
 plan's wording is ambiguous. Tighten: "Edit
 `docs/source/gui_help/positioning_offsets.md` (canonical); run
 `python scripts/sync_gui_help.py` to mirror to
-`src/mypyskindose/gui/help/positioning_offsets.md`. Do not edit the
+`src/guiskindose/gui/help/positioning_offsets.md`. Do not edit the
 mirrored copy directly."
 
 **G2.6.b — missing help files in the sweep.**
@@ -377,7 +377,7 @@ multi-exam; Settings → Per-exam corrections transform handler triggers
 Geometry refresh; `positioning_offsets.md` help updated; per-exam
 offset commit re-clamps Geometry event index."
 
-**G2.6.e — `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` cross-check.**
+**G2.6.e — `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` cross-check.**
 The plan says "cross-check" rather than "update." This is correct
 because the migration status doc compares MyPySkinDose to upstream
 PySkinDose; the new per-exam semantics are a MyPySkinDose-only feature,
@@ -660,7 +660,7 @@ with the G-items above absorbed:
 | 12 | Update `docs/source/gui_help/geometry_workflow.md` (G2.6.b) | Doc consistency | G2.6.b | S |
 | 13 | Update `dev-docs/CODEBASE_OVERVIEW.md` and `dev-docs/FEATURE_INVENTORY.md` with multi-exam Geometry section (G2.6.c) | Doc consistency | G2.6.c | S |
 | 14 | Add Part V `CHANGELOG.md` entry (G2.6.d) | Release-history gate | G2.6.d | XS |
-| 15 | Cross-check `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` (G2.6.e) and `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` | Doc consistency | G2.6.e | XS |
+| 15 | Cross-check `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` (G2.6.e) and `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` | Doc consistency | G2.6.e | XS |
 | 16 | Append `per-exam event stepping` and `per-exam dose map toggles` to `TO_DO.md` (§5) | Lifecycle rule | §5 | XS |
 | 17 | Manual matrix rerun (Appendix B) | Exit gate | — | S |
 | 18 | `python scripts/check_doc_freshness.py`, `check_doc_pruning.py`, `check_file_sizes.py` | Exit criteria | — | S |

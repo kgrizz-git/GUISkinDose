@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mypyskindose.gui.tabs.results import multi_exam_results_ui_stale
+from guiskindose.gui.tabs.results import multi_exam_results_ui_stale
 
 
 def test_multi_exam_results_ui_stale_first_render():

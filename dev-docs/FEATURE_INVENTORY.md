@@ -1,4 +1,4 @@
-# Feature Inventory — MyPySkinDose
+# Feature Inventory — GUISkinDose
 
 > See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](plans/GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
@@ -34,7 +34,7 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 | pre-commit hooks (ruff, gitleaks, doc-freshness, license-notices) | Shipped | basedpyright on pre-push |
 | Stale-pattern and path-reference doc scan | Shipped | `scripts/check_doc_freshness.py`; warnings for stale terms, CI-blocking for broken links, path references, and inventory contradictions |
 | GUI help registry | Shipped | `dev-docs/help_registry.json` + `scripts/check_help_registry.py`; validates source help, mirrored bundled help, GUI references, and orphaned help pages |
-| UI copy catalog and glossary | Shipped | `dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `src/mypyskindose/gui/ui_copy.py`, and `scripts/check_ui_copy.py` |
+| UI copy catalog and glossary | Shipped | `dev-docs/ui_copy.json`, `dev-docs/glossary.json`, `src/guiskindose/gui/ui_copy.py`, and `scripts/check_ui_copy.py` |
 | Feature documentation matrix | Shipped | `dev-docs/feature_doc_matrix.json` + `scripts/check_feature_doc_matrix.py`; metadata validation plus optional doc-impact review |
 | Plan lifecycle | Deferred | Closed Phase 6 — separate execution-plan directories are not needed at current team size |
 | `references/` external library index | Partial | `dev-docs/references/` stub; expand before next major dependency review |
@@ -51,7 +51,7 @@ Repository harness features completed in [HARNESS_ENGINEERING_IMPROVEMENT_PLAN.m
 - Remove rows with invalid kVp = 0 (configurable)
 
 ### 1.2 Bundled example RDSR files
-Located in `src/mypyskindose/example_data/RDSR/`:
+Located in `src/guiskindose/example_data/RDSR/`:
 - `philips_allura_clarity_u104.dcm`
 - `philips_allura_clarity_u601.dcm`
 - `siemens_axiom_artis.dcm`
@@ -103,7 +103,7 @@ New vendors can be added by editing `normalization_settings.json`.
 
 ### 2.2 Human mesh files
 
-Located in `src/mypyskindose/phantom_data/` (full-resolution `.stl` plus optional
+Located in `src/guiskindose/phantom_data/` (full-resolution `.stl` plus optional
 `*_reduced_3000t` / `*_reduced_1000t` previews). The Settings / CLI mesh list is **filesystem-discovered** —
 treat the families below as the product surface, not a frozen stem census (inventory may
 be trimmed without a docs rewrite of every id).
@@ -304,7 +304,7 @@ When `interactivity=False`:
 - Static PNG: `PlotOutputs/right.png`, `back.png`, `left.png`, `front.png`
 - Output directory configurable via `file_result_output_path`
 
-### 7.7 Rich Report Export (`mypyskindose.export`)
+### 7.7 Rich Report Export (`guiskindose.export`)
 Single self-contained audit document from a completed dose calculation, additive to the
 JSON/HTML/PNG downloads. Formats: **XLSX** (`openpyxl`), **PDF** (`reportlab`), **HTML** (stdlib),
 **DOCX** (`python-docx`). All backing libraries are now core dependencies (the `export` extra is
@@ -469,7 +469,7 @@ Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_
 ## 10. CLI (`main.py`)
 
 ```bash
-python -m mypyskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
+python -m guiskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
 ```
 
 | Argument | Description |
@@ -484,7 +484,7 @@ python -m mypyskindose.main [--mode headless|gui] [--file-path PATH] [--settings
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Restore last size/position/maximized | Shipped | `~/.mypyskindose/gui.json`; first run maximized with 75% centered normal bounds |
+| Restore last size/position/maximized | Shipped | `~/.guiskindose/gui.json` (reads `~/.mypyskindose/gui.json` if the new file is absent); first run maximized with 75% centered normal bounds |
 | Event-driven save | Shipped | Debounced commits on `resized`/`moved`; flush on native `closed` |
 
 Implementation: `gui/window_prefs.py`, wired in `gui/app.py` when `native=True`.
@@ -496,7 +496,7 @@ Falls back to `DEVELOPMENT_PARAMETERS` from `dev_data.py` if no settings given.
 ## 11. Public Python API (`__init__.py`)
 
 ```python
-from mypyskindose import (
+from guiskindose import (
     PyskindoseSettings,
     load_settings_example_json,          # → dict
     print_available_human_phantoms,      # prints STL names
@@ -530,7 +530,7 @@ from mypyskindose import (
 | CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | `qaelum.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real Qaelum export fixture. |
 | CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | `dosemonitor.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseMonitor export fixture. |
 | CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | `dosewatch.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseWatch export fixture. |
-| PDF/Word/XLSX/HTML report export | Shipped (2026-07-02) | Rich Report Export — see §7.7; `mypyskindose.export`. GUI modal + CLI `--export-format`. |
+| PDF/Word/XLSX/HTML report export | Shipped (2026-07-02) | Rich Report Export — see §7.7; `guiskindose.export`. GUI modal + CLI `--export-format`. |
 | Side-by-side procedure comparison | Open backlog | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |
 | New vendor RDSR support | Manual JSON edit required | No UI for adding vendors |

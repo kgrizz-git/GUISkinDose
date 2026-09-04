@@ -14,8 +14,8 @@ pytest.importorskip("nicegui")
 
 from nicegui import ui
 
-from mypyskindose.gui.concurrency import operation_guard
-from mypyskindose.gui.state import state
+from guiskindose.gui.concurrency import operation_guard
+from guiskindose.gui.state import state
 
 
 @pytest.fixture(autouse=True)

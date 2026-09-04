@@ -3,7 +3,9 @@
 Compares how MyPySkinDose, dhen2714/PySkinDose (public fork), and kgrizz-git/PSDCalcReworkTemp
 (private rework) handle geometry, coordinate axes, and preprocessing.
 
-This comparison is historical and diagnostic. The canonical coordinate terminology is
+This comparison is historical and diagnostic. The current product name is GUISkinDose
+(`guiskindose`); table cells below keep "MyPySkinDose" as the name of this fork at the
+time the comparison was written. The canonical coordinate terminology is
 [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 
 ## Axis conventions

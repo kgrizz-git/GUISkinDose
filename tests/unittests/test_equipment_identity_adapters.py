@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from mypyskindose import load_settings_example_json
-from mypyskindose.constants import (
+from guiskindose import load_settings_example_json
+from guiskindose.constants import (
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
 )
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.settings import PyskindoseSettings
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "tabular_inputs"
 
@@ -23,7 +23,7 @@ def _default_settings() -> PyskindoseSettings:
 
 def test_dosetrack_persists_equipment_name_as_station_name(tmp_path: Path):
     """DoseTrack Equipment Name is stored as station_name."""
-    from mypyskindose.input_adapters.registry import read_and_normalize_input
+    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     result = read_and_normalize_input(
         FIXTURES / "dosetrack_events.csv",
@@ -38,7 +38,7 @@ def test_dosetrack_persists_equipment_name_as_station_name(tmp_path: Path):
 
 def test_radimetrics_equipment_vs_device_split(tmp_path: Path):
     """Equipment → station_name; Device → model (never swapped)."""
-    from mypyskindose.input_adapters.registry import read_and_normalize_input
+    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     src = FIXTURES / "radimetrics_events.csv"
     df = pd.read_csv(src)
@@ -57,7 +57,7 @@ def test_radimetrics_equipment_vs_device_split(tmp_path: Path):
 
 def test_radimetrics_without_equipment_station_is_none():
     """Radimetrics without Equipment leaves station_name null."""
-    from mypyskindose.input_adapters.registry import read_and_normalize_input
+    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     result = read_and_normalize_input(
         FIXTURES / "radimetrics_events.csv",
@@ -75,7 +75,7 @@ def test_radimetrics_without_equipment_station_is_none():
 
 def test_generic_rdsr_equipment_column_to_station(tmp_path: Path):
     """Generic RDSR Equipment column maps to station_name."""
-    from mypyskindose.input_adapters.registry import read_and_normalize_input
+    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     src = FIXTURES / "generic_rdsr_events.csv"
     df = pd.read_csv(src)
@@ -94,8 +94,8 @@ def test_generic_rdsr_equipment_column_to_station(tmp_path: Path):
 
 def test_normalized_station_serial_round_trip(tmp_path: Path):
     """Normalized schema preserves station_name and device_serial."""
-    from mypyskindose.input_adapters.models import InputAdapterResult
-    from mypyskindose.input_adapters.registry import read_and_normalize_input
+    from guiskindose.input_adapters.models import InputAdapterResult
+    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     src = FIXTURES / "normalized_events.csv"
     df = pd.read_csv(src)
@@ -112,8 +112,8 @@ def test_normalized_station_serial_round_trip(tmp_path: Path):
 
 def test_normalized_without_identity_still_loads():
     """Normalized files without identity columns still load."""
-    from mypyskindose.input_adapters.models import InputAdapterResult
-    from mypyskindose.input_adapters.registry import read_and_normalize_input
+    from guiskindose.input_adapters.models import InputAdapterResult
+    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     result = read_and_normalize_input(
         FIXTURES / "normalized_events.csv",

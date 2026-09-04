@@ -9,7 +9,7 @@ This document turns the repository into a more reliable harness for AI agents an
 Agents working in this repository should be able to answer three questions quickly:
 
 1. **What is this system?**
-   MyPySkinDose estimates peak skin dose and 3D skin dose maps from fluoroscopic irradiation event data.
+   GUISkinDose estimates peak skin dose and 3D skin dose maps from fluoroscopic irradiation event data.
 2. **Where is the authoritative context?**
    `AGENTS.md` is the short entry point. Detailed context lives in `dev-docs/`.
 3. **How do I validate changes?**
@@ -43,8 +43,9 @@ Agents working in this repository should be able to answer three questions quick
 | In-app positioning help | `docs/source/gui_help/positioning_offsets.md` |
 | Tabular CSV/TSV/XLSX input plan | `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` |
 | In-repo GUISkinDose / `guiskindose` rename (not yet executed) | `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` |
-| Privacy republication, fixture sanitization, GitHub/PyPI publish | `dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md` |
-| Fork vs upstream migration status | `dev-docs/MYPYSKINDOSE_MIGRATION_STATUS.md` |
+| GitHub/Sonar/live-URL follow-up after that rename | `dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md` |
+| Privacy republication, fixture sanitization, PyPI publish | `dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md` |
+| Fork vs upstream migration status | `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
 | Diagnostics and assessments (refactoring, code quality, etc.) | `dev-docs/assessments/` |
 | Active plans folder | `dev-docs/plans/` |
@@ -56,7 +57,7 @@ Agents working in this repository should be able to answer three questions quick
 | Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install; soft-fails with issue notify so `main` stays green) |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
-| Stale-brand allowlist (GUISkinDose rename) | `scripts/check_stale_brand.py` (PR 0 gate is effectively a no-op until PR 1 flips `LIVE_PACKAGE_NAME`; fail-closed tests cover the post-rename mode) |
+| Stale-brand allowlist (GUISkinDose rename) | `scripts/check_stale_brand.py` (live-tree gate is active; dual-read config/env and historical identity phrases are allowlisted; `CHANGELOG.md` Unreleased is scanned, then the gate stops at the first `## [25.` historical header) |
 | Inventory path rewrite helper (GUISkinDose rename) | `scripts/rewrite_package_paths.py` (`rewrite` dry-run/apply; `scan` report-only) |
 | Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
@@ -130,7 +131,7 @@ Run the smallest relevant set locally before committing, and run the full set be
 ### Fast checks
 
 ```bash
-python -m compileall src/mypyskindose
+python -m compileall src/guiskindose
 python -m pytest tests/unittests
 ```
 
@@ -196,7 +197,7 @@ python scripts/check_feature_doc_matrix.py
 ```
 
 `check_help_registry.py` validates `dev-docs/help_registry.json`, confirms each source help page exists under
-`docs/source/gui_help/`, confirms bundled copies under `src/mypyskindose/gui/help/` are in sync, and checks that
+`docs/source/gui_help/`, confirms bundled copies under `src/guiskindose/gui/help/` are in sync, and checks that
 registered GUI files reference the expected `content_path` and `help_id`. Default mode warns for orphaned help files;
 `--strict` fails on them.
 
@@ -312,7 +313,7 @@ CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed).
 
 - **Scope:** PyPI-resolved packages for core dependencies plus `[dev]` and `[gui]` extras (widest maintained install surface).
 - **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (via `uv audit` when `uv` is available, otherwise `pip-audit`).
-- **Local editable install:** `mypyskindose` itself is skipped (not published on PyPI); this is expected.
+- **Local editable install:** `guiskindose` itself is skipped (not published on PyPI); this is expected.
 - **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented entry under
   `[tool.uv.audit]` in `pyproject.toml` only after maintainer review (avoid silent ignores). Use
   `ignore-until-fixed` when no patched release exists yet so the audit re-fails automatically once
@@ -357,14 +358,14 @@ A pre-commit hook (`license-notices`) runs the locked `dev` + `gui` environment'
 
 ```bash
 pip install -e ".[dev]"
-bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
 ```
 
 CI runs the same command in the Ubuntu `bandit` job (Python 3.12).
 
 **Policy:**
 
-- **Scope:** Application code under `src/mypyskindose/` and `scripts/` (not `tests/`).
+- **Scope:** Application code under `src/guiskindose/` and `scripts/` (not `tests/`).
 - **Config:** `[tool.bandit]` in `pyproject.toml` (excludes `table_data/`, venvs, backups).
 - **Gate:** CI **fails** on **medium or high** severity findings. Low-severity items (e.g. `B110` try/except/pass in GUI helpers) are visible with `--severity-level low` but do not block CI.
 - **Overlap:** Complements gitleaks (secrets in git) and pip-audit (dependency CVEs); does not replace either.
@@ -392,7 +393,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **ruff** | `ruff check --fix` on `src/` and `tests/` |
 | **gitleaks** | Secret scan on staged changes |
 | **shellcheck** | Shell-script lint (auto-detects `*.sh` + shell shebangs) |
-| **bandit** | Python SAST on `src/mypyskindose/` + `scripts/` (medium+ severity) |
+| **bandit** | Python SAST on `src/guiskindose/` + `scripts/` (medium+ severity) |
 | **doc-freshness** | `python scripts/check_doc_freshness.py` (broken links/path refs/inventory contradictions; stale-pattern warnings only) |
 | **sensitive-content** | `python scripts/check_sensitive_content.py` (direct PII/PHI-like text, absolute paths, and hash-pinned sensitive assets) |
 | **sensitive-commit-message** | `python scripts/check_commit_message.py` (commit-message PII/PHI-like text, internal endpoints, and local paths; `commit-msg` stage only) |
@@ -402,7 +403,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **help-registry** | `python scripts/check_help_registry.py` |
 | **ui-copy** | `python scripts/check_ui_copy.py` |
 | **feature-doc-matrix** | `python scripts/check_feature_doc_matrix.py` |
-| **check-stale-brand** | `python scripts/check_stale_brand.py` (leftover `mypyskindose` / `MyPySkinDose` / `MYPYSKINDOSE_` outside the allowlist; PR 0 is a no-op until `LIVE_PACKAGE_NAME` is flipped) |
+| **check-stale-brand** | `python scripts/check_stale_brand.py` (leftover pre-rename package/brand tokens outside the allowlist; live-tree gate is active; CHANGELOG Unreleased is scanned, historical `## [25.` sections are not) |
 | **check-ignored-assets** | `python scripts/check_ignored_asset_files.py` (advisory: PNG/HTML outside `PlotOutputs/`) |
 | **cleanup-old-backups** | `python scripts/cleanup_old_backups.py` (delete `backups/*.bak` older than 5 commits) |
 | **license-notices** | `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --check-notices` (blocks commit if `THIRD_PARTY_NOTICES.md` is stale) |
@@ -416,7 +417,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | **pip-audit** | Dependency vulnerability scan (`python scripts/audit_dependencies.py`; `uv audit` on `uv.lock` when `uv` >= 0.11.19 is available) |
 | **check-changelog** | `python scripts/check_changelog.py` when `src/` or `tests/` change |
 
-**Not in local hooks** (CI-only or manual): full pytest matrix, safety (CI when `SAFETY_API_KEY` set), license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
+**Not in local hooks** (CI-only or manual): full pytest matrix, license compliance (`--write-notices`), GUI smoke, `compileall`, `python -m build`.
 
 Hooks can be skipped with `SKIP=gitleaks git commit ...`, `git commit --no-verify`, or `git push --no-verify` (CI remains the blocking gate on push/PR).
 
@@ -445,7 +446,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 
 | Check | Where in CI |
 |---|---|
-| `python -m compileall src/mypyskindose` | `build` job (matrix policy above) |
+| `python -m compileall src/guiskindose` | `build` job (matrix policy above) |
 | `python -m pytest` | `build` job (matrix policy above) |
 | `python -m ruff check src tests` | `build` job (matrix policy above) |
 | `uv build` | Ubuntu `static-analysis` job (Python 3.12) |
@@ -458,13 +459,13 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | GUI smoke tests (`pytest tests/gui/`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | Pull requests: `gitleaks` job in `ci.yml` after `privacy-gates`; `main` pushes: separate `.github/workflows/gitleaks.yml` workflow |
-| `bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
+| `bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh scripts/type_baseline.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
 | `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | SonarCloud CI scan | **Enabled**: `main` is protected by a ruleset and repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`, so `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled (CI-based analysis is authoritative). The scan requires the `SONAR_TOKEN` repository secret; no tokenized scanner runs on a PR head. |
-| `safety scan --detailed-output` | `main` pushes only, in `cloud-scans-main`, after `privacy-gates`, static-analysis, GUI smoke, and the test matrix succeed. Enforced PR coverage is the GHA `coverage-pr` job. |
-| PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/mypyskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
+| Dependency auditors | `uv audit` on `uv.lock` with `pip-audit` fallback via `scripts/audit_dependencies.py` — runs in the Ubuntu `static-analysis` job and the local pre-push hook. (The former main-only `safety scan` cloud job was removed with the `safety` dev dependency; it duplicated the OSV/PyPA advisory data both auditors already query.) |
+| PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/guiskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on same-repository PRs (including drafts; deduped per head SHA). The same-repository guard prevents CI from posting comments on fork PRs. Manual CodeRabbit requests bypass the CI ordering, so this is not a trusted privacy boundary. |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mypyskindose.gui.components.help_button import HelpButton
+from guiskindose.gui.components.help_button import HelpButton
 
 
 @pytest.fixture(autouse=True)

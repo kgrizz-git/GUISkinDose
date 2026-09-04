@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: MyPySkinDose
+title: GUISkinDose
 message: >-
   If you use this software, please cite it and also credit the upstream
   PySkinDose project as appropriate.
@@ -7,7 +7,7 @@ type: software
 authors:
   - family-names: Hellström
     given-names: Max
-  - name: "MyPySkinDose contributors"
+  - name: "GUISkinDose contributors"
 repository-code: "https://github.com/kgrizz-git/MyPySkinDose"
 url: "https://github.com/kgrizz-git/MyPySkinDose"
 abstract: >-

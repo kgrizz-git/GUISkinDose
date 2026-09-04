@@ -161,11 +161,11 @@ Still useful defense-in-depth, but **not** the explanation for this incident giv
 
 | File | Lines | Role |
 |------|-------|------|
-| `src/mypyskindose/gui/concurrency.py` | 32-43 | `require_io_result` — conflates `None` meanings |
-| `src/mypyskindose/gui/figures.py` | 117-178 | `make_dosemap_fig` / `make_dosemap_html` / `make_dosemap_png` |
-| `src/mypyskindose/gui/tabs/export.py` | 196-245 | HTML/PNG download; multi-exam args; dead `"Failed to generate HTML"` branch |
-| `src/mypyskindose/gui/tabs/results_builders.py` | 160-175 | Aggregate map uses same fig inputs **without** `require_io_result` (rendered OK) |
-| `src/mypyskindose/export/images.py` | 59-117 | Shared Plotly figure builder |
+| `src/guiskindose/gui/concurrency.py` | 32-43 | `require_io_result` — conflates `None` meanings |
+| `src/guiskindose/gui/figures.py` | 117-178 | `make_dosemap_fig` / `make_dosemap_html` / `make_dosemap_png` |
+| `src/guiskindose/gui/tabs/export.py` | 196-245 | HTML/PNG download; multi-exam args; dead `"Failed to generate HTML"` branch |
+| `src/guiskindose/gui/tabs/results_builders.py` | 160-175 | Aggregate map uses same fig inputs **without** `require_io_result` (rendered OK) |
+| `src/guiskindose/export/images.py` | 59-117 | Shared Plotly figure builder |
 
 ---
 
@@ -183,7 +183,7 @@ Still useful defense-in-depth, but **not** the explanation for this incident giv
 
 ## Phase 0 finding (2026-07-19)
 
-Instrumented `make_dosemap_html` / `make_dosemap_png` (`src/mypyskindose/gui/figures.py`) with
+Instrumented `make_dosemap_html` / `make_dosemap_png` (`src/guiskindose/gui/figures.py`) with
 `safe_error_event(logger, "dosemap_html_render"/"dosemap_png_render", exc)` in the previously-silent
 `except Exception:` blocks (still returning `None`, per Task 0 Step 0.1 — no behavior change yet).
 Confirmed via a manual negative-control call (monkeypatched `make_dosemap_fig` to return an

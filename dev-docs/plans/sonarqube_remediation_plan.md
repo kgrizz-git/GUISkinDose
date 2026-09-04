@@ -171,16 +171,16 @@ are development tools.
 ### Phase 1: Targeted correctness, clarity, and type cleanup
 
 - **Task 1.1 — `S6729` (1 CRITICAL):** In
-  [beam_class.py](../../src/mypyskindose/beam_class.py#L214), replace
+  [beam_class.py](../../src/guiskindose/beam_class.py#L214), replace
   `np.where(hits)` indexing with direct boolean indexing (`hits[hits] =
   bool_entrance`) or an equally clear `np.nonzero` form. This is an API clarity
   cleanup, not a claim that the current one-dimensional indexing is functionally
   incorrect. Preserve the entrance-cell result for plane and non-plane phantoms.
 - **Task 1.2 — `S1244` (4 MAJOR):** Triage the equality checks in
-  [summary_formatters.py](../../src/mypyskindose/gui/summary_formatters.py#L56),
-  [images.py](../../src/mypyskindose/export/images.py#L36),
-  [metrics.py](../../src/mypyskindose/export/metrics.py#L167), and
-  [registry.py](../../src/mypyskindose/input_adapters/registry.py#L94).
+  [summary_formatters.py](../../src/guiskindose/gui/summary_formatters.py#L56),
+  [images.py](../../src/guiskindose/export/images.py#L36),
+  [metrics.py](../../src/guiskindose/export/metrics.py#L167), and
+  [registry.py](../../src/guiskindose/input_adapters/registry.py#L94).
   Do not mechanically replace every equality with `isclose`: zero may be a
   sentinel or an exact division-by-zero guard. For each finding, either make a
   semantics-preserving code change with a regression test, or have the project
@@ -214,16 +214,16 @@ historical CRITICAL count is reduced by 31 from the baseline.
 ### Phase 3: Core parsing and orchestration
 
 - **Task 3.1 — `S3776` (3):** Refactor `analyze_multiple_exams` in
-  [analyze_data.py](../../src/mypyskindose/analyze_data.py#L99), plus
+  [analyze_data.py](../../src/guiskindose/analyze_data.py#L99), plus
   `analyze_input_file` and `preview_input_file` in
-  [main.py](../../src/mypyskindose/main.py#L71), into narrow loading,
+  [main.py](../../src/guiskindose/main.py#L71), into narrow loading,
   normalization, calculation, and result-formatting helpers. Keep public entry
   points and keyword parameters unchanged. In particular, preserve opaque
   labels, warning counts, HTML-to-dict coercion for multi-exam input, explicit
   sensitive-preview opt-in, and the rule that a failed exam does not discard
   completed exams.
 - **Task 3.2 — `S3776` (1):** Refactor
-  [rdsr_parser.py](../../src/mypyskindose/rdsr_parser.py#L20) by separating DICOM
+  [rdsr_parser.py](../../src/guiskindose/rdsr_parser.py#L20) by separating DICOM
   traversal, tag extraction, and DataFrame construction. Preserve the normalized
   DataFrame contract and warning behaviour; this parser is clinical-data
   ingestion code, so characterization tests precede structural changes. Preserve

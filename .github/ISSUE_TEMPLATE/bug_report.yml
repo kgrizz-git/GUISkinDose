@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in MyPySkinDose
+description: Report a reproducible problem in GUISkinDose
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -58,9 +58,9 @@ body:
   - type: input
     id: version
     attributes:
-      label: MyPySkinDose version
-      description: From `pyproject.toml` or `import mypyskindose; print(mypyskindose.__version__)` if available.
-      placeholder: "25.2.0"
+      label: GUISkinDose version
+      description: From `pyproject.toml` or `python -c "import guiskindose; print(guiskindose.__version__)"`.
+      placeholder: "1.0.0"
     validations:
       required: true
   - type: input

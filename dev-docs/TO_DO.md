@@ -1,6 +1,6 @@
 # TO DO
 
-Short active backlog for MyPySkinDose. Keep this file focused on actionable work and open questions; use
+Short active backlog for GUISkinDose. Keep this file focused on actionable work and open questions; use
 `CHANGELOG.md`, archived plans, and `dev-docs/index.md` for historical traceability. Release/distribution
 map (PyPI, GitHub notes vs changelog, deferred portable executables):
 [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md).
@@ -41,7 +41,7 @@ policy decisions, not a restart of Phases 0–9.
 - [ ] **Exhaustive docstring and doc review** — sweep all Python source files under `src/` for outdated,
   missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs
   (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior.
-  Flag leftover `mypyskindose` in docstrings after the GUISkinDose rename, or any docstring that
+  Flag leftover `guiskindose` in docstrings after the GUISkinDose rename, or any docstring that
   describes behavior that has changed since it was written.
 - [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results
   accordion in the GUI.
@@ -52,10 +52,17 @@ policy decisions, not a restart of Phases 0–9.
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
-- [ ] **Rename from mypyskindose to GUISkinDose** — in-repo package/import/CLI rebrand with config migration
-  and a stale-brand CI check. Prefer before first PyPI publish; does not require the GitHub repo rename.
+- [ ] **Rename from guiskindose to GUISkinDose** — in-repo package/import/CLI rebrand with config migration
+  and a stale-brand CI check. **First `guiskindose` version is `1.0.0`** (new identity; not a continuation of
+  MyPySkinDose `25.2.0`). Prefer before first PyPI publish; does not require the GitHub repo rename.
   Plan: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). Publication/fixture work remains in
   [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
+- [ ] **Rename the GitHub repository to GUISkinDose** — after the in-repo package rename is on `main`:
+  GitHub Settings rename `GUISkinDose` → `GUISkinDose`, confirm the PySkinDose fork banner and old-URL
+  redirect, rename SonarCloud to match **before** changing `sonar.projectKey`, then rewrite live
+  `github.com/kgrizz-git/MyPySkinDose` links (`pyproject.toml`, `CITATION.cff`, README/SUPPORT/SECURITY,
+  issue templates) and `origin`. Not blocked on PyPI. Do not do this during the mechanical-rename PR.
+  Plan: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 ## Product Backlog
 
@@ -82,7 +89,7 @@ policy decisions, not a restart of Phases 0–9.
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **Fix raw_events_cleaned example RDSR parsing** — investigate and fix the parsing issue that led to the problematic `raw_events_cleaned example RDSR (old) csv export from mypyskindose.csv` in `test_data_gitignored/`.
+- [ ] **Fix raw_events_cleaned example RDSR parsing** — investigate and fix the parsing issue that led to the problematic `raw_events_cleaned example RDSR (old) csv export from guiskindose.csv` in `test_data_gitignored/`.
 - [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
   case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
   cranial, height = down for HFS) and the normalizer-level `Tx`/`Tz` correction are already confirmed; this item
@@ -118,7 +125,25 @@ policy decisions, not a restart of Phases 0–9.
 
 ### Harness / Repo Hygiene
 
-- [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `mypyskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
+- [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
+- [x] **CI wheel packaging smoke** (2026-09-03) — the `build` matrix job now runs `uv build` before
+  pytest, so `test_wheel_contains_guiskindose_package` (including the `gui/help/*.md` assertion)
+  exercises a real wheel on every OS/Python matrix entry instead of skipping.
+- [ ] **Ship `corrections.db` in the wheel and resolve it package-relatively** —
+  `src/guiskindose/gui/settings_builder.py` walks four parents up to the repo root to find
+  `corrections.db`, which only exists in a source checkout; the DB is not in `MANIFEST.in` or
+  package data, so an installed wheel silently falls back to the CWD-relative default
+  `"corrections.db"` (`settings/pyskindose_settings.py`). Move the DB into the package (like
+  `table_data/`), add it to `MANIFEST.in`, resolve via a package-relative path or
+  `importlib.resources`, and extend the wheel-content test to assert it ships.
+- [ ] **Retire the pre-rename compatibility shims** — three independent pieces with different
+  triggers (semgrep rules-file rename and rule-ID rename: any time, atomic diff required, no
+  migration dependency; legacy config-read/env shims: after the user-migration window).
+  Full sequencing, file lists, and the migration-window criterion are documented in
+  `plans/GUISKINDOSE_RENAME_PLAN.md` § "Post-PR-1 retirement".
+- [ ] **Stale-brand CHANGELOG Unreleased pattern audit** — `CHANGELOG_CURRENT_PATTERNS` in
+  `scripts/check_stale_brand.py` allow rename-prose in Unreleased. If more patterns are added,
+  re-check that they still cannot hide an unquoted import of the pre-rename package.
 - [ ] **Deferred documentation experience ideas** — after the documentation/help harness lands, evaluate the ideas
   intentionally left out of the implementation plan: screenshot-driven help regression tests, in-app "report
   inaccurate help" feedback, per-run processing-log narratives in exports, generated normalization-flow diagrams,
@@ -133,11 +158,14 @@ policy decisions, not a restart of Phases 0–9.
   2026-07-17: added mcp GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
   suppressions while semgrep pins `mcp==1.23.3`; remove when semgrep bumps or relaxes the pin.)
   (2026-07-18: confirmed GitHub Dependabot still opens alerts for these GHSA IDs — alerts #2/#3/#4 on
-  `kgrizz-git/MyPySkinDose` — because the `uv.lock`-level `dep_scope` reads as `runtime` to Dependabot and GitHub's
+  `kgrizz-git/GUISkinDose` — because the `uv.lock`-level `dep_scope` reads as `runtime` to Dependabot and GitHub's
   advisory feed is independent of `[tool.uv.audit]` ignores. CI's `uv audit` is the gate that matters; the Dependabot
   alerts are informational and should stay open until semgrep bumps/relaxes its `mcp==1.23.3` pin
   (patched versions are `mcp >=1.27.2` / `>=1.28.1`). Context: `mcp` is transitive via the optional Semgrep MCP server
-  path and is not imported or run by MyPySkinDose runtime code, so the CVEs are not exploitable in this repo.)
+  path and is not imported or run by GUISkinDose runtime code, so the CVEs are not exploitable in this repo.
+  2026-09-03: removed the `safety` dev dependency (and its main-only CI scan job), which removes
+  transitive `nltk` entirely — the `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 `ignore-until-fixed`
+  entry and the `nltk` pin were deleted in the same change.)
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
@@ -183,9 +211,9 @@ policy decisions, not a restart of Phases 0–9.
 
 ## Research Ideas
 
-- [ ] Call it GUISkinDose?
-- [ ] **Safety API key** — get a free Safety API key ([safetycli.com](https://safetycli.com)) and wire it as
-  `SAFETY_API_KEY` GitHub secret.
+- [ ] Call it GUISkinDose? **Decided.** Product/GitHub: GUISkinDose; import/CLI/PyPI: `guiskindose`; first
+  version `1.0.0`. In-repo rename: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar
+  follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 ## Open Questions
 

@@ -51,7 +51,7 @@ scripts/phantom_gen/env.local.json
 *.orig
 debug_*
 #RDSR/clinical*
-src/mypyskindose/example_data/RDSR/clinical*
+src/guiskindose/example_data/RDSR/clinical*
 
 .DS_Store
 temp*
@@ -68,8 +68,8 @@ corrections.db
 
 tests/manual_tests/.ipynb_checkpoints/
 
-src/mypyskindose/.ipynb_checkpoints/
-src/mypyskindose/phantom_data/old/
+src/guiskindose/.ipynb_checkpoints/
+src/guiskindose/phantom_data/old/
 
 # Local-only sample exports (not for distribution)
 test_data_gitignored/

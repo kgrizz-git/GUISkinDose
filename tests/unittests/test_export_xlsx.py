@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
 
-from mypyskindose import PyskindoseSettings, load_settings_example_json
-from mypyskindose.export import ExportExamSource, ExportSource, collect_export_payload
-from mypyskindose.export.models import ImageEntry
-from mypyskindose.export.writers.xlsx import render_xlsx_bytes
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.export import ExportExamSource, ExportSource, collect_export_payload
+from guiskindose.export.models import ImageEntry
+from guiskindose.export.writers.xlsx import render_xlsx_bytes
 
 # 1x1 PNG.
 _PNG = base64.b64decode(

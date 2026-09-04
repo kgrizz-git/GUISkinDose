@@ -1,6 +1,6 @@
 # Input schema detection
 
-_How MyPySkinDose decides which tabular adapter to use, and how DAP units are interpreted._
+_How GUISkinDose decides which tabular adapter to use, and how DAP units are interpreted._
 
 This document is **machine-checked**: `tests/unittests/test_input_schema_doc.py` asserts the
 default mode, the ambiguity margin, the list of detectable schemas, and the marker columns cited
@@ -9,9 +9,9 @@ default, that test fails until this file is updated. See [Keeping this up to dat
 
 Source of truth in code:
 
-- Detection & scoring — `src/mypyskindose/input_adapters/registry.py`
+- Detection & scoring — `src/guiskindose/input_adapters/registry.py`
   (`_detect_schema`, `_score_schema`, `_SCHEMA_KNOWN_NAMES`, `_AUTO_MIN_MARGIN`).
-- Header-row location — `src/mypyskindose/input_adapters/column_mapper.py` (`detect_header_row`).
+- Header-row location — `src/guiskindose/input_adapters/column_mapper.py` (`detect_header_row`).
 - Per-schema fingerprints — each adapter's `*_COLUMN_NAMES` frozenset
   (`radimetrics.py`, `dosetrack.py`, `generic_rdsr.py`, `normalized.py`).
 
@@ -51,7 +51,7 @@ are not yet in the scoring set — they need real export fixtures):
 
 | Schema | What it is | Distinguishing marker columns |
 |---|---|---|
-| `normalized` | MyPySkinDose's own canonical event table | `model`, `K_IRP`, `kVp`, `DSD`, `DSI` |
+| `normalized` | GUISkinDose's own canonical event table | `model`, `K_IRP`, `kVp`, `DSD`, `DSI` |
 | `generic_rdsr_like` | A raw RDSR-parser-style dump (rdsr_parser column names) | `ManufacturerModelName`, `KVP_kV`, `DoseRP_Gy` |
 | `radimetrics` | Bayer **Radimetrics** CSV export | `Device`, `kVp kV`, `DAP (Total) Gy-cm2` |
 | `dosetrack` | Sectra **DoseTrack** CSV export | `Equipment Name`, `Tube Voltage Peak (kV)`, `Plane Code` |
@@ -84,7 +84,7 @@ If a file is misdetected or ambiguous, select the schema explicitly:
 
 ## Unit handling
 
-MyPySkinDose has three input paths and they handle physical units differently. The goal in all three
+GUISkinDose has three input paths and they handle physical units differently. The goal in all three
 is that no unit is silently assumed without either being read from the source or flagged.
 
 ### DICOM RDSR (reads + asserts)
@@ -138,7 +138,7 @@ unconverted passthrough. Consequences:
   underlying modality reported in that unit.
 - When DAP magnitudes look implausible (orders of magnitude off from the reference air kerma), the
   most likely cause is a unit mismatch introduced upstream by the manufacturer's DAP reporting, not
-  by MyPySkinDose.
+  by GUISkinDose.
 - Fluoro time is assumed to be milliseconds (the near-universal export unit) and is likewise flagged
   if the header unit cannot be confirmed.
 

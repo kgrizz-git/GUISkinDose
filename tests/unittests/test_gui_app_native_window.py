@@ -6,8 +6,8 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-import mypyskindose.gui.app as gui_app
-from mypyskindose.gui.window_prefs import NativeWindowPrefs, ScreenBounds
+import guiskindose.gui.app as gui_app
+from guiskindose.gui.window_prefs import NativeWindowPrefs, ScreenBounds
 
 PRIMARY = ScreenBounds(0, 0, 1920, 1080, is_primary=True)
 

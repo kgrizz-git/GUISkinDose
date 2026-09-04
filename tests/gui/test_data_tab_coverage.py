@@ -12,8 +12,8 @@ pytest.importorskip("nicegui")
 
 from nicegui import ui
 
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import data as data_tab
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import data as data_tab
 
 
 @pytest.fixture(autouse=True)

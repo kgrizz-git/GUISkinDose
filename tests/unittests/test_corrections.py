@@ -6,21 +6,21 @@ import pandas as pd
 import pytest
 from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
 
-from mypyskindose.constants import (
+from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
     KEY_NORMALIZATION_FILTER_SIZE_COPPER,
     KEY_NORMALIZATION_KVP,
     KEY_NORMALIZATION_MODEL_NAME,
 )
-from mypyskindose.corrections import (
+from guiskindose.corrections import (
     calculate_k_bs,
     calculate_k_isq,
     calculate_k_med,
     calculate_k_tab,
 )
-from mypyskindose.geom_calc import fetch_and_append_hvl
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.geom_calc import fetch_and_append_hvl
+from guiskindose.settings import PyskindoseSettings
 
 P = Path(__file__).parent.parent.parent
 sys.path.insert(1, str(P.absolute()))
@@ -180,7 +180,7 @@ def _k_tab(kvp, cu, al, model, plane):
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose")
+    logger = logging.getLogger("guiskindose")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:
@@ -220,8 +220,8 @@ def test_calculate_k_tab_clamps_out_of_range_kvp():
 
 
 def test_interpolate_off_grid_degenerate_kv_axis() -> None:
-    from mypyskindose.corrections import _interpolate_off_grid
-    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_EXACT, STATUS_INTERPOLATED
+    from guiskindose.corrections import _interpolate_off_grid
+    from guiskindose.grid_interp import STATUS_CLAMPED, STATUS_EXACT, STATUS_INTERPOLATED
 
     piv = pd.DataFrame(
         data=[[0.8, 0.9]], 
@@ -263,8 +263,8 @@ def test_interpolate_off_grid_degenerate_kv_axis() -> None:
 
 def test_interpolate_off_grid_degenerate_cu_axis() -> None:
     """A one-Cu-column pivot supports kVp lookup and clamps other Cu values."""
-    from mypyskindose.corrections import _interpolate_off_grid
-    from mypyskindose.grid_interp import STATUS_CLAMPED, STATUS_EXACT
+    from guiskindose.corrections import _interpolate_off_grid
+    from guiskindose.grid_interp import STATUS_CLAMPED, STATUS_EXACT
 
     piv = pd.DataFrame(data=[[0.8], [0.9]], index=[70.0, 80.0], columns=[0.3])
     cache_key = ("AXIOM-Artis", "Single Plane", 0.0)

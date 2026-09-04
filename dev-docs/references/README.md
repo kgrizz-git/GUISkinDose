@@ -1,8 +1,8 @@
 # External library references
 
-_Index of authoritative documentation for major MyPySkinDose dependencies. Expand before the next major dependency review._
+_Index of authoritative documentation for major GUISkinDose dependencies. Expand before the next major dependency review._
 
-| Library | Role in MyPySkinDose | Documentation |
+| Library | Role in GUISkinDose | Documentation |
 |---------|----------------------|---------------|
 | [pydicom](https://pypi.org/project/pydicom/) | DICOM RDSR parsing | [User guide](https://pydicom.github.io/pydicom/stable/) · [Tag dictionary](https://dicom.innolitics.com/) |
 | [NiceGUI](https://pypi.org/project/nicegui/) | Web/desktop GUI (`[gui]` extra) | [Documentation](https://nicegui.io/documentation) · [User simulation testing](https://nicegui.io/documentation/section_testing) |

@@ -1,4 +1,4 @@
-# Project-specific, blocking privacy SAST rules for MyPySkinDose.
+# Project-specific, blocking privacy SAST rules for GUISkinDose.
 #
 # Findings must be fixed or documented inline with a narrow `nosemgrep` comment
 # that explains why the value is deliberately user-visible. The rules avoid
@@ -113,10 +113,10 @@ rules:
       cwe: CWE-73
     paths:
       include:
-        - src/mypyskindose/gui/tabs/data.py
-        - src/mypyskindose/gui/tabs/export.py
-        - src/mypyskindose/export/writers/**
-        - src/mypyskindose/plotting/create_dose_map_plot.py
+        - src/guiskindose/gui/tabs/data.py
+        - src/guiskindose/gui/tabs/export.py
+        - src/guiskindose/export/writers/**
+        - src/guiskindose/plotting/create_dose_map_plot.py
     pattern-either:
       - pattern: $P.write_text(...)
       - pattern: $P.write_bytes(...)
@@ -138,8 +138,8 @@ rules:
       cwe: CWE-377
     paths:
       include:
-        - src/mypyskindose/gui/tabs/**
-        - src/mypyskindose/gui/widgets/**
-        - src/mypyskindose/gui/upload_temp_files.py
+        - src/guiskindose/gui/tabs/**
+        - src/guiskindose/gui/widgets/**
+        - src/guiskindose/gui/upload_temp_files.py
     patterns:
       - pattern: tempfile.NamedTemporaryFile(..., delete=False, ...)

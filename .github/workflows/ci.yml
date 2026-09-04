@@ -1,6 +1,7 @@
 # Job DAG (privacy-first): schedule-gate → privacy-gates → {static-analysis, owasp-semgrep,
 # gui-smoke, build, scan-for-secrets (PRs), codeql, coverage-pr (PRs)} → sonar-scan (opt-in protected-main only).
-# Safety stays main-only in cloud-scans-main.
+# (The former main-only Safety cloud scan job was removed when the safety dev dependency was dropped;
+# dependency auditing runs in the static-analysis job via scripts/audit_dependencies.py.)
 #
 # External PR scanners that previously ran before privacy-gates:
 #   gitleaks.yml — pull_request trigger removed; PR scanning now in the Scan for secrets job below.
@@ -161,7 +162,7 @@ jobs:
         python scripts/audit_dependencies.py
         python scripts/check_licenses.py
     - name: Bandit (Python SAST, medium+ severity)
-      run: bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+      run: bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)
       run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
 
@@ -274,9 +275,13 @@ jobs:
     - name: Install dependencies (locked)
       run: uv sync --extra dev --locked --python ${{ matrix.python-version }}
     - name: Compile check
-      run: uv run --no-sync python -m compileall src/mypyskindose
+      run: uv run --no-sync python -m compileall src/guiskindose
     - name: Lint with ruff
       run: uv run --no-sync ruff check src tests
+    # test_packaging.py asserts wheel contents; without dist/ it would silently
+    # skip, so build the artifact in the same job that runs pytest.
+    - name: Build wheel (packaging test needs a real artifact)
+      run: uv build
     - name: Test with pytest
       # Cross-version test-pass matrix only (no coverage gate). Coverage is enforced at a single
       # 80% standard by coverage-pr (PRs) and sonar-scan (main); -n auto parallelizes.
@@ -320,12 +325,12 @@ jobs:
       run: |
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
         uv run --no-sync pytest tests/gui/ \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-append --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     - name: Combined coverage threshold (≥80%)
-      run: uv run --no-sync coverage report --include="src/mypyskindose/*" --fail-under=80
+      run: uv run --no-sync coverage report --include="src/guiskindose/*" --fail-under=80
     - name: Diff coverage vs base (≥80% of changed lines)
       env:
         BASE_REF: ${{ github.base_ref }}
@@ -367,9 +372,9 @@ jobs:
       run: |
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
         uv run --no-sync pytest tests/gui/ \
-          --cov=src/mypyskindose --cov=scripts --cov=tests --cov-append --cov-report=
+          --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     # CI-based analysis is authoritative (Automatic Analysis disabled). Reads
     # sonar-project.properties. This job stays disabled until a repository administrator
@@ -381,33 +386,6 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  cloud-scans-main:
-    name: Main-only Safety scan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [privacy-gates, static-analysis, gui-smoke, build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      with:
-        persist-credentials: false
-    - name: Install uv
-      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
-      with:
-        version: ">=0.11.19"
-    - name: Set up Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
-      with:
-        python-version: '3.12'
-    - name: Install dependencies (locked)
-      run: uv sync --extra dev --extra gui --locked
-    - name: Run Safety cloud scan (main only; skipped without key)
-      if: env.SAFETY_API_KEY != ''
-      run: uv run --no-sync safety scan --detailed-output
 
   gitleaks:
     # PR secret scanning, gated behind privacy-gates. The standalone gitleaks.yml
@@ -465,7 +443,7 @@ jobs:
     name: Open / update tracking issue on failure
     needs: [schedule-gate, privacy-gates, static-analysis, owasp-semgrep,
             gui-smoke, build, coverage-pr, gitleaks, codeql,
-            cloud-scans-main, sonar-scan]
+            sonar-scan]
     if: >
       always() &&
       needs.schedule-gate.outputs.should_run == 'true' &&
@@ -486,7 +464,6 @@ jobs:
         COVERAGE_PR: ${{ needs.coverage-pr.result }}
         GITLEAKS: ${{ needs.gitleaks.result }}
         CODEQL: ${{ needs.codeql.result }}
-        CLOUD_SCANS_MAIN: ${{ needs.cloud-scans-main.result }}
         SONAR_SCAN: ${{ needs.sonar-scan.result }}
       run: |
         # Count only result == 'failure'. 'skipped' (job gated off — e.g.
@@ -502,7 +479,6 @@ jobs:
           "coverage-pr:$COVERAGE_PR" \
           "gitleaks:$GITLEAKS" \
           "codeql:$CODEQL" \
-          "cloud-scans-main:$CLOUD_SCANS_MAIN" \
           "sonar-scan:$SONAR_SCAN"; do
           name="${pair%%:*}"
           result="${pair#*:}"
@@ -588,7 +564,7 @@ jobs:
     name: Close ci tracking issues on success
     needs: [schedule-gate, privacy-gates, static-analysis, owasp-semgrep,
             gui-smoke, build, coverage-pr, gitleaks, codeql,
-            cloud-scans-main, sonar-scan]
+            sonar-scan]
     if: >
       always() &&
       needs.schedule-gate.outputs.should_run == 'true' &&

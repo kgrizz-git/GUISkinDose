@@ -2,7 +2,7 @@
 
 ## Intended use
 
-MyPySkinDose is an independently maintained fork of
+GUISkinDose is an independently maintained fork of
 [PySkinDose](https://github.com/rvbCMTS/PySkinDose). It estimates peak skin dose
 and skin dose maps from fluoroscopy RDSR / tabular inputs for **research,
 education, development, and institutional quality-assurance** workflows.

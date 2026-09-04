@@ -88,7 +88,7 @@ def test_find_broken_path_references_reports_backtick_and_prose_paths(tmp_path: 
         "Archive note: `dev-docs/plans/old-plan.md`\n"
         "See dev-docs/plans/missing-plan.md before changing this.\n"
         "External command `/verify` should not be treated as a path.\n"
-        "Python package `mypyskindose.gui.helpers` should not be treated as a path.\n",
+        "Python package `guiskindose.gui.helpers` should not be treated as a path.\n",
         encoding="utf-8",
     )
 
@@ -124,7 +124,7 @@ def test_find_absolute_path_hits_reports_file_uri_and_absolute_placeholder(tmp_p
     doc = repo_root / "README.md"
     doc.write_text(
         "[bad](file:///Users/name/project/dev-docs/index.md)\n"
-        "Do not use /path/to/MyPySkinDose/src in docs.\n",
+        "Do not use /path/to/GUISkinDose/src in docs.\n",
         encoding="utf-8",
     )
 

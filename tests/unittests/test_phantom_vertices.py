@@ -20,10 +20,10 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from mypyskindose import constants as c
-from mypyskindose import load_settings_example_json
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import constants as c
+from guiskindose import load_settings_example_json
+from guiskindose.phantom_class import Phantom
+from guiskindose.settings import PyskindoseSettings
 
 _FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
 _VERTICES = _FIXTURE_DIR / "phantom_hudfrid_vertices.npy"

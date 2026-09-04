@@ -11,7 +11,7 @@ compliance, evaluating what is already in place and what would add the most valu
 
 | Tool | Type | Scope | CI | Pre-commit | Notes |
 |------|------|-------|----|-----------|-------|
-| **bandit** | SAST (AST-level) | Python code | `ci.yml` `static-analysis` job | Yes | `--severity-level medium` on `src/mypyskindose` + `scripts`; configured in `pyproject.toml` |
+| **bandit** | SAST (AST-level) | Python code | `ci.yml` `static-analysis` job | Yes | `--severity-level medium` on `src/guiskindose` + `scripts`; configured in `pyproject.toml` |
 | **pip-audit** | Dependency vuln scan | Python packages | `ci.yml` `static-analysis` job | — | `--desc on`; checks against PyPI advisory feed |
 | **gitleaks** | Secret detection | Git history | `.github/workflows/gitleaks.yml` on push/PR | Yes (pre-commit stage) | Wired in both pre-commit and CI |
 
@@ -63,11 +63,16 @@ Multi-language SAST with dataflow analysis and [official OWASP Top 10 rule packs
 Or run locally:
 ```bash
 pip install semgrep safety
-semgrep --config=p/owasp-top-ten --error src/mypyskindose
+semgrep --config=p/owasp-top-ten --error src/guiskindose
 safety scan
 ```
 
 ### 2. safety (medium priority — CI optional)
+
+> **Update (2026-09-03, GUISkinDose 1.0.0):** the `safety` dev dependency and its main-only
+> `cloud-scans-main` CI job were removed (it was the sole consumer of transitive `nltk`, which
+> carried an unpatched advisory). `uv audit` + `pip-audit` remain the dependency auditors. This
+> section is historical.
 
 Alternative/complement to pip-audit. Checks against Safety DB's broader advisory feed
 (not just PyPI). Catches some CVEs pip-audit misses (and vice versa — both is ideal).
@@ -75,7 +80,7 @@ Alternative/complement to pip-audit. Checks against Safety DB's broader advisory
 > **API key required for `safety scan`:** Safety >=3.0 requires authentication (`safety auth` or
 > `SAFETY_API_KEY` env var). Free tier available at [safetycli.com](https://safetycli.com).
 > CI skips the step when the secret is unset; `pip-audit` remains the no-key dependency gate.
-> See [SECURITY_TOOLS_CI_PLAN.md](../plans/SECURITY_TOOLS_CI_PLAN.md).
+> See [SECURITY_TOOLS_CI_PLAN.md](../plans/archive/SECURITY_TOOLS_CI_PLAN.md) (archived; the `safety` scanner it described was dropped in 1.0.0).
 
 ```bash
 pip install safety
@@ -119,7 +124,7 @@ existing coverage.
 | Action | Effort | Impact | Priority | Status |
 |--------|--------|--------|----------|--------|
 | Add **semgrep** (OWASP Top 10 rules) to CI `static-analysis` job | Low | High (fills biggest SAST gap) | **High** | **Shipped** (CI + pre-push) |
-| Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium | **Shipped** (CI; skipped without `SAFETY_API_KEY`) |
+| Add **safety** alongside pip-audit in CI | Low | Medium (broader advisory coverage) | Medium | **Removed** (1.0.0, 2026-09-03 — dropped with the transitive `nltk` advisory exposure) |
 | Add **grype** to release workflow | Medium | Low (supply-chain hardening) | Low | **Shipped** (`anchore/scan-action v7.4.0`; `.grype.yaml`) |
 | Add **shellcheck** (`shellcheck-py`) for shell scripts | Low | Medium (catches quoting/`set -e` bugs) | Medium | **Shipped** (pre-commit + CI) |
 
@@ -127,11 +132,11 @@ existing coverage.
 
 ```bash
 # Already installed (dev deps):
-bandit -c pyproject.toml -r src/mypyskindose scripts --severity-level medium
+bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
 pip-audit --desc on
 
 # To add (pip install):
 pip install semgrep safety
-semgrep --config=p/owasp-top-ten --error src/mypyskindose
+semgrep --config=p/owasp-top-ten --error src/guiskindose
 safety scan
 ```

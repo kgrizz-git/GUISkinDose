@@ -23,23 +23,23 @@ import pydicom
 import pytest
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
-from mypyskindose import constants as c
-from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.calculate_dose.add_correction_and_event_dose_to_output import (
+from guiskindose import constants as c
+from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.calculate_dose.add_correction_and_event_dose_to_output import (
     add_corrections_and_event_dose_to_output,
 )
-from mypyskindose.calculate_dose.calculate_dose import (
+from guiskindose.calculate_dose.calculate_dose import (
     _build_output_template,
     calculate_dose,
 )
-from mypyskindose.calculate_dose.perform_calculations_for_new_geometries import (
+from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
-from mypyskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
+from guiskindose.phantom_class import Phantom
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 _FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
@@ -81,7 +81,7 @@ _MUTABLE_PER_EVENT_KEYS = (
 
 @pytest.fixture(autouse=True)
 def _quiet_logs():
-    logging.getLogger("mypyskindose").setLevel(logging.WARNING)
+    logging.getLogger("guiskindose").setLevel(logging.WARNING)
     yield
 
 
@@ -153,30 +153,30 @@ def test_calculate_dose_delegates_to_build_output_template():
 
     with (
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.position_patient_phantom_on_table"
+            "guiskindose.calculate_dose.calculate_dose.position_patient_phantom_on_table"
         ),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.fetch_and_append_hvl",
+            "guiskindose.calculate_dose.calculate_dose.fetch_and_append_hvl",
             side_effect=lambda data_norm, **_kw: data_norm,
         ),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.check_new_geometry",
+            "guiskindose.calculate_dose.calculate_dose.check_new_geometry",
             return_value=[True],
         ),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.calculate_k_bs",
+            "guiskindose.calculate_dose.calculate_dose.calculate_k_bs",
             return_value=[MagicMock()],
         ),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.calculate_k_tab",
+            "guiskindose.calculate_dose.calculate_dose.calculate_k_tab",
             return_value=[0.8],
         ),
         patch(
-            "mypyskindose.calculate_dose.calculate_dose._build_output_template",
+            "guiskindose.calculate_dose.calculate_dose._build_output_template",
             wraps=_build_output_template,
         ) as build_template,
         patch(
-            "mypyskindose.calculate_dose.calculate_dose.calculate_irradiation_event_result",
+            "guiskindose.calculate_dose.calculate_dose.calculate_irradiation_event_result",
             side_effect=_return_output_unchanged,
         ),
         patch("tqdm.tqdm", return_value=MagicMock()),
@@ -235,7 +235,7 @@ def test_perform_calculations_clears_stale_geometry_on_zero_hit():
     beam.check_hit.return_value = [False, False, False]
 
     with patch(
-        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
         return_value=beam,
     ):
         hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
@@ -272,16 +272,16 @@ def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
     miss_beam.check_hit.return_value = [False, False]
 
     with patch(
-        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
         side_effect=[hit_beam, miss_beam],
     ), patch(
-        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.check_table_hits",
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.check_table_hits",
         return_value=[False],
     ), patch(
-        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area",
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area",
         return_value=[5.0],
     ), patch(
-        "mypyskindose.calculate_dose.perform_calculations_for_new_geometries.calculate_k_isq",
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.calculate_k_isq",
         return_value=np.array([0.5]),
     ):
         norm = pd.DataFrame({c.DATA_DS_IRP: [100.0]})
@@ -418,8 +418,8 @@ def _run_calculate_dose_with_offset(d_lon: float = 0.0, d_ver: float = 0.0, d_la
     return output
 
 
-def _capture_mypyskindose_warnings() -> tuple[logging.Logger, logging.Handler, list[str]]:
-    """Install a WARNING-level capture handler on the ``mypyskindose`` logger.
+def _capture_guiskindose_warnings() -> tuple[logging.Logger, logging.Handler, list[str]]:
+    """Install a WARNING-level capture handler on the ``guiskindose`` logger.
 
     Returns ``(logger, handler, messages)``. Caller must ``removeHandler`` in a
     ``finally`` block. Captures via a dedicated handler so it is robust to
@@ -431,7 +431,7 @@ def _capture_mypyskindose_warnings() -> tuple[logging.Logger, logging.Handler, l
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose")
+    logger = logging.getLogger("guiskindose")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     return logger, handler, messages
@@ -439,7 +439,7 @@ def _capture_mypyskindose_warnings() -> tuple[logging.Logger, logging.Handler, l
 
 def test_beam_miss_per_event_warning():
     """All 21 events miss → 21 per-event warnings plus all-miss sentinel."""
-    logger, handler, messages = _capture_mypyskindose_warnings()
+    logger, handler, messages = _capture_guiskindose_warnings()
     try:
         output = _run_calculate_dose_with_offset(d_lon=500.0)
     finally:
@@ -468,7 +468,7 @@ def test_beam_miss_off_dial_suppresses_per_event_but_not_sentinel():
     norm = rdsr_normalizer(parsed, settings=settings)
     norm = calculate_rotation_matrices(norm)
 
-    logger, handler, messages = _capture_mypyskindose_warnings()
+    logger, handler, messages = _capture_guiskindose_warnings()
     try:
         _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     finally:
@@ -491,7 +491,7 @@ def test_beam_miss_summary_mode():
     norm = rdsr_normalizer(parsed, settings=settings)
     norm = calculate_rotation_matrices(norm)
 
-    logger, handler, messages = _capture_mypyskindose_warnings()
+    logger, handler, messages = _capture_guiskindose_warnings()
     try:
         _, output, _ = calculate_dose(normalized_data=norm, settings=settings, table=table, pad=pad)
     finally:

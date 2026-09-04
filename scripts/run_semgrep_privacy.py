@@ -68,7 +68,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "tests",
     ]
     try:
-        with tempfile.TemporaryDirectory(prefix="mypyskindose-semgrep-") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix="guiskindose-semgrep-") as temp_dir:
             environment["SEMGREP_LOG_FILE"] = str(Path(temp_dir) / "semgrep.log")
             environment["XDG_CACHE_HOME"] = str(Path(temp_dir) / "cache")
             completed = subprocess.run(

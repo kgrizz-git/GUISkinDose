@@ -1,4 +1,4 @@
-from mypyskindose.rdsr_parser import rdsr_parser
+from guiskindose.rdsr_parser import rdsr_parser
 
 
 def test_that_all_rdsr_events_are_extracted_during_parsing(phantom_dataset):

@@ -16,8 +16,8 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN, rebuild_rdsr_df
-from mypyskindose.gui.state import AppState
+from guiskindose.gui.helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN, rebuild_rdsr_df
+from guiskindose.gui.state import AppState
 
 
 def _exam(n_events: int, kvp: float) -> SimpleNamespace:

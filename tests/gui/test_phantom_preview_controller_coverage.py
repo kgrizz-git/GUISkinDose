@@ -9,9 +9,9 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui import phantom_preview_controller
-from mypyskindose.gui.phantom_preview_controller import PhantomPreviewController
-from mypyskindose.gui.state import state
+from guiskindose.gui import phantom_preview_controller
+from guiskindose.gui.phantom_preview_controller import PhantomPreviewController
+from guiskindose.gui.state import state
 
 
 def _controller() -> PhantomPreviewController:

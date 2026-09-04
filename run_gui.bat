@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-title MyPySkinDose GUI Launcher
+title GUISkinDose GUI Launcher
 
 echo ==========================================
-echo       MyPySkinDose GUI Launcher
+echo       GUISkinDose GUI Launcher
 echo ==========================================
 echo.
 
@@ -67,14 +67,14 @@ if exist .venv\Scripts\python.exe (
 )
 
 :: Check if package is installed
-%PYTHON_CMD% -c "import mypyskindose" >nul 2>&1
+%PYTHON_CMD% -c "import guiskindose" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [OK] mypyskindose package is installed
+    echo [OK] guiskindose package is installed
     goto :run_gui
 )
 
 echo.
-echo [!] mypyskindose package not installed.
+echo [!] guiskindose package not installed.
 echo Install options:
 echo   [1] Core + GUI (browser mode)      - pip install -e ".[gui]"
 echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]"
@@ -84,12 +84,12 @@ echo.
 set /p install_choice="Select option [1/2/3, default=1]: "
 
 if "%install_choice%"=="2" (
-    echo Installing mypyskindose with GUI and native window support...
+    echo Installing guiskindose with GUI and native window support...
     %PYTHON_CMD% -m pip install -e ".[gui-native]"
 ) else if "%install_choice%"=="3" (
     echo Skipping. Install manually with: pip install -e ".[gui]"
 ) else (
-    echo Installing mypyskindose with GUI...
+    echo Installing guiskindose with GUI...
     %PYTHON_CMD% -m pip install -e ".[gui]"
 )
 
@@ -137,12 +137,12 @@ if "%choice%"=="2" (
 
 if "%choice%"=="2" (
     echo.
-    echo Starting MyPySkinDose in Native Window mode...
-    %PYTHON_CMD% -m mypyskindose --mode gui --native
+    echo Starting GUISkinDose in Native Window mode...
+    %PYTHON_CMD% -m guiskindose --mode gui --native
 ) else (
     echo.
-    echo Starting MyPySkinDose in Browser mode...
-    %PYTHON_CMD% -m mypyskindose --mode gui
+    echo Starting GUISkinDose in Browser mode...
+    %PYTHON_CMD% -m guiskindose --mode gui
 )
 
 if %ERRORLEVEL% NEQ 0 (

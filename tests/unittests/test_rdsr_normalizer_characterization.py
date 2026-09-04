@@ -20,13 +20,13 @@ from __future__ import annotations
 import pydicom
 import pytest
 
-from mypyskindose import (
+from guiskindose import (
     get_path_to_example_rdsr_files,
     load_settings_example_json,
 )
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
 _RDSR_DIR = get_path_to_example_rdsr_files()
 

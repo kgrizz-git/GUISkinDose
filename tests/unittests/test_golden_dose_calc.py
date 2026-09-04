@@ -16,11 +16,11 @@ import numpy as np
 import pydicom
 import pytest
 
-from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.analyze_data import analyze_data
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.analyze_data import analyze_data
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 
@@ -36,7 +36,7 @@ _GOLDEN_N_EVENTS = 21
 
 @pytest.fixture(autouse=True)
 def _quiet_logs():
-    logging.getLogger("mypyskindose").setLevel(logging.WARNING)
+    logging.getLogger("guiskindose").setLevel(logging.WARNING)
     yield
 
 

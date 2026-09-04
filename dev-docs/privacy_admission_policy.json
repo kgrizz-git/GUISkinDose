@@ -63,7 +63,7 @@
   "never_track_patterns": [
     "*.cache", "*.err", "*.log", "*.log.[0-9]*", "*.out", "*.pkl", "*.pickle", "*.trace",
     ".coverage", "coverage.xml", ".coverage.*", "*.tmp", "*.bak", "*.orig", "debug_*", "scratch*",
-    "temp*", "_test_gui_import.py", "src/mypyskindose/example_data/RDSR/clinical*"
+    "temp*", "_test_gui_import.py", "src/guiskindose/example_data/RDSR/clinical*"
   ],
   "phi_filename": {
     "_comment": "Blocks committing/tracking files whose NAME OR PATH looks like it embeds PHI (a patient identifier or a person's name). Matched over the full normalized POSIX path, case-insensitively. Name tokens are scanned over the WHOLE path (directory components included), not just the basename: this is a medical-imaging repo where a patient name plausibly appears as a directory (e.g. patients/SMITH_JOHN/scan.dcm), so full-path scanning maximizes PHI recall. The trade-off is that a legitimate surname-bearing directory (an org unit, contributor dir, or algorithm name) can false-positive; resolve those by adding an allowlist_patterns glob, never by weakening the token list. Structural patterns are regexes; name_tokens are matched as whole tokens after splitting the path on non-alphanumerics (so substrings like 'goldsmith' never match 'smith'). The accession abbreviation 'acc' uses a 5-digit floor to avoid year-tag false positives (acc-2024); the full word 'accession' keeps a 1-digit floor as an unambiguous keyword. Add legitimate exceptions to allowlist_patterns (fnmatch globs over the full path). See dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md.",

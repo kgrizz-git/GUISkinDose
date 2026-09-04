@@ -41,7 +41,7 @@ def _write_glossary(repo_root: Path, data: object | None = None) -> None:
 
 
 def _write_owner(repo_root: Path, text: str = 'copy_text("sample.tooltip")\n') -> None:
-    path = repo_root / "src" / "mypyskindose" / "gui" / "tabs" / "sample.py"
+    path = repo_root / "src" / "guiskindose" / "gui" / "tabs" / "sample.py"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 

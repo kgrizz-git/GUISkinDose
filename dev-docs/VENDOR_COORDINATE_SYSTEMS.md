@@ -1,6 +1,6 @@
 # Vendor-Specific Coordinate Systems and Normalization
 
-This document explains how MyPySkinDose handles different fluoroscopy system manufacturers' coordinate systems and the transformations applied to normalize them into a unified internal representation.
+This document explains how GUISkinDose handles different fluoroscopy system manufacturers' coordinate systems and the transformations applied to normalize them into a unified internal representation.
 
 ## Overview
 
@@ -10,11 +10,11 @@ Different X-ray equipment manufacturers (Siemens, Philips, GE, Canon, etc.) use 
 - **Rotation conventions** (clockwise vs counter-clockwise)
 - **Field size calculations** (how beam dimensions are specified)
 
-To ensure accurate dose calculations, MyPySkinDose normalizes all vendor-specific RDSR data into a **unified coordinate system** through the normalization pipeline (`rdsr_normalizer.py` + `normalization_settings.json`).
+To ensure accurate dose calculations, GUISkinDose normalizes all vendor-specific RDSR data into a **unified coordinate system** through the normalization pipeline (`rdsr_normalizer.py` + `normalization_settings.json`).
 
 ## Coordinate Frames And Names
 
-This document is the canonical coordinate reference for MyPySkinDose. The same
+This document is the canonical coordinate reference for GUISkinDose. The same
 numbers are described by several naming systems, so avoid using `X`, `LON`,
 `LAT`, or a DICOM table-position attribute name without saying which frame you
 mean.
@@ -65,7 +65,7 @@ or `Z`.
 
 The attribute names are operator/table-axis names for Siemens and Philips, not
 patient-anatomy names. GE raw data uses patient-anatomy longitudinal/lateral
-naming instead; MyPySkinDose swaps GE raw lateral/longitudinal during
+naming instead; GUISkinDose swaps GE raw lateral/longitudinal during
 normalization so downstream code sees the same plotted/calculation frame.
 
 ### Normalized DataFrame columns
@@ -327,11 +327,11 @@ The normalization matching process (in `normalization_settings.py`):
 
 ## The Two Offset Systems
 
-MyPySkinDose uses **two separate offset systems** that work together to position the patient correctly:
+GUISkinDose uses **two separate offset systems** that work together to position the patient correctly:
 
 ### 1. Table Offsets (Vendor-Specific Machine Coordinates)
 
-**Purpose**: Transform manufacturer-specific coordinates into MyPySkinDose's unified coordinate system.
+**Purpose**: Transform manufacturer-specific coordinates into GUISkinDose's unified coordinate system.
 
 **Applied**: Automatically during RDSR normalization.
 
@@ -473,7 +473,7 @@ Text-based Mermaid diagrams below summarize conventions described earlier in thi
 
 ```mermaid
 flowchart TB
-    subgraph UNIFIED["MyPySkinDose unified system (head-first supine)"]
+    subgraph UNIFIED["GUISkinDose unified system (head-first supine)"]
         O["Origin (0, 0, 0)<br/>Head-end of table<br/>default height & lateral center"]
         X["+X (Tx) lateral<br/>→ patient left"]
         Y["+Y (Ty) vertical<br/>→ downward (gravity)"]
@@ -630,7 +630,7 @@ Before writing a Phase 3–4 vendor adapter (Radimetrics, DoseTrack, etc.), the 
 | Export coordinate frame | Correct normalization path | Risk if wrong |
 |---|---|---|
 | Raw DICOM frame (same as `rdsr_parser()` output) | Use `generic_rdsr_like` adapter → `rdsr_normalizer()` applies corrections from `normalization_settings.json` once | None if confirmed |
-| Already fully normalized (e.g., by MyPySkinDose itself) | Use `normalized` schema adapter; do not call `rdsr_normalizer()` | None if confirmed |
+| Already fully normalized (e.g., by GUISkinDose itself) | Use `normalized` schema adapter; do not call `rdsr_normalizer()` | None if confirmed |
 | Pre-transformed by vendor software (unknown convention) | Must investigate before writing adapter | Risk of double-correction or missed correction — silently wrong geometry |
 
 **Radimetrics** is expected to pass coordinate values through from the underlying
@@ -661,7 +661,7 @@ different frame than the normalized calculation columns.
 
 - **GE DICOM RDSRs and tabular exports**: confirmed GE table travel is positive
   lateral = patient left, positive longitudinal = patient superior/cranial, and
-  positive height = down for head-first supine positioning. MyPySkinDose handles
+  positive height = down for head-first supine positioning. GUISkinDose handles
   the resulting lateral/longitudinal convention with the normalizer-level
   `swap_lateral_longitudinal` flag on the GE manufacturer wildcard entry. The
   GUI no longer auto-enables an additional post-normalization `Tx`/`Tz` swap for

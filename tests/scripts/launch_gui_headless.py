@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run MyPySkinDose GUI smoke tests without a visible browser.
+Run GUISkinDose GUI smoke tests without a visible browser.
 
 Harness Phase 5 maintainer script. Uses NiceGUI user simulation via pytest;
 does not start ui.run() or open a desktop window.

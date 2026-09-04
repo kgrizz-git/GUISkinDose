@@ -1,16 +1,16 @@
 # Why Install as a Package?
 
-This document explains the benefits of installing MyPySkinDose as a Python package rather than running it directly from source.
+This document explains the benefits of installing GUISkinDose as a Python package rather than running it directly from source.
 
 ## What "Installing as a Package" Means
 
-When you run `pip install -e .`, pip reads `pyproject.toml` and registers the `mypyskindose` package with your Python environment. The `-e` flag means "editable mode" — instead of copying code into your site-packages, it creates a link to your source directory. Edits to the code take effect immediately without reinstalling.
+When you run `pip install -e .`, pip reads `pyproject.toml` and registers the `guiskindose` package with your Python environment. The `-e` flag means "editable mode" — instead of copying code into your site-packages, it creates a link to your source directory. Edits to the code take effect immediately without reinstalling.
 
 ## Benefits
 
 ### 1. Import Paths Work Anywhere
 
-Without the package installed, Python doesn't know where `mypyskindose` lives. You'd need to manually manipulate `sys.path`:
+Without the package installed, Python doesn't know where `guiskindose` lives. You'd need to manually manipulate `sys.path`:
 
 ```python
 # Without package install
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path("src").resolve()))
-from mypyskindose.main import main
+from guiskindose.main import main
 ```
 
 This is fragile — the path is hardcoded, and it breaks if you move the project or share the script.
@@ -27,28 +27,28 @@ With the package installed:
 
 ```python
 # With package install
-from mypyskindose.main import main  # works anywhere
+from guiskindose.main import main  # works anywhere
 ```
 
 The import works from any directory, any script, any virtual environment that has the package installed.
 
 ### 2. CLI Entry Points
 
-The `python -m mypyskindose` command works because the package structure defines `__main__.py`. Without installation:
+The `python -m guiskindose` command works because the package structure defines `__main__.py`. Without installation:
 
 ```bash
 # Without package install
-python src/mypyskindose/__main__.py --mode gui
+python src/guiskindose/__main__.py --mode gui
 ```
 
 With installation:
 
 ```bash
 # With package install
-python -m mypyskindose --mode gui
+python -m guiskindose --mode gui
 ```
 
-This is how the GUI launcher script (`run_gui.sh`) works — it just calls `python -m mypyskindose --mode gui`.
+This is how the GUI launcher script (`run_gui.sh`) works — it just calls `python -m guiskindose --mode gui`.
 
 ### 3. Automatic Dependency Resolution
 
@@ -92,7 +92,7 @@ The package version is defined in one place (`pyproject.toml`) and can be querie
 
 ```python
 import importlib.metadata
-print(importlib.metadata.version("mypyskindose"))  # 25.1.1
+print(importlib.metadata.version("guiskindose"))  # 1.0.0
 ```
 
 This is useful for logging, reproducibility, and debugging.
@@ -108,27 +108,27 @@ pip install git+https://github.com/kgrizz-git/MyPySkinDose.git
 
 **PyPI (if published):**
 ```bash
-pip install mypyskindose
+pip install guiskindose
 ```
 
 **Local wheel/sdist:**
 ```bash
 pip install build
-python -m build  # creates dist/mypyskindose-25.1.1-py3-none-any.whl
-pip install dist/mypyskindose-25.1.1-py3-none-any.whl
+python -m build  # creates dist/guiskindose-1.0.0-py3-none-any.whl
+pip install dist/guiskindose-1.0.0-py3-none-any.whl
 ```
 
 Without the package structure, users would need to clone the repo, understand the directory layout, and manually configure their environment.
 
 ## Publishing to PyPI
 
-If you want to make the package installable via `pip install mypyskindose`, you can publish it to PyPI.
+If you want to make the package installable via `pip install guiskindose`, you can publish it to PyPI.
 
 ### Prerequisites
 
 1. A PyPI account (create at https://pypi.org/account/register/)
 2. An API token from PyPI settings
-3. A unique package name (check that `mypyskindose` isn't taken)
+3. A unique package name (check that `guiskindose` isn't taken)
 
 ### Build and Upload
 
@@ -154,7 +154,7 @@ twine upload dist/*
 Before uploading a new version, update the version in `pyproject.toml`:
 
 ```toml
-version = "25.2.0"  # was 25.1.1
+version = "1.0.0"  # first GUISkinDose identity; was MyPySkinDose 25.2.0
 ```
 
 PyPI does not allow re-uploading the same version number.
@@ -168,7 +168,7 @@ You can also automate PyPI uploads via GitHub Actions. The project already has a
 | Aspect | Without Package | With Package |
 |--------|-----------------|--------------|
 | Imports | Manual `sys.path` manipulation | Just works |
-| CLI | Full path to `__main__.py` | `python -m mypyskindose` |
+| CLI | Full path to `__main__.py` | `guiskindose` or `python -m guiskindose` |
 | Dependencies | Install manually | Automatic |
 | Distribution | Clone repo + manual setup | `pip install ...` |
 | Versioning | Ad-hoc | Built-in metadata |

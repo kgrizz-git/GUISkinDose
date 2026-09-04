@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Documentation freshness checker for MyPySkinDose.
+"""Documentation freshness checker for GUISkinDose.
 
 Purpose:
     Scan tracked markdown for broken relative links, forbidden absolute
@@ -18,7 +18,7 @@ Outputs:
 
 Usage:
     python scripts/check_doc_freshness.py
-    python scripts/check_doc_freshness.py --repo-root /path/to/MyPySkinDose
+    python scripts/check_doc_freshness.py --repo-root /path/to/GUISkinDose
     python scripts/check_doc_freshness.py --no-stale-warnings
 """
 
@@ -510,7 +510,7 @@ def run_checks(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate MyPySkinDose documentation freshness.")
+    parser = argparse.ArgumentParser(description="Validate GUISkinDose documentation freshness.")
     parser.add_argument(
         "--repo-root",
         type=Path,

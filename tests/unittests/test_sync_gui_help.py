@@ -21,7 +21,7 @@ SCRIPT = REPO_ROOT / "scripts" / "sync_gui_help.py"
 @pytest.fixture()
 def mirror_dirs(tmp_path: Path) -> tuple[Path, Path]:
     source = tmp_path / "docs" / "source" / "gui_help"
-    target = tmp_path / "src" / "mypyskindose" / "gui" / "help"
+    target = tmp_path / "src" / "guiskindose" / "gui" / "help"
     source.mkdir(parents=True)
     target.mkdir(parents=True)
     return source, target
@@ -246,7 +246,7 @@ def test_non_utf8_input_exits_cleanly(mirror_dirs: tuple[Path, Path]) -> None:
 
 def test_cli_check_in_sync(tmp_path: Path) -> None:
     source = tmp_path / "docs" / "source" / "gui_help"
-    target = tmp_path / "src" / "mypyskindose" / "gui" / "help"
+    target = tmp_path / "src" / "guiskindose" / "gui" / "help"
     source.mkdir(parents=True)
     target.mkdir(parents=True)
     (source / "a.md").write_text("x", encoding="utf-8")
@@ -257,7 +257,7 @@ def test_cli_check_in_sync(tmp_path: Path) -> None:
 
 def test_cli_check_out_of_sync(tmp_path: Path) -> None:
     source = tmp_path / "docs" / "source" / "gui_help"
-    target = tmp_path / "src" / "mypyskindose" / "gui" / "help"
+    target = tmp_path / "src" / "guiskindose" / "gui" / "help"
     source.mkdir(parents=True)
     target.mkdir(parents=True)
     (source / "a.md").write_text("x", encoding="utf-8")

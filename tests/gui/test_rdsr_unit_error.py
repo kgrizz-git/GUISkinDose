@@ -12,14 +12,14 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui import exam_loaders
-from mypyskindose.gui.state import AppState
-from mypyskindose.rdsr_normalizer import RdsrUnitError
+from guiskindose.gui import exam_loaders
+from guiskindose.gui.state import AppState
+from guiskindose.rdsr_normalizer import RdsrUnitError
 
 _EXAMPLE_RDSR = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "mypyskindose"
+    / "guiskindose"
     / "example_data"
     / "RDSR"
     / "siemens_axiom_artis.dcm"
@@ -29,7 +29,7 @@ _EXAMPLE_RDSR = (
 def test_load_rdsr_surfaces_unit_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
     def _raise(*_args, **_kwargs):
         raise RdsrUnitError(
-            "This RDSR reports reference point dose in 'mGy', but MyPySkinDose expects 'Gy'."
+            "This RDSR reports reference point dose in 'mGy', but GUISkinDose expects 'Gy'."
         )
 
     monkeypatch.setattr(exam_loaders, "rdsr_normalizer", _raise)

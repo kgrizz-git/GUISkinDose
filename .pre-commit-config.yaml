@@ -38,7 +38,7 @@ repos:
         name: bandit (src + scripts, medium+ severity)
         # Pre-commit passes staged file paths; do not use -r here (CI scans directories).
         args: ["-c", "pyproject.toml", "--severity-level", "medium"]
-        files: ^(src/mypyskindose|scripts)/
+        files: ^(src/guiskindose|scripts)/
 
   - repo: local
     hooks:
@@ -118,7 +118,7 @@ repos:
         always_run: true
 
       - id: sync-gui-help
-        name: GUI help sync (docs/source/gui_help -> src/mypyskindose/gui/help)
+        name: GUI help sync (docs/source/gui_help -> src/guiskindose/gui/help)
         entry: python scripts/sync_gui_help.py --check
         language: system
         pass_filenames: false

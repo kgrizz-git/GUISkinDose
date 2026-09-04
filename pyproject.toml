@@ -1,6 +1,6 @@
 [project]
-name = "mypyskindose"
-version = "25.2.0"
+name = "guiskindose"
+version = "1.0.0"
 description = "Tools and script for calculating peak skin dose and create dose maps for fluoroscopic exams from RDSR data (fork of PySkinDose)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,7 +39,7 @@ gui = ["nicegui>=2.0.0", "pytest-asyncio>=0.24"]
 gui-native = ["nicegui>=2.0.0", "pywebview", "pytest-asyncio>=0.24"]
 # Rich report export backends (PDF via reportlab, DOCX via python-docx) are now
 # core dependencies so exports work out of the box. This extra is retained as a
-# no-op alias so existing `pip install mypyskindose[export]` commands still work.
+# no-op alias so existing `pip install guiskindose[export]` commands still work.
 export = ["reportlab>=4.0", "python-docx>=1.1"]
 # Sphinx site (docs/source/conf.py); nbsphinx executes the getting-started
 # notebook, so it needs a kernel + ipywidgets at build time. Used by
@@ -88,18 +88,19 @@ dev = [
     "pip-audit>=2.7",
     "bandit>=1.8",
     "semgrep>=1.100",
-    "safety>=3.0",
     "shellcheck-py>=0.11",
     "pre-commit>=4.0",
     "pytest>=7.0",
     "pytest-cov>=5.0",
     "pytest-xdist>=3.5",
     "diff-cover>=10.0",
-    "nltk>=3.10.3",  # transitive via safety; explicit pin for PYSEC-2026-3726 / GHSA-vp2x-qp44-57v7
     "ruff>=0.15,<0.17",
     "playwright>=1.40",
     "pytest-playwright>=0.4",
 ]
+
+[project.scripts]
+guiskindose = "guiskindose.__main__:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -108,11 +109,13 @@ zip-safe = false
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["mypyskindose*"]
-exclude = ["mypyskindose.egg-info*", "pyskindose.egg-info*"]
+include = ["guiskindose*"]
+exclude = ["guiskindose.egg-info*"]
 
 
-[project-urls]
+[project.urls]
+# URLs track the GitHub repository, which still carries the pre-rename
+# slug until the GUISkinDose GitHub rename plan executes (GitHub redirects).
 "Homepage" = "https://github.com/kgrizz-git/MyPySkinDose"
 "Bug Tracker" = "https://github.com/kgrizz-git/MyPySkinDose/issues"
 "Documentation" = "https://github.com/kgrizz-git/MyPySkinDose/tree/main/docs"
@@ -148,25 +151,25 @@ select = ["E4", "E7", "E9", "F", "B", "C4", "FURB", "I", "PYI", "RUF", "SIM", "U
 "tests/unittests/test_path_safety.py" = ["E402"]
 "scripts/phantom_gen/transform_to_psd_frame.py" = ["RUF002"]
 "scripts/phantom_gen/validate_phantom.py" = ["RUF002"]
-"src/mypyskindose/calculate_dose/add_correction_and_event_dose_to_output.py" = ["RUF003"]
-"src/mypyskindose/cli_kerma_meter.py" = ["RUF001"]
-"src/mypyskindose/corrections.py" = ["RUF002", "RUF003"]
-"src/mypyskindose/export/metrics.py" = ["RUF002", "RUF003"]
-"src/mypyskindose/export/models.py" = ["RUF002", "RUF003"]
-"src/mypyskindose/export/payload.py" = ["RUF002"]
-"src/mypyskindose/geom_calc.py" = ["RUF001", "RUF003"]
-"src/mypyskindose/grid_interp.py" = ["RUF002"]
-"src/mypyskindose/gui/exam_transforms.py" = ["RUF002"]
-"src/mypyskindose/gui/helpers.py" = ["RUF002"]
-"src/mypyskindose/gui/state.py" = ["RUF003"]
-"src/mypyskindose/gui/tabs/_per_exam.py" = ["RUF001", "SIM117"]
-"src/mypyskindose/gui/tabs/results_builders.py" = ["SIM117"]
-"src/mypyskindose/gui/tabs/settings.py" = ["SIM117"]
-"src/mypyskindose/gui/tabs/upload_builders.py" = ["SIM117"]
-"src/mypyskindose/gui/widgets/import_preview.py" = ["RUF001"]
-"src/mypyskindose/gui/window_prefs.py" = ["RUF002"]
-"src/mypyskindose/input_adapters/tabular_loader.py" = ["RUF002"]
-"src/mypyskindose/settings/kerma_meter_correction_settings.py" = ["RUF002"]
+"src/guiskindose/calculate_dose/add_correction_and_event_dose_to_output.py" = ["RUF003"]
+"src/guiskindose/cli_kerma_meter.py" = ["RUF001"]
+"src/guiskindose/corrections.py" = ["RUF002", "RUF003"]
+"src/guiskindose/export/metrics.py" = ["RUF002", "RUF003"]
+"src/guiskindose/export/models.py" = ["RUF002", "RUF003"]
+"src/guiskindose/export/payload.py" = ["RUF002"]
+"src/guiskindose/geom_calc.py" = ["RUF001", "RUF003"]
+"src/guiskindose/grid_interp.py" = ["RUF002"]
+"src/guiskindose/gui/exam_transforms.py" = ["RUF002"]
+"src/guiskindose/gui/helpers.py" = ["RUF002"]
+"src/guiskindose/gui/state.py" = ["RUF003"]
+"src/guiskindose/gui/tabs/_per_exam.py" = ["RUF001", "SIM117"]
+"src/guiskindose/gui/tabs/results_builders.py" = ["SIM117"]
+"src/guiskindose/gui/tabs/settings.py" = ["SIM117"]
+"src/guiskindose/gui/tabs/upload_builders.py" = ["SIM117"]
+"src/guiskindose/gui/widgets/import_preview.py" = ["RUF001"]
+"src/guiskindose/gui/window_prefs.py" = ["RUF002"]
+"src/guiskindose/input_adapters/tabular_loader.py" = ["RUF002"]
+"src/guiskindose/settings/kerma_meter_correction_settings.py" = ["RUF002"]
 "tests/gui/test_multi_exam_gui.py" = ["RUF002", "RUF003"]
 "tests/unittests/test_export_payload.py" = ["RUF002"]
 "tests/unittests/test_gui_offset_reset.py" = ["RUF002"]
@@ -176,10 +179,10 @@ select = ["E4", "E7", "E9", "F", "B", "C4", "FURB", "I", "PYI", "RUF", "SIM", "U
 
 [tool.basedpyright]
 pythonVersion = "3.11"
-include = ["src/mypyskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
+include = ["src/guiskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
 exclude = [
     "**/__pycache__",
-    "src/mypyskindose/table_data",
+    "src/guiskindose/table_data",
     "tests/manual_tests",
     # Headless Blender/MPFB tooling: bpy/trimesh/numpy-stl stubs are incomplete.
     "scripts/phantom_gen",
@@ -200,7 +203,7 @@ exclude_dirs = [
     "build",
     "dist",
     "backups",
-    "src/mypyskindose/table_data",
+    "src/guiskindose/table_data",
 ]
 # Application code only; tests excluded above. CI fails on medium+ severity (see HARNESS_ENGINEERING.md).
 skips = ["B101"]
@@ -218,8 +221,10 @@ ignore = [
     "PYSEC-2026-2132",
     # mcp 1.23.3 is pinned exactly by semgrep; GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
     # are fixed in mcp >=1.27.2 / >=1.28.1. Suppress until semgrep relaxes or bumps the pin. mcp is only
-    # pulled in for the optional Semgrep MCP server path and is not used by MyPySkinDose runtime code.
+    # pulled in for the optional Semgrep MCP server path and is not used by GUISkinDose runtime code.
     "GHSA-jpw9-pfvf-9f58",
     "GHSA-hvrp-rf83-w775",
     "GHSA-vj7q-gjh5-988w",
 ]
+# No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared
+# with the safety dev dependency (nltk was safety-only; see CHANGELOG [1.0.0] `### Removed`).

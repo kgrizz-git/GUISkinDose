@@ -17,16 +17,16 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from mypyskindose import load_settings_example_json
-from mypyskindose.constants import (
+from guiskindose import load_settings_example_json
+from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
     KEY_NORMALIZATION_FILTER_SIZE_COPPER,
     KEY_NORMALIZATION_KVP,
     KEY_NORMALIZATION_MODEL_NAME,
 )
-from mypyskindose.corrections import calculate_k_tab
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.corrections import calculate_k_tab
+from guiskindose.settings import PyskindoseSettings
 
 _FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "golden" / "k_tab_golden.json"
 
@@ -36,7 +36,7 @@ def _restore_logger_level():
     """Ensure the suite's logging state is permissive enough for the per-test
     WARNING handler to receive records. Does NOT silence the logger (we need the
     WARNING records to classify exact/interpolated/clamped/fallback status)."""
-    logger = logging.getLogger("mypyskindose")
+    logger = logging.getLogger("guiskindose")
     original_level = logger.level
     original_disabled = logger.disabled
     if logger.level > logging.WARNING or logger.disabled:
@@ -60,7 +60,7 @@ def _run_k_tab(case: dict) -> tuple[float, str]:
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose")
+    logger = logging.getLogger("guiskindose")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:

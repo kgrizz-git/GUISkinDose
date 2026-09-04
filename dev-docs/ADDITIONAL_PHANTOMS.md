@@ -1,6 +1,6 @@
 # Additional Anthropomorphic Phantoms
 
-Reference for expanding MyPySkinDose’s human STL library: what is already shipped, preferred generation paths, external sources, and the mesh requirements the dose engine depends on.
+Reference for expanding GUISkinDose’s human STL library: what is already shipped, preferred generation paths, external sources, and the mesh requirements the dose engine depends on.
 
 For the **agent-executable generation pipeline** (catalog, headless MPFB/Blender, validation gates), see [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md). This page is the broader source survey and integration checklist; that plan is the runbook.
 
@@ -10,7 +10,7 @@ Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDIN
 
 ## Currently shipped meshes
 
-Human meshes live in `src/mypyskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
+Human meshes live in `src/guiskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
 globs `*.stl` and **excludes** any `*_reduced_*` preview variants. Prefer the runtime mesh list
 (or `get_human_mesh_names()`) over treating any table here as a frozen census — stems may be
 trimmed as the catalog settles.
@@ -40,7 +40,7 @@ not for shipping new body shapes (see below).
 
 **Policy:** shipped phantoms must have **true shape variety** (parametric phenotype / regional morph targets), not global affine stretches of existing STLs.
 
-1. **Headless MPFB under Blender** — primary path. Catalog presets + `scripts/phantom_gen/` produce full-body meshes in the MyPySkinDose frame. See [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phases 0–4 complete; v1 catalog meshes shipped).
+1. **Headless MPFB under Blender** — primary path. Catalog presets + `scripts/phantom_gen/` produce full-body meshes in the GUISkinDose frame. See [`plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md`](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md) (Phases 0–4 complete; v1 catalog meshes shipped).
 2. **MakeHuman standalone GUI** — same asset family as MPFB; use only if headless automation is blocked and a hybrid hand-export path is explicitly approved. Extreme-weight models are not Class-III bariatric fidelity.
 3. **GUI `scale_*` on a shipped mesh** — acceptable for interactive “what if” habitus checks; **not** a shipping method for new catalog rows.
 
@@ -88,7 +88,7 @@ TCIA + Slicer remains the best **manual** fallback for a real bariatric surface 
 
 Clinical catalogs stay anatomical. Separately, it can be useful (and fun) to ship or demo **non-clinical** humanoids: low-poly game characters, MakeHuman cartoon morphs, and classical / historical figures.
 
-**Input formats:** MyPySkinDose loads **binary `.stl`**. Candidate sources may ship `.stl`, `.obj`, `.ply`, `.fbx`, or `.glTF` — convert in Blender or MeshLab, then run the [integration checklist](#integration-checklist).
+**Input formats:** GUISkinDose loads **binary `.stl`**. Candidate sources may ship `.stl`, `.obj`, `.ply`, `.fbx`, or `.glTF` — convert in Blender or MeshLab, then run the [integration checklist](#integration-checklist).
 
 **Short version:**
 
@@ -144,7 +144,7 @@ Ordered by fit for this project:
 
 ## Integration checklist
 
-Dropping a file into `src/mypyskindose/phantom_data/{name}.stl` is enough for discovery (`print_available_human_phantoms()` and the GUI mesh selector). It is **not** enough for correct PSD. Before committing:
+Dropping a file into `src/guiskindose/phantom_data/{name}.stl` is enough for discovery (`print_available_human_phantoms()` and the GUI mesh selector). It is **not** enough for correct PSD. Before committing:
 
 ### Frame and units
 

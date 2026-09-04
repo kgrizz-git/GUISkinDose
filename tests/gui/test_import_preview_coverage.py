@@ -8,10 +8,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mypyskindose.gui.helpers import load_tabular
-from mypyskindose.gui.page_context import PageContext
-from mypyskindose.gui.state import state
-from mypyskindose.gui.widgets import import_preview as ip
+from guiskindose.gui.helpers import load_tabular
+from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.state import state
+from guiskindose.gui.widgets import import_preview as ip
 
 pytest.importorskip("nicegui")
 

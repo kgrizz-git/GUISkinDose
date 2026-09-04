@@ -6,11 +6,11 @@ from pathlib import Path
 
 from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
 
-import mypyskindose.constants as c
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.settings import PyskindoseSettings
+import guiskindose.constants as c
+from guiskindose.phantom_class import Phantom
+from guiskindose.settings import PyskindoseSettings
 
-phantom_path = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"
+phantom_path = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "phantom_data"
 
 param = PyskindoseSettings(DEVELOPMENT_PARAMETERS)
 

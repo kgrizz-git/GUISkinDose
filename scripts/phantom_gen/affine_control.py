@@ -6,7 +6,7 @@ Used only for anti-balloon shape tests — never shipped as a phantom.
 Usage::
 
     python scripts/phantom_gen/affine_control.py \\
-      --base src/mypyskindose/phantom_data/adult_male.stl \\
+      --base src/guiskindose/phantom_data/adult_male.stl \\
       --match tmp/phantom_gen/spike_pediatric.stl \\
       -o tmp/phantom_gen/control_pediatric.stl
 """

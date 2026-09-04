@@ -6,9 +6,9 @@ from scripts.check_ignored_asset_files import check_ignored_asset_files
 
 
 def test_no_warnings_for_clean_repo_state():
-    git_ls = "src/mypyskindose/main.py\ndocs/source/user/figures/ExampleSkinDoseMap.png\n"
+    git_ls = "src/guiskindose/main.py\ndocs/source/user/figures/ExampleSkinDoseMap.png\n"
     git_status = (
-        " M src/mypyskindose/main.py\n"
+        " M src/guiskindose/main.py\n"
         "!! PlotOutputs/dosemap.html\n"
         "!! PlotOutputs/right.png\n"
     )

@@ -8,8 +8,8 @@ if this page and the adapters disagree, trust the adapters and update this file.
 | [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | End-to-end input paths, units, offsets, DataFrame contract narrative |
 | [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md) | How tabular schemas are auto-detected |
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor frames and `Tx`/`Ty`/`Tz` meaning |
-| `src/mypyskindose/input_adapters/*.py` | Per-schema column name patterns and required sets |
-| `src/mypyskindose/constants.py` (`KEY_NORMALIZATION_*`) | Canonical string keys used in code |
+| `src/guiskindose/input_adapters/*.py` | Per-schema column name patterns and required sets |
+| `src/guiskindose/constants.py` (`KEY_NORMALIZATION_*`) | Canonical string keys used in code |
 
 ---
 

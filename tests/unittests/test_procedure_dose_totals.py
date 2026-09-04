@@ -10,9 +10,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mypyskindose.export._format import fmt_duration
-from mypyskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
-from mypyskindose.input_adapters.base import (
+from guiskindose.export._format import fmt_duration
+from guiskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
+from guiskindose.input_adapters.base import (
     AdapterContext,
     attach_procedure_dose_totals,
     convert_dap_series_to_gym2,

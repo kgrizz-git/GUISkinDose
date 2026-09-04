@@ -9,12 +9,12 @@ six remaining GUI findings in that phase:
 
 | Component | Function | Baseline complexity |
 |---|---|---:|
-| [export.py](../../../src/mypyskindose/gui/tabs/export.py#L82) | `build` | 72 |
-| [_per_exam.py](../../../src/mypyskindose/gui/tabs/_per_exam.py#L36) | `build_per_exam_section` | 42 |
-| [calculate.py](../../../src/mypyskindose/gui/tabs/calculate.py#L70) | `build` | 32 |
-| [data.py](../../../src/mypyskindose/gui/tabs/data.py#L38) | `build` | 27 |
-| [geometry_preview.py](../../../src/mypyskindose/gui/geometry_preview.py#L13) | `geometry_vendor_notice` | 17 |
-| [import_preview.py](../../../src/mypyskindose/gui/widgets/import_preview.py#L37) | `build` | 46 |
+| [export.py](../../../src/guiskindose/gui/tabs/export.py#L82) | `build` | 72 |
+| [_per_exam.py](../../../src/guiskindose/gui/tabs/_per_exam.py#L36) | `build_per_exam_section` | 42 |
+| [calculate.py](../../../src/guiskindose/gui/tabs/calculate.py#L70) | `build` | 32 |
+| [data.py](../../../src/guiskindose/gui/tabs/data.py#L38) | `build` | 27 |
+| [geometry_preview.py](../../../src/guiskindose/gui/geometry_preview.py#L13) | `geometry_vendor_notice` | 17 |
+| [import_preview.py](../../../src/guiskindose/gui/widgets/import_preview.py#L37) | `build` | 46 |
 
 The function name in `_per_exam.py` is deliberately recorded as
 `build_per_exam_section`, not `build`. Reconfirm rule/component/line against the
@@ -118,7 +118,7 @@ uv run pytest tests/gui/test_gui_flows.py \
   tests/gui/test_gui_security.py \
   tests/gui/test_gui_results_refresh.py \
   tests/gui/test_results_per_exam_dosemap.py
-uv run ruff check src/mypyskindose/gui tests
+uv run ruff check src/guiskindose/gui tests
 uv run basedpyright
 ```
 

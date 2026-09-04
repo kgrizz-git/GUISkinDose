@@ -11,11 +11,11 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from mypyskindose.input_adapters.base import (
+from guiskindose.input_adapters.base import (
     AdapterContext,
     convert_field_with_header_units,
 )
-from mypyskindose.rdsr_normalizer import RdsrUnitError, _verify_expected_units
+from guiskindose.rdsr_normalizer import RdsrUnitError, _verify_expected_units
 
 
 def _ctx(source_header: str, target_col: str) -> AdapterContext:

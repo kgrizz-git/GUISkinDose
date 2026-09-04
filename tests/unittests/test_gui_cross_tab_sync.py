@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.state import AppState
+from guiskindose.gui.state import AppState
 
 
 def test_tab_change_to_geometry_refreshes_callbacks():

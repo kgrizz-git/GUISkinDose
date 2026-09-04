@@ -9,7 +9,7 @@ import pytest
 # exam_loaders transitively imports NiceGUI via page_context; skip in core CI.
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.exam_loaders import _record_load_failure
+from guiskindose.gui.exam_loaders import _record_load_failure
 
 
 def test_load_failure_log_suppresses_exception_message() -> None:
@@ -20,7 +20,7 @@ def test_load_failure_log_suppresses_exception_message() -> None:
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose.gui.exam_loaders")
+    logger = logging.getLogger("guiskindose.gui.exam_loaders")
     handler = _Capture(level=logging.ERROR)
     logger.addHandler(handler)
     try:

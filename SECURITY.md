@@ -37,7 +37,7 @@ Do not paste identifiers into public issues or pull requests.
 
 ## Scope notes
 
-MyPySkinDose is research / education / development / QA-oriented software and is
+GUISkinDose is research / education / development / QA-oriented software and is
 **not FDA-cleared**. Security reports about dose accuracy for clinical care are
 out of scope for this policy unless they involve a concrete software defect that
 misleads users about calculation inputs or outputs; clinical judgment remains

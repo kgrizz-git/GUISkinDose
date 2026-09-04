@@ -20,12 +20,12 @@ from types import SimpleNamespace
 import pydicom
 import pytest
 
-from mypyskindose import get_path_to_example_rdsr_files, load_settings_example_json
-from mypyskindose.analyze_data import analyze_data
-from mypyskindose.format_export_data import EXPORT_SCHEMA_VERSION
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.analyze_data import analyze_data
+from guiskindose.format_export_data import EXPORT_SCHEMA_VERSION
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 _EXPECTED_TOP_KEYS = {
@@ -45,7 +45,7 @@ _EXPECTED_TOP_KEYS = {
 @pytest.fixture(autouse=True)
 def _quiet_logs():
     """The calculation logs verbosely at DEBUG; keep test output readable."""
-    logging.getLogger("mypyskindose").setLevel(logging.WARNING)
+    logging.getLogger("guiskindose").setLevel(logging.WARNING)
     yield
 
 
@@ -119,7 +119,7 @@ def test_dose_map_is_sparse_positive_entries():
 pytest.importorskip("nicegui")
 # The provenance helpers were relocated from app.py to io_helpers.py (refactor
 # plan Phase 3.3b); io_helpers has no nicegui dependency of its own.
-import mypyskindose.gui.io_helpers as gui_io
+import guiskindose.gui.io_helpers as gui_io
 
 
 def _fake_provenance():
@@ -159,19 +159,19 @@ def test_inject_html_meta_inserts_comment_after_head():
     html = b"<html><head><title>x</title></head><body>map</body></html>"
     meta = {"schema": "dosetrack", "warnings": []}
     out = gui_io._inject_html_tabular_meta(html, meta)
-    assert b"mypyskindose:tabular_input" in out
+    assert b"guiskindose:tabular_input" in out
     assert b"<body>map</body>" in out  # original content preserved
     # comment appears exactly once
-    assert out.count(b"mypyskindose:tabular_input") == 1
+    assert out.count(b"guiskindose:tabular_input") == 1
     # and is positioned immediately after the OPENING <head>, before <title>
     # (guards against anchoring on </head> or elsewhere).
-    comment_pos = out.index(b"mypyskindose:tabular_input")
+    comment_pos = out.index(b"guiskindose:tabular_input")
     title_pos = out.index(b"<title>")
     head_close_pos = out.index(b"</head>")
     assert comment_pos < title_pos, "comment must precede <title> (right after opening <head>)"
     assert comment_pos < head_close_pos, "comment must be inside the head, before </head>"
     # verify base64-encoded content decodes to the original meta
-    comment_start = out.index(b"mypyskindose:tabular_input ") + len(b"mypyskindose:tabular_input ")
+    comment_start = out.index(b"guiskindose:tabular_input ") + len(b"guiskindose:tabular_input ")
     comment_end = out.index(b" -->", comment_start)
     encoded = out[comment_start:comment_end].decode("ascii")
     decoded = json.loads(base64.b64decode(encoded).decode("utf-8"))
@@ -187,4 +187,4 @@ def test_inject_html_meta_noop_without_head():
 def test_inject_html_meta_only_first_head_annotated():
     html = b"<head>A</head><head>B</head>"
     out = gui_io._inject_html_tabular_meta(html, {"schema": "x"})
-    assert out.count(b"mypyskindose:tabular_input") == 1
+    assert out.count(b"guiskindose:tabular_input") == 1

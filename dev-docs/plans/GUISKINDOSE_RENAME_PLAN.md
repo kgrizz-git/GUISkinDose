@@ -1,13 +1,23 @@
 # GUISkinDose Rename Plan
 
+**First package version (locked): `1.0.0`**
+
+GUISkinDose / `guiskindose` starts at SemVer **`1.0.0`**. That is a new PyPI and import
+identity: not MyPySkinDose `26.0.0`, not a patch on `25.2.0`, and not an imitation of
+upstream PySkinDose's calendar line. Historical `CHANGELOG.md` sections through `[25.2.0]`
+stay MyPySkinDose history. `pyproject.toml` remains `25.2.0` until the PR 1 packaging
+commit that sets `name = "guiskindose"` and `version = "1.0.0"` together. Release notes
+must say this was formerly MyPySkinDose `25.2.0` / a fork of PySkinDose.
+
 **Scope:** In-repo rename of the Python package from `mypyskindose` to `guiskindose` and the
 user-facing brand from "MyPySkinDose" to "GUISkinDose".
 
 **Does not include:** GitHub repository rename, PyPI first publish, fixture sanitization, or
-Trusted Publishing. Those stay in
-[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md)
-(Phases 5B–7). This file is the mechanical-rename execution plan that republication Phase 5A
-points at.
+Trusted Publishing. GitHub/Sonar/live-URL follow-up is
+[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) (after this PR is on
+`main`; not blocked on PyPI). Fixture sanitization and first publish stay in
+[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
+This file is the mechanical-rename execution plan that republication Phase 5A points at.
 
 **Scale (re-count immediately before execution):** git-tracked files containing `mypyskindose`,
 plus upstream `PySkinDose` attribution lines (intentionally preserved). Snapshot from plan
@@ -21,12 +31,15 @@ authoring was ~320 files / ~2,140 matching lines; that count drifts as other wor
 |------|--------|
 | `src/` directory rename, imports, tests, scripts, CI paths, docs brand strings, config migration, stale-brand check | **This plan** |
 | `[project.scripts]` `guiskindose` console command (new; today only `python -m`) | **This plan** (identity) |
-| Wheel/sdist clean-install verification, TestPyPI, version-line decision, Trusted Publishing | Republication Phase 5B |
-| NOTICE/provenance, GitHub fork rename, fork-banner preservation | Republication Phases 5C and 7 |
+| Wheel/sdist clean-install verification, TestPyPI, Trusted Publishing | Republication Phase 5B |
+| First GUISkinDose version (`1.0.0`) | **This plan** (Phase 0; packaging commit in PR 1) |
+| GitHub repo rename, Sonar key, live `github.com/kgrizz-git/MyPySkinDose` URLs | **[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md)** (after this PR) |
+| NOTICE/provenance; privacy sign-off if GUISkinDose should mean a sanitized launch | Republication Phases 5C, 6, 7 |
 | DICOM/tabular sanitization and scanner gates | Republication Phases 1–4, 6 |
 
 Do not re-list replacement tables in the republication plan. If the two documents disagree,
-this file wins for mechanical rename; republication wins for publication and GitHub rename.
+this file wins for mechanical rename; [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md)
+wins for GitHub/Sonar/live URLs; republication wins for publication and fixture sanitization.
 
 ---
 
@@ -36,6 +49,7 @@ this file wins for mechanical rename; republication wins for publication and Git
 |---------|-----|-----|
 | Python package / import path | `mypyskindose` | `guiskindose` |
 | PyPI distribution name | `mypyskindose` | `guiskindose` |
+| First `guiskindose` SemVer | `25.2.0` (live MyPySkinDose line) | **`1.0.0`** (locked; set with the package name) |
 | User-facing brand / display | "MyPySkinDose" | "GUISkinDose" |
 | CLI invocation | `python -m mypyskindose` | `python -m guiskindose` |
 | Console script (new) | *(none)* | `guiskindose` via `[project.scripts]` |
@@ -49,7 +63,7 @@ this file wins for mechanical rename; republication wins for publication and Git
 | HTML comment marker | `mypyskindose:tabular_input` | `guiskindose:tabular_input` |
 | HTML meta tag | `mypyskindose_version` | `guiskindose_version` |
 | Environment variable | `MYPYSKINDOSE_SHOW_DEMO_PHANTOMS` | `GUISKINDOSE_SHOW_DEMO_PHANTOMS` (keep reading the old name) |
-| GitHub URLs / Sonar project key | `kgrizz-git/MyPySkinDose` | **Only after** the GitHub/SonarCloud projects are actually renamed |
+| GitHub URLs / Sonar project key | `kgrizz-git/MyPySkinDose` | **Only after** [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) actually renames GitHub and SonarCloud |
 
 ### What stays as-is (upstream attribution and Semgrep IDs)
 
@@ -101,6 +115,29 @@ Required behavior:
 
 ---
 
+## Post-PR-1 retirement (future; tracked in `TO_DO.md`)
+
+Three independent pieces, each with its own trigger:
+
+1. **Semgrep rules-file rename** — `.semgrep/mypyskindose-privacy.yml` →
+   `.semgrep/guiskindose-privacy.yml`. This plan's Phase instruction that was **not executed in
+   PR 1**. Any time; atomic with the path updates in `scripts/run_semgrep_privacy.py` and
+   `tests/unittests/test_privacy_semgrep_rules.py`. Standalone or riding any suitable PR — it is
+   **not** part of the GitHub-rename plan (whose "Do not" list defers rule-ID changes).
+2. **Rule-ID rename** (`mypyskindose-*` → `guiskindose-*`) — internal branding only; no user
+   migration dependency. Any time as one atomic commit: the six YAML `id:`s, the live
+   `# nosemgrep:` comment(s) (currently one, in `src/guiskindose/__init__.py`), the rule-ID
+   assertions in `tests/unittests/test_privacy_semgrep_rules.py`, and the stale-brand allowlist
+   entries for rule IDs and nosemgrep comments in `scripts/check_stale_brand.py`.
+3. **Config/env shim removal** — only after the user-migration window (maintainer decision;
+   suggested criterion: the first maintenance release ~6 months after `1.0.0` publishes on PyPI,
+   or earlier if issue reports show migration is complete). Remove the legacy reads (legacy
+   home config dir, repo-local legacy config JSON, legacy env var, and the dual
+   traceback-prefix tuple in `privacy.py`) and prune the matching stale-brand allowlist
+   patterns in `scripts/check_stale_brand.py`.
+
+---
+
 ## Re-count before execution
 
 If **any** other work lands on `main` (or this branch is rebased) before implementation, re-run
@@ -142,8 +179,11 @@ Also re-check:
 4. Confirm `guiskindose` is available on PyPI/TestPyPI (this fork has **not** published
    `mypyskindose` yet — see [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)).
 5. Keep `PySkinDoseOutput` (public upstream API). A later rename is a separate PR.
-6. Decide the first GUISkinDose version in `pyproject.toml` (breaking identity change; do not
-   ship it as a silent patch). Record the choice in `CHANGELOG.md` Unreleased before merge.
+6. **Decided:** first GUISkinDose version is **`1.0.0`**. This is a new PyPI/import identity,
+   not a calendar continuation of MyPySkinDose `25.2.0` and not an imitation of upstream
+   PySkinDose. Do not bump `pyproject.toml` until the packaging commit that also sets
+   `name = "guiskindose"`. Changelog must state it was formerly MyPySkinDose `25.2.0` / a
+   fork of PySkinDose. Republication 5B still verifies tag/metadata consistency before publish.
 
 ### Phase 1 — Source directory rename
 
@@ -243,7 +283,8 @@ Bulk-replace imports under `tests/`. Special cases:
 
 1. **Stale-brand allowlist check** — pytest or `scripts/check_stale_brand.py` that fails if
    `mypyskindose` / `MyPySkinDose` / `MYPYSKINDOSE_` appear outside an explicit allowlist:
-   historical changelog sections, `plans/archive/`, `assessments/`, Semgrep rule IDs,
+   historical changelog sections (`CHANGELOG.md` Unreleased is scanned; the gate stops at
+   the first `## [25.` header), `plans/archive/`, `assessments/`, Semgrep rule IDs,
    `# nosemgrep: mypyskindose-*`, upstream PySkinDose attribution, this plan, the
    republication plan, `COORD_TRANSFORM_COMPARISON.md`, and `GUISKINDOSE_MIGRATION_STATUS.md`
    migration examples. Wire it into pre-commit and CI. A one-shot `rg` in Phase 8 is not enough.
@@ -270,10 +311,11 @@ brand only), `.pre-commit-config.yaml`, `.gitignore`, `uv.lock` (`uv lock` after
 `pyproject.toml`; do not `--upgrade` as part of the rename), `.phi-scanner.yml`, regenerate
 `.phi-scanbaseline`, `.github/workflows/ci.yml` coverage/bandit/compileall paths.
 
-**Do not** change `sonar.projectKey` / `sonar.projectName` until the SonarCloud project is
-renamed to match; a key change without that UI rename breaks `sonar-scan`. GitHub issue
+**Do not** change `sonar.projectKey` / `sonar.projectName` in this PR. GitHub issue
 templates: update `import mypyskindose` instructions and brand strings; leave
-`github.com/kgrizz-git/MyPySkinDose` links until the GitHub repo is renamed.
+`github.com/kgrizz-git/MyPySkinDose` links until
+[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md). A key change without
+the SonarCloud UI rename breaks `sonar-scan`.
 
 Add `[project.scripts] guiskindose = "guiskindose.__main__:cli"` (extract a `cli()` from
 `__main__.py` if needed). Republication Phase 5B still verifies the wheel exposes it.
@@ -403,10 +445,26 @@ name: `git mv`, Python imports/strings (except Semgrep rule IDs), tests (includi
 assertions if APP_NAME changes here), scripts, `MANIFEST.in`, `pyproject.toml`, CI, hooks,
 inventory path rewrite + render, phi-scan config/baseline, Semgrep includes, help registry,
 feature-doc matrix, doc-freshness paths, Sphinx RST regen, changelog Unreleased, version
-bump, and set `LIVE_PACKAGE_NAME` in `scripts/check_stale_brand.py` to `"guiskindose"` or
+bump to `1.0.0` with the `guiskindose` package name, and set `LIVE_PACKAGE_NAME` in `scripts/check_stale_brand.py` to `"guiskindose"` or
 `None` (search `TODO(PR1)`). Multiple commits **inside** this PR are fine (directory+imports+inventory first so a
 mid-PR checkout can be made buildable; then scripts/CI/docs). Do not open a second PR to
 `main` until this tip is green.
+
+#### PR 1 test contract (required)
+
+PR 0 tests freeze today's write-old / live-`mypyskindose` behavior. Invert or replace them
+in the **same** mechanical-rename PR. Do not keep assertions that saves still go to
+`~/.mypyskindose/` or that `LIVE_PACKAGE_NAME == "mypyskindose"`. Do not open a separate
+tests-only PR between PR 0 and PR 1.
+
+| Area | Current PR 0 lock | Required on the PR 1 tip |
+|------|-------------------|--------------------------|
+| Config write | `test_save_gui_config_still_writes_old_path`, `test_load_prefers_new_path_but_save_still_writes_old_path` | When both home files exist, a load–modify–save (onboarding dismiss or native-window prefs) updates the **new** path so the next startup reads it. New missing → still reads old. |
+| Stale-brand default | `test_live_package_name_pr1_todo_is_present` requires `LIVE_PACKAGE_NAME == "mypyskindose"` | Default is `"guiskindose"` or `None` so the live-tree gate is no longer a no-op. Keep fail-closed coverage (`test_stale_brand_fails_closed`). |
+| Console script | `cli()` exists; no `[project.scripts]` | `[project.scripts] guiskindose` points at `cli()`; a small entry-point test plus `python -m guiskindose --help` (runbook). |
+
+Bounded leftover-brand I/O and empty-`except` skipping already merged with PR 0; do not
+re-test those as a PR 1 prerequisite.
 
 Optional split **after** PR 1 (also green): display-only leftover `MyPySkinDose` →
 `GUISkinDose` if PR 1 kept `APP_NAME` on the old brand. Prefer doing brand + package
@@ -414,8 +472,9 @@ together unless the PR 1 diff is unreviewable.
 
 ### PR 2+ — not this plan
 
-GitHub repo rename, SonarCloud project key, ReadTheDocs slug, TestPyPI/Trusted Publishing:
-republication Phases 5B–7. Those stay red/wrong if done in PR 1 without the matching
+GitHub repo rename, SonarCloud project key, live GitHub URLs, ReadTheDocs slug:
+[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md). TestPyPI / Trusted
+Publishing: republication Phase 5B. Those stay red/wrong if done in PR 1 without the matching
 external rename.
 
 ---
@@ -450,14 +509,14 @@ merging a red slice.
 5. **Commit** with hooks on. If a hook auto-touches files (ruff, inventory markdown),
    amend only when the amend rules in the agent playbook allow it; otherwise a follow-up
    commit.
-6. **Validate** Phase 8 on the tip (`pytest`, coverage include path, `python -m
-   guiskindose --help`, stale-brand check, wheel install if time).
+6. **Validate** Phase 8 on the tip (`pytest` including the PR 1 test contract above,
+   coverage include path, `python -m guiskindose --help`, stale-brand check, wheel
+   install if time).
 7. **Push / PR** against `main`. If CI is red, fix on this branch; do not land a
    “docs-only follow-up” that leaves `main` unable to import `guiskindose`.
 
-A small helper (optional, can be PR 0) that rewrites inventory paths and prints leftover
-`rg mypyskindose` hits with the allowlist applied will save a review round. Do not add a
-permanent `mypyskindose` shim package.
+The leftover-brand scan helper (`scripts/rewrite_package_paths.py`) already landed in PR 0.
+Do not add a permanent `mypyskindose` shim package.
 
 ---
 
@@ -465,12 +524,15 @@ permanent `mypyskindose` shim package.
 
 1. **`PySkinDoseOutput`?** Keep. Separate PR if ever renamed.
 2. **GitHub repo rename?** Independent of this PR. Do not rewrite live
-   `github.com/kgrizz-git/MyPySkinDose` links or the Sonar project key in the mechanical-rename
-   PR. Republication Phase 7 owns the GitHub rename.
+   `github.com/kgrizz-git/MyPySkinDose` links or the Sonar project key here. Follow-up:
+   [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) (after this PR is on
+   `main`; not blocked on PyPI). Republication Phase 7 is verify-only if that plan already
+   landed.
 3. **PyPI `guiskindose` availability?** Confirm before starting Phase 1. This fork has not
    published `mypyskindose`.
-4. **First GUISkinDose version?** Record in Phase 0. Prefer a documented breaking bump of the
-   current `25.2.0` line over pretending this is a patch.
+4. **First GUISkinDose version?** **`1.0.0`.** New distribution identity; formerly MyPySkinDose
+   `25.2.0`. Set `pyproject.toml` and `docs/source/conf.py` `release` together in PR 1's
+   packaging commit. Do not ship `mypyskindose` as `1.0.0`.
 5. **Notebooks** under `tests/manual_tests/notebook_tests/` need JSON-aware edits and a
    post-rename execution check.
 6. **`[project.scripts]`?** Yes — add `guiskindose` in this rename (new surface, not a
@@ -484,7 +546,8 @@ Prefer executing this plan **before the first PyPI publish** and **before more l
 land**. Every week of GUI/privacy work adds `mypyskindose` strings and mock targets. Waiting
 for republication Phases 1–4 (fixture sanitization) is unnecessary: those can land before or
 after the import rename. Waiting for the GitHub repository rename is also unnecessary and
-would block the package rename on an unrelated operations step.
+would block the package rename on an unrelated operations step. Run
+[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) after this PR merges.
 
 Downsides of doing it now: a large but **single** CI-green PR 1 that conflicts with any
 parallel `src/` work; local privacy receipts (Presidio/HoundDog/DICOM) on that staged set;

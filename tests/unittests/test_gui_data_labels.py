@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose.gui.tabs.data import display_column_label
+from guiskindose.gui.tabs.data import display_column_label
 
 
 def test_table_position_columns_get_display_aliases():

@@ -342,6 +342,7 @@ def test_is_line_allowlisted_matches(line: str) -> None:
         "dev-docs/plans/archive/old_plan.md",
         "dev-docs/assessments/old.md",
         "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
         "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
         "dev-docs/COORD_TRANSFORM_COMPARISON.md",
     ],

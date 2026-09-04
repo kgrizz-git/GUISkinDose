@@ -40,12 +40,12 @@ def _cancel_leaked_timers() -> None:
 def _reset_state_singleton() -> None:
     """Reset the module-level ``AppState`` singleton in place.
 
-    ``mypyskindose.gui.state.state`` is a shared singleton that most GUI modules
+    ``guiskindose.gui.state.state`` is a shared singleton that most GUI modules
     import by reference, so reassigning it would not update those references.
     Copying a fresh instance's ``__dict__`` resets every field in place, giving
     each test a clean slate (no leaked ``rdsr_df`` / offsets / multi-exam flags).
     """
-    from mypyskindose.gui.state import AppState, state
+    from guiskindose.gui.state import AppState, state
 
     state.__dict__.clear()
     state.__dict__.update(AppState().__dict__)

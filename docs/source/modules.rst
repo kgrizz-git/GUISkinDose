@@ -1,7 +1,7 @@
-mypyskindose
+guiskindose
 ============
 
 .. toctree::
    :maxdepth: 4
 
-   mypyskindose
+   guiskindose

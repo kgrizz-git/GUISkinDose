@@ -8,6 +8,11 @@
 For the full release map (changelog vs GitHub notes, SemVer, portable executables, checklist), see
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
+**First GUISkinDose / `guiskindose` version is `1.0.0`** (new distribution identity;
+formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). This fork is **not currently
+published** to PyPI. Details:
+[dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
+
 ## How releasing works now
 
 `.github/workflows/release.yml` runs only on a **GitHub Release (`created`)** event. It:
@@ -25,11 +30,11 @@ Actions (`permissions: id-token: write`), so there is **no `PYPI_*` secret to le
 Trusted Publishing needs a one-time registration on PyPI so it will trust this repo:
 
 1. Sign in at <https://pypi.org> (create an account if needed).
-2. **If the `mypyskindose` project does not exist on PyPI yet**, add a *pending* publisher:
+2. **If the `guiskindose` project does not exist on PyPI yet**, add a *pending* publisher:
    PyPI → your account → **Publishing** → *Add a new pending publisher* with
-   - PyPI Project Name: `mypyskindose`
+   - PyPI Project Name: `guiskindose`
    - Owner: `kgrizz-git`
-   - Repository name: `MyPySkinDose`
+   - Repository name: `GUISkinDose`
    - Workflow name: `release.yml`
    - Environment: *(leave blank)*
 3. **If the project already exists**, do the same under

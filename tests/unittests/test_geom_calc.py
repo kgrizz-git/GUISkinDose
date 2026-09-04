@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from mypyskindose.geom_calc import Triangle, convert_from_m_to_cm, convert_from_mm_to_cm
+from guiskindose.geom_calc import Triangle, convert_from_m_to_cm, convert_from_mm_to_cm
 
 P = Path(__file__).parent.parent.parent
 sys.path.insert(1, str(P.absolute()))
@@ -94,9 +94,9 @@ def test_fetch_and_append_hvl_snaps_out_of_grid_events():
     """
     import pandas as pd
 
-    from mypyskindose import load_settings_example_json
-    from mypyskindose.geom_calc import fetch_and_append_hvl
-    from mypyskindose.settings import PyskindoseSettings
+    from guiskindose import load_settings_example_json
+    from guiskindose.geom_calc import fetch_and_append_hvl
+    from guiskindose.settings import PyskindoseSettings
 
     base = load_settings_example_json()
     base["mode"] = "calculate_dose"
@@ -125,15 +125,15 @@ def test_fetch_and_append_hvl_snaps_out_of_grid_events():
 def _hvl(kvp_list, cu_list, al_list=None):
     """Run fetch_and_append_hvl on a tiny synthetic frame, returning (HVL series,
     captured WARNING messages). Captures via a dedicated handler on the
-    ``mypyskindose`` logger so it is robust to suite-wide logging state (unlike
+    ``guiskindose`` logger so it is robust to suite-wide logging state (unlike
     pytest's ``caplog``, which depends on root-logger propagation)."""
     import logging
 
     import pandas as pd
 
-    from mypyskindose import load_settings_example_json
-    from mypyskindose.geom_calc import fetch_and_append_hvl
-    from mypyskindose.settings import PyskindoseSettings
+    from guiskindose import load_settings_example_json
+    from guiskindose.geom_calc import fetch_and_append_hvl
+    from guiskindose.settings import PyskindoseSettings
 
     base = load_settings_example_json()
     base["mode"] = "calculate_dose"
@@ -153,7 +153,7 @@ def _hvl(kvp_list, cu_list, al_list=None):
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose")
+    logger = logging.getLogger("guiskindose")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:
@@ -203,12 +203,12 @@ def test_fetch_and_append_hvl_on_grid_emits_no_warning():
 def _apply_policy(kvp_list, policy, manual_kvp=70.0):
     """Run apply_below_floor_kvp_policy on a synthetic frame, returning
     (resulting kVp list, captured WARNING messages). Captures via a dedicated
-    handler on the ``mypyskindose`` logger (robust to suite-wide logging state)."""
+    handler on the ``guiskindose`` logger (robust to suite-wide logging state)."""
     import logging
 
     import pandas as pd
 
-    from mypyskindose.geom_calc import apply_below_floor_kvp_policy
+    from guiskindose.geom_calc import apply_below_floor_kvp_policy
 
     data_norm = pd.DataFrame(
         {
@@ -224,7 +224,7 @@ def _apply_policy(kvp_list, policy, manual_kvp=70.0):
         def emit(self, record: logging.LogRecord) -> None:
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("mypyskindose")
+    logger = logging.getLogger("guiskindose")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:
@@ -240,7 +240,7 @@ def test_count_below_floor_events_returns_indices():
     """count_below_floor_events flags exactly the sub-25 kV rows by position."""
     import pandas as pd
 
-    from mypyskindose.geom_calc import count_below_floor_events
+    from guiskindose.geom_calc import count_below_floor_events
 
     df = pd.DataFrame({"kVp": [70.0, 10.0, 25.0, 0.003, 24.9]})
     # 25.0 is on the floor (not below); 10, 0.003, 24.9 are below.
@@ -280,7 +280,7 @@ def test_below_floor_policy_uses_positions_when_index_labels_repeat():
     """Only below-floor rows change when the input frame has duplicate index labels."""
     import pandas as pd
 
-    from mypyskindose.geom_calc import apply_below_floor_kvp_policy
+    from guiskindose.geom_calc import apply_below_floor_kvp_policy
 
     data_norm = pd.DataFrame(
         {

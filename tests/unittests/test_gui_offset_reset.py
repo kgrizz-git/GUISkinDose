@@ -12,9 +12,9 @@ import pytest
 
 pytest.importorskip("nicegui")
 
-from mypyskindose import get_path_to_example_rdsr_files
-from mypyskindose.gui.exam_loaders import _append_multi_study_exams
-from mypyskindose.gui.helpers import (
+from guiskindose import get_path_to_example_rdsr_files
+from guiskindose.gui.exam_loaders import _append_multi_study_exams
+from guiskindose.gui.helpers import (
     build_settings,
     commit_table_origin_transform,
     detected_table_origin,
@@ -29,10 +29,10 @@ from mypyskindose.gui.helpers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
-from mypyskindose.gui.page_context import PageContext
-from mypyskindose.gui.state import AppState
-from mypyskindose.gui.tabs.geometry import geometry_vendor_notice
-from mypyskindose.input_adapters.models import InputAdapterResult, InputProvenance
+from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.state import AppState
+from guiskindose.gui.tabs.geometry import geometry_vendor_notice
+from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 
 
 def _minimal_ctx() -> PageContext:
@@ -222,7 +222,7 @@ def test_on_global_patient_offset_change_invokes_refresh_per_exam():
         refreshed["called"] = True
 
     ctx.refresh_per_exam = _refresh
-    with patch("mypyskindose.gui.offset_handlers.state", st):
+    with patch("guiskindose.gui.offset_handlers.state", st):
         st.d_lon = 7.0
         on_global_patient_offset_change(ctx)
     assert refreshed["called"]
@@ -242,7 +242,7 @@ def test_remove_exam_restores_global_patient_offset_from_meta():
 
 def test_stage_table_origin_axis_does_not_call_apply():
     meta = {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
-    with patch("mypyskindose.gui.helpers.apply_exam_transforms") as mock_apply:
+    with patch("guiskindose.gui.helpers.apply_exam_transforms") as mock_apply:
         stage_table_origin_axis(meta, "x", 5.0)
     mock_apply.assert_not_called()
     assert meta["table_origin_override"]["x"] == 5.0
@@ -389,7 +389,7 @@ def test_on_global_patient_offset_scrub_syncs_meta():
     st.loaded_exams = [SimpleNamespace()]
     st.loaded_exam_meta = [{"d_lon": 0.0, "d_ver": 0.0, "d_lat": 0.0}]
     ctx = _minimal_ctx()
-    with patch("mypyskindose.gui.offset_handlers.state", st):
+    with patch("guiskindose.gui.offset_handlers.state", st):
         on_global_patient_offset_scrub(ctx)
     assert st.loaded_exam_meta[0]["d_lon"] == 3.0
 

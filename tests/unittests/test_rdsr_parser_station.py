@@ -9,18 +9,18 @@ import pytest
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence
 
-from mypyskindose import load_settings_example_json
-from mypyskindose.constants import (
+from guiskindose import load_settings_example_json
+from guiskindose.constants import (
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
     KEY_RDSR_DEVICE_SERIAL,
     KEY_RDSR_STATION_NAME,
 )
-from mypyskindose.rdsr_normalizer import rdsr_normalizer
-from mypyskindose.rdsr_parser import rdsr_parser
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
+from guiskindose.settings import PyskindoseSettings
 
-EXAMPLE_RDSR = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "example_data" / "RDSR"
+EXAMPLE_RDSR = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "example_data" / "RDSR"
 
 # Synthetic labels only — never log/assert site-specific strings beyond fixture stems.
 EXPECTED_PRESENT = {

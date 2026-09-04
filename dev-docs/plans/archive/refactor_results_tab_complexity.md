@@ -5,7 +5,7 @@
 
 This is the detailed companion to Phase 4.2 of
 [the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
-`build` in [results.py](../../../src/mypyskindose/gui/tabs/results.py#L50), whose
+`build` in [results.py](../../../src/guiskindose/gui/tabs/results.py#L50), whose
 baseline cognitive complexity is **128**.
 
 ---
@@ -16,7 +16,7 @@ Move layout and callback ownership into a new sibling module without importing
 the owner module back:
 
 ```text
-src/mypyskindose/gui/tabs/
+src/guiskindose/gui/tabs/
 ├── results.py              # public build(ctx), compatibility helpers as needed
 └── results_builders.py     # controller, UI references, layout builders
 ```
@@ -100,7 +100,7 @@ uv run pytest tests/gui/test_gui_results_refresh.py \
   tests/gui/test_results_per_exam_dosemap.py \
   tests/unittests/test_export_payload.py
 uv run pytest tests/gui/
-uv run ruff check src/mypyskindose/gui/tabs tests
+uv run ruff check src/guiskindose/gui/tabs tests
 uv run basedpyright
 ```
 

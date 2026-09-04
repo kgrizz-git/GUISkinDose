@@ -12,9 +12,9 @@ pytest.importorskip("nicegui")
 
 from nicegui import ui
 
-from mypyskindose.gui.page_context import PageContext
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import _per_exam as pe
+from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import _per_exam as pe
 
 
 def _ctx() -> PageContext:

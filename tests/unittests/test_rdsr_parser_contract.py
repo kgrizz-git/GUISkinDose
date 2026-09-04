@@ -5,9 +5,9 @@ from pathlib import Path
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence
 
-from mypyskindose.constants import KEY_RDSR_DETECTORSIZE_MM
-from mypyskindose.main import preview_input_file
-from mypyskindose.rdsr_parser import rdsr_parser
+from guiskindose.constants import KEY_RDSR_DETECTORSIZE_MM
+from guiskindose.main import preview_input_file
+from guiskindose.rdsr_parser import rdsr_parser
 
 
 def _code_sequence(code_meaning: str) -> Sequence:

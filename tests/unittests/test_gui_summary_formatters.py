@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mypyskindose.gui.summary_formatters import format_scale_cm_label
+from guiskindose.gui.summary_formatters import format_scale_cm_label
 
 
 def test_format_scale_cm_label_includes_scaled_centimeters() -> None:

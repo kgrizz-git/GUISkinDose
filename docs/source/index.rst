@@ -1,4 +1,4 @@
-Welcome to MyPySkinDose's documentation!
+Welcome to GUISkinDose's documentation!
 ========================================
 
 .. toctree::

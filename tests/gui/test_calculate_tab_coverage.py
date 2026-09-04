@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from nicegui.testing import User
 
-from mypyskindose.gui.helpers import load_tabular
-from mypyskindose.gui.page_context import PageContext
-from mypyskindose.gui.state import state
-from mypyskindose.gui.tabs import calculate as calc_tab
+from guiskindose.gui.helpers import load_tabular
+from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.state import state
+from guiskindose.gui.tabs import calculate as calc_tab
 
 pytest.importorskip("nicegui")
 

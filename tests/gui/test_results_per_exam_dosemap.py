@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from mypyskindose.gui.figures import extract_exam_dose_map
-from mypyskindose.gui.state import AppState, reset_results
-from mypyskindose.gui.tabs.results import can_show_more_inline, compute_subset_aggregate
+from guiskindose.gui.figures import extract_exam_dose_map
+from guiskindose.gui.state import AppState, reset_results
+from guiskindose.gui.tabs.results import can_show_more_inline, compute_subset_aggregate
 
 
 def _make_mock_exam_output(dose_map_pairs: list[tuple[int, float]], num_cells: int = 5):
@@ -64,7 +64,7 @@ def test_state_reset_clears_checkbox_state():
     state.aggregate_subset_exams = [False, True]
 
     # Patch the singleton temporarily or test via reset_results
-    from mypyskindose.gui import state as state_mod
+    from guiskindose.gui import state as state_mod
 
     old_state = state_mod.state
     try:

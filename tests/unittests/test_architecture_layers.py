@@ -1,10 +1,10 @@
 """
-Structural tests for MyPySkinDose package layer dependency rules (Harness Phase 4).
+Structural tests for GUISkinDose package layer dependency rules (Harness Phase 4).
 
 Scans import statements via AST (no import-linter dependency). Fails CI when
 high-value layer boundaries are violated.
 
-Inputs: Python sources under src/mypyskindose/
+Inputs: Python sources under src/guiskindose/
 Outputs: pytest pass/fail with module:line messages on violation
 """
 
@@ -13,47 +13,47 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "mypyskindose"
+PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "guiskindose"
 
 # Settings may only depend on shared utilities — not runtime/orchestration/presentation.
 SETTINGS_FORBIDDEN_PREFIXES = (
-    "mypyskindose.calculate_dose",
-    "mypyskindose.plotting",
-    "mypyskindose.gui",
-    "mypyskindose.analyze_data",
-    "mypyskindose.main",
-    "mypyskindose.format_export_data",
-    "mypyskindose.beam_class",
-    "mypyskindose.phantom_class",
-    "mypyskindose.geom_calc",
-    "mypyskindose.corrections",
-    "mypyskindose.db_connect",
-    "mypyskindose.rdsr_parser",
-    "mypyskindose.rdsr_normalizer",
+    "guiskindose.calculate_dose",
+    "guiskindose.plotting",
+    "guiskindose.gui",
+    "guiskindose.analyze_data",
+    "guiskindose.main",
+    "guiskindose.format_export_data",
+    "guiskindose.beam_class",
+    "guiskindose.phantom_class",
+    "guiskindose.geom_calc",
+    "guiskindose.corrections",
+    "guiskindose.db_connect",
+    "guiskindose.rdsr_parser",
+    "guiskindose.rdsr_normalizer",
 )
 
 CALCULATE_DOSE_FORBIDDEN_PREFIXES = (
-    "mypyskindose.gui",
-    "mypyskindose.plotting",
+    "guiskindose.gui",
+    "guiskindose.plotting",
 )
 
 GUI_FORBIDDEN_PREFIXES = (
-    "mypyskindose.calculate_dose",
+    "guiskindose.calculate_dose",
 )
 
 # input_adapters is L2 — must not reach into domain, dose, GUI, or orchestration.
 INPUT_ADAPTERS_FORBIDDEN_PREFIXES = (
-    "mypyskindose.calculate_dose",
-    "mypyskindose.plotting",
-    "mypyskindose.gui",
-    "mypyskindose.analyze_data",
-    "mypyskindose.main",
-    "mypyskindose.format_export_data",
-    "mypyskindose.beam_class",
-    "mypyskindose.phantom_class",
-    "mypyskindose.geom_calc",
-    "mypyskindose.corrections",
-    "mypyskindose.db_connect",
+    "guiskindose.calculate_dose",
+    "guiskindose.plotting",
+    "guiskindose.gui",
+    "guiskindose.analyze_data",
+    "guiskindose.main",
+    "guiskindose.format_export_data",
+    "guiskindose.beam_class",
+    "guiskindose.phantom_class",
+    "guiskindose.geom_calc",
+    "guiskindose.corrections",
+    "guiskindose.db_connect",
 )
 
 

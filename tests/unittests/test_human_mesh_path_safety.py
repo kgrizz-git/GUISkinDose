@@ -6,17 +6,17 @@ from pathlib import Path
 
 import pytest
 
-from mypyskindose import load_settings_example_json
-from mypyskindose.phantom_class import Phantom
-from mypyskindose.phantom_mesh_names import (
+from guiskindose import load_settings_example_json
+from guiskindose.phantom_class import Phantom
+from guiskindose.phantom_mesh_names import (
     assert_safe_human_mesh_stem,
     prefer_reduced_preview_stem,
     resolve_human_mesh_stem,
     resolve_human_mesh_stl_path,
 )
-from mypyskindose.settings import PyskindoseSettings
+from guiskindose.settings import PyskindoseSettings
 
-PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "mypyskindose" / "phantom_data"
+PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "phantom_data"
 
 
 @pytest.mark.parametrize(

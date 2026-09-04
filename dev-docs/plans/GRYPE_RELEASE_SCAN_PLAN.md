@@ -10,7 +10,9 @@ artifacts.
 
 ## Motivation
 
-CI already runs `pip-audit`, `safety`, and `bandit` against the *source* tree (see [SECURITY_TOOLS_CI_PLAN.md](SECURITY_TOOLS_CI_PLAN.md)). Grype scans a
+CI already runs `uv audit` (with a `pip-audit` fallback) and `bandit` against the *source* tree (see
+[SECURITY_TOOLS_CI_PLAN.md](archive/SECURITY_TOOLS_CI_PLAN.md), now archived — the `safety` scan it
+described was dropped in 1.0.0). Grype scans a
 **built artifact** (wheel/sdist), which catches vulnerabilities introduced by the build process
 itself (packaging metadata, included data files, transitive deps resolved at build time). This
 closes a gap identified in the

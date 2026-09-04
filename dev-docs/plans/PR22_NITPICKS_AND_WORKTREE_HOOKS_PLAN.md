@@ -187,7 +187,7 @@ Expected: All tests pass.
 In `dev-docs/TO_DO.md`:
 Update item 117 to clarify that `commit-msg` hook containment is resolved, while pre-push hook `PATH` tracking in worktrees remains active:
 ```markdown
-- [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `mypyskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
+- [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
 ```
 
 - [ ] **Step 7: Commit Task 2**
