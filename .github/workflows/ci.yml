@@ -278,6 +278,10 @@ jobs:
       run: uv run --no-sync python -m compileall src/guiskindose
     - name: Lint with ruff
       run: uv run --no-sync ruff check src tests
+    # test_packaging.py asserts wheel contents; without dist/ it would silently
+    # skip, so build the artifact in the same job that runs pytest.
+    - name: Build wheel (packaging test needs a real artifact)
+      run: uv build
     - name: Test with pytest
       # Cross-version test-pass matrix only (no coverage gate). Coverage is enforced at a single
       # 80% standard by coverage-pr (PRs) and sonar-scan (main); -n auto parallelizes.
