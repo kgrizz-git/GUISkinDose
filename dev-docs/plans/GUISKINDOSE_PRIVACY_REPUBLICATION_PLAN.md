@@ -4,8 +4,8 @@ _Status: Proposed_
 _Created: 2026-07-16_
 _Owners: Maintainers; coding agents may implement individual phases_
 _Predecessor: [PRIVACY_HARDENING_PLAN.md](PRIVACY_HARDENING_PLAN.md)_
-_Mechanical rename: [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) — execute that file for Phase 5A; do not duplicate replacement tables here._
-_GitHub/Sonar/live-URL follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) — after the mechanical rename is on `main`; not blocked on PyPI._
+_Mechanical rename: [GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md) — execute that file for Phase 5A; do not duplicate replacement tables here._
+_GitHub/Sonar/live-URL follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) — after the mechanical rename is on `main`; not blocked on PyPI._
 _Policy: [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md)_
 _Incident response: [PRIVACY_INCIDENT_RESPONSE.md](../PRIVACY_INCIDENT_RESPONSE.md)_
 
@@ -13,7 +13,7 @@ _Incident response: [PRIVACY_INCIDENT_RESPONSE.md](../PRIVACY_INCIDENT_RESPONSE.
 
 Finish the current privacy hardening, replace the public DICOM regression fixtures with conservatively sanitized
 derivatives, add targeted person-name and image/DICOM review tooling, complete the **GUISkinDose** / `guiskindose`
-identity change (mechanical steps live in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)), and publish
+identity change (mechanical steps live in [GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md)), and publish
 the renamed project by updating the existing GitHub fork without rewriting its history.
 
 The result should remain fully attributed to PySkinDose and retain GitHub's technical fork-network relationship.
@@ -66,7 +66,7 @@ availability before publication.
 continuation of MyPySkinDose `25.2.0` and not an imitation of upstream PySkinDose. Mechanical
 rename PR 1 sets `name = "guiskindose"` and `version = "1.0.0"` together; this plan's Phase 5B
 still verifies tag/changelog/metadata consistency before PyPI publish. Details:
-[GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md).
+[GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md).
 
 The first GUISkinDose release is an intentional breaking identity change:
 
@@ -111,10 +111,10 @@ rewriting; do not restart history merely as a cosmetic measure.
 ## 4. Delivery order
 
 Do not publish intermediate DICOMs, OCR reports, scanner reports, UID mappings, or unsanitized fixture bytes.
-The in-repo package rename ([GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)) **may merge to the public
+The in-repo package rename ([GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md)) **may merge to the public
 GitHub repository** before fixture sanitization; that is an identity change in code, not a GitHub rename.
 Do not publish to PyPI until Phase 7 / 5B exit criteria pass. GitHub/Sonar/live-URL rename may run
-earlier via [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) after the mechanical
+earlier via [GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) after the mechanical
 rename is on `main`. If that follow-up has already landed, Phase 7 is verify-only for the fork
 rename. Work on fixture sanitization locally or in an approved private environment until those
 artifacts are admitted.
@@ -127,10 +127,10 @@ artifacts are admitted.
 3. Create a private, access-controlled recovery bundle or clone outside the future publication tree. Do not add it to
    this repository or a cloud-synced scratch directory.
 4. Record the selected publication choice: retain and rename the existing GitHub fork without rewriting history.
-5. Lock the breaking rename boundary (details in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)): product
+5. Lock the breaking rename boundary (details in [GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md)): product
    `GUISkinDose`; distribution, import namespace, module launcher, and CLI `guiskindose`; first version **`1.0.0`**;
    no permanent old-namespace shim by default; private migration from `~/.mypyskindose/` settings. The GitHub
-   repository rename is [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) and is not a
+   repository rename is [GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) and is not a
    prerequisite for the in-repo package rename.
 6. Check availability and ownership of the `GUISkinDose` GitHub name, `guiskindose` distribution name, documentation
    hostname, and any package-publishing identities. Do not reserve or mutate external services without explicit
@@ -335,13 +335,13 @@ moment a path enters the index. An optional `git add` wrapper may warn earlier, 
 
 The in-repo mechanical rename **may land before Phases 1–4** (fixture sanitization) and **does not require**
 the GitHub repository rename. GitHub/Sonar/live URLs:
-[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md). Prefer completing the mechanical
+[GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md). Prefer completing the mechanical
 rename before the first PyPI publish. If other commits land first,
-re-run the inventories in [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) § Re-count before execution.
+re-run the inventories in [GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md) § Re-count before execution.
 
 #### 5A. Mechanical and behavioral rename
 
-Execute [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) in full. That file is the source of truth for
+Execute [GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md) in full. That file is the source of truth for
 directory/import replacement, Semgrep rule-ID exceptions, config/env migration, tests to add, **PR sequencing**
 (green prerequisites vs one CI-green mechanical PR; do not merge a partial `src/` rename), commit grouping,
 GitHub/Sonar URL gating, and the privacy-admission runbook (inventory path rewrite with unchanged hashes;
@@ -357,7 +357,7 @@ Exit criteria that this phase still owns (must be true after the rename PR merge
 5. A migration document (README plus changelog Unreleased) covers imports, CLI/module/console script, extras,
    configuration migration, environment variables, output metadata, and the absence of a permanent compatibility shim.
 6. Live `github.com/kgrizz-git/MyPySkinDose` URLs and the SonarCloud project key are left unchanged until
-   [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) actually renames those external
+   [GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) actually renames those external
    projects.
 
 #### 5B. Python packaging and release hygiene
@@ -374,7 +374,7 @@ Exit criteria that this phase still owns (must be true after the rename PR merge
    and `[project.scripts] guiskindose`). This phase still verifies before publish:
    - accurate description, Python requirement, license expression/files, maintainers, classifiers, keywords,
      dependencies/extras, and current project URLs (GitHub URLs still match the live repo name until
-       [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md));
+       [GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md));
    - package data explicitly includes required JSON, database, help, mesh, and example assets and excludes caches,
      `.DS_Store`, generated egg-info, tests, scanner output, and original unsanitized fixture bytes.
 5. Remove obsolete source-root packaging artifacts such as an unnecessary `src/__init__.py`; confirm generated
@@ -447,12 +447,12 @@ Exit criteria that this phase still owns (must be true after the rename PR merge
 ### Phase 7 — Verify and rename the existing fork
 
 Operational GitHub/Sonar/URL steps live in
-[GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md). Execute that checklist
-here if it has not already run after the mechanical rename. If it has, treat the GitHub/Sonar/URL
+[archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) (**complete**, 2026-09-04).
+If it has already run (it has), treat the GitHub/Sonar/URL
 items as verification only (fork banner, redirects, `origin`, remaining launch checks).
 
 1. Confirm the in-repo product/import/package rename from
-   [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md) is merged (or complete it here) and that remaining
+   [archive/GUISKINDOSE_RENAME_PLAN.md](archive/GUISKINDOSE_RENAME_PLAN.md) (**complete**, PR #73) is merged (or complete it here) and that remaining
    privacy changes are on the existing branch without rewriting any parent commit, tag, or ref.
    After the GitHub rename, update live `github.com/kgrizz-git/MyPySkinDose` links, `CITATION.cff` URLs,
    `sonar.projectKey` / `sonar.projectName` (only after the SonarCloud project is renamed to match), and

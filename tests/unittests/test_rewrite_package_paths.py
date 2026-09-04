@@ -256,7 +256,7 @@ def test_scan_leftover_brand_allowlists_archive_and_plan_paths(tmp_path: Path) -
     )
     _write(
         tmp_path,
-        "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md",
         "mypyskindose -> guiskindose\n",
     )
     hits = scan_leftover_brand(tmp_path, [Path("dev-docs")])
@@ -366,8 +366,8 @@ def test_is_line_allowlisted_matches(line: str) -> None:
     [
         "dev-docs/plans/archive/old_plan.md",
         "dev-docs/assessments/old.md",
-        "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
-        "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
+        "dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
         "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
         "dev-docs/COORD_TRANSFORM_COMPARISON.md",
     ],

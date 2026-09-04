@@ -11,7 +11,7 @@ For the full release map (changelog vs GitHub notes, SemVer, portable executable
 **First GUISkinDose / `guiskindose` version is `1.0.0`** (new distribution identity;
 formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). This fork is **not currently
 published** to PyPI. Details:
-[dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
+[dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 
 ## How releasing works now
 

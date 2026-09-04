@@ -46,7 +46,7 @@ These are **not** the same audience.
 - **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
   not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose.
   Changelog `[1.0.0]` and GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
-  of PySkinDose. Details: [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
+  of PySkinDose. Details: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 - Bump at release time (not on every docs PR). Document SemVer impact in Unreleased notes when shipping user-visible library/GUI changes.
 - `scripts/check_changelog.py` requires an Unreleased touch when `src/` or `tests/` change (pre-push).
 
@@ -75,8 +75,8 @@ Frozen desktop apps are an optional future channel for non-Python users. Feasibi
 | Doc | Role |
 |-----|------|
 | [PUBLISHING.md](../PUBLISHING.md) | PyPI Trusted Publishing detail |
-| [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md) | In-repo package rename; first `guiskindose` version `1.0.0` |
-| [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md) | GitHub fork → `GUISkinDose`, then SonarCloud, then live URLs |
+| [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) | In-repo package rename; first `guiskindose` version `1.0.0` |
+| [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) | GitHub fork → `GUISkinDose`, then SonarCloud, then live URLs |
 | [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) | Full maintainer release + monthly ops rhythm |
 | [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Privacy release / history audit checklist |
 | [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) | CI gates that must stay green before release |

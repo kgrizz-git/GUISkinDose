@@ -77,7 +77,7 @@ def test_stale_brand_rejects_live_old_github_urls_and_sonar_key(tmp_path: Path) 
 def test_stale_brand_excludes_paths(tmp_path: Path):
     """Entire paths on the allowlist are skipped."""
     repo_root = tmp_path
-    file_path = repo_root / "dev-docs" / "plans" / "GUISKINDOSE_RENAME_PLAN.md"
+    file_path = repo_root / "dev-docs" / "plans" / "archive" / "GUISKINDOSE_RENAME_PLAN.md"
     file_path.parent.mkdir(parents=True)
     file_path.write_text("This mentions MyPySkinDose and mypyskindose freely.\n")
 
@@ -89,7 +89,8 @@ def test_stale_brand_allowlist_matches_files_exactly() -> None:
     """File allowlist entries must not match a suffix variant of the same name."""
     assert is_path_allowed("CHANGELOG.md") is False
     assert is_path_allowed("CHANGELOG.md.bak") is False
-    assert is_path_allowed("dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md") is True
+    assert is_path_allowed("dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md") is True
+    assert is_path_allowed("dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md") is False
     assert is_path_allowed("scripts/check_stale_brand.py") is True
     assert is_path_allowed("scripts/check_stale_brand.py.backup") is False
     assert is_path_allowed("dev-docs/plans/archive/old.md") is True

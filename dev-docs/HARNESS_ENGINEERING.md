@@ -42,8 +42,8 @@ Agents working in this repository should be able to answer three questions quick
 | External library reference links | `dev-docs/references/` |
 | In-app positioning help | `docs/source/gui_help/positioning_offsets.md` |
 | Tabular CSV/TSV/XLSX input plan | `dev-docs/plans/TABULAR_RDSR_INPUT_PLAN.md` |
-| In-repo GUISkinDose / `guiskindose` rename (not yet executed) | `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` |
-| GitHub/Sonar/live-URL follow-up after that rename | `dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md` |
+| In-repo GUISkinDose / `guiskindose` rename (**complete**, PR #73) | `dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md` |
+| GitHub/Sonar/live-URL follow-up (**complete**, 2026-09-04) | `dev-docs/plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md` |
 | Privacy republication, fixture sanitization, PyPI publish | `dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md` |
 | Fork vs upstream migration status | `dev-docs/GUISKINDOSE_MIGRATION_STATUS.md` |
 | Short-term task list | `dev-docs/TO_DO.md` |
