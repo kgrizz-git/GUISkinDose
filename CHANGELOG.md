@@ -97,12 +97,12 @@ omit pure CI/refactor bullets and point readers here. See
   PySkinDose. Package `name` was already `guiskindose`; version was `25.2.0` until the
   packaging commit in this PR set `1.0.0`. GitHub Release notes and the `[1.0.0]` changelog
   section must say this was formerly MyPySkinDose `25.2.0` / a fork of PySkinDose. Plan:
-  [dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md).
+  [dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 
 - **GitHub/Sonar/URL follow-up plan** (2026-09-02) — after the in-repo package rename is on
   `main`, rename the GitHub fork to `GUISkinDose`, then SonarCloud, then live URLs/`origin`.
   Not blocked on PyPI; not part of the mechanical-rename PR. Plan:
-  [dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
+  [dev-docs/plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](dev-docs/plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 - **Package directory and import path are `guiskindose`** (2026-09-02) — `git mv src/mypyskindose
   src/guiskindose`; `pyproject.toml` `name` / `packages.find` follow. Version was `25.2.0`
@@ -125,14 +125,14 @@ omit pure CI/refactor bullets and point readers here. See
   (onboarding dismiss, native-window prefs) updates the new file. The legacy directory is not
   deleted.
 
-- **GUISkinDose rename PR 1 test contract** (2026-09-02) — `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md`
+- **GUISkinDose rename PR 1 test contract** (2026-09-02) — `dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md`
   now requires inverting PR 0 locks in the mechanical-rename PR: config load–modify–save must
   persist to `~/.guiskindose/` when that file exists, `LIVE_PACKAGE_NAME` must not remain
   `"mypyskindose"`, and `[project.scripts] guiskindose` needs an entry-point test. No extra
   tests-only PR between PR 0 and PR 1.
 
 - **GUISkinDose rename and republication plans aligned** (2026-09-01) — mechanical in-repo rename
-  (`mypyskindose` → `guiskindose`) is specified in `dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md` and
+  (`mypyskindose` → `guiskindose`) is specified in `dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md` and
   catalogued in `dev-docs/index.md`. The privacy republication plan now points Phase 5A at that file,
   requires config-directory migration, keeps Semgrep rule IDs, and gates GitHub/Sonar URL rewrites
   on the actual external renames. The rename plan documents a green PR-0 prerequisite slice, one

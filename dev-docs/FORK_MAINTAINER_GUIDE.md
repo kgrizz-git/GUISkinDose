@@ -411,9 +411,9 @@ Before each release, review pyproject.toml:
 - Version follows the project SemVer policy and agrees with CHANGELOG.md.
   **First GUISkinDose / `guiskindose` version is `1.0.0`** (new identity; formerly
   MyPySkinDose `25.2.0` / a fork of PySkinDose). See
-  [plans/GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md).
+  [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 - Homepage, documentation, and bug-tracker URLs work. After the GitHub fork is renamed,
-  follow [plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md)
+  follow [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md)
   (Sonar key before `sonar-project.properties`; then live URLs and `origin`).
 - Python support matches the tested CI matrix.
 - Authors, maintainers, license, classifiers, and project description are

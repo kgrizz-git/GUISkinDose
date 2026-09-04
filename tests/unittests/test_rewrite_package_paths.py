@@ -256,7 +256,7 @@ def test_scan_leftover_brand_allowlists_archive_and_plan_paths(tmp_path: Path) -
     )
     _write(
         tmp_path,
-        "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md",
         "mypyskindose -> guiskindose\n",
     )
     hits = scan_leftover_brand(tmp_path, [Path("dev-docs")])
@@ -366,8 +366,8 @@ def test_is_line_allowlisted_matches(line: str) -> None:
     [
         "dev-docs/plans/archive/old_plan.md",
         "dev-docs/assessments/old.md",
-        "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
-        "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
+        "dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
         "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
         "dev-docs/COORD_TRANSFORM_COMPARISON.md",
     ],
@@ -376,6 +376,21 @@ def test_is_file_allowlisted_matches(repo_rel: str) -> None:
     from scripts.rewrite_package_paths import _is_file_allowlisted
 
     assert _is_file_allowlisted(repo_rel) is True
+
+
+@pytest.mark.parametrize(
+    "repo_rel",
+    [
+        "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
+        "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
+    ],
+)
+def test_is_file_allowlisted_rejects_former_active_plan_paths(repo_rel: str) -> None:
+    """The two rename plans were archived; their old active paths must no longer
+    be allowlisted so a stray brand token there would still be reported."""
+    from scripts.rewrite_package_paths import _is_file_allowlisted
+
+    assert _is_file_allowlisted(repo_rel) is False
 
 
 def test_is_file_allowlisted_matches_files_exactly() -> None:

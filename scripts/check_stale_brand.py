@@ -23,11 +23,9 @@ BAD_STRINGS = ["mypyskindose", "MyPySkinDose", "MYPYSKINDOSE_"]
 ALLOWED_PATHS = [
     "dev-docs/plans/archive/",
     "dev-docs/assessments/",
-    "dev-docs/plans/GUISKINDOSE_RENAME_PLAN.md",
-    "dev-docs/plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md",
     "dev-docs/plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md",
     "dev-docs/COORD_TRANSFORM_COMPARISON.md",
-    "dev-docs/GUISKINDOSE_MIGRATION_STATUS.md",  # created in PR 1; allowlist it now
+    "dev-docs/GUISKINDOSE_MIGRATION_STATUS.md",
     "scripts/check_stale_brand.py",
     "tests/unittests/test_check_stale_brand.py",
     "scripts/rewrite_package_paths.py",

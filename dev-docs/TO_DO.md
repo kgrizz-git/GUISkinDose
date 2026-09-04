@@ -52,14 +52,14 @@ policy decisions, not a restart of Phases 0–9.
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
-- [ ] **Rename from guiskindose to GUISkinDose** — in-repo package/import/CLI rebrand with config migration
-  and a stale-brand CI check. **First `guiskindose` version is `1.0.0`** (new identity; not a continuation of
-  MyPySkinDose `25.2.0`). Prefer before first PyPI publish; does not require the GitHub repo rename.
-  Plan: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). Publication/fixture work remains in
-  [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
+- [x] **Rename from guiskindose to GUISkinDose** (2026-09-04, PR #73) — in-repo package/import/CLI rebrand with
+  config migration and a stale-brand CI check shipped; first `guiskindose` version is `1.0.0` (new identity,
+  not a continuation of MyPySkinDose `25.2.0`). Publication/fixture work remains in
+  [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md). Plan archived:
+  [GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 - [x] **Rename the GitHub repository to GUISkinDose** (2026-09-04) — done: GitHub Settings rename plus the
   SonarCloud key flip, then live URLs/`sonar-project.properties` rewritten in the follow-up PR
-  ([GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md)); archive that plan when its
+  ([GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md)); archive that plan when its
   Phase D verification (fresh clone, `sonar-scan` on the new key) is green.
 
 ## Product Backlog
@@ -138,7 +138,7 @@ policy decisions, not a restart of Phases 0–9.
   triggers (semgrep rules-file rename and rule-ID rename: any time, atomic diff required, no
   migration dependency; legacy config-read/env shims: after the user-migration window).
   Full sequencing, file lists, and the migration-window criterion are documented in
-  `plans/GUISKINDOSE_RENAME_PLAN.md` § "Post-PR-1 retirement".
+  `plans/archive/GUISKINDOSE_RENAME_PLAN.md` § "Post-PR-1 retirement".
 - [ ] **Stale-brand CHANGELOG Unreleased pattern audit** — `CHANGELOG_CURRENT_PATTERNS` in
   `scripts/check_stale_brand.py` allow rename-prose in Unreleased. If more patterns are added,
   re-check that they still cannot hide an unquoted import of the pre-rename package.
@@ -209,9 +209,9 @@ policy decisions, not a restart of Phases 0–9.
 
 ## Research Ideas
 
-- [ ] Call it GUISkinDose? **Decided.** Product/GitHub: GUISkinDose; import/CLI/PyPI: `guiskindose`; first
-  version `1.0.0`. In-repo rename: [GUISKINDOSE_RENAME_PLAN.md](plans/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar
-  follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
+- [x] Call it GUISkinDose? **Decided and done.** Product/GitHub: GUISkinDose; import/CLI/PyPI: `guiskindose`; first
+  version `1.0.0`. In-repo rename: [GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar
+  follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 ## Open Questions
 

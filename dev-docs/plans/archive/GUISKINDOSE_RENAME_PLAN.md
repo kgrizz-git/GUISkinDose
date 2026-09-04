@@ -1,5 +1,9 @@
 # GUISkinDose Rename Plan
 
+**Status:** **Archived 2026-09-04 — complete** (PR #73 merged; first `guiskindose` version `1.0.0`).
+The "Post-PR-1 retirement" section below remains the live lifecycle guidance for the
+dual-read/semgrep-ID shims, tracked in `TO_DO.md`.
+
 **First package version (locked): `1.0.0`**
 
 GUISkinDose / `guiskindose` starts at SemVer **`1.0.0`**. That is a new PyPI and import
@@ -16,7 +20,7 @@ user-facing brand from "MyPySkinDose" to "GUISkinDose".
 Trusted Publishing. GitHub/Sonar/live-URL follow-up is
 [GUISKINDOSE_GITHUB_RENAME_PLAN.md](GUISKINDOSE_GITHUB_RENAME_PLAN.md) (after this PR is on
 `main`; not blocked on PyPI). Fixture sanitization and first publish stay in
-[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
+[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](../GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md).
 This file is the mechanical-rename execution plan that republication Phase 5A points at.
 
 **Scale (re-count immediately before execution):** git-tracked files containing `mypyskindose`,
@@ -177,7 +181,7 @@ Also re-check:
 2. Verify CI is green on the merge base.
 3. Re-count inventories (section above). Record `git log --oneline -5` and `git diff --stat main`.
 4. Confirm `guiskindose` is available on PyPI/TestPyPI (this fork has **not** published
-   `mypyskindose` yet — see [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)).
+   `mypyskindose` yet — see    [RELEASES_AND_DISTRIBUTION.md](../../RELEASES_AND_DISTRIBUTION.md)).
 5. Keep `PySkinDoseOutput` (public upstream API). A later rename is a separate PR.
 6. **Decided:** first GUISkinDose version is **`1.0.0`**. This is a new PyPI/import identity,
    not a calendar continuation of MyPySkinDose `25.2.0` and not an imitation of upstream

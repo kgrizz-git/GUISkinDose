@@ -1,12 +1,14 @@
 # GUISkinDose GitHub / Sonar / URL follow-up
 
-**Status:** Active (run after mechanical rename PR 1 is on `main`)
+**Status:** **Archived 2026-09-04 — complete.** GitHub fork renamed to `GUISkinDose`, SonarCloud
+key flipped (`kgrizz-git_GUISkinDose`), live URLs/`sonar-project.properties` retargeted in PR #74,
+fresh-clone/redirect check and `main` CI verified.
 **Does not include:** in-repo `mypyskindose` → `guiskindose` imports (that is
 [GUISKINDOSE_RENAME_PLAN.md](GUISKINDOSE_RENAME_PLAN.md)), fixture sanitization, TestPyPI, or
 Trusted Publishing (those stay in
-[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md)).
+[GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](../GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md)).
 
-**TO_DO:** [TO_DO.md](../TO_DO.md) Now/Next item “Rename the GitHub repository to GUISkinDose”.
+**TO_DO:** [TO_DO.md](../../TO_DO.md) Now/Next item "Rename the GitHub repository to GUISkinDose" (done).
 
 This is the operational checklist for renaming the **existing** GitHub fork and then updating
 live URLs and the SonarCloud project key. PyPI is not a prerequisite. Do **not** do this during
