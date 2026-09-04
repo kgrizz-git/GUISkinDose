@@ -115,6 +115,29 @@ Required behavior:
 
 ---
 
+## Post-PR-1 retirement (future; tracked in `TO_DO.md`)
+
+Three independent pieces, each with its own trigger:
+
+1. **Semgrep rules-file rename** — `.semgrep/mypyskindose-privacy.yml` →
+   `.semgrep/guiskindose-privacy.yml`. This plan's Phase instruction that was **not executed in
+   PR 1**. Any time; atomic with the path updates in `scripts/run_semgrep_privacy.py` and
+   `tests/unittests/test_privacy_semgrep_rules.py`. Standalone or riding any suitable PR — it is
+   **not** part of the GitHub-rename plan (whose "Do not" list defers rule-ID changes).
+2. **Rule-ID rename** (`mypyskindose-*` → `guiskindose-*`) — internal branding only; no user
+   migration dependency. Any time as one atomic commit: the six YAML `id:`s, the live
+   `# nosemgrep:` comment(s) (currently one, in `src/guiskindose/__init__.py`), the rule-ID
+   assertions in `tests/unittests/test_privacy_semgrep_rules.py`, and the stale-brand allowlist
+   entries for rule IDs and nosemgrep comments in `scripts/check_stale_brand.py`.
+3. **Config/env shim removal** — only after the user-migration window (maintainer decision;
+   suggested criterion: the first maintenance release ~6 months after `1.0.0` publishes on PyPI,
+   or earlier if issue reports show migration is complete). Remove the legacy reads (legacy
+   home config dir, repo-local legacy config JSON, legacy env var, and the dual
+   traceback-prefix tuple in `privacy.py`) and prune the matching stale-brand allowlist
+   patterns in `scripts/check_stale_brand.py`.
+
+---
+
 ## Re-count before execution
 
 If **any** other work lands on `main` (or this branch is rebased) before implementation, re-run

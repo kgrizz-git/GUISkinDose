@@ -136,25 +136,11 @@ policy decisions, not a restart of Phases 0–9.
   `"corrections.db"` (`settings/pyskindose_settings.py`). Move the DB into the package (like
   `table_data/`), add it to `MANIFEST.in`, resolve via a package-relative path or
   `importlib.resources`, and extend the wheel-content test to assert it ships.
-- [ ] **Retire the pre-rename compatibility shims — three independent pieces, different triggers:**
-  - *Any time (no migration dependency):* rename `.semgrep/mypyskindose-privacy.yml` to
-    `guiskindose-privacy.yml`. The rename plan intended this for PR 1 and the stale-brand gate
-    flags the filename as "must be renamed"; atomic with the path updates in
-    `scripts/run_semgrep_privacy.py` and `tests/unittests/test_privacy_semgrep_rules.py`.
-    Natural vehicle: the GitHub-rename follow-up (`plans/GUISKINDOSE_GITHUB_RENAME_PLAN.md`).
-  - *Any time (atomicity is the only constraint, not user migration):* rename the six legacy
-    rule IDs to a `guiskindose-` prefix in the same commit as the single live `# nosemgrep:`
-    comment (`src/guiskindose/__init__.py`), the rule-ID assertions in
-    `test_privacy_semgrep_rules.py`, and the stale-brand allowlist entries for rule IDs and
-    nosemgrep comments. Internal branding only — safe whenever the diff is kept atomic.
-  - *After the user-migration window (maintainer decision — e.g. the first maintenance release
-    ~6 months after 1.0.0 publishes on PyPI, or earlier if issue reports show migration is
-    complete):* remove the legacy config reads (legacy home config dir, repo-local legacy
-    config JSON, legacy env var name, and the dual traceback-prefix tuple in `privacy.py`) and
-    prune the matching stale-brand allowlist patterns in `scripts/check_stale_brand.py` (the
-    legacy home/local-path regexes, the quoted-literal, env-var, and rule-ID allowances, and
-    the backticked legacy-path docstring mention). Config migration context:
-    `plans/GUISKINDOSE_RENAME_PLAN.md`.
+- [ ] **Retire the pre-rename compatibility shims** — three independent pieces with different
+  triggers (semgrep rules-file rename and rule-ID rename: any time, atomic diff required, no
+  migration dependency; legacy config-read/env shims: after the user-migration window).
+  Full sequencing, file lists, and the migration-window criterion are documented in
+  `plans/GUISKINDOSE_RENAME_PLAN.md` § "Post-PR-1 retirement".
 - [ ] **Stale-brand CHANGELOG Unreleased pattern audit** — `CHANGELOG_CURRENT_PATTERNS` in
   `scripts/check_stale_brand.py` allow rename-prose in Unreleased. If more patterns are added,
   re-check that they still cannot hide an unquoted import of the pre-rename package.
