@@ -159,9 +159,14 @@ That keeps SemVer and contributor history organized.
   exams are preserved on the run warning list (they previously dropped because no
   `ExamResult` was created).
 
-### Changed
-
 ### Removed
+
+- **`safety` dev dependency and main-only CI cloud scan removed** (2026-09-03) — the `safety` package was the
+  sole consumer of transitive `nltk` in the dev extra, so dropping it deletes the unpatched
+  `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
+  `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer needed).
+  Dependency auditing remains covered by `uv audit` + `pip-audit` via `scripts/audit_dependencies.py` (same
+  OSV/PyPA advisory data) in the PR-level `static-analysis` job and the local pre-push hook.
 
 ### Changed
 
@@ -932,10 +937,3 @@ That keeps SemVer and contributor history organized.
 [Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/kgrizz-git/GUISkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v25.1.1
-
-- **`safety` dev dependency and main-only CI cloud scan removed** (2026-09-03) — the `safety` package was the
-  sole consumer of transitive `nltk` in the dev extra, so dropping it deletes the unpatched
-  `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
-  `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer needed).
-  Dependency auditing remains covered by `uv audit` + `pip-audit` via `scripts/audit_dependencies.py` (same
-  OSV/PyPA advisory data) in the PR-level `static-analysis` job and the local pre-push hook.
