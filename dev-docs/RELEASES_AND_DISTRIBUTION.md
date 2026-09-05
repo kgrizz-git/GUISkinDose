@@ -16,27 +16,26 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 
 **Non-goals:** a single binary for all OSes; committing built executables to git; wrapping the stack for the JVM (call CLI/API from Java instead — see the portable-exec note).
 
-## Changelog vs GitHub Release notes
+## Changelogs vs Maintenance Log
 
-These are **not** the same audience.
+These serve different audiences.
 
 | Artifact | Audience | What goes in it |
 |----------|----------|-----------------|
-| **`CHANGELOG.md`** | Users **and** maintainers/contributors | Curated **notable** changes for the version: features, fixes, breaking changes, **and** significant CI/harness/refactor/privacy work that affects how the project is built or maintained. Keep a Changelog categories (`Added` / `Changed` / `Fixed` / …). |
-| **GitHub Release notes** | People upgrading or downloading the release | **User-facing** summary: what they can do differently, upgrade steps, known limits, credits. Prefer features, bug fixes, and breaking changes. |
+| **`CHANGELOG.md`** | Users | Curated **notable** user-facing changes for the version: features, fixes, UI updates, breaking changes. Keep a Changelog categories (`Added` / `Changed` / `Fixed` / …). |
+| **`dev-docs/MAINTENANCE_LOG.md`** | Maintainers/contributors | Under-the-hood work: significant CI/harness/refactor/privacy work, testing, and documentation updates that do not directly affect end-users. |
+| **GitHub Release notes** | People upgrading or downloading the release | **User-facing** summary: what they can do differently, upgrade steps, known limits, credits. Prefer features, bug fixes, and breaking changes. Generated from `CHANGELOG.md`. |
 
-**Do not paste the entire Unreleased CHANGELOG into GitHub Release notes.** CI cleanups, coverage gates, Sonar remediations, and pure refactors belong in `CHANGELOG.md` so the repo history stays honest, but they are usually noise for end users.
+**Do not paste the entire Unreleased CHANGELOG into GitHub Release notes.** CI cleanups, coverage gates, Sonar remediations, and pure refactors belong in `dev-docs/MAINTENANCE_LOG.md` so the repo history stays honest, and they are usually noise for end users.
 
 ### Suggested Release notes recipe
 
 1. Move `[Unreleased]` into a new versioned section in `CHANGELOG.md` (Keep a Changelog).
 2. Draft GitHub Release body from that section:
    - Lead with **Added** / **Fixed** / user-visible **Changed** / **Removed** / **Security**.
-   - Skip or collapse maintainer-only bullets into one line, e.g.  
-     *Also includes internal CI, harness, and refactor updates — see `CHANGELOG.md`.*
 3. Add upgrade notes, intended-use reminder (not FDA-cleared), and any privacy/validation caveats.
 
-`GOVERNANCE.md` still expects calculation-, privacy-, security-, and release-affecting work to be recorded in `CHANGELOG.md`; that does **not** mean every such line must appear in the GitHub Release blurb.
+`GOVERNANCE.md` still expects calculation-, privacy-, security-, and release-affecting work to be recorded in `CHANGELOG.md` (or `MAINTENANCE_LOG.md` as appropriate).
 
 ## Versioning
 

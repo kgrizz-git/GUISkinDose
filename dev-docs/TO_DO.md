@@ -60,15 +60,6 @@ policy decisions, not a restart of Phases 0-9.
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
-- [x] **Rename from guiskindose to GUISkinDose** (2026-09-04, PR #73) — in-repo package/import/CLI rebrand with
-  config migration and a stale-brand CI check shipped; first `guiskindose` version is `1.0.0` (new identity,
-  not a continuation of MyPySkinDose `25.2.0`). Publication/fixture work remains in
-  [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md). Plan archived:
-  [GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md).
-- [x] **Rename the GitHub repository to GUISkinDose** (2026-09-04) — done: GitHub Settings rename plus the
-  SonarCloud key flip, then live URLs/`sonar-project.properties` rewritten in the follow-up PR
-  ([GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md)); archive that plan when its
-  Phase D verification (fresh clone, `sonar-scan` on the new key) is green.
 
 ## Product Backlog
 
@@ -131,9 +122,6 @@ policy decisions, not a restart of Phases 0-9.
 ### Harness / Repo Hygiene
 
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
-- [x] **CI wheel packaging smoke** (2026-09-03) — the `build` matrix job now runs `uv build` before
-  pytest, so `test_wheel_contains_guiskindose_package` (including the `gui/help/*.md` assertion)
-  exercises a real wheel on every OS/Python matrix entry instead of skipping.
 - [ ] **Ship `corrections.db` in the wheel and resolve it package-relatively** —
   `src/guiskindose/gui/settings_builder.py` walks four parents up to the repo root to find
   `corrections.db`, which only exists in a source checkout; the DB is not in `MANIFEST.in` or
@@ -210,12 +198,6 @@ policy decisions, not a restart of Phases 0-9.
   release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
   non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
   (phantoms, `corrections.db`, help). Not a Java wrap.
-
-## Research Ideas
-
-- [x] Call it GUISkinDose? **Decided and done.** Product/GitHub: GUISkinDose; import/CLI/PyPI: `guiskindose`; first
-  version `1.0.0`. In-repo rename: [GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar
-  follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 ## Open Questions
 

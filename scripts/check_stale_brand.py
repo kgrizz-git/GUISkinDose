@@ -126,7 +126,7 @@ def check_file(path: Path, repo_root: Path, live_package_name: str | None = LIVE
         return []
 
     errors = []
-    changelog_current = rel_path == "CHANGELOG.md"
+    changelog_current = rel_path in ("CHANGELOG.md", "dev-docs/MAINTENANCE_LOG.md")
     try:
         with path.open("r", encoding="utf-8", errors="surrogateescape") as f:
             for line_no, line in enumerate(f, start=1):
