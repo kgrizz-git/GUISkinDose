@@ -36,6 +36,11 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
 - Update `AGENTS.md` and the relevant `dev-docs/` page when a change adds, removes, or wires behavior.
 - Edit GUI help source under `docs/source/gui_help/`; mirrored files under `src/guiskindose/gui/help/` are generated.
 - Put diagnostics and assessments under `dev-docs/assessments/` and register them in `dev-docs/index.md`.
+- **TO_DO.md rules:**
+  - Ensure `dev-docs/TO_DO.md` has a **Next Up** section near the top containing 3-5 items. These must be short pointers to main, detailed todo items, not full entries themselves.
+  - Every active execution plan must have a corresponding todo item linking to it in `dev-docs/TO_DO.md`.
+  - When completing a task, **remove it entirely** from `dev-docs/TO_DO.md`. Log user-facing changes in `CHANGELOG.md` under the 'Unreleased' section. Ensure under-the-hood work (like tests or refactoring) is captured in the commit history or an archived plan rather than left as checked-off in the TO_DO.
+  - **Manual Smokes:** If a plan or todo item is completely finished except for a pending manual smoke test, archive the plan (or remove the todo item) and bundle its manual smoke requirement into a consolidated "Manual Smokes" pointer in the **Next Up** section.
 - Archive completed or superseded execution plans under `dev-docs/plans/archive/` and update `dev-docs/index.md`.
 - Keep scratch scripts and temporary outputs in gitignored paths such as `tmp/`, `scripts/scratch_*`, `*.tmp`, or
   `debug_*`, or delete them before finishing.

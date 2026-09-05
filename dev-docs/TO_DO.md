@@ -9,12 +9,19 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ---
 
-## Now / Next
+## Next Up
+
+- [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
+- [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
+- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section.
+- [ ] **Documentation Review** — See "Check documentation completeness and accuracy" in the Active Work section.
+
+## Active Work
 
 Privacy hardening is implemented through Phase 9
 ([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 (private history/release-object audit)
 still needs an approved private environment. Remaining privacy bullets below are follow-on evaluations or
-policy decisions, not a restart of Phases 0–9.
+policy decisions, not a restart of Phases 0-9.
 
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
@@ -41,13 +48,14 @@ policy decisions, not a restart of Phases 0–9.
 - [ ] **Exhaustive docstring and doc review** — sweep all Python source files under `src/` for outdated,
   missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs
   (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior.
-  Flag leftover `guiskindose` in docstrings after the GUISkinDose rename, or any docstring that
+  Flag any docstring that
   describes behavior that has changed since it was written.
-- [ ] **Multi-exam manual smoke check** — exercise multi-file upload, per-exam overrides, calculate, and results
-  accordion in the GUI.
-- [ ] **Settings phantom preview — manual smoke** — code + docs shipped
-  ([SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md)); run the plan’s acceptance checklist
-  (no RDSR; mesh/habitus/orientation/offsets), then archive the plan.
+- [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
+  - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
+  - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
+  - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
+  - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.
+  - *Results table*: run a manual Results smoke to confirm '—' vs kerma behavior (see Open Questions).
 - [ ] **Finish HTML/PNG export fix** — Phase 1 (raise + actionable errors) shipped; Phase 0 did not capture the
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
@@ -100,7 +108,6 @@ policy decisions, not a restart of Phases 0–9.
   geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
   [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
 - [ ] **Add more normalizations and offsets for different models** — extend vendor/model-specific coordinate normalization and table-origin offsets to cover additional scanner models beyond current coverage.
-
 
 ### GUI / UX
 
@@ -191,16 +198,13 @@ policy decisions, not a restart of Phases 0–9.
   [archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md](plans/archive/INTERACTIVE_TABLE_OFFSETS_PLAN.md).
 - [ ] **Rich export — phantom dimensions** — report AP / L-R / S-I phantom extents in cm (max/thickest) in rich
   reports rather than scale factors only. See [RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md).
-- [ ] **Rich export — manual browser/native save smoke** (Phase 4.3.x) — verify the Export-tab modal in a real
-  browser (download filename + toast) and in native pywebview mode (Browse/save-path dialog focused on top).
 - [ ] **Rich export — polish (Phase 7 leftovers)** — multi-exam image-cap GUI toggle (7.1); deeper tagged-PDF/DOCX
   accessibility + alt text, HTML already sets `alt` (7.2); extract user-visible strings to a localization module
   (7.3); align the Results tab correction table to include `k_med` as a small separate PR (7.4); Export-tab help
   page if a central Help index lands.
 - [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
   (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
-  replace the baseline `ui.download()` fallback). Native "Open file / Open folder" shipped 2026-07-02; Windows
-  manual smoke still pending.
+  replace the baseline `ui.download()` fallback).
 - [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research:
   [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md);
   release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
@@ -221,4 +225,4 @@ policy decisions, not a restart of Phases 0–9.
   Data Table has a real `K_IRP (mGy)` column from the normalized events; Results shows **Total Air Kerma**
   (sum of reported K_IRP) and a **Correction factors per event** table (`k_isq` / `k_bs` / `k_tab`) that uses
   `—` for missing/empty correction slots (e.g. zero-hit events), not as a stand-in for kerma. Metric cards also
-  show `—` before a calculation finishes. Confirm in a manual Results smoke, then delete this question.
+  show `—` before a calculation finishes. See the Manual Smokes item in Now / Next to confirm and delete.
