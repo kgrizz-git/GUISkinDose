@@ -11,10 +11,10 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Next Up
 
+- [ ] **Documentation Review & Infrastructure** — See "Comprehensive Documentation & Docstrings Assessment" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section.
-- [ ] **Documentation Review** — See "Check documentation completeness and accuracy" in the Active Work section.
 
 ## Active Work
 
@@ -43,13 +43,11 @@ policy decisions, not a restart of Phases 0-9.
   (CPU, ephemeral raw report, count-only summary) for conditional admission. Remaining: run it only on synthetic
   DICOM fixtures, confirm report output cannot leak findings, and decide whether to keep it as a local advisory
   step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
-- [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
-  `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
-- [ ] **Exhaustive docstring and doc review** — sweep all Python source files under `src/` for outdated,
-  missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs
-  (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior.
-  Flag any docstring that
-  describes behavior that has changed since it was written.
+- [ ] **Comprehensive Documentation & Docstrings Assessment** — execute a structured review of docs and source files:
+  - **Check completeness and accuracy**: verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
+  - **Exhaustive docstring and doc review**: sweep all Python source files under `src/` for outdated, missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior. Flag any docstring describing changed behavior.
+  - **Build assessment infrastructure**: establish a structured prescription for *how* and *what* to review. Define what records to keep (e.g., an assessment matrix or checklist artifact), and set clear triggers to rerun assessments or update docs (e.g., pre-release, changing calculation pipelines, major feature addition).
+  - **Explore modern documentation generators**: investigate adopting tools like Mintlify, MkDocs (with Material theme), or Docusaurus to provide a more polished, user-facing documentation site than the current Sphinx setup.
 - [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
@@ -60,15 +58,6 @@ policy decisions, not a restart of Phases 0-9.
   original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
-- [x] **Rename from guiskindose to GUISkinDose** (2026-09-04, PR #73) — in-repo package/import/CLI rebrand with
-  config migration and a stale-brand CI check shipped; first `guiskindose` version is `1.0.0` (new identity,
-  not a continuation of MyPySkinDose `25.2.0`). Publication/fixture work remains in
-  [GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md). Plan archived:
-  [GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md).
-- [x] **Rename the GitHub repository to GUISkinDose** (2026-09-04) — done: GitHub Settings rename plus the
-  SonarCloud key flip, then live URLs/`sonar-project.properties` rewritten in the follow-up PR
-  ([GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md)); archive that plan when its
-  Phase D verification (fresh clone, `sonar-scan` on the new key) is green.
 
 ## Product Backlog
 
@@ -131,9 +120,6 @@ policy decisions, not a restart of Phases 0-9.
 ### Harness / Repo Hygiene
 
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
-- [x] **CI wheel packaging smoke** (2026-09-03) — the `build` matrix job now runs `uv build` before
-  pytest, so `test_wheel_contains_guiskindose_package` (including the `gui/help/*.md` assertion)
-  exercises a real wheel on every OS/Python matrix entry instead of skipping.
 - [ ] **Ship `corrections.db` in the wheel and resolve it package-relatively** —
   `src/guiskindose/gui/settings_builder.py` walks four parents up to the repo root to find
   `corrections.db`, which only exists in a source checkout; the DB is not in `MANIFEST.in` or
@@ -210,12 +196,6 @@ policy decisions, not a restart of Phases 0-9.
   release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
   non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
   (phantoms, `corrections.db`, help). Not a Java wrap.
-
-## Research Ideas
-
-- [x] Call it GUISkinDose? **Decided and done.** Product/GitHub: GUISkinDose; import/CLI/PyPI: `guiskindose`; first
-  version `1.0.0`. In-repo rename: [GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md). GitHub/Sonar
-  follow-up: [GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md).
 
 ## Open Questions
 
