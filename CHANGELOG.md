@@ -161,12 +161,10 @@ That keeps SemVer and contributor history organized.
 
 ### Removed
 
-- **`safety` dev dependency and main-only CI cloud scan removed** (2026-09-03) — the `safety` package was the
-  sole consumer of transitive `nltk` in the dev extra, so dropping it deletes the unpatched
-  `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
-  `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer needed).
-  Dependency auditing remains covered by `uv audit` + `pip-audit` via `scripts/audit_dependencies.py` (same
-  OSV/PyPA advisory data) in the PR-level `static-analysis` job and the local pre-push hook.
+- **`safety` development dependency removed** (2026-09-03) — dropping unused `safety` from the
+  `dev` extra also removes its unpatched transitive `nltk` exposure
+  (`GHSA-8mgp-746c-j5xp` / CVE-2026-81726 and the earlier `nltk` pin for PYSEC-2026-3726).
+  Dependency auditing continues via `uv audit` and `pip-audit`.
 
 ### Changed
 

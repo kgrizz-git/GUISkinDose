@@ -252,10 +252,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Removed
 
+- **`safety` and main-only CI cloud scan removed** (2026-09-03) — the `safety` package was the
+  sole consumer of transitive `nltk` in the `dev` extra, so dropping it deletes the unpatched
+  `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 exposure at the root instead of ignoring it, along with the
+  `nltk>=3.10.3` pin (PYSEC-2026-3726) and the `cloud-scans-main` CI job (`SAFETY_API_KEY` no longer
+  needed). Dependency auditing remains covered by `uv audit` + `pip-audit` via
+  `scripts/audit_dependencies.py` (same OSV/PyPA advisory data) in the PR-level `static-analysis`
+  job and the local pre-push hook. User-facing summary stays in `CHANGELOG.md`.
 - **Codecov integration** (2026-07-26) — dropped the `main`-only Codecov upload step from the
   `cloud-scans-main` CI job and deleted `codecov.yml`. Enforced PR coverage remains the GHA
   `coverage-pr` job (combined non-GUI+GUI ≥80% plus `diff-cover` ≥80% vs the PR base); the job
-  then ran Safety only until the 2026-09-03 safety removal below deleted it outright.
+  then ran Safety only until the 2026-09-03 safety removal above deleted it outright.
 
 ### Security
 
