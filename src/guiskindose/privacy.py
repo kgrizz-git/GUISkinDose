@@ -150,6 +150,47 @@ def opaque_exam_label(index: int) -> str:
     return f"Exam {index + 1}"
 
 
+def opaque_exam_index(label: str) -> int:
+    """Parse a label from :func:`opaque_exam_label` back to a 0-based index.
+
+    Accepts only ASCII ``Exam N`` where ``N`` is ``[1-9][0-9]*`` (no leading
+    zeros, no Unicode digits). Anything else raises ``ValueError``.
+
+    Raises
+    ------
+    ValueError
+        If *label* is not exactly ``Exam N`` for an integer ``N >= 1``.
+    """
+    if not isinstance(label, str):
+        raise ValueError("exam label must be a string")
+    prefix = "Exam "
+    if not label.startswith(prefix):
+        raise ValueError("exam label is not an opaque Exam N label")
+    suffix = label[len(prefix) :]
+    # Strict ASCII decimal: reject leading zeros and Unicode Nd digits so
+    # legacy/non-canonical ids fall through to result_index in the resolver.
+    if not suffix or not suffix.isascii() or not suffix.isdigit() or suffix[0] == "0":
+        raise ValueError("exam label is not an opaque Exam N label")
+    return int(suffix) - 1
+
+
+def resolve_loaded_exam_index(exam_id: str, *, result_index: int, n_loaded: int) -> int | None:
+    """Map a multi-exam result row back onto the full loaded-input list.
+
+    Successful ``MultiExamResult.exams`` omit excluded exams, so enumerating that
+    list is **not** aligned with ``loaded_exams`` / CLI ``inputs``. Prefer the
+    opaque ``Exam N`` label (which encodes the original load index). Fall back to
+    *result_index* only when the id is not opaque, for legacy/test callers.
+    """
+    try:
+        index = opaque_exam_index(exam_id)
+    except ValueError:
+        index = result_index
+    if 0 <= index < n_loaded:
+        return index
+    return None
+
+
 def safe_user_error(operation: str) -> str:
     """Return a generic user-facing error carrying only a stable code."""
     return f"Operation failed ({_code(operation, label='operation')})."

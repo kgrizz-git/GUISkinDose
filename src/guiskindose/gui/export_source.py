@@ -9,7 +9,7 @@ from __future__ import annotations
 import pandas as pd
 
 from guiskindose.export import ExportExamSource, ExportSource
-from guiskindose.privacy import opaque_exam_label
+from guiskindose.privacy import opaque_exam_label, resolve_loaded_exam_index
 
 from .settings_builder import build_settings
 from .state import AppState
@@ -39,14 +39,28 @@ def build_export_source_from_gui(
 
 
 def _multi_exam_export_source(state: AppState, *, include_source_identifiers: bool) -> ExportSource:
-    """Build a GUI export source from the current per-exam result objects."""
+    """Build a GUI export source from the current per-exam result objects.
+
+    Result rows are matched back to ``loaded_exams`` / ``loaded_exam_meta`` by the
+    opaque ``Exam N`` label (original load index). Enumerating ``result.exams`` is
+    wrong after exclusions because failed exams are omitted from that list.
+    """
     result = state.multi_exam_result
     if result is None:
         raise ValueError("A multi-exam result is required for multi-exam export")
     exams: list[ExportExamSource] = []
-    for index, exam_result in enumerate(result.exams):
-        adapter = state.loaded_exams[index] if index < len(state.loaded_exams) else None
-        metadata = state.loaded_exam_meta[index] if index < len(state.loaded_exam_meta) else {}
+    n_loaded = len(state.loaded_exams)
+    n_meta = len(state.loaded_exam_meta)
+    for result_index, exam_result in enumerate(result.exams):
+        loaded_index = resolve_loaded_exam_index(
+            exam_result.exam_id, result_index=result_index, n_loaded=max(n_loaded, n_meta)
+        )
+        adapter = (
+            state.loaded_exams[loaded_index] if loaded_index is not None and loaded_index < n_loaded else None
+        )
+        metadata = (
+            state.loaded_exam_meta[loaded_index] if loaded_index is not None and loaded_index < n_meta else {}
+        )
         offset = tuple(exam_result.patient_offset)
         exams.append(
             ExportExamSource(

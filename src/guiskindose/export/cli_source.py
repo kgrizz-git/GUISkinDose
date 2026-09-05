@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from guiskindose.privacy import opaque_exam_label
+from guiskindose.privacy import opaque_exam_label, resolve_loaded_exam_index
 
 from .models import ExportExamSource, ExportSource
 
@@ -37,10 +37,18 @@ def _exam_source_from_multi_result(
     multi_exam_result: MultiExamResult,
     inputs: list[InputAdapterResult] | None,
 ) -> list[ExportExamSource]:
-    """Build per-exam export sources from a multi-exam calculation result."""
+    """Build per-exam export sources from a multi-exam calculation result.
+
+    ``inputs`` is the full pre-calculation list (including exams later excluded
+    from ``multi_exam_result.exams``). Match each result row by opaque ``Exam N``
+    label rather than by enumeration index so excluded exams do not shift later
+    rows onto the wrong normalized frame / provenance.
+    """
     exams: list[ExportExamSource] = []
-    for i, er in enumerate(multi_exam_result.exams):
-        adapter = inputs[i] if inputs and i < len(inputs) else None
+    n_inputs = len(inputs) if inputs else 0
+    for result_index, er in enumerate(multi_exam_result.exams):
+        loaded_index = resolve_loaded_exam_index(er.exam_id, result_index=result_index, n_loaded=n_inputs)
+        adapter = inputs[loaded_index] if inputs is not None and loaded_index is not None else None
         exams.append(
             ExportExamSource(
                 exam_id=er.exam_id,
@@ -100,8 +108,9 @@ def build_export_source_from_cli(
     """Assemble an ``ExportSource`` for headless (CLI) export.
 
     Provide either ``output_dict`` + single-exam inputs, or ``multi_exam_result``
-    + ``inputs`` (one ``InputAdapterResult`` per exam, parallel to the result's
-    ``exams``).
+    + ``inputs`` (the full pre-calculation input list, including any exams later
+    excluded from ``multi_exam_result.exams``; rows are matched by opaque
+    ``Exam N`` labels).
     """
     if multi_exam_result is not None:
         exams = _exam_source_from_multi_result(settings, multi_exam_result, inputs)
