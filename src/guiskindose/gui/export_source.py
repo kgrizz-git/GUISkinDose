@@ -53,7 +53,7 @@ def _multi_exam_export_source(state: AppState, *, include_source_identifiers: bo
     n_meta = len(state.loaded_exam_meta)
     for result_index, exam_result in enumerate(result.exams):
         loaded_index = resolve_loaded_exam_index(
-            exam_result.exam_id, result_index=result_index, n_loaded=max(n_loaded, n_meta)
+            exam_result.exam_id, result_index=result_index, n_loaded=n_loaded
         )
         adapter = (
             state.loaded_exams[loaded_index] if loaded_index is not None and loaded_index < n_loaded else None
@@ -62,6 +62,9 @@ def _multi_exam_export_source(state: AppState, *, include_source_identifiers: bo
             state.loaded_exam_meta[loaded_index] if loaded_index is not None and loaded_index < n_meta else {}
         )
         offset = tuple(exam_result.patient_offset)
+        extra_warnings = list(exam_result.warnings)
+        if adapter is None:
+            extra_warnings.append(f"Export input unresolved for {exam_result.exam_id}")
         exams.append(
             ExportExamSource(
                 exam_id=exam_result.exam_id,
@@ -71,7 +74,7 @@ def _multi_exam_export_source(state: AppState, *, include_source_identifiers: bo
                 effective_settings=build_settings(state, patient_offset=offset),  # type: ignore[arg-type]
                 patient_offset=offset,  # type: ignore[arg-type]
                 transform_meta=dict(metadata),
-                extra_warnings=list(exam_result.warnings),
+                extra_warnings=extra_warnings,
             )
         )
     return ExportSource(

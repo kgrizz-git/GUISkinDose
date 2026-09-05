@@ -168,7 +168,7 @@ def opaque_exam_index(label: str) -> int:
         raise ValueError("exam label is not an opaque Exam N label")
     suffix = label[len(prefix) :]
     # Strict ASCII decimal: reject leading zeros and Unicode Nd digits so
-    # legacy/non-canonical ids fall through to result_index in the resolver.
+    # malformed Exam-shaped ids resolve to None rather than a wrong input.
     if not suffix or not suffix.isascii() or not suffix.isdigit() or suffix[0] == "0":
         raise ValueError("exam label is not an opaque Exam N label")
     return int(suffix) - 1
@@ -179,12 +179,19 @@ def resolve_loaded_exam_index(exam_id: str, *, result_index: int, n_loaded: int)
 
     Successful ``MultiExamResult.exams`` omit excluded exams, so enumerating that
     list is **not** aligned with ``loaded_exams`` / CLI ``inputs``. Prefer the
-    opaque ``Exam N`` label (which encodes the original load index). Fall back to
-    *result_index* only when the id is not opaque, for legacy/test callers.
+    opaque ``Exam N`` label (which encodes the original load index).
+
+    Returns ``None`` when the label is Exam-shaped but non-canonical (so callers
+    must not bind a wrong input), or when the resolved index is out of range.
+    Fall back to *result_index* only for clearly non-Exam legacy/test ids.
     """
     try:
         index = opaque_exam_index(exam_id)
     except ValueError:
+        # Malformed "Exam …" must not reintroduce exclusion off-by-one via
+        # positional fallback; only true custom ids use result_index.
+        if isinstance(exam_id, str) and exam_id.startswith("Exam "):
+            return None
         index = result_index
     if 0 <= index < n_loaded:
         return index

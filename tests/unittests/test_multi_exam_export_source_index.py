@@ -69,9 +69,9 @@ def test_opaque_exam_index_round_trips() -> None:
     assert resolve_loaded_exam_index("Exam 3", result_index=0, n_loaded=3) == 2
     assert resolve_loaded_exam_index("custom", result_index=1, n_loaded=3) == 1
     assert resolve_loaded_exam_index("Exam 9", result_index=0, n_loaded=2) is None
-    # Non-canonical suffixes must fall back to result_index (or None if OOB).
-    assert resolve_loaded_exam_index("Exam 03", result_index=1, n_loaded=3) == 1
-    assert resolve_loaded_exam_index("Exam \u0663", result_index=0, n_loaded=3) == 0
+    # Malformed Exam-shaped labels must not fall back to result_index (exclusion bug).
+    assert resolve_loaded_exam_index("Exam 03", result_index=1, n_loaded=3) is None
+    assert resolve_loaded_exam_index("Exam \u0663", result_index=0, n_loaded=3) is None
 
 
 def test_cli_export_source_skips_excluded_middle_exam() -> None:
@@ -129,3 +129,38 @@ def test_gui_export_source_skips_excluded_middle_exam() -> None:
     assert source.exams[1].transform_meta.get("flip_ap1") is True
     # Must not inherit the excluded middle exam's transform flags.
     assert source.exams[1].transform_meta.get("swap_lat_lon") is False
+
+
+def test_cli_export_source_all_exams_excluded() -> None:
+    multi = MultiExamResult(
+        exams=[],
+        aggregate_dose_map=cast(Any, None),
+        aggregate_psd=0.0,
+        total_events=0,
+        warnings=["all excluded"],
+        exams_attempted=2,
+        exams_excluded=2,
+    )
+    source = build_export_source_from_cli(
+        _settings(),
+        multi_exam_result=multi,
+        inputs=[_adapter("a.csv", "A"), _adapter("b.csv", "B")],
+    )
+    assert source.exams == []
+
+
+def test_cli_export_source_inputs_none_adds_unresolved_warning() -> None:
+    multi = MultiExamResult(
+        exams=[_exam_result(0, "a.csv")],
+        aggregate_dose_map=cast(Any, None),
+        aggregate_psd=0.0,
+        total_events=1,
+        warnings=[],
+        exams_attempted=1,
+        exams_excluded=0,
+    )
+    source = build_export_source_from_cli(_settings(), multi_exam_result=multi, inputs=None)
+    assert len(source.exams) == 1
+    assert source.exams[0].normalized_data.empty
+    assert source.exams[0].provenance is None
+    assert "Export input unresolved for Exam 1" in source.exams[0].extra_warnings

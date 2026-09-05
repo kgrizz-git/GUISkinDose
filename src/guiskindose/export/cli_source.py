@@ -49,6 +49,9 @@ def _exam_source_from_multi_result(
     for result_index, er in enumerate(multi_exam_result.exams):
         loaded_index = resolve_loaded_exam_index(er.exam_id, result_index=result_index, n_loaded=n_inputs)
         adapter = inputs[loaded_index] if inputs is not None and loaded_index is not None else None
+        extra_warnings = list(er.warnings)
+        if adapter is None:
+            extra_warnings.append(f"Export input unresolved for {er.exam_id}")
         exams.append(
             ExportExamSource(
                 exam_id=er.exam_id,
@@ -58,7 +61,7 @@ def _exam_source_from_multi_result(
                 effective_settings=settings,
                 patient_offset=tuple(er.patient_offset),  # type: ignore[arg-type]
                 transform_meta={},
-                extra_warnings=list(er.warnings),
+                extra_warnings=extra_warnings,
             )
         )
     return exams
