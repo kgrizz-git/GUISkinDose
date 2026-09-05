@@ -11,10 +11,10 @@ For harness rules, validation commands, and plan conventions, see [HARNESS_ENGIN
 
 ## Next Up
 
+- [ ] **Documentation Review & Infrastructure** — See "Comprehensive Documentation & Docstrings Assessment" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section.
-- [ ] **Documentation Review** — See "Check documentation completeness and accuracy" in the Active Work section.
 
 ## Active Work
 
@@ -43,13 +43,11 @@ policy decisions, not a restart of Phases 0-9.
   (CPU, ephemeral raw report, count-only summary) for conditional admission. Remaining: run it only on synthetic
   DICOM fixtures, confirm report output cannot leak findings, and decide whether to keep it as a local advisory
   step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
-- [ ] **Check documentation completeness and accuracy** — verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`,
-  `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
-- [ ] **Exhaustive docstring and doc review** — sweep all Python source files under `src/` for outdated,
-  missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs
-  (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior.
-  Flag any docstring that
-  describes behavior that has changed since it was written.
+- [ ] **Comprehensive Documentation & Docstrings Assessment** — execute a structured review of docs and source files:
+  - **Check completeness and accuracy**: verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
+  - **Exhaustive docstring and doc review**: sweep all Python source files under `src/` for outdated, missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior. Flag any docstring describing changed behavior.
+  - **Build assessment infrastructure**: establish a structured prescription for *how* and *what* to review. Define what records to keep (e.g., an assessment matrix or checklist artifact), and set clear triggers to rerun assessments or update docs (e.g., pre-release, changing calculation pipelines, major feature addition).
+  - **Explore modern documentation generators**: investigate adopting tools like Mintlify, MkDocs (with Material theme), or Docusaurus to provide a more polished, user-facing documentation site than the current Sphinx setup.
 - [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
