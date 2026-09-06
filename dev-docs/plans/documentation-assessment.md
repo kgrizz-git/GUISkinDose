@@ -32,7 +32,7 @@ No prose rewrite for style; accuracy and completeness only.
 ## Phase 0 — Script-assisted inventory (advisory, not a gate)
 
 - [x] Add `scripts/check_docstring_inventory.py` (stdlib `ast` only): per-file counts of
-  public modules/classes/functions missing docstrings under `src/`; advisory report,
+  public modules/classes/functions/methods missing docstrings under `src/`; advisory report,
   no CI failure. Reuse the `check_doc_pruning.py` output style.
 - [x] Register the script in the `dev-docs/index.md` Harness table and the
   `HARNESS_ENGINEERING.md` validation-commands map when it lands.
