@@ -57,11 +57,15 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Phase 2 — Docstring sweep
 
-- [ ] Walk the Phase 0 inventory file by file; fix inaccurate docstrings, add missing
+- [x] Walk the Phase 0 inventory file by file; fix inaccurate docstrings, add missing
   ones for public behavior, flag (don't silently rewrite) anything describing changed
   behavior for a behavior-vs-doc decision.
-- [ ] Keep fixes behavior-neutral: no signature or logic changes in this phase.
-- [ ] Acceptance: zero public undocumented symbols or an explicit accepted-gap list.
+- [x] Keep fixes behavior-neutral: no signature or logic changes in this phase.
+- [x] Acceptance: zero public undocumented symbols or an explicit accepted-gap list.
+  Result (2026-09-06): **0 missing** across 134 public modules (was 175 in 72 files).
+  Branch `docs/phase-2-docstring-sweep`; four commits (API/settings, pipeline/export,
+  plotting, GUI). Orchestrator fixed accidental `attrs_dict` removal in
+  `create_attributes_string.py`; whitelisted `geometry_builders.py` at 828 lines.
 
 ## Phase 3 — User-facing cross-check
 
