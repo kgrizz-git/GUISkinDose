@@ -343,6 +343,31 @@ def test_on_exam_select_change_updates_active_index(monkeypatch: pytest.MonkeyPa
     cast(MagicMock, ctrl.ctx.refresh_per_exam).assert_called()
 
 
+def test_on_exam_select_change_commits_pending_table_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_philips_into_state()
+    ctrl = _controller()
+    _wire_geometry_refs(ctrl)
+    state.is_multi_exam = True
+    state.active_exam_index = 0
+    state.loaded_exam_meta = [{"file_name": "a.dcm"}, {"file_name": "b.dcm"}]
+    ctrl.table_origin_pending = True
+    committed: list[int] = []
+    reset_called: list[bool] = []
+
+    monkeypatch.setattr(gc, "commit_table_origin_transform", lambda st, idx: committed.append(idx))
+    monkeypatch.setattr(gc, "reset_results", lambda: reset_called.append(True))
+    monkeypatch.setattr(ctrl, "update_preview_caption", lambda: None)
+    monkeypatch.setattr(ctrl, "update_event_context", lambda: None)
+    ctrl.ctx.refresh_per_exam = MagicMock()
+
+    ctrl.on_exam_select_change(SimpleNamespace(value=1))
+
+    assert committed == [0]
+    assert reset_called == [True]
+    assert ctrl.table_origin_pending is False
+    assert state.active_exam_index == 1
+
+
 def test_on_composite_toggle_schedules_render(monkeypatch: pytest.MonkeyPatch) -> None:
     ctrl = _controller()
     _wire_geometry_refs(ctrl)

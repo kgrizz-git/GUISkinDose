@@ -1,7 +1,7 @@
 """Coerce settings input into a :class:`PyskindoseSettings` instance.
 
-Falls back to the bundled ``settings_example.json`` when no input is
-provided.
+When no input is provided, loads ``settings.json`` from the package root if
+present; otherwise falls back to the bundled ``settings_example.json``.
 """
 import logging
 from pathlib import Path
@@ -19,8 +19,9 @@ def parse_settings_to_settings_class(
     Parameters
     ----------
     settings : str | dict | PyskindoseSettings | None, optional
-        JSON string, dict, or existing settings object. When *None*, the
-        bundled ``settings_example.json`` is used.
+        JSON string, dict, or existing settings object. When *None*, loads
+        ``settings.json`` from the package root if present; otherwise uses
+        the bundled ``settings_example.json``.
 
     Returns
     -------

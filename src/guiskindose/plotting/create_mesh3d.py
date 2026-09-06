@@ -26,7 +26,7 @@ def create_mesh_3d_general(
     color : str
         Plotly color string or hex code.
     mesh_text : list[str]
-        Hover text for each mesh face.
+        Hover text for each mesh vertex.
     opacity : float, optional
         Surface opacity in [0, 1]. Defaults to 1.0.
     mesh_name : str, optional

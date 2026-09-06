@@ -301,6 +301,7 @@ class GeometryTabController:
             self._slider_timer = None
         if self.table_origin_pending and old_index is not None:
             commit_table_origin_transform(state, old_index)
+            reset_results()
             self.table_origin_pending = False
         new_index = int(
             e.value
