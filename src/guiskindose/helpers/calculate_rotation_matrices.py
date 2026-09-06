@@ -1,7 +1,8 @@
-"""Compute C-arm rotation matrices from normalized RDSR angles.
+"""Compute patient-table rotation matrices from normalized At angles.
 
 Takes a DataFrame with At1/At2/At3 columns and appends Rx, Ry, Rz
-matrix tuples as new columns.
+matrix tuples as new columns. Positioner (C-arm) angles Ap1/Ap2/Ap3 are
+handled separately in beam geometry, not here.
 """
 import numpy as np
 import pandas as pd

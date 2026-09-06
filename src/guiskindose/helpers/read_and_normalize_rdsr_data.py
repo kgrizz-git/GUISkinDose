@@ -1,7 +1,8 @@
-"""Read an RDSR file and normalize it into the internal event DataFrame.
+"""Read an RDSR file and return the internal event DataFrame.
 
-Reads a DICOM RDSR (or preparsed JSON), parses it, normalizes vendor
-conventions, and optionally drops invalid kVp rows.
+For DICOM RDSR inputs, parses with pydicom, normalizes vendor conventions,
+and optionally drops invalid kVp rows. For ``.json`` inputs, returns the
+pre-parsed frame via ``pd.read_json`` without re-running the normalizer.
 """
 import logging
 from pathlib import Path
@@ -17,7 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: PyskindoseSettings) -> pd.DataFrame:
-    """Load and normalize RDSR event data for downstream dose calculations.
+    """Load RDSR event data for downstream dose calculations.
+
+    DICOM paths are parsed and normalized; ``.json`` paths are loaded as
+    stored (already normalized when exported).
 
     Parameters
     ----------
@@ -31,8 +35,8 @@ def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: Pyskindose
     Returns
     -------
     pd.DataFrame
-        Normalized DataFrame of irradiation events ready for geometry
-        reconstruction and dose accumulation.
+        Event DataFrame ready for geometry reconstruction and dose
+        accumulation (normalized for DICOM; as stored for JSON).
     """
     path: Path = (
         Path(rdsr_filepath)

@@ -28,8 +28,11 @@ def perform_calculations_for_new_geometries(
 ):
     """Calculate beam intersections, field areas, and inverse-square corrections.
 
-    If the geometry hasn't changed since the previous event (new_geometry=False),
-    returns the previous event's intersection and correction arrays.
+    If the geometry hasn't changed since the previous event (``new_geometry=False``),
+    returns the previous event's intersection and correction arrays unchanged.
+    When ``new_geometry=True`` but the beam hits no skin cells, returns empty
+    ``table_hits``, ``field_area``, and ``k_isq`` arrays rather than carrying
+    forward values from the prior event.
 
     Parameters
     ----------

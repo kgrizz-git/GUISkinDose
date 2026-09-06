@@ -75,7 +75,7 @@ class PhantomDimensions:
 
     def update_attrs_str(self):
         """Refresh the cached attribute summary string."""
-        self.attrs_str = create_attributes_string(attrs_parent=self, object_name="dimension", indent_level=1)
+        self.attrs_str = create_attributes_string(attrs_parent=self, object_name="dimensions", indent_level=1)
 
     def to_dict_pad(self):
         """Return dimensions as a dict including table and pad values.
