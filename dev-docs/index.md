@@ -138,6 +138,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/APPSEC_MEDIUM_FINDINGS_2026-08-03.md](assessments/APPSEC_MEDIUM_FINDINGS_2026-08-03.md) | Remediation note for three medium findings: export header formula injection, `human_mesh` path traversal, XLSX zip-bomb budgets. |
 | [assessments/privacy-admission-enforcement/hardening.md](assessments/privacy-admission-enforcement/hardening.md) | Design review of protected ignore/never-track rules and conditional scanner enforcement; recommends staged-content-bound local receipts plus independent CI. |
 | [assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md) | HTML export fake “background task cancelled” error; Results aggregate can render while export fails. Fix plan: [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). |
+| [assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md) | Dual-agent spike: Mintlify free-tier/OSS terms, end-user docs tooling survey, ranked shortlist, and open verification items. Linked from `TO_DO.md`. |
 
 ---
 
