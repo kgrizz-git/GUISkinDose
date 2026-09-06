@@ -25,7 +25,7 @@ src/guiskindose/          # Main package
   db_connect.py            # SQLite correction-factor database
   format_export_data.py    # Output formatting (dict / JSON / HTML)
   dev_data.py              # Hard-coded dev/test parameters
-  constants.py             # All string/numeric constants (~200)
+   constants.py             # All string/numeric constants (~200 constants)
   normalization_settings.json  # Per-vendor RDSR normalization rules
   settings_example.json    # Template settings file
   settings/                # Settings dataclasses
@@ -58,7 +58,7 @@ GUISkinDose is organized in layers so settings, dose physics, and presentation s
 | **L7 — Entry** | `main.py`, `__main__.py`, `cli_args.py` | CLI argparse and public `main()` API |
 | **L8 — GUI (optional extra)** | `gui/` | NiceGUI app; uses orchestration and input, not dose internals |
 
-**Multi-exam Geometry (GUI):** `gui/tabs/geometry.py` binds offset sliders to `loaded_exam_meta[active_exam_index]`; `gui/geometry_preview.py` slices `rdsr_df` via `EXAM_INDEX_COLUMN`; composite preview pauses at >30 events (`composite_live_preview_paused`). Calculate/Settings summaries use `gui/summary_formatters.py` and `per_exam_offsets_version` on `AppState`.
+**Multi-exam Geometry (GUI):** `gui/tabs/geometry.py` binds offset sliders to `loaded_exam_meta[active_exam_index]`; `gui/geometry_preview.py` slices `rdsr_df` via `EXAM_INDEX_COLUMN`; composite preview pauses via `procedure_live_preview_paused` above 30 events in any `Full procedure` path (single-exam or multi-exam, composite or not). Calculate/Settings summaries use `gui/summary_formatters.py` and `per_exam_offsets_version` on `AppState`.
 
 **Native GUI window state:** `gui/app.py` and `gui/window_prefs.py` persist native-window geometry in
 `~/.guiskindose/gui.json`, falling back to `~/.mypyskindose/gui.json` when the new file is absent.
@@ -201,7 +201,7 @@ Key flags (see `python -m guiskindose --help` for the full list):
 | `--kerma-meter-correction-mode` | CF resolution mode: `file` or `prompt` (GUI-only) |
 | `--kerma-meter-explicit-label` | Force all events to this equipment label for CF lookup |
 | `--native` | Open GUI in a native desktop window (requires `[gui-native]` extra) |
-| `--host` | GUI server bind address (default `127.0.0.1`; requires `--allow-network` for non-loopback) |
+| `--host` | GUI server bind address (`127.0.0.1` applied when the flag is unset; argparse default is `None`; requires `--allow-network` for non-loopback) |
 | `--allow-network` | Acknowledge non-loopback GUI binding |
 
 ---
@@ -229,9 +229,9 @@ Top-level settings object. Key attributes:
 | `estimate_k_tab` | `bool` | `True` | Use estimated table attenuation instead of measured |
 | `k_tab_val` | `float` | `0.8` | Table transmission factor (0–1) when estimating |
 | `inherent_filtration` | `float` | `3.1` | X-ray tube inherent filtration in mmAl |
-| `remove_invalid_rows` | `bool` | `False` | Drop RDSR rows with missing/invalid data |
+| `remove_invalid_rows` | `bool` | `False` | Drop events with kVp = 0 |
 | `below_floor_kvp_policy` | `str` | `"exam_average"` | Handle events with kVp < 25 kV HVL floor: `snap`/`skip`/`manual`/`exam_average` |
-| `below_floor_kvp_manual` | `float` | `70.0` | Substituted kVp when `below_floor_kvp_policy="manual"` |
+| `below_floor_kvp_manual` | `float` | `70.0` | Substituted kVp when `below_floor_kvp_policy="manual"` (example value; code fallback is the 25.0 HVL floor) |
 | `silence_pydicom_warnings` | `bool` | `True` | Suppress pydicom warnings |
 | `output_format` | `str` | `"html"` | `"html"`, `"dict"`, or `"json"` |
 | `corrections_db_path` | `str` | `"corrections.db"` | Path to SQLite corrections database |
@@ -291,6 +291,8 @@ All values in cm:
 | `max_events_for_patient_inclusion` | `10` | Hide patient in `plot_procedure` above this event count |
 | `plot_event_index` | `0` | Which event to show in `plot_event` mode |
 
+Defaults above are the code fallbacks applied when keys are absent (`settings/plot_settings.py`); `settings_example.json` is a dev template and intentionally differs (`notebook_mode: true`, `plot_dosemap: false`, `max_events_for_patient_inclusion: 0`, `plot_event_index: 1`).
+
 ---
 
 ## Core classes
@@ -314,11 +316,11 @@ Key attributes:
 
 Key methods: `rotate()`, `translate()`, `save_position()`, `position()`
 
-Human phantoms are loaded from STL files in `phantom_data/`. The catalog is large (~130+ stems) and is **discovered at runtime** — use `print_available_human_phantoms()` or the GUI mesh selector for the authoritative list. Family groupings include:
+Human phantoms are loaded from STL files in `phantom_data/`. The catalog is large (46 full stems — 23 base clinical + 23 `*_arms_down` twins — plus 92 reduced previews; 138 `.stl` files) and is **discovered at runtime** — use `print_available_human_phantoms()` or the GUI mesh selector for the authoritative list. Family groupings include:
 
 - **Adult standard:** `adult_ecto_*`, `adult_endo_*` (male/female)
-- **Adult bariatric:** `adult_bariatric_{1,2,3}_{male,female}` and `*_arms_down` variants
-- **Pediatric:** `ped_preschool_*`, `ped_5y_*`, `ped_10y_*`, `ped_15y_*`
+- **Adult bariatric:** `adult_bariatric_{male,female}_{1,2,3}` and `*_arms_down` variants
+- **Pediatric:** `ped_preschool_*`, `ped_5y_*`, `ped_10y_*`
 - **Senior:** `senior_{male,female}`
 - **Legacy/compat:** `hudfrid`, `adult_male`, `adult_female`, `junior_male`, `junior_female`
 - **Resolution variants:** `*_reduced_1000t` (speed), `*_reduced_3000t` (GUI preview)
@@ -337,7 +339,7 @@ Key attributes:
 | `det_r` | `(8, 3)` — 8 corners of the cuboid detector |
 | `N` | `(4, 3)` — normal vectors to the 4 beam faces |
 
-Key method: `check_hit(phantom)` — returns indices of phantom cells inside the beam pyramid.
+Key method: `check_hit(phantom)` — returns a per-cell boolean mask (`list[bool]`) marking entrance skin cells inside the beam pyramid.
 
 Beam angulation parameters from RDSR:
 - `Ap1` — primary positioner angle (LAT rotation, about Z)
@@ -358,6 +360,10 @@ Orchestrates the full calculation:
 5. Computes table transmission correction
 6. Calls `calculate_irradiation_event_result()` in a loop over each event
 
+Geometry-change handling and per-event dose accumulation live in
+`calculate_dose/perform_calculations_for_new_geometries.py` and
+`calculate_dose/add_correction_and_event_dose_to_output.py`.
+
 ### `calculate_dose/calculate_irradiation_event_result.py`
 
 Per-event processing:
@@ -366,7 +372,7 @@ Per-event processing:
 3. Scales field area to each skin cell
 4. Applies corrections: k_isq × k_bs × k_med × k_tab
 5. Adds corrected dose to `dose_map`
-6. Recurses to next event
+6. Iterates over the remaining events in a loop (former tail recursion replaced; see `plans/archive/recursion-to-iteration.md`)
 
 ### Correction factors — `corrections.py`
 
@@ -471,6 +477,8 @@ All visualisation uses [Plotly](https://plotly.com/python/) for interactive 3D r
 | `plot_settings.py` | Plot-level color/size/margin fetchers |
 | `plot_layout.py` | Shared Plotly `go.Layout` builders for geometry, procedure, and dose-map plots |
 
+Smaller builders not listed per-row: `plot_geometry.py`, `create_setup_and_event_plot.py`, `create_irradiation_event_procedure_plot_data.py`, `create_layout_for_dose_map_plots.py`, `create_geometry_plot_texts.py`, `create_notebook_dose_map_plot.py`, `get_visual_offset.py`.
+
 ---
 
 ## Public API helpers — `__init__.py`
@@ -505,12 +513,15 @@ from guiskindose import (
 | `kaleido` | Static image export from Plotly |
 | `pillow` | Image handling |
 | `psutil` | System resource monitoring |
+| `pypdf` | PDF parsing for privacy admission (sensitive-content scan) |
+| `reportlab>=4.0` | PDF rich audit report export |
+| `python-docx>=1.1` | DOCX rich audit report export |
 
 ### Optional extras
 
 | Extra | Package(s) | Purpose |
 |-------|------------|---------|
-| `[export]` | `reportlab>=4.0`, `python-docx>=1.1` | PDF and DOCX rich audit report export |
+| `[export]` | — (no-op alias) | Retained so existing `pip install guiskindose[export]` commands keep working; the report backends above are core dependencies |
 | `[gui]` | `nicegui>=2.0.0` | Browser-based GUI |
 | `[gui-native]` | `nicegui>=2.0.0`, `pywebview` | Native desktop window GUI |
 | `[dev]` | ruff, pytest, basedpyright, bandit, etc. | Development tooling |
