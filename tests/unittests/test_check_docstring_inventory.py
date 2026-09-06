@@ -9,6 +9,7 @@ from scripts.check_docstring_inventory import (
     collect_missing,
     inventory_file,
     iter_module_scope,
+    iter_source_files,
     main,
     plural,
 )
@@ -105,3 +106,29 @@ def test_main_clean_tree_ok(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
 def test_main_missing_src_dir_errors(tmp_path: Path) -> None:
     with pytest.raises(SystemExit):
         main(["--repo-root", str(tmp_path)])
+
+
+def test_main_external_absolute_src_dir(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    ext_dir = tmp_path / "ext"
+    ext_dir.mkdir()
+    ext_file = ext_dir / "b.py"
+    ext_file.write_text("def undoc():\n    pass\n", encoding="utf-8")
+
+    assert main(["--repo-root", str(repo_dir), "--src-dir", str(ext_dir.resolve()), "--strict"]) == 1
+    out = capsys.readouterr()
+    assert f"missing {ext_file.resolve().as_posix()}: <module>, undoc" in out.err
+
+
+def test_iter_source_files_excludes_private_modules(tmp_path: Path) -> None:
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "public.py").touch()
+    (src_dir / "_private.py").touch()
+    (src_dir / "__init__.py").touch()
+    (src_dir / "__main__.py").touch()
+
+    files = iter_source_files(src_dir)
+    names = [f.name for f in files]
+    assert names == ["__init__.py", "__main__.py", "public.py"]

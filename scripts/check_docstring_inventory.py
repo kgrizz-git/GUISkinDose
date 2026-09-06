@@ -10,8 +10,10 @@ Visibility rule: a name is public when it does not start with an underscore
 (dunder and private names are skipped, including ``__init__``). Module-level
 symbols nested under ``if``/``try``/``with``/``match`` guards (for example
 ``if TYPE_CHECKING:``) are included; definitions nested inside function bodies
-are out of scope for the inventory. Files that fail to parse are
-reported on stderr and skipped.
+are out of scope for the inventory. Files whose stem starts with a single
+underscore (for example ``_helpers.py``) are omitted; package entry points such
+as ``__init__.py`` and ``__main__.py`` are included. Files that fail to parse
+are reported on stderr and skipped.
 """
 
 from __future__ import annotations
@@ -42,6 +44,11 @@ def plural(count: int, singular: str, plural_form: str) -> str:
 
 def is_public(name: str) -> bool:
     return not name.startswith("_")
+
+
+def is_public_module(stem: str) -> bool:
+    """Return whether a ``.py`` file stem should be included in the inventory."""
+    return not stem.startswith("_") or stem.startswith("__")
 
 
 def iter_module_scope(body: list[ast.stmt]) -> Iterator[ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef]:
@@ -79,8 +86,6 @@ def collect_missing(tree: ast.Module) -> tuple[list[str], dict[str, int]]:
             missing.append(qualified_name(stack))
         for child in node.body:
             if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef):
-                if child.name.startswith("__") and child.name.endswith("__"):
-                    continue
                 if not is_public(child.name):
                     continue
                 totals["method"] += 1
@@ -101,7 +106,7 @@ def collect_missing(tree: ast.Module) -> tuple[list[str], dict[str, int]]:
 
 
 def iter_source_files(src_dir: Path) -> list[Path]:
-    return sorted(p for p in src_dir.rglob("*.py") if p.is_file())
+    return sorted(p for p in src_dir.rglob("*.py") if p.is_file() and is_public_module(p.stem))
 
 
 def inventory_file(path: Path) -> FileInventory:
@@ -127,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = args.repo_root.resolve()
     src_dir = repo_root / args.src_dir if not args.src_dir.is_absolute() else args.src_dir
+    src_dir = src_dir.resolve()
     if not src_dir.is_dir():
         parser.error(f"src dir not found: {src_dir}")
 
@@ -135,7 +141,10 @@ def main(argv: list[str] | None = None) -> int:
 
     with_gaps = [inv for inv in inventories if inv.missing]
     for inv in with_gaps:
-        rel = inv.path.relative_to(repo_root).as_posix()
+        try:
+            rel = inv.path.relative_to(repo_root).as_posix()
+        except ValueError:
+            rel = inv.path.as_posix()
         print(f"missing {rel}: {', '.join(inv.missing)}", file=sys.stderr)
 
     totals = {"module": 0, "class": 0, "function": 0, "method": 0}
