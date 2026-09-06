@@ -1,3 +1,4 @@
+"""Compute small visual offsets so overlapping phantom meshes remain visible."""
 
 from ..beam_class import Beam
 from ..constants import PHANTOM_MODEL_PLANE

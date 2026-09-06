@@ -1,3 +1,4 @@
+"""Create Plotly Mesh3d traces for phantoms, beams, and detectors."""
 
 import plotly.graph_objects as go
 
@@ -16,6 +17,33 @@ def create_mesh_3d_general(
     detector_mesh: bool = False,
     visible_status: bool | None = True,
 ) -> go.Mesh3d:
+    """Create a Plotly Mesh3d trace for a phantom or detector object.
+
+    Parameters
+    ----------
+    obj : Phantom | Beam
+        Geometry object to render.
+    color : str
+        Plotly color string or hex code.
+    mesh_text : list[str]
+        Hover text for each mesh face.
+    opacity : float, optional
+        Surface opacity in [0, 1]. Defaults to 1.0.
+    mesh_name : str, optional
+        Trace name shown in the legend.
+    lighting : dict, optional
+        Plotly lighting dict (e.g. ``{"diffuse": 0.5, "ambient": 0.5}``).
+    detector_mesh : bool, optional
+        Use the detector surface instead of the object surface. Defaults to False.
+    visible_status : bool, optional
+        Initial trace visibility. Defaults to True.
+
+    Returns
+    -------
+    go.Mesh3d
+        Configured Plotly mesh trace.
+
+    """
 
     if opacity is None:
         opacity = 1.0

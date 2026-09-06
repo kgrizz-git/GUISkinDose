@@ -1,3 +1,4 @@
+"""Assemble meshes, wireframes, and layout for setup or single-event plots."""
 import logging
 
 import plotly.graph_objects as go
@@ -42,6 +43,40 @@ def create_setup_and_event_plot(
     dark_mode=True,
     notebook_mode: bool = False,
 ):
+    """Assemble meshes, wireframes and layout for setup or event plots.
+
+    Parameters
+    ----------
+    patient : Phantom
+        Patient phantom.
+    table : Phantom
+        Table phantom.
+    pad : Phantom
+        Pad phantom.
+    beam : Beam
+        X-ray beam geometry.
+    mode : str
+        Plot mode label.
+    patient_text : list[str]
+        Hover text for the patient mesh.
+    source_text : list[str]
+        Hover text for the X-ray source.
+    table_text : list[str]
+        Hover text for the table mesh.
+    detectors_text : list[str]
+        Hover text for the detector mesh.
+    pad_text : list[str]
+        Hover text for the pad mesh.
+    beam_text : list[str]
+        Hover text for the beam mesh.
+    title : str
+        Plot title.
+    dark_mode : bool, optional
+        Use dark theme. Defaults to True.
+    notebook_mode : bool, optional
+        Optimize figure size for notebooks. Defaults to False.
+
+    """
 
     logger.debug("Creating meshes for plot")
 

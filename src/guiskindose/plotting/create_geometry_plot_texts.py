@@ -1,3 +1,4 @@
+"""Generate hover text strings for geometry Plotly traces."""
 import logging
 
 import numpy as np

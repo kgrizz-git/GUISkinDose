@@ -1,3 +1,4 @@
+"""Assemble Plotly traces for one irradiation event in a procedure slider plot."""
 import logging
 
 import pandas as pd
@@ -40,6 +41,34 @@ def create_irradiation_event_procedure_plot_data(
     pad: Phantom,
     patient: Phantom | None = None,
 ) -> dict[str, go.Scatter3d | go.Mesh3d]:
+    """Build Plotly traces for one irradiation event in the procedure plot.
+
+    Positions the beam, table, pad and optional patient phantom for the selected
+    event, then assembles meshes and wireframes keyed by constant names.
+
+    Parameters
+    ----------
+    data_norm : pd.DataFrame
+        Normalized RDSR data.
+    include_patient : bool
+        Whether to include the patient phantom mesh.
+    visible_status : bool
+        Initial visibility flag for all traces in this event.
+    event : int
+        Irradiation event index.
+    table : Phantom
+        Patient support table phantom.
+    pad : Phantom
+        Patient support pad phantom.
+    patient : Phantom, optional
+        Patient phantom. Required when ``include_patient`` is True.
+
+    Returns
+    -------
+    dict[str, go.Scatter3d | go.Mesh3d]
+        Mapping of trace-name constants to Plotly trace objects.
+
+    """
 
     # Position geometry objects
     beam = Beam(data_norm, event=event, plot_setup=False)

@@ -1,3 +1,4 @@
+"""Plot geometry for a single irradiation event."""
 import logging
 
 import pandas as pd

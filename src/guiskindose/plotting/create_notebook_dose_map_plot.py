@@ -1,3 +1,4 @@
+"""Compose static dose-map PNGs into a notebook-friendly Plotly figure."""
 import logging
 from pathlib import Path
 
@@ -14,6 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 def create_notebook_dose_map_plot(names: list[Path]):
+    """Assemble static dose-map images into a single Plotly figure for notebooks.
+
+    Places the four static PNG dose-map renders side-by-side so they can be
+    viewed in a Jupyter notebook without opening external windows.
+
+    Parameters
+    ----------
+    names : list[Path]
+        Paths to the four static dose-map PNG files.
+
+    """
 
     fig = go.Figure()
 

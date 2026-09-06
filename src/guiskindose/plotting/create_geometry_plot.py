@@ -1,3 +1,4 @@
+"""High-level entry to render setup, event, or procedure geometry plots."""
 import pandas as pd
 
 from guiskindose import constants as c

@@ -1,3 +1,4 @@
+"""Plot the initial phantom-and-table setup before any irradiation events."""
 import logging
 
 import pandas as pd
