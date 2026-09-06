@@ -44,12 +44,16 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Phase 1 — Hub-doc accuracy pass
 
-- [ ] `CODEBASE_OVERVIEW.md`: settings table, class/function inventory, layering rules,
+- [x] `CODEBASE_OVERVIEW.md`: settings table, class/function inventory, layering rules,
   repo layout vs code.
-- [ ] `FEATURE_INVENTORY.md`: status ledger vs shipped behavior; harness/CI §0.
-- [ ] `AGENTS.md` + `HARNESS_ENGINEERING.md`: commands, file maps, conventions vs repo.
-- [ ] Fix drift in place (same PR per golden rule 1); record per-doc verdict in matrix.
-- [ ] Acceptance: each hub doc marked accurate + dated, or fixed with the fix commit linked.
+- [x] `FEATURE_INVENTORY.md`: status ledger vs shipped behavior; harness/CI §0.
+- [x] `AGENTS.md` + `HARNESS_ENGINEERING.md`: commands, file maps, conventions vs repo.
+- [x] Fix drift in place (same PR per golden rule 1); record per-doc verdict in matrix.
+- [x] Acceptance: each hub doc marked accurate + dated, or fixed with the fix commit linked.
+  Result (2026-09-06, commit `4b64a98`, dual-agent two-round review): CODEBASE_OVERVIEW —
+  15 fixes, accurate; FEATURE_INVENTORY — 8 fixes + header re-dated, accurate; AGENTS.md —
+  2 fixes, accurate; HARNESS_ENGINEERING.md — no drift found, accurate. Verdicts held for
+  the Phase 4 matrix.
 
 ## Phase 2 — Docstring sweep
 
