@@ -31,6 +31,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Public docstring coverage under `src/guiskindose/` (maintainer-facing)** (2026-09-06) —
+  Phase 2 of the documentation-assessment plan adds module and public-symbol docstrings
+  across settings, pipeline, plotting, and GUI modules (175 gaps closed; inventory now
+  reports zero missing). No end-user behavior change.
 - **Added docstring inventory tooling (maintainer-facing)** (2026-09-06) — new advisory
   `scripts/check_docstring_inventory.py` reports public symbols under `src/` missing
   docstrings, backing the phased documentation-assessment sweep. No end-user behavior change.
