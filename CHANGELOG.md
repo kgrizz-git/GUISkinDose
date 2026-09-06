@@ -31,6 +31,9 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Added docstring inventory tooling (maintainer-facing)** (2026-09-06) — new advisory
+  `scripts/check_docstring_inventory.py` reports public symbols under `src/` missing
+  docstrings, backing the phased documentation-assessment sweep. No end-user behavior change.
 - **GitHub repository renamed to `GUISkinDose`** (2026-09-04) — the fork (still `rvbCMTS/PySkinDose` upstream)
   and the SonarCloud project (key flipped automatically) now carry the product name. Live URLs, `pyproject.toml`
   `[project.urls]`, `CITATION.cff`, community files, issue templates, the changelog footer links, and

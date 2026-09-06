@@ -2,7 +2,7 @@
 
 > See also: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) | [GUI_PLAN.md](plans/GUI_PLAN.md) | [AGENTS.md](../AGENTS.md)
 
-_Last updated: 2026-07-16 — compiled from direct source code reading and privacy-harness completion_
+_Last updated: 2026-09-06 — Phase 1 documentation assessment pass (hub-doc accuracy vs code)_
 
 ---
 
@@ -188,7 +188,7 @@ scales the full lateral mesh axis.
 | `fetch_and_append_hvl()` | HVL (mmAl) from SQLite DB by kVp + filtration; bilinear interpolation over (kVp, Cu), off-grid filtration interpolated and out-of-range clamped (warns per event); appends to DataFrame |
 | `apply_below_floor_kvp_policy()` | Resolves events with kVp below the 25 kV HVL floor per policy (`snap`/`skip`/`manual`/`exam_average`) before the HVL lookup; warns per event |
 | `count_below_floor_events()` | Positional indices of events with kVp below the HVL floor (drives the policy warnings + GUI pre-calc prompt) |
-| `calculate_rotation_matrices()` | Converts At1/At2/At3 angles to 3×3 rotation matrices (Rx, Ry, Rz) |
+| `calculate_rotation_matrices()` (`helpers/`, not `geom_calc`) | Converts At1/At2/At3 angles to 3×3 rotation matrices (Rx, Ry, Rz) |
 | `vector()` | Creates a vector or unit vector between two 3D points |
 | `Triangle.check_intersection()` | Möller–Trumbore-style ray-triangle intersection test |
 
@@ -408,7 +408,7 @@ Falls back to `settings_example.json` if nothing provided.
 | `inherent_filtration` | float | `3.1` | X-ray tube inherent filtration (mmAl) |
 | `remove_invalid_rows` | bool | `False` | Drop events with kVp = 0 |
 | `below_floor_kvp_policy` | str | `"exam_average"` | Below-floor (kVp < 25) handling: `snap`/`skip`/`manual`/`exam_average` |
-| `below_floor_kvp_manual` | float | `70.0` | Substituted kVp for `below_floor_kvp_policy="manual"` |
+| `below_floor_kvp_manual` | float | `70.0` | Substituted kVp for `below_floor_kvp_policy="manual"` (example value; code fallback is the 25.0 HVL floor) |
 | `silence_pydicom_warnings` | bool | `True` | Suppress pydicom warnings |
 | `output_format` | str | `"html"` | `"html"`, `"dict"`, or `"json"` |
 | `corrections_db_path` | str | `"corrections.db"` | Path to SQLite DB |
@@ -438,6 +438,8 @@ Falls back to `settings_example.json` if nothing provided.
 | `plot.max_events_for_patient_inclusion` | int | 10 | Hide patient in procedure above this |
 | `plot.plot_event_index` | int | 0 | Which event to show in `plot_event` |
 
+Defaults above are the code fallbacks applied when keys are absent (`settings/plot_settings.py`); `settings_example.json` is a dev template and intentionally differs.
+
 **Normalization (per vendor, in `normalization_settings.json`):**
 - `translation_offset`: x, y, z offsets (cm) between machine origin and PySkinDose origin
 - `translation_direction`: sign (+/-) for each translation axis
@@ -449,13 +451,13 @@ Falls back to `settings_example.json` if nothing provided.
 
 | Surface | Behavior |
 |---------|----------|
-| **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); PAUSED when composite `plot_procedure` > 30 events |
+| **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); live preview shows a PAUSED badge when any `Full procedure` path exceeds 30 events (`procedure_live_preview_paused`) |
 | **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview; **live 3D human-mesh preview** (no RDSR; prefers `_reduced_3000t` then `_reduced_1000t`; reflects scales, orientation, and active-exam offsets) |
 | **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
 | **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections |
 | **Upload tab** | Click exam card → set active index and open Geometry tab |
 
-Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_event_index`), `offset_handlers.py` (`apply_patient_offset_slider_tick`, `per_exam_offsets_version`), `summary_formatters.py`.
+Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_event_index`), `offset_handlers.py` (`apply_patient_offset_slider_tick`, `bump_per_exam_offsets_version`; `per_exam_offsets_version` lives on `AppState`), `summary_formatters.py`.
 
 ### 9.5 Multi-exam GUI Results tab controls
 
@@ -527,9 +529,9 @@ from guiskindose import (
 | CSV/TSV/XLSX event-table input (raw RDSR-like schema + auto-detect) | Shipped — Phase 2 (2026-06-09) | `generic_rdsr_like` adapter → `rdsr_normalizer()`; `--input-schema auto`. GUI import workflow is Phase 5. |
 | CSV/TSV/XLSX event-table input (Radimetrics adapter) | Shipped — Phase 3 (2026-06-10) | `radimetrics` adapter; column map + unit conversions (mGy→Gy, cm²→m², mAs→µAs); auto-detection; unknown model warning; synthetic fixture + tests. Validated against AXIOM-Artis column names only — real vendor fixture needed for production sign-off. |
 | CSV/TSV/XLSX event-table input (DoseTrack adapter) | Shipped — Phase 4 (2026-06-10) | `dosetrack` adapter; Equipment Name→Manufacturer inference (`MODEL2MANUF`); ffill; Plane Code normalization; unit conversions (mGy→Gy, Gy·cm²→Gy·m², µA→mA); CFA derivation from DAP formula; Siemens/Philips filter thickness paths; Philips lat/lon swap warning; synthetic AXIOM-Artis fixture + 10 tests. Philips path untested — needs real DoseTrack XLSX. |
-| CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | `qaelum.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real Qaelum export fixture. |
-| CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | `dosemonitor.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseMonitor export fixture. |
-| CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | `dosewatch.py` raises `NotImplementedError`; column map is empty `TODO`. Needs real DoseWatch export fixture. |
+| CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | Registry-wired `qaelum` schema in `input_adapters/stubs.py` raises `NotImplementedError`; excluded from auto-detection. Needs real Qaelum export fixture. |
+| CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | Registry-wired `dosemonitor` schema in `input_adapters/stubs.py` raises `NotImplementedError`; excluded from auto-detection. Needs real DoseMonitor export fixture. |
+| CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | Registry-wired `dosewatch` schema in `input_adapters/stubs.py` raises `NotImplementedError`; excluded from auto-detection. Needs real DoseWatch export fixture. |
 | PDF/Word/XLSX/HTML report export | Shipped (2026-07-02) | Rich Report Export — see §7.7; `guiskindose.export`. GUI modal + CLI `--export-format`. |
 | Side-by-side procedure comparison | Open backlog | — |
 | Settings validation with user-friendly errors | Partial | Errors surface deep in stack |

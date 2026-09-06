@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Added
+
+- **Docstring inventory script + tests** (2026-09-06) — `scripts/check_docstring_inventory.py`
+  (stdlib-AST advisory inventory of undocumented public symbols under `src/`) plus
+  `tests/unittests/test_check_docstring_inventory.py` (11 tests). Part of the phased
+  documentation-assessment plan; restores the PR coverage gate that flagged the untested script.
+
 ## [1.0.0] - 2026-09-03
 
 ### Added
