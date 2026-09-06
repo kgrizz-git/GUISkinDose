@@ -31,13 +31,16 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Phase 0 — Script-assisted inventory (advisory, not a gate)
 
-- [ ] Add `scripts/check_docstring_inventory.py` (stdlib `ast` only): per-file counts of
+- [x] Add `scripts/check_docstring_inventory.py` (stdlib `ast` only): per-file counts of
   public modules/classes/functions missing docstrings under `src/`; advisory report,
   no CI failure. Reuse the `check_doc_pruning.py` output style.
-- [ ] Register the script in the `dev-docs/index.md` Harness table and the
+- [x] Register the script in the `dev-docs/index.md` Harness table and the
   `HARNESS_ENGINEERING.md` validation-commands map when it lands.
-- [ ] Run it once to size Phase 2; attach the summary to the Phase 4 matrix.
-- [ ] Acceptance: script runs in `<30 s`, output lists every public undocumented symbol.
+- [x] Run it once to size Phase 2; attach the summary to the Phase 4 matrix.
+  Result (2026-09-06): 137 files, 175 missing docstrings in 72 files, 0.2 s.
+  Reviewed by two independent agents (approve-with-fixes; findings stderr, guard-block
+  descent, pluralization, skipped-count, frozen dataclass — all applied; linters clean).
+- [x] Acceptance: script runs in `<30 s`, output lists every public undocumented symbol.
 
 ## Phase 1 — Hub-doc accuracy pass
 
