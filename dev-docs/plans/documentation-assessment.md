@@ -20,7 +20,9 @@ No prose rewrite for style; accuracy and completeness only.
   `HARNESS_ENGINEERING.md` vs current behavior.
 - **Docstrings:** every Python module under `src/` (module, class, method, function) —
   missing, outdated, or inaccurate.
-- **User-facing docs:** `docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`,
+- **User-facing docs:** `docs/source/`, `dev-docs/` (including
+  `INPUT_DATA_FLOW_AND_OFFSETS.md`, `VENDOR_COORDINATE_SYSTEMS.md`,
+  `INPUT_SCHEMA_DETECTION.md`), `README.md`, `CONTRIBUTING.md`,
   `SUPPORT.md`, in-app `gui_help/` pages vs actual behavior.
 - Existing harness already covers: stale links/paths (`check_doc_freshness.py`), help
   coverage (`check_help_registry.py`), UI copy/glossary (`check_ui_copy.py`),
@@ -32,6 +34,8 @@ No prose rewrite for style; accuracy and completeness only.
 - [ ] Add `scripts/check_docstring_inventory.py` (stdlib `ast` only): per-file counts of
   public modules/classes/functions missing docstrings under `src/`; advisory report,
   no CI failure. Reuse the `check_doc_pruning.py` output style.
+- [ ] Register the script in the `dev-docs/index.md` Harness table and the
+  `HARNESS_ENGINEERING.md` validation-commands map when it lands.
 - [ ] Run it once to size Phase 2; attach the summary to the Phase 4 matrix.
 - [ ] Acceptance: script runs in `<30 s`, output lists every public undocumented symbol.
 
@@ -60,16 +64,17 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Phase 4 — Standing infrastructure (persists after archival)
 
-- [ ] Write the record: `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<YYYY-MM-DD>.md`
-  (matrix: per-doc verdict, docstring coverage numbers, gaps accepted, reviewer, date).
+- [ ] Write the record: `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`
+  (date-stamped like `DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md`; matrix: per-doc
+  verdict, docstring coverage numbers, gaps accepted, reviewer, date).
   Register it in `dev-docs/index.md`.
 - [ ] Triggers (any one fires a re-assessment of the affected area):
   1. **Pre-release** — extend `RELEASES_AND_DISTRIBUTION.md` step 4 with: "docs
      assessment current (matrix touched this cycle, or N/A with reason)".
   2. **Calculation-pipeline change** — PRs touching `calculate_dose/`,
-     `corrections.py`, `geom_calc.py`, `grid_interp.py`, or `input_adapters/` must
-     update affected hub docs + `feature_doc_matrix.json` (advisory impact script
-     already warns).
+     `corrections.py`, `geom_calc.py`, `grid_interp.py`, `input_adapters/`, or other
+     geometry/dose modules must update affected hub docs + `feature_doc_matrix.json`
+     (advisory impact script already warns).
   3. **Major feature** — new GUI tab, adapter, or setting must wire help registry +
      `ui_copy` + matrix + hub docs before merge.
   4. **Backstop** — `check_doc_pruning.py` review queue (30 days / 10 commits);
@@ -80,4 +85,5 @@ No prose rewrite for style; accuracy and completeness only.
 
 - Create: `scripts/check_docstring_inventory.py`, `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`
 - Modify: hub docs + docstrings (Phases 1–3), `dev-docs/RELEASES_AND_DISTRIBUTION.md` (trigger 1),
-  `dev-docs/TO_DO.md`, `dev-docs/index.md`
+  `dev-docs/HARNESS_ENGINEERING.md` + `dev-docs/index.md` (script registration),
+  `dev-docs/TO_DO.md`
