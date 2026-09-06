@@ -1,3 +1,4 @@
+"""Build interactive and static Plotly dose-map figures from phantom skin dose."""
 import logging
 from pathlib import Path
 

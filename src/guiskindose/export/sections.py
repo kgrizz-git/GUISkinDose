@@ -89,6 +89,7 @@ def non_default_settings(snapshot: dict[str, Any]) -> dict[str, Any]:
 
 
 def equipment_section(exam: ExportExamSource) -> dict[str, str | None]:
+    """Extract equipment details (manufacturer, model, profile) from the exam."""
     df = exam.normalized_data
     profile = exam.transform_meta.get("normalization_profile")
     if profile is None and exam.provenance is not None:
@@ -101,6 +102,7 @@ def equipment_section(exam: ExportExamSource) -> dict[str, str | None]:
 
 
 def phantom_section(view: ExamView, settings: Any) -> dict[str, Any]:
+    """Build the phantom metadata and geometry section from the 3D model view."""
     cells = view.patient.get("patient_skin_cells", {"x": [], "y": [], "z": []})
     ijk = view.patient.get("triangle_vertex_indices", {"i": []})
     vertex_count = len(cells["x"])
@@ -123,6 +125,7 @@ def phantom_section(view: ExamView, settings: Any) -> dict[str, Any]:
 
 
 def coordinate_section(exam: ExportExamSource, settings: Any) -> dict[str, Any]:
+    """Compile coordinate overrides, toggles, and offsets for the exam."""
     meta = exam.transform_meta
     offset = settings.phantom.patient_offset
     return {

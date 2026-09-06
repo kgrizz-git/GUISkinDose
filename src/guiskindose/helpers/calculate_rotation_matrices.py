@@ -1,8 +1,29 @@
+"""Compute patient-table rotation matrices from normalized At angles.
+
+Takes a DataFrame with At1/At2/At3 columns and appends Rx, Ry, Rz
+matrix tuples as new columns. Positioner (C-arm) angles Ap1/Ap2/Ap3 are
+handled separately in beam geometry, not here.
+"""
 import numpy as np
 import pandas as pd
 
 
 def calculate_rotation_matrices(normalized_data: pd.DataFrame) -> pd.DataFrame:
+    """Append Rx, Ry, Rz rotation matrices for each RDSR event.
+
+    Parameters
+    ----------
+    normalized_data : pd.DataFrame
+        DataFrame containing normalized RDSR event data with At1, At2, At3
+        angle columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        Input DataFrame with Rx, Ry, Rz columns added, each containing a
+        3x3 rotation matrix.
+
+    """
     angles = np.deg2rad(normalized_data.loc[:, ["At1", "At2", "At3"]].to_numpy(dtype=float))
     matrices = []
     for at1, at2, at3 in angles:

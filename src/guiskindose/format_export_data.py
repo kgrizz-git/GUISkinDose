@@ -1,3 +1,5 @@
+"""Format calculation results and geometry data into structured dictionary or JSON exports."""
+
 import json
 from dataclasses import dataclass, field
 from typing import Any

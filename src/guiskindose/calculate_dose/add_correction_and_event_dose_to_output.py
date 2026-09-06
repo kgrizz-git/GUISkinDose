@@ -1,3 +1,5 @@
+"""Applies physics corrections and adds event skin dose to the cumulative dose map."""
+
 import logging
 from typing import Any
 

@@ -149,6 +149,7 @@ def _show_onboarding_dialog() -> None:
 # ── page ───────────────────────────────────────────────────────────────────
 @ui.page("/")
 def index():
+    """Render the main single-page application GUI."""
     dprint("GUI", f"Rendering index page (v{GUI_VERSION})")
 
     install_notification_defaults()

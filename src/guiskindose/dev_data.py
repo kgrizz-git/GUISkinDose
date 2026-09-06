@@ -1,3 +1,8 @@
+"""Development-mode default parameter dictionary.
+
+Provides a hard-coded settings dict for plotting the bundled example
+procedure without a settings file. Keys mirror the JSON settings schema.
+"""
 from . import constants as c
 
 DEVELOPMENT_PARAMETERS = {

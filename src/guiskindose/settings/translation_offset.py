@@ -1,3 +1,8 @@
+"""Machine-origin translation offsets.
+
+Specifies the offset in cm between the RDSR-generating unit's origin and
+the GUISkinDose machine origin (x,y,z = 0,0,0).
+"""
 
 
 class TranslationOffset:
@@ -33,6 +38,14 @@ class TranslationOffset:
         self.z: float = float(offset.get("z", 0.0) or 0.0)
 
     def update_translation_offset(self, offset: dict[str, float]):
+        """Update translation offsets from a dict of floats.
+
+        Parameters
+        ----------
+        offset : dict[str, float]
+            Mapping of x, y, z to translation offsets in cm.
+
+        """
         self.x = float(offset["x"])
         self.y = float(offset["y"])
         self.z = float(offset["z"])

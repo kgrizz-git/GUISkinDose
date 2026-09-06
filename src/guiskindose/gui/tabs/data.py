@@ -35,6 +35,7 @@ COLUMN_LABEL_ALIASES = {
 
 
 def display_column_label(column: str) -> str:
+    """Display column label."""
     return COLUMN_LABEL_ALIASES.get(column, column)
 
 
@@ -158,6 +159,7 @@ def _build_data_header() -> ui.toggle:
 
 
 def build(_ctx: PageContext) -> None:
+    """Build."""
     with ui.tab_panel("data"), ui.column().classes("w-full gap-4"):
         view_toggle = _build_data_header()
         with ui.card().classes("modern-card w-full p-0 overflow-hidden sticky-header"):

@@ -88,6 +88,7 @@ _LOAD_STATE_FIELDS = (
 
 
 def upload_exceeds_limit(num_bytes: int) -> bool:
+    """Upload exceeds limit."""
     return num_bytes > MAX_UPLOAD_BYTES
 
 
@@ -129,6 +130,7 @@ class UploadTabController:
         self.refs: UploadViewRefs = UploadViewRefs()
 
     async def handle_upload(self, e: Any) -> None:
+        """Handle upload."""
         async with upload_lock:
             await self._do_upload(e)
 
@@ -226,6 +228,7 @@ class UploadTabController:
                 self.refs.import_preview.sheet_row.set_visibility(True)
 
     async def load_example(self) -> None:
+        """Load example."""
         name = self.refs.example_select.value
         if not name:
             return
@@ -265,6 +268,7 @@ class UploadTabController:
                 ui.notify("Could not load this example. Try again.", type="negative")
 
     async def reparse_schema(self) -> None:
+        """Reparse schema."""
         if state.file_path is None or state.input_source_type in ("", "dicom"):
             return
         with operation_guard("changing the input schema") as proceed:
@@ -287,6 +291,7 @@ class UploadTabController:
                 ui.notify(msg, type="negative", timeout=10000, multi_line=True)
 
     def clear_all_exams(self) -> None:
+        """Clear all exams."""
         clear_all_temp_uploads()
         clear_multi_exam_state(state)
         state.rdsr_df = None
@@ -326,6 +331,7 @@ class UploadTabController:
         self.ctx.refresh_per_exam()
 
     def remove_exam(self, index: int) -> None:
+        """Remove exam."""
         if not (0 <= index < len(state.loaded_exams)):
             return
         meta = state.loaded_exam_meta[index] if index < len(state.loaded_exam_meta) else {}
@@ -364,6 +370,7 @@ class UploadTabController:
         self.refs.import_preview.refresh()
 
     def select_exam_for_geometry(self, index: int) -> None:
+        """Select exam for geometry."""
         if not (0 <= index < len(state.loaded_exams)):
             return
         state.active_exam_index = index
@@ -371,6 +378,7 @@ class UploadTabController:
         self.ctx.tabs.set_value("geometry")
 
     def refresh_exams_table(self) -> None:
+        """Refresh exams table."""
         self.refs.exams_list.clear()
         has_exams = bool(state.loaded_exams)
         self.refs.exams_section_label.set_visibility(has_exams)

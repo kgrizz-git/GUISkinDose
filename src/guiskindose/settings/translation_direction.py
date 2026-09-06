@@ -1,3 +1,8 @@
+"""Table-translation direction multipliers.
+
+Each attribute is +1 or -1 and is used as a multiplicative correction
+factor to flip the sign of the corresponding translation direction.
+"""
 
 
 class TranslationDirection:
@@ -31,6 +36,14 @@ class TranslationDirection:
         self.z = 1 if directions is None else self._get_direction_as_value(directions["z"])
 
     def update_translation_direction(self, directions: dict[str, str]):
+        """Update direction multipliers from a dict of '+'/'-'.
+
+        Parameters
+        ----------
+        directions : dict[str, str]
+            Mapping of x, y, z to '+' or '-'.
+
+        """
         self.x = self._get_direction_as_value(directions["x"])
         self.y = self._get_direction_as_value(directions["y"])
         self.z = self._get_direction_as_value(directions["z"])

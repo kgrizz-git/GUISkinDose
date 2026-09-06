@@ -1,3 +1,4 @@
+"""Provides the Beam class for modeling the X-ray source, beam geometry, and detector."""
 
 import numpy as np
 import pandas as pd

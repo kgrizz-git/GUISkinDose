@@ -1,3 +1,5 @@
+"""Initialization and orchestration of the main dose calculation loop."""
+
 import logging
 from typing import Any
 
