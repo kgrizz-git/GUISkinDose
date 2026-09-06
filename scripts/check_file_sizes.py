@@ -8,7 +8,11 @@ MAX_LINES = 800
 # Files that are currently allowed to exceed the limit.
 # These must be relative paths from the repository root.
 # Outliers should be documented and eventually decomposed/refactored.
-WHITELIST: set[str] = {"dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md"}
+WHITELIST: set[str] = {
+    "dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md",
+    # Near limit before Phase 2 docstrings (797 lines); public method docs land at 828.
+    "src/guiskindose/gui/tabs/geometry_builders.py",
+}
 
 
 def _iter_checked_files(repo_root: Path):

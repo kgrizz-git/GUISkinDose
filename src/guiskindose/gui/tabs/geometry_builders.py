@@ -90,11 +90,13 @@ class GeometryTabController:
 
     @property
     def active_exam_index(self) -> int:
+        """Active exam index."""
         if state.is_multi_exam and state.active_exam_index is not None:
             return state.active_exam_index
         return 0
 
     def current_load_signature(self) -> tuple | None:
+        """Current load signature."""
         if state.rdsr_df is None or not state.loaded_exam_meta:
             return None
         return (
@@ -103,6 +105,7 @@ class GeometryTabController:
         )
 
     def middle_event_index(self, active_idx: int | None, composite: bool) -> int:
+        """Middle event index."""
         count = (
             preview_event_count(state, active_exam_index=active_idx, composite=composite)
             if state.is_multi_exam
@@ -111,6 +114,7 @@ class GeometryTabController:
         return count // 2 if count > 0 else 0
 
     def live_preview_allowed(self) -> bool:
+        """Live preview allowed."""
         if state.busy:
             return False
         return not procedure_live_preview_paused(
@@ -121,10 +125,12 @@ class GeometryTabController:
         )
 
     def exam_select_value(self, options: dict[int, str] | None = None) -> int | None:
+        """Exam select value."""
         opts = options if options is not None else exam_selector_options(state)
         return exam_select_value(state.active_exam_index, set(opts.keys()))
 
     def update_preview_caption(self) -> None:
+        """Update preview caption."""
         self.refs.preview_caption.set_text(
             geometry_preview_caption(
                 state,
@@ -144,18 +150,22 @@ class GeometryTabController:
         )
 
     def stale_caption_visible(self) -> bool:
+        """Stale caption visible."""
         return bool(state.calculation_done and self.offset_changed_since_calc)
 
     def update_stale_caption(self) -> None:
+        """Update stale caption."""
         self.refs.stale_caption.set_visibility(self.stale_caption_visible())
 
     def override_active_for_active_exam(self, _m=None) -> bool:
+        """Override active for active exam."""
         idx = self.active_exam_index
         if idx >= len(state.loaded_exam_meta):
             return False
         return state.loaded_exam_meta[idx].get("table_origin_override") is not None
 
     def schedule_debounced_render(self) -> None:
+        """Schedule debounced render."""
         self.live_preview_requested = True
         self._update_paused_badge()
         if self._slider_timer is not None:
@@ -235,6 +245,7 @@ class GeometryTabController:
         )
 
     def update_event_context(self) -> None:
+        """Update event context."""
         composite = self._resolve_composite_for_render() if state.is_multi_exam else False
         self.refs.geom_event_context.set_text(
             event_context_caption(
@@ -246,6 +257,7 @@ class GeometryTabController:
         )
 
     def render_event_preview_debounced(self) -> None:
+        """Render event preview debounced."""
         if self.last_preview_mode != "plot_event":
             self.last_preview_mode = "plot_event"
         self.update_event_context()
@@ -265,6 +277,7 @@ class GeometryTabController:
         return event_count()
 
     def step(self, delta: int) -> None:
+        """Step."""
         if self.last_preview_mode != "plot_event":
             return
         count = self._preview_slice_count()
@@ -280,11 +293,13 @@ class GeometryTabController:
         self.render_event_preview_debounced()
 
     def set_stepper_enabled(self, enabled: bool) -> None:
+        """Set stepper enabled."""
         self.refs.geom_event_select.set_enabled(enabled)
         self.refs.prev_btn.set_enabled(enabled)
         self.refs.next_btn.set_enabled(enabled)
 
     def on_event_select_change(self, _e) -> None:
+        """Handle event select change."""
         if self.event_select_guard["suppress"]:
             return
         if self.last_preview_mode != "plot_event":
@@ -293,6 +308,7 @@ class GeometryTabController:
         self.schedule_debounced_render()
 
     def on_exam_select_change(self, e) -> None:
+        """Handle exam select change."""
         if self.exam_selector_guard["suppress"]:
             return
         old_index = state.active_exam_index
@@ -320,6 +336,7 @@ class GeometryTabController:
         self.ctx.refresh_per_exam()
 
     def rebuild_exam_selector(self) -> None:
+        """Rebuild exam selector."""
         if not state.is_multi_exam:
             return
         self.exam_selector_guard["suppress"] = True
@@ -332,6 +349,7 @@ class GeometryTabController:
         self.exam_selector_guard["suppress"] = False
 
     def on_composite_toggle(self, e) -> None:
+        """Handle composite toggle."""
         self.composite_preview = bool(e.value)
         self.update_preview_caption()
         self.update_event_context()
@@ -341,6 +359,7 @@ class GeometryTabController:
             self.schedule_debounced_render()
 
     def sync_patient_sliders_from_meta(self, active_index: int | None = None) -> None:
+        """Sync patient sliders from meta."""
         idx = active_index if active_index is not None else self.active_exam_index
         if idx >= len(state.loaded_exam_meta):
             return
@@ -352,6 +371,7 @@ class GeometryTabController:
         self.patient_guard["suppress"] = False
 
     def sync_table_sliders_from_meta(self, active_index: int | None = None) -> None:
+        """Sync table sliders from meta."""
         idx = active_index if active_index is not None else self.active_exam_index
         if idx >= len(state.loaded_exam_meta):
             return
@@ -375,6 +395,7 @@ class GeometryTabController:
         self.table_guard["suppress"] = False
 
     def handle_patient_slider_change(self, attr: str, slider: ui.slider) -> None:
+        """Handle patient slider change."""
         if self.patient_guard["suppress"]:
             return
         apply_patient_offset_slider_tick(state, attr, float(slider.value or 0.0))
@@ -387,6 +408,7 @@ class GeometryTabController:
         self.ctx.refresh_phantom_preview()
 
     def handle_table_slider_change(self, key: str, slider: ui.slider) -> None:
+        """Handle table slider change."""
         if self.table_guard["suppress"] or not state.loaded_exam_meta:
             return
         idx = self.active_exam_index
@@ -406,6 +428,7 @@ class GeometryTabController:
         self.schedule_debounced_render()
 
     def reset_patient_offset(self) -> None:
+        """Reset patient offset."""
         reset_patient_offset_for_active(state)
         if not state.is_multi_exam:
             on_global_patient_offset_change(self.ctx)
@@ -420,6 +443,7 @@ class GeometryTabController:
         ui.notify("Patient offset reset to 0", color="info")
 
     def reset_table_origin(self) -> None:
+        """Reset table origin."""
         if not state.loaded_exam_meta:
             return
         idx = state.active_exam_index if state.is_multi_exam else 0
@@ -439,14 +463,17 @@ class GeometryTabController:
         ui.notify("Table origin reset to auto-detected", color="info")
 
     def clear_offset_stale_caption(self) -> None:
+        """Clear offset stale caption."""
         self.offset_changed_since_calc = False
         self.update_stale_caption()
 
     def request_geometry_preview_refresh(self) -> None:
+        """Request geometry preview refresh."""
         if self.last_preview_mode:
             self.schedule_debounced_render()
 
     def register_context_hooks(self) -> None:
+        """Register context hooks."""
         self.ctx.clear_offset_stale_caption = self.clear_offset_stale_caption
         self.ctx.refresh_geometry_preview = self.request_geometry_preview_refresh
         self.ctx.flush_geometry_pending = self.flush_pending_table_origin
@@ -460,6 +487,7 @@ class GeometryTabController:
         self.ctx.refresh_geometry_tab = self.refresh_geometry_sliders
 
     def refresh_geometry_sliders(self) -> None:
+        """Refresh geometry sliders."""
         self.composite_preview = composite_preview_after_exam_mode_change(
             self.was_multi_exam,
             state.is_multi_exam,
@@ -508,6 +536,7 @@ class GeometryTabController:
             self.schedule_debounced_render()
 
     async def preview_setup(self) -> None:
+        """Preview setup."""
         if state.rdsr_df is None:
             ui.notify(_LOAD_DATA_FIRST_MESSAGE, type="warning")
             return
@@ -520,6 +549,7 @@ class GeometryTabController:
             self._update_paused_badge()
 
     async def preview_event(self) -> None:
+        """Preview event."""
         if state.rdsr_df is None:
             ui.notify(_LOAD_DATA_FIRST_MESSAGE, type="warning")
             return
@@ -532,6 +562,7 @@ class GeometryTabController:
             self._update_paused_badge()
 
     async def preview_procedure(self) -> None:
+        """Preview procedure."""
         if state.rdsr_df is None:
             ui.notify(_LOAD_DATA_FIRST_MESSAGE, type="warning")
             return

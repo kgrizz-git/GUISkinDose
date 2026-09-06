@@ -93,11 +93,13 @@ def reset_patient_offset_for_active(app_state: AppState) -> None:
 
 
 def on_global_patient_offset_scrub(_ctx: PageContext) -> None:
+    """Sync global patient offset changes to single-exam state during a slider scrub."""
     sync_global_patient_offset_to_single_exam_meta(state)
     bump_per_exam_offsets_version(state)
 
 
 def on_global_patient_offset_change(ctx: PageContext) -> None:
+    """Handle completion of a global patient offset change, resetting stale results."""
     on_global_patient_offset_scrub(ctx)
     reset_results()
     ctx.refresh_per_exam()
@@ -106,4 +108,5 @@ def on_global_patient_offset_change(ctx: PageContext) -> None:
 
 
 def any_table_origin_override(app_state: AppState) -> bool:
+    """Check if any loaded exam has a manual table origin override."""
     return any(m.get("table_origin_override") is not None for m in app_state.loaded_exam_meta)

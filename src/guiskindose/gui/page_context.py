@@ -31,6 +31,7 @@ def _noop() -> None:
 
 @dataclass
 class PageContext:
+    """Holds references to primary UI components for cross-tab updates."""
     # cross-cutting chrome (set at construction)
     tabs: ui.tabs
     file_label: ui.label
