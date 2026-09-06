@@ -11,6 +11,7 @@ from ..constants import (
     TABLE_ORIGIN_SLIDER_MAX,
     TABLE_ORIGIN_SLIDER_MIN,
 )
+from ..figures import make_geometry_fig
 from ..geometry_preview import (
     clamp_geometry_event_index,
     composite_preview_after_exam_mode_change,
@@ -211,10 +212,8 @@ class GeometryTabController:
         )
         if mode == "plot_event" and slice_count > 0:
             event_idx = min(max(0, event_idx), slice_count - 1)
-        from guiskindose.gui.tabs import geometry_builders as gb
-
         fig = await run.io_bound(
-            gb.make_geometry_fig,
+            make_geometry_fig,
             mode,
             event_idx,
             active_exam_index=active_idx,

@@ -62,7 +62,7 @@ No prose rewrite for style; accuracy and completeness only.
   behavior for a behavior-vs-doc decision.
 - [x] Keep fixes behavior-neutral: no signature or logic changes in this phase.
 - [x] Acceptance: zero public undocumented symbols or an explicit accepted-gap list.
-  Result (2026-09-06): **0 missing** across 134 public modules (was 175 in 72 files).
+  Result (2026-09-06): **0 missing** across 137 public modules (was 175 in 72 files).
   Branch `docs/phase-2-docstring-sweep`; four commits (API/settings, pipeline/export,
   plotting, GUI). Orchestrator fixed accidental `attrs_dict` removal in
   `create_attributes_string.py`; split `geometry_builders.py` into controller/layout/view-ref

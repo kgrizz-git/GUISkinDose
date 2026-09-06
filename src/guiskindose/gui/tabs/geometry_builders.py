@@ -1,7 +1,6 @@
 """Geometry tab public module — re-exports controller, refs, builders, and figure helper.
 
-``geometry.py`` remains the thin entry point imported by ``app.py``.  Tests and
-monkeypatches import ``make_geometry_fig`` from this module namespace.
+``geometry.py`` remains the thin entry point imported by ``app.py``.
 """
 
 from __future__ import annotations

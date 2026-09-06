@@ -11,7 +11,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 ### Added
 
 - **Phase 2 docstring sweep** (2026-09-06) — closed all 175 public docstring gaps under
-  `src/guiskindose/` (134 modules, 0 missing per `check_docstring_inventory.py`). Four
+  `src/guiskindose/` (137 modules, 0 missing per `check_docstring_inventory.py`). Four
   commits on `docs/phase-2-docstring-sweep`: settings/helpers/API, core pipeline/export,
   plotting, GUI. Split `geometry_builders.py` into `geometry_controller.py`,
   `geometry_layout_builders.py`, and `geometry_view_refs.py` (facade re-exports preserved)

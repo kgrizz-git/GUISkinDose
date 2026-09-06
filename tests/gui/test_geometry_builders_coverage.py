@@ -169,7 +169,7 @@ async def test_render_preview_calls_make_geometry_fig(monkeypatch: pytest.Monkey
         return fn(*args, **kwargs)
 
     monkeypatch.setattr(gc.run, "io_bound", _fake_io_bound)
-    monkeypatch.setattr(gb, "make_geometry_fig", lambda *a, **k: fake_fig)
+    monkeypatch.setattr(gc, "make_geometry_fig", lambda *a, **k: fake_fig)
 
     await ctrl._render_preview("plot_setup")
 
@@ -186,7 +186,7 @@ async def test_geometry_setup_view_user_path(user: User, monkeypatch: pytest.Mon
         rendered.append(mode)
         return {"data": [], "layout": {}}
 
-    monkeypatch.setattr(gb, "make_geometry_fig", _track_render)
+    monkeypatch.setattr(gc, "make_geometry_fig", _track_render)
 
     await user.open("/")
     user.find(marker="example-select").click()
