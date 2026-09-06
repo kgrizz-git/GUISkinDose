@@ -1,3 +1,8 @@
+"""Phantom model and patient-positioning configuration.
+
+Selects the skin-surface model, human mesh, scaling, patient orientation,
+and patient-table offsets.
+"""
 import logging
 from typing import Any
 
@@ -67,9 +72,23 @@ class PhantomSettings:
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="phantom", indent_level=0)
 
     def update_attrs_str(self):
+        """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="phantom", indent_level=0)
 
     def to_printable_string(self, color: str = "light_slate_blue"):
+        """Render phantom settings as a Rich-formatted string.
+
+        Parameters
+        ----------
+        color : str, optional
+            Rich markup color name, by default "light_slate_blue".
+
+        Returns
+        -------
+        str
+            Formatted phantom-settings block.
+
+        """
         return (
             f"[bold {color}]Phantom settings[/bold {color}]\n"
             f"\t[{color}]model: {self.model}[/{color}]\n"

@@ -1,3 +1,8 @@
+"""SQLite database bootstrap for correction-factor lookups.
+
+Creates/connects to the corrections SQLite database and loads the bundled
+CSV lookup tables on first run. Returns the connection and cursor.
+"""
 import logging
 import os
 import sqlite3

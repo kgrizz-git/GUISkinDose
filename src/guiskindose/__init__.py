@@ -1,3 +1,8 @@
+"""Top-level public API for GUISkinDose.
+
+Re-exports the primary classes and convenience helpers used to run skin-dose
+calculations from DICOM RDSR data. All geometry is expressed in cm unless noted.
+"""
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _distribution_version
 
@@ -21,6 +26,7 @@ except PackageNotFoundError:  # source tree imported without installation
 
 
 def load_settings_example_json() -> dict:
+    """Load the bundled example settings as a dictionary."""
     import json
     from pathlib import Path
 
@@ -28,6 +34,7 @@ def load_settings_example_json() -> dict:
 
 
 def print_available_human_phantoms():
+    """Print the bundled human phantom STL stems to stdout."""
     from pathlib import Path
 
     phantom_data_dir = Path(__file__).parent / "phantom_data"
@@ -40,6 +47,7 @@ def print_available_human_phantoms():
 
 
 def print_example_rdsr_files():
+    """Print the packaged example RDSR filenames to stdout."""
     rdsr_data_dir = get_path_to_example_rdsr_files()
     files = [file.name for file in rdsr_data_dir.glob("*.dcm")]
 
@@ -52,6 +60,7 @@ def print_example_rdsr_files():
 
 
 def get_path_to_example_rdsr_files():
+    """Return the pathlib.Path to the bundled example RDSR directory."""
     from pathlib import Path
 
     return Path(__file__).parent / "example_data" / "RDSR"

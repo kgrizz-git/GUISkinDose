@@ -1,3 +1,8 @@
+"""Plot rendering configuration.
+
+Controls notebook mode, dark mode, interactivity, and procedure plot
+behaviour.
+"""
 from guiskindose.helpers.create_attributes_string import create_attributes_string
 
 
@@ -49,9 +54,23 @@ class Plotsettings:
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="plot", indent_level=0)
 
     def update_attrs_str(self):
+        """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="plot", indent_level=0)
 
     def to_printable_string(self, color: str = "blue"):
+        """Render plot settings as a Rich-formatted string.
+
+        Parameters
+        ----------
+        color : str, optional
+            Rich markup color name, by default "blue".
+
+        Returns
+        -------
+        str
+            Formatted plot-settings block.
+
+        """
         return (
             f"[bold {color}]Plot settings[/bold {color}]\n"
             f"\t[{color}]interactivity: {'True' if self.interactivity else 'False'}[/{color}]\n"

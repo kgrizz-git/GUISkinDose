@@ -1,3 +1,8 @@
+"""Coerce settings input into a :class:`PyskindoseSettings` instance.
+
+Falls back to the bundled ``settings_example.json`` when no input is
+provided.
+"""
 import logging
 from pathlib import Path
 
@@ -9,6 +14,20 @@ logger = logging.getLogger(__name__)
 def parse_settings_to_settings_class(
     settings: str | dict | PyskindoseSettings | None = None,
 ) -> PyskindoseSettings:
+    """Return a validated :class:`PyskindoseSettings` from supported input types.
+
+    Parameters
+    ----------
+    settings : str | dict | PyskindoseSettings | None, optional
+        JSON string, dict, or existing settings object. When *None*, the
+        bundled ``settings_example.json`` is used.
+
+    Returns
+    -------
+    PyskindoseSettings
+        Parsed and initialized settings object.
+
+    """
     if settings is not None:
         try:
             return initialize_settings(settings)

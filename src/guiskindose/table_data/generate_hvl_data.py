@@ -1,3 +1,8 @@
+"""Generate HVL lookup tables with SpekPy.
+
+Simulates half-value layers for a given tube/filter combination and
+writes the resulting table to CSV.
+"""
 from pathlib import Path
 
 import pandas as pd

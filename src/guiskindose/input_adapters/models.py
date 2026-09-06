@@ -1,3 +1,4 @@
+"""Dataclasses for tabular input provenance and adapter results."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -23,6 +24,7 @@ class InputProvenance:
 
 @dataclass
 class InputAdapterResult:
+    """Normalized tabular RDSR result together with provenance and warnings."""
     normalized_data: pd.DataFrame
     raw_data: pd.DataFrame | None
     provenance: InputProvenance
@@ -32,5 +34,6 @@ class InputAdapterResult:
 
 @dataclass
 class ParsedEventTable:
+    """Parsed tabular event data together with provenance metadata."""
     parsed_data: pd.DataFrame
     provenance: InputProvenance

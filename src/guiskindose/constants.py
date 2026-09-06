@@ -1,3 +1,10 @@
+"""Shared literal constants for GUISkinDose.
+
+Includes color strings, dimension keys, field-size mode identifiers,
+RDSR tag keys, normalization keys, mode identifiers, output keys,
+plot formatting constants, and unit strings. All geometry values are
+expressed in cm unless noted.
+"""
 COLOR_CANVAS_DARK = "rgb(33,33,33)"
 COLOR_CANVAS_LIGHT = "rgb(252, 252, 252)"
 COLOR_PLOT_TEXT_LIGHT = "rgb(52, 49, 49)"

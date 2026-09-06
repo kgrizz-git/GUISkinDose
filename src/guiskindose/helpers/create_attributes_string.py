@@ -1,4 +1,30 @@
+"""Build an indented attribute string for settings classes.
+
+Used by :class:`PyskindoseSettings` and its nested dataclasses to
+render human-readable parameter summaries.
+"""
 def create_attributes_string(attrs_parent, object_name, indent_level, indent_size=4, indent_sign=" "):
+    """Serialize the public attributes of *attrs_parent* to an indented string.
+
+    Parameters
+    ----------
+    attrs_parent : object
+        The settings object whose attributes should be serialized.
+    object_name : str
+        Header label for the attribute block.
+    indent_level : int
+        Nesting level determining left margin.
+    indent_size : int, optional
+        Spaces per indentation level, by default 4.
+    indent_sign : str, optional
+        Character used for indentation, by default a space.
+
+    Returns
+    -------
+    str
+        Formatted attribute block.
+
+    """
 
     attrs_dict = vars(attrs_parent)
 

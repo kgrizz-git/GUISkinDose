@@ -1,3 +1,8 @@
+"""User-defined parameter dictionary.
+
+Convenience place to override a small number of settings without supplying
+a full JSON file. Keys mirror the JSON settings schema.
+"""
 from guiskindose import constants as c
 
 PARAMETERS = {

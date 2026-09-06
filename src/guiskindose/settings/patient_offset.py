@@ -1,3 +1,4 @@
+"""Patient-table offset configuration."""
 from guiskindose.constants import (
     OFFSET_LATERAL_KEY,
     OFFSET_LONGITUDINAL_KEY,
@@ -47,4 +48,5 @@ class PatientOffset:
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="patient offset", indent_level=1)
 
     def update_attrs_str(self):
+        """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="patient offset", indent_level=1)
