@@ -138,7 +138,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/APPSEC_MEDIUM_FINDINGS_2026-08-03.md](assessments/APPSEC_MEDIUM_FINDINGS_2026-08-03.md) | Remediation note for three medium findings: export header formula injection, `human_mesh` path traversal, XLSX zip-bomb budgets. |
 | [assessments/privacy-admission-enforcement/hardening.md](assessments/privacy-admission-enforcement/hardening.md) | Design review of protected ignore/never-track rules and conditional scanner enforcement; recommends staged-content-bound local receipts plus independent CI. |
 | [assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md) | HTML export fake “background task cancelled” error; Results aggregate can render while export fails. Fix plan: [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). |
-| [assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md) | Dual-agent spike: Mintlify free-tier/OSS terms, end-user docs tooling survey, ranked shortlist, and open verification items. Linked from `TO_DO.md`. |
+| [assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md) | Dual-agent spike: Mintlify free-tier/OSS terms, end-user docs tooling survey, ranked shortlist; single-sourced claims verified against primary sources 2026-09-06. Linked from `TO_DO.md`. |
 
 ---
 
@@ -161,6 +161,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
+| [plans/documentation-assessment.md](plans/documentation-assessment.md) | **Active** — Documentation & docstrings accuracy sweep (hub docs, `src/` docstrings, user-facing docs) plus standing matrix record and re-assessment triggers. Linked from `TO_DO.md`. |
 
 ## Archived plans (`plans/archive/`)
 

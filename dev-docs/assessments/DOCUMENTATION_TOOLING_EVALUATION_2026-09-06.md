@@ -52,19 +52,27 @@ Both agents confirmed against the live pricing page (accessed 2026-09-06):
 3. **Mintlify** — only if a hosted, AI-native look outweighs lock-in *and* the OSS
    approval is actually granted for this project.
 
-## 5. Cross-review outcome
+## 5. Claim verification (maintainer, 2026-09-06)
 
-- **Agreed**: Starter $0 terms, Pro-gated AI, no self-hosting below Enterprise,
-  portability split (content portable / platform proprietary), shortlist order.
-- **Open verification items** (single-sourced, confirm before committing to a path):
-  - `mkdocstrings` maintenance-mode / sponsorware-sunset status (MkDocs API-docs risk).
-  - Mintlify Pro price figure ($450/mo annual quoted by one agent; the other's page
-    render garbled the number — pin to a clean capture).
-  - Mintlify OSS "Pro free" grant in practice (existence of program confirmed; grant
-    for *this* project requires the application).
-  - Jupyter Book V2 vs V1-maintenance status.
-- Review gap noted: ReadTheDocs (free hosting for public OSS, supports Sphinx and
-  MkDocs) deserves explicit weight in the final decision.
+The dual-agent review agreed on the Starter terms, Pro-gated AI, Enterprise-only
+self-hosting, the portability split, and the shortlist order. Its four single-sourced
+items were re-checked against primary sources:
+
+- **mkdocstrings maintenance mode: CONFIRMED** — the homepage banner at
+  https://mkdocstrings.github.io/ reads "mkdocstrings is in maintenance mode". The
+  MkDocs API-docs risk is real; any MkDocs move needs a docstring-renderer decision
+  (pin, fork, or alternative) first.
+- **Mintlify Pro $450/mo annual billing: CONFIRMED** — https://mintlify.com/pricing
+  shows Pro at $450 on the annual toggle. The month-to-month figure ($540, quoted by one
+  agent) was not legible in the page render and stays single-sourced.
+- **Mintlify OSS "Pro free forever": CONFIRMED as a program** —
+  https://www.mintlify.com/oss-program offers Pro free to non-commercial OSS (recognized
+  license; not venture-backed or revenue-funded; not owned/maintained by a for-profit
+  company). GUISkinDose (MIT, solo-maintained, non-commercial) looks eligible, but the
+  grant itself still requires an application.
+- **Jupyter Book V1 maintenance / V2 active: CONFIRMED** —
+  https://jupyter-book.readthedocs.io/v1/intro.html banners V1 as maintenance-only and
+  points to https://jupyterbook.org for the current version.
 
 ## 6. Sources (all accessed 2026-09-05/06 unless noted)
 
@@ -80,3 +88,34 @@ Both agents confirmed against the live pricing page (accessed 2026-09-06):
 - Jupyter Book V1 banner — https://jupyter-book.readthedocs.io/v1/intro.html
 - Quarto websites — https://quarto.org/docs/websites/
 - Starlight — https://starlight.astro.build/
+
+## 7. Wider landscape (maintainer survey, 2026-09-06)
+
+Beyond §3. Only starred items are material to the decision; the rest lose to the
+shortlist on Python-autodoc or notebook grounds.
+
+**Sphinx path** — ★ `sphinx-immaterial` (Material look on Sphinx; keeps autodoc,
+nbsphinx, RTD — strengthens shortlist option 2 as a co-candidate); `furo` (minimal
+restyle, e.g. pip's docs); `sphinx-autoapi` (API refs without importing modules);
+`pdoc` / `pydoc-markdown` / `lazydocs` (lightweight Python API generators — de-risk
+option 1's mkdocstrings caveat); `sphinx-autobuild` (live-reload dev server).
+
+**MkDocs context** — ★ `Zensical` (Material-for-MkDocs fork by the mkdocstrings author;
+the maintenance story is a maintainer split — evaluate Zensical vs Material explicitly
+if option 1 proceeds).
+
+**JS frameworks** — `Nextra`, `Fumadocs` (Next.js/MDX), `Hextra`/`Doks`/`Geekdoc`
+(Hugo), `Just the Docs` (Jekyll, GitHub-Pages-native), `VuePress`, `Docus` (Nuxt),
+`Antora` (AsciiDoc, multi-repo): same verdict as the §3 bucket — polished, but no
+Python autodoc or notebook story and high migration cost.
+
+**API-docs SaaS (not applicable today)** — `Fern`, `Redocly`, `Bump.sh`, `Stainless`
+are OpenAPI-driven; this project has a Python library + GUI, no web API.
+
+**Quality infrastructure (complements the harness, not the generator)** — `Vale`
+(prose/terminology lint; upgrade path for the glossary checks), `codespell` (CI typo
+check), `Diátaxis` (tutorials/how-tos/reference/explanation framework — cite in
+assessment criteria), `llms.txt` (AI-consumable docs; Mintlify generates it, static
+builds need a plugin or manual file).
+
+Net effect: shortlist (§4) unchanged.
