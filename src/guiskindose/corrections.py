@@ -1,3 +1,5 @@
+"""Physics-based correction factors for inverse-square law, backscatter, medium, and table attenuation."""
+
 import logging
 from typing import cast
 

@@ -1,3 +1,5 @@
+"""Provides the Phantom class representing the patient, table, and support pad."""
+
 import copy
 from itertools import chain
 from pathlib import Path

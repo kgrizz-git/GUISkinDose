@@ -1,3 +1,5 @@
+"""Iterates through irradiation events to calculate geometries and skin dose contributions."""
+
 import logging
 from typing import TYPE_CHECKING, Any
 

@@ -1,3 +1,5 @@
+"""Orchestrates dose calculation, data analysis, and output generation."""
+
 import copy
 import logging
 from typing import Any
