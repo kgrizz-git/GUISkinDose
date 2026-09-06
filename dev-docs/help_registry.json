@@ -53,7 +53,10 @@
       "id": "geometry",
       "title": "Geometry workflow",
       "source": "geometry_workflow.md",
-      "gui_files": ["src/guiskindose/gui/tabs/geometry_builders.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/geometry_layout_builders.py",
+        "src/guiskindose/gui/tabs/geometry_builders.py"
+      ],
       "required": true
     },
     {

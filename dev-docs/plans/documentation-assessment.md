@@ -65,7 +65,8 @@ No prose rewrite for style; accuracy and completeness only.
   Result (2026-09-06): **0 missing** across 134 public modules (was 175 in 72 files).
   Branch `docs/phase-2-docstring-sweep`; four commits (API/settings, pipeline/export,
   plotting, GUI). Orchestrator fixed accidental `attrs_dict` removal in
-  `create_attributes_string.py`; whitelisted `geometry_builders.py` at 828 lines.
+  `create_attributes_string.py`; split `geometry_builders.py` into controller/layout/view-ref
+  modules after docstrings exceeded the 800-line harness limit (facade re-exports preserved).
 
 ## Phase 3 — User-facing cross-check
 

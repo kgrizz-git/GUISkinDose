@@ -21,6 +21,7 @@ from guiskindose.gui.helpers import load_rdsr
 from guiskindose.gui.page_context import PageContext
 from guiskindose.gui.state import state
 from guiskindose.gui.tabs import geometry_builders as gb
+from guiskindose.gui.tabs import geometry_controller as gc
 
 pytest.importorskip("nicegui")
 
@@ -130,8 +131,8 @@ def test_flush_pending_table_origin_commits_and_cancels_timer(monkeypatch: pytes
     def _commit(st, idx: int) -> None:
         committed.append(idx)
 
-    monkeypatch.setattr(gb, "commit_table_origin_transform", _commit)
-    monkeypatch.setattr(gb, "reset_results", lambda: None)
+    monkeypatch.setattr(gc, "commit_table_origin_transform", _commit)
+    monkeypatch.setattr(gc, "reset_results", lambda: None)
 
     ctrl.flush_pending_table_origin()
 
@@ -167,7 +168,7 @@ async def test_render_preview_calls_make_geometry_fig(monkeypatch: pytest.Monkey
     async def _fake_io_bound(fn, *args, **kwargs):
         return fn(*args, **kwargs)
 
-    monkeypatch.setattr(gb.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(gc.run, "io_bound", _fake_io_bound)
     monkeypatch.setattr(gb, "make_geometry_fig", lambda *a, **k: fake_fig)
 
     await ctrl._render_preview("plot_setup")
@@ -267,7 +268,7 @@ def test_handle_patient_slider_change_schedules_render(monkeypatch: pytest.Monke
     _wire_geometry_refs(ctrl)
     scheduled: list[bool] = []
     monkeypatch.setattr(ctrl, "schedule_debounced_render", lambda: scheduled.append(True))
-    monkeypatch.setattr(gb, "apply_patient_offset_slider_tick", lambda *a, **k: None)
+    monkeypatch.setattr(gc, "apply_patient_offset_slider_tick", lambda *a, **k: None)
     ctrl.ctx.refresh_phantom_preview = MagicMock()
 
     slider = MagicMock(value=3.5)
@@ -282,8 +283,8 @@ def test_reset_patient_offset_single_exam(monkeypatch: pytest.MonkeyPatch) -> No
     _load_philips_into_state()
     ctrl = _controller()
     _wire_geometry_refs(ctrl)
-    monkeypatch.setattr(gb, "reset_patient_offset_for_active", lambda st: None)
-    monkeypatch.setattr(gb, "on_global_patient_offset_change", lambda ctx: None)
+    monkeypatch.setattr(gc, "reset_patient_offset_for_active", lambda st: None)
+    monkeypatch.setattr(gc, "on_global_patient_offset_change", lambda ctx: None)
     monkeypatch.setattr(ctrl, "sync_patient_sliders_from_meta", lambda: None)
 
     ctrl.reset_patient_offset()
@@ -364,7 +365,7 @@ def test_handle_table_slider_change_stages_origin(monkeypatch: pytest.MonkeyPatc
     _wire_geometry_refs(ctrl)
     scheduled: list[bool] = []
     monkeypatch.setattr(ctrl, "schedule_debounced_render", lambda: scheduled.append(True))
-    monkeypatch.setattr(gb, "stage_table_origin_axis", lambda meta, key, val: None)
+    monkeypatch.setattr(gc, "stage_table_origin_axis", lambda meta, key, val: None)
 
     ctrl.handle_table_slider_change("Tx", MagicMock(value=12.0))
 

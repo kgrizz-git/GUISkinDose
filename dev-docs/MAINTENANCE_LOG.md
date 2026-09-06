@@ -13,8 +13,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Phase 2 docstring sweep** (2026-09-06) — closed all 175 public docstring gaps under
   `src/guiskindose/` (134 modules, 0 missing per `check_docstring_inventory.py`). Four
   commits on `docs/phase-2-docstring-sweep`: settings/helpers/API, core pipeline/export,
-  plotting, GUI. Whitelisted `geometry_builders.py` in `check_file_sizes.py` after docs
-  on a 797-line file reached 828 lines.
+  plotting, GUI. Split `geometry_builders.py` into `geometry_controller.py`,
+  `geometry_layout_builders.py`, and `geometry_view_refs.py` (facade re-exports preserved)
+  after Phase 2 docstrings pushed the monolith past the 800-line harness limit.
 
 - **Docstring inventory script + tests** (2026-09-06) — `scripts/check_docstring_inventory.py`
   (stdlib-AST advisory inventory of undocumented public symbols under `src/`) plus

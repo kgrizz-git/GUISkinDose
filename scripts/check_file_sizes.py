@@ -10,8 +10,6 @@ MAX_LINES = 800
 # Outliers should be documented and eventually decomposed/refactored.
 WHITELIST: set[str] = {
     "dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md",
-    # Near limit before Phase 2 docstrings (797 lines); public method docs land at 828.
-    "src/guiskindose/gui/tabs/geometry_builders.py",
 }
 
 
