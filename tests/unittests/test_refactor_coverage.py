@@ -89,7 +89,8 @@ def test_build_export_source_from_cli_multi_and_empty() -> None:
     multi_source = build_export_source_from_cli(settings, multi_exam_result=multi)
     assert len(multi_source.exams) == 1
     assert multi_source.exams[0].exam_id == "exam-a"
-    assert multi_source.exams[0].extra_warnings == ["w1"]
+    # No inputs list → unresolved warning is appended after exam warnings.
+    assert multi_source.exams[0].extra_warnings == ["w1", "Export input unresolved for exam-a"]
 
     # Neither output_dict nor multi_exam_result → empty exam list.
     empty_source = build_export_source_from_cli(settings)

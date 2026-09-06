@@ -19,6 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Multi-exam export paired surviving exams with the wrong input after exclusions**
+  (2026-09-05) — GUI/CLI export builders indexed ``loaded_exams`` / ``inputs`` by
+  position in ``MultiExamResult.exams``. When a middle exam was excluded, later
+  successful exams silently received another exam's normalized frame, provenance,
+  and transform metadata in the report. Matching now uses the opaque ``Exam N``
+  label (original load index). Supersedes conflicted Cursor automation PR #72
+  after the ``mypyskindose`` → ``guiskindose`` rename.
+
 ### Changed
 
 - **GitHub repository renamed to `GUISkinDose`** (2026-09-04) — the fork (still `rvbCMTS/PySkinDose` upstream)
