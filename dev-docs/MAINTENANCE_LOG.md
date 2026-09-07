@@ -10,6 +10,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Phase 4 standing documentation-assessment record** (2026-09-07) — added
+  `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md` (durable per-doc verdict
+  matrix, docstring coverage `0 missing`, accepted gaps, and event-driven re-assessment
+  triggers), registered it in `dev-docs/index.md`, wired the pre-release trigger into
+  `RELEASES_AND_DISTRIBUTION.md` step 4, marked the `TO_DO.md` Documentation Assessment item
+  complete, and archived the execution plan to
+  `dev-docs/plans/archive/documentation-assessment.md`. Closes the documentation-assessment
+  plan (Phases 0–4).
+
 - **Phase 3 cross-check checklist** (2026-09-06) — expanded
   `documentation-assessment.md` Phase 3 with §0–§7 workflow and seeded
   `dev-docs/assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md` from

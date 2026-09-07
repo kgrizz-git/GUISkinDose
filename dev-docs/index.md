@@ -141,6 +141,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md) | HTML export fake “background task cancelled” error; Results aggregate can render while export fails. Fix plan: [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). |
 | [assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md) | Dual-agent spike: Mintlify free-tier/OSS terms, end-user docs tooling survey, ranked shortlist; single-sourced claims verified against primary sources 2026-09-06. Linked from `TO_DO.md`. |
 | [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md) | **COMPLETE** — Phase 3 user-facing doc cross-check (help, feature matrix, Sphinx, community, UI copy, CLI). Doc GAPs → Phase 3.5. |
+| [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md) | **CURRENT** — standing documentation-assessment record: hub-doc + docstring + user-facing verdict matrix, docstring coverage (0 missing), accepted gaps, and event-driven re-assessment triggers. Phase 4 artifact of the documentation-assessment plan. |
 
 ---
 
@@ -163,12 +164,12 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
-| [plans/documentation-assessment.md](plans/documentation-assessment.md) | **Active** — Documentation & docstrings accuracy sweep (Phases 0–3 complete; **Phase 3.5** doc GAPs open; Phase 4 matrix/triggers pending). Linked from `TO_DO.md`. |
 
 ## Archived plans (`plans/archive/`)
 
 | File | Purpose |
 |---|---|
+| [plans/archive/documentation-assessment.md](plans/archive/documentation-assessment.md) | **Complete** (2026-09-07) — documentation & docstrings accuracy sweep, Phases 0–4. Standing matrix + triggers persist in [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md). |
 | [plans/archive/SECURITY_TOOLS_CI_PLAN.md](plans/archive/SECURITY_TOOLS_CI_PLAN.md) | **Superseded** (2026-09-03) — semgrep/gitleaks wiring was completed; the `safety` scanner path was dropped when the `safety` dev dependency (and its main-only CI job) was removed in 1.0.0 — `uv audit` + `pip-audit` remain the dependency auditors. |
 | [plans/archive/SONAR_PRIVACY_GATED_SCANS_PLAN.md](plans/archive/SONAR_PRIVACY_GATED_SCANS_PLAN.md) | **Complete** (PR #32) — Sonar security + GUI coverage tests; privacy-gated Semgrep/Sonar/CodeRabbit. Archived 2026-09-03: its `cloud-scans-main` job design was retired with the 1.0.0 `safety` removal. |
 | [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) | **Complete** (PR #73, 2026-09-04) — in-repo rename to GUISkinDose / `guiskindose` at `1.0.0` (imports, CLI, config migration, tests, stale-brand gate). Its "Post-PR-1 retirement" section remains the lifecycle guidance for the dual-read/semgrep-ID shims (tracked in `TO_DO.md`). |

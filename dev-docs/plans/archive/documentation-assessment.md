@@ -1,15 +1,16 @@
 # Documentation Assessment — execution plan
 
-> **Status:** ACTIVE — implements the "Documentation & Docstrings Assessment" item in
-> `dev-docs/TO_DO.md` (Active Work). Archive to `dev-docs/plans/archive/` when all
-> phases land; the Phase 4 infrastructure (matrix + triggers) persists after archival.
+> **Status:** COMPLETE / ARCHIVED (2026-09-07) — all phases (0–3.5, 4) landed. The standing
+> Phase 4 infrastructure (matrix + triggers) persists in
+> [../../assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](../../assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md).
+> Implemented the "Documentation & Docstrings Assessment" item in `dev-docs/TO_DO.md`.
 
 **Goal:** Verify that hub docs, docstrings, and user-facing docs match current code
 behavior, fix what drifted, and leave behind a repeatable assessment record plus clear
 triggers for re-running it — so docs never again need a from-scratch audit.
 
 **Non-goals:** No docs-generator migration (see
-[DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](../assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md)).
+[DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](../../assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md)).
 No prose rewrite for style; accuracy and completeness only.
 
 ---
@@ -70,7 +71,7 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Phase 3 — User-facing cross-check
 
-> **Execution checklist:** [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
+> **Execution checklist:** [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
 > (seeded from `help_registry.json`, `feature_doc_matrix.json`, and `docs/source/` layout).
 
 Phase 3 verifies **semantic accuracy** of user-facing prose. Harness scripts (§0 of the
@@ -124,13 +125,13 @@ from PR #81 to keep that pass reviewable and doc-only. Phase 3.5 closes them in 
 - [x] **Getting-started notebook** (Phase 3 §3 GAP) — refreshed
   `docs/source/getting_started/getting_started.ipynb` for GUISkinDose product identity, current
   `main()`/settings examples, and portable example paths; keep PySkinDose where upstream/historical.
-  TO_DO: [Getting-started notebook refresh](../TO_DO.md).
+  TO_DO: [Getting-started notebook refresh](../../TO_DO.md).
 - [x] **Glossary plot-axis labels** (Phase 3 §6 GAP) — added LON/LAT/VER and PT L-R / A-P / S-I aliases
   to `dev-docs/glossary.json`; tick checklist §6 glossary row when done.
-  TO_DO: [Glossary plot-axis labels](../TO_DO.md).
-- [x] Update [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
+  TO_DO: [Glossary plot-axis labels](../../TO_DO.md).
+- [x] Update [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
   §3 and §6 verdict rows from **GAP** → **FIX** (or **ACC** after refresh).
-- [ ] Note Phase 3.5 completion in the Phase 4 assessment matrix when written.
+- [x] Note Phase 3.5 completion in the Phase 4 assessment matrix when written.
 
 ### Out of scope (product backlog, not Phase 3.5)
 
@@ -159,7 +160,7 @@ Today every entry point calls `configure_logging()` **without** `log_file`:
   terminal.
 
 **Redaction / privacy (stderr today; file would mirror this — see
-[TO_DO.md](../TO_DO.md) → Native GUI optional file logging):**
+[TO_DO.md](../../TO_DO.md) → Native GUI optional file logging):**
 
 - There is **no separate redaction layer** on stderr or on file write. Privacy relies on value-free
   APIs (`safe_error_event`, `safe_user_error`, `safe_warning` in `guiskindose.privacy`), conventions
@@ -184,11 +185,13 @@ Today every entry point calls `configure_logging()` **without** `log_file`:
 
 ## Phase 4 — Standing infrastructure (persists after archival)
 
-- [ ] Write the record: `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`
+- [x] Write the record: `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`
   (date-stamped like `DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md`; matrix: per-doc
   verdict, docstring coverage numbers, gaps accepted, reviewer, date).
   Register it in `dev-docs/index.md`.
-- [ ] Triggers (any one fires a re-assessment of the affected area):
+  Result (2026-09-07): [../../assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](../../assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md),
+  registered in the index Assessments table.
+- [x] Triggers (any one fires a re-assessment of the affected area):
   1. **Pre-release** — extend `RELEASES_AND_DISTRIBUTION.md` step 4 with: "docs
      assessment current (matrix touched this cycle, or N/A with reason)".
   2. **Calculation-pipeline change** — PRs touching `calculate_dose/`,
@@ -199,7 +202,9 @@ Today every entry point calls `configure_logging()` **without** `log_file`:
      `ui_copy` + matrix + hub docs before merge.
   4. **Backstop** — `check_doc_pruning.py` review queue (30 days / 10 commits);
      the matrix carries a "last reviewed" stamp so staleness is visible.
-- [ ] Wire the TO_DO item to this plan (done) and archive this plan when Phases 0–3.5–4 land.
+  Result (2026-09-07): trigger 1 wired into `RELEASES_AND_DISTRIBUTION.md` step 4;
+  triggers 2–4 recorded in the standing record's "Re-assessment triggers" section.
+- [x] Wire the TO_DO item to this plan (done) and archive this plan when Phases 0–3.5–4 land.
 
 ## Files
 
