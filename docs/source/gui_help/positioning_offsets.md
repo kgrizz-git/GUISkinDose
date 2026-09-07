@@ -19,9 +19,8 @@ GUISkinDose uses a normalized calculation frame plus historical PySkinDose/DICOM
 | Patient lateral / width | `d_lat` / patient scale | `X - LON / PT L-R` | Side-to-side placement after normalized geometry is built |
 | Patient longitudinal / head-foot | `d_lon` / patient scale | `Z - LAT / PT S-I` | Head-foot placement after normalized geometry is built |
 | Patient AP / vertical | `d_ver` / patient scale | `Y - VER / PT A-P` | Up-down placement |
-| Rotation | patient rotation setting | about vertical axis | Rotates patient around the table-height axis |
 
-The `LON`, `VER`, and `LAT` plot aliases are historical PySkinDose labels inherited from DICOM/operator table-coordinate names after vendor normalization. Siemens and Philips use that DICOM/operator convention. GE raw data uses patient-anatomy longitudinal and lateral naming instead; GUISkinDose swaps GE raw lateral/longitudinal into the common plotted frame during normalization. For developer-level details, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
+The `LON`, `VER`, and `LAT` plot aliases are historical PySkinDose labels inherited from DICOM/operator table-coordinate names after vendor normalization. Beam angles (`Ap1`/`Ap2`) come from the RDSR and are normalized using vendor `rotation_direction` rules — there is no separate patient-rotation slider in Settings. Siemens and Philips use that DICOM/operator convention. GE raw data uses patient-anatomy longitudinal and lateral naming instead; GUISkinDose swaps GE raw lateral/longitudinal into the common plotted frame during normalization. For developer-level details, see `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`.
 
 All values are in **centimeters**. In the normalized frame, **+Y (vertical) points down** toward the floor, and the `(0, 0, 0)` origin is the beam isocenter, which coincides with the table head-end when the table-position readout is zero.
 
