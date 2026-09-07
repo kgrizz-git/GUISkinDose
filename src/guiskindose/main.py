@@ -1,3 +1,5 @@
+"""Entry point and CLI orchestration for GUISkinDose."""
+
 import logging
 import sys
 from collections.abc import Sequence

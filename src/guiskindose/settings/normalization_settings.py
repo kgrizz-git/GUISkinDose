@@ -1,3 +1,8 @@
+"""Vendor-specific RDSR normalization configuration.
+
+Holds manufacturer/model match rules, translation and rotation direction
+overrides, and field-size mode selection used by the RDSR normalizer.
+"""
 import re
 from typing import Any
 
@@ -111,6 +116,14 @@ class NormalizationSettings:
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="normalization", indent_level=0)
 
     def update_used_settings(self, data_parsed: pd.DataFrame):
+        """Match and apply vendor-specific normalization settings.
+
+        Parameters
+        ----------
+        data_parsed : pd.DataFrame
+            Parsed RDSR DataFrame with manufacturer and model columns.
+
+        """
         manufacturer = normalize_manufacturer_key(data_parsed[KEY_RDSR_MANUFACTURER][0])
         model = normalize_model_key(data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0])
 
@@ -174,9 +187,23 @@ class NormalizationSettings:
         self.update_attrs_str()
 
     def update_attrs_str(self):
+        """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="normalization", indent_level=0)
 
     def to_printable_string(self, color: str = "blue"):
+        """Render normalization settings as a Rich-formatted string.
+
+        Parameters
+        ----------
+        color : str, optional
+            Rich markup color name, by default "blue".
+
+        Returns
+        -------
+        str
+            Formatted settings block.
+
+        """
         return (
             f"[bold {color}]Normalization settings[/bold {color}]\n"
             f"\t[{color}]trans_offset:[/{color}]\n"

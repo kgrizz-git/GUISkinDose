@@ -1,3 +1,4 @@
+"""Plotly layout, color, and slider styling constants for geometry plots."""
 from ..constants import (
     COLOR_CANVAS_DARK,
     COLOR_CANVAS_LIGHT,

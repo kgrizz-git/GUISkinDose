@@ -1,3 +1,8 @@
+"""Mathematical phantom dimension configuration.
+
+Defines the size parameters for the plane, cylinder, table, and pad
+phantoms. All linear dimensions are in cm.
+"""
 from guiskindose.helpers.create_attributes_string import create_attributes_string
 
 
@@ -69,9 +74,18 @@ class PhantomDimensions:
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="dimensions", indent_level=1)
 
     def update_attrs_str(self):
-        self.attrs_str = create_attributes_string(attrs_parent=self, object_name="dimension", indent_level=1)
+        """Refresh the cached attribute summary string."""
+        self.attrs_str = create_attributes_string(attrs_parent=self, object_name="dimensions", indent_level=1)
 
     def to_dict_pad(self):
+        """Return dimensions as a dict including table and pad values.
+
+        Returns
+        -------
+        dict
+            Keys mirror the phantom dimension constants.
+
+        """
         return {
             "plane_length": self.plane_length,
             "plane_width": self.plane_width,
@@ -89,6 +103,15 @@ class PhantomDimensions:
         }
 
     def to_dict_cylinder(self):
+        """Return dimensions limited to the cylinder phantom values.
+
+        Returns
+        -------
+        dict
+            Keys: ``cylinder_length``, ``cylinder_radii_a``,
+            ``cylinder_radii_b``, ``cylinder_resolution``.
+
+        """
         return {
             "cylinder_length": self.cylinder_length,
             "cylinder_radii_a": self.cylinder_radii_a,

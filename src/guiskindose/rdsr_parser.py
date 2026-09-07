@@ -1,3 +1,5 @@
+"""Parses DICOM Radiation Dose Structured Reports (RDSR) into tabular format."""
+
 import pandas as pd
 import pydicom
 

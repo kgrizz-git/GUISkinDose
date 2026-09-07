@@ -268,6 +268,7 @@ def save_gui_config(data: dict[str, Any]) -> None:
 
 
 def primary_screen(screens: list[ScreenBounds]) -> ScreenBounds | None:
+    """Find the primary screen from a list of screen bounds."""
     if not screens:
         return None
     primaries = [s for s in screens if s.is_primary]
@@ -283,6 +284,7 @@ def geometry_looks_maximized(
     *,
     fill_ratio: float = MAXIMIZED_FILL_RATIO,
 ) -> bool:
+    """Check if the given dimensions closely match any screen\'s dimensions."""
     if not screens:
         return False
     area = width * height
@@ -299,6 +301,7 @@ def title_bar_accessible_on_any_screen(
     title_bar_height: int = TITLE_BAR_HEIGHT,
     min_horizontal_overlap: int = MIN_HORIZONTAL_OVERLAP,
 ) -> bool:
+    """Check if a window\'s title bar is positioned within the visible bounds of any screen."""
     if not screens:
         return False
     for screen in screens:
@@ -354,6 +357,7 @@ def default_normal_bounds(screens: list[ScreenBounds]) -> NativeWindowPrefs:
 
 
 def validate_prefs(prefs: NativeWindowPrefs, screens: list[ScreenBounds]) -> NativeWindowPrefs:
+    """Ensure window preferences are valid and visible on current screens."""
     width, height = _clamp_dimensions(prefs.width, prefs.height)
     maximized = prefs.maximized
     x, y = prefs.x, prefs.y
@@ -398,6 +402,7 @@ def _parse_native_window(data: dict[str, Any]) -> NativeWindowPrefs | None:
 
 
 def load_native_window_prefs() -> NativeWindowPrefs | None:
+    """Load native window preferences from the local GUI configuration file."""
     raw = load_gui_config()
     if not isinstance(raw, dict):
         return None
@@ -405,6 +410,7 @@ def load_native_window_prefs() -> NativeWindowPrefs | None:
 
 
 def save_native_window_prefs(prefs: NativeWindowPrefs) -> None:
+    """Save native window preferences to the local GUI configuration file."""
     data = load_gui_config()
     data["schema_version"] = SCHEMA_VERSION
     data["native_window"] = {

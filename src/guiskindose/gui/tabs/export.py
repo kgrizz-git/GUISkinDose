@@ -196,6 +196,7 @@ class ExportTabController:
         return payload
 
     async def download_json(self) -> None:
+        """Download json."""
         if not state.calculation_done or (state.output is None and state.multi_exam_result is None):
             ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
             return
@@ -207,6 +208,7 @@ class ExportTabController:
         _write_or_download(save_path, content, default_name, "JSON export saved.", "json_export_write")
 
     async def download_html(self) -> None:
+        """Download html."""
         if not state.calculation_done:
             ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
             return
@@ -249,6 +251,7 @@ class ExportTabController:
         _write_or_download(save_path, content, default_name, "HTML export saved.", "html_export_write")
 
     async def download_png(self) -> None:
+        """Download png."""
         if not state.calculation_done:
             ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
             return
@@ -305,6 +308,7 @@ class ExportTabController:
         return None
 
     async def export_rich_report(self) -> None:
+        """Export rich report."""
         if not state.calculation_done:
             ui.notify("Run a calculation first", color="warning")
             return
@@ -402,6 +406,7 @@ def _build_rich_report_dialog(controller: ExportTabController) -> None:
 
 
 def build(_ctx: PageContext) -> None:
+    """Build."""
     controller = ExportTabController()
     with ui.tab_panel("export"), ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
         _build_export_header(controller)

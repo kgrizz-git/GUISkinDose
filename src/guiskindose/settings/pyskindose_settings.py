@@ -1,3 +1,8 @@
+"""Top-level settings container for a GUISkinDose run.
+
+Aggregates mode, I/O, phantom, plot, normalization, kerma-meter, and
+physics policy settings.
+"""
 import json
 from pathlib import Path
 from typing import Any, cast

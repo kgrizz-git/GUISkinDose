@@ -27,14 +27,17 @@ _EXAM_METRIC_LABEL_CLASSES = "text-[10px] text-grey-5 font-bold tracking-widest 
 
 
 def multi_exam_results_ui_stale(last_run_id: int | None, calc_run_id: int) -> bool:
+    """Multi exam results ui stale."""
     return last_run_id != calc_run_id
 
 
 def can_show_more_inline(visible: list[bool]) -> bool:
+    """Can show more inline."""
     return sum(visible) < MAX_INLINE_MAPS
 
 
 def compute_subset_aggregate(res: Any, selected_mask: list[bool]) -> tuple[Any, float]:
+    """Compute subset aggregate."""
     import numpy as np
 
     selected_indices = [i for i, s in enumerate(selected_mask) if s]
@@ -63,6 +66,7 @@ class ResultsTabController:
         self._inline_rendered: dict[int, bool] = {}
 
     def refresh_metrics(self) -> None:
+        """Refresh metrics."""
         if not state.is_multi_exam and state.calculation_done and state.psd is not None:
             from guiskindose.export._format import fmt_duration
             from guiskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
@@ -78,6 +82,7 @@ class ResultsTabController:
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
 
     async def refresh_dosemap(self) -> None:
+        """Refresh dosemap."""
         if state.is_multi_exam or not state.calculation_done:
             return
         self.refs.dosemap_spinner.visible = True
@@ -87,10 +92,12 @@ class ResultsTabController:
             self.refs.dosemap_plot.update_figure(fig)
 
     async def maybe_auto_refresh_dosemap(self) -> None:
+        """Maybe auto refresh dosemap."""
         if not state.is_multi_exam and state.calculation_done and state.dosemap_fig is None:
             await self.refresh_dosemap()
 
     def refresh_corr_table(self) -> None:
+        """Refresh corr table."""
         if state.is_multi_exam or not state.calculation_done or state.output is None:
             return
         out = state.output
@@ -189,6 +196,7 @@ class ResultsTabController:
             self.last_rendered_run_id = state.calc_run_id
 
     def refresh_aggregate_dosemap(self, res: Any) -> None:
+        """Refresh aggregate dosemap."""
         if not res.exams:
             self.refs.agg_dosemap_plot.update_figure({})
             self.last_agg_map_run_id = state.calc_run_id
@@ -206,6 +214,7 @@ class ResultsTabController:
         self.last_agg_map_run_id = state.calc_run_id
 
     def refresh_aggregate_dosemap_subset(self) -> None:
+        """Refresh aggregate dosemap subset."""
         res = state.multi_exam_result
         if res is None or not res.exams:
             self.refs.agg_dosemap_plot.update_figure({})
@@ -233,11 +242,13 @@ class ResultsTabController:
             self.last_agg_map_run_id = state.calc_run_id
 
     def on_subset_toggle(self, e: Any, idx: int) -> None:
+        """Handle subset toggle."""
         if idx < len(state.aggregate_subset_exams):
             state.aggregate_subset_exams[idx] = bool(e.value)
         self.refresh_aggregate_dosemap_subset()
 
     def set_subset_all(self, value: bool) -> None:
+        """Set subset all."""
         for i in range(len(state.aggregate_subset_exams)):
             state.aggregate_subset_exams[i] = value
         for cb in self.subset_checkboxes:
@@ -245,6 +256,7 @@ class ResultsTabController:
         self.refresh_aggregate_dosemap_subset()
 
     def show_exam_dosemap_dialog(self, exam_idx: int) -> None:
+        """Show exam dosemap dialog."""
         res = state.multi_exam_result
         if res is None or exam_idx < 0 or exam_idx >= len(res.exams):
             ui.notify("No dose map for this exam", color="warning")

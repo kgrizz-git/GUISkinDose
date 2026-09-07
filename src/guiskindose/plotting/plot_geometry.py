@@ -1,3 +1,4 @@
+"""Dispatch geometry plotting by mode (setup, event, or procedure)."""
 import pandas as pd
 
 from guiskindose.phantom_class import Phantom

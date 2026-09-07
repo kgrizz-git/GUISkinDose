@@ -1,3 +1,8 @@
+"""Combine vendor HVL CSVs into the bundled ``hvl_combined.csv``.
+
+Development script for regenerating the master HVL lookup table from
+individual vendor filter tables.
+"""
 import os
 from pathlib import Path
 

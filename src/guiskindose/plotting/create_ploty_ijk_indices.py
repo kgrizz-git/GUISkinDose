@@ -1,3 +1,6 @@
+"""Build Plotly mesh index arrays for cuboid phantom wireframe surfaces."""
+
+
 def _create_plotly_ijk_indices_for_cuboid_objects():
 
     # create list for storing indices order

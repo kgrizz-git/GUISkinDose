@@ -99,6 +99,8 @@ class ExportSource:
 
 @dataclass
 class ReportMeta:
+    """Metadata about the report generation process (§1)."""
+
     app_name: str
     package_version: str
     schema_version: int
@@ -143,6 +145,8 @@ class CorrectionStat:
 
 @dataclass
 class AcquisitionBreakdown:
+    """Event count and dosimetric summary for a specific acquisition type (§7)."""
+
     mode: str  # fluoroscopy | acquisition | other
     raw_labels: list[str]
     event_count: int
@@ -152,6 +156,8 @@ class AcquisitionBreakdown:
 
 @dataclass
 class DosimetricMetrics:
+    """Core dosimetric metrics and acquisition breakdown for an exam or procedure (§7)."""
+
     psd: float | None
     air_kerma: float | None
     dap_gycm2: float | None
@@ -209,6 +215,7 @@ class WarningsBlock:
     discarded_events: dict[str, int] = field(default_factory=dict)
 
     def is_empty(self) -> bool:
+        """Return True if there are no warnings or discarded events."""
         return not (
             self.calc_warnings
             or self.run_warnings

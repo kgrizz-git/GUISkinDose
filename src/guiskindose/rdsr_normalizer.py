@@ -1,3 +1,5 @@
+"""Normalizes extracted RDSR parameters to GUISkinDose internal formats and coordinates."""
+
 import logging
 
 import numpy as np

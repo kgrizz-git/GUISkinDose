@@ -11,9 +11,11 @@ from ..state import state
 
 @dataclass
 class EventTableWidget:
+    """Eventtablewidget."""
     table: ui.table
 
     def refresh(self) -> None:
+        """Refresh."""
         if state.rdsr_df is None:
             self.table.rows = []
             self.table.update()
@@ -33,6 +35,7 @@ class EventTableWidget:
 
 
 def build() -> EventTableWidget:
+    """Build."""
     ui.label("Irradiation events").classes("text-subtitle2 q-mt-md q-mb-xs")
     table = ui.table(
         columns=[

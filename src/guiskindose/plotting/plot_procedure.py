@@ -1,3 +1,4 @@
+"""Plot all irradiation events in a procedure with a slider."""
 import logging
 
 import pandas as pd

@@ -1,3 +1,4 @@
+"""Create Plotly wireframe traces for beam, table, pad, and detector geometry."""
 
 import plotly.graph_objects as go
 

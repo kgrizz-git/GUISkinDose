@@ -25,6 +25,7 @@ def collect_provenance(
     *,
     include_source_identifiers: bool = False,
 ) -> ProvenanceInfo:
+    """Aggregate per-exam input provenance and metadata into a report-level structure."""
     processed = sum(len(e.normalized_data) for e in exams)
     discarded_events = _sum_discarded(exams)
     discarded = sum(discarded_events.values())

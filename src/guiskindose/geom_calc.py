@@ -1,3 +1,5 @@
+"""Geometry calculations for field size, beam intersections, table hits, and unit conversions."""
+
 import logging
 from typing import Any
 

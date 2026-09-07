@@ -1,1 +1,1 @@
-# GUI package for GUISkinDose — NiceGUI-based local web app
+"""NiceGUI-based local web application for GUISkinDose."""

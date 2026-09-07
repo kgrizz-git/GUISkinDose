@@ -21,7 +21,7 @@ from nicegui.testing import User
 
 from guiskindose.gui.constants import GEOMETRY_DEBOUNCE_SEC
 from guiskindose.gui.state import state
-from guiskindose.gui.tabs import geometry_builders
+from guiskindose.gui.tabs import geometry_controller
 
 pytest.importorskip("nicegui")
 
@@ -46,14 +46,14 @@ async def _open_geometry_tab(user: User) -> None:
 def _install_make_fig_counter(monkeypatch: pytest.MonkeyPatch) -> Callable[[], int]:
     """Monkeypatch make_geometry_fig; return a getter for the call count."""
     count = 0
-    original = geometry_builders.make_geometry_fig
+    original = geometry_controller.make_geometry_fig
 
     def mock_make_fig(*args, **kwargs):
         nonlocal count
         count += 1
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(geometry_builders, "make_geometry_fig", mock_make_fig)
+    monkeypatch.setattr(geometry_controller, "make_geometry_fig", mock_make_fig)
     return lambda: count
 
 

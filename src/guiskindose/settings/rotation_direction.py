@@ -1,3 +1,8 @@
+"""Beam- and table-angle direction multipliers.
+
+Each attribute is +1 or -1 and is used as a multiplicative correction
+factor to flip the sign of the corresponding rotation angle.
+"""
 
 
 class RotationDirection:
@@ -30,6 +35,14 @@ class RotationDirection:
         self.At3: int = 1 if directions is None else self._get_direction_as_value(directions["At3"])
 
     def update_rotation_direction(self, directions: dict[str, str]):
+        """Update direction multipliers from a dict of '+'/'-'.
+
+        Parameters
+        ----------
+        directions : dict[str, str]
+            Mapping of Ap1, Ap2, Ap3, At1, At2, At3 to '+' or '-'.
+
+        """
         self.Ap1 = self._get_direction_as_value(directions["Ap1"])
         self.Ap2 = self._get_direction_as_value(directions["Ap2"])
         self.Ap3 = self._get_direction_as_value(directions["Ap3"])

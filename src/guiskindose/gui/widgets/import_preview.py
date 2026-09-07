@@ -37,6 +37,7 @@ _MONO_FULL_WIDTH_CLASSES = "w-full mono-text"
 
 @dataclass
 class ImportPreviewWidget:
+    """Importpreviewwidget."""
     sheet_row: ui.row
     sheet_select: ui.select
     coord_card: ui.card
@@ -79,6 +80,7 @@ class ImportPreviewController:
         return "ge manufacturer detected" in warnings_lower
 
     def set_transform_defaults(self) -> None:
+        """Set transform defaults."""
         if state.import_provenance is None:
             return
         if state.is_multi_exam:
@@ -109,6 +111,7 @@ class ImportPreviewController:
         self.ctx.refresh_geometry_tab()
 
     def on_swap_toggle(self) -> None:
+        """Handle swap toggle."""
         if not self._single_exam_transform_active():
             return
         prov = state.import_provenance
@@ -119,12 +122,14 @@ class ImportPreviewController:
         self.coord_auto_label.set_text("")
 
     def on_flip_toggle(self, key: str) -> None:
+        """Handle flip toggle."""
         if not self._single_exam_transform_active():
             return
         state.loaded_exam_meta[0][key] = getattr(state, key)
         self._commit_single_exam_transform()
 
     async def on_sheet_change(self) -> None:
+        """Handle sheet change."""
         if state.file_path is None:
             return
         with operation_guard("switching sheets") as proceed:
@@ -147,6 +152,7 @@ class ImportPreviewController:
 
     # --- refresh -----------------------------------------------------------
     def refresh(self) -> None:
+        """Refresh."""
         prov = state.import_provenance
         self.coord_card.set_visibility(
             prov is not None
@@ -317,6 +323,7 @@ def _build_mapping_and_sample(controller: ImportPreviewController) -> None:
 
 
 def build(ctx: PageContext, upload_status: ui.label) -> ImportPreviewWidget:
+    """Build."""
     controller = ImportPreviewController(ctx, upload_status)
     with ui.card().classes("modern-card w-full").bind_visibility_from(
         state, "input_source_type", backward=lambda v: v not in ("", "dicom")
