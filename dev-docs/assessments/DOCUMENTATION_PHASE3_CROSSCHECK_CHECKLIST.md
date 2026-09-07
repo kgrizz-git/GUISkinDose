@@ -101,13 +101,13 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Doc | Verdict (`ACC`/`FIX`/`GAP`/`N/A`) | Cross-check against |
 |-----|-----------------------------------|---------------------|
-| [README.md](../../README.md) | | Install, GUI launch, CLI one-liner, links, version badge source |
-| [CONTRIBUTING.md](../../CONTRIBUTING.md) | | Dev setup, hooks, privacy gates, unsolicited-PR policy |
-| [SUPPORT.md](../../SUPPORT.md) | | Issue vs Discussion routing, intended use disclaimer |
-| [SECURITY.md](../../SECURITY.md) | | Vulnerability reporting path vs GitHub security advisories |
-| [CHANGELOG.md](../../CHANGELOG.md) | | User-facing release notes vs shipped behavior (recent `[Unreleased]` / `[1.0.0]`) |
-| [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md) | | Upload/export privacy copy in GUI vs policy |
-| [LICENSE_COMPLIANCE.md](../LICENSE_COMPLIANCE.md) | | Third-party notices workflow vs `NOTICES` / `pyproject.toml` |
+| [README.md](../../README.md) | **FIX** | 2026-09-06 — added headless CLI flags section |
+| [CONTRIBUTING.md](../../CONTRIBUTING.md) | **ACC** | 2026-09-06 — dev setup, privacy gates, unsolicited-PR policy match |
+| [SUPPORT.md](../../SUPPORT.md) | **ACC** | 2026-09-06 — Issue/Discussion routing and FDA disclaimer |
+| [SECURITY.md](../../SECURITY.md) | **ACC** | 2026-09-06 — private advisory reporting path |
+| [CHANGELOG.md](../../CHANGELOG.md) | **ACC** | 2026-09-06 — `[Unreleased]` matches Phase 3 help/doc fixes |
+| [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md) | **ACC** | 2026-09-06 — repo admission policy; GUI copy verified in §6 |
+| [LICENSE_COMPLIANCE.md](../LICENSE_COMPLIANCE.md) | **FIX** | 2026-09-06 — demo meshes not shipped under phantom_data |
 
 ---
 
@@ -115,11 +115,11 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Doc | Verdict | Cross-check against |
 |-----|---------|---------------------|
-| [INPUT_SCHEMA_DETECTION.md](../INPUT_SCHEMA_DETECTION.md) | | `--input-schema`, adapter scoring, GUI schema selector |
-| [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) | | Normalization, per-exam meta, Geometry/Settings sliders |
-| [INPUT_FIELD_REFERENCE.md](../INPUT_FIELD_REFERENCE.md) | | Column names vs adapters + Data table |
-| [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md) | | Vendor normalizer, `INPUT_DATA_FLOW_AND_OFFSETS.md`, GUI Tx↔Tz toggle scope |
-| [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md) | | PyPI identity `guiskindose`, version 1.0.0 story |
+| [INPUT_SCHEMA_DETECTION.md](../INPUT_SCHEMA_DETECTION.md) | **ACC** | 2026-09-06 — `auto` default, adapters match `cli_args.py` / GUI |
+| [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) | **ACC** | 2026-09-06 — normalization + per-exam meta aligned with code |
+| [INPUT_FIELD_REFERENCE.md](../INPUT_FIELD_REFERENCE.md) | **ACC** | 2026-09-06 — `test_input_schema_doc.py` pass |
+| [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md) | **ACC** | 2026-09-06 — GE swap + Tx↔Tz scope match help |
+| [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md) | **ACC** | 2026-09-06 — `guiskindose` 1.0.0, not yet on PyPI |
 
 ---
 
@@ -135,16 +135,17 @@ warnings) are mandatory.
 `settings.phantom_preview.caption`.
 
 - [x] Run `python scripts/check_ui_copy.py` _(2026-09-06 — pass)_
-- [ ] Review each cataloged key in [ui_copy.json](../ui_copy.json) against owner file text
-- [ ] Spot-check uncatalogued user-visible strings in `gui/tabs/`, `gui/app.py`, widgets
+- [x] Review each cataloged key in [ui_copy.json](../ui_copy.json) against owner file text _(2026-09-06 — pass)_
+- [x] Spot-check uncatalogued user-visible strings in `gui/tabs/`, `gui/app.py`, widgets _(2026-09-06 — mandatory keys cataloged; no new high-risk gaps)_
 - [ ] [glossary.json](../glossary.json) terms match in-app labels (LON/LAT/VER, exam, offset)
 
 | Area | Verdict | Notes |
 |------|---------|-------|
-| Catalog completeness | | |
-| Privacy / PHI notices (`upload.privacy_notice`, `onboarding.privacy_notice`, export identifiers) | | |
-| Per-exam correction tooltips (`per_exam.*`) | | |
-| Settings phantom preview captions | | |
+| Catalog completeness | **ACC** | `check_ui_copy.py` pass |
+| Privacy / PHI notices (`upload.privacy_notice`, `onboarding.privacy_notice`, export identifiers) | **ACC** | Matches `export.py`, `upload_builders.py`, `app.py` |
+| Per-exam correction tooltips (`per_exam.*`) | **ACC** | Matches `_per_exam.py` |
+| Settings phantom preview captions | **ACC** | Matches `settings.py` + controller status strings |
+| Glossary plot-axis labels (LON/LAT/VER) | **GAP** | Not in `glossary.json`; filed in TO_DO |
 
 ---
 
@@ -152,10 +153,10 @@ warnings) are mandatory.
 
 | Surface | Verdict | Cross-check against |
 |---------|---------|---------------------|
-| `python -m guiskindose --help` | | [cli_args.py](../../src/guiskindose/cli_args.py), `main.py` modes |
-| Tabular flags (`--input-schema`, `--sheet-name`, `--input-preview-only`) | | `AGENTS.md`, `INPUT_SCHEMA_DETECTION.md`, upload help |
-| `--mode gui` / `--native` | | README, user_guide, FEATURE_INVENTORY |
-| Export CLI subcommands / formats | | [cli_args.py](../../src/guiskindose/cli_args.py), `export_workflow.md`, `tests/unittests/test_export_cli.py` |
+| `python -m guiskindose --help` | **ACC** | 2026-09-06 — matches `cli_args.py` flags |
+| Tabular flags (`--input-schema`, `--sheet-name`, `--input-preview-only`) | **ACC** | 2026-09-06 — documented in README + INPUT_SCHEMA_DETECTION |
+| `--mode gui` / `--native` | **ACC** | 2026-09-06 — README GUI section |
+| Export CLI subcommands / formats | **ACC** | 2026-09-06 — README + `export_workflow.md` + `--export-format` |
 
 ---
 
@@ -166,10 +167,10 @@ warnings) are mandatory.
 | §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
 | §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
 | §3 Sphinx user | 6 | 0 | 5 | 1 | 0 | 2026-09-06 |
-| §4 Community + policy | 7 | | | | | |
-| §5 Dev-docs user | 5 | | | | | |
-| §6 UI copy | 4 | | | | | |
-| §7 CLI | 4 | | | | | |
+| §4 Community + policy | 7 | 5 | 2 | 0 | 0 | 2026-09-06 |
+| §5 Dev-docs user | 5 | 5 | 0 | 0 | 0 | 2026-09-06 |
+| §6 UI copy | 4 | 3 | 0 | 1 | 0 | 2026-09-06 |
+| §7 CLI | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |
 
 **Phase 3 acceptance:** all **GAP** rows have a linked `TO_DO.md` bullet; all **FIX**
 rows merged; summary table complete.

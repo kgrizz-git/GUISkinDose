@@ -81,6 +81,21 @@ python -m guiskindose --mode gui --native     # native window (requires pywebvie
 guiskindose --mode gui [--native]
 ```
 
+### Command-line flags (headless)
+
+Run `guiskindose --help` for the full list. Common headless examples:
+
+```bash
+guiskindose --file-path study.dcm
+guiskindose --file-path events.csv --input-schema auto
+guiskindose --file-path workbook.xlsx --sheet-name "Sheet1"
+guiskindose --file-path study.dcm --export-format xlsx --export-path report.xlsx
+```
+
+Notable flags: `--input-schema` (default `auto` for tabular files), `--input-preview-only`,
+`--export-format {xlsx,pdf,html,docx}`, `--export-path`, `--include-source-identifiers` (opt-in;
+may embed PHI in filenames), `--kerma-meter-correction` and related kerma-meter options.
+
 Native window mode remembers the last window size, position, and maximized state in
 `~/.guiskindose/gui.json` (first launch opens maximized; Restore returns to the saved
 normal size). Existing `~/.mypyskindose/gui.json` is still read when the new file is

@@ -43,7 +43,8 @@ That keeps SemVer and contributor history organized.
   kerma corrected vs uncorrected display). Aligned help-token regression test with actual setting
   names. FEATURE_INVENTORY §9.5 dose-map dialog wording aligned with Results UI. Sphinx user docs
   (`install`, `user_guide`, `description`, `contribute`, `background`) refreshed for GUISkinDose
-  product identity while preserving PySkinDose upstream attribution where appropriate. No calculation
+  product identity while preserving PySkinDose upstream attribution where appropriate.
+  README CLI flags section; LICENSE_COMPLIANCE demo-mesh path corrected. No calculation
   or UI behavior change.
 
 - **Public docstring coverage under `src/guiskindose/` (maintainer-facing)** (2026-09-06) —
