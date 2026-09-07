@@ -1,8 +1,8 @@
 # Phase 3 user-facing documentation cross-check — execution checklist
 
-> **Status:** COMPLETE (2026-09-07) — all §0–§7 verdicts recorded; open **GAP** items filed in
-> `dev-docs/TO_DO.md` (getting-started notebook, glossary plot-axis labels). Phase 4 assessment
-> artifact next.
+> **Status:** COMPLETE (2026-09-07) — all §0–§7 verdicts recorded; documentation **GAP** items
+> deferred to **Phase 3.5** (notebook + glossary) or product backlog in `dev-docs/TO_DO.md`
+> (native file logging, `TabularImportOptions`/CLI). Phase 4 assessment artifact next.
 
 **Started:** 2026-09-06  
 **Reviewer(s):** Kevin Grizzard + StepFun / MiniMax / Muse Spark audit agents (2026-09-06–07)  

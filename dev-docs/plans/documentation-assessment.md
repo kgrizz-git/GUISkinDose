@@ -110,6 +110,67 @@ the human/agent pass for “does it match behavior?”
 - [x] All **GAP** items filed in `dev-docs/TO_DO.md` with enough context to execute later.
 - [x] No known inaccurate user-facing claims left unrecorded.
 
+## Phase 3.5 — Close documentation GAPs (follow-up PR)
+
+> **Scope:** documentation and harness only — **no** calculation, GUI behavior, or CLI flag changes.
+> **Branch:** `docs/phase-3.5-doc-gaps` (or equivalent) after Phase 3 PR #81 merges.
+> **Plan:** this section; execution tracked in `dev-docs/TO_DO.md`.
+
+Phase 3 filed two **GAP** rows that are still user-facing debt but were intentionally deferred
+from PR #81 to keep that pass reviewable and doc-only. Phase 3.5 closes them in one small PR.
+
+### In scope
+
+- [ ] **Getting-started notebook** (Phase 3 §3 GAP) — refresh
+  `docs/source/getting_started/getting_started.ipynb` for GUISkinDose product identity, current
+  `main()`/settings examples, and portable example paths; keep PySkinDose where upstream/historical.
+  TO_DO: [Getting-started notebook refresh](../TO_DO.md).
+- [ ] **Glossary plot-axis labels** (Phase 3 §6 GAP) — add LON/LAT/VER and PT L-R / A-P / S-I aliases
+  to `dev-docs/glossary.json`; tick checklist §6 glossary row when done.
+  TO_DO: [Glossary plot-axis labels](../TO_DO.md).
+- [ ] Update [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
+  §3 and §6 verdict rows from **GAP** → **FIX** (or **ACC** after refresh).
+- [ ] Note Phase 3.5 completion in the Phase 4 assessment matrix when written.
+
+### Out of scope (product backlog, not Phase 3.5)
+
+These were discovered during Phase 3 audits; docs were corrected to match **current** behavior.
+Implementation stays in `TO_DO.md` under Product Backlog / separate feature PRs:
+
+| Item | Why deferred |
+|------|----------------|
+| **Native GUI optional file logging** | Requires wiring `log_file` at startup — behavior change. See [Current logging behavior](#current-logging-behavior) below. |
+| **`TabularImportOptions` + CLI coordinate flags** | API/CLI feature; GUI toggles already ship via `AppState` / `exam_transforms.py`. |
+
+### Current logging behavior
+
+Today every entry point calls `configure_logging()` **without** `log_file`:
+
+- **CLI** (`__main__.py`) and **GUI** (`gui/app.py` → `run_gui()`) set up the `guiskindose`
+  logger tree with a **console handler only** (stderr via `logging.StreamHandler`).
+- **`dprint` categories** (GUI / PROCESSING / CALCULATION / RENDERING) map to child loggers;
+  levels come from optional `debug.json` in the working directory (default: categories off,
+  file handler would stay at INFO unless a category is enabled).
+- **Module loggers** (`logging.getLogger(__name__)`) under the `guiskindose` tree also flow to
+  that console once configured; before Phase 0 logging work they had no handler.
+- **Optional file sink** already exists in `guiskindose.debug`: pass `log_file=` to
+  `configure_logging()` to attach a `RotatingFileHandler` (~1 MiB × 4 files, fresh session
+  purge, `0o600` on POSIX, INFO-by-default for PHI safety unless debug categories are on).
+  **Nothing passes `log_file` today**, so no log file is written in any mode — including
+  `--native` / pywebview, where stderr still exists but is easy to miss without a terminal.
+- **Privacy:** README and `PRIVACY_AND_SENSITIVE_ASSETS.md` describe this accurately after
+  Phase 3 §4 FIX. Enabling a native temp log file is tracked as optional product work, not a
+  doc-accuracy gap.
+
+### Acceptance
+
+- [ ] Both Phase 3.5 TO_DO bullets complete (notebook + glossary).
+- [ ] Checklist §3 notebook and §6 glossary rows updated; no remaining Phase 3 **GAP** rows
+  for documentation-only items.
+- [ ] Harness checks pass (`check_doc_freshness`, glossary/ui_copy if touched, notebook smoke
+  optional).
+- [ ] `CHANGELOG.md` entry if user-visible notebook prose changes.
+
 ## Phase 4 — Standing infrastructure (persists after archival)
 
 - [ ] Write the record: `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`
@@ -127,7 +188,7 @@ the human/agent pass for “does it match behavior?”
      `ui_copy` + matrix + hub docs before merge.
   4. **Backstop** — `check_doc_pruning.py` review queue (30 days / 10 commits);
      the matrix carries a "last reviewed" stamp so staleness is visible.
-- [ ] Wire the TO_DO item to this plan (done) and archive this plan when Phases 0–4 land.
+- [ ] Wire the TO_DO item to this plan (done) and archive this plan when Phases 0–3.5–4 land.
 
 ## Files
 
