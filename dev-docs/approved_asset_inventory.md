@@ -14,14 +14,13 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 173
+**Assets tracked:** 172
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
 | [`docs/source/_static/cmunbx.ttf`](../docs/source/_static/cmunbx.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `643afcc8fc9a` |
 | [`docs/source/_static/cmunrm.ttf`](../docs/source/_static/cmunrm.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `3deb3c529a46` |
 | [`docs/source/_static/cmunti.ttf`](../docs/source/_static/cmunti.ttf) | Opaque binary | Documentation font asset | ✅ Approved — KG (2026-07-14) | — | `acd86b280644` |
-| [`docs/source/getting_started/getting_started.ipynb`](../docs/source/getting_started/getting_started.ipynb) | Notebook embedded visual | Getting-started notebook with rendered visual outputs | ✅ Approved — KG (2026-09-04) | images ✓ · burned-in ✓ | `b3fddb4aec6c` |
 | [`docs/source/user/figures/ExampleSkinDoseMap.png`](../docs/source/user/figures/ExampleSkinDoseMap.png) | Image | Documentation dose-map illustration | ✅ Approved — KG (2026-07-15) | — | `0dc55620af6d` |
 | [`docs/source/user/figures/beam/beam_ap1.svg`](../docs/source/user/figures/beam/beam_ap1.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `281d754bbb5d` |
 | [`docs/source/user/figures/beam/beam_ap2.svg`](../docs/source/user/figures/beam/beam_ap2.svg) | Image | Documentation geometry illustration | ✅ Approved — KG (2026-07-15) | — | `947f2d9ab579` |

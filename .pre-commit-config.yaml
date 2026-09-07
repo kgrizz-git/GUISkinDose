@@ -50,6 +50,13 @@ repos:
         always_run: true
         stages: [pre-commit, pre-push]
 
+      - id: canonical-notebook-cleanliness
+        name: canonical getting-started notebook has no stored outputs
+        entry: python scripts/check_notebook_cleanliness.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: sonar-properties-parity
         name: Sonar configuration scope parity
         entry: python scripts/check_sonar_properties.py

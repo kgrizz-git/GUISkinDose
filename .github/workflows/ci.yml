@@ -135,6 +135,8 @@ jobs:
         python scripts/check_changelog.py
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
+    - name: Check canonical getting-started notebook cleanliness
+      run: python scripts/check_notebook_cleanliness.py
     - name: Check Sonar configuration scope parity
       run: python scripts/check_sonar_properties.py
     - name: Check cloud scanner sensitive-file exclusions

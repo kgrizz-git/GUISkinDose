@@ -1,12 +1,12 @@
 # Phase 3 user-facing documentation cross-check — execution checklist
 
-> **Status:** COMPLETE (2026-09-07) — all §0–§7 verdicts recorded; documentation **GAP** items
-> deferred to **Phase 3.5** (notebook + glossary) or product backlog in `dev-docs/TO_DO.md`
+> **Status:** COMPLETE (2026-09-07) — all §0–§7 verdicts recorded; the documentation **GAP** items
+> were closed in **Phase 3.5** (notebook + glossary) or remain product backlog in `dev-docs/TO_DO.md`
 > (native file logging, `TabularImportOptions`/CLI). Phase 4 assessment artifact next.
 
 **Started:** 2026-09-06  
 **Reviewer(s):** Kevin Grizzard + StepFun / MiniMax / Muse Spark audit agents (2026-09-06–07)  
-**Branch:** `docs/phase-3-user-facing-cross-check`
+**Branch:** `docs/phase-3-user-facing-cross-check` (Phase 3); `docs/phase-3.5-doc-gaps` (GAP closeout)
 
 ## How to use this checklist
 
@@ -92,7 +92,7 @@ paths. Skip or mark **N/A** for retired rows.
 | [description.md](../../docs/source/user/description.md) | **FIX** | 2026-09-06 — GUISkinDose product title; PySkinDose kept as upstream fork link |
 | [background.md](../../docs/source/user/background.md) | **FIX** | 2026-09-06 — PySkinDose mission preserved; GUISkinDose fork scope added |
 | [contribute.md](../../docs/source/user/contribute.md) | **FIX** | 2026-09-06 — PyPI status + CONTRIBUTING link |
-| [getting_started/getting_started.ipynb](../../docs/source/getting_started/getting_started.ipynb) | **GAP** | Notebook still uses PySkinDose branding and a Windows example path; needs dedicated refresh |
+| [getting_started/getting_started.ipynb](../../docs/source/getting_started/getting_started.ipynb) | **FIX** | 2026-09-07 — GUISkinDose Python API orientation, current output schema, and portable examples; stale outputs cleared |
 
 ---
 
@@ -136,7 +136,7 @@ warnings) are mandatory.
 - [x] Run `python scripts/check_ui_copy.py` _(2026-09-06 — pass)_
 - [x] Review each cataloged key in [ui_copy.json](../ui_copy.json) against owner file text _(2026-09-06 — pass)_
 - [x] Spot-check uncatalogued user-visible strings in `gui/tabs/`, `gui/app.py`, widgets _(2026-09-06 — mandatory keys cataloged; no new high-risk gaps)_
-- [ ] [glossary.json](../glossary.json) terms match in-app labels (LON/LAT/VER, exam, offset)
+- [x] [glossary.json](../glossary.json) terms match in-app labels (LON/LAT/VER, exam, offset) _(2026-09-07)_
 
 | Area | Verdict | Notes |
 |------|---------|-------|
@@ -144,7 +144,7 @@ warnings) are mandatory.
 | Privacy / PHI notices (`upload.privacy_notice`, `onboarding.privacy_notice`, export identifiers) | **ACC** | Matches `export.py`, `upload_builders.py`, `app.py` |
 | Per-exam correction tooltips (`per_exam.*`) | **ACC** | Matches `_per_exam.py` |
 | Settings phantom preview captions | **ACC** | Matches `settings.py` + controller status strings |
-| Glossary plot-axis labels (LON/LAT/VER) | **GAP** | Not in `glossary.json`; filed in TO_DO |
+| Glossary plot-axis labels (LON/LAT/VER) | **FIX** | 2026-09-07 — canonical display aliases added to `glossary.json` |
 
 ---
 
@@ -165,10 +165,10 @@ warnings) are mandatory.
 |---------|-------|-----|-----|-----|-----|-------------|
 | §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
 | §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
-| §3 Sphinx user | 6 | 0 | 5 | 1 | 0 | 2026-09-06 |
+| §3 Sphinx user | 6 | 0 | 6 | 0 | 0 | 2026-09-07 |
 | §4 Community + policy | 7 | 4 | 3 | 0 | 0 | 2026-09-07 |
 | §5 Dev-docs user | 5 | 3 | 2 | 0 | 0 | 2026-09-07 |
-| §6 UI copy | 4 | 3 | 0 | 1 | 0 | 2026-09-06 |
+| §6 UI copy | 4 | 3 | 1 | 0 | 0 | 2026-09-07 |
 | §7 CLI | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |
 
 **Phase 3 acceptance:** all **GAP** rows have a linked `TO_DO.md` bullet; all **FIX**

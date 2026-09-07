@@ -121,14 +121,14 @@ from PR #81 to keep that pass reviewable and doc-only. Phase 3.5 closes them in 
 
 ### In scope
 
-- [ ] **Getting-started notebook** (Phase 3 §3 GAP) — refresh
+- [x] **Getting-started notebook** (Phase 3 §3 GAP) — refreshed
   `docs/source/getting_started/getting_started.ipynb` for GUISkinDose product identity, current
   `main()`/settings examples, and portable example paths; keep PySkinDose where upstream/historical.
   TO_DO: [Getting-started notebook refresh](../TO_DO.md).
-- [ ] **Glossary plot-axis labels** (Phase 3 §6 GAP) — add LON/LAT/VER and PT L-R / A-P / S-I aliases
+- [x] **Glossary plot-axis labels** (Phase 3 §6 GAP) — added LON/LAT/VER and PT L-R / A-P / S-I aliases
   to `dev-docs/glossary.json`; tick checklist §6 glossary row when done.
   TO_DO: [Glossary plot-axis labels](../TO_DO.md).
-- [ ] Update [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
+- [x] Update [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
   §3 and §6 verdict rows from **GAP** → **FIX** (or **ACC** after refresh).
 - [ ] Note Phase 3.5 completion in the Phase 4 assessment matrix when written.
 
@@ -175,12 +175,12 @@ Today every entry point calls `configure_logging()` **without** `log_file`:
 
 ### Acceptance
 
-- [ ] Both Phase 3.5 TO_DO bullets complete (notebook + glossary).
-- [ ] Checklist §3 notebook and §6 glossary rows updated; no remaining Phase 3 **GAP** rows
+- [x] Both Phase 3.5 TO_DO bullets complete (notebook + glossary).
+- [x] Checklist §3 notebook and §6 glossary rows updated; no remaining Phase 3 **GAP** rows
   for documentation-only items.
-- [ ] Harness checks pass (`check_doc_freshness`, glossary/ui_copy if touched, notebook smoke
-  optional).
-- [ ] `CHANGELOG.md` entry if user-visible notebook prose changes.
+- [x] Harness checks pass (`check_doc_freshness`, glossary/ui_copy, canonical-notebook guard, and
+  focused launcher/guard tests; notebook execution smoke remains optional).
+- [x] `CHANGELOG.md` entry for the user-visible notebook prose and safe local launcher.
 
 ## Phase 4 — Standing infrastructure (persists after archival)
 

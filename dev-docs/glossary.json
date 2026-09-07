@@ -40,6 +40,21 @@
         "KAP correction coefficient",
         "k_meter"
       ]
+    },
+    "LON": {
+      "preferred": "historical longitudinal display alias / patient left-right axis",
+      "definition": "Historical PySkinDose display alias for the normalized X-axis, combining longitudinal table-position naming with the patient left-right direction.",
+      "aliases": ["LON / PT L-R", "PT L-R", "X - LON / PT L-R [cm]"]
+    },
+    "VER": {
+      "preferred": "historical vertical display alias / patient anterior-posterior axis",
+      "definition": "Historical PySkinDose display alias for the normalized Y-axis, combining vertical table-position naming with the patient anterior-posterior direction.",
+      "aliases": ["VER / PT A-P", "PT A-P", "Y - VER / PT A-P [cm]"]
+    },
+    "LAT": {
+      "preferred": "historical lateral display alias / patient superior-inferior axis",
+      "definition": "Historical PySkinDose display alias for the normalized Z-axis, combining lateral table-position naming with the patient superior-inferior direction.",
+      "aliases": ["LAT / PT S-I", "PT S-I", "Z - LAT / PT S-I [cm]"]
     }
   }
 }

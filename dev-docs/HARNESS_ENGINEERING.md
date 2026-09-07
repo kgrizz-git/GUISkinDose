@@ -62,6 +62,7 @@ Agents working in this repository should be able to answer three questions quick
 | Agent guidance drift check (advisory) | `scripts/check_agent_guidance.py` |
 | Doc pruning candidates (advisory) | `scripts/check_doc_pruning.py` |
 | Docstring inventory (advisory) | `scripts/check_docstring_inventory.py` |
+| Canonical getting-started notebook guard | `scripts/check_notebook_cleanliness.py` (rejects stored outputs/execution counts in the tracked tutorial); `scripts/open_getting_started_notebook.py` creates and opens its ignored local copy under `tmp/notebooks/` |
 | Secret scanning | `.github/workflows/gitleaks.yml` |
 | Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py` (policy/CLI), `scripts/check_sensitive_helpers.py` (notebook/PDF/container readers), `scripts/git_identity_trailers.py` (Dependabot/GitHub noreply commit trailers), `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
 | Conditional privacy admission | `scripts/privacy_admission.py`, `dev-docs/privacy_admission_policy.json`; receipts stay under `.git/privacy-scan-receipts/` |
