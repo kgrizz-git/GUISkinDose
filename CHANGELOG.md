@@ -36,6 +36,11 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **In-app help accuracy (Phase 3 cross-check)** (2026-09-06) — corrected Upload, Geometry,
+  Calculate, and Results help pages where prose drifted from current GUI behavior (coordinate
+  toggle scope, example auto-load, 1-based event stepper, table-origin metadata key names,
+  below-floor kVp setting name, dose-map dialog sizing). No calculation or UI behavior change.
+
 - **Public docstring coverage under `src/guiskindose/` (maintainer-facing)** (2026-09-06) —
   Phase 2 of the documentation-assessment plan adds module and public-symbol docstrings
   across settings, pipeline, plotting, and GUI modules (175 gaps closed; inventory now

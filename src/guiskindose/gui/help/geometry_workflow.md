@@ -16,7 +16,7 @@ Siemens and Philips use the DICOM/operator table convention for table longitudin
 
 Internally, manual table-origin overrides are stored in the GUI transform source frame, before any expert-only `Tx ↔ Tz` correction toggle is applied. The app maps those stored values to the plotted frame for display and maps edits back before recalculating geometry, so the `X/DICOM LON/PT L-R` control moves plotted X even when a site-specific manual swap is enabled.
 
-Manual table-origin override metadata is tracked with `table_origin` keys so saved settings and exports can identify the correction source.
+Manual table-origin override metadata is tracked with `table_origin_override` and `table_origin_detected` keys so saved settings and exports can identify the correction source.
 
 For GE inputs, the lateral/longitudinal swap is handled during normalization. The GUI `Tx ↔ Tz` swap is a manual expert override only. GE table travel has been confirmed from tabular export inspection as positive lateral = patient left, positive longitudinal = patient superior/cranial, and positive height = down for head-first supine positioning. A matched GE DICOM RDSR plus tabular export would be useful later only to pin exact regression fixture values.
 
@@ -68,7 +68,7 @@ Live preview may **pause** when a full-procedure view exceeds 30 events (perform
 | **Setup view** | Phantom and table in starting orientation |
 | **Single event** | Render one specific irradiation event |
 | **Full procedure** | Render all events in the current preview slice (may pause when large) |
-| **Event selection stepper** | Jump to a specific event within the current preview slice (prev / next or typed number). Disabled unless **Single event** mode is active. The caption is 1-based; the typed number is 0-based. |
+| **Event selection stepper** | Jump to a specific event within the current preview slice (prev / next or typed number). Disabled unless **Single event** mode is active. The caption is 1-based; the typed number is also 1-based. |
 
 ## Tips
 

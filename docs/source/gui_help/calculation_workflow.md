@@ -18,7 +18,7 @@ Siemens and Philips use the DICOM/operator table convention for longitudinal and
 
 The manual `Tx ↔ Tz` import toggle is an expert correction for non-DICOM tabular inputs. It is not normally needed for GE DICOM RDSR data because GE handling is already applied during normalization.
 
-Calculation uses the active `table_origin` metadata and the below-floor kVp settings `below_floor_kvp_policy` and `manual_below_floor_kvp`.
+Calculation uses the active table-origin metadata and the below-floor kVp settings `below_floor_kvp_policy` and `below_floor_kvp_manual`.
 
 ## Before Running
 

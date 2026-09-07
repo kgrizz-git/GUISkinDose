@@ -55,12 +55,12 @@ to the live GUI tab/workflow and the wired `HelpButton` entry in `help_registry.
 | `data` | [data_table_workflow.md](../../docs/source/gui_help/data_table_workflow.md) | `data.py` | **ACC** | 2026-09-06 — StepFun audit |
 | `settings_positioning` | [positioning_offsets.md](../../docs/source/gui_help/positioning_offsets.md) | `settings.py` | | Global + per-exam offsets, patient orientation, table offsets |
 | `settings_phantom_preview` | [phantom_preview.md](../../docs/source/gui_help/phantom_preview.md) | `settings.py`, `phantom_preview*.py` | | Human-only preview, habitus scales, reduced mesh caption |
-| `settings_below_floor_kvp` | [below_floor_kvp.md](../../docs/source/gui_help/below_floor_kvp.md) | `settings.py`, `calculate.py`; policy in `geom_calc.py` | | Policy options vs `below_floor_kvp_policy`; pre-calc prompt on Calculate tab |
-| `settings_kerma_meter_correction` | [kerma_meter_correction.md](../../docs/source/gui_help/kerma_meter_correction.md) | `settings.py`, `calculate.py` | | Enable/mode/file settings vs `kerma_meter_correction` block |
-| `geometry` | [geometry_workflow.md](../../docs/source/gui_help/geometry_workflow.md) | `geometry_layout_builders.py`, `geometry_builders.py` | | Multi-exam selectors, composite preview, patient/table sliders, preview modes |
-| `calculate` | [calculation_workflow.md](../../docs/source/gui_help/calculation_workflow.md) | `calculate.py` | | Run flow, below-floor prompt, busy state, multi-exam summary |
-| `results` | [results_workflow.md](../../docs/source/gui_help/results_workflow.md) | `results_builders.py` | | PSD, dose map, per-exam toggles, warnings accordion |
-| `export` | [export_workflow.md](../../docs/source/gui_help/export_workflow.md) | `export.py` | | Formats, privacy toggles, CLI command copy, native save paths |
+| `settings_below_floor_kvp` | [below_floor_kvp.md](../../docs/source/gui_help/below_floor_kvp.md) | `settings.py`, `calculate.py`; policy in `geom_calc.py` | | |
+| `settings_kerma_meter_correction` | [kerma_meter_correction.md](../../docs/source/gui_help/kerma_meter_correction.md) | `settings.py`, `calculate.py` | | |
+| `geometry` | [geometry_workflow.md](../../docs/source/gui_help/geometry_workflow.md) | `geometry_layout_builders.py`, `geometry_builders.py` | **FIX** | 2026-09-06 — event stepper 1-based; table-origin key names |
+| `calculate` | [calculation_workflow.md](../../docs/source/gui_help/calculation_workflow.md) | `calculate.py` | **FIX** | 2026-09-06 — `below_floor_kvp_manual` setting name |
+| `results` | [results_workflow.md](../../docs/source/gui_help/results_workflow.md) | `results_builders.py` | **FIX** | 2026-09-06 — dose map dialog is modal, not full-screen |
+| `export` | [export_workflow.md](../../docs/source/gui_help/export_workflow.md) | `export.py` | **ACC** | 2026-09-06 — StepFun audit |
 
 ---
 
