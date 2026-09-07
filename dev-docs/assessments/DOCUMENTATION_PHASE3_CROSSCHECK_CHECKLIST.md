@@ -51,8 +51,8 @@ to the live GUI tab/workflow and the wired `HelpButton` entry in `help_registry.
 
 | ID | Help page | GUI wiring | Verdict (`ACC`/`FIX`/`GAP`/`N/A`) | Notes / fix commit |
 |----|-----------|------------|-----------------------------------|-------------------|
-| `upload` | [upload_workflow.md](../../docs/source/gui_help/upload_workflow.md) | `upload_builders.py` | | Tabular + DICOM upload, import preview, schema selector, coordinate toggles, multi-exam load |
-| `data` | [data_table_workflow.md](../../docs/source/gui_help/data_table_workflow.md) | `data.py` | | Event stream, Exam column, filters, per-row actions |
+| `upload` | [upload_workflow.md](../../docs/source/gui_help/upload_workflow.md) | `upload_builders.py` | **FIX** | 2026-09-06 — coord toggle scope + example auto-load (StepFun audit) |
+| `data` | [data_table_workflow.md](../../docs/source/gui_help/data_table_workflow.md) | `data.py` | **ACC** | 2026-09-06 — StepFun audit |
 | `settings_positioning` | [positioning_offsets.md](../../docs/source/gui_help/positioning_offsets.md) | `settings.py` | | Global + per-exam offsets, patient orientation, table offsets |
 | `settings_phantom_preview` | [phantom_preview.md](../../docs/source/gui_help/phantom_preview.md) | `settings.py`, `phantom_preview*.py` | | Human-only preview, habitus scales, reduced mesh caption |
 | `settings_below_floor_kvp` | [below_floor_kvp.md](../../docs/source/gui_help/below_floor_kvp.md) | `settings.py`, `calculate.py`; policy in `geom_calc.py` | | Policy options vs `below_floor_kvp_policy`; pre-calc prompt on Calculate tab |
