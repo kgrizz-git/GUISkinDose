@@ -103,6 +103,14 @@ policy decisions, not a restart of Phases 0-9.
 
 ### GUI / UX
 
+- [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
+  `<tempdir>/guiskindose-gui.log`, but `run_gui()` calls `configure_logging()` without `log_file`
+  (`gui/app.py`, `__main__.py`). **Goal:** when `--native` / pywebview mode is active, pass a temp-path
+  `log_file` into `configure_logging()` so diagnostics are visible without a terminal (reuse
+  `RotatingFileHandler` bounds in `debug.py`: fresh session, ~4 MiB cap, PHI-safe redaction already
+  enforced). **Acceptance:** manual native smoke shows the log file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md`
+  restored to describe the sink accurately; unit test that native startup registers a file handler (mock temp dir).
+  **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized

@@ -100,7 +100,7 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Doc | Verdict (`ACC`/`FIX`/`GAP`/`N/A`) | Cross-check against |
 |-----|-----------------------------------|---------------------|
-| [README.md](../../README.md) | **FIX** | 2026-09-07 — CLI flags; native log + `--allow-network` accuracy |
+| [README.md](../../README.md) | **FIX** | 2026-09-07 — CLI flags; logging/`--allow-network` accuracy; native file log deferred → TO_DO |
 | [CONTRIBUTING.md](../../CONTRIBUTING.md) | **ACC** | 2026-09-06 — dev setup, privacy gates, unsolicited-PR policy match |
 | [SUPPORT.md](../../SUPPORT.md) | **ACC** | 2026-09-06 — Issue/Discussion routing and FDA disclaimer |
 | [SECURITY.md](../../SECURITY.md) | **ACC** | 2026-09-06 — private advisory reporting path |

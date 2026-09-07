@@ -46,7 +46,8 @@ That keeps SemVer and contributor history organized.
   product identity while preserving PySkinDose upstream attribution where appropriate.
   README CLI flags section; LICENSE_COMPLIANCE demo-mesh path corrected; README and
   privacy policy logging/network examples aligned with `configure_logging()` and
-  `--allow-network` behavior. No calculation or UI behavior change.
+  `--allow-network` behavior. Native GUI file logging tracked in `TO_DO.md` (optional
+  implementation). No calculation or UI behavior change.
 
 - **Public docstring coverage under `src/guiskindose/` (maintainer-facing)** (2026-09-06) —
   Phase 2 of the documentation-assessment plan adds module and public-symbol docstrings
