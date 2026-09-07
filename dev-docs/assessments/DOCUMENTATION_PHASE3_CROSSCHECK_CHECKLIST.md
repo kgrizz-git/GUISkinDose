@@ -100,13 +100,13 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Doc | Verdict (`ACC`/`FIX`/`GAP`/`N/A`) | Cross-check against |
 |-----|-----------------------------------|---------------------|
-| [README.md](../../README.md) | **FIX** | 2026-09-06 — added headless CLI flags section |
+| [README.md](../../README.md) | **FIX** | 2026-09-07 — CLI flags; native log + `--allow-network` accuracy |
 | [CONTRIBUTING.md](../../CONTRIBUTING.md) | **ACC** | 2026-09-06 — dev setup, privacy gates, unsolicited-PR policy match |
 | [SUPPORT.md](../../SUPPORT.md) | **ACC** | 2026-09-06 — Issue/Discussion routing and FDA disclaimer |
 | [SECURITY.md](../../SECURITY.md) | **ACC** | 2026-09-06 — private advisory reporting path |
 | [CHANGELOG.md](../../CHANGELOG.md) | **ACC** | 2026-09-06 — `[Unreleased]` matches Phase 3 help/doc fixes |
-| [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md) | **ACC** | 2026-09-06 — repo admission policy; GUI copy verified in §6 |
-| [LICENSE_COMPLIANCE.md](../LICENSE_COMPLIANCE.md) | **FIX** | 2026-09-06 — demo meshes not shipped under phantom_data |
+| [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md) | **FIX** | 2026-09-07 — console-only logging default; no native log file claim |
+| [LICENSE_COMPLIANCE.md](../LICENSE_COMPLIANCE.md) | **ACC** | 2026-09-06 — demo meshes not shipped; audit command matches CI |
 
 ---
 
@@ -166,7 +166,7 @@ warnings) are mandatory.
 | §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
 | §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
 | §3 Sphinx user | 6 | 0 | 5 | 1 | 0 | 2026-09-06 |
-| §4 Community + policy | 7 | 5 | 2 | 0 | 0 | 2026-09-06 |
+| §4 Community + policy | 7 | 4 | 3 | 0 | 0 | 2026-09-07 |
 | §5 Dev-docs user | 5 | 5 | 0 | 0 | 0 | 2026-09-06 |
 | §6 UI copy | 4 | 3 | 0 | 1 | 0 | 2026-09-06 |
 | §7 CLI | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |

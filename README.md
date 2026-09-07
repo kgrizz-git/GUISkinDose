@@ -111,7 +111,7 @@ on.
 Serving it to other hosts is opt-in via `--host`:
 
 ```bash
-python -m guiskindose --mode gui --host 0.0.0.0   # serve on the LAN
+python -m guiskindose --mode gui --host 0.0.0.0 --allow-network   # serve on the LAN
 ```
 
 Only do this on a trusted network, and behind your own access controls, since
@@ -120,27 +120,23 @@ mutate shared settings.
 
 ### Logging & privacy
 
-The CLI and browser-mode GUI log to the console only. **Native** mode has no
-console, so it also writes a diagnostic log to your system temp directory:
-
-```
-<tempdir>/guiskindose-gui.log
-```
-
-This file is **truncated at each launch** and **size-capped** (rotating, ~4 MB
-max across `.log`/`.log.1`–`.3`), so it does not accumulate across sessions.
+The CLI and GUI log to the console (stderr) by default. **Native** mode has no
+visible terminal, so diagnostic output is still emitted to stderr but may not be
+easy to read unless you launch from a shell. No log file is written unless
+`configure_logging(log_file=...)` is wired at startup (the optional file sink in
+`guiskindose.debug` supports rotation and size caps when enabled).
 
 To protect PHI, the app **does not log file names or paths** (RDSR filenames
 often contain patient name/MRN/accession) — only file type, size, and event
-counts. By default the file sink records `INFO` and above; verbose `DEBUG` output
-is opt-in per category via a `debug.json` in the working directory, e.g.:
+counts. Verbose `DEBUG` output is opt-in per category via a `debug.json` in the
+working directory, e.g.:
 
 ```json
 { "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
 ```
 
-Even with debug enabled, identifiers are still redacted. The log lives outside
-the repo by design (temp dir); delete it any time — it is recreated on next launch.
+Even with debug enabled, identifiers are still redacted. Do not paste console
+output into issues or commits without reviewing it for PHI first.
 
 ### Optional: native Save As dialogs (Tkinter)
 

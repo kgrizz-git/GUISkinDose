@@ -110,10 +110,7 @@ for that work.
 Run `bash scripts/setup-dev.sh` or `scripts\setup-dev.bat` after updating the checkout; those setup scripts install
 the `pre-commit`, `pre-push`, and `commit-msg` hook types.
 
-Diagnostic files are ignored by default and rejected by the blocking gate if tracked. Native GUI logs are local,
-fresh per session, size-bounded, and owner-only on POSIX systems. GUI load errors deliberately record only an
-operation label and exception type and show a generic UI message, rather than raw tracebacks, paths, or exception
-messages. Do not attach diagnostic logs to issues or commits without reviewing them separately.
+Diagnostic files are ignored by default and rejected by the blocking gate if tracked. GUI and CLI diagnostic logging use the console by default; no log file is written unless startup code passes `log_file` to `configure_logging()`. GUI load errors deliberately record only an operation label and exception type and show a generic UI message, rather than raw tracebacks, paths, or exception messages. Do not attach console captures or log files to issues or commits without reviewing them separately for PHI.
 
 ## Protected paths and conditional scanner receipts
 
