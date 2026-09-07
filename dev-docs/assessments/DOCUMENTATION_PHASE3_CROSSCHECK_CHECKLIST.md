@@ -88,12 +88,12 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Doc | Verdict | Cross-check against |
 |-----|---------|---------------------|
-| [install.md](../../docs/source/user/install.md) | | `pyproject.toml` extras (`gui`, `dev`, `docs`), `uv`/`pip` install paths |
-| [user_guide.md](../../docs/source/user/user_guide.md) | | GUI tabs, CLI `--mode`, example RDSR paths, settings JSON |
-| [description.md](../../docs/source/user/description.md) | | Product scope, PSD output, non-FDA disclaimer |
-| [background.md](../../docs/source/user/background.md) | | Physics/correction narrative vs `corrections.py` / FEATURE_INVENTORY |
-| [contribute.md](../../docs/source/user/contribute.md) | | Overlap with root `CONTRIBUTING.md`; keep consistent |
-| [getting_started/getting_started.ipynb](../../docs/source/getting_started/getting_started.ipynb) | | `main()` API, example file paths, modes in `settings_example.json` |
+| [install.md](../../docs/source/user/install.md) | **FIX** | 2026-09-06 — dev/gui extras and uv note |
+| [user_guide.md](../../docs/source/user/user_guide.md) | **FIX** | 2026-09-06 — replaced stub with GUI + main() workflow |
+| [description.md](../../docs/source/user/description.md) | **FIX** | 2026-09-06 — GUISkinDose product title; PySkinDose kept as upstream fork link |
+| [background.md](../../docs/source/user/background.md) | **FIX** | 2026-09-06 — PySkinDose mission preserved; GUISkinDose fork scope added |
+| [contribute.md](../../docs/source/user/contribute.md) | **FIX** | 2026-09-06 — PyPI status + CONTRIBUTING link |
+| [getting_started/getting_started.ipynb](../../docs/source/getting_started/getting_started.ipynb) | **GAP** | Notebook still uses PySkinDose branding and a Windows example path; needs dedicated refresh |
 
 ---
 
@@ -165,7 +165,7 @@ warnings) are mandatory.
 |---------|-------|-----|-----|-----|-----|-------------|
 | §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
 | §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
-| §3 Sphinx user | 6 | | | | | |
+| §3 Sphinx user | 6 | 0 | 5 | 1 | 0 | 2026-09-06 |
 | §4 Community + policy | 7 | | | | | |
 | §5 Dev-docs user | 5 | | | | | |
 | §6 UI copy | 4 | | | | | |

@@ -79,6 +79,11 @@ def test_marker_columns_appear_in_doc(doc_text: str):
 
 
 def test_registered_workflow_help_mentions_relevant_setting_tokens():
+    """Registered workflow help pages mention reproducible setting key names.
+
+    Guards against help prose drifting from ``PyskindoseSettings`` / GUI state
+    field names (for example ``below_floor_kvp_manual`` vs obsolete aliases).
+    """
     import json
 
     registry = json.loads((REPO_ROOT / "dev-docs" / "help_registry.json").read_text(encoding="utf-8"))

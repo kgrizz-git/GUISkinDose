@@ -1,21 +1,54 @@
 # User guide
 
-## Running GUISkinDose headless
+## GUI workflow
 
-Sometimes you might want to run GUISkinDose without having to look at the output immediately. This might, for example, be the case if you want to automate the calculations. In this case you can have a script that runs the `analyze_normalized_data_with_custom_settings_object` (see incomplete example below).
+Launch the NiceGUI app from a development install:
+
+```bash
+python -m guiskindose --mode gui
+```
+
+Or use the console script:
+
+```bash
+guiskindose --mode gui
+```
+
+Add `--native` to open a desktop window instead of a browser tab (requires the `gui-native` extra).
+
+Typical workflow: **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review → **Settings**
+(phantom, physics, per-exam offsets) → **Geometry** preview → **Calculate** → **Results** (PSD, dose map)
+→ **Export** (JSON, HTML/PNG dose map, rich XLSX/PDF/DOCX report).
+
+Example RDSR files ship under `src/guiskindose/example_data/RDSR/`. In-app help on each tab mirrors
+`docs/source/gui_help/` (synced into the package at build time).
+
+## Headless / scripted use
+
+For automation, call the package entry point with a settings object and optional RDSR path:
 
 ```python
-import pandas as pd
-from guiskindose import analyze_normalized_data_with_custom_settings_object
+from guiskindose import PyskindoseSettings, load_settings_example_json
+from guiskindose.main import main
 
-settings = '<the-entire-settings-file-as-json-string>'
-normalized_data = pd.DataFrame(columns=[
-    
-])  # "<Your normalized data as a pandas DataFrame>"
-
-result = analyze_normalized_data_with_custom_settings_object(
-    data_norm=normalized_data,
-    settings=settings,
-    output_format="json"  # Valid values are "json" and "dict"
-)
+settings = PyskindoseSettings(settings=load_settings_example_json())
+settings.mode = "calculate_dose"
+settings.phantom.model = "human"
+settings.phantom.human_mesh = "hudfrid"
+output = main(file_path="path/to/file.dcm", settings=settings)
+print(output["psd"])  # peak skin dose in mGy
 ```
+
+Set `settings.output_format` to `"html"`, `"dict"`, or `"json"`. Tabular inputs use the same
+`main()` path with `--input-schema` on the CLI (default `auto`). See
+[dev-docs/INPUT_SCHEMA_DETECTION.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/INPUT_SCHEMA_DETECTION.md)
+for schema detection details.
+
+For normalized DataFrame workflows, `analyze_normalized_data_with_custom_settings_object` remains
+available when you already have vendor-normalized event tables.
+
+## Further reading
+
+- [Installation](install.html)
+- [Background](background.html)
+- Repository [AGENTS.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/AGENTS.md) for maintainer-oriented API and settings reference
