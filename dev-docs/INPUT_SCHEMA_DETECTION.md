@@ -36,8 +36,10 @@ backward compatibility; only the two user-facing entry points default to `auto`.
    header row. Recall (not precision) is used deliberately: a real Radimetrics export has ~87
    columns of which ~13 are recognised (poor precision, but perfect recall), so recall gives the
    correct schema ≈ 1.0 and the others ≈ 0.
-3. **Pick the winner with a margin.** The highest scorer wins **only if** it beats the runner-up by
-   at least `_AUTO_MIN_MARGIN` = **0.20**. If two schemas score within that margin, or nothing
+3. **Pick the winner with a margin.** When **two or more** schemas score above zero, the highest
+   scorer wins **only if** it beats the runner-up by at least `_AUTO_MIN_MARGIN` = **0.20**;
+   otherwise detection raises `SchemaDetectionError`. When **exactly one** schema scores above
+   zero, that schema wins regardless of its absolute score (no tie is possible). If **nothing**
    scores above zero, detection raises `SchemaDetectionError` telling the user to pass
    `--input-schema` explicitly rather than guessing.
 

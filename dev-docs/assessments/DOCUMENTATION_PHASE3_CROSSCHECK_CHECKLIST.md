@@ -114,10 +114,10 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Doc | Verdict | Cross-check against |
 |-----|---------|---------------------|
-| [INPUT_SCHEMA_DETECTION.md](../INPUT_SCHEMA_DETECTION.md) | **ACC** | 2026-09-06 — `auto` default, adapters match `cli_args.py` / GUI |
+| [INPUT_SCHEMA_DETECTION.md](../INPUT_SCHEMA_DETECTION.md) | **FIX** | 2026-09-07 — margin rule clarifies single-scorer vs tie cases (`registry.py`) |
 | [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) | **ACC** | 2026-09-06 — normalization + per-exam meta aligned with code |
 | [INPUT_FIELD_REFERENCE.md](../INPUT_FIELD_REFERENCE.md) | **ACC** | 2026-09-06 — `test_input_schema_doc.py` pass |
-| [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md) | **ACC** | 2026-09-06 — GE swap + Tx↔Tz scope match help |
+| [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md) | **FIX** | 2026-09-07 — shipped GUI toggles vs backlog `TabularImportOptions`/CLI; gap in TO_DO |
 | [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md) | **ACC** | 2026-09-06 — `guiskindose` 1.0.0, not yet on PyPI |
 
 ---
@@ -167,7 +167,7 @@ warnings) are mandatory.
 | §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
 | §3 Sphinx user | 6 | 0 | 5 | 1 | 0 | 2026-09-06 |
 | §4 Community + policy | 7 | 4 | 3 | 0 | 0 | 2026-09-07 |
-| §5 Dev-docs user | 5 | 5 | 0 | 0 | 0 | 2026-09-06 |
+| §5 Dev-docs user | 5 | 3 | 2 | 0 | 0 | 2026-09-07 |
 | §6 UI copy | 4 | 3 | 0 | 1 | 0 | 2026-09-06 |
 | §7 CLI | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |
 

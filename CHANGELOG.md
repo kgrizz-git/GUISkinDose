@@ -47,7 +47,10 @@ That keeps SemVer and contributor history organized.
   README CLI flags section; LICENSE_COMPLIANCE demo-mesh path corrected; README and
   privacy policy logging/network examples aligned with `configure_logging()` and
   `--allow-network` behavior. Native GUI file logging tracked in `TO_DO.md` (optional
-  implementation). No calculation or UI behavior change.
+  implementation). Phase 3 §5 dev-docs pass: `INPUT_SCHEMA_DETECTION.md` margin wording aligned
+  with `registry.py`; `VENDOR_COORDINATE_SYSTEMS.md` separates shipped GUI coordinate toggles
+  from backlog `TabularImportOptions`/CLI flags (gap filed in `TO_DO.md`). No calculation or UI
+  behavior change.
 
 - **Public docstring coverage under `src/guiskindose/` (maintainer-facing)** (2026-09-06) —
   Phase 2 of the documentation-assessment plan adds module and public-symbol docstrings

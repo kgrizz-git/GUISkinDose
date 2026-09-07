@@ -83,6 +83,15 @@ policy decisions, not a restart of Phases 0-9.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
+- [ ] **`TabularImportOptions` + CLI coordinate override flags** — Phase 3 §5 audit found
+  `VENDOR_COORDINATE_SYSTEMS.md` previously described a future `TabularImportOptions` dataclass and
+  `--swap-lat-lon` / `--skip-transforms` CLI flags as if they shipped with the GUI toggles. GUI
+  post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live via `AppState` /
+  `exam_transforms.py`; the dataclass, `skip_manufacturer_transforms`, `custom_translation_offset`,
+  and CLI flags are not wired in `cli_args.py` or `input_adapters/registry.py`. **Goal:** expose the
+  same override surface on `read_and_normalize_input()` and headless CLI. **Acceptance:** unit tests
+  for API + CLI paths; docs describe shipped GUI vs API/CLI parity. See
+  `TABULAR_RDSR_INPUT_PLAN.md` and `VENDOR_COORDINATE_SYSTEMS.md`.
 - [ ] **Tabular input Phase 5+** — implement Qaelum, DoseMonitor, and DoseWatch adapters when real export fixtures
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
