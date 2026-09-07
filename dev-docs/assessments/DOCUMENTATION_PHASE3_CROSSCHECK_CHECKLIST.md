@@ -55,7 +55,7 @@ to the live GUI tab/workflow and the wired `HelpButton` entry in `help_registry.
 | `data` | [data_table_workflow.md](../../docs/source/gui_help/data_table_workflow.md) | `data.py` | **ACC** | 2026-09-06 — StepFun audit |
 | `settings_positioning` | [positioning_offsets.md](../../docs/source/gui_help/positioning_offsets.md) | `settings.py` | **FIX** | 2026-09-06 — removed nonexistent Rotation control row |
 | `settings_phantom_preview` | [phantom_preview.md](../../docs/source/gui_help/phantom_preview.md) | `settings.py`, `phantom_preview*.py` | **ACC** | 2026-09-06 — StepFun audit |
-| `settings_below_floor_kvp` | [below_floor_kvp.md](../../docs/source/gui_help/below_floor_kvp.md) | `settings.py`, `calculate.py`; policy in `geom_calc.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `settings_below_floor_kvp` | [below_floor_kvp.md](../../docs/source/gui_help/below_floor_kvp.md) | `settings.py`, `calculate.py`; policy in `geom_calc.py` | **FIX** | 2026-09-06 — `below_floor_kvp_manual` setting key name |
 | `settings_kerma_meter_correction` | [kerma_meter_correction.md](../../docs/source/gui_help/kerma_meter_correction.md) | `settings.py`, `calculate.py` | **FIX** | 2026-09-06 — Results tab shows uncorrected kerma |
 | `geometry` | [geometry_workflow.md](../../docs/source/gui_help/geometry_workflow.md) | `geometry_layout_builders.py`, `geometry_builders.py` | **FIX** | 2026-09-06 — event stepper 1-based; table-origin key names |
 | `calculate` | [calculation_workflow.md](../../docs/source/gui_help/calculation_workflow.md) | `calculate.py` | **FIX** | 2026-09-06 — `below_floor_kvp_manual` setting name |
@@ -163,7 +163,7 @@ warnings) are mandatory.
 
 | Section | Items | ACC | FIX | GAP | N/A | Review date |
 |---------|-------|-----|-----|-----|-----|-------------|
-| §1 Help pages | 10 | 4 | 6 | 0 | 0 | 2026-09-06 |
+| §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
 | §2 Features | 10 | | | | | |
 | §3 Sphinx user | 6 | | | | | |
 | §4 Community + policy | 7 | | | | | |
