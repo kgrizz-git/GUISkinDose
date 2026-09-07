@@ -94,7 +94,8 @@ guiskindose --file-path study.dcm --export-format xlsx --export-path report.xlsx
 
 Notable flags: `--input-schema` (default `auto` for tabular files), `--input-preview-only`,
 `--export-format {xlsx,pdf,html,docx}`, `--export-path`, `--include-source-identifiers` (opt-in;
-may embed PHI in filenames), `--kerma-meter-correction` and related kerma-meter options.
+may include PHI-bearing source filenames in reports), `--kerma-meter-correction` and related
+kerma-meter options.
 
 Native window mode remembers the last window size, position, and maximized state in
 `~/.guiskindose/gui.json` (first launch opens maximized; Restore returns to the saved

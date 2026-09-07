@@ -33,15 +33,17 @@ from guiskindose.main import main
 
 settings = PyskindoseSettings(settings=load_settings_example_json())
 settings.mode = "calculate_dose"
+settings.output_format = "dict"
 settings.phantom.model = "human"
 settings.phantom.human_mesh = "hudfrid"
 output = main(file_path="path/to/file.dcm", settings=settings)
 print(output["psd"])  # peak skin dose in mGy
 ```
 
-Set `settings.output_format` to `"html"`, `"dict"`, or `"json"`. Tabular inputs use the same
-`main()` path with `--input-schema` on the CLI (default `auto`). See
-[dev-docs/INPUT_SCHEMA_DETECTION.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/INPUT_SCHEMA_DETECTION.md)
+Set `settings.output_format` to `"html"`, `"dict"`, or `"json"`. The CLI uses the same entry point
+for all inputs: tabular files are dispatched to `analyze_input_file(...)` with `--input-schema`
+(default `auto`), while RDSR DICOM files use `main(...)`. See
+[dev-docs/INPUT_SCHEMA_DETECTION.md](../../../dev-docs/INPUT_SCHEMA_DETECTION.md)
 for schema detection details.
 
 For normalized DataFrame workflows, `analyze_normalized_data_with_custom_settings_object` remains
@@ -51,4 +53,4 @@ available when you already have vendor-normalized event tables.
 
 - [Installation](install.html)
 - [Background](background.html)
-- Repository [AGENTS.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/AGENTS.md) for maintainer-oriented API and settings reference
+- Repository [AGENTS.md](../../../AGENTS.md) for maintainer-oriented API and settings reference
