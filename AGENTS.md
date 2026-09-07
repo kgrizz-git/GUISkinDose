@@ -163,10 +163,13 @@ needs network access (offline pushes will fail). On Windows, semgrep runs native
 but may need `PYTHONUTF8=1` in the environment; treat the local pre-push hook as
 best-effort on Windows — CI runs semgrep on Ubuntu.
 
-Run the getting-started notebook:
+Run the getting-started notebook without dirtying the tracked documentation source:
 ```bash
-jupyter notebook docs/source/getting_started/getting_started.ipynb
+python scripts/open_getting_started_notebook.py
 ```
+
+The launcher opens an ignored local copy under `tmp/notebooks/`. Use `--reset` to replace that local copy with the
+current tracked tutorial.
 
 Example RDSR files are in `src/guiskindose/example_data/RDSR/`.
 

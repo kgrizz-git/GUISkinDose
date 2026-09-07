@@ -198,12 +198,16 @@ This notebook walks you through:
 - Running calculations and generating dose maps
 - Exporting results in different formats
 
-To run the notebook:
+To run the notebook without changing the tracked documentation source:
 ```bash
-pip install -e .
-pip install jupyter
-jupyter notebook docs/source/getting_started/getting_started.ipynb
+pip install -e ".[notebooks]"
+python scripts/open_getting_started_notebook.py
 ```
+
+The launcher creates and opens `tmp/notebooks/getting_started.local.ipynb`, an ignored local copy where
+execution counts, plots, and experiments are safe to save without dirtying the Git working tree. It preserves
+that local work on later launches; use `python scripts/open_getting_started_notebook.py --reset` to replace it
+with the latest tracked tutorial (discarding local notebook edits and outputs).
 
 If you prefer to learn by example with code snippets instead, continue to the section below.
 

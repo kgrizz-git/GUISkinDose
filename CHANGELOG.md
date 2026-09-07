@@ -36,6 +36,13 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Getting-started notebook refresh and safe local launcher (Phase 3.5)** (2026-09-07) — refreshed
+  the Python API tutorial for GUISkinDose and current result fields, cleared stale rendered outputs,
+  and added `python scripts/open_getting_started_notebook.py`. The launcher opens an ignored local
+  notebook copy under `tmp/notebooks/`, so users can run and save interactive results without
+  modifying the tracked documentation source; `--reset` refreshes that local copy deliberately.
+  A pre-commit/CI guard rejects stored outputs or execution counts in the canonical notebook.
+
 - **In-app help accuracy (Phase 3 cross-check)** (2026-09-06) — corrected Upload, Geometry,
   Calculate, Results, Settings positioning, kerma-meter, and below-floor kVp help pages where
   prose drifted from current GUI behavior (coordinate toggle scope, example auto-load, 1-based event
