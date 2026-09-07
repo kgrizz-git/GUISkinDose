@@ -96,9 +96,10 @@ the human/agent pass for “does it match behavior?”
 - [ ] **§2 Feature traceability** — each `feature_doc_matrix.json` row (skip `demo_phantoms`
   as retired); docs + help vs code paths listed in the matrix.
 - [ ] **§3 Sphinx user docs** — `docs/source/user/*`, getting-started notebook vs install/GUI/CLI.
-- [ ] **§4 Community files** — `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`.
+- [ ] **§4 Community + policy** — `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`,
+  `CHANGELOG.md`, privacy and license compliance docs.
 - [ ] **§5 Dev-docs user paths** — `INPUT_*`, `VENDOR_COORDINATE_SYSTEMS.md`, release hub.
-- [ ] **§6 UI copy scope** — `ui_copy.json` + glossary vs `copy_text()` usage; privacy/PHI strings.
+- [ ] **§6 UI copy + glossary** — `ui_copy.json` mandatory keys + glossary vs in-app labels.
 - [ ] **§7 CLI vs docs** — `cli_args.py` / `--help` vs README, AGENTS, and export/tabular docs.
 - [ ] **Verdict summary** — checklist bottom table filled; Phase 3 acceptance met.
 
@@ -131,7 +132,8 @@ the human/agent pass for “does it match behavior?”
 ## Files
 
 - Create: `scripts/check_docstring_inventory.py`, `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`,
-  `dev-docs/assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md` (Phase 3 working checklist)
+  `dev-docs/assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md` (Phase 3 working checklist;
+  seeded from `help_registry.json`, `feature_doc_matrix.json`, `ui_copy.json`, `glossary.json`)
 - Modify: hub docs + docstrings (Phases 1–3), `dev-docs/RELEASES_AND_DISTRIBUTION.md` (trigger 1),
   `dev-docs/HARNESS_ENGINEERING.md` + `dev-docs/index.md` (script registration),
   `dev-docs/TO_DO.md`
