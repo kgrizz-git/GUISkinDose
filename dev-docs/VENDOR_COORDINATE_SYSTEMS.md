@@ -688,9 +688,22 @@ positioning. Matched GE DICOM RDSR plus tabular export comparison is deferred
 fixture confirmation to pin exact values, not an open live question about the
 convention.
 
-### User-selectable import options (`TabularImportOptions`, Phase 3+)
+### User-selectable coordinate corrections (shipped) vs import API (backlog)
 
-To let expert users override incorrect defaults, `read_and_normalize_input()` will accept an optional `TabularImportOptions` dataclass:
+**Shipped today (GUI only).** Expert post-normalization coordinate corrections are live without a
+`TabularImportOptions` dataclass or CLI flags:
+
+- **Upload → import preview** (single-exam tabular uploads that are not the `normalized` schema):
+  `Tx ↔ Tz` swap plus `Ap1×−1` / `Ap2×−1` axis flips (`gui/widgets/import_preview.py`,
+  `AppState.swap_lat_lon` and flip flags in `gui/state.py`).
+- **Settings → Per-exam corrections** (multi-exam): the same toggles per exam
+  (`gui/tabs/_per_exam.py`, applied in `gui/exam_transforms.py`).
+- **Not available** for DICOM RDSR files, `normalized`-schema uploads, or headless CLI runs today.
+  Vendor-level `swap_lateral_longitudinal` in `normalization_settings.json` (for example GE) still
+  runs inside `rdsr_normalizer()` and is separate from these GUI expert overrides.
+
+**Backlog (`TabularImportOptions`, Phase 3+).** A planned dataclass would unify import-time overrides
+on the Python API and CLI (tracked in `dev-docs/TO_DO.md`):
 
 ```python
 @dataclass
@@ -700,7 +713,8 @@ class TabularImportOptions:
     custom_translation_offset: dict | None = None  # override normalization_settings.json offset
 ```
 
-These options will be exposed in the GUI as toggles in the import preview step (see `TABULAR_RDSR_INPUT_PLAN.md` Phase 5 GUI changes section), and as `--swap-lat-lon` / `--skip-transforms` CLI flags.
+Planned surfaces: `read_and_normalize_input(..., import_options=TabularImportOptions(...))` and CLI
+flags `--swap-lat-lon` / `--skip-transforms`. See `TABULAR_RDSR_INPUT_PLAN.md` for the full design.
 
 ---
 

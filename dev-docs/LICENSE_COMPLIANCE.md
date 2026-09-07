@@ -38,14 +38,16 @@ also carried the docs/notebook packages.
 
 ## Redistributed mesh assets (not Python deps)
 
-Some **demo / non-clinical** STL phantoms under `src/guiskindose/phantom_data/` are third-party mesh
-binaries redistributed under Creative Commons terms (e.g. **CC BY 4.0** Ramesses II). These are
+Some **demo / non-clinical** STL phantoms (when retained locally) live under gitignored
+`tmp/phantom_data_demo_stash/` and are **not** shipped under `src/guiskindose/phantom_data/`.
+Clinical meshes that *are* shipped may include third-party CC-licensed assets documented in
+[`references/fun_phantom_provenance.md`](references/fun_phantom_provenance.md). Demo meshes are
 **not** Python packages and must **not** be folded into `THIRD_PARTY_NOTICES.md` (that file is
 generated from `uv.lock` / installed packages via `check_licenses.py`).
 
 | Requirement | Where |
 |-------------|--------|
-| Attribution + license for BY / BY-SA meshes | `phantom_data/NOTICE_{id}.txt` beside the STLs |
+| Attribution + license for BY / BY-SA meshes | `NOTICE_{id}.txt` beside shipped STLs or stash-sidecar files |
 | Retrieval dates, locked transforms, repair notes | [`references/fun_phantom_provenance.md`](references/fun_phantom_provenance.md) |
 | Do not ship **NC** (NonCommercial) meshes | Plan policy — public MIT redistribution conflicts with NC |
 

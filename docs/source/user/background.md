@@ -24,5 +24,7 @@ geometries, accuracy in representing patient position and dealing with uncertain
 are many different solutions that can be used for estimating skin dose, including commercial, 
 non-commercial and open-source. Many of these solutions are great tools but do not offer the user 
 a chance to analyze the effect of all the variables, add functionality and improve uncertainties with 
-in-house measurements. **P**y**S**kin**D**ose aims to be an open-source tool for estimation of PSD 
-with full transparency and user adoption functionality.
+in-house measurements. **PySkinDose** aimed to be an open-source tool for estimation of PSD
+with full transparency and user adoption functionality. **GUISkinDose** continues that lineage as
+an independently maintained fork, adding a NiceGUI workflow, tabular input adapters, and extended
+clinical phantom options while preserving the underlying dose-estimation approach.

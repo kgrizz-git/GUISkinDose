@@ -79,15 +79,20 @@ def test_marker_columns_appear_in_doc(doc_text: str):
 
 
 def test_registered_workflow_help_mentions_relevant_setting_tokens():
+    """Registered workflow help pages mention reproducible setting key names.
+
+    Guards against help prose drifting from ``PyskindoseSettings`` / GUI state
+    field names (for example ``below_floor_kvp_manual`` vs obsolete aliases).
+    """
     import json
 
     registry = json.loads((REPO_ROOT / "dev-docs" / "help_registry.json").read_text(encoding="utf-8"))
     entries = {entry["id"]: entry for entry in registry["entries"]}
     expected_tokens = {
         "settings_positioning": ["scale_lat", "scale_ap", "scale_lon", "table_origin"],
-        "settings_below_floor_kvp": ["below_floor_kvp_policy", "manual_below_floor_kvp"],
+        "settings_below_floor_kvp": ["below_floor_kvp_policy", "below_floor_kvp_manual"],
         "geometry": ["table_origin"],
-        "calculate": ["below_floor_kvp_policy", "manual_below_floor_kvp", "table_origin"],
+        "calculate": ["below_floor_kvp_policy", "below_floor_kvp_manual", "table_origin"],
     }
     help_root = REPO_ROOT / registry["source_dir"]
     for help_id, tokens in expected_tokens.items():

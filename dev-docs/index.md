@@ -140,6 +140,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/privacy-admission-enforcement/hardening.md](assessments/privacy-admission-enforcement/hardening.md) | Design review of protected ignore/never-track rules and conditional scanner enforcement; recommends staged-content-bound local receipts plus independent CI. |
 | [assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md) | HTML export fake “background task cancelled” error; Results aggregate can render while export fails. Fix plan: [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). |
 | [assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md) | Dual-agent spike: Mintlify free-tier/OSS terms, end-user docs tooling survey, ranked shortlist; single-sourced claims verified against primary sources 2026-09-06. Linked from `TO_DO.md`. |
+| [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md) | **COMPLETE** — Phase 3 user-facing doc cross-check (help, feature matrix, Sphinx, community, UI copy, CLI). Doc GAPs → Phase 3.5. |
 
 ---
 
@@ -162,7 +163,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
-| [plans/documentation-assessment.md](plans/documentation-assessment.md) | **Active** — Documentation & docstrings accuracy sweep (hub docs, `src/` docstrings, user-facing docs) plus standing matrix record and re-assessment triggers. Linked from `TO_DO.md`. |
+| [plans/documentation-assessment.md](plans/documentation-assessment.md) | **Active** — Documentation & docstrings accuracy sweep (Phases 0–3 complete; **Phase 3.5** doc GAPs open; Phase 4 matrix/triggers pending). Linked from `TO_DO.md`. |
 
 ## Archived plans (`plans/archive/`)
 

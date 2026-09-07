@@ -13,7 +13,7 @@ Accepted inputs:
 
 - DICOM RDSR files with `.dcm` extension.
 - Tabular exports with `.csv`, `.tsv`, `.xlsx`, or `.xlsm` extension.
-- Example RDSR files bundled with the package.
+- Example RDSR files bundled with the package. Selecting an example auto-loads it.
 
 After a file loads, the app normalizes events into the internal event table used by geometry preview, calculation, results, and export. Multi-exam uploads keep each exam separate and add an `Exam` label in the Data tab.
 
@@ -21,7 +21,7 @@ For tabular files, the schema selector controls how columns are interpreted. `au
 
 Warnings in the loaded-exam list mean the importer made an assumption or found a condition that should be reviewed before clinical use. Examples include assumed DAP units, unsupported equipment names, missing optional fields, or manual table-origin overrides.
 
-Coordinate correction toggles apply to the loaded tabular event data before calculation. Use them only when a site export is known to need the correction; vendor-level normalizations documented in [Vendor Coordinate Systems](../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md) are already applied by the adapter.
+Coordinate correction toggles apply to single-exam, non-normalized tabular uploads. They are unavailable for DICOM files, the `normalized` schema, and multi-exam mode. Use them only when a site export is known to need the correction; vendor-level normalizations documented in [Vendor Coordinate Systems](../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md) are already applied by the adapter.
 
 Technical references:
 

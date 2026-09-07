@@ -36,6 +36,22 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **In-app help accuracy (Phase 3 cross-check)** (2026-09-06) — corrected Upload, Geometry,
+  Calculate, Results, Settings positioning, kerma-meter, and below-floor kVp help pages where
+  prose drifted from current GUI behavior (coordinate toggle scope, example auto-load, 1-based event
+  stepper, table-origin metadata key names, below-floor kVp setting name, dose-map dialog sizing,
+  kerma corrected vs uncorrected display). Aligned help-token regression test with actual setting
+  names. FEATURE_INVENTORY §9.5 dose-map dialog wording aligned with Results UI. Sphinx user docs
+  (`install`, `user_guide`, `description`, `contribute`, `background`) refreshed for GUISkinDose
+  product identity while preserving PySkinDose upstream attribution where appropriate.
+  README CLI flags section; LICENSE_COMPLIANCE demo-mesh path corrected; README and
+  privacy policy logging/network examples aligned with `configure_logging()` and
+  `--allow-network` behavior. Native GUI file logging tracked in `TO_DO.md` (optional
+  implementation). Phase 3 §5 dev-docs pass: `INPUT_SCHEMA_DETECTION.md` margin wording aligned
+  with `registry.py`; `VENDOR_COORDINATE_SYSTEMS.md` separates shipped GUI coordinate toggles
+  from backlog `TabularImportOptions`/CLI flags (gap filed in `TO_DO.md`). No calculation or UI
+  behavior change.
+
 - **Public docstring coverage under `src/guiskindose/` (maintainer-facing)** (2026-09-06) —
   Phase 2 of the documentation-assessment plan adds module and public-symbol docstrings
   across settings, pipeline, plotting, and GUI modules (175 gaps closed; inventory now

@@ -26,5 +26,6 @@ CF is resolved per **individual unit × tube** (Plane A / Plane B / Single Plane
 When equipment or tube cannot be resolved, or the `(equipment, tube)` pair is missing
 from the table, CF falls back to the configured default factor (usually `1.0`).
 
-Reported `K_IRP` in the Data table stays uncorrected. Corrected kerma appears in
-Results and exports as `K_IRP (corrected)` / `AirKermaCorrected`.
+Reported `K_IRP` in the Data table stays uncorrected. Corrected kerma is stored per event
+as `kerma_corrected` and included in exports as `air_kerma_corrected`. The GUI Results tab
+currently shows uncorrected `K_IRP` only.

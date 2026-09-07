@@ -45,10 +45,12 @@ policy decisions, not a restart of Phases 0-9.
   DICOM fixtures, confirm report output cannot leak findings, and decide whether to keep it as a local advisory
   step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
 - [ ] **Documentation & Docstrings Assessment** — execute a structured review of docs and source files:
-  - **Check completeness and accuracy**: verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior.
-  - **Exhaustive docstring and doc review**: sweep all Python source files under `src/` for outdated, missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior. Flag any docstring describing changed behavior.
-  - **Build assessment infrastructure**: establish a structured prescription for *how* and *what* to review. Define what records to keep (e.g., an assessment matrix or checklist artifact under `dev-docs/assessments/`), and set clear triggers to rerun assessments or update docs (e.g., pre-release, changing calculation pipelines, major feature addition). Plan: [plans/documentation-assessment.md](plans/documentation-assessment.md).
+  - **Check completeness and accuracy**: verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior. _(Phase 1 complete.)_
+  - **Exhaustive docstring and doc review**: sweep all Python source files under `src/` for outdated, missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior. Flag any docstring describing changed behavior. _(Phase 2 complete; Phase 3 complete — checklist: [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md). Phase 3.5 — close doc GAPs (notebook + glossary): [plans/documentation-assessment.md](plans/documentation-assessment.md) § Phase 3.5.)_
+  - **Build assessment infrastructure**: establish a structured prescription for *how* and *what* to review. Define what records to keep (e.g., an assessment matrix or checklist artifact under `dev-docs/assessments/`), and set clear triggers to rerun assessments or update docs (e.g., pre-release, changing calculation pipelines, major feature addition). Plan: [plans/documentation-assessment.md](plans/documentation-assessment.md). _(Phase 4 open.)_
 - [ ] **User-Facing Documentation Tooling Evaluation** — time-boxed spike to decide whether to keep Sphinx or adopt a more polished end-user docs site; no migration commitment until the Documentation & Docstrings Assessment above lands. Candidates, dual-agent findings (2026-09-06), shortlist, and open verification items: [assessment](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md). Record the outcome in a decision log.
+- [ ] **Getting-started notebook refresh (Phase 3.5)** — Phase 3 §3 GAP. `docs/source/getting_started/getting_started.ipynb` still uses legacy PySkinDose-as-product prose, stale outputs (including a Windows-specific example RDSR path), and pre-GUI workflow. Refresh for GUISkinDose where the notebook describes *this* product; keep PySkinDose references where they denote upstream lineage or historical plot/API names. Align `main()`/settings examples with `AGENTS.md`. Plan: [documentation-assessment.md](plans/documentation-assessment.md) § Phase 3.5.
+- [ ] **Glossary plot-axis labels (Phase 3.5)** — Phase 3 §6 GAP. Add LON/LAT/VER (and related PT L-R / A-P / S-I aliases) to `dev-docs/glossary.json` so in-app axis labels have a canonical definition entry. Plan: [documentation-assessment.md](plans/documentation-assessment.md) § Phase 3.5.
 - [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
@@ -81,6 +83,15 @@ policy decisions, not a restart of Phases 0-9.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
+- [ ] **`TabularImportOptions` + CLI coordinate override flags** — Phase 3 §5 audit found
+  `VENDOR_COORDINATE_SYSTEMS.md` previously described a future `TabularImportOptions` dataclass and
+  `--swap-lat-lon` / `--skip-transforms` CLI flags as if they shipped with the GUI toggles. GUI
+  post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live via `AppState` /
+  `exam_transforms.py`; the dataclass, `skip_manufacturer_transforms`, `custom_translation_offset`,
+  and CLI flags are not wired in `cli_args.py` or `input_adapters/registry.py`. **Goal:** expose the
+  same override surface on `read_and_normalize_input()` and headless CLI. **Acceptance:** unit tests
+  for API + CLI paths; docs describe shipped GUI vs API/CLI parity. See
+  `TABULAR_RDSR_INPUT_PLAN.md` and `VENDOR_COORDINATE_SYSTEMS.md`.
 - [ ] **Tabular input Phase 5+** — implement Qaelum, DoseMonitor, and DoseWatch adapters when real export fixtures
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
@@ -101,6 +112,37 @@ policy decisions, not a restart of Phases 0-9.
 
 ### GUI / UX
 
+- [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
+  `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
+  `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via
+  `logging.StreamHandler` in `guiskindose.debug`); no log file in any mode, including `--native`.
+  **Redaction / privacy model (stderr today; same rules would apply to a file sink):**
+  - **Not a blanket redaction filter** on every log line — console and file share the same logger tree,
+    formatters, and call sites. Privacy is enforced by **what we log**, plus **handler levels**.
+  - **Value-free error paths (stderr today):** GUI/CLI boundaries use `safe_error_event()` /
+    `safe_user_error()` (`guiskindose.privacy`) — operation code + exception **class** only on the
+    one-line summary; optional value-free traceback at DEBUG (package-relative `path:lineno in func`,
+    no exception message, no absolute paths, no locals). CLI uncaught exceptions go through
+    `install_value_safe_excepthook()` (generic stderr message, no raw traceback). GUI load failures
+    use the same pattern (`gui/exam_loaders.py` → `_record_load_failure`).
+  - **Routine INFO/WARNING (stderr today):** convention avoids patient identifiers and source paths
+    (e.g. upload logs suffix + byte count, RDSR read logs extension only). Prefer `safe_warning()`
+    for coded metrics; avoid string metrics that could become filenames.
+  - **Opt-in DEBUG (`debug.json` → `dprint` categories):** when a category is enabled, DEBUG lines
+    go to **stderr** (and would also go to a file once wired). These are developer toggles, not
+    clinical-safe by default — review before sharing captures. Do not assume “debug on ⇒ fully
+    redacted”; review output for PHI before pasting or attaching logs.
+  - **File handler level gate (when `log_file=` is used):** `_file_handler_level()` keeps the file at
+    **INFO** unless a `dprint` category is explicitly enabled, then **DEBUG** — so module DEBUG
+    records (which *could* include paths if a call site regresses) are excluded from the file by
+    default. Same records as stderr that pass the file handler’s level; **no separate redaction pass**
+    on write. Rotation: ~1 MiB × 4, session purge, POSIX `0o600` (`debug.py`).
+  **Goal:** when `--native` / pywebview mode is active, pass a temp-path `log_file` into
+  `configure_logging()` so diagnostics are visible without a terminal. **Acceptance:** manual native
+  smoke shows the log file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` describe console + optional
+  file sinks and the redaction/level model accurately; unit test that native startup registers a file
+  handler (mock temp dir); privacy review confirms no new path/identifier logging on the enabled path.
+  **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized

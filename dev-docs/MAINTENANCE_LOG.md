@@ -10,6 +10,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Phase 3 cross-check checklist** (2026-09-06) — expanded
+  `documentation-assessment.md` Phase 3 with §0–§7 workflow and seeded
+  `dev-docs/assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md` from
+  `help_registry.json`, `feature_doc_matrix.json`, and `docs/source/` layout.
+
 - **Phase 2 docstring sweep** (2026-09-06) — closed all 175 public docstring gaps under
   `src/guiskindose/` (137 modules, 0 missing per `check_docstring_inventory.py`). Four
   commits on `docs/phase-2-docstring-sweep`: settings/helpers/API, core pipeline/export,

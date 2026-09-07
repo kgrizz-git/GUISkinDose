@@ -1,0 +1,175 @@
+# Phase 3 user-facing documentation cross-check — execution checklist
+
+> **Status:** COMPLETE (2026-09-07) — all §0–§7 verdicts recorded; documentation **GAP** items
+> deferred to **Phase 3.5** (notebook + glossary) or product backlog in `dev-docs/TO_DO.md`
+> (native file logging, `TabularImportOptions`/CLI). Phase 4 assessment artifact next.
+
+**Started:** 2026-09-06  
+**Reviewer(s):** Kevin Grizzard + StepFun / MiniMax / Muse Spark audit agents (2026-09-06–07)  
+**Branch:** `docs/phase-3-user-facing-cross-check`
+
+## How to use this checklist
+
+1. Run **§0 Harness preflight** first — fixes broken links, missing help wiring, and
+   catalog drift before semantic review.
+2. Work **§1–§7** in any order; each item needs a **verdict**:
+   - **Accurate** — prose matches current GUI/CLI behavior (note review date).
+   - **Fixed** — drift corrected in the same PR (link commit).
+   - **Gap filed** — intentional deferral; add a line to `dev-docs/TO_DO.md` with owner.
+   - **N/A** — retired feature or doc not user-facing (one-line reason).
+3. Do **not** rewrite for style; accuracy and completeness only (same rule as Phases 1–2).
+4. When a fix changes behavior descriptions, cross-check the linked **code** and **tests**
+   listed in `feature_doc_matrix.json` for that feature.
+5. Record blockers in the **Verdict summary** table at the bottom.
+
+**Verdict legend:** `ACC` | `FIX` | `GAP` | `N/A` — use exactly one code in each row's **Verdict** column; add review date in **Notes** for `ACC`.
+
+**Registries (source of truth for seeding):** [help_registry.json](../help_registry.json),
+[feature_doc_matrix.json](../feature_doc_matrix.json), [ui_copy.json](../ui_copy.json),
+[glossary.json](../glossary.json).
+
+---
+
+## §0 — Harness preflight (structural)
+
+These checks catch missing files and wiring; they do **not** prove semantic accuracy.
+
+- [x] `python scripts/check_doc_freshness.py` _(2026-09-06 — pass)_
+- [x] `python scripts/sync_gui_help.py --check` _(2026-09-06 — pass)_
+- [x] `python scripts/check_help_registry.py` _(2026-09-06 — pass)_
+- [x] `python scripts/check_ui_copy.py` _(2026-09-06 — pass)_
+- [x] `python scripts/check_feature_doc_matrix.py` _(2026-09-06 — pass)_
+- [x] `python scripts/check_docstring_inventory.py` _(2026-09-06 — 0 missing)_
+
+---
+
+## §1 — In-app help (`docs/source/gui_help/`)
+
+Source of truth for mirrored pages under `src/guiskindose/gui/help/`. Compare each page
+to the live GUI tab/workflow and the wired `HelpButton` entry in `help_registry.json`.
+
+| ID | Help page | GUI wiring | Verdict (`ACC`/`FIX`/`GAP`/`N/A`) | Notes / fix commit |
+|----|-----------|------------|-----------------------------------|-------------------|
+| `upload` | [upload_workflow.md](../../docs/source/gui_help/upload_workflow.md) | `upload_builders.py` | **FIX** | 2026-09-06 — coord toggle scope + example auto-load (StepFun audit) |
+| `data` | [data_table_workflow.md](../../docs/source/gui_help/data_table_workflow.md) | `data.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `settings_positioning` | [positioning_offsets.md](../../docs/source/gui_help/positioning_offsets.md) | `settings.py` | **FIX** | 2026-09-06 — removed nonexistent Rotation control row |
+| `settings_phantom_preview` | [phantom_preview.md](../../docs/source/gui_help/phantom_preview.md) | `settings.py`, `phantom_preview*.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `settings_below_floor_kvp` | [below_floor_kvp.md](../../docs/source/gui_help/below_floor_kvp.md) | `settings.py`, `calculate.py`; policy in `geom_calc.py` | **FIX** | 2026-09-06 — `below_floor_kvp_manual` setting key name |
+| `settings_kerma_meter_correction` | [kerma_meter_correction.md](../../docs/source/gui_help/kerma_meter_correction.md) | `settings.py`, `calculate.py` | **FIX** | 2026-09-06 — Results tab shows uncorrected kerma |
+| `geometry` | [geometry_workflow.md](../../docs/source/gui_help/geometry_workflow.md) | `geometry_layout_builders.py`, `geometry_builders.py` | **FIX** | 2026-09-06 — event stepper 1-based; table-origin key names |
+| `calculate` | [calculation_workflow.md](../../docs/source/gui_help/calculation_workflow.md) | `calculate.py` | **FIX** | 2026-09-06 — `below_floor_kvp_manual` setting name |
+| `results` | [results_workflow.md](../../docs/source/gui_help/results_workflow.md) | `results_builders.py` | **FIX** | 2026-09-06 — dose map dialog is modal, not full-screen |
+| `export` | [export_workflow.md](../../docs/source/gui_help/export_workflow.md) | `export.py` | **ACC** | 2026-09-06 — StepFun audit |
+
+---
+
+## §2 — Feature traceability (`feature_doc_matrix.json`)
+
+For each shipped feature, read every listed **doc** and **help** page against the **code**
+paths. Skip or mark **N/A** for retired rows.
+
+| Feature key | Status | Docs to verify | Help to verify | Code spot-check | Verdict | Notes / TO_DO |
+|-------------|--------|----------------|----------------|-----------------|---------|---------------|
+| `tabular_input` | shipped | `INPUT_SCHEMA_DETECTION.md`, `INPUT_DATA_FLOW_AND_OFFSETS.md`, `INPUT_FIELD_REFERENCE.md`, `FEATURE_INVENTORY.md`, `AGENTS.md` | `upload_workflow.md` | `input_adapters/`, `upload.py`, `import_preview.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `vendor_coordinates` | shipped_with_open_validation | `VENDOR_COORDINATE_SYSTEMS.md`, `INPUT_DATA_FLOW_AND_OFFSETS.md`, `AGENTS.md` | `geometry_workflow.md`, `positioning_offsets.md` | `helpers.py`, `exam_transforms.py`, adapters | **ACC** | Open GE/DoseTrack validation documented as deferred |
+| `below_floor_kvp` | shipped | `FEATURE_INVENTORY.md`, `AGENTS.md` | `below_floor_kvp.md`, `calculation_workflow.md` | `geom_calc.py`, `calculate.py`, `settings.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `kerma_meter_correction` | shipped | `FEATURE_INVENTORY.md`, `CODEBASE_OVERVIEW.md`, `CHANGELOG.md` | `kerma_meter_correction.md` | `kerma_correction.py`, calculate/settings tabs | **ACC** | 2026-09-06 — Results uncorrected kerma aligned in §1 help |
+| `body_habitus_scaling` | shipped | `AGENTS.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | `positioning_offsets.md`, `phantom_preview.md` | `phantom_class.py`, settings + preview | **ACC** | 2026-09-06 — StepFun audit |
+| `arms_down_phantoms` | shipped | `FEATURE_INVENTORY.md`, `ADDITIONAL_PHANTOMS.md`, archived plan + assessment | `phantom_preview.md` | `phantom_mesh_names.py`, catalog | **ACC** | 2026-09-06 — StepFun audit |
+| `settings_phantom_preview` | shipped | `FEATURE_INVENTORY.md`, `SETTINGS_PHANTOM_PREVIEW_PLAN.md`, `CHANGELOG.md` | `phantom_preview.md`, `positioning_offsets.md` | `phantom_preview_controller.py`, settings tab | **ACC** | 2026-09-06 — StepFun audit |
+| `demo_phantoms` | retired | _(archive docs only)_ | `phantom_preview.md` | — | **N/A** | Help states demos not shipped; no steamboat/popeye in user help |
+| `rich_exports` | shipped_with_leftovers | `RICH_EXPORT_PLAN.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | `export_workflow.md` | `export/`, `export.py`, CLI | **ACC** | §7.7 matches `pyproject.toml` core deps; Phase 7 leftovers in TO_DO |
+| `dose_map_per_exam` | shipped | `FEATURE_INVENTORY.md`, `AGENTS.md` | `results_workflow.md` | `results.py`, `figures.py` | **FIX** | 2026-09-06 — §9.5 “full-screen” → modal popup dialog |
+
+---
+
+## §3 — Sphinx / published user docs (`docs/source/user/`)
+
+| Doc | Verdict | Cross-check against |
+|-----|---------|---------------------|
+| [install.md](../../docs/source/user/install.md) | **FIX** | 2026-09-06 — dev/gui extras and uv note |
+| [user_guide.md](../../docs/source/user/user_guide.md) | **FIX** | 2026-09-06 — replaced stub with GUI + main() workflow |
+| [description.md](../../docs/source/user/description.md) | **FIX** | 2026-09-06 — GUISkinDose product title; PySkinDose kept as upstream fork link |
+| [background.md](../../docs/source/user/background.md) | **FIX** | 2026-09-06 — PySkinDose mission preserved; GUISkinDose fork scope added |
+| [contribute.md](../../docs/source/user/contribute.md) | **FIX** | 2026-09-06 — PyPI status + CONTRIBUTING link |
+| [getting_started/getting_started.ipynb](../../docs/source/getting_started/getting_started.ipynb) | **GAP** | Notebook still uses PySkinDose branding and a Windows example path; needs dedicated refresh |
+
+---
+
+## §4 — Community and policy files (repo root)
+
+| Doc | Verdict (`ACC`/`FIX`/`GAP`/`N/A`) | Cross-check against |
+|-----|-----------------------------------|---------------------|
+| [README.md](../../README.md) | **FIX** | 2026-09-07 — CLI flags; logging/`--allow-network` accuracy; native file log deferred → TO_DO |
+| [CONTRIBUTING.md](../../CONTRIBUTING.md) | **ACC** | 2026-09-06 — dev setup, privacy gates, unsolicited-PR policy match |
+| [SUPPORT.md](../../SUPPORT.md) | **ACC** | 2026-09-06 — Issue/Discussion routing and FDA disclaimer |
+| [SECURITY.md](../../SECURITY.md) | **ACC** | 2026-09-06 — private advisory reporting path |
+| [CHANGELOG.md](../../CHANGELOG.md) | **ACC** | 2026-09-06 — `[Unreleased]` matches Phase 3 help/doc fixes |
+| [PRIVACY_AND_SENSITIVE_ASSETS.md](../PRIVACY_AND_SENSITIVE_ASSETS.md) | **FIX** | 2026-09-07 — console-only logging default; no native log file claim |
+| [LICENSE_COMPLIANCE.md](../LICENSE_COMPLIANCE.md) | **ACC** | 2026-09-06 — demo meshes not shipped; audit command matches CI |
+
+---
+
+## §5 — Dev-docs user paths (maintainer-written, user-relevant)
+
+| Doc | Verdict | Cross-check against |
+|-----|---------|---------------------|
+| [INPUT_SCHEMA_DETECTION.md](../INPUT_SCHEMA_DETECTION.md) | **FIX** | 2026-09-07 — margin rule clarifies single-scorer vs tie cases (`registry.py`) |
+| [INPUT_DATA_FLOW_AND_OFFSETS.md](../INPUT_DATA_FLOW_AND_OFFSETS.md) | **ACC** | 2026-09-06 — normalization + per-exam meta aligned with code |
+| [INPUT_FIELD_REFERENCE.md](../INPUT_FIELD_REFERENCE.md) | **ACC** | 2026-09-06 — `test_input_schema_doc.py` pass |
+| [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md) | **FIX** | 2026-09-07 — shipped GUI toggles vs backlog `TabularImportOptions`/CLI; gap in TO_DO |
+| [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md) | **ACC** | 2026-09-06 — `guiskindose` 1.0.0, not yet on PyPI |
+
+---
+
+## §6 — UI copy catalog (`ui_copy.json` + glossary)
+
+**Scope pass:** every `copy_text("…")` key used in GUI code should either appear in
+`ui_copy.json` or be filed as a **GAP** to add. High-risk strings (privacy, PHI, clinical
+warnings) are mandatory.
+
+**Mandatory catalog keys (must match owner file text):** `upload.privacy_notice`,
+`onboarding.privacy_notice`, `export.include_identifiers.label`,
+`export.include_identifiers.explanation`, `per_exam.tx_tz_swap.tooltip`,
+`settings.phantom_preview.caption`.
+
+- [x] Run `python scripts/check_ui_copy.py` _(2026-09-06 — pass)_
+- [x] Review each cataloged key in [ui_copy.json](../ui_copy.json) against owner file text _(2026-09-06 — pass)_
+- [x] Spot-check uncatalogued user-visible strings in `gui/tabs/`, `gui/app.py`, widgets _(2026-09-06 — mandatory keys cataloged; no new high-risk gaps)_
+- [ ] [glossary.json](../glossary.json) terms match in-app labels (LON/LAT/VER, exam, offset)
+
+| Area | Verdict | Notes |
+|------|---------|-------|
+| Catalog completeness | **ACC** | `check_ui_copy.py` pass |
+| Privacy / PHI notices (`upload.privacy_notice`, `onboarding.privacy_notice`, export identifiers) | **ACC** | Matches `export.py`, `upload_builders.py`, `app.py` |
+| Per-exam correction tooltips (`per_exam.*`) | **ACC** | Matches `_per_exam.py` |
+| Settings phantom preview captions | **ACC** | Matches `settings.py` + controller status strings |
+| Glossary plot-axis labels (LON/LAT/VER) | **GAP** | Not in `glossary.json`; filed in TO_DO |
+
+---
+
+## §7 — CLI vs documentation
+
+| Surface | Verdict | Cross-check against |
+|---------|---------|---------------------|
+| `python -m guiskindose --help` | **ACC** | 2026-09-06 — matches `cli_args.py` flags |
+| Tabular flags (`--input-schema`, `--sheet-name`, `--input-preview-only`) | **ACC** | 2026-09-06 — documented in README + INPUT_SCHEMA_DETECTION |
+| `--mode gui` / `--native` | **ACC** | 2026-09-06 — README GUI section |
+| Export CLI subcommands / formats | **ACC** | 2026-09-06 — README + `export_workflow.md` + `--export-format` |
+
+---
+
+## Verdict summary (for Phase 4 matrix)
+
+| Section | Items | ACC | FIX | GAP | N/A | Review date |
+|---------|-------|-----|-----|-----|-----|-------------|
+| §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
+| §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
+| §3 Sphinx user | 6 | 0 | 5 | 1 | 0 | 2026-09-06 |
+| §4 Community + policy | 7 | 4 | 3 | 0 | 0 | 2026-09-07 |
+| §5 Dev-docs user | 5 | 3 | 2 | 0 | 0 | 2026-09-07 |
+| §6 UI copy | 4 | 3 | 0 | 1 | 0 | 2026-09-06 |
+| §7 CLI | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |
+
+**Phase 3 acceptance:** all **GAP** rows have a linked `TO_DO.md` bullet; all **FIX**
+rows merged; summary table complete.
