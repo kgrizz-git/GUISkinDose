@@ -89,26 +89,26 @@ the human/agent pass for “does it match behavior?”
 
 ### Checklist sections (detailed)
 
-- [ ] **§0 Harness preflight** — `check_doc_freshness`, `sync_gui_help --check`,
+- [x] **§0 Harness preflight** — `check_doc_freshness`, `sync_gui_help --check`,
   `check_help_registry`, `check_ui_copy`, `check_feature_doc_matrix`, docstring inventory.
-- [ ] **§1 In-app help** — all 10 `help_registry.json` entries vs live GUI workflows
+- [x] **§1 In-app help** — all 10 `help_registry.json` entries vs live GUI workflows
   (`docs/source/gui_help/*.md`).
-- [ ] **§2 Feature traceability** — each `feature_doc_matrix.json` row (skip `demo_phantoms`
+- [x] **§2 Feature traceability** — each `feature_doc_matrix.json` row (skip `demo_phantoms`
   as retired); docs + help vs code paths listed in the matrix.
-- [ ] **§3 Sphinx user docs** — `docs/source/user/*`, getting-started notebook vs install/GUI/CLI.
-- [ ] **§4 Community + policy** — `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`,
+- [x] **§3 Sphinx user docs** — `docs/source/user/*`, getting-started notebook vs install/GUI/CLI.
+- [x] **§4 Community + policy** — `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`,
   `CHANGELOG.md`, privacy and license compliance docs.
-- [ ] **§5 Dev-docs user paths** — `INPUT_*`, `VENDOR_COORDINATE_SYSTEMS.md`, release hub.
-- [ ] **§6 UI copy + glossary** — `ui_copy.json` mandatory keys + glossary vs in-app labels.
-- [ ] **§7 CLI vs docs** — `cli_args.py` / `--help` vs README, AGENTS, and export/tabular docs.
-- [ ] **Verdict summary** — checklist bottom table filled; Phase 3 acceptance met.
+- [x] **§5 Dev-docs user paths** — `INPUT_*`, `VENDOR_COORDINATE_SYSTEMS.md`, release hub.
+- [x] **§6 UI copy + glossary** — `ui_copy.json` mandatory keys + glossary vs in-app labels.
+- [x] **§7 CLI vs docs** — `cli_args.py` / `--help` vs README, AGENTS, and export/tabular docs.
+- [x] **Verdict summary** — checklist bottom table filled; Phase 3 acceptance met.
 
 ### Acceptance
 
-- [ ] Every checklist row has a verdict (`ACC`, `FIX`, `GAP`, or `N/A` with reason).
-- [ ] All **FIX** items merged on the Phase 3 branch (or follow-up PR linked).
-- [ ] All **GAP** items filed in `dev-docs/TO_DO.md` with enough context to execute later.
-- [ ] No known inaccurate user-facing claims left unrecorded.
+- [x] Every checklist row has a verdict (`ACC`, `FIX`, `GAP`, or `N/A` with reason).
+- [x] All **FIX** items merged on the Phase 3 branch (or follow-up PR linked).
+- [x] All **GAP** items filed in `dev-docs/TO_DO.md` with enough context to execute later.
+- [x] No known inaccurate user-facing claims left unrecorded.
 
 ## Phase 4 — Standing infrastructure (persists after archival)
 
