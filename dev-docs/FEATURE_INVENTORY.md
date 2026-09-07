@@ -463,7 +463,7 @@ Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_
 
 | Surface | Behavior |
 |---------|----------|
-| **Per-exam Accordion** | Expand exam row to view Peak Skin Dose, Air Kerma, and event count; **Show inline dose map** checkbox renders a 500px 3D dose map inline (max 5 simultaneous inline maps); **Show Dose Map** button opens full-screen dialog |
+| **Per-exam Accordion** | Expand exam row to view Peak Skin Dose, Air Kerma, and event count; **Show inline dose map** checkbox renders a 500px 3D dose map inline (max 5 simultaneous inline maps); **Show Dose Map** button opens a modal popup dialog |
 | **Visible Exams Subset Selector** | Checkboxes per exam + **All** / **None** buttons to filter which exams contribute to the Aggregate Dose Map and recompute aggregate Peak Skin Dose on the subset |
 
 ---

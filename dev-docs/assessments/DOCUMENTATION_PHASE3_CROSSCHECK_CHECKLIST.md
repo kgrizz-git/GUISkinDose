@@ -71,16 +71,16 @@ paths. Skip or mark **N/A** for retired rows.
 
 | Feature key | Status | Docs to verify | Help to verify | Code spot-check | Verdict | Notes / TO_DO |
 |-------------|--------|----------------|----------------|-----------------|---------|---------------|
-| `tabular_input` | shipped | `INPUT_SCHEMA_DETECTION.md`, `INPUT_DATA_FLOW_AND_OFFSETS.md`, `INPUT_FIELD_REFERENCE.md`, `FEATURE_INVENTORY.md`, `AGENTS.md` | `upload_workflow.md` | `input_adapters/`, `upload.py`, `import_preview.py` | | |
-| `vendor_coordinates` | shipped_with_open_validation | `VENDOR_COORDINATE_SYSTEMS.md`, `INPUT_DATA_FLOW_AND_OFFSETS.md`, `AGENTS.md` | `geometry_workflow.md`, `positioning_offsets.md` | `helpers.py`, `exam_transforms.py`, adapters | | Open validation items → TO_DO if still true |
-| `below_floor_kvp` | shipped | `FEATURE_INVENTORY.md`, `AGENTS.md` | `below_floor_kvp.md`, `calculation_workflow.md` | `geom_calc.py`, `calculate.py`, `settings.py` | | |
-| `kerma_meter_correction` | shipped | `FEATURE_INVENTORY.md`, `CODEBASE_OVERVIEW.md`, `CHANGELOG.md` | `kerma_meter_correction.md` | `kerma_correction.py`, calculate/settings tabs | | No standalone operator dev-doc beyond help + inventory — file **GAP** if drift found |
-| `body_habitus_scaling` | shipped | `AGENTS.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | `positioning_offsets.md`, `phantom_preview.md` | `phantom_class.py`, settings + preview | | |
-| `arms_down_phantoms` | shipped | `FEATURE_INVENTORY.md`, `ADDITIONAL_PHANTOMS.md`, archived plan + assessment | `phantom_preview.md` | `phantom_mesh_names.py`, catalog | | |
-| `settings_phantom_preview` | shipped | `FEATURE_INVENTORY.md`, `SETTINGS_PHANTOM_PREVIEW_PLAN.md`, `CHANGELOG.md` | `phantom_preview.md`, `positioning_offsets.md` | `phantom_preview_controller.py`, settings tab | | |
-| `demo_phantoms` | retired | _(archive docs only)_ | `phantom_preview.md` | — | **N/A** | Retired; grep help for demo/fun mesh names (`steamboat`, `popeye`, etc.) |
-| `rich_exports` | shipped_with_leftovers | `RICH_EXPORT_PLAN.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | `export_workflow.md` | `export/`, `export.py`, CLI | | Leftovers → GAP or FIX |
-| `dose_map_per_exam` | shipped | `FEATURE_INVENTORY.md`, `AGENTS.md` | `results_workflow.md` | `results.py`, `figures.py` | | |
+| `tabular_input` | shipped | `INPUT_SCHEMA_DETECTION.md`, `INPUT_DATA_FLOW_AND_OFFSETS.md`, `INPUT_FIELD_REFERENCE.md`, `FEATURE_INVENTORY.md`, `AGENTS.md` | `upload_workflow.md` | `input_adapters/`, `upload.py`, `import_preview.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `vendor_coordinates` | shipped_with_open_validation | `VENDOR_COORDINATE_SYSTEMS.md`, `INPUT_DATA_FLOW_AND_OFFSETS.md`, `AGENTS.md` | `geometry_workflow.md`, `positioning_offsets.md` | `helpers.py`, `exam_transforms.py`, adapters | **ACC** | Open GE/DoseTrack validation documented as deferred |
+| `below_floor_kvp` | shipped | `FEATURE_INVENTORY.md`, `AGENTS.md` | `below_floor_kvp.md`, `calculation_workflow.md` | `geom_calc.py`, `calculate.py`, `settings.py` | **ACC** | 2026-09-06 — StepFun audit |
+| `kerma_meter_correction` | shipped | `FEATURE_INVENTORY.md`, `CODEBASE_OVERVIEW.md`, `CHANGELOG.md` | `kerma_meter_correction.md` | `kerma_correction.py`, calculate/settings tabs | **ACC** | 2026-09-06 — Results uncorrected kerma aligned in §1 help |
+| `body_habitus_scaling` | shipped | `AGENTS.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | `positioning_offsets.md`, `phantom_preview.md` | `phantom_class.py`, settings + preview | **ACC** | 2026-09-06 — StepFun audit |
+| `arms_down_phantoms` | shipped | `FEATURE_INVENTORY.md`, `ADDITIONAL_PHANTOMS.md`, archived plan + assessment | `phantom_preview.md` | `phantom_mesh_names.py`, catalog | **ACC** | 2026-09-06 — StepFun audit |
+| `settings_phantom_preview` | shipped | `FEATURE_INVENTORY.md`, `SETTINGS_PHANTOM_PREVIEW_PLAN.md`, `CHANGELOG.md` | `phantom_preview.md`, `positioning_offsets.md` | `phantom_preview_controller.py`, settings tab | **ACC** | 2026-09-06 — StepFun audit |
+| `demo_phantoms` | retired | _(archive docs only)_ | `phantom_preview.md` | — | **N/A** | Help states demos not shipped; no steamboat/popeye in user help |
+| `rich_exports` | shipped_with_leftovers | `RICH_EXPORT_PLAN.md`, `FEATURE_INVENTORY.md`, `CHANGELOG.md` | `export_workflow.md` | `export/`, `export.py`, CLI | **ACC** | §7.7 matches `pyproject.toml` core deps; Phase 7 leftovers in TO_DO |
+| `dose_map_per_exam` | shipped | `FEATURE_INVENTORY.md`, `AGENTS.md` | `results_workflow.md` | `results.py`, `figures.py` | **FIX** | 2026-09-06 — §9.5 “full-screen” → modal popup dialog |
 
 ---
 
@@ -164,7 +164,7 @@ warnings) are mandatory.
 | Section | Items | ACC | FIX | GAP | N/A | Review date |
 |---------|-------|-----|-----|-----|-----|-------------|
 | §1 Help pages | 10 | 3 | 7 | 0 | 0 | 2026-09-06 |
-| §2 Features | 10 | | | | | |
+| §2 Features | 10 | 8 | 1 | 0 | 1 | 2026-09-06 |
 | §3 Sphinx user | 6 | | | | | |
 | §4 Community + policy | 7 | | | | | |
 | §5 Dev-docs user | 5 | | | | | |
