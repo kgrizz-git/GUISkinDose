@@ -140,6 +140,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/privacy-admission-enforcement/hardening.md](assessments/privacy-admission-enforcement/hardening.md) | Design review of protected ignore/never-track rules and conditional scanner enforcement; recommends staged-content-bound local receipts plus independent CI. |
 | [assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md) | HTML export fake “background task cancelled” error; Results aggregate can render while export fails. Fix plan: [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). |
 | [assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md) | Dual-agent spike: Mintlify free-tier/OSS terms, end-user docs tooling survey, ranked shortlist; single-sourced claims verified against primary sources 2026-09-06. Linked from `TO_DO.md`. |
+| [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md) | **IN PROGRESS** — Phase 3 user-facing doc cross-check execution checklist (help registry, feature matrix, Sphinx, community files, UI copy, CLI). |
 
 ---
 

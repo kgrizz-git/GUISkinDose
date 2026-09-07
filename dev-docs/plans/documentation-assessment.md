@@ -70,9 +70,44 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Phase 3 — User-facing cross-check
 
-- [ ] `docs/source/` (incl. `gui_help/` source), `README.md`, `CONTRIBUTING.md`,
-  `SUPPORT.md` vs GUI/CLI behavior; GUI tooltips covered by `ui_copy.json` scope check.
-- [ ] Acceptance: discrepancies fixed or filed as follow-up TO_DO items with owners.
+> **Execution checklist:** [DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](../assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md)
+> (seeded from `help_registry.json`, `feature_doc_matrix.json`, and `docs/source/` layout).
+
+Phase 3 verifies **semantic accuracy** of user-facing prose. Harness scripts (§0 of the
+checklist) already enforce file existence, help wiring, and catalog shape; this phase is
+the human/agent pass for “does it match behavior?”
+
+### Workflow
+
+1. **Preflight** — run structural checks in checklist §0; fix any red harness failures first.
+2. **Cross-check** — work checklist §1–§7; mark each row `ACC` / `FIX` / `GAP` / `N/A`.
+3. **Fix in place** — same PR per golden rule 1 when drift is clear; do not silently change
+   behavior to match stale docs.
+4. **File gaps** — unclear or large drift → `dev-docs/TO_DO.md` with owner, not drive-by scope creep.
+5. **Summarize** — complete the verdict table in the checklist; Phase 4 copies counts into the
+   assessment matrix.
+
+### Checklist sections (detailed)
+
+- [ ] **§0 Harness preflight** — `check_doc_freshness`, `sync_gui_help --check`,
+  `check_help_registry`, `check_ui_copy`, `check_feature_doc_matrix`, docstring inventory.
+- [ ] **§1 In-app help** — all 10 `help_registry.json` entries vs live GUI workflows
+  (`docs/source/gui_help/*.md`).
+- [ ] **§2 Feature traceability** — each `feature_doc_matrix.json` row (skip `demo_phantoms`
+  as retired); docs + help vs code paths listed in the matrix.
+- [ ] **§3 Sphinx user docs** — `docs/source/user/*`, getting-started notebook vs install/GUI/CLI.
+- [ ] **§4 Community files** — `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`.
+- [ ] **§5 Dev-docs user paths** — `INPUT_*`, `VENDOR_COORDINATE_SYSTEMS.md`, release hub.
+- [ ] **§6 UI copy scope** — `ui_copy.json` + glossary vs `copy_text()` usage; privacy/PHI strings.
+- [ ] **§7 CLI vs docs** — `cli_args.py` / `--help` vs README, AGENTS, and export/tabular docs.
+- [ ] **Verdict summary** — checklist bottom table filled; Phase 3 acceptance met.
+
+### Acceptance
+
+- [ ] Every checklist row has a verdict (`ACC`, `FIX`, `GAP`, or `N/A` with reason).
+- [ ] All **FIX** items merged on the Phase 3 branch (or follow-up PR linked).
+- [ ] All **GAP** items filed in `dev-docs/TO_DO.md` with enough context to execute later.
+- [ ] No known inaccurate user-facing claims left unrecorded.
 
 ## Phase 4 — Standing infrastructure (persists after archival)
 
@@ -95,7 +130,8 @@ No prose rewrite for style; accuracy and completeness only.
 
 ## Files
 
-- Create: `scripts/check_docstring_inventory.py`, `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`
+- Create: `scripts/check_docstring_inventory.py`, `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_<date>.md`,
+  `dev-docs/assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md` (Phase 3 working checklist)
 - Modify: hub docs + docstrings (Phases 1–3), `dev-docs/RELEASES_AND_DISTRIBUTION.md` (trigger 1),
   `dev-docs/HARNESS_ENGINEERING.md` + `dev-docs/index.md` (script registration),
   `dev-docs/TO_DO.md`
