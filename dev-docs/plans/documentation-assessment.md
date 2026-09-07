@@ -149,18 +149,29 @@ Today every entry point calls `configure_logging()` **without** `log_file`:
 - **CLI** (`__main__.py`) and **GUI** (`gui/app.py` → `run_gui()`) set up the `guiskindose`
   logger tree with a **console handler only** (stderr via `logging.StreamHandler`).
 - **`dprint` categories** (GUI / PROCESSING / CALCULATION / RENDERING) map to child loggers;
-  levels come from optional `debug.json` in the working directory (default: categories off,
-  file handler would stay at INFO unless a category is enabled).
+  levels come from optional `debug.json` in the working directory (default: categories off).
 - **Module loggers** (`logging.getLogger(__name__)`) under the `guiskindose` tree also flow to
-  that console once configured; before Phase 0 logging work they had no handler.
+  that console once configured.
 - **Optional file sink** already exists in `guiskindose.debug`: pass `log_file=` to
   `configure_logging()` to attach a `RotatingFileHandler` (~1 MiB × 4 files, fresh session
-  purge, `0o600` on POSIX, INFO-by-default for PHI safety unless debug categories are on).
-  **Nothing passes `log_file` today**, so no log file is written in any mode — including
-  `--native` / pywebview, where stderr still exists but is easy to miss without a terminal.
-- **Privacy:** README and `PRIVACY_AND_SENSITIVE_ASSETS.md` describe this accurately after
-  Phase 3 §4 FIX. Enabling a native temp log file is tracked as optional product work, not a
-  doc-accuracy gap.
+  purge, `0o600` on POSIX). **Nothing passes `log_file` today**, so no log file is written in any
+  mode — including `--native` / pywebview, where stderr still exists but is easy to miss without a
+  terminal.
+
+**Redaction / privacy (stderr today; file would mirror this — see
+[TO_DO.md](../TO_DO.md) → Native GUI optional file logging):**
+
+- There is **no separate redaction layer** on stderr or on file write. Privacy relies on value-free
+  APIs (`safe_error_event`, `safe_user_error`, `safe_warning` in `guiskindose.privacy`), conventions
+  on INFO/WARNING call sites (no source paths/filenames), and **file-handler level gating** (INFO
+  on file unless a `dprint` category is enabled, then DEBUG).
+- Error paths on GUI/CLI boundaries log operation codes and exception **types**, not exception
+  messages or patient/source strings. CLI uncaught exceptions use `install_value_safe_excepthook()`.
+- Opt-in `debug.json` / `dprint` DEBUG output is developer diagnostics — review before sharing;
+  not treated as automatically PHI-safe.
+- Enabling a native temp log file is tracked as optional product work in `TO_DO.md`, not a Phase 3
+  doc-accuracy gap. README and `PRIVACY_AND_SENSITIVE_ASSETS.md` describe console-only default
+  after Phase 3 §4 FIX; expand them again when file logging ships.
 
 ### Acceptance
 

@@ -113,12 +113,35 @@ policy decisions, not a restart of Phases 0-9.
 ### GUI / UX
 
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
-  `<tempdir>/guiskindose-gui.log`, but `run_gui()` calls `configure_logging()` without `log_file`
-  (`gui/app.py`, `__main__.py`). **Goal:** when `--native` / pywebview mode is active, pass a temp-path
-  `log_file` into `configure_logging()` so diagnostics are visible without a terminal (reuse
-  `RotatingFileHandler` bounds in `debug.py`: fresh session, ~4 MiB cap, PHI-safe redaction already
-  enforced). **Acceptance:** manual native smoke shows the log file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md`
-  restored to describe the sink accurately; unit test that native startup registers a file handler (mock temp dir).
+  `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
+  `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via
+  `logging.StreamHandler` in `guiskindose.debug`); no log file in any mode, including `--native`.
+  **Redaction / privacy model (stderr today; same rules would apply to a file sink):**
+  - **Not a blanket redaction filter** on every log line — console and file share the same logger tree,
+    formatters, and call sites. Privacy is enforced by **what we log**, plus **handler levels**.
+  - **Value-free error paths (stderr today):** GUI/CLI boundaries use `safe_error_event()` /
+    `safe_user_error()` (`guiskindose.privacy`) — operation code + exception **class** only on the
+    one-line summary; optional value-free traceback at DEBUG (package-relative `path:lineno in func`,
+    no exception message, no absolute paths, no locals). CLI uncaught exceptions go through
+    `install_value_safe_excepthook()` (generic stderr message, no raw traceback). GUI load failures
+    use the same pattern (`gui/exam_loaders.py` → `_record_load_failure`).
+  - **Routine INFO/WARNING (stderr today):** convention avoids patient identifiers and source paths
+    (e.g. upload logs suffix + byte count, RDSR read logs extension only). Prefer `safe_warning()`
+    for coded metrics; avoid string metrics that could become filenames.
+  - **Opt-in DEBUG (`debug.json` → `dprint` categories):** when a category is enabled, DEBUG lines
+    go to **stderr** (and would also go to a file once wired). These are developer toggles, not
+    clinical-safe by default — review before sharing captures. Do not assume “debug on ⇒ fully
+    redacted”; review output for PHI before pasting or attaching logs.
+  - **File handler level gate (when `log_file=` is used):** `_file_handler_level()` keeps the file at
+    **INFO** unless a `dprint` category is explicitly enabled, then **DEBUG** — so module DEBUG
+    records (which *could* include paths if a call site regresses) are excluded from the file by
+    default. Same records as stderr that pass the file handler’s level; **no separate redaction pass**
+    on write. Rotation: ~1 MiB × 4, session purge, POSIX `0o600` (`debug.py`).
+  **Goal:** when `--native` / pywebview mode is active, pass a temp-path `log_file` into
+  `configure_logging()` so diagnostics are visible without a terminal. **Acceptance:** manual native
+  smoke shows the log file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` describe console + optional
+  file sinks and the redaction/level model accurately; unit test that native startup registers a file
+  handler (mock temp dir); privacy review confirms no new path/identifier logging on the enabled path.
   **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
