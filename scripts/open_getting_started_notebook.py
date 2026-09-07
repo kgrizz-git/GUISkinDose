@@ -27,7 +27,7 @@ def prepare_local_notebook(source: Path, target: Path, *, reset: bool = False) -
     is preserved unless the caller explicitly requests ``reset=True``.
     """
     if not source.is_file():
-        raise FileNotFoundError(f"Canonical notebook is missing: {source}")
+        raise FileNotFoundError("Canonical getting-started notebook is missing")
     if target.exists() and not reset:
         return False
 

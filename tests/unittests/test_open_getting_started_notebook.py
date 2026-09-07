@@ -45,8 +45,10 @@ def test_prepare_local_notebook_requires_canonical_source(tmp_path: Path):
     missing_source = tmp_path / "missing.ipynb"
     target = tmp_path / "tmp" / "notebooks" / "getting_started.local.ipynb"
 
-    with pytest.raises(FileNotFoundError, match="Canonical notebook is missing"):
+    with pytest.raises(FileNotFoundError, match="Canonical getting-started notebook is missing") as error:
         prepare_local_notebook(missing_source, target)
+
+    assert str(missing_source) not in str(error.value)
 
 
 def configure_launcher_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> tuple[Path, Path]:
