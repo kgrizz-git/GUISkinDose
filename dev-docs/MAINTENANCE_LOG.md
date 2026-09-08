@@ -10,6 +10,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Documentation-assessment backlog closeout** (2026-09-08) — removed the completed documentation-assessment
+  entries from `TO_DO.md`, updated the documentation-tooling evaluation now that its prerequisite has landed,
+  and linked the backlog lifecycle rules directly from `TO_DO.md`.
+
 - **Phase 3 cross-check §6 count correction** (2026-09-07) — an independent PR review of the
   Phase 4 record caught that the §6 (UI copy + glossary) verdict-summary row undercounted its
   own detail table (shown as `4 items / 3 ACC` when the detail table lists 5 rows:
