@@ -5,15 +5,15 @@ Short active backlog for GUISkinDose. Keep this file focused on actionable work 
 map (PyPI, GitHub notes vs changelog, deferred portable executables):
 [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md).
 
-For harness rules, validation commands, and plan conventions, see [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md).
+For harness rules, validation commands, and plan conventions, see
+[HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md). For backlog lifecycle rules, see
+[AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md): completed items must be removed from this file after their user-facing or
+maintenance impact is logged, and completed plans must be archived.
 
 ---
 
 ## Next Up
 
-- [x] **Documentation Assessment & Inventory** — Complete (2026-09-07). Standing record:
-  [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md);
-  plan archived at [plans/archive/documentation-assessment.md](plans/archive/documentation-assessment.md).
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
@@ -46,11 +46,9 @@ policy decisions, not a restart of Phases 0-9.
   (CPU, ephemeral raw report, count-only summary) for conditional admission. Remaining: run it only on synthetic
   DICOM fixtures, confirm report output cannot leak findings, and decide whether to keep it as a local advisory
   step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
-- [x] **Documentation & Docstrings Assessment** — Complete (2026-09-07). Structured review of docs and source files:
-  - **Check completeness and accuracy**: verify `CODEBASE_OVERVIEW.md`, `FEATURE_INVENTORY.md`, `AGENTS.md`, and `HARNESS_ENGINEERING.md` against current code behavior. _(Phase 1 complete.)_
-  - **Exhaustive docstring and doc review**: sweep all Python source files under `src/` for outdated, missing, or inaccurate docstrings (module, class, method, function). Cross-check user-facing docs (`docs/source/`, `dev-docs/`, `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`) against actual behavior. Flag any docstring describing changed behavior. _(Phases 2, 3, and 3.5 complete — checklist: [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md).)_
-  - **Build assessment infrastructure**: establish a structured prescription for *how* and *what* to review. Define what records to keep (e.g., an assessment matrix or checklist artifact under `dev-docs/assessments/`), and set clear triggers to rerun assessments or update docs (e.g., pre-release, changing calculation pipelines, major feature addition). _(Phase 4 complete — standing record: [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md); plan archived: [plans/archive/documentation-assessment.md](plans/archive/documentation-assessment.md).)_
-- [ ] **User-Facing Documentation Tooling Evaluation** — time-boxed spike to decide whether to keep Sphinx or adopt a more polished end-user docs site; no migration commitment until the Documentation & Docstrings Assessment above lands. Candidates, dual-agent findings (2026-09-06), shortlist, and open verification items: [assessment](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md). Record the outcome in a decision log.
+- [ ] **User-Facing Documentation Tooling Evaluation** — time-boxed spike to decide whether to keep Sphinx or adopt
+  a more polished end-user docs site. Candidates, dual-agent findings (2026-09-06), shortlist, and open verification
+  items: [assessment](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md). Record the outcome in a decision log.
 - [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
