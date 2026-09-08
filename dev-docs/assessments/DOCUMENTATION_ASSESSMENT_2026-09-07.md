@@ -72,9 +72,9 @@ Full working checklist:
 | §3 Sphinx user docs | 6 | 0 | 6 | 0 | 0 | 2026-09-07 |
 | §4 Community + policy | 7 | 4 | 3 | 0 | 0 | 2026-09-07 |
 | §5 Dev-docs user paths | 5 | 3 | 2 | 0 | 0 | 2026-09-07 |
-| §6 UI copy + glossary | 4 | 3 | 1 | 0 | 0 | 2026-09-07 |
+| §6 UI copy + glossary | 5 | 4 | 1 | 0 | 0 | 2026-09-07 |
 | §7 CLI vs docs | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |
-| **Total** | **46** | **25** | **20** | **0** | **1** | — |
+| **Total** | **47** | **26** | **20** | **0** | **1** | — |
 
 The single **N/A** is `demo_phantoms` (retired; non-clinical demo STLs are not shipped).
 

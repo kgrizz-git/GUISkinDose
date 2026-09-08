@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Fixed
+
+- **Phase 3 cross-check §6 count correction** (2026-09-07) — an independent PR review of the
+  Phase 4 record caught that the §6 (UI copy + glossary) verdict-summary row undercounted its
+  own detail table (shown as `4 items / 3 ACC` when the detail table lists 5 rows:
+  Catalog, Privacy, Per-exam, Settings-preview = ACC; Glossary = FIX). Corrected §6 to
+  `5 / 4 ACC / 1 FIX` in `DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md` and propagated the fix
+  (grand total `47 / 26 ACC / 20 FIX / 0 GAP / 1 N/A`) into
+  `DOCUMENTATION_ASSESSMENT_2026-09-07.md`.
+
 ### Added
 
 - **Phase 4 standing documentation-assessment record** (2026-09-07) — added

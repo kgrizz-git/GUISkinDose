@@ -168,7 +168,7 @@ warnings) are mandatory.
 | §3 Sphinx user | 6 | 0 | 6 | 0 | 0 | 2026-09-07 |
 | §4 Community + policy | 7 | 4 | 3 | 0 | 0 | 2026-09-07 |
 | §5 Dev-docs user | 5 | 3 | 2 | 0 | 0 | 2026-09-07 |
-| §6 UI copy | 4 | 3 | 1 | 0 | 0 | 2026-09-07 |
+| §6 UI copy | 5 | 4 | 1 | 0 | 0 | 2026-09-07 |
 | §7 CLI | 4 | 4 | 0 | 0 | 0 | 2026-09-06 |
 
 **Phase 3 acceptance:** all **GAP** rows have a linked `TO_DO.md` bullet; all **FIX**
