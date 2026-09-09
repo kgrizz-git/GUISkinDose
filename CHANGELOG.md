@@ -51,7 +51,8 @@ That keeps SemVer and contributor history organized.
   real unmatched scanner and identify the active profile as Default. In multi-exam
   mode, each exam's fallback status is attributed per-exam. The Calculate tab
   summary shows the selected normalization profile, table origin offsets, and
-  patient-support transmission factor status before calculation.
+  estimated-vs-measured patient-support transmission status before calculation
+  (per-event table-lookup match/fallback preview remains open).
 
 - **Geometry exam switch left stale dose results after a pending table-origin commit**
   (2026-09-06) — switching the selected exam now calls ``reset_results()`` when a staged

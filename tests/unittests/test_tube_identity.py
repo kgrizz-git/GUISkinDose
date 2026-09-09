@@ -118,6 +118,11 @@ class TestResolveCanonicalPlaneIdentity:
         assert resolve_canonical_plane_identity(113621) == "B"
         assert resolve_canonical_plane_identity(113622) == "single"
 
+    def test_float_string_and_invalid_tokens_return_unknown_or_canonical(self):
+        assert resolve_canonical_plane_identity("113620.0") == "A"
+        assert resolve_canonical_plane_identity("not-a-code") == "unknown"
+        assert resolve_canonical_plane_identity(object()) == "unknown"
+
 
 # ---------------------------------------------------------------------------
 # 2. kerma resolution: unknown tube must not match a real calibration
@@ -285,8 +290,23 @@ class TestDoseTrackPlaneCodeNormalization:
         from guiskindose.input_adapters.dosetrack import _normalize_plane_code
 
         series = pd.Series([1, 2, 3])
-        with pytest.raises(ValueError, match=r"expected 1 .* or 2"):
+        with pytest.raises(ValueError, match=r"expected 1 .* or 2|plane_code_map"):
             _normalize_plane_code(series)
+
+    def test_three_codes_succeed_with_complete_explicit_map(self):
+        from guiskindose.input_adapters.base import AdapterContext
+        from guiskindose.input_adapters.dosetrack import _normalize_plane_code
+
+        series = pd.Series([1, 2, 3])
+        ctx = AdapterContext(
+            column_map={},
+            raw_headers=[],
+            settings=None,
+            warnings=[],
+            plane_code_map={1: "Plane A", 2: "Plane B", 3: "Single Plane"},
+        )
+        result = _normalize_plane_code(series, ctx=ctx)
+        assert result.tolist() == ["Plane A", "Plane B", "Single Plane"]
 
     def test_explicit_map_overrides_unknown(self):
         from guiskindose.input_adapters.base import AdapterContext

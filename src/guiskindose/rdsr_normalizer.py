@@ -278,10 +278,9 @@ def _normalize_machine_parameters(
     from guiskindose.kerma_correction import resolve_canonical_plane_identity
 
     code_col = data_parsed.get("AcquisitionPlane_CodeValue")
-    raw_code_col = (
-        data_parsed.get(KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE)
-        or data_parsed.get("_dt_plane_code")
-    )
+    raw_named = data_parsed.get(KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE)
+    raw_dt = data_parsed.get("_dt_plane_code")
+    raw_code_col = raw_named if raw_named is not None else raw_dt
     if code_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODE] = code_col
         canonical = code_col.map(resolve_canonical_plane_identity)

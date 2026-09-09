@@ -175,7 +175,8 @@ def _normalize_plane_code(series: pd.Series, ctx: AdapterContext | None = None) 
 
     raise ValueError(
         f"DoseTrack Plane Code has {len(codes)} distinct values ({codes}); "
-        "expected 1 (single-plane) or 2 (biplane)."
+        "expected 1 (single-plane) or 2 (biplane), or provide a complete "
+        "plane_code_map covering every observed code."
     )
 
 

@@ -404,7 +404,7 @@ Falls back to `settings_example.json` if nothing provided.
 | `mode` | str | `"plot_event"` | Run mode |
 | `rdsr_filename` | str | — | RDSR filename (used when no `file_path` passed) |
 | `estimate_k_tab` | bool | `True` | Use estimated patient-support transmission factor instead of measured |
-| `k_tab_val` | float | `0.8` | Estimated patient-support transmission factor (0–1) |
+| `k_tab_val` | float | `0.8` | Estimated patient-support transmission factor `(0, 1]` |
 | `inherent_filtration` | float | `3.1` | X-ray tube inherent filtration (mmAl) |
 | `remove_invalid_rows` | bool | `False` | Drop events with kVp = 0 |
 | `below_floor_kvp_policy` | str | `"exam_average"` | Below-floor (kVp < 25) handling: `snap`/`skip`/`manual`/`exam_average` |
