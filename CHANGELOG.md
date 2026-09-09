@@ -36,7 +36,7 @@ That keeps SemVer and contributor history organized.
   coverage; direct ``_coerce_inherited_transmission`` tests; remove-exam warning
   refresh coverage. Upload normalization alert visibility binds to non-empty
   ``normalization_warnings`` (not global ``normalization_method``) so multi-exam
-  Fallback warnings stay visible after Matched exams are removed.
+  Fallback warnings stay visible after Matched exams are removed. CodeQL: use ``backward=bool`` for the visibility binding.
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit

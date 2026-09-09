@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -326,8 +326,8 @@ def test_remove_matched_exam_keeps_remaining_fallback_warning(
 ) -> None:
     """Alert list stays non-empty when a Fallback exam remains after remove.
 
-    Global ``normalization_method`` may become Matched via restore; visibility
-    must still follow ``normalization_warnings``.
+    Real ``restore_globals_from_exam_meta`` leaves global ``normalization_method``
+    stale (Matched); visibility must still follow ``normalization_warnings``.
     """
     ctrl = _upload_controller()
     state.loaded_exams = [
@@ -359,17 +359,15 @@ def test_remove_matched_exam_keeps_remaining_fallback_warning(
     state.rdsr_df = MagicMock(__len__=lambda s: 1)
     monkeypatch.setattr(ub, "rebuild_rdsr_df", lambda st: None)
     monkeypatch.setattr(ub, "remove_temp_upload", lambda p: None)
-
-    def _restore(st: Any, meta: dict) -> None:
-        st.normalization_method = meta.get("normalization_method", "Unknown")
-
-    monkeypatch.setattr(ub, "restore_globals_from_exam_meta", _restore)
+    # Use the real restore helper: it does NOT update normalization_method, so the
+    # global method can stay Matched while Fallback warnings remain — the Upload
+    # alert binds to normalization_warnings for that reason.
     monkeypatch.setattr(ub, "adjust_active_exam_index_after_remove", lambda st, i: None)
     monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
 
     ctrl.remove_exam(0)
 
-    assert state.normalization_method == "Fallback"
+    assert state.normalization_method == "Matched"  # real restore leaves this stale
     assert len(state.normalization_warnings) == 1
     assert "ACME X1" in state.normalization_warnings[0]
     # Single remaining exam: refresh_normalization_warnings omits "Exam N:" prefix.

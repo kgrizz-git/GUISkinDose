@@ -67,6 +67,12 @@ maintenance impact is logged, and completed plans must be archived.
   embedded in `PSD_CALCULATION_ALGORITHM.md`) and **link it from the algorithm
   doc** when that page is written. Update the diagram when dose-pipeline code
   changes (same harness/matrix watch as the algorithm doc).
+- [ ] **Settings/Calculate Fallback badge visibility** — Upload alert now binds to
+  non-empty `normalization_warnings`. Settings and Calculate still bind badges to
+  global `normalization_method == "Fallback"` (`settings.py`, `calculate.py`);
+  `restore_globals_from_exam_meta` does not restore that field, so multi-exam
+  remove can leave stale badges. Align those tabs with the warning-list binding
+  (or restore `normalization_method` from remaining exam meta) in a small follow-up.
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
