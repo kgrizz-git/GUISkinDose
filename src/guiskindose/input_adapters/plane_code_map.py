@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 
 from guiskindose.constants import DOSETRACK_PLANE_MEANINGS
 
@@ -21,6 +22,26 @@ def _parse_plane_code(code: object) -> int:
     return int(text)
 
 
+def _plane_map_from_json_pairs(pairs: Sequence[tuple[object, object]]) -> dict[int, str]:
+    """``json.loads`` object_pairs_hook for flat plane-code maps.
+
+    Rejects duplicate JSON member names (default ``json.loads`` would keep only
+    the last value) and duplicate integer codes (``"1"`` vs ``"01"``) via
+    :func:`_mapping_from_pairs` before returning the validated map.
+    """
+    seen_names: dict[object, object] = {}
+    typed_pairs: list[tuple[int, str]] = []
+    for key, value in pairs:
+        if key in seen_names:
+            raise ValueError(
+                f"plane_code_map JSON has duplicate member name {key!r} "
+                f"(conflicting values {seen_names[key]!r} and {value!r})."
+            )
+        seen_names[key] = value
+        typed_pairs.append((_parse_plane_code(key), str(value).strip()))
+    return _validated_plane_code_map(_mapping_from_pairs(typed_pairs))
+
+
 def parse_plane_code_map(raw: object) -> dict[int, str] | None:
     """Parse an explicit DoseTrack plane-code map from settings or CLI text.
 
@@ -33,7 +54,8 @@ def parse_plane_code_map(raw: object) -> dict[int, str] | None:
 
     Duplicate integer codes (including alternate spellings such as ``"1"`` and
     ``"01"``) are rejected — later entries must not silently overwrite earlier
-    meanings.
+    meanings. Duplicate JSON object member names are also rejected (``json.loads``
+    would otherwise keep only the last value).
     """
     if raw is None:
         return None
@@ -42,10 +64,10 @@ def parse_plane_code_map(raw: object) -> dict[int, str] | None:
         if not text:
             return None
         if text.startswith("{"):
-            parsed = json.loads(text)
+            parsed = json.loads(text, object_pairs_hook=_plane_map_from_json_pairs)
             if not isinstance(parsed, dict):
                 raise ValueError("plane_code_map JSON must be an object of code→meaning pairs.")
-            return parse_plane_code_map(parsed)
+            return parsed
         pairs: list[tuple[int, str]] = []
         for part in text.split(","):
             code_text, sep, meaning = part.partition(":")

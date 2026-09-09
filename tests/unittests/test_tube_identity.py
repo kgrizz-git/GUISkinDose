@@ -382,6 +382,20 @@ class TestDoseTrackPlaneCodeNormalization:
         with pytest.raises(ValueError, match="duplicate plane code"):
             parse_plane_code_map('{"1":"Plane A","01":"Plane B"}')
 
+    def test_plane_code_map_rejects_duplicate_json_member_names(self):
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        with pytest.raises(ValueError, match=r"duplicate member name '1'"):
+            parse_plane_code_map('{"1":"Plane A","1":"Plane B"}')
+
+    def test_plane_code_map_json_unique_keys_ok(self):
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        assert parse_plane_code_map('{"1":"Plane A","2":"Plane B"}') == {
+            1: "Plane A",
+            2: "Plane B",
+        }
+
     def test_plane_code_map_rejects_non_integer_codes(self):
         from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
 

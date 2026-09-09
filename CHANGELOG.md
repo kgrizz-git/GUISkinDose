@@ -44,6 +44,8 @@ That keeps SemVer and contributor history organized.
   ``is_philips_manufacturer`` allow-list. Dots3 nits: ``plane_code_map`` accepts
   decimal integers only; DoseTrack warns on mixed Single+biplane CID subsets;
   tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
+  CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
+  ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit
