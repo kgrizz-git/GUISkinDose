@@ -40,19 +40,22 @@ from guiskindose.kerma_correction import (
 )
 from guiskindose.rdsr_normalizer import _normalize_machine_parameters
 from guiskindose.settings.normalization_settings import NormalizationSettings
+from guiskindose.settings.rotation_direction import RotationDirection
+from guiskindose.settings.translation_direction import TranslationDirection
+from guiskindose.settings.translation_offset import TranslationOffset
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _norm_settings():
+def _norm_settings() -> NormalizationSettings:
     """Return a minimal NormalizationSettings for unit tests."""
     s = NormalizationSettings(normalization_settings=[])
-    s.trans_offset = type("o", (), {"x": 0, "y": 0, "z": 0})()
-    s.trans_dir = type("o", (), {"x": 1, "y": 1, "z": 1})()
-    s.rot_dir = type("o", (), {"At1": 0, "At2": 0, "At3": 0})()
+    s.trans_offset = TranslationOffset()
+    s.trans_dir = TranslationDirection()
+    s.rot_dir = RotationDirection()
     s.field_size_mode = "CFA"
-    s.detector_side_length = 0.0
+    s.detector_side_length = "0"
     return s
 
 

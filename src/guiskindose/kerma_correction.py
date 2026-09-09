@@ -98,20 +98,29 @@ def resolve_canonical_plane_identity(raw_code: object) -> str:
     """
     if raw_code is None:
         return TUBE_IDENTITY_UNKNOWN
-    try:
-        if pd.isna(raw_code):
-            return TUBE_IDENTITY_UNKNOWN
-    except (TypeError, ValueError):
-        pass
+    if raw_code is pd.NA:
+        return TUBE_IDENTITY_UNKNOWN
     if isinstance(raw_code, float) and math.isnan(raw_code):
         return TUBE_IDENTITY_UNKNOWN
     try:
         if isinstance(raw_code, str):
             key = raw_code.strip()
-            if key.endswith(".0") and key.replace(".", "", 1).isdigit():
+            if key.endswith(".0") and key[:-2].isdigit():
                 key = str(int(float(key)))
-        else:
+        elif isinstance(raw_code, bool):
+            return TUBE_IDENTITY_UNKNOWN
+        elif isinstance(raw_code, int):
+            key = str(raw_code)
+        elif isinstance(raw_code, float):
             key = str(int(raw_code))
+        else:
+            text = str(raw_code).strip()
+            if text.endswith(".0") and text[:-2].isdigit():
+                key = str(int(float(text)))
+            elif text.isdigit():
+                key = text
+            else:
+                return TUBE_IDENTITY_UNKNOWN
     except (TypeError, ValueError):
         return TUBE_IDENTITY_UNKNOWN
     return CID_10003_CANONICAL.get(key, TUBE_IDENTITY_UNKNOWN)

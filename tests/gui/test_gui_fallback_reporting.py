@@ -1,4 +1,8 @@
-"""Tests for unmatched-model fallback reporting (Plan §4)."""
+"""GUI unmatched-model fallback reporting tests (Plan §4).
+
+Lives under ``tests/gui/`` because it imports ``guiskindose.gui.exam_loaders``
+(which requires the ``gui`` extra / NiceGUI). Core CI ignores ``tests/gui``.
+"""
 
 from __future__ import annotations
 

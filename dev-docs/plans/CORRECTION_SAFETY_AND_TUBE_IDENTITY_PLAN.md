@@ -158,7 +158,7 @@ equipment profiles, or change the table/pad intersection model.
   table-lookup `k_tab` match/fallback status remains open with Chunk 2 export
   status.)*
 - [x] Add GUI simulation tests for single- and multi-exam fallback reporting.
-  *(Chunk 4: `tests/unittests/test_gui_fallback_reporting.py`)*
+  *(Chunk 4: `tests/gui/test_gui_fallback_reporting.py`)*
 
 ### 5. Terminology audit
 
