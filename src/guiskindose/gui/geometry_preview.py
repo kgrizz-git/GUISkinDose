@@ -4,34 +4,17 @@ from __future__ import annotations
 
 import pandas as pd
 
-from guiskindose.settings.normalization_settings import normalize_manufacturer_key
+from guiskindose.settings.normalization_settings import is_ge_manufacturer
 
 from .exam_transforms import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from .state import AppState
 
 _GE_WARNING_TOKEN = "ge manufacturer detected"
-# Keep aligned with ``normalization_settings._GE_MANUFACTURER_ALIASES`` (allow-list,
-# not substring match — avoids false hits like "Surgery Equipment").
-_GE_MANUFACTURER_ALIASES = frozenset(
-    {
-        "ge",
-        "gehealthcare",
-        "ge healthcare",
-        "ge medical systems",
-        "general electric",
-        "gems",
-    }
-)
 
 
 def _is_ge_family_manufacturer(manufacturer: str) -> bool:
     """True when ``manufacturer`` canonicalizes to a known GE alias."""
-    key = normalize_manufacturer_key(manufacturer)
-    if not key:
-        return False
-    return key in _GE_MANUFACTURER_ALIASES or key.replace(" ", "") in {
-        alias.replace(" ", "") for alias in _GE_MANUFACTURER_ALIASES
-    }
+    return is_ge_manufacturer(manufacturer)
 
 
 def _active_exam_summary(meta: dict, manufacturer: str, model: str, normalization_method: str) -> str:

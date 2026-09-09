@@ -32,6 +32,9 @@ That keeps SemVer and contributor history organized.
   ``CODEBASE_OVERVIEW`` now state when measured ``k_tab`` runs, that Allura
   Plane B zeros are neutralized, and that transmission applies only to
   table-hit cells (RDSR and tabular share the path after normalization).
+  Review nits: shared ``is_ge_manufacturer()`` helper; JSON plane-map duplicate
+  coverage; direct ``_coerce_inherited_transmission`` tests; remove-exam warning
+  refresh coverage.
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit

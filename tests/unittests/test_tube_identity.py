@@ -372,6 +372,16 @@ class TestDoseTrackPlaneCodeNormalization:
         result = _normalize_plane_code(series)
         assert result.tolist() == ["Single Plane", "Plane A"]
 
+    def test_plane_code_map_rejects_duplicate_integer_codes(self):
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        with pytest.raises(ValueError, match="duplicate plane code"):
+            parse_plane_code_map("1:Plane A,01:Plane B")
+        with pytest.raises(ValueError, match="duplicate plane code"):
+            parse_plane_code_map({"1": "Plane A", "01": "Plane B"})
+        with pytest.raises(ValueError, match="duplicate plane code"):
+            parse_plane_code_map('{"1":"Plane A","01":"Plane B"}')
+
 
 # ---------------------------------------------------------------------------
 # 5. DoseTrack integration: canonical identity through the adapter
@@ -439,15 +449,6 @@ class TestDoseTrackCanonicalIdentity:
             assert "non-CID-10003" in str(exc_info.value.__cause__)
         finally:
             Path(path).unlink()
-
-    def test_plane_code_map_rejects_duplicate_integer_codes(self):
-        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
-
-        with pytest.raises(ValueError, match="duplicate plane code"):
-            parse_plane_code_map("1:Plane A,01:Plane B")
-        with pytest.raises(ValueError, match="duplicate plane code"):
-            parse_plane_code_map({"1": "Plane A", "01": "Plane B"})
-
 
     def test_explicit_map_via_settings_unblocks_legacy_codes(self):
         """Settings dosetrack_plane_code_map must reach AdapterContext."""

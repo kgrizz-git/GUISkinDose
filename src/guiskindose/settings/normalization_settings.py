@@ -62,6 +62,16 @@ def normalize_manufacturer_key(manufacturer: object) -> str:
     return " ".join(key.split())
 
 
+def is_ge_manufacturer(manufacturer: object) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known GE-family alias.
+
+    Uses the same allow-list as normalization profile matching (not a substring
+    check), so values like ``"Surgery Equipment"`` are not treated as GE.
+    """
+    key = normalize_manufacturer_key(manufacturer)
+    return bool(key) and key in _GE_MANUFACTURER_ALIASES
+
+
 def normalize_model_key(model: object) -> str:
     """Canonical model key for settings lookup."""
     if str(model).strip() == "*":

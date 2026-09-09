@@ -42,7 +42,7 @@ from guiskindose.constants import (
     KEY_NORMALIZATION_KVP,
     KEY_NORMALIZATION_MODEL_NAME,
 )
-from guiskindose.corrections import calculate_k_tab
+from guiskindose.corrections import _coerce_inherited_transmission, calculate_k_tab
 
 
 def _db_path() -> str:
@@ -84,6 +84,26 @@ def _capture_warnings(func, *args, **kwargs):
 # ---------------------------------------------------------------------------
 # 1a. estimate_k_tab=True: range validation enforced
 # ---------------------------------------------------------------------------
+
+class TestCoerceInheritedTransmission:
+    """Direct contract for ``_coerce_inherited_transmission``."""
+
+    def test_valid_value_passes(self):
+        assert _coerce_inherited_transmission(0.8) == pytest.approx(0.8)
+
+    def test_zero_and_negative_reject(self):
+        assert _coerce_inherited_transmission(0.0) is None
+        assert _coerce_inherited_transmission(-0.1) is None
+
+    def test_non_numeric_reject(self):
+        assert _coerce_inherited_transmission("not-a-number") is None
+        assert _coerce_inherited_transmission(None) is None
+        assert _coerce_inherited_transmission(object()) is None
+
+    def test_non_finite_reject(self):
+        assert _coerce_inherited_transmission(float("nan")) is None
+        assert _coerce_inherited_transmission(float("inf")) is None
+
 
 class TestEstimateKTabValidation:
     """``estimate_k_tab=True`` now validates ``k_tab_val`` is finite and in (0, 1]."""

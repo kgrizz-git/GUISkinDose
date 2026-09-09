@@ -278,3 +278,45 @@ def test_remove_exam_keeps_remaining_single(monkeypatch: pytest.MonkeyPatch) -> 
     assert len(state.loaded_exams) == 1
     assert state.file_name == "b.dcm"
     cast(MagicMock, ctrl.ctx.file_label.set_text).assert_called()
+
+
+def test_remove_exam_refreshes_normalization_warnings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Removing a Fallback exam must drop its scanner warning from state."""
+    ctrl = _upload_controller()
+    state.loaded_exams = [
+        SimpleNamespace(normalized_data=MagicMock(__len__=lambda s: 1)),
+        SimpleNamespace(normalized_data=MagicMock(__len__=lambda s: 1)),
+    ]
+    state.loaded_exam_meta = [
+        {
+            "file_name": "a.dcm",
+            "file_path": Path("a.dcm"),
+            "normalization_method": "Fallback",
+            "input_manufacturer": "ACME",
+            "input_model": "X1",
+        },
+        {
+            "file_name": "b.dcm",
+            "file_path": Path("b.dcm"),
+            "normalization_method": "Matched",
+            "input_manufacturer": "Siemens",
+            "input_model": "AXIOM-Artis",
+        },
+    ]
+    state.normalization_warnings = [
+        "Exam 1: Scanner 'ACME X1' not found in normalization profiles. "
+        "Using default normalization settings."
+    ]
+    state.is_multi_exam = True
+    state.rdsr_df = MagicMock(__len__=lambda s: 1)
+    monkeypatch.setattr(ub, "rebuild_rdsr_df", lambda st: None)
+    monkeypatch.setattr(ub, "remove_temp_upload", lambda p: None)
+    monkeypatch.setattr(ub, "restore_globals_from_exam_meta", lambda st, meta: None)
+    monkeypatch.setattr(ub, "adjust_active_exam_index_after_remove", lambda st, i: None)
+    monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
+
+    ctrl.remove_exam(0)
+
+    assert state.normalization_warnings == []
+    assert len(state.loaded_exam_meta) == 1
+    assert state.loaded_exam_meta[0]["file_name"] == "b.dcm"
