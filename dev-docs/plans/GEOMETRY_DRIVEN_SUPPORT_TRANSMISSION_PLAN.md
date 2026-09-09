@@ -25,7 +25,11 @@ measured or defensible material/effective attenuation data.
   face and returns a boolean per irradiated skin cell.
 - The positioned pad is not tested.
 - A source-side dot-product shortcut bypasses the intersection test for one side of
-  the table plane.
+  the table plane. It tests the isocenter-minus-source direction against the table
+  face normal, not the source point itself, and returns all-miss for "over-table"
+  irradiation.
+- A second shortcut returns all-hit for every irradiated cell when all four beam
+  vertices intersect the table face, without testing any individual cell ray.
 - Intersected cells receive one event-level combined table+pad transmission `k_tab`.
 - No entry/exit points, table path length, pad path length, or angle-dependent
   transmission are calculated.
@@ -43,6 +47,10 @@ measured or defensible material/effective attenuation data.
 - [ ] Characterize the dot-product shortcut on both sides of the face and around its
   zero boundary. Treat numerical fragility as a hypothesis until tests demonstrate
   it.
+- [ ] Characterize the four-beam-vertex all-hit shortcut and the boundary where the
+  count moves between three and four. Determine whether convexity guarantees that
+  every in-beam skin-cell ray also intersects the finite table face; if so, document
+  and test that invariant rather than removing a valid optimization.
 - [ ] Verify that changing only `acquisition_plane` does not change beam geometry.
 - [ ] Verify current per-cell behavior when some rays intersect and others do not.
 - [ ] Record current pad omission and combined-factor behavior.
@@ -80,7 +88,12 @@ Acceptance:
 
 - [ ] Inventory available measurements: combined table+pad transmission, separate
   table transmission, separate pad transmission, material composition, thickness,
-  beam quality, and measurement angle.
+  beam quality, and measurement angle. Start from what the repository already holds:
+  the `measured in lab 106 - 2018-04` AXIOM-Artis rows in
+  `correction_table_and_pad_attenuation.csv` and the per-lab `PadThickness_mm`
+  values in `table_data/device_info.csv` (whose retention/de-identification is
+  decided by the packaging plan). Record what is still missing rather than
+  reconstructing it.
 - [ ] Do not derive separate table/pad coefficients from one combined measurement;
   that problem is underdetermined.
 - [ ] Select one model only after review:
@@ -128,6 +141,9 @@ Acceptance:
 - This plan does not alter inherited Plane B data; immediate invalid-value safety is
   owned by the correction-safety plan.
 - This plan does not create the custom equipment-profile ingestion surface.
+- Any benchmark or comparison must set `estimate_k_tab: false` explicitly. The
+  shipped default applies one global estimated transmission and never reaches the
+  bundled table, so a default-settings run cannot exercise this plan's model.
 
 ## Delivery
 

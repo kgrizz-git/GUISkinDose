@@ -25,7 +25,8 @@ plans.
   JSON, CLI, and GUI do not expose a persistent profile file.
 - GUI table-origin controls are per-exam session overrides, not reusable
   manufacturer/model definitions.
-- Custom `k_tab` is limited to one global estimated transmission or an undocumented
+- Custom `k_tab` is limited to one global estimated transmission (which is the
+  shipped default, `estimate_k_tab: true` / `k_tab_val: 0.8`) or an undocumented
   full replacement SQLite database.
 - Kerma-meter correction already supports validated user files keyed by individual
   equipment and tube; it is a useful loader/validation precedent but remains a
@@ -59,7 +60,9 @@ plans.
 - [ ] Treat profile files as untrusted input: allowlisted formats, bounded bytes and
   rows, strict schema, finite/ranged values, duplicate rejection, and no executable
   deserialization.
-- [ ] Reject non-positive or non-finite transmission values.
+- [ ] Reject non-finite, non-positive, and greater-than-one transmission values.
+  Values above `1.0` are unphysical for a patient support and produce unsupported
+  dose inflation, so they must not be accepted as a user override.
 - [ ] Canonicalize manufacturer/model/tube identifiers without silently merging
   ambiguous aliases.
 - [ ] Define and test precedence:
@@ -70,6 +73,10 @@ plans.
   5. bundled wildcard;
   6. warned neutral/default fallback.
 - [ ] Never mutate bundled data or the source profile during a run.
+- [ ] Treat a custom profile that shadows a bundled exact match (Siemens
+  AXIOM-Artis, Philips Allura Clarity, the GE wildcard) as a dose-affecting change:
+  require it to be reported before calculation and recorded in exports, since a
+  changed `translation_offset` re-bases the whole table geometry.
 - [ ] Detect conflicts between multiple custom profiles before calculation and
   require explicit resolution.
 

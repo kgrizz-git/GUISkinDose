@@ -28,9 +28,9 @@ This work must preserve a strict terminology distinction:
 |---|---|---|---|
 | `k_isq` | Formula in `src/guiskindose/corrections.py` | Per-hit-cell inverse-square scaling | None; geometry-derived |
 | `k_bs` | Polynomial coefficients in `corrections.py`, attributed to Benmakhlouf et al. | Per-hit-cell backscatter spline by field size | None |
-| `k_med` | `table_data/correction_medium_and_backscatter.csv` | Nearest field size, kVp, and HVL lookup | Undocumented replacement SQLite DB only |
-| HVL | `table_data/hvl_tables/*.csv` | Package table; interpolated over kVp/Cu after inherent-Al and added-Al slice selection | Inherent filtration setting; undocumented replacement DB |
-| `k_tab` | `table_data/correction_table_and_pad_attenuation.csv` | Per-event patient-support transmission, applied only to table-intersected cells | One global estimated value, or undocumented replacement DB |
+| `k_med` | `table_data/correction_medium_and_backscatter.csv` (only the `kvp_kv`, `hvl_mmal`, `field_side_length_cm`, and `mu_en_quotient` columns are read; the file's `backscatter` and `h` columns have no runtime consumer because `k_bs` uses in-code coefficients) | Nearest field size, kVp, and HVL lookup | Undocumented replacement SQLite DB only |
+| HVL | `table_data/hvl_tables/hvl_combined.csv` (built from the two vendor CSVs by the in-package dev script `table_data/build_hvl_table.py`) | Package table; interpolated over kVp/Cu after inherent-Al and added-Al slice selection | Inherent filtration setting; undocumented replacement DB |
+| `k_tab` | `table_data/correction_table_and_pad_attenuation.csv` | Per-event patient-support transmission, applied only to table-intersected cells | One global estimated value (**the shipped default**), or undocumented replacement DB |
 | `k_meter` | User CSV/TSV/XLSX/JSON or GUI prompt | Per-equipment/tube kerma calibration before physics corrections | Fully user-configurable |
 | Machine coordinate transform | `src/guiskindose/normalization_settings.json` | Converts raw vendor table coordinates/angles to the common frame | Python API custom config; GUI session overrides |
 
@@ -38,6 +38,15 @@ The authoritative baseline correction data are packaged CSVs. A root
 `corrections.db` may exist locally, but it is a gitignored derived artifact. The
 default setting is the relative string `"corrections.db"`, so a missing database
 is currently created in the process working directory from the packaged CSVs.
+
+**Which `k_tab` path a default run takes.** `settings_example.json` ships
+`estimate_k_tab: true` with `k_tab_val: 0.8`, and the GUI default state matches
+(`gui/state.py`). `calculate_k_tab()` returns `[k_tab_val] * len(data_norm)`
+without consulting the bundled table whenever `estimate_k_tab` is set. The bundled
+`correction_table_and_pad_attenuation` lookup — and therefore the inherited Plane B
+zeros — is reached only when a user deliberately opts out of the estimate. This
+bounds who is exposed to the Plane B hazard, but it does not reduce its severity for
+those users, and it means the *default* path is an unvalidated user-supplied scalar.
 
 ### How tube A/B/single-plane identity is obtained
 
@@ -109,9 +118,11 @@ manufacturer/model profile.
 
 `check_table_hits()` already performs a vendor-independent source-to-skin
 ray/triangle test and applies `k_tab` only to cells whose rays cross one face of the
-positioned table. The table phantom itself is a cuboid, but the current test does
-not use its closed volume. It does not intersect the pad, calculate path length, or
-adjust transmission for obliquity.
+positioned table. It also short-circuits in two ways: an over-table dot-product test
+returns all-miss, and if all four beam vertices hit the table face it returns all-hit
+without testing any individual cell ray. The table phantom itself is a cuboid, but
+the current test does not use its closed volume. It does not intersect the pad,
+calculate path length, or adjust transmission for obliquity.
 
 All inherited Allura Clarity Plane B rows contain transmission `0.0`. If any Plane B
 ray is classified as crossing the table, the dose for that cell is silently
@@ -167,9 +178,10 @@ remain separate commits or PRs if review size or risk warrants it.
 ## Dependency Order
 
 ```text
-Safety and tube identity ─┬─> Custom equipment profiles
-                         ├─> Geometry-driven support transmission
-Packaging and provenance ┘
+Safety and tube identity ──────────┬─> Custom equipment profiles
+                                   └─> Geometry-driven support transmission
+Packaging and provenance ─────────┬─> Custom equipment profiles
+                                   └─> Geometry-driven support transmission
 ```
 
 The two immediate plans can proceed independently where their files do not overlap,
