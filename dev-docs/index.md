@@ -83,6 +83,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | File | Purpose |
 |---|---|
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
+| [plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md) | **Umbrella roadmap/current-state reference** — correction semantics, tube identification, coordinate origins, data locations, existing customization, and links to four independently delivered child plans. |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, publish GUISkinDose, and retain the GitHub fork history. First `guiskindose` version is **`1.0.0`**. Mechanical rename: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) (**complete**, PR #73). GitHub/Sonar/URLs: [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) (**complete**, 2026-09-04). |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
@@ -151,6 +152,10 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) | **Immediate bug fix** — prevent inherited Plane B zero transmission from silently zeroing dose; validate tube identity; fix unmatched-model GUI alerts; standardize transmission terminology. |
+| [plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md) | **Packaging/runtime fix** — correction manifest and validation; package-resource provider; remove the CWD-created database default; verify wheel behavior and numerical parity. |
+| [plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md) | **Separate future feature** — validated reusable manufacturer/model coordinate and patient-support transmission profiles across API, CLI, GUI, and exports. |
+| [plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md) | **Separate research/physics work** — characterize current intersection, model closed table/pad volumes, and require scientific validation before path-length-aware transmission. |
 | [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. Manual smoke then archive. |
 | [plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md](plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md) | **Complete** — additive `_arms_down` for all clinical stems (23 twins; legacy via MPFB approx). |
 | [plans/FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md) | Broader fun-demo survey: nude classical (Venus/David, D1-gated), Phase 2 cartoons, bust fallbacks. v1 clothed+Steamboat execution archived (see archive entry). |

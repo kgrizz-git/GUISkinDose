@@ -14,6 +14,9 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
+- [ ] **Immediate Correction Work** — Complete
+  [correction safety and tube identity](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md), then
+  [correction packaging and provenance](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
@@ -26,6 +29,13 @@ Privacy hardening is implemented through Phase 9
 still needs an approved private environment. Remaining privacy bullets below are follow-on evaluations or
 policy decisions, not a restart of Phases 0-9.
 
+- [ ] **Correction-data modernization roadmap** — umbrella and current-state reference:
+  [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md).
+  Delivery is deliberately split:
+  1. **Immediate bug fix:** [Plane B safety, tube identity, unmatched-model alerts, and transmission terminology](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
+  2. **Packaging/runtime fix:** [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
+  3. **Separate future feature:** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
+  4. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
   gate scans first-level text and requires manual embedded-file/image/DICOM clearance.
@@ -161,13 +171,6 @@ policy decisions, not a restart of Phases 0-9.
 ### Harness / Repo Hygiene
 
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
-- [ ] **Ship `corrections.db` in the wheel and resolve it package-relatively** —
-  `src/guiskindose/gui/settings_builder.py` walks four parents up to the repo root to find
-  `corrections.db`, which only exists in a source checkout; the DB is not in `MANIFEST.in` or
-  package data, so an installed wheel silently falls back to the CWD-relative default
-  `"corrections.db"` (`settings/pyskindose_settings.py`). Move the DB into the package (like
-  `table_data/`), add it to `MANIFEST.in`, resolve via a package-relative path or
-  `importlib.resources`, and extend the wheel-content test to assert it ships.
 - [ ] **Retire the pre-rename compatibility shims** — three independent pieces with different
   triggers (semgrep rules-file rename and rule-ID rename: any time, atomic diff required, no
   migration dependency; legacy config-read/env shims: after the user-migration window).
