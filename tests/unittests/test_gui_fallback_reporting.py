@@ -151,6 +151,37 @@ def test_matched_profile_does_not_show_fallback_warning() -> None:
     assert "Default normalization in use" not in notice
 
 
+def test_unmatched_ge_fallback_does_not_claim_auto_swap_applied() -> None:
+    """GE-family input on Default must warn that GE Tx/Tz auto-swap was skipped."""
+    notice = geometry_vendor_notice(
+        _make_meta(
+            input_manufacturer="GE Healthcare",
+            input_model="Innova 2100",
+            manufacturer="Default",
+            model="Default",
+            normalization_method="Fallback",
+        ),
+        manufacturer="Default",
+    )
+    assert "GE-family" in notice
+    assert "auto-swap was not applied" in notice
+    assert "already applied during normalization" not in notice
+
+
+def test_matched_ge_still_reports_auto_swap_applied() -> None:
+    notice = geometry_vendor_notice(
+        {
+            "normalization_method": "Matched",
+            "input_manufacturer": "GE Healthcare",
+            "input_model": "Innova",
+            "warnings": [],
+            "swap_lat_lon": False,
+        },
+        manufacturer="GE Healthcare",
+    )
+    assert "already applied during normalization" in notice
+
+
 def test_build_exam_meta_entry_sets_empty_input_identity_for_tabular() -> None:
     """Tabular meta construction must leave input identity empty."""
     st = AppState()

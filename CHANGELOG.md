@@ -52,7 +52,12 @@ That keeps SemVer and contributor history organized.
   mode, each exam's fallback status is attributed per-exam. The Calculate tab
   summary shows the selected normalization profile, table origin offsets, and
   estimated-vs-measured patient-support transmission status before calculation
-  (per-event table-lookup match/fallback preview remains open).
+  (per-event table-lookup match/fallback preview remains open). GE/Philips-family
+  input that falls back to Default no longer claims vendor auto-axis handling was
+  applied; the Geometry notice says Default is active and GE Tx/Tz auto-swap (or
+  Philips offsets) were not applied. Kerma-meter tube resolution prefers
+  CID-backed ``acquisition_plane_canonical`` when present, otherwise the legacy
+  meaning string.
 
 - **Geometry exam switch left stale dose results after a pending table-origin commit**
   (2026-09-06) — switching the selected exam now calls ``reset_results()`` when a staged

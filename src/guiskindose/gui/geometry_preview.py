@@ -42,15 +42,41 @@ def _normalization_notice(meta: dict, normalization_method: str) -> str:
 
 
 def _vendor_coordinate_notice(meta: dict, manufacturer: str) -> str:
-    """Return vendor and manual-swap guidance without changing its precedence."""
+    """Return vendor and manual-swap guidance without changing its precedence.
+
+    Vendor-family detection prefers the actual input manufacturer so an unmatched
+    GE/Philips scanner on the Default profile still gets family-specific guidance.
+    For GE-family Fallback, do **not** claim auto Tx/Tz swap was applied — Default
+    does not enable ``swap_lateral_longitudinal``.
+    """
     warnings = " ".join(meta.get("warnings", []) or []).lower()
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip().lower()
+    input_mfr = (meta.get("input_manufacturer") or "").strip().lower()
+    matched_mfr = (manufacturer or meta.get("manufacturer") or "").strip().lower()
+    mfr = input_mfr or matched_mfr
+    method = (meta.get("normalization_method") or "").strip()
     manual_swap = bool(meta.get("swap_lat_lon", False))
-    if _GE_WARNING_TOKEN in warnings or "ge" in mfr:
+    ge_like = _GE_WARNING_TOKEN in warnings or "ge" in mfr
+    if ge_like:
+        if method == "Fallback":
+            if manual_swap:
+                return (
+                    "Input looks GE-family but Default profile is active "
+                    "(GE Tx/Tz auto-swap was not applied); manual Tx/Tz swap is on — "
+                    "verify axes to avoid missed or double correction."
+                )
+            return (
+                "Input looks GE-family but Default profile is active; "
+                "GE Tx/Tz auto-swap was not applied — verify table axes before calculation."
+            )
         if manual_swap:
             return "GE handling is already normalized; manual Tx/Tz swap is active and may double-correct."
         return "GE lateral/longitudinal handling is already applied during normalization."
     if "philips" in mfr:
+        if method == "Fallback":
+            return (
+                "Input looks Philips-family but Default profile is active; "
+                "Philips table offsets were not applied — verify Tx/Ty/Tz before calculation."
+            )
         return "Philips large table offsets make missed or double normalization visibly wrong."
     if manual_swap:
         return "Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps."

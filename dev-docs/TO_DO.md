@@ -14,8 +14,12 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
-- [ ] **Immediate Correction Work** — Complete
-  [correction safety and tube identity](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md), then
+- [ ] **Immediate Correction Work** — Land the safety PR for
+  [correction safety and tube identity](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
+  (transmission validation, tube identity, unmatched-scanner GUI, terminology),
+  then finish that plan’s **Remaining before Plan 1 archive** section (plane-identity
+  audit/export parity; structured `k_tab` invalid-source status / pre-calc match
+  preview). After Plan 1 is archived, continue with
   [correction packaging and provenance](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
@@ -32,7 +36,10 @@ policy decisions, not a restart of Phases 0-9.
 - [ ] **Correction-data modernization roadmap** — umbrella and current-state reference:
   [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md).
   Delivery is deliberately split:
-  1. **Immediate bug fix:** [Plane B safety, tube identity, unmatched-model alerts, and transmission terminology](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
+  1. **Immediate bug fix:** [Plane B safety, tube identity, unmatched-model alerts, and transmission terminology](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
+     — safety core is implemented on `fix/correction-safety-tube-identity`; remaining
+     closure items are listed in that plan’s **Remaining before Plan 1 archive**
+     section (do not archive until those are done or relocated).
   2. **Packaging/runtime fix:** [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
   3. **Separate future feature:** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
   4. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
@@ -61,6 +68,7 @@ policy decisions, not a restart of Phases 0-9.
   items: [assessment](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md). Record the outcome in a decision log.
 - [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
+  - *Correction safety / tube identity*: unmatched model → Default warning names real scanner; GE-family unmatched does **not** claim Tx/Tz auto-swap applied; valid Plane A; ambiguous Plane B / DoseTrack map; multi-exam mixed match/fallback (see [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation).
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
   - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
   - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.

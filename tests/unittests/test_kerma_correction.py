@@ -15,6 +15,7 @@ import pytest
 
 from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
 )
@@ -42,6 +43,29 @@ def test_normalize_tube_aliases():
     assert normalize_tube(None) == "unknown"
     assert normalize_tube("") == "unknown"
     assert normalize_tube("ambiguous text") == "unknown"
+
+
+def test_resolve_keys_prefers_canonical_over_ambiguous_meaning():
+    """CID-backed canonical identity wins over unrecognized free-form meaning."""
+    df = _frame(
+        **{
+            KEY_NORMALIZATION_STATION_NAME: ["unit-01"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: ["Custom Plane Label"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL: ["A"],
+        }
+    )
+    assert resolve_correction_keys(df, explicit_label=None) == [("unit-01", "A")]
+
+
+def test_resolve_keys_falls_back_to_meaning_when_canonical_unknown():
+    df = _frame(
+        **{
+            KEY_NORMALIZATION_STATION_NAME: ["unit-01"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: ["Plane B"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL: ["unknown"],
+        }
+    )
+    assert resolve_correction_keys(df, explicit_label=None) == [("unit-01", "B")]
 
 
 def test_normalize_equipment_casefold_nfkc():

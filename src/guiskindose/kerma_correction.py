@@ -24,6 +24,7 @@ import pandas as pd
 from guiskindose.constants import (
     CID_10003_CANONICAL,
     KEY_NORMALIZATION_ACQUISITION_PLANE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
     TUBE_IDENTITY_UNKNOWN,
@@ -124,12 +125,21 @@ def resolve_correction_keys(
     """Resolve ``(equipment_label, tube)`` per event using fixed precedence.
 
     Order: explicit_label → device_serial → station_name → unresolved (None).
+
+    Tube identity prefers ``acquisition_plane_canonical`` when it is a recognized
+    CID-backed value (``single`` / ``A`` / ``B``); otherwise falls back to
+    ``normalize_tube(acquisition_plane)`` so meaning-only inputs still resolve.
     """
     n = len(data_norm)
     plane_col = (
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE]
         if KEY_NORMALIZATION_ACQUISITION_PLANE in data_norm.columns
         else pd.Series([None] * n)
+    )
+    canonical_col = (
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL]
+        if KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL in data_norm.columns
+        else None
     )
     serial_col = (
         data_norm[KEY_NORMALIZATION_DEVICE_SERIAL]
@@ -145,7 +155,13 @@ def resolve_correction_keys(
     forced = normalize_equipment_label(explicit_label)
     keys: list[tuple[str | None, str]] = []
     for i in range(n):
-        tube = normalize_tube(plane_col.iloc[i] if i < len(plane_col) else None)
+        tube = TUBE_IDENTITY_UNKNOWN
+        if canonical_col is not None and i < len(canonical_col):
+            cand = str(canonical_col.iloc[i]).strip()
+            if cand in {"single", "A", "B"}:
+                tube = cand
+        if tube == TUBE_IDENTITY_UNKNOWN:
+            tube = normalize_tube(plane_col.iloc[i] if i < len(plane_col) else None)
         if forced is not None:
             keys.append((forced, tube))
             continue
