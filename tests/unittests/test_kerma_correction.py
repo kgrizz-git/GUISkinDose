@@ -35,12 +35,13 @@ def _frame(**cols) -> pd.DataFrame:
 
 
 def test_normalize_tube_aliases():
-    """Acquisition-plane strings map to single/A/B."""
+    """Acquisition-plane strings map to single/A/B; unknown text returns unknown."""
     assert normalize_tube("Single Plane") == "single"
     assert normalize_tube("Plane A") == "A"
     assert normalize_tube("plane b") == "B"
-    assert normalize_tube(None) == "single"
-    assert normalize_tube("") == "single"
+    assert normalize_tube(None) == "unknown"
+    assert normalize_tube("") == "unknown"
+    assert normalize_tube("ambiguous text") == "unknown"
 
 
 def test_normalize_equipment_casefold_nfkc():
@@ -273,7 +274,7 @@ def test_normalize_nan_inputs_and_suspicious_factor_warning(tmp_path: Path):
     swallow the WARNING.
     """
     assert normalize_equipment_label(float("nan")) is None
-    assert normalize_tube(float("nan")) == "single"
+    assert normalize_tube(float("nan")) == "unknown"
 
     path = tmp_path / "wide.json"
     path.write_text(

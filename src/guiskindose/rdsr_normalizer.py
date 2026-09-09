@@ -9,6 +9,11 @@ from guiskindose.settings.normalization_settings import NormalizationSettings
 
 from .constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CODE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CODING_SCHEME,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE,
     KEY_NORMALIZATION_ACQUISITION_TYPE,
     KEY_NORMALIZATION_AIR_KERMA,
     KEY_NORMALIZATION_DEVICE_SERIAL,
@@ -253,6 +258,39 @@ def _normalize_machine_parameters(
     data_norm[KEY_NORMALIZATION_DISTANCE_SOURCE_IRP] = data_norm.DSI - 15
     data_norm[KEY_NORMALIZATION_ACQUISITION_TYPE] = data_parsed.IrradiationEventType
     data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE] = data_parsed.AcquisitionPlane
+
+    # Additive plane-identity audit fields.  The legacy acquisition_plane column
+    # is preserved verbatim because corrections._match_device_rows() compares it
+    # against the CSV's literal "Single Plane" / "Plane A" / "Plane B" strings;
+    # rewriting those values with canonical single/A/B would make every k_tab
+    # lookup miss and silently fall back to 1.0.
+    scheme_col = data_parsed.get("AcquisitionPlane_CodingSchemeDesignator")
+    if scheme_col is not None:
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODING_SCHEME] = scheme_col
+
+    meaning_col = data_parsed.get("AcquisitionPlane")
+    if meaning_col is not None:
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING] = meaning_col
+
+    # Canonical identity: CID 10003 code-backed → single/A/B, else unknown.
+    # DICOM path uses the stored CodeValue; tabular sources (DoseTrack etc.)
+    # carry their raw integer code in _dt_plane_code or acquisition_plane_raw_code.
+    from guiskindose.kerma_correction import resolve_canonical_plane_identity
+
+    code_col = data_parsed.get("AcquisitionPlane_CodeValue")
+    raw_code_col = (
+        data_parsed.get(KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE)
+        or data_parsed.get("_dt_plane_code")
+    )
+    if code_col is not None:
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODE] = code_col
+        canonical = code_col.map(resolve_canonical_plane_identity)
+    elif raw_code_col is not None:
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE] = raw_code_col
+        canonical = raw_code_col.map(resolve_canonical_plane_identity)
+    else:
+        canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = canonical.fillna("unknown")
 
     return data_norm
 

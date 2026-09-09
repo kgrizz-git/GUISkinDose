@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from guiskindose.constants import CID_10003_MEANING
 from guiskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
@@ -137,26 +138,45 @@ _NUMERIC_COLUMNS: frozenset[str] = frozenset(
 )
 
 
-def _normalize_plane_code(series: pd.Series) -> pd.Series:
-    """Map integer plane codes to 'Single Plane', 'Plane A', or 'Plane B'."""
+def _normalize_plane_code(series: pd.Series, ctx: AdapterContext | None = None) -> pd.Series:
+    """Map integer plane codes to 'Single Plane', 'Plane A', or 'Plane B'.
+
+    Uses DICOM CID 10003 (113620/113621/113622) as the authoritative mapping.
+    Unknown integer codes require an explicit ``plane_code_map`` in ``ctx``;
+    otherwise a ``ValueError`` is raised so the operator can provide a documented
+    mapping via settings ``dosetrack_plane_code_map`` or CLI ``--plane-code-map``.
+    Free-form string codes are returned unchanged.
+    """
     try:
         numeric = pd.to_numeric(series, errors="coerce")
         codes = sorted(int(c) for c in numeric.dropna().unique())
     except (ValueError, TypeError):
-        return series  # already string-coded
+        return series
 
     if not codes:
         return series
-    if len(codes) == 1:
-        plane_map: dict[int, str] = {codes[0]: "Single Plane"}
-    elif len(codes) == 2:
-        plane_map = {codes[0]: "Plane A", codes[1]: "Plane B"}
-    else:
+
+    if set(codes).issubset(set(CID_10003_MEANING.keys())):
+        plane_map = {code: CID_10003_MEANING[code] for code in codes}
+        return numeric.map(plane_map).fillna(series)
+
+    explicit_map = (ctx.plane_code_map if ctx is not None else None) or {}
+    plane_map = {k: v for k, v in explicit_map.items() if k in codes}
+    if plane_map and set(plane_map.keys()) == set(codes):
+        return numeric.map(plane_map).fillna(series)
+
+    if len(codes) <= 2:
         raise ValueError(
-            f"DoseTrack Plane Code has {len(codes)} distinct values ({codes}); "
-            "expected 1 (single-plane) or 2 (biplane)."
+            f"DoseTrack Plane Code has {len(codes)} distinct non-CID-10003 integer value(s) "
+            f"({codes}); provide an explicit plane_code_map via settings "
+            "dosetrack_plane_code_map or CLI --plane-code-map "
+            "(e.g. '1:Single Plane' or '1:Plane A,2:Plane B')."
         )
-    return numeric.map(plane_map).fillna(series)
+
+    raise ValueError(
+        f"DoseTrack Plane Code has {len(codes)} distinct values ({codes}); "
+        "expected 1 (single-plane) or 2 (biplane)."
+    )
 
 
 def _parse_philips_filter(val: object) -> tuple[float, float]:
@@ -289,9 +309,12 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
     data_df = _infer_manufacturer_from_equipment(data_df, warnings)
 
     # Normalize AcquisitionPlane from integer Plane Code values.
+    # Preserve the raw integer code additively before mapping so the normalizer
+    # can compute canonical identity from CID 10003 without losing the source.
     if "AcquisitionPlane" in data_df.columns:
+        data_df["_dt_plane_code"] = data_df["AcquisitionPlane"]
         try:
-            data_df["AcquisitionPlane"] = _normalize_plane_code(data_df["AcquisitionPlane"])
+            data_df["AcquisitionPlane"] = _normalize_plane_code(data_df["AcquisitionPlane"], ctx=ctx)
         except ValueError as exc:
             raise ValueError(
                 f"DoseTrack plane code normalization failed (error_type={exception_class_name(exc)})."

@@ -58,6 +58,17 @@ are not yet in the scoring set — they need real export fixtures):
 | `radimetrics` | Bayer **Radimetrics** CSV export | `Device`, `kVp kV`, `DAP (Total) Gy-cm2` |
 | `dosetrack` | Sectra **DoseTrack** CSV export | `Equipment Name`, `Tube Voltage Peak (kV)`, `Plane Code` |
 
+**DoseTrack Plane Code:** integer codes that match DICOM CID 10003 (`113620` /
+`113621` / `113622`) map automatically to Plane A / Plane B / Single Plane. Typical
+DoseTrack site codes such as `1`/`2` are **not** inferred from sort order anymore
+(that mislabeled one-tube subsets of biplane exports). Provide an explicit map:
+
+- Settings JSON: `"dosetrack_plane_code_map": {"1": "Single Plane"}` or
+  `{"1": "Plane A", "2": "Plane B"}`
+- CLI: `--plane-code-map '1:Single Plane'` or `'1:Plane A,2:Plane B'`
+
+Without a map, non-CID integer codes raise `ValueError` before dose calculation.
+
 The clearest human tells between the two aggregator exports:
 
 - **Radimetrics** uses `(RF)` suffixes and bracketed units — `Primary Angle (RF) [°]`,

@@ -143,6 +143,11 @@ class PyskindoseSettings:
             km_raw if isinstance(km_raw, dict) else None
         )
 
+        # Optional explicit DoseTrack Plane Code → meaning map for non-CID integers.
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        self.dosetrack_plane_code_map = parse_plane_code_map(tmp.get("dosetrack_plane_code_map"))
+
     @staticmethod
     def _initialize_output_path(output_path: str | Path | None, output_format: str) -> Path:
         """Resolve the plot/output directory for the chosen output_format."""

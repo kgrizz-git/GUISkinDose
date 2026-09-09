@@ -109,6 +109,19 @@ def _add_input_args(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
+        "--plane-code-map",
+        required=False,
+        default=None,
+        dest="plane_code_map",
+        help=(
+            "Explicit DoseTrack Plane Code mapping when codes are not DICOM CID 10003. "
+            "Form: '1:Single Plane' or '1:Plane A,2:Plane B', or a JSON object. "
+            "Required for typical DoseTrack integer codes (1/2); CID 113620/113621/113622 "
+            "map automatically."
+        ),
+    )
+
+    parser.add_argument(
         "--input-preview-only",
         action="store_true",
         default=False,

@@ -29,6 +29,22 @@ That keeps SemVer and contributor history organized.
   with a privacy-safe event-index warning. The Settings slider lower bound is
   ``0.01`` so users cannot select ``0.0``.
 
+- **Ambiguous tube identity no longer silently selects a real single-plane calibration**
+  (2026-09-09) — ``normalize_tube()`` now returns ``"unknown"`` for unrecognized
+  acquisition-plane text instead of silently mapping to ``"single"``. Kerma-meter
+  correction resolution treats ``"unknown"`` as unresolved and falls back to
+  ``default_factor``, so ambiguous input can never silently apply a real
+  single-tube CF. DICOM CID 10003 tube codes (113620 A, 113621 B, 113622 single)
+  are preserved additively during parse and normalized into a new
+  ``acquisition_plane_canonical`` column without rewriting the legacy
+  ``acquisition_plane`` column that ``_match_device_rows`` compares verbatim
+  against the CSV. DoseTrack plane-code normalization now maps CID 10003 codes
+  directly and raises ``ValueError`` for 1–2 unknown integer codes instead of
+  silently inferring A/B from sort order; provide an explicit map via settings
+  ``dosetrack_plane_code_map`` or CLI ``--plane-code-map`` (e.g.
+  ``1:Single Plane`` or ``1:Plane A,2:Plane B``). 3+ distinct codes retain the
+  existing hard error.
+
 - **Geometry exam switch left stale dose results after a pending table-origin commit**
   (2026-09-06) — switching the selected exam now calls ``reset_results()`` when a staged
   table-origin transform is committed for the previous exam, matching the debounced-render

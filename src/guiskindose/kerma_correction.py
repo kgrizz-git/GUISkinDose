@@ -22,9 +22,11 @@ from typing import Any, cast
 import pandas as pd
 
 from guiskindose.constants import (
+    CID_10003_CANONICAL,
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
+    TUBE_IDENTITY_UNKNOWN,
 )
 from guiskindose.grid_interp import format_event_indices
 
@@ -47,8 +49,6 @@ _TUBE_ALIASES = {
     "b": "B",
     "plane b": "B",
 }
-
-
 @dataclass(frozen=True)
 class KermaMeterCorrection:
     """Resolved per-event kerma-meter correction factors."""
@@ -73,15 +73,34 @@ def normalize_equipment_label(raw: str | float | None) -> str | None:
 
 
 def normalize_tube(acquisition_plane: str | float | None) -> str:
-    """Map acquisition_plane to ``single`` | ``A`` | ``B`` (default ``single``)."""
+    """Map acquisition_plane to ``single`` | ``A`` | ``B`` | ``unknown``.
+
+    Unrecognized or absent values return ``unknown`` so they cannot silently
+    match a real single-plane calibration in the correction table.
+    """
     if acquisition_plane is None:
-        return "single"
+        return TUBE_IDENTITY_UNKNOWN
     if isinstance(acquisition_plane, float) and math.isnan(acquisition_plane):
-        return "single"
+        return TUBE_IDENTITY_UNKNOWN
     text = unicodedata.normalize("NFKC", str(acquisition_plane)).strip().casefold()
     if not text:
-        return "single"
-    return _TUBE_ALIASES.get(text, "single")
+        return TUBE_IDENTITY_UNKNOWN
+    return _TUBE_ALIASES.get(text, TUBE_IDENTITY_UNKNOWN)
+
+
+def resolve_canonical_plane_identity(raw_code: object) -> str:
+    """Map a raw plane-identity code to ``single`` | ``A`` | ``B`` | ``unknown``.
+
+    Uses DICOM CID 10003 as the authoritative source.  Non-CID or missing codes
+    return ``unknown`` so callers never silently apply a real calibration to
+    ambiguous input.
+    """
+    if raw_code is None:
+        return TUBE_IDENTITY_UNKNOWN
+    if isinstance(raw_code, float) and math.isnan(raw_code):
+        return TUBE_IDENTITY_UNKNOWN
+    key = str(int(raw_code)) if not isinstance(raw_code, str) else str(raw_code).strip()
+    return CID_10003_CANONICAL.get(key, TUBE_IDENTITY_UNKNOWN)
 
 
 def resolve_correction_keys(
@@ -320,7 +339,7 @@ def _lookup_correction(
     table_miss: list[int],
 ) -> float:
     """Per-event lookup: returns factor, appends to ``unresolved``/``table_miss`` as needed."""
-    if equip is None:
+    if equip is None or tube == TUBE_IDENTITY_UNKNOWN:
         unresolved.append(index)
         return default_factor
     cf = lookup.get((equip, tube))

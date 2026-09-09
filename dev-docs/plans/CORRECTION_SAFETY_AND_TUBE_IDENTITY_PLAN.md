@@ -114,19 +114,21 @@ equipment profiles, or change the table/pad intersection model.
 
 ### 3. Canonicalize tube identity
 
-- [ ] Preserve DICOM acquisition-plane code, coding scheme, and meaning during parse
+- [x] Preserve DICOM acquisition-plane code, coding scheme, and meaning during parse
   and normalization.
-- [ ] Canonicalize only recognized CID 10003 values to `single`, `A`, or `B`, in a
+- [x] Canonicalize only recognized CID 10003 values to `single`, `A`, or `B`, in a
   **new additive field**. Do not rewrite the normalized `acquisition_plane` column
   in place: `corrections._match_device_rows()` compares it verbatim against the
   CSV's literal `"Single Plane"` / `"Plane A"` / `"Plane B"` strings, so replacing
   those values with `single`/`A`/`B` would make every `k_tab` lookup miss and
   fail soft to `1.0` — a silent, global dose change. Add a regression test that
   fails if canonicalization changes any `k_tab` value.
-- [ ] Unknown or ambiguous values must remain unknown and use neutral correction
+- [x] Unknown or ambiguous values must remain unknown and use neutral correction
   behavior; they must not silently become `single`.
-- [ ] Replace DoseTrack ordering inference with a documented explicit mapping or a
+- [x] Replace DoseTrack ordering inference with a documented explicit mapping or a
   required user choice when the source mapping is unknown.
+  *(CID-backed auto-map; non-CID requires settings ``dosetrack_plane_code_map`` or
+  CLI ``--plane-code-map``; otherwise ``ValueError``.)*
 - [ ] Before closure, define a raw plane-identity audit/export schema preserving:
   - source kind/schema (DICOM, DoseTrack, Radimetrics, generic, normalized);
   - raw code value (when present, e.g., DICOM CodeValue or DoseTrack integer);
@@ -138,6 +140,8 @@ equipment profiles, or change the table/pad intersection model.
   Require API/GUI/export parity on this schema with additive fields so no existing
   output shape is broken. Privacy-safe handling: never log raw identifiers; emit
   only counts and event-index lists for warnings.
+  *(Partial: additive DataFrame fields for code/scheme/meaning/canonical/raw_code
+  landed; source-kind, resolution status, and GUI/export parity remain open.)*
 
 ### 4. Fix unmatched-model GUI reporting
 
