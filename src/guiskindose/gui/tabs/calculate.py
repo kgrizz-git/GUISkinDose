@@ -13,7 +13,7 @@ from nicegui import run, ui
 
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result
-from ..helpers import below_floor_event_count, run_calculation
+from ..helpers import below_floor_event_count, format_input_scanner_label, run_calculation
 from ..page_context import PageContext
 from ..state import state
 from ..summary_formatters import format_patient_offsets
@@ -304,12 +304,20 @@ def _build_input_data_summary() -> None:
                 ).classes(_SUMMARY_VALUE_CLASSES)
             with ui.column().classes("gap-0"):
                 ui.label("Scanner:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "manufacturer", backward=lambda v: f"{v} {state.model}"
-                ).classes(_SUMMARY_VALUE_CLASSES)
-                ui.label().bind_text_from(
-                    state, "normalization_method", backward=lambda v: f"({v})"
-                ).classes("text-[10px] opacity-40 italic")
+                scanner_label = ui.label(format_input_scanner_label(state)).classes(_SUMMARY_VALUE_CLASSES)
+                for attr in ("input_manufacturer", "input_model", "manufacturer", "model"):
+                    scanner_label.bind_text_from(
+                        state, attr, backward=lambda _v: format_input_scanner_label(state)
+                    )
+                method_label = ui.label().classes("text-[10px] opacity-40 italic")
+                method_label.bind_text_from(
+                    state, "normalization_method",
+                    backward=lambda v: f"({v})"
+                )
+                matched_label = ui.label("Default profile active").classes("text-[10px] text-amber-5 italic")
+                matched_label.bind_visibility_from(
+                    state, "normalization_method", backward=lambda v: v == "Fallback"
+                )
 
 
 def _build_phantom_setup_summary() -> None:
@@ -354,7 +362,7 @@ def _build_physics_summary() -> None:
         )
         with ui.column().classes("gap-1"):
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
-                ui.label("k_tab:").classes(_SUMMARY_LABEL_CLASSES)
+                ui.label("Patient-support transmission factor:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(
                     state, "estimate_k_tab", backward=lambda v: "Estimated" if v else "Measured"
                 ).classes(_SUMMARY_VALUE_CLASSES)

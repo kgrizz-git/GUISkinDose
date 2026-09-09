@@ -109,6 +109,8 @@ class NormalizationSettings:
         self.field_size_mode: str | None = None
         self.detector_side_length: str | None = None
         self.normalization_method: str = "Unknown"
+        self.input_manufacturer: str = ""
+        self.input_model: str = ""
         self.matched_manufacturer: str = ""
         self.matched_model: str = ""
         self.swap_lateral_longitudinal: bool = False
@@ -126,6 +128,8 @@ class NormalizationSettings:
         """
         manufacturer = normalize_manufacturer_key(data_parsed[KEY_RDSR_MANUFACTURER][0])
         model = normalize_model_key(data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0])
+        self.input_manufacturer = str(data_parsed[KEY_RDSR_MANUFACTURER][0])
+        self.input_model = str(data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0])
 
         manufacturer_settings = [
             setting

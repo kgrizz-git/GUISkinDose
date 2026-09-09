@@ -12,8 +12,10 @@ _GE_WARNING_TOKEN = "ge manufacturer detected"
 
 def _active_exam_summary(meta: dict, manufacturer: str, model: str, normalization_method: str) -> str:
     """Format the optional vendor/schema line for a Geometry notice."""
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
-    mdl = (model or meta.get("model") or "").strip()
+    # Prefer the actual input manufacturer/model over the matched profile so
+    # unmatched scanners are identified by their true identity.
+    mfr = (meta.get("input_manufacturer") or manufacturer or meta.get("manufacturer") or "").strip()
+    mdl = (meta.get("input_model") or model or meta.get("model") or "").strip()
     schema = (meta.get("schema") or "").strip()
     source = (meta.get("source_type") or "").strip().upper()
     method = (meta.get("normalization_method") or normalization_method or "").strip()
@@ -27,6 +29,14 @@ def _normalization_notice(meta: dict, normalization_method: str) -> str:
     """Return the fallback-normalization warning, if applicable."""
     method = (meta.get("normalization_method") or normalization_method or "").strip()
     if method == "Fallback":
+        actual_mfr = (meta.get("input_manufacturer") or "").strip()
+        actual_mdl = (meta.get("input_model") or "").strip()
+        scanner = " / ".join(v for v in (actual_mfr, actual_mdl) if v)
+        if scanner:
+            return (
+                f"Default normalization in use for '{scanner}'; "
+                "verify Tx/Tz axes and table signs before calculation."
+            )
         return "Default normalization in use; verify Tx/Tz axes and table signs before calculation."
     return ""
 
@@ -65,7 +75,9 @@ def geometry_vendor_notice(
 
     Inspects metadata warnings, manufacturer, model, normalization method, and manual
     coordinate swap flags to construct informative user guidance regarding table axes
-    and vendor-specific coordinate conventions.
+    and vendor-specific coordinate conventions. When normalization fell back to the
+    Default profile, the notice names the actual unmatched scanner identity and
+    identifies the active profile as Default.
 
     Parameters
     ----------

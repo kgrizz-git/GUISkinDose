@@ -20,7 +20,7 @@ from .exam_transforms import (
 )
 from .geometry_preview import on_exams_loaded
 from .offset_handlers import reset_global_offsets_on_new_load
-from .settings_builder import build_settings
+from .settings_builder import build_settings, refresh_normalization_warnings
 from .state import AppState
 
 logger = logging.getLogger(__name__)
@@ -149,6 +149,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             "d_ver": seed_d_ver,
             "d_lat": seed_d_lat,
             "normalization_method": norm.normalization_method,
+            "input_manufacturer": norm.input_manufacturer,
+            "input_model": norm.input_model,
         })
 
         # Rebuild concat event preview from all loaded exams
@@ -166,15 +168,13 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         # Extract DICOM metadata for display (last-loaded wins)
         state.manufacturer = norm.matched_manufacturer
         state.model = norm.matched_model
+        state.input_manufacturer = norm.input_manufacturer
+        state.input_model = norm.input_model
         state.normalization_method = norm.normalization_method
         state.table_offset_x = norm.trans_offset.x
         state.table_offset_y = norm.trans_offset.y
         state.table_offset_z = norm.trans_offset.z
-        state.normalization_warnings = []
-        if state.normalization_method == "Fallback":
-            state.normalization_warnings.append(
-                f"Scanner model '{state.model}' not found. Using default normalization settings."
-            )
+        refresh_normalization_warnings(state)
 
         return True, f"Loaded {len(df)} irradiation events"
     except RdsrUnitError as exc:
@@ -355,6 +355,8 @@ def _build_exam_meta_entry(
         "d_ver": seed_d_ver,
         "d_lat": seed_d_lat,
         "normalization_method": "Tabular",
+        "input_manufacturer": "",
+        "input_model": "",
     }
 
 
@@ -452,11 +454,13 @@ def _finalize_tabular_state(state: AppState, file_path: Path, result) -> None:
 
     state.manufacturer = ""
     state.model = ""
+    state.input_manufacturer = ""
+    state.input_model = ""
     state.normalization_method = "Tabular"
     state.table_offset_x = 0.0
     state.table_offset_y = 0.0
     state.table_offset_z = 0.0
-    state.normalization_warnings = []
+    refresh_normalization_warnings(state)
 
 
 def _wrap_tabular_schema_detection(state: AppState, exc: BaseException) -> tuple[bool, str]:

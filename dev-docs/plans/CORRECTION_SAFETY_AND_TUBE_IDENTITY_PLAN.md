@@ -145,25 +145,35 @@ equipment profiles, or change the table/pad intersection model.
 
 ### 4. Fix unmatched-model GUI reporting
 
-- [ ] Retain actual input manufacturer/model separately from the matched
+- [x] Retain actual input manufacturer/model separately from the matched
   normalization profile.
-- [ ] Make Upload and Geometry warnings name the actual unmatched model and state
+  *(Chunk 4: `NormalizationSettings.input_*` + `AppState` + per-exam meta)*
+- [x] Make Upload and Geometry warnings name the actual unmatched model and state
   that the Default profile is active.
-- [ ] Attribute fallback warnings per exam in multi-exam mode.
+- [x] Attribute fallback warnings per exam in multi-exam mode.
 - [ ] Show the selected normalization profile, X/Y/Z origin shift, axis rules, and
   `k_tab` match/fallback status before calculation.
-- [ ] Add GUI simulation tests for single- and multi-exam fallback reporting.
+  *(Partial in Chunk 4: Calculate/Settings show input vs matched/Default profile,
+  table offsets, and estimated vs measured patient-support transmission. Bundled
+  table-lookup `k_tab` match/fallback status remains open with Chunk 2 export
+  status.)*
+- [x] Add GUI simulation tests for single- and multi-exam fallback reporting.
+  *(Chunk 4: `tests/unittests/test_gui_fallback_reporting.py`)*
 
 ### 5. Terminology audit
 
-- [ ] Use “patient-support transmission factor” for `k_tab` in GUI labels, help,
+- [x] Use “patient-support transmission factor” for `k_tab` in GUI labels, help,
   notebook, glossary, API docs, exports, warnings, feature inventory, and active
   plans.
-- [ ] Use “attenuation” only for the physical reduction or explicitly say
+  *(Chunk 4: GUI labels, export label, glossary, FEATURE_INVENTORY. In-app help
+  pages had no prior `k_tab` copy to rewrite; notebook already describes
+  patient-support transmission.)*
+- [x] Use “attenuation” only for the physical reduction or explicitly say
   “transmission correction for attenuation.”
-- [ ] Define `attenuation fraction = 1 - transmission factor`.
-- [ ] Update the UI-copy/help registries required by the documentation harness.
-- [ ] When renaming the `dev-docs/glossary.json` `k_tab` preferred term (currently
+- [x] Define `attenuation fraction = 1 - transmission factor`.
+- [x] Update the UI-copy/help registries required by the documentation harness.
+  *(Glossary updated; UI-copy/help-registry checks pass without new tokens.)*
+- [x] When renaming the `dev-docs/glossary.json` `k_tab` preferred term (currently
   "table transmission correction"), keep the previous term and "table transmission"
   as aliases so existing copy and searches still resolve.
 

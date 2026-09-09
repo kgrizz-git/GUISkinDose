@@ -226,7 +226,7 @@ Top-level settings object. Key attributes:
 |-----------|------|---------|-------------|
 | `mode` | `str` | `"plot_event"` | Run mode (see below) |
 | `rdsr_filename` | `str` | — | RDSR filename (used when no `file_path` passed to `main()`) |
-| `estimate_k_tab` | `bool` | `True` | Use estimated table attenuation instead of measured |
+| `estimate_k_tab` | `bool` | `True` | Use estimated patient-support transmission instead of measured lookup |
 | `k_tab_val` | `float` | `0.8` | Table transmission factor (0–1) when estimating |
 | `inherent_filtration` | `float` | `3.1` | X-ray tube inherent filtration in mmAl |
 | `remove_invalid_rows` | `bool` | `False` | Drop events with kVp = 0 |
@@ -357,7 +357,7 @@ Orchestrates the full calculation:
 2. Fetches HVL values from `corrections.db`
 3. Detects geometry changes between events (`check_new_geometry`)
 4. Pre-computes backscatter interpolation objects for all events
-5. Computes table transmission correction
+5. Computes patient-support transmission correction (`k_tab`)
 6. Calls `calculate_irradiation_event_result()` in a loop over each event
 
 Geometry-change handling and per-event dose accumulation live in

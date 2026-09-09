@@ -217,7 +217,7 @@ scales the full lateral mesh axis.
 | Inverse-square law | k_isq | `(d_IRP / d_skin)²` | Computed per cell from source distance |
 | Backscatter | k_bs | Benmakhlouf et al. polynomial (kVp, HVL, field size) | Cubic spline interpolation over 5 field sizes |
 | Medium | k_med | Air kerma → tissue dose (μ_en/ρ ratio) | Lookup table in SQLite DB by kVp, HVL, field size |
-| Table + pad attenuation | k_tab | Beam attenuation through table/pad | Measured values from SQLite DB (exact-match first, then (kVp, Cu) interpolation with edge clamping; unknown device/plane fails soft to k_tab=1.0), or user-specified constant |
+| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | Measured values from SQLite DB (exact-match first, then (kVp, Cu) interpolation with edge clamping; unknown device/plane fails soft to k_tab=1.0), or user-specified constant |
 | Kerma-meter calibration | k_meter | Convert reported K_IRP → lab-traceable kerma | User CF table/prompt keyed by equipment × tube; fail-soft to `default_factor` (1.0). Applied once before physics corrections. |
 
 ### 5.4 Geometry optimisation
@@ -403,8 +403,8 @@ Falls back to `settings_example.json` if nothing provided.
 |---------|------|---------|-------------|
 | `mode` | str | `"plot_event"` | Run mode |
 | `rdsr_filename` | str | — | RDSR filename (used when no `file_path` passed) |
-| `estimate_k_tab` | bool | `True` | Use estimated k_tab instead of measured |
-| `k_tab_val` | float | `0.8` | Estimated table transmission (0–1) |
+| `estimate_k_tab` | bool | `True` | Use estimated patient-support transmission factor instead of measured |
+| `k_tab_val` | float | `0.8` | Estimated patient-support transmission factor (0–1) |
 | `inherent_filtration` | float | `3.1` | X-ray tube inherent filtration (mmAl) |
 | `remove_invalid_rows` | bool | `False` | Drop events with kVp = 0 |
 | `below_floor_kvp_policy` | str | `"exam_average"` | Below-floor (kVp < 25) handling: `snap`/`skip`/`manual`/`exam_average` |

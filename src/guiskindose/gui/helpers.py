@@ -63,7 +63,13 @@ from .offset_handlers import (
     restore_globals_from_exam_meta,
     sync_global_patient_offset_to_single_exam_meta,
 )
-from .settings_builder import build_settings, fallback_normalization_exam_count
+from .settings_builder import (
+    build_settings,
+    fallback_normalization_exam_count,
+    format_input_scanner_label,
+    format_normalization_profile_label,
+    refresh_normalization_warnings,
+)
 from .state import AppState
 from .table_origins import detected_table_origin, effective_table_origin, stage_table_origin_axis
 
@@ -107,6 +113,8 @@ __all__ = [
     "exam_supports_table_origin",
     "exam_supports_transforms",
     "fallback_normalization_exam_count",
+    "format_input_scanner_label",
+    "format_normalization_profile_label",
     "geometry_preview_caption",
     "get_example_rdsr_files",
     "get_excel_sheets",
@@ -124,6 +132,7 @@ __all__ = [
     "rdsr_df_for_geometry_preview",
     "read_patient_offset_value",
     "rebuild_rdsr_df",
+    "refresh_normalization_warnings",
     "reset_global_offsets_on_new_load",
     "reset_patient_offset_for_active",
     "resolve_composite_for_render",

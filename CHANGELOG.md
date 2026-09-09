@@ -45,6 +45,14 @@ That keeps SemVer and contributor history organized.
   ``1:Single Plane`` or ``1:Plane A,2:Plane B``). 3+ distinct codes retain the
   existing hard error.
 
+- **Unmatched scanner identity is now shown correctly in Upload and Geometry warnings**
+  (2026-09-09) — the GUI retains the actual input ``ManufacturerModelName``
+  separately from the matched normalization profile. Fallback warnings name the
+  real unmatched scanner and identify the active profile as Default. In multi-exam
+  mode, each exam's fallback status is attributed per-exam. The Calculate tab
+  summary shows the selected normalization profile, table origin offsets, and
+  patient-support transmission factor status before calculation.
+
 - **Geometry exam switch left stale dose results after a pending table-origin commit**
   (2026-09-06) — switching the selected exam now calls ``reset_results()`` when a staged
   table-origin transform is committed for the previous exam, matching the debounced-render
@@ -59,6 +67,17 @@ That keeps SemVer and contributor history organized.
   after the ``mypyskindose`` → ``guiskindose`` rename.
 
 ### Changed
+
+- **Terminology: "patient-support transmission factor" replaces informal "k_tab" labels**
+  (2026-09-09) — the Settings physics section, Calculate tab summary, results
+  correction table, exports, glossary, and feature inventory now use
+  "patient-support transmission factor" for the ``k_tab`` correction.
+  "Attenuation" is reserved for physical dose reduction; where needed, prose uses
+  "transmission correction for attenuation." ``attenuation fraction = 1 -
+  transmission factor`` is defined in the glossary. The export label changes from
+  "Table (k_tab)" to "Patient-support transmission (k_tab)". The glossary preferred
+  term for ``k_tab`` is now "patient-support transmission factor" with "table
+  transmission correction" and "table transmission" retained as aliases.
 
 - **Getting-started notebook refresh and safe local launcher (Phase 3.5)** (2026-09-07) — refreshed
   the Python API tutorial for GUISkinDose and current result fields, cleared stale rendered outputs,

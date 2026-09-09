@@ -63,6 +63,8 @@ _LOAD_STATE_FIELDS = (
     "file_name",
     "manufacturer",
     "model",
+    "input_manufacturer",
+    "input_model",
     "normalization_method",
     "normalization_warnings",
     "table_offset_x",
@@ -309,6 +311,8 @@ class UploadTabController:
         state.flip_ap2 = False
         state.manufacturer = ""
         state.model = ""
+        state.input_manufacturer = ""
+        state.input_model = ""
         state.normalization_method = "Unknown"
         state.normalization_warnings = []
         state.table_offset_x = 0.0
