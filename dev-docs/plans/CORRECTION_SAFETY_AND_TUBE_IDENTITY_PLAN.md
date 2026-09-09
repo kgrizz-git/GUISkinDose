@@ -56,12 +56,15 @@ equipment profiles, or change the table/pad intersection model.
 
 - [ ] Add focused tests for valid single-plane/A/B DICOM CID values, free-form or
   unknown values, DoseTrack one-code/two-code subsets, and normalized input.
-- [ ] Add a current-behavior characterization test proving that inherited
+- [x] Add a current-behavior characterization test proving that inherited
   AlluraClarity Plane B zero `k_tab` currently zeroes intersected-cell dose, and
   that a non-zero fallback produces a higher, conservative PSD-side estimate.
-- [ ] Pin existing valid Siemens and Philips Plane A numerical behavior.
-- [ ] Characterize the default `estimate_k_tab` path separately from the table
+  *(Completed in Chunk 1: `tests/unittests/test_k_tab_transmission_characterization.py`)*
+- [x] Pin existing valid Siemens and Philips Plane A numerical behavior.
+  *(Completed in Chunk 1: exact-match pins in the new characterization module)*
+- [x] Characterize the default `estimate_k_tab` path separately from the table
   lookup, including `k_tab_val = 0.0` and `k_tab_val > 1.0`.
+  *(Completed in Chunk 1: `TestEstimateKTabNoValidation` in the new module)*
 - [ ] Add DoseTrack cases for a plane-code column with three or more distinct
   integers (currently a hard `ValueError`) and for a file whose codes span more than
   one scanner, since `_normalize_plane_code()` infers one mapping per file.
