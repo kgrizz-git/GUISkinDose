@@ -494,7 +494,7 @@ def _build_normalization_warning() -> None:
         # while ``normalization_warnings`` is still non-empty (or vice versa).
         state,
         "normalization_warnings",
-        backward=lambda ws: bool(ws),
+        backward=bool,
     ), ui.row().classes("items-center gap-3"):
         ui.icon("warning", color="negative").classes("text-xl icon-outlined")
         ui.label().bind_text_from(
