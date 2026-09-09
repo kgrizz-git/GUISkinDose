@@ -73,34 +73,44 @@ equipment profiles, or change the table/pad intersection model.
 
 ### 2. Add a conservative zero-transmission safeguard
 
-- [ ] Validate database/profile-derived patient-support transmission before use.
-- [ ] Treat non-finite or non-positive lookup values as invalid/missing, emit a
+- [x] Validate database/profile-derived patient-support transmission before use.
+  *(Chunk 2: shared `_validate_transmission_factor` in `corrections.py`)*
+- [x] Treat non-finite or non-positive lookup values as invalid/missing, emit a
   prominent privacy-safe warning, and use neutral transmission `1.0`.
-- [ ] Reject or warn on transmission values greater than `1.0`. These are
+  *(Chunk 2)*
+- [x] Reject or warn on transmission values greater than `1.0`. These are
   unphysical for a patient support and produce unsupported dose inflation, so they
   must not pass validation silently.
-- [ ] Define the explicit estimated-factor contract as finite `0 < k_tab_val <= 1`.
+  *(Chunk 2: estimated path raises; inherited lookup falls back with warning)*
+- [x] Define the explicit estimated-factor contract as finite `0 < k_tab_val <= 1`.
   Align the `calculate_k_tab()` docstring, GUI control and validation, notebook,
   settings docs, and API/CLI boundaries in the same change.
-- [ ] Apply that contract to the **default** `estimate_k_tab` path, which currently
+  *(Chunk 2: docstring, Settings slider, settings class docs, getting-started notebook)*
+- [x] Apply that contract to the **default** `estimate_k_tab` path, which currently
   returns `k_tab_val` for every event with no range check. Reject an invalid explicit
   value with an actionable error before calculation rather than silently replacing
   the user's input. Share range-validation logic with the lookup path where practical,
   while retaining the warned-neutral fallback for invalid inherited lookup data.
-- [ ] Preserve the inherited Plane B rows unchanged for provenance until a verified
+  *(Chunk 2)*
+- [x] Preserve the inherited Plane B rows unchanged for provenance until a verified
   source or measurement justifies editing them.
-- [ ] Keep intentional user-entered estimated transmission separate, label its
+  *(Chunk 2: CSV unchanged; runtime fallback only)*
+- [x] Keep intentional user-entered estimated transmission separate, label its
   source, and document the user-visible correction that explicit zero is no longer
   accepted.
+  *(Chunk 2: estimated path raises; CHANGELOG documents the contract)*
 - [ ] Include invalid-source/fallback status in calculation warnings and exports.
-- [ ] Add a dedicated fixture/test pinning the observable contract: AlluraClarity
+  *(Warnings landed in Chunk 2; structured export/status fields remain open)*
+- [x] Add a dedicated fixture/test pinning the observable contract: AlluraClarity
   Plane B events must produce warned-neutral transmission `1.0`, must not silently
   zero intersected dose, and must show a dose regression relative to the pre-fix
   characterization baseline. Do not edit an existing golden fixture if a dedicated
   test is cleaner.
-- [ ] Record a clear CHANGELOG note under the patch release explaining that
+  *(Chunk 2: `test_k_tab_transmission_characterization.py`)*
+- [x] Record a clear CHANGELOG note under the patch release explaining that
   inherited Plane B zero-transmission rows no longer silently zero dose and that
   affected PSD values will increase to the warned-neutral fallback.
+  *(Chunk 2: `CHANGELOG.md` Unreleased)*
 
 ### 3. Canonicalize tube identity
 

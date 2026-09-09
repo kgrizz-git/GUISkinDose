@@ -64,7 +64,8 @@ class PyskindoseSettings:
         Whether k_tab should be approximated or not. You should set this to true if you
         have not conducted table attenuation measurements.
     k_tab_val : float
-        Value of k_tab, in range 0.0 -> 1.0.
+        Estimated patient-support transmission factor when ``estimate_k_tab`` is
+        True. Must be finite and in ``(0, 1]`` (``1.0`` means no attenuation).
     inherent_filtration : float
         X-ray tube inherent filtration, for backscatter and medium correction.
     below_floor_kvp_policy : str

@@ -21,6 +21,14 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Invalid patient-support transmission no longer silently zeroes or inflates dose**
+  (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit
+  ``estimate_k_tab`` / ``k_tab_val`` values must be finite and in ``(0, 1]`` or
+  calculation raises ``ValueError``. Invalid inherited table-lookup values
+  (including Allura Clarity Plane B zeros) fall back to warned-neutral ``1.0``
+  with a privacy-safe event-index warning. The Settings slider lower bound is
+  ``0.01`` so users cannot select ``0.0``.
+
 - **Geometry exam switch left stale dose results after a pending table-origin commit**
   (2026-09-06) — switching the selected exam now calls ``reset_results()`` when a staged
   table-origin transform is committed for the previous exam, matching the debounced-render

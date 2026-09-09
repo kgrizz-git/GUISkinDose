@@ -303,7 +303,7 @@ def _build_physics_section() -> None:
             with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
                 ui.label("TRANSMISSION FACTOR (k_tab)").classes("technical-label")
                 with ui.row().classes("items-center w-full gap-4"):
-                    ui.slider(min=0.0, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
+                    ui.slider(min=0.01, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
                         state, "k_tab_val"
                     ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
                     ui.label().bind_text_from(state, "k_tab_val", backward=lambda v: f"{v:.2f}").classes("mono-text font-bold")

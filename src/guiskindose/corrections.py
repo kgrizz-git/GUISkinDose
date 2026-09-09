@@ -275,15 +275,37 @@ def _lookup_single_cu(
 
 
 
+def _validate_transmission_factor(value: float, *, context: str = "transmission factor") -> None:
+    """Validate a dimensionless transmission factor.
+
+    Raises ``ValueError`` if the value is non-finite, <= 0, or > 1.
+    """
+    if not np.isfinite(value) or value <= 0 or value > 1:
+        raise ValueError(
+            f"Invalid {context}: {value}. Expected a finite value in (0, 1]."
+        )
+
+
 def _log_k_tab_warnings(
     n: int,
     no_device: list[int],
     interpolated: list[int],
     clamped: list[int],
+    invalid_events: list[int] | None = None,
 ) -> None:
-    """Emit the three per-class k_tab WARNING summaries (no_device / interpolated /
-    clamped). Message strings are pinned by ``test_corrections.py`` and the golden
-    status classification — do not paraphrase."""
+    """Emit the per-class k_tab WARNING summaries.
+
+    The no_device / interpolated / clamped message strings are pinned by
+    ``test_corrections.py`` and the golden status classification — do not
+    paraphrase those three. The invalid-inherited-data warning is additive.
+    """
+    if invalid_events:
+        logger.warning(
+            "k_tab: %d of %d event(s) had invalid inherited table-attenuation data "
+            "(non-finite, <=0, or >1) and fell back to neutral k_tab=1.0. "
+            "Affected event index(es): %s.",
+            len(invalid_events), n, format_event_indices(invalid_events),
+        )
     if no_device:
         logger.warning(
             "k_tab: %d of %d event(s) had no table-attenuation data for their "
@@ -321,7 +343,7 @@ def calculate_k_tab(
     estimate_k_tab: bool
         Set to True to use estimated table correction, default is False.
     k_tab_val: float
-        Value of estimated table corrections, must be in range (0, 1).
+        Value of estimated table corrections; must be finite and in ``(0, 1]``.
     corrections_db : str
         A string defining the path to the corrections SQLite db
 
@@ -332,6 +354,7 @@ def calculate_k_tab(
 
     """
     if estimate_k_tab:
+        _validate_transmission_factor(k_tab_val, context="estimated k_tab_val")
         return [k_tab_val] * len(data_norm)
 
     # Load the whole attenuation table once, then resolve each event in pandas.
@@ -350,6 +373,7 @@ def calculate_k_tab(
     no_device_events: list[int] = []
     interpolated_events: list[int] = []
     clamped_events: list[int] = []
+    invalid_value_events: list[int] = []
 
     # Cache the (kVp × Cu) pivot per (device, plane, Al) slice — built only when an
     # off-grid event actually needs interpolation (exact matches skip it).
@@ -377,19 +401,38 @@ def calculate_k_tab(
             & (rows["filtration_added_mmal"] == round(al))
         ]
         if len(exact):
-            k_tab[event] = float(cast(pd.Series, exact["k_patient_support"]).iloc[0])
+            value = float(cast(pd.Series, exact["k_patient_support"]).iloc[0])
+            try:
+                _validate_transmission_factor(value, context="inherited table attenuation")
+            except ValueError:
+                k_tab[event] = 1.0
+                invalid_value_events.append(event)
+            else:
+                k_tab[event] = value
             continue
 
         # Off-grid within this device/plane: snap Al, then interpolate over (kVp,
         # Cu) with edge clamping.
         value, status = _interpolate_off_grid(rows, model, plane, kvp, cu, al, pivot_cache)
-        k_tab[event] = value
+        try:
+            _validate_transmission_factor(value, context="inherited table attenuation")
+        except ValueError:
+            k_tab[event] = 1.0
+            invalid_value_events.append(event)
+            continue
 
+        k_tab[event] = value
         if status == STATUS_CLAMPED:
             clamped_events.append(event)
         elif status == STATUS_INTERPOLATED:
             interpolated_events.append(event)
 
-    _log_k_tab_warnings(len(data_norm), no_device_events, interpolated_events, clamped_events)
+    _log_k_tab_warnings(
+        len(data_norm),
+        no_device_events,
+        interpolated_events,
+        clamped_events,
+        invalid_events=invalid_value_events,
+    )
 
     return k_tab

@@ -1,23 +1,24 @@
-"""Characterization tests pinning the CURRENT (pre-fix) behavior of ``calculate_k_tab``
+"""Characterization tests pinning the post-fix behavior of ``calculate_k_tab``
 and the per-cell table-transmission multiplication in the dose pipeline.
 
 Chunk 1 of ``dev-docs/plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md`` documents
 observed bugs so the later safeguard/fix can show exact regression deltas.  These
-tests intentionally assert the *current* (buggy) contract; they must be updated
-when the fix ships.
+tests assert the *post-fix* contract.
 
 Covered cases (plan §1):
-  a. ``estimate_k_tab=True`` returns ``[k_tab_val] * n`` with no range validation
-     (accepts 0.0 and values >1.0).
-  b. ``estimate_k_tab=False`` + AlluraClarity Plane B exact lookup returns 0.0 for
-     a representative (kVp, Cu, Al) present in the CSV.
+  a. ``estimate_k_tab=True`` validates ``k_tab_val`` and rejects non-finite,
+     <=0, or >1 values with ``ValueError``.  A valid value still returns the
+     scalar repeated for every event.
+  b. ``estimate_k_tab=False`` + AlluraClarity Plane B exact lookup returns 1.0
+     (neutral fallback) and emits an invalid-inherited-data warning for the
+     affected event index(es).
   c. Unit-level multiplication mirroring ``add_corrections_and_event_dose_to_output``:
-     ``k_tab=0.0`` zeroes table-hit intersected cells, while a neutral factor
-     (1.0) yields higher dose (PSD max increases), proving the dose-zeroing
-     pathway.
+     ``k_tab=0.0`` still zeroes table-hit intersected cells when passed directly,
+     while a neutral factor (1.0) yields higher dose (PSD max increases), proving
+     the dose-zeroing pathway.  (Note: ``calculate_k_tab`` no longer produces
+     0.0; this test guards the downstream multiplication logic.)
   d. Valid Siemens AXIOM-Artis Single Plane and Philips AlluraClarity Plane A
-     exact-match ``k_tab`` values from the CSV/golden (must remain 0.8 for typical
-     Allura Plane A).
+     exact-match ``k_tab`` values from the CSV/golden must remain unchanged.
 """
 
 from __future__ import annotations
@@ -81,45 +82,53 @@ def _capture_warnings(func, *args, **kwargs):
 
 
 # ---------------------------------------------------------------------------
-# 1a. estimate_k_tab=True: no range validation for 0.0 or >1.0
+# 1a. estimate_k_tab=True: range validation enforced
 # ---------------------------------------------------------------------------
 
-class TestEstimateKTabNoValidation:
-    """The ``estimate_k_tab`` path returns the user-supplied scalar for every
-    event with no range check.  Current behavior documents the missing guard."""
+class TestEstimateKTabValidation:
+    """``estimate_k_tab=True`` now validates ``k_tab_val`` is finite and in (0, 1]."""
 
-    def test_estimate_k_tab_returns_zero_without_error(self):
+    def test_estimate_k_tab_zero_raises_value_error(self):
         data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane", n=3)
-        result, _ = _capture_warnings(
-            calculate_k_tab,
-            data_norm=data,
-            corrections_db=_db_path(),
-            estimate_k_tab=True,
-            k_tab_val=0.0,
-        )
-        assert result == [0.0, 0.0, 0.0]
+        with pytest.raises(ValueError, match="Invalid estimated k_tab_val"):
+            calculate_k_tab(
+                data_norm=data,
+                corrections_db=_db_path(),
+                estimate_k_tab=True,
+                k_tab_val=0.0,
+            )
 
-    def test_estimate_k_tab_returns_greater_than_one_without_error(self):
+    def test_estimate_k_tab_greater_than_one_raises_value_error(self):
+        data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane", n=2)
+        with pytest.raises(ValueError, match="Invalid estimated k_tab_val"):
+            calculate_k_tab(
+                data_norm=data,
+                corrections_db=_db_path(),
+                estimate_k_tab=True,
+                k_tab_val=1.5,
+            )
+
+    def test_estimate_k_tab_valid_value_passes(self):
         data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane", n=2)
         result, _ = _capture_warnings(
             calculate_k_tab,
             data_norm=data,
             corrections_db=_db_path(),
             estimate_k_tab=True,
-            k_tab_val=1.5,
+            k_tab_val=0.8,
         )
-        assert result == [1.5, 1.5]
+        assert result == [0.8, 0.8]
 
 
 # ---------------------------------------------------------------------------
-# 1b. AlluraClarity Plane B exact lookup → 0.0
+# 1b. AlluraClarity Plane B exact lookup → fallback to 1.0 with warning
 # ---------------------------------------------------------------------------
 
 class TestAlluraClarityPlaneBExactLookup:
-    """All 304 inherited AlluraClarity Plane B rows carry k=0.0.  A representative
-    exact-match query confirms the current (buggy) return of 0.0."""
+    """AlluraClarity Plane B rows carry invalid k=0.0 in the CSV.  After the fix
+    they fall back to neutral k_tab=1.0 and emit an invalid-inherited-data warning."""
 
-    def test_allura_clarity_plane_b_exact_returns_zero(self):
+    def test_allura_clarity_plane_b_exact_falls_back_to_one(self):
         """Representative (80 kVp, 0.4 mm Cu, 1.0 mm Al) exists in the CSV."""
         data = _frame(kvp=80, cu=0.4, al=1.0, model="AlluraClarity", plane="Plane B")
         result, messages = _capture_warnings(
@@ -129,9 +138,11 @@ class TestAlluraClarityPlaneBExactLookup:
             estimate_k_tab=False,
             k_tab_val=0.8,
         )
-        assert result[0] == 0.0
-        # Exact match — no off-grid warning expected
+        assert result[0] == 1.0
+        # Exact match path — no off-grid warnings expected.
         assert not any("interpolated" in m.lower() or "clamped" in m.lower() for m in messages)
+        # Invalid inherited data warning must be present.
+        assert any("invalid inherited" in m.lower() for m in messages)
 
 
 # ---------------------------------------------------------------------------
@@ -139,13 +150,14 @@ class TestAlluraClarityPlaneBExactLookup:
 # ---------------------------------------------------------------------------
 
 class TestKTabDoseMultiplicationPathway:
-    """Characterize the *real* dose-multiplication behavior.
+    """Regression tests for the dose-multiplication pathway.
 
     We call ``add_corrections_and_event_dose_to_output`` with synthetic inputs
     but the same ``temp[table_hits] = k_tab[event]`` logic as production code.
 
-    These tests are pre-fix characterization: they pin the current contract
-    that passing k_tab=0.0 will zero dose for table-hit cells.
+    ``calculate_k_tab`` no longer produces 0.0, but if an explicit 0.0 is passed
+    directly to the dose pipeline it still zeroes table-hit cells.  A neutral
+    factor (1.0) yields higher dose, proving the multiplication pathway is intact.
     """
 
     def _run_one_event(self, k_tab_value: float) -> tuple[np.ndarray, dict]:
