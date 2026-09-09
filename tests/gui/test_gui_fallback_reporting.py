@@ -186,6 +186,42 @@ def test_matched_ge_still_reports_auto_swap_applied() -> None:
     assert "already applied during normalization" in notice
 
 
+def test_surgery_equipment_is_not_classified_as_ge() -> None:
+    """Substring 'ge' must not treat unrelated manufacturers as GE-family."""
+    notice = geometry_vendor_notice(
+        {
+            "normalization_method": "Matched",
+            "input_manufacturer": "Surgery Equipment",
+            "input_model": "Table",
+            "warnings": [],
+            "swap_lat_lon": False,
+        },
+        manufacturer="Surgery Equipment",
+    )
+    assert "GE-family" not in notice
+    assert "already applied during normalization" not in notice
+
+
+def test_explicit_normalization_method_arg_aligns_vendor_and_fallback_notices() -> None:
+    """geometry_vendor_notice's method override must drive both notice helpers."""
+    meta = {
+        "normalization_method": "Matched",
+        "input_manufacturer": "GE Healthcare",
+        "input_model": "Innova 2100",
+        "manufacturer": "Default",
+        "model": "Default",
+        "warnings": [],
+        "swap_lat_lon": False,
+    }
+    notice = geometry_vendor_notice(
+        meta,
+        manufacturer="Default",
+        normalization_method="Fallback",
+    )
+    assert "Default normalization in use" in notice
+    assert "auto-swap was not applied" in notice
+
+
 def test_build_exam_meta_entry_sets_empty_input_identity_for_tabular() -> None:
     """Tabular meta construction must leave input identity empty."""
     st = AppState()

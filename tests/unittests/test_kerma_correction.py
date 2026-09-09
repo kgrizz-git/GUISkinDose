@@ -285,6 +285,22 @@ def test_load_rejects_bad_json_shape_and_empty_equipment(tmp_path: Path):
     with pytest.raises(ValueError, match="empty value"):
         load_correction_table(empty_equip)
 
+    empty_tube = tmp_path / "empty-tube.json"
+    empty_tube.write_text(
+        json.dumps([{"equipment": "unit-01", "tube": "  ", "correction_factor": 1.0}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="tube column"):
+        load_correction_table(empty_tube)
+
+    unknown_tube = tmp_path / "unknown-tube.json"
+    unknown_tube.write_text(
+        json.dumps([{"equipment": "unit-01", "tube": "Biplane", "correction_factor": 1.0}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="tube column"):
+        load_correction_table(unknown_tube)
+
     unsupported = tmp_path / "factors.txt"
     unsupported.write_text("nope", encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported"):

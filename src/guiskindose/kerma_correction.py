@@ -256,6 +256,10 @@ def _rows_to_factor_dict(
         raw_cf = row.get("correction_factor")
         if equip is None:
             raise ValueError("Kerma-meter correction table: equipment column has an empty value.")
+        if tube == TUBE_IDENTITY_UNKNOWN:
+            raise ValueError(
+                "Kerma-meter correction table: tube column has an empty or unrecognized value."
+            )
         if raw_cf is None:
             raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
         try:

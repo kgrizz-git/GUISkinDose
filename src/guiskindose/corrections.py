@@ -1,7 +1,7 @@
 """Physics-based correction factors for inverse-square law, backscatter, medium, and table attenuation."""
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -286,6 +286,24 @@ def _validate_transmission_factor(value: float, *, context: str = "transmission 
         )
 
 
+def _coerce_inherited_transmission(raw: object) -> float | None:
+    """Coerce and validate an inherited table-attenuation value.
+
+    Returns the validated float, or ``None`` when the raw cell is non-numeric or
+    fails :func:`_validate_transmission_factor` (caller applies warned-neutral
+    ``1.0``).
+    """
+    try:
+        value = float(cast(Any, raw))
+    except (TypeError, ValueError):
+        return None
+    try:
+        _validate_transmission_factor(value, context="inherited table attenuation")
+    except ValueError:
+        return None
+    return value
+
+
 def _log_k_tab_warnings(
     n: int,
     no_device: list[int],
@@ -330,28 +348,47 @@ def _log_k_tab_warnings(
 def calculate_k_tab(
     data_norm: pd.DataFrame, corrections_db: str, estimate_k_tab: bool = False, k_tab_val: float = 0.8
 ) -> list[float]:
-    """Fetch table correction factor from database.
+    """Resolve per-event patient-support transmission factors (``k_tab``).
 
-    This function fetches measured table correction factor as a function of
-    HVL and kVp. Further, if no measurement are conducted on a specific unit,
-    the function can also return user specified estimated table correction.
+    Transmission is dimensionless in ``(0, 1]`` (1.0 = no table/pad attenuation).
+
+    **Estimated path** (``estimate_k_tab=True``, GUI / ``settings_example.json``
+    default): validate ``k_tab_val`` and return that scalar for every event.
+    The SQLite attenuation table is **not** read.
+
+    **Measured path** (``estimate_k_tab=False``): look up
+    ``correction_table_and_pad_attenuation`` by ``model`` + literal
+    ``acquisition_plane`` string (``"Single Plane"`` / ``"Plane A"`` /
+    ``"Plane B"``), exact (kVp, Cu, Al) match first, else (kVp, Cu)
+    interpolation with Al snap and edge clamping. Unknown device/plane →
+    soft ``1.0``. Non-numeric or out-of-range inherited cells (including the
+    shipped AlluraClarity **Plane B** rows that are all ``0.0``) →
+    warned-neutral ``1.0``.
+
+    Application to skin cells happens later in
+    ``add_corrections_and_event_dose_to_output``: only cells with
+    ``table_hits[i]`` are multiplied by the event's ``k_tab``; other hit cells
+    keep factor 1.0 for table transmission. Input source (DICOM RDSR vs tabular)
+    does not matter after normalization.
 
     Parameters
     ----------
     data_norm : pd.DataFrame
-        RDSR data, normalized for compliance with PySkinDose.
+        Normalized irradiation-event table.
     estimate_k_tab: bool
-        Set to True to use estimated table correction, default is False.
+        ``True`` → estimated scalar; ``False`` → measured table lookup.
+        Function default is ``False`` for backward compatibility; product
+        settings/GUI default to ``True``.
     k_tab_val: float
-        Value of estimated table corrections; must be finite and in ``(0, 1]``.
+        Estimated transmission when ``estimate_k_tab`` is ``True``; must be
+        finite and in ``(0, 1]``.
     corrections_db : str
-        A string defining the path to the corrections SQLite db
+        Path to the corrections SQLite database.
 
     Returns
     -------
     List[float]
-        List of table correction factor for all events in procedure.
-
+        One transmission factor per event.
     """
     if estimate_k_tab:
         _validate_transmission_factor(k_tab_val, context="estimated k_tab_val")
@@ -401,10 +438,10 @@ def calculate_k_tab(
             & (rows["filtration_added_mmal"] == round(al))
         ]
         if len(exact):
-            value = float(cast(pd.Series, exact["k_patient_support"]).iloc[0])
-            try:
-                _validate_transmission_factor(value, context="inherited table attenuation")
-            except ValueError:
+            value = _coerce_inherited_transmission(
+                cast(pd.Series, exact["k_patient_support"]).iloc[0]
+            )
+            if value is None:
                 k_tab[event] = 1.0
                 invalid_value_events.append(event)
             else:
@@ -412,11 +449,11 @@ def calculate_k_tab(
             continue
 
         # Off-grid within this device/plane: snap Al, then interpolate over (kVp,
-        # Cu) with edge clamping.
-        value, status = _interpolate_off_grid(rows, model, plane, kvp, cu, al, pivot_cache)
-        try:
-            _validate_transmission_factor(value, context="inherited table attenuation")
-        except ValueError:
+        # Cu) with edge clamping. Malformed pivot cells become non-finite and
+        # fail the same coerced validation as exact matches.
+        raw_value, status = _interpolate_off_grid(rows, model, plane, kvp, cu, al, pivot_cache)
+        value = _coerce_inherited_transmission(raw_value)
+        if value is None:
             k_tab[event] = 1.0
             invalid_value_events.append(event)
             continue

@@ -102,6 +102,9 @@ def add_corrections_and_event_dose_to_output(
     event_dose[hits] *= k_bs
 
     temp = np.ones(len(table_hits))
+    # Patient-support transmission applies only along paths that intersect the
+    # table/pad (``table_hits``). Non-table hit cells keep factor 1.0 here even
+    # when the event's resolved ``k_tab`` differs (see ``calculate_k_tab``).
     temp[table_hits] = k_tab[event]
     event_dose[hits] *= temp
 

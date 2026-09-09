@@ -255,6 +255,45 @@ class TestNormalizerAdditivePlaneFields:
         )
         assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
 
+    def test_non_dcm_code_scheme_yields_unknown_without_meaning_fallback(self):
+        """Non-DCM CodeValue rows must stay unknown even when meaning looks valid."""
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A"],
+                "AcquisitionPlane_CodeValue": ["113620"],
+                "AcquisitionPlane_CodingSchemeDesignator": ["99LOCAL"],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE].iloc[0] == "Plane A"
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+
+    def test_code_value_without_scheme_yields_unknown(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A"],
+                "AcquisitionPlane_CodeValue": ["113620"],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+
 
 # ---------------------------------------------------------------------------
 # 4. DoseTrack plane-code normalization
@@ -400,6 +439,14 @@ class TestDoseTrackCanonicalIdentity:
             assert "non-CID-10003" in str(exc_info.value.__cause__)
         finally:
             Path(path).unlink()
+
+    def test_plane_code_map_rejects_duplicate_integer_codes(self):
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        with pytest.raises(ValueError, match="duplicate plane code"):
+            parse_plane_code_map("1:Plane A,01:Plane B")
+        with pytest.raises(ValueError, match="duplicate plane code"):
+            parse_plane_code_map({"1": "Plane A", "01": "Plane B"})
 
 
     def test_explicit_map_via_settings_unblocks_legacy_codes(self):

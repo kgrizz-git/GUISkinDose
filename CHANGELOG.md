@@ -21,6 +21,18 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited
+  ``k_tab`` coercion treats non-numeric table cells as warned-neutral ``1.0``;
+  GE-family Geometry notices use a manufacturer allow-list (not substring
+  ``"ge"``) and honor the explicit ``normalization_method`` argument; DoseTrack
+  ``plane_code_map`` rejects duplicate integer codes (e.g. ``1`` / ``01``);
+  kerma-meter CF tables reject empty/unrecognized tube labels at load;
+  DICOM plane canonicalization requires coding scheme ``DCM``; removing an exam
+  refreshes normalization warning banners. Docstrings / ``FEATURE_INVENTORY`` /
+  ``CODEBASE_OVERVIEW`` now state when measured ``k_tab`` runs, that Allura
+  Plane B zeros are neutralized, and that transmission applies only to
+  table-hit cells (RDSR and tabular share the path after normalization).
+
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit
   ``estimate_k_tab`` / ``k_tab_val`` values must be finite and in ``(0, 1]`` or

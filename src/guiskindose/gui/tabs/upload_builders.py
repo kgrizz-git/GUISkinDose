@@ -25,6 +25,7 @@ from ..helpers import (
     load_rdsr,
     load_tabular,
     rebuild_rdsr_df,
+    refresh_normalization_warnings,
     restore_globals_from_exam_meta,
 )
 from ..state import reset_results, state
@@ -343,6 +344,7 @@ class UploadTabController:
         state.loaded_exams.pop(index)
         if index < len(state.loaded_exam_meta):
             state.loaded_exam_meta.pop(index)
+        refresh_normalization_warnings(state)
         adjust_active_exam_index_after_remove(state, index)
         if file_path is not None and all(
             m.get("file_path") != file_path for m in state.loaded_exam_meta

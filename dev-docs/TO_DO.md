@@ -21,6 +21,52 @@ maintenance impact is logged, and completed plans must be archived.
   audit/export parity; structured `k_tab` invalid-source status / pre-calc match
   preview). After Plan 1 is archived, continue with
   [correction packaging and provenance](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
+- [ ] **PSD calculation algorithm doc + harness** — After Plan 1 PR merge (or in
+  parallel on a separate branch once review is idle), write a canonical PSD
+  calculation algorithm page under `dev-docs/` (proposed filename
+  `PSD_CALCULATION_ALGORITHM.md` — create the file when starting this item) and
+  wire light doc-maintenance hooks.
+  Parked so CodeRabbit / Plan 1 closure is not blocked. Outline to cover:
+
+  **Algorithm stages (user-requested):**
+  1. Read irradiation events (RDSR DICOM and/or tabular imports).
+  2. Identify and apply correct vendor/unit/coordinate transformations and
+     patient/table offsets into the internal normalized frame.
+  3. Identify and apply correction factors (`k_meter` when enabled, then
+     `k_isq`, `k_bs`, `k_med`, patient-support `k_tab`, plus HVL / below-floor
+     kVp policy as prerequisites for backscatter/medium).
+  4. Project X-ray fields from the source per exposure (angles, SID/IRP
+     distances, collimated field size / field-size mode).
+  5. Determine intersections with table/pad and patient phantom (table
+     coordinates, phantom size/contours/normals; `Beam.check_hit`,
+     `check_table_hits`).
+  6. Accumulate dose cumulatively over exposures and exams (per-exam maps;
+     multi-exam aggregate = sum of aligned dose maps; PSD = max of map).
+  7. Report peak skin dose and supporting outputs (dose map, corrections,
+     warnings).
+
+  **Also document (easy to overlook):** phantom placement / habitus scales;
+  geometry-change reuse; beam-miss diagnostics; kerma CF keyed by equipment ×
+  tube without special-casing A/B geometry; measured `k_tab` table keyed by
+  device × plane string (lookup identity only — projection math stays
+  plane-agnostic); invalid-row / out-of-range transmission handling;
+  Implementation-deviations section vs live code.
+
+  **Harness work (do with the doc, not a separate forgotten PR):** register in
+  `dev-docs/index.md`, `HARNESS_ENGINEERING.md` source-of-truth map, and
+  `AGENTS.md`; add a `psd_calculation` (or equivalent) row in
+  `feature_doc_matrix.json` covering `calculate_dose/`, `geom_calc.py`,
+  `beam_class.py`, `corrections.py`, `kerma_correction.py`, normalizer/adapters;
+  optional invariant tests in the style of `test_input_schema_doc.py`; use
+  matrix `--against-ref` / impact review when dose-path code changes; keep a
+  short Sphinx/user pointer rather than duplicating the full narrative.
+- [ ] **PSD algorithm flow diagram** — Add a sequence diagram and/or Mermaid
+  flowchart of input → normalize → position → per-event loop (field projection,
+  intersections, corrections, accumulate) → per-exam / multi-exam aggregate →
+  PSD, with links to the real modules. Host under `dev-docs/` (e.g. beside or
+  embedded in `PSD_CALCULATION_ALGORITHM.md`) and **link it from the algorithm
+  doc** when that page is written. Update the diagram when dose-pipeline code
+  changes (same harness/matrix watch as the algorithm doc).
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).

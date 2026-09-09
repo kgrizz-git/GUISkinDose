@@ -272,9 +272,10 @@ def _normalize_machine_parameters(
     if meaning_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING] = meaning_col
 
-    # Canonical identity: CID 10003 code-backed → single/A/B, else unknown.
-    # DICOM path uses the stored CodeValue; tabular sources (DoseTrack etc.)
-    # carry their raw integer code in _dt_plane_code or acquisition_plane_raw_code.
+    # Canonical identity: CID 10003 code-backed → single/A/B only when the
+    # coding-scheme designator is DCM. Non-DCM code-backed rows stay unknown
+    # (no meaning-only fallback). Tabular sources carry raw integer codes in
+    # _dt_plane_code or acquisition_plane_raw_code.
     from guiskindose.kerma_correction import resolve_canonical_plane_identity
 
     code_col = data_parsed.get("AcquisitionPlane_CodeValue")
@@ -283,7 +284,16 @@ def _normalize_machine_parameters(
     raw_code_col = raw_named if raw_named is not None else raw_dt
     if code_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODE] = code_col
-        canonical = code_col.map(resolve_canonical_plane_identity)
+        mapped = code_col.map(resolve_canonical_plane_identity)
+        if scheme_col is not None:
+            scheme_ok = scheme_col.map(
+                lambda s: str(s).strip().upper() == "DCM" if pd.notna(s) else False
+            )
+            # Code present with a non-DCM (or missing) designator → unknown.
+            canonical = mapped.where(scheme_ok, other="unknown")
+        else:
+            # CodeValue without a designator cannot be trusted as CID 10003.
+            canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
     elif raw_code_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE] = raw_code_col
         canonical = raw_code_col.map(resolve_canonical_plane_identity)

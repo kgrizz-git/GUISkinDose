@@ -217,7 +217,7 @@ scales the full lateral mesh axis.
 | Inverse-square law | k_isq | `(d_IRP / d_skin)²` | Computed per cell from source distance |
 | Backscatter | k_bs | Benmakhlouf et al. polynomial (kVp, HVL, field size) | Cubic spline interpolation over 5 field sizes |
 | Medium | k_med | Air kerma → tissue dose (μ_en/ρ ratio) | Lookup table in SQLite DB by kVp, HVL, field size |
-| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | Measured values from SQLite DB (exact-match first, then (kVp, Cu) interpolation with edge clamping; unknown device/plane fails soft to k_tab=1.0), or user-specified constant |
+| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | **Estimated** (GUI/settings default): constant `k_tab_val` in `(0, 1]`, no DB read. **Measured** (`estimate_k_tab=False`): SQLite by device model + literal plane string; exact then (kVp, Cu) interp; unknown device/plane → 1.0; invalid inherited values (incl. AlluraClarity Plane B zeros) → warned-neutral 1.0. Applied only to **table-hit** skin cells. Same path for RDSR and tabular after normalization. |
 | Kerma-meter calibration | k_meter | Convert reported K_IRP → lab-traceable kerma | User CF table/prompt keyed by equipment × tube; fail-soft to `default_factor` (1.0). Applied once before physics corrections. |
 
 ### 5.4 Geometry optimisation
