@@ -500,7 +500,9 @@ def _build_normalization_warning() -> None:
         ui.label().bind_text_from(
             state,
             "normalization_warnings",
-            backward=lambda ws: f"NORMALIZATION ALERT: {ws[0]}" if ws else "",
+            backward=lambda ws: (
+                f"NORMALIZATION ALERT: {' | '.join(str(w) for w in ws)}" if ws else ""
+            ),
         ).classes("mono-text text-xs font-bold text-red-400")
 
 

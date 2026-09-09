@@ -272,10 +272,12 @@ def _normalize_machine_parameters(
     if meaning_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING] = meaning_col
 
-    # Canonical identity: CID 10003 code-backed → single/A/B only when the
-    # coding-scheme designator is DCM. Non-DCM code-backed rows stay unknown
-    # (no meaning-only fallback). Tabular sources carry raw integer codes in
-    # _dt_plane_code or acquisition_plane_raw_code.
+    # Canonical identity for AcquisitionPlane: CID 10003 code-backed →
+    # single/A/B only when the coding-scheme designator is DCM. Non-DCM
+    # code-backed rows stay unknown here (this column does not fall back to
+    # meaning text). Kerma lookup separately may call normalize_tube(meaning)
+    # when the canonical plane is unknown. Tabular sources carry raw integer
+    # codes in _dt_plane_code or acquisition_plane_raw_code.
     from guiskindose.kerma_correction import resolve_canonical_plane_identity
 
     code_col = data_parsed.get("AcquisitionPlane_CodeValue")
@@ -295,6 +297,12 @@ def _normalize_machine_parameters(
             # CodeValue without a designator cannot be trusted as CID 10003.
             canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
     elif raw_code_col is not None:
+        # Tabular raw codes (DoseTrack / adapters) have no CodingSchemeDesignator.
+        # Mapping CID-looking integers here can look "code-backed" in the
+        # canonical column even though identity was inferred from the integer
+        # alone — dose results still follow acquisition_plane meaning /
+        # normalize_tube. Closing the audit gap is Plan 1 remaining item
+        # ``acquisition_plane_source_kind`` / resolution tags.
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE] = raw_code_col
         canonical = raw_code_col.map(resolve_canonical_plane_identity)
     else:

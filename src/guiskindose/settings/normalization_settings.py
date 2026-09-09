@@ -72,6 +72,12 @@ def is_ge_manufacturer(manufacturer: object) -> bool:
     return bool(key) and key in _GE_MANUFACTURER_ALIASES
 
 
+def is_philips_manufacturer(manufacturer: object) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known Philips-family alias."""
+    key = normalize_manufacturer_key(manufacturer)
+    return bool(key) and key in _MANUFACTURER_ALIASES_BY_SETTINGS_KEY["philips"]
+
+
 def normalize_model_key(model: object) -> str:
     """Canonical model key for settings lookup."""
     if str(model).strip() == "*":

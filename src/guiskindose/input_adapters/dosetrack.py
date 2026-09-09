@@ -158,6 +158,17 @@ def _normalize_plane_code(series: pd.Series, ctx: AdapterContext | None = None) 
 
     if set(codes).issubset(set(CID_10003_MEANING.keys())):
         plane_map = {code: CID_10003_MEANING[code] for code in codes}
+        meanings = {plane_map[code] for code in codes}
+        # A CID subset that mixes Single Plane with Plane A/B is legal under
+        # isubset() but clinically ambiguous — warn so operators can verify.
+        if "Single Plane" in meanings and (meanings & {"Plane A", "Plane B"}):
+            msg = (
+                "DoseTrack Plane Code mixes Single Plane with biplane CID "
+                f"value(s) {codes} → {sorted(meanings)}; verify the export is "
+                "not a hybrid subset of a biplane system."
+            )
+            if ctx is not None:
+                ctx.warnings.append(msg)
         return numeric.map(plane_map).fillna(series)
 
     explicit_map = (ctx.plane_code_map if ctx is not None else None) or {}
@@ -165,18 +176,29 @@ def _normalize_plane_code(series: pd.Series, ctx: AdapterContext | None = None) 
     if plane_map and set(plane_map.keys()) == set(codes):
         return numeric.map(plane_map).fillna(series)
 
+    missing = sorted(set(codes) - set(explicit_map.keys()))
+    provided = sorted(explicit_map.keys())
+    gap_hint = ""
+    if explicit_map:
+        gap_hint = (
+            f" Explicit plane_code_map provides {provided} but is missing "
+            f"observed code(s) {missing}."
+        )
+
     if len(codes) <= 2:
         raise ValueError(
             f"DoseTrack Plane Code has {len(codes)} distinct non-CID-10003 integer value(s) "
             f"({codes}); provide an explicit plane_code_map via settings "
             "dosetrack_plane_code_map or CLI --plane-code-map "
             "(e.g. '1:Single Plane' or '1:Plane A,2:Plane B')."
+            f"{gap_hint}"
         )
 
     raise ValueError(
         f"DoseTrack Plane Code has {len(codes)} distinct values ({codes}); "
         "expected 1 (single-plane) or 2 (biplane), or provide a complete "
         "plane_code_map covering every observed code."
+        f"{gap_hint}"
     )
 
 

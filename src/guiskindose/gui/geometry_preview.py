@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from guiskindose.settings.normalization_settings import is_ge_manufacturer
+from guiskindose.settings.normalization_settings import is_ge_manufacturer, is_philips_manufacturer
 
 from .exam_transforms import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from .state import AppState
@@ -15,6 +15,11 @@ _GE_WARNING_TOKEN = "ge manufacturer detected"
 def _is_ge_family_manufacturer(manufacturer: str) -> bool:
     """True when ``manufacturer`` canonicalizes to a known GE alias."""
     return is_ge_manufacturer(manufacturer)
+
+
+def _is_philips_family_manufacturer(manufacturer: str) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known Philips alias."""
+    return is_philips_manufacturer(manufacturer)
 
 
 def _active_exam_summary(meta: dict, manufacturer: str, model: str, normalization_method: str) -> str:
@@ -83,7 +88,7 @@ def _vendor_coordinate_notice(
         if manual_swap:
             return "GE handling is already normalized; manual Tx/Tz swap is active and may double-correct."
         return "GE lateral/longitudinal handling is already applied during normalization."
-    if "philips" in mfr.casefold():
+    if _is_philips_family_manufacturer(mfr):
         if method == "Fallback":
             return (
                 "Input looks Philips-family but Default profile is active; "

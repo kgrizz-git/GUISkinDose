@@ -382,6 +382,48 @@ class TestDoseTrackPlaneCodeNormalization:
         with pytest.raises(ValueError, match="duplicate plane code"):
             parse_plane_code_map('{"1":"Plane A","01":"Plane B"}')
 
+    def test_plane_code_map_rejects_non_integer_codes(self):
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        with pytest.raises(ValueError, match=r"decimal integer.*'A'"):
+            parse_plane_code_map("A:Single Plane")
+        with pytest.raises(ValueError, match=r"decimal integer.*'x'"):
+            parse_plane_code_map({"x": "Plane A"})
+        with pytest.raises(ValueError, match=r"decimal integer.*'1_000'"):
+            parse_plane_code_map("1_000:Single Plane")
+        with pytest.raises(ValueError, match=r"decimal integer.*'0x10'"):
+            parse_plane_code_map("0x10:Plane A")
+
+    def test_partial_explicit_map_lists_missing_codes(self):
+        from guiskindose.input_adapters.base import AdapterContext
+        from guiskindose.input_adapters.dosetrack import _normalize_plane_code
+
+        series = pd.Series([1, 2])
+        ctx = AdapterContext(
+            column_map={},
+            raw_headers=[],
+            settings=None,
+            warnings=[],
+            plane_code_map={1: "Plane A"},
+        )
+        with pytest.raises(ValueError, match=r"missing .*\[2\].*provides .*\[1\]|provides .*\[1\].*missing .*\[2\]"):
+            _normalize_plane_code(series, ctx=ctx)
+
+    def test_mixed_cid_single_and_biplane_warns(self):
+        from guiskindose.input_adapters.base import AdapterContext
+        from guiskindose.input_adapters.dosetrack import _normalize_plane_code
+
+        series = pd.Series([113620, 113622])  # Plane A + Single Plane
+        ctx = AdapterContext(
+            column_map={},
+            raw_headers=[],
+            settings=None,
+            warnings=[],
+        )
+        result = _normalize_plane_code(series, ctx=ctx)
+        assert result.tolist() == ["Plane A", "Single Plane"]
+        assert any("mixes Single Plane with biplane" in w for w in ctx.warnings)
+
 
 # ---------------------------------------------------------------------------
 # 5. DoseTrack integration: canonical identity through the adapter

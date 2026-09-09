@@ -3,8 +3,22 @@
 from __future__ import annotations
 
 import json
+import re
 
 from guiskindose.constants import DOSETRACK_PLANE_MEANINGS
+
+# Decimal integer only (optional sign). Rejects underscores, hex, and floats.
+_PLANE_CODE_RE = re.compile(r"[+-]?\d+$")
+
+
+def _parse_plane_code(code: object) -> int:
+    """Parse a plane-map key as a decimal integer with a clear ValueError on failure."""
+    text = str(code).strip()
+    if not _PLANE_CODE_RE.fullmatch(text):
+        raise ValueError(
+            f"plane_code_map code must be a decimal integer, got {code!r}."
+        )
+    return int(text)
 
 
 def parse_plane_code_map(raw: object) -> dict[int, str] | None:
@@ -40,10 +54,10 @@ def parse_plane_code_map(raw: object) -> dict[int, str] | None:
                     "plane_code_map entries must look like '1:Single Plane' or "
                     "'1:Plane A,2:Plane B'."
                 )
-            pairs.append((int(code_text.strip()), meaning.strip()))
+            pairs.append((_parse_plane_code(code_text), meaning.strip()))
         return _validated_plane_code_map(_mapping_from_pairs(pairs))
     if isinstance(raw, dict):
-        pairs = [(int(k), str(v).strip()) for k, v in raw.items()]
+        pairs = [(_parse_plane_code(k), str(v).strip()) for k, v in raw.items()]
         return _validated_plane_code_map(_mapping_from_pairs(pairs))
     raise ValueError("plane_code_map must be a dict, JSON object string, or 'code:meaning' list.")
 

@@ -21,6 +21,24 @@ maintenance impact is logged, and completed plans must be archived.
   audit/export parity; structured `k_tab` invalid-source status / pre-calc match
   preview). After Plan 1 is archived, continue with
   [correction packaging and provenance](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
+
+  **Conscious sign-offs (keep fail-loud unless product asks otherwise):**
+  - Kerma CF tables with an unrecognized tube label abort the whole table at
+    load (no silent per-row skip).
+  - Measured `k_tab` with `k_tab_val=0` / invalid transmission fails at dose
+    calculation (not at settings construction); inherited AlluraClarity Plane B
+    zeros are already neutralized to warned `1.0` on the measured path.
+
+  **Review follow-ups (soon / with Plan 1 archive leftovers):**
+  - Tabular raw-code → `acquisition_plane_canonical` without a DCM designator
+    can over-claim code-backed identity (audit trail only; dose path unchanged).
+    Close with plan remaining item #1 (`acquisition_plane_source_kind` /
+    `acquisition_plane_resolution`). Comment lives in `rdsr_normalizer.py`.
+  - Optional hardening: assert uniqueness of measured `k_tab` DB rows on
+    `(model, plane, kVp, Cu, Al)` so exact-match `iloc[0]` cannot silently
+    choose among duplicates (`corrections.py`).
+  - DoseTrack mixed CID `{Single Plane, Plane A/B}` now warns on import; watch
+    for noisy false positives on unusual site exports.
 - [ ] **PSD calculation algorithm doc + harness** — After Plan 1 PR merge (or in
   parallel on a separate branch once review is idle), write a canonical PSD
   calculation algorithm page under `dev-docs/` (proposed filename

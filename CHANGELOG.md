@@ -37,6 +37,13 @@ That keeps SemVer and contributor history organized.
   refresh coverage. Upload normalization alert visibility binds to non-empty
   ``normalization_warnings`` (not global ``normalization_method``) so multi-exam
   Fallback warnings stay visible after Matched exams are removed. CodeQL: use ``backward=bool`` for the visibility binding.
+  Muse review follow-ups: Geometry vendor notice prefers the active exam's
+  ``normalization_method``; Upload alert joins all normalization warnings;
+  ``plane_code_map`` reports non-integer codes clearly; DoseTrack partial maps
+  list missing vs provided codes; Philips Geometry notices use
+  ``is_philips_manufacturer`` allow-list. Dots3 nits: ``plane_code_map`` accepts
+  decimal integers only; DoseTrack warns on mixed Single+biplane CID subsets;
+  tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit

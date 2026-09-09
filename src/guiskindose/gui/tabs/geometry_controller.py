@@ -124,12 +124,15 @@ class GeometryTabController:
         )
         idx = self.active_exam_index
         meta = state.loaded_exam_meta[idx] if idx < len(state.loaded_exam_meta) else {}
+        # Prefer the active exam's profile method so mixed Matched/Fallback loads
+        # do not show the last-loaded global method on the wrong exam.
+        active_method = str(meta.get("normalization_method") or state.normalization_method or "")
         self.refs.vendor_notice.set_text(
             geometry_vendor_notice(
                 meta,
                 manufacturer=state.manufacturer,
                 model=state.model,
-                normalization_method=state.normalization_method,
+                normalization_method=active_method,
             )
         )
 
