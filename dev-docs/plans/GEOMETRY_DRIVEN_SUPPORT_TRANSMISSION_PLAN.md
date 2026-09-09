@@ -46,6 +46,10 @@ measured or defensible material/effective attenuation data.
 - [ ] Verify that changing only `acquisition_plane` does not change beam geometry.
 - [ ] Verify current per-cell behavior when some rays intersect and others do not.
 - [ ] Record current pad omission and combined-factor behavior.
+- [ ] Record the interim safety invariant: warned-neutral `1.0` for an invalid
+  transmission on a genuinely table-intersecting lateral event is conservative on
+  the PSD side but may overestimate dose by omitting support attenuation. Preserve
+  its warning/export status until validated geometry and attenuation data replace it.
 
 Deliverable: a maintainer assessment with diagrams, characterization tests, known
 limitations, and explicit invariants for the replacement.
@@ -95,7 +99,8 @@ Acceptance:
   legacy behavior.
 - [ ] Calculate per-cell transmission from actual table and pad path lengths and
   beam quality.
-- [ ] Use neutral transmission for non-intersected supports.
+- [ ] Use neutral transmission `1.0` for supports the closed-volume geometry proves
+  are not intersected.
 - [ ] Do not key geometric crossing on Plane A/B/Single or manufacturer.
 - [ ] Retain explicit measured-profile identity where material/support data are
   equipment-specific.

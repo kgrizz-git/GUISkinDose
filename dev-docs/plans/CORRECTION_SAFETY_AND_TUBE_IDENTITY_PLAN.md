@@ -21,6 +21,12 @@ equipment profiles, or change the table/pad intersection model.
    `1.0` means no attenuation; `0.0` removes all dose for an intersected cell.
 2. All inherited Allura Clarity Plane B support rows contain `0.0`. Their
    `estimated` comments do not establish that zero is a valid physical value.
+   **This plan classifies those inherited zeros as invalid for this lookup** because
+   no provenance supports complete blocking by the patient support. The runtime
+   safeguard will deliberately change an affected AlluraClarity Plane B table-hit
+   transmission from `0.0` to warned neutral `1.0` before dose multiplication.
+   This does not conflict with "valid existing results unchanged": the affected
+   values are unsupported invalid inputs, not established valid results.
 3. DICOM RDSR uses CID 10003 (`113620` A, `113621` B, `113622` single), but
    `rdsr_parser.py` stores only `CodeMeaning`; the code and coding scheme are lost.
 4. DoseTrack infers one observed integer code as single-plane, or sorts two codes
@@ -40,8 +46,9 @@ equipment profiles, or change the table/pad intersection model.
 
 - [ ] Add focused tests for valid single-plane/A/B DICOM CID values, free-form or
   unknown values, DoseTrack one-code/two-code subsets, and normalized input.
-- [ ] Add a regression test proving a database-derived zero `k_tab` currently
-  zeroes intersected-cell dose.
+- [ ] Add a current-behavior characterization test proving that inherited
+  AlluraClarity Plane B zero `k_tab` currently zeroes intersected-cell dose, and
+  that a non-zero fallback produces a higher, conservative PSD-side estimate.
 - [ ] Pin existing valid Siemens and Philips Plane A numerical behavior.
 - [ ] Confirm how plane identity appears in calculation output and every rich export;
   record missing audit fields before changing output.
@@ -57,6 +64,14 @@ equipment profiles, or change the table/pad intersection model.
   source. Review whether explicit zero should remain allowed; do not silently change
   that user contract.
 - [ ] Include invalid-source/fallback status in calculation warnings and exports.
+- [ ] Add a dedicated fixture/test pinning the observable contract: AlluraClarity
+  Plane B events must produce warned-neutral transmission `1.0`, must not silently
+  zero intersected dose, and must show a dose regression relative to the pre-fix
+  characterization baseline. Do not edit an existing golden fixture if a dedicated
+  test is cleaner.
+- [ ] Record a clear CHANGELOG note under the patch release explaining that
+  inherited Plane B zero-transmission rows no longer silently zero dose and that
+  affected PSD values will increase to the warned-neutral fallback.
 
 ### 3. Canonicalize tube identity
 
@@ -67,8 +82,17 @@ equipment profiles, or change the table/pad intersection model.
   behavior; they must not silently become `single`.
 - [ ] Replace DoseTrack ordering inference with a documented explicit mapping or a
   required user choice when the source mapping is unknown.
-- [ ] Surface tube identity, source schema/code, and confidence/status in import
-  preview, calculation diagnostics, Results, and exports.
+- [ ] Before closure, define a raw plane-identity audit/export schema preserving:
+  - source kind/schema (DICOM, DoseTrack, Radimetrics, generic, normalized);
+  - raw code value (when present, e.g., DICOM CodeValue or DoseTrack integer);
+  - coding scheme (when applicable, e.g., DCM, DoseTrack internal);
+  - raw meaning/label (e.g., "Plane A", "Plane B", "Single Plane");
+  - canonical identity (`single`, `A`, `B`, or `unknown`);
+  - resolution/confidence/status (`code-backed`, `inferred`, `ambiguous`,
+    `unknown`).
+  Require API/GUI/export parity on this schema with additive fields so no existing
+  output shape is broken. Privacy-safe handling: never log raw identifiers; emit
+  only counts and event-index lists for warnings.
 
 ### 4. Fix unmatched-model GUI reporting
 
@@ -96,16 +120,20 @@ equipment profiles, or change the table/pad intersection model.
 1. No bundled/custom lookup can silently multiply intersected dose by a non-finite
    or non-positive transmission.
 2. Valid existing correction results remain unchanged.
-3. DICOM tube A/B/single identity is code-backed and auditable.
-4. Ambiguous DoseTrack or free-form tube identity cannot silently select a real
+3. An inherited AlluraClarity Plane B zero produces warned-neutral `1.0`, explicit
+   invalid-source status, and the characterized dose delta instead of silent zeroing.
+4. DICOM tube A/B/single identity is code-backed and auditable.
+5. Ambiguous DoseTrack or free-form tube identity cannot silently select a real
    correction/calibration.
-5. GUI fallback alerts show actual scanner identity and affected exam.
-6. Every user-facing description makes transmission semantics explicit.
+6. GUI fallback alerts show actual scanner identity and affected exam.
+7. Every user-facing description makes transmission semantics explicit.
 
 ## Validation
 
 - Targeted parser, adapter, correction, dose, GUI, and export tests.
-- Golden correction and PSD tests.
+- A pre-fix characterization and post-fix golden contract for the Plane B
+  transmission value, warning/status, and intersected-cell dose behavior.
+- Golden correction and PSD tests for all unaffected valid cases.
 - Help/UI-copy, doc-freshness, file-size, type, lint, privacy, and full test checks
   appropriate to changed files.
 - Manual GUI smoke: unmatched model, valid Plane A, ambiguous Plane B, multi-exam
