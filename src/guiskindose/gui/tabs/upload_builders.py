@@ -488,7 +488,13 @@ def _build_normalization_warning() -> None:
     with ui.card().classes(
         "modern-card w-full border-red-900 bg-red-950/20"
     ).bind_visibility_from(
-        state, "normalization_method", backward=lambda v: v == "Fallback"
+        # Visibility must follow the rebuilt warning list (multi-exam Fallback
+        # exams), not the global ``normalization_method`` — after removing a
+        # Fallback exam while a Matched exam remains, method may be Matched
+        # while ``normalization_warnings`` is still non-empty (or vice versa).
+        state,
+        "normalization_warnings",
+        backward=lambda ws: bool(ws),
     ), ui.row().classes("items-center gap-3"):
         ui.icon("warning", color="negative").classes("text-xl icon-outlined")
         ui.label().bind_text_from(

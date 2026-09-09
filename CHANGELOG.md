@@ -34,7 +34,9 @@ That keeps SemVer and contributor history organized.
   table-hit cells (RDSR and tabular share the path after normalization).
   Review nits: shared ``is_ge_manufacturer()`` helper; JSON plane-map duplicate
   coverage; direct ``_coerce_inherited_transmission`` tests; remove-exam warning
-  refresh coverage.
+  refresh coverage. Upload normalization alert visibility binds to non-empty
+  ``normalization_warnings`` (not global ``normalization_method``) so multi-exam
+  Fallback warnings stay visible after Matched exams are removed.
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit

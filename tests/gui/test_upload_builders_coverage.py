@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -320,3 +320,58 @@ def test_remove_exam_refreshes_normalization_warnings(monkeypatch: pytest.Monkey
     assert state.normalization_warnings == []
     assert len(state.loaded_exam_meta) == 1
     assert state.loaded_exam_meta[0]["file_name"] == "b.dcm"
+
+def test_remove_matched_exam_keeps_remaining_fallback_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Alert list stays non-empty when a Fallback exam remains after remove.
+
+    Global ``normalization_method`` may become Matched via restore; visibility
+    must still follow ``normalization_warnings``.
+    """
+    ctrl = _upload_controller()
+    state.loaded_exams = [
+        SimpleNamespace(normalized_data=MagicMock(__len__=lambda s: 1)),
+        SimpleNamespace(normalized_data=MagicMock(__len__=lambda s: 1)),
+    ]
+    state.loaded_exam_meta = [
+        {
+            "file_name": "matched.dcm",
+            "file_path": Path("matched.dcm"),
+            "normalization_method": "Matched",
+            "input_manufacturer": "Siemens",
+            "input_model": "AXIOM-Artis",
+        },
+        {
+            "file_name": "fallback.dcm",
+            "file_path": Path("fallback.dcm"),
+            "normalization_method": "Fallback",
+            "input_manufacturer": "ACME",
+            "input_model": "X1",
+        },
+    ]
+    state.normalization_method = "Matched"
+    state.normalization_warnings = [
+        "Exam 2: Scanner 'ACME X1' not found in normalization profiles. "
+        "Using default normalization settings."
+    ]
+    state.is_multi_exam = True
+    state.rdsr_df = MagicMock(__len__=lambda s: 1)
+    monkeypatch.setattr(ub, "rebuild_rdsr_df", lambda st: None)
+    monkeypatch.setattr(ub, "remove_temp_upload", lambda p: None)
+
+    def _restore(st: Any, meta: dict) -> None:
+        st.normalization_method = meta.get("normalization_method", "Unknown")
+
+    monkeypatch.setattr(ub, "restore_globals_from_exam_meta", _restore)
+    monkeypatch.setattr(ub, "adjust_active_exam_index_after_remove", lambda st, i: None)
+    monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
+
+    ctrl.remove_exam(0)
+
+    assert state.normalization_method == "Fallback"
+    assert len(state.normalization_warnings) == 1
+    assert "ACME X1" in state.normalization_warnings[0]
+    # Single remaining exam: refresh_normalization_warnings omits "Exam N:" prefix.
+    assert not state.normalization_warnings[0].startswith("Exam ")
+
