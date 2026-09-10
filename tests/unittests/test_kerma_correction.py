@@ -15,6 +15,7 @@ import pytest
 
 from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
 )
@@ -35,12 +36,36 @@ def _frame(**cols) -> pd.DataFrame:
 
 
 def test_normalize_tube_aliases():
-    """Acquisition-plane strings map to single/A/B."""
+    """Acquisition-plane strings map to single/A/B; unknown text returns unknown."""
     assert normalize_tube("Single Plane") == "single"
     assert normalize_tube("Plane A") == "A"
     assert normalize_tube("plane b") == "B"
-    assert normalize_tube(None) == "single"
-    assert normalize_tube("") == "single"
+    assert normalize_tube(None) == "unknown"
+    assert normalize_tube("") == "unknown"
+    assert normalize_tube("ambiguous text") == "unknown"
+
+
+def test_resolve_keys_prefers_canonical_over_ambiguous_meaning():
+    """CID-backed canonical identity wins over unrecognized free-form meaning."""
+    df = _frame(
+        **{
+            KEY_NORMALIZATION_STATION_NAME: ["unit-01"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: ["Custom Plane Label"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL: ["A"],
+        }
+    )
+    assert resolve_correction_keys(df, explicit_label=None) == [("unit-01", "A")]
+
+
+def test_resolve_keys_falls_back_to_meaning_when_canonical_unknown():
+    df = _frame(
+        **{
+            KEY_NORMALIZATION_STATION_NAME: ["unit-01"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: ["Plane B"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL: ["unknown"],
+        }
+    )
+    assert resolve_correction_keys(df, explicit_label=None) == [("unit-01", "B")]
 
 
 def test_normalize_equipment_casefold_nfkc():
@@ -260,6 +285,22 @@ def test_load_rejects_bad_json_shape_and_empty_equipment(tmp_path: Path):
     with pytest.raises(ValueError, match="empty value"):
         load_correction_table(empty_equip)
 
+    empty_tube = tmp_path / "empty-tube.json"
+    empty_tube.write_text(
+        json.dumps([{"equipment": "unit-01", "tube": "  ", "correction_factor": 1.0}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="tube column"):
+        load_correction_table(empty_tube)
+
+    unknown_tube = tmp_path / "unknown-tube.json"
+    unknown_tube.write_text(
+        json.dumps([{"equipment": "unit-01", "tube": "Biplane", "correction_factor": 1.0}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="tube column"):
+        load_correction_table(unknown_tube)
+
     unsupported = tmp_path / "factors.txt"
     unsupported.write_text("nope", encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported"):
@@ -273,7 +314,7 @@ def test_normalize_nan_inputs_and_suspicious_factor_warning(tmp_path: Path):
     swallow the WARNING.
     """
     assert normalize_equipment_label(float("nan")) is None
-    assert normalize_tube(float("nan")) == "single"
+    assert normalize_tube(float("nan")) == "unknown"
 
     path = tmp_path / "wide.json"
     path.write_text(

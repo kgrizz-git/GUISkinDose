@@ -62,6 +62,22 @@ def normalize_manufacturer_key(manufacturer: object) -> str:
     return " ".join(key.split())
 
 
+def is_ge_manufacturer(manufacturer: object) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known GE-family alias.
+
+    Uses the same allow-list as normalization profile matching (not a substring
+    check), so values like ``"Surgery Equipment"`` are not treated as GE.
+    """
+    key = normalize_manufacturer_key(manufacturer)
+    return bool(key) and key in _GE_MANUFACTURER_ALIASES
+
+
+def is_philips_manufacturer(manufacturer: object) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known Philips-family alias."""
+    key = normalize_manufacturer_key(manufacturer)
+    return bool(key) and key in _MANUFACTURER_ALIASES_BY_SETTINGS_KEY["philips"]
+
+
 def normalize_model_key(model: object) -> str:
     """Canonical model key for settings lookup."""
     if str(model).strip() == "*":
@@ -109,6 +125,8 @@ class NormalizationSettings:
         self.field_size_mode: str | None = None
         self.detector_side_length: str | None = None
         self.normalization_method: str = "Unknown"
+        self.input_manufacturer: str = ""
+        self.input_model: str = ""
         self.matched_manufacturer: str = ""
         self.matched_model: str = ""
         self.swap_lateral_longitudinal: bool = False
@@ -126,6 +144,8 @@ class NormalizationSettings:
         """
         manufacturer = normalize_manufacturer_key(data_parsed[KEY_RDSR_MANUFACTURER][0])
         model = normalize_model_key(data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0])
+        self.input_manufacturer = str(data_parsed[KEY_RDSR_MANUFACTURER][0])
+        self.input_model = str(data_parsed[KEY_RDSR_MANUFACTURER_MODEL_NAME][0])
 
         manufacturer_settings = [
             setting

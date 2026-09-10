@@ -22,9 +22,12 @@ from typing import Any, cast
 import pandas as pd
 
 from guiskindose.constants import (
+    CID_10003_CANONICAL,
     KEY_NORMALIZATION_ACQUISITION_PLANE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_STATION_NAME,
+    TUBE_IDENTITY_UNKNOWN,
 )
 from guiskindose.grid_interp import format_event_indices
 
@@ -47,8 +50,6 @@ _TUBE_ALIASES = {
     "b": "B",
     "plane b": "B",
 }
-
-
 @dataclass(frozen=True)
 class KermaMeterCorrection:
     """Resolved per-event kerma-meter correction factors."""
@@ -73,15 +74,56 @@ def normalize_equipment_label(raw: str | float | None) -> str | None:
 
 
 def normalize_tube(acquisition_plane: str | float | None) -> str:
-    """Map acquisition_plane to ``single`` | ``A`` | ``B`` (default ``single``)."""
+    """Map acquisition_plane to ``single`` | ``A`` | ``B`` | ``unknown``.
+
+    Unrecognized or absent values return ``unknown`` so they cannot silently
+    match a real single-plane calibration in the correction table.
+    """
     if acquisition_plane is None:
-        return "single"
+        return TUBE_IDENTITY_UNKNOWN
     if isinstance(acquisition_plane, float) and math.isnan(acquisition_plane):
-        return "single"
+        return TUBE_IDENTITY_UNKNOWN
     text = unicodedata.normalize("NFKC", str(acquisition_plane)).strip().casefold()
     if not text:
-        return "single"
-    return _TUBE_ALIASES.get(text, "single")
+        return TUBE_IDENTITY_UNKNOWN
+    return _TUBE_ALIASES.get(text, TUBE_IDENTITY_UNKNOWN)
+
+
+def resolve_canonical_plane_identity(raw_code: object) -> str:
+    """Map a raw plane-identity code to ``single`` | ``A`` | ``B`` | ``unknown``.
+
+    Uses DICOM CID 10003 as the authoritative source.  Non-CID or missing codes
+    return ``unknown`` so callers never silently apply a real calibration to
+    ambiguous input.
+    """
+    if raw_code is None:
+        return TUBE_IDENTITY_UNKNOWN
+    if raw_code is pd.NA:
+        return TUBE_IDENTITY_UNKNOWN
+    if isinstance(raw_code, float) and math.isnan(raw_code):
+        return TUBE_IDENTITY_UNKNOWN
+    try:
+        if isinstance(raw_code, str):
+            key = raw_code.strip()
+            if key.endswith(".0") and key[:-2].isdigit():
+                key = str(int(float(key)))
+        elif isinstance(raw_code, bool):
+            return TUBE_IDENTITY_UNKNOWN
+        elif isinstance(raw_code, int):
+            key = str(raw_code)
+        elif isinstance(raw_code, float):
+            key = str(int(raw_code))
+        else:
+            text = str(raw_code).strip()
+            if text.endswith(".0") and text[:-2].isdigit():
+                key = str(int(float(text)))
+            elif text.isdigit():
+                key = text
+            else:
+                return TUBE_IDENTITY_UNKNOWN
+    except (TypeError, ValueError):
+        return TUBE_IDENTITY_UNKNOWN
+    return CID_10003_CANONICAL.get(key, TUBE_IDENTITY_UNKNOWN)
 
 
 def resolve_correction_keys(
@@ -92,12 +134,21 @@ def resolve_correction_keys(
     """Resolve ``(equipment_label, tube)`` per event using fixed precedence.
 
     Order: explicit_label → device_serial → station_name → unresolved (None).
+
+    Tube identity prefers ``acquisition_plane_canonical`` when it is a recognized
+    CID-backed value (``single`` / ``A`` / ``B``); otherwise falls back to
+    ``normalize_tube(acquisition_plane)`` so meaning-only inputs still resolve.
     """
     n = len(data_norm)
     plane_col = (
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE]
         if KEY_NORMALIZATION_ACQUISITION_PLANE in data_norm.columns
         else pd.Series([None] * n)
+    )
+    canonical_col = (
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL]
+        if KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL in data_norm.columns
+        else None
     )
     serial_col = (
         data_norm[KEY_NORMALIZATION_DEVICE_SERIAL]
@@ -113,7 +164,13 @@ def resolve_correction_keys(
     forced = normalize_equipment_label(explicit_label)
     keys: list[tuple[str | None, str]] = []
     for i in range(n):
-        tube = normalize_tube(plane_col.iloc[i] if i < len(plane_col) else None)
+        tube = TUBE_IDENTITY_UNKNOWN
+        if canonical_col is not None and i < len(canonical_col):
+            cand = str(canonical_col.iloc[i]).strip()
+            if cand in {"single", "A", "B"}:
+                tube = cand
+        if tube == TUBE_IDENTITY_UNKNOWN:
+            tube = normalize_tube(plane_col.iloc[i] if i < len(plane_col) else None)
         if forced is not None:
             keys.append((forced, tube))
             continue
@@ -199,6 +256,10 @@ def _rows_to_factor_dict(
         raw_cf = row.get("correction_factor")
         if equip is None:
             raise ValueError("Kerma-meter correction table: equipment column has an empty value.")
+        if tube == TUBE_IDENTITY_UNKNOWN:
+            raise ValueError(
+                "Kerma-meter correction table: tube column has an empty or unrecognized value."
+            )
         if raw_cf is None:
             raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
         try:
@@ -320,7 +381,7 @@ def _lookup_correction(
     table_miss: list[int],
 ) -> float:
     """Per-event lookup: returns factor, appends to ``unresolved``/``table_miss`` as needed."""
-    if equip is None:
+    if equip is None or tube == TUBE_IDENTITY_UNKNOWN:
         unresolved.append(index)
         return default_factor
     cf = lookup.get((equip, tube))

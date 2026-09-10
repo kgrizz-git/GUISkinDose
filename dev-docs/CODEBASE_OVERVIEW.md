@@ -226,8 +226,8 @@ Top-level settings object. Key attributes:
 |-----------|------|---------|-------------|
 | `mode` | `str` | `"plot_event"` | Run mode (see below) |
 | `rdsr_filename` | `str` | — | RDSR filename (used when no `file_path` passed to `main()`) |
-| `estimate_k_tab` | `bool` | `True` | Use estimated table attenuation instead of measured |
-| `k_tab_val` | `float` | `0.8` | Table transmission factor (0–1) when estimating |
+| `estimate_k_tab` | `bool` | `True` | Use estimated patient-support transmission instead of measured lookup |
+| `k_tab_val` | `float` | `0.8` | Patient-support transmission factor `(0, 1]` when estimating |
 | `inherent_filtration` | `float` | `3.1` | X-ray tube inherent filtration in mmAl |
 | `remove_invalid_rows` | `bool` | `False` | Drop events with kVp = 0 |
 | `below_floor_kvp_policy` | `str` | `"exam_average"` | Handle events with kVp < 25 kV HVL floor: `snap`/`skip`/`manual`/`exam_average` |
@@ -357,7 +357,7 @@ Orchestrates the full calculation:
 2. Fetches HVL values from `corrections.db`
 3. Detects geometry changes between events (`check_new_geometry`)
 4. Pre-computes backscatter interpolation objects for all events
-5. Computes table transmission correction
+5. Computes patient-support transmission correction (`k_tab`)
 6. Calls `calculate_irradiation_event_result()` in a loop over each event
 
 Geometry-change handling and per-event dose accumulation live in
@@ -381,7 +381,7 @@ Per-event processing:
 | `k_isq` | `calculate_k_isq()` | Inverse-square-law: `(d_ref / d_skin)²` |
 | `k_bs` | `calculate_k_bs()` | Backscatter (Benmakhlouf et al., field size + kVp) |
 | `k_med` | `calculate_k_med()` | Medium correction (air kerma → tissue dose) |
-| `k_tab` | `calculate_k_tab()` | Table/pad attenuation (measured or estimated; (kVp, Cu) interpolation + edge clamping, fail-soft to 1.0 for unknown device/plane) |
+| `k_tab` | `calculate_k_tab()` | Patient-support transmission. Estimated path (product default): validated `k_tab_val`. Measured path: DB by model + plane string; invalid inherited (e.g. AlluraClarity Plane B `0.0`) → warned-neutral `1.0`. Multiplied only onto table-hit cells in `add_corrections_and_event_dose_to_output`. |
 | `k_meter` | `kerma_correction.resolve_correction_factors()` | Kerma-meter CF (optional; reported K_IRP × CF before physics corrections; fail-soft to `default_factor`) |
 
 ---

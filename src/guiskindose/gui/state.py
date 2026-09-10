@@ -26,6 +26,8 @@ class AppState:
     file_name: str = ""
     manufacturer: str = ""
     model: str = ""
+    input_manufacturer: str = ""
+    input_model: str = ""
     normalization_method: str = "Unknown"
     normalization_warnings: list[str] = field(default_factory=list)
     table_offset_x: float = 0.0

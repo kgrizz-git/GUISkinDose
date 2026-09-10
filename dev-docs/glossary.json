@@ -4,36 +4,50 @@
     "PSD": {
       "preferred": "peak skin dose",
       "definition": "Maximum accumulated dose on any modeled skin cell, reported in mGy.",
-      "aliases": ["peak skin dose"]
+      "aliases": [
+        "peak skin dose"
+      ]
     },
     "RDSR": {
       "preferred": "DICOM Radiation Dose Structured Report",
       "definition": "DICOM object containing irradiation event geometry and dose metadata.",
-      "aliases": ["radiation dose structured report"]
+      "aliases": [
+        "radiation dose structured report"
+      ]
     },
     "DAP": {
       "preferred": "dose-area product",
       "definition": "Product of air kerma and beam area used by tabular exports and correction calculations.",
-      "aliases": ["dose area product"]
+      "aliases": [
+        "dose area product"
+      ]
     },
     "HVL": {
       "preferred": "half-value layer",
       "definition": "Beam-quality measure used by correction-factor lookup and interpolation.",
-      "aliases": ["half value layer"]
+      "aliases": [
+        "half value layer"
+      ]
     },
     "k_tab": {
-      "preferred": "table transmission correction",
-      "definition": "Correction factor for attenuation through the procedure table or pad.",
-      "aliases": ["table transmission"]
+      "preferred": "patient-support transmission factor",
+      "definition": "Dimensionless correction factor for dose attenuation through the patient-support table or pad. A value of 1.0 means no attenuation; lower values mean greater attenuation. attenuation_fraction = 1 - k_tab.",
+      "aliases": [
+        "table transmission correction",
+        "table transmission",
+        "k_tab"
+      ]
     },
     "below_floor_kvp": {
       "preferred": "below-floor kVp",
       "definition": "Irradiation event with kVp below the lowest HVL lookup grid value.",
-      "aliases": ["sub-floor kVp"]
+      "aliases": [
+        "sub-floor kVp"
+      ]
     },
     "kerma_meter_correction": {
       "preferred": "kerma-meter correction factor",
-      "definition": "Calibration multiplier CF = (real measured dose) / (unit reported dose), applied per equipment × tube before physics corrections.",
+      "definition": "Calibration multiplier CF = (real measured dose) / (unit reported dose), applied per equipment \u00d7 tube before physics corrections.",
       "aliases": [
         "kerma calibration factor",
         "K_a,r correction coefficient",
@@ -44,17 +58,36 @@
     "LON": {
       "preferred": "historical longitudinal display alias / patient left-right axis",
       "definition": "Historical PySkinDose display alias for the normalized X-axis, combining longitudinal table-position naming with the patient left-right direction.",
-      "aliases": ["LON / PT L-R", "PT L-R", "X - LON / PT L-R [cm]"]
+      "aliases": [
+        "LON / PT L-R",
+        "PT L-R",
+        "X - LON / PT L-R [cm]"
+      ]
     },
     "VER": {
       "preferred": "historical vertical display alias / patient anterior-posterior axis",
       "definition": "Historical PySkinDose display alias for the normalized Y-axis, combining vertical table-position naming with the patient anterior-posterior direction.",
-      "aliases": ["VER / PT A-P", "PT A-P", "Y - VER / PT A-P [cm]"]
+      "aliases": [
+        "VER / PT A-P",
+        "PT A-P",
+        "Y - VER / PT A-P [cm]"
+      ]
     },
     "LAT": {
       "preferred": "historical lateral display alias / patient superior-inferior axis",
       "definition": "Historical PySkinDose display alias for the normalized Z-axis, combining lateral table-position naming with the patient superior-inferior direction.",
-      "aliases": ["LAT / PT S-I", "PT S-I", "Z - LAT / PT S-I [cm]"]
+      "aliases": [
+        "LAT / PT S-I",
+        "PT S-I",
+        "Z - LAT / PT S-I [cm]"
+      ]
+    },
+    "attenuation_fraction": {
+      "preferred": "attenuation fraction",
+      "definition": "Fraction of dose attenuated by the patient support, equal to 1 minus the patient-support transmission factor (attenuation_fraction = 1 - k_tab).",
+      "aliases": [
+        "attenuation fraction"
+      ]
     }
   }
 }

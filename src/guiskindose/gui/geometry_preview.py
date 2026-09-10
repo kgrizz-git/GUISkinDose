@@ -4,19 +4,33 @@ from __future__ import annotations
 
 import pandas as pd
 
+from guiskindose.settings.normalization_settings import is_ge_manufacturer, is_philips_manufacturer
+
 from .exam_transforms import EXAM_COLUMN, EXAM_INDEX_COLUMN
 from .state import AppState
 
 _GE_WARNING_TOKEN = "ge manufacturer detected"
 
 
+def _is_ge_family_manufacturer(manufacturer: str) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known GE alias."""
+    return is_ge_manufacturer(manufacturer)
+
+
+def _is_philips_family_manufacturer(manufacturer: str) -> bool:
+    """True when ``manufacturer`` canonicalizes to a known Philips alias."""
+    return is_philips_manufacturer(manufacturer)
+
+
 def _active_exam_summary(meta: dict, manufacturer: str, model: str, normalization_method: str) -> str:
     """Format the optional vendor/schema line for a Geometry notice."""
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip()
-    mdl = (model or meta.get("model") or "").strip()
+    # Prefer the actual input manufacturer/model over the matched profile so
+    # unmatched scanners are identified by their true identity.
+    mfr = (meta.get("input_manufacturer") or manufacturer or meta.get("manufacturer") or "").strip()
+    mdl = (meta.get("input_model") or model or meta.get("model") or "").strip()
     schema = (meta.get("schema") or "").strip()
     source = (meta.get("source_type") or "").strip().upper()
-    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    method = (normalization_method or meta.get("normalization_method") or "").strip()
     subject = " / ".join(value for value in (mfr, mdl) if value)
     details = " · ".join(value for value in (source, schema, method) if value)
     summary = " · ".join(value for value in (subject, details) if value)
@@ -25,22 +39,61 @@ def _active_exam_summary(meta: dict, manufacturer: str, model: str, normalizatio
 
 def _normalization_notice(meta: dict, normalization_method: str) -> str:
     """Return the fallback-normalization warning, if applicable."""
-    method = (meta.get("normalization_method") or normalization_method or "").strip()
+    method = (normalization_method or meta.get("normalization_method") or "").strip()
     if method == "Fallback":
+        actual_mfr = (meta.get("input_manufacturer") or "").strip()
+        actual_mdl = (meta.get("input_model") or "").strip()
+        scanner = " / ".join(v for v in (actual_mfr, actual_mdl) if v)
+        if scanner:
+            return (
+                f"Default normalization in use for '{scanner}'; "
+                "verify Tx/Tz axes and table signs before calculation."
+            )
         return "Default normalization in use; verify Tx/Tz axes and table signs before calculation."
     return ""
 
 
-def _vendor_coordinate_notice(meta: dict, manufacturer: str) -> str:
-    """Return vendor and manual-swap guidance without changing its precedence."""
+def _vendor_coordinate_notice(
+    meta: dict, manufacturer: str, normalization_method: str = ""
+) -> str:
+    """Return vendor and manual-swap guidance without changing its precedence.
+
+    Vendor-family detection prefers the actual input manufacturer so an unmatched
+    GE/Philips scanner on the Default profile still gets family-specific guidance.
+    For GE-family Fallback, do **not** claim auto Tx/Tz swap was applied — Default
+    does not enable ``swap_lateral_longitudinal``.
+
+    ``normalization_method`` prefers the explicit argument (same as
+    :func:`_normalization_notice`), then ``meta["normalization_method"]``.
+    """
     warnings = " ".join(meta.get("warnings", []) or []).lower()
-    mfr = (manufacturer or meta.get("manufacturer") or "").strip().lower()
+    input_mfr = (meta.get("input_manufacturer") or "").strip()
+    matched_mfr = (manufacturer or meta.get("manufacturer") or "").strip()
+    mfr = input_mfr or matched_mfr
+    method = (normalization_method or meta.get("normalization_method") or "").strip()
     manual_swap = bool(meta.get("swap_lat_lon", False))
-    if _GE_WARNING_TOKEN in warnings or "ge" in mfr:
+    ge_like = _GE_WARNING_TOKEN in warnings or _is_ge_family_manufacturer(mfr)
+    if ge_like:
+        if method == "Fallback":
+            if manual_swap:
+                return (
+                    "Input looks GE-family but Default profile is active "
+                    "(GE Tx/Tz auto-swap was not applied); manual Tx/Tz swap is on — "
+                    "verify axes to avoid missed or double correction."
+                )
+            return (
+                "Input looks GE-family but Default profile is active; "
+                "GE Tx/Tz auto-swap was not applied — verify table axes before calculation."
+            )
         if manual_swap:
             return "GE handling is already normalized; manual Tx/Tz swap is active and may double-correct."
         return "GE lateral/longitudinal handling is already applied during normalization."
-    if "philips" in mfr:
+    if _is_philips_family_manufacturer(mfr):
+        if method == "Fallback":
+            return (
+                "Input looks Philips-family but Default profile is active; "
+                "Philips table offsets were not applied — verify Tx/Ty/Tz before calculation."
+            )
         return "Philips large table offsets make missed or double normalization visibly wrong."
     if manual_swap:
         return "Manual Tx/Tz swap is active; verify the source/export convention to avoid missed or double swaps."
@@ -65,7 +118,9 @@ def geometry_vendor_notice(
 
     Inspects metadata warnings, manufacturer, model, normalization method, and manual
     coordinate swap flags to construct informative user guidance regarding table axes
-    and vendor-specific coordinate conventions.
+    and vendor-specific coordinate conventions. When normalization fell back to the
+    Default profile, the notice names the actual unmatched scanner identity and
+    identifies the active profile as Default.
 
     Parameters
     ----------
@@ -86,7 +141,7 @@ def geometry_vendor_notice(
     parts = (
         _active_exam_summary(meta, manufacturer, model, normalization_method),
         _normalization_notice(meta, normalization_method),
-        _vendor_coordinate_notice(meta, manufacturer),
+        _vendor_coordinate_notice(meta, manufacturer, normalization_method),
         _axis_flip_notice(meta),
     )
     return " ".join(part for part in parts if part)

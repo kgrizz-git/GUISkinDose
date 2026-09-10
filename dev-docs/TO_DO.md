@@ -14,9 +14,83 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
-- [ ] **Immediate Correction Work** — Complete
-  [correction safety and tube identity](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md), then
+- [ ] **Immediate Correction Work** — Land the safety PR for
+  [correction safety and tube identity](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
+  (transmission validation, tube identity, unmatched-scanner GUI, terminology),
+  then finish that plan’s **Remaining before Plan 1 archive** section (plane-identity
+  audit/export parity; structured `k_tab` invalid-source status / pre-calc match
+  preview). After Plan 1 is archived, continue with
   [correction packaging and provenance](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
+
+  **Conscious sign-offs (keep fail-loud unless product asks otherwise):**
+  - Kerma CF tables with an unrecognized tube label abort the whole table at
+    load (no silent per-row skip).
+  - Measured `k_tab` with `k_tab_val=0` / invalid transmission fails at dose
+    calculation (not at settings construction); inherited AlluraClarity Plane B
+    zeros are already neutralized to warned `1.0` on the measured path.
+
+  **Review follow-ups (soon / with Plan 1 archive leftovers):**
+  - Tabular raw-code → `acquisition_plane_canonical` without a DCM designator
+    can over-claim code-backed identity (audit trail only; dose path unchanged).
+    Close with plan remaining item #1 (`acquisition_plane_source_kind` /
+    `acquisition_plane_resolution`). Comment lives in `rdsr_normalizer.py`.
+  - Optional hardening: assert uniqueness of measured `k_tab` DB rows on
+    `(model, plane, kVp, Cu, Al)` so exact-match `iloc[0]` cannot silently
+    choose among duplicates (`corrections.py`).
+  - DoseTrack mixed CID `{Single Plane, Plane A/B}` now warns on import; watch
+    for noisy false positives on unusual site exports.
+- [ ] **PSD calculation algorithm doc + harness** — After Plan 1 PR merge (or in
+  parallel on a separate branch once review is idle), write a canonical PSD
+  calculation algorithm page under `dev-docs/` (proposed filename
+  `PSD_CALCULATION_ALGORITHM.md` — create the file when starting this item) and
+  wire light doc-maintenance hooks.
+  Parked so CodeRabbit / Plan 1 closure is not blocked. Outline to cover:
+
+  **Algorithm stages (user-requested):**
+  1. Read irradiation events (RDSR DICOM and/or tabular imports).
+  2. Identify and apply correct vendor/unit/coordinate transformations and
+     patient/table offsets into the internal normalized frame.
+  3. Identify and apply correction factors (`k_meter` when enabled, then
+     `k_isq`, `k_bs`, `k_med`, patient-support `k_tab`, plus HVL / below-floor
+     kVp policy as prerequisites for backscatter/medium).
+  4. Project X-ray fields from the source per exposure (angles, SID/IRP
+     distances, collimated field size / field-size mode).
+  5. Determine intersections with table/pad and patient phantom (table
+     coordinates, phantom size/contours/normals; `Beam.check_hit`,
+     `check_table_hits`).
+  6. Accumulate dose cumulatively over exposures and exams (per-exam maps;
+     multi-exam aggregate = sum of aligned dose maps; PSD = max of map).
+  7. Report peak skin dose and supporting outputs (dose map, corrections,
+     warnings).
+
+  **Also document (easy to overlook):** phantom placement / habitus scales;
+  geometry-change reuse; beam-miss diagnostics; kerma CF keyed by equipment ×
+  tube without special-casing A/B geometry; measured `k_tab` table keyed by
+  device × plane string (lookup identity only — projection math stays
+  plane-agnostic); invalid-row / out-of-range transmission handling;
+  Implementation-deviations section vs live code.
+
+  **Harness work (do with the doc, not a separate forgotten PR):** register in
+  `dev-docs/index.md`, `HARNESS_ENGINEERING.md` source-of-truth map, and
+  `AGENTS.md`; add a `psd_calculation` (or equivalent) row in
+  `feature_doc_matrix.json` covering `calculate_dose/`, `geom_calc.py`,
+  `beam_class.py`, `corrections.py`, `kerma_correction.py`, normalizer/adapters;
+  optional invariant tests in the style of `test_input_schema_doc.py`; use
+  matrix `--against-ref` / impact review when dose-path code changes; keep a
+  short Sphinx/user pointer rather than duplicating the full narrative.
+- [ ] **PSD algorithm flow diagram** — Add a sequence diagram and/or Mermaid
+  flowchart of input → normalize → position → per-event loop (field projection,
+  intersections, corrections, accumulate) → per-exam / multi-exam aggregate →
+  PSD, with links to the real modules. Host under `dev-docs/` (e.g. beside or
+  embedded in `PSD_CALCULATION_ALGORITHM.md`) and **link it from the algorithm
+  doc** when that page is written. Update the diagram when dose-pipeline code
+  changes (same harness/matrix watch as the algorithm doc).
+- [ ] **Settings/Calculate Fallback badge visibility** — Upload alert now binds to
+  non-empty `normalization_warnings`. Settings and Calculate still bind badges to
+  global `normalization_method == "Fallback"` (`settings.py`, `calculate.py`);
+  `restore_globals_from_exam_meta` does not restore that field, so multi-exam
+  remove can leave stale badges. Align those tabs with the warning-list binding
+  (or restore `normalization_method` from remaining exam meta) in a small follow-up.
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
@@ -32,7 +106,10 @@ policy decisions, not a restart of Phases 0-9.
 - [ ] **Correction-data modernization roadmap** — umbrella and current-state reference:
   [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md).
   Delivery is deliberately split:
-  1. **Immediate bug fix:** [Plane B safety, tube identity, unmatched-model alerts, and transmission terminology](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
+  1. **Immediate bug fix:** [Plane B safety, tube identity, unmatched-model alerts, and transmission terminology](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
+     — safety core is implemented on `fix/correction-safety-tube-identity`; remaining
+     closure items are listed in that plan’s **Remaining before Plan 1 archive**
+     section (do not archive until those are done or relocated).
   2. **Packaging/runtime fix:** [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
   3. **Separate future feature:** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
   4. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
@@ -61,6 +138,7 @@ policy decisions, not a restart of Phases 0-9.
   items: [assessment](assessments/DOCUMENTATION_TOOLING_EVALUATION_2026-09-06.md). Record the outcome in a decision log.
 - [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
+  - *Correction safety / tube identity*: unmatched model → Default warning names real scanner; GE-family unmatched does **not** claim Tx/Tz auto-swap applied; valid Plane A; ambiguous Plane B / DoseTrack map; multi-exam mixed match/fallback (see [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation).
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
   - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
   - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.

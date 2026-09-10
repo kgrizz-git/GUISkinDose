@@ -504,7 +504,7 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
                     {"name": "event", "label": "EV", "field": "event", "align": "right"},
                     {"name": "k_isq", "label": "ISQ", "field": "k_isq", "align": "right"},
                     {"name": "k_bs", "label": "BS", "field": "k_bs", "align": "right"},
-                    {"name": "k_tab", "label": "TAB", "field": "k_tab", "align": "right"},
+                    {"name": "k_tab", "label": "k_tab", "field": "k_tab", "align": "right"},
                 ],
                 rows=[],
                 row_key="event",

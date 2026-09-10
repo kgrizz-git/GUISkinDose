@@ -23,6 +23,7 @@ from ..helpers import (
     any_table_origin_override,
     canonicalize_human_mesh_selection,
     fallback_normalization_exam_count,
+    format_normalization_profile_label,
     get_human_mesh_options,
     get_mesh_baseline_extents,
     get_mesh_baseline_torso_width,
@@ -176,7 +177,16 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                 state, "is_multi_exam", backward=lambda _v: _format_table_offset_line()
             )
 
-            fallback_badge = ui.badge("Fallback normalization").props("color=amber")
+            # Matched normalization profile and origin detail
+            norm_profile_label = ui.label(format_normalization_profile_label(state)).classes(
+                "text-caption text-grey-5 italic"
+            )
+            for attr in ("normalization_method", "manufacturer", "model"):
+                norm_profile_label.bind_text_from(
+                    state, attr, backward=lambda _v: format_normalization_profile_label(state)
+                )
+
+            fallback_badge = ui.badge("Default profile").props("color=amber")
             fallback_badge.bind_visibility_from(
                 state, "normalization_method", backward=lambda v: v == "Fallback"
             )
@@ -296,14 +306,14 @@ def _build_physics_section() -> None:
     """Physics Settings expansion: transmission factor, filtration, kVp policy, kerma meter."""
     with ui.expansion("Physics Settings", icon="science").classes(_SETTINGS_EXPANSION_CLASSES):
         with ui.column().classes(_SETTINGS_SECTION_CLASSES):
-            ui.checkbox("Use estimated table transmission (k_tab)", value=state.estimate_k_tab).bind_value(
+            ui.checkbox("Use estimated patient-support transmission factor", value=state.estimate_k_tab).bind_value(
                 state, "estimate_k_tab"
             ).on(_MODEL_VALUE_EVENT, reset_results)
 
             with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
-                ui.label("TRANSMISSION FACTOR (k_tab)").classes("technical-label")
+                ui.label("TRANSMISSION FACTOR (patient-support)").classes("technical-label")
                 with ui.row().classes("items-center w-full gap-4"):
-                    ui.slider(min=0.0, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
+                    ui.slider(min=0.01, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
                         state, "k_tab_val"
                     ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
                     ui.label().bind_text_from(state, "k_tab_val", backward=lambda v: f"{v:.2f}").classes("mono-text font-bold")

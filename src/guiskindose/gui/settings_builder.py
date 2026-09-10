@@ -15,6 +15,46 @@ def fallback_normalization_exam_count(app_state: AppState) -> int:
     return sum(1 for m in app_state.loaded_exam_meta if m.get("normalization_method") == "Fallback")
 
 
+def format_input_scanner_label(app_state: AppState) -> str:
+    """Prefer actual input manufacturer/model; fall back to matched profile labels."""
+    text = f"{app_state.input_manufacturer} {app_state.input_model}".strip()
+    if not text:
+        text = f"{app_state.manufacturer} {app_state.model}".strip()
+    return text or "—"
+
+
+def format_normalization_profile_label(app_state: AppState) -> str:
+    """Describe the matched profile or Default fallback for Settings/Calculate."""
+    if app_state.normalization_method == "Matched":
+        matched = f"{app_state.manufacturer} {app_state.model}".strip()
+        return f"Matched: {matched}" if matched else "Matched"
+    if app_state.normalization_method == "Fallback":
+        return "Default profile"
+    return ""
+
+
+def refresh_normalization_warnings(app_state: AppState) -> None:
+    """Rebuild toast warnings from every loaded exam's fallback status.
+
+    Multi-file uploads must accumulate per-exam messages; clearing on each file
+    would leave only the last exam's warning.
+    """
+    warnings: list[str] = []
+    multi = len(app_state.loaded_exam_meta) > 1
+    for index, meta in enumerate(app_state.loaded_exam_meta):
+        if meta.get("normalization_method") != "Fallback":
+            continue
+        scanner = f"{meta.get('input_manufacturer', '')} {meta.get('input_model', '')}".strip()
+        if not scanner:
+            scanner = "unknown scanner"
+        prefix = f"Exam {index + 1}: " if multi else ""
+        warnings.append(
+            f"{prefix}Scanner '{scanner}' not found in normalization profiles. "
+            "Using default normalization settings."
+        )
+    app_state.normalization_warnings = warnings
+
+
 def build_settings(
     app_state: AppState,
     mode: str = "calculate_dose",

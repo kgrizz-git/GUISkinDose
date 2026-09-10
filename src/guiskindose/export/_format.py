@@ -15,7 +15,7 @@ CORRECTION_LABELS = {
     "k_bs": "Backscatter (k_bs)",
     "k_isq": "Inverse-square law (k_isq)",
     "k_med": "Medium (k_med)",
-    "k_tab": "Table (k_tab)",
+    "k_tab": "Patient-support transmission (k_tab)",
     "k_meter": "Kerma-meter (k_meter)",
 }
 

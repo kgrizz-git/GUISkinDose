@@ -1,6 +1,6 @@
 # Correction Safety and Tube Identity Plan
 
-Status: Active — immediate priority
+Status: Active — PR branch in progress; remaining closure items listed below
 Created: 2026-09-08
 Parent roadmap:
 [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
@@ -56,12 +56,15 @@ equipment profiles, or change the table/pad intersection model.
 
 - [ ] Add focused tests for valid single-plane/A/B DICOM CID values, free-form or
   unknown values, DoseTrack one-code/two-code subsets, and normalized input.
-- [ ] Add a current-behavior characterization test proving that inherited
+- [x] Add a current-behavior characterization test proving that inherited
   AlluraClarity Plane B zero `k_tab` currently zeroes intersected-cell dose, and
   that a non-zero fallback produces a higher, conservative PSD-side estimate.
-- [ ] Pin existing valid Siemens and Philips Plane A numerical behavior.
-- [ ] Characterize the default `estimate_k_tab` path separately from the table
+  *(Completed in Chunk 1: `tests/unittests/test_k_tab_transmission_characterization.py`)*
+- [x] Pin existing valid Siemens and Philips Plane A numerical behavior.
+  *(Completed in Chunk 1: exact-match pins in the new characterization module)*
+- [x] Characterize the default `estimate_k_tab` path separately from the table
   lookup, including `k_tab_val = 0.0` and `k_tab_val > 1.0`.
+  *(Completed in Chunk 1: `TestEstimateKTabNoValidation` in the new module)*
 - [ ] Add DoseTrack cases for a plane-code column with three or more distinct
   integers (currently a hard `ValueError`) and for a file whose codes span more than
   one scanner, since `_normalize_plane_code()` infers one mapping per file.
@@ -70,50 +73,62 @@ equipment profiles, or change the table/pad intersection model.
 
 ### 2. Add a conservative zero-transmission safeguard
 
-- [ ] Validate database/profile-derived patient-support transmission before use.
-- [ ] Treat non-finite or non-positive lookup values as invalid/missing, emit a
+- [x] Validate database/profile-derived patient-support transmission before use.
+  *(Chunk 2: shared `_validate_transmission_factor` in `corrections.py`)*
+- [x] Treat non-finite or non-positive lookup values as invalid/missing, emit a
   prominent privacy-safe warning, and use neutral transmission `1.0`.
-- [ ] Reject or warn on transmission values greater than `1.0`. These are
+  *(Chunk 2)*
+- [x] Reject or warn on transmission values greater than `1.0`. These are
   unphysical for a patient support and produce unsupported dose inflation, so they
   must not pass validation silently.
-- [ ] Define the explicit estimated-factor contract as finite `0 < k_tab_val <= 1`.
+  *(Chunk 2: estimated path raises; inherited lookup falls back with warning)*
+- [x] Define the explicit estimated-factor contract as finite `0 < k_tab_val <= 1`.
   Align the `calculate_k_tab()` docstring, GUI control and validation, notebook,
   settings docs, and API/CLI boundaries in the same change.
-- [ ] Apply that contract to the **default** `estimate_k_tab` path, which currently
+  *(Chunk 2: docstring, Settings slider, settings class docs, getting-started notebook)*
+- [x] Apply that contract to the **default** `estimate_k_tab` path, which currently
   returns `k_tab_val` for every event with no range check. Reject an invalid explicit
   value with an actionable error before calculation rather than silently replacing
   the user's input. Share range-validation logic with the lookup path where practical,
   while retaining the warned-neutral fallback for invalid inherited lookup data.
-- [ ] Preserve the inherited Plane B rows unchanged for provenance until a verified
+  *(Chunk 2)*
+- [x] Preserve the inherited Plane B rows unchanged for provenance until a verified
   source or measurement justifies editing them.
-- [ ] Keep intentional user-entered estimated transmission separate, label its
+  *(Chunk 2: CSV unchanged; runtime fallback only)*
+- [x] Keep intentional user-entered estimated transmission separate, label its
   source, and document the user-visible correction that explicit zero is no longer
   accepted.
+  *(Chunk 2: estimated path raises; CHANGELOG documents the contract)*
 - [ ] Include invalid-source/fallback status in calculation warnings and exports.
-- [ ] Add a dedicated fixture/test pinning the observable contract: AlluraClarity
+  *(Warnings landed in Chunk 2; structured export/status fields remain open)*
+- [x] Add a dedicated fixture/test pinning the observable contract: AlluraClarity
   Plane B events must produce warned-neutral transmission `1.0`, must not silently
   zero intersected dose, and must show a dose regression relative to the pre-fix
   characterization baseline. Do not edit an existing golden fixture if a dedicated
   test is cleaner.
-- [ ] Record a clear CHANGELOG note under the patch release explaining that
+  *(Chunk 2: `test_k_tab_transmission_characterization.py`)*
+- [x] Record a clear CHANGELOG note under the patch release explaining that
   inherited Plane B zero-transmission rows no longer silently zero dose and that
   affected PSD values will increase to the warned-neutral fallback.
+  *(Chunk 2: `CHANGELOG.md` Unreleased)*
 
 ### 3. Canonicalize tube identity
 
-- [ ] Preserve DICOM acquisition-plane code, coding scheme, and meaning during parse
+- [x] Preserve DICOM acquisition-plane code, coding scheme, and meaning during parse
   and normalization.
-- [ ] Canonicalize only recognized CID 10003 values to `single`, `A`, or `B`, in a
+- [x] Canonicalize only recognized CID 10003 values to `single`, `A`, or `B`, in a
   **new additive field**. Do not rewrite the normalized `acquisition_plane` column
   in place: `corrections._match_device_rows()` compares it verbatim against the
   CSV's literal `"Single Plane"` / `"Plane A"` / `"Plane B"` strings, so replacing
   those values with `single`/`A`/`B` would make every `k_tab` lookup miss and
   fail soft to `1.0` — a silent, global dose change. Add a regression test that
   fails if canonicalization changes any `k_tab` value.
-- [ ] Unknown or ambiguous values must remain unknown and use neutral correction
+- [x] Unknown or ambiguous values must remain unknown and use neutral correction
   behavior; they must not silently become `single`.
-- [ ] Replace DoseTrack ordering inference with a documented explicit mapping or a
+- [x] Replace DoseTrack ordering inference with a documented explicit mapping or a
   required user choice when the source mapping is unknown.
+  *(CID-backed auto-map; non-CID requires settings ``dosetrack_plane_code_map`` or
+  CLI ``--plane-code-map``; otherwise ``ValueError``.)*
 - [ ] Before closure, define a raw plane-identity audit/export schema preserving:
   - source kind/schema (DICOM, DoseTrack, Radimetrics, generic, normalized);
   - raw code value (when present, e.g., DICOM CodeValue or DoseTrack integer);
@@ -125,28 +140,40 @@ equipment profiles, or change the table/pad intersection model.
   Require API/GUI/export parity on this schema with additive fields so no existing
   output shape is broken. Privacy-safe handling: never log raw identifiers; emit
   only counts and event-index lists for warnings.
+  *(Partial: additive DataFrame fields for code/scheme/meaning/canonical/raw_code
+  landed; source-kind, resolution status, and GUI/export parity remain open.)*
 
 ### 4. Fix unmatched-model GUI reporting
 
-- [ ] Retain actual input manufacturer/model separately from the matched
+- [x] Retain actual input manufacturer/model separately from the matched
   normalization profile.
-- [ ] Make Upload and Geometry warnings name the actual unmatched model and state
+  *(Chunk 4: `NormalizationSettings.input_*` + `AppState` + per-exam meta)*
+- [x] Make Upload and Geometry warnings name the actual unmatched model and state
   that the Default profile is active.
-- [ ] Attribute fallback warnings per exam in multi-exam mode.
+- [x] Attribute fallback warnings per exam in multi-exam mode.
 - [ ] Show the selected normalization profile, X/Y/Z origin shift, axis rules, and
   `k_tab` match/fallback status before calculation.
-- [ ] Add GUI simulation tests for single- and multi-exam fallback reporting.
+  *(Partial in Chunk 4: Calculate/Settings show input vs matched/Default profile,
+  table offsets, and estimated vs measured patient-support transmission. Bundled
+  table-lookup `k_tab` match/fallback status remains open with Chunk 2 export
+  status.)*
+- [x] Add GUI simulation tests for single- and multi-exam fallback reporting.
+  *(Chunk 4: `tests/gui/test_gui_fallback_reporting.py`)*
 
 ### 5. Terminology audit
 
-- [ ] Use “patient-support transmission factor” for `k_tab` in GUI labels, help,
+- [x] Use “patient-support transmission factor” for `k_tab` in GUI labels, help,
   notebook, glossary, API docs, exports, warnings, feature inventory, and active
   plans.
-- [ ] Use “attenuation” only for the physical reduction or explicitly say
+  *(Chunk 4: GUI labels, export label, glossary, FEATURE_INVENTORY. In-app help
+  pages had no prior `k_tab` copy to rewrite; notebook already describes
+  patient-support transmission.)*
+- [x] Use “attenuation” only for the physical reduction or explicitly say
   “transmission correction for attenuation.”
-- [ ] Define `attenuation fraction = 1 - transmission factor`.
-- [ ] Update the UI-copy/help registries required by the documentation harness.
-- [ ] When renaming the `dev-docs/glossary.json` `k_tab` preferred term (currently
+- [x] Define `attenuation fraction = 1 - transmission factor`.
+- [x] Update the UI-copy/help registries required by the documentation harness.
+  *(Glossary updated; UI-copy/help-registry checks pass without new tokens.)*
+- [x] When renaming the `dev-docs/glossary.json` `k_tab` preferred term (currently
   "table transmission correction"), keep the previous term and "table transmission"
   as aliases so existing copy and searches still resolve.
 
@@ -176,8 +203,33 @@ equipment profiles, or change the table/pad intersection model.
 - Manual GUI smoke: unmatched model, valid Plane A, ambiguous Plane B, multi-exam
   mixed match/fallback.
 
+## Remaining before Plan 1 archive
+
+These items are **not** silently deferred: they remain open acceptance work on this
+plan. Ship the safety-critical PR first if needed, then close the plan only after
+the items below are done or explicitly moved to a named follow-up plan with a
+`TO_DO.md` pointer.
+
+1. **Plane-identity audit/export parity** (still open under §3)
+   - Add `acquisition_plane_source_kind` and `acquisition_plane_resolution`
+     (`code-backed` / `inferred` / `ambiguous` / `unknown`) on the normalized frame.
+   - Surface the additive schema in API/dict/JSON outputs and rich export without
+     breaking existing keys.
+   - Optional GUI import-preview / Calculate audit row for the same fields.
+
+2. **Structured `k_tab` invalid-source status** (still open under §2 + §4 partial)
+   - Carry warned-neutral / invalid-lookup status into calculation output and
+     exports (not only logger warnings).
+   - Pre-calc UI preview of table-lookup match vs fallback (beyond estimated vs
+     measured).
+
+3. **Optional UX polish (non-blocking for safety)**
+   - Per-exam enumerated Calculate/Settings scanner summaries in multi-exam mode
+     (toasts + Geometry already attribute per exam).
+
 ## Delivery
 
 Expected SemVer impact: patch-level bug fix, unless preserving DICOM plane metadata
 requires a breaking public-output change. Record user-visible behavior in
 `CHANGELOG.md` and internal characterization in `dev-docs/MAINTENANCE_LOG.md`.
+Archive this plan only after the remaining items above are closed or relocated.

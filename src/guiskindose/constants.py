@@ -124,7 +124,28 @@ KEY_NORMALIZATION_STATION_NAME = "station_name"
 KEY_NORMALIZATION_DEVICE_SERIAL = "device_serial"
 KEY_NORMALIZATION_ACQUISITION_TYPE = "acquisition_type"
 KEY_NORMALIZATION_ACQUISITION_PLANE = "acquisition_plane"
+KEY_NORMALIZATION_ACQUISITION_PLANE_CODE = "acquisition_plane_code"
+KEY_NORMALIZATION_ACQUISITION_PLANE_CODING_SCHEME = "acquisition_plane_coding_scheme"
+KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING = "acquisition_plane_meaning"
+KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL = "acquisition_plane_canonical"
+KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE = "acquisition_plane_raw_code"
 KEY_NORMALIZATION_AIR_KERMA = "K_IRP"
+
+# DICOM CID 10003 Acquisition Device Type / acquisition plane identity.
+# Canonical tokens are used by kerma-meter CF resolution; meaning strings are the
+# legacy labels that corrections._match_device_rows compares against the CSV.
+CID_10003_CANONICAL: dict[str, str] = {
+    "113620": "A",
+    "113621": "B",
+    "113622": "single",
+}
+CID_10003_MEANING: dict[int, str] = {
+    113620: "Plane A",
+    113621: "Plane B",
+    113622: "Single Plane",
+}
+DOSETRACK_PLANE_MEANINGS: frozenset[str] = frozenset(CID_10003_MEANING.values())
+TUBE_IDENTITY_UNKNOWN = "unknown"
 
 
 IRRADIATION_EVENT_PROCEDURE_KEY_BEAM = "Beam"

@@ -649,7 +649,7 @@ class TestDoseTrackAdapter:
         assert (result.normalized_data["model"] == "AXIOM-Artis").all()
 
     def test_plane_code_normalized(self):
-        """Integer Plane Code 1 → 'Single Plane' before rdsr_normalizer."""
+        """CID 10003 Plane Code 113622 → 'Single Plane' before rdsr_normalizer."""
         from guiskindose.input_adapters.registry import read_and_normalize_input
 
         result = read_and_normalize_input(
@@ -659,6 +659,52 @@ class TestDoseTrackAdapter:
         )
         # rdsr_normalizer maps acquisition_plane; we just need a successful result
         assert len(result.normalized_data) == 5
+        assert (result.normalized_data["acquisition_plane"] == "Single Plane").all()
+        # Canonical identity is code-backed, not unknown.
+        assert (result.normalized_data["acquisition_plane_canonical"] == "single").all()
+
+    def test_non_cid_plane_code_raises_without_map(self, tmp_path):
+        """Legacy DoseTrack integers (1/2) must not silently infer A/B."""
+        from guiskindose.input_adapters.registry import read_and_normalize_input
+
+        csv_text = (
+            "Equipment Name,Plane Code,Air Kerma (mGy),Tube Voltage Peak (kV),"
+            "Distance Source to Detector (mm),Distance Source To Isocenter (mm),"
+            "Table Longitudinal Position (mm),Table Lateral Position (mm),"
+            "Table Height Position (mm),Positioner Primary Angle (deg),"
+            "Positioner Secondary Angle (deg),Filter Thickness,DAP (Gy*cm2),"
+            "Collimated Field Area (m2),Filter Material\n"
+            "AXIOM-Artis,1,15.0,70,1000,750,0,0,290,0,0,0.1,0.54,0.01,Cu\n"
+        )
+        p = tmp_path / "legacy_plane.csv"
+        p.write_text(csv_text, encoding="utf-8")
+        with pytest.raises(ValueError) as exc_info:
+            read_and_normalize_input(
+                p, input_schema="dosetrack", settings=_default_settings()
+            )
+        assert exc_info.value.__cause__ is not None
+        assert "non-CID-10003" in str(exc_info.value.__cause__)
+        assert "plane_code_map" in str(exc_info.value.__cause__)
+
+    def test_non_cid_plane_code_accepts_settings_map(self, tmp_path):
+        """Explicit dosetrack_plane_code_map unblocks typical DoseTrack site codes."""
+        from guiskindose.input_adapters.registry import read_and_normalize_input
+
+        csv_text = (
+            "Equipment Name,Plane Code,Air Kerma (mGy),Tube Voltage Peak (kV),"
+            "Distance Source to Detector (mm),Distance Source To Isocenter (mm),"
+            "Table Longitudinal Position (mm),Table Lateral Position (mm),"
+            "Table Height Position (mm),Positioner Primary Angle (deg),"
+            "Positioner Secondary Angle (deg),Filter Thickness,DAP (Gy*cm2),"
+            "Collimated Field Area (m2),Filter Material\n"
+            "AXIOM-Artis,1,15.0,70,1000,750,0,0,290,0,0,0.1,0.54,0.01,Cu\n"
+        )
+        p = tmp_path / "legacy_plane_mapped.csv"
+        p.write_text(csv_text, encoding="utf-8")
+        settings = _default_settings()
+        settings.dosetrack_plane_code_map = {1: "Single Plane"}
+        result = read_and_normalize_input(p, input_schema="dosetrack", settings=settings)
+        assert (result.normalized_data["acquisition_plane"] == "Single Plane").all()
 
     def test_kvp_numeric_and_positive(self):
         from guiskindose.input_adapters.registry import read_and_normalize_input

@@ -25,6 +25,7 @@ from ..helpers import (
     load_rdsr,
     load_tabular,
     rebuild_rdsr_df,
+    refresh_normalization_warnings,
     restore_globals_from_exam_meta,
 )
 from ..state import reset_results, state
@@ -63,6 +64,8 @@ _LOAD_STATE_FIELDS = (
     "file_name",
     "manufacturer",
     "model",
+    "input_manufacturer",
+    "input_model",
     "normalization_method",
     "normalization_warnings",
     "table_offset_x",
@@ -309,6 +312,8 @@ class UploadTabController:
         state.flip_ap2 = False
         state.manufacturer = ""
         state.model = ""
+        state.input_manufacturer = ""
+        state.input_model = ""
         state.normalization_method = "Unknown"
         state.normalization_warnings = []
         state.table_offset_x = 0.0
@@ -339,6 +344,7 @@ class UploadTabController:
         state.loaded_exams.pop(index)
         if index < len(state.loaded_exam_meta):
             state.loaded_exam_meta.pop(index)
+        refresh_normalization_warnings(state)
         adjust_active_exam_index_after_remove(state, index)
         if file_path is not None and all(
             m.get("file_path") != file_path for m in state.loaded_exam_meta
@@ -482,13 +488,21 @@ def _build_normalization_warning() -> None:
     with ui.card().classes(
         "modern-card w-full border-red-900 bg-red-950/20"
     ).bind_visibility_from(
-        state, "normalization_method", backward=lambda v: v == "Fallback"
+        # Visibility must follow the rebuilt warning list (multi-exam Fallback
+        # exams), not the global ``normalization_method`` — after removing a
+        # Fallback exam while a Matched exam remains, method may be Matched
+        # while ``normalization_warnings`` is still non-empty (or vice versa).
+        state,
+        "normalization_warnings",
+        backward=bool,
     ), ui.row().classes("items-center gap-3"):
         ui.icon("warning", color="negative").classes("text-xl icon-outlined")
         ui.label().bind_text_from(
             state,
             "normalization_warnings",
-            backward=lambda ws: f"NORMALIZATION ALERT: {ws[0]}" if ws else "",
+            backward=lambda ws: (
+                f"NORMALIZATION ALERT: {' | '.join(str(w) for w in ws)}" if ws else ""
+            ),
         ).classes("mono-text text-xs font-bold text-red-400")
 
 

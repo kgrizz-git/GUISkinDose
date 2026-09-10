@@ -564,6 +564,11 @@ if __name__ == "__main__":
         # Apply kerma-meter CLI overrides onto a concrete settings object once.
         settings_for_run = parse_settings_to_settings_class(settings=run_settings)
         apply_kerma_meter_cli_flags(settings_for_run, args)
+        plane_code_map_raw = getattr(args, "plane_code_map", None)
+        if plane_code_map_raw is not None:
+            from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+            settings_for_run.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
         run_settings = settings_for_run
 
         file_paths_raw: list[str] = args.file_path or []

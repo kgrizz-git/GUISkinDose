@@ -83,7 +83,19 @@ def _store_content_value(
     tag = _normalized_tag(content)
 
     if KEY_RDSR_CONCEPT_CODE_SEQUENCE in content:
-        _store_value(parsed, tag, content.ConceptCodeSequence[0].CodeMeaning)
+        code_seq = content.ConceptCodeSequence[0]
+        _store_value(parsed, tag, code_seq.CodeMeaning)
+        # Preserve raw DICOM plane-identity fields additively so canonical
+        # resolution can use the authoritative CID 10003 code value without
+        # disturbing the legacy CodeMeaning column that corrections._match_device_rows()
+        # compares verbatim against the CSV.
+        if tag == "AcquisitionPlane":
+            _store_value(parsed, "AcquisitionPlane_CodeValue", code_seq.CodeValue)
+            _store_value(
+                parsed,
+                "AcquisitionPlane_CodingSchemeDesignator",
+                getattr(code_seq, "CodingSchemeDesignator", None),
+            )
     elif KEY_RDSR_MEASURED_VALUE_SEQUENCE in content:
         tag = _measured_tag(content, remove_unit_dots=not nested)
         _store_value(

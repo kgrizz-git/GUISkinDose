@@ -55,6 +55,7 @@ class AdapterContext:
     settings: PyskindoseSettings | None
     warnings: list[str]
     unit_conversions: dict[str, str] = field(default_factory=dict)
+    plane_code_map: dict[int, str] | None = None
 
 
 # A vendor transform takes the renamed DataFrame plus context and returns the
@@ -409,6 +410,7 @@ def run_normalizer_pipeline(
         raw_headers=raw_headers,
         settings=settings,
         warnings=warnings,
+        plane_code_map=getattr(settings, "dosetrack_plane_code_map", None),
     )
     data_df = transform(data_df, ctx)
 

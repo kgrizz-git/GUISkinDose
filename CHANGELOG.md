@@ -21,6 +21,70 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited
+  ``k_tab`` coercion treats non-numeric table cells as warned-neutral ``1.0``;
+  GE-family Geometry notices use a manufacturer allow-list (not substring
+  ``"ge"``) and honor the explicit ``normalization_method`` argument; DoseTrack
+  ``plane_code_map`` rejects duplicate integer codes (e.g. ``1`` / ``01``);
+  kerma-meter CF tables reject empty/unrecognized tube labels at load;
+  DICOM plane canonicalization requires coding scheme ``DCM``; removing an exam
+  refreshes normalization warning banners. Docstrings / ``FEATURE_INVENTORY`` /
+  ``CODEBASE_OVERVIEW`` now state when measured ``k_tab`` runs, that Allura
+  Plane B zeros are neutralized, and that transmission applies only to
+  table-hit cells (RDSR and tabular share the path after normalization).
+  Review nits: shared ``is_ge_manufacturer()`` helper; JSON plane-map duplicate
+  coverage; direct ``_coerce_inherited_transmission`` tests; remove-exam warning
+  refresh coverage. Upload normalization alert visibility binds to non-empty
+  ``normalization_warnings`` (not global ``normalization_method``) so multi-exam
+  Fallback warnings stay visible after Matched exams are removed. CodeQL: use ``backward=bool`` for the visibility binding.
+  Muse review follow-ups: Geometry vendor notice prefers the active exam's
+  ``normalization_method``; Upload alert joins all normalization warnings;
+  ``plane_code_map`` reports non-integer codes clearly; DoseTrack partial maps
+  list missing vs provided codes; Philips Geometry notices use
+  ``is_philips_manufacturer`` allow-list. Dots3 nits: ``plane_code_map`` accepts
+  decimal integers only; DoseTrack warns on mixed Single+biplane CID subsets;
+  tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
+  CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
+  ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
+
+- **Invalid patient-support transmission no longer silently zeroes or inflates dose**
+  (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit
+  ``estimate_k_tab`` / ``k_tab_val`` values must be finite and in ``(0, 1]`` or
+  calculation raises ``ValueError``. Invalid inherited table-lookup values
+  (including Allura Clarity Plane B zeros) fall back to warned-neutral ``1.0``
+  with a privacy-safe event-index warning. The Settings slider lower bound is
+  ``0.01`` so users cannot select ``0.0``.
+
+- **Ambiguous tube identity no longer silently selects a real single-plane calibration**
+  (2026-09-09) — ``normalize_tube()`` now returns ``"unknown"`` for unrecognized
+  acquisition-plane text instead of silently mapping to ``"single"``. Kerma-meter
+  correction resolution treats ``"unknown"`` as unresolved and falls back to
+  ``default_factor``, so ambiguous input can never silently apply a real
+  single-tube CF. DICOM CID 10003 tube codes (113620 A, 113621 B, 113622 single)
+  are preserved additively during parse and normalized into a new
+  ``acquisition_plane_canonical`` column without rewriting the legacy
+  ``acquisition_plane`` column that ``_match_device_rows`` compares verbatim
+  against the CSV. DoseTrack plane-code normalization now maps CID 10003 codes
+  directly and raises ``ValueError`` for 1–2 unknown integer codes instead of
+  silently inferring A/B from sort order; provide an explicit map via settings
+  ``dosetrack_plane_code_map`` or CLI ``--plane-code-map`` (e.g.
+  ``1:Single Plane`` or ``1:Plane A,2:Plane B``). 3+ distinct codes retain the
+  existing hard error.
+
+- **Unmatched scanner identity is now shown correctly in Upload and Geometry warnings**
+  (2026-09-09) — the GUI retains the actual input ``ManufacturerModelName``
+  separately from the matched normalization profile. Fallback warnings name the
+  real unmatched scanner and identify the active profile as Default. In multi-exam
+  mode, each exam's fallback status is attributed per-exam. The Calculate tab
+  summary shows the selected normalization profile, table origin offsets, and
+  estimated-vs-measured patient-support transmission status before calculation
+  (per-event table-lookup match/fallback preview remains open). GE/Philips-family
+  input that falls back to Default no longer claims vendor auto-axis handling was
+  applied; the Geometry notice says Default is active and GE Tx/Tz auto-swap (or
+  Philips offsets) were not applied. Kerma-meter tube resolution prefers
+  CID-backed ``acquisition_plane_canonical`` when present, otherwise the legacy
+  meaning string.
+
 - **Geometry exam switch left stale dose results after a pending table-origin commit**
   (2026-09-06) — switching the selected exam now calls ``reset_results()`` when a staged
   table-origin transform is committed for the previous exam, matching the debounced-render
@@ -35,6 +99,17 @@ That keeps SemVer and contributor history organized.
   after the ``mypyskindose`` → ``guiskindose`` rename.
 
 ### Changed
+
+- **Terminology: "patient-support transmission factor" replaces informal "k_tab" labels**
+  (2026-09-09) — the Settings physics section, Calculate tab summary, results
+  correction table, exports, glossary, and feature inventory now use
+  "patient-support transmission factor" for the ``k_tab`` correction.
+  "Attenuation" is reserved for physical dose reduction; where needed, prose uses
+  "transmission correction for attenuation." ``attenuation fraction = 1 -
+  transmission factor`` is defined in the glossary. The export label changes from
+  "Table (k_tab)" to "Patient-support transmission (k_tab)". The glossary preferred
+  term for ``k_tab`` is now "patient-support transmission factor" with "table
+  transmission correction" and "table transmission" retained as aliases.
 
 - **Getting-started notebook refresh and safe local launcher (Phase 3.5)** (2026-09-07) — refreshed
   the Python API tutorial for GUISkinDose and current result fields, cleared stale rendered outputs,
