@@ -21,6 +21,15 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Canonical PSD calculation algorithm doc** (2026-09-10) — new
+  `dev-docs/PSD_CALCULATION_ALGORITHM.md` describing the dose pipeline in
+  execution order (events → transforms/offsets → corrections → projection →
+  accumulation → PSD), with an implementation-deviations section and a
+  machine-checked companion test (`tests/unittests/test_psd_algorithm_doc.py`).
+  Registered in `dev-docs/index.md`, the harness source-of-truth map,
+  `AGENTS.md`, and `feature_doc_matrix.json` (`psd_algorithm`); short pointer
+  added to the user guide. The PSD flow-diagram item in `TO_DO.md` remains open.
+
 - **Plan 1 archive** (2026-09-10) — `CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md`
   is completed and moved to `dev-docs/plans/archive/`. All remaining closure
   items (plane-identity audit/export parity, structured `k_tab` invalid-source
