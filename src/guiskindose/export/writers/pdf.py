@@ -35,6 +35,7 @@ from .._format import (
     CORRECTION_HEADER,
     KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
+    audit_setting_rows,
     collect_alert_lines,
     correction_row,
     corrections_use_kerma_meter,
@@ -147,6 +148,7 @@ def _settings_flow(exam: ExamSection, multi: bool) -> list:
     rows.append(["Model", exam.model or "N/A"])
     for field_name, desc in exam.unit_conversions.items():
         rows.append([f"Units: {field_name}", desc])
+    rows.extend(audit_setting_rows(exam))
     flow: list[Any] = []
     if multi:
         flow.append(Paragraph(f"Exam {exam.exam_id}", _H2))

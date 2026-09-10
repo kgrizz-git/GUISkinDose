@@ -9,7 +9,7 @@ and image code never branch on dict-vs-object. See §7 of the Rich Export plan.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -33,6 +33,7 @@ class ExamView:
     k_meter: list[float] | None = None  # per-event kerma-meter CF when present
     air_kerma_corrected: float | None = None
     kerma_reported: list[float] | None = None
+    k_tab_statuses: list[str] = field(default_factory=list)
 
     def peak_vertex(self) -> tuple[int | None, float]:
         """Return ``(vertex_index, dose)`` of the peak dose cell.
@@ -102,6 +103,13 @@ def view_from_dict(output: dict[str, Any]) -> ExamView:
             else None
         ),
         kerma_reported=kerma_reported,
+        k_tab_statuses=[
+            str(s) for s in (
+                corr.get("table_statuses")
+                or (output.get("events") or {}).get("k_tab_statuses")
+                or []
+            )
+        ],
     )
 
 
@@ -126,4 +134,5 @@ def view_from_output(obj: Any) -> ExamView:
         k_meter=[float(v) for v in k_meter] if k_meter is not None else None,
         air_kerma_corrected=float(obj.air_kerma_corrected),
         kerma_reported=kerma_reported,
+        k_tab_statuses=[str(s) for s in (getattr(obj, "k_tab_statuses", None) or [])],
     )

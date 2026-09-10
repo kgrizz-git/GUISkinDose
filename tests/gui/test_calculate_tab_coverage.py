@@ -155,3 +155,158 @@ async def test_calculate_tab_renders_summary(user: User) -> None:
     await user.should_see("Run Dose Calculation", retries=30)
     await user.should_see("Current settings", retries=30)
     await user.should_see("INPUT DATA", retries=30)
+
+
+def test_k_tab_status_summary_reads_nested_dict_and_multi_exam() -> None:
+    """Post-calc summary must read nested export keys and multi-exam outputs."""
+    from types import SimpleNamespace
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.rdsr_df = None
+    state.loaded_exams = []
+    assert "not yet calculated" in calc_tab._format_k_tab_status_summary()
+
+    state.calculation_done = True
+    state.output = {
+        "events": {"k_tab_statuses": ["exact", "exact", "no_device"]},
+        "corrections": {"table_statuses": ["exact", "exact", "no_device"]},
+    }
+    assert calc_tab._format_k_tab_status_summary() == "k_tab: exact=2, no_device=1"
+
+    state.output = None
+    state.is_multi_exam = True
+    state.multi_exam_result = SimpleNamespace(
+        exams=[SimpleNamespace(output=SimpleNamespace(k_tab_statuses=["estimated", "estimated"]))]
+    )
+    assert calc_tab._format_k_tab_status_summary() == "k_tab: estimated=2"
+
+
+def test_k_tab_preview_caches_and_suppresses_warnings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Measured-mode preview must cache and skip warnings without mutating logger level."""
+    import logging
+    from unittest.mock import MagicMock
+
+    import pandas as pd
+
+    from guiskindose.constants import (
+        KEY_NORMALIZATION_ACQUISITION_PLANE,
+        KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
+        KEY_NORMALIZATION_FILTER_SIZE_COPPER,
+        KEY_NORMALIZATION_KVP,
+        KEY_NORMALIZATION_MODEL_NAME,
+    )
+    from guiskindose.corrections import KTabResult
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.loaded_exams = []
+    state.estimate_k_tab = False
+    state.k_tab_val = 0.8
+    state.calc_run_id = 0
+    state.input_revision = 7
+    state.rdsr_df = pd.DataFrame(
+        {
+            KEY_NORMALIZATION_MODEL_NAME: ["Siemens"],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: ["Single Plane"],
+            KEY_NORMALIZATION_KVP: [80.0],
+            KEY_NORMALIZATION_FILTER_SIZE_COPPER: [0.1],
+            KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [0.0],
+        }
+    )
+    calc_tab._preview_cache.key = None
+    calc_tab._preview_cache.value = None
+    calc_tab._preview_cache.error = None
+
+    import importlib
+
+    import guiskindose.corrections as corrections_mod
+
+    settings_builder_mod = importlib.import_module("guiskindose.gui.settings_builder")
+
+    calls: list[dict] = []
+
+    def _fake_calculate_k_tab(**kwargs):
+        calls.append(kwargs)
+        return KTabResult(values=[0.9], statuses=["no_device"])
+
+    monkeypatch.setattr(corrections_mod, "calculate_k_tab", _fake_calculate_k_tab)
+    monkeypatch.setattr(
+        settings_builder_mod,
+        "build_settings",
+        lambda _state: MagicMock(corrections_db_path="corrections.db"),
+    )
+
+    log = logging.getLogger("guiskindose.corrections")
+    prior_level = log.level
+    first = calc_tab._format_k_tab_status_summary()
+    second = calc_tab._format_k_tab_status_summary()
+    assert first == "k_tab preview: no_device=1"
+    assert second == first
+    assert len(calls) == 1
+    assert calls[0]["emit_warnings"] is False
+    assert log.level == prior_level
+
+
+def test_k_tab_preview_invalid_estimated_value_is_safe() -> None:
+    """Invalid estimated k_tab_val must not raise inside the summary binder."""
+    import pandas as pd
+
+    from guiskindose.constants import KEY_NORMALIZATION_MODEL_NAME
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.loaded_exams = []
+    state.estimate_k_tab = True
+    state.k_tab_val = 0.0
+    state.calc_run_id = 1
+    state.input_revision = 8
+    state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
+    calc_tab._preview_cache.key = None
+    calc_tab._preview_cache.value = None
+    calc_tab._preview_cache.error = None
+
+    assert calc_tab._format_k_tab_status_summary() == "k_tab preview: unavailable"
+
+
+def test_k_tab_preview_guards_non_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DB / OperationalError during Measured preview must not escape the binder."""
+    import pandas as pd
+
+    from guiskindose.constants import KEY_NORMALIZATION_MODEL_NAME
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.loaded_exams = []
+    state.estimate_k_tab = False
+    state.calc_run_id = 2
+    state.input_revision = 9
+    state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
+    calc_tab._preview_cache.key = None
+    calc_tab._preview_cache.value = None
+    calc_tab._preview_cache.error = None
+
+    import importlib
+
+    import guiskindose.corrections as corrections_mod
+
+    settings_builder_mod = importlib.import_module("guiskindose.gui.settings_builder")
+
+    def _boom(**_kwargs):
+        raise OSError("corrections.db missing")
+
+    monkeypatch.setattr(corrections_mod, "calculate_k_tab", _boom)
+    monkeypatch.setattr(
+        settings_builder_mod,
+        "build_settings",
+        lambda _state: type("S", (), {"corrections_db_path": "corrections.db"})(),
+    )
+    assert calc_tab._format_k_tab_status_summary() == "k_tab preview: unavailable"

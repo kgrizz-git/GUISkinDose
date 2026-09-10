@@ -90,6 +90,15 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
     discarded = sum(exam_src.discarded_events.values()) if exam_src is not None else 0
 
     snapshot = _sections.serialize_settings(settings) if settings is not None else {}
+    plane_identity_audit: dict[str, list[str]] = {}
+    if df is not None:
+        for col, key in (
+            ("acquisition_plane_source_kind", "source_kind"),
+            ("acquisition_plane_resolution", "resolution"),
+            ("acquisition_plane_canonical", "canonical"),
+        ):
+            if col in df.columns:
+                plane_identity_audit[key] = df[col].fillna("unknown").astype(str).tolist()
     return ExamSection(
         exam_id=exam_id,
         manufacturer=(_sections.equipment_section(exam_src)["manufacturer"] if exam_src else None),
@@ -101,6 +110,8 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         phantom=(_sections.phantom_section(view, settings) if settings is not None else {}),
         metrics=_metrics.dosimetric_metrics(view, df, events_discarded=discarded),
         corrections=_metrics.correction_stats(view),
+        plane_identity_audit=plane_identity_audit,
+        k_tab_statuses=list(view.k_tab_statuses),
         unit_conversions=(
             dict(getattr(exam_src.provenance, "unit_conversions", None) or {})
             if exam_src is not None and exam_src.provenance is not None

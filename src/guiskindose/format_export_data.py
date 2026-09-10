@@ -9,12 +9,16 @@ import pandas as pd
 
 from guiskindose.beam_class import Beam
 from guiskindose.constants import (
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
     KEY_NORMALIZATION_AIR_KERMA,
     OUTPUT_KEY_CORRECTION_BACK_SCATTER,
     OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW,
     OUTPUT_KEY_CORRECTION_KERMA_METER,
     OUTPUT_KEY_CORRECTION_MEDIUM,
     OUTPUT_KEY_CORRECTION_TABLE,
+    OUTPUT_KEY_CORRECTION_TABLE_STATUSES,
     OUTPUT_KEY_DOSE_MAP,
     OUTPUT_KEY_HITS,
     OUTPUT_KEY_KERMA_CORRECTED,
@@ -33,6 +37,17 @@ from guiskindose.settings import PyskindoseSettings
 # type changed. Not tied to package semver; downstream consumers should read this
 # before parsing nested fields.
 EXPORT_SCHEMA_VERSION = 2
+
+
+def _plane_identity_column_list(data_norm: pd.DataFrame, column: str, n_events: int) -> list[str]:
+    """Return a per-event plane-identity column as strings, or ``[]`` if absent.
+
+    Missing / NaN cells become ``"unknown"`` so dict/JSON export matches the
+    rich-export ``fillna("unknown")`` hardening in ``export/payload.py``.
+    """
+    if n_events == 0 or column not in data_norm.columns:
+        return []
+    return data_norm[column].fillna("unknown").astype(str).tolist()
 
 
 @dataclass
@@ -161,6 +176,16 @@ class EventOutput:
         The x, y, and z rotation for each event
     translation : dict[str, list[float]]
         The x, y, and z translation for each event
+    kerma : list[float]
+        Per-event air kerma from the normalized frame
+    acquisition_plane_source_kind : list[str]
+        Per-event plane-identity source kind; missing column → ``[]``; NaN/None → ``"unknown"``
+    acquisition_plane_resolution : list[str]
+        Per-event plane-identity resolution; same missing/NaN rules as source kind
+    acquisition_plane_canonical : list[str]
+        Per-event canonical plane label; same missing/NaN rules as source kind
+    k_tab_statuses : list[str]
+        Per-event patient-support transmission lookup status (may be empty)
     beam_positions : list[Position]
         The position of the beam for each event
     beam_vertex_indices : list[VertexIndices]
@@ -177,12 +202,13 @@ class EventOutput:
         The trace order to for the detector object when creating plotly plots
     """
 
-    def __init__(self, data_norm: pd.DataFrame):
+    def __init__(self, data_norm: pd.DataFrame, k_tab_statuses: list[str] | None = None):
         """Extract per-event geometry fields from normalized RDSR data.
 
         An empty *data_norm* (e.g. after ``below_floor_kvp_policy=skip`` drops every
         event) yields empty geometry lists and empty setup meshes so dict/JSON export
-        can still succeed with zero events.
+        can still succeed with zero events. Plane-identity columns, when present,
+        use ``fillna("unknown")`` so dict/JSON matches rich-export hardening.
         """
         self.events = len(data_norm)
 
@@ -197,6 +223,16 @@ class EventOutput:
             "z": data_norm.Tz.tolist() if self.events else [],
         }
         self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist() if self.events else []
+        self.acquisition_plane_source_kind = _plane_identity_column_list(
+            data_norm, KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND, self.events
+        )
+        self.acquisition_plane_resolution = _plane_identity_column_list(
+            data_norm, KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION, self.events
+        )
+        self.acquisition_plane_canonical = _plane_identity_column_list(
+            data_norm, KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL, self.events
+        )
+        self.k_tab_statuses = k_tab_statuses if k_tab_statuses is not None else []
         self.phantom_object_trace_order = PLOT_TRACE_ORDER_PHANTOM_WIREFRAME
         self.beam_wireframe_trace_order = PLOT_TRACE_ORDER_BEAM_WIREFRAME
         self.detector_wireframe_trace_order = PLOT_TRACE_ORDER_DETECTOR_WIREFRAME
@@ -267,6 +303,10 @@ class EventOutput:
             "rotation": self.rotation,
             "translation": self.translation,
             "kerma": self.kerma,
+            "acquisition_plane_source_kind": self.acquisition_plane_source_kind,
+            "acquisition_plane_resolution": self.acquisition_plane_resolution,
+            "acquisition_plane_canonical": self.acquisition_plane_canonical,
+            "k_tab_statuses": self.k_tab_statuses,
             "phantom_object_trace_order": self.phantom_object_trace_order,
             "beam": {
                 "positions": [pos.to_dict() for pos in self.beam_positions],
@@ -350,6 +390,7 @@ class PySkinDoseOutput:
     data_norm: pd.DataFrame
     kerma_meter_correction: list[float] | None = None
     kerma_corrected: list[float] | None = None
+    k_tab_statuses: list[str] | None = None
 
     # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
     psd: float = field(init=False)
@@ -428,6 +469,13 @@ class PySkinDoseOutput:
                 "\tThe kerma-corrected list is not the same length as the number of events"
             )
 
+        if self.k_tab_statuses is not None and len(self.k_tab_statuses) != n_events:
+            error = True
+            error_message.append(
+                "k_tab statuses:\n"
+                "\tThe k_tab_statuses list is not the same length as the number of events"
+            )
+
         if error:
             raise ValueError("\n\n".join(error_message))
 
@@ -435,7 +483,7 @@ class PySkinDoseOutput:
         """Populate canonical derived values after validation passes."""
         self.psd = float(self.dose_map.max())
         self.air_kerma = float(self.data_norm[KEY_NORMALIZATION_AIR_KERMA].sum())
-        self.events = EventOutput(data_norm=self.data_norm)
+        self.events = EventOutput(data_norm=self.data_norm, k_tab_statuses=self.k_tab_statuses)
         kerma_meter_correction = self.kerma_meter_correction
         kerma_corrected = self.kerma_corrected
         if kerma_meter_correction is None and kerma_corrected is None:
@@ -530,6 +578,7 @@ class PySkinDoseOutput:
                 "backscatter": self.backscatter_correction,
                 "medium": self.medium_correction,
                 "table": self.table_correction,
+                "table_statuses": self.k_tab_statuses if self.k_tab_statuses is not None else [],
                 "inverse_square_law": self.inverse_square_law_correction,
                 "kerma": self.events.to_dict().get("kerma", []),
                 "kerma_corrected": self.kerma_corrected,
@@ -676,6 +725,7 @@ def format_analysis_result_for_export(
         data_norm=data_norm,
         kerma_meter_correction=analysis_result.get(OUTPUT_KEY_CORRECTION_KERMA_METER),
         kerma_corrected=analysis_result.get(OUTPUT_KEY_KERMA_CORRECTED),
+        k_tab_statuses=analysis_result.get(OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
     )
 
     if settings.output_format == RUN_ARGUMENTS_OUTPUT_DICT:

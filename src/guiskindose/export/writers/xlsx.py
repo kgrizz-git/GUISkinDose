@@ -25,6 +25,7 @@ from .._format import (
     CORRECTION_HEADER,
     KERMA_METER_WEIGHTING_FOOTNOTE,
     OFFSET_LABELS,
+    audit_setting_rows,
     collect_alert_lines,
     correction_row,
     corrections_use_kerma_meter,
@@ -145,6 +146,7 @@ def _settings_block(exam: ExamSection) -> list[list[str]]:
     rows.append(["Normalization profile", exam.normalization_profile or "N/A"])
     for field_name, desc in exam.unit_conversions.items():
         rows.append([f"Units: {field_name}", desc])
+    rows.extend(audit_setting_rows(exam))
     toggles = exam.coordinate.get("toggles", {})
     for key, value in toggles.items():
         rows.append([f"coord.{key}", str(value)])

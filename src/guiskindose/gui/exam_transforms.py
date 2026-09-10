@@ -25,6 +25,7 @@ def clear_multi_exam_state(state: AppState) -> None:
     state.is_multi_exam = False
     state.multi_exam_result = None
     state.active_exam_index = None
+    state.input_revision += 1
 
 
 def _exam_is_ge(exam) -> bool:
@@ -180,6 +181,7 @@ def rebuild_rdsr_df(state: AppState) -> None:
 
     if not state.loaded_exams:
         state.rdsr_df = None
+        state.input_revision += 1
         return
 
     multi = len(state.loaded_exams) > 1
@@ -193,6 +195,7 @@ def rebuild_rdsr_df(state: AppState) -> None:
             df.insert(1, EXAM_COLUMN, f"#{i + 1} · {meta.get('file_name', '—')}")
         frames.append(df)
     state.rdsr_df = pd.concat(frames, ignore_index=True)
+    state.input_revision += 1
 
 
 def apply_exam_transforms(state: AppState, index: int) -> None:

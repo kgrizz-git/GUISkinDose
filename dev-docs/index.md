@@ -152,7 +152,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
-| [plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) | **Immediate bug fix** — prevent inherited Plane B zero transmission from silently zeroing dose; validate tube identity; fix unmatched-model GUI alerts; standardize transmission terminology. |
+| [plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) | **Completed** — prevent inherited Plane B zero transmission from silently zeroing dose; validate tube identity; fix unmatched-model GUI alerts; standardize transmission terminology. Archived 2026-09-10. |
 | [plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md) | **Packaging/runtime fix** — correction manifest and validation; package-resource provider; remove the CWD-created database default; verify wheel behavior and numerical parity. |
 | [plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md) | **Separate future feature** — validated reusable manufacturer/model coordinate and patient-support transmission profiles across API, CLI, GUI, and exports. |
 | [plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md) | **Separate research/physics work** — characterize current intersection, model closed table/pad volumes, and require scientific validation before path-length-aware transmission. |

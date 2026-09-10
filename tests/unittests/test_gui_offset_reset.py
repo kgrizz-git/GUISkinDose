@@ -233,11 +233,18 @@ def test_on_global_patient_offset_change_invokes_refresh_per_exam():
 def test_remove_exam_restores_global_patient_offset_from_meta():
     st = AppState()
     st.d_lon = 99.0
-    meta0 = {"d_lon": 1.0, "d_ver": 2.0, "d_lat": 3.0, "swap_lat_lon": False}
+    meta0 = {
+        "d_lon": 1.0,
+        "d_ver": 2.0,
+        "d_lat": 3.0,
+        "swap_lat_lon": False,
+        "normalization_method": "Fallback",
+    }
     restore_globals_from_exam_meta(st, meta0)
     assert st.d_lon == 1.0
     assert st.d_ver == 2.0
     assert st.d_lat == 3.0
+    assert st.normalization_method == "Fallback"
 
 
 def test_stage_table_origin_axis_does_not_call_apply():

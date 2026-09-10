@@ -367,7 +367,7 @@ def test_remove_matched_exam_keeps_remaining_fallback_warning(
 
     ctrl.remove_exam(0)
 
-    assert state.normalization_method == "Matched"  # real restore leaves this stale
+    assert state.normalization_method == "Fallback"  # restore_globals_from_exam_meta now restores this field
     assert len(state.normalization_warnings) == 1
     assert "ACME X1" in state.normalization_warnings[0]
     # Single remaining exam: refresh_normalization_warnings omits "Exam N:" prefix.

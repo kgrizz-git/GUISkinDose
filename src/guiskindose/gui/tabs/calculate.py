@@ -28,10 +28,174 @@ _DIALOG_BODY_CLASSES = "text-sm text-grey-7"
 _DIALOG_ACTIONS_CLASSES = "w-full justify-end gap-2"
 _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
 
+# Cache for pre-calc ``calculate_k_tab`` dry-runs. ``bind_text_from`` can refresh
+# the summary label many times; without a cache each refresh re-reads the
+# corrections DB (measured mode). Stored in a module-level object (not ``global``
+# scalars) so CodeQL py/unused-global-variable does not flag the writes.
+@dataclass
+class _KTabPreviewCache:
+    """Mutable cache for the k_tab status preview dry-run."""
+
+    key: object | None = None
+    value: list[str] | None = None
+    error: str | None = None
+
+
+_preview_cache = _KTabPreviewCache()
+
+# Cache for plane-identity audit text (same bind_text_from refresh pressure).
+@dataclass
+class _PlaneAuditCache:
+    """Mutable cache for the plane-identity audit string."""
+
+    key: object | None = None
+    value: str | None = None
+
+
+_plane_audit_cache = _PlaneAuditCache()
+
 
 def _format_patient_offsets() -> str:
     """Format the current patient-offset summary string for the Calculate card."""
     return format_patient_offsets(state)
+
+
+def _count_status_summary(statuses: list[str], *, prefix: str) -> str:
+    """Format privacy-safe status counts (e.g. ``exact=3, no_device=1``)."""
+    if not statuses:
+        return f"{prefix}: no events"
+    counts: dict[str, int] = {}
+    for status in statuses:
+        counts[str(status)] = counts.get(str(status), 0) + 1
+    parts = [f"{key}={value}" for key, value in sorted(counts.items())]
+    return f"{prefix}: " + ", ".join(parts)
+
+
+def _statuses_from_last_calculation() -> list[str] | None:
+    """Collect k_tab statuses from the last successful calculation, if any."""
+    if not state.calculation_done:
+        return None
+    if state.is_multi_exam and state.multi_exam_result is not None:
+        statuses: list[str] = []
+        for exam in state.multi_exam_result.exams:
+            output = getattr(exam, "output", None)
+            if output is None:
+                continue
+            exam_statuses = getattr(output, "k_tab_statuses", None) or []
+            statuses.extend(str(s) for s in exam_statuses)
+        return statuses
+    output = state.output
+    if isinstance(output, dict):
+        events = output.get("events") or {}
+        corrections = output.get("corrections") or {}
+        statuses = events.get("k_tab_statuses") or corrections.get("table_statuses") or []
+        return [str(s) for s in statuses]
+    return None
+
+
+def _preview_frames() -> list:
+    """Normalized frames used for the pre-calc k_tab status preview."""
+    frames = []
+    if state.is_multi_exam:
+        for exam in state.loaded_exams:
+            nd = getattr(exam, "normalized_data", None)
+            if nd is not None and len(nd):
+                frames.append(nd)
+    elif state.rdsr_df is not None and len(state.rdsr_df):
+        frames.append(state.rdsr_df)
+    return frames
+
+
+def _preview_fingerprint(frames: list) -> tuple:
+    """Stable key so ``bind_text_from`` refreshes reuse one dry-run.
+
+    Uses ``state.input_revision`` (bumped on ``rebuild_rdsr_df``) instead of bare
+    ``id(frame)`` so recycled DataFrame addresses after reload cannot collide.
+    """
+    return (
+        state.is_multi_exam,
+        state.estimate_k_tab,
+        float(state.k_tab_val) if state.k_tab_val is not None else None,
+        state.calc_run_id,
+        state.input_revision,
+        tuple(len(frame) for frame in frames),
+    )
+
+
+def _preview_k_tab_statuses() -> list[str] | None:
+    """Light pre-calc dry-run of ``calculate_k_tab`` for the active/loaded frames.
+
+    Returns ``None`` when no normalized data is available. Estimated mode does not
+    hit the DB. Measured mode uses the same corrections DB path as Settings.
+
+    Results are cached by fingerprint so NiceGUI text bindings do not re-query the
+    DB on every refresh. Warnings are suppressed via ``emit_warnings=False`` (not a
+    process-global logger level change).
+
+    Raises
+    ------
+    Exception
+        Propagates validation / DB errors so the binder can show a safe label.
+    """
+    frames = _preview_frames()
+    if not frames:
+        _preview_cache.key = None
+        _preview_cache.value = None
+        _preview_cache.error = None
+        return None
+
+    key = _preview_fingerprint(frames)
+    if key == _preview_cache.key:
+        if _preview_cache.error is not None:
+            raise RuntimeError(_preview_cache.error)
+        return _preview_cache.value
+
+    from guiskindose.corrections import calculate_k_tab
+    from guiskindose.gui.settings_builder import build_settings
+
+    settings = build_settings(state)
+    statuses: list[str] = []
+    try:
+        for frame in frames:
+            result = calculate_k_tab(
+                data_norm=frame,
+                corrections_db=settings.corrections_db_path,
+                estimate_k_tab=state.estimate_k_tab,
+                k_tab_val=state.k_tab_val,
+                emit_warnings=False,
+            )
+            statuses.extend(result.statuses)
+    except Exception as exc:
+        _preview_cache.key = key
+        _preview_cache.value = None
+        _preview_cache.error = f"{type(exc).__name__}: {exc}"
+        raise
+
+    _preview_cache.key = key
+    _preview_cache.value = statuses
+    _preview_cache.error = None
+    return statuses
+
+
+def _format_k_tab_status_summary() -> str:
+    """Return a compact privacy-safe summary of per-event k_tab lookup statuses.
+
+    Prefers post-calculation statuses from ``state.output`` / multi-exam results.
+    Before the first successful run, performs a light ``calculate_k_tab`` dry-run
+    so Measured vs Estimated outcomes are visible on the Calculate card. Preview
+    dry-runs are cached and do not emit corrections-logger warnings; any preview
+    failure yields a safe label so NiceGUI bindings never crash.
+    """
+    post = _statuses_from_last_calculation()
+    if post is not None:
+        return _count_status_summary(post, prefix="k_tab")
+    try:
+        preview = _preview_k_tab_statuses()
+    except Exception:
+        return "k_tab preview: unavailable"
+    if preview is None:
+        return "k_tab status: not yet calculated"
+    return _count_status_summary(preview, prefix="k_tab preview")
 
 
 def _normalized_data_frames() -> list:
@@ -255,7 +419,8 @@ class _CalculationController:
         """Update PSD chrome, switch to Results, and surface any calc warnings."""
         self.ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
         self.ctx.clear_offset_stale_caption()
-        ui.notify(f"✓ {message}", color="positive")
+        k_tab_summary = _format_k_tab_status_summary()
+        ui.notify(f"✓ {message} · {k_tab_summary}", color="positive")
         self.ctx.tabs.set_value("results")
         controls = self._require_controls()
         if not state.calc_warnings:
@@ -283,6 +448,37 @@ class _CalculationController:
         if self.controls is None:
             raise RuntimeError("Calculate controls are not initialized.")
         return self.controls
+
+
+def _format_plane_identity_audit() -> str:
+    """Return a compact, privacy-safe plane-identity audit string for the active frame.
+
+    Cached by ``(input_revision, id(rdsr_df), len)`` so NiceGUI ``bind_text_from``
+    refreshes do not re-run ``value_counts`` every 0.1 s.
+    """
+    df = state.rdsr_df
+    if df is None:
+        _plane_audit_cache.key = None
+        _plane_audit_cache.value = None
+        return "Plane identity: no data"
+
+    key = (state.input_revision, id(df), len(df))
+    if key == _plane_audit_cache.key and _plane_audit_cache.value is not None:
+        return _plane_audit_cache.value
+
+    parts = []
+    for col, label in (
+        ("acquisition_plane_source_kind", "source kind"),
+        ("acquisition_plane_resolution", "resolution"),
+    ):
+        if col in df.columns:
+            counts = df[col].fillna("unknown").astype(str).value_counts()
+            counts_str = ", ".join(f"{k}={v}" for k, v in counts.sort_index().items())
+            parts.append(f"{label}: {counts_str}")
+    value = "Plane identity: " + "; ".join(parts) if parts else "Plane identity: not available"
+    _plane_audit_cache.key = key
+    _plane_audit_cache.value = value
+    return value
 
 
 def _build_input_data_summary() -> None:
@@ -316,8 +512,15 @@ def _build_input_data_summary() -> None:
                 )
                 matched_label = ui.label("Default profile active").classes("text-[10px] text-amber-5 italic")
                 matched_label.bind_visibility_from(
-                    state, "normalization_method", backward=lambda v: v == "Fallback"
+                    state,
+                    "normalization_warnings",
+                    backward=bool,
                 )
+            with ui.row().classes(_SUMMARY_ROW_CLASSES):
+                ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)
+                ui.label().bind_text_from(
+                    state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()
+                ).classes(_SUMMARY_VALUE_CLASSES)
 
 
 def _build_phantom_setup_summary() -> None:
@@ -366,6 +569,20 @@ def _build_physics_summary() -> None:
                 ui.label().bind_text_from(
                     state, "estimate_k_tab", backward=lambda v: "Estimated" if v else "Measured"
                 ).classes(_SUMMARY_VALUE_CLASSES)
+            with ui.row().classes(_SUMMARY_ROW_CLASSES):
+                ui.label("k_tab lookup summary:").classes(_SUMMARY_LABEL_CLASSES)
+                # Refresh after calc (calc_run_id), when estimated/measured toggles,
+                # and when loaded frames change (input_revision).
+                k_tab_summary = ui.label().classes(_SUMMARY_VALUE_CLASSES)
+                k_tab_summary.bind_text_from(
+                    state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary()
+                )
+                k_tab_summary.bind_text_from(
+                    state, "estimate_k_tab", backward=lambda _v: _format_k_tab_status_summary()
+                )
+                k_tab_summary.bind_text_from(
+                    state, "input_revision", backward=lambda _v: _format_k_tab_status_summary()
+                )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Filtration:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(

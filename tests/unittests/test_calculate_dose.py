@@ -35,6 +35,7 @@ from guiskindose.calculate_dose.calculate_dose import (
 from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
+from guiskindose.corrections import KTabResult
 from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
 from guiskindose.phantom_class import Phantom
 from guiskindose.rdsr_normalizer import rdsr_normalizer
@@ -169,7 +170,7 @@ def test_calculate_dose_delegates_to_build_output_template():
         ),
         patch(
             "guiskindose.calculate_dose.calculate_dose.calculate_k_tab",
-            return_value=[0.8],
+            return_value=KTabResult(values=[0.8], statuses=["exact"]),
         ),
         patch(
             "guiskindose.calculate_dose.calculate_dose._build_output_template",

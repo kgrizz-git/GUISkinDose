@@ -19,9 +19,79 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- **Plan 1 archive** (2026-09-10) — `CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md`
+  is completed and moved to `dev-docs/plans/archive/`. All remaining closure
+  items (plane-identity audit/export parity, structured `k_tab` invalid-source
+  status, pre-calc match preview) landed in prior chunks. Next up is
+  `CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md`. Updated `dev-docs/index.md`,
+  `TO_DO.md`, `MAINTENANCE_LOG.md`, and cross-plan links.
+
+- **Structured per-event `k_tab` lookup status** (2026-09-10) — `calculate_k_tab()`
+  now returns a `KTabResult` dataclass with `.values` and `.statuses` instead of a
+  plain list (call sites that assumed a bare ``list[float]`` must use ``.values``;
+  ``len`` / indexing still work). Status vocabulary: `estimated`, `exact`,
+  `interpolated`, `clamped`, `no_device`, `invalid_inherited`. The logger warnings
+  are preserved unchanged. Statuses are carried through `calculate_dose` into
+  dict/JSON exports (`corrections.table_statuses` and `events.k_tab_statuses`,
+  additive, `EXPORT_SCHEMA_VERSION` unchanged) and rich-export settings sections
+  (HTML/DOCX/PDF/XLSX). The Calculate tab shows a compact `k_tab:` count summary
+  after a successful run (reads nested `events.k_tab_statuses` / multi-exam
+  outputs) and a Measured/Estimated dry-run preview before the first calculation
+  (cached; `emit_warnings=False`).
+
+- **Normalized frame plane-identity audit fields** (2026-09-09) —
+  ``acquisition_plane_source_kind`` (``dicom_cid`` / ``dicom_code`` /
+  ``tabular_raw_code`` / ``meaning_only`` / ``none``) and ``acquisition_plane_resolution``
+  (``code-backed`` / ``inferred`` / ``ambiguous`` reserved / ``unknown``).
+  ``dicom_code`` means a DICOM CodeValue is present but not DCM-CID-backed (not
+  ``meaning_only``). Tabular CID-looking integers are ``inferred`` only when they
+  resolve; missing or unmapped raw codes and blank meanings fall back per-row.
+  Dose math, ``k_tab`` lookup, and legacy ``acquisition_plane`` are unchanged.
+
+- **Plane-identity audit fields surfaced in API/dict/JSON export and rich export** (2026-09-10) —
+  ``acquisition_plane_source_kind``, ``acquisition_plane_resolution``, and
+  ``acquisition_plane_canonical`` are now included in ``events`` dict/JSON output
+  (additive, ``EXPORT_SCHEMA_VERSION`` unchanged) and in the rich report
+  ``ExamSection.plane_identity_audit`` (rendered in HTML/DOCX/PDF/XLSX settings).
+  Missing normalized columns degrade safely to empty lists / ``"unknown"``. The
+  Calculate tab also shows a compact plane-identity audit line with per-kind /
+  per-resolution counts.
+
 ### Fixed
 
-- **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited
+- **Opus whole-branch review follow-ups** (2026-09-10) — Calculate `k_tab`
+  preview catches all exceptions (not only `ValueError`) so NiceGUI bindings
+  cannot freeze; preview uses `emit_warnings=False` instead of a process-global
+  logger level; fingerprint uses `input_revision`; plane-identity audit text is
+  cached; DICOM CodeValue with non-DCM scheme is `dicom_code` (not
+  `meaning_only`); rich-export writers render plane-identity and `k_tab` status
+  counts; `k_tab_statuses` length is validated; glossary terms added; CHANGELOG
+  indent nit fixed; MAINTENANCE_LOG Unreleased headings consolidated.
+
+- **Calculate `k_tab` preview cache + quiet dry-run** (2026-09-10) — pre-calc
+  status summary no longer re-reads the corrections DB or re-emits
+  `guiskindose.corrections` warnings on every NiceGUI `bind_text_from` refresh;
+  invalid estimated `k_tab_val` shows a safe label instead of raising in the UI
+  binding. Dict/JSON `EventOutput` plane-identity columns now `fillna("unknown")`
+  like the rich export. Duplicate Unreleased `### Added` headings merged.
+
+- **Settings and Calculate Fallback badge visibility** — both tabs now bind the
+  "Default profile active" badge to non-empty `state.normalization_warnings`
+  (same pattern as the Upload tab) instead of global `normalization_method ==
+  "Fallback"`. Multi-exam remove no longer leaves stale badges when a Matched
+  exam is removed while Fallback warnings remain. `restore_globals_from_exam_meta`
+  now restores `normalization_method` from the sole remaining exam meta for
+  defense in depth.
+
+- **Measured `k_tab` exact-match duplicate rows warn once** — when the attenuation
+  table contains multiple rows matching the same `(model, plane, kVp, Cu, Al)`,
+  `calculate_k_tab()` emits a single `logger.warning` with the duplicate count
+  and continues to use the first row (`iloc[0]`) so unique-row behavior is
+  unchanged. Unique exact matches are unaffected.
+
+- CodeRabbit follow-ups on correction-safety PR (2026-09-09) — inherited
   ``k_tab`` coercion treats non-numeric table cells as warned-neutral ``1.0``;
   GE-family Geometry notices use a manufacturer allow-list (not substring
   ``"ge"``) and honor the explicit ``normalization_method`` argument; DoseTrack

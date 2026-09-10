@@ -129,6 +129,8 @@ KEY_NORMALIZATION_ACQUISITION_PLANE_CODING_SCHEME = "acquisition_plane_coding_sc
 KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING = "acquisition_plane_meaning"
 KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL = "acquisition_plane_canonical"
 KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE = "acquisition_plane_raw_code"
+KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND = "acquisition_plane_source_kind"
+KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION = "acquisition_plane_resolution"
 KEY_NORMALIZATION_AIR_KERMA = "K_IRP"
 
 # DICOM CID 10003 Acquisition Device Type / acquisition plane identity.
@@ -146,6 +148,50 @@ CID_10003_MEANING: dict[int, str] = {
 }
 DOSETRACK_PLANE_MEANINGS: frozenset[str] = frozenset(CID_10003_MEANING.values())
 TUBE_IDENTITY_UNKNOWN = "unknown"
+
+# Plane-identity audit fields on the normalized DataFrame.
+# ``acquisition_plane_source_kind`` records how the identity was obtained.
+# ``acquisition_plane_resolution`` records the confidence/status of the identity.
+#
+# Source kinds:
+#   * ``dicom_cid`` — DICOM CodeValue with DCM coding scheme + recognized CID 10003 code.
+#   * ``dicom_code`` — DICOM CodeValue present, but scheme missing/non-DCM or code not a
+#     recognized CID 10003 identity (code is still recorded; not ``meaning_only``).
+#   * ``tabular_raw_code`` — Tabular raw integer mapped via CID-looking codes (DoseTrack /
+#     adapter path).  Not code-backed because there is no CodingSchemeDesignator.
+#   * ``meaning_only`` — Only the meaning text/label is present; no code or scheme.
+#   * ``none`` — No usable identity at all.
+#
+# Resolutions:
+#   * ``code-backed`` — DICOM DCM scheme + recognized CID 10003 code.
+#   * ``inferred`` — Tabular raw integer successfully mapped via CID 10003 without
+#     a CodingSchemeDesignator. Unmapped / missing raw codes use ``unknown``.
+#   * ``ambiguous`` — Reserved for detectable meaning/code conflicts.  No current
+#     code path produces this; retained for audit parity when conflict detection is added.
+#   * ``unknown`` — No usable code identity (non-DCM/non-CID, missing raw code,
+#     unmapped site code, or meaning-only / none).
+PLANE_IDENTITY_SOURCE_KIND_DICOM_CID = "dicom_cid"
+PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE = "dicom_code"
+PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE = "tabular_raw_code"
+PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY = "meaning_only"
+PLANE_IDENTITY_SOURCE_KIND_NONE = "none"
+PLANE_IDENTITY_RESOLUTION_CODE_BACKED = "code-backed"
+PLANE_IDENTITY_RESOLUTION_INFERRED = "inferred"
+PLANE_IDENTITY_RESOLUTION_AMBIGUOUS = "ambiguous"
+PLANE_IDENTITY_RESOLUTION_UNKNOWN = "unknown"
+PLANE_IDENTITY_SOURCE_KINDS = (
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE,
+    PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
+    PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
+    PLANE_IDENTITY_SOURCE_KIND_NONE,
+)
+PLANE_IDENTITY_RESOLUTIONS = (
+    PLANE_IDENTITY_RESOLUTION_CODE_BACKED,
+    PLANE_IDENTITY_RESOLUTION_INFERRED,
+    PLANE_IDENTITY_RESOLUTION_AMBIGUOUS,
+    PLANE_IDENTITY_RESOLUTION_UNKNOWN,
+)
 
 
 IRRADIATION_EVENT_PROCEDURE_KEY_BEAM = "Beam"
@@ -179,6 +225,7 @@ OUTPUT_KEY_CORRECTION_BACK_SCATTER = "k_bs"
 OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW = "k_isq"
 OUTPUT_KEY_CORRECTION_MEDIUM = "k_med"
 OUTPUT_KEY_CORRECTION_TABLE = "k_tab"
+OUTPUT_KEY_CORRECTION_TABLE_STATUSES = "k_tab_statuses"
 OUTPUT_KEY_CORRECTION_KERMA_METER = "k_meter"
 OUTPUT_KEY_DOSE_MAP = "dose_map"
 OUTPUT_KEY_HITS = "hits"

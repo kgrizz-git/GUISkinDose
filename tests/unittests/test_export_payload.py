@@ -371,3 +371,45 @@ def test_payload_real_fixture():
     assert payload.cumulative.metrics.psd == pytest.approx(out["psd"])
     assert payload.cumulative.metrics.air_kerma == pytest.approx(out["air_kerma"])
     assert payload.meta.package_version != ""
+
+
+# ── plane-identity audit in rich export ──────────────────────────────────────
+
+
+def test_payload_surfaces_plane_identity_audit():
+    df = pd.DataFrame({
+        "acquisition_plane_source_kind": ["dicom_cid", "meaning_only"],
+        "acquisition_plane_resolution": ["code-backed", "unknown"],
+        "acquisition_plane_canonical": ["A", "unknown"],
+    })
+    src = _single_source(_two_event_output(), df=df)
+    payload = collect_export_payload(src, with_images=False)
+    audit = payload.exams[0].plane_identity_audit
+    assert audit["source_kind"] == ["dicom_cid", "meaning_only"]
+    assert audit["resolution"] == ["code-backed", "unknown"]
+    assert audit["canonical"] == ["A", "unknown"]
+
+
+def test_payload_surfaces_k_tab_statuses_and_audit_setting_rows():
+    out = _two_event_output()
+    out["corrections"]["table_statuses"] = ["exact", "no_device"]
+    out["events"] = {"k_tab_statuses": ["exact", "no_device"]}
+    df = pd.DataFrame({
+        "acquisition_plane_source_kind": ["dicom_cid", "dicom_code"],
+        "acquisition_plane_resolution": ["code-backed", "unknown"],
+        "acquisition_plane_canonical": ["A", "unknown"],
+    })
+    payload = collect_export_payload(_single_source(out, df=df), with_images=False)
+    exam = payload.exams[0]
+    assert exam.k_tab_statuses == ["exact", "no_device"]
+    from guiskindose.export._format import audit_setting_rows
+
+    rows = dict(audit_setting_rows(exam))
+    assert rows["Plane identity (source kind)"] == "dicom_cid=1, dicom_code=1"
+    assert rows["k_tab lookup statuses"] == "exact=1, no_device=1"
+
+
+def test_payload_plane_identity_audit_empty_when_columns_absent():
+    src = _single_source(_two_event_output(), df=pd.DataFrame())
+    payload = collect_export_payload(src, with_images=False)
+    assert payload.exams[0].plane_identity_audit == {}

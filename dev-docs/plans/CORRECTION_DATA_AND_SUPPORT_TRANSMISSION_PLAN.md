@@ -136,7 +136,7 @@ execution checklist. Work is divided into four independently reviewable plans:
 
 ### 1. Immediate safety and identity
 
-[CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
+[archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
 
 - Plane B zero-transmission safeguard.
 - DICOM/DoseTrack tube identity validation and auditability.

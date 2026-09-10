@@ -66,6 +66,9 @@ class AppState:
     # Bumped when any per-exam or global patient offset changes so Calculate summary
     # labels bound to d_lon/d_ver/d_lat alone refresh in multi-exam mode.
     per_exam_offsets_version: int = 0
+    # Bumped whenever loaded exam frames are rebuilt so Calculate preview caches
+    # cannot collide via recycled DataFrame ``id()`` values.
+    input_revision: int = 0
 
     estimate_k_tab: bool = True
     k_tab_val: float = 0.8

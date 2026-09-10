@@ -88,6 +88,36 @@
       "aliases": [
         "attenuation fraction"
       ]
+    },
+    "k_tab_status": {
+      "preferred": "patient-support transmission lookup status",
+      "definition": "Per-event classification of how k_tab was resolved: estimated, exact, interpolated, clamped, no_device, or invalid_inherited.",
+      "aliases": [
+        "k_tab statuses",
+        "table_statuses",
+        "no_device",
+        "invalid_inherited"
+      ]
+    },
+    "plane_identity_source_kind": {
+      "preferred": "plane-identity source kind",
+      "definition": "How acquisition-plane identity was obtained for an event: dicom_cid (DCM + recognized CID), dicom_code (CodeValue present but not DCM-CID-backed), tabular_raw_code, meaning_only, or none.",
+      "aliases": [
+        "dicom_cid",
+        "dicom_code",
+        "tabular_raw_code",
+        "meaning_only",
+        "source kind"
+      ]
+    },
+    "plane_identity_resolution": {
+      "preferred": "plane-identity resolution",
+      "definition": "How strongly plane identity is known: code-backed, inferred, ambiguous (reserved), or unknown.",
+      "aliases": [
+        "code-backed",
+        "inferred",
+        "plane resolution"
+      ]
     }
   }
 }

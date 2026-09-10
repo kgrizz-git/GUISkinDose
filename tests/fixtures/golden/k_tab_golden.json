@@ -59,7 +59,7 @@
       "cu": 0.3,
       "al": 0,
       "expected_k_tab": 1.0,
-      "expected_status": "fallback_1.0",
+      "expected_status": "no_device",
       "note": "Unknown device/plane combination \u2014 fallback to k_tab=1.0, warning 'no table-attenuation'"
     }
   ]

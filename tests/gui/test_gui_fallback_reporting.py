@@ -247,3 +247,39 @@ def test_build_exam_meta_entry_sets_empty_input_identity_for_tabular() -> None:
     assert meta["normalization_method"] == "Tabular"
     assert meta["input_manufacturer"] == ""
     assert meta["input_model"] == ""
+
+
+def test_restore_globals_from_exam_meta_restores_normalization_method() -> None:
+    """Sole remaining exam meta must restore normalization_method to globals."""
+    from guiskindose.gui.offset_handlers import restore_globals_from_exam_meta
+
+    st = AppState()
+    st.normalization_method = "Matched"
+    meta0 = {
+        "normalization_method": "Fallback",
+        "swap_lat_lon": True,
+        "flip_ap1": False,
+        "flip_ap2": True,
+        "d_lon": 5.0,
+        "d_ver": -2.0,
+        "d_lat": 1.5,
+    }
+    restore_globals_from_exam_meta(st, meta0)
+    assert st.normalization_method == "Fallback"
+    assert st.swap_lat_lon is True
+    assert st.flip_ap1 is False
+    assert st.flip_ap2 is True
+    assert st.d_lon == 5.0
+    assert st.d_ver == -2.0
+    assert st.d_lat == 1.5
+
+
+def test_normalization_warnings_visibility_matches_non_empty_list() -> None:
+    """Settings/Calculate Fallback badge visibility is bool(normalization_warnings)."""
+    st = AppState()
+    # Empty warnings -> hidden
+    st.normalization_warnings = []
+    assert bool(st.normalization_warnings) is False
+    # Non-empty warnings -> visible
+    st.normalization_warnings = ["Scanner 'X' not found. Using default."]
+    assert bool(st.normalization_warnings) is True
