@@ -7,6 +7,7 @@ the Settings phantom preview and (where needed) the Geometry preview.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 
 from nicegui import ui
@@ -318,7 +319,15 @@ def _build_physics_section() -> None:
                     ui.slider(min=0.01, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
                         state, "k_tab_val"
                     ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
-                    ui.label().bind_text_from(state, "k_tab_val", backward=lambda v: f"{v:.2f}").classes("mono-text font-bold")
+                    ui.label().bind_text_from(
+                        state,
+                        "k_tab_val",
+                        backward=lambda v: (
+                            f"{float(v):.2f}"
+                            if isinstance(v, (int, float)) and math.isfinite(float(v))
+                            else "—"
+                        ),
+                    ).classes("mono-text font-bold")
 
             ui.number(
                 label="Inherent filtration (mmAl)", value=state.inherent_filtration, min=0.0, step=0.1

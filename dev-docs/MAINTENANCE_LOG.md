@@ -10,6 +10,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Calculate `k_tab` preview cache + EventOutput NaN parity** (2026-09-10) — pre-calc
+  Calculate-tab status summary caches dry-runs and suppresses
+  `guiskindose.corrections` warnings during preview; invalid estimated
+  `k_tab_val` is safe in UI bindings. Dict/JSON plane-identity lists now
+  `fillna("unknown")` like rich export. Docstrings / `CODEBASE_OVERVIEW` /
+  `FEATURE_INVENTORY` updated for `KTabResult` statuses and Calculate summary.
+
 - **Documentation-assessment backlog closeout** (2026-09-08) — removed the completed documentation-assessment
   entries from `TO_DO.md`, updated the documentation-tooling evaluation now that its prerequisite has landed,
   and linked the backlog lifecycle rules directly from `TO_DO.md`.

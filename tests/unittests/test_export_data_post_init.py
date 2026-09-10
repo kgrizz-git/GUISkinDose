@@ -310,6 +310,20 @@ def test_json_export_contains_plane_identity_keys(settings, trio, data_norm) -> 
     assert "acquisition_plane_canonical" in parsed["events"]
 
 
+def test_events_dict_fillna_unknown_for_nan_plane_identity(settings, trio, data_norm) -> None:
+    """NaN plane-identity cells must export as "unknown", matching rich export."""
+    data_norm = data_norm.copy()
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = [float("nan")] * len(data_norm)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = [None] * len(data_norm)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = [float("nan")] * len(data_norm)
+    patient, table, pad = trio
+    out = _build(patient, table, pad, settings, data_norm)
+    events_dict = out.events.to_dict()
+    assert events_dict["acquisition_plane_source_kind"] == ["unknown"] * len(data_norm)
+    assert events_dict["acquisition_plane_resolution"] == ["unknown"] * len(data_norm)
+    assert events_dict["acquisition_plane_canonical"] == ["unknown"] * len(data_norm)
+
+
 def test_event_output_zero_events_has_empty_plane_identity(settings, trio) -> None:
     """An empty data_norm must still produce empty plane-identity lists."""
     data_norm = pd.DataFrame({

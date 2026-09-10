@@ -28,18 +28,18 @@ That keeps SemVer and contributor history organized.
   `CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md`. Updated `dev-docs/index.md`,
   `TO_DO.md`, `MAINTENANCE_LOG.md`, and cross-plan links.
 
-### Added
-
 - **Structured per-event `k_tab` lookup status** (2026-09-10) — `calculate_k_tab()`
   now returns a `KTabResult` dataclass with `.values` and `.statuses` instead of a
-  plain list. Status vocabulary: `estimated`, `exact`, `interpolated`, `clamped`,
-  `no_device`, `invalid_inherited`. The logger warnings are preserved unchanged.
-  Statuses are carried through `calculate_dose` into dict/JSON exports
-  (`corrections.table_statuses` and `events.k_tab_statuses`, additive,
-  `EXPORT_SCHEMA_VERSION` unchanged) and the rich export. The Calculate tab shows
-  a compact `k_tab:` count summary after a successful run (reads nested
+  plain list (call sites that assumed a bare ``list[float]`` must use ``.values``;
+  ``len`` / indexing still work). Status vocabulary: `estimated`, `exact`,
+  `interpolated`, `clamped`, `no_device`, `invalid_inherited`. The logger warnings
+  are preserved unchanged. Statuses are carried through `calculate_dose` into
+  dict/JSON exports (`corrections.table_statuses` and `events.k_tab_statuses`,
+  additive, `EXPORT_SCHEMA_VERSION` unchanged) and the rich export. The Calculate
+  tab shows a compact `k_tab:` count summary after a successful run (reads nested
   `events.k_tab_statuses` / multi-exam outputs) and a Measured/Estimated
-  dry-run preview before the first calculation.
+  dry-run preview before the first calculation (cached; `k_tab` logger warnings
+  suppressed during preview).
 
 - **Normalized frame plane-identity audit fields** (2026-09-09) —
   ``acquisition_plane_source_kind`` (``dicom_cid`` / ``tabular_raw_code`` /
@@ -54,10 +54,17 @@ That keeps SemVer and contributor history organized.
   ``acquisition_plane_canonical`` are now included in ``events`` dict/JSON output
   (additive, ``EXPORT_SCHEMA_VERSION`` unchanged) and in the rich report
   ``ExamSection.plane_identity_audit``. Missing normalized columns degrade
-  safely to empty lists. The Calculate tab also shows a compact plane-identity
-  audit line with per-kind / per-resolution counts.
+  safely to empty lists / ``"unknown"``. The Calculate tab also shows a compact
+  plane-identity audit line with per-kind / per-resolution counts.
 
 ### Fixed
+
+- **Calculate `k_tab` preview cache + quiet dry-run** (2026-09-10) — pre-calc
+  status summary no longer re-reads the corrections DB or re-emits
+  `guiskindose.corrections` warnings on every NiceGUI `bind_text_from` refresh;
+  invalid estimated `k_tab_val` shows a safe label instead of raising in the UI
+  binding. Dict/JSON `EventOutput` plane-identity columns now `fillna("unknown")`
+  like the rich export. Duplicate Unreleased `### Added` headings merged.
 
 - **Settings and Calculate Fallback badge visibility** — both tabs now bind the
   "Default profile active" badge to non-empty `state.normalization_warnings`

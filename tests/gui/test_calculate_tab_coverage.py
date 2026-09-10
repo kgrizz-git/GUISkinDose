@@ -182,3 +182,54 @@ def test_k_tab_status_summary_reads_nested_dict_and_multi_exam() -> None:
         exams=[SimpleNamespace(output=SimpleNamespace(k_tab_statuses=["estimated", "estimated"]))]
     )
     assert calc_tab._format_k_tab_status_summary() == "k_tab: estimated=2"
+
+
+def test_k_tab_preview_caches_and_suppresses_warnings(caplog: pytest.LogCaptureFixture) -> None:
+    """Pre-calc preview must not re-log or re-query on repeated summary reads."""
+    import logging
+
+    import pandas as pd
+
+    from guiskindose.constants import KEY_NORMALIZATION_MODEL_NAME
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.loaded_exams = []
+    state.estimate_k_tab = True
+    state.k_tab_val = 0.8
+    state.calc_run_id = 0
+    state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
+    calc_tab._preview_cache_key = None
+    calc_tab._preview_cache_value = None
+    calc_tab._preview_cache_error = None
+
+    with caplog.at_level(logging.WARNING, logger="guiskindose.corrections"):
+        first = calc_tab._format_k_tab_status_summary()
+        second = calc_tab._format_k_tab_status_summary()
+    assert first == "k_tab preview: estimated=1"
+    assert second == first
+    assert not any("k_tab" in r.message for r in caplog.records)
+
+
+def test_k_tab_preview_invalid_estimated_value_is_safe() -> None:
+    """Invalid estimated k_tab_val must not raise inside the summary binder."""
+    import pandas as pd
+
+    from guiskindose.constants import KEY_NORMALIZATION_MODEL_NAME
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.loaded_exams = []
+    state.estimate_k_tab = True
+    state.k_tab_val = 0.0
+    state.calc_run_id = 1
+    state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
+    calc_tab._preview_cache_key = None
+    calc_tab._preview_cache_value = None
+    calc_tab._preview_cache_error = None
+
+    assert calc_tab._format_k_tab_status_summary() == "k_tab preview: invalid estimated value"

@@ -7,6 +7,9 @@ click handler is wired here even though the button is built in the drawer.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 from nicegui import run, ui
@@ -27,6 +30,13 @@ _DIALOG_TITLE_CLASSES = "text-lg font-bold"
 _DIALOG_BODY_CLASSES = "text-sm text-grey-7"
 _DIALOG_ACTIONS_CLASSES = "w-full justify-end gap-2"
 _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
+
+# Cache for pre-calc ``calculate_k_tab`` dry-runs. ``bind_text_from`` can refresh
+# the summary label many times; without a cache each refresh re-reads the
+# corrections DB (measured mode) and re-emits ``guiskindose.corrections`` warnings.
+_preview_cache_key: object | None = None
+_preview_cache_value: list[str] | None = None
+_preview_cache_error: str | None = None
 
 
 def _format_patient_offsets() -> str:
@@ -67,15 +77,8 @@ def _statuses_from_last_calculation() -> list[str] | None:
     return None
 
 
-def _preview_k_tab_statuses() -> list[str] | None:
-    """Light pre-calc dry-run of ``calculate_k_tab`` for the active/loaded frames.
-
-    Returns ``None`` when no normalized data is available. Estimated mode does not
-    hit the DB. Measured mode uses the same corrections DB path as Settings.
-    """
-    from guiskindose.corrections import calculate_k_tab
-    from guiskindose.gui.settings_builder import build_settings
-
+def _preview_frames() -> list:
+    """Normalized frames used for the pre-calc k_tab status preview."""
     frames = []
     if state.is_multi_exam:
         for exam in state.loaded_exams:
@@ -84,19 +87,86 @@ def _preview_k_tab_statuses() -> list[str] | None:
                 frames.append(nd)
     elif state.rdsr_df is not None and len(state.rdsr_df):
         frames.append(state.rdsr_df)
+    return frames
+
+
+def _preview_fingerprint(frames: list) -> tuple:
+    """Stable-enough key so ``bind_text_from`` refreshes reuse one dry-run."""
+    return (
+        state.is_multi_exam,
+        state.estimate_k_tab,
+        float(state.k_tab_val) if state.k_tab_val is not None else None,
+        state.calc_run_id,
+        tuple((id(frame), len(frame)) for frame in frames),
+    )
+
+
+@contextmanager
+def _suppress_k_tab_logger() -> Iterator[None]:
+    """Raise the corrections logger level so preview dry-runs stay quiet."""
+    log = logging.getLogger("guiskindose.corrections")
+    previous = log.level
+    log.setLevel(logging.ERROR)
+    try:
+        yield
+    finally:
+        log.setLevel(previous)
+
+
+def _preview_k_tab_statuses() -> list[str] | None:
+    """Light pre-calc dry-run of ``calculate_k_tab`` for the active/loaded frames.
+
+    Returns ``None`` when no normalized data is available. Estimated mode does not
+    hit the DB. Measured mode uses the same corrections DB path as Settings.
+
+    Results are cached by fingerprint so NiceGUI text bindings do not re-query the
+    DB or re-emit ``k_tab`` warnings on every refresh. Logger warnings from
+    ``guiskindose.corrections`` are suppressed for the dry-run only.
+
+    Raises
+    ------
+    ValueError
+        When estimated ``k_tab_val`` is outside ``(0, 1]`` (same as calculation).
+    """
+    global _preview_cache_key, _preview_cache_value, _preview_cache_error
+
+    frames = _preview_frames()
     if not frames:
+        _preview_cache_key = None
+        _preview_cache_value = None
+        _preview_cache_error = None
         return None
+
+    key = _preview_fingerprint(frames)
+    if key == _preview_cache_key:
+        if _preview_cache_error is not None:
+            raise ValueError(_preview_cache_error)
+        return _preview_cache_value
+
+    from guiskindose.corrections import calculate_k_tab
+    from guiskindose.gui.settings_builder import build_settings
 
     settings = build_settings(state)
     statuses: list[str] = []
-    for frame in frames:
-        result = calculate_k_tab(
-            data_norm=frame,
-            corrections_db=settings.corrections_db_path,
-            estimate_k_tab=state.estimate_k_tab,
-            k_tab_val=state.k_tab_val,
-        )
-        statuses.extend(result.statuses)
+    try:
+        with _suppress_k_tab_logger():
+            for frame in frames:
+                result = calculate_k_tab(
+                    data_norm=frame,
+                    corrections_db=settings.corrections_db_path,
+                    estimate_k_tab=state.estimate_k_tab,
+                    k_tab_val=state.k_tab_val,
+                )
+                statuses.extend(result.statuses)
+    except ValueError as exc:
+        _preview_cache_key = key
+        _preview_cache_value = None
+        _preview_cache_error = str(exc)
+        raise
+
+    _preview_cache_key = key
+    _preview_cache_value = statuses
+    _preview_cache_error = None
     return statuses
 
 
@@ -105,16 +175,20 @@ def _format_k_tab_status_summary() -> str:
 
     Prefers post-calculation statuses from ``state.output`` / multi-exam results.
     Before the first successful run, performs a light ``calculate_k_tab`` dry-run
-    so Measured vs Estimated outcomes are visible on the Calculate card.
+    so Measured vs Estimated outcomes are visible on the Calculate card. Preview
+    dry-runs are cached and do not emit corrections-logger warnings; an invalid
+    estimated ``k_tab_val`` yields a safe label instead of raising in UI bindings.
     """
     post = _statuses_from_last_calculation()
     if post is not None:
         return _count_status_summary(post, prefix="k_tab")
-    preview = _preview_k_tab_statuses()
+    try:
+        preview = _preview_k_tab_statuses()
+    except ValueError:
+        return "k_tab preview: invalid estimated value"
     if preview is None:
         return "k_tab status: not yet calculated"
     return _count_status_summary(preview, prefix="k_tab preview")
-
 
 def _normalized_data_frames() -> list:
     """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""

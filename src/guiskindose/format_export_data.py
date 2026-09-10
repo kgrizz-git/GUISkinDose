@@ -39,6 +39,17 @@ from guiskindose.settings import PyskindoseSettings
 EXPORT_SCHEMA_VERSION = 2
 
 
+def _plane_identity_column_list(data_norm: pd.DataFrame, column: str, n_events: int) -> list[str]:
+    """Return a per-event plane-identity column as strings, or ``[]`` if absent.
+
+    Missing / NaN cells become ``"unknown"`` so dict/JSON export matches the
+    rich-export ``fillna("unknown")`` hardening in ``export/payload.py``.
+    """
+    if n_events == 0 or column not in data_norm.columns:
+        return []
+    return data_norm[column].fillna("unknown").astype(str).tolist()
+
+
 @dataclass
 class Position:
     """Create and handle the x, y, and z-positions of, e.g., a phantom. When used for a phantom, each combination of an
@@ -165,6 +176,16 @@ class EventOutput:
         The x, y, and z rotation for each event
     translation : dict[str, list[float]]
         The x, y, and z translation for each event
+    kerma : list[float]
+        Per-event air kerma from the normalized frame
+    acquisition_plane_source_kind : list[str]
+        Per-event plane-identity source kind; missing column → ``[]``; NaN/None → ``"unknown"``
+    acquisition_plane_resolution : list[str]
+        Per-event plane-identity resolution; same missing/NaN rules as source kind
+    acquisition_plane_canonical : list[str]
+        Per-event canonical plane label; same missing/NaN rules as source kind
+    k_tab_statuses : list[str]
+        Per-event patient-support transmission lookup status (may be empty)
     beam_positions : list[Position]
         The position of the beam for each event
     beam_vertex_indices : list[VertexIndices]
@@ -186,7 +207,8 @@ class EventOutput:
 
         An empty *data_norm* (e.g. after ``below_floor_kvp_policy=skip`` drops every
         event) yields empty geometry lists and empty setup meshes so dict/JSON export
-        can still succeed with zero events.
+        can still succeed with zero events. Plane-identity columns, when present,
+        use ``fillna("unknown")`` so dict/JSON matches rich-export hardening.
         """
         self.events = len(data_norm)
 
@@ -201,20 +223,14 @@ class EventOutput:
             "z": data_norm.Tz.tolist() if self.events else [],
         }
         self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist() if self.events else []
-        self.acquisition_plane_source_kind = (
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
-            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND in data_norm.columns
-            else []
+        self.acquisition_plane_source_kind = _plane_identity_column_list(
+            data_norm, KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND, self.events
         )
-        self.acquisition_plane_resolution = (
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()
-            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION in data_norm.columns
-            else []
+        self.acquisition_plane_resolution = _plane_identity_column_list(
+            data_norm, KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION, self.events
         )
-        self.acquisition_plane_canonical = (
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist()
-            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL in data_norm.columns
-            else []
+        self.acquisition_plane_canonical = _plane_identity_column_list(
+            data_norm, KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL, self.events
         )
         self.k_tab_statuses = k_tab_statuses if k_tab_statuses is not None else []
         self.phantom_object_trace_order = PLOT_TRACE_ORDER_PHANTOM_WIREFRAME

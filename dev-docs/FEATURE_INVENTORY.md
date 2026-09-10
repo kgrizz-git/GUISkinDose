@@ -217,7 +217,7 @@ scales the full lateral mesh axis.
 | Inverse-square law | k_isq | `(d_IRP / d_skin)²` | Computed per cell from source distance |
 | Backscatter | k_bs | Benmakhlouf et al. polynomial (kVp, HVL, field size) | Cubic spline interpolation over 5 field sizes |
 | Medium | k_med | Air kerma → tissue dose (μ_en/ρ ratio) | Lookup table in SQLite DB by kVp, HVL, field size |
-| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | **Estimated** (GUI/settings default): constant `k_tab_val` in `(0, 1]`, no DB read. **Measured** (`estimate_k_tab=False`): SQLite by device model + literal plane string; exact then (kVp, Cu) interp; unknown device/plane → 1.0; invalid inherited values (incl. AlluraClarity Plane B zeros) → warned-neutral 1.0. Applied only to **table-hit** skin cells. Same path for RDSR and tabular after normalization. |
+| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | **Estimated** (GUI/settings default): constant `k_tab_val` in `(0, 1]`, no DB read. **Measured** (`estimate_k_tab=False`): SQLite by device model + literal plane string; exact then (kVp, Cu) interp; unknown device/plane → 1.0; invalid inherited values (incl. AlluraClarity Plane B zeros) → warned-neutral 1.0. Applied only to **table-hit** skin cells. Same path for RDSR and tabular after normalization. Returns `KTabResult` with per-event statuses exported as `corrections.table_statuses` / `events.k_tab_statuses`. |
 | Kerma-meter calibration | k_meter | Convert reported K_IRP → lab-traceable kerma | User CF table/prompt keyed by equipment × tube; fail-soft to `default_factor` (1.0). Applied once before physics corrections. |
 
 ### 5.4 Geometry optimisation
@@ -454,7 +454,7 @@ Defaults above are the code fallbacks applied when keys are absent (`settings/pl
 | **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); live preview shows a PAUSED badge when any `Full procedure` path exceeds 30 events (`procedure_live_preview_paused`) |
 | **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview; **live 3D human-mesh preview** (no RDSR; prefers `_reduced_3000t` then `_reduced_1000t`; reflects scales, orientation, and active-exam offsets) |
 | **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
-| **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections |
+| **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections; compact `k_tab` status counts (post-calc or cached pre-calc preview) and plane-identity audit counts |
 | **Upload tab** | Click exam card → set active index and open Geometry tab |
 
 Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_event_index`), `offset_handlers.py` (`apply_patient_offset_slider_tick`, `bump_per_exam_offsets_version`; `per_exam_offsets_version` lives on `AppState`), `summary_formatters.py`.
