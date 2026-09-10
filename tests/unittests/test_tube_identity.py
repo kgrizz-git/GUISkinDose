@@ -547,6 +547,65 @@ class TestNormalizerPlaneIdentityAuditFields:
             == [PLANE_IDENTITY_RESOLUTION_CODE_BACKED, PLANE_IDENTITY_RESOLUTION_UNKNOWN]
         )
 
+    def test_row_without_dicom_code_falls_back_to_raw_code(self):
+        """Mixed frame: DICOM-missing row must resolve via the raw-code path."""
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A", "Plane B"],
+                "AcquisitionPlane_CodeValue": ["113620", None],
+                "AcquisitionPlane_CodingSchemeDesignator": ["DCM", None],
+                "acquisition_plane_raw_code": [None, 113622],
+                "Manufacturer": ["Siemens", "Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis", "AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0, 1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0, 750.0],
+                "IrradiationEventType": ["Fluoroscopy", "Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist() == ["A", "single"]
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
+            == [PLANE_IDENTITY_SOURCE_KIND_DICOM_CID, PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE]
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()
+            == [PLANE_IDENTITY_RESOLUTION_CODE_BACKED, PLANE_IDENTITY_RESOLUTION_INFERRED]
+        )
+
+    def test_blank_and_nan_raw_codes_fall_back_to_meaning(self):
+        """Blank / 'nan' raw codes must not classify as tabular_raw_code."""
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A", "Plane B"],
+                "acquisition_plane_raw_code": ["", "nan"],
+                "Manufacturer": ["Siemens", "Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis", "AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0, 1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0, 750.0],
+                "IrradiationEventType": ["Fluoroscopy", "Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist() == [
+            "unknown",
+            "unknown",
+        ]
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
+            == [PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY, PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY]
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()
+            == [PLANE_IDENTITY_RESOLUTION_UNKNOWN, PLANE_IDENTITY_RESOLUTION_UNKNOWN]
+        )
+
 
 # ---------------------------------------------------------------------------
 # 4. DoseTrack plane-code normalization

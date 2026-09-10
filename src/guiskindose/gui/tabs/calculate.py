@@ -571,13 +571,17 @@ def _build_physics_summary() -> None:
                 ).classes(_SUMMARY_VALUE_CLASSES)
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("k_tab lookup summary:").classes(_SUMMARY_LABEL_CLASSES)
-                # Refresh after calc (calc_run_id) and when estimated/measured toggles.
+                # Refresh after calc (calc_run_id), when estimated/measured toggles,
+                # and when loaded frames change (input_revision).
                 k_tab_summary = ui.label().classes(_SUMMARY_VALUE_CLASSES)
                 k_tab_summary.bind_text_from(
                     state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary()
                 )
                 k_tab_summary.bind_text_from(
                     state, "estimate_k_tab", backward=lambda _v: _format_k_tab_status_summary()
+                )
+                k_tab_summary.bind_text_from(
+                    state, "input_revision", backward=lambda _v: _format_k_tab_status_summary()
                 )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Filtration:").classes(_SUMMARY_LABEL_CLASSES)

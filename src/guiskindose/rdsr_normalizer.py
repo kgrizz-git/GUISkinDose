@@ -340,22 +340,36 @@ def _normalize_machine_parameters(
     raw_named = data_parsed.get(KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE)
     raw_dt = data_parsed.get("_dt_plane_code")
     raw_code_col = raw_named if raw_named is not None else raw_dt
+    # Additive audit columns: preserve whichever identity inputs are present so
+    # mixed frames (DICOM CodeValue on some rows, tabular raw codes on others)
+    # keep full provenance.
     if code_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODE] = code_col
+    if raw_code_col is not None:
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE] = raw_code_col
+
+    has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
+    has_code = _plane_code_present(code_col, data_norm.index)
+    # Shared presence predicate (excludes blanks and "nan") so blank/"nan" raw
+    # entries fall back to meaning_only / none instead of tabular_raw_code.
+    has_raw = _plane_code_present(raw_code_col, data_norm.index)
+    meaning_fallback = _source_kind_from_meaning(has_meaning)
+    unknown_resolution = pd.Series(
+        [PLANE_IDENTITY_RESOLUTION_UNKNOWN] * len(data_norm), index=data_norm.index
+    )
+
+    # DICOM per-row pieces (only selected where has_code is True).
+    if code_col is not None:
         mapped = code_col.map(resolve_canonical_plane_identity)
-        has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
-        has_code = _plane_code_present(code_col, data_norm.index)
         if scheme_col is not None:
             scheme_ok = scheme_col.map(
                 lambda s: str(s).strip().upper() == "DCM" if pd.notna(s) else False
             )
             # Code present with a non-DCM (or missing) designator → unknown.
-            canonical = mapped.where(scheme_ok, other="unknown")
+            dicom_canonical = mapped.where(scheme_ok, other="unknown")
             cid_backed = scheme_ok & mapped.notna() & (mapped != "unknown")
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _dicom_source_kind(
-                cid_backed, has_code, has_meaning
-            )
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
+            dicom_source = _dicom_source_kind(cid_backed, has_code, has_meaning)
+            dicom_resolution = pd.Series(
                 np.where(
                     cid_backed,
                     PLANE_IDENTITY_RESOLUTION_CODE_BACKED,
@@ -365,48 +379,54 @@ def _normalize_machine_parameters(
             )
         else:
             # CodeValue without a designator cannot be trusted as CID 10003.
-            canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _dicom_source_kind(
+            dicom_canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
+            dicom_source = _dicom_source_kind(
                 pd.Series(False, index=data_norm.index), has_code, has_meaning
             )
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
-                [PLANE_IDENTITY_RESOLUTION_UNKNOWN] * len(data_norm), index=data_norm.index
-            )
-    elif raw_code_col is not None:
-        # Tabular raw codes (DoseTrack / adapters) have no CodingSchemeDesignator.
-        # Successfully mapped CID-looking integers are ``inferred`` (not
-        # code-backed). Missing/unrecognized raw codes fall back per-row to
-        # meaning_only / none with resolution ``unknown``.
-        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE] = raw_code_col
-        canonical = raw_code_col.map(resolve_canonical_plane_identity)
-        has_raw = raw_code_col.notna()
-        has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
-        inferred = has_raw & canonical.notna() & (canonical != "unknown")
-        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = pd.Series(
+            dicom_resolution = unknown_resolution
+    else:
+        dicom_canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
+        dicom_source = meaning_fallback
+        dicom_resolution = unknown_resolution
+
+    # Tabular raw-code per-row pieces (DoseTrack / adapters have no
+    # CodingSchemeDesignator; mapped CID-looking integers are ``inferred``).
+    if raw_code_col is not None:
+        raw_mapped = raw_code_col.map(resolve_canonical_plane_identity)
+        raw_canonical = raw_mapped.where(has_raw, other="unknown")
+        raw_inferred = has_raw & raw_mapped.notna() & (raw_mapped != "unknown")
+        raw_source = pd.Series(
             np.where(
                 has_raw,
                 PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
-                _source_kind_from_meaning(has_meaning),
+                meaning_fallback,
             ),
             index=data_norm.index,
         )
-        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
+        raw_resolution = pd.Series(
             np.where(
-                inferred,
+                raw_inferred,
                 PLANE_IDENTITY_RESOLUTION_INFERRED,
                 PLANE_IDENTITY_RESOLUTION_UNKNOWN,
             ),
             index=data_norm.index,
         )
     else:
-        canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
-        has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
-        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _source_kind_from_meaning(
-            has_meaning
-        )
-        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
-            [PLANE_IDENTITY_RESOLUTION_UNKNOWN] * len(data_norm), index=data_norm.index
-        )
+        raw_canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
+        raw_source = meaning_fallback
+        raw_resolution = unknown_resolution
+
+    # Per-row selection: DICOM wins where a usable CodeValue is present;
+    # otherwise fall back per-row to the raw-code path, then meaning / none.
+    # Missing/unrecognized codes fall back per-row to meaning_only / none with
+    # resolution ``unknown``.
+    canonical = dicom_canonical.where(has_code, other=raw_canonical.where(has_raw, other="unknown"))
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = dicom_source.where(
+        has_code, other=raw_source
+    )
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = dicom_resolution.where(
+        has_code, other=raw_resolution
+    )
     data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = canonical.fillna("unknown")
 
     return data_norm
