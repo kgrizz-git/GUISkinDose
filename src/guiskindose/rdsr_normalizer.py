@@ -14,6 +14,8 @@ from .constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE_CODING_SCHEME,
     KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING,
     KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
     KEY_NORMALIZATION_ACQUISITION_TYPE,
     KEY_NORMALIZATION_AIR_KERMA,
     KEY_NORMALIZATION_DEVICE_SERIAL,
@@ -33,11 +35,39 @@ from .constants import (
     KEY_RDSR_FILTER_MAX,
     KEY_RDSR_FILTER_MIN,
     KEY_RDSR_STATION_NAME,
+    PLANE_IDENTITY_RESOLUTION_CODE_BACKED,
+    PLANE_IDENTITY_RESOLUTION_INFERRED,
+    PLANE_IDENTITY_RESOLUTION_UNKNOWN,
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+    PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
+    PLANE_IDENTITY_SOURCE_KIND_NONE,
+    PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
 )
 from .geom_calc import calculate_field_size
 from .settings import PyskindoseSettings
 
 logger = logging.getLogger("guiskindose")
+
+
+def _plane_meaning_present(meaning_col: pd.Series | None, index: pd.Index) -> pd.Series:
+    """True where AcquisitionPlane meaning is non-null and non-blank after strip."""
+    if meaning_col is None:
+        return pd.Series(False, index=index)
+    aligned = meaning_col.reindex(index)
+    text = aligned.where(aligned.notna(), other="").astype(str).str.strip()
+    return aligned.notna() & text.ne("")
+
+
+def _source_kind_from_meaning(has_meaning: pd.Series) -> pd.Series:
+    """Fallback source kind when no trusted code identity is available."""
+    return pd.Series(
+        np.where(
+            has_meaning,
+            PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
+            PLANE_IDENTITY_SOURCE_KIND_NONE,
+        ),
+        index=has_meaning.index,
+    )
 
 
 class RdsrUnitError(ValueError):
@@ -287,26 +317,74 @@ def _normalize_machine_parameters(
     if code_col is not None:
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODE] = code_col
         mapped = code_col.map(resolve_canonical_plane_identity)
+        has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
         if scheme_col is not None:
             scheme_ok = scheme_col.map(
                 lambda s: str(s).strip().upper() == "DCM" if pd.notna(s) else False
             )
             # Code present with a non-DCM (or missing) designator → unknown.
             canonical = mapped.where(scheme_ok, other="unknown")
+            cid_backed = scheme_ok & mapped.notna() & (mapped != "unknown")
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = pd.Series(
+                np.where(
+                    cid_backed,
+                    PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+                    _source_kind_from_meaning(has_meaning),
+                ),
+                index=data_norm.index,
+            )
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
+                np.where(
+                    cid_backed,
+                    PLANE_IDENTITY_RESOLUTION_CODE_BACKED,
+                    PLANE_IDENTITY_RESOLUTION_UNKNOWN,
+                ),
+                index=data_norm.index,
+            )
         else:
             # CodeValue without a designator cannot be trusted as CID 10003.
             canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _source_kind_from_meaning(
+                has_meaning
+            )
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
+                [PLANE_IDENTITY_RESOLUTION_UNKNOWN] * len(data_norm), index=data_norm.index
+            )
     elif raw_code_col is not None:
         # Tabular raw codes (DoseTrack / adapters) have no CodingSchemeDesignator.
-        # Mapping CID-looking integers here can look "code-backed" in the
-        # canonical column even though identity was inferred from the integer
-        # alone — dose results still follow acquisition_plane meaning /
-        # normalize_tube. Closing the audit gap is Plan 1 remaining item
-        # ``acquisition_plane_source_kind`` / resolution tags.
+        # Successfully mapped CID-looking integers are ``inferred`` (not
+        # code-backed). Missing/unrecognized raw codes fall back per-row to
+        # meaning_only / none with resolution ``unknown``.
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RAW_CODE] = raw_code_col
         canonical = raw_code_col.map(resolve_canonical_plane_identity)
+        has_raw = raw_code_col.notna()
+        has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
+        inferred = has_raw & canonical.notna() & (canonical != "unknown")
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = pd.Series(
+            np.where(
+                has_raw,
+                PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
+                _source_kind_from_meaning(has_meaning),
+            ),
+            index=data_norm.index,
+        )
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
+            np.where(
+                inferred,
+                PLANE_IDENTITY_RESOLUTION_INFERRED,
+                PLANE_IDENTITY_RESOLUTION_UNKNOWN,
+            ),
+            index=data_norm.index,
+        )
     else:
         canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
+        has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _source_kind_from_meaning(
+            has_meaning
+        )
+        data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
+            [PLANE_IDENTITY_RESOLUTION_UNKNOWN] * len(data_norm), index=data_norm.index
+        )
     data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = canonical.fillna("unknown")
 
     return data_norm

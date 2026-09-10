@@ -19,6 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- **Normalized frame plane-identity audit fields** (2026-09-09) —
+  ``acquisition_plane_source_kind`` (``dicom_cid`` / ``tabular_raw_code`` /
+  ``meaning_only`` / ``none``) and ``acquisition_plane_resolution``
+  (``code-backed`` / ``inferred`` / ``ambiguous`` reserved / ``unknown``).
+  Tabular CID-looking integers are ``inferred`` only when they resolve; missing
+  or unmapped raw codes and blank meanings fall back per-row. Dose math,
+  ``k_tab`` lookup, and legacy ``acquisition_plane`` are unchanged.
+
 ### Fixed
 
 - **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited
@@ -43,9 +53,9 @@ That keeps SemVer and contributor history organized.
   list missing vs provided codes; Philips Geometry notices use
   ``is_philips_manufacturer`` allow-list. Dots3 nits: ``plane_code_map`` accepts
   decimal integers only; DoseTrack warns on mixed Single+biplane CID subsets;
-  tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
-  CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
-  ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
+   tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
+   CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
+   ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit

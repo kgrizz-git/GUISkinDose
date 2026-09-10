@@ -27,11 +27,20 @@ from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE_CODE,
     KEY_NORMALIZATION_ACQUISITION_PLANE_CODING_SCHEME,
     KEY_NORMALIZATION_ACQUISITION_PLANE_MEANING,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
     KEY_NORMALIZATION_FILTER_SIZE_COPPER,
     KEY_NORMALIZATION_KVP,
     KEY_NORMALIZATION_MODEL_NAME,
     KEY_NORMALIZATION_STATION_NAME,
+    PLANE_IDENTITY_RESOLUTION_CODE_BACKED,
+    PLANE_IDENTITY_RESOLUTION_INFERRED,
+    PLANE_IDENTITY_RESOLUTION_UNKNOWN,
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+    PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
+    PLANE_IDENTITY_SOURCE_KIND_NONE,
+    PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
 )
 from guiskindose.kerma_correction import (
     normalize_tube,
@@ -293,6 +302,249 @@ class TestNormalizerAdditivePlaneFields:
             data_parsed, data_norm, _norm_settings()
         )
         assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+
+
+class TestNormalizerPlaneIdentityAuditFields:
+    """Per-event source_kind and resolution on the normalized frame."""
+
+    def test_dicom_dcm_cid_yields_code_backed(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A"],
+                "AcquisitionPlane_CodeValue": ["113620"],
+                "AcquisitionPlane_CodingSchemeDesignator": ["DCM"],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "A"
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_DICOM_CID
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_CODE_BACKED
+        )
+
+    def test_non_dcm_code_yields_unknown_resolution(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A"],
+                "AcquisitionPlane_CodeValue": ["113620"],
+                "AcquisitionPlane_CodingSchemeDesignator": ["99LOCAL"],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_UNKNOWN
+        )
+
+    def test_tabular_raw_code_yields_inferred_resolution(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A"],
+                "acquisition_plane_raw_code": [113620],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "A"
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_INFERRED
+        )
+
+    def test_site_specific_raw_code_unknown_canonical_sensible_audit(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Custom Plane"],
+                "acquisition_plane_raw_code": [999999],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_UNKNOWN
+        )
+
+    def test_missing_raw_code_falls_back_to_meaning_only(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A", ""],
+                "acquisition_plane_raw_code": [113620, None],
+                "Manufacturer": ["Siemens", "Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis", "AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0, 1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0, 750.0],
+                "IrradiationEventType": ["Fluoroscopy", "Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist() == [
+            "A",
+            "unknown",
+        ]
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist() == [
+            PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
+            PLANE_IDENTITY_SOURCE_KIND_NONE,
+        ]
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist() == [
+            PLANE_IDENTITY_RESOLUTION_INFERRED,
+            PLANE_IDENTITY_RESOLUTION_UNKNOWN,
+        ]
+
+    def test_meaning_only_without_codes(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A"],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_UNKNOWN
+        )
+
+    def test_blank_meaning_with_non_dcm_code_is_none(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": [""],
+                "AcquisitionPlane_CodeValue": ["113620"],
+                "AcquisitionPlane_CodingSchemeDesignator": ["99LOCAL"],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_NONE
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_UNKNOWN
+        )
+
+    def test_no_identity_yields_none_and_unknown(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": [""],
+                "Manufacturer": ["Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0],
+                "IrradiationEventType": ["Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
+            == PLANE_IDENTITY_SOURCE_KIND_NONE
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
+            == PLANE_IDENTITY_RESOLUTION_UNKNOWN
+        )
+
+    def test_mixed_rows_have_heterogeneous_source_kinds(self):
+        data_parsed = pd.DataFrame(
+            {
+                "AcquisitionPlane": ["Plane A", "Plane B"],
+                "AcquisitionPlane_CodeValue": ["113620", "113621"],
+                "AcquisitionPlane_CodingSchemeDesignator": ["DCM", "99LOCAL"],
+                "acquisition_plane_raw_code": [None, 113622],
+                "Manufacturer": ["Siemens", "Siemens"],
+                "ManufacturerModelName": ["AXIOM-Artis", "AXIOM-Artis"],
+                "DistanceSourcetoDetector_mm": [1000.0, 1000.0],
+                "DistanceSourcetoIsocenter_mm": [750.0, 750.0],
+                "IrradiationEventType": ["Fluoroscopy", "Fluoroscopy"],
+            }
+        )
+        data_norm = pd.DataFrame()
+        data_norm = _normalize_machine_parameters(
+            data_parsed, data_norm, _norm_settings()
+        )
+        assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist() == ["A", "unknown"]
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
+            == [PLANE_IDENTITY_SOURCE_KIND_DICOM_CID, PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY]
+        )
+        assert (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()
+            == [PLANE_IDENTITY_RESOLUTION_CODE_BACKED, PLANE_IDENTITY_RESOLUTION_UNKNOWN]
+        )
 
 
 # ---------------------------------------------------------------------------

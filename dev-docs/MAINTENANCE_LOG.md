@@ -24,6 +24,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Plane-identity audit fields on the normalized DataFrame** (2026-09-09) — added
+  ``acquisition_plane_source_kind`` and ``acquisition_plane_resolution`` to the
+  ``rdsr_normalizer`` output. Source kinds: ``dicom_cid``, ``tabular_raw_code``,
+  ``meaning_only``, ``none``. Resolutions: ``code-backed``, ``inferred``,
+  ``ambiguous`` (reserved), ``unknown``. Row-wise fallbacks: blank meanings are
+  not ``meaning_only``; missing tabular raw codes fall back to meaning/none;
+  ``inferred`` only when a tabular raw code resolves to CID identity. Tests cover
+  DCM+CID, non-DCM code, tabular raw, site-specific unknown raw, missing raw,
+  meaning-only, blank meaning, absent identity, and mixed rows.
+
+### Added
+
 - **Phase 4 standing documentation-assessment record** (2026-09-07) — added
   `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md` (durable per-doc verdict
   matrix, docstring coverage `0 missing`, accepted gaps, and event-driven re-assessment
