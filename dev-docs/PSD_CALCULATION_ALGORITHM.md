@@ -146,7 +146,8 @@ output["dose_map"] += event_dose
 ```
 
 where `k_bs` is the event spline evaluated at `sqrt(field_area)` and `k_med`
-(air→water, from kVp/HVL/field via the corrections DB) is scalar per event.
+(`corrections.calculate_k_med()`, air→water, from kVp/HVL/field via the
+corrections DB) is scalar per event.
 Zero-hit events record empty `k_bs`, `k_med = 0.0` ("not applied"), the event's
 `k_tab`, and add nothing. `K_IRP` in the frame is never mutated; the corrected
 kerma is stored separately (`kerma_corrected`).

@@ -72,6 +72,21 @@ def test_stage_headings_present(doc_text: str) -> None:
         assert heading in doc_text, f"Missing stage heading {heading!r} in {DOC.name}"
 
 
+def test_entry_points_cited_in_doc(doc_text: str) -> None:
+    """Every ENTRY_POINTS name must actually appear in the canonical document."""
+    for _, func_name in ENTRY_POINTS:
+        assert func_name in doc_text, (
+            f"{func_name!r} is not cited in {DOC.name}; document it or drop it from ENTRY_POINTS"
+        )
+
+
+def test_stage_headings_in_execution_order(doc_text: str) -> None:
+    """Stage headings must occur in execution order, not just be present."""
+    positions = [doc_text.index(heading) for heading in STAGES]
+    assert positions == sorted(positions), f"Stage headings out of execution order in {DOC.name}: {STAGES}"
+    assert len(set(positions)) == len(STAGES)
+
+
 def test_psd_is_dose_map_maximum() -> None:
     """PSD must remain the max of the (aggregate) dose map."""
     export_src = (REPO_ROOT / "src/guiskindose/format_export_data.py").read_text(encoding="utf-8")
