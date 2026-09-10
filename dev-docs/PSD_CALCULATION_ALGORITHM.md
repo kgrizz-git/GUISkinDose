@@ -60,9 +60,9 @@ Phantom placement (`geom_calc.position_patient_phantom_on_table`):
   (pad thickness included); the patient `Phantom` is built from
   `settings.phantom.model` (`plane` / `cylinder` / `human` mesh + `human_mesh`).
 - The mesh is placed with `patient_offset` `[d_lon, d_ver, d_lat]` in cm and
-  `patient_orientation`. Multi-exam runs use per-exam offsets
-  (`analyze_data._effective_patient_offset`); globals are ignored for dose in
-  multi-exam mode. Fresh table/pad objects are created per exam because
+  `patient_orientation`. Multi-exam runs apply per-exam offsets when present
+  (`analyze_data._effective_patient_offset`), falling back to the global offset
+  for exams without one. Fresh table/pad objects are created per exam because
   positioning uses incremental translation.
 - Human meshes accept directional habitus scales `scale_lat/scale_ap/scale_lon`
   (clamped to 0.5–2.0); geometry and dose use the scaled vertices and recomputed
