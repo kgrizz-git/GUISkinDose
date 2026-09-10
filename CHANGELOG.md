@@ -21,6 +21,15 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Plan 1 archive** (2026-09-10) — `CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md`
+  is completed and moved to `dev-docs/plans/archive/`. All remaining closure
+  items (plane-identity audit/export parity, structured `k_tab` invalid-source
+  status, pre-calc match preview) landed in prior chunks. Next up is
+  `CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md`. Updated `dev-docs/index.md`,
+  `TO_DO.md`, `MAINTENANCE_LOG.md`, and cross-plan links.
+
+### Added
+
 - **Structured per-event `k_tab` lookup status** (2026-09-10) — `calculate_k_tab()`
   now returns a `KTabResult` dataclass with `.values` and `.statuses` instead of a
   plain list. Status vocabulary: `estimated`, `exact`, `interpolated`, `clamped`,
@@ -50,7 +59,21 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
-- **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited
+- **Settings and Calculate Fallback badge visibility** — both tabs now bind the
+  "Default profile active" badge to non-empty `state.normalization_warnings`
+  (same pattern as the Upload tab) instead of global `normalization_method ==
+  "Fallback"`. Multi-exam remove no longer leaves stale badges when a Matched
+  exam is removed while Fallback warnings remain. `restore_globals_from_exam_meta`
+  now restores `normalization_method` from the sole remaining exam meta for
+  defense in depth.
+
+- **Measured `k_tab` exact-match duplicate rows warn once** — when the attenuation
+  table contains multiple rows matching the same `(model, plane, kVp, Cu, Al)`,
+  `calculate_k_tab()` emits a single `logger.warning` with the duplicate count
+  and continues to use the first row (`iloc[0]`) so unique-row behavior is
+  unchanged. Unique exact matches are unaffected.
+
+- CodeRabbit follow-ups on correction-safety PR (2026-09-09) — inherited
   ``k_tab`` coercion treats non-numeric table cells as warned-neutral ``1.0``;
   GE-family Geometry notices use a manufacturer allow-list (not substring
   ``"ge"``) and honor the explicit ``normalization_method`` argument; DoseTrack
@@ -73,8 +96,8 @@ That keeps SemVer and contributor history organized.
   ``is_philips_manufacturer`` allow-list. Dots3 nits: ``plane_code_map`` accepts
   decimal integers only; DoseTrack warns on mixed Single+biplane CID subsets;
    tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
-   CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
-   ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
+  CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
+  ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
 
 - **Invalid patient-support transmission no longer silently zeroes or inflates dose**
   (2026-09-09) — ``calculate_k_tab()`` now validates transmission factors. Explicit

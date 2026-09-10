@@ -364,3 +364,78 @@ class TestKTabResultStatusAssignment:
         )
         assert result.statuses == ["exact", "interpolated", "clamped", "no_device"]
         assert len(result) == 4
+
+
+class TestExactMatchDuplicateWarning:
+    """Duplicate exact-match rows in the attenuation table must warn once."""
+
+    def test_duplicate_exact_match_warns_once(self, tmp_path: Path) -> None:
+        """Multiple exact rows for the same (model, plane, kVp, Cu, Al) warn with count."""
+        import logging
+        import sqlite3
+
+        db_path = tmp_path / "duplicate_attenuation.db"
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            """CREATE TABLE correction_table_and_pad_attenuation (
+                kvp_kv INTEGER,
+                filtration_added_mmcu REAL,
+                filtration_added_mmal REAL,
+                device_model TEXT,
+                acquisition_plane TEXT,
+                k_patient_support REAL,
+                comment TEXT
+            )"""
+        )
+        # Insert three identical exact-match rows (first two have value 0.73,
+        # third has a different value to prove we still use iloc[0]).
+        rows = [
+            (80, 0.3, 0.0, "AXIOM-Artis", "Single Plane", 0.7319, "dup1"),
+            (80, 0.3, 0.0, "AXIOM-Artis", "Single Plane", 0.7319, "dup2"),
+            (80, 0.3, 0.0, "AXIOM-Artis", "Single Plane", 0.9999, "dup3"),
+        ]
+        conn.executemany(
+            "INSERT INTO correction_table_and_pad_attenuation "
+            "(kvp_kv, filtration_added_mmcu, filtration_added_mmal, device_model, acquisition_plane, k_patient_support, comment) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        conn.commit()
+        conn.close()
+
+        data_norm = pd.DataFrame(
+            data={
+                KEY_NORMALIZATION_KVP: [80],
+                KEY_NORMALIZATION_FILTER_SIZE_COPPER: [0.3],
+                KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [0],
+                KEY_NORMALIZATION_MODEL_NAME: ["AXIOM-Artis"],
+                KEY_NORMALIZATION_ACQUISITION_PLANE: ["Single Plane"],
+            }
+        )
+
+        messages: list[str] = []
+
+        class _Capture(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                messages.append(record.getMessage())
+
+        logger = logging.getLogger("guiskindose")
+        handler = _Capture(level=logging.WARNING)
+        logger.addHandler(handler)
+        try:
+            result = calculate_k_tab(
+                data_norm=data_norm,
+                estimate_k_tab=False,
+                k_tab_val=0.8,
+                corrections_db=str(db_path),
+            )
+        finally:
+            logger.removeHandler(handler)
+
+        # Value is still the first row's k_patient_support (0.7319) — unique-row
+        # behavior is unchanged.
+        assert result.values[0] == 0.7319
+        assert result.statuses[0] == "exact"
+        # Warning is emitted once with the count of duplicate rows.
+        assert any("3 exact-match rows found" in m for m in messages), messages
+        assert any("using the first" in m for m in messages), messages

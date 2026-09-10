@@ -22,6 +22,7 @@ def reset_global_offsets_on_new_load(app_state: AppState) -> None:
 
 def restore_globals_from_exam_meta(app_state: AppState, meta0: dict) -> None:
     """Restore global offset and coordinate flags from the sole remaining exam meta."""
+    app_state.normalization_method = str(meta0.get("normalization_method", "Unknown"))
     app_state.swap_lat_lon = bool(meta0.get("swap_lat_lon", False))
     app_state.flip_ap1 = bool(meta0.get("flip_ap1", False))
     app_state.flip_ap2 = bool(meta0.get("flip_ap2", False))

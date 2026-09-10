@@ -441,6 +441,7 @@ def calculate_k_tab(
     interpolated_events: list[int] = []
     clamped_events: list[int] = []
     invalid_value_events: list[int] = []
+    warned_duplicate_exact: set[tuple[str, str, int, float, int]] = set()
 
     # Cache the (kVp × Cu) pivot per (device, plane, Al) slice — built only when an
     # off-grid event actually needs interpolation (exact matches skip it).
@@ -469,6 +470,14 @@ def calculate_k_tab(
             & (rows["filtration_added_mmal"] == round(al))
         ]
         if len(exact):
+            dup_key = (model, str(plane), round(kvp), float(cu), round(al))
+            if len(exact) > 1 and dup_key not in warned_duplicate_exact:
+                warned_duplicate_exact.add(dup_key)
+                logger.warning(
+                    "k_tab: %d exact-match rows found for model=%s plane=%s kvp=%s cu=%s al=%s; "
+                    "using the first.",
+                    len(exact), model, plane, round(kvp), cu, round(al),
+                )
             value = _coerce_inherited_transmission(
                 cast(pd.Series, exact["k_patient_support"]).iloc[0]
             )

@@ -1,9 +1,9 @@
 # Correction Safety and Tube Identity Plan
 
-Status: Active — PR branch in progress; remaining closure items listed below
+Status: Completed — archived 2026-09-10
 Created: 2026-09-08
 Parent roadmap:
-[CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
+[CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](../CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
 
 ## Objective
 
@@ -205,31 +205,26 @@ equipment profiles, or change the table/pad intersection model.
 
 ## Remaining before Plan 1 archive
 
-These items are **not** silently deferred: they remain open acceptance work on this
-plan. Ship the safety-critical PR first if needed, then close the plan only after
-the items below are done or explicitly moved to a named follow-up plan with a
-`TO_DO.md` pointer.
+All remaining items are now closed or relocated:
 
-1. **Plane-identity audit/export parity** (still open under §3)
-   - Add `acquisition_plane_source_kind` and `acquisition_plane_resolution`
-     (`code-backed` / `inferred` / `ambiguous` / `unknown`) on the normalized frame.
-   - Surface the additive schema in API/dict/JSON outputs and rich export without
-     breaking existing keys.
-   - Optional GUI import-preview / Calculate audit row for the same fields.
+1. **Plane-identity audit/export parity** — completed in parallel chunks; additive
+   `acquisition_plane_source_kind` / `acquisition_plane_resolution` landed on the
+   normalized frame and in API/dict/JSON/rich-export output. Calculate tab shows
+   a compact audit line.
 
-2. **Structured `k_tab` invalid-source status** (still open under §2 + §4 partial)
-   - Carry warned-neutral / invalid-lookup status into calculation output and
-     exports (not only logger warnings).
-   - Pre-calc UI preview of table-lookup match vs fallback (beyond estimated vs
-     measured).
+2. **Structured `k_tab` invalid-source status** — `KTabResult` dataclass with
+   per-event `.statuses` (`estimated`, `exact`, `interpolated`, `clamped`,
+   `no_device`, `invalid_inherited`) is implemented and threaded through
+   `calculate_dose` into exports. Pre-calc preview is available via
+   `calculate.py` `_format_k_tab_status_summary()`.
 
-3. **Optional UX polish (non-blocking for safety)**
-   - Per-exam enumerated Calculate/Settings scanner summaries in multi-exam mode
-     (toasts + Geometry already attribute per exam).
+3. **Optional UX polish** — per-exam warnings attribute correctly in multi-exam
+   mode; Settings/Calculate Fallback badges now bind to non-empty
+   `normalization_warnings` for consistency with the Upload tab.
 
 ## Delivery
 
 Expected SemVer impact: patch-level bug fix, unless preserving DICOM plane metadata
 requires a breaking public-output change. Record user-visible behavior in
 `CHANGELOG.md` and internal characterization in `dev-docs/MAINTENANCE_LOG.md`.
-Archive this plan only after the remaining items above are closed or relocated.
+Archived 2026-09-10 after the remaining items above were closed.

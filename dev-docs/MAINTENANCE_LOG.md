@@ -53,6 +53,23 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   JSON, missing-column degradation, zero-event safety, and rich-export payload
   coverage.
 
+### Fixed
+
+- **Settings/Calculate Fallback badge visibility** (2026-09-10) — changed both
+  tabs to bind the "Default profile active" badge to non-empty
+  `state.normalization_warnings` (same pattern as the Upload tab) instead of
+  `state.normalization_method == "Fallback"`. Updated
+  `restore_globals_from_exam_meta` to also restore `normalization_method` from
+  the sole remaining exam meta. Added tests for the binding logic and the
+  restoration helper.
+
+- **Measured `k_tab` exact-match duplicate rows warn once** (2026-09-10) — when
+  the attenuation table contains multiple rows matching the same
+  `(model, plane, kVp, Cu, Al)`, `calculate_k_tab()` emits a single
+  `logger.warning` with the duplicate count and continues to use the first row
+  (`iloc[0]`) so unique-row behavior is unchanged. Added a unit test with a
+  tiny in-memory SQLite table containing duplicate rows.
+
 ### Added
 
 - **Phase 4 standing documentation-assessment record** (2026-09-07) — added

@@ -416,7 +416,9 @@ def _build_input_data_summary() -> None:
                 )
                 matched_label = ui.label("Default profile active").classes("text-[10px] text-amber-5 italic")
                 matched_label.bind_visibility_from(
-                    state, "normalization_method", backward=lambda v: v == "Fallback"
+                    state,
+                    "normalization_warnings",
+                    backward=bool,
                 )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)

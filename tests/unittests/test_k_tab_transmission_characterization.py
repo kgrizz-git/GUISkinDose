@@ -1,7 +1,7 @@
 """Characterization tests pinning the post-fix behavior of ``calculate_k_tab``
 and the per-cell table-transmission multiplication in the dose pipeline.
 
-Chunk 1 of ``dev-docs/plans/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md`` documents
+Chunk 1 of ``dev-docs/plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md`` documents
 observed bugs so the later safeguard/fix can show exact regression deltas.  These
 tests assert the *post-fix* contract.
 

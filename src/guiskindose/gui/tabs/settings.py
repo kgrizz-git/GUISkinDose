@@ -188,7 +188,9 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
 
             fallback_badge = ui.badge("Default profile").props("color=amber")
             fallback_badge.bind_visibility_from(
-                state, "normalization_method", backward=lambda v: v == "Fallback"
+                state,
+                "normalization_warnings",
+                backward=bool,
             )
             multi_fallback_caption = ui.label("").classes("text-caption text-amber-6 italic")
             multi_fallback_caption.bind_text_from(
