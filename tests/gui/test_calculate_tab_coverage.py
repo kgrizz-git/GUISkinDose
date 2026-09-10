@@ -218,9 +218,9 @@ def test_k_tab_preview_caches_and_suppresses_warnings(monkeypatch: pytest.Monkey
             KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [0.0],
         }
     )
-    calc_tab._preview_cache_key = None
-    calc_tab._preview_cache_value = None
-    calc_tab._preview_cache_error = None
+    calc_tab._preview_cache.key = None
+    calc_tab._preview_cache.value = None
+    calc_tab._preview_cache.error = None
 
     import importlib
 
@@ -268,9 +268,9 @@ def test_k_tab_preview_invalid_estimated_value_is_safe() -> None:
     state.calc_run_id = 1
     state.input_revision = 8
     state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
-    calc_tab._preview_cache_key = None
-    calc_tab._preview_cache_value = None
-    calc_tab._preview_cache_error = None
+    calc_tab._preview_cache.key = None
+    calc_tab._preview_cache.value = None
+    calc_tab._preview_cache.error = None
 
     assert calc_tab._format_k_tab_status_summary() == "k_tab preview: unavailable"
 
@@ -290,9 +290,9 @@ def test_k_tab_preview_guards_non_value_error(monkeypatch: pytest.MonkeyPatch) -
     state.calc_run_id = 2
     state.input_revision = 9
     state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
-    calc_tab._preview_cache_key = None
-    calc_tab._preview_cache_value = None
-    calc_tab._preview_cache_error = None
+    calc_tab._preview_cache.key = None
+    calc_tab._preview_cache.value = None
+    calc_tab._preview_cache.error = None
 
     import importlib
 

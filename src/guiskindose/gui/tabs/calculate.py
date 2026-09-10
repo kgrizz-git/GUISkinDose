@@ -30,14 +30,29 @@ _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
 
 # Cache for pre-calc ``calculate_k_tab`` dry-runs. ``bind_text_from`` can refresh
 # the summary label many times; without a cache each refresh re-reads the
-# corrections DB (measured mode).
-_preview_cache_key: object | None = None
-_preview_cache_value: list[str] | None = None
-_preview_cache_error: str | None = None
+# corrections DB (measured mode). Stored in a module-level object (not ``global``
+# scalars) so CodeQL py/unused-global-variable does not flag the writes.
+@dataclass
+class _KTabPreviewCache:
+    """Mutable cache for the k_tab status preview dry-run."""
+
+    key: object | None = None
+    value: list[str] | None = None
+    error: str | None = None
+
+
+_preview_cache = _KTabPreviewCache()
 
 # Cache for plane-identity audit text (same bind_text_from refresh pressure).
-_plane_audit_cache_key: object | None = None
-_plane_audit_cache_value: str | None = None
+@dataclass
+class _PlaneAuditCache:
+    """Mutable cache for the plane-identity audit string."""
+
+    key: object | None = None
+    value: str | None = None
+
+
+_plane_audit_cache = _PlaneAuditCache()
 
 
 def _format_patient_offsets() -> str:
@@ -122,20 +137,18 @@ def _preview_k_tab_statuses() -> list[str] | None:
     Exception
         Propagates validation / DB errors so the binder can show a safe label.
     """
-    global _preview_cache_key, _preview_cache_value, _preview_cache_error
-
     frames = _preview_frames()
     if not frames:
-        _preview_cache_key = None
-        _preview_cache_value = None
-        _preview_cache_error = None
+        _preview_cache.key = None
+        _preview_cache.value = None
+        _preview_cache.error = None
         return None
 
     key = _preview_fingerprint(frames)
-    if key == _preview_cache_key:
-        if _preview_cache_error is not None:
-            raise RuntimeError(_preview_cache_error)
-        return _preview_cache_value
+    if key == _preview_cache.key:
+        if _preview_cache.error is not None:
+            raise RuntimeError(_preview_cache.error)
+        return _preview_cache.value
 
     from guiskindose.corrections import calculate_k_tab
     from guiskindose.gui.settings_builder import build_settings
@@ -153,14 +166,14 @@ def _preview_k_tab_statuses() -> list[str] | None:
             )
             statuses.extend(result.statuses)
     except Exception as exc:
-        _preview_cache_key = key
-        _preview_cache_value = None
-        _preview_cache_error = f"{type(exc).__name__}: {exc}"
+        _preview_cache.key = key
+        _preview_cache.value = None
+        _preview_cache.error = f"{type(exc).__name__}: {exc}"
         raise
 
-    _preview_cache_key = key
-    _preview_cache_value = statuses
-    _preview_cache_error = None
+    _preview_cache.key = key
+    _preview_cache.value = statuses
+    _preview_cache.error = None
     return statuses
 
 
@@ -443,17 +456,15 @@ def _format_plane_identity_audit() -> str:
     Cached by ``(input_revision, id(rdsr_df), len)`` so NiceGUI ``bind_text_from``
     refreshes do not re-run ``value_counts`` every 0.1 s.
     """
-    global _plane_audit_cache_key, _plane_audit_cache_value
-
     df = state.rdsr_df
     if df is None:
-        _plane_audit_cache_key = None
-        _plane_audit_cache_value = None
+        _plane_audit_cache.key = None
+        _plane_audit_cache.value = None
         return "Plane identity: no data"
 
     key = (state.input_revision, id(df), len(df))
-    if key == _plane_audit_cache_key and _plane_audit_cache_value is not None:
-        return _plane_audit_cache_value
+    if key == _plane_audit_cache.key and _plane_audit_cache.value is not None:
+        return _plane_audit_cache.value
 
     parts = []
     for col, label in (
@@ -465,8 +476,8 @@ def _format_plane_identity_audit() -> str:
             counts_str = ", ".join(f"{k}={v}" for k, v in counts.sort_index().items())
             parts.append(f"{label}: {counts_str}")
     value = "Plane identity: " + "; ".join(parts) if parts else "Plane identity: not available"
-    _plane_audit_cache_key = key
-    _plane_audit_cache_value = value
+    _plane_audit_cache.key = key
+    _plane_audit_cache.value = value
     return value
 
 
