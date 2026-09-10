@@ -38,6 +38,7 @@ from guiskindose.constants import (
     PLANE_IDENTITY_RESOLUTION_INFERRED,
     PLANE_IDENTITY_RESOLUTION_UNKNOWN,
     PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE,
     PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
     PLANE_IDENTITY_SOURCE_KIND_NONE,
     PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
@@ -354,7 +355,7 @@ class TestNormalizerPlaneIdentityAuditFields:
         assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].iloc[0] == "unknown"
         assert (
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
-            == PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY
+            == PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE
         )
         assert (
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
@@ -467,7 +468,7 @@ class TestNormalizerPlaneIdentityAuditFields:
             == PLANE_IDENTITY_RESOLUTION_UNKNOWN
         )
 
-    def test_blank_meaning_with_non_dcm_code_is_none(self):
+    def test_blank_meaning_with_non_dcm_code_is_dicom_code(self):
         data_parsed = pd.DataFrame(
             {
                 "AcquisitionPlane": [""],
@@ -486,7 +487,7 @@ class TestNormalizerPlaneIdentityAuditFields:
         )
         assert (
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].iloc[0]
-            == PLANE_IDENTITY_SOURCE_KIND_NONE
+            == PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE
         )
         assert (
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].iloc[0]
@@ -539,7 +540,7 @@ class TestNormalizerPlaneIdentityAuditFields:
         assert data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist() == ["A", "unknown"]
         assert (
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
-            == [PLANE_IDENTITY_SOURCE_KIND_DICOM_CID, PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY]
+            == [PLANE_IDENTITY_SOURCE_KIND_DICOM_CID, PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE]
         )
         assert (
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()

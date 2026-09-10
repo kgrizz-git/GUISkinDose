@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import CorrectionStat, DosimetricMetrics, ExportPayload
+from .models import CorrectionStat, DosimetricMetrics, ExamSection, ExportPayload
 
 # Executive-alert palette (shared by XLSX/PDF/HTML).
 COLOR_WARNING = "FFF3CD"  # amber — warnings
@@ -99,6 +99,31 @@ def correction_row(stat: CorrectionStat) -> list[str]:
 
 
 CORRECTION_HEADER = ["Correction factor", "Min", "Max", "Mean", "Dose-weighted mean"]
+
+
+def _count_label(values: list[str]) -> str:
+    """Compact privacy-safe ``key=count`` summary."""
+    counts: dict[str, int] = {}
+    for value in values:
+        key = str(value)
+        counts[key] = counts.get(key, 0) + 1
+    return ", ".join(f"{key}={counts[key]}" for key in sorted(counts))
+
+
+def audit_setting_rows(exam: ExamSection) -> list[list[str]]:
+    """Settings rows for plane-identity audit and k_tab status counts."""
+    rows: list[list[str]] = []
+    for key, label in (
+        ("source_kind", "Plane identity (source kind)"),
+        ("resolution", "Plane identity (resolution)"),
+        ("canonical", "Plane identity (canonical)"),
+    ):
+        values = exam.plane_identity_audit.get(key) or []
+        if values:
+            rows.append([label, _count_label(values)])
+    if exam.k_tab_statuses:
+        rows.append(["k_tab lookup statuses", _count_label(exam.k_tab_statuses)])
+    return rows
 
 
 def dosimetric_rows(metrics: DosimetricMetrics) -> list[list[str]]:

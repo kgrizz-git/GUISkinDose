@@ -454,7 +454,7 @@ Defaults above are the code fallbacks applied when keys are absent (`settings/pl
 | **Geometry tab** | `Selected exam` dropdown; patient/table-origin sliders write `loaded_exam_meta[active]`; **Show all exams in preview** composites events (phantom stays at active exam); live preview shows a PAUSED badge when any `Full procedure` path exceeds 30 events (`procedure_live_preview_paused`) |
 | **Settings → Phantom** | Global `d_lon/d_ver/d_lat` spinboxes hidden when `is_multi_exam`; C6 caption points to Geometry + Per-exam corrections; human-only body-habitus scale sliders update Geometry preview; **live 3D human-mesh preview** (no RDSR; prefers `_reduced_3000t` then `_reduced_1000t`; reflects scales, orientation, and active-exam offsets) |
 | **Settings → Per-exam corrections** | Per-exam spinboxes + coordinate/table-origin overrides; active exam card highlighted |
-| **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections; compact `k_tab` status counts (post-calc or cached pre-calc preview) and plane-identity audit counts |
+| **Calculate tab** | Per-exam patient-offset summary (`lon/ver/lat`); table-offset line defers to Per-exam corrections; compact `k_tab` status counts (post-calc or cached pre-calc preview) and plane-identity audit counts (`dicom_cid` / `dicom_code` / …) |
 | **Upload tab** | Click exam card → set active index and open Geometry tab |
 
 Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_event_index`), `offset_handlers.py` (`apply_patient_offset_slider_tick`, `bump_per_exam_offsets_version`; `per_exam_offsets_version` lives on `AppState`), `summary_formatters.py`.

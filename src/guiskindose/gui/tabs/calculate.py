@@ -7,9 +7,6 @@ click handler is wired here even though the button is built in the drawer.
 
 from __future__ import annotations
 
-import logging
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass
 
 from nicegui import run, ui
@@ -33,10 +30,14 @@ _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
 
 # Cache for pre-calc ``calculate_k_tab`` dry-runs. ``bind_text_from`` can refresh
 # the summary label many times; without a cache each refresh re-reads the
-# corrections DB (measured mode) and re-emits ``guiskindose.corrections`` warnings.
+# corrections DB (measured mode).
 _preview_cache_key: object | None = None
 _preview_cache_value: list[str] | None = None
 _preview_cache_error: str | None = None
+
+# Cache for plane-identity audit text (same bind_text_from refresh pressure).
+_plane_audit_cache_key: object | None = None
+_plane_audit_cache_value: str | None = None
 
 
 def _format_patient_offsets() -> str:
@@ -91,26 +92,19 @@ def _preview_frames() -> list:
 
 
 def _preview_fingerprint(frames: list) -> tuple:
-    """Stable-enough key so ``bind_text_from`` refreshes reuse one dry-run."""
+    """Stable key so ``bind_text_from`` refreshes reuse one dry-run.
+
+    Uses ``state.input_revision`` (bumped on ``rebuild_rdsr_df``) instead of bare
+    ``id(frame)`` so recycled DataFrame addresses after reload cannot collide.
+    """
     return (
         state.is_multi_exam,
         state.estimate_k_tab,
         float(state.k_tab_val) if state.k_tab_val is not None else None,
         state.calc_run_id,
-        tuple((id(frame), len(frame)) for frame in frames),
+        state.input_revision,
+        tuple(len(frame) for frame in frames),
     )
-
-
-@contextmanager
-def _suppress_k_tab_logger() -> Iterator[None]:
-    """Raise the corrections logger level so preview dry-runs stay quiet."""
-    log = logging.getLogger("guiskindose.corrections")
-    previous = log.level
-    log.setLevel(logging.ERROR)
-    try:
-        yield
-    finally:
-        log.setLevel(previous)
 
 
 def _preview_k_tab_statuses() -> list[str] | None:
@@ -120,13 +114,13 @@ def _preview_k_tab_statuses() -> list[str] | None:
     hit the DB. Measured mode uses the same corrections DB path as Settings.
 
     Results are cached by fingerprint so NiceGUI text bindings do not re-query the
-    DB or re-emit ``k_tab`` warnings on every refresh. Logger warnings from
-    ``guiskindose.corrections`` are suppressed for the dry-run only.
+    DB on every refresh. Warnings are suppressed via ``emit_warnings=False`` (not a
+    process-global logger level change).
 
     Raises
     ------
-    ValueError
-        When estimated ``k_tab_val`` is outside ``(0, 1]`` (same as calculation).
+    Exception
+        Propagates validation / DB errors so the binder can show a safe label.
     """
     global _preview_cache_key, _preview_cache_value, _preview_cache_error
 
@@ -140,7 +134,7 @@ def _preview_k_tab_statuses() -> list[str] | None:
     key = _preview_fingerprint(frames)
     if key == _preview_cache_key:
         if _preview_cache_error is not None:
-            raise ValueError(_preview_cache_error)
+            raise RuntimeError(_preview_cache_error)
         return _preview_cache_value
 
     from guiskindose.corrections import calculate_k_tab
@@ -149,19 +143,19 @@ def _preview_k_tab_statuses() -> list[str] | None:
     settings = build_settings(state)
     statuses: list[str] = []
     try:
-        with _suppress_k_tab_logger():
-            for frame in frames:
-                result = calculate_k_tab(
-                    data_norm=frame,
-                    corrections_db=settings.corrections_db_path,
-                    estimate_k_tab=state.estimate_k_tab,
-                    k_tab_val=state.k_tab_val,
-                )
-                statuses.extend(result.statuses)
-    except ValueError as exc:
+        for frame in frames:
+            result = calculate_k_tab(
+                data_norm=frame,
+                corrections_db=settings.corrections_db_path,
+                estimate_k_tab=state.estimate_k_tab,
+                k_tab_val=state.k_tab_val,
+                emit_warnings=False,
+            )
+            statuses.extend(result.statuses)
+    except Exception as exc:
         _preview_cache_key = key
         _preview_cache_value = None
-        _preview_cache_error = str(exc)
+        _preview_cache_error = f"{type(exc).__name__}: {exc}"
         raise
 
     _preview_cache_key = key
@@ -176,19 +170,20 @@ def _format_k_tab_status_summary() -> str:
     Prefers post-calculation statuses from ``state.output`` / multi-exam results.
     Before the first successful run, performs a light ``calculate_k_tab`` dry-run
     so Measured vs Estimated outcomes are visible on the Calculate card. Preview
-    dry-runs are cached and do not emit corrections-logger warnings; an invalid
-    estimated ``k_tab_val`` yields a safe label instead of raising in UI bindings.
+    dry-runs are cached and do not emit corrections-logger warnings; any preview
+    failure yields a safe label so NiceGUI bindings never crash.
     """
     post = _statuses_from_last_calculation()
     if post is not None:
         return _count_status_summary(post, prefix="k_tab")
     try:
         preview = _preview_k_tab_statuses()
-    except ValueError:
-        return "k_tab preview: invalid estimated value"
+    except Exception:
+        return "k_tab preview: unavailable"
     if preview is None:
         return "k_tab status: not yet calculated"
     return _count_status_summary(preview, prefix="k_tab preview")
+
 
 def _normalized_data_frames() -> list:
     """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""
@@ -443,10 +438,23 @@ class _CalculationController:
 
 
 def _format_plane_identity_audit() -> str:
-    """Return a compact, privacy-safe plane-identity audit string for the active frame."""
+    """Return a compact, privacy-safe plane-identity audit string for the active frame.
+
+    Cached by ``(input_revision, id(rdsr_df), len)`` so NiceGUI ``bind_text_from``
+    refreshes do not re-run ``value_counts`` every 0.1 s.
+    """
+    global _plane_audit_cache_key, _plane_audit_cache_value
+
     df = state.rdsr_df
     if df is None:
+        _plane_audit_cache_key = None
+        _plane_audit_cache_value = None
         return "Plane identity: no data"
+
+    key = (state.input_revision, id(df), len(df))
+    if key == _plane_audit_cache_key and _plane_audit_cache_value is not None:
+        return _plane_audit_cache_value
+
     parts = []
     for col, label in (
         ("acquisition_plane_source_kind", "source kind"),
@@ -456,7 +464,10 @@ def _format_plane_identity_audit() -> str:
             counts = df[col].fillna("unknown").astype(str).value_counts()
             counts_str = ", ".join(f"{k}={v}" for k, v in counts.sort_index().items())
             parts.append(f"{label}: {counts_str}")
-    return "Plane identity: " + "; ".join(parts) if parts else "Plane identity: not available"
+    value = "Plane identity: " + "; ".join(parts) if parts else "Plane identity: not available"
+    _plane_audit_cache_key = key
+    _plane_audit_cache_value = value
+    return value
 
 
 def _build_input_data_summary() -> None:

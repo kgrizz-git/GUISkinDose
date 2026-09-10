@@ -201,6 +201,9 @@ class ExamSection:
     # Plane-identity audit (§6 additive) — per-event source-kind / resolution /
     # canonical lists from the normalized DataFrame, or empty when absent.
     plane_identity_audit: dict[str, list[str]] = field(default_factory=dict)
+    # Per-event patient-support transmission lookup statuses from the calculation
+    # (``estimated`` / ``exact`` / …). Empty when not available.
+    k_tab_statuses: list[str] = field(default_factory=list)
     # Unit parsing / conversions applied by the input adapter (§3) —
     # {internal field: "source unit → internal (from 'header')"}. Empty for
     # DICOM RDSR (units read+asserted, not converted) and normalized inputs.

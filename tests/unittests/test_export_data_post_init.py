@@ -201,6 +201,13 @@ def test_rejects_table_correction_length_mismatch(settings, trio, data_norm) -> 
                table_correction=[0.0] * (len(data_norm) - 1))
 
 
+def test_rejects_k_tab_statuses_length_mismatch(settings, trio, data_norm) -> None:
+    """k_tab_statuses length must match n_events when provided."""
+    patient, table, pad = trio
+    with pytest.raises(ValueError, match="k_tab statuses"):
+        _build(patient, table, pad, settings, data_norm, k_tab_statuses=["exact"])
+
+
 def test_rejects_partial_kerma_args(settings, trio, data_norm) -> None:
     """Providing kerma_meter_correction but not kerma_corrected (or vice versa) must raise."""
     patient, table, pad = trio

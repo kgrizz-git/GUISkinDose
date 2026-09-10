@@ -469,6 +469,13 @@ class PySkinDoseOutput:
                 "\tThe kerma-corrected list is not the same length as the number of events"
             )
 
+        if self.k_tab_statuses is not None and len(self.k_tab_statuses) != n_events:
+            error = True
+            error_message.append(
+                "k_tab statuses:\n"
+                "\tThe k_tab_statuses list is not the same length as the number of events"
+            )
+
         if error:
             raise ValueError("\n\n".join(error_message))
 

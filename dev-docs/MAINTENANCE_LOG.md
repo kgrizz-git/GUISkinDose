@@ -10,6 +10,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Opus whole-branch review follow-ups** (2026-09-10) — Calculate preview
+  broad exception guard + `emit_warnings=False` + `input_revision` fingerprint;
+  plane-identity audit cache; `dicom_code` source kind for present non-DCM
+  CodeValues; rich-export writers render audit/`k_tab` status counts;
+  `k_tab_statuses` length validation; glossary terms; Unreleased heading cleanup.
+
 - **Calculate `k_tab` preview cache + EventOutput NaN parity** (2026-09-10) — pre-calc
   Calculate-tab status summary caches dry-runs and suppresses
   `guiskindose.corrections` warnings during preview; invalid estimated
@@ -29,39 +35,6 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   (grand total `47 / 26 ACC / 20 FIX / 0 GAP / 1 N/A`) into
   `DOCUMENTATION_ASSESSMENT_2026-09-07.md`.
 
-### Added
-
-- **Structured `k_tab` result type and per-event status tracking** (2026-09-10) —
-  replaced the `list[float]` return of `calculate_k_tab()` with a `KTabResult`
-  dataclass carrying `.values` and `.statuses` (`estimated`, `exact`,
-  `interpolated`, `clamped`, `no_device`, `invalid_inherited`). Logger warnings
-  are preserved verbatim. Threaded statuses through `calculate_dose`,
-  `format_export_data` (`corrections.table_statuses` and `events.k_tab_statuses`,
-  additive), and `analyze_data` multi-exam output. Updated all unit-test call sites
-  and mocks; added status-assignment regression tests and export-inclusion tests.
-  GUI Calculate tab now shows a compact `k_tab:` counts summary after a successful
-  run.
-
-- **Plane-identity audit fields on the normalized DataFrame** (2026-09-09) — added
-  ``acquisition_plane_source_kind`` and ``acquisition_plane_resolution`` to the
-  ``rdsr_normalizer`` output. Source kinds: ``dicom_cid``, ``tabular_raw_code``,
-  ``meaning_only``, ``none``. Resolutions: ``code-backed``, ``inferred``,
-  ``ambiguous`` (reserved), ``unknown``. Row-wise fallbacks: blank meanings are
-  not ``meaning_only``; missing tabular raw codes fall back to meaning/none;
-  ``inferred`` only when a tabular raw code resolves to CID identity. Tests cover
-  DCM+CID, non-DCM code, tabular raw, site-specific unknown raw, missing raw,
-  meaning-only, blank meaning, absent identity, and mixed rows.
-
-- **Plane-identity audit fields in export and GUI** (2026-09-10) — extended
-  ``EventOutput`` and ``PySkinDoseOutput`` to include ``acquisition_plane_*``
-  lists additively in dict/JSON events (no ``EXPORT_SCHEMA_VERSION`` bump);
-  added ``plane_identity_audit`` to rich-export ``ExamSection``; Calculate tab
-  now shows a compact per-kind/per-resolution count audit line. Tests pin dict,
-  JSON, missing-column degradation, zero-event safety, and rich-export payload
-  coverage.
-
-### Fixed
-
 - **Settings/Calculate Fallback badge visibility** (2026-09-10) — changed both
   tabs to bind the "Default profile active" badge to non-empty
   `state.normalization_warnings` (same pattern as the Upload tab) instead of
@@ -78,6 +51,37 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   tiny in-memory SQLite table containing duplicate rows.
 
 ### Added
+
+- **Structured `k_tab` result type and per-event status tracking** (2026-09-10) —
+  replaced the `list[float]` return of `calculate_k_tab()` with a `KTabResult`
+  dataclass carrying `.values` and `.statuses` (`estimated`, `exact`,
+  `interpolated`, `clamped`, `no_device`, `invalid_inherited`). Logger warnings
+  are preserved verbatim. Threaded statuses through `calculate_dose`,
+  `format_export_data` (`corrections.table_statuses` and `events.k_tab_statuses`,
+  additive), and `analyze_data` multi-exam output. Updated all unit-test call sites
+  and mocks; added status-assignment regression tests and export-inclusion tests.
+  GUI Calculate tab now shows a compact `k_tab:` counts summary after a successful
+  run.
+
+- **Plane-identity audit fields on the normalized DataFrame** (2026-09-09) — added
+  ``acquisition_plane_source_kind`` and ``acquisition_plane_resolution`` to the
+  ``rdsr_normalizer`` output. Source kinds: ``dicom_cid``, ``dicom_code``,
+  ``tabular_raw_code``, ``meaning_only``, ``none``. Resolutions: ``code-backed``,
+  ``inferred``, ``ambiguous`` (reserved), ``unknown``. Row-wise fallbacks: blank
+  meanings are not ``meaning_only``; missing tabular raw codes fall back to
+  meaning/none; ``inferred`` only when a tabular raw code resolves to CID
+  identity. Present non-DCM CodeValues stay ``dicom_code``. Tests cover DCM+CID,
+  non-DCM code, tabular raw, site-specific unknown raw, missing raw, meaning-only,
+  blank meaning, absent identity, and mixed rows.
+
+- **Plane-identity audit fields in export and GUI** (2026-09-10) — extended
+  ``EventOutput`` and ``PySkinDoseOutput`` to include ``acquisition_plane_*``
+  lists additively in dict/JSON events (no ``EXPORT_SCHEMA_VERSION`` bump);
+  added ``plane_identity_audit`` / ``k_tab_statuses`` to rich-export
+  ``ExamSection`` and rendered counts in HTML/DOCX/PDF/XLSX settings; Calculate
+  tab now shows a compact per-kind/per-resolution count audit line. Tests pin
+  dict, JSON, missing-column degradation, zero-event safety, and rich-export
+  payload / writer-row coverage.
 
 - **Phase 4 standing documentation-assessment record** (2026-09-07) — added
   `dev-docs/assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md` (durable per-doc verdict

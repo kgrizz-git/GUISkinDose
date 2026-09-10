@@ -155,6 +155,8 @@ TUBE_IDENTITY_UNKNOWN = "unknown"
 #
 # Source kinds:
 #   * ``dicom_cid`` — DICOM CodeValue with DCM coding scheme + recognized CID 10003 code.
+#   * ``dicom_code`` — DICOM CodeValue present, but scheme missing/non-DCM or code not a
+#     recognized CID 10003 identity (code is still recorded; not ``meaning_only``).
 #   * ``tabular_raw_code`` — Tabular raw integer mapped via CID-looking codes (DoseTrack /
 #     adapter path).  Not code-backed because there is no CodingSchemeDesignator.
 #   * ``meaning_only`` — Only the meaning text/label is present; no code or scheme.
@@ -169,6 +171,7 @@ TUBE_IDENTITY_UNKNOWN = "unknown"
 #   * ``unknown`` — No usable code identity (non-DCM/non-CID, missing raw code,
 #     unmapped site code, or meaning-only / none).
 PLANE_IDENTITY_SOURCE_KIND_DICOM_CID = "dicom_cid"
+PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE = "dicom_code"
 PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE = "tabular_raw_code"
 PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY = "meaning_only"
 PLANE_IDENTITY_SOURCE_KIND_NONE = "none"
@@ -178,6 +181,7 @@ PLANE_IDENTITY_RESOLUTION_AMBIGUOUS = "ambiguous"
 PLANE_IDENTITY_RESOLUTION_UNKNOWN = "unknown"
 PLANE_IDENTITY_SOURCE_KINDS = (
     PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE,
     PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
     PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
     PLANE_IDENTITY_SOURCE_KIND_NONE,

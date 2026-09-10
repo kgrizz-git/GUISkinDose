@@ -39,6 +39,7 @@ from .constants import (
     PLANE_IDENTITY_RESOLUTION_INFERRED,
     PLANE_IDENTITY_RESOLUTION_UNKNOWN,
     PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+    PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE,
     PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
     PLANE_IDENTITY_SOURCE_KIND_NONE,
     PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
@@ -58,6 +59,15 @@ def _plane_meaning_present(meaning_col: pd.Series | None, index: pd.Index) -> pd
     return aligned.notna() & text.ne("")
 
 
+def _plane_code_present(code_col: pd.Series | None, index: pd.Index) -> pd.Series:
+    """True where AcquisitionPlane CodeValue is non-null and non-blank after strip."""
+    if code_col is None:
+        return pd.Series(False, index=index)
+    aligned = code_col.reindex(index)
+    text = aligned.where(aligned.notna(), other="").astype(str).str.strip()
+    return aligned.notna() & text.ne("") & text.str.lower().ne("nan")
+
+
 def _source_kind_from_meaning(has_meaning: pd.Series) -> pd.Series:
     """Fallback source kind when no trusted code identity is available."""
     return pd.Series(
@@ -65,6 +75,22 @@ def _source_kind_from_meaning(has_meaning: pd.Series) -> pd.Series:
             has_meaning,
             PLANE_IDENTITY_SOURCE_KIND_MEANING_ONLY,
             PLANE_IDENTITY_SOURCE_KIND_NONE,
+        ),
+        index=has_meaning.index,
+    )
+
+
+def _dicom_source_kind(cid_backed: pd.Series, has_code: pd.Series, has_meaning: pd.Series) -> pd.Series:
+    """Choose DICOM audit source_kind without mislabeling present codes as meaning_only."""
+    return pd.Series(
+        np.where(
+            cid_backed,
+            PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
+            np.where(
+                has_code,
+                PLANE_IDENTITY_SOURCE_KIND_DICOM_CODE,
+                _source_kind_from_meaning(has_meaning),
+            ),
         ),
         index=has_meaning.index,
     )
@@ -318,6 +344,7 @@ def _normalize_machine_parameters(
         data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CODE] = code_col
         mapped = code_col.map(resolve_canonical_plane_identity)
         has_meaning = _plane_meaning_present(meaning_col, data_norm.index)
+        has_code = _plane_code_present(code_col, data_norm.index)
         if scheme_col is not None:
             scheme_ok = scheme_col.map(
                 lambda s: str(s).strip().upper() == "DCM" if pd.notna(s) else False
@@ -325,13 +352,8 @@ def _normalize_machine_parameters(
             # Code present with a non-DCM (or missing) designator → unknown.
             canonical = mapped.where(scheme_ok, other="unknown")
             cid_backed = scheme_ok & mapped.notna() & (mapped != "unknown")
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = pd.Series(
-                np.where(
-                    cid_backed,
-                    PLANE_IDENTITY_SOURCE_KIND_DICOM_CID,
-                    _source_kind_from_meaning(has_meaning),
-                ),
-                index=data_norm.index,
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _dicom_source_kind(
+                cid_backed, has_code, has_meaning
             )
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
                 np.where(
@@ -344,8 +366,8 @@ def _normalize_machine_parameters(
         else:
             # CodeValue without a designator cannot be trusted as CID 10003.
             canonical = pd.Series(["unknown"] * len(data_norm), index=data_norm.index)
-            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _source_kind_from_meaning(
-                has_meaning
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = _dicom_source_kind(
+                pd.Series(False, index=data_norm.index), has_code, has_meaning
             )
             data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = pd.Series(
                 [PLANE_IDENTITY_RESOLUTION_UNKNOWN] * len(data_norm), index=data_norm.index

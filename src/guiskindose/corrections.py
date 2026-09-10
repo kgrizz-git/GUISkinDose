@@ -372,7 +372,12 @@ def _log_k_tab_warnings(
 
 
 def calculate_k_tab(
-    data_norm: pd.DataFrame, corrections_db: str, estimate_k_tab: bool = False, k_tab_val: float = 0.8
+    data_norm: pd.DataFrame,
+    corrections_db: str,
+    estimate_k_tab: bool = False,
+    k_tab_val: float = 0.8,
+    *,
+    emit_warnings: bool = True,
 ) -> KTabResult:
     """Resolve per-event patient-support transmission factors (``k_tab``).
 
@@ -410,6 +415,9 @@ def calculate_k_tab(
         finite and in ``(0, 1]``.
     corrections_db : str
         Path to the corrections SQLite database.
+    emit_warnings : bool
+        When ``False``, skip logger warnings (GUI pre-calc dry-runs). Statuses
+        are still returned unchanged.
 
     Returns
     -------
@@ -471,7 +479,7 @@ def calculate_k_tab(
         ]
         if len(exact):
             dup_key = (model, str(plane), round(kvp), float(cu), round(al))
-            if len(exact) > 1 and dup_key not in warned_duplicate_exact:
+            if emit_warnings and len(exact) > 1 and dup_key not in warned_duplicate_exact:
                 warned_duplicate_exact.add(dup_key)
                 logger.warning(
                     "k_tab: %d exact-match rows found for model=%s plane=%s kvp=%s cu=%s al=%s; "
@@ -510,12 +518,13 @@ def calculate_k_tab(
         else:
             statuses[event] = "exact"
 
-    _log_k_tab_warnings(
-        len(data_norm),
-        no_device_events,
-        interpolated_events,
-        clamped_events,
-        invalid_events=invalid_value_events,
-    )
+    if emit_warnings:
+        _log_k_tab_warnings(
+            len(data_norm),
+            no_device_events,
+            interpolated_events,
+            clamped_events,
+            invalid_events=invalid_value_events,
+        )
 
     return KTabResult(values=k_tab, statuses=statuses)

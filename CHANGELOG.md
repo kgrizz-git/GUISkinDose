@@ -35,29 +35,40 @@ That keeps SemVer and contributor history organized.
   `interpolated`, `clamped`, `no_device`, `invalid_inherited`. The logger warnings
   are preserved unchanged. Statuses are carried through `calculate_dose` into
   dict/JSON exports (`corrections.table_statuses` and `events.k_tab_statuses`,
-  additive, `EXPORT_SCHEMA_VERSION` unchanged) and the rich export. The Calculate
-  tab shows a compact `k_tab:` count summary after a successful run (reads nested
-  `events.k_tab_statuses` / multi-exam outputs) and a Measured/Estimated
-  dry-run preview before the first calculation (cached; `k_tab` logger warnings
-  suppressed during preview).
+  additive, `EXPORT_SCHEMA_VERSION` unchanged) and rich-export settings sections
+  (HTML/DOCX/PDF/XLSX). The Calculate tab shows a compact `k_tab:` count summary
+  after a successful run (reads nested `events.k_tab_statuses` / multi-exam
+  outputs) and a Measured/Estimated dry-run preview before the first calculation
+  (cached; `emit_warnings=False`).
 
 - **Normalized frame plane-identity audit fields** (2026-09-09) —
-  ``acquisition_plane_source_kind`` (``dicom_cid`` / ``tabular_raw_code`` /
-  ``meaning_only`` / ``none``) and ``acquisition_plane_resolution``
+  ``acquisition_plane_source_kind`` (``dicom_cid`` / ``dicom_code`` /
+  ``tabular_raw_code`` / ``meaning_only`` / ``none``) and ``acquisition_plane_resolution``
   (``code-backed`` / ``inferred`` / ``ambiguous`` reserved / ``unknown``).
-  Tabular CID-looking integers are ``inferred`` only when they resolve; missing
-  or unmapped raw codes and blank meanings fall back per-row. Dose math,
-  ``k_tab`` lookup, and legacy ``acquisition_plane`` are unchanged.
+  ``dicom_code`` means a DICOM CodeValue is present but not DCM-CID-backed (not
+  ``meaning_only``). Tabular CID-looking integers are ``inferred`` only when they
+  resolve; missing or unmapped raw codes and blank meanings fall back per-row.
+  Dose math, ``k_tab`` lookup, and legacy ``acquisition_plane`` are unchanged.
 
 - **Plane-identity audit fields surfaced in API/dict/JSON export and rich export** (2026-09-10) —
   ``acquisition_plane_source_kind``, ``acquisition_plane_resolution``, and
   ``acquisition_plane_canonical`` are now included in ``events`` dict/JSON output
   (additive, ``EXPORT_SCHEMA_VERSION`` unchanged) and in the rich report
-  ``ExamSection.plane_identity_audit``. Missing normalized columns degrade
-  safely to empty lists / ``"unknown"``. The Calculate tab also shows a compact
-  plane-identity audit line with per-kind / per-resolution counts.
+  ``ExamSection.plane_identity_audit`` (rendered in HTML/DOCX/PDF/XLSX settings).
+  Missing normalized columns degrade safely to empty lists / ``"unknown"``. The
+  Calculate tab also shows a compact plane-identity audit line with per-kind /
+  per-resolution counts.
 
 ### Fixed
+
+- **Opus whole-branch review follow-ups** (2026-09-10) — Calculate `k_tab`
+  preview catches all exceptions (not only `ValueError`) so NiceGUI bindings
+  cannot freeze; preview uses `emit_warnings=False` instead of a process-global
+  logger level; fingerprint uses `input_revision`; plane-identity audit text is
+  cached; DICOM CodeValue with non-DCM scheme is `dicom_code` (not
+  `meaning_only`); rich-export writers render plane-identity and `k_tab` status
+  counts; `k_tab_statuses` length is validated; glossary terms added; CHANGELOG
+  indent nit fixed; MAINTENANCE_LOG Unreleased headings consolidated.
 
 - **Calculate `k_tab` preview cache + quiet dry-run** (2026-09-10) — pre-calc
   status summary no longer re-reads the corrections DB or re-emits
@@ -102,7 +113,7 @@ That keeps SemVer and contributor history organized.
   list missing vs provided codes; Philips Geometry notices use
   ``is_philips_manufacturer`` allow-list. Dots3 nits: ``plane_code_map`` accepts
   decimal integers only; DoseTrack warns on mixed Single+biplane CID subsets;
-   tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
+  tabular raw-code canonical audit gap tracked for Plan 1 archive leftovers.
   CodeRabbit: JSON ``plane_code_map`` rejects duplicate object member names via
   ``object_pairs_hook`` (``json.loads`` would otherwise keep the last value).
 
