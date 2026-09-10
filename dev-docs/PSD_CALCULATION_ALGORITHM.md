@@ -202,7 +202,26 @@ upstream baseline; do not "simplify" them away as dead complexity:
   the same PR:
   `python scripts/check_feature_doc_matrix.py --against-ref origin/main --strict-impact`
 - Machine-checked companion: `tests/unittests/test_psd_algorithm_doc.py`
-  (doc exists; stage headings present; cited entry-point functions importable).
+  (doc exists; stage headings present and ordered; cited entry-point functions
+  importable). Watched entry points (fully qualified; the test asserts each
+  appears below):
+
+```text
+guiskindose.analyze_data.analyze_data
+guiskindose.analyze_data.analyze_multiple_exams
+guiskindose.calculate_dose.calculate_dose.calculate_dose
+guiskindose.calculate_dose.calculate_irradiation_event_result.calculate_irradiation_event_result
+guiskindose.calculate_dose.perform_calculations_for_new_geometries.perform_calculations_for_new_geometries
+guiskindose.calculate_dose.add_correction_and_event_dose_to_output.add_corrections_and_event_dose_to_output
+guiskindose.corrections.calculate_k_bs
+guiskindose.corrections.calculate_k_tab
+guiskindose.corrections.calculate_k_med
+guiskindose.corrections.calculate_k_isq
+guiskindose.geom_calc.check_new_geometry
+guiskindose.geom_calc.position_patient_phantom_on_table
+guiskindose.geom_calc.fetch_and_append_hvl
+guiskindose.geom_calc.apply_below_floor_kvp_policy
+```
 - `feature_doc_matrix.json` row: `psd_algorithm`. Sphinx/user pointer: link
   from `docs/source/user/user_guide.md` dose-calculation section (short pointer,
   no narrative duplication).

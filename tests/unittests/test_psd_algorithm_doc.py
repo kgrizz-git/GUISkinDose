@@ -73,18 +73,22 @@ def test_stage_headings_present(doc_text: str) -> None:
 
 
 def test_entry_points_cited_in_doc(doc_text: str) -> None:
-    """Every ENTRY_POINTS name must actually appear in the canonical document."""
-    for _, func_name in ENTRY_POINTS:
-        assert func_name in doc_text, (
-            f"{func_name!r} is not cited in {DOC.name}; document it or drop it from ENTRY_POINTS"
+    """Every ENTRY_POINTS reference must appear fully qualified in the doc."""
+    for module_name, func_name in ENTRY_POINTS:
+        qualified = f"{module_name}.{func_name}"
+        assert qualified in doc_text, (
+            f"{qualified!r} is not cited in {DOC.name}; document it or drop it from ENTRY_POINTS"
         )
 
 
 def test_stage_headings_in_execution_order(doc_text: str) -> None:
-    """Stage headings must occur in execution order, not just be present."""
+    """Stage headings must occur exactly once and in execution order."""
+    for heading in STAGES:
+        assert doc_text.count(heading) == 1, (
+            f"Stage heading {heading!r} occurs {doc_text.count(heading)} times in {DOC.name}"
+        )
     positions = [doc_text.index(heading) for heading in STAGES]
     assert positions == sorted(positions), f"Stage headings out of execution order in {DOC.name}: {STAGES}"
-    assert len(set(positions)) == len(STAGES)
 
 
 def test_psd_is_dose_map_maximum() -> None:
