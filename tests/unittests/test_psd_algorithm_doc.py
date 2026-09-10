@@ -78,3 +78,18 @@ def test_psd_is_dose_map_maximum() -> None:
     assert "self.psd = float(self.dose_map.max())" in export_src
     multi_src = (REPO_ROOT / "src/guiskindose/analyze_data.py").read_text(encoding="utf-8")
     assert "aggregate_psd=float(aggregate_dose_map.max())" in multi_src
+
+
+def test_reporting_field_placement() -> None:
+    """§7 field placement must hold: no missed-indices/warnings on the export object."""
+    import dataclasses
+
+    from guiskindose.format_export_data import PySkinDoseOutput
+
+    output_fields = {f.name for f in dataclasses.fields(PySkinDoseOutput)}
+    assert "missed_event_indices" not in output_fields
+    assert "warnings" not in output_fields
+    assert "kerma_corrected" in output_fields
+    assert "k_tab_statuses" in output_fields
+    event_src = (REPO_ROOT / "src/guiskindose/format_export_data.py").read_text(encoding="utf-8")
+    assert "self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist()" in event_src

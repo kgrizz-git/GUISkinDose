@@ -160,11 +160,17 @@ from the aggregate with an exclusion count header.
 
 ## 7. Reporting
 
-- `format_analysis_result_for_export()` packages dose map, per-event corrections
-  (`kerma`, `kerma_corrected`, `k_isq`, `k_bs`, `k_med`, `k_tab`,
-  `kerma_meter_cf`), `k_tab_statuses`, `missed_event_indices`, air kerma, PSD,
-  and warnings into `PySkinDoseOutput` (dict / JSON) or the interactive HTML
-  dose-map plot.
+- `format_analysis_result_for_export()` packages the dose map, per-event
+  corrections (`kerma_corrected`, `k_isq`, `k_bs`, `k_med`, `k_tab`,
+  `kerma_meter_cf`), `k_tab_statuses`, air kerma, and PSD into
+  `PySkinDoseOutput` (returned as object, dict, or JSON string — never HTML).
+  Field placement details: per-event reported kerma lives nested under
+  `events.kerma` (`EventOutput`); `missed_event_indices` stay in the raw
+  dose-loop dict (beam-miss callouts reach users via warnings, not the export
+  object); warnings are not export fields — single-exam calc warnings travel
+  via GUI state, multi-exam warnings via `MultiExamResult.warnings`.
+- The interactive HTML dose-map plot is rendered separately by
+  `create_dose_map_plot()` in `analyze_data`, not by the export formatter.
 - Rich exports add the plane-identity audit (`source_kind` / `resolution` /
   `canonical` per event) and `k_tab` status counts; the Calculate tab shows a
   pre-calc `k_tab` preview (cached dry-run, warnings suppressed) plus
