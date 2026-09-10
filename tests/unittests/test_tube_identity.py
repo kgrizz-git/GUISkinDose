@@ -820,7 +820,7 @@ class TestKTabRegressionCanonicalFields:
             estimate_k_tab=False,
             k_tab_val=0.8,
         )
-        assert result[0] == pytest.approx(0.7319, abs=1e-6)
+        assert result.values[0] == pytest.approx(0.7319, abs=1e-6)
 
     def test_canonical_single_does_not_alter_k_tab(self):
         from guiskindose.corrections import calculate_k_tab
@@ -842,4 +842,4 @@ class TestKTabRegressionCanonicalFields:
             estimate_k_tab=False,
             k_tab_val=0.8,
         )
-        assert result[0] == pytest.approx(0.7319, abs=1e-6)
+        assert result.values[0] == pytest.approx(0.7319, abs=1e-6)

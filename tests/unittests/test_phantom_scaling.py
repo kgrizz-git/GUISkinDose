@@ -10,7 +10,7 @@ import pytest
 from guiskindose import constants as c
 from guiskindose import load_settings_example_json
 from guiskindose.calculate_dose.calculate_dose import calculate_dose
-from guiskindose.corrections import calculate_k_isq
+from guiskindose.corrections import KTabResult, calculate_k_isq
 from guiskindose.geom_calc import position_patient_phantom_on_table
 from guiskindose.phantom_class import Phantom
 from guiskindose.plotting.create_geometry_plot import create_geometry_plot
@@ -145,7 +145,7 @@ def test_calculate_dose_constructs_human_patient_with_scale_values():
         ),
         patch("guiskindose.calculate_dose.calculate_dose.check_new_geometry", return_value=[True]),
         patch("guiskindose.calculate_dose.calculate_dose.calculate_k_bs", return_value=[MagicMock()]),
-        patch("guiskindose.calculate_dose.calculate_dose.calculate_k_tab", return_value=[0.8]),
+        patch("guiskindose.calculate_dose.calculate_dose.calculate_k_tab", return_value=KTabResult(values=[0.8], statuses=["exact"])),
         patch(
             "guiskindose.calculate_dose.calculate_dose.calculate_irradiation_event_result",
             side_effect=_return_output_unchanged,

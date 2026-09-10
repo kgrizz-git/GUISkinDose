@@ -166,6 +166,8 @@ def calculate_dose(
         k_tab_val=settings.k_tab_val,
         corrections_db=settings.corrections_db_path,
     )
+    k_tab_values = k_tab.values
+    k_tab_statuses = k_tab.statuses
 
     kerma_cf = _resolve_kerma_meter_cf(normalized_data, settings)
 
@@ -180,7 +182,7 @@ def calculate_dose(
         event=0,
         total_events=len(normalized_data),
         new_geometry=new_geometry,
-        k_tab=k_tab,
+        k_tab=k_tab_values,
         hits=[],
         patient=patient,
         table=table,
@@ -193,6 +195,8 @@ def calculate_dose(
         exam_id=exam_id,
         kerma_cf=kerma_cf,
     )
+
+    output[c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES] = k_tab_statuses
 
     # Return the post-policy frame separately so export packaging can match
     # dose-loop event lengths after below-floor ``skip`` without stuffing a

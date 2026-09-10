@@ -137,7 +137,8 @@ class TestEstimateKTabValidation:
             estimate_k_tab=True,
             k_tab_val=0.8,
         )
-        assert result == [0.8, 0.8]
+        assert result.values == [0.8, 0.8]
+        assert result.statuses == ["estimated", "estimated"]
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +159,8 @@ class TestAlluraClarityPlaneBExactLookup:
             estimate_k_tab=False,
             k_tab_val=0.8,
         )
-        assert result[0] == 1.0
+        assert result.values[0] == 1.0
+        assert result.statuses[0] == "invalid_inherited"
         # Exact match path — no off-grid warnings expected.
         assert not any("interpolated" in m.lower() or "clamped" in m.lower() for m in messages)
         # Invalid inherited data warning must be present.
@@ -264,7 +266,8 @@ class TestValidExactMatchKTabPins:
             estimate_k_tab=False,
             k_tab_val=0.8,
         )
-        assert result[0] == pytest.approx(0.7319, abs=1e-6)
+        assert result.values[0] == pytest.approx(0.7319, abs=1e-6)
+        assert result.statuses[0] == "exact"
 
     def test_philips_allura_clarity_plane_a_exact(self):
         """AlluraClarity Plane A rows all resolve to 0.8."""
@@ -276,4 +279,5 @@ class TestValidExactMatchKTabPins:
             estimate_k_tab=False,
             k_tab_val=0.8,
         )
-        assert result[0] == pytest.approx(0.8, abs=1e-6)
+        assert result.values[0] == pytest.approx(0.8, abs=1e-6)
+        assert result.statuses[0] == "exact"

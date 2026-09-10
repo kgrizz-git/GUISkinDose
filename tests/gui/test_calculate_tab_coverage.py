@@ -155,3 +155,30 @@ async def test_calculate_tab_renders_summary(user: User) -> None:
     await user.should_see("Run Dose Calculation", retries=30)
     await user.should_see("Current settings", retries=30)
     await user.should_see("INPUT DATA", retries=30)
+
+
+def test_k_tab_status_summary_reads_nested_dict_and_multi_exam() -> None:
+    """Post-calc summary must read nested export keys and multi-exam outputs."""
+    from types import SimpleNamespace
+
+    state.calculation_done = False
+    state.output = None
+    state.multi_exam_result = None
+    state.is_multi_exam = False
+    state.rdsr_df = None
+    state.loaded_exams = []
+    assert "not yet calculated" in calc_tab._format_k_tab_status_summary()
+
+    state.calculation_done = True
+    state.output = {
+        "events": {"k_tab_statuses": ["exact", "exact", "no_device"]},
+        "corrections": {"table_statuses": ["exact", "exact", "no_device"]},
+    }
+    assert calc_tab._format_k_tab_status_summary() == "k_tab: exact=2, no_device=1"
+
+    state.output = None
+    state.is_multi_exam = True
+    state.multi_exam_result = SimpleNamespace(
+        exams=[SimpleNamespace(output=SimpleNamespace(k_tab_statuses=["estimated", "estimated"]))]
+    )
+    assert calc_tab._format_k_tab_status_summary() == "k_tab: estimated=2"

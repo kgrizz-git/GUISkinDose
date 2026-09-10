@@ -34,6 +34,88 @@ def _format_patient_offsets() -> str:
     return format_patient_offsets(state)
 
 
+def _count_status_summary(statuses: list[str], *, prefix: str) -> str:
+    """Format privacy-safe status counts (e.g. ``exact=3, no_device=1``)."""
+    if not statuses:
+        return f"{prefix}: no events"
+    counts: dict[str, int] = {}
+    for status in statuses:
+        counts[str(status)] = counts.get(str(status), 0) + 1
+    parts = [f"{key}={value}" for key, value in sorted(counts.items())]
+    return f"{prefix}: " + ", ".join(parts)
+
+
+def _statuses_from_last_calculation() -> list[str] | None:
+    """Collect k_tab statuses from the last successful calculation, if any."""
+    if not state.calculation_done:
+        return None
+    if state.is_multi_exam and state.multi_exam_result is not None:
+        statuses: list[str] = []
+        for exam in state.multi_exam_result.exams:
+            output = getattr(exam, "output", None)
+            if output is None:
+                continue
+            exam_statuses = getattr(output, "k_tab_statuses", None) or []
+            statuses.extend(str(s) for s in exam_statuses)
+        return statuses
+    output = state.output
+    if isinstance(output, dict):
+        events = output.get("events") or {}
+        corrections = output.get("corrections") or {}
+        statuses = events.get("k_tab_statuses") or corrections.get("table_statuses") or []
+        return [str(s) for s in statuses]
+    return None
+
+
+def _preview_k_tab_statuses() -> list[str] | None:
+    """Light pre-calc dry-run of ``calculate_k_tab`` for the active/loaded frames.
+
+    Returns ``None`` when no normalized data is available. Estimated mode does not
+    hit the DB. Measured mode uses the same corrections DB path as Settings.
+    """
+    from guiskindose.corrections import calculate_k_tab
+    from guiskindose.gui.settings_builder import build_settings
+
+    frames = []
+    if state.is_multi_exam:
+        for exam in state.loaded_exams:
+            nd = getattr(exam, "normalized_data", None)
+            if nd is not None and len(nd):
+                frames.append(nd)
+    elif state.rdsr_df is not None and len(state.rdsr_df):
+        frames.append(state.rdsr_df)
+    if not frames:
+        return None
+
+    settings = build_settings(state)
+    statuses: list[str] = []
+    for frame in frames:
+        result = calculate_k_tab(
+            data_norm=frame,
+            corrections_db=settings.corrections_db_path,
+            estimate_k_tab=state.estimate_k_tab,
+            k_tab_val=state.k_tab_val,
+        )
+        statuses.extend(result.statuses)
+    return statuses
+
+
+def _format_k_tab_status_summary() -> str:
+    """Return a compact privacy-safe summary of per-event k_tab lookup statuses.
+
+    Prefers post-calculation statuses from ``state.output`` / multi-exam results.
+    Before the first successful run, performs a light ``calculate_k_tab`` dry-run
+    so Measured vs Estimated outcomes are visible on the Calculate card.
+    """
+    post = _statuses_from_last_calculation()
+    if post is not None:
+        return _count_status_summary(post, prefix="k_tab")
+    preview = _preview_k_tab_statuses()
+    if preview is None:
+        return "k_tab status: not yet calculated"
+    return _count_status_summary(preview, prefix="k_tab preview")
+
+
 def _normalized_data_frames() -> list:
     """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""
     frames = []
@@ -255,7 +337,8 @@ class _CalculationController:
         """Update PSD chrome, switch to Results, and surface any calc warnings."""
         self.ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
         self.ctx.clear_offset_stale_caption()
-        ui.notify(f"✓ {message}", color="positive")
+        k_tab_summary = _format_k_tab_status_summary()
+        ui.notify(f"✓ {message} · {k_tab_summary}", color="positive")
         self.ctx.tabs.set_value("results")
         controls = self._require_controls()
         if not state.calc_warnings:
@@ -388,6 +471,16 @@ def _build_physics_summary() -> None:
                 ui.label().bind_text_from(
                     state, "estimate_k_tab", backward=lambda v: "Estimated" if v else "Measured"
                 ).classes(_SUMMARY_VALUE_CLASSES)
+            with ui.row().classes(_SUMMARY_ROW_CLASSES):
+                ui.label("k_tab lookup summary:").classes(_SUMMARY_LABEL_CLASSES)
+                # Refresh after calc (calc_run_id) and when estimated/measured toggles.
+                k_tab_summary = ui.label().classes(_SUMMARY_VALUE_CLASSES)
+                k_tab_summary.bind_text_from(
+                    state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary()
+                )
+                k_tab_summary.bind_text_from(
+                    state, "estimate_k_tab", backward=lambda _v: _format_k_tab_status_summary()
+                )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Filtration:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(

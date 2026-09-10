@@ -1,6 +1,7 @@
 """Physics-based correction factors for inverse-square law, backscatter, medium, and table attenuation."""
 
 import logging
+from dataclasses import dataclass
 from typing import Any, cast
 
 import numpy as np
@@ -18,6 +19,31 @@ from .grid_interp import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class KTabResult:
+    """Per-event patient-support transmission factors plus their lookup status.
+
+    Attributes
+    ----------
+    values : list[float]
+        One transmission factor per event, in ``(0, 1]`` (1.0 = no table/pad
+        attenuation).
+    statuses : list[str]
+        One status string per event.  Values are ``"estimated"``, ``"exact"``,
+        ``"interpolated"``, ``"clamped"``, ``"no_device"``, or
+        ``"invalid_inherited"``.
+    """
+
+    values: list[float]
+    statuses: list[str]
+
+    def __len__(self) -> int:
+        return len(self.values)
+
+    def __getitem__(self, item: int) -> float:
+        return self.values[item]
 
 
 def calculate_k_isq(source: np.ndarray, cells: np.ndarray, dref: float) -> np.ndarray:
@@ -347,7 +373,7 @@ def _log_k_tab_warnings(
 
 def calculate_k_tab(
     data_norm: pd.DataFrame, corrections_db: str, estimate_k_tab: bool = False, k_tab_val: float = 0.8
-) -> list[float]:
+) -> KTabResult:
     """Resolve per-event patient-support transmission factors (``k_tab``).
 
     Transmission is dimensionless in ``(0, 1]`` (1.0 = no table/pad attenuation).
@@ -387,12 +413,15 @@ def calculate_k_tab(
 
     Returns
     -------
-    List[float]
-        One transmission factor per event.
+    KTabResult
+        Per-event transmission factors and their lookup status strings.
     """
     if estimate_k_tab:
         _validate_transmission_factor(k_tab_val, context="estimated k_tab_val")
-        return [k_tab_val] * len(data_norm)
+        return KTabResult(
+            values=[k_tab_val] * len(data_norm),
+            statuses=["estimated"] * len(data_norm),
+        )
 
     # Load the whole attenuation table once, then resolve each event in pandas.
     # The historical implementation did an exact-match SQL lookup ending in
@@ -407,6 +436,7 @@ def calculate_k_tab(
     conn.close()
 
     k_tab = [1.0] * len(data_norm)
+    statuses = ["exact"] * len(data_norm)
     no_device_events: list[int] = []
     interpolated_events: list[int] = []
     clamped_events: list[int] = []
@@ -429,6 +459,7 @@ def calculate_k_tab(
             # Unknown device/plane — no measured correction. Fail soft to k_tab=1.0
             # (no table attenuation) rather than crashing.
             no_device_events.append(event)
+            statuses[event] = "no_device"
             continue
 
         # Exact match first (bit-for-bit parity with the historical lookup).
@@ -443,6 +474,7 @@ def calculate_k_tab(
             )
             if value is None:
                 k_tab[event] = 1.0
+                statuses[event] = "invalid_inherited"
                 invalid_value_events.append(event)
             else:
                 k_tab[event] = value
@@ -455,14 +487,19 @@ def calculate_k_tab(
         value = _coerce_inherited_transmission(raw_value)
         if value is None:
             k_tab[event] = 1.0
+            statuses[event] = "invalid_inherited"
             invalid_value_events.append(event)
             continue
 
         k_tab[event] = value
         if status == STATUS_CLAMPED:
+            statuses[event] = "clamped"
             clamped_events.append(event)
         elif status == STATUS_INTERPOLATED:
+            statuses[event] = "interpolated"
             interpolated_events.append(event)
+        else:
+            statuses[event] = "exact"
 
     _log_k_tab_warnings(
         len(data_norm),
@@ -472,4 +509,4 @@ def calculate_k_tab(
         invalid_events=invalid_value_events,
     )
 
-    return k_tab
+    return KTabResult(values=k_tab, statuses=statuses)

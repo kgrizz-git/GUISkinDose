@@ -24,6 +24,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Structured `k_tab` result type and per-event status tracking** (2026-09-10) —
+  replaced the `list[float]` return of `calculate_k_tab()` with a `KTabResult`
+  dataclass carrying `.values` and `.statuses` (`estimated`, `exact`,
+  `interpolated`, `clamped`, `no_device`, `invalid_inherited`). Logger warnings
+  are preserved verbatim. Threaded statuses through `calculate_dose`,
+  `format_export_data` (`corrections.table_statuses` and `events.k_tab_statuses`,
+  additive), and `analyze_data` multi-exam output. Updated all unit-test call sites
+  and mocks; added status-assignment regression tests and export-inclusion tests.
+  GUI Calculate tab now shows a compact `k_tab:` counts summary after a successful
+  run.
+
 - **Plane-identity audit fields on the normalized DataFrame** (2026-09-09) — added
   ``acquisition_plane_source_kind`` and ``acquisition_plane_resolution`` to the
   ``rdsr_normalizer`` output. Source kinds: ``dicom_cid``, ``tabular_raw_code``,

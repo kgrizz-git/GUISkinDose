@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from guiskindose import load_settings_example_json
+from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
 from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
@@ -26,6 +26,8 @@ from guiskindose.constants import (
     KEY_NORMALIZATION_MODEL_NAME,
 )
 from guiskindose.corrections import calculate_k_tab
+from guiskindose.rdsr_normalizer import rdsr_normalizer
+from guiskindose.rdsr_parser import rdsr_parser
 from guiskindose.settings import PyskindoseSettings
 
 _FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "golden" / "k_tab_golden.json"
@@ -52,46 +54,24 @@ def _db_path() -> str:
 
 
 def _run_k_tab(case: dict) -> tuple[float, str]:
-    """Run calculate_k_tab on a one-row frame, capture WARNING messages via a
-    dedicated handler (robust to suite-wide logging state, unlike caplog)."""
-    messages: list[str] = []
-
-    class _Capture(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            messages.append(record.getMessage())
-
-    logger = logging.getLogger("guiskindose")
-    handler = _Capture(level=logging.WARNING)
-    logger.addHandler(handler)
-    try:
-        data_norm = pd.DataFrame(
-            data={
-                KEY_NORMALIZATION_KVP: [case["kvp"]],
-                KEY_NORMALIZATION_FILTER_SIZE_COPPER: [case["cu"]],
-                KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [case["al"]],
-                KEY_NORMALIZATION_MODEL_NAME: [case["model"]],
-                KEY_NORMALIZATION_ACQUISITION_PLANE: [case["plane"]],
-            }
-        )
-        result = calculate_k_tab(
-            data_norm=data_norm,
-            estimate_k_tab=False,
-            k_tab_val=0.8,
-            corrections_db=_db_path(),
-        )
-        value = float(result[0])
-    finally:
-        logger.removeHandler(handler)
-
-    status = "exact"
-    for msg in messages:
-        mlow = msg.lower()
-        if "interpolated" in mlow:
-            status = "interpolated"
-        elif "clamped" in mlow:
-            status = "clamped"
-        elif "no table-attenuation" in mlow:
-            status = "fallback_1.0"
+    """Run calculate_k_tab on a one-row frame and return (value, status)."""
+    data_norm = pd.DataFrame(
+        data={
+            KEY_NORMALIZATION_KVP: [case["kvp"]],
+            KEY_NORMALIZATION_FILTER_SIZE_COPPER: [case["cu"]],
+            KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [case["al"]],
+            KEY_NORMALIZATION_MODEL_NAME: [case["model"]],
+            KEY_NORMALIZATION_ACQUISITION_PLANE: [case["plane"]],
+        }
+    )
+    result = calculate_k_tab(
+        data_norm=data_norm,
+        estimate_k_tab=False,
+        k_tab_val=0.8,
+        corrections_db=_db_path(),
+    )
+    value = float(result.values[0])
+    status = result.statuses[0]
     return value, status
 
 
@@ -118,3 +98,60 @@ def test_k_tab_golden_fixture_is_loadable() -> None:
     required = {"model", "plane", "kvp", "cu", "al", "expected_k_tab", "expected_status"}
     for case in cases:
         assert required.issubset(case.keys()), f"case missing keys: {case}"
+
+
+class TestKTabStatusExportInclusion:
+    """k_tab statuses are included additively in dict/JSON export."""
+
+    def test_table_statuses_present_in_dict_export(self):
+        import pydicom
+
+        from guiskindose.analyze_data import analyze_data
+
+        base = load_settings_example_json()
+        base["mode"] = "calculate_dose"
+        base["silence_pydicom_warnings"] = True
+        base["phantom"]["model"] = "cylinder"
+        base["plot"]["notebook_mode"] = False
+        base["plot"]["plot_dosemap"] = False
+        settings = PyskindoseSettings(settings=base, output_format="dict")
+
+        rdsr_path = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
+        parsed = rdsr_parser(pydicom.dcmread(str(rdsr_path)), silence_pydicom_warnings=True)
+        norm = rdsr_normalizer(data_parsed=parsed, settings=settings)
+
+        result = analyze_data(normalized_data=norm, settings=settings)
+        assert isinstance(result, dict)
+        assert "corrections" in result
+        assert "table_statuses" in result["corrections"]
+        assert "events" in result
+        assert "k_tab_statuses" in result["events"]
+        statuses = result["events"]["k_tab_statuses"]
+        assert isinstance(statuses, list)
+        assert len(statuses) == len(norm)
+
+    def test_table_statuses_present_in_json_export(self):
+        import pydicom
+
+        from guiskindose.analyze_data import analyze_data
+
+        base = load_settings_example_json()
+        base["mode"] = "calculate_dose"
+        base["silence_pydicom_warnings"] = True
+        base["phantom"]["model"] = "cylinder"
+        base["plot"]["notebook_mode"] = False
+        base["plot"]["plot_dosemap"] = False
+        settings = PyskindoseSettings(settings=base, output_format="json")
+
+        rdsr_path = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
+        parsed = rdsr_parser(pydicom.dcmread(str(rdsr_path)), silence_pydicom_warnings=True)
+        norm = rdsr_normalizer(data_parsed=parsed, settings=settings)
+
+        result = analyze_data(normalized_data=norm, settings=settings)
+        assert isinstance(result, str)
+        import json as _json
+        parsed_result = _json.loads(result)
+        assert "corrections" in parsed_result
+        assert "table_statuses" in parsed_result["corrections"]
+        assert "events" in parsed_result
+        assert "k_tab_statuses" in parsed_result["events"]

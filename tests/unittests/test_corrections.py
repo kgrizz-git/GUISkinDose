@@ -28,6 +28,18 @@ sys.path.insert(1, str(P.absolute()))
 PATH_TO_DB = PyskindoseSettings(DEVELOPMENT_PARAMETERS).corrections_db_path
 
 
+def _frame(kvp, cu, al, model, plane, n=1):
+    return pd.DataFrame(
+        data={
+            KEY_NORMALIZATION_KVP: [kvp] * n,
+            KEY_NORMALIZATION_FILTER_SIZE_COPPER: [cu] * n,
+            KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [al] * n,
+            KEY_NORMALIZATION_MODEL_NAME: [model] * n,
+            KEY_NORMALIZATION_ACQUISITION_PLANE: [plane] * n,
+        }
+    )
+
+
 def test_fetch_hvl_from_database():
 
     expected = 6.549
@@ -132,7 +144,7 @@ def test_fetch_correct_table_correction_from_database():
     # Act
     result = calculate_k_tab(data_norm=data_norm, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB)
 
-    actual = result[0]
+    actual = result.values[0]
 
     # Assert
     assert actual == expected
@@ -154,7 +166,7 @@ def test_fetch_correct_table_correction_from_database_when_machine_model_has_ext
 
     # Act
     result = calculate_k_tab(data_norm=data_norm, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB)
-    actual = result[0]
+    actual = result.values[0]
 
     # Assert
     assert actual == expected
@@ -189,33 +201,36 @@ def _k_tab(kvp, cu, al, model, plane):
         )
     finally:
         logger.removeHandler(handler)
-    return result[0], messages
+    return result.values[0], result.statuses[0], messages
 
 
 def test_calculate_k_tab_unknown_device_fails_soft():
     """An unknown device/plane has no measured correction: fall back to k_tab=1.0
     and warn — never raise (regression for the `None[0]` TypeError crash)."""
-    value, messages = _k_tab(kvp=80, cu=0.3, al=0, model="GE Innova", plane="Single Plane")
+    value, status, messages = _k_tab(kvp=80, cu=0.3, al=0, model="GE Innova", plane="Single Plane")
     assert value == 1.0
+    assert status == "no_device"
     assert any("no table-attenuation" in m.lower() for m in messages)
 
 
 def test_calculate_k_tab_interpolates_off_grid_cu():
     """A Cu between two tabulated points interpolates strictly between the bracketing
     k_tab values for the same device/plane, and warns 'interpolated'."""
-    lo, _ = _k_tab(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
-    hi, _ = _k_tab(kvp=80, cu=0.6, al=0, model="AXIOM-Artis", plane="Single Plane")
-    mid, messages = _k_tab(kvp=80, cu=0.45, al=0, model="AXIOM-Artis", plane="Single Plane")
+    lo, _, _ = _k_tab(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+    hi, _, _ = _k_tab(kvp=80, cu=0.6, al=0, model="AXIOM-Artis", plane="Single Plane")
+    mid, status, messages = _k_tab(kvp=80, cu=0.45, al=0, model="AXIOM-Artis", plane="Single Plane")
     assert min(lo, hi) < mid < max(lo, hi)
+    assert status == "interpolated"
     assert any("interpolated" in m.lower() for m in messages)
 
 
 def test_calculate_k_tab_clamps_out_of_range_kvp():
     """A kVp beyond the table ceiling (125) is clamped to the edge value (no crash,
     no extrapolation) and flagged 'clamped'."""
-    edge, _ = _k_tab(kvp=125, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
-    beyond, messages = _k_tab(kvp=200, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+    edge, _, _ = _k_tab(kvp=125, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+    beyond, status, messages = _k_tab(kvp=200, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
     assert beyond == edge
+    assert status == "clamped"
     assert any("clamped" in m.lower() for m in messages)
 
 
@@ -284,3 +299,68 @@ def test_interpolate_off_grid_degenerate_cu_axis() -> None:
     )
     assert value == pytest.approx(0.9)
     assert status == STATUS_CLAMPED
+
+
+class TestKTabResultStatusAssignment:
+    """Structured status strings returned by ``calculate_k_tab``."""
+
+    def test_estimated_path_returns_estimated_status(self):
+        data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane", n=2)
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=True, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses == ["estimated", "estimated"]
+        assert result.values == [0.8, 0.8]
+
+    def test_exact_match_returns_exact_status(self):
+        data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses[0] == "exact"
+
+    def test_no_device_returns_no_device_status(self):
+        data = _frame(kvp=80, cu=0.3, al=0, model="GE Innova", plane="Single Plane")
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses[0] == "no_device"
+        assert result.values[0] == 1.0
+
+    def test_invalid_inherited_returns_invalid_inherited_status(self):
+        data = _frame(kvp=80, cu=0.4, al=1.0, model="AlluraClarity", plane="Plane B")
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses[0] == "invalid_inherited"
+        assert result.values[0] == 1.0
+
+    def test_interpolated_returns_interpolated_status(self):
+        data = _frame(kvp=80, cu=0.45, al=0, model="AXIOM-Artis", plane="Single Plane")
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses[0] == "interpolated"
+
+    def test_clamped_returns_clamped_status(self):
+        data = _frame(kvp=200, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane")
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses[0] == "clamped"
+
+    def test_mixed_statuses_in_single_frame(self):
+        data = pd.DataFrame(
+            data={
+                KEY_NORMALIZATION_KVP: [80, 80, 200, 999],
+                KEY_NORMALIZATION_FILTER_SIZE_COPPER: [0.3, 0.45, 0.3, 0.3],
+                KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [0, 0, 0, 0],
+                KEY_NORMALIZATION_MODEL_NAME: ["AXIOM-Artis", "AXIOM-Artis", "AXIOM-Artis", "GE Innova"],
+                KEY_NORMALIZATION_ACQUISITION_PLANE: ["Single Plane", "Single Plane", "Single Plane", "Single Plane"],
+            }
+        )
+        result = calculate_k_tab(
+            data_norm=data, estimate_k_tab=False, k_tab_val=0.8, corrections_db=PATH_TO_DB
+        )
+        assert result.statuses == ["exact", "interpolated", "clamped", "no_device"]
+        assert len(result) == 4

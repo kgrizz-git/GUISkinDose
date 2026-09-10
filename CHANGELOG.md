@@ -21,6 +21,17 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Structured per-event `k_tab` lookup status** (2026-09-10) — `calculate_k_tab()`
+  now returns a `KTabResult` dataclass with `.values` and `.statuses` instead of a
+  plain list. Status vocabulary: `estimated`, `exact`, `interpolated`, `clamped`,
+  `no_device`, `invalid_inherited`. The logger warnings are preserved unchanged.
+  Statuses are carried through `calculate_dose` into dict/JSON exports
+  (`corrections.table_statuses` and `events.k_tab_statuses`, additive,
+  `EXPORT_SCHEMA_VERSION` unchanged) and the rich export. The Calculate tab shows
+  a compact `k_tab:` count summary after a successful run (reads nested
+  `events.k_tab_statuses` / multi-exam outputs) and a Measured/Estimated
+  dry-run preview before the first calculation.
+
 - **Normalized frame plane-identity audit fields** (2026-09-09) —
   ``acquisition_plane_source_kind`` (``dicom_cid`` / ``tabular_raw_code`` /
   ``meaning_only`` / ``none``) and ``acquisition_plane_resolution``

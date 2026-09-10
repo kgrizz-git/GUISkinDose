@@ -18,6 +18,7 @@ from guiskindose.constants import (
     OUTPUT_KEY_CORRECTION_KERMA_METER,
     OUTPUT_KEY_CORRECTION_MEDIUM,
     OUTPUT_KEY_CORRECTION_TABLE,
+    OUTPUT_KEY_CORRECTION_TABLE_STATUSES,
     OUTPUT_KEY_DOSE_MAP,
     OUTPUT_KEY_HITS,
     OUTPUT_KEY_KERMA_CORRECTED,
@@ -180,7 +181,7 @@ class EventOutput:
         The trace order to for the detector object when creating plotly plots
     """
 
-    def __init__(self, data_norm: pd.DataFrame):
+    def __init__(self, data_norm: pd.DataFrame, k_tab_statuses: list[str] | None = None):
         """Extract per-event geometry fields from normalized RDSR data.
 
         An empty *data_norm* (e.g. after ``below_floor_kvp_policy=skip`` drops every
@@ -215,6 +216,7 @@ class EventOutput:
             if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL in data_norm.columns
             else []
         )
+        self.k_tab_statuses = k_tab_statuses if k_tab_statuses is not None else []
         self.phantom_object_trace_order = PLOT_TRACE_ORDER_PHANTOM_WIREFRAME
         self.beam_wireframe_trace_order = PLOT_TRACE_ORDER_BEAM_WIREFRAME
         self.detector_wireframe_trace_order = PLOT_TRACE_ORDER_DETECTOR_WIREFRAME
@@ -288,6 +290,7 @@ class EventOutput:
             "acquisition_plane_source_kind": self.acquisition_plane_source_kind,
             "acquisition_plane_resolution": self.acquisition_plane_resolution,
             "acquisition_plane_canonical": self.acquisition_plane_canonical,
+            "k_tab_statuses": self.k_tab_statuses,
             "phantom_object_trace_order": self.phantom_object_trace_order,
             "beam": {
                 "positions": [pos.to_dict() for pos in self.beam_positions],
@@ -371,6 +374,7 @@ class PySkinDoseOutput:
     data_norm: pd.DataFrame
     kerma_meter_correction: list[float] | None = None
     kerma_corrected: list[float] | None = None
+    k_tab_statuses: list[str] | None = None
 
     # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
     psd: float = field(init=False)
@@ -456,7 +460,7 @@ class PySkinDoseOutput:
         """Populate canonical derived values after validation passes."""
         self.psd = float(self.dose_map.max())
         self.air_kerma = float(self.data_norm[KEY_NORMALIZATION_AIR_KERMA].sum())
-        self.events = EventOutput(data_norm=self.data_norm)
+        self.events = EventOutput(data_norm=self.data_norm, k_tab_statuses=self.k_tab_statuses)
         kerma_meter_correction = self.kerma_meter_correction
         kerma_corrected = self.kerma_corrected
         if kerma_meter_correction is None and kerma_corrected is None:
@@ -551,6 +555,7 @@ class PySkinDoseOutput:
                 "backscatter": self.backscatter_correction,
                 "medium": self.medium_correction,
                 "table": self.table_correction,
+                "table_statuses": self.k_tab_statuses if self.k_tab_statuses is not None else [],
                 "inverse_square_law": self.inverse_square_law_correction,
                 "kerma": self.events.to_dict().get("kerma", []),
                 "kerma_corrected": self.kerma_corrected,
@@ -697,6 +702,7 @@ def format_analysis_result_for_export(
         data_norm=data_norm,
         kerma_meter_correction=analysis_result.get(OUTPUT_KEY_CORRECTION_KERMA_METER),
         kerma_corrected=analysis_result.get(OUTPUT_KEY_KERMA_CORRECTED),
+        k_tab_statuses=analysis_result.get(OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
     )
 
     if settings.output_format == RUN_ARGUMENTS_OUTPUT_DICT:

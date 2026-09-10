@@ -156,6 +156,7 @@ def test_serialized_export_shape_remains_stable(settings, trio, data_norm) -> No
         "backscatter",
         "medium",
         "table",
+        "table_statuses",
         "inverse_square_law",
         "kerma",
         "kerma_corrected",
