@@ -29,6 +29,14 @@ That keeps SemVer and contributor history organized.
   or unmapped raw codes and blank meanings fall back per-row. Dose math,
   ``k_tab`` lookup, and legacy ``acquisition_plane`` are unchanged.
 
+- **Plane-identity audit fields surfaced in API/dict/JSON export and rich export** (2026-09-10) —
+  ``acquisition_plane_source_kind``, ``acquisition_plane_resolution``, and
+  ``acquisition_plane_canonical`` are now included in ``events`` dict/JSON output
+  (additive, ``EXPORT_SCHEMA_VERSION`` unchanged) and in the rich report
+  ``ExamSection.plane_identity_audit``. Missing normalized columns degrade
+  safely to empty lists. The Calculate tab also shows a compact plane-identity
+  audit line with per-kind / per-resolution counts.
+
 ### Fixed
 
 - **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited

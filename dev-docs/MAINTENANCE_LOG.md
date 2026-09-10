@@ -34,6 +34,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   DCM+CID, non-DCM code, tabular raw, site-specific unknown raw, missing raw,
   meaning-only, blank meaning, absent identity, and mixed rows.
 
+- **Plane-identity audit fields in export and GUI** (2026-09-10) — extended
+  ``EventOutput`` and ``PySkinDoseOutput`` to include ``acquisition_plane_*``
+  lists additively in dict/JSON events (no ``EXPORT_SCHEMA_VERSION`` bump);
+  added ``plane_identity_audit`` to rich-export ``ExamSection``; Calculate tab
+  now shows a compact per-kind/per-resolution count audit line. Tests pin dict,
+  JSON, missing-column degradation, zero-event safety, and rich-export payload
+  coverage.
+
 ### Added
 
 - **Phase 4 standing documentation-assessment record** (2026-09-07) — added

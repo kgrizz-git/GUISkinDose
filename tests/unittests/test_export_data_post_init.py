@@ -27,6 +27,11 @@ import pydicom
 import pytest
 
 from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+from guiskindose.constants import (
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
+)
 from guiskindose.format_export_data import PySkinDoseOutput
 from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
 from guiskindose.rdsr_normalizer import rdsr_normalizer
@@ -259,3 +264,64 @@ def test_pyskindose_output_repr_tolerates_uninitialized_derived_fields() -> None
         "air_kerma_corrected=<unavailable>, pad_thickness=<unavailable>, "
         "patient_offsets='<unavailable>')"
     )
+
+
+
+def test_events_dict_includes_plane_identity_keys_when_columns_present(settings, trio, data_norm) -> None:
+    """EventOutput.to_dict() must surface plane-identity fields when data_norm has them."""
+    data_norm = data_norm.copy()
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = ["dicom_cid"] * len(data_norm)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = ["code-backed"] * len(data_norm)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = ["A"] * len(data_norm)
+    patient, table, pad = trio
+    out = _build(patient, table, pad, settings, data_norm)
+    events_dict = out.events.to_dict()
+    assert "acquisition_plane_source_kind" in events_dict
+    assert "acquisition_plane_resolution" in events_dict
+    assert "acquisition_plane_canonical" in events_dict
+    assert events_dict["acquisition_plane_source_kind"] == ["dicom_cid"] * len(data_norm)
+    assert events_dict["acquisition_plane_resolution"] == ["code-backed"] * len(data_norm)
+    assert events_dict["acquisition_plane_canonical"] == ["A"] * len(data_norm)
+
+
+def test_events_dict_degrades_safely_without_plane_identity_columns(settings, trio, data_norm) -> None:
+    """Missing plane-identity columns must yield empty lists, not KeyError."""
+    data_norm = data_norm.drop(columns=[c for c in data_norm.columns if "acquisition_plane" in c], errors="ignore")
+    patient, table, pad = trio
+    out = _build(patient, table, pad, settings, data_norm)
+    events_dict = out.events.to_dict()
+    assert events_dict.get("acquisition_plane_source_kind", []) == []
+    assert events_dict.get("acquisition_plane_resolution", []) == []
+    assert events_dict.get("acquisition_plane_canonical", []) == []
+
+
+def test_json_export_contains_plane_identity_keys(settings, trio, data_norm) -> None:
+    """JSON export must include additive plane-identity event fields."""
+    data_norm = data_norm.copy()
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = ["dicom_cid"] * len(data_norm)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = ["code-backed"] * len(data_norm)
+    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = ["A"] * len(data_norm)
+    patient, table, pad = trio
+    out = _build(patient, table, pad, settings, data_norm)
+    parsed = json.loads(out.to_json())
+    assert "acquisition_plane_source_kind" in parsed["events"]
+    assert "acquisition_plane_resolution" in parsed["events"]
+    assert "acquisition_plane_canonical" in parsed["events"]
+
+
+def test_event_output_zero_events_has_empty_plane_identity(settings, trio) -> None:
+    """An empty data_norm must still produce empty plane-identity lists."""
+    data_norm = pd.DataFrame({
+        "Rx": [], "Ry": [], "Rz": [],
+        "Tx": [], "Ty": [], "Tz": [],
+        "K_IRP": [],
+        "Ap1": [], "Ap2": [], "Ap3": [],
+        "DID": [], "DSIRP": [],
+    })
+    patient, table, pad = trio
+    out = _build(patient, table, pad, settings, data_norm)
+    events_dict = out.events.to_dict()
+    assert events_dict["acquisition_plane_source_kind"] == []
+    assert events_dict["acquisition_plane_resolution"] == []
+    assert events_dict["acquisition_plane_canonical"] == []
+

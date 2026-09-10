@@ -285,6 +285,23 @@ class _CalculationController:
         return self.controls
 
 
+def _format_plane_identity_audit() -> str:
+    """Return a compact, privacy-safe plane-identity audit string for the active frame."""
+    df = state.rdsr_df
+    if df is None:
+        return "Plane identity: no data"
+    parts = []
+    for col, label in (
+        ("acquisition_plane_source_kind", "source kind"),
+        ("acquisition_plane_resolution", "resolution"),
+    ):
+        if col in df.columns:
+            counts = df[col].fillna("unknown").astype(str).value_counts()
+            counts_str = ", ".join(f"{k}={v}" for k, v in counts.sort_index().items())
+            parts.append(f"{label}: {counts_str}")
+    return "Plane identity: " + "; ".join(parts) if parts else "Plane identity: not available"
+
+
 def _build_input_data_summary() -> None:
     """Render the Calculate card's input-data summary column."""
     with ui.column().classes("gap-2"):
@@ -318,6 +335,11 @@ def _build_input_data_summary() -> None:
                 matched_label.bind_visibility_from(
                     state, "normalization_method", backward=lambda v: v == "Fallback"
                 )
+            with ui.row().classes(_SUMMARY_ROW_CLASSES):
+                ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)
+                ui.label().bind_text_from(
+                    state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()
+                ).classes(_SUMMARY_VALUE_CLASSES)
 
 
 def _build_phantom_setup_summary() -> None:

@@ -9,6 +9,9 @@ import pandas as pd
 
 from guiskindose.beam_class import Beam
 from guiskindose.constants import (
+    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
+    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
     KEY_NORMALIZATION_AIR_KERMA,
     OUTPUT_KEY_CORRECTION_BACK_SCATTER,
     OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW,
@@ -197,6 +200,21 @@ class EventOutput:
             "z": data_norm.Tz.tolist() if self.events else [],
         }
         self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist() if self.events else []
+        self.acquisition_plane_source_kind = (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
+            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND in data_norm.columns
+            else []
+        )
+        self.acquisition_plane_resolution = (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()
+            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION in data_norm.columns
+            else []
+        )
+        self.acquisition_plane_canonical = (
+            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist()
+            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL in data_norm.columns
+            else []
+        )
         self.phantom_object_trace_order = PLOT_TRACE_ORDER_PHANTOM_WIREFRAME
         self.beam_wireframe_trace_order = PLOT_TRACE_ORDER_BEAM_WIREFRAME
         self.detector_wireframe_trace_order = PLOT_TRACE_ORDER_DETECTOR_WIREFRAME
@@ -267,6 +285,9 @@ class EventOutput:
             "rotation": self.rotation,
             "translation": self.translation,
             "kerma": self.kerma,
+            "acquisition_plane_source_kind": self.acquisition_plane_source_kind,
+            "acquisition_plane_resolution": self.acquisition_plane_resolution,
+            "acquisition_plane_canonical": self.acquisition_plane_canonical,
             "phantom_object_trace_order": self.phantom_object_trace_order,
             "beam": {
                 "positions": [pos.to_dict() for pos in self.beam_positions],

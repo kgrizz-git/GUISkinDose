@@ -1,0 +1,280 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index f9b31e9..f6cb5e3 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -29,6 +29,14 @@ That keeps SemVer and contributor history organized.
+   or unmapped raw codes and blank meanings fall back per-row. Dose math,
+   ``k_tab`` lookup, and legacy ``acquisition_plane`` are unchanged.
+ 
++- **Plane-identity audit fields surfaced in API/dict/JSON export and rich export** (2026-09-10) —
++  ``acquisition_plane_source_kind``, ``acquisition_plane_resolution``, and
++  ``acquisition_plane_canonical`` are now included in ``events`` dict/JSON output
++  (additive, ``EXPORT_SCHEMA_VERSION`` unchanged) and in the rich report
++  ``ExamSection.plane_identity_audit``. Missing normalized columns degrade
++  safely to empty lists. The Calculate tab also shows a compact plane-identity
++  audit line with per-kind / per-resolution counts.
++
+ ### Fixed
+ 
+ - **CodeRabbit follow-ups on correction-safety PR** (2026-09-09) — inherited
+diff --git a/dev-docs/MAINTENANCE_LOG.md b/dev-docs/MAINTENANCE_LOG.md
+index f26c939..5ee0f0f 100644
+--- a/dev-docs/MAINTENANCE_LOG.md
++++ b/dev-docs/MAINTENANCE_LOG.md
+@@ -34,6 +34,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
+   DCM+CID, non-DCM code, tabular raw, site-specific unknown raw, missing raw,
+   meaning-only, blank meaning, absent identity, and mixed rows.
+ 
++- **Plane-identity audit fields in export and GUI** (2026-09-10) — extended
++  ``EventOutput`` and ``PySkinDoseOutput`` to include ``acquisition_plane_*``
++  lists additively in dict/JSON events (no ``EXPORT_SCHEMA_VERSION`` bump);
++  added ``plane_identity_audit`` to rich-export ``ExamSection``; Calculate tab
++  now shows a compact per-kind/per-resolution count audit line. Tests pin dict,
++  JSON, missing-column degradation, zero-event safety, and rich-export payload
++  coverage.
++
+ ### Added
+ 
+ - **Phase 4 standing documentation-assessment record** (2026-09-07) — added
+diff --git a/src/guiskindose/export/models.py b/src/guiskindose/export/models.py
+index 5a73f16..bb9dd1f 100644
+--- a/src/guiskindose/export/models.py
++++ b/src/guiskindose/export/models.py
+@@ -198,6 +198,9 @@ class ExamSection:
+     # Dosimetric (§7) and corrections (§8)
+     metrics: DosimetricMetrics
+     corrections: list[CorrectionStat]
++    # Plane-identity audit (§6 additive) — per-event source-kind / resolution /
++    # canonical lists from the normalized DataFrame, or empty when absent.
++    plane_identity_audit: dict[str, list[str]] = field(default_factory=dict)
+     # Unit parsing / conversions applied by the input adapter (§3) —
+     # {internal field: "source unit → internal (from 'header')"}. Empty for
+     # DICOM RDSR (units read+asserted, not converted) and normalized inputs.
+diff --git a/src/guiskindose/export/payload.py b/src/guiskindose/export/payload.py
+index c78796a..65276ed 100644
+--- a/src/guiskindose/export/payload.py
++++ b/src/guiskindose/export/payload.py
+@@ -90,6 +90,15 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
+     discarded = sum(exam_src.discarded_events.values()) if exam_src is not None else 0
+ 
+     snapshot = _sections.serialize_settings(settings) if settings is not None else {}
++    plane_identity_audit: dict[str, list[str]] = {}
++    if df is not None:
++        for col, key in (
++            ("acquisition_plane_source_kind", "source_kind"),
++            ("acquisition_plane_resolution", "resolution"),
++            ("acquisition_plane_canonical", "canonical"),
++        ):
++            if col in df.columns:
++                plane_identity_audit[key] = df[col].fillna("unknown").astype(str).tolist()
+     return ExamSection(
+         exam_id=exam_id,
+         manufacturer=(_sections.equipment_section(exam_src)["manufacturer"] if exam_src else None),
+@@ -101,6 +110,7 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
+         phantom=(_sections.phantom_section(view, settings) if settings is not None else {}),
+         metrics=_metrics.dosimetric_metrics(view, df, events_discarded=discarded),
+         corrections=_metrics.correction_stats(view),
++        plane_identity_audit=plane_identity_audit,
+         unit_conversions=(
+             dict(getattr(exam_src.provenance, "unit_conversions", None) or {})
+             if exam_src is not None and exam_src.provenance is not None
+diff --git a/src/guiskindose/format_export_data.py b/src/guiskindose/format_export_data.py
+index 07c7819..04e137b 100644
+--- a/src/guiskindose/format_export_data.py
++++ b/src/guiskindose/format_export_data.py
+@@ -9,6 +9,9 @@ import pandas as pd
+ 
+ from guiskindose.beam_class import Beam
+ from guiskindose.constants import (
++    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
++    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
++    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
+     KEY_NORMALIZATION_AIR_KERMA,
+     OUTPUT_KEY_CORRECTION_BACK_SCATTER,
+     OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW,
+@@ -197,6 +200,21 @@ class EventOutput:
+             "z": data_norm.Tz.tolist() if self.events else [],
+         }
+         self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist() if self.events else []
++        self.acquisition_plane_source_kind = (
++            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND].tolist()
++            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND in data_norm.columns
++            else []
++        )
++        self.acquisition_plane_resolution = (
++            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION].tolist()
++            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION in data_norm.columns
++            else []
++        )
++        self.acquisition_plane_canonical = (
++            data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL].tolist()
++            if self.events and KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL in data_norm.columns
++            else []
++        )
+         self.phantom_object_trace_order = PLOT_TRACE_ORDER_PHANTOM_WIREFRAME
+         self.beam_wireframe_trace_order = PLOT_TRACE_ORDER_BEAM_WIREFRAME
+         self.detector_wireframe_trace_order = PLOT_TRACE_ORDER_DETECTOR_WIREFRAME
+@@ -267,6 +285,9 @@ class EventOutput:
+             "rotation": self.rotation,
+             "translation": self.translation,
+             "kerma": self.kerma,
++            "acquisition_plane_source_kind": self.acquisition_plane_source_kind,
++            "acquisition_plane_resolution": self.acquisition_plane_resolution,
++            "acquisition_plane_canonical": self.acquisition_plane_canonical,
+             "phantom_object_trace_order": self.phantom_object_trace_order,
+             "beam": {
+                 "positions": [pos.to_dict() for pos in self.beam_positions],
+diff --git a/src/guiskindose/gui/tabs/calculate.py b/src/guiskindose/gui/tabs/calculate.py
+index 7698f40..a0261a3 100644
+--- a/src/guiskindose/gui/tabs/calculate.py
++++ b/src/guiskindose/gui/tabs/calculate.py
+@@ -285,6 +285,23 @@ class _CalculationController:
+         return self.controls
+ 
+ 
++def _format_plane_identity_audit() -> str:
++    """Return a compact, privacy-safe plane-identity audit string for the active frame."""
++    df = state.rdsr_df
++    if df is None:
++        return "Plane identity: no data"
++    parts = []
++    for col, label in (
++        ("acquisition_plane_source_kind", "source kind"),
++        ("acquisition_plane_resolution", "resolution"),
++    ):
++        if col in df.columns:
++            counts = df[col].fillna("unknown").astype(str).value_counts()
++            counts_str = ", ".join(f"{k}={v}" for k, v in counts.sort_index().items())
++            parts.append(f"{label}: {counts_str}")
++    return "Plane identity: " + "; ".join(parts) if parts else "Plane identity: not available"
++
++
+ def _build_input_data_summary() -> None:
+     """Render the Calculate card's input-data summary column."""
+     with ui.column().classes("gap-2"):
+@@ -318,6 +335,11 @@ def _build_input_data_summary() -> None:
+                 matched_label.bind_visibility_from(
+                     state, "normalization_method", backward=lambda v: v == "Fallback"
+                 )
++            with ui.row().classes(_SUMMARY_ROW_CLASSES):
++                ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)
++                ui.label().bind_text_from(
++                    state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()
++                ).classes(_SUMMARY_VALUE_CLASSES)
+ 
+ 
+ def _build_phantom_setup_summary() -> None:
+diff --git a/tests/unittests/test_export_data_post_init.py b/tests/unittests/test_export_data_post_init.py
+index 864e25d..ff753ea 100644
+--- a/tests/unittests/test_export_data_post_init.py
++++ b/tests/unittests/test_export_data_post_init.py
+@@ -27,7 +27,12 @@ import pydicom
+ import pytest
+ 
+ from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
+-from guiskindose.format_export_data import PySkinDoseOutput
++from guiskindose.constants import (
++    KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL,
++    KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
++    KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
++)
++from guiskindose.format_export_data import EventOutput, PySkinDoseOutput
+ from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
+ from guiskindose.rdsr_normalizer import rdsr_normalizer
+ from guiskindose.rdsr_parser import rdsr_parser
+@@ -259,3 +264,64 @@ def test_pyskindose_output_repr_tolerates_uninitialized_derived_fields() -> None
+         "air_kerma_corrected=<unavailable>, pad_thickness=<unavailable>, "
+         "patient_offsets='<unavailable>')"
+     )
++
++
++
++def test_events_dict_includes_plane_identity_keys_when_columns_present(settings, trio, data_norm) -> None:
++    """EventOutput.to_dict() must surface plane-identity fields when data_norm has them."""
++    data_norm = data_norm.copy()
++    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = ["dicom_cid"] * len(data_norm)
++    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = ["code-backed"] * len(data_norm)
++    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = ["A"] * len(data_norm)
++    patient, table, pad = trio
++    out = _build(patient, table, pad, settings, data_norm)
++    events_dict = out.events.to_dict()
++    assert "acquisition_plane_source_kind" in events_dict
++    assert "acquisition_plane_resolution" in events_dict
++    assert "acquisition_plane_canonical" in events_dict
++    assert events_dict["acquisition_plane_source_kind"] == ["dicom_cid"] * len(data_norm)
++    assert events_dict["acquisition_plane_resolution"] == ["code-backed"] * len(data_norm)
++    assert events_dict["acquisition_plane_canonical"] == ["A"] * len(data_norm)
++
++
++def test_events_dict_degrades_safely_without_plane_identity_columns(settings, trio, data_norm) -> None:
++    """Missing plane-identity columns must yield empty lists, not KeyError."""
++    data_norm = data_norm.drop(columns=[c for c in data_norm.columns if "acquisition_plane" in c], errors="ignore")
++    patient, table, pad = trio
++    out = _build(patient, table, pad, settings, data_norm)
++    events_dict = out.events.to_dict()
++    assert events_dict.get("acquisition_plane_source_kind", []) == []
++    assert events_dict.get("acquisition_plane_resolution", []) == []
++    assert events_dict.get("acquisition_plane_canonical", []) == []
++
++
++def test_json_export_contains_plane_identity_keys(settings, trio, data_norm) -> None:
++    """JSON export must include additive plane-identity event fields."""
++    data_norm = data_norm.copy()
++    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND] = ["dicom_cid"] * len(data_norm)
++    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION] = ["code-backed"] * len(data_norm)
++    data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE_CANONICAL] = ["A"] * len(data_norm)
++    patient, table, pad = trio
++    out = _build(patient, table, pad, settings, data_norm)
++    parsed = json.loads(out.to_json())
++    assert "acquisition_plane_source_kind" in parsed["events"]
++    assert "acquisition_plane_resolution" in parsed["events"]
++    assert "acquisition_plane_canonical" in parsed["events"]
++
++
++def test_event_output_zero_events_has_empty_plane_identity(settings, trio) -> None:
++    """An empty data_norm must still produce empty plane-identity lists."""
++    data_norm = pd.DataFrame({
++        "Rx": [], "Ry": [], "Rz": [],
++        "Tx": [], "Ty": [], "Tz": [],
++        "K_IRP": [],
++        "Ap1": [], "Ap2": [], "Ap3": [],
++        "DID": [], "DSIRP": [],
++    })
++    patient, table, pad = trio
++    out = _build(patient, table, pad, settings, data_norm)
++    events_dict = out.events.to_dict()
++    assert events_dict["acquisition_plane_source_kind"] == []
++    assert events_dict["acquisition_plane_resolution"] == []
++    assert events_dict["acquisition_plane_canonical"] == []
++
+diff --git a/tests/unittests/test_export_payload.py b/tests/unittests/test_export_payload.py
+index cbad759..762c3f4 100644
+--- a/tests/unittests/test_export_payload.py
++++ b/tests/unittests/test_export_payload.py
+@@ -371,3 +371,26 @@ def test_payload_real_fixture():
+     assert payload.cumulative.metrics.psd == pytest.approx(out["psd"])
+     assert payload.cumulative.metrics.air_kerma == pytest.approx(out["air_kerma"])
+     assert payload.meta.package_version != ""
++
++
++# ── plane-identity audit in rich export ──────────────────────────────────────
++
++
++def test_payload_surfaces_plane_identity_audit():
++    df = pd.DataFrame({
++        "acquisition_plane_source_kind": ["dicom_cid", "meaning_only"],
++        "acquisition_plane_resolution": ["code-backed", "unknown"],
++        "acquisition_plane_canonical": ["A", "unknown"],
++    })
++    src = _single_source(_two_event_output(), df=df)
++    payload = collect_export_payload(src, with_images=False)
++    audit = payload.exams[0].plane_identity_audit
++    assert audit["source_kind"] == ["dicom_cid", "meaning_only"]
++    assert audit["resolution"] == ["code-backed", "unknown"]
++    assert audit["canonical"] == ["A", "unknown"]
++
++
++def test_payload_plane_identity_audit_empty_when_columns_absent():
++    src = _single_source(_two_event_output(), df=pd.DataFrame())
++    payload = collect_export_payload(src, with_images=False)
++    assert payload.exams[0].plane_identity_audit == {}
