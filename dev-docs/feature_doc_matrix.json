@@ -220,6 +220,34 @@
       "help": [
         "docs/source/gui_help/results_workflow.md"
       ]
+    },
+    "psd_algorithm": {
+      "status": "shipped",
+      "code": [
+        "src/guiskindose/calculate_dose",
+        "src/guiskindose/geom_calc.py",
+        "src/guiskindose/beam_class.py",
+        "src/guiskindose/corrections.py",
+        "src/guiskindose/kerma_correction.py",
+        "src/guiskindose/rdsr_normalizer.py",
+        "src/guiskindose/input_adapters",
+        "src/guiskindose/analyze_data.py",
+        "src/guiskindose/format_export_data.py"
+      ],
+      "tests": [
+        "tests/unittests/test_psd_algorithm_doc.py",
+        "tests/unittests/test_calculate_dose.py",
+        "tests/unittests/test_golden_k_tab.py"
+      ],
+      "docs": [
+        "dev-docs/PSD_CALCULATION_ALGORITHM.md",
+        "dev-docs/CODEBASE_OVERVIEW.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "AGENTS.md"
+      ],
+      "help": [
+        "docs/source/gui_help/calculation_workflow.md"
+      ]
     }
   }
 }

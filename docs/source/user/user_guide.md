@@ -49,6 +49,15 @@ for schema detection details.
 For normalized DataFrame workflows, `analyze_normalized_data_with_custom_settings_object` remains
 available when you already have vendor-normalized event tables.
 
+## How the dose is calculated
+
+Per-event pipeline in brief: normalized irradiation events → vendor/coordinate
+transforms and patient/table offsets → correction factors (kerma-meter, inverse-square,
+backscatter, medium, patient-support transmission) → X-ray field projection and
+phantom intersection → cumulative dose-map accumulation → PSD (maximum of the map).
+The canonical full description (maintainer reference) is
+[dev-docs/PSD_CALCULATION_ALGORITHM.md](../../../dev-docs/PSD_CALCULATION_ALGORITHM.md).
+
 ## Further reading
 
 - [Installation](install.html)

@@ -12,6 +12,7 @@ It is a fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose). The package
 
 - **[dev-docs/AGENT_PLAYBOOK.md](dev-docs/AGENT_PLAYBOOK.md)** — shared workflow rules for coding agents; `CLAUDE.md`, `GEMINI.md`, and `QWEN.md` are thin pointers to this guidance.
 - **[dev-docs/CODEBASE_OVERVIEW.md](dev-docs/CODEBASE_OVERVIEW.md)** — full architecture, data flow, all settings, classes, and functions
+- **[dev-docs/PSD_CALCULATION_ALGORITHM.md](dev-docs/PSD_CALCULATION_ALGORITHM.md)** — canonical PSD dose algorithm in execution order (machine-checked by `tests/unittests/test_psd_algorithm_doc.py`)
 - **[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md)** — exhaustive list of every feature: calculations, rendering, settings, outputs, CLI, API
 - **[dev-docs/plans/GUI_PLAN.md](dev-docs/plans/GUI_PLAN.md)** — GUI current state (§0) and NiceGUI implementation plan
 - **[DESIGN.md](DESIGN.md)** — GUI aesthetic intent; **[dev-docs/UI_values.md](dev-docs/UI_values.md)** — auto-generated design tokens from `app.py`

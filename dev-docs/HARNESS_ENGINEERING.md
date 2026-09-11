@@ -28,6 +28,7 @@ Agents working in this repository should be able to answer three questions quick
 | Harness improvement plan and phased roadmap | `dev-docs/plans/archive/HARNESS_ENGINEERING_IMPROVEMENT_PLAN.md` |
 | Documentation catalog | `dev-docs/index.md` |
 | Architecture, data flow, and layering rules | `dev-docs/CODEBASE_OVERVIEW.md` |
+| PSD dose algorithm in execution order (machine-checked) | `dev-docs/PSD_CALCULATION_ALGORITHM.md` via `tests/unittests/test_psd_algorithm_doc.py` |
 | Feature inventory and known missing features | `dev-docs/FEATURE_INVENTORY.md` |
 | RDSR normalization, offsets, DataFrame contract | `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` |
 | Tabular schema auto-detection + DAP-unit caveat (machine-checked) | `dev-docs/INPUT_SCHEMA_DETECTION.md` via `tests/unittests/test_input_schema_doc.py` |
