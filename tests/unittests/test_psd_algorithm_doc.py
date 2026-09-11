@@ -112,3 +112,16 @@ def test_reporting_field_placement() -> None:
     assert "k_tab_statuses" in output_fields
     event_src = (REPO_ROOT / "src/guiskindose/format_export_data.py").read_text(encoding="utf-8")
     assert "self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist()" in event_src
+
+
+def test_flow_diagrams_present(doc_text: str) -> None:
+    """The Flow diagram section must keep flowchart + sequence diagrams on key stages."""
+    assert doc_text.count("```mermaid") == 2, f"Expected 2 mermaid blocks in {DOC.name}"
+    for token in (
+        "calculate_dose",
+        "check_new_geometry",
+        "aggregate_psd = max",
+        "PSD = max dose_map",
+        "sequenceDiagram",
+    ):
+        assert token in doc_text, f"Flow diagram lost {token!r} in {DOC.name}"

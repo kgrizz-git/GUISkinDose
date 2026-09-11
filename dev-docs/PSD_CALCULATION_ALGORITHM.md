@@ -19,6 +19,69 @@ only the settings source differs. Mode must be `calculate_dose`
 > [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md); schema
 > detection in [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md).
 
+## Flow diagram
+
+Stage overview (flowchart) followed by the module-call sequence. Node labels
+name the real modules; the narrative sections below are authoritative on
+semantics.
+
+```mermaid
+flowchart TD
+    IN["Input events<br/>RDSR .dcm via rdsr_parser<br/>tabular via input_adapters"]
+    NORM["Normalize<br/>rdsr_normalizer → cm frame<br/>offsets, plane identity"]
+    GEO["Per-exam geometry<br/>table+pad Phantoms<br/>calculate_rotation_matrices<br/>create_geometry_plot"]
+    PREP["Prerequisites [calculate_dose]<br/>position patient phantom<br/>below-floor kVp policy → HVL<br/>check_new_geometry<br/>k_bs splines · k_tab · kerma_cf"]
+    LOOP{"Per-event loop<br/>new_geometry?"}
+    REUSE["Reuse prior<br/>hits / k_isq"]
+    PROJ["Project [Beam]<br/>position · check_hit<br/>check_table_hits<br/>scale_field_area · k_isq"]
+    ACC["Accumulate<br/>K_IRP × kerma_cf × k_isq<br/>× k_med × k_bs × k_tab-on-table<br/>dose_map += event_dose"]
+    MISS["Miss diagnostics<br/>missed_event_indices<br/>per-event or summary warn"]
+    PSD["PSD = max dose_map<br/>PySkinDoseOutput · dict · JSON<br/>create_dose_map_plot HTML"]
+    MULTI{"Multi-exam?<br/>per-exam offsets<br/>fresh table+pad · fail-soft"}
+    AGG["Aggregate<br/>sum dose maps<br/>aggregate_psd = max"]
+    IN --> NORM --> GEO --> PREP --> LOOP
+    LOOP -- "unchanged" --> REUSE --> ACC
+    LOOP -- "changed" --> PROJ --> ACC
+    PROJ -- "no hits" --> MISS --> ACC
+    ACC --> PSD --> MULTI
+    MULTI -- "yes" --> AGG
+```
+
+```mermaid
+sequenceDiagram
+    participant U as GUI / CLI
+    participant M as main.main
+    participant A as analyze_data
+    participant D as calculate_dose
+    participant G as geom_calc
+    participant C as corrections / kerma
+    participant B as Beam + Phantoms
+    participant F as format_export_data
+    U->>M: settings + input file
+    M->>A: analyze_data / analyze_multiple_exams
+    A->>A: initialize_settings
+    A->>A: build table + pad Phantoms
+    A->>A: calculate_rotation_matrices
+    A->>A: create_geometry_plot
+    A->>D: calculate_dose
+    D->>D: position_patient_phantom_on_table
+    D->>G: apply_below_floor_kvp_policy
+    D->>G: fetch_and_append_hvl
+    D->>G: check_new_geometry
+    D->>C: calculate_k_bs / calculate_k_tab
+    D->>C: resolve_correction_factors
+    loop per event
+        D->>B: Beam + position + check_hit
+        B-->>D: hits, table_hits, field_area, k_isq
+        D->>C: k_bs spline + calculate_k_med
+        D->>D: accumulate dose_map
+    end
+    D-->>A: patient, output, post-policy frame
+    A->>F: format_analysis_result_for_export
+    A->>A: create_dose_map_plot
+    A-->>U: PSD + dose map + exports
+```
+
 ## 0. Entry points and orchestration
 
 - `guiskindose.main.main()` → `analyze_data.analyze_data()` (single exam) or

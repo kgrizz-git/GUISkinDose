@@ -14,15 +14,6 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
-- [ ] **PSD algorithm flow diagram** — Add a sequence diagram and/or Mermaid
-  flowchart of input → normalize → position → per-event loop (field projection,
-  intersections, corrections, accumulate) → per-exam / multi-exam aggregate →
-  PSD, with links to the real modules. Host under `dev-docs/` (e.g. beside or
-  embedded in `PSD_CALCULATION_ALGORITHM.md`) and **link it from the algorithm
-  doc** (`dev-docs/PSD_CALCULATION_ALGORITHM.md`, shipped 2026-09-10 with
-  machine-checked `tests/unittests/test_psd_algorithm_doc.py`). Update the
-  diagram when dose-pipeline code changes (same harness/matrix watch as the
-  algorithm doc).
 - [ ] **User-Facing Docs Tooling Evaluation** — See "User-Facing Documentation Tooling Evaluation" in the Active Work section.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
