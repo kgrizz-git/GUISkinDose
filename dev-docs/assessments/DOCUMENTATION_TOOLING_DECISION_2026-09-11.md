@@ -67,3 +67,19 @@ No migration to MkDocs/Material, Zensical, or a hosted SaaS (Mintlify/GitBook).
 - Theme-swap PR: `pyproject.toml` `docs` extra + `docs/source/conf.py`, rebuild
   + RTD preview, screenshot before/after.
 - Keep `mkdocs`-adjacent ideas out of the backlog until a trigger fires.
+
+## 6. Sources (all accessed 2026-09-11 unless noted)
+
+- Zensical announcement / Material maintenance + MkDocs supply-chain risk —
+  https://squidfunk.github.io/mkdocs-material/blog/2025/11/05/zensical/ (2025-11-05)
+- mkdocstrings maintenance mode, bug-fix-only, horizon end of 2026 —
+  https://github.com/mkdocstrings/mkdocstrings/issues/807 and
+  https://github.com/mkdocstrings/mkdocstrings/discussions/806 (2025-11-30)
+- Zensical MkDocs-compatibility / migration path —
+  https://zensical.org/docs/compatibility/mkdocs/migration/
+- MkDocs 2.0 rewrite impact analysis — https://mail.zensical.org/monthly/2026/02/ (2026-02-01)
+- Mintlify pricing (Starter free tier) — https://www.mintlify.com/pricing
+- Mintlify outcome-based AI credit pricing — https://www.mintlify.com/blog/outcome-based-ai-pricing (2026-09-08)
+- PyData Sphinx Theme releases / Sphinx support range —
+  https://pypi.org/project/pydata-sphinx-theme/0.20.0/ and
+  https://github.com/pydata/pydata-sphinx-theme
