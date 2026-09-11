@@ -112,3 +112,34 @@ def test_reporting_field_placement() -> None:
     assert "k_tab_statuses" in output_fields
     event_src = (REPO_ROOT / "src/guiskindose/format_export_data.py").read_text(encoding="utf-8")
     assert "self.kerma = data_norm[KEY_NORMALIZATION_AIR_KERMA].tolist()" in event_src
+
+
+def _extract_mermaid_blocks(doc_text: str) -> list[str]:
+    """Return the bodies of closed ```mermaid fences; fail on unclosed fences."""
+    blocks: list[str] = []
+    for part in doc_text.split("```mermaid")[1:]:
+        end = part.find("```")
+        assert end != -1, f"Unclosed ```mermaid block in {DOC.name}"
+        blocks.append(part[:end])
+    return blocks
+
+
+def test_flow_diagrams_present(doc_text: str) -> None:
+    """The Flow diagram section must keep one flowchart and one sequence diagram."""
+    blocks = _extract_mermaid_blocks(doc_text)
+    assert len(blocks) == 2, f"Expected 2 mermaid blocks in {DOC.name}, found {len(blocks)}"
+    first_lines = [block.strip().splitlines()[0].strip() for block in blocks]
+    assert sum(line.startswith(("flowchart", "graph")) for line in first_lines) == 1, (
+        f"Expected one flowchart/graph block in {DOC.name}"
+    )
+    assert sum(line.startswith("sequenceDiagram") for line in first_lines) == 1, (
+        f"Expected one sequenceDiagram block in {DOC.name}"
+    )
+    diagrams = "\n".join(blocks)
+    for token in (
+        "calculate_dose",
+        "check_new_geometry",
+        "aggregate_psd = max",
+        "PSD = max dose_map",
+    ):
+        assert token in diagrams, f"Flow diagram lost {token!r} in {DOC.name}"

@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **PSD algorithm flow diagrams** (2026-09-11) — `dev-docs/PSD_CALCULATION_ALGORITHM.md`
+  gains a Flow diagram section (Mermaid flowchart + sequence diagram, node labels
+  naming the real modules), pinned by a `test_flow_diagrams_present` invariant.
+  This supersedes the prior entry's "flow-diagram item remains open" note.
+
 - **Canonical PSD calculation algorithm doc** (2026-09-10) — new
   `dev-docs/PSD_CALCULATION_ALGORITHM.md` describing the dose pipeline in
   execution order (events → transforms/offsets → corrections → projection →
