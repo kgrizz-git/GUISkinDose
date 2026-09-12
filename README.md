@@ -72,8 +72,8 @@ guiskindose --mode gui [--native]
 ```
 
 Example RDSR files ship under `src/guiskindose/example_data/RDSR/`. In-app
-help on each tab mirrors `docs/source/gui_help/` (synced into the package at
-build time).
+help on each tab mirrors `docs/source/gui_help/` (mirrored into the package
+by `scripts/sync_gui_help.py`, enforced by pre-commit + CI).
 
 Feature highlights: multi-exam aggregation with per-exam offsets, tabular
 DoseTrack/Radimetrics imports with schema auto-detection, kerma-meter

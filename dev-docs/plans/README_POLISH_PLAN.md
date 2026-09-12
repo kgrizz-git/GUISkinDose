@@ -8,8 +8,9 @@ screenshots with `docs/source/user/figures/readme/` captures)._
 Make `README.md` present the **GUI as the typical use case**: what it does,
 what it looks like (screenshots), how to launch it. Headless/API usage becomes
 a compact secondary section; the Jupyter notebook becomes a pointer, not a
-walkthrough. Fix stale claims and close the Windows launcher gap. No behavior
-change.
+walkthrough. Fix stale claims and close the Windows launcher gap. No dose-calculation
+behavior change (launcher UX hardening — 3.11 floor, interpreter validation,
+and install-hint fixes — landed in the same PR).
 
 ## Pre-flight verification (done 2026-09-11, re-check at implementation)
 

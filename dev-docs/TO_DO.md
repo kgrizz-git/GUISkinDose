@@ -150,6 +150,12 @@ policy decisions, not a restart of Phases 0-9.
   rerun hint, and a broken `.venv/bin/python` skips the friendly version message.
   Fix with explicit status handling + manual smoke of every branch; keep `.bat`
   parity. Found by PR94 kilo review, deferred out of that docs PR.
+  Also in scope: harden `run_gui.bat` version parsing so it is reliably
+  fail-closed — today non-numeric `--version` output (from a broken or planted
+  `.venv` interpreter) falls through the `LSS`/`EQU` comparisons instead of
+  hitting the error path (PR94 codex review; threat model: a hostile binary
+  there already runs unconditionally at launch, so this guards accidents, not
+  attackers — still worth a numeric guard while the block is being reworked).
 - [ ] **Launcher install-default vs run-default** — install menu defaults to `[gui]`
   while the run menu defaults to native `[2]` (extra pywebview prompt/fallback on
   first launch). Realignment pulls pywebview into default installs; maintainer

@@ -7,6 +7,18 @@ echo       GUISkinDose GUI Launcher
 echo ==========================================
 echo.
 
+:: An existing .venv interpreter takes precedence: validate it directly and
+:: skip the system-Python gate below (PATH may point at an older interpreter
+:: than the one in .venv). Defaults fail closed if its version is unreadable.
+if exist .venv\Scripts\python.exe (
+    set PYTHON_CMD=.venv\Scripts\python.exe
+    echo [OK] Using .venv\Scripts\python.exe
+    set PYTHON_VERSION=0.0.0
+    set PYTHON_MAJOR=0
+    set PYTHON_MINOR=0
+    goto :validate_selected
+)
+
 :: Check for Python
 where python >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
@@ -66,6 +78,7 @@ if exist .venv\Scripts\python.exe (
     )
 )
 
+:validate_selected
 :: Re-validate the selected interpreter: an existing .venv may carry an
 :: older Python than the system one checked above.
 for /f "tokens=2 delims= " %%v in ('"%PYTHON_CMD%" --version 2^>^&1') do set PYTHON_VERSION=%%v
@@ -181,6 +194,6 @@ if "%choice%"=="2" (
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] The application failed to start.
-    echo Try installing dependencies: "%PYTHON_CMD%" -m pip install -e ".[gui]" (or ".[gui-native]" for native window mode)
+    echo Try installing dependencies: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     pause
 )
