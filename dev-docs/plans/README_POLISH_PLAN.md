@@ -34,6 +34,22 @@ Rationale: the project's stated focus is GUI usability, but the README buries
 the GUI under install detail and never shows it. Most readers will never write
 `PyskindoseSettings` code — the API sections should serve them, not lead them.
 
+### 1a. Retain safety and platform sections (must not drop)
+
+The restructure must explicitly carry these three sections to a retained
+location — none exists in the user guide today:
+
+- Network exposure / PHI warning (`README.md:105-120`) → keep under Quick
+  launch as a "Privacy / network" note (localhost default, `--host` opt-in,
+  shared-state risk).
+- Logging & privacy (`README.md:122-141`) → keep as a compact note
+  (stderr-only, identifier redaction, `debug.json` opt-in).
+- Tkinter / platform notes (`README.md:142-162`) → keep under Quick launch
+  per-OS (native Save As, screen sizing, install table).
+
+If any of the three moves to the user guide instead, the plan implementer must
+add the corresponding content there in the same PR — no silent drops.
+
 ### 1b. De-emphasize code-first usage
 
 - Collapse "Typical usage" §1–4 into a single scripted example (calculate +
@@ -79,7 +95,8 @@ the GUI under install detail and never shows it. Most readers will never write
 
 - Fresh-eyes test: a new user can state what the app does, launch the GUI on
   their OS, and run the headless example from the README alone.
-- `python scripts/check_doc_freshness.py` passes (new image links resolve).
+- `python scripts/check_doc_freshness.py` passes (relative links, including new
+  image links, resolve; no absolute paths).
 - All images cleared via the approved-asset inventory; no privacy-gate
   failures.
 - CHANGELOG entry under `[Unreleased]`.
