@@ -131,7 +131,7 @@ setup_dependencies() {
             $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
         3)
-            echo "Skipping. Install manually with: pip install -e \".[gui]\""
+            echo "Skipping. Install manually with: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
             return 1
             ;;
         *)
@@ -253,6 +253,6 @@ fi
 if [ "$launch_status" -ne 0 ]; then
     echo ""
     echo -e "${RED}[ERROR] The application failed to start.${NC}"
-    echo "Try installing dependencies: pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
+    echo "Try installing dependencies: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
     read -r -p "Press Enter to exit..."
 fi

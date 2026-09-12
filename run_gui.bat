@@ -181,6 +181,6 @@ if "%choice%"=="2" (
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] The application failed to start.
-    echo Try installing dependencies: pip install -e ".[gui]" (or ".[gui-native]" for native window mode)
+    echo Try installing dependencies: "%PYTHON_CMD%" -m pip install -e ".[gui]" (or ".[gui-native]" for native window mode)
     pause
 )
