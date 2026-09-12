@@ -14,8 +14,13 @@ an audit report — from a graphical interface or headlessly from scripts.
 
 The distribution and import package name is `guiskindose` (distinct from upstream).
 
-> **Screenshots** — Upload → Geometry → Results/Export captures (taken with the
-> bundled example data) are being added with the README refresh.
+| Upload | Geometry |
+|---|---|
+| ![Upload tab: load a DICOM RDSR or tabular event table](docs/source/user/figures/readme/upload.png) | ![Geometry preview: beam, phantom, and event selector](docs/source/user/figures/readme/geometry.png) |
+| Results | Export |
+| ![Results tab: peak skin dose cards and 3D dose map](docs/source/user/figures/readme/results.png) | ![Export tab: JSON, HTML, PNG, and rich-report downloads](docs/source/user/figures/readme/export.png) |
+
+*Captured with the bundled example data; no patient data.*
 
 ## Intended use and responsibility
 

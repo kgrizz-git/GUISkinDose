@@ -1,7 +1,7 @@
 # README Polish Plan
 
-_Date: 2026-09-11. Status: partially implemented (restructure + content landed
-in PR #94; screenshots pending a live GUI capture session)._
+_Date: 2026-09-11. Status: implemented in PR #94 (restructure, content,
+screenshots with `docs/source/user/figures/readme/` captures)._
 
 ## Goal
 

@@ -14,11 +14,6 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
-- [ ] **README screenshots** — restructure landed in PR #94; remaining: capture
-  Upload → Geometry → Results/Export with the bundled example data. Every capture
-  must be vetted for privacy before commit: synthetic or example-data sessions
-  only, no PHI/PII, filenames, or absolute paths; images require hash-pinned
-  approved-asset clearance per [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md).
 - [ ] **Correction-data packaging/runtime fix** — implement
   [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
   (sequenced next step after archived Plan 1; see "Correction-data modernization
@@ -29,6 +24,14 @@ maintenance impact is logged, and completed plans must be archived.
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **GUI network-exposure hardening** — See "GUI network-exposure hardening" in
   the GUI/UX backlog section.
+- [ ] **DSfloat leak into NiceGUI payloads (Data-table RAW view)** — pydicom
+  `DSfloat`/`IS` values from the parsed (pre-normalization) frame reach
+  `ui.table.rows` unconverted (`gui/tabs/data.py:126`
+  `dataframe.to_dict("records")`), and NiceGUI's orjson serializer raises
+  `TypeError: ... DSfloat` on every socket emit (flooded by the 2 s refresh
+  timer). Fix at the boundary (coerce to JSON-safe scalars, cf.
+  `gui/widgets/import_preview.py:209` `.fillna("—").astype(str)`); add a
+  regression test with a DSfloat-bearing frame.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that section).
 
