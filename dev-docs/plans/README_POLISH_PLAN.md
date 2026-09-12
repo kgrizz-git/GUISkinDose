@@ -1,7 +1,7 @@
 # README Polish Plan
 
-_Date: 2026-09-11. Status: proposed. Implements the TO_DO "README review and
-polish" Next Up item._
+_Date: 2026-09-11. Status: partially implemented (restructure + content landed
+in PR #94; screenshots pending a live GUI capture session)._
 
 ## Goal
 

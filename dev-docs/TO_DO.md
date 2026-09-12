@@ -14,12 +14,11 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
-- [ ] **README review and polish** — review the README end to end for stale
-  install/usage/GUI claims, tighten structure and links, and add screen captures
-  of the app (Upload → Geometry → Results/Export). Every capture must be vetted
-  for privacy before commit: synthetic or example-data sessions only, no PHI/PII,
-  filenames, or absolute paths; images require hash-pinned approved-asset clearance
-  per [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md).
+- [ ] **README screenshots** — restructure landed in PR #94; remaining: capture
+  Upload → Geometry → Results/Export with the bundled example data. Every capture
+  must be vetted for privacy before commit: synthetic or example-data sessions
+  only, no PHI/PII, filenames, or absolute paths; images require hash-pinned
+  approved-asset clearance per [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md).
 - [ ] **Correction-data packaging/runtime fix** — implement
   [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
   (sequenced next step after archived Plan 1; see "Correction-data modernization
@@ -28,6 +27,8 @@ maintenance impact is logged, and completed plans must be archived.
   JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
   user-facing, pairs with the README refresh).
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
+- [ ] **GUI network-exposure hardening** — See "GUI network-exposure hardening" in
+  the GUI/UX backlog section.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that section).
 
@@ -131,6 +132,13 @@ policy decisions, not a restart of Phases 0-9.
 
 ### GUI / UX
 
+- [ ] **GUI network-exposure hardening** — loopback-by-default is already enforced
+  (`gui/app.py:411` `_resolve_bind_host`: non-loopback `--host` raises without
+  explicit `--allow-network`). Evaluate the residual risk of opt-in LAN serving
+  (fixed port 8765, no authentication, single shared process-global state) and
+  adopt proportional mitigations: startup single-use token, read-only shared-view
+  mode, port randomization, or stronger do-not-serve warnings. Threat-model the
+  hospital-workstation / shared-network case first; keep localhost UX unchanged.
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
   `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
   `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via

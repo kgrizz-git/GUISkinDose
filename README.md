@@ -7,11 +7,15 @@ PySkinDose release unless upstream maintainers say otherwise.
 Current maintainer: [@kgrizz-git](https://github.com/kgrizz-git) — see
 [SUPPORT.md](SUPPORT.md) and [GOVERNANCE.md](GOVERNANCE.md).
 
-This repository estimates peak skin dose (PSD) and 3D skin dose maps from DICOM
-X-ray Radiation Dose Structured Reports (RDSR) and supported tabular exports,
-while allowing local modifications beyond upstream.
+GUISkinDose estimates **peak skin dose (PSD)** and **3D skin dose maps** for
+fluoroscopic X-ray procedures. Load a DICOM RDSR (or a tabular event-table
+export), preview the examination geometry, run the dose calculation, and export
+an audit report — from a graphical interface or headlessly from scripts.
 
 The distribution and import package name is `guiskindose` (distinct from upstream).
+
+> **Screenshots** — Upload → Geometry → Results/Export captures (taken with the
+> bundled example data) are being added with the README refresh.
 
 ## Intended use and responsibility
 
@@ -30,11 +34,122 @@ Never commit or attach real patient data to issues, pull requests, or the
 repository — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md).
 
-## Requirements
+## Quick launch (GUI)
 
-- Python 3.11 or above
-- A settings configuration, typically based on [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json)
-- A DICOM RDSR file (`.dcm`), a pre-parsed JSON export, or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`)
+The typical way to use GUISkinDose is the NiceGUI-based graphical interface:
+**Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
+**Settings** (phantom, physics, per-exam offsets) → **Geometry** preview →
+**Calculate** → **Results** (PSD, dose map) → **Export** (JSON, dose-map
+HTML/PNG, rich XLSX/PDF/DOCX report).
+
+**macOS / Linux:**
+
+```bash
+chmod +x run_gui.sh   # one-time setup, enables executing the sh script
+./run_gui.sh
+```
+
+**Windows:**
+
+```bat
+run_gui.bat
+```
+
+Both scripts prompt you to run in browser mode (default) or native window
+mode. Or launch directly:
+
+```bash
+python -m guiskindose --mode gui              # browser mode
+python -m guiskindose --mode gui --native     # native window (requires pywebview)
+
+# or the equivalent installed console command:
+guiskindose --mode gui [--native]
+```
+
+Example RDSR files ship under `src/guiskindose/example_data/RDSR/`. In-app
+help on each tab mirrors `docs/source/gui_help/` (synced into the package at
+build time).
+
+Feature highlights: multi-exam aggregation with per-exam offsets, tabular
+DoseTrack/Radimetrics imports with schema auto-detection, kerma-meter
+correction keyed by equipment × tube, rich audit reports, and a human phantom
+library with habitus scaling. Details in
+[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md) and the
+[User guide](docs/source/user/user_guide.md).
+
+### Privacy / network
+
+The GUI has **no authentication** and loads PHI-derived RDSR data into a single
+shared, process-global state. Browser mode binds to `127.0.0.1` (localhost
+only) by default — reachable only from the machine it runs on.
+
+Serving it to other hosts is opt-in via `--host`, which additionally requires
+`--allow-network` as an explicit acknowledgement:
+
+```bash
+python -m guiskindose --mode gui --host 0.0.0.0 --allow-network   # serve on the LAN
+```
+
+Only do this on a trusted network, and behind your own access controls, since
+anyone who can reach the port can view loaded patient data, trigger exports,
+and mutate shared settings.
+
+### Logging & privacy
+
+The CLI and GUI log to the console (stderr) by default. **Native** mode has no
+visible terminal, so diagnostic output is still emitted to stderr but may not be
+easy to read unless you launch from a shell. No log file is written unless
+`configure_logging(log_file=...)` is wired at startup (the optional file sink in
+`guiskindose.debug` supports rotation and size caps when enabled).
+
+To protect PHI, the app **does not log file names or paths** (RDSR filenames
+often contain patient name/MRN/accession) — only file type, size, and event
+counts. Verbose `DEBUG` output is opt-in per category via a `debug.json` in the
+working directory, e.g.:
+
+```json
+{ "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
+```
+
+Even with debug enabled, identifiers are still redacted. Do not paste console
+output into issues or commits without reviewing it for PHI first.
+
+### Platform notes (Tkinter)
+
+The GUI works fully without Tkinter, but uses it for two niceties: the native
+**Save As** file dialog when exporting, and detecting your screen size to size
+the native window. If Tkinter is missing you'll see a log line like
+`No module named '_tkinter'`, exports fall back to a browser-style download, and
+the window opens at a default size — nothing crashes.
+
+Tkinter ships with Python but is only built when the Tcl/Tk libraries are present
+at build time, so it can be absent (commonly with `pyenv` builds). It is **not** a
+pip package — do not add it to the project dependencies. To install it:
+
+| Platform | Command |
+|---|---|
+| macOS, Homebrew Python | `brew install python-tk` (or `python-tk@3.12` for a specific version) |
+| macOS, pyenv Python | `brew install tcl-tk`, then reinstall the interpreter: `pyenv install 3.12.9` |
+| Debian / Ubuntu | `sudo apt install python3-tk` |
+| Fedora | `sudo dnf install python3-tkinter` |
+| Windows | Included with the python.org installer — keep "tcl/tk and IDLE" checked |
+
+Verify with: `python -c "import tkinter; print(tkinter.TkVersion)"`.
+
+Native window mode remembers the last window size, position, and maximized state in
+`~/.guiskindose/gui.json` (first launch opens maximized; Restore returns to the saved
+normal size). Existing `~/.mypyskindose/gui.json` is still read when the new file is
+absent.
+
+## What this code is for
+
+Within the intended-use boundary above, GUISkinDose is meant to be used in a few different ways:
+
+1. Inspect or debug the examination geometry before doing dose calculations.
+2. Step through irradiation events from an RDSR study to understand beam orientation and positioning.
+3. Calculate a skin dose map on a mathematical or human phantom.
+4. Export the calculation result as HTML, JSON, XLSX, PDF, or DOCX rich audit report, or as a Python dictionary for downstream processing.
+5. Run the analysis headlessly from your own Python scripts.
 
 ## Installation
 
@@ -58,30 +173,21 @@ pip install -e ".[dev,gui]"             # lint/type/test toolchain + GUI
 pip install -e ".[dev,gui,docs,notebooks]"   # everything (docs + JupyterLab)
 ```
 
-## Running the GUI
-
-GUISkinDose includes a NiceGUI-based graphical interface.
-
-**Quick launch (macOS/Linux):**
+If you only need the documentation tooling as well:
 
 ```bash
-chmod +x run_gui.sh   # one-time setup, enables executing the sh script
-./run_gui.sh
+pip install -e ".[docs]"
 ```
 
-The script prompts you to run in browser mode (default) or native window mode.
+## Requirements
 
-**Direct Python command:**
+- Python 3.11 or above
+- A settings configuration, typically based on [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json)
+- A DICOM RDSR file (`.dcm`), a pre-parsed JSON export, or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`)
 
-```bash
-python -m guiskindose --mode gui              # browser mode
-python -m guiskindose --mode gui --native     # native window (requires pywebview)
+## Headless use
 
-# or the equivalent installed console command:
-guiskindose --mode gui [--native]
-```
-
-### Command-line flags (headless)
+### Command-line flags
 
 Run `guiskindose --help` for the full list. Common headless examples:
 
@@ -97,155 +203,7 @@ Notable flags: `--input-schema` (default `auto` for tabular files), `--input-pre
 may include PHI-bearing source filenames in reports), `--kerma-meter-correction` and related
 kerma-meter options.
 
-Native window mode remembers the last window size, position, and maximized state in
-`~/.guiskindose/gui.json` (first launch opens maximized; Restore returns to the saved
-normal size). Existing `~/.mypyskindose/gui.json` is still read when the new file is
-absent.
-
-### Network exposure (browser mode)
-
-The GUI has **no authentication** and loads PHI-derived RDSR data into a single
-shared, process-global state. To keep that off the network, browser mode binds to
-`127.0.0.1` (localhost only) by default — reachable only from the machine it runs
-on.
-
-Serving it to other hosts is opt-in via `--host`:
-
-```bash
-python -m guiskindose --mode gui --host 0.0.0.0 --allow-network   # serve on the LAN
-```
-
-Only do this on a trusted network, and behind your own access controls, since
-anyone who can reach the port can view loaded patient data, trigger exports, and
-mutate shared settings.
-
-### Logging & privacy
-
-The CLI and GUI log to the console (stderr) by default. **Native** mode has no
-visible terminal, so diagnostic output is still emitted to stderr but may not be
-easy to read unless you launch from a shell. No log file is written unless
-`configure_logging(log_file=...)` is wired at startup (the optional file sink in
-`guiskindose.debug` supports rotation and size caps when enabled).
-
-To protect PHI, the app **does not log file names or paths** (RDSR filenames
-often contain patient name/MRN/accession) — only file type, size, and event
-counts. Verbose `DEBUG` output is opt-in per category via a `debug.json` in the
-working directory, e.g.:
-
-```json
-{ "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
-```
-
-Even with debug enabled, identifiers are still redacted. Do not paste console
-output into issues or commits without reviewing it for PHI first.
-
-### Optional: native Save As dialogs (Tkinter)
-
-The GUI works fully without Tkinter, but uses it for two niceties: the native
-**Save As** file dialog when exporting, and detecting your screen size to size
-the native window. If Tkinter is missing you'll see a log line like
-`No module named '_tkinter'`, exports fall back to a browser-style download, and
-the window opens at a default size — nothing crashes.
-
-Tkinter ships with Python but is only built when the Tcl/Tk libraries are present
-at build time, so it can be absent (commonly with `pyenv` builds). It is **not** a
-pip package — do not add it to the project dependencies. To install it:
-
-| Platform | Command |
-|---|---|
-| macOS, Homebrew Python | `brew install python-tk` (or `python-tk@3.12` for a specific version) |
-| macOS, pyenv Python | `brew install tcl-tk`, then reinstall the interpreter: `pyenv install 3.12.9` |
-| Debian / Ubuntu | `sudo apt install python3-tk` |
-| Fedora | `sudo dnf install python3-tkinter` |
-| Windows | Included with the python.org installer — keep "tcl/tk and IDLE" checked |
-
-Verify with: `python -c "import tkinter; print(tkinter.TkVersion)"`.
-
-If you only need the documentation tooling as well:
-
-```bash
-pip install -e ".[docs]"
-```
-
-## What this code is for
-
-Within the intended-use boundary above, GUISkinDose is meant to be used in a few different ways:
-
-1. Inspect or debug the examination geometry before doing dose calculations.
-2. Step through irradiation events from an RDSR study to understand beam orientation and positioning.
-3. Calculate a skin dose map on a mathematical or human phantom.
-4. Export the calculation result as HTML, JSON, XLSX, PDF, or DOCX rich audit report, or as a Python dictionary for downstream processing.
-5. Run the analysis headlessly from your own Python scripts.
-
-The main user-facing workflow is:
-
-1. Load or create a `PyskindoseSettings` object.
-2. Choose a phantom and positioning.
-3. Select a mode such as `plot_setup`, `plot_procedure`, `plot_event`, or `calculate_dose`.
-4. Run `main()` with a path to an RDSR file, a JSON export, or a tabular file (`.csv`, `.tsv`, `.xlsx`).
-5. Review the interactive plot or exported result.
-
-## Quick Start with Jupyter Notebook
-
-**New to GUISkinDose?** The easiest way to learn is to start with the interactive getting-started notebook:
-
-📓 **[docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb)**
-
-This notebook walks you through:
-- Loading and configuring settings
-- Setting up different phantom models and positioning
-- Inspecting RDSR procedures interactively
-- Running calculations and generating dose maps
-- Exporting results in different formats
-
-To run the notebook without changing the tracked documentation source:
-```bash
-pip install -e ".[notebooks]"
-python scripts/open_getting_started_notebook.py
-```
-
-The launcher creates and opens `tmp/notebooks/getting_started.local.ipynb`, an ignored local copy where
-execution counts, plots, and experiments are safe to save without dirtying the Git working tree. It preserves
-that local work on later launches; use `python scripts/open_getting_started_notebook.py --reset` to replace it
-with the latest tracked tutorial (discarding local notebook edits and outputs).
-
-If you prefer to learn by example with code snippets instead, continue to the section below.
-
-## Typical usage
-
-### 1. Start from the example settings
-
-```python
-from guiskindose import PyskindoseSettings, load_settings_example_json
-from guiskindose.main import main
-
-settings = PyskindoseSettings(settings=load_settings_example_json())
-settings.mode = "plot_setup"
-settings.phantom.model = "cylinder"
-
-main(settings=settings)
-```
-
-This is useful for checking the initial geometry, patient/table positioning, and phantom choice before loading a real study.
-
-### 2. Examine a procedure from an RDSR file or tabular export
-
-```python
-from guiskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
-from guiskindose.main import main
-
-settings = PyskindoseSettings(settings=load_settings_example_json())
-settings.mode = "plot_procedure"
-settings.phantom.model = "cylinder"
-settings.plot.max_events_for_patient_inclusion = 0
-
-rdsr_dir = get_path_to_example_rdsr_files()
-main(settings=settings, file_path=rdsr_dir / "siemens_axiom_example_procedure.dcm")
-```
-
-Use `plot_procedure` to scroll through irradiation events and understand how the beam geometry changes over the study.
-
-### 3. Calculate a dose map
+### Scripted example
 
 ```python
 from guiskindose import PyskindoseSettings, get_path_to_example_rdsr_files, load_settings_example_json
@@ -254,7 +212,6 @@ from guiskindose.main import main
 settings = PyskindoseSettings(settings=load_settings_example_json())
 settings.mode = "calculate_dose"
 settings.output_format = "dict"
-settings.plot.plot_dosemap = True
 settings.phantom.model = "human"
 settings.phantom.human_mesh = "hudfrid"
 
@@ -264,26 +221,12 @@ output = main(settings=settings, file_path=rdsr_dir / "siemens_axiom_example_pro
 print(f"Estimated PSD: {output['psd']:.1f} mGy")
 ```
 
-When `settings.output_format` is set to `dict` or `json`, the result can be used programmatically. The exported result includes items such as patient/table/pad data, event geometry, correction factors, dose map data, and peak skin dose.
+When `settings.output_format` is set to `dict` or `json`, the result can be used programmatically. The exported result includes items such as patient/table/pad data, event geometry, correction factors, dose map data, and peak skin dose. If you already have normalized RDSR data in a pandas `DataFrame`, use `analyze_normalized_data_with_custom_settings_object()` instead.
 
-### 4. Run headless with pre-normalized data
-
-If you already have normalized RDSR data in a pandas `DataFrame`, use `analyze_normalized_data_with_custom_settings_object()`.
-
-```python
-import pandas as pd
-from guiskindose import load_settings_example_json
-from guiskindose.main import analyze_normalized_data_with_custom_settings_object
-
-settings = load_settings_example_json()
-normalized_data = pd.DataFrame(...)  # your normalized RDSR data
-
-result = analyze_normalized_data_with_custom_settings_object(
-    data_norm=normalized_data,
-    settings=settings,
-    output_format="json",
-)
-```
+**New to GUISkinDose?** Prefer the GUI or the interactive getting-started notebook
+([docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb);
+run it via `pip install -e ".[notebooks]"` + `python scripts/open_getting_started_notebook.py`, which
+opens an ignored local copy so experiments never dirty the tracked source).
 
 ## Useful helpers
 
@@ -298,18 +241,14 @@ The package includes helper functions that make exploration easier:
 
 Important settings live in [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json) and the settings classes under [src/guiskindose/settings](src/guiskindose/settings).
 
-Common modes are:
+| Mode | What it does |
+|---|---|
+| `plot_setup` | Plot the initial geometry without loading an irradiation sequence |
+| `plot_event` | Inspect one irradiation event |
+| `plot_procedure` | Inspect the full event sequence |
+| `calculate_dose` | Compute the dose map and peak skin dose estimate |
 
-- `plot_setup`: plot the initial geometry without loading an irradiation sequence
-- `plot_event`: inspect one irradiation event
-- `plot_procedure`: inspect the full event sequence
-- `calculate_dose`: compute the dose map and peak skin dose estimate
-
-Common phantom models are:
-
-- `plane`
-- `cylinder`
-- `human`
+Common phantom models: `plane`, `cylinder`, `human`.
 
 ## Documentation
 
