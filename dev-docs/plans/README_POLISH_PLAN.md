@@ -5,9 +5,11 @@ polish" Next Up item._
 
 ## Goal
 
-Make `README.md` sell the GUI-first project in 60 seconds: what it does, what
-it looks like (screenshots), how to launch it, then headless/API detail. Fix
-stale claims and close the Windows launcher gap. No behavior change.
+Make `README.md` present the **GUI as the typical use case**: what it does,
+what it looks like (screenshots), how to launch it. Headless/API usage becomes
+a compact secondary section; the Jupyter notebook becomes a pointer, not a
+walkthrough. Fix stale claims and close the Windows launcher gap. No behavior
+change.
 
 ## Pre-flight verification (done 2026-09-11, re-check at implementation)
 
@@ -23,12 +25,25 @@ stale claims and close the Windows launcher gap. No behavior change.
 ### 1. Restructure (move, don't rewrite)
 
 Proposed order: header + fork identity → **screenshots** → Intended use →
-Quick launch (GUI) → What it does (condense current "What this code is for" +
-workflow, move up) → Installation → Headless/API → Settings & modes →
-Documentation → Notes for this fork.
+Quick launch (GUI, all OSes) → What it does (condense current "What this code
+is for" + workflow, move up) → Installation → Headless/API (compact: CLI flags
++ one scripted example; link user guide for the rest) → Settings & modes
+(summary table, not prose) → Documentation → Notes for this fork.
 
 Rationale: the project's stated focus is GUI usability, but the README buries
-the GUI under install detail and never shows it.
+the GUI under install detail and never shows it. Most readers will never write
+`PyskindoseSettings` code — the API sections should serve them, not lead them.
+
+### 1b. De-emphasize code-first usage
+
+- Collapse "Typical usage" §1–4 into a single scripted example (calculate +
+  PSD) plus a link to the user guide; drop the plot_setup/plot_procedure tour
+  (GUI Geometry tab covers this interactively).
+- Demote the Jupyter notebook block to a 3-line pointer (install notebooks
+  extra, launcher command, local-copy note). Rationale: the notebook duplicates
+  the GUI workflow for most users and its tracked-source hygiene rules
+  (`tmp/notebooks/`, `--reset`) are maintainer detail that currently occupies
+  prime README space.
 
 ### 2. Screenshots (privacy-gated)
 
