@@ -168,6 +168,19 @@ else
     fi
 fi
 
+# Re-validate the selected interpreter: an existing .venv may carry an
+# older Python than the system one checked above.
+PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}')
+PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+
+if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
+    echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Selected interpreter: $PYTHON (Python $PYTHON_VERSION)"
+
 # Check/install dependencies
 setup_dependencies "$PYTHON"
 

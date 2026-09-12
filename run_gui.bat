@@ -66,6 +66,30 @@ if exist .venv\Scripts\python.exe (
     )
 )
 
+:: Re-validate the selected interpreter: an existing .venv may carry an
+:: older Python than the system one checked above.
+for /f "tokens=2 delims= " %%v in ('"%PYTHON_CMD%" --version 2^>^&1') do set PYTHON_VERSION=%%v
+for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
+    set PYTHON_MAJOR=%%a
+    set PYTHON_MINOR=%%b
+)
+
+if !PYTHON_MAJOR! LSS 3 (
+    echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
+    pause
+    exit /b 1
+)
+
+if !PYTHON_MAJOR! EQU 3 (
+    if !PYTHON_MINOR! LSS 11 (
+        echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
+        pause
+        exit /b 1
+    )
+)
+
+echo [OK] Selected interpreter: %PYTHON_CMD% ^(Python !PYTHON_VERSION!^)
+
 :: Check if package is installed
 %PYTHON_CMD% -c "import guiskindose" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
@@ -93,9 +117,14 @@ if "%install_choice%"=="2" (
     %PYTHON_CMD% -m pip install -e ".[gui]"
 )
 
-:: Skip means no installation was attempted: launch directly instead of
-:: checking the (stale) package-install exit code below.
-if "%install_choice%"=="3" goto :run_gui
+:: Skip means no installation was attempted: show the manual command and
+:: exit so the user can rerun the launcher after installing.
+if "%install_choice%"=="3" (
+    echo Install manually with: pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
+    echo Then rerun run_gui.bat.
+    pause
+    exit /b 0
+)
 
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Installation failed.
