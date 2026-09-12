@@ -15,8 +15,8 @@ maintenance impact is logged, and completed plans must be archived.
 ## Next Up
 
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
-- [ ] **HTML/PNG Export Fix** — See [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md).
-- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section.
+- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
+  confirming the Open Questions "Results — vs kerma" note, then deleting that section).
 
 ## Active Work
 
@@ -58,8 +58,12 @@ policy decisions, not a restart of Phases 0-9.
   - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
   - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.
   - *Results table*: run a manual Results smoke to confirm '—' vs kerma behavior (see Open Questions).
-- [ ] **Finish HTML/PNG export fix** — Phase 1 (raise + actionable errors) shipped; Phase 0 did not capture the
-  original multi-exam exception, so Phase 2 root-cause fix + Phase 3 closeout remain. Plan:
+- [ ] **HTML/PNG export root-cause fix (awaiting fresh repro)** — Phase 1 (raise +
+  actionable errors) shipped; Phase 0 never captured the original multi-exam
+  exception, so Phase 2 has no evidence to work from. Demoted from Next Up
+  2026-09-11: no further action until a new incident reproduces it. Re-trigger:
+  on the next real failure, capture the exception via the Phase 0 instrumentation,
+  then run Phase 2 + Phase 3 closeout. Plan:
   [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
   [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
 
@@ -97,15 +101,16 @@ policy decisions, not a restart of Phases 0-9.
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **Fix raw_events_cleaned example RDSR parsing** — investigate and fix the parsing issue that led to the problematic `raw_events_cleaned example RDSR (old) csv export from guiskindose.csv` in `test_data_gitignored/`.
 - [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
   case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
   cranial, height = down for HFS) and the normalizer-level `Tx`/`Tz` correction are already confirmed; this item
   is for pinning raw numeric fixture values only. See [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md)
   and [plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
-- [ ] **Beam lateral/longitudinal position usage** — check whether beam lateral and longitudinal position fields (similar to those used for table position) are used elsewhere in the codebase, and document or fill any gaps.
-- [ ] **Vendor coordinate validation** — confirm per-vendor export frames and Philips double-correction risk against
-  source RDSRs before expanding vendor adapters. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+- [ ] **Vendor coordinate validation** — confirm per-vendor export frames (including
+  beam lateral/longitudinal position-field usage and gaps) and Philips
+  double-correction risk against source RDSRs before expanding vendor adapters.
+  Distinct from the matched-GE-fixture acquisition above (external data
+  dependency): this item is code-level validation once fixtures exist. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Patient orientation support (prone / decubitus + auto-detect)** — HFS/FFS already exist in settings, GUI, and
   geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
   [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
