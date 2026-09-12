@@ -109,7 +109,8 @@ policy decisions, not a restart of Phases 0-9.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames (including
   beam lateral/longitudinal position-field usage and gaps) and Philips
   double-correction risk against source RDSRs before expanding vendor adapters.
-  Covers the matched-GE-fixture numeric pinning above. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+  Distinct from the matched-GE-fixture acquisition above (external data
+  dependency): this item is code-level validation once fixtures exist. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Patient orientation support (prone / decubitus + auto-detect)** — HFS/FFS already exist in settings, GUI, and
   geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
   [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
