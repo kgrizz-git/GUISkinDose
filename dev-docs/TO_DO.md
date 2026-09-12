@@ -14,6 +14,19 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
+- [ ] **README review and polish** — review the README end to end for stale
+  install/usage/GUI claims, tighten structure and links, and add screen captures
+  of the app (Upload → Geometry → Results/Export). Every capture must be vetted
+  for privacy before commit: synthetic or example-data sessions only, no PHI/PII,
+  filenames, or absolute paths; images require hash-pinned approved-asset clearance
+  per [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md).
+- [ ] **Correction-data packaging/runtime fix** — implement
+  [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+  (sequenced next step after archived Plan 1; see "Correction-data modernization
+  roadmap" in Active Work).
+- [ ] **Reproducible settings export** — export `PyskindoseSettings` / GUI state as
+  JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
+  user-facing, pairs with the README refresh).
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that section).
