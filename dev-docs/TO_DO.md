@@ -141,7 +141,19 @@ policy decisions, not a restart of Phases 0-9.
   (fixed port 8765, no authentication, single shared process-global state) and
   adopt proportional mitigations: startup single-use token, read-only shared-view
   mode, port randomization, or stronger do-not-serve warnings. Threat-model the
-  hospital-workstation / shared-network case first; keep localhost UX unchanged.
+   hospital-workstation / shared-network case first; keep localhost UX unchanged.
+- [ ] **Launcher `set -e` robustness (`run_gui.sh`)** — pre-existing (verified
+  identical on `main` before PR94): `setup_venv` / `setup_dependencies` return 1
+  on the decline-venv and skip-install paths, but bare calls under `set -e`
+  (`run_gui.sh:163,185`) exit the script before the mode prompt (`.bat` handles
+  skip with `exit /b 0` + rerun text). Same bucket: skip-install exits 1 with no
+  rerun hint, and a broken `.venv/bin/python` skips the friendly version message.
+  Fix with explicit status handling + manual smoke of every branch; keep `.bat`
+  parity. Found by PR94 kilo review, deferred out of that docs PR.
+- [ ] **Launcher install-default vs run-default** — install menu defaults to `[gui]`
+  while the run menu defaults to native `[2]` (extra pywebview prompt/fallback on
+  first launch). Realignment pulls pywebview into default installs; maintainer
+  call. Deferred from PR94.
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
   `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
   `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via
