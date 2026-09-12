@@ -60,8 +60,8 @@ chmod +x run_gui.sh   # one-time setup, enables executing the sh script
 run_gui.bat
 ```
 
-Both scripts prompt you to run in browser mode [1] or native window
-mode [2] (default). Or launch directly:
+Both scripts prompt you to run in browser mode (option 1) or native
+window mode (option 2, default). Or launch directly:
 
 ```bash
 python -m guiskindose --mode gui              # browser mode
