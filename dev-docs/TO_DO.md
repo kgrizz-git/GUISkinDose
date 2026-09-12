@@ -14,7 +14,24 @@ maintenance impact is logged, and completed plans must be archived.
 
 ## Next Up
 
+- [ ] **Correction-data packaging/runtime fix** — implement
+  [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+  (sequenced next step after archived Plan 1; see "Correction-data modernization
+  roadmap" in Active Work).
+- [ ] **Reproducible settings export** — export `PyskindoseSettings` / GUI state as
+  JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
+  user-facing, pairs with the README refresh).
 - [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
+- [ ] **GUI network-exposure hardening** — See "GUI network-exposure hardening" in
+  the GUI/UX backlog section.
+- [ ] **DSfloat leak into NiceGUI payloads (Data-table RAW view)** — pydicom
+  `DSfloat`/`IS` values from the parsed (pre-normalization) frame reach
+  `ui.table.rows` unconverted (`gui/tabs/data.py:126`
+  `dataframe.to_dict("records")`), and NiceGUI's orjson serializer raises
+  `TypeError: ... DSfloat` on every socket emit (flooded by the 2 s refresh
+  timer). Fix at the boundary (coerce to JSON-safe scalars, cf.
+  `gui/widgets/import_preview.py:209` `.fillna("—").astype(str)`); add a
+  regression test with a DSfloat-bearing frame.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that section).
 
@@ -118,6 +135,31 @@ policy decisions, not a restart of Phases 0-9.
 
 ### GUI / UX
 
+- [ ] **GUI network-exposure hardening** — loopback-by-default is already enforced
+  (`gui/app.py:411` `_resolve_bind_host`: non-loopback `--host` raises without
+  explicit `--allow-network`). Evaluate the residual risk of opt-in LAN serving
+  (fixed port 8765, no authentication, single shared process-global state) and
+  adopt proportional mitigations: startup single-use token, read-only shared-view
+  mode, port randomization, or stronger do-not-serve warnings. Threat-model the
+   hospital-workstation / shared-network case first; keep localhost UX unchanged.
+- [ ] **Launcher `set -e` robustness (`run_gui.sh`)** — pre-existing (verified
+  identical on `main` before PR94): `setup_venv` / `setup_dependencies` return 1
+  on the decline-venv and skip-install paths, but bare calls under `set -e`
+  (`run_gui.sh:163,185`) exit the script before the mode prompt (`.bat` handles
+  skip with `exit /b 0` + rerun text). Same bucket: skip-install exits 1 with no
+  rerun hint, and a broken `.venv/bin/python` skips the friendly version message.
+  Fix with explicit status handling + manual smoke of every branch; keep `.bat`
+  parity. Found by PR94 kilo review, deferred out of that docs PR.
+  Also in scope: harden `run_gui.bat` version parsing so it is reliably
+  fail-closed — today non-numeric `--version` output (from a broken or planted
+  `.venv` interpreter) falls through the `LSS`/`EQU` comparisons instead of
+  hitting the error path (PR94 codex review; threat model: a hostile binary
+  there already runs unconditionally at launch, so this guards accidents, not
+  attackers — still worth a numeric guard while the block is being reworked).
+- [ ] **Launcher install-default vs run-default** — install menu defaults to `[gui]`
+  while the run menu defaults to native `[2]` (extra pywebview prompt/fallback on
+  first launch). Realignment pulls pywebview into default installs; maintainer
+  call. Deferred from PR94.
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
   `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
   `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via

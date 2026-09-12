@@ -10,7 +10,7 @@
 #      ./run_gui.sh
 #
 # REQUIREMENTS:
-#   - Python 3.10+ with virtual environment at .venv (optional but recommended)
+#   - Python 3.11+ with virtual environment at .venv (optional but recommended)
 #   - Install dependencies: pip install -e ".[gui]"
 #   - For native window mode: pip install -e ".[gui-native]"
 #
@@ -35,14 +35,14 @@ echo "      GUISkinDose GUI Launcher"
 echo "=========================================="
 echo ""
 
-# Check for Python 3.10+
+# Check for Python 3.11+
 check_python() {
     if command -v python3 &> /dev/null; then
         PYTHON_CMD="python3"
     elif command -v python &> /dev/null; then
         PYTHON_CMD="python"
     else
-        echo -e "${RED}[ERROR] Python not found. Please install Python 3.10 or newer.${NC}"
+        echo -e "${RED}[ERROR] Python not found. Please install Python 3.11 or newer.${NC}"
         exit 1
     fi
     
@@ -50,8 +50,8 @@ check_python() {
     PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
     PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
     
-    if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]; }; then
-        echo -e "${RED}[ERROR] Python 3.10+ required. Found: $PYTHON_VERSION${NC}"
+    if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
+        echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
         exit 1
     fi
     
@@ -131,7 +131,7 @@ setup_dependencies() {
             $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
         3)
-            echo "Skipping. Install manually with: pip install -e \".[gui]\""
+            echo "Skipping. Install manually with: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
             return 1
             ;;
         *)
@@ -167,6 +167,19 @@ else
         PYTHON="$PYTHON_CMD"
     fi
 fi
+
+# Re-validate the selected interpreter: an existing .venv may carry an
+# older Python than the system one checked above.
+PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}')
+PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+
+if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
+    echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Selected interpreter: $PYTHON (Python $PYTHON_VERSION)"
 
 # Check/install dependencies
 setup_dependencies "$PYTHON"
@@ -240,6 +253,6 @@ fi
 if [ "$launch_status" -ne 0 ]; then
     echo ""
     echo -e "${RED}[ERROR] The application failed to start.${NC}"
-    echo "Try installing dependencies: pip install -e \".[gui]\""
+    echo "Try installing dependencies: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
     read -r -p "Press Enter to exit..."
 fi

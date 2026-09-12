@@ -7,10 +7,22 @@ echo       GUISkinDose GUI Launcher
 echo ==========================================
 echo.
 
+:: An existing .venv interpreter takes precedence: validate it directly and
+:: skip the system-Python gate below (PATH may point at an older interpreter
+:: than the one in .venv). Defaults fail closed if its version is unreadable.
+if exist .venv\Scripts\python.exe (
+    set PYTHON_CMD=.venv\Scripts\python.exe
+    echo [OK] Using .venv\Scripts\python.exe
+    set PYTHON_VERSION=0.0.0
+    set PYTHON_MAJOR=0
+    set PYTHON_MINOR=0
+    goto :validate_selected
+)
+
 :: Check for Python
 where python >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Python not found. Please install Python 3.10 or newer.
+    echo [ERROR] Python not found. Please install Python 3.11 or newer.
     pause
     exit /b 1
 )
@@ -23,14 +35,14 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
 )
 
 if %PYTHON_MAJOR% LSS 3 (
-    echo [ERROR] Python 3.10+ required. Found: %PYTHON_VERSION%
+    echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
     pause
     exit /b 1
 )
 
 if %PYTHON_MAJOR% EQU 3 (
-    if %PYTHON_MINOR% LSS 10 (
-        echo [ERROR] Python 3.10+ required. Found: %PYTHON_VERSION%
+    if %PYTHON_MINOR% LSS 11 (
+        echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
         pause
         exit /b 1
     )
@@ -66,6 +78,31 @@ if exist .venv\Scripts\python.exe (
     )
 )
 
+:validate_selected
+:: Re-validate the selected interpreter: an existing .venv may carry an
+:: older Python than the system one checked above.
+for /f "tokens=2 delims= " %%v in ('"%PYTHON_CMD%" --version 2^>^&1') do set PYTHON_VERSION=%%v
+for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
+    set PYTHON_MAJOR=%%a
+    set PYTHON_MINOR=%%b
+)
+
+if !PYTHON_MAJOR! LSS 3 (
+    echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
+    pause
+    exit /b 1
+)
+
+if !PYTHON_MAJOR! EQU 3 (
+    if !PYTHON_MINOR! LSS 11 (
+        echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
+        pause
+        exit /b 1
+    )
+)
+
+echo [OK] Selected interpreter: %PYTHON_CMD% ^(Python !PYTHON_VERSION!^)
+
 :: Check if package is installed
 %PYTHON_CMD% -c "import guiskindose" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
@@ -87,10 +124,19 @@ if "%install_choice%"=="2" (
     echo Installing guiskindose with GUI and native window support...
     %PYTHON_CMD% -m pip install -e ".[gui-native]"
 ) else if "%install_choice%"=="3" (
-    echo Skipping. Install manually with: pip install -e ".[gui]"
+    echo Skipping installation...
 ) else (
     echo Installing guiskindose with GUI...
     %PYTHON_CMD% -m pip install -e ".[gui]"
+)
+
+:: Skip means no installation was attempted: show the manual command and
+:: exit so the user can rerun the launcher after installing.
+if "%install_choice%"=="3" (
+    echo Install manually with: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
+    echo Then rerun run_gui.bat.
+    pause
+    exit /b 0
 )
 
 if %ERRORLEVEL% NEQ 0 (
@@ -148,6 +194,6 @@ if "%choice%"=="2" (
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] The application failed to start.
-    echo Try installing dependencies: pip install -e ".[gui]"
+    echo Try installing dependencies: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     pause
 )

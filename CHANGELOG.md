@@ -187,8 +187,15 @@ That keeps SemVer and contributor history organized.
   position in ``MultiExamResult.exams``. When a middle exam was excluded, later
   successful exams silently received another exam's normalized frame, provenance,
   and transform metadata in the report. Matching now uses the opaque ``Exam N``
-  label (original load index). Supersedes conflicted Cursor automation PR #72
-  after the ``mypyskindose`` → ``guiskindose`` rename.
+   label (original load index). Supersedes conflicted Cursor automation PR #72
+   after the ``mypyskindose`` → ``guiskindose`` rename.
+
+- **GUI launcher Python-floor and install-flow fixes** (2026-09-12) —
+  ``run_gui.sh`` / ``run_gui.bat`` now enforce Python 3.11+ (matching
+  ``requires-python``), re-validate the selected ``.venv`` interpreter so a stale
+  venv cannot reach launch, prefer an existing ``.venv`` over an older PATH
+  interpreter, exit with rerun instructions on skip-install instead of launching
+  an uninstalled module, and qualify install hints with the selected interpreter.
 
 ### Changed
 
