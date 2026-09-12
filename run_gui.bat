@@ -120,7 +120,7 @@ if "%install_choice%"=="2" (
 :: Skip means no installation was attempted: show the manual command and
 :: exit so the user can rerun the launcher after installing.
 if "%install_choice%"=="3" (
-    echo Install manually with: pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
+    echo Install manually with: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     echo Then rerun run_gui.bat.
     pause
     exit /b 0
