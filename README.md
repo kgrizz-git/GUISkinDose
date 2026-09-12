@@ -60,8 +60,8 @@ chmod +x run_gui.sh   # one-time setup, enables executing the sh script
 run_gui.bat
 ```
 
-Both scripts prompt you to run in browser mode (default) or native window
-mode. Or launch directly:
+Both scripts prompt you to run in browser mode [1] or native window
+mode [2] (default). Or launch directly:
 
 ```bash
 python -m guiskindose --mode gui              # browser mode
@@ -167,7 +167,8 @@ pip install -e .
 To include the GUI dependencies:
 
 ```bash
-pip install -e ".[gui]"
+pip install -e ".[gui]"          # browser mode
+pip install -e ".[gui-native]"   # native window mode (includes pywebview)
 ```
 
 For full development setup (linting, testing, docs, Jupyter), install the

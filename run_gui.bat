@@ -10,7 +10,7 @@ echo.
 :: Check for Python
 where python >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Python not found. Please install Python 3.10 or newer.
+    echo [ERROR] Python not found. Please install Python 3.11 or newer.
     pause
     exit /b 1
 )
@@ -23,14 +23,14 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
 )
 
 if %PYTHON_MAJOR% LSS 3 (
-    echo [ERROR] Python 3.10+ required. Found: %PYTHON_VERSION%
+    echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
     pause
     exit /b 1
 )
 
 if %PYTHON_MAJOR% EQU 3 (
-    if %PYTHON_MINOR% LSS 10 (
-        echo [ERROR] Python 3.10+ required. Found: %PYTHON_VERSION%
+    if %PYTHON_MINOR% LSS 11 (
+        echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
         pause
         exit /b 1
     )
@@ -93,6 +93,10 @@ if "%install_choice%"=="2" (
     %PYTHON_CMD% -m pip install -e ".[gui]"
 )
 
+:: Skip means no installation was attempted: launch directly instead of
+:: checking the (stale) package-install exit code below.
+if "%install_choice%"=="3" goto :run_gui
+
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Installation failed.
     pause
@@ -148,6 +152,6 @@ if "%choice%"=="2" (
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] The application failed to start.
-    echo Try installing dependencies: pip install -e ".[gui]"
+    echo Try installing dependencies: pip install -e ".[gui]" (or ".[gui-native]" for native window mode)
     pause
 )
