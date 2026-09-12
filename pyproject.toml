@@ -47,6 +47,7 @@ export = ["reportlab>=4.0", "python-docx>=1.1"]
 docs = [
     "sphinx",
     "sphinx-rtd-theme",
+    "pydata-sphinx-theme",
     "myst-parser",
     "nbsphinx",
     "ipykernel",

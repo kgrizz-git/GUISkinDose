@@ -21,6 +21,14 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **PyData Sphinx Theme** (2026-09-11) — user docs restyle per the [tooling
+  decision](dev-docs/assessments/DOCUMENTATION_TOOLING_DECISION_2026-09-11.md):
+  `docs/source/conf.py` uses `pydata_sphinx_theme` (stale `sphinx_rtd_theme`
+  extension entry removed), `pydata-sphinx-theme` added to the `docs` extra
+  (`sphinx-rtd-theme` retained as fallback), `uv.lock` updated. Verified with a
+  local Sphinx build (theme assets render; the 21 warnings and the
+  getting-started notebook execution failure are pre-existing and unchanged).
+
 - **PSD algorithm flow diagrams** (2026-09-11) — `dev-docs/PSD_CALCULATION_ALGORITHM.md`
   gains a Flow diagram section (Mermaid flowchart + sequence diagram, node labels
   naming the real modules), pinned by a `test_flow_diagrams_present` invariant.
