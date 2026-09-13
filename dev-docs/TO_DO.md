@@ -75,7 +75,7 @@ policy decisions, not a restart of Phases 0-9.
   - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
   - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.
   - *Results table*: run a manual Results smoke to confirm '—' vs kerma behavior (see Open Questions).
-  - *Launcher robustness*: Windows `.bat` smoke matrix run 2026-09-13 — decline-venv, skip-install exit-0 + rerun text, install-fail, good-`.venv` launch, and malformed-`--version` pass; old-`.venv` unrunnable on this box and an unstartable binary blocks headless runs (see the Validation section of the archived [LAUNCHER_ROBUSTNESS_PLAN.md](plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md)); `.sh` side already stub-smoked on macOS.
+  - *Launcher robustness*: Windows `.bat` smoke matrix run 2026-09-13 — decline-venv, skip-install exit-0 + rerun text, install-fail, good-`.venv` launch, malformed-`--version`, and broken-`.venv` pass; old-`.venv` unrunnable on this box and an unstartable binary blocks headless runs (see the Validation section of the archived [LAUNCHER_ROBUSTNESS_PLAN.md](plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md)); `.sh` side already stub-smoked on macOS.
 - [ ] **HTML/PNG export root-cause fix (awaiting fresh repro)** — Phase 1 (raise +
   actionable errors) shipped; Phase 0 never captured the original multi-exam
   exception, so Phase 2 has no evidence to work from. Demoted from Next Up

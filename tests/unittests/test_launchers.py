@@ -7,8 +7,9 @@ every text paren as ``^(`` / ``^)`` is harmless at top level (the caret is
 consumed by the parser), so the convention -- and the test below -- is simple:
 no ``echo`` text paren may appear unescaped, anywhere in the file.
 
-These tests run on Linux CI (no ``cmd.exe`` needed); Windows manual smoke
-remains the execution check per the launcher robustness plan.
+These tests run on Linux CI (no ``cmd.exe`` needed); the ``test_bat_exec_*``
+tests additionally execute the real launcher on Windows runners, where
+``cmd.exe`` exists and the system python is a real executable.
 """
 
 from __future__ import annotations
@@ -80,7 +81,7 @@ def test_bat_version_guard_fail_closed() -> None:
     assert text.count("Could not determine Python version") == 4
     assert "0.0.0" not in text
     for var in ("PYTHON_VERSION", "PYTHON_MAJOR", "PYTHON_MINOR"):
-        assert text.count(f"set {var}=unreadable") == 2
+        assert text.count(f"set {var}=unreadable") == 3
     label = text.index("\n:validate_selected")
     for part in (text[:label], text[label:]):
         assert part.index("NUM_OK") < part.index("LSS 3")
@@ -121,3 +122,91 @@ def test_launcher_parity() -> None:
     assert "default is 2" in bat.lower() and "default is 2" in sh.lower()
     assert "exit /b 0" in bat
     assert re.search(r"rerun.*exit 0", sh, re.DOTALL | re.IGNORECASE) is not None
+
+
+WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")
+
+
+def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProcess[str]:
+    """Run a copy of ``run_gui.bat`` with ``cwd`` as its working directory."""
+    bat = cwd / "run_gui.bat"
+    shutil.copyfile(BAT, bat)
+    return subprocess.run(
+        ["cmd", "/d", "/c", str(bat)],
+        cwd=cwd,
+        input=stdin_text,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+
+def _stdin_survives_version_gate() -> bool:
+    """Whether ``for /f`` version parsing preserves redirected stdin for later prompts.
+
+    Some shims (e.g. pyenv-win) drain stdin while their output is captured,
+    which makes prompt-driven rows untestable in that environment.
+    """
+    if shutil.which("cmd") is None or shutil.which("python") is None:
+        return False
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = Path(tmp) / "probe.bat"
+        probe.write_text(
+            "@echo off\n"
+            "for /f \"tokens=2 delims= \" %%v in ('python --version 2>&1') do set PV=%%v\n"
+            "set /p ANS=Q:\n"
+            'if "%ANS%"=="n" (echo PROBE-OK) else (echo PROBE-DRAINED)\n',
+            encoding="ascii",
+        )
+        result = subprocess.run(
+            ["cmd", "/d", "/c", "probe.bat"],
+            cwd=tmp,
+            input="n\n",
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    return "PROBE-OK" in result.stdout
+
+
+@WINDOWS_ONLY
+def test_bat_exec_broken_venv_exit_code(tmp_path: Path) -> None:
+    """A `.venv` directory without an interpreter exits 1 with the repair hint."""
+    (tmp_path / ".venv").mkdir()
+    result = _run_launcher(tmp_path, None)
+    assert result.returncode == 1
+    assert "rmdir /s /q .venv" in result.stdout
+
+
+@WINDOWS_ONLY
+def test_bat_exec_malformed_version_exit_code(tmp_path: Path) -> None:
+    """An interpreter with unreadable `--version` output exits 1 via the numeric guard."""
+    system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
+    where_exe = Path(system_root) / "System32" / "where.exe"
+    if not where_exe.is_file():
+        pytest.skip("no where.exe to stand in as a malformed interpreter")
+    scripts = tmp_path / ".venv" / "Scripts"
+    scripts.mkdir(parents=True)
+    shutil.copyfile(where_exe, scripts / "python.exe")
+    result = _run_launcher(tmp_path, None)
+    assert result.returncode == 1
+    assert "Could not determine Python version" in result.stdout
+
+
+@WINDOWS_ONLY
+def test_bat_exec_skip_install_exit_code(tmp_path: Path) -> None:
+    """Declining the venv and skipping install exits 0 with the rerun hint."""
+    if not _stdin_survives_version_gate():
+        pytest.skip("system python drains redirected stdin (e.g. pyenv shim)")
+    check = subprocess.run(
+        ["python", "-c", "import guiskindose"],
+        capture_output=True,
+        timeout=60,
+    )
+    if check.returncode == 0:
+        pytest.skip("system python already has guiskindose installed")
+    result = _run_launcher(tmp_path, "n\n3\n")
+    assert result.returncode == 0
+    assert "Then rerun run_gui.bat." in result.stdout

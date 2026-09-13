@@ -128,6 +128,11 @@ if exist .venv\Scripts\python.exe (
 :validate_selected
 :: Re-validate the selected interpreter: an existing .venv may carry an
 :: older Python than the system one checked above.
+:: Reset sentinels first: a fresh interpreter with tokenless output must not
+:: reuse the system-gate values parsed above.
+set PYTHON_VERSION=unreadable
+set PYTHON_MAJOR=unreadable
+set PYTHON_MINOR=unreadable
 for /f "tokens=2 delims= " %%v in ('"%PYTHON_CMD%" --version 2^>^&1') do set PYTHON_VERSION=%%v
 for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
     set PYTHON_MAJOR=%%a
