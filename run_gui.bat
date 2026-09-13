@@ -34,17 +34,12 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
     set PYTHON_MINOR=%%b
 )
 
-:: Fail closed when the version output is not numeric. Separate digit-only
-:: checks (echo( pipes no trailing space; no dots to escape).
-echo(%PYTHON_MAJOR%| findstr /r "^[0-9][0-9]*$" >nul
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
-    echo [HINT] Check 'python --version' output (pyenv users: set a global/local version first).
-    pause
-    exit /b 1
-)
-echo(%PYTHON_MINOR%| findstr /r "^[0-9][0-9]*$" >nul
-if %ERRORLEVEL% NEQ 0 (
+:: Fail closed when the version output is not numeric. Pipeless check (a line
+:: of only delimiter digits is skipped by for, anything else trips NUM_OK).
+set "NUM_OK=1"
+for /f "delims=0123456789" %%d in ("%PYTHON_MAJOR%%PYTHON_MINOR%") do set "NUM_OK=0"
+if "%PYTHON_MAJOR%%PYTHON_MINOR%"=="" set "NUM_OK=0"
+if %NUM_OK% NEQ 1 (
     echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
     echo [HINT] Check 'python --version' output (pyenv users: set a global/local version first).
     pause
@@ -105,10 +100,11 @@ for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
 )
 
 :: Fail closed when the version output is not numeric (e.g. a broken .venv
-:: interpreter printing an error instead of a version). Separate digit-only
-:: checks (echo( pipes no trailing space; no dots to escape).
-echo(!PYTHON_MAJOR!| findstr /r "^[0-9][0-9]*$" >nul
-if !ERRORLEVEL! NEQ 0 (
+:: interpreter printing an error instead of a version). Pipeless check.
+set "NUM_OK=1"
+for /f "delims=0123456789" %%d in ("!PYTHON_MAJOR!!PYTHON_MINOR!") do set "NUM_OK=0"
+if "!PYTHON_MAJOR!!PYTHON_MINOR!"=="" set "NUM_OK=0"
+if !NUM_OK! NEQ 1 (
     echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
     pause
     exit /b 1
