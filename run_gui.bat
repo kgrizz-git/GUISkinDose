@@ -35,7 +35,7 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
 )
 
 :: Fail closed when the version output is not numeric.
-echo %PYTHON_MAJOR%.%PYTHON_MINOR% | findstr /r "^[0-9][0-9]*.[0-9][0-9]*$" >nul
+echo %PYTHON_MAJOR%.%PYTHON_MINOR% | findstr /r "^[0-9][0-9]*\.[0-9][0-9]*$" >nul
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
     pause
@@ -97,7 +97,7 @@ for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
 
 :: Fail closed when the version output is not numeric (e.g. a broken .venv
 :: interpreter printing an error instead of a version).
-echo !PYTHON_MAJOR!.!PYTHON_MINOR! | findstr /r "^[0-9][0-9]*.[0-9][0-9]*$" >nul
+echo !PYTHON_MAJOR!.!PYTHON_MINOR! | findstr /r "^[0-9][0-9]*\.[0-9][0-9]*$" >nul
 if !ERRORLEVEL! NEQ 0 (
     echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
     pause
