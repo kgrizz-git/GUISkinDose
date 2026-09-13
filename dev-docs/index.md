@@ -171,7 +171,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
-| [plans/README_POLISH_PLAN.md](plans/README_POLISH_PLAN.md) | **Implemented in PR #94** — restructure README around the GUI workflow (screenshots, launch, headless secondary); fix stale claims and the Windows launcher gap. |
+| [plans/LAUNCHER_ROBUSTNESS_PLAN.md](plans/LAUNCHER_ROBUSTNESS_PLAN.md) | **Active** — `run_gui.sh`/`run_gui.bat` `set -e`/exit-path hardening, skip-install parity, `.venv`-first gate parity, version-parse fail-closed guard; manual smoke matrix incl. Windows. |
 
 ## Archived plans (`plans/archive/`)
 
@@ -197,6 +197,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/refactor_other_gui_tabs_complexity.md](plans/archive/refactor_other_gui_tabs_complexity.md) | **Completed** (2026-07-18) — Remaining GUI complexity (export, per-exam, calculate, data, geometry preview, import preview). |
 | [plans/archive/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md](plans/archive/GEOMETRY_PER_EXAM_EVENT_SELECTION_PLAN.md) | **Completed** (2026-07-12) — Geometry tab event-stepper UX (chevron prev/next + context caption) on the existing per-exam preview-slice foundation; trace-count guard documentation. |
 | [plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md](plans/archive/DOSE_MAP_PER_EXAM_CHECKBOX_PLAN.md) | **Completed** — Multi-exam Results: inline per-exam dose map checkboxes + aggregate subset selector with live PSD recompute. |
+| [plans/archive/README_POLISH_PLAN.md](plans/archive/README_POLISH_PLAN.md) | **Complete** (PR #94, 2026-09-12) — GUI-first README restructure with screenshots, launch docs, and launcher consistency fixes. |
 | [plans/archive/README.md](plans/archive/README.md) | Index of completed or superseded execution plans. |
 | [plans/archive/RICH_EXPORT_SPEC.md](plans/archive/RICH_EXPORT_SPEC.md) | **Superseded** — original Rich Report Export draft spec; folded into the master `plans/RICH_EXPORT_PLAN.md`. |
 | [plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md) | **Superseded** — brainstorming and high-level ideas folded into [plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md](plans/archive/DOCUMENTATION_HELP_HARNESS_IMPLEMENTATION_PLAN.md) plus deferred `TO_DO.md` items. |
