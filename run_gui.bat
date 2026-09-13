@@ -142,9 +142,9 @@ if %ERRORLEVEL% EQU 0 (
 echo.
 echo [!] guiskindose package not installed.
 echo Install options:
-echo   [1] Core + GUI (browser mode)      - pip install -e ".[gui]"
+echo   [1] Core + GUI ^(browser mode^)      - pip install -e ".[gui]"
 echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]"
-echo   [3] Skip (install manually later)
+echo   [3] Skip ^(install manually later^)
 echo.
 
 set /p install_choice="Select option [1/2/3, default=1]: "
@@ -179,8 +179,8 @@ echo [OK] Installation complete
 :run_gui
 echo.
 echo How would you like to run the GUI?
-echo [1] Browser (Standard)
-echo [2] Native Window (Requires pywebview)
+echo [1] Browser ^(Standard^)
+echo [2] Native Window ^(Requires pywebview^)
 echo.
 
 set /p choice="Enter your choice (1 or 2, default is 2): "
