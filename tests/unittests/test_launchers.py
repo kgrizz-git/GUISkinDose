@@ -51,12 +51,38 @@ def test_bat_echo_parens_escaped() -> None:
     assert not violations, "unescaped parens in echo text (breaks inside if-blocks):\n" + "\n".join(violations)
 
 
+def test_bat_echo_bang_marker() -> None:
+    """Notice markers render as ``[!]``: a literal bang is swallowed by delayed expansion."""
+    for lineno, text in _bat_echo_text_lines():
+        assert "[!]" not in text, f"line {lineno}: literal [!] renders as [] under delayed expansion"
+
+
+def test_bat_block_comments_paren_free() -> None:
+    """Indented ``::`` comments carry no parens: cmd counts comment parens as block delimiters."""
+    lines = BAT.read_text(encoding="utf-8").splitlines()
+    violations = [
+        f"line {lineno}: {raw.strip()}"
+        for lineno, raw in enumerate(lines, start=1)
+        if raw != raw.lstrip() and raw.lstrip().startswith("::") and ("(" in raw or ")" in raw)
+    ]
+    assert not violations, "parens in in-block :: comment (breaks block parsing):\n" + "\n".join(violations)
+
+
 def test_bat_version_guard_fail_closed() -> None:
-    """Non-numeric ``--version`` output is rejected before any ``LSS``/``EQU`` comparison."""
+    """Both version gates reject garbage output before any ``LSS``/``EQU`` comparison.
+
+    The system-python gate (top of file) and the ``:validate_selected`` gate
+    each carry a fail-closed numeric guard plus an empty-``MINOR`` backstop;
+    all four rejection paths share the standard error message (exact count so
+    a deleted guard is caught, not just a deleted message).
+    """
     text = BAT.read_text(encoding="utf-8")
-    assert text.count("Could not determine Python version") >= 2
-    first_guard = text.index("NUM_OK")
-    assert first_guard < text.index("LSS 3")
+    assert text.count("Could not determine Python version") == 4
+    assert "0.0.0" not in text
+    label = text.index("\n:validate_selected")
+    for part in (text[:label], text[label:]):
+        assert part.index("NUM_OK") < part.index("LSS 3")
+        assert "EQU 3" in part
 
 
 def test_sh_syntax_check() -> None:

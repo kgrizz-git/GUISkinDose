@@ -1,5 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
+:: Delayed expansion swallows a literal bang in echo text, so keep one in a
+:: variable (defined via caret escape) for the notice markers below.
+set "BANG=^!"
 title GUISkinDose GUI Launcher
 
 echo ==========================================
@@ -13,9 +16,12 @@ echo.
 if exist .venv\Scripts\python.exe (
     set PYTHON_CMD=.venv\Scripts\python.exe
     echo [OK] Using .venv\Scripts\python.exe
-    set PYTHON_VERSION=0.0.0
-    set PYTHON_MAJOR=0
-    set PYTHON_MINOR=0
+    :: Dummy defaults that fail closed: never an all-zero version, which would
+    :: misleadingly report a floor violation. If --version yields no output
+    :: below, the numeric guard trips with "Could not determine" instead.
+    set PYTHON_VERSION=unreadable
+    set PYTHON_MAJOR=unreadable
+    set PYTHON_MINOR=unreadable
     goto :validate_selected
 )
 
@@ -45,6 +51,15 @@ if %NUM_OK% NEQ 1 (
     pause
     exit /b 1
 )
+:: An empty MINOR (e.g. version "3.") passes the digit-only check above as
+:: the concatenation "3"; reject it here, mirroring :validate_selected.
+echo(%PYTHON_MINOR%| findstr /r "^[0-9][0-9]*$" >nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
+    echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
+    pause
+    exit /b 1
+)
 
 if %PYTHON_MAJOR% LSS 3 (
     echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
@@ -65,6 +80,9 @@ echo [OK] Python %PYTHON_VERSION% found
 :: Determine which Python to use
 set PYTHON_CMD=python
 
+:: NOTE: the .venv branch below is unreachable while the .venv-first bypass at
+:: the top of this file exists (it jumps straight to :validate_selected); kept
+:: as belt-and-braces in case that bypass is ever removed.
 if exist .venv\Scripts\python.exe (
     set PYTHON_CMD=.venv\Scripts\python.exe
     echo [OK] Using .venv\Scripts\python.exe
@@ -72,7 +90,7 @@ if exist .venv\Scripts\python.exe (
     echo [OK] Using current virtual environment: %VIRTUAL_ENV%
 ) else (
     echo.
-    echo [!] No virtual environment found.
+    echo [!BANG!] No virtual environment found.
     set /p create_venv="Would you like to create one at .venv? [Y/n]: "
     
     if /i "!create_venv!"=="n" (
@@ -140,7 +158,7 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 echo.
-echo [!] guiskindose package not installed.
+echo [!BANG!] guiskindose package not installed.
 echo Install options:
 echo   [1] Core + GUI ^(browser mode^)      - pip install -e ".[gui]"
 echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]"
@@ -192,7 +210,7 @@ if "%choice%"=="2" (
     %PYTHON_CMD% -c "import webview" >nul 2>&1
     if !ERRORLEVEL! NEQ 0 (
         echo.
-        echo [!] pywebview not installed ^(required for native window mode^).
+        echo [!BANG!] pywebview not installed ^(required for native window mode^).
         set /p install_pywebview="Would you like to install it? [Y/n]: "
         
         if /i "!install_pywebview!"=="n" (
