@@ -83,6 +83,16 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **GUI launcher robustness** (2026-09-13) — `run_gui.sh` / `run_gui.bat`
+  hardening: every interactive branch reaches the mode prompt or exits with an
+  intentional code (no silent `set -e` deaths); skip-install exits 0 with a
+  rerun hint on both launchers; a broken `.venv` errors with a delete-and-rerun
+  hint instead of silently falling back; a failed app launch exits nonzero; a
+  good `.venv` is never rejected over an older system interpreter; garbage
+  version output is rejected loudly. Covered by
+  `tests/unittests/test_launchers.py` (static pins plus executable Windows
+  branch tests).
+
 - **Opus whole-branch review follow-ups** (2026-09-10) — Calculate `k_tab`
   preview catches all exceptions (not only `ValueError`) so NiceGUI bindings
   cannot freeze; preview uses `emit_warnings=False` instead of a process-global

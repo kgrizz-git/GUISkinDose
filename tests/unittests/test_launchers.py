@@ -107,9 +107,9 @@ def test_launch_failure_exit_code() -> None:
 def test_sh_syntax_check() -> None:
     """``bash -n run_gui.sh`` parses cleanly (Windows has no functional bash; covered on Linux CI)."""
     if os.name == "nt":
-        pytest.skip("no functional bash on Windows")
+        pytest.skip("no functional bash on Windows")  # pragma: no cover - Windows-only branch
     if shutil.which("bash") is None:
-        pytest.skip("bash unavailable")
+        pytest.skip("bash unavailable")  # pragma: no cover - bash always present on Linux CI
     result = subprocess.run(["bash", "-n", str(SH)], capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
 
@@ -127,7 +127,7 @@ def test_launcher_parity() -> None:
 WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")
 
 
-def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProcess[str]:
+def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProcess[str]:  # pragma: no cover
     """Run a copy of ``run_gui.bat`` with ``cwd`` as its working directory."""
     bat = cwd / "run_gui.bat"
     shutil.copyfile(BAT, bat)
@@ -141,7 +141,7 @@ def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProc
     )
 
 
-def _stdin_survives_version_gate() -> bool:
+def _stdin_survives_version_gate() -> bool:  # pragma: no cover
     """Whether ``for /f`` version parsing preserves redirected stdin for later prompts.
 
     Some shims (e.g. pyenv-win) drain stdin while their output is captured,
@@ -172,7 +172,7 @@ def _stdin_survives_version_gate() -> bool:
 
 
 @WINDOWS_ONLY
-def test_bat_exec_broken_venv_exit_code(tmp_path: Path) -> None:
+def test_bat_exec_broken_venv_exit_code(tmp_path: Path) -> None:  # pragma: no cover
     """A `.venv` directory without an interpreter exits 1 with the repair hint."""
     (tmp_path / ".venv").mkdir()
     result = _run_launcher(tmp_path, None)
@@ -181,7 +181,7 @@ def test_bat_exec_broken_venv_exit_code(tmp_path: Path) -> None:
 
 
 @WINDOWS_ONLY
-def test_bat_exec_malformed_version_exit_code(tmp_path: Path) -> None:
+def test_bat_exec_malformed_version_exit_code(tmp_path: Path) -> None:  # pragma: no cover
     """An interpreter with unreadable `--version` output exits 1 via the numeric guard."""
     system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
     where_exe = Path(system_root) / "System32" / "where.exe"
@@ -196,7 +196,7 @@ def test_bat_exec_malformed_version_exit_code(tmp_path: Path) -> None:
 
 
 @WINDOWS_ONLY
-def test_bat_exec_skip_install_exit_code(tmp_path: Path) -> None:
+def test_bat_exec_skip_install_exit_code(tmp_path: Path) -> None:  # pragma: no cover
     """Declining the venv and skipping install exits 0 with the rerun hint."""
     if not _stdin_survives_version_gate():
         pytest.skip("system python drains redirected stdin (e.g. pyenv shim)")
