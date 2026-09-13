@@ -79,10 +79,28 @@ def test_bat_version_guard_fail_closed() -> None:
     text = BAT.read_text(encoding="utf-8")
     assert text.count("Could not determine Python version") == 4
     assert "0.0.0" not in text
+    for var in ("PYTHON_VERSION", "PYTHON_MAJOR", "PYTHON_MINOR"):
+        assert text.count(f"set {var}=unreadable") == 2
     label = text.index("\n:validate_selected")
     for part in (text[:label], text[label:]):
         assert part.index("NUM_OK") < part.index("LSS 3")
         assert "EQU 3" in part
+
+
+def test_broken_venv_repair_hint() -> None:
+    """A `.venv` without an interpreter errors with a delete-and-rerun hint, never silent fallback."""
+    sh = SH.read_text(encoding="utf-8")
+    bat = BAT.read_text(encoding="utf-8")
+    assert "rm -rf .venv" in sh
+    assert "rmdir /s /q .venv" in bat
+
+
+def test_launch_failure_exit_code() -> None:
+    """A failed app launch exits nonzero instead of falling off with success."""
+    sh = SH.read_text(encoding="utf-8")
+    bat = BAT.read_text(encoding="utf-8")
+    assert 'exit "$launch_status"' in sh
+    assert bat.rindex("exit /b 1") > bat.index("failed to start")
 
 
 def test_sh_syntax_check() -> None:

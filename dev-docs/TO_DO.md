@@ -75,7 +75,7 @@ policy decisions, not a restart of Phases 0-9.
   - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
   - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.
   - *Results table*: run a manual Results smoke to confirm '—' vs kerma behavior (see Open Questions).
-  - *Launcher robustness*: run the Windows `.bat` smoke matrix (decline-venv, skip-install exit-0 + rerun text, install-fail, old `.venv`, missing system python + good `.venv`, broken `.venv`, malformed `--version` incl. the `\.` guard) per the Validation section of [LAUNCHER_ROBUSTNESS_PLAN.md](plans/LAUNCHER_ROBUSTNESS_PLAN.md); `.sh` side already stub-smoked on macOS. Not urgent — runs whenever Windows access is convenient.
+  - *Launcher robustness*: Windows `.bat` smoke matrix run 2026-09-13 — decline-venv, skip-install exit-0 + rerun text, install-fail, good-`.venv` launch, and malformed-`--version` pass; old-`.venv` unrunnable on this box and an unstartable binary blocks headless runs (see the Validation section of the archived [LAUNCHER_ROBUSTNESS_PLAN.md](plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md)); `.sh` side already stub-smoked on macOS.
 - [ ] **HTML/PNG export root-cause fix (awaiting fresh repro)** — Phase 1 (raise +
   actionable errors) shipped; Phase 0 never captured the original multi-exam
   exception, so Phase 2 has no evidence to work from. Demoted from Next Up
@@ -143,7 +143,7 @@ policy decisions, not a restart of Phases 0-9.
   adopt proportional mitigations: startup single-use token, read-only shared-view
   mode, port randomization, or stronger do-not-serve warnings. Threat-model the
    hospital-workstation / shared-network case first; keep localhost UX unchanged.
-- [ ] **Launcher `set -e` robustness (`run_gui.sh`)** — pre-existing (verified
+- [x] **Launcher `set -e` robustness (`run_gui.sh`)** — done 2026-09-13, see the archived [LAUNCHER_ROBUSTNESS_PLAN.md](plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md); pre-existing (verified
   identical on `main` before PR94): `setup_venv` / `setup_dependencies` return 1
   on the decline-venv and skip-install paths, but bare calls under `set -e`
   (`run_gui.sh:163,185`) exit the script before the mode prompt (`.bat` handles

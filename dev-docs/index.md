@@ -171,7 +171,6 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
-| [plans/LAUNCHER_ROBUSTNESS_PLAN.md](plans/LAUNCHER_ROBUSTNESS_PLAN.md) | **Active** — `run_gui.sh`/`run_gui.bat` `set -e`/exit-path hardening, skip-install parity, `.venv`-first gate parity, version-parse fail-closed guard; manual smoke matrix incl. Windows. |
 
 ## Archived plans (`plans/archive/`)
 
@@ -225,6 +224,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md](plans/archive/VENDOR_XZ_CLARIFICATION_PLAN.md) | **Completed** (2026-06-28) — Vendor-invariant Geometry/Per-exam table-origin controls, explicit `X/LON/PT L-R` labels, plot annotations, Calculate/Geometry help, and vendor warnings. |
 | [plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | **Completed** (2026-06-28) — Canonical coordinate reference in `VENDOR_COORDINATE_SYSTEMS.md`; DICOM attribute/display-alias distinction; GE convention confirmed; characterization tests; agent + GUI help updated. GE matched-fixture item tracked in TO_DO. |
 | [plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md) | **Completed** (2026-07-03) — macOS native startup now normalizes saved `maximized=true` into a safe visible-desktop titled window, persists `maximized=false`, and keeps Windows/Linux maximize behavior unchanged. |
+| [plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md](plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md) | **Completed** (2026-09-13) — `run_gui.sh`/`run_gui.bat` `set -e`/exit-path hardening, skip-install parity, broken-`.venv` repair hints, `.venv`-first gate parity, fail-closed version guards, launch-failure exit codes; `.bat` smoke matrix run on Windows. |
 
 ---
 

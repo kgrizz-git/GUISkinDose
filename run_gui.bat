@@ -25,6 +25,19 @@ if exist .venv\Scripts\python.exe (
     goto :validate_selected
 )
 
+:: A .venv directory without its interpreter is broken: fail with a repair
+:: hint instead of silently falling through to system Python. An active
+:: VIRTUAL_ENV takes precedence, mirroring run_gui.sh. Flat structure on
+:: purpose: exit codes are lost from doubly-nested blocks after pause.
+if not exist .venv\ goto :venv_ok
+if defined VIRTUAL_ENV goto :venv_ok
+echo [ERROR] .venv exists but .venv\Scripts\python.exe is missing.
+echo [HINT] Delete the broken environment with: rmdir /s /q .venv
+echo Then rerun run_gui.bat.
+pause
+exit /b 1
+:venv_ok
+
 :: Check for Python
 where python >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
@@ -33,7 +46,11 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: Check Python version
+:: Check Python version. Pre-initialize: setlocal inherits the environment,
+:: so tokenless output must not reuse caller-supplied values.
+set PYTHON_VERSION=unreadable
+set PYTHON_MAJOR=unreadable
+set PYTHON_MINOR=unreadable
 for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set PYTHON_VERSION=%%v
 for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
     set PYTHON_MAJOR=%%a
@@ -243,4 +260,5 @@ if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] The application failed to start.
     echo Try installing dependencies: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     pause
+    exit /b 1
 )

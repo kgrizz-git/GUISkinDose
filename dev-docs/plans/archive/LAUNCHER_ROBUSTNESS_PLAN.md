@@ -1,8 +1,9 @@
 # Launcher Robustness Plan
 
-_Date: 2026-09-13. Status: implementing on branch
-`docs/archive-readme-plan-launcher-plan` (all 5 scope items coded, unreviewed;
-`.sh` stub-smoked, `.bat` needs Windows manual smoke)._
+_Date: 2026-09-13. Status: complete — all 5 scope items implemented on branch
+`docs/archive-readme-plan-launcher-plan` and reviewed (deepseek per-commit,
+kimi + codex whole-PR); `.bat` smoke matrix run 2026-09-13 with results folded
+into the `TO_DO.md` Manual Smokes pointer; archived 2026-09-13._
 
 ## Goal
 

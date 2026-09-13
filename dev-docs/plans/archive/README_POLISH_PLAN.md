@@ -1,7 +1,7 @@
 # README Polish Plan
 
 _Date: 2026-09-11. Status: complete (implemented in PR #94, merged 2026-09-12;
-archived 2026-09-13; launcher follow-ups live on in `plans/LAUNCHER_ROBUSTNESS_PLAN.md`)._
+archived 2026-09-13; launcher follow-ups lived on in `plans/archive/LAUNCHER_ROBUSTNESS_PLAN.md` (completed 2026-09-13))._
 
 ## Goal
 

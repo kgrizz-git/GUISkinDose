@@ -89,6 +89,12 @@ in_venv() {
 # Offer to create venv if missing
 setup_venv() {
     if [ -d ".venv" ]; then
+        if [ ! -x ".venv/bin/python" ]; then
+            echo -e "${RED}[ERROR] .venv exists but .venv/bin/python is missing or not executable.${NC}"
+            echo "Delete the broken environment with: rm -rf .venv"
+            echo "Then rerun ./run_gui.sh."
+            exit 1
+        fi
         echo -e "${GREEN}✓${NC} Virtual environment found at .venv"
         return 0
     fi
@@ -291,3 +297,5 @@ if [ "$launch_status" -ne 0 ]; then
     echo "Try installing dependencies: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
     read -r -p "Press Enter to exit..."
 fi
+
+exit "$launch_status"
