@@ -35,26 +35,46 @@ echo "      GUISkinDose GUI Launcher"
 echo "=========================================="
 echo ""
 
-# Check for Python 3.11+
-check_python() {
-    if command -v python3 &> /dev/null; then
-        PYTHON_CMD="python3"
-    elif command -v python &> /dev/null; then
-        PYTHON_CMD="python"
-    else
-        echo -e "${RED}[ERROR] Python not found. Please install Python 3.11 or newer.${NC}"
+# Parse and enforce the 3.11+ floor for $PYTHON_CMD; exits 1 on failure.
+# Safe to call whenever PYTHON_CMD is (re-)selected. Rejects unreadable or
+# non-numeric version output with the standard error (fail closed).
+check_python_version() {
+    if ! PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}'); then
+        echo -e "${RED}[ERROR] Cannot run $PYTHON_CMD --version.${NC}"
         exit 1
     fi
-    
-    PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
+
     PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
     PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-    
+
+    if ! [[ "$PYTHON_MAJOR" =~ ^[0-9]+$ && "$PYTHON_MINOR" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}[ERROR] Could not determine Python version. Got: $PYTHON_VERSION${NC}"
+        exit 1
+    fi
+
     if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
         echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
         exit 1
     fi
-    
+}
+
+# Check for Python 3.11+
+check_python() {
+    # A pre-selected PYTHON_CMD (e.g. an existing .venv interpreter) takes
+    # precedence: PATH may point at an older interpreter than the one in .venv.
+    if [ -z "${PYTHON_CMD:-}" ]; then
+        if command -v python3 &> /dev/null; then
+            PYTHON_CMD="python3"
+        elif command -v python &> /dev/null; then
+            PYTHON_CMD="python"
+        else
+            echo -e "${RED}[ERROR] Python not found. Please install Python 3.11 or newer.${NC}"
+            exit 1
+        fi
+    fi
+
+    check_python_version
+
     echo -e "${GREEN}✓${NC} Python $PYTHON_VERSION found"
 }
 
@@ -132,7 +152,7 @@ setup_dependencies() {
             ;;
         3)
             echo "Skipping. Install manually with: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
-            return 1
+            return 3
             ;;
         *)
             echo "Installing guiskindose with GUI..."
@@ -150,6 +170,11 @@ setup_dependencies() {
 }
 
 # Main setup checks
+# Prefer an existing usable .venv interpreter so it is validated directly and
+# never rejected over an older system Python on PATH.
+if [ -x ".venv/bin/python" ]; then
+    PYTHON_CMD=".venv/bin/python"
+fi
 check_python
 
 # Determine which Python to use
@@ -160,7 +185,11 @@ elif in_venv; then
     PYTHON="$PYTHON_CMD"
     echo -e "${GREEN}✓${NC} Using current virtual environment"
 else
-    setup_venv
+    # setup_venv returns 1 on decline or creation failure; either way no
+    # .venv was selected, so fall through to system Python (no set -e exit).
+    if ! setup_venv; then
+        echo "Continuing without a virtual environment."
+    fi
     if [ -f ".venv/bin/python" ]; then
         PYTHON=".venv/bin/python"
     else
@@ -168,21 +197,27 @@ else
     fi
 fi
 
-# Re-validate the selected interpreter: an existing .venv may carry an
-# older Python than the system one checked above.
-PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}')
-PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
-PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-
-if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
-    echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
-    exit 1
-fi
+# Re-validate the selected interpreter as a final backstop (covers a freshly
+# created or meanwhile-broken .venv binary).
+PYTHON_CMD="$PYTHON"
+check_python_version
 
 echo -e "${GREEN}✓${NC} Selected interpreter: $PYTHON (Python $PYTHON_VERSION)"
 
-# Check/install dependencies
-setup_dependencies "$PYTHON"
+# Check/install dependencies (skip-install exits 0 with a rerun hint, matching
+# run_gui.bat; install failure exits 1; set -e safe via explicit handling).
+if setup_dependencies "$PYTHON"; then
+    dep_status=0
+else
+    dep_status=$?
+fi
+
+if [ "$dep_status" -eq 3 ]; then
+    echo "Then rerun ./run_gui.sh."
+    exit 0
+elif [ "$dep_status" -ne 0 ]; then
+    exit 1
+fi
 
 # Check if pywebview is installed (needed for native mode)
 check_pywebview() {
