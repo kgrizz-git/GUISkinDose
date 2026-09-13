@@ -1,7 +1,8 @@
 # Launcher Robustness Plan
 
-_Date: 2026-09-13. Status: active (backlog: `TO_DO.md` "Launcher `set -e`
-robustness" + install-default item is separate)._
+_Date: 2026-09-13. Status: implementing on branch
+`docs/archive-readme-plan-launcher-plan` (all 5 scope items coded, unreviewed;
+`.sh` stub-smoked, `.bat` needs Windows manual smoke)._
 
 ## Goal
 
