@@ -41,7 +41,7 @@ for /f "delims=0123456789" %%d in ("%PYTHON_MAJOR%%PYTHON_MINOR%") do set "NUM_O
 if "%PYTHON_MAJOR%%PYTHON_MINOR%"=="" set "NUM_OK=0"
 if %NUM_OK% NEQ 1 (
     echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
-    echo [HINT] Check 'python --version' output (pyenv users: set a global/local version first).
+    echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
     pause
     exit /b 1
 )
@@ -192,7 +192,7 @@ if "%choice%"=="2" (
     %PYTHON_CMD% -c "import webview" >nul 2>&1
     if !ERRORLEVEL! NEQ 0 (
         echo.
-        echo [!] pywebview not installed (required for native window mode).
+        echo [!] pywebview not installed ^(required for native window mode^).
         set /p install_pywebview="Would you like to install it? [Y/n]: "
         
         if /i "!install_pywebview!"=="n" (
