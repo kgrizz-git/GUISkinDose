@@ -2,10 +2,10 @@
 
 _Date: 2026-09-13. Status: complete — all 5 scope items implemented on branch
 `docs/archive-readme-plan-launcher-plan` and reviewed (deepseek per-commit,
-kimi + codex whole-PR); `.bat` smoke matrix run 2026-09-13 (decline-venv,
-skip-install, install-fail, good-`.venv` launch, malformed-`--version`, and
-broken-`.venv` pass; old-`.venv` unrunnable here and an unstartable binary
-blocks headless runs); results folded into the `TO_DO.md` Manual Smokes
+kimi + codex whole-PR); `.bat` smoke matrix run 2026-09-13/14 (decline-venv,
+skip-install, install-fail, good-`.venv` launch, malformed-`--version`,
+broken-`.venv`, old-`.venv` on 3.10.11, and unstartable-binary via a
+text-content fixture pass; a 0-byte binary still blocks headless runs); results folded into the `TO_DO.md` Manual Smokes
 pointer; archived 2026-09-13._
 
 ## Goal
