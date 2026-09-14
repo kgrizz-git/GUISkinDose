@@ -139,6 +139,11 @@ def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProc
     """Run a copy of ``run_gui.bat`` with ``cwd`` as its working directory."""
     bat = cwd / "run_gui.bat"
     shutil.copyfile(BAT, bat)
+    # Strip VIRTUAL_ENV: CI invokes pytest via `uv run`, which sets it, and an
+    # active venv changes launcher routing (broken-.venv repair is skipped,
+    # the create-venv prompt disappears and shifts every later stdin answer).
+    # Tests must observe the no-venv flow deterministically on any runner.
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
     return subprocess.run(
         ["cmd", "/d", "/c", str(bat)],
         cwd=cwd,
@@ -146,6 +151,7 @@ def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProc
         capture_output=True,
         text=True,
         timeout=120,
+        env=env,
     )
 
 
