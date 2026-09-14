@@ -190,17 +190,18 @@ def test_bat_exec_broken_venv_exit_code(tmp_path: Path) -> None:  # pragma: no c
 
 @WINDOWS_ONLY
 def test_bat_exec_malformed_version_exit_code(tmp_path: Path) -> None:  # pragma: no cover
-    """An interpreter with unreadable `--version` output exits 1 via the numeric guard."""
+    """An interpreter whose `--version` probe fails routes to the repair hint, not version parsing."""
     system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
     where_exe = Path(system_root) / "System32" / "where.exe"
     if not where_exe.is_file():
-        pytest.skip("no where.exe to stand in as a malformed interpreter")
+        pytest.skip("no where.exe to stand in as a failing interpreter")
     scripts = tmp_path / ".venv" / "Scripts"
     scripts.mkdir(parents=True)
     shutil.copyfile(where_exe, scripts / "python.exe")
     result = _run_launcher(tmp_path, None)
     assert result.returncode == 1
-    assert "Could not determine Python version" in result.stdout
+    assert ".venv interpreter failed to start" in result.stdout
+    assert "rmdir /s /q .venv" in result.stdout
 
 
 @WINDOWS_ONLY

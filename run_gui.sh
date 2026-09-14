@@ -223,8 +223,13 @@ else
     elif [ "$venv_status" -ne 0 ]; then
         exit 1
     fi
-    if [ -f ".venv/bin/python" ]; then
+    if venv_usable; then
         PYTHON=".venv/bin/python"
+    elif [ -f ".venv/bin/python" ]; then
+        echo -e "${RED}[ERROR] .venv interpreter failed to start.${NC}"
+        echo "Delete the broken environment with: rm -rf .venv"
+        echo "Then rerun ./run_gui.sh."
+        exit 1
     else
         PYTHON="$PYTHON_CMD"
     fi

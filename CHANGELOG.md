@@ -89,7 +89,9 @@ That keeps SemVer and contributor history organized.
   rerun hint on both launchers; a broken `.venv` errors with a delete-and-rerun
   hint instead of silently falling back; a failed app launch exits nonzero; a
   good `.venv` is never rejected over an older system interpreter; garbage
-  version output is rejected loudly. Covered by
+  version output is rejected loudly; install menus reject invalid choices
+  instead of silently installing, and interpreter startup is probed before any
+  `.venv` binary is accepted. Covered by
   `tests/unittests/test_launchers.py` (static pins plus executable Windows
   branch tests).
 

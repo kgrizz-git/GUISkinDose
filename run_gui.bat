@@ -19,7 +19,10 @@ if exist .venv\Scripts\python.exe (
     :: binary routes to the repair diagnostic below. Chained single-line IFs
     :: only, no nesting: 'if errorlevel' evaluates at execution, so it reads
     :: the probe result even here. An active VIRTUAL_ENV keeps its fallback.
-    "%PYTHON_CMD%" --version >nul 2>&1
+    :: Delayed expansion below: percent form would expand at block parse
+    :: time to the pre-set value; the probe must run the just-selected
+    :: binary. No pipe on this line, so delayed expansion applies normally.
+    "!PYTHON_CMD!" --version >nul 2>&1
     if errorlevel 1 if not defined VIRTUAL_ENV goto :venv_broken
     if errorlevel 1 goto :venv_ok
     echo [OK] Using .venv\Scripts\python.exe
