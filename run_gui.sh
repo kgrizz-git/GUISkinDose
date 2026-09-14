@@ -111,7 +111,7 @@ setup_venv() {
     
     if [[ "$create_venv" =~ ^[Nn]$ ]]; then
         echo "Proceeding without virtual environment..."
-        return 1
+        return 3
     fi
     
     echo "Creating virtual environment..."
@@ -192,10 +192,19 @@ elif in_venv; then
     PYTHON="$PYTHON_CMD"
     echo -e "${GREEN}✓${NC} Using current virtual environment"
 else
-    # setup_venv returns 1 on decline or creation failure; either way no
-    # .venv was selected, so fall through to system Python (no set -e exit).
-    if ! setup_venv; then
+    # setup_venv returns 3 on explicit decline (continue without a venv) and 1
+    # on creation failure (stop: a stale or partial .venv must not silently
+    # fall back to system Python).
+    if setup_venv; then
+        venv_status=0
+    else
+        venv_status=$?
+    fi
+
+    if [ "$venv_status" -eq 3 ]; then
         echo "Continuing without a virtual environment."
+    elif [ "$venv_status" -ne 0 ]; then
+        exit 1
     fi
     if [ -f ".venv/bin/python" ]; then
         PYTHON=".venv/bin/python"
