@@ -79,7 +79,7 @@ set "NUM_OK=1"
 for /f "delims=0123456789" %%d in ("%PYTHON_MAJOR%%PYTHON_MINOR%") do set "NUM_OK=0"
 if "%PYTHON_MAJOR%%PYTHON_MINOR%"=="" set "NUM_OK=0"
 if %NUM_OK% NEQ 1 (
-    echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
+    echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
     echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
     pause
     exit /b 1
@@ -88,7 +88,7 @@ if %NUM_OK% NEQ 1 (
 :: the concatenation "3"; reject it here. Pipeless on purpose: pipe children
 :: do not inherit delayed expansion, so an echo-pipe guard cannot work.
 if "%PYTHON_MINOR%"=="" (
-    echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
+    echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
     echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
     pause
     exit /b 1
@@ -125,12 +125,12 @@ if exist .venv\Scripts\python.exe (
         set PYTHON_CMD=.venv\Scripts\python.exe
         echo [OK] Using .venv\Scripts\python.exe
     ) else if defined VIRTUAL_ENV (
-        echo [OK] Using current virtual environment: %VIRTUAL_ENV%
+        echo [OK] Using current virtual environment: !VIRTUAL_ENV!
     ) else (
         goto :venv_broken
     )
 ) else if defined VIRTUAL_ENV (
-    echo [OK] Using current virtual environment: %VIRTUAL_ENV%
+    echo [OK] Using current virtual environment: !VIRTUAL_ENV!
 ) else (
     echo.
     echo [!BANG!] No virtual environment found.
@@ -256,9 +256,9 @@ echo.
 
 set /p choice="Enter your choice (1 or 2, default is 2): "
 :: Default to native window mode when no choice is entered.
-if "%choice%"=="" set choice=2
+if "!choice!"=="" set "choice=2"
 
-if "%choice%"=="2" (
+if "!choice!"=="2" (
     :: Check for pywebview before launching native mode
     %PYTHON_CMD% -c "import webview" >nul 2>&1
     if !ERRORLEVEL! NEQ 0 (
@@ -281,7 +281,7 @@ if "%choice%"=="2" (
     )
 )
 
-if "%choice%"=="2" (
+if "!choice!"=="2" (
     echo.
     echo Starting GUISkinDose in Native Window mode...
     %PYTHON_CMD% -m guiskindose --mode gui --native
