@@ -5,8 +5,10 @@ _Date: 2026-09-13. Status: complete — all 5 scope items implemented on branch
 kimi + codex whole-PR); `.bat` smoke matrix run 2026-09-13/14 (decline-venv,
 skip-install, install-fail, good-`.venv` launch, malformed-`--version`,
 broken-`.venv`, old-`.venv` on 3.10.11, and unstartable-binary via a
-text-content fixture pass; a 0-byte binary still blocks headless runs); results folded into the `TO_DO.md` Manual Smokes
-pointer; archived 2026-09-13._
+text-content fixture pass; a 0-byte binary still blocks headless runs); matrix
+results recorded in the Validation section below; the `TO_DO.md` Manual Smokes
+pointer was removed with the other completed launcher items (see TO_DO removal
+2ac66d9); archived 2026-09-13._
 
 ## Goal
 
@@ -90,4 +92,5 @@ cursor) found deeper pre-existing control-flow issues, verified identical on
   intentional code; `.sh`/`.bat` agree on skip semantics.
 - No `set -e` early-exit remains on any user-decline path.
 - Non-numeric version output is rejected with the standard error in `.bat`.
-- `TO_DO.md` launcher items checked off; this plan archived with index update.
+- `TO_DO.md` launcher items removed after impact logging (per playbook backlog
+  lifecycle); this plan archived with index update.

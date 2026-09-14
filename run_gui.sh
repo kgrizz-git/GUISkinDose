@@ -93,11 +93,17 @@ in_venv() {
     return 1
 }
 
+# A .venv interpreter counts as usable only if it actually starts (an
+# executable-but-broken binary must reach the repair path, not selection).
+venv_usable() {
+    [ -x ".venv/bin/python" ] && ".venv/bin/python" --version >/dev/null 2>&1
+}
+
 # Offer to create venv if missing
 setup_venv() {
     if [ -d ".venv" ]; then
-        if [ ! -x ".venv/bin/python" ]; then
-            echo -e "${RED}[ERROR] .venv exists but .venv/bin/python is missing or not executable.${NC}"
+        if ! venv_usable; then
+            echo -e "${RED}[ERROR] .venv exists but its interpreter is missing, not executable, or failed to start.${NC}"
             echo "Delete the broken environment with: rm -rf .venv"
             echo "Then rerun ./run_gui.sh."
             exit 1
@@ -158,18 +164,22 @@ setup_dependencies() {
     read -r -p "Select option [1/2/3, default=2]: " install_choice
     
     local install_status=0
-    case "$install_choice" in
+    case "${install_choice:-2}" in
         1)
             echo "Installing guiskindose with GUI..."
             $PYTHON -m pip install -e ".[gui]" || install_status=$?
+            ;;
+        2)
+            echo "Installing guiskindose with GUI and native window support..."
+            $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
         3)
             echo "Skipping. Install manually with: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
             return 3
             ;;
         *)
-            echo "Installing guiskindose with GUI and native window support..."
-            $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
+            echo -e "${RED}[ERROR] Invalid install option. Choose 1, 2, or 3.${NC}"
+            return 2
             ;;
     esac
     
@@ -184,14 +194,15 @@ setup_dependencies() {
 
 # Main setup checks
 # Prefer an existing usable .venv interpreter so it is validated directly and
-# never rejected over an older system Python on PATH.
-if [ -x ".venv/bin/python" ]; then
+# never rejected over an older system Python on PATH. Only pre-select when it
+# starts; anything else falls through to setup_venv's repair path below.
+if venv_usable; then
     PYTHON_CMD=".venv/bin/python"
 fi
 check_python
 
 # Determine which Python to use
-if [ -f ".venv/bin/python" ]; then
+if venv_usable; then
     PYTHON=".venv/bin/python"
     echo -e "${GREEN}✓${NC} Using .venv/bin/python"
 elif in_venv; then

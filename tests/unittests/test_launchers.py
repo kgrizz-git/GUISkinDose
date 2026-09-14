@@ -86,6 +86,9 @@ def test_bat_version_guard_fail_closed() -> None:
     for part in (text[:label], text[label:]):
         assert part.index("NUM_OK") < part.index("LSS 3")
         assert "EQU 3" in part
+    # Guards stay pipeless: pipe children do not inherit delayed expansion, so
+    # an echo-pipe guard cannot read !VAR! values (see PR95 review).
+    assert "| findstr" not in text
 
 
 def test_broken_venv_repair_hint() -> None:
@@ -122,6 +125,11 @@ def test_launcher_parity() -> None:
     assert "default is 2" in bat.lower() and "default is 2" in sh.lower()
     assert "exit /b 0" in bat
     assert re.search(r"rerun.*exit 0", sh, re.DOTALL | re.IGNORECASE) is not None
+    # Install menus allow-list: only empty input takes the native default;
+    # garbage choices are rejected, never silently installed.
+    assert "Invalid install option" in sh and "Invalid install option" in bat
+    assert '"${install_choice:-2}"' in sh
+    assert 'if "%install_choice%"=="" set install_choice=2' in bat
 
 
 WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")

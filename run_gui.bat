@@ -15,6 +15,13 @@ echo.
 :: than the one in .venv). Defaults fail closed if its version is unreadable.
 if exist .venv\Scripts\python.exe (
     set PYTHON_CMD=.venv\Scripts\python.exe
+    :: Accept the interpreter only if it starts: an executable-but-broken
+    :: binary routes to the repair diagnostic below. Chained single-line IFs
+    :: only, no nesting: 'if errorlevel' evaluates at execution, so it reads
+    :: the probe result even here. An active VIRTUAL_ENV keeps its fallback.
+    "%PYTHON_CMD%" --version >nul 2>&1
+    if errorlevel 1 if not defined VIRTUAL_ENV goto :venv_broken
+    if errorlevel 1 goto :venv_ok
     echo [OK] Using .venv\Scripts\python.exe
     :: Dummy defaults that fail closed: never an all-zero version, which would
     :: misleadingly report a floor violation. If --version yields no output
@@ -32,6 +39,12 @@ if exist .venv\Scripts\python.exe (
 if not exist .venv\ goto :venv_ok
 if defined VIRTUAL_ENV goto :venv_ok
 echo [ERROR] .venv exists but .venv\Scripts\python.exe is missing.
+echo [HINT] Delete the broken environment with: rmdir /s /q .venv
+echo Then rerun run_gui.bat.
+pause
+exit /b 1
+:venv_broken
+echo [ERROR] .venv interpreter failed to start.
 echo [HINT] Delete the broken environment with: rmdir /s /q .venv
 echo Then rerun run_gui.bat.
 pause
@@ -69,9 +82,9 @@ if %NUM_OK% NEQ 1 (
     exit /b 1
 )
 :: An empty MINOR (e.g. version "3.") passes the digit-only check above as
-:: the concatenation "3"; reject it here, mirroring :validate_selected.
-echo(%PYTHON_MINOR%| findstr /r "^[0-9][0-9]*$" >nul
-if %ERRORLEVEL% NEQ 0 (
+:: the concatenation "3"; reject it here. Pipeless on purpose: pipe children
+:: do not inherit delayed expansion, so an echo-pipe guard cannot work.
+if "%PYTHON_MINOR%"=="" (
     echo [ERROR] Could not determine Python version. Got: %PYTHON_VERSION%
     echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
     pause
@@ -97,12 +110,22 @@ echo [OK] Python %PYTHON_VERSION% found
 :: Determine which Python to use
 set PYTHON_CMD=python
 
-:: NOTE: the .venv branch below is unreachable while the .venv-first bypass at
-:: the top of this file exists (it jumps straight to :validate_selected); kept
-:: as belt-and-braces in case that bypass is ever removed.
+:: NOTE: this .venv branch is normally bypassed at the top of the file (which
+:: jumps straight to :validate_selected); it still runs for flows arriving via
+:: :venv_ok with a broken .venv, so it re-probes startup instead of trusting
+:: existence. Under an active VIRTUAL_ENV, bare 'python' IS the venv
+:: interpreter (activation puts it first on PATH), so keeping PYTHON_CMD is
+:: correct there.
 if exist .venv\Scripts\python.exe (
-    set PYTHON_CMD=.venv\Scripts\python.exe
-    echo [OK] Using .venv\Scripts\python.exe
+    ".venv\Scripts\python.exe" --version >nul 2>&1
+    if not errorlevel 1 (
+        set PYTHON_CMD=.venv\Scripts\python.exe
+        echo [OK] Using .venv\Scripts\python.exe
+    ) else if defined VIRTUAL_ENV (
+        echo [OK] Using current virtual environment: %VIRTUAL_ENV%
+    ) else (
+        goto :venv_broken
+    )
 ) else if defined VIRTUAL_ENV (
     echo [OK] Using current virtual environment: %VIRTUAL_ENV%
 ) else (
@@ -149,8 +172,8 @@ if !NUM_OK! NEQ 1 (
     pause
     exit /b 1
 )
-echo(!PYTHON_MINOR!| findstr /r "^[0-9][0-9]*$" >nul
-if !ERRORLEVEL! NEQ 0 (
+:: Empty MINOR backstop (mirrors the system gate above); pipeless, same reason.
+if "!PYTHON_MINOR!"=="" (
     echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
     pause
     exit /b 1
@@ -188,15 +211,20 @@ echo   [3] Skip ^(install manually later^)
 echo.
 
 set /p install_choice="Select option [1/2/3, default=2]: "
+if "%install_choice%"=="" set install_choice=2
 
 if "%install_choice%"=="1" (
     echo Installing guiskindose with GUI...
     %PYTHON_CMD% -m pip install -e ".[gui]"
+) else if "%install_choice%"=="2" (
+    echo Installing guiskindose with GUI and native window support...
+    %PYTHON_CMD% -m pip install -e ".[gui-native]"
 ) else if "%install_choice%"=="3" (
     echo Skipping installation...
 ) else (
-    echo Installing guiskindose with GUI and native window support...
-    %PYTHON_CMD% -m pip install -e ".[gui-native]"
+    echo [ERROR] Invalid install option. Choose 1, 2, or 3.
+    pause
+    exit /b 1
 )
 
 :: Skip means no installation was attempted: show the manual command and

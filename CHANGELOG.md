@@ -207,7 +207,10 @@ That keeps SemVer and contributor history organized.
   interpreter, exit with rerun instructions on skip-install instead of launching
   an uninstalled module, and qualify install hints with the selected interpreter.
   The install menu now defaults to Core + GUI + Native window (``.[gui-native]``,
-  extra native-window dependencies noted) to match the native run default.
+  extra native-window dependencies noted) to match the native run default;
+  invalid install choices are rejected instead of silently installing native,
+  and an executable-but-broken ``.venv`` interpreter routes to the repair hint
+  instead of the generic version error on both launchers.
 
 ### Changed
 
