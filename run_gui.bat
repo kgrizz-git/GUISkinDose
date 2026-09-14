@@ -214,15 +214,15 @@ echo   [3] Skip ^(install manually later^)
 echo.
 
 set /p install_choice="Select option [1/2/3, default=2]: "
-if "%install_choice%"=="" set install_choice=2
+if "!install_choice!"=="" set "install_choice=2"
 
-if "%install_choice%"=="1" (
+if "!install_choice!"=="1" (
     echo Installing guiskindose with GUI...
     %PYTHON_CMD% -m pip install -e ".[gui]"
-) else if "%install_choice%"=="2" (
+) else if "!install_choice!"=="2" (
     echo Installing guiskindose with GUI and native window support...
     %PYTHON_CMD% -m pip install -e ".[gui-native]"
-) else if "%install_choice%"=="3" (
+) else if "!install_choice!"=="3" (
     echo Skipping installation...
 ) else (
     echo [ERROR] Invalid install option. Choose 1, 2, or 3.
@@ -232,7 +232,7 @@ if "%install_choice%"=="1" (
 
 :: Skip means no installation was attempted: show the manual command and
 :: exit so the user can rerun the launcher after installing.
-if "%install_choice%"=="3" (
+if "!install_choice!"=="3" (
     echo Install manually with: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     echo Then rerun run_gui.bat.
     pause

@@ -129,7 +129,11 @@ def test_launcher_parity() -> None:
     # garbage choices are rejected, never silently installed.
     assert "Invalid install option" in sh and "Invalid install option" in bat
     assert '"${install_choice:-2}"' in sh
-    assert 'if "%install_choice%"=="" set install_choice=2' in bat
+    # Delayed expansion: tainted set /p input must never be %-expanded into
+    # parsed command text (quote/& injection); compare the literal value.
+    assert 'if "%install_choice%"=="" set install_choice=2' not in bat
+    assert 'if "!install_choice!"=="" set "install_choice=2"' in bat
+    assert bat.count('!install_choice!') == 5
 
 
 WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")
