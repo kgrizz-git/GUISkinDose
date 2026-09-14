@@ -95,14 +95,14 @@ if "%PYTHON_MINOR%"=="" (
 )
 
 if %PYTHON_MAJOR% LSS 3 (
-    echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
+    echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
     pause
     exit /b 1
 )
 
 if %PYTHON_MAJOR% EQU 3 (
     if %PYTHON_MINOR% LSS 11 (
-        echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
+        echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
         pause
         exit /b 1
     )

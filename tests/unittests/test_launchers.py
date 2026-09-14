@@ -138,6 +138,9 @@ def test_launcher_parity() -> None:
     # form everywhere a value meets parsed command text inside a block.
     assert '%choice%' not in bat and bat.count('!choice!') == 3
     assert '%VIRTUAL_ENV%' not in bat
+    # Same class for version echoes: every in-block Got:/Found: message shows
+    # the delayed-expansion literal, never the parse-time value.
+    assert 'Got: %PYTHON_VERSION%' not in bat and 'Found: %PYTHON_VERSION%' not in bat
 
 
 WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")
