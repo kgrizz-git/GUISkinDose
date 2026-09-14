@@ -49,6 +49,7 @@ check_python_version() {
 
     if ! [[ "$PYTHON_MAJOR" =~ ^[0-9]+$ && "$PYTHON_MINOR" =~ ^[0-9]+$ ]]; then
         echo -e "${RED}[ERROR] Could not determine Python version. Got: $PYTHON_VERSION${NC}"
+        echo "Check 'python --version' output (pyenv users: set a global/local version first)."
         exit 1
     fi
 
