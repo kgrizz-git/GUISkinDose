@@ -183,20 +183,20 @@ echo.
 echo [!BANG!] guiskindose package not installed.
 echo Install options:
 echo   [1] Core + GUI ^(browser mode^)      - pip install -e ".[gui]"
-echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]"
+echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]" ^(default; extra native-window dependencies^)
 echo   [3] Skip ^(install manually later^)
 echo.
 
-set /p install_choice="Select option [1/2/3, default=1]: "
+set /p install_choice="Select option [1/2/3, default=2]: "
 
-if "%install_choice%"=="2" (
-    echo Installing guiskindose with GUI and native window support...
-    %PYTHON_CMD% -m pip install -e ".[gui-native]"
+if "%install_choice%"=="1" (
+    echo Installing guiskindose with GUI...
+    %PYTHON_CMD% -m pip install -e ".[gui]"
 ) else if "%install_choice%"=="3" (
     echo Skipping installation...
 ) else (
-    echo Installing guiskindose with GUI...
-    %PYTHON_CMD% -m pip install -e ".[gui]"
+    echo Installing guiskindose with GUI and native window support...
+    %PYTHON_CMD% -m pip install -e ".[gui-native]"
 )
 
 :: Skip means no installation was attempted: show the manual command and

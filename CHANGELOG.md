@@ -206,6 +206,8 @@ That keeps SemVer and contributor history organized.
   venv cannot reach launch, prefer an existing ``.venv`` over an older PATH
   interpreter, exit with rerun instructions on skip-install instead of launching
   an uninstalled module, and qualify install hints with the selected interpreter.
+  The install menu now defaults to Core + GUI + Native window (``.[gui-native]``,
+  extra native-window dependencies noted) to match the native run default.
 
 ### Changed
 

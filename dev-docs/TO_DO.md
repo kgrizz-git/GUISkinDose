@@ -142,10 +142,6 @@ policy decisions, not a restart of Phases 0-9.
   adopt proportional mitigations: startup single-use token, read-only shared-view
   mode, port randomization, or stronger do-not-serve warnings. Threat-model the
    hospital-workstation / shared-network case first; keep localhost UX unchanged.
-- [ ] **Launcher install-default vs run-default** — install menu defaults to `[gui]`
-  while the run menu defaults to native `[2]` (extra pywebview prompt/fallback on
-  first launch). Realignment pulls pywebview into default installs; maintainer
-  call. Deferred from PR94.
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
   `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
   `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via

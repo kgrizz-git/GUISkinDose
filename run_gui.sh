@@ -145,24 +145,24 @@ setup_dependencies() {
     echo -e "${YELLOW}guiskindose package not installed.${NC}"
     echo "Install options:"
     echo "  [1] Core + GUI (browser mode)      - pip install -e \".[gui]\""
-    echo "  [2] Core + GUI + Native window     - pip install -e \".[gui-native]\""
+    echo "  [2] Core + GUI + Native window     - pip install -e \".[gui-native]\" (default; extra native-window dependencies)"
     echo "  [3] Skip (install manually later)"
     echo ""
-    read -r -p "Select option [1/2/3, default=1]: " install_choice
+    read -r -p "Select option [1/2/3, default=2]: " install_choice
     
     local install_status=0
     case "$install_choice" in
-        2)
-            echo "Installing guiskindose with GUI and native window support..."
-            $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
+        1)
+            echo "Installing guiskindose with GUI..."
+            $PYTHON -m pip install -e ".[gui]" || install_status=$?
             ;;
         3)
             echo "Skipping. Install manually with: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
             return 3
             ;;
         *)
-            echo "Installing guiskindose with GUI..."
-            $PYTHON -m pip install -e ".[gui]" || install_status=$?
+            echo "Installing guiskindose with GUI and native window support..."
+            $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
     esac
     
