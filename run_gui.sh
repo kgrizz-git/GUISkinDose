@@ -39,10 +39,16 @@ echo ""
 # Safe to call whenever PYTHON_CMD is (re-)selected. Rejects unreadable or
 # non-numeric version output with the standard error (fail closed).
 check_python_version() {
-    if ! PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}'); then
+    # Capture the interpreter status before parsing: the pipeline status would
+    # otherwise be awk's, letting a failing interpreter with version-shaped
+    # error output slip past this branch (declaration and assignment are
+    # separate statements so the exit status is preserved).
+    local version_raw
+    if ! version_raw=$("$PYTHON_CMD" --version 2>&1); then
         echo -e "${RED}[ERROR] Cannot run $PYTHON_CMD --version.${NC}"
         exit 1
     fi
+    PYTHON_VERSION=$(echo "$version_raw" | awk '{print $2}')
 
     PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
     PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
