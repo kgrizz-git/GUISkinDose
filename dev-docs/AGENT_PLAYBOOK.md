@@ -98,3 +98,18 @@ NiceGUI user-simulation tests under `tests/gui/` or `tests/unittests/test_gui_*.
 only when explicitly asked to verify visual layout — for example, when running the `/verify` skill on a CSS or
 layout-only change where the NiceGUI test client cannot observe the rendered result. Do not add Playwright to the
 routine pre-commit or CI verification loop.
+
+## Backlog lifecycle
+
+`dev-docs/TO_DO.md` is a short-term action list, not a ledger: completed items
+must be **removed** from it (never checked off in place) once their impact is
+logged elsewhere. Log the impact first, then remove, preferably in the same PR:
+
+- User-facing changes (features, fixes, UI updates) → `CHANGELOG.md` under
+  `[Unreleased]` (Keep a Changelog style; see its header).
+- Maintainer-facing changes (CI/harness, refactors, privacy gates, tests) →
+  `dev-docs/MAINTENANCE_LOG.md`.
+- Completed or superseded execution plans → `dev-docs/plans/archive/`, with the
+  `dev-docs/index.md` rows moved to the archived section in the same PR.
+- Deferred work stays tracked: a `TO_DO.md` item, an active plan's follow-up
+  section, or a code-adjacent note — "deferred" without a record is dropped.
