@@ -54,7 +54,7 @@ def _dsfloat_frame() -> pd.DataFrame:
     )
 
 
-def test_dsfloat_frame_serializes():
+def test_dsfloat_frame_serializes() -> None:
     records = to_json_safe_records(_dsfloat_frame())
     assert len(records) == 1
     # Must not raise: this is the exact call NiceGUI makes per socket emit.
@@ -62,7 +62,7 @@ def test_dsfloat_frame_serializes():
     assert isinstance(payload, bytes)
 
 
-def test_numbers_stay_numeric_for_sorting():
+def test_numbers_stay_numeric_for_sorting() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
     assert row["dose"] == 12.5 and isinstance(row["dose"], float)
     assert row["code"] == 7 and isinstance(row["code"], int)
@@ -73,7 +73,7 @@ def test_numbers_stay_numeric_for_sorting():
     assert row["whole"] == 9
 
 
-def test_non_json_scalars_become_text_or_null():
+def test_non_json_scalars_become_text_or_null() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
     assert row["name"] == "Doe^John" and isinstance(row["name"], str)
     assert row["uid"] == "1.2.3" and isinstance(row["uid"], str)
@@ -85,19 +85,19 @@ def test_non_json_scalars_become_text_or_null():
     assert row["plain"] == "text"
 
 
-def test_nan_reaches_wire_as_null():
+def test_nan_reaches_wire_as_null() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
     assert row["nan"] != row["nan"]  # still NaN in the record (orjson renders null)
     assert b'"nan":null' in orjson.dumps([row])
 
 
-def test_sequences_coerce_to_text():
+def test_sequences_coerce_to_text() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
     assert row["pair"] == "(1, 2)" and isinstance(row["pair"], str)
     assert row["tags"] == "['a', 'b']" and isinstance(row["tags"], str)
 
 
-def test_out_of_range_int_and_signaling_nan_fallback():
+def test_out_of_range_int_and_signaling_nan_fallback() -> None:
     from decimal import Decimal
 
     df = pd.DataFrame([{"huge": 10**30, "snan": Decimal("sNaN")}], dtype=object)
@@ -107,7 +107,7 @@ def test_out_of_range_int_and_signaling_nan_fallback():
     orjson.dumps([row])
 
 
-def test_uint64_band_stays_numeric():
+def test_uint64_band_stays_numeric() -> None:
     df = pd.DataFrame([{"big": 2**63, "max": 2**64 - 1}], dtype=object)
     row = to_json_safe_records(df)[0]
     assert row["big"] == 2**63 and isinstance(row["big"], int)
@@ -115,7 +115,7 @@ def test_uint64_band_stays_numeric():
     orjson.dumps([row])
 
 
-def test_nested_dsfloat_tuple_coerces_to_text():
+def test_nested_dsfloat_tuple_coerces_to_text() -> None:
     """Production shape: Philips duplicate measured values arrive as tuples of
     DSfloat, which survive to_dict nested and break orjson element-wise."""
     nested = (DSfloat("0.1"), DSfloat("0.2"))
@@ -127,7 +127,7 @@ def test_nested_dsfloat_tuple_coerces_to_text():
     orjson.dumps([row])
 
 
-def test_raw_to_dict_would_crash_without_coercion():
+def test_raw_to_dict_would_crash_without_coercion() -> None:
     """Guard the premise: the uncoerced frame really is unserializable."""
     with pytest.raises(TypeError):
         orjson.dumps(_dsfloat_frame().to_dict("records"))
