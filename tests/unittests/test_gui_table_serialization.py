@@ -13,13 +13,14 @@ from __future__ import annotations
 import datetime
 
 import numpy as np
-import orjson
 import pandas as pd
 import pytest
-from pydicom.uid import UID
-from pydicom.valuerep import IS, DSdecimal, DSfloat, PersonName
 
 pytest.importorskip("nicegui")
+
+import orjson
+from pydicom.uid import UID
+from pydicom.valuerep import IS, DSdecimal, DSfloat, PersonName
 
 from guiskindose.gui.helpers import to_json_safe_records
 
@@ -94,6 +95,16 @@ def test_sequences_coerce_to_text():
     row = to_json_safe_records(_dsfloat_frame())[0]
     assert row["pair"] == "(1, 2)" and isinstance(row["pair"], str)
     assert row["tags"] == "['a', 'b']" and isinstance(row["tags"], str)
+
+
+def test_out_of_range_int_and_signaling_nan_fallback():
+    from decimal import Decimal
+
+    df = pd.DataFrame([{"huge": 10**30, "snan": Decimal("sNaN")}], dtype=object)
+    row = to_json_safe_records(df)[0]
+    assert row["huge"] == str(10**30) and isinstance(row["huge"], str)
+    assert row["snan"] == "sNaN"
+    orjson.dumps([row])
 
 
 def test_raw_to_dict_would_crash_without_coercion():

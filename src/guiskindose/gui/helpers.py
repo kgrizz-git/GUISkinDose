@@ -164,6 +164,17 @@ class _CalcWarningCollector(logging.Handler):
         self.messages.append(record.getMessage())
 
 
+_INT64_MIN = -(2**63)
+_INT64_MAX = 2**63 - 1
+
+
+def _bounded_int(value: int) -> int | str:
+    """Keep ints orjson can represent; oversized values become text."""
+    if _INT64_MIN <= value <= _INT64_MAX:
+        return value
+    return str(value)
+
+
 def _json_safe_value(value: object) -> object:
     """Coerce one table cell to an orjson-serializable scalar.
 
@@ -178,7 +189,7 @@ def _json_safe_value(value: object) -> object:
     if isinstance(value, bool):
         return value
     if isinstance(value, int):
-        return int(value)
+        return _bounded_int(int(value))
     if isinstance(value, float):
         # Normalizes float subclasses orjson rejects (e.g. DSfloat).
         # NaN passes through; orjson renders it as null.
@@ -186,11 +197,14 @@ def _json_safe_value(value: object) -> object:
     if isinstance(value, str):
         return str(value)
     if isinstance(value, numbers.Integral):
-        return int(value)
+        return _bounded_int(int(value))
     if isinstance(value, numbers.Real):
         return float(value)
     if isinstance(value, decimal.Decimal):
-        return float(value)
+        try:
+            return float(value)
+        except (ArithmeticError, TypeError, ValueError):
+            return str(value)
     if isinstance(value, datetime.datetime | datetime.date | datetime.time):
         # orjson serializes only the exact builtin types; subclasses such as
         # pd.Timestamp go through isoformat instead.
