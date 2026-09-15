@@ -7,9 +7,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pandas as pd
 import pytest
+from pydicom.valuerep import DSdecimal
 
 pytest.importorskip("nicegui")
 
+import orjson
 from nicegui import ui
 
 from guiskindose.gui.state import state
@@ -83,6 +85,28 @@ def test_refresh_raw_table_with_exam_column() -> None:
     assert names[0] == data_tab.EXAM_COLUMN
     assert data_tab.EXAM_INDEX_COLUMN not in names
     assert len(table.rows) == 1
+    cast(MagicMock, table.update).assert_called()
+
+
+def test_refresh_raw_table_pydicom_native_rows_serialize() -> None:
+    """Boundary regression: RAW pydicom natives must reach the table orjson-safe.
+
+    Reverting ``data.py`` to bare ``to_dict("records")`` must fail this test:
+    the socket emit serializes ``table.rows`` with orjson. Note ``DSdecimal``
+    (not ``DSfloat``): ``to_dict`` self-converts float subclasses to plain
+    floats, while ``DSdecimal``/``PersonName``/``Timestamp`` survive as exotic
+    instances; production frames additionally carry nested ``DSfloat`` tuples
+    (covered in the unit tests).
+    """
+    state.view_raw = True
+    # dtype=object: without it pandas coerces DSdecimal to float64 at frame
+    # construction and the test would pass even with the bug present.
+    state.rdsr_raw_df = pd.DataFrame([{"dose": DSdecimal("12.5")}], dtype=object)
+    table = MagicMock()
+    data_tab._refresh_raw_table(table)
+    assert len(table.rows) == 1
+    orjson.dumps(table.rows)  # what the socket emit does; must not raise
+    assert table.rows[0]["dose"] == 12.5
     cast(MagicMock, table.update).assert_called()
 
 
