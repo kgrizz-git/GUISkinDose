@@ -1,5 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
+:: Delayed expansion swallows a literal bang in echo text, so keep one in a
+:: variable (defined via caret escape) for the notice markers below.
+set "BANG=^!"
 title GUISkinDose GUI Launcher
 
 echo ==========================================
@@ -12,12 +15,44 @@ echo.
 :: than the one in .venv). Defaults fail closed if its version is unreadable.
 if exist .venv\Scripts\python.exe (
     set PYTHON_CMD=.venv\Scripts\python.exe
+    :: Accept the interpreter only if it starts: an executable-but-broken
+    :: binary routes to the repair diagnostic below. Chained single-line IFs
+    :: only, no nesting: 'if errorlevel' evaluates at execution, so it reads
+    :: the probe result even here. An active VIRTUAL_ENV keeps its fallback.
+    :: Delayed expansion below: percent form would expand at block parse
+    :: time to the pre-set value; the probe must run the just-selected
+    :: binary. No pipe on this line, so delayed expansion applies normally.
+    "!PYTHON_CMD!" --version >nul 2>&1
+    if errorlevel 1 if not defined VIRTUAL_ENV goto :venv_broken
+    if errorlevel 1 goto :venv_ok
     echo [OK] Using .venv\Scripts\python.exe
-    set PYTHON_VERSION=0.0.0
-    set PYTHON_MAJOR=0
-    set PYTHON_MINOR=0
+    :: Dummy defaults that fail closed: never an all-zero version, which would
+    :: misleadingly report a floor violation. If --version yields no output
+    :: below, the numeric guard trips with "Could not determine" instead.
+    set PYTHON_VERSION=unreadable
+    set PYTHON_MAJOR=unreadable
+    set PYTHON_MINOR=unreadable
     goto :validate_selected
 )
+
+:: A .venv directory without its interpreter is broken: fail with a repair
+:: hint instead of silently falling through to system Python. An active
+:: VIRTUAL_ENV takes precedence, mirroring run_gui.sh. Flat structure on
+:: purpose: exit codes are lost from doubly-nested blocks after pause.
+if not exist .venv\ goto :venv_ok
+if defined VIRTUAL_ENV goto :venv_ok
+echo [ERROR] .venv exists but .venv\Scripts\python.exe is missing.
+echo [HINT] Delete the broken environment with: rmdir /s /q .venv
+echo Then rerun run_gui.bat.
+pause
+exit /b 1
+:venv_broken
+echo [ERROR] .venv interpreter failed to start.
+echo [HINT] Delete the broken environment with: rmdir /s /q .venv
+echo Then rerun run_gui.bat.
+pause
+exit /b 1
+:venv_ok
 
 :: Check for Python
 where python >nul 2>&1
@@ -27,22 +62,47 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: Check Python version
+:: Check Python version. Pre-initialize: setlocal inherits the environment,
+:: so tokenless output must not reuse caller-supplied values.
+set PYTHON_VERSION=unreadable
+set PYTHON_MAJOR=unreadable
+set PYTHON_MINOR=unreadable
 for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set PYTHON_VERSION=%%v
 for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
     set PYTHON_MAJOR=%%a
     set PYTHON_MINOR=%%b
 )
 
+:: Fail closed when the version output is not numeric. Pipeless check (a line
+:: of only delimiter digits is skipped by for, anything else trips NUM_OK).
+set "NUM_OK=1"
+for /f "delims=0123456789" %%d in ("%PYTHON_MAJOR%%PYTHON_MINOR%") do set "NUM_OK=0"
+if "%PYTHON_MAJOR%%PYTHON_MINOR%"=="" set "NUM_OK=0"
+if %NUM_OK% NEQ 1 (
+    echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
+    echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
+    pause
+    exit /b 1
+)
+:: An empty MINOR (e.g. version "3.") passes the digit-only check above as
+:: the concatenation "3"; reject it here. Pipeless on purpose: pipe children
+:: do not inherit delayed expansion, so an echo-pipe guard cannot work.
+if "%PYTHON_MINOR%"=="" (
+    echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
+    echo [HINT] Check 'python --version' output ^(pyenv users: set a global/local version first^).
+    pause
+    exit /b 1
+)
+
 if %PYTHON_MAJOR% LSS 3 (
-    echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
+    echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
     pause
     exit /b 1
 )
 
 if %PYTHON_MAJOR% EQU 3 (
     if %PYTHON_MINOR% LSS 11 (
-        echo [ERROR] Python 3.11+ required. Found: %PYTHON_VERSION%
+        echo [ERROR] Python 3.11+ required. Found: !PYTHON_VERSION!
         pause
         exit /b 1
     )
@@ -53,14 +113,27 @@ echo [OK] Python %PYTHON_VERSION% found
 :: Determine which Python to use
 set PYTHON_CMD=python
 
+:: NOTE: this .venv branch is normally bypassed at the top of the file (which
+:: jumps straight to :validate_selected); it still runs for flows arriving via
+:: :venv_ok with a broken .venv, so it re-probes startup instead of trusting
+:: existence. Under an active VIRTUAL_ENV, bare 'python' IS the venv
+:: interpreter (activation puts it first on PATH), so keeping PYTHON_CMD is
+:: correct there.
 if exist .venv\Scripts\python.exe (
-    set PYTHON_CMD=.venv\Scripts\python.exe
-    echo [OK] Using .venv\Scripts\python.exe
+    ".venv\Scripts\python.exe" --version >nul 2>&1
+    if not errorlevel 1 (
+        set PYTHON_CMD=.venv\Scripts\python.exe
+        echo [OK] Using .venv\Scripts\python.exe
+    ) else if defined VIRTUAL_ENV (
+        echo [OK] Using current virtual environment: !VIRTUAL_ENV!
+    ) else (
+        goto :venv_broken
+    )
 ) else if defined VIRTUAL_ENV (
-    echo [OK] Using current virtual environment: %VIRTUAL_ENV%
+    echo [OK] Using current virtual environment: !VIRTUAL_ENV!
 ) else (
     echo.
-    echo [!] No virtual environment found.
+    echo [!BANG!] No virtual environment found.
     set /p create_venv="Would you like to create one at .venv? [Y/n]: "
     
     if /i "!create_venv!"=="n" (
@@ -81,10 +154,32 @@ if exist .venv\Scripts\python.exe (
 :validate_selected
 :: Re-validate the selected interpreter: an existing .venv may carry an
 :: older Python than the system one checked above.
+:: Reset sentinels first: a fresh interpreter with tokenless output must not
+:: reuse the system-gate values parsed above.
+set PYTHON_VERSION=unreadable
+set PYTHON_MAJOR=unreadable
+set PYTHON_MINOR=unreadable
 for /f "tokens=2 delims= " %%v in ('"%PYTHON_CMD%" --version 2^>^&1') do set PYTHON_VERSION=%%v
 for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
     set PYTHON_MAJOR=%%a
     set PYTHON_MINOR=%%b
+)
+
+:: Fail closed when the version output is not numeric (e.g. a broken .venv
+:: interpreter printing an error instead of a version). Pipeless check.
+set "NUM_OK=1"
+for /f "delims=0123456789" %%d in ("!PYTHON_MAJOR!!PYTHON_MINOR!") do set "NUM_OK=0"
+if "!PYTHON_MAJOR!!PYTHON_MINOR!"=="" set "NUM_OK=0"
+if !NUM_OK! NEQ 1 (
+    echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
+    pause
+    exit /b 1
+)
+:: Empty MINOR backstop (mirrors the system gate above); pipeless, same reason.
+if "!PYTHON_MINOR!"=="" (
+    echo [ERROR] Could not determine Python version. Got: !PYTHON_VERSION!
+    pause
+    exit /b 1
 )
 
 if !PYTHON_MAJOR! LSS 3 (
@@ -111,28 +206,33 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 echo.
-echo [!] guiskindose package not installed.
+echo [!BANG!] guiskindose package not installed.
 echo Install options:
-echo   [1] Core + GUI (browser mode)      - pip install -e ".[gui]"
-echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]"
-echo   [3] Skip (install manually later)
+echo   [1] Core + GUI ^(browser mode^)      - pip install -e ".[gui]"
+echo   [2] Core + GUI + Native window     - pip install -e ".[gui-native]" ^(default; extra native-window dependencies^)
+echo   [3] Skip ^(install manually later^)
 echo.
 
-set /p install_choice="Select option [1/2/3, default=1]: "
+set /p install_choice="Select option [1/2/3, default=2]: "
+if "!install_choice!"=="" set "install_choice=2"
 
-if "%install_choice%"=="2" (
-    echo Installing guiskindose with GUI and native window support...
-    %PYTHON_CMD% -m pip install -e ".[gui-native]"
-) else if "%install_choice%"=="3" (
-    echo Skipping installation...
-) else (
+if "!install_choice!"=="1" (
     echo Installing guiskindose with GUI...
     %PYTHON_CMD% -m pip install -e ".[gui]"
+) else if "!install_choice!"=="2" (
+    echo Installing guiskindose with GUI and native window support...
+    %PYTHON_CMD% -m pip install -e ".[gui-native]"
+) else if "!install_choice!"=="3" (
+    echo Skipping installation...
+) else (
+    echo [ERROR] Invalid install option. Choose 1, 2, or 3.
+    pause
+    exit /b 1
 )
 
 :: Skip means no installation was attempted: show the manual command and
 :: exit so the user can rerun the launcher after installing.
-if "%install_choice%"=="3" (
+if "!install_choice!"=="3" (
     echo Install manually with: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     echo Then rerun run_gui.bat.
     pause
@@ -150,20 +250,20 @@ echo [OK] Installation complete
 :run_gui
 echo.
 echo How would you like to run the GUI?
-echo [1] Browser (Standard)
-echo [2] Native Window (Requires pywebview)
+echo [1] Browser ^(Standard^)
+echo [2] Native Window ^(Requires pywebview^)
 echo.
 
 set /p choice="Enter your choice (1 or 2, default is 2): "
 :: Default to native window mode when no choice is entered.
-if "%choice%"=="" set choice=2
+if "!choice!"=="" set "choice=2"
 
-if "%choice%"=="2" (
+if "!choice!"=="2" (
     :: Check for pywebview before launching native mode
     %PYTHON_CMD% -c "import webview" >nul 2>&1
     if !ERRORLEVEL! NEQ 0 (
         echo.
-        echo [!] pywebview not installed (required for native window mode).
+        echo [!BANG!] pywebview not installed ^(required for native window mode^).
         set /p install_pywebview="Would you like to install it? [Y/n]: "
         
         if /i "!install_pywebview!"=="n" (
@@ -181,7 +281,7 @@ if "%choice%"=="2" (
     )
 )
 
-if "%choice%"=="2" (
+if "!choice!"=="2" (
     echo.
     echo Starting GUISkinDose in Native Window mode...
     %PYTHON_CMD% -m guiskindose --mode gui --native
@@ -196,4 +296,5 @@ if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] The application failed to start.
     echo Try installing dependencies: "%PYTHON_CMD%" -m pip install -e ".[gui]" ^(or ".[gui-native]" for native window mode^)
     pause
+    exit /b 1
 )

@@ -35,26 +35,53 @@ echo "      GUISkinDose GUI Launcher"
 echo "=========================================="
 echo ""
 
-# Check for Python 3.11+
-check_python() {
-    if command -v python3 &> /dev/null; then
-        PYTHON_CMD="python3"
-    elif command -v python &> /dev/null; then
-        PYTHON_CMD="python"
-    else
-        echo -e "${RED}[ERROR] Python not found. Please install Python 3.11 or newer.${NC}"
+# Parse and enforce the 3.11+ floor for $PYTHON_CMD; exits 1 on failure.
+# Safe to call whenever PYTHON_CMD is (re-)selected. Rejects unreadable or
+# non-numeric version output with the standard error (fail closed).
+check_python_version() {
+    # Capture the interpreter status before parsing: the pipeline status would
+    # otherwise be awk's, letting a failing interpreter with version-shaped
+    # error output slip past this branch (declaration and assignment are
+    # separate statements so the exit status is preserved).
+    local version_raw
+    if ! version_raw=$("$PYTHON_CMD" --version 2>&1); then
+        echo -e "${RED}[ERROR] Cannot run $PYTHON_CMD --version.${NC}"
         exit 1
     fi
-    
-    PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
+    PYTHON_VERSION=$(echo "$version_raw" | awk '{print $2}')
+
     PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
     PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-    
+
+    if ! [[ "$PYTHON_MAJOR" =~ ^[0-9]+$ && "$PYTHON_MINOR" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}[ERROR] Could not determine Python version. Got: $PYTHON_VERSION${NC}"
+        echo "Check 'python --version' output (pyenv users: set a global/local version first)."
+        exit 1
+    fi
+
     if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
         echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
         exit 1
     fi
-    
+}
+
+# Check for Python 3.11+
+check_python() {
+    # A pre-selected PYTHON_CMD (e.g. an existing .venv interpreter) takes
+    # precedence: PATH may point at an older interpreter than the one in .venv.
+    if [ -z "${PYTHON_CMD:-}" ]; then
+        if command -v python3 &> /dev/null; then
+            PYTHON_CMD="python3"
+        elif command -v python &> /dev/null; then
+            PYTHON_CMD="python"
+        else
+            echo -e "${RED}[ERROR] Python not found. Please install Python 3.11 or newer.${NC}"
+            exit 1
+        fi
+    fi
+
+    check_python_version
+
     echo -e "${GREEN}✓${NC} Python $PYTHON_VERSION found"
 }
 
@@ -66,9 +93,21 @@ in_venv() {
     return 1
 }
 
+# A .venv interpreter counts as usable only if it actually starts (an
+# executable-but-broken binary must reach the repair path, not selection).
+venv_usable() {
+    [ -x ".venv/bin/python" ] && ".venv/bin/python" --version >/dev/null 2>&1
+}
+
 # Offer to create venv if missing
 setup_venv() {
     if [ -d ".venv" ]; then
+        if ! venv_usable; then
+            echo -e "${RED}[ERROR] .venv exists but its interpreter is missing, not executable, or failed to start.${NC}"
+            echo "Delete the broken environment with: rm -rf .venv"
+            echo "Then rerun ./run_gui.sh."
+            exit 1
+        fi
         echo -e "${GREEN}✓${NC} Virtual environment found at .venv"
         return 0
     fi
@@ -84,7 +123,7 @@ setup_venv() {
     
     if [[ "$create_venv" =~ ^[Nn]$ ]]; then
         echo "Proceeding without virtual environment..."
-        return 1
+        return 3
     fi
     
     echo "Creating virtual environment..."
@@ -119,24 +158,28 @@ setup_dependencies() {
     echo -e "${YELLOW}guiskindose package not installed.${NC}"
     echo "Install options:"
     echo "  [1] Core + GUI (browser mode)      - pip install -e \".[gui]\""
-    echo "  [2] Core + GUI + Native window     - pip install -e \".[gui-native]\""
+    echo "  [2] Core + GUI + Native window     - pip install -e \".[gui-native]\" (default; extra native-window dependencies)"
     echo "  [3] Skip (install manually later)"
     echo ""
-    read -r -p "Select option [1/2/3, default=1]: " install_choice
+    read -r -p "Select option [1/2/3, default=2]: " install_choice
     
     local install_status=0
-    case "$install_choice" in
+    case "${install_choice:-2}" in
+        1)
+            echo "Installing guiskindose with GUI..."
+            $PYTHON -m pip install -e ".[gui]" || install_status=$?
+            ;;
         2)
             echo "Installing guiskindose with GUI and native window support..."
             $PYTHON -m pip install -e ".[gui-native]" || install_status=$?
             ;;
         3)
             echo "Skipping. Install manually with: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
-            return 1
+            return 3
             ;;
         *)
-            echo "Installing guiskindose with GUI..."
-            $PYTHON -m pip install -e ".[gui]" || install_status=$?
+            echo -e "${RED}[ERROR] Invalid install option. Choose 1, 2, or 3.${NC}"
+            return 2
             ;;
     esac
     
@@ -150,39 +193,69 @@ setup_dependencies() {
 }
 
 # Main setup checks
+# Prefer an existing usable .venv interpreter so it is validated directly and
+# never rejected over an older system Python on PATH. Only pre-select when it
+# starts; anything else falls through to setup_venv's repair path below.
+if venv_usable; then
+    PYTHON_CMD=".venv/bin/python"
+fi
 check_python
 
 # Determine which Python to use
-if [ -f ".venv/bin/python" ]; then
+if venv_usable; then
     PYTHON=".venv/bin/python"
     echo -e "${GREEN}✓${NC} Using .venv/bin/python"
 elif in_venv; then
     PYTHON="$PYTHON_CMD"
     echo -e "${GREEN}✓${NC} Using current virtual environment"
 else
-    setup_venv
-    if [ -f ".venv/bin/python" ]; then
+    # setup_venv returns 3 on explicit decline (continue without a venv) and 1
+    # on creation failure (stop: a stale or partial .venv must not silently
+    # fall back to system Python).
+    if setup_venv; then
+        venv_status=0
+    else
+        venv_status=$?
+    fi
+
+    if [ "$venv_status" -eq 3 ]; then
+        echo "Continuing without a virtual environment."
+    elif [ "$venv_status" -ne 0 ]; then
+        exit 1
+    fi
+    if venv_usable; then
         PYTHON=".venv/bin/python"
+    elif [ -f ".venv/bin/python" ]; then
+        echo -e "${RED}[ERROR] .venv interpreter failed to start.${NC}"
+        echo "Delete the broken environment with: rm -rf .venv"
+        echo "Then rerun ./run_gui.sh."
+        exit 1
     else
         PYTHON="$PYTHON_CMD"
     fi
 fi
 
-# Re-validate the selected interpreter: an existing .venv may carry an
-# older Python than the system one checked above.
-PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}')
-PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
-PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-
-if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
-    echo -e "${RED}[ERROR] Python 3.11+ required. Found: $PYTHON_VERSION${NC}"
-    exit 1
-fi
+# Re-validate the selected interpreter as a final backstop (covers a freshly
+# created or meanwhile-broken .venv binary).
+PYTHON_CMD="$PYTHON"
+check_python_version
 
 echo -e "${GREEN}✓${NC} Selected interpreter: $PYTHON (Python $PYTHON_VERSION)"
 
-# Check/install dependencies
-setup_dependencies "$PYTHON"
+# Check/install dependencies (skip-install exits 0 with a rerun hint, matching
+# run_gui.bat; install failure exits 1; set -e safe via explicit handling).
+if setup_dependencies "$PYTHON"; then
+    dep_status=0
+else
+    dep_status=$?
+fi
+
+if [ "$dep_status" -eq 3 ]; then
+    echo "Then rerun ./run_gui.sh."
+    exit 0
+elif [ "$dep_status" -ne 0 ]; then
+    exit 1
+fi
 
 # Check if pywebview is installed (needed for native mode)
 check_pywebview() {
@@ -256,3 +329,5 @@ if [ "$launch_status" -ne 0 ]; then
     echo "Try installing dependencies: $PYTHON -m pip install -e \".[gui]\" (or \".[gui-native]\" for native window mode)"
     read -r -p "Press Enter to exit..."
 fi
+
+exit "$launch_status"
