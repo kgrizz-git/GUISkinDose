@@ -83,6 +83,15 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Data tab RAW view no longer crashes socket serialization** (2026-09-15) —
+  the parsed pre-normalization frame carries pydicom natives (``DSdecimal``,
+  ``PersonName``), ``Timestamp``, numpy scalars, and nested tuples that
+  ``DataFrame.to_dict("records")`` passes through to NiceGUI's orjson emit,
+  raising ``TypeError`` on every refresh. Rows are now coerced at the boundary
+  (``to_json_safe_records``): numbers stay numeric so sortable columns keep
+  sorting, everything else becomes text or ``null``. Pinned by premise-guarded
+  unit tests plus a boundary regression test.
+
 - **GUI launcher robustness** (2026-09-13) — `run_gui.sh` / `run_gui.bat`
   hardening: every interactive branch reaches the mode prompt or exits with an
   intentional code (no silent `set -e` deaths); skip-install exits 0 with a
