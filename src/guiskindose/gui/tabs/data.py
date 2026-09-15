@@ -18,7 +18,7 @@ from guiskindose.safe_output import atomic_write_private
 from guiskindose.spreadsheet_safety import neutralize_dataframe
 
 from ..components import HelpButton
-from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN
+from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN, to_json_safe_records
 from ..io_helpers import _get_save_path, _is_native_mode
 from ..page_context import PageContext
 from ..state import state
@@ -123,7 +123,9 @@ def _refresh_raw_table(raw_data_table: ui.table) -> None:
         }
         for column in ordered
     ]
-    raw_data_table.rows = dataframe.to_dict("records")
+    # JSON-safe coercion: the RAW frame carries pydicom natives (DSfloat, ...)
+    # and numpy scalars that crash orjson socket serialization otherwise.
+    raw_data_table.rows = to_json_safe_records(dataframe)
     raw_data_table.update()
 
 
