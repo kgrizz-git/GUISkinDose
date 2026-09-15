@@ -107,6 +107,26 @@ def test_out_of_range_int_and_signaling_nan_fallback():
     orjson.dumps([row])
 
 
+def test_uint64_band_stays_numeric():
+    df = pd.DataFrame([{"big": 2**63, "max": 2**64 - 1}], dtype=object)
+    row = to_json_safe_records(df)[0]
+    assert row["big"] == 2**63 and isinstance(row["big"], int)
+    assert row["max"] == 2**64 - 1 and isinstance(row["max"], int)
+    orjson.dumps([row])
+
+
+def test_nested_dsfloat_tuple_coerces_to_text():
+    """Production shape: Philips duplicate measured values arrive as tuples of
+    DSfloat, which survive to_dict nested and break orjson element-wise."""
+    nested = (DSfloat("0.1"), DSfloat("0.2"))
+    with pytest.raises(TypeError):
+        orjson.dumps([{"filter": nested}])
+    df = pd.DataFrame([{"filter": nested}], dtype=object)
+    row = to_json_safe_records(df)[0]
+    assert row["filter"] == "('0.1', '0.2')" and isinstance(row["filter"], str)
+    orjson.dumps([row])
+
+
 def test_raw_to_dict_would_crash_without_coercion():
     """Guard the premise: the uncoerced frame really is unserializable."""
     with pytest.raises(TypeError):

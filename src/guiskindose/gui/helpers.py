@@ -165,12 +165,12 @@ class _CalcWarningCollector(logging.Handler):
 
 
 _INT64_MIN = -(2**63)
-_INT64_MAX = 2**63 - 1
+_UINT64_MAX = 2**64 - 1
 
 
 def _bounded_int(value: int) -> int | str:
-    """Keep ints orjson can represent; oversized values become text."""
-    if _INT64_MIN <= value <= _INT64_MAX:
+    """Keep ints orjson can represent (signed/unsigned 64-bit); oversized values become text."""
+    if _INT64_MIN <= value <= _UINT64_MAX:
         return value
     return str(value)
 

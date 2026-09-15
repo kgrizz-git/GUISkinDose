@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
-import orjson
 import pandas as pd
 import pytest
 from pydicom.valuerep import DSdecimal
 
 pytest.importorskip("nicegui")
 
+import orjson
 from nicegui import ui
 
 from guiskindose.gui.state import state
@@ -88,14 +88,15 @@ def test_refresh_raw_table_with_exam_column() -> None:
     cast(MagicMock, table.update).assert_called()
 
 
-def test_refresh_raw_table_dsfloat_rows_serialize() -> None:
+def test_refresh_raw_table_pydicom_native_rows_serialize() -> None:
     """Boundary regression: RAW pydicom natives must reach the table orjson-safe.
 
     Reverting ``data.py`` to bare ``to_dict("records")`` must fail this test:
     the socket emit serializes ``table.rows`` with orjson. Note ``DSdecimal``
     (not ``DSfloat``): ``to_dict`` self-converts float subclasses to plain
     floats, while ``DSdecimal``/``PersonName``/``Timestamp`` survive as exotic
-    instances — exactly the values real RAW frames carry.
+    instances; production frames additionally carry nested ``DSfloat`` tuples
+    (covered in the unit tests).
     """
     state.view_raw = True
     # dtype=object: without it pandas coerces DSdecimal to float64 at frame
