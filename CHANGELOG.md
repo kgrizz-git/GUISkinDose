@@ -83,6 +83,11 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Same-PR TO_DO cleanup enforcement** (2026-09-15) — backlog lifecycle is
+  now part of the PR Definition of Done (remove completed items in the same
+  PR, not post-merge); new advisory pre-push reminder flags open items
+  touching branch files. Detail in `dev-docs/MAINTENANCE_LOG.md`.
+
 - **Data tab RAW view no longer crashes socket serialization** (2026-09-15) —
   the parsed pre-normalization frame carries pydicom natives (``DSdecimal``,
   ``PersonName``), ``Timestamp``, numpy scalars, and nested tuples that

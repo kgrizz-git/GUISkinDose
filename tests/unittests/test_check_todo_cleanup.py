@@ -25,10 +25,15 @@ def test_parse_open_items_stops_at_headings():
 def test_extract_paths_backticked_and_bare():
     text = "See `gui/tabs/data.py:126`, `dataframe.to_dict`, src/guiskindose/gui/helpers.py and `CHANGELOG.md`."
     paths = extract_paths(text)
-    assert "gui/tabs/data.py:126" in paths
+    assert "gui/tabs/data.py" in paths
     assert "src/guiskindose/gui/helpers.py" in paths
     assert "CHANGELOG.md" in paths
     assert "dataframe.to_dict" not in paths
+
+
+def test_extract_paths_strips_line_numbers():
+    assert extract_paths("see `gui/tabs/data.py:126` fixed") == {"gui/tabs/data.py"}
+    assert extract_paths("see `plans/X.md:10-20` fixed") == {"plans/X.md"}
 
 
 def test_match_items_suffix_and_exact():

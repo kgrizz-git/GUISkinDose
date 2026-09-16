@@ -70,6 +70,9 @@ def parse_open_items(text: str) -> list[OpenItem]:
 
 def _clean_candidate(token: str) -> str | None:
     token = token.strip().rstrip(").,;:!?\"'")
+    # Drop trailing :line / :start-end suffixes (e.g. `gui/tabs/data.py:126`):
+    # they would defeat suffix matching against diff paths.
+    token = re.sub(r":\d+(?:-\d+)?$", "", token)
     if not token or " " in token or "\n" in token:
         return None
     if "/" in token or token.endswith(_KNOWN_EXTENSIONS):
