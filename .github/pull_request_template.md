@@ -17,6 +17,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md).
 - [ ] Worked from a feature branch / worktree (not direct commits to `main`)
 - [ ] Ran the relevant tests, linters, and docs checks for this change
 - [ ] Updated `CHANGELOG.md` when behavior is user- or maintainer-visible
+- [ ] Removed completed `TO_DO.md` items (impact logged first; same PR, not post-merge)
 - [ ] Docs / help / registry updated if settings, exports, GUI copy, or agent guidance changed
 - [ ] No PHI/PII, real clinical RDSRs, credentials, private URLs, or unapproved assets
 - [ ] New third-party code/assets have license and provenance recorded where required
