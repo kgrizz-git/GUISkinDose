@@ -143,6 +143,25 @@ def changed_files(base: str) -> list[str]:
     return [f for f in result.stdout.splitlines() if f]
 
 
+def evaluate(todo_text: str, changed: list[str], strict: bool) -> tuple[int, str]:
+    """Pure core: match open items against changed files.
+
+    Returns ``(exit_code, report)``; the report is empty when nothing matches.
+    """
+    hits = match_items(parse_open_items(todo_text), changed)
+    if not hits:
+        return 0, ""
+    lines = [
+        "check_todo_cleanup: open TO_DO.md items reference files changed on this branch.",
+        "If the planned work landed here, remove the item (impact logged first) — same PR, not post-merge.",
+        "",
+    ]
+    for item, matched in hits:
+        refs = ", ".join(sorted(matched))
+        lines.append(f"- {item.title}\n    touches: {refs}")
+    return (1 if strict else 0), "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strict", action="store_true", help="exit 1 on any match")
@@ -156,18 +175,11 @@ def main(argv: list[str] | None = None) -> int:
     if not TODO_PATH.is_file():
         return 0
 
-    items = parse_open_items(TODO_PATH.read_text(encoding="utf-8"))
-    hits = match_items(items, changed_files(base))
-    if not hits:
-        return 0
-
-    print("check_todo_cleanup: open TO_DO.md items reference files changed on this branch.")
-    print("If the planned work landed here, remove the item (impact logged first) — same PR, not post-merge.\n")
-    for item, matched in hits:
-        refs = ", ".join(sorted(matched))
-        print(f"- {item.title}\n    touches: {refs}")
-    return 1 if args.strict else 0
+    exit_code, report = evaluate(TODO_PATH.read_text(encoding="utf-8"), changed_files(base), args.strict)
+    if report:
+        print(report)
+    return exit_code
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - entry point, exercised via main()
     sys.exit(main())
