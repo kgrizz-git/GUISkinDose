@@ -7,10 +7,15 @@ focused modules (``settings_builder``, ``exam_loaders``, ``exam_transforms``,
 
 from __future__ import annotations
 
+import datetime
+import decimal
 import logging
+import numbers
 from math import isclose
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 from stl import mesh as stl_mesh
 
 from guiskindose.phantom_mesh_names import (
@@ -141,6 +146,7 @@ __all__ = [
     "run_calculation",
     "stage_table_origin_axis",
     "sync_global_patient_offset_to_single_exam_meta",
+    "to_json_safe_records",
 ]
 
 
@@ -156,6 +162,88 @@ class _CalcWarningCollector(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         """Append the formatted log message to the capture list."""
         self.messages.append(record.getMessage())
+
+
+_INT64_MIN = -(2**63)
+_UINT64_MAX = 2**64 - 1
+
+
+def _bounded_int(value: int) -> int | str:
+    """Keep ints orjson can represent (signed/unsigned 64-bit); oversized values become text."""
+    if _INT64_MIN <= value <= _UINT64_MAX:
+        return value
+    return str(value)
+
+
+def _json_safe_value(value: object) -> object:
+    """Coerce one table cell to an orjson-serializable scalar.
+
+    NiceGUI tables serialize rows with orjson, which rejects non-native
+    scalars that pandas happily carries (pydicom ``DSfloat``/``DSdecimal``/
+    ``PersonName``, numpy scalars, ``pd.NA``/``NaT``, ``bytes``, ...).
+    Numbers stay numbers so sortable columns keep sorting; anything else
+    becomes text (or ``None`` for missing values).
+    """
+    if value is None or value is pd.NA or value is pd.NaT:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return _bounded_int(int(value))
+    if isinstance(value, float):
+        # Normalizes float subclasses orjson rejects (e.g. DSfloat).
+        # NaN passes through; orjson renders it as null.
+        return float(value)
+    if isinstance(value, str):
+        return str(value)
+    if isinstance(value, numbers.Integral):
+        return _bounded_int(int(value))
+    if isinstance(value, numbers.Real):
+        return float(value)
+    if isinstance(value, decimal.Decimal):
+        try:
+            return float(value)
+        except (ArithmeticError, TypeError, ValueError):
+            return str(value)
+    if isinstance(value, datetime.datetime | datetime.date | datetime.time):
+        # orjson serializes only the exact builtin types; subclasses such as
+        # pd.Timestamp go through isoformat instead.
+        if type(value) in (datetime.datetime, datetime.date, datetime.time):
+            return value
+        isoformat = getattr(value, "isoformat", None)
+        if callable(isoformat):
+            try:
+                return isoformat()
+            except (TypeError, ValueError):
+                pass
+        return str(value)
+    if isinstance(value, bytes | bytearray):
+        return bytes(value).decode("utf-8", errors="replace")
+    if isinstance(value, np.generic):
+        try:
+            return _json_safe_value(value.item())
+        except (TypeError, ValueError):
+            return str(value)
+    try:
+        return str(value)
+    except Exception:  # pragma: no cover - str() on an object never raises in practice
+        return None
+
+
+def to_json_safe_records(dataframe: pd.DataFrame) -> list[dict[str, object]]:
+    """Convert a DataFrame to orjson-serializable row dicts for NiceGUI tables.
+
+    Use at the GUI boundary instead of ``DataFrame.to_dict("records")`` when
+    the frame may carry pydicom natives or numpy scalars (e.g. the RAW
+    pre-normalization view), which crash socket serialization otherwise.
+    """
+    return [
+        {
+            column if isinstance(column, str) else str(column): _json_safe_value(value)
+            for column, value in row.items()
+        }
+        for row in dataframe.to_dict("records")
+    ]
 
 
 def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
