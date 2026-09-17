@@ -264,3 +264,12 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
+      - id: check-todo-cleanup
+        name: open TO_DO items touching changed files (advisory)
+        entry: python scripts/check_todo_cleanup.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        stages: [pre-push]

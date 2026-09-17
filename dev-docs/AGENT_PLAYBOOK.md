@@ -103,7 +103,14 @@ routine pre-commit or CI verification loop.
 
 `dev-docs/TO_DO.md` is a short-term action list, not a ledger: completed items
 must be **removed** from it (never checked off in place) once their impact is
-logged elsewhere. Log the impact first, then remove, preferably in the same PR:
+logged elsewhere. Log the impact first, then remove. Removal is part of the
+PR's Definition of Done: once the planned work lands on the branch, remove the
+item in the **same PR** — do not defer it to post-merge (a merged PR strands
+the cleanup in a follow-up that may never come). Removing before review cycles
+finish is fine and expected (reviewers read the current tree, not the ledger);
+just never leave the removal to after the merge. The
+`check_todo_cleanup.py` pre-push reminder flags open items that touch files
+changed on the branch.
 
 - User-facing changes (features, fixes, UI updates) → `CHANGELOG.md` under
   `[Unreleased]` (Keep a Changelog style; see its header).
