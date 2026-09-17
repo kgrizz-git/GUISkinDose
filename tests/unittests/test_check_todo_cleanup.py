@@ -57,6 +57,15 @@ def test_match_items_no_false_positive_on_prose():
     assert match_items(items, ["src/guiskindose/gui/helpers.py"]) == []
 
 
+def test_match_items_rejects_partial_filename_suffixes():
+    items = [
+        OpenItem(title="partial", text="touches `a.py`"),
+        OpenItem(title="reverse", text="touches `src/a.py`"),
+    ]
+    # a.py must not match src/data.py; src/a.py must not match bare a.py.
+    assert match_items(items, ["src/data.py", "a.py"]) == []
+
+
 def test_clean_candidate_rejects_non_paths():
     assert extract_paths("see `dataframe.to_dict` soon") == set()
     assert extract_paths("see `` soon") == set()

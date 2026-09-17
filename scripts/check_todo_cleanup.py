@@ -99,10 +99,11 @@ def extract_paths(item_text: str) -> set[str]:
 
 
 def match_items(items: list[OpenItem], changed: list[str]) -> list[tuple[OpenItem, set[str]]]:
-    """Items whose referenced paths overlap the changed files (suffix match).
+    """Items whose referenced paths overlap the changed files (component-boundary match).
 
-    Suffix matching lets items cite short forms (``gui/tabs/data.py``) while
-    the diff carries repo-relative paths (``src/guiskindose/gui/tabs/data.py``).
+    A reference matches a changed file when identical or nested beneath it
+    (``gui/tabs/data.py`` matches ``src/guiskindose/gui/tabs/data.py``);
+    partial filename suffixes (``a.py`` vs ``src/data.py``) never match.
     """
     hits: list[tuple[OpenItem, set[str]]] = []
     for item in items:
@@ -110,7 +111,7 @@ def match_items(items: list[OpenItem], changed: list[str]) -> list[tuple[OpenIte
             ref
             for ref in extract_paths(item.text)
             for path in changed
-            if path.endswith(ref) or ref.endswith(path)
+            if path == ref or path.endswith(f"/{ref}")
         }
         if matched:
             hits.append((item, matched))
