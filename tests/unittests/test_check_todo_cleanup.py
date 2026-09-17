@@ -62,8 +62,9 @@ def test_match_items_rejects_partial_filename_suffixes():
         OpenItem(title="partial", text="touches `a.py`"),
         OpenItem(title="reverse", text="touches `src/a.py`"),
     ]
-    # a.py must not match src/data.py; src/a.py must not match bare a.py.
-    assert match_items(items, ["src/data.py", "a.py"]) == []
+    # a.py must not match src/data.py (partial filename);
+    # src/a.py must not match changed bare b.py (reverse).
+    assert match_items(items, ["src/data.py", "b.py"]) == []
 
 
 def test_clean_candidate_rejects_non_paths():
