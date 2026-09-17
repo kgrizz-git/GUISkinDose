@@ -15,7 +15,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   in the same PR, not post-merge); new advisory pre-push
   `scripts/check_todo_cleanup.py` flags open items touching branch files, with
   unit tests; PR template checklist line; removed the stale DSfloat item
-  (impact in CHANGELOG + tests).
+  (impact in CHANGELOG + tests). *Migration note: the DSfloat work landed in
+  PR #97 and its item was removed in the follow-up process PR #98 — the rule
+  was adopted mid-flight, so this one removal is grandfathered post-merge.
+  Removals after #98 follow the same-PR rule.*
 
 - **Opus whole-branch review follow-ups** (2026-09-10) — Calculate preview
   broad exception guard + `emit_warnings=False` + `input_revision` fingerprint;

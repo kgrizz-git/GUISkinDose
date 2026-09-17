@@ -59,6 +59,14 @@ def main() -> int:
     if not substantive:
         return 0
 
+    # Process-only exemption: when the only src/tests changes are test files
+    # and the PR also touches MAINTENANCE_LOG.md (the maintainer-facing log),
+    # the entry belongs there, not in the user-facing CHANGELOG. Backlog
+    # cleanups (TO_DO item removals with test pinning) are the recurring case.
+    non_test = [f for f in substantive if not f.startswith("tests/")]
+    if not non_test and "dev-docs/MAINTENANCE_LOG.md" in changed:
+        return 0
+
     if "CHANGELOG.md" in changed:
         return 0
 

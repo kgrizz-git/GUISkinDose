@@ -9,6 +9,13 @@ not checked off in place, and not deferred to post-merge.
 Advisory by default (exit 0): only a human (or reviewing agent) can judge
 whether the work actually landed. Pass ``--strict`` to fail on matches.
 
+Known limitations (by scope): parses *our* TO_DO item format only (flat
+``- [ ]`` markers; indented sub-items are treated as continuations), matches
+whole file paths (a directory reference never matches a changed file inside
+it), and diffs committed work only (``base...HEAD``; a dirty tree is not
+seen). The reminder is advisory: pre-commit output is shown because the hook
+is wired with ``verbose: true``.
+
 Exit 0 (pass) when:
   - No open items reference changed files.
   - Base ref cannot be determined (fail-open to avoid blocking offline work).

@@ -8,7 +8,7 @@ map (PyPI, GitHub notes vs changelog, deferred portable executables):
 For harness rules, validation commands, and plan conventions, see
 [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md). For backlog lifecycle rules, see
 [AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md): completed items must be removed from this file after their user-facing or
-maintenance impact is logged — in the same PR once the work lands, not post-merge — and completed plans must
+maintenance impact is logged — in the same PR once the work lands (not post-merge) — and completed plans must
 be archived.
 
 ---
