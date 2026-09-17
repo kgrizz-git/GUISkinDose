@@ -51,8 +51,8 @@ cite `resolve()` internals as fact in the #60 closeout comment).
 - `tests/unittests/test_gui_phantom_preview.py:61-68` — convert string-path
   `monkeypatch.setattr("guiskindose.gui.phantom_preview._PHANTOM_DATA_DIR", …)`
   to object-form patching on the already-imported module
-  (`from guiskindose.gui import phantom_preview as mod`, then
-  `monkeypatch.setattr(mod, "_PHANTOM_DATA_DIR", tmp_path)`). Matches the
+  (`from guiskindose.gui import phantom_preview as phantom_preview_mod`, then
+  `monkeypatch.setattr(phantom_preview_mod, "_PHANTOM_DATA_DIR", tmp_path)`). Matches the
   existing idiom at `tests/gui/test_gui_helpers.py:22`. Patching by object
   identity bypasses `sys.modules` and parent attrs entirely.
 - `dev-docs/MAINTENANCE_LOG.md` entry (tests-only + maintenance-log touch →
@@ -105,11 +105,11 @@ cite `resolve()` internals as fact in the #60 closeout comment).
   ordering assumption changed and the root-cause section must be rewritten
   before touching the test.
 - [x] **Step 2: Apply the object-form fix**
-  Add `from guiskindose.gui import phantom_preview as mod` alongside the
+  Add `from guiskindose.gui import phantom_preview as phantom_preview_mod` alongside the
   existing import block (`:17-23`), keeping `pytest.importorskip("nicegui")`
   at `:14` ABOVE the new import (core-CI collection breaks otherwise — the
   `check_gui_test_placement` gate enforces this); replace the string target
-  at `:63-66` with `monkeypatch.setattr(mod, "_PHANTOM_DATA_DIR", tmp_path)`.
+  at `:63-66` with `monkeypatch.setattr(phantom_preview_mod, "_PHANTOM_DATA_DIR", tmp_path)`.
   Nothing else in the test changes (assertion, tmp STL fixture stay).
 - [x] **Step 3: Post-fix verification, in order**
   1. Mixed repro from Step 1 → green.
@@ -140,8 +140,9 @@ cite `resolve()` internals as fact in the #60 closeout comment).
   Post a value-free comment on #60 stating the mechanism (purge + fresh
   parent, no binding) and the fix (object-form patch), with file:line cites.
   Flip this plan's `Status:` line to Completed, move it to
-  `dev-docs/plans/archive/`, and update the `index.md` row to the archive
-  path — all in ONE commit to keep `check_doc_freshness` clean.
+  `dev-docs/plans/archive/`, update the `index.md` row to the archive
+  path, AND update the `MAINTENANCE_LOG.md` plan link to the archive path —
+  all in ONE commit to keep `check_doc_freshness` clean.
 
 ## Acceptance Criteria
 
