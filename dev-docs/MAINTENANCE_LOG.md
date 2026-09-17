@@ -21,7 +21,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   (`tests/unittests/test_gui_phantom_preview.py`). Proven by a mixed-suite
   repro (GUI smoke + phantom test) failing pre-fix and passing post-fix on
   pinned deps; full `pytest -q` green. No `src/`, dep, lock, or changelog
-  changes. Plan: `dev-docs/plans/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md`.
+  changes. Plan: `dev-docs/plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md`.
 
 - **Same-PR TO_DO cleanup rule + reminder hook** (2026-09-15) — backlog
   lifecycle is now part of the PR Definition of Done (remove completed items

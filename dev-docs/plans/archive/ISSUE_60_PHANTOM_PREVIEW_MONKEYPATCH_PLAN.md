@@ -1,7 +1,7 @@
 # Issue #60 Fix Plan — Phantom-Preview `monkeypatch` vs NiceGUI `sys.modules` Purge
 
-Status: Active — DeepSeek plan review returned 4× APPROVE-WITH-NITS + 1× BLOCK
-(Step 5 dispatch); BLOCK + nits addressed below. Ready to implement.
+Status: Complete — implemented, canary green (run 35276199003: 1419 passed,
+11 skipped), #60 auto-closed 2026-09-17. Archived.
 Created: 2026-09-17
 Issue: [#60](https://github.com/kgrizz-git/GUISkinDose/issues/60) (`ci-latest` pytest probe failed)
 Branch: `fix/issue-60-phantom-preview-monkeypatch`
@@ -126,7 +126,7 @@ cite `resolve()` internals as fact in the #60 closeout comment).
   maintenance-log touch). (`index.md` row already added with the plan commit;
   it gets updated to the archive path in Step 6, not here.) Implementation
   commits go through the normal pre-commit path (privacy receipts as required).
-- [ ] **Step 5: Push branch, open PR, dispatch canary against the branch**
+- [x] **Step 5: Push branch, open PR, dispatch canary against the branch**
   `gh workflow run ci-latest.yml --ref fix/issue-60-phantom-preview-monkeypatch`
   (dispatch enabled, `ci-latest.yml:20`). NOTE: a bare `gh workflow run`
   without `--ref` checks out `main` (no `ref` on `actions/checkout`,
@@ -136,7 +136,7 @@ cite `resolve()` internals as fact in the #60 closeout comment).
   archive in Step 6 and merge. If red with the SAME signature → fix
   incomplete, reopen Step 2. If red with a NEW failure → separate triage, not
   scope expansion here.
-- [ ] **Step 6: Closeout comment + archive**
+- [x] **Step 6: Closeout comment + archive**
   Post a value-free comment on #60 stating the mechanism (purge + fresh
   parent, no binding) and the fix (object-form patch), with file:line cites.
   Flip this plan's `Status:` line to Completed, move it to
