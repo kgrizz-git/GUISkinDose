@@ -98,20 +98,20 @@ cite `resolve()` internals as fact in the #60 closeout comment).
 
 ## Tasks
 
-- [ ] **Step 1: Pre-fix repro on pinned env (already done once — re-run to lock evidence)**
+- [x] **Step 1: Pre-fix repro on pinned env (already done once — re-run to lock evidence)**
   `python -m pytest tests/gui/test_gui_smoke.py::test_index_page_renders
   tests/unittests/test_gui_phantom_preview.py::test_resolve_preview_mesh_returns_stem_when_reduced_absent -q`
   Expect: the exact `AttributeError` signature. If it passes, STOP — the
   ordering assumption changed and the root-cause section must be rewritten
   before touching the test.
-- [ ] **Step 2: Apply the object-form fix**
+- [x] **Step 2: Apply the object-form fix**
   Add `from guiskindose.gui import phantom_preview as mod` alongside the
   existing import block (`:17-23`), keeping `pytest.importorskip("nicegui")`
   at `:14` ABOVE the new import (core-CI collection breaks otherwise — the
   `check_gui_test_placement` gate enforces this); replace the string target
   at `:63-66` with `monkeypatch.setattr(mod, "_PHANTOM_DATA_DIR", tmp_path)`.
   Nothing else in the test changes (assertion, tmp STL fixture stay).
-- [ ] **Step 3: Post-fix verification, in order**
+- [x] **Step 3: Post-fix verification, in order**
   1. Mixed repro from Step 1 → green.
   2. `python -m pytest tests/unittests/test_gui_phantom_preview.py -q` → 12/12.
   3. Full `python -m pytest -q` (pinned; both suites, one process) → green.
@@ -120,7 +120,7 @@ cite `resolve()` internals as fact in the #60 closeout comment).
      green; `pyproject.toml:183` covers `tests/`).
   6. `python scripts/check_doc_freshness.py` (harness-required; docs touched).
   7. `python scripts/check_gui_test_placement.py` (canary `gui_placement` gate).
-- [ ] **Step 4: Maintenance log + docs**
+- [x] **Step 4: Maintenance log + docs**
   `MAINTENANCE_LOG.md` Fixed entry (tests-only; cite the purge mechanism +
   object-form fix). No `CHANGELOG.md` (PR98 exemption: tests-only +
   maintenance-log touch). (`index.md` row already added with the plan commit;

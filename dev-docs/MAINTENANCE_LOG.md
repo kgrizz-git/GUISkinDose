@@ -10,6 +10,19 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Issue #60 phantom-preview `monkeypatch` vs NiceGUI `sys.modules` purge**
+  (2026-09-17) — the `ci-latest` canary's single deterministic pytest failure
+  was cross-suite pollution, not dependency drift: NiceGUI's `user`-fixture
+  teardown (`nicegui_reset_globals`) purges `guiskindose.gui` from
+  `sys.modules`, so the string-path
+  `monkeypatch.setattr("guiskindose.gui.phantom_preview._PHANTOM_DATA_DIR", …)`
+  resolved against a fresh parent with no `phantom_preview` binding. Test-only
+  fix: patch the already-imported module object
+  (`tests/unittests/test_gui_phantom_preview.py`). Proven by a mixed-suite
+  repro (GUI smoke + phantom test) failing pre-fix and passing post-fix on
+  pinned deps; full `pytest -q` green. No `src/`, dep, lock, or changelog
+  changes. Plan: `dev-docs/plans/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md`.
+
 - **Same-PR TO_DO cleanup rule + reminder hook** (2026-09-15) — backlog
   lifecycle is now part of the PR Definition of Done (remove completed items
   in the same PR, not post-merge); new advisory pre-push
