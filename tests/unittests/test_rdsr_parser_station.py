@@ -22,7 +22,7 @@ from guiskindose.settings import PyskindoseSettings
 
 EXAMPLE_RDSR = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "example_data" / "RDSR"
 
-# Synthetic labels only — never log/assert site-specific strings beyond fixture stems.
+# Station/serial labels retained from upstream — never log/assert site-specific strings beyond fixture stems.
 EXPECTED_PRESENT = {
     "fake_scanner.dcm": ("AXIS01475", "146278"),
     "philips_allura_clarity_u104.dcm": ("INR Lab", "722013-362"),

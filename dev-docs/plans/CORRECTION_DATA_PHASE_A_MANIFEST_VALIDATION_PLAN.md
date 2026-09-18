@@ -98,19 +98,19 @@ geometry redesign.
 | `src/guiskindose/table_data/device_info.csv` | Identifier substitution |
 | `tests/unittests/test_correction_data_manifest.py` (new) | Manifest↔CSV consistency, hash drift |
 | `tests/unittests/test_correction_validation.py` (new) | Dataset + explicit-DB drift matrix |
-| `tests/unittests/test_rdsr_parser_station.py:26` | Comment correction |
+| `tests/unittests/test_rdsr_parser_station.py:25` | Comment correction |
 | `CHANGELOG.md` | Brief entry (src/ data change ships; gate requires it) |
 | `dev-docs/MAINTENANCE_LOG.md` | Detail entry |
 | `dev-docs/index.md` | Catalog this plan (same PR) |
 
 ## Tasks
 
-- [ ] **Step 1: Manifest** — inventory all CSVs under `table_data/` (+2 vendor
+- [x] **Step 1: Manifest** — inventory all CSVs under `table_data/` (+2 vendor
   HVL build inputs, dev scripts flagged non-runtime); write the JSON manifest
   per scope; add hash + drift check; manifest test (every CSV covered, every
   hash matches, `unknown`s explicit, runtime/read flags match the master
   plan's verified state).
-- [ ] **Step 2: Dataset validators** — implement §2 dataset checks; unit tests
+- [x] **Step 2: Dataset validators** — implement §2 dataset checks; unit tests
   over synthetic frames (valid, missing column, wrong type, non-finite,
   out-of-range, duplicates, >1.0 transmission); error-vs-advisory separation
   asserted. Classification rule: `k_patient_support == 0` is a
@@ -118,7 +118,7 @@ geometry redesign.
   plan's warned-neutral `1.0` — the shipped CSV holds exactly 304 such rows,
   all AlluraClarity Plane B), NOT a hard dataset error; >1.0 and
   non-finite/negative are hard errors.
-- [ ] **Step 3: Explicit-DB validators + drift matrix** — implement §2 adapter
+- [x] **Step 3: Explicit-DB validators + drift matrix** — implement §2 adapter
   checks against synthetic SQLite DBs in `tmp_path` (valid, bad version,
   missing table/column, out-of-range/duplicate); fail-closed errors name
   table/column and never create files. Note the real bootstrap DB
@@ -126,7 +126,7 @@ geometry redesign.
   version" matrix case uses synthetic DBs with a declared `schema_version`
   table and the validator takes the expected version as a parameter (Phase B
   sets the policy when wiring the adapter). No runtime wiring (Phase B).
-- [ ] **Step 4: device_info substitution + comment fix** — apply the locked
+- [x] **Step 4: device_info substitution + comment fix** — apply the locked
   spec; update manifest entry; reword the parser-test comment. Verify: full
   `pytest -q` green. The guarantee is "no consumer reads the swapped columns"
   (only `db_connect.py:67,77` loads the file; no test asserts its contents) —

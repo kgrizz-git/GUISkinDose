@@ -81,8 +81,8 @@ geometry.
   expectations asserting them in `test_rdsr_parser_station.py` /
   `test_dose_kerma_correction.py` — are RETAINED under the existing
   asset-inventory approval (KG 2026-07-16, "deliberately retained"); rewriting
-  hash-pinned binaries would invalidate clearance and risk golden tests for no
-  propagation gain.   The misleading "Synthetic labels only" comment in
+  hash-pinned binaries would invalidate clearance and force updates across
+  golden/regression suites for no propagation gain. The misleading "Synthetic labels only" comment in
   `test_rdsr_parser_station.py:25` is corrected to state the values are retained
   from upstream.
 - [ ] Add hashes or deterministic content checks so manifest and CSV drift is

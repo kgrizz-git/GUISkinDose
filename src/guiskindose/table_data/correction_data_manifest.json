@@ -1,0 +1,141 @@
+{
+  "manifest_version": 1,
+  "description": "Machine-readable inventory of the authoritative correction-data CSVs under src/guiskindose/table_data/. The CSVs are the source of truth; db_connect.py bootstraps them into SQLite. Fields with value unknown are explicitly undocumented provenance, not oversights.",
+  "tables": [
+    {
+      "file": "hvl_tables/hvl_combined.csv",
+      "sqlite_table": "hvl_combined",
+      "role": "runtime_lookup",
+      "runtime_consumer": "geom_calc.fetch_and_append_hvl (SELECT * FROM hvl_combined; anode-angle slice select, then clamped bilinear interpolation on the (kVp, Cu) plane per dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md)",
+      "lookup_keys": ["kvp_kv", "filtration_inherent_mmal", "filtration_added_mmcu", "filtration_added_mmal"],
+      "lookup_value": "hvl_mmal",
+      "columns": [
+        {"name": "kvp_kv", "unit": "kV", "dtype": "float", "runtime_read": true, "physical_range": [25.0, 175.0]},
+        {"name": "filtration_inherent_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": true, "physical_range": [0.0, null]},
+        {"name": "filtration_added_mmcu", "unit": "mmCu", "dtype": "float", "runtime_read": true, "physical_range": [0.0, null]},
+        {"name": "filtration_added_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": true, "physical_range": [0.0, null]},
+        {"name": "anode_angle_deg", "unit": "deg", "dtype": "float", "runtime_read": true, "physical_range": [8.0, 11.0], "note": "Discrete tube-target property: slice-selected (11 deg where present, else 8), never interpolated."},
+        {"name": "hvl_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": true, "physical_range": [0.0, null]}
+      ],
+      "source_type": "simulated",
+      "generation_method": "SpekCalc simulation (per db_connect.py bootstrap comment)",
+      "upstream_history": "Inherited from the upstream 2018 initial commit; regenerated per dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md",
+      "literature": "unknown",
+      "provenance_confidence": "medium",
+      "sha256": "5df25b8c13246f965905bacfc9adaf847d5697a1bb7e3755a1405ffcd7232223"
+    },
+    {
+      "file": "hvl_tables/hvl_allura_filters_11deg.csv",
+      "sqlite_table": null,
+      "role": "build_input",
+      "runtime_consumer": null,
+      "lookup_keys": [],
+      "lookup_value": null,
+      "columns": [
+        {"name": "kvp_kv", "unit": "kV", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_inherent_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_added_mmcu", "unit": "mmCu", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_added_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "anode_angle_deg", "unit": "deg", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "hvl_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null}
+      ],
+      "source_type": "simulated",
+      "generation_method": "SpekCalc 11-deg anode slice input to hvl_combined.csv (see build_hvl_table.py); NOT consulted at runtime",
+      "upstream_history": "unknown",
+      "literature": "unknown",
+      "provenance_confidence": "low",
+      "sha256": "e287e8138da66b27df19d5ba8ef32c6c9b15fdbc848b7ca8334e51b1e7c20efb"
+    },
+    {
+      "file": "hvl_tables/hvl_axiom_filters_8deg.csv",
+      "sqlite_table": null,
+      "role": "build_input",
+      "runtime_consumer": null,
+      "lookup_keys": [],
+      "lookup_value": null,
+      "columns": [
+        {"name": "kvp_kv", "unit": "kV", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_inherent_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_added_mmcu", "unit": "mmCu", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_added_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "anode_angle_deg", "unit": "deg", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "hvl_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null}
+      ],
+      "source_type": "simulated",
+      "generation_method": "SpekCalc 8-deg anode slice input to hvl_combined.csv (see build_hvl_table.py); NOT consulted at runtime",
+      "upstream_history": "unknown",
+      "literature": "unknown",
+      "provenance_confidence": "low",
+      "sha256": "ac79398be60b161bb96aae1f95e0152a723b60f61635101434fbe43e61ca2871"
+    },
+    {
+      "file": "correction_medium_and_backscatter.csv",
+      "sqlite_table": "correction_medium_and_backscatter",
+      "role": "runtime_lookup",
+      "runtime_consumer": "corrections.calculate_k_med (4-column projection kvp_kv/hvl_mmal/field_side_length_cm/mu_en_quotient; nearest tabulated field size, then kVp, then HVL)",
+      "lookup_keys": ["field_side_length_cm", "kvp_kv", "hvl_mmal"],
+      "lookup_value": "mu_en_quotient",
+      "columns": [
+        {"name": "kvp_kv", "unit": "kV", "dtype": "float", "runtime_read": true, "physical_range": [50.0, 150.0]},
+        {"name": "filtration_inherent_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "filtration_added_mmcu", "unit": "mmCu", "dtype": "float", "runtime_read": false, "physical_range": null},
+        {"name": "hvl_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": true, "physical_range": [1.78, 12.48]},
+        {"name": "h", "unit": "unknown", "dtype": "float", "runtime_read": false, "physical_range": null, "note": "No runtime consumer; retained for provenance."},
+        {"name": "field_side_length_cm", "unit": "cm", "dtype": "float", "runtime_read": true, "physical_range": [5.0, 35.0]},
+        {"name": "backscatter", "unit": "dimensionless", "dtype": "float", "runtime_read": false, "physical_range": null, "note": "No runtime consumer (k_bs uses hard-coded polynomial coefficients in corrections.py); retained for provenance."},
+        {"name": "mu_en_quotient", "unit": "dimensionless", "dtype": "float", "runtime_read": true, "physical_range": [1.0, null]}
+      ],
+      "source_type": "literature",
+      "generation_method": "Table 2 of the cited article (mass energy-absorption coefficient ratios); backscatter/h columns carried alongside but unused",
+      "upstream_history": "Inherited from the upstream 2018 initial commit",
+      "literature": "doi:10.1088/0031-9155/58/2/247 (Benmakhlouf et al., backscatter factors and mass energy-absorption coefficient ratios for surface dose determination in diagnostic radiology)",
+      "provenance_confidence": "high",
+      "sha256": "67eb1e8f7707edb97795cf219c227077f5121ae79ed2f622567bb4cdfca48473"
+    },
+    {
+      "file": "correction_table_and_pad_attenuation.csv",
+      "sqlite_table": "correction_table_and_pad_attenuation",
+      "role": "runtime_lookup",
+      "runtime_consumer": "corrections.calculate_k_tab (SELECT *; row filter on device_model + acquisition_plane, then clamped grid interpolation on (kVp, Cu) with Al snapping; Plane B invalid-value handling per the archived safety plan)",
+      "lookup_keys": ["device_model", "acquisition_plane", "kvp_kv", "filtration_added_mmcu", "filtration_added_mmal"],
+      "lookup_value": "k_patient_support",
+      "columns": [
+        {"name": "kvp_kv", "unit": "kV", "dtype": "float", "runtime_read": true, "physical_range": [50.0, 125.0]},
+        {"name": "filtration_added_mmcu", "unit": "mmCu", "dtype": "float", "runtime_read": true, "physical_range": [0.0, 0.9]},
+        {"name": "filtration_added_mmal", "unit": "mmAl", "dtype": "float", "runtime_read": true, "physical_range": [0.0, 1.0]},
+        {"name": "device_model", "unit": "label", "dtype": "string", "runtime_read": true, "physical_range": null, "note": "Matched with de-spaced alias (AXIOM-Artis, AlluraClarity)."},
+        {"name": "acquisition_plane", "unit": "label", "dtype": "string", "runtime_read": true, "physical_range": null, "note": "Plane A, Plane B, Single Plane."},
+        {"name": "k_patient_support", "unit": "dimensionless", "dtype": "float", "runtime_read": true, "physical_range": [0.0, 0.8], "note": "Exactly 304 rows are 0.0 (all AlluraClarity Plane B): known-invalid inherited class per the archived safety plan (warned-neutral 1.0 at runtime), advisory — not a hard dataset error."},
+        {"name": "comment", "unit": "text", "dtype": "string", "runtime_read": false, "physical_range": null, "note": "Measured/estimated annotations; provenance only."}
+      ],
+      "source_type": "measured_and_approximated",
+      "generation_method": "Measured and approximated patient-support transmission (per db_connect.py bootstrap comment); exact derivation of every inherited value is not known",
+      "upstream_history": "Inherited from the upstream 2018 initial commit",
+      "literature": "unknown",
+      "provenance_confidence": "medium",
+      "sha256": "8111b7d9ae0d8c8d6d3e67e30c8c05190e0a65c7f7bcb51a51cc9f150e2634c5"
+    },
+    {
+      "file": "device_info.csv",
+      "sqlite_table": "device_info",
+      "role": "provenance_only",
+      "runtime_consumer": null,
+      "lookup_keys": [],
+      "lookup_value": null,
+      "columns": [
+        {"name": "DeviceObserverSerialNumber", "unit": "label", "dtype": "string", "runtime_read": false, "physical_range": null, "note": "Upstream-inherited equipment identifiers substituted with obviously-synthetic tokens (SYN-SN-01…04) on 2026-09-18; no original→synthetic mapping retained. See the Phase A execution plan."},
+        {"name": "Lab", "unit": "label", "dtype": "string", "runtime_read": false, "physical_range": null, "note": "Upstream-inherited site identifiers substituted with obviously-synthetic tokens (SYN-LAB-A…D, first-appearance order) on 2026-09-18."},
+        {"name": "DateMeasured", "unit": "YYYY-MM", "dtype": "string", "runtime_read": false, "physical_range": null},
+        {"name": "PadMaterial", "unit": "label", "dtype": "string", "runtime_read": false, "physical_range": null, "note": "Empty in all inherited rows."},
+        {"name": "PadThickness_mm", "unit": "mm", "dtype": "float", "runtime_read": false, "physical_range": [0.0, null], "note": "Only recorded per-lab pad thickness values (74/74/101/68); input to the geometry plan's measurement inventory. No runtime consumer reads this table."},
+        {"name": "Comment", "unit": "text", "dtype": "string", "runtime_read": false, "physical_range": null, "note": "Measured/estimated annotations; lab reference retokenized alongside Lab."}
+      ],
+      "source_type": "measured",
+      "generation_method": "Lab-specific pad parameters; per-lab thickness measured except one row estimated from another lab (see Comment)",
+      "upstream_history": "Inherited from the upstream 2018 initial commit; identifiers de-identified 2026-09-18",
+      "literature": "unknown",
+      "provenance_confidence": "medium",
+      "sha256": "f9dbff6a00e5bc87b5a4be3aafb2166ebeaff3dbe843dc7d5a8f051ac307cf5c"
+    }
+  ]
+}

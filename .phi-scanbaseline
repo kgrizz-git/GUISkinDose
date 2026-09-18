@@ -123,13 +123,13 @@ entries:
   expires_at: '2026-10-16T00:36:14+00:00'
 - file_path: src/guiskindose/table_data/device_info.csv
   line_number: 1
-  line_content_hash: 1ffdd5c63ed08d74570c99ce5a8b6997bcd6f469ca3bc37709379a7e3fd56873
-  entity_type: ACCOUNT + HEALTH_PLAN + MRN + UNIQUE_ID
+  line_content_hash: f44c6ca32163ca44abea41dfb019e347e37c620605263ac317ced3b571bebb6f
+  entity_type: HEALTH_PLAN + UNIQUE_ID
   hipaa_category: quasi_identifier_combination
-  value_hash: 608e3cabe87a9b05be7b0dbadcddf7a0b632aec2abfff23654e528ec6abe290a
+  value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
-  created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  created_at: '2026-09-18T19:36:54+00:00'
+  expires_at: '2026-12-17T19:36:54+00:00'
 - file_path: src/guiskindose/table_data/correction_table_and_pad_attenuation.csv
   line_number: 2
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139

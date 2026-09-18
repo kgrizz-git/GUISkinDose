@@ -1,5 +1,6 @@
 include src/guiskindose/settings_example.json
 include src/guiskindose/table_data/*.csv
+include src/guiskindose/table_data/*.json
 include src/guiskindose/table_data/hvl_tables/*.csv
 include src/guiskindose/phantom_data/*.stl
 include src/guiskindose/example_data/RDSR/*.dcm
