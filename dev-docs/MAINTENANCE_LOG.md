@@ -10,6 +10,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Correction-data Phase A: manifest, validation, device_info substitution**
+  (2026-09-18) — master §1+§2 with zero behavior change: new
+  `correction_data_manifest.json` (schema/units/ranges/consumer/provenance/
+  hashes per CSV; runtime vs build-input and read-vs-unread separation); new
+  `correction_validation.py` (dataset checks with error/advisory split,
+  support-transmission range policy with known-invalid zeros advisory,
+  read-only explicit-DB validation + schema-drift matrix, manifest drift
+  check); `device_info.csv` serials/labs substituted per the locked positional
+  scheme (no mapping retained); `MANIFEST.in` ships the manifest JSON.
+  Full plan: `dev-docs/plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md`.
+
 - **Issue #60 phantom-preview `monkeypatch` vs NiceGUI `sys.modules` purge**
   (2026-09-17) — the `ci-latest` canary's single deterministic pytest failure
   was cross-suite pollution, not dependency drift: NiceGUI's `user`-fixture

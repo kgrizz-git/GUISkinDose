@@ -21,6 +21,14 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Correction-data manifest** (2026-09-18) — new machine-readable
+  `src/guiskindose/table_data/correction_data_manifest.json` inventorying every
+  correction CSV (schema, units, ranges, runtime consumer, provenance with
+  explicit unknowns, SHA-256 hashes), shipped in the wheel. Upstream-inherited
+  equipment/site identifiers in `device_info.csv` are replaced with
+  obviously-synthetic tokens (pad thickness and all other values unchanged).
+  No calculation behavior changes. Detail in `dev-docs/MAINTENANCE_LOG.md`.
+
 - **PyData Sphinx Theme** (2026-09-11) — user docs restyle per the [tooling
   decision](dev-docs/assessments/DOCUMENTATION_TOOLING_DECISION_2026-09-11.md):
   `docs/source/conf.py` uses `pydata_sphinx_theme` (stale `sphinx_rtd_theme`

@@ -255,6 +255,14 @@ policy decisions, not a restart of Phases 0-9.
   release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
   non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
   (phantoms, `corrections.db`, help). Not a Java wrap.
+- [ ] **Fixture-DICOM identifier scrub** — the upstream-inherited serials/lab codes
+  in `device_info.csv` are substituted with synthetic tokens (Phase A), but the same
+  identifiers persist in 4 hash-pinned approved fixture DICOMs and 2 asserting test
+  files (retained under the KG 2026-07-16 asset-inventory approval). A full binary
+  scrub would invalidate clearance, force re-clearance, and risk golden tests for
+  identifiers public upstream since 2018. Revisit only under a future privacy review
+  with maintainer re-clearance. See
+  [CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md).
 
 ## Open Questions
 
