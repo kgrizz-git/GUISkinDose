@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-03).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-18).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -20,7 +20,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | alabaster | 1.0.0 | BSD-3-Clause | Changelog, https://alabaster.readthedocs.io/en/latest/changelog.html |
 | annotated-doc | 0.0.4 | MIT | Homepage, https://github.com/fastapi/annotated-doc |
 | annotated-types | 0.7.0 | MIT | Homepage, https://github.com/annotated-types/annotated-types |
-| anyio | 4.13.0 | MIT | Documentation, https://anyio.readthedocs.io/en/latest/ |
+| anyio | 4.14.2 | MIT | Documentation, https://anyio.readthedocs.io/en/latest/ |
 | appnope | 0.1.4 | BSD-3-Clause | http://github.com/minrk/appnope |
 | argon2-cffi | 25.1.0 | MIT | Documentation, https://argon2-cffi.readthedocs.io/ |
 | argon2-cffi-bindings | 25.1.0 | MIT | Tidelift, https://tidelift.com/?utm_source=lifter&utm_medium=referral&utm_campaign=hynek |
