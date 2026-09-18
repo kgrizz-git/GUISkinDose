@@ -411,7 +411,7 @@ Falls back to `settings_example.json` if nothing provided.
 | `below_floor_kvp_manual` | float | `70.0` | Substituted kVp for `below_floor_kvp_policy="manual"` (example value; code fallback is the 25.0 HVL floor) |
 | `silence_pydicom_warnings` | bool | `True` | Suppress pydicom warnings |
 | `output_format` | str | `"html"` | `"html"`, `"dict"`, or `"json"` |
-| `corrections_db_path` | str | `"corrections.db"` | Path to SQLite DB |
+| `corrections_db_path` | str | `"corrections.db"` | Packaged data by default; explicit path = validated read-only legacy SQLite |
 | `file_result_output_path` | str/Path | `./PlotOutputs/` | Where to save output files |
 
 **Phantom:**

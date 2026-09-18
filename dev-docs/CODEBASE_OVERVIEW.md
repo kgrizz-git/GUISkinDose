@@ -234,7 +234,7 @@ Top-level settings object. Key attributes:
 | `below_floor_kvp_manual` | `float` | `70.0` | Substituted kVp when `below_floor_kvp_policy="manual"` (example value; code fallback is the 25.0 HVL floor) |
 | `silence_pydicom_warnings` | `bool` | `True` | Suppress pydicom warnings |
 | `output_format` | `str` | `"html"` | `"html"`, `"dict"`, or `"json"` |
-| `corrections_db_path` | `str` | `"corrections.db"` | Path to SQLite corrections database |
+| `corrections_db_path` | `str` | `"corrections.db"` | Packaged correction data by default (sentinel value; no files created, root/CWD DB ignored); explicit path = validated read-only legacy SQLite |
 | `phantom` | `PhantomSettings` | — | Phantom sub-settings |
 | `plot` | `Plotsettings` | — | Plot sub-settings |
 | `normalization_settings` | `NormalizationSettings` | — | Vendor normalization sub-settings |

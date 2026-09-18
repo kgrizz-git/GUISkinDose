@@ -24,7 +24,6 @@ Covered cases (plan §1):
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -46,10 +45,10 @@ from guiskindose.corrections import _coerce_inherited_transmission, calculate_k_
 
 
 def _db_path() -> str:
-    # The settings example uses a relative "corrections.db". Resolve it to a
-    # repository-root absolute path so the suite is robust to test CWD.
-    repo_root = Path(__file__).resolve().parents[2]
-    return str(repo_root / "corrections.db")
+    # The bare default sentinel always resolves to the packaged provider
+    # (CWD-independent by design), so these characterization tests do not
+    # depend on a bootstrapped repository-root database existing.
+    return "corrections.db"
 
 
 def _frame(kvp, cu, al, model, plane, n=1):

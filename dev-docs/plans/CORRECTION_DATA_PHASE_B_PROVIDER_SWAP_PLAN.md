@@ -167,19 +167,19 @@ deferral), `db_connect.py` removal (kept for the explicit adapter path).
 
 ## Tasks
 
-- [ ] **Step 1: Provider module** — `importlib.resources` table loading +
+- [x] **Step 1: Provider module** — `importlib.resources` table loading +
   cache + isolation contract + `packaged_source_hash()`; unit tests (table
   identity vs CSVs, cache isolation, hash determinism).
-- [ ] **Step 2: Route the three call sites** — provider by default; explicit
+- [x] **Step 2: Route the three call sites** — provider by default; explicit
   path → validated read-only adapter (Phase A `check_explicit_db`;
   `mode=ro`, never create). Keep `db_connect` for the explicit path; remove
   or gate its bootstrap-on-absent so default runs cannot write.
-- [ ] **Step 3: Settings + GUI construction** — deprecate relative default
+- [x] **Step 3: Settings + GUI construction** — deprecate relative default
   (warning, honor per decision 1); template + GUI docs updated; remove
   `settings_builder` root discovery.
-- [ ] **Step 4: Export descriptor + ignored-DB warning** — per Q3/Q4
+- [x] **Step 4: Export descriptor + ignored-DB warning** — per Q3/Q4
   decisions; update export tests; value-free messages only.
-- [ ] **Step 5: Parity + transition tests** — table-parity test (provider
+- [x] **Step 5: Parity + transition tests** — table-parity test (provider
   frame vs legacy bootstrap frame, dtype-normalized, three runtime tables);
   golden suite green with the enumerated updates above; sentinel root DB AND
   CWD DB ignored with packaged result; explicit-DB parity vs source CSVs;

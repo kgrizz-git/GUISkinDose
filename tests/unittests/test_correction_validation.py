@@ -193,6 +193,30 @@ def test_explicit_db_missing_version_table_fails(tmp_path: Path):
     assert _codes(check_explicit_db(db, expected_version="1", table_specs=PROBE_SPECS)) == {"missing_table"}
 
 
+def test_explicit_db_legacy_unversioned_advisory_but_content_still_checked(tmp_path: Path):
+    good = tmp_path / "legacy.db"
+    _build_db(good, version=None, rows=[(1.0,)])
+    issues = check_explicit_db(good, expected_version="1", table_specs=PROBE_SPECS, legacy_unversioned=True)
+    assert _codes(issues) == set()
+    assert {i.code for i in issues if i.severity == "advisory"} == {"legacy_unversioned"}
+    bad = tmp_path / "legacy_bad.db"
+    _build_db(bad, version=None, rows=[(99.0,)])
+    assert _codes(check_explicit_db(bad, expected_version="1", table_specs=PROBE_SPECS, legacy_unversioned=True)) == {
+        "out_of_range"
+    }
+
+
+def test_explicit_db_findings_are_value_free(tmp_path: Path):
+    db = tmp_path / "leak.db"
+    _build_db(db, version="9", rows=None)
+    secret = tmp_path / "secret_dir"
+    moved = secret / "leak.db"
+    secret.mkdir()
+    db.rename(moved)
+    for issue in check_explicit_db(moved, expected_version="1", table_specs=PROBE_SPECS):
+        assert "secret_dir" not in issue.table + issue.column + issue.message + issue.code
+
+
 def test_explicit_db_missing_table_and_column_fail(tmp_path: Path):
     db = tmp_path / "notab.db"
     _build_db(db, version="1", rows=None)
@@ -211,7 +235,7 @@ def test_explicit_db_out_of_range_and_duplicates_fail(tmp_path: Path):
     _build_db(db2, version="1", rows=[(1.0,), (1.0,)])
     issues = check_explicit_db(db2, expected_version="1", table_specs=PROBE_SPECS, table_keys={"probe": ("a",)})
     assert _codes(issues) == {"duplicate_key"}
-    assert all(i.table.startswith(str(db2)) and i.column == "a" for i in issues)
+    assert all(i.table == "probe" and i.column == "a" for i in issues)
 
 
 def test_explicit_db_unreadable_and_missing_fail_without_creating(tmp_path: Path):

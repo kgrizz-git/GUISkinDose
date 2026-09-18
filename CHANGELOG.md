@@ -19,6 +19,18 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Changed
+
+- **Packaged correction data by default; explicit opt-in for custom databases**
+  (2026-09-18) — correction lookup now reads the packaged CSVs with no working-
+  directory writes, and an implicitly present root/CWD `corrections.db` is
+  ignored (warned once, not loaded). Users with an intentional custom database
+  must point `corrections_db_path` at it explicitly (absolute path preferred;
+  relative paths warn); it is validated read-only and fails closed on drift.
+  Exports now record a source descriptor plus hash instead of a raw filesystem
+  path, and `RICH_EXPORT_SCHEMA_VERSION` is 2. Numerical results are unchanged.
+  Detail in `dev-docs/MAINTENANCE_LOG.md`.
+
 ### Added
 
 - **Correction-data manifest** (2026-09-18) — new machine-readable

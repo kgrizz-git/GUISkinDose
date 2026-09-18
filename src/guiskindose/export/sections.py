@@ -46,6 +46,7 @@ def serialize_settings(settings: Any) -> dict[str, Any]:
     phantom = settings.phantom
     offset = phantom.patient_offset
     snapshot: dict[str, Any] = {key: getattr(settings, key, None) for key in _SETTINGS_KEYS}
+    snapshot["corrections_db_path"], snapshot["corrections_db_source"] = _corrections_source_descriptor(settings)
     snapshot["phantom"] = {
         "model": phantom.model,
         "human_mesh": phantom.human_mesh,
@@ -60,6 +61,35 @@ def serialize_settings(settings: Any) -> dict[str, Any]:
         "d_lat": offset.d_lat,
     }
     return snapshot
+
+
+def _corrections_source_descriptor(settings: Any) -> tuple[str, dict[str, str | None]]:
+    """Non-identifying correction-data provenance for exports.
+
+    Returns a ``(display, descriptor)`` pair: ``"packaged"`` /
+    ``{"source": "packaged-csv", "sha256": …}`` for the default, or
+    ``"explicit"`` / ``{"source": "explicit-sqlite", "sha256": …}`` for an
+    explicit database (hashed by file bytes). Raw filesystem paths never enter
+    the payload. Defensive: any failure yields an unknown descriptor rather
+    than breaking the export on metadata.
+    """
+    try:
+        from guiskindose.correction_data import packaged_source_hash, resolve_corrections_source
+
+        source, db_path = resolve_corrections_source(getattr(settings, "corrections_db_path", None), emit_warnings=False)
+        if source == "packaged":
+            return "packaged", {"source": "packaged-csv", "sha256": packaged_source_hash()}
+        digest: str | None = None
+        try:
+            import hashlib
+            from pathlib import Path as _Path
+
+            digest = hashlib.sha256(_Path(str(db_path)).read_bytes()).hexdigest()
+        except OSError:
+            digest = None
+        return "explicit", {"source": "explicit-sqlite", "sha256": digest}
+    except Exception:
+        return "unknown", {"source": "unknown", "sha256": None}
 
 
 def _default_settings_snapshot() -> dict[str, Any] | None:

@@ -29,7 +29,7 @@ if TYPE_CHECKING:  # avoid importing heavy deps at module import time
 # Rich-export payload schema version. Separate from ``EXPORT_SCHEMA_VERSION``
 # (the JSON/dict export schema) — increment when ``ExportPayload`` changes
 # incompatibly.
-RICH_EXPORT_SCHEMA_VERSION = 1
+RICH_EXPORT_SCHEMA_VERSION = 2
 
 APP_NAME = "GUISkinDose"
 
