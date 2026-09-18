@@ -172,6 +172,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
 | [plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Active** — Correction-data Phase A: manifest, validation, device_info substitution (master §1+§2, zero behavior change). |
+| [plans/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](plans/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Active** — Correction-data Phase B: packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (master §3, numerical identity). |
 | [plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md](plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md) | **Complete** (2026-09-17) — issue #60: object-form `monkeypatch` for the phantom-preview test vs NiceGUI `sys.modules` purge; canary-verified. |
 
 ## Archived plans (`plans/archive/`)
