@@ -40,7 +40,8 @@ stop emitting raw filesystem paths in exports.
    missing/malformed content. `expected_version` applies only when the table
    exists. Tested both ways.
 5. **Value-free errors (BLOCK fix).** Phase A `ValidationIssue` messages embed
-   `str(db_path)`; the adapter maps issues to value-free output (code + table/
+   `str(db_path)`; `check_explicit_db` itself stops embedding paths in its
+   messages, and the adapter maps issues to value-free output (code + table/
    column only, never the path) via `safe_error_event`/`safe_warning`, with a
    test asserting the raised error contains no path.
 6. **Warn-and-honor refined.** Non-default strings warn once (value-free) then
@@ -120,8 +121,10 @@ stop emitting raw filesystem paths in exports.
   (unversioned → legacy policy) and its ad-hoc single-table tmp DB;
   `test_k_tab_transmission_characterization.py:48-52` and
   `test_tube_identity.py` repo-root DB references; `test_golden_k_tab.py:53`
-  and `test_calculate_tab_coverage.py:241,310` legacy sentinels (transparent
-  routing or explicit update — decided at implementation, stated in the PR).
+  and `tests/gui/test_calculate_tab_coverage.py:241,310` legacy sentinels
+  (transparent routing or explicit update — decided at implementation, stated
+  in the PR); `test_export_payload.py` and `test_export_data_post_init.py`
+  for the sibling-key + schema-bump export shape.
 
 **Out of scope:** §4 guides (Phase C), §5 wheel proof (Phase D), custom
 equipment profiles, support geometry, fixture-DICOM scrub (tracked TO_DO
@@ -150,13 +153,13 @@ deferral), `db_connect.py` removal (kept for the explicit adapter path).
 | `src/guiskindose/correction_data.py` (new, proposed name) | Provider + hash |
 | `src/guiskindose/corrections.py` (`calculate_k_med`, `calculate_k_tab`) | Route through provider / explicit adapter |
 | `src/guiskindose/geom_calc.py` (`fetch_and_append_hvl`) | Route through provider / explicit adapter |
-| `src/guiskindose/db_connect.py` | Retained for the explicit path only; bootstrap-on-absent removed or gated |
+| `src/guiskindose/db_connect.py` | Hard-delete the bootstrap branch; always read-only |
 | `src/guiskindose/settings/pyskindose_settings.py:123` | Default deprecation |
 | `src/guiskindose/settings_example.json:59` | Template default |
 | `src/guiskindose/gui/settings_builder.py:109-112` | Remove root discovery |
 | `src/guiskindose/export/sections.py` (`_SETTINGS_KEYS`) | Descriptor + hash |
 | `tests/unittests/test_correction_data_provider.py` (new) | Parity, sentinel, no-CWD-write, explicit, fail-closed, export descriptor |
-| `tests/unittests/test_corrections.py`, `test_k_tab_transmission_characterization.py`, `test_tube_identity.py`, `test_golden_k_tab.py`, `test_calculate_tab_coverage.py` | Updated to legacy-policy/explicit routing (enumerated, not unmodified) |
+| `tests/unittests/test_corrections.py`, `test_k_tab_transmission_characterization.py`, `test_tube_identity.py`, `test_golden_k_tab.py`, `tests/gui/test_calculate_tab_coverage.py`, `test_export_payload.py`, `test_export_data_post_init.py` | Updated to legacy-policy/explicit routing and export-descriptor shape (enumerated, not unmodified) |
 | `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/FEATURE_INVENTORY.md` | Update `corrections_db_path` default documentation |
 | `CHANGELOG.md` | Migration note (default now packaged; explicit opt-in; root DB ignored) |
 | `dev-docs/MAINTENANCE_LOG.md` | Detail entry |
