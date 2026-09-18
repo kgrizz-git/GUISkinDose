@@ -171,6 +171,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
+| [plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md](plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md) | **Complete** (2026-09-17) — issue #60: object-form `monkeypatch` for the phantom-preview test vs NiceGUI `sys.modules` purge; canary-verified. |
 
 ## Archived plans (`plans/archive/`)
 

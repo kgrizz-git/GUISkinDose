@@ -14,6 +14,7 @@ import pytest
 pytest.importorskip("nicegui")
 
 from guiskindose.constants import COLOR_PAD, COLOR_PATIENT, COLOR_TABLE
+from guiskindose.gui import phantom_preview as phantom_preview_mod
 from guiskindose.gui.phantom_preview import (
     PreviewSnapshot,
     capture_phantom_preview_snapshot,
@@ -60,8 +61,14 @@ def test_resolve_preview_mesh_prefers_reduced_when_present():
 
 def test_resolve_preview_mesh_returns_stem_when_reduced_absent(tmp_path, monkeypatch):
     # Point resolver at an empty phantom_data dir so reduced companion is missing.
+    # Object-form patch: string-path resolution breaks when NiceGUI's
+    # `user`-fixture teardown purges `guiskindose.gui` from `sys.modules`
+    # (nicegui `nicegui_reset_globals`), leaving a fresh parent with no
+    # `phantom_preview` binding. Patching the imported module object bypasses
+    # `sys.modules` and parent attrs entirely (cf. tests/gui/test_gui_helpers.py).
     monkeypatch.setattr(
-        "guiskindose.gui.phantom_preview._PHANTOM_DATA_DIR",
+        phantom_preview_mod,
+        "_PHANTOM_DATA_DIR",
         tmp_path,
     )
     (tmp_path / "only_full.stl").write_bytes(b"solid empty\nendsolid empty\n")
