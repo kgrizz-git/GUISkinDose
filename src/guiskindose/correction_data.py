@@ -173,10 +173,14 @@ def resolve_corrections_source(value: object, *, emit_warnings: bool = True) -> 
 
     Returns ``("packaged", None)`` for the default (unset/``None``/empty/
     whitespace/``"corrections.db"``) and ``("explicit", path)`` for anything
-    else. Non-default paths warn once per process (value-free) and are honored
+    else. Note the spelling is exact: ``"./corrections.db"`` (or any other
+    relative spelling) classifies as explicit, not as the sentinel.
+    Non-default paths warn once per process (value-free) and are honored
     read-only downstream. ``~``-leading paths are rejected with a migration
     hint (SQLite expansion differs by OS). Emits an additional diagnostic when
-    a root/CWD ``corrections.db`` is detected but deliberately ignored.
+    a ``corrections.db`` file in the process working directory is detected but
+    deliberately ignored (repo-root files are no longer probed: the GUI root
+    discovery was removed, so only CWD is checked).
     """
     text = "" if value is None else str(value).strip()
     if not text or text == _DEFAULT_SENTINEL:

@@ -204,6 +204,11 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int
     fsl = fsl_tab[int(np.argmin(np.abs(np.asarray(fsl_tab) - fsl_mean)))]
 
     # Connect to database
+    # NOTE (perf follow-up, only if profiles ever care): per-event callers
+    # deep-copy the full medium table here before projecting 4 columns, and
+    # rely on the default emit_warnings=True instead of a threaded flag.
+    # Correct today (warn-once cache; no dry-run calls k_med); revisit with a
+    # projected cache + threaded flag only on measured need.
     df = _load_correction_table(corrections_db, "correction_medium_and_backscatter", emit_warnings=emit_warnings)
 
     # Fetch k_med = f(kVp, HVL) from database. This is table 2 in
