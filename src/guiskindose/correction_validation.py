@@ -76,6 +76,29 @@ def check_frame(
             )
             continue
         series = df[spec.name]
+        if spec.dtype == "string":
+            if len(series) == 0:
+                issues.append(
+                    ValidationIssue(table_name, spec.name, "empty_column", f"Column {spec.name!r} has no rows.", "error")
+                )
+            elif bool(series.isna().any()):
+                issues.append(
+                    ValidationIssue(table_name, spec.name, "missing_value", f"Column {spec.name!r} holds missing values.", "error")
+                )
+            elif bool(series.map(lambda value: not isinstance(value, str)).any()):
+                issues.append(
+                    ValidationIssue(
+                        table_name, spec.name, "wrong_dtype", f"Column {spec.name!r} holds non-string values.", "error"
+                    )
+                )
+            continue
+        if spec.dtype != "float":
+            issues.append(
+                ValidationIssue(
+                    table_name, spec.name, "unknown_dtype", f"Column {spec.name!r} declares unknown dtype {spec.dtype!r}.", "error"
+                )
+            )
+            continue
         if spec.dtype == "float":
             if len(series) == 0:
                 issues.append(
@@ -141,10 +164,12 @@ def check_frame(
             issues.append(
                 ValidationIssue(table_name, key, "null_key", f"Lookup key {key!r} holds null values.", "error")
             )
-        if bool(df.duplicated(subset=[key]).any()):
-            issues.append(
-                ValidationIssue(table_name, key, "duplicate_key", f"Lookup key {key!r} has duplicate entries.", "error")
-            )
+    # Per-column duplicates are only meaningful for single-column keys: in
+    # a composite key the individual axes legitimately repeat (grid tables).
+    if len(key_columns) == 1 and key_columns[0] in df.columns and bool(df.duplicated(subset=[key_columns[0]]).any()):
+        issues.append(
+            ValidationIssue(table_name, key_columns[0], "duplicate_key", f"Lookup key {key_columns[0]!r} has duplicate entries.", "error")
+        )
     if len(key_columns) > 1 and all(k in df.columns for k in key_columns) and bool(df.duplicated(subset=list(key_columns)).any()):
         issues.append(
             ValidationIssue(
@@ -250,18 +275,21 @@ def check_manifest_consistency(manifest: dict, table_dir: Path) -> list[Validati
                 ValidationIssue("manifest", name, "column_mismatch", f"Lookup value {lookup_value!r} is not a declared column of {name!r}.", "error")
             )
         candidate = table_dir / name
-        if candidate.is_file():
-            with candidate.open(encoding="utf-8", newline="") as fh:
-                header = next(csv.reader(fh), [])
-            if set(declared) != set(header) or len(declared) != len(header):
-                issues.append(
-                    ValidationIssue(
-                        "manifest", name, "column_mismatch", f"Manifest columns for {name!r} do not match the CSV header.", "error"
-                    )
+        if not candidate.is_file():
+            issues.append(
+                ValidationIssue("manifest", name, "missing_file", f"Declared CSV {name!r} is absent.", "error")
+            )
+            continue
+        with candidate.open(encoding="utf-8", newline="") as fh:
+            header = next(csv.reader(fh), [])
+        if set(declared) != set(header) or len(declared) != len(header):
+            issues.append(
+                ValidationIssue(
+                    "manifest", name, "column_mismatch", f"Manifest columns for {name!r} do not match the CSV header.", "error"
                 )
+            )
         expected = entry.get("sha256")
-        candidate = table_dir / name
-        if expected and candidate.is_file():
+        if expected:
             digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
             if digest != expected:
                 issues.append(

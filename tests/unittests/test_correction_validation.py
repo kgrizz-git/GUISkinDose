@@ -77,15 +77,30 @@ def test_duplicate_keys_are_errors():
         _frame(), FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal")
     )
     assert _codes(composite) == set()
+def test_composite_keys_allow_repeating_single_axes():
+    grid = pd.DataFrame({"kvp_kv": [50.0, 50.0, 60.0, 60.0], "hvl_mmal": [2.0, 3.0, 2.0, 3.0]})
+    issues = check_frame(grid, FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal"))
+    assert issues == []
     dup = pd.DataFrame({"kvp_kv": [50.0, 50.0], "hvl_mmal": [2.0, 2.0]})
     issues = check_frame(dup, FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal"))
     assert _codes(issues) == {"duplicate_key"}
+    assert all(i.column == "kvp_kv,hvl_mmal" for i in issues if i.code == "duplicate_key")
 
 
 def test_string_columns_accept_text():
     df = pd.DataFrame({"device_model": ["AXIOM-Artis", "AlluraClarity"]})
     specs = [ColumnSpec("device_model", "string")]
     assert check_frame(df, specs, table_name="t") == []
+
+
+def test_string_columns_reject_empty_missing_and_non_string():
+    specs = [ColumnSpec("device_model", "string")]
+    assert _codes(check_frame(pd.DataFrame({"device_model": []}), specs, table_name="t")) == {"empty_column"}
+    assert _codes(check_frame(pd.DataFrame({"device_model": ["a", None]}), specs, table_name="t")) == {"missing_value"}
+    assert _codes(check_frame(pd.DataFrame({"device_model": ["a", 1]}), specs, table_name="t")) == {"wrong_dtype"}
+    assert _codes(check_frame(pd.DataFrame({"device_model": ["a"]}), [ColumnSpec("device_model", "Float")], table_name="t")) == {
+        "unknown_dtype"
+    }
 
 
 def test_support_transmission_valid_is_clean():
@@ -112,6 +127,23 @@ def test_manifest_flags_uncovered_csv(tmp_path: Path):
     (tmp_path / "stray.csv").write_text("a\n1\n", encoding="utf-8")
     manifest = {"tables": []}
     assert _codes(check_manifest_consistency(manifest, tmp_path)) == {"uncovered_csv"}
+
+
+def test_manifest_flags_absent_declared_csv(tmp_path: Path):
+    manifest = {
+        "tables": [
+            {
+                "file": "ghost.csv",
+                "sqlite_table": None,
+                "role": "provenance_only",
+                "source_type": "unknown",
+                "provenance_confidence": "low",
+                "sha256": "0" * 64,
+                "columns": [],
+            }
+        ]
+    }
+    assert _codes(check_manifest_consistency(manifest, tmp_path)) == {"missing_file"}
 
 
 PROBE_SPECS = {"probe": [ColumnSpec("a", "float", (0.0, 10.0))]}

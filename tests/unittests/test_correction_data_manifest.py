@@ -10,9 +10,6 @@ from guiskindose.correction_validation import check_manifest_consistency, load_m
 
 TABLE_DIR = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "table_data"
 
-REAL_SERIALS = {"146278", "146936", "722010564", "722013362"}
-REAL_LABS = {"U105", "U106", "U601", "U104"}
-
 
 def _errors(manifest: dict, table_dir: Path = TABLE_DIR):
     return [i for i in check_manifest_consistency(manifest, table_dir) if i.severity == "error"]
@@ -115,13 +112,14 @@ def test_manifest_entry_without_file_field_fails(tmp_path: Path):
     assert "missing_key" in codes
 
 
-def test_device_info_carries_no_real_identifiers():
+def test_device_info_carries_only_synthetic_identifiers():
+    # Every identifier-bearing cell is pinned to its exact expected synthetic
+    # value below: any real identifier anywhere in these columns fails the
+    # equality assertions, so no blocklist of upstream values is needed (and
+    # none is kept — this file must not propagate them).
     rows = list(csv.DictReader((TABLE_DIR / "device_info.csv").open(encoding="utf-8")))
     assert [r["DeviceObserverSerialNumber"] for r in rows] == ["SYN-SN-01", "SYN-SN-02", "SYN-SN-03", "SYN-SN-04"]
     assert [r["Lab"] for r in rows] == ["SYN-LAB-A", "SYN-LAB-B", "SYN-LAB-C", "SYN-LAB-D"]
-    cells = [value for row in rows for value in row.values() if value]
-    assert not (REAL_SERIALS & set(cells))
-    assert not (REAL_LABS & set(cells))
     assert [r["PadThickness_mm"] for r in rows] == ["74", "74", "101", "68"]
     assert [r["DateMeasured"] for r in rows] == ["2018-04", "", "2018-04", "2018-04"]
     # Row 3 references another row's lab: the token must match that lab's own row.
