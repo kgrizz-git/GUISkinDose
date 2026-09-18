@@ -1,10 +1,8 @@
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
-from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
 
 from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
@@ -20,12 +18,12 @@ from guiskindose.corrections import (
     calculate_k_tab,
 )
 from guiskindose.geom_calc import fetch_and_append_hvl
-from guiskindose.settings import PyskindoseSettings
 
-P = Path(__file__).parent.parent.parent
-sys.path.insert(1, str(P.absolute()))
-
-PATH_TO_DB = PyskindoseSettings(DEVELOPMENT_PARAMETERS).corrections_db_path
+# Packaged provider via the default sentinel: these behavior tests must not
+# depend on the gitignored developer database at tests/manual_tests/ (absent
+# on clean checkouts). Explicit-path coverage lives in
+# test_correction_data_provider.py.
+PATH_TO_DB = "corrections.db"
 
 
 def _frame(kvp, cu, al, model, plane, n=1):
