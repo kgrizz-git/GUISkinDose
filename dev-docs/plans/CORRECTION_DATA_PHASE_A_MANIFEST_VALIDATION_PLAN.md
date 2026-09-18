@@ -134,7 +134,7 @@ geometry redesign.
   only read when a fresh DB is built, `db_connect.py:49`). Substitution test
   asserts: row order, preserved dates/comments modulo retokenization, no real
   identifiers remain, and the row-3 comment token matches that lab's row token.
-- [ ] **Step 5: Docs + verification ladder** — CHANGELOG brief entry +
+- [x] **Step 5: Docs + verification ladder** — CHANGELOG brief entry +
   MAINTENANCE_LOG detail; `index.md` row (already added with this plan —
   update only if paths change). Ladder: file tests → full `pytest -q` →
   `ruff` → `basedpyright` → `check_doc_freshness` → `check_gui_test_placement`
