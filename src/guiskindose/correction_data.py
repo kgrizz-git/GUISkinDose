@@ -148,9 +148,12 @@ def packaged_source_hash() -> str:
 
 
 def _warn_once(cls: str, code: str, message: str, *, emit_warnings: bool) -> None:
-    if not emit_warnings or cls in _warned:
+    if not emit_warnings:
         return
-    _warned.add(cls)
+    with _CACHE_LOCK:
+        if cls in _warned:
+            return
+        _warned.add(cls)
     safe_warning(logger, code)
     logger.warning(message)
     warnings.warn(message, DeprecationWarning, stacklevel=3)
