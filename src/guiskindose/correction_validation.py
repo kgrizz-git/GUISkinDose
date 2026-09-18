@@ -77,15 +77,41 @@ def check_frame(
             continue
         series = df[spec.name]
         if spec.dtype == "float":
-            numeric = pd.to_numeric(series, errors="coerce")
-            if numeric.isna().any() and not series.isna().all():
+            if len(series) == 0:
                 issues.append(
-                    ValidationIssue(
-                        table_name, spec.name, "wrong_dtype", f"Column {spec.name!r} holds non-numeric values.", "error"
-                    )
+                    ValidationIssue(table_name, spec.name, "empty_column", f"Column {spec.name!r} has no rows.", "error")
                 )
                 continue
-            if not numeric.isna().all() and not bool(numeric.dropna().map(math.isfinite).all()):
+            numeric = pd.to_numeric(series, errors="coerce")
+            if numeric.isna().all():
+                if series.isna().all():
+                    issues.append(
+                        ValidationIssue(
+                            table_name, spec.name, "non_finite", f"Column {spec.name!r} holds no usable numeric values.", "error"
+                        )
+                    )
+                else:
+                    issues.append(
+                        ValidationIssue(
+                            table_name, spec.name, "wrong_dtype", f"Column {spec.name!r} holds non-numeric values.", "error"
+                        )
+                    )
+                continue
+            if bool(numeric.isna().any()):
+                if bool(((~series.isna()) & (numeric.isna())).any()):
+                    issues.append(
+                        ValidationIssue(
+                            table_name, spec.name, "wrong_dtype", f"Column {spec.name!r} holds non-numeric values.", "error"
+                        )
+                    )
+                else:
+                    issues.append(
+                        ValidationIssue(
+                            table_name, spec.name, "non_finite", f"Column {spec.name!r} holds missing values.", "error"
+                        )
+                    )
+                continue
+            if not bool(numeric.map(math.isfinite).all()):
                 issues.append(
                     ValidationIssue(
                         table_name, spec.name, "non_finite", f"Column {spec.name!r} holds non-finite values.", "error"
@@ -107,7 +133,15 @@ def check_frame(
                         )
                     )
     for key in key_columns:
-        if key in df.columns and bool(df.duplicated(subset=[key]).any()):
+        if key not in df.columns:
+            continue
+        if bool(df[key].isna().any()):
+            # pandas treats NaN as not-equal-to-NaN, so null keys would slip
+            # past the duplicate check below: keys must be complete.
+            issues.append(
+                ValidationIssue(table_name, key, "null_key", f"Lookup key {key!r} holds null values.", "error")
+            )
+        if bool(df.duplicated(subset=[key]).any()):
             issues.append(
                 ValidationIssue(table_name, key, "duplicate_key", f"Lookup key {key!r} has duplicate entries.", "error")
             )
@@ -147,6 +181,11 @@ def check_support_transmission(
             ValidationIssue(table_name, value_column, "non_finite", f"Column {value_column!r} holds non-numeric values.", "error")
         )
         return issues
+    if not bool(values.map(math.isfinite).all()):
+        issues.append(
+            ValidationIssue(table_name, value_column, "non_finite", f"Column {value_column!r} holds non-finite values.", "error")
+        )
+        return issues
     if bool((values < 0).any()):
         issues.append(
             ValidationIssue(table_name, value_column, "out_of_range", f"Column {value_column!r} holds negative values.", "error")
@@ -184,6 +223,9 @@ def check_manifest_consistency(manifest: dict, table_dir: Path) -> list[Validati
         issues.append(ValidationIssue("manifest", missing, "uncovered_csv", f"CSV {missing!r} has no manifest entry.", "error"))
     for entry in tables:
         name = entry.get("file", "?")
+        if "file" not in entry:
+            issues.append(ValidationIssue("manifest", name, "missing_key", "A manifest entry lacks its 'file' field.", "error"))
+            continue
         for key in ("sqlite_table", "role", "source_type", "provenance_confidence", "sha256"):
             if key not in entry:
                 issues.append(ValidationIssue("manifest", name, "missing_key", f"Manifest entry {name!r} lacks {key!r}.", "error"))
@@ -196,11 +238,21 @@ def check_manifest_consistency(manifest: dict, table_dir: Path) -> list[Validati
             issues.append(
                 ValidationIssue("manifest", name, "missing_key", f"Runtime table {name!r} names no consumer.", "error")
             )
+        declared = [col.get("name", "?") for col in entry.get("columns", [])]
+        for key in entry.get("lookup_keys", []):
+            if key not in declared:
+                issues.append(
+                    ValidationIssue("manifest", name, "column_mismatch", f"Lookup key {key!r} is not a declared column of {name!r}.", "error")
+                )
+        lookup_value = entry.get("lookup_value")
+        if lookup_value is not None and lookup_value not in declared:
+            issues.append(
+                ValidationIssue("manifest", name, "column_mismatch", f"Lookup value {lookup_value!r} is not a declared column of {name!r}.", "error")
+            )
         candidate = table_dir / name
         if candidate.is_file():
             with candidate.open(encoding="utf-8", newline="") as fh:
                 header = next(csv.reader(fh), [])
-            declared = [col.get("name", "?") for col in entry.get("columns", [])]
             if set(declared) != set(header) or len(declared) != len(header):
                 issues.append(
                     ValidationIssue(
@@ -248,7 +300,7 @@ def check_explicit_db(
         # Table names cannot be bound parameters; the allowlist guard above makes
         # this interpolation safe. nosec: the identifier is regex-validated.
         try:
-            versions = [row[0] for row in conn.execute(f"SELECT version FROM {_quoted_identifier(version_table)}")]  # nosec B608
+            versions = [str(row[0]) for row in conn.execute(f"SELECT version FROM {_quoted_identifier(version_table)}")]  # nosec B608
         except sqlite3.Error:
             versions = []
         except ValueError:
@@ -264,23 +316,25 @@ def check_explicit_db(
                     "error",
                 )
             )
-    for table, columns in table_specs.items():
-        if table == version_table:
-            continue
-        if table not in tables:
-            issues.append(ValidationIssue(str(db_path), table, "missing_table", f"Required table {table!r} is absent.", "error"))
-            continue
-        try:
-            frame = pd.read_sql_query(f"SELECT * FROM {_quoted_identifier(table)}", conn)  # nosec B608
-        except (sqlite3.Error, ValueError, pd.errors.DatabaseError) as exc:
-            code = "unsafe_identifier" if isinstance(exc, ValueError) else "unreadable_table"
-            issues.append(
-                ValidationIssue(str(db_path), table, code, f"Table {table!r} could not be read safely.", "error")
-            )
-            continue
-        for issue in check_frame(frame, columns, table_name=f"{db_path}::{table}", key_columns=(table_keys or {}).get(table, ())):
-            issues.append(issue)
-    conn.close()
+    try:
+        for table, columns in table_specs.items():
+            if table == version_table:
+                continue
+            if table not in tables:
+                issues.append(ValidationIssue(str(db_path), table, "missing_table", f"Required table {table!r} is absent.", "error"))
+                continue
+            try:
+                frame = pd.read_sql_query(f"SELECT * FROM {_quoted_identifier(table)}", conn)  # nosec B608
+            except (sqlite3.Error, ValueError, pd.errors.DatabaseError) as exc:
+                code = "unsafe_identifier" if isinstance(exc, ValueError) else "unreadable_table"
+                issues.append(
+                    ValidationIssue(str(db_path), table, code, f"Table {table!r} could not be read safely.", "error")
+                )
+                continue
+            for issue in check_frame(frame, columns, table_name=f"{db_path}::{table}", key_columns=(table_keys or {}).get(table, ())):
+                issues.append(issue)
+    finally:
+        conn.close()
     return issues
 
 

@@ -50,6 +50,17 @@ def test_non_finite_is_error():
     assert _codes(issues) == {"non_finite"}
 
 
+def test_all_null_and_empty_columns_are_errors():
+    all_null = check_frame(_frame(hvl_mmal=[None, None]), FLOAT_COLS, table_name="t")
+    assert _codes(all_null) == {"non_finite"}
+    empty = check_frame(pd.DataFrame({"kvp_kv": [], "hvl_mmal": []}), FLOAT_COLS, table_name="t")
+    assert _codes(empty) == {"empty_column"}
+    genuine_missing = check_frame(_frame(hvl_mmal=[1.0, float("nan")]), FLOAT_COLS, table_name="t")
+    assert _codes(genuine_missing) == {"non_finite"}
+    mixed_types = check_frame(_frame(hvl_mmal=["a", 1.0]), FLOAT_COLS, table_name="t")
+    assert _codes(mixed_types) == {"wrong_dtype"}
+
+
 def test_out_of_range_both_sides_is_error():
     low = check_frame(_frame(kvp_kv=[10.0, 60.0]), FLOAT_COLS, table_name="t")
     high = check_frame(_frame(kvp_kv=[60.0, 200.0]), FLOAT_COLS, table_name="t")
@@ -60,6 +71,8 @@ def test_out_of_range_both_sides_is_error():
 def test_duplicate_keys_are_errors():
     single = check_frame(_frame(kvp_kv=[50.0, 50.0]), FLOAT_COLS, table_name="t", key_columns=KEYS)
     assert _codes(single) == {"duplicate_key"}
+    nulls = check_frame(_frame(kvp_kv=[50.0, None]), FLOAT_COLS, table_name="t", key_columns=KEYS)
+    assert "null_key" in _codes(nulls)
     composite = check_frame(
         _frame(), FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal")
     )
@@ -91,6 +104,7 @@ def test_support_transmission_negative_and_above_one_are_errors():
     assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [-0.1, 0.5]}))) == {"out_of_range"}
     assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [0.5, 1.5]}))) == {"out_of_range"}
     assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": ["x", 0.5]}))) == {"non_finite"}
+    assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [0.5, float("inf")]}))) == {"non_finite"}
     assert _codes(check_support_transmission(pd.DataFrame({"other": [1.0]}))) == {"missing_column"}
 
 
@@ -127,6 +141,18 @@ def test_explicit_db_bad_version_fails(tmp_path: Path):
     db = tmp_path / "badver.db"
     _build_db(db, version="2", rows=[(1.0,)])
     assert _codes(check_explicit_db(db, expected_version="1", table_specs=PROBE_SPECS)) == {"schema_version_mismatch"}
+
+
+def test_explicit_db_integer_version_matches_string_expectation(tmp_path: Path):
+    db = tmp_path / "intver.db"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE schema_version (version INTEGER)")
+    conn.execute("INSERT INTO schema_version VALUES (1)")
+    conn.execute("CREATE TABLE probe (a REAL)")
+    conn.execute("INSERT INTO probe VALUES (1.0)")
+    conn.commit()
+    conn.close()
+    assert check_explicit_db(db, expected_version="1", table_specs=PROBE_SPECS) == []
 
 
 def test_explicit_db_missing_version_table_fails(tmp_path: Path):

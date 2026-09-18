@@ -92,6 +92,29 @@ def test_manifest_columns_match_csv_headers(tmp_path: Path):
     assert "column_mismatch" in codes
 
 
+def test_manifest_lookup_keys_must_be_declared_columns(tmp_path: Path):
+    import shutil
+
+    name = "device_info.csv"
+    shutil.copy(TABLE_DIR / name, tmp_path / name)
+    manifest = load_manifest(TABLE_DIR)
+    trimmed = {"tables": [dict(e) for e in manifest["tables"] if e["file"] == name]}
+    trimmed["tables"][0]["lookup_keys"] = ["Lab"]
+    trimmed["tables"][0]["lookup_value"] = "PadThickness_mm"
+    assert _errors(trimmed, tmp_path) == []
+    trimmed["tables"][0]["lookup_keys"] = ["Nope"]
+    assert "column_mismatch" in {i.code for i in _errors(trimmed, tmp_path)}
+    trimmed["tables"][0]["lookup_keys"] = []
+    trimmed["tables"][0]["lookup_value"] = "Nope"
+    assert "column_mismatch" in {i.code for i in _errors(trimmed, tmp_path)}
+
+
+def test_manifest_entry_without_file_field_fails(tmp_path: Path):
+    manifest = {"tables": [{"role": "provenance_only"}]}
+    codes = {i.code for i in _errors(manifest, tmp_path)}
+    assert "missing_key" in codes
+
+
 def test_device_info_carries_no_real_identifiers():
     rows = list(csv.DictReader((TABLE_DIR / "device_info.csv").open(encoding="utf-8")))
     assert [r["DeviceObserverSerialNumber"] for r in rows] == ["SYN-SN-01", "SYN-SN-02", "SYN-SN-03", "SYN-SN-04"]
