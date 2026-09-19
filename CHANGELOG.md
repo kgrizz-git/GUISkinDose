@@ -103,6 +103,12 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Correction-data docstring/comment accuracy follow-ups** (2026-09-18) —
+  validator module docstring reflects Phase B runtime wiring, the test-suite
+  artifact comment matches the packaged-data default, and the manifest
+  description no longer references the removed SQLite bootstrap. No behavior
+  changes.
+
 - **Same-PR TO_DO cleanup enforcement** (2026-09-15) — backlog lifecycle is
   now part of the PR Definition of Done (remove completed items in the same
   PR, not post-merge); new advisory pre-push reminder flags open items
