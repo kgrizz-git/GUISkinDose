@@ -427,8 +427,8 @@ Packaged lookup tables (inventoried in `correction_data_manifest.json`):
 - `device_info` — provenance only (no runtime consumer)
 
 Default runs read the packaged CSVs (no working-directory writes); explicit
-custom SQLite databases validate read-only via `db_connect.py` (bootstrap
-removed). See `CORRECTION_DATA_REFERENCE.md`.
+custom SQLite databases validate read-only via `correction_data.explicit_table()`
+(`db_connect.py` opens explicit databases only, off the hot path). See `CORRECTION_DATA_REFERENCE.md`.
 
 ---
 

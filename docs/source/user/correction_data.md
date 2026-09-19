@@ -22,7 +22,7 @@ at it **explicitly, preferably with an absolute path**:
 - The file is validated read-only before any calculation (schema, tables,
   columns, ranges, duplicates) and fails closed with an actionable error.
   Nothing is ever written to it, and no working-directory database is created.
-- Relative paths still work but are deprecated and warn once per run — prefer
+- Relative paths still work but are deprecated and warn once per process — prefer
   absolute paths.
 - A `corrections.db` file sitting in the working directory is **ignored** (you
   will see a one-time notice); it is never loaded silently. This replaces the

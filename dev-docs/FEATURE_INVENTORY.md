@@ -243,8 +243,9 @@ Packaged lookup tables (shipped CSVs, inventoried in `correction_data_manifest.j
 | `device_info` | Provenance only (lab pad thickness; identifiers de-identified; no runtime consumer) |
 
 Default runs read the packaged CSVs with no working-directory writes; explicit
-custom SQLite databases are validated read-only (`db_connect.py` opens explicit
-databases only — the CWD bootstrap is removed). See `CORRECTION_DATA_REFERENCE.md`.
+custom SQLite databases are validated read-only (`correction_data.explicit_table()`;
+`db_connect.py` opens explicit databases only, off the hot path). User guide:
+`docs/source/user/correction_data.md`. See `CORRECTION_DATA_REFERENCE.md`.
 
 ---
 
