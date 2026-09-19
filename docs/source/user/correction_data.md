@@ -19,8 +19,9 @@ units, sources, and SHA-256 hashes).
 If you have your own SQLite correction database, point `corrections_db_path`
 at it **explicitly, preferably with an absolute path**:
 
-- The file is validated read-only before any calculation (schema, tables,
-  columns, ranges, duplicates) and fails closed with an actionable error.
+- The file is validated read-only before any calculation (schema version where
+  present, then the requested table's schema, columns, ranges, duplicates) and
+  fails closed with an actionable error.
   Nothing is ever written to it, and no working-directory database is created.
 - Relative paths still work but are deprecated and warn once per process — prefer
   absolute paths.

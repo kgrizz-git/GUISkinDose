@@ -143,7 +143,7 @@ geometry redesign.
   route (`privacy_admission_policy.json`); verify the `.phi-scanbaseline`
   `device_info.csv` entry freshness post-substitution (refresh/remove per the
   scanner's stale-entry behavior, confirmed empirically — do not assume).
-- [ ] **Step 6: Push, PR, reviews** — push branch, open PR, request DeepSeek +
+- [x] **Step 6: Push, PR, reviews** — push branch, open PR, request DeepSeek +
   kilo reviews of the implementation. Merge only on approval + green CI.
 
 ## Acceptance Criteria

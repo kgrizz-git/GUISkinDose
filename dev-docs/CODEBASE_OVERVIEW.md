@@ -22,6 +22,7 @@ src/guiskindose/          # Main package
   beam_class.py            # X-ray beam and detector model
   geom_calc.py             # Geometry calculations
   corrections.py           # Physics correction factors
+  correction_data.py       # Packaged correction-data provider (resources, cache, explicit-DB adapter)
   db_connect.py            # Read-only access to explicit legacy SQLite correction databases
   format_export_data.py    # Output formatting (dict / JSON / HTML)
   dev_data.py              # Hard-coded dev/test parameters
@@ -51,7 +52,7 @@ GUISkinDose is organized in layers so settings, dose physics, and presentation s
 | **L0 — Shared** | `constants.py`, `debug.py` | String keys, debug helpers; no business logic |
 | **L1 — Settings** | `settings/` | `PyskindoseSettings` and related dataclasses; may use L0, `helpers/` |
 | **L2 — Helpers & input** | `helpers/`, `rdsr_parser.py`, `rdsr_normalizer.py` | Parsing, normalization, settings loading |
-| **L3 — Domain** | `beam_class.py`, `phantom_class.py`, `geom_calc.py`, `corrections.py`, `db_connect.py` | Geometry, phantoms, beams, correction factors |
+| **L3 — Domain** | `beam_class.py`, `phantom_class.py`, `geom_calc.py`, `corrections.py`, `correction_data.py`, `db_connect.py` | Geometry, phantoms, beams, correction factors |
 | **L4 — Dose pipeline** | `calculate_dose/` | Per-event dose accumulation (uses L3) |
 | **L5 — Presentation** | `plotting/`, `format_export_data.py` | Plotly plots and export formatting |
 | **L6 — Orchestration** | `analyze_data.py` | Mode dispatch: geometry plots vs dose calculation |

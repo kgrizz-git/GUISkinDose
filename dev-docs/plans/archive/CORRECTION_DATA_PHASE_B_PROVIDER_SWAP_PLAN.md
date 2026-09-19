@@ -186,12 +186,12 @@ deferral), `db_connect.py` removal (kept for the explicit adapter path).
   path (asserted); dedicated temp-CWD run asserts no file is created (the
   session guard excludes `corrections.db*`, so this must be its own test);
   export payload carries no absolute path in either mode.
-- [ ] **Step 6: Docs + verification ladder** — CHANGELOG migration note +
+- [x] **Step 6: Docs + verification ladder** — CHANGELOG migration note +
   MAINTENANCE_LOG detail; ladder: new tests → full `pytest -q` → `ruff` →
   `basedpyright` → `bandit` + semgrep → `check_doc_freshness` →
   `check_gui_test_placement` → `check_changelog` → `check_file_sizes` →
   `audit_dependencies` (lock untouched; expect green).
-- [ ] **Step 7: Push, PR, reviews** — push branch, open PR, request Kilo +
+- [x] **Step 7: Push, PR, reviews** — push branch, open PR, request Kilo +
   Spark implementation reviews. Merge only on approval + green CI.
 
 ## Acceptance Criteria

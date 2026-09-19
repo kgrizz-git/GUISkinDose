@@ -1,8 +1,8 @@
 """Validation for correction-data CSVs and explicit legacy SQLite databases.
 
-Phase A of the correction-data packaging plan: pure, side-effect-free checks
-with no runtime wiring (wiring the explicit-DB adapter into calculation is
-Phase B). All findings are returned as :class:`ValidationIssue` values with an
+Pure, side-effect-free checks used by the test suite and, since Phase B, by
+the runtime explicit-database adapter (`correction_data.explicit_table()`).
+All findings are returned as :class:`ValidationIssue` values with an
 ``error`` / ``advisory`` severity split: errors can change dose, advisories
 (provenance gaps, known-invalid inherited classes) cannot.
 
