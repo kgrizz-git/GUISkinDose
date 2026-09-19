@@ -113,7 +113,7 @@ Plans and backlog are split on purpose (Phase 6 closed `exec-plans/` as unnecess
 6. **Fail loudly on clinical-data ambiguity.**
    Unknown units, missing geometry, unsupported scanner models, or ambiguous tabular schemas should produce actionable errors or explicit warnings before calculation.
 7. **Keep files to a reasonable size (Modularity).**
-   Keep all Python source files and Markdown documentation files under ~800 lines to ensure maintainability and agent legibility. Outliers must be explicitly whitelisted in `scripts/check_file_sizes.py` and scheduled for refactoring.
+    Keep Python source files and Markdown documentation files under `src/`, `scripts/`, and `dev-docs/` under ~800 lines to ensure maintainability and agent legibility. Outliers must be explicitly whitelisted in `scripts/check_file_sizes.py` and scheduled for refactoring. Root-level append-only history (`CHANGELOG.md`) is out of scope by design, not by whitelist.
 8. **Archive completed or superseded plans.**
    Always move completed or superseded execution plans from `dev-docs/plans/` to `dev-docs/plans/archive/` and update `dev-docs/index.md` catalog references.
 9. **Store diagnostics and assessments in the designated folder.**

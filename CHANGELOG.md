@@ -103,6 +103,12 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Plot modes no longer raise in HTML output format** (2026-09-18) —
+  `plot_setup` / `plot_event` / `plot_procedure` with the default `html` format
+  returned no output by design but raised `RuntimeError` (regression from
+  June, breaking the getting-started notebook). Only dose modes with genuinely
+  missing output still raise. Detail in `dev-docs/MAINTENANCE_LOG.md`.
+
 - **Correction-data docstring/comment accuracy follow-ups** (2026-09-18) —
   validator module docstring reflects Phase B runtime wiring, the test-suite
   artifact comment matches the packaged-data default, and the manifest

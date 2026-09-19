@@ -304,7 +304,7 @@ def analyze_normalized_data_with_custom_settings_object(
     data_norm: pd.DataFrame,
     settings: PyskindoseSettings | str | dict,
     output_format: str | None = RUN_ARGUMENTS_OUTPUT_JSON,
-) -> str | dict[str, Any] | PySkinDoseOutput:
+) -> str | dict[str, Any] | PySkinDoseOutput | None:
     """Run PySkinDose with custom normalized data and a custom specified settings objects.
 
     See the

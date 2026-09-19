@@ -227,6 +227,14 @@ policy decisions, not a restart of Phases 0-9.
   once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
+- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx
+  execution of `docs/source/getting_started/getting_started.ipynb` failed with
+  `RuntimeError: Expected HTML output but dose calculation returned no data`
+  (plot modes + html regression from 2026-06-07; fix plan archived at
+  [NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md)).
+  Remaining: confirm the docs build is green (watch for a second latent failure
+  behind it, e.g. the `tqdm_notebook.disp` incompatibility seen in CI build
+  logs); then remove this item.
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
   Playwright/CDP only for browser-specific gaps.
 - [ ] **Coordinate diagrams** — expand and validate `VENDOR_COORDINATE_SYSTEMS.md` diagrams against vendor data.

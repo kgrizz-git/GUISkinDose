@@ -71,7 +71,7 @@ def _format_multi_exam_no_output_warning(exam_id: str) -> str:
 def analyze_data(
     normalized_data: pd.DataFrame,
     settings: str | dict | PyskindoseSettings,
-) -> dict[str, Any] | str | PySkinDoseOutput:
+) -> dict[str, Any] | str | PySkinDoseOutput | None:
     """Analyze data och settings, and runs PySkinDose in desired mode.
 
     Parameters
@@ -85,7 +85,9 @@ def analyze_data(
     -------
     Dict[str, Any]
         output dictionary containing calculation specifics such as dose map, correction
-        factors, etc.
+        factors, etc. ``None`` in plot modes with ``html`` output (geometry plots
+        render for side effect; only dose modes produce output). Note: ``dict`` /
+        ``json`` formats raise on missing output in every mode.
 
     """
     settings = initialize_settings(settings)
@@ -134,7 +136,9 @@ def analyze_data(
         )
 
     if settings.output_format == c.RUN_ARGUMENTS_OUTPUT_HTML:
-        if output is None:
+        # Plot modes legitimately produce no output (plots render for side
+        # effect); only dose modes must have data at this point.
+        if output is None and settings.mode in (c.MODE_CALCULATE_DOSE, c.MODE_PLOT_DOSEMAP):
             raise RuntimeError("Expected HTML output but dose calculation returned no data.")
         return output
 
