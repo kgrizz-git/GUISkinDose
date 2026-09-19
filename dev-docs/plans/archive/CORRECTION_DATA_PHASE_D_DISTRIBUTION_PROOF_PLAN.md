@@ -171,6 +171,10 @@ unit items (table above).
 - `python scripts/verify_distribution.py` end-to-end on this machine; attach
   the PASS report in the PR. Optional Ubuntu-only CI step runs it with
   `--skip-build` after the existing `uv build`.
+- Coverage: `scripts/verify_distribution.py` is omitted from
+  `[tool.coverage.run]` (runbook script verified by execution, not import);
+  the coverage-pr job builds a wheel first so the new packaging assertions
+  execute under diff-cover instead of skipping.
 - `python scripts/privacy_admission.py run --mode staged` when adding
   `scripts/verify_distribution.py` (new `scripts/` surface).
 - Full suite + `ruff` / `basedpyright` / `bandit` / privacy gates per the

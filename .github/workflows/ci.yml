@@ -320,6 +320,10 @@ jobs:
         python-version: '3.12'
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
+    - name: Build wheel (packaging test needs a real artifact)
+      # test_packaging.py asserts wheel/sdist contents; without dist/ it would
+      # silently skip, hiding the new assertions from diff coverage.
+      run: uv build
     - name: Generate combined coverage (non-GUI + GUI)
       # pytest-cov keeps xdist workers measured; non-GUI runs parallel (-n auto),
       # GUI stays serial (asyncio/nicegui). --cov spans src+scripts+tests so

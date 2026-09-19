@@ -108,7 +108,7 @@ def test_wheel_contains_correction_runtime_tables() -> None:
     dist = Path(__file__).resolve().parents[2] / "dist"
     wheels = sorted(dist.glob("guiskindose-*.whl"))
     if not wheels:
-        pytest.skip("no guiskindose wheel in dist/; run `uv build` to cover this")
+        pytest.skip("no guiskindose wheel in dist/; run `uv build` to cover this")  # pragma: no cover
     with zipfile.ZipFile(wheels[-1]) as archive:
         names = set(archive.namelist())
     missing = [path for path in _runtime_lookup_wheel_paths() if path not in names]
@@ -124,7 +124,7 @@ def test_sdist_contains_correction_runtime_tables() -> None:
     dist = Path(__file__).resolve().parents[2] / "dist"
     sdists = sorted(dist.glob("guiskindose-*.tar.gz"))
     if not sdists:
-        pytest.skip("no guiskindose sdist in dist/; run `uv build` to cover this")
+        pytest.skip("no guiskindose sdist in dist/; run `uv build` to cover this")  # pragma: no cover
     with tarfile.open(sdists[-1], "r:gz") as archive:
         names = archive.getnames()
     missing = [
