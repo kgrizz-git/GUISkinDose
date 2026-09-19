@@ -2,11 +2,17 @@
 
 Guards Phase 4b of the rename: installed metadata reports ``1.0.0``, and a built
 wheel contains the ``guiskindose`` package (not an empty or old-name tree).
+
+Phase D (correction-data distribution proof) adds content assertions: every
+manifest-declared runtime lookup table plus the manifest itself must ship in
+the wheel, and the sdist file list must cover the same set.
 """
 
 from __future__ import annotations
 
+import json
 import re
+import tarfile
 import tomllib
 import zipfile
 from importlib.metadata import version
@@ -71,3 +77,57 @@ def test_wheel_contains_guiskindose_package() -> None:
     # Concatenate so this file does not contain the pre-rename import path literal.
     legacy_prefix = "".join(("my", "pyskindose", "/"))
     assert not any(name.startswith(legacy_prefix) for name in names)
+
+
+def _runtime_lookup_wheel_paths() -> list[str]:
+    """Manifest-declared runtime lookup tables as wheel-relative paths.
+
+    "Required" (master §5) means runtime lookups plus the manifest itself —
+    not the build-input HVL CSVs or the provenance-only ``device_info.csv``
+    that ``MANIFEST.in`` also ships.
+    """
+    repo = Path(__file__).resolve().parents[2]
+    manifest_path = repo / "src" / "guiskindose" / "table_data" / "correction_data_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    paths = [
+        "guiskindose/table_data/" + table["file"]
+        for table in manifest["tables"]
+        if table.get("role") == "runtime_lookup"
+    ]
+    paths.append("guiskindose/table_data/correction_data_manifest.json")
+    assert len(paths) >= 2, "manifest declares no runtime lookup tables"
+    return sorted(paths)
+
+
+def test_wheel_contains_correction_runtime_tables() -> None:
+    """The newest ``dist/*.whl`` must ship every runtime lookup CSV + manifest.
+
+    Skipped when no wheel has been built yet (``uv build`` is a runbook step,
+    not a required pytest precondition for every developer).
+    """
+    dist = Path(__file__).resolve().parents[2] / "dist"
+    wheels = sorted(dist.glob("guiskindose-*.whl"))
+    if not wheels:
+        pytest.skip("no guiskindose wheel in dist/; run `uv build` to cover this")
+    with zipfile.ZipFile(wheels[-1]) as archive:
+        names = set(archive.namelist())
+    missing = [path for path in _runtime_lookup_wheel_paths() if path not in names]
+    assert not missing, f"wheel is missing correction-data files: {missing}"
+
+
+def test_sdist_contains_correction_runtime_tables() -> None:
+    """The newest ``dist/*.tar.gz`` file list must cover the same set as the wheel.
+
+    Build-and-install from the sdist is out of scope (needs network build
+    deps); list parity is the Phase D bar.
+    """
+    dist = Path(__file__).resolve().parents[2] / "dist"
+    sdists = sorted(dist.glob("guiskindose-*.tar.gz"))
+    if not sdists:
+        pytest.skip("no guiskindose sdist in dist/; run `uv build` to cover this")
+    with tarfile.open(sdists[-1], "r:gz") as archive:
+        names = archive.getnames()
+    missing = [
+        path for path in _runtime_lookup_wheel_paths() if not any(name.endswith("/src/" + path) for name in names)
+    ]
+    assert not missing, f"sdist is missing correction-data files: {missing}"
