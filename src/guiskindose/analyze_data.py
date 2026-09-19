@@ -85,8 +85,9 @@ def analyze_data(
     -------
     Dict[str, Any]
         output dictionary containing calculation specifics such as dose map, correction
-        factors, etc. ``None`` in plot modes (geometry plots render for side effect;
-        only dose modes produce output).
+        factors, etc. ``None`` in plot modes with ``html`` output (geometry plots
+        render for side effect; only dose modes produce output). Note: ``dict`` /
+        ``json`` formats raise on missing output in every mode.
 
     """
     settings = initialize_settings(settings)
@@ -155,7 +156,7 @@ def _global_patient_offset(settings: PyskindoseSettings) -> list[float]:
 
 def _require_valid_patient_offset(offset: object, exam_index: int) -> list[float]:
     """Require exactly three finite numeric centimeter values for one exam offset."""
-    if not isinstance(offset, list | tuple) or len(offset) != 3:
+    if not isinstance(offset, (list, tuple)) or len(offset) != 3:
         raise ValueError(
             f"Per-exam offset for exam {exam_index} must contain exactly 3 finite numeric values, "
             f"got {offset!r}"
@@ -252,7 +253,7 @@ def _multi_exam_output(
             for event in raw_output[c.OUTPUT_KEY_CORRECTION_BACK_SCATTER]
         ],
         inverse_square_law_correction=[
-            event if isinstance(event, list | float) else ([] if event is None else event.tolist())
+            event if isinstance(event, (list, float)) else ([] if event is None else event.tolist())
             for event in raw_output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW]
         ],  # type: ignore[arg-type]
         medium_correction=raw_output[c.OUTPUT_KEY_CORRECTION_MEDIUM],
