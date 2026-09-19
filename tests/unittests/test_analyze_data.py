@@ -12,14 +12,14 @@ import sys
 import pandas as pd
 import pytest
 
-import guiskindose.analyze_data as _analyze_data_symbol  # noqa: F401  (keeps the submodule imported)
 from guiskindose import constants as c
 from guiskindose.analyze_data import analyze_data
 from guiskindose.settings import PyskindoseSettings
 
 # The name `guiskindose.analyze_data` resolves to the analyze_data() function
 # (shadowed by the package __init__), so patch targets must come from the real
-# module object below — never the dotted string path.
+# module object below — never the dotted string path. (The from-import above
+# already ensures `sys.modules["guiskindose.analyze_data"]` is populated.)
 analyze_data_module = sys.modules["guiskindose.analyze_data"]
 
 
@@ -48,16 +48,12 @@ def test_plot_modes_html_return_none_without_raising(mode: str) -> None:
 
 
 def test_dose_mode_html_missing_output_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        analyze_data_module, "calculate_dose", lambda **kwargs: (None, None, None)
-    )
+    monkeypatch.setattr(analyze_data_module, "calculate_dose", lambda **kwargs: (None, None, None))
     with pytest.raises(RuntimeError, match=r"Expected HTML output but dose calculation returned no data."):
         analyze_data(normalized_data=_frame(), settings=_settings(c.MODE_CALCULATE_DOSE))
 
 
 def test_plot_dosemap_html_missing_output_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        analyze_data_module, "calculate_dose", lambda **kwargs: (None, None, None)
-    )
+    monkeypatch.setattr(analyze_data_module, "calculate_dose", lambda **kwargs: (None, None, None))
     with pytest.raises(RuntimeError, match=r"Expected HTML output but dose calculation returned no data."):
         analyze_data(normalized_data=_frame(), settings=_settings(c.MODE_PLOT_DOSEMAP))
