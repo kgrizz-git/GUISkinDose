@@ -110,6 +110,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md) | Standalone cheat sheet: required normalized columns, optional identity fields, and where each input schema maps from. |
 | [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md) | Tabular schema auto-detection (default `auto`, recall scoring, per-schema fingerprints) and the DAP-unit / manufacturer caveat. Machine-checked by `tests/unittests/test_input_schema_doc.py`. |
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor-specific coordinate conventions, normalization mapping, and Mermaid coordinate-system diagrams. |
+| [CORRECTION_DATA_REFERENCE.md](CORRECTION_DATA_REFERENCE.md) | Maintainer map: correction tables → loaders/consumers/outputs/fallbacks/tests, flow diagram, and behavior notes. User version: `docs/source/user/correction_data.md`. |
 | [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) | GE coordinate convention record: confirmed table-travel directions, normalization-level `Tx`/`Tz` correction, and deferred matched DICOM/export fixture notes. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | See **Master plans** above. |
 | [COORD_TRANSFORM_COMPARISON.md](COORD_TRANSFORM_COMPARISON.md) | Side-by-side comparison of coordinate transforms and preprocessing across GUISkinDose, dhen2714/PySkinDose, and PSDCalcReworkTemp. |
@@ -171,8 +172,8 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
-| [plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Active** — Correction-data Phase A: manifest, validation, device_info substitution (master §1+§2, zero behavior change). |
-| [plans/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](plans/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Active** — Correction-data Phase B: packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (master §3, numerical identity). |
+| [plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase A: manifest, validation, device_info substitution (PR #101). |
+| [plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase B: packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (PR #102). |
 | [plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md](plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md) | **Complete** (2026-09-17) — issue #60: object-form `monkeypatch` for the phantom-preview test vs NiceGUI `sys.modules` purge; canary-verified. |
 
 ## Archived plans (`plans/archive/`)

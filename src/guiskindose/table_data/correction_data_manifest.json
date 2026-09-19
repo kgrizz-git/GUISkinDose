@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "description": "Machine-readable inventory of the authoritative correction-data CSVs under src/guiskindose/table_data/. The CSVs are the source of truth; db_connect.py bootstraps them into SQLite. Fields with value unknown are explicitly undocumented provenance, not oversights.",
+  "description": "Machine-readable inventory of the authoritative correction-data CSVs under src/guiskindose/table_data/. The CSVs are the source of truth, read at runtime through the correction_data.py provider (explicit legacy SQLite databases validate read-only via check_explicit_db). Fields with value unknown are explicitly undocumented provenance, not oversights.",
   "tables": [
     {
       "file": "hvl_tables/hvl_combined.csv",

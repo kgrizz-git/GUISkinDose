@@ -34,5 +34,8 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) | **Completed** (2026-06-28) | Centralizes coordinate terminology: physical axes, DICOM attribute names, normalized `Tx/Ty/Tz`, historical PySkinDose plot aliases, vendor conventions, GE confirmed table-travel directions, GUI help, agent guidance, and characterization tests. GE matched-fixture confirmation remains a deferred TO_DO item. |
 | [README_POLISH_PLAN.md](README_POLISH_PLAN.md) | **Completed** (2026-09-12) | GUI-first README rewrite (PR #94); launcher follow-ups lived on in the launcher robustness plan (completed 2026-09-13). |
 | [LAUNCHER_ROBUSTNESS_PLAN.md](LAUNCHER_ROBUSTNESS_PLAN.md) | **Completed** (2026-09-13) | `run_gui.sh`/`run_gui.bat` hardening: `set -e` handling, skip-install parity, broken-`.venv` repair hints, `.venv`-first parity, fail-closed version guards, launch-failure exit codes; Windows `.bat` smoke matrix. |
+| [CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Completed** (2026-09-18) | Correction-data manifest, validators, device_info de-identification (PR #101). |
+| [ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md](ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md) | **Completed** (2026-09-17) | Phantom-preview `monkeypatch` vs NiceGUI `sys.modules` purge fix (PR #99). |
+| [CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Completed** (2026-09-18) | Packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (PR #102). |
 
 For active work, see [TO_DO.md](../../TO_DO.md) and execution plans in [../](../).

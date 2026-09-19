@@ -1,10 +1,9 @@
 # Phase B Execution Plan — Correction-Data Provider Swap
 
-Status: Active — awaiting DeepSeek + Kilo plan review BEFORE implementation.
-Reviewers are additionally asked for recommendations and analysis on the open
-design questions (§Open Design Questions) — see the review request.
+Status: Complete — implemented, merged as PR #102 (2026-09-18), CI green. Archived.
+(Original pre-implementation status lines below are kept as history.)
 Created: 2026-09-18
-Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](../CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
  (§3 only; §4 guides and §5 wheel proof stay out)
 Depends on: Phase A (manifest + validators, merged as PR #101)
 Branch: `fix/correction-data-phase-b`
@@ -187,12 +186,12 @@ deferral), `db_connect.py` removal (kept for the explicit adapter path).
   path (asserted); dedicated temp-CWD run asserts no file is created (the
   session guard excludes `corrections.db*`, so this must be its own test);
   export payload carries no absolute path in either mode.
-- [ ] **Step 6: Docs + verification ladder** — CHANGELOG migration note +
+- [x] **Step 6: Docs + verification ladder** — CHANGELOG migration note +
   MAINTENANCE_LOG detail; ladder: new tests → full `pytest -q` → `ruff` →
   `basedpyright` → `bandit` + semgrep → `check_doc_freshness` →
   `check_gui_test_placement` → `check_changelog` → `check_file_sizes` →
   `audit_dependencies` (lock untouched; expect green).
-- [ ] **Step 7: Push, PR, reviews** — push branch, open PR, request Kilo +
+- [x] **Step 7: Push, PR, reviews** — push branch, open PR, request Kilo +
   Spark implementation reviews. Merge only on approval + green CI.
 
 ## Acceptance Criteria

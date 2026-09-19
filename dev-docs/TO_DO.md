@@ -18,7 +18,8 @@ be archived.
 - [ ] **Correction-data packaging/runtime fix** — implement
   [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
   (sequenced next step after archived Plan 1; see "Correction-data modernization
-  roadmap" in Active Work).
+  roadmap" in Active Work). Phases A–C shipped (manifest/validation, provider
+  swap, guides); remaining delivery is Phase D (§5 distribution proof).
 - [ ] **Reproducible settings export** — export `PyskindoseSettings` / GUI state as
   JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
   user-facing, pairs with the README refresh).
@@ -262,7 +263,7 @@ policy decisions, not a restart of Phases 0-9.
   scrub would invalidate clearance, force re-clearance, and risk golden tests for
   identifiers public upstream since 2018. Revisit only under a future privacy review
   with maintainer re-clearance. See
-  [CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md).
+  [CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md).
 
 ## Open Questions
 

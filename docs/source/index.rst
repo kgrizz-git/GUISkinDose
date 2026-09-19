@@ -9,6 +9,7 @@ Welcome to GUISkinDose's documentation!
    user/description.md
    user/install.md
    user/user_guide.md
+   user/correction_data.md
    gui_help/positioning_offsets.md
    gui_help/geometry_workflow.md
    gui_help/below_floor_kvp.md

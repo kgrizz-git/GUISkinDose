@@ -10,6 +10,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Correction-data Phase C guides + Phase A/B archival** (2026-09-18) — new
+  user guide (`docs/source/user/correction_data.md`, in Sphinx nav) and
+  maintainer reference (`dev-docs/CORRECTION_DATA_REFERENCE.md` with flow
+  diagram and loader/consumer map); Phase A/B execution plans archived with
+  Completed status; stale `corrections.db`/`db_connect` prose refreshed in
+  `CODEBASE_OVERVIEW.md` and `FEATURE_INVENTORY.md`; notebook pointer added.
+
 - **Correction-data Phase B: packaged provider swap** (2026-09-18) — new
   `correction_data.py` provider (`importlib.resources`, locked dict cache,
   deep copies, packaged hash); the three `db_connect` call sites route through
@@ -20,7 +27,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   1→2); ignored-DB and relative-path warnings are once-per-process and
   value-free. Legacy unversioned DBs classify as `legacy` with full content
   validation. Full plan:
-  `dev-docs/plans/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md`.
+  `dev-docs/plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md`.
 
 - **Correction-data Phase A: manifest, validation, device_info substitution**
   (2026-09-18) — master §1+§2 with zero behavior change: new
@@ -31,7 +38,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   read-only explicit-DB validation + schema-drift matrix, manifest drift
   check); `device_info.csv` serials/labs substituted per the locked positional
   scheme (no mapping retained); `MANIFEST.in` ships the manifest JSON.
-  Full plan: `dev-docs/plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md`.
+  Full plan: `dev-docs/plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md`.
 
 - **Issue #60 phantom-preview `monkeypatch` vs NiceGUI `sys.modules` purge**
   (2026-09-17) — the `ci-latest` canary's single deterministic pytest failure

@@ -55,7 +55,8 @@ def _is_excluded_artifact(path: Path) -> bool:
     """Ignore regenerable local artifacts that tests may create from committed inputs."""
     if path.name in _EXCLUDED_FILENAMES or path.name.startswith(".coverage"):
         return True
-    # db_connect() auto-builds this SQLite cache from committed CSV tables; it is gitignored.
+    # A stray corrections.db must never influence the suite: default runs use
+    # packaged data and ignore it, so it is excluded from the artifact check.
     return bool(path.name == "corrections.db" or path.name.startswith("corrections.db-"))
 
 
