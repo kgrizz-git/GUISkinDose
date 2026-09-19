@@ -1,10 +1,9 @@
 # Phase B Execution Plan — Correction-Data Provider Swap
 
-Status: Active — awaiting DeepSeek + Kilo plan review BEFORE implementation.
-Reviewers are additionally asked for recommendations and analysis on the open
-design questions (§Open Design Questions) — see the review request.
+Status: Complete — implemented, merged as PR #102 (2026-09-18), CI green. Archived.
+(Original pre-implementation status lines below are kept as history.)
 Created: 2026-09-18
-Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](../CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
  (§3 only; §4 guides and §5 wheel proof stay out)
 Depends on: Phase A (manifest + validators, merged as PR #101)
 Branch: `fix/correction-data-phase-b`

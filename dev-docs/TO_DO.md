@@ -262,7 +262,7 @@ policy decisions, not a restart of Phases 0-9.
   scrub would invalidate clearance, force re-clearance, and risk golden tests for
   identifiers public upstream since 2018. Revisit only under a future privacy review
   with maintainer re-clearance. See
-  [CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md).
+  [CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md).
 
 ## Open Questions
 

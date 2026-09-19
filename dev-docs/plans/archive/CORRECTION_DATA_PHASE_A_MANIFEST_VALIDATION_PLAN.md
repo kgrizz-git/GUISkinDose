@@ -1,8 +1,8 @@
 # Phase A Execution Plan — Correction-Data Manifest, Validation, device_info Substitution
 
-Status: Active — awaiting DeepSeek plan review BEFORE implementation.
+Status: Complete — implemented, merged as PR #101 (2026-09-18), canary/CI green. Archived.
 Created: 2026-09-18
-Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](../CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
  (§1 manifest + §2 validation only)
 Branch: `fix/correction-data-phase-a`
 

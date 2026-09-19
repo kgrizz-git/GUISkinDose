@@ -22,7 +22,7 @@ src/guiskindose/          # Main package
   beam_class.py            # X-ray beam and detector model
   geom_calc.py             # Geometry calculations
   corrections.py           # Physics correction factors
-  db_connect.py            # SQLite correction-factor database
+  db_connect.py            # Read-only access to explicit legacy SQLite correction databases
   format_export_data.py    # Output formatting (dict / JSON / HTML)
   dev_data.py              # Hard-coded dev/test parameters
    constants.py             # All string/numeric constants (~200 constants)
@@ -35,7 +35,7 @@ src/guiskindose/          # Main package
   example_data/RDSR/       # Bundled example DICOM RDSR files
   phantom_data/            # STL mesh files for human phantoms
 docs/                      # Sphinx documentation + getting-started notebook
-corrections.db             # SQLite database (correction factors, HVL tables)
+corrections.db             # Legacy gitignored artifact (developer databases only; default runs use packaged CSVs)
 ```
 
 ---
@@ -130,7 +130,7 @@ analyze_data.py         — creates Phantom objects, dispatches to mode handler
               │
               ├─ position_patient_phantom_on_table()   (geom_calc.py)
               ├─ apply_below_floor_kvp_policy()        (geom_calc.py — snap/skip/manual/exam_average)
-              ├─ fetch_and_append_hvl()                (geom_calc.py + corrections.db)
+              ├─ fetch_and_append_hvl()                (geom_calc.py + packaged correction data)
               ├─ calculate_k_bs()                      (corrections.py)
               ├─ calculate_k_tab()                     (corrections.py)
               └─ calculate_irradiation_event_result()  (iterative, per-event)
@@ -354,7 +354,7 @@ Beam angulation parameters from RDSR:
 
 Orchestrates the full calculation:
 1. Creates patient `Phantom` and positions it on the table
-2. Fetches HVL values from `corrections.db`
+2. Fetches HVL values from the packaged correction data
 3. Detects geometry changes between events (`check_new_geometry`)
 4. Pre-computes backscatter interpolation objects for all events
 5. Computes patient-support transmission correction (`k_tab`)
@@ -418,15 +418,17 @@ Normalised DataFrame columns include: `Ap1`, `Ap2`, `Ap3` (beam angles), `At1`, 
 
 ---
 
-## Database — `db_connect.py` + `corrections.db`
+## Correction data — packaged CSVs + `correction_data.py`
 
-SQLite database with tables:
+Packaged lookup tables (inventoried in `correction_data_manifest.json`):
 - `hvl_combined` — HVL values by kVp and filtration
-- `correction_medium_and_backscatter` — k_med and k_bs tabulated values
+- `correction_medium_and_backscatter` — k_med tabulated values (`backscatter`/`h` columns unused; k_bs uses hard-coded polynomials)
 - `correction_table_and_pad_attenuation` — measured k_tab values
-- `device_info` — device-specific metadata
+- `device_info` — provenance only (no runtime consumer)
 
-Auto-created from CSV files on first run if the `.db` file is missing.
+Default runs read the packaged CSVs (no working-directory writes); explicit
+custom SQLite databases validate read-only via `db_connect.py` (bootstrap
+removed). See `CORRECTION_DATA_REFERENCE.md`.
 
 ---
 

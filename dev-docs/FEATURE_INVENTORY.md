@@ -216,8 +216,8 @@ scales the full lateral mesh axis.
 |--------|--------|---------|--------|
 | Inverse-square law | k_isq | `(d_IRP / d_skin)²` | Computed per cell from source distance |
 | Backscatter | k_bs | Benmakhlouf et al. polynomial (kVp, HVL, field size) | Cubic spline interpolation over 5 field sizes |
-| Medium | k_med | Air kerma → tissue dose (μ_en/ρ ratio) | Lookup table in SQLite DB by kVp, HVL, field size |
-| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | **Estimated** (GUI/settings default): constant `k_tab_val` in `(0, 1]`, no DB read. **Measured** (`estimate_k_tab=False`): SQLite by device model + literal plane string; exact then (kVp, Cu) interp; unknown device/plane → 1.0; invalid inherited values (incl. AlluraClarity Plane B zeros) → warned-neutral 1.0. Applied only to **table-hit** skin cells. Same path for RDSR and tabular after normalization. Returns `KTabResult` with per-event statuses exported as `corrections.table_statuses` / `events.k_tab_statuses`. |
+| Medium | k_med | Air kerma → tissue dose (μ_en/ρ ratio) | Lookup in packaged CSVs by kVp, HVL, field size |
+| Table + pad attenuation | k_tab | Patient-support transmission factor: fraction of beam transmitted through table/pad (attenuation_fraction = 1 - k_tab) | **Estimated** (GUI/settings default): constant `k_tab_val` in `(0, 1]`, no DB read. **Measured** (`estimate_k_tab=False`): packaged CSVs by device model + literal plane string; exact then (kVp, Cu) interp; unknown device/plane → 1.0; invalid inherited values (incl. AlluraClarity Plane B zeros) → warned-neutral 1.0. Explicit custom SQLite databases are validated read-only. Applied only to **table-hit** skin cells. Same path for RDSR and tabular after normalization. Returns `KTabResult` with per-event statuses exported as `corrections.table_statuses` / `events.k_tab_statuses`. |
 | Kerma-meter calibration | k_meter | Convert reported K_IRP → lab-traceable kerma | User CF table/prompt keyed by equipment × tube; fail-soft to `default_factor` (1.0). Applied once before physics corrections. |
 
 ### 5.4 Geometry optimisation
@@ -231,16 +231,20 @@ scales the full lateral mesh axis.
 
 ---
 
-## 6. Database (`corrections.db` + `db_connect.py`)
+## 6. Correction data (packaged CSVs + `correction_data.py`)
 
-SQLite database with tables:
+Packaged lookup tables (shipped CSVs, inventoried in `correction_data_manifest.json`):
 
 | Table | Contents |
 |-------|---------|
 | `hvl_combined` | HVL (mmAl) by kVp and filtration (inherent + added Al + added Cu) |
-| `correction_medium_and_backscatter` | k_med (μ_en quotient) by kVp, HVL, field side length |
+| `correction_medium_and_backscatter` | k_med (μ_en quotient) by kVp, HVL, field side length (`backscatter`/`h` columns unused) |
 | `correction_table_and_pad_attenuation` | Measured k_tab by kVp, Cu/Al filtration, device model, acquisition plane |
-| `device_info` | Device-specific metadata |
+| `device_info` | Provenance only (lab pad thickness; identifiers de-identified; no runtime consumer) |
+
+Default runs read the packaged CSVs with no working-directory writes; explicit
+custom SQLite databases are validated read-only (`db_connect.py` opens explicit
+databases only — the CWD bootstrap is removed). See `CORRECTION_DATA_REFERENCE.md`.
 
 ---
 
