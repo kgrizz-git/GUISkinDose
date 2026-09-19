@@ -161,7 +161,8 @@ def _warn_once(cls: str, code: str, message: str, *, emit_warnings: bool) -> Non
 
 def reset_warnings() -> None:
     """Clear once-per-process warning state (tests only)."""
-    _warned.clear()
+    with _CACHE_LOCK:
+        _warned.clear()
 
 
 def _ignored_db_present() -> bool:
