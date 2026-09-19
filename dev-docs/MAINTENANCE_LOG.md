@@ -10,6 +10,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Notebook plot-mode HTML guard** (2026-09-18) — `analyze_data()` raised on
+  `output is None` for every html call, including plot modes that legitimately
+  produce nothing (regression from June `803b748`; broke the getting-started
+  notebook in docs builds). The raise is now gated on dose-producing modes,
+  mirroring the adjacent dose-map guard; return type widened to include
+  `None`. Mode/format matrix tests in new `test_analyze_data.py`; headless
+  full-notebook execution clean. Plan:
+  `dev-docs/plans/NOTEBOOK_PLOT_HTML_FIX_PLAN.md`.
+
 - **Correction-data Phase C guides + Phase A/B archival** (2026-09-18) — new
   user guide (`docs/source/user/correction_data.md`, in Sphinx nav) and
   maintainer reference (`dev-docs/CORRECTION_DATA_REFERENCE.md` with flow

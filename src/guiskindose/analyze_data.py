@@ -71,7 +71,7 @@ def _format_multi_exam_no_output_warning(exam_id: str) -> str:
 def analyze_data(
     normalized_data: pd.DataFrame,
     settings: str | dict | PyskindoseSettings,
-) -> dict[str, Any] | str | PySkinDoseOutput:
+) -> dict[str, Any] | str | PySkinDoseOutput | None:
     """Analyze data och settings, and runs PySkinDose in desired mode.
 
     Parameters
@@ -85,7 +85,8 @@ def analyze_data(
     -------
     Dict[str, Any]
         output dictionary containing calculation specifics such as dose map, correction
-        factors, etc.
+        factors, etc. ``None`` in plot modes (geometry plots render for side effect;
+        only dose modes produce output).
 
     """
     settings = initialize_settings(settings)
@@ -134,7 +135,9 @@ def analyze_data(
         )
 
     if settings.output_format == c.RUN_ARGUMENTS_OUTPUT_HTML:
-        if output is None:
+        # Plot modes legitimately produce no output (plots render for side
+        # effect); only dose modes must have data at this point.
+        if output is None and settings.mode in (c.MODE_CALCULATE_DOSE, c.MODE_PLOT_DOSEMAP):
             raise RuntimeError("Expected HTML output but dose calculation returned no data.")
         return output
 
@@ -152,7 +155,7 @@ def _global_patient_offset(settings: PyskindoseSettings) -> list[float]:
 
 def _require_valid_patient_offset(offset: object, exam_index: int) -> list[float]:
     """Require exactly three finite numeric centimeter values for one exam offset."""
-    if not isinstance(offset, (list, tuple)) or len(offset) != 3:
+    if not isinstance(offset, list | tuple) or len(offset) != 3:
         raise ValueError(
             f"Per-exam offset for exam {exam_index} must contain exactly 3 finite numeric values, "
             f"got {offset!r}"
@@ -249,7 +252,7 @@ def _multi_exam_output(
             for event in raw_output[c.OUTPUT_KEY_CORRECTION_BACK_SCATTER]
         ],
         inverse_square_law_correction=[
-            event if isinstance(event, (list, float)) else ([] if event is None else event.tolist())
+            event if isinstance(event, list | float) else ([] if event is None else event.tolist())
             for event in raw_output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW]
         ],  # type: ignore[arg-type]
         medium_correction=raw_output[c.OUTPUT_KEY_CORRECTION_MEDIUM],

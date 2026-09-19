@@ -83,16 +83,16 @@ candidate, not this fix); RTD log forensics; notebook content changes.
 
 ## Tasks
 
-- [ ] **Step 1: Apply the guard** — mode-gated raise per Scope; nothing else
+- [x] **Step 1: Apply the guard** — mode-gated raise per Scope; nothing else
   in the function changes.
-- [ ] **Step 2: Tests** — create `tests/unittests/test_analyze_data.py` with
+- [x] **Step 2: Tests** — create `tests/unittests/test_analyze_data.py` with
   the mode/format matrix: plot modes + html return None cleanly; dose mode +
   forced-None output still raises; existing analyze/calculate tests unmodified
   and green.
-- [ ] **Step 3: Notebook proof** — headless `nbclient` full execution clean
+- [x] **Step 3: Notebook proof** — headless `nbclient` full execution clean
   (outside-tree CWD); Sphinx build renders past the notebook step (remaining
   pre-existing failure modes, if any, reported — not fixed — here).
-- [ ] **Step 4: Docs + ladder** — CHANGELOG + MAINTENANCE_LOG; ladder: new
+- [x] **Step 4: Docs + ladder** — CHANGELOG + MAINTENANCE_LOG; ladder: new
   tests → full `pytest -q` → `ruff` → `basedpyright` → freshness →
   `check_changelog`.
 - [ ] **Step 5: Push, PR, reviews** — push branch, open PR, request Kilo +
