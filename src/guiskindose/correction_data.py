@@ -12,8 +12,10 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+import sqlite3
 import threading
 import warnings
+from contextlib import suppress
 from importlib import resources
 from pathlib import Path
 
@@ -225,33 +227,51 @@ def explicit_table(db_path: Path, table: str) -> pd.DataFrame:
     :class:`CorrectionDataError` with a value-free message on any error-grade
     finding. Only the requested table (plus the schema version, when present)
     is validated: partial databases stay usable for the operations they cover.
-    Never writes.
+    Validation and retrieval share one read-only connection inside an explicit
+    read transaction, so the returned rows always come from the exact snapshot
+    that was validated (no TOCTOU between check and read).     Never writes.
     """
     specs = {table: _EXPLICIT_SPECS[table]}
     keys = {table: _EXPLICIT_KEYS[table]} if table in _EXPLICIT_KEYS else {}
-    issues = check_explicit_db(
-        db_path,
-        expected_version=EXPLICIT_SCHEMA_VERSION,
-        table_specs=specs,
-        table_keys=keys,
-        legacy_unversioned=True,
-    )
-    errors = [issue for issue in issues if issue.severity == "error"]
-    if errors:
-        first = errors[0]
-        raise CorrectionDataError(
-            f"Explicit correction database failed validation: {first.code} on table {first.table!r} column {first.column!r}."
-        )
-    return _read_explicit_table(db_path, table)
-
-
-def _read_explicit_table(db_path: Path, table: str) -> pd.DataFrame:
-    import sqlite3
-
-    if not _IDENTIFIER_RE.match(table):
-        raise CorrectionDataError("Refusing to read table with unsafe name (value-free).")
-    conn = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
     try:
-        return pd.read_sql_query(f'SELECT * FROM "{table}"', conn)  # nosec B608
+        conn = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
+    except sqlite3.Error:
+        raise CorrectionDataError("Explicit correction database is not readable (value-free).") from None
+    try:
+        conn.execute("BEGIN")
+        issues = check_explicit_db(
+            db_path,
+            expected_version=EXPLICIT_SCHEMA_VERSION,
+            table_specs=specs,
+            table_keys=keys,
+            legacy_unversioned=True,
+            _conn=conn,
+        )
+        errors = [issue for issue in issues if issue.severity == "error"]
+        if errors:
+            first = errors[0]
+            raise CorrectionDataError(
+                f"Explicit correction database failed validation: {first.code} on table {first.table!r} column {first.column!r}."
+            )
+        frame = _read_explicit_table(conn, table)
+        conn.execute("COMMIT")
+        return frame
+    except CorrectionDataError:
+        _rollback_quietly(conn)
+        raise
+    except Exception as exc:
+        _rollback_quietly(conn)
+        raise CorrectionDataError("Explicit correction database could not be read (value-free).") from exc
     finally:
         conn.close()
+
+
+def _rollback_quietly(conn: sqlite3.Connection) -> None:
+    with suppress(Exception):
+        conn.execute("ROLLBACK")
+
+
+def _read_explicit_table(conn: sqlite3.Connection, table: str) -> pd.DataFrame:
+    if not _IDENTIFIER_RE.match(table):
+        raise CorrectionDataError("Refusing to read table with unsafe name (value-free).")
+    return pd.read_sql_query(f'SELECT * FROM "{table}"', conn)  # nosec B608

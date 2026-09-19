@@ -306,6 +306,7 @@ def check_explicit_db(
     table_keys: dict[str, tuple[str, ...]] | None = None,
     version_table: str = "schema_version",
     legacy_unversioned: bool = False,
+    _conn: sqlite3.Connection | None = None,
 ) -> list[ValidationIssue]:
     """Fail-closed validation for an explicitly configured legacy SQLite DB.
 
@@ -319,14 +320,27 @@ def check_explicit_db(
     must equal ``expected_version``. When absent, the DB is classified as
     ``legacy`` (advisory) iff ``legacy_unversioned`` is set — otherwise it is
     an error. Real bootstrap databases carry no version table.
+
+    ``_conn`` is internal: an already-open read connection to reuse (shared
+    snapshot with the subsequent read). When given, it is left open for the
+    caller; otherwise it is opened and closed here.
     """
     issues: list[ValidationIssue] = []
+    own_connection = _conn is None
+    if own_connection:
+        try:
+            # mode=ro: validate read-only and never create a replacement file.
+            # as_uri keeps Windows drive letters and backslashes intact.
+            conn = sqlite3.connect(f"{Path(db_path).resolve().as_uri()}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return [ValidationIssue("", "", "unreadable_db", "File is not a readable SQLite database.", "error")]
+    else:
+        conn = _conn
     try:
-        # mode=ro: validate read-only and never create a replacement file.
-        # as_uri keeps Windows drive letters and backslashes intact.
-        conn = sqlite3.connect(f"{Path(db_path).resolve().as_uri()}?mode=ro", uri=True)
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     except sqlite3.Error:
+        if own_connection:
+            conn.close()
         return [ValidationIssue("", "", "unreadable_db", "File is not a readable SQLite database.", "error")]
     if version_table not in tables:
         if legacy_unversioned:
@@ -347,7 +361,6 @@ def check_explicit_db(
         except sqlite3.Error:
             versions = []
         except ValueError:
-            conn.close()
             return [ValidationIssue(version_table, version_table, "unsafe_identifier", f"Table name {version_table!r} is not a safe identifier.", "error")]
         if versions != [expected_version]:
             issues.append(
@@ -377,7 +390,8 @@ def check_explicit_db(
             for issue in check_frame(frame, columns, table_name=table, key_columns=(table_keys or {}).get(table, ())):
                 issues.append(issue)
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
     return issues
 
 

@@ -117,6 +117,29 @@ def test_explicit_malformed_fails_value_free(tmp_path: Path):
     assert str(tmp_path) not in str(excinfo.value)
 
 
+def test_explicit_table_opens_exactly_one_connection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import sqlite3
+
+    db = tmp_path / "legacy.db"
+    _legacy_db(db)
+    real_connect = sqlite3.connect
+    calls = []
+
+    def counting_connect(*args, **kwargs):
+        calls.append(args)
+        return real_connect(*args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", counting_connect)
+    explicit_table(db, "hvl_combined")
+    assert len(calls) == 1
+    calls.clear()
+    bad = tmp_path / "bad.db"
+    bad.write_bytes(b"not sqlite")
+    with pytest.raises(CorrectionDataError):
+        explicit_table(bad, "hvl_combined")
+    assert len(calls) == 1
+
+
 def test_sentinel_db_ignored_and_untouched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     sentinel = tmp_path / "corrections.db"
     conn = sqlite3.connect(sentinel)
