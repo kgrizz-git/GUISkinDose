@@ -95,9 +95,9 @@ candidate, not this fix); RTD log forensics; notebook content changes.
 - [x] **Step 4: Docs + ladder** — CHANGELOG + MAINTENANCE_LOG; ladder: new
   tests → full `pytest -q` → `ruff` → `basedpyright` → freshness →
   `check_changelog`.
-- [ ] **Step 5: Push, PR, reviews** — push branch, open PR, request Kilo +
+- [x] **Step 5: Push, PR, reviews** — push branch, open PR, request Kilo +
   Composer implementation reviews. Merge only on approval + green CI.
-- [ ] **Step 6: Archive** — flip this plan's `Status:` to Complete, move it to
+- [x] **Step 6: Archive** — flip this plan's `Status:` to Complete, move it to
   `dev-docs/plans/archive/`, update the `index.md` row to the archive path,
   in the same PR as the fix (per the closeout discipline).
 
