@@ -157,9 +157,12 @@ geometry.
 **Status (2026-09-19, shipped in Phase D):** all items below are delivered —
 wheel/sdist content assertions in `test_packaging.py` plus
 `scripts/verify_distribution.py` (hermetic install, direct-comparison parity,
-sentinel ignore, no-artifact and leak-free export checks). Parity/explicit/fail-closed
-bullets were already pinned at unit level in Phases A–B and are re-asserted
-from the installed wheel where installation can change the outcome. Full plan:
+sentinel ignore, no-artifact and leak-free export checks). The parity,
+explicit-SQLite, sentinel, no-artifact, and export bullets are re-asserted
+from the installed wheel; malformed/schema-drift fail-closed is pure
+validation logic (installation-independent) and stays pinned at unit level
+(`test_correction_validation.py` drift group +
+`test_explicit_malformed_fails_value_free`). Full plan:
 [archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md](archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md).
 
 - [x] Extend `tests/unittests/test_packaging.py` to assert all required correction
