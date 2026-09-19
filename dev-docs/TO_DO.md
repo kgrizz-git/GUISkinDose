@@ -227,15 +227,6 @@ policy decisions, not a restart of Phases 0-9.
   once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
-- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx
-  execution of `docs/source/getting_started/getting_started.ipynb` fails with
-  `RuntimeError: Expected HTML output but dose calculation returned no data`
-  (`output is None` in the docs-build environment; known since 2026-09-11). The
-  calculation itself is healthy (same cell runs headless locally, PSD ~10.4),
-  so this is environmental to the docs build — likely RTD resource limits on
-  the human-mesh calculation or a plotting-dependency gap. Next: read the RTD
-  build logs to pin OOM vs dependency, then fix (slim the notebook mesh,
-  gate execution, or document the split between executed and rendered docs).
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
   Playwright/CDP only for browser-specific gaps.
 - [ ] **Coordinate diagrams** — expand and validate `VENDOR_COORDINATE_SYSTEMS.md` diagrams against vendor data.
