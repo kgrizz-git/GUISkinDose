@@ -85,7 +85,8 @@ candidate, not this fix); RTD log forensics; notebook content changes.
 
 - [ ] **Step 1: Apply the guard** — mode-gated raise per Scope; nothing else
   in the function changes.
-- [ ] **Step 2: Tests** — plot modes + html return None cleanly; dose mode +
+- [ ] **Step 2: Tests** — create `tests/unittests/test_analyze_data.py` with
+  the mode/format matrix: plot modes + html return None cleanly; dose mode +
   forced-None output still raises; existing analyze/calculate tests unmodified
   and green.
 - [ ] **Step 3: Notebook proof** — headless `nbclient` full execution clean
