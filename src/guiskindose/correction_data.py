@@ -229,7 +229,8 @@ def explicit_table(db_path: Path, table: str) -> pd.DataFrame:
     is validated: partial databases stay usable for the operations they cover.
     Validation and retrieval share one read-only connection inside an explicit
     read transaction, so the returned rows always come from the exact snapshot
-    that was validated (no TOCTOU between check and read).     Never writes.
+    that was validated (no TOCTOU between check and read) and nothing is ever
+    written.
     """
     specs = {table: _EXPLICIT_SPECS[table]}
     keys = {table: _EXPLICIT_KEYS[table]} if table in _EXPLICIT_KEYS else {}
