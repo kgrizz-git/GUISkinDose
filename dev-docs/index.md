@@ -175,7 +175,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase A: manifest, validation, device_info substitution (PR #101). |
 | [plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase B: packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (PR #102). |
 | [plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md](plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md) | **Complete** (2026-09-17) — issue #60: object-form `monkeypatch` for the phantom-preview test vs NiceGUI `sys.modules` purge; canary-verified. |
-| [plans/NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/NOTEBOOK_PLOT_HTML_FIX_PLAN.md) | **Active** — Fix `analyze_data` raising on plot modes + html output (notebook docs-build failure); mode-gated None guard. |
+| [plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md) | **Complete** (2026-09-18) — Fix `analyze_data` raising on plot modes + html output (notebook docs-build failure); mode-gated None guard. |
 
 ## Archived plans (`plans/archive/`)
 

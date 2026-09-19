@@ -1,6 +1,6 @@
 # Notebook Plot-HTML Fix Plan — `analyze_data` None-Output Guard
 
-Status: Active — awaiting Kilo + Composer plan review BEFORE implementation.
+Status: Complete — implemented, notebook executes clean headlessly, pending PR merge. Archived.
 Created: 2026-09-18
 Branch: `fix/notebook-plot-html`
 Related backlog: `TO_DO.md` "Getting-started notebook execution failure in docs builds"
