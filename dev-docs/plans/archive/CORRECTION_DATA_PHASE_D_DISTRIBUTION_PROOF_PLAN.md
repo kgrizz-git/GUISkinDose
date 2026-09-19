@@ -1,8 +1,8 @@
 # Phase D Execution Plan — Correction-Data Distribution Proof
 
-Status: Revised post-review (kilo `stepfun/step-3.7-flash:free` + cursor `composer-2.5`, both REQUEST CHANGES on the draft; resolutions in §Resolved Design Decisions) — ready to implement.
+Status: Complete — implemented (2026-09-19), distribution proof PASS locally. Archived.
 Created: 2026-09-19
-Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+Parent (master) plan: [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](../CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
  (§5 only; §§1–4 shipped as Phases A–C)
 Depends on: Phase A (manifest + validators, PR #101), Phase B (provider swap, PR #102),
  Phase C (guides, PR #103)

@@ -103,6 +103,15 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Correction-data distribution proof (Phase D)** (2026-09-19) — the
+  packaged-correction-data behavior is now proven from a real installed
+  distribution: wheel/sdist content assertions pin every runtime lookup CSV
+  plus the manifest, and new `scripts/verify_distribution.py` installs the
+  wheel into a hermetic venv and reproduces checkout results (PSD, dose sum,
+  air kerma, events) with no working-directory writes, ignored sentinel DB,
+  and leak-free exports in packaged and explicit-SQLite modes. No behavior
+  changes. Detail in `dev-docs/MAINTENANCE_LOG.md`.
+
 - **Plot modes no longer raise in HTML output format** (2026-09-18) —
   `plot_setup` / `plot_event` / `plot_procedure` with the default `html` format
   returned no output by design but raised `RuntimeError` (regression from

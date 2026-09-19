@@ -10,6 +10,19 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Correction-data Phase D: wheel/sdist distribution proof** (2026-09-19) —
+  `tests/unittests/test_packaging.py` asserts every manifest-declared
+  `runtime_lookup` CSV plus the manifest JSON in the wheel (sdist file-list
+  parity; both skip when no `dist/` artifact exists). New
+  `scripts/verify_distribution.py` builds, installs into a hermetic venv
+  under `tmp/dist-proof/`, and reproduces checkout results from the install
+  with a mandatory `site-packages` import guard (defeats editable-install
+  shadowing), direct-comparison parity (no new hardcoded goldens), sentinel
+  ignore, no CWD artifacts, and leak-free dict/JSON exports. Full `main()`
+  on the bundled Siemens cylinder fixture; installed PSD equals the frozen
+  golden both sides. Plan:
+  `dev-docs/plans/archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md`.
+
 - **Notebook plot-mode HTML guard** (2026-09-18) — `analyze_data()` raised on
   `output is None` for every html call, including plot modes that legitimately
   produce nothing (regression from June `803b748`; broke the getting-started
