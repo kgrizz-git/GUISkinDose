@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from guiskindose import load_settings_example_json
 from guiskindose.settings import PyskindoseSettings
 
@@ -105,10 +103,5 @@ def build_settings(
     base["plot"]["interactivity"] = True
     base["plot"]["notebook_mode"] = False
     base["plot"]["colorscale"] = app_state.colorscale
-
-    # Point corrections DB to the package root
-    db_path = Path(__file__).parent.parent.parent.parent / "corrections.db"
-    if db_path.exists():
-        base["corrections_db_path"] = str(db_path)
 
     return PyskindoseSettings(settings=base, output_format=output_format)

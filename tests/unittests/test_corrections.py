@@ -1,10 +1,8 @@
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
-from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
 
 from guiskindose.constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE,
@@ -20,12 +18,12 @@ from guiskindose.corrections import (
     calculate_k_tab,
 )
 from guiskindose.geom_calc import fetch_and_append_hvl
-from guiskindose.settings import PyskindoseSettings
 
-P = Path(__file__).parent.parent.parent
-sys.path.insert(1, str(P.absolute()))
-
-PATH_TO_DB = PyskindoseSettings(DEVELOPMENT_PARAMETERS).corrections_db_path
+# Packaged provider via the default sentinel: these behavior tests must not
+# depend on the gitignored developer database at tests/manual_tests/ (absent
+# on clean checkouts). Explicit-path coverage lives in
+# test_correction_data_provider.py.
+PATH_TO_DB = "corrections.db"
 
 
 def _frame(kvp, cu, al, model, plane, n=1):
@@ -367,12 +365,21 @@ class TestKTabResultStatusAssignment:
 
 
 class TestExactMatchDuplicateWarning:
-    """Duplicate exact-match rows in the attenuation table must warn once."""
+    """Duplicate exact-match rows in the attenuation table must fail closed.
 
-    def test_duplicate_exact_match_warns_once(self, tmp_path: Path) -> None:
-        """Multiple exact rows for the same (model, plane, kVp, Cu, Al) warn with count."""
-        import logging
+    Boundary validation (duplicate lookup keys) now rejects such databases
+    before calculation with a value-free error — superseding the legacy
+    runtime warning, which can no longer trigger (packaged data is
+    duplicate-free and explicit DBs are validated first).
+    """
+
+    def test_duplicate_exact_match_fails_closed(self, tmp_path: Path) -> None:
+        """Multiple exact rows for the same (model, plane, kVp, Cu, Al) raise."""
         import sqlite3
+
+        import pytest
+
+        from guiskindose.correction_data import CorrectionDataError
 
         db_path = tmp_path / "duplicate_attenuation.db"
         conn = sqlite3.connect(db_path)
@@ -413,29 +420,13 @@ class TestExactMatchDuplicateWarning:
             }
         )
 
-        messages: list[str] = []
-
-        class _Capture(logging.Handler):
-            def emit(self, record: logging.LogRecord) -> None:
-                messages.append(record.getMessage())
-
-        logger = logging.getLogger("guiskindose")
-        handler = _Capture(level=logging.WARNING)
-        logger.addHandler(handler)
-        try:
-            result = calculate_k_tab(
+        # Duplicate lookup keys are rejected at the validation boundary with a
+        # value-free error — nothing is silently picked, nothing is logged
+        # with a path.
+        with pytest.raises(CorrectionDataError, match="duplicate_key"):
+            calculate_k_tab(
                 data_norm=data_norm,
                 estimate_k_tab=False,
                 k_tab_val=0.8,
                 corrections_db=str(db_path),
             )
-        finally:
-            logger.removeHandler(handler)
-
-        # Value is still the first row's k_patient_support (0.7319) — unique-row
-        # behavior is unchanged.
-        assert result.values[0] == 0.7319
-        assert result.statuses[0] == "exact"
-        # Warning is emitted once with the count of duplicate rows.
-        assert any("3 exact-match rows found" in m for m in messages), messages
-        assert any("using the first" in m for m in messages), messages

@@ -857,8 +857,9 @@ class TestKTabRegressionCanonicalFields:
     """Presence of additive canonical columns must not alter k_tab lookup."""
 
     def _db_path(self):
-        repo_root = Path(__file__).resolve().parents[2]
-        return str(repo_root / "corrections.db")
+        # Packaged provider via the default sentinel (CWD-independent); these
+        # regression tests do not depend on a repository-root database.
+        return "corrections.db"
 
     def test_canonical_unknown_does_not_alter_k_tab(self):
         from guiskindose.corrections import calculate_k_tab

@@ -305,25 +305,54 @@ def check_explicit_db(
     table_specs: dict[str, list[ColumnSpec]],
     table_keys: dict[str, tuple[str, ...]] | None = None,
     version_table: str = "schema_version",
+    legacy_unversioned: bool = False,
+    _conn: sqlite3.Connection | None = None,
 ) -> list[ValidationIssue]:
     """Fail-closed validation for an explicitly configured legacy SQLite DB.
 
-    Pure read-only checks: the file must be readable SQLite, its schema
-    version must match exactly, every required table/column must exist, and
-    each required column is type/finite/range/duplicate checked. Never creates
-    or bootstraps a replacement file.
+    Pure read-only checks: the file must be readable SQLite, every required
+    table/column must exist, and each required column is type/finite/range/
+    duplicate checked. Findings are value-free (table/column/code only — never
+    the database path) so they are safe to surface in errors and logs. Never
+    creates or bootstraps a replacement file.
+
+    Version policy: when the schema-version table exists, its single version
+    must equal ``expected_version``. When absent, the DB is classified as
+    ``legacy`` (advisory) iff ``legacy_unversioned`` is set — otherwise it is
+    an error. Real bootstrap databases carry no version table.
+
+    ``_conn`` is internal: an already-open read connection to reuse (shared
+    snapshot with the subsequent read). When given, it is left open for the
+    caller; otherwise it is opened and closed here.
     """
     issues: list[ValidationIssue] = []
+    own_connection = _conn is None
+    if own_connection:
+        try:
+            # mode=ro: validate read-only and never create a replacement file.
+            # as_uri keeps Windows drive letters and backslashes intact.
+            conn = sqlite3.connect(f"{Path(db_path).resolve().as_uri()}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return [ValidationIssue("", "", "unreadable_db", "File is not a readable SQLite database.", "error")]
+    else:
+        conn = _conn
     try:
-        # mode=ro: validate read-only and never create a replacement file.
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     except sqlite3.Error:
-        return [ValidationIssue(str(db_path), "", "unreadable_db", f"File {db_path} is not a readable SQLite database.", "error")]
+        if own_connection:
+            conn.close()
+        return [ValidationIssue("", "", "unreadable_db", "File is not a readable SQLite database.", "error")]
     if version_table not in tables:
-        issues.append(
-            ValidationIssue(str(db_path), version_table, "missing_table", f"Schema-version table {version_table!r} is absent.", "error")
-        )
+        if legacy_unversioned:
+            issues.append(
+                ValidationIssue(
+                    version_table, version_table, "legacy_unversioned", "No schema-version table; treating as legacy.", "advisory"
+                )
+            )
+        else:
+            issues.append(
+                ValidationIssue(version_table, version_table, "missing_table", f"Schema-version table {version_table!r} is absent.", "error")
+            )
     else:
         # Table names cannot be bound parameters; the allowlist guard above makes
         # this interpolation safe. nosec: the identifier is regex-validated.
@@ -332,15 +361,16 @@ def check_explicit_db(
         except sqlite3.Error:
             versions = []
         except ValueError:
-            conn.close()
-            return [ValidationIssue(str(db_path), version_table, "unsafe_identifier", f"Table name {version_table!r} is not a safe identifier.", "error")]
+            if own_connection:
+                conn.close()
+            return [ValidationIssue(version_table, version_table, "unsafe_identifier", f"Table name {version_table!r} is not a safe identifier.", "error")]
         if versions != [expected_version]:
             issues.append(
                 ValidationIssue(
-                    str(db_path),
+                    version_table,
                     version_table,
                     "schema_version_mismatch",
-                    f"Schema version {versions!r} does not match expected {expected_version!r}.",
+                    "Schema version does not match the expected version.",
                     "error",
                 )
             )
@@ -349,20 +379,21 @@ def check_explicit_db(
             if table == version_table:
                 continue
             if table not in tables:
-                issues.append(ValidationIssue(str(db_path), table, "missing_table", f"Required table {table!r} is absent.", "error"))
+                issues.append(ValidationIssue(table, table, "missing_table", f"Required table {table!r} is absent.", "error"))
                 continue
             try:
                 frame = pd.read_sql_query(f"SELECT * FROM {_quoted_identifier(table)}", conn)  # nosec B608
             except (sqlite3.Error, ValueError, pd.errors.DatabaseError) as exc:
                 code = "unsafe_identifier" if isinstance(exc, ValueError) else "unreadable_table"
                 issues.append(
-                    ValidationIssue(str(db_path), table, code, f"Table {table!r} could not be read safely.", "error")
+                    ValidationIssue(table, table, code, f"Table {table!r} could not be read safely.", "error")
                 )
                 continue
-            for issue in check_frame(frame, columns, table_name=f"{db_path}::{table}", key_columns=(table_keys or {}).get(table, ())):
+            for issue in check_frame(frame, columns, table_name=table, key_columns=(table_keys or {}).get(table, ())):
                 issues.append(issue)
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
     return issues
 
 

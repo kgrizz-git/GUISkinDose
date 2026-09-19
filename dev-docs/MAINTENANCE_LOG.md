@@ -10,6 +10,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Correction-data Phase B: packaged provider swap** (2026-09-18) — new
+  `correction_data.py` provider (`importlib.resources`, locked dict cache,
+  deep copies, packaged hash); the three `db_connect` call sites route through
+  it with per-function `emit_warnings`; `db_connect.py` is read-only-only
+  (bootstrap branch deleted); repo-root discovery removed from
+  `gui/settings_builder.py`; exports carry `packaged`/`explicit` labels plus
+  a `corrections_db_source` descriptor and hash (`RICH_EXPORT_SCHEMA_VERSION`
+  1→2); ignored-DB and relative-path warnings are once-per-process and
+  value-free. Legacy unversioned DBs classify as `legacy` with full content
+  validation. Full plan:
+  `dev-docs/plans/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md`.
+
 - **Correction-data Phase A: manifest, validation, device_info substitution**
   (2026-09-18) — master §1+§2 with zero behavior change: new
   `correction_data_manifest.json` (schema/units/ranges/consumer/provenance/

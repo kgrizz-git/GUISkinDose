@@ -9,7 +9,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 import guiskindose.constants as c
 
-from .db_connect import db_connect
+from .correction_data import explicit_table, get_table, resolve_corrections_source
 from .grid_interp import STATUS_CLAMPED, STATUS_INTERPOLATED, clamped_rgi_lookup, format_event_indices
 from .phantom_class import Phantom
 
@@ -350,7 +350,7 @@ def apply_below_floor_kvp_policy(
     return data_norm
 
 
-def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, corrections_db: str) -> pd.DataFrame:
+def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, corrections_db: str, emit_warnings: bool = True) -> pd.DataFrame:
     """Add event HVL to RDSR event data from database.
 
     Parameters
@@ -361,6 +361,8 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
         X-ray tube inherent filtration in mmAl.
     corrections_db : str
         A string defining the path to the corrections SQLite db
+    emit_warnings : bool
+        Emit the once-per-process source deprecation warning (default True).
 
     Returns
     -------
@@ -371,12 +373,12 @@ def fetch_and_append_hvl(data_norm: pd.DataFrame, inherent_filtration: float, co
 
     """
     # Open connection to database
-    conn = db_connect(db_name=corrections_db)[0]
-
-    # Fetch entire HVL table
-    hvl_data = pd.read_sql_query("SELECT * FROM hvl_combined", conn)
-    conn.commit()
-    conn.close()
+    source, db_path = resolve_corrections_source(corrections_db, emit_warnings=emit_warnings)
+    if source == "packaged":
+        hvl_data = get_table("hvl_combined")
+    else:
+        assert db_path is not None
+        hvl_data = explicit_table(db_path, "hvl_combined")
 
     # The table carries two anode-angle slices (8 deg / 11 deg) that cover
     # different (Cu, Al) regions, so there is no single clean 4-D grid across anode

@@ -9,7 +9,7 @@ import pandas as pd
 import scipy.interpolate
 from scipy.interpolate import CubicSpline, RegularGridInterpolator
 
-from .db_connect import db_connect
+from .correction_data import CorrectionDataError, explicit_table, get_table, resolve_corrections_source
 from .grid_interp import (
     STATUS_CLAMPED,
     STATUS_EXACT,
@@ -19,6 +19,26 @@ from .grid_interp import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _load_correction_table(corrections_db: str, table: str, *, emit_warnings: bool = True) -> pd.DataFrame:
+    """Load one correction table from the packaged provider or an explicit DB.
+
+    Default/empty/``"corrections.db"`` resolves to the packaged CSVs (no
+    files created, any CWD DB ignored). Any other value is validated read-only
+    as an explicit legacy database (legacy unversioned DBs accepted with full
+    content validation); failures raise :class:`CorrectionDataError`.
+    """
+    source, db_path = resolve_corrections_source(corrections_db, emit_warnings=emit_warnings)
+    if source == "packaged":
+        return get_table(table)
+    assert db_path is not None
+    try:
+        return explicit_table(db_path, table)
+    except CorrectionDataError:
+        raise
+    except Exception as exc:
+        raise CorrectionDataError("Explicit correction database could not be read (value-free).") from exc
 
 
 @dataclass
@@ -139,7 +159,7 @@ def calculate_k_bs(data_norm: pd.DataFrame) -> list[CubicSpline]:
     return bs_interp
 
 
-def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int, corrections_db: str) -> float:
+def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int, corrections_db: str, emit_warnings: bool = True) -> float:
     """Calculate medium correction.
 
     This function calculates and appends the medium correction factor for all skin cells
@@ -158,6 +178,8 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int
         Irradiation event index.
     corrections_db : str
         A string defining the path to the corrections SQLite db
+    emit_warnings : bool
+        Emit the once-per-process source deprecation warning (default True).
 
 
     Returns
@@ -182,18 +204,16 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int
     fsl = fsl_tab[int(np.argmin(np.abs(np.asarray(fsl_tab) - fsl_mean)))]
 
     # Connect to database
-    conn = db_connect(db_name=corrections_db)[0]
+    # NOTE (perf follow-up, only if profiles ever care): per-event callers
+    # deep-copy the full medium table here before projecting 4 columns, and
+    # rely on the default emit_warnings=True instead of a threaded flag.
+    # Correct today (warn-once cache; no dry-run calls k_med); revisit with a
+    # projected cache + threaded flag only on measured need.
+    df = _load_correction_table(corrections_db, "correction_medium_and_backscatter", emit_warnings=emit_warnings)
 
     # Fetch k_med = f(kVp, HVL) from database. This is table 2 in
     # [doi:10.1088/0031-9155/58/2/247]
-    df = pd.read_sql_query(
-        """SELECT kvp_kv, hvl_mmal, field_side_length_cm,
-                           mu_en_quotient FROM correction_medium_and_backscatter""",
-        conn,
-    )
-
-    conn.commit()
-    conn.close()
+    df = df[["kvp_kv", "hvl_mmal", "field_side_length_cm", "mu_en_quotient"]]
 
     # Fetch kVp entries from table
     kvp_data = df.loc[(df["field_side_length_cm"] == fsl), "kvp_kv"]
@@ -438,10 +458,7 @@ def calculate_k_tab(
     # (e.g. a non-Siemens/Philips export). We keep exact match as the primary path
     # (so in-table events are unchanged) but fail soft and interpolate otherwise.
     # See dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md.
-    conn = db_connect(db_name=corrections_db)[0]
-    tab = pd.read_sql_query("SELECT * FROM correction_table_and_pad_attenuation", conn)
-    conn.commit()
-    conn.close()
+    tab = _load_correction_table(corrections_db, "correction_table_and_pad_attenuation", emit_warnings=emit_warnings)
 
     k_tab = [1.0] * len(data_norm)
     statuses = ["exact"] * len(data_norm)
