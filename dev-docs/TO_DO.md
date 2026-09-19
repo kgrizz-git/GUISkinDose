@@ -18,7 +18,8 @@ be archived.
 - [ ] **Correction-data packaging/runtime fix** — implement
   [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
   (sequenced next step after archived Plan 1; see "Correction-data modernization
-  roadmap" in Active Work).
+  roadmap" in Active Work). Phases A–C shipped (manifest/validation, provider
+  swap, guides); remaining delivery is Phase D (§5 distribution proof).
 - [ ] **Reproducible settings export** — export `PyskindoseSettings` / GUI state as
   JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
   user-facing, pairs with the README refresh).
