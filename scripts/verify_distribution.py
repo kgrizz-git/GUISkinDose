@@ -53,13 +53,21 @@ _TOLERANCES = {
 # fixture via the imported package's own API so each side uses the data it
 # ships. Prints one JSON report line to stdout.
 SNIPPET = r"""
-import json, os
+import hashlib, json, os, re
 import guiskindose
+from importlib import resources
 from guiskindose import get_path_to_example_rdsr_files, load_settings_example_json
 from guiskindose.main import main
 from guiskindose.settings import PyskindoseSettings
 
 report = {"guiskindose_file": guiskindose.__file__}
+pkg = resources.files("guiskindose") / "table_data"
+manifest = json.loads((pkg / "correction_data_manifest.json").read_text())
+report["tables_sha"] = {
+    table["file"]: hashlib.sha256((pkg / table["file"]).read_bytes()).hexdigest()
+    for table in manifest["tables"]
+    if table.get("role") == "runtime_lookup"
+}
 base = load_settings_example_json()
 base["mode"] = "calculate_dose"
 base["silence_pydicom_warnings"] = True
@@ -74,21 +82,67 @@ report["psd"] = float(out["psd"])
 report["dose_sum"] = float(sum(d for _, d in out["dose_map"]))
 report["air_kerma"] = float(out["air_kerma"])
 report["n_events"] = int(out["events"]["number_of_events"])
+
+
+def _flat(values):
+    flat = []
+    for value in values:
+        if isinstance(value, (list, tuple)):
+            flat.extend(_flat(value))
+        else:
+            flat.append(float(value))
+    return flat
+
+
+report["corrections"] = {key: _flat(out["corrections"][key]) for key in ("medium", "table", "backscatter")}
+import pandas as pd
+from guiskindose.geom_calc import fetch_and_append_hvl
+
+probe_frame = pd.DataFrame(
+    {
+        "kVp": [70.0, 100.0],
+        "filter_thickness_Cu": [0.0, 0.3],
+        "filter_thickness_Al": [0.0, 1.0],
+    }
+)
+hvl_db = os.environ.get("PROOF_HVL_DB", "corrections.db")
+probe_out = fetch_and_append_hvl(data_norm=probe_frame, inherent_filtration=2.5, corrections_db=hvl_db)
+report["hvl_probe"] = [float(v) for v in probe_out["HVL"]]
 payload = json.dumps(out, default=str)
 json_out = main(file_path=rdsr, settings=PyskindoseSettings(settings=base, output_format="json"))
-markers = (os.environ["PROOF_CWD"], ".db")
-report["leaks"] = sorted({m for m in markers if m in payload or m in str(json_out)})
+combined = payload + str(json_out)
+markers = {
+    "cwd": os.environ["PROOF_CWD"],
+    "repo": os.environ["PROOF_REPO"],
+    "home": os.path.expanduser("~"),
+    "explicit_db": os.environ.get("PROOF_EXPLICIT_DB", ""),
+    "db_suffix": ".db",
+}
+leaks = sorted(label for label, value in markers.items() if value and value in combined)
+abs_pattern = r"(/(Users|home|private|tmp|opt|usr|var)/|[A-Za-z]:[\\/]|\\\\)"
+if re.search(abs_pattern, combined):
+    leaks.append("abs_path_shape")
+report["leaks"] = sorted(leaks)
 print(json.dumps(report))
 """
 
 
 def _clean_env(extra: dict[str, str]) -> dict[str, str]:
     """Subprocess env without checkout leakage plus proof variables."""
-    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH",)}
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
     env.pop("VIRTUAL_ENV", None)
     env.pop("VIRTUAL_ENV_PROMPT", None)
     env.update(extra)
     return env
+
+
+def _safe(text: str) -> str:
+    """Redact absolute local paths from failure output (privacy rule)."""
+    redacted = text.replace(str(REPO), "<repo>")
+    home = os.path.expanduser("~")
+    if home and home != "/":
+        redacted = redacted.replace(home, "<home>")
+    return redacted
 
 
 def _run(python: Path, snippet: Path, cwd: Path, extra: dict[str, str]) -> dict[str, Any]:
@@ -102,7 +156,7 @@ def _run(python: Path, snippet: Path, cwd: Path, extra: dict[str, str]) -> dict[
         check=False,
     )
     if proc.returncode != 0:
-        raise RuntimeError(f"proof run failed in {cwd}:\n{proc.stderr[-2000:]}")
+        raise RuntimeError(f"proof run failed in {cwd.name}:\n{_safe(proc.stderr[-2000:])}")
     return json.loads(proc.stdout.strip().splitlines()[-1])
 
 
@@ -110,6 +164,13 @@ def _check(condition: bool, failures: list[str], message: str) -> None:
     print(("PASS" if condition else "FAIL") + f": {message}")
     if not condition:
         failures.append(message)
+
+
+def _close_lists(label: str, got: list[float], want: list[float], failures: list[str]) -> None:
+    ok = len(got) == len(want) and all(
+        math.isclose(g, w, rel_tol=PSD_REL, abs_tol=PSD_ABS) for g, w in zip(got, want, strict=False)
+    )
+    _check(ok, failures, f"{label} per-event values match checkout ({len(want)} values)")
 
 
 def _close_enough(label: str, got: float, want: float, failures: list[str]) -> None:
@@ -132,7 +193,7 @@ def main() -> int:
         print("FAIL: `uv` not found on PATH (precondition for build + venv)")
         return 1
     if not LEGACY_DB.is_file():
-        print(f"FAIL: explicit-DB fixture missing: {LEGACY_DB}")
+        print(f"FAIL: explicit-DB fixture missing: {LEGACY_DB.relative_to(REPO)}")
         return 1
 
     dist = REPO / "dist"
@@ -140,7 +201,7 @@ def main() -> int:
         print("--- uv build ---")
         proc = subprocess.run([uv, "build"], cwd=REPO, capture_output=True, text=True, timeout=600, check=False)
         if proc.returncode != 0:
-            print(f"FAIL: uv build failed:\n{proc.stderr[-2000:]}")
+            print(f"FAIL: uv build failed:\n{_safe(proc.stderr[-2000:])}")
             return 1
     wheels = sorted(dist.glob("guiskindose-*.whl"))
     if not wheels:
@@ -169,7 +230,7 @@ def main() -> int:
         check=False,
     )
     if proc.returncode != 0:
-        print(f"FAIL: wheel install failed:\n{proc.stderr[-2000:]}")
+        print(f"FAIL: wheel install failed:\n{_safe(proc.stderr[-2000:])}")
         return 1
 
     snippet = PROOF_DIR / "snippet.py"
@@ -204,18 +265,30 @@ def main() -> int:
     # Checkout baseline (own interpreter, clean env, fresh CWD).
     baseline_cwd = fresh_cwd("baseline-cwd")
     baseline = _run(
-        Path(sys.executable), snippet, baseline_cwd, {"PROOF_MODE": "packaged", "PROOF_CWD": str(baseline_cwd)}
+        Path(sys.executable),
+        snippet,
+        baseline_cwd,
+        {"PROOF_MODE": "packaged", "PROOF_CWD": str(baseline_cwd), "PROOF_REPO": str(REPO)},
     )
     _check(list(baseline_cwd.iterdir()) == [], failures, "checkout baseline writes no CWD artifacts")
 
     # Installed run 1: clean CWD, packaged mode.
     run_cwd = fresh_cwd("run-cwd-clean")
-    installed = _run(proof_python, snippet, run_cwd, {"PROOF_MODE": "packaged", "PROOF_CWD": str(run_cwd)})
+    installed = _run(
+        proof_python,
+        snippet,
+        run_cwd,
+        {"PROOF_MODE": "packaged", "PROOF_CWD": str(run_cwd), "PROOF_REPO": str(REPO)},
+    )
     _check(list(run_cwd.iterdir()) == [], failures, "installed run writes no CWD artifacts")
+    _check(installed["tables_sha"] == baseline["tables_sha"], failures, "packaged table bytes identical")
     _check(installed["n_events"] == baseline["n_events"], failures, "event count matches checkout")
     _close_enough("psd", installed["psd"], baseline["psd"], failures)
     _close_enough("dose_sum", installed["dose_sum"], baseline["dose_sum"], failures)
     _close_enough("air_kerma", installed["air_kerma"], baseline["air_kerma"], failures)
+    for key in ("medium", "table", "backscatter"):
+        _close_lists(f"k-{key}", installed["corrections"][key], baseline["corrections"][key], failures)
+    _close_lists("hvl-probe", installed["hvl_probe"], baseline["hvl_probe"], failures)
     _check(installed["leaks"] == [], failures, f"no path leaks in installed exports (got {installed['leaks']})")
 
     # Installed run 2: sentinel-seeded CWD DB must be ignored, bytes untouched.
@@ -227,7 +300,12 @@ def main() -> int:
     conn.commit()
     conn.close()
     before = sentinel.read_bytes()
-    seeded = _run(proof_python, snippet, seed_cwd, {"PROOF_MODE": "packaged", "PROOF_CWD": str(seed_cwd)})
+    seeded = _run(
+        proof_python,
+        snippet,
+        seed_cwd,
+        {"PROOF_MODE": "packaged", "PROOF_CWD": str(seed_cwd), "PROOF_REPO": str(REPO)},
+    )
     _check(sentinel.read_bytes() == before, failures, "seeded CWD DB left untouched")
     _check({p.name for p in seed_cwd.iterdir()} == {"corrections.db"}, failures, "seeded CWD gains no artifacts")
     _close_enough("psd-seeded", seeded["psd"], baseline["psd"], failures)
@@ -241,7 +319,9 @@ def main() -> int:
         {
             "PROOF_MODE": "explicit",
             "PROOF_EXPLICIT_DB": str(LEGACY_DB),
+            "PROOF_HVL_DB": str(LEGACY_DB),
             "PROOF_CWD": str(explicit_cwd),
+            "PROOF_REPO": str(REPO),
         },
     )
     checkout_explicit = _run(
@@ -251,10 +331,16 @@ def main() -> int:
         {
             "PROOF_MODE": "explicit",
             "PROOF_EXPLICIT_DB": str(LEGACY_DB),
+            "PROOF_HVL_DB": str(LEGACY_DB),
             "PROOF_CWD": str(explicit_cwd),
+            "PROOF_REPO": str(REPO),
         },
     )
+    _check(explicit["tables_sha"] == baseline["tables_sha"], failures, "explicit mode ships packaged tables")
     _close_enough("psd-explicit", explicit["psd"], checkout_explicit["psd"], failures)
+    for key in ("medium", "table", "backscatter"):
+        _close_lists(f"k-{key}-explicit", explicit["corrections"][key], checkout_explicit["corrections"][key], failures)
+    _close_lists("hvl-probe-explicit", explicit["hvl_probe"], checkout_explicit["hvl_probe"], failures)
     _check(explicit["leaks"] == [], failures, f"no path leaks in explicit exports (got {explicit['leaks']})")
 
     print("---")

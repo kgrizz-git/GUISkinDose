@@ -132,8 +132,14 @@ explicitly.
   gates (`ruff`, `basedpyright`, `bandit`) and stays under 800 lines.
 - Step 3 — installed-wheel run matrix (each against a fresh CWD with no DB,
   then with a sentinel-seeded `corrections.db`):
-  1. HVL / `k_med` / `k_tab` lookups return the packaged values (compare
-     against checkout provider output, not hardcoded numbers).
+  1. Packaged content parity: sha256 over the raw bytes of every
+     `runtime_lookup` table (read via `importlib.resources` from the
+     importing interpreter) must match exactly; plus a direct HVL probe
+     (sample kVp/filtration frame through `fetch_and_append_hvl`) and the
+     per-event k_med/k_tab/k_bs arrays from the full run, all compared
+     against the checkout run with golden-suite tolerances (no hardcoded
+     numbers). Note: `backscatter` entries are nested per-event lists —
+     flatten one level before comparing.
   2. Full `main()` on the bundled Siemens example (default cylinder
      settings); PSD + dose-map checksum equal the checkout run.
   3. CWD contains no `corrections.db` or other new artifact after each run.
@@ -141,7 +147,11 @@ explicitly.
      the packaged-CSV run.
   5. Full `analyze_data` dict + JSON export payloads (not just
      `serialize_settings` snapshots) contain no absolute path, in both
-     packaged and explicit-SQLite modes.
+     packaged and explicit-SQLite modes. Mechanism: marker set (proof CWD,
+     repo root, home, explicit DB path, `.db` suffix) plus an absolute-path
+     shape regex; the report carries matched marker *labels* only, never
+     the matched text (privacy rule). Failure output redacts repo/home
+     prefixes via a `_safe()` helper.
 - Step 4 — docs: `CHANGELOG.md` (Fixed bullet), `dev-docs/MAINTENANCE_LOG.md`,
   `dev-docs/index.md` row flip to Complete **plus add the missing
   `MAINTENANCE_LOG.md` catalog row** (kilo verified it is absent; required

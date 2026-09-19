@@ -17,10 +17,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `scripts/verify_distribution.py` builds, installs into a hermetic venv
   under `tmp/dist-proof/`, and reproduces checkout results from the install
   with a mandatory `site-packages` import guard (defeats editable-install
-  shadowing), direct-comparison parity (no new hardcoded goldens), sentinel
+  shadowing), direct-comparison parity (PSD, dose sum, per-event k_med/k_tab
+  arrays, packaged table bytes — no new hardcoded goldens), sentinel
   ignore, no CWD artifacts, and leak-free dict/JSON exports. Full `main()`
-  on the bundled Siemens cylinder fixture; installed PSD equals the frozen
-  golden both sides. Plan:
+  on the bundled Siemens cylinder fixture. Plan:
   `dev-docs/plans/archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md`.
 
 - **Notebook plot-mode HTML guard** (2026-09-18) — `analyze_data()` raised on
