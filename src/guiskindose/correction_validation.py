@@ -361,6 +361,8 @@ def check_explicit_db(
         except sqlite3.Error:
             versions = []
         except ValueError:
+            if own_connection:
+                conn.close()
             return [ValidationIssue(version_table, version_table, "unsafe_identifier", f"Table name {version_table!r} is not a safe identifier.", "error")]
         if versions != [expected_version]:
             issues.append(

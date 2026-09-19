@@ -255,6 +255,37 @@ def test_explicit_db_check_is_read_only(tmp_path: Path):
     assert hashlib.sha256(db.read_bytes()).hexdigest() == before
 
 
+def test_explicit_db_unsafe_version_table_closes_owned_connection(tmp_path, monkeypatch):
+    import sqlite3
+
+    db = tmp_path / "evilver.db"
+    conn = sqlite3.connect(db)
+    conn.execute('CREATE TABLE "a""b" (a REAL)')
+    conn.execute("CREATE TABLE probe (a REAL)")
+    conn.commit()
+    conn.close()
+    closed = []
+    real_connect = sqlite3.connect
+
+    class SpyConn:
+        def __init__(self, *args, **kwargs):
+            self._conn = real_connect(*args, **kwargs)
+
+        def execute(self, *args, **kwargs):
+            return self._conn.execute(*args, **kwargs)
+
+        def close(self):
+            closed.append(True)
+            return self._conn.close()
+
+    monkeypatch.setattr(sqlite3, "connect", lambda *args, **kwargs: SpyConn(*args, **kwargs))
+    issues = check_explicit_db(
+        db, expected_version="1", table_specs={"probe": [ColumnSpec("a", "float")]}, version_table='a"b'
+    )
+    assert [i.code for i in issues if i.severity == "error"] == ["unsafe_identifier"]
+    assert closed == [True]
+
+
 def test_explicit_db_malicious_table_name_fails_closed(tmp_path: Path):
     db = tmp_path / "evil.db"
     _build_db(db, version="1", rows=[(1.0,)])
