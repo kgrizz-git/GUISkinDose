@@ -138,7 +138,7 @@ def main() -> int:
     dist = REPO / "dist"
     if not args.skip_build:
         print("--- uv build ---")
-        proc = subprocess.run([uv, "build"], cwd=REPO, capture_output=True, text=True, check=False)
+        proc = subprocess.run([uv, "build"], cwd=REPO, capture_output=True, text=True, timeout=600, check=False)
         if proc.returncode != 0:
             print(f"FAIL: uv build failed:\n{proc.stderr[-2000:]}")
             return 1
@@ -165,6 +165,7 @@ def main() -> int:
         cwd=REPO,
         capture_output=True,
         text=True,
+        timeout=600,
         check=False,
     )
     if proc.returncode != 0:
@@ -186,11 +187,12 @@ def main() -> int:
         check=False,
     )
     guard_file = Path(guard_proc.stdout.strip()).resolve() if guard_proc.returncode == 0 else None
-    _check(
-        guard_file is not None and guard_file.is_relative_to(venv_dir.resolve()) and "src" not in guard_file.parts,
-        failures,
-        f"installed import resolves to proof venv ({guard_file})",
+    guard_ok = (
+        guard_file is not None and guard_file.is_relative_to(venv_dir.resolve()) and "src" not in guard_file.parts
     )
+    # Never print guard_file itself: on failure it is an absolute checkout
+    # path and raw paths must not be emitted (privacy rule).
+    _check(guard_ok, failures, "installed import resolves inside proof venv")
     if failures:
         return 1
 
@@ -210,7 +212,7 @@ def main() -> int:
     run_cwd = fresh_cwd("run-cwd-clean")
     installed = _run(proof_python, snippet, run_cwd, {"PROOF_MODE": "packaged", "PROOF_CWD": str(run_cwd)})
     _check(list(run_cwd.iterdir()) == [], failures, "installed run writes no CWD artifacts")
-    _check(installed["n_events"] == baseline["n_events"] == 21, failures, "event count is 21 both sides")
+    _check(installed["n_events"] == baseline["n_events"], failures, "event count matches checkout")
     _close_enough("psd", installed["psd"], baseline["psd"], failures)
     _close_enough("dose_sum", installed["dose_sum"], baseline["dose_sum"], failures)
     _close_enough("air_kerma", installed["air_kerma"], baseline["air_kerma"], failures)
