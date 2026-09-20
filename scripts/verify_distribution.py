@@ -199,7 +199,9 @@ def main() -> int:
     dist = REPO / "dist"
     if not args.skip_build:
         print("--- uv build ---")
-        proc = subprocess.run([uv, "build"], cwd=REPO, capture_output=True, text=True, timeout=600, check=False)
+        proc = subprocess.run(
+            [uv, "build", "--clear"], cwd=REPO, capture_output=True, text=True, timeout=600, check=False
+        )
         if proc.returncode != 0:
             print(f"FAIL: uv build failed:\n{_safe(proc.stderr[-2000:])}")
             return 1
@@ -207,7 +209,13 @@ def main() -> int:
     if not wheels:
         print("FAIL: no guiskindose wheel in dist/ (run without --skip-build)")
         return 1
-    wheel = wheels[-1]
+    if len(wheels) != 1:
+        # Never guess: lexicographic [-1] can select a stale artifact across
+        # versions (e.g. 1.0.10 sorts before 1.0.9). Fail with names only.
+        names = sorted(wheel.name for wheel in wheels)
+        print(f"FAIL: expected exactly one guiskindose wheel, found {len(names)}: {names}")
+        return 1
+    wheel = wheels[0]
     print(f"wheel under test: {wheel.name}")
 
     if PROOF_DIR.exists():
@@ -237,7 +245,10 @@ def main() -> int:
     snippet.write_text(SNIPPET, encoding="utf-8")
 
     # Import-path guard: the installed import must resolve inside the proof
-    # venv, never to the checkout src/ (editable-install shadowing).
+    # venv (containment is the whole check — no extra path-component rules,
+    # which would false-fail when the checkout itself lives under a "src"
+    # directory). Never print guard_file: on failure it is an absolute
+    # checkout path and raw paths must not be emitted (privacy rule).
     guard_proc = subprocess.run(
         [str(proof_python), "-c", "import guiskindose; print(guiskindose.__file__)"],
         cwd=PROOF_DIR,
@@ -248,11 +259,7 @@ def main() -> int:
         check=False,
     )
     guard_file = Path(guard_proc.stdout.strip()).resolve() if guard_proc.returncode == 0 else None
-    guard_ok = (
-        guard_file is not None and guard_file.is_relative_to(venv_dir.resolve()) and "src" not in guard_file.parts
-    )
-    # Never print guard_file itself: on failure it is an absolute checkout
-    # path and raw paths must not be emitted (privacy rule).
+    guard_ok = guard_file is not None and guard_file.is_relative_to(venv_dir.resolve())
     _check(guard_ok, failures, "installed import resolves inside proof venv")
     if failures:
         return 1
@@ -262,14 +269,28 @@ def main() -> int:
         path.mkdir(parents=True, exist_ok=False)
         return path
 
-    # Checkout baseline (own interpreter, clean env, fresh CWD).
+    checkout_src = str(REPO / "src")
+
+    def baseline_env(cwd: Path, mode: str, explicit_db: str = "") -> dict[str, str]:
+        """Baseline env: import the checkout via PYTHONPATH (no editable-install assumption)."""
+        env = {"PROOF_MODE": mode, "PROOF_CWD": str(cwd), "PROOF_REPO": str(REPO), "PYTHONPATH": checkout_src}
+        if explicit_db:
+            env["PROOF_EXPLICIT_DB"] = explicit_db
+            env["PROOF_HVL_DB"] = explicit_db
+        return env
+
+    def check_baseline_import(report: dict[str, Any], failures: list[str]) -> None:
+        imported = Path(str(report["guiskindose_file"])).resolve()
+        _check(
+            imported.is_relative_to((REPO / "src" / "guiskindose").resolve()),
+            failures,
+            "baseline imports the checkout package",
+        )
+
+    # Checkout baseline (own interpreter, fresh CWD, checkout on PYTHONPATH).
     baseline_cwd = fresh_cwd("baseline-cwd")
-    baseline = _run(
-        Path(sys.executable),
-        snippet,
-        baseline_cwd,
-        {"PROOF_MODE": "packaged", "PROOF_CWD": str(baseline_cwd), "PROOF_REPO": str(REPO)},
-    )
+    baseline = _run(Path(sys.executable), snippet, baseline_cwd, baseline_env(baseline_cwd, "packaged"))
+    check_baseline_import(baseline, failures)
     _check(list(baseline_cwd.iterdir()) == [], failures, "checkout baseline writes no CWD artifacts")
 
     # Installed run 1: clean CWD, packaged mode.
@@ -324,18 +345,16 @@ def main() -> int:
             "PROOF_REPO": str(REPO),
         },
     )
+    checkout_explicit_cwd = fresh_cwd("baseline-cwd-explicit")
     checkout_explicit = _run(
         Path(sys.executable),
         snippet,
-        fresh_cwd("baseline-cwd-explicit"),
-        {
-            "PROOF_MODE": "explicit",
-            "PROOF_EXPLICIT_DB": str(LEGACY_DB),
-            "PROOF_HVL_DB": str(LEGACY_DB),
-            "PROOF_CWD": str(explicit_cwd),
-            "PROOF_REPO": str(REPO),
-        },
+        checkout_explicit_cwd,
+        baseline_env(checkout_explicit_cwd, "explicit", explicit_db=str(LEGACY_DB)),
     )
+    check_baseline_import(checkout_explicit, failures)
+    _check(list(explicit_cwd.iterdir()) == [], failures, "explicit run writes no CWD artifacts")
+    _check(list(checkout_explicit_cwd.iterdir()) == [], failures, "explicit baseline writes no CWD artifacts")
     _check(explicit["tables_sha"] == baseline["tables_sha"], failures, "explicit mode ships packaged tables")
     _close_enough("psd-explicit", explicit["psd"], checkout_explicit["psd"], failures)
     for key in ("medium", "table", "backscatter"):

@@ -120,14 +120,17 @@ explicitly.
   means runtime lookups + manifest, not the build-input HVL CSVs or the
   provenance-only `device_info.csv` that `MANIFEST.in` also ships. Skip (with
   reason) when no `dist/` artifact exists, matching the existing test pattern.
-- Step 2 — `scripts/verify_distribution.py`: `uv build` (wheel + sdist),
-  hermetic venv under `tmp/dist-proof/`, locked/cache wheel install, then
-  the Step 3 matrix. Prints a PASS/FAIL report; exits nonzero on any failure.
-  Decisions 2–5 apply. Implementation constraints (both reviews): proof runs
+- Step 2 — `scripts/verify_distribution.py`: `uv build --clear` (wheel +
+  sdist; exactly one matching wheel required — lexicographic `[-1]` could
+  select a stale artifact), hermetic venv under `tmp/dist-proof/`,
+  locked/cache wheel install, then the Step 3 matrix. Prints a PASS/FAIL
+  report; exits nonzero on any failure. Decisions 2–5 apply. Implementation constraints (both reviews): proof runs
   execute **only** in proof-venv `python` subprocesses, never in-process
   from the checkout; `PYTHONPATH` is cleared in the proof environment
   (`pyproject.toml` sets `pythonpath = ["tests"]` for pytest, which must not
-  leak in); checkout baseline runs in a separate subprocess against the
+  leak in) while checkout baselines import via explicit
+  `PYTHONPATH=<repo>/src` (no editable-install assumption) with a symmetric
+  import-path assertion; checkout baseline runs in a separate subprocess against the
   checkout interpreter. The script passes the standard `scripts/` harness
   gates (`ruff`, `basedpyright`, `bandit`) and stays under 800 lines.
 - Step 3 — installed-wheel run matrix (each against a fresh CWD with no DB,
@@ -142,7 +145,8 @@ explicitly.
      flatten one level before comparing.
   2. Full `main()` on the bundled Siemens example (default cylinder
      settings); PSD + dose-map checksum equal the checkout run.
-  3. CWD contains no `corrections.db` or other new artifact after each run.
+  3. Every run directory (packaged, seeded, explicit installed + explicit
+  checkout baselines) contains no new artifact after each run.
   4. Sentinel-seeded CWD DB is ignored (untouched bytes) and results equal
      the packaged-CSV run.
   5. Full `analyze_data` dict + JSON export payloads (not just

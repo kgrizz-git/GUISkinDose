@@ -99,33 +99,43 @@ def _runtime_lookup_wheel_paths() -> list[str]:
     return sorted(paths)
 
 
+def _single_artifact(dist: Path, pattern: str, label: str) -> Path:
+    """Return the exactly-one matching ``dist/`` artifact, else skip or fail.
+
+    Skips (pragma'd, environment-dependent) when nothing is built; fails when
+    several match — lexicographic ``[-1]`` could silently select a stale
+    artifact across versions. Names only in the message, never paths.
+    """
+    matches = sorted(dist.glob(pattern))
+    if not matches:
+        pytest.skip(f"no guiskindose {label} in dist/; run `uv build` to cover this")  # pragma: no cover
+    assert len(matches) == 1, f"expected exactly one {label}, found: {sorted(p.name for p in matches)}"
+    return matches[0]
+
+
 def test_wheel_contains_correction_runtime_tables() -> None:
-    """The newest ``dist/*.whl`` must ship every runtime lookup CSV + manifest.
+    """The ``dist/*.whl`` must ship every runtime lookup CSV + manifest.
 
     Skipped when no wheel has been built yet (``uv build`` is a runbook step,
     not a required pytest precondition for every developer).
     """
     dist = Path(__file__).resolve().parents[2] / "dist"
-    wheels = sorted(dist.glob("guiskindose-*.whl"))
-    if not wheels:
-        pytest.skip("no guiskindose wheel in dist/; run `uv build` to cover this")  # pragma: no cover
-    with zipfile.ZipFile(wheels[-1]) as archive:
+    wheel = _single_artifact(dist, "guiskindose-*.whl", "wheel")
+    with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
     missing = [path for path in _runtime_lookup_wheel_paths() if path not in names]
     assert not missing, f"wheel is missing correction-data files: {missing}"
 
 
 def test_sdist_contains_correction_runtime_tables() -> None:
-    """The newest ``dist/*.tar.gz`` file list must cover the same set as the wheel.
+    """The ``dist/*.tar.gz`` file list must cover the same set as the wheel.
 
     Build-and-install from the sdist is out of scope (needs network build
     deps); list parity is the Phase D bar.
     """
     dist = Path(__file__).resolve().parents[2] / "dist"
-    sdists = sorted(dist.glob("guiskindose-*.tar.gz"))
-    if not sdists:
-        pytest.skip("no guiskindose sdist in dist/; run `uv build` to cover this")  # pragma: no cover
-    with tarfile.open(sdists[-1], "r:gz") as archive:
+    sdist = _single_artifact(dist, "guiskindose-*.tar.gz", "sdist")
+    with tarfile.open(sdist, "r:gz") as archive:
         names = archive.getnames()
     missing = [
         path for path in _runtime_lookup_wheel_paths() if not any(name.endswith("/src/" + path) for name in names)
