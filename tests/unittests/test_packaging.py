@@ -54,8 +54,22 @@ def test_sphinx_release_matches_pyproject() -> None:
     assert match.group(1) == declared
 
 
+def _single_artifact(dist: Path, pattern: str, label: str) -> Path:
+    """Return the exactly-one matching ``dist/`` artifact, else skip or fail.
+
+    Skips (pragma'd, environment-dependent) when nothing is built; fails when
+    several match — lexicographic ``[-1]`` could silently select a stale
+    artifact across versions. Names only in the message, never paths.
+    """
+    matches = sorted(dist.glob(pattern))
+    if not matches:
+        pytest.skip(f"no guiskindose {label} in dist/; run `uv build` to cover this")  # pragma: no cover
+    assert len(matches) == 1, f"expected exactly one {label}, found: {sorted(p.name for p in matches)}"
+    return matches[0]
+
+
 def test_wheel_contains_guiskindose_package() -> None:
-    """The newest ``dist/*.whl`` must ship the ``guiskindose/`` tree, not an empty or old-name tree.
+    """The ``dist/*.whl`` must ship the ``guiskindose/`` tree, not an empty or old-name tree.
 
     (The legacy package name is built by concatenation below so this file holds no
     pre-rename import-path literal.)
@@ -64,10 +78,7 @@ def test_wheel_contains_guiskindose_package() -> None:
     a required pytest precondition for every developer).
     """
     dist = Path(__file__).resolve().parents[2] / "dist"
-    wheels = sorted(dist.glob("guiskindose-*.whl"))
-    if not wheels:
-        pytest.skip("no guiskindose wheel in dist/; run `uv build` to cover this")
-    wheel = wheels[-1]
+    wheel = _single_artifact(dist, "guiskindose-*.whl", "wheel")
     with zipfile.ZipFile(wheel) as archive:
         names = archive.namelist()
     assert any(name.startswith("guiskindose/") for name in names)
@@ -97,20 +108,6 @@ def _runtime_lookup_wheel_paths() -> list[str]:
     paths.append("guiskindose/table_data/correction_data_manifest.json")
     assert len(paths) >= 2, "manifest declares no runtime lookup tables"
     return sorted(paths)
-
-
-def _single_artifact(dist: Path, pattern: str, label: str) -> Path:
-    """Return the exactly-one matching ``dist/`` artifact, else skip or fail.
-
-    Skips (pragma'd, environment-dependent) when nothing is built; fails when
-    several match — lexicographic ``[-1]`` could silently select a stale
-    artifact across versions. Names only in the message, never paths.
-    """
-    matches = sorted(dist.glob(pattern))
-    if not matches:
-        pytest.skip(f"no guiskindose {label} in dist/; run `uv build` to cover this")  # pragma: no cover
-    assert len(matches) == 1, f"expected exactly one {label}, found: {sorted(p.name for p in matches)}"
-    return matches[0]
 
 
 def test_wheel_contains_correction_runtime_tables() -> None:
