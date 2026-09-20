@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-18).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-19).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -92,7 +92,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | jupyter_builder | 1.0.2 | BSD-3-Clause, MIT, ISC | Homepage, https://jupyter.org |
 | jupyter_client | 8.9.1 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyter_core | 5.9.1 | BSD-3-Clause | Homepage, https://jupyter.org |
-| jupyter_server | 2.20.0 | BSD-3-Clause | Homepage, https://jupyter-server.readthedocs.io |
+| jupyter_server | 2.21.1 | BSD-3-Clause | Homepage, https://jupyter-server.readthedocs.io |
 | jupyter_server_terminals | 0.5.4 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyterlab | 4.6.2 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyterlab_pygments | 0.3.0 | BSD-3-Clause | Homepage, https://github.com/jupyterlab/jupyterlab_pygments |
@@ -211,7 +211,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | six | 1.17.0 | MIT | https://github.com/benjaminp/six |
 | snowballstemmer | 3.1.1 | BSD-3-Clause | https://github.com/snowballstem/snowball |
 | sortedcontainers | 2.4.0 | Apache-2.0 | http://www.grantjenks.com/docs/sortedcontainers/ |
-| soupsieve | 2.8.4 | MIT | Homepage, https://github.com/facelessuser/soupsieve |
+| soupsieve | 2.9.2 | MIT | Homepage, https://github.com/facelessuser/soupsieve |
 | Sphinx | 9.1.0 | BSD-2-Clause | Changelog, https://www.sphinx-doc.org/en/master/changes.html |
 | sphinx_rtd_theme | 3.1.0 | MIT | https://github.com/readthedocs/sphinx_rtd_theme |
 | sphinxcontrib-applehelp | 2.0.0 | BSD-3-Clause | Changelog, https://github.com/sphinx-doc/sphinxcontrib-applehelp/blob/master/CHANGES.rst |

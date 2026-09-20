@@ -15,11 +15,6 @@ be archived.
 
 ## Next Up
 
-- [ ] **Correction-data packaging/runtime fix** — implement
-  [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
-  (sequenced next step after archived Plan 1; see "Correction-data modernization
-  roadmap" in Active Work). Phases A–C shipped (manifest/validation, provider
-  swap, guides); remaining delivery is Phase D (§5 distribution proof).
 - [ ] **Reproducible settings export** — export `PyskindoseSettings` / GUI state as
   JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
   user-facing, pairs with the README refresh).
@@ -38,10 +33,12 @@ policy decisions, not a restart of Phases 0-9.
 
 - [ ] **Correction-data modernization roadmap** — umbrella and current-state reference:
   [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md).
-  Plan 1 (correction safety and tube identity) is archived; remaining delivery:
-  1. **Packaging/runtime fix:** [correction provenance, package resources, and removal of the CWD database default](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md).
-  2. **Separate future feature:** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
-  3. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
+  Plan 1 (correction safety and tube identity) is archived; the packaging/runtime
+  fix shipped (Phases A–D, 2026-09-19;
+  [packaging/provenance master plan](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)).
+  Remaining delivery:
+  1. **Separate future feature:** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
+  2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
   nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
   gate scans first-level text and requires manual embedded-file/image/DICOM clearance.

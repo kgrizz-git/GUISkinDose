@@ -154,20 +154,31 @@ geometry.
 
 ### 5. Verify distribution behavior
 
-- [ ] Extend `tests/unittests/test_packaging.py` to assert all required correction
+**Status (2026-09-19, shipped in Phase D):** all items below are delivered —
+wheel/sdist content assertions in `test_packaging.py` plus
+`scripts/verify_distribution.py` (hermetic install, direct-comparison parity,
+sentinel ignore, no-artifact and leak-free export checks). The parity,
+explicit-SQLite, sentinel, no-artifact, and export bullets are re-asserted
+from the installed wheel; malformed/schema-drift fail-closed is pure
+validation logic (installation-independent) and stays pinned at unit level
+(`test_correction_validation.py` drift group +
+`test_explicit_malformed_fails_value_free`). Full plan:
+[archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md](archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md).
+
+- [x] Extend `tests/unittests/test_packaging.py` to assert all required correction
   CSVs and the manifest are present in the wheel.
-- [ ] Build a wheel and install it in a clean environment under a gitignored
+- [x] Build a wheel and install it in a clean environment under a gitignored
   repo-local temporary directory.
-- [ ] Run HVL, `k_med`, `k_tab`, and a golden dose calculation without a root DB.
-- [ ] Assert no `corrections.db` or other artifact appears in the CWD.
-- [ ] Compare wheel/sdist contents and numerical outputs with the source checkout.
-- [ ] Assert that a default run ignores a seeded root/CWD `corrections.db` (populated
+- [x] Run HVL, `k_med`, `k_tab`, and a golden dose calculation without a root DB.
+- [x] Assert no `corrections.db` or other artifact appears in the CWD.
+- [x] Compare wheel/sdist contents and numerical outputs with the source checkout.
+- [x] Assert that a default run ignores a seeded root/CWD `corrections.db` (populated
   with a sentinel value) and returns the packaged-CSV golden result with no CWD writes.
-- [ ] Assert explicit custom SQLite parity: a validated explicit DB yields the same
+- [x] Assert explicit custom SQLite parity: a validated explicit DB yields the same
   HVL/`k_med`/`k_tab` as its source CSVs.
-- [ ] Assert malformed or schema-drift explicit DBs fail closed with the §2
+- [x] Assert malformed or schema-drift explicit DBs fail closed with the §2
   validation errors before any calculation.
-- [ ] Assert that no export payload contains an absolute filesystem path for the
+- [x] Assert that no export payload contains an absolute filesystem path for the
   correction-data source, in both default and explicit-SQLite modes.
 
 ## Acceptance Criteria

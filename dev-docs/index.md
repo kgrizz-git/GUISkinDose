@@ -53,6 +53,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [../scripts/generate_ui_values.py](../scripts/generate_ui_values.py) | Regenerates `UI_values.md` from `MODERN_CSS` in `gui/styles.py`. |
 | Bandit | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job and pre-commit hook (medium+ severity on `src/guiskindose` + `scripts`). |
 | [TO_DO.md](TO_DO.md) | Short active backlog, deferred work, and open questions. Completed history lives in `CHANGELOG.md` and archived plans. |
+| [MAINTENANCE_LOG.md](MAINTENANCE_LOG.md) | Maintainer-facing change history (refactors, tests, CI/harness); user-facing changes live in `CHANGELOG.md`. |
 | [index.md](index.md) | This catalog — one-line purpose for every file under `dev-docs/`. |
 | [help_registry.json](help_registry.json) | Machine-readable map of GUI help ids to source markdown files, bundled mirror files, and GUI tabs/workflows. |
 | [ui_copy.json](ui_copy.json) | Catalog of high-risk GUI tooltip/help/warning strings used through `copy_text()`. |
@@ -172,6 +173,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
+| [plans/archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md) | **Complete** (2026-09-19) — Correction-data Phase D: wheel/sdist distribution proof, clean-env install, numerical parity (master §5, last delivery). |
 | [plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase A: manifest, validation, device_info substitution (PR #101). |
 | [plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase B: packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (PR #102). |
 | [plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md](plans/archive/ISSUE_60_PHANTOM_PREVIEW_MONKEYPATCH_PLAN.md) | **Complete** (2026-09-17) — issue #60: object-form `monkeypatch` for the phantom-preview test vs NiceGUI `sys.modules` purge; canary-verified. |

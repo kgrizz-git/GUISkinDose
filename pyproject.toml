@@ -136,6 +136,12 @@ markers = [
     "blender_mpfb: requires local Blender ≥4.2 with MPFB; skipped when unavailable",
 ]
 
+[tool.coverage.run]
+# Runbook scripts verified by execution (PASS report), not import coverage:
+# verify_distribution.py orchestrates uv build + venv + subprocess runs that
+# cannot execute under pytest-xdist. Its pure helpers stay lint/type-gated.
+omit = ["scripts/verify_distribution.py"]
+
 [tool.ruff]
 line-length = 120
 
