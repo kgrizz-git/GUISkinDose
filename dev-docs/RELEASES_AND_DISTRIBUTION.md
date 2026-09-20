@@ -57,7 +57,9 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
 2. Confirm `main` is green for the exact commit you will tag.
 3. Bump `pyproject.toml` version; fold `CHANGELOG.md` `[Unreleased]` into `## [x.y.z]`; update citation/support bits if needed.
 4. Run full tests and documented privacy, secret, dependency, license, type, build, and doc checks. Confirm the documentation assessment is current — the matrix in [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md) was touched this cycle, or note N/A with a reason.
-5. Locally `uv build` (or equivalent); inspect wheel/sdist contents.
+5. Locally `uv build` (or equivalent); inspect wheel/sdist contents. For correction-data
+   changes, run `python scripts/verify_distribution.py` (hermetic install + packaged-data
+   parity proof) and attach the PASS report.
 6. Privacy: no identifiers, private paths, or unapproved assets in fixtures, logs, or artifacts.
 7. Create a **GitHub Release** on that commit (user-facing notes per above). That event runs `release.yml`.
 8. Verify workflow: privacy gates → build → grype → PyPI publish (only after Trusted Publisher is registered — see `PUBLISHING.md`).
