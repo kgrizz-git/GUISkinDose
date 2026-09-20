@@ -7,6 +7,12 @@ active packaging/provenance master
 (`plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md`) plus archived Phase
 plans in `plans/archive/`.
 
+**Maintenance:** update this map whenever a loader, consumer, output field,
+fallback, or covering test changes — including new tables, manifest role
+changes, and provider/explicit-adapter contract changes. No automated gate
+can verify the map's semantic accuracy, so treat it as part of the
+Definition of Done for correction-data PRs (human review).
+
 ## Flow
 
 ```mermaid
@@ -30,9 +36,9 @@ flowchart TD
 
 | Table (SQLite name) | Loader | Consumer | Output field | Fallback | Tests |
 |---|---|---|---|---|---|
-| `hvl_combined` (packaged `hvl_tables/hvl_combined.csv`) | `get_table` / explicit adapter | `geom_calc.fetch_and_append_hvl` | `data_norm.HVL` (mmAl) | Below-floor kVp policy (`snap`/`skip`/`manual`/`exam_average`); anode slice select + clamped interp | `test_geom_calc.py` HVL tests, `test_correction_data_provider.py` parity |
-| `correction_medium_and_backscatter` (4-col projection) | `get_table` / explicit adapter | `corrections.calculate_k_med` | `k_med` per hit cell | Nearest tabulated field size → kVp → HVL (always resolves; no missing path) | `test_corrections.py`, provider parity |
-| `correction_table_and_pad_attenuation` | `get_table` / explicit adapter | `corrections.calculate_k_tab` | `KTabResult(values, statuses)` | `estimate_k_tab=True` → constant `k_tab_val`, no DB read; unknown device/plane → 1.0 (`no_device`); invalid inherited (AlluraClarity Plane B zeros) → warned-neutral 1.0 | `test_corrections.py`, `test_k_tab_transmission_characterization.py`, `test_golden_k_tab.py` |
+| `hvl_combined` (packaged `hvl_tables/hvl_combined.csv`) | `get_table` / explicit adapter | `geom_calc.fetch_and_append_hvl` | `data_norm.HVL` (mmAl) | Below-floor kVp policy (`snap`/`skip`/`manual`/`exam_average`); anode slice select + clamped interp | `test_geom_calc.py` HVL tests, `test_correction_data_provider.py` parity, `test_packaging.py` wheel assertions, `verify_distribution.py` installed parity |
+| `correction_medium_and_backscatter` (4-col projection) | `get_table` / explicit adapter | `corrections.calculate_k_med` | `k_med` per hit cell | Nearest tabulated field size → kVp → HVL (always resolves; no missing path) | `test_corrections.py`, provider parity, `test_packaging.py` wheel assertions, `verify_distribution.py` installed parity |
+| `correction_table_and_pad_attenuation` | `get_table` / explicit adapter | `corrections.calculate_k_tab` | `KTabResult(values, statuses)` | `estimate_k_tab=True` → constant `k_tab_val`, no DB read; unknown device/plane → 1.0 (`no_device`); invalid inherited (AlluraClarity Plane B zeros) → warned-neutral 1.0 | `test_corrections.py`, `test_k_tab_transmission_characterization.py`, `test_golden_k_tab.py`, `test_packaging.py` wheel assertions, `verify_distribution.py` installed parity |
 | `device_info` | Packaged CSV (no loader calls it; provenance only) | None (provenance only) | — | — | Manifest consistency + substitution tests |
 | `hvl_allura_filters_11deg.csv`, `hvl_axiom_filters_8deg.csv` | `build_hvl_table.py` (dev) | None at runtime (build inputs) | — | — | Manifest `build_input` flags |
 | `backscatter`, `h` columns | — | None (`k_bs` uses hard-coded polynomials + `CubicSpline` in `corrections.py:104-157`) | — | — | Manifest `runtime_read: false` flags |

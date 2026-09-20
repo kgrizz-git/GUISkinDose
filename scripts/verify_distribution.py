@@ -146,6 +146,7 @@ def _safe(text: str) -> str:
 
 
 def _run(python: Path, snippet: Path, cwd: Path, extra: dict[str, str]) -> dict[str, Any]:
+    """Execute the proof snippet in one interpreter, return its JSON report."""
     proc = subprocess.run(
         [str(python), str(snippet)],
         cwd=cwd,
@@ -161,12 +162,14 @@ def _run(python: Path, snippet: Path, cwd: Path, extra: dict[str, str]) -> dict[
 
 
 def _check(condition: bool, failures: list[str], message: str) -> None:
+    """Record a PASS/FAIL line, collecting failures for the final verdict."""
     print(("PASS" if condition else "FAIL") + f": {message}")
     if not condition:
         failures.append(message)
 
 
 def _close_lists(label: str, got: list[float], want: list[float], failures: list[str]) -> None:
+    """Element-wise tolerance comparison for numeric value arrays."""
     ok = len(got) == len(want) and all(
         math.isclose(g, w, rel_tol=PSD_REL, abs_tol=PSD_ABS) for g, w in zip(got, want, strict=False)
     )
@@ -174,6 +177,7 @@ def _close_lists(label: str, got: list[float], want: list[float], failures: list
 
 
 def _close_enough(label: str, got: float, want: float, failures: list[str]) -> None:
+    """Tolerance comparison for scalar metrics using the per-label budget."""
     rel_tol, abs_tol = _TOLERANCES[label]
     ok = math.isclose(got, want, rel_tol=rel_tol, abs_tol=abs_tol)
     _check(ok, failures, f"{label} installed={got!r} checkout={want!r}")
