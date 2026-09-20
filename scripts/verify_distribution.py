@@ -169,7 +169,7 @@ def _check(condition: bool, failures: list[str], message: str) -> None:
 
 
 def _close_lists(label: str, got: list[float], want: list[float], failures: list[str]) -> None:
-    """Element-wise tolerance comparison for per-event value arrays."""
+    """Element-wise tolerance comparison for numeric value arrays."""
     ok = len(got) == len(want) and all(
         math.isclose(g, w, rel_tol=PSD_REL, abs_tol=PSD_ABS) for g, w in zip(got, want, strict=False)
     )
