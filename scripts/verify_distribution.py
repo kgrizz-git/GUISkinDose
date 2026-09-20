@@ -181,7 +181,7 @@ def _close_enough(label: str, got: float, want: float, failures: list[str]) -> N
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--skip-build", action="store_true", help="reuse newest dist/* artifacts")
+    parser.add_argument("--skip-build", action="store_true", help="reuse the dist/* wheel (fails unless exactly one)")
     parser.add_argument(
         "--quick", action="store_true", help="offline shortcut: --system-site-packages (not canonical evidence)"
     )
@@ -212,7 +212,7 @@ def main() -> int:
     if len(wheels) != 1:
         # Never guess: lexicographic [-1] can select a stale artifact across
         # versions (e.g. 1.0.10 sorts before 1.0.9). Fail with names only.
-        names = sorted(wheel.name for wheel in wheels)
+        names = sorted(candidate.name for candidate in wheels)
         print(f"FAIL: expected exactly one guiskindose wheel, found {len(names)}: {names}")
         return 1
     wheel = wheels[0]
