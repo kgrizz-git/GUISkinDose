@@ -49,7 +49,7 @@ decision — see §4.
   (`ui.run` at `src/guiskindose/gui/app.py:454`), so `--native --host
   0.0.0.0` without the flag is refused too.
 - CLI help (`src/guiskindose/cli_args.py:202`, flag at `:217`) and README
-  (`README.md:85`) both warn: no authentication, PHI-derived data, trusted
+  (`README.md:87`) both warn: no authentication, PHI-derived data, trusted
   network + own access controls. README enumerates LAN consequences plainly
   (`README.md:98`): anyone reaching the port can view loaded patient data,
   trigger exports, and mutate shared settings.
@@ -57,12 +57,11 @@ decision — see §4.
   localhost-by-default, acknowledged-LAN passthrough, and unacknowledged
   refusal. Upload size caps ride in the same file (DoS bounding, orthogonal
   to network auth).
-
 ### 1.2 Single shared process-global state (by design, load-bearing)
 
 - `state = AppState()` (`src/guiskindose/gui/state.py:137`) is a module-level
   singleton holding everything: loaded RDSR frames, filenames, per-exam
-  metadata, settings mirrors, results, and figures (`state.py:20`).
+  metadata, settings mirrors, results, and figures (`state.py:19`).
 - The `busy` flag (`src/guiskindose/gui/state.py:123`) is process-global, not
   per-client: it crudely serializes concurrent operations but isolates
   nothing. Every connected browser sees and mutates the same patients,
@@ -78,12 +77,17 @@ decision — see §4.
 ### 1.3 Partially shipped neighbours
 
 - Privacy-plan Phase 9 (`dev-docs/plans/PRIVACY_HARDENING_PLAN.md:324`):
-  items 3–4 (loopback default, `--allow-network` gate) shipped; item 5
-  (explain no-auth/shared-state) exists in README/CLI/docstring but has **no
-  in-GUI surface**; item 6 (refuse non-loopback until per-client state +
-  auth) is an open policy decision; item 7 (registry entries) has only the
-  generic upload-privacy line (`dev-docs/ui_copy.json:49`), nothing
-  network-specific.
+  items 1 (onboarding notice) and 3–4 (loopback default, `--allow-network`
+  gate) shipped — the first-run onboarding dialog
+  (`src/guiskindose/gui/app.py:104`, dismissable) already carries
+  network-aware copy. Item 5 (explain no-auth/shared-state) exists in
+  README/CLI/docstring/onboarding, but there is **no persistent or
+  mode-aware in-GUI surface** (nothing reflects actual LAN serving, and the
+  dialog can be permanently dismissed). Item 6 (refuse non-loopback until
+  per-client state + auth) is an open policy decision. Item 7 (registry
+  entries) has the onboarding privacy line (`dev-docs/ui_copy.json:49`,
+  which does include network wording) but no dedicated network-mode banner
+  or help page.
 - In-app help (`docs/source/gui_help/`) has no network-mode page; the only
   network-adjacent copy is the export-destination caution.
 
@@ -158,7 +162,8 @@ one-line change plus doc updates and this assessment's packages become moot.
 ### Package A — Say it where it happens (cheap, do regardless)
 
 1. In-GUI banner on every tab whenever the bound host is non-loopback:
-   no-auth + shared-state + operator-acknowledged wording. Register copy in
+   no-auth + shared-state + operator-acknowledged wording. This complements
+   (not duplicates) the one-time onboarding notice. Register copy in
    `ui_copy.json` / `help_registry.json` (plan item 7) and add a `gui_help`
    network-mode page.
 2. Startup stderr banner in network mode restating the same (value-free,
@@ -209,7 +214,7 @@ localhost behavior must stay pinned unchanged throughout.
 - `src/guiskindose/main.py:552`
 - `src/guiskindose/__main__.py:63`
 - `tests/gui/test_gui_security.py`
-- `README.md:85`
+- `README.md:87`
 - `dev-docs/TO_DO.md` ("GUI network-exposure hardening" item)
 - `dev-docs/plans/PRIVACY_HARDENING_PLAN.md:324`
 - `dev-docs/ui_copy.json:49`
