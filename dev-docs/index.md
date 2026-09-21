@@ -1,6 +1,6 @@
 # Documentation index
 
-_Date: 2026-07-16_
+_Date: 2026-09-21_
 
 Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) for agent orientation, then [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) for validation commands and the source-of-truth map.
 

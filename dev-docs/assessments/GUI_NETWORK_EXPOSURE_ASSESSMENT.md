@@ -62,7 +62,7 @@ decision — see §4.
 - `state = AppState()` (`src/guiskindose/gui/state.py:137`) is a module-level
   singleton holding everything: loaded RDSR frames, filenames, per-exam
   metadata, settings mirrors, results, and figures (`state.py:19`).
-- The `busy` flag (`src/guiskindose/gui/state.py:123`) is process-global, not
+- The `busy` flag (`src/guiskindose/gui/state.py:127`) is process-global, not
   per-client: it crudely serializes concurrent operations but isolates
   nothing. Every connected browser sees and mutates the same patients,
   settings, and results — there are no sessions, no users, no read-only
@@ -123,9 +123,10 @@ Anyone on the routable network, with no credentials, can:
    exports — availability and integrity impact, not just confidentiality.
 
 Fixed port 8765 makes the service trivially discoverable; the 30-second
-setting permits socket reattachment but is not a privilege lifetime — while
-the server remains reachable, stale tabs can reload and new clients can
-connect with full privileges. None of this is accidental —
+client-side reconnect window covers socket reattachment after a dropped
+connection — it is not a privilege lifetime. While the server remains
+reachable, stale tabs can reload and new clients can connect with full
+privileges. None of this is accidental —
 the operator opted in — but the blast radius of that opt-in currently has no
 in-app reminder and no technical bound beyond the network perimeter the
 operator was told to provide themselves.
