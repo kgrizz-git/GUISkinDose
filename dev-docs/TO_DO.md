@@ -63,6 +63,17 @@ be archived.
 - [ ] **Review rotational-acquisition handling (see Next Up)** — determine whether spin/rotational acquisitions need dose spread
   across per-frame or start/end angles. Assessment + evidence-gated recommendations:
   [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md).
+- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF
+  test files fail `rdsr_parser`: `RF-RDSR-Philips_Allura.dcm` and
+  `RF-Pat-Orientation-Modifier-Missing.dcm` lack top-level
+  `Manufacturer`/`ManufacturerModelName` (`AttributeError`);
+  `RF-RDSR-GE.dcm` raises a structural `IndexError`. Observed during the
+  rotational-assessment fixture survey ([assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md),
+  Phase 0 lead inventory). **Goal:** fail-soft or clear errors on missing
+  top-level attributes and atypical event structures. **Constraint:** the upstream files carry
+  populated identifier fields — do not vendor them; reproduce with synthetic or cleared
+  fixtures. **Acceptance:** unit tests with minimal synthetic RDSRs covering each failure;
+  no behavior change on the bundled fixtures.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
