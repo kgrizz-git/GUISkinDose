@@ -1,0 +1,6 @@
+# Line-ending policy.
+#
+# Hash-pinned correction-table CSVs are validated by raw-byte sha256
+# (correction_validation.py), so CRLF conversion on Windows checkouts breaks
+# the manifest gate (issue #107). Force LF checkouts for all CSVs.
+*.csv text eol=lf
