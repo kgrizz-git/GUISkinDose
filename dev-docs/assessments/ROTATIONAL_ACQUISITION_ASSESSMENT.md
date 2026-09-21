@@ -15,16 +15,22 @@ per-frame or start/end angles.
 Every irradiation event is modelled at **one static C-arm pose**. A
 rotational (spin) acquisition — one RDSR event whose gantry sweeps through a
 large arc — therefore deposits its **entire event kerma at a single
-`Ap1`/`Ap2` pose**. The expected effect is a **PSD overestimate at that pose**
-and an **underestimate along the rest of the arc**, with the dose map showing
-a focal hotspot instead of an arc smear. No parser, adapter, normalizer, or
-dose-stage concept for start/end angles or per-frame angles exists today, so
-there is currently nothing to spread even if we wanted to.
+`Ap1`/`Ap2` pose**. The static model concentrates dose at the reported pose
+and underestimates dose elsewhere along the arc. It will often overstate the
+local dose near that pose, but the direction of the global PSD error is not
+guaranteed: it can under- or overestimate PSD depending on pose selection,
+field overlap, phantom intersection, and geometry-dependent corrections. The
+dose map shows a focal hotspot instead of an arc smear. No parser, adapter,
+normalizer, or dose-stage concept for start/end angles or per-frame angles
+exists today, so there is currently nothing to spread even if we wanted to.
 
-**Recommendation:** evidence first, then warn, then model — in that order.
-Do not build arc-subdivision until a real spin RDSR (plus its vendor export
-counterpart) shows where start/end or per-frame angles actually live. Details
-in §5.
+**Recommendation:** evidence first, then detection/warning and — only where
+angles exist — modelling. Gate detection and modelling independently per
+input source: a validated spin fixture for each source being implemented
+decides what that source supports. Vendor exports are supporting parity
+evidence where available, not a universal prerequisite. Do not build
+arc-subdivision for a source until that source shows where start/end or
+per-frame angles actually live. Details in §5.
 
 ---
 
@@ -88,9 +94,12 @@ producing a zero-dose event that is really a modelling artifact.
 For a spin recorded as one event with total air kerma K at pose P0 over arc
 A:
 
-- **PSD**: all of K lands on the skin cells hit at P0. True PSD is spread
-  over A; reported PSD is biased high at P0 (and low elsewhere). The bias
-  grows with arc length and shrinks with field overlap along the arc.
+- **PSD**: all of K lands on the skin cells hit at P0 instead of being
+  spread over A. Local dose near P0 is usually overstated (more so with
+  longer arcs and less field overlap along the arc), but the global PSD error
+  direction is not guaranteed — a static pose that misses or clips the
+  phantom, or less favourable pose-dependent corrections elsewhere, can flip
+  the sign (see §1.4).
 - **Dose map**: focal hotspot at P0 instead of an arc band. GUI Results and
   rich exports inherit the distortion as a direct consequence of the
   dose-map artifact.
@@ -105,7 +114,7 @@ A:
 | 2 | Per-frame angle series (RDSR or image headers) | **Unknown** — same fixture dependency; image-header ingestion would additionally be out of RDSR scope (see §4) |
 | 3 | Rotational `IrradiationEventType` strings per vendor | **Unknown** — adapters pass the value through; no observed spin value in fixtures |
 | 4 | Angle-range columns in DoseTrack/Radimetrics exports | **Unknown** — current column maps show single-valued angles only; needs a real spin export |
-| 5 | Arc-subdivision dose model | **Not built** — correctly blocked on 1–4 |
+| 5 | Arc-subdivision dose model | **Not built** — blocked per source on validated angle data, arc semantics, and detection/provenance (see Phase 2) |
 
 ## 4. Explicit non-goals and adjacent gaps
 
@@ -127,8 +136,9 @@ A:
 ### Phase 0 — Evidence gathering (no behavior change)
 
 1. Obtain a de-identified spin RDSR (ideally Siemens Artis + Philips Allura/
-   Azurion spins, matching the validated normalization profiles) **plus** the
-   same case's DoseTrack/Radimetrics export where available.
+   Azurion spins, matching the validated normalization profiles), plus the
+   same case's vendor export where available for parity analysis (supporting
+   evidence only — RDSR-side support must not wait on it).
 2. Record, per source: which angle concepts appear (start/end? per-frame?
    `NumberOfFrames`? rotation direction?), the `IrradiationEventType` string
    for the spin event, and which pose the single reported angle pair
@@ -136,26 +146,29 @@ A:
    in §1.4).
 3. Privacy: de-identified synthetic or properly cleared fixtures only; normal
    asset-admission rules apply (`PRIVACY_AND_SENSITIVE_ASSETS.md`).
-4. Record findings as a dated follow-up section in this file. **Stop here if
-   the angles are nowhere to be found** — re-scope toward a documented
-   limitation + warning (Phase 1b below) instead of modelling.
+4. Record findings as a dated follow-up section in this file (and, if a new
+   angle concept or event-type string is found, a note in
+   `INPUT_SCHEMA_DETECTION.md` so the finding reaches adapter readers).
+   Then branch on two independent questions: (a) is there a reliable
+   rotational detection signal for this source? → Phase 1a; (b) are start/end
+   or per-frame angles available for this source? → Phase 2. If neither,
+   Phase 1b.
 
-### Phase 1a — Detection + warning (only if Phase 0 yields a type signal)
+### Phase 1a — Detection + warning (whenever Phase 0 yields a reliable rotational signal for the source, independent of angle availability)
 
-If a distinct rotational event-type string (or a reliable heuristic, e.g.
-`K_IRP`-large single event with arc-scale neighbor deltas) emerges:
-
-1. Warn per affected event that its dose is modelled at one static pose and
-   PSD may be overstated at that pose. Follow the `_emit_beam_miss_summary`
+1. Warn per affected event that its dose is modelled at one static pose: the
+   local dose near that pose is usually overstated, but the global PSD error
+   direction is not guaranteed (§2). Follow the `_emit_beam_miss_summary`
    dial precedent
    (`src/guiskindose/calculate_dose/calculate_irradiation_event_result.py:68`);
    reuse the GUI `state.calc_warnings` collector.
 2. Unit tests on synthetic normalized rows; docs describe the limitation in
    the Calculate-tab help and rich-export methodology note.
 
-### Phase 1b — Documented limitation (if Phase 0 finds no angle data)
+### Phase 1b — Documented limitation (if Phase 0 finds neither a detection signal nor angle data for the source)
 
-If spin angles are unavailable in every supported input: downgrade this item
+If spin angles are unavailable in every supported input and no detection
+signal exists: downgrade this item
 to a documented limitation (help page + export methodology note stating spins
 are modelled at the reported static pose), keep the TO_DO pointer, and close
 the modelling question until a source format change reopens it.
@@ -164,19 +177,37 @@ the modelling question until a source format change reopens it.
 
 If start/end angles (or per-frame angles) are available:
 
-1. Subdivide the event's kerma across N sub-poses spanning the arc
-   (uniform split by default; kerma-weighted if per-frame kerma exists).
-   Each sub-pose is a synthetic geometry row reusing the existing
-   hit-test/correction path — no new physics, just N evaluations.
-2. Recompute geometry-dependent corrections (`k_isq`, `k_bs`, `k_tab`) per
-   sub-pose; keep the event as one row in GUI/exports with a provenance note
-   recording N and the arc span.
+1. Expand the spin event into N sub-pose rows **before** the per-row
+   prerequisites in `calculate_dose()` (below-floor policy, HVL append,
+   `check_new_geometry`, `k_bs` splines, `k_tab`, kerma-meter factors, and the
+   event-count-sized output template:
+   `src/guiskindose/calculate_dose/calculate_dose.py:144`), carrying a stable
+   parent-event identifier and kerma-conserving weights (uniform split by
+   default; kerma-weighted if per-frame kerma exists). Run the expanded frame
+   through the existing hit-test/correction path — no new physics, just N
+   evaluations. Expanding only inside the event loop would misalign the
+   precomputed arrays; expanding without aggregation would leak N synthetic
+   events into the GUI and exports.
+2. Per sub-pose, recompute the genuinely pose-dependent quantities: hit sets,
+   skin-plane field area, and `k_isq`. Reuse the parent event's per-event
+   constants: HVL, the `k_bs` splines (evaluated per sub-pose through that
+   sub-pose's field area), `k_med` (same field-area-dependent evaluation),
+   the kerma-meter factor, and the resolved `k_tab` scalar applied via
+   per-sub-pose table-hit testing. Aggregate sub-pose corrections,
+   hits/misses, and provenance back into one parent event for GUI/export
+   reporting (the post-policy frame is length-aligned with exports, so
+   aggregation is required, not optional); record N and the arc span in the
+   provenance note. Define how partial and total sub-pose misses surface,
+   including the `missed_event_indices` representation.
 3. Choose N by angle step with a cap: each sub-pose is a full new geometry
    evaluation, so ray-casting cost scales with N. Bound N and warn when the
    cap binds.
-4. Acceptance: synthetic spin fixture (constant-kerma arc) shows PSD at/below
-   the static-pose value and a contiguous arc band on the dose map; golden
-   characterization tests pin the subdivision math.
+4. Acceptance: kerma conservation across sub-poses (weights sum to the parent
+   `K_IRP`); correct weighting on a synthetic fixture; a contiguous arc band
+   on the dose map; convergence of PSD and dose map with decreasing angular
+   step; golden characterization tests pin the subdivision math. Assert no
+   PSD inequality — a static-vs-arc comparison needs a fixture with a known
+   expected result, chosen explicitly.
 
 ### Suggested sequencing note
 
