@@ -1,0 +1,215 @@
+> **NEEDS REVIEW** — This assessment has not yet been reviewed by a domain
+> expert, and its Step-0 refuse-vs-serve recommendation is a maintainer
+> decision, not a decided outcome. Code-path claims are verified against the
+> tree.
+
+# GUI Network-Exposure Hardening Assessment
+
+Investigated: 2026-09-21
+
+For `TO_DO.md` item *"GUI network-exposure hardening"* (Next Up): evaluate
+the residual risk of opt-in LAN serving (fixed port 8765, no authentication,
+single shared process-global state) and adopt proportional mitigations,
+threat-modelling the hospital-workstation / shared-network case first while
+keeping localhost UX unchanged.
+
+## Summary
+
+Accidental exposure is already closed: loopback-by-default is enforced in
+code (`src/guiskindose/gui/app.py:411`), a non-loopback `--host` without
+`--allow-network` raises instead of serving, and regression tests pin both
+behaviors. What remains is **deliberate** exposure plus one often-missed
+property of the default: loopback is per-host, not per-user, and every
+connected browser — local or LAN — shares one unauthenticated `AppState`
+singleton with full privileges.
+
+**Recommendation:** keep opt-in LAN serving (refusal would kill legitimate
+workflows; the typo-risk the gate was built for is already closed), but bound
+it: (A) in-GUI network-mode banner + startup banner + doc tweaks, (B) port
+randomization in network mode, (C) a spiked single-use token gate, and
+explicitly defer (D) per-client state / real auth. Step 0 is a maintainer
+decision — see §4.
+
+---
+
+## 1. What exists today
+
+### 1.1 Loopback default + explicit-acknowledgement gate (shipped)
+
+- `_resolve_bind_host` (`src/guiskindose/gui/app.py:411`): unset host binds
+  `127.0.0.1`; anything outside `127.0.0.1`/`localhost` without
+  `allow_network` raises `ValueError`
+  (`network_gui_binding_requires_explicit_acknowledgement`), otherwise logs a
+  value-free warning. IPv6 `::1` is conservatively treated as network (not in
+  the exempt tuple) — correct behavior, no change needed.
+- `run_gui` docstring (`src/guiskindose/gui/app.py:424`) states no-auth,
+  shared-state, and trusted-network-only framing; the single dispatch in
+  `main.py:552` (mirrored in `__main__.py:63`) means browser and `--native`
+  modes share the same gate — native still binds `host:port` under the hood
+  (`ui.run` at `src/guiskindose/gui/app.py:454`), so `--native --host
+  0.0.0.0` without the flag is refused too.
+- CLI help (`src/guiskindose/cli_args.py:202`, flag at `:217`) and README
+  (`README.md:85`) both warn: no authentication, PHI-derived data, trusted
+  network + own access controls. README enumerates LAN consequences plainly
+  (`README.md:98`): anyone reaching the port can view loaded patient data,
+  trigger exports, and mutate shared settings.
+- Regression tests (`tests/gui/test_gui_security.py:27`, `:35`, `:43`) pin
+  localhost-by-default, acknowledged-LAN passthrough, and unacknowledged
+  refusal. Upload size caps ride in the same file (DoS bounding, orthogonal
+  to network auth).
+
+### 1.2 Single shared process-global state (by design, load-bearing)
+
+- `state = AppState()` (`src/guiskindose/gui/state.py:137`) is a module-level
+  singleton holding everything: loaded RDSR frames, filenames, per-exam
+  metadata, settings mirrors, results, and figures (`state.py:20`).
+- The `busy` flag (`src/guiskindose/gui/state.py:123`) is process-global, not
+  per-client: it crudely serializes concurrent operations but isolates
+  nothing. Every connected browser sees and mutates the same patients,
+  settings, and results — there are no sessions, no users, no read-only
+  viewers.
+- Fixed port `8765` with no `--port` flag (`src/guiskindose/gui/app.py:460`;
+  `cli_args.py` has no port option): predictable and scannable on any host
+  that can route to the machine. `reload=False` and a 30 s client-reconnect
+  window (`src/guiskindose/gui/app.py:459`, `:463`) are sane; neither
+  substitutes for access control — any browser pointed at the URL, new or
+  reattached, is a full-privilege client.
+
+### 1.3 Partially shipped neighbours
+
+- Privacy-plan Phase 9 (`dev-docs/plans/PRIVACY_HARDENING_PLAN.md:324`):
+  items 3–4 (loopback default, `--allow-network` gate) shipped; item 5
+  (explain no-auth/shared-state) exists in README/CLI/docstring but has **no
+  in-GUI surface**; item 6 (refuse non-loopback until per-client state +
+  auth) is an open policy decision; item 7 (registry entries) has only the
+  generic upload-privacy line (`dev-docs/ui_copy.json:49`), nothing
+  network-specific.
+- In-app help (`docs/source/gui_help/`) has no network-mode page; the only
+  network-adjacent copy is the export-destination caution.
+
+## 2. Threat model
+
+### Case A — localhost default
+
+- **Single-user workstation**: exposure surface is local processes only.
+  Residual risk is low but nonzero (malware / other local users aside, the
+  operator is the threat boundary they already manage).
+- **Shared / multi-user workstation** (wards, reading rooms, teaching
+  machines): **any user on the machine can open `localhost:8765` and get
+  full access to loaded PHI and shared settings.** Loopback is per-host, not
+  per-user. README's "reachable only from the machine it runs on"
+  (`README.md:88`) is accurate but easy to misread as "only by me" — worth
+  one clarifying sentence (Package A).
+
+### Case B — opt-in LAN (`--host 0.0.0.0 --allow-network`)
+
+Anyone on the routable network, with no credentials, can:
+
+1. **Read** all loaded exams, Data Table contents, results, and dose maps
+   (PHI-derived values rendered in the browser).
+2. **Write** new PHI into the shared state via uploads (temp files land on
+   the server; size caps bound volume, not access).
+3. **Mutate** settings, offsets, and coordinate toggles, changing what every
+   other viewer sees and what the next calculation produces — including
+   cross-talk between different operators' patients.
+4. **Compute**: trigger dose calculations (CPU-heavy on human meshes) and
+   exports — availability and integrity impact, not just confidentiality.
+
+Fixed port 8765 makes the service trivially discoverable; the 30 s
+reconnect window keeps stale tabs privileged. None of this is accidental —
+the operator opted in — but the blast radius of that opt-in currently has no
+in-app reminder and no technical bound beyond the network perimeter the
+operator was told to provide themselves.
+
+### What is explicitly NOT claimed
+
+- No evidence of remote code execution, traversal, or injection via the
+  network path was sought in this assessment; the findings are
+  authentication/authorization-absence plus shared-state design, consistent
+  with the plan's own framing (`PRIVACY_HARDENING_PLAN.md:335`).
+- Upload size caps already bound the cheapest DoS vector; this assessment
+  does not re-litigate them.
+
+## 3. Gaps (ordered by leverage)
+
+| # | Gap | Status |
+|---|---|---|
+| 1 | No in-GUI network-mode indication — all warnings live in CLI/README/logs, invisible to someone viewing the served GUI | Open |
+| 2 | Fixed predictable port 8765, no randomization or override | Open |
+| 3 | No token/auth layer (NiceGUI `>=2.0.0` per `pyproject.toml:38` brings none; needs custom middleware covering page + websocket + static paths) | Open, needs spike |
+| 4 | No read-only view mode; no per-client state (singleton `AppState`) | Open, large |
+| 5 | README loopback wording undersells the multi-user-machine case | Open, one sentence |
+| 6 | Refuse-vs-serve policy decision (plan item 6) | Open, maintainer call |
+
+## 4. Recommendations
+
+### Step 0 — Decision (maintainer, before any code)
+
+**Refuse** non-loopback entirely, or **serve with mitigations**? Refusal is
+the strongest control and the smallest diff, but it kills legitimate
+workflows (ward display screens, tablet at tableside, teaching demos on lab
+LANs). The failure mode the gate was built for — accidental exposure via a
+host typo — is already closed by the `ValueError`, and the remaining risk is
+entirely inside an explicit, twice-documented opt-in. **Recommended:
+serve-with-mitigations** (Packages A→C below), keeping localhost UX
+byte-for-byte unchanged. If the maintainer prefers refusal, that is a
+one-line change plus doc updates and this assessment's packages become moot.
+
+### Package A — Say it where it happens (cheap, do regardless)
+
+1. In-GUI banner on every tab whenever the bound host is non-loopback:
+   no-auth + shared-state + operator-acknowledged wording. Register copy in
+   `ui_copy.json` / `help_registry.json` (plan item 7) and add a `gui_help`
+   network-mode page.
+2. Startup stderr banner in network mode restating the same (value-free,
+   same convention as the existing coded warning).
+3. README one-liner: loopback is per-host, not per-user — shared machines
+   need their own access story.
+4. Extend `tests/gui/test_gui_security.py`: banner appears in network mode,
+   absent on loopback.
+
+### Package B — Unpredictable port in network mode (small)
+
+Randomize the bound port when (and only when) serving non-loopback; print
+the URL to stderr. Keep `8765` for loopback so bookmarks, docs, and muscle
+memory survive. This raises opportunistic-discovery cost, not targeted
+attack cost — document it as such.
+
+### Package C — Single-use token gate (moderate, spike first)
+
+Print a random token to the server console at startup in network mode;
+require it (query param or header) on all served paths via light middleware;
+localhost exempt. **Spike before committing**: NiceGUI page + websocket +
+static-asset paths must all pass the gate without breaking reconnect,
+`ui.download()` exports, or the native path. If the spike shows framework
+friction (e.g. websocket upgrades bypassing middleware cleanly), stop and
+re-evaluate rather than shipping a half-gate that teaches false confidence.
+
+### Package D — Deferred (large, only on demonstrated need)
+
+Per-client state (replacing the `AppState` singleton) + real authentication,
+and/or a read-only shared-view mode. This is a state-management rewrite with
+PHI-isolation testing obligations. Pursue only if B/C prove insufficient or
+a clinical LAN deployment requires named users. Record the trigger, do not
+schedule the work.
+
+### Suggested sequencing note
+
+Step 0 decision → Package A (one PR) → Package B (one PR) → Package C spike
+(go/no-go) → D only on trigger. Each package extends `test_gui_security.py`;
+localhost behavior must stay pinned unchanged throughout.
+
+---
+
+## Files examined
+
+- `src/guiskindose/gui/app.py` (esp. lines 411-467)
+- `src/guiskindose/gui/state.py` (esp. lines 18-137)
+- `src/guiskindose/cli_args.py` (esp. lines 202-226)
+- `src/guiskindose/main.py:552`
+- `src/guiskindose/__main__.py:63`
+- `tests/gui/test_gui_security.py`
+- `README.md:85`
+- `dev-docs/TO_DO.md` ("GUI network-exposure hardening" item)
+- `dev-docs/plans/PRIVACY_HARDENING_PLAN.md:324`
+- `dev-docs/ui_copy.json:49`

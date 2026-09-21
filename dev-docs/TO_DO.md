@@ -98,7 +98,8 @@ be archived.
 
 - [ ] **GUI network-exposure hardening** — loopback-by-default is already enforced
   (`gui/app.py:411` `_resolve_bind_host`: non-loopback `--host` raises without
-  explicit `--allow-network`). Evaluate the residual risk of opt-in LAN serving
+  explicit `--allow-network`). Threat model + decision-first recommendations:
+  [assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Evaluate the residual risk of opt-in LAN serving
   (fixed port 8765, no authentication, single shared process-global state) and
   adopt proportional mitigations: startup single-use token, read-only shared-view
   mode, port randomization, or stronger do-not-serve warnings. Threat-model the
