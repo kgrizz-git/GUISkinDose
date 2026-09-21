@@ -20,9 +20,11 @@ and underestimates dose elsewhere along the arc. It will often overstate the
 local dose near that pose, but the direction of the global PSD error is not
 guaranteed: it can under- or overestimate PSD depending on pose selection,
 field overlap, phantom intersection, and geometry-dependent corrections. The
-dose map shows a focal hotspot instead of an arc smear. No parser, adapter,
-normalizer, or dose-stage concept for start/end angles or per-frame angles
-exists today, so there is currently nothing to spread even if we wanted to.
+dose map shows a focal hotspot instead of an arc smear. No adapter,
+normalizer, or dose-stage concept for start/end angles exists today — though
+the parser already emits End Angle columns generically when vendors populate
+them (verified §5.1) — and per-frame angles have no concept anywhere, so
+there is still nothing modelled even where data exists.
 
 **Recommendation:** evidence first, then detection/warning and — only where
 angles exist — modelling. Gate detection and modelling independently per
@@ -54,7 +56,9 @@ per-frame angles actually live. Details in §5.
 ### 1.2 Only one angle pair per event exists in the pipeline
 
 - `rdsr_parser.py` extracts whatever angle concepts the RDSR carries into
-  flat columns; the normalizer reads exactly two:
+  flat columns — including `PositionerPrimaryEndAngle_deg` /
+  `PositionerSecondaryEndAngle_deg` when vendors populate them (verified on
+  OpenREM `RF-RDSR-Eurocolumbus.dcm`, §5.1); the normalizer reads exactly two:
   `PositionerPrimaryAngle_deg → Ap1`, `PositionerSecondaryAngle_deg → Ap2`
   (`src/guiskindose/rdsr_normalizer.py:522`; units pinned to `deg` at
   `src/guiskindose/rdsr_normalizer.py:122`).
@@ -110,11 +114,11 @@ A:
 
 | # | Gap | Evidence status |
 |---|---|---|
-| 1 | Start/end angle concepts in RDSR events | **Unknown** — parser has no such columns; needs a real spin RDSR to check whether the concepts exist but are dropped, or are absent entirely |
+| 1 | Start/end angle concepts in RDSR events | **Confirmed in standard + in the wild** — DICOM defines `Positioner Primary/Secondary End Angle` (DCM 113739/113740, conditioned on event type 113613); our parser already emits the columns; OpenREM `RF-RDSR-Eurocolumbus.dcm` populates them (equal on static events) and `RF-RDSR-Canon-Alphenix-rotational.dcm` varies them (see §5.1). Remaining unknown: per-vendor population consistency and arc semantics |
 | 2 | Per-frame angle series (RDSR or image headers) | **Unknown** — same fixture dependency; image-header ingestion would additionally be out of RDSR scope (see §4) |
-| 3 | Rotational `IrradiationEventType` strings per vendor | **Unknown** — adapters pass the value through; no observed spin value in fixtures |
+| 3 | Rotational `IrradiationEventType` strings per vendor | **Confirmed** — CodeMeaning `Rotational Acquisition` (DCM 113613, CID 10002; siblings 113611 Stationary / 113612 Stepping) observed in OpenREM `RF-RDSR-Canon-Alphenix-rotational.dcm` (1 of 49 events; rest `Fluoroscopy`). Remaining unknown: per-vendor emission consistency |
 | 4 | Angle-range columns in DoseTrack/Radimetrics exports | **Unknown** — current column maps show single-valued angles only; needs a real spin export |
-| 5 | Arc-subdivision dose model | **Not built** — blocked per source on validated angle data, arc semantics, and detection/provenance (see Phase 2) |
+| 5 | Arc-subdivision dose model | **Not built** — angle data now confirmed obtainable upstream (see §5.1); blocked on in-tree fixture clearance and per-source arc semantics (see Phase 2) |
 
 ## 4. Explicit non-goals and adjacent gaps
 
@@ -135,15 +139,23 @@ A:
 
 ### Phase 0 — Evidence gathering (no behavior change)
 
-1. Obtain a de-identified spin RDSR (ideally Siemens Artis + Philips Allura/
-   Azurion spins, matching the validated normalization profiles), plus the
-   same case's vendor export where available for parity analysis (supporting
-   evidence only — RDSR-side support must not wait on it).
-2. Record, per source: which angle concepts appear (start/end? per-frame?
-   `NumberOfFrames`? rotation direction?), the `IrradiationEventType` string
-   for the spin event, and which pose the single reported angle pair
-   corresponds to (start / mid / end — determines the miss-warning behavior
-   in §1.4).
+1. Start from located upstream data: OpenREM `develop`
+   (`openrem/remapp/tests/test_files/`, Bitbucket `openrem/openrem`) ships
+   `RF-RDSR-Canon-Alphenix-rotational.dcm` (1 `Rotational Acquisition` event:
+   primary 90.0 → −120.0, i.e. a 210° sweep with secondary fixed at 0.0, plus
+   48 fluoroscopy events), `RF-RDSR-Eurocolumbus.dcm` (populates End Angle
+   concepts on static events), and Siemens AXIOM-Artis / Philips Allura /
+   Azurion / GE RF files. **Identifier fields are populated in these files —
+   nothing may be vendored without scrub + hash-pinned clearance** (see lead
+   inventory below). Still missing and wanted: Siemens Artis / Philips spins
+   with end angles, and any matched GE DICOM + tabular pair.
+2. Record, per source: which angle concepts appear (check
+   `PositionerPrimaryEndAngle_deg` / `PositionerSecondaryEndAngle_deg`
+   first — the parser already emits them); the `IrradiationEventType`
+   CodeMeaning (look for `Rotational Acquisition` / DCM 113613 alongside
+   `Stationary Acquisition` 113611 and `Stepping Acquisition` 113612); and
+   which pose the single reported angle pair corresponds to (start / mid /
+   end).
 3. Privacy: de-identified synthetic or properly cleared fixtures only; normal
    asset-admission rules apply (`PRIVACY_AND_SENSITIVE_ASSETS.md`).
 4. Record findings as a dated follow-up section in this file (and, if a new
@@ -154,6 +166,42 @@ A:
    angles, the Phase 1.5 assumed-arc candidate); (b) are start/end
    or per-frame angles available for this source? → Phase 2. If neither,
    Phase 1b.
+
+#### Lead inventory (surveyed + inspected 2026-09-21; nothing vendored)
+
+- **OpenREM upstream** (Bitbucket `openrem/openrem`, `develop`,
+  `openrem/remapp/tests/test_files/`; 69 files): `RF-RDSR-Canon-Alphenix-
+  rotational.dcm` (Canon DFP-8000D, 49 events, 1× `Rotational Acquisition`
+  with primary 90.0 → −120.0 and DoseRP 0.011 Gy), `RF-RDSR-Eurocolumbus.dcm`
+  (Eurocolumbus Fly4, End Angles populated on static events),
+  `RF-RDSR-Siemens-Zee.dcm` (+ `_adjusted` twin, AXIOM-Artis, 8 fluoroscopy
+  events with varied poses), `RF-RDSR-Philips_Allura.dcm`,
+  `RF-RDSR-Philips_Azurion.dcm` (89 events, fluoro + stationary pairs),
+  `RF-RDSR-GE-OECEliteMiniView.dcm`, `RF-RDSR-GE.dcm`, plus DX/CT/MG files.
+  Our `rdsr_parser` already emits End Angle columns on these files.
+  **Identifier fields (`PatientName`/`PatientID`) are populated in every RF
+  file inspected — treat as NOT de-identified; nothing may be copied
+  in-tree without scrub + hash-pinned human clearance.** A read-only sparse
+  clone lives in gitignored `tmp/openrem-upstream/` on the investigating
+  machine only. Side observation (not this item): `RF-RDSR-Philips_Allura`,
+  `RF-Pat-Orientation-Modifier-Missing`, and `RF-RDSR-GE.dcm` fail our
+  `rdsr_parser` (missing top-level `ManufacturerModelName` / structure) —
+  potential input-hardening follow-up, not assessed here.
+- **Papers as transcribed fixtures** (provenance: transcribed, not vendor
+  exports): Morota et al. 2021 (Diagnostics) Table 1 — 60+ cerebral-angio
+  events with LAO/RAO/CRAN per event; CVIR review 2021 Table 1 — RDSR
+  excerpt with per-event geometry; Buytaert et al. 2024 — grouped RDSR
+  statistics only (no event rows).
+- **Shiramis/RDSR-to-Excel** (GitHub + Prog. Med. Phys. 2025): open
+  extractor, Siemens/Philips/Ziehm PDF + DICOM-RDSR → Excel
+  fluoroscopy/DSA event tabs. No sample inputs in the repo; the 400-file
+  clinical validation set is not public.
+- **Normative text** (no downloadable instances): DICOM Sup 94 (CID 10002,
+  DCM 113739/113740), Sup 245 RDSR annex, PS3.17 Annex GGGG skin-dose-map
+  worked example.
+- **Negative results**: no public DoseTrack/Radimetrics/Qaelum sample
+  exports; no fluoroscopy-RDSR datasets on Zenodo/Kaggle; OpenREM demo data
+  is computer-generated with exports disabled; pydicom-data ships no RDSR.
 
 ### Phase 1a — Detection + warning (whenever Phase 0 yields a reliable rotational signal for the source, independent of angle availability)
 
@@ -208,7 +256,10 @@ recording center, span, N, and the uniform-split approximation.
 Acceptance: Phase 2 criteria (kerma conservation, weighting, arc-band
 contiguity, convergence with decreasing step, golden tests) plus one limit
 check — narrowing the assumed span toward zero recovers the static-pose
-result.
+result. Empirical anchor (not a fixture): the OpenREM Canon rotational event
+sweeps primary 90 → −120 (210°) with secondary fixed — consistent with the
+single-axis default and the 180–220° typical span, pending per-source
+confirmation.
 
 Open before building: default span value and center convention per vendor
 (Phase 0); whether AEC modulation is material enough to block uniform
