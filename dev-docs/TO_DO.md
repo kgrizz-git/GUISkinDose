@@ -15,21 +15,18 @@ be archived.
 
 ## Next Up
 
-- [ ] **Reproducible settings export** — export `PyskindoseSettings` / GUI state as
-  JSON to easily reload and reproduce runs (promoted from GUI/UX backlog: small,
-  user-facing, pairs with the README refresh).
-- [ ] **Privacy Hardening** — See [PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md).
+- [ ] **Reproducible settings export** — See "Reproducible settings export" in the
+  GUI/UX backlog section.
 - [ ] **GUI network-exposure hardening** — See "GUI network-exposure hardening" in
   the GUI/UX backlog section.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
-  confirming the Open Questions "Results — vs kerma" note, then deleting that section).
+  confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
+- [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
+  roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
+- [ ] **Rotational-acquisition handling** — See "Review rotational-acquisition
+  handling" in the Product Backlog (Input Data And Calculation) section.
 
 ## Active Work
-
-Privacy hardening is implemented through Phase 9
-([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 (private history/release-object audit)
-still needs an approved private environment. Remaining privacy bullets below are follow-on evaluations or
-policy decisions, not a restart of Phases 0-9.
 
 - [ ] **Correction-data modernization roadmap** — umbrella and current-state reference:
   [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md).
@@ -37,43 +34,15 @@ policy decisions, not a restart of Phases 0-9.
   fix shipped (Phases A–D, 2026-09-19;
   [packaging/provenance master plan](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)).
   Remaining delivery:
-  1. **Separate future feature:** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
+  1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
-- [ ] **Nested and unsupported container admission policy** — evaluate recursive inspection versus blocking for
-  nested archives and unsupported container types (for example 7z/RAR); the current ZIP/TAR/GZIP and Office/iWork
-  gate scans first-level text and requires manual embedded-file/image/DICOM clearance.
-- [ ] **Local OCR quality bake-off** — `scripts/run_image_privacy_advisory.py` already runs local Tesseract OCR
-  (value-suppressed) for admission of rendered assets. Remaining: benchmark Tesseract vs a local-only ML OCR option
-  on synthetic image/PDF/Office/iWork/DICOM burned-in fixtures; record false positives/misses, runtime, and report
-  safety; decide whether to keep Tesseract-only, add ML OCR, or change admission gating. Do not upload reports or
-  add OCR to CI until that write-up exists. See [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md).
-- [ ] **Local PII/PHI detector evaluation** — use
-  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md)'s synthetic-fixture protocol to benchmark the existing
-  Presidio runner against Fastino GLiNER2. Record false positives/misses, thresholds, elapsed time, and peak memory
-  without logging matched values; decide whether either is worth retaining as a scheduled advisory check.
-- [ ] **NVIDIA GLiNER-PII macOS trial** — following
-  [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md), verify local Python/PyTorch execution, MPS/CPU behavior,
-  model-license fit, download/cache location, throughput, and memory on the 128-GB Mac. Keep it local and advisory;
-  do not add it to CI or use LM Studio as its runtime unless the trial establishes a supported path.
-- [ ] **DICOM pixel-PHI scanner keep/drop** — `scripts/run_dicom_phi_advisory.py` already wraps `dicom-phi-scan`
-  (CPU, ephemeral raw report, count-only summary) for conditional admission. Remaining: run it only on synthetic
-  DICOM fixtures, confirm report output cannot leak findings, and decide whether to keep it as a local advisory
-  step. It must never replace human DICOM inventory clearance or run in public CI without a separate approval.
-- [ ] **Manual Smokes (Next Up)** — Compile and execute manual smokes for shipped features:
+- [ ] **Manual Smokes** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
   - *Correction safety / tube identity*: unmatched model → Default warning names real scanner; GE-family unmatched does **not** claim Tx/Tz auto-swap applied; valid Plane A; ambiguous Plane B / DoseTrack map; multi-exam mixed match/fallback (see [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation).
   - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
   - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
   - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.
   - *Results table*: run a manual Results smoke to confirm '—' vs kerma behavior (see Open Questions).
-- [ ] **HTML/PNG export root-cause fix (awaiting fresh repro)** — Phase 1 (raise +
-  actionable errors) shipped; Phase 0 never captured the original multi-exam
-  exception, so Phase 2 has no evidence to work from. Demoted from Next Up
-  2026-09-11: no further action until a new incident reproduces it. Re-trigger:
-  on the next real failure, capture the exception via the Phase 0 instrumentation,
-  then run Phase 2 + Phase 3 closeout. Plan:
-  [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
-  [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
 
 ## Product Backlog
 
@@ -91,8 +60,20 @@ policy decisions, not a restart of Phases 0-9.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
 - [ ] **Anode-angle awareness in HVL lookup** — add device-model anode-angle mapping, angle-aware lookup, and
   nearest-angle warnings; see [hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md).
-- [ ] **Review rotational-acquisition handling** — determine whether spin/rotational acquisitions need dose spread
-  across per-frame or start/end angles.
+- [ ] **Review rotational-acquisition handling (see Next Up)** — determine whether spin/rotational acquisitions need dose spread
+  across per-frame or start/end angles. Assessment + evidence-gated recommendations:
+  [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md).
+- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF
+  test files fail `rdsr_parser`: `RF-RDSR-Philips_Allura.dcm` and
+  `RF-Pat-Orientation-Modifier-Missing.dcm` lack top-level
+  `Manufacturer`/`ManufacturerModelName` (`AttributeError`);
+  `RF-RDSR-GE.dcm` raises a structural `IndexError`. Observed during the
+  rotational-assessment fixture survey ([assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md),
+  Phase 0 lead inventory). **Goal:** fail-soft or clear errors on missing
+  top-level attributes and atypical event structures. **Constraint:** the upstream files carry
+  populated identifier fields — do not vendor them; reproduce with synthetic or cleared
+  fixtures. **Acceptance:** unit tests with minimal synthetic RDSRs covering each failure;
+  no behavior change on the bundled fixtures.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
@@ -128,11 +109,12 @@ policy decisions, not a restart of Phases 0-9.
 
 - [ ] **GUI network-exposure hardening** — loopback-by-default is already enforced
   (`gui/app.py:411` `_resolve_bind_host`: non-loopback `--host` raises without
-  explicit `--allow-network`). Evaluate the residual risk of opt-in LAN serving
+  explicit `--allow-network`). Threat model + decision-first recommendations:
+  [assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Evaluate the residual risk of opt-in LAN serving
   (fixed port 8765, no authentication, single shared process-global state) and
   adopt proportional mitigations: startup single-use token, read-only shared-view
   mode, port randomization, or stronger do-not-serve warnings. Threat-model the
-   hospital-workstation / shared-network case first; keep localhost UX unchanged.
+  hospital-workstation / shared-network case first; keep localhost UX unchanged.
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
   `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
   `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via
@@ -240,6 +222,46 @@ policy decisions, not a restart of Phases 0-9.
 
 ## Deferred Until Needed
 
+- [ ] **Privacy hardening follow-ons (parked)** — implemented through Phase 9
+  ([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 (private
+  history/release-object audit) still needs an approved private environment. The
+  items below are follow-on evaluations or policy decisions, not a restart of
+  Phases 0-9. Revisit only when privacy work is next prioritized:
+  - *Nested and unsupported container admission policy* — evaluate recursive inspection
+    versus blocking for nested archives and unsupported container types (for example
+    7z/RAR); the current ZIP/TAR/GZIP and Office/iWork gate scans first-level text
+    and requires manual embedded-file/image/DICOM clearance.
+  - *Local OCR quality bake-off* — `scripts/run_image_privacy_advisory.py` already runs
+    local Tesseract OCR (value-suppressed) for admission of rendered assets. Remaining:
+    benchmark Tesseract vs a local-only ML OCR option on synthetic
+    image/PDF/Office/iWork/DICOM burned-in fixtures; record false positives/misses,
+    runtime, and report safety; decide whether to keep Tesseract-only, add ML OCR, or
+    change admission gating. Do not upload reports or add OCR to CI until that write-up
+    exists. See [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md).
+  - *Local PII/PHI detector evaluation* — use
+    [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md)'s synthetic-fixture protocol
+    to benchmark the existing Presidio runner against Fastino GLiNER2. Record false
+    positives/misses, thresholds, elapsed time, and peak memory without logging matched
+    values; decide whether either is worth retaining as a scheduled advisory check.
+  - *NVIDIA GLiNER-PII macOS trial* — following
+    [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md), verify local Python/PyTorch
+    execution, MPS/CPU behavior, model-license fit, download/cache location,
+    throughput, and memory on the 128-GB Mac. Keep it local and advisory; do not add it
+    to CI or use LM Studio as its runtime unless the trial establishes a supported path.
+  - *DICOM pixel-PHI scanner keep/drop* — `scripts/run_dicom_phi_advisory.py` already
+    wraps `dicom-phi-scan` (CPU, ephemeral raw report, count-only summary) for
+    conditional admission. Remaining: run it only on synthetic DICOM fixtures, confirm
+    report output cannot leak findings, and decide whether to keep it as a local advisory
+    step. It must never replace human DICOM inventory clearance or run in public CI
+    without a separate approval.
+- [ ] **HTML/PNG export root-cause fix (awaiting fresh repro)** — Phase 1 (raise +
+  actionable errors) shipped; Phase 0 never captured the original multi-exam
+  exception, so Phase 2 has no evidence to work from. Demoted from Next Up
+  2026-09-11: no further action until a new incident reproduces it. Re-trigger:
+  on the next real failure, capture the exception via the Phase 0 instrumentation,
+  then run Phase 2 + Phase 3 closeout. Plan:
+  [HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md). Assessment:
+  [HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md).
 - [ ] **Split `constants.py`** — defer until the file grows hard to navigate or a large new constant block is added.
 - [ ] **Narrow broad `except Exception` sites** — avoid repo-wide sweeps; tighten only where a broad catch masks a
   bug or when already editing that boundary.
@@ -278,4 +300,4 @@ policy decisions, not a restart of Phases 0-9.
   Data Table has a real `K_IRP (mGy)` column from the normalized events; Results shows **Total Air Kerma**
   (sum of reported K_IRP) and a **Correction factors per event** table (`k_isq` / `k_bs` / `k_tab`) that uses
   `—` for missing/empty correction slots (e.g. zero-hit events), not as a stand-in for kerma. Metric cards also
-  show `—` before a calculation finishes. See the Manual Smokes item in Now / Next to confirm and delete.
+  show `—` before a calculation finishes. See the Manual Smokes item in Next Up / Active Work to confirm and delete.
