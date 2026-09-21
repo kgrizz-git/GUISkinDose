@@ -111,16 +111,21 @@ Anyone on the routable network, with no credentials, can:
 
 1. **Read** all loaded exams, Data Table contents, results, and dose maps
    (PHI-derived values rendered in the browser).
-2. **Write** new PHI into the shared state via uploads (temp files land on
-   the server; size caps bound volume, not access).
+2. **Write** new PHI into the shared state via uploads: LAN upload access
+   permits unauthenticated creation of PHI-bearing server-side files within
+   the size cap. Temp dirs/files are `0700`/`0600`, uploads persist until
+   explicit removal, clear, or clean shutdown, crash leftovers may remain up
+   to 24 hours, and deletion is plain unlink with no secure erase.
 3. **Mutate** settings, offsets, and coordinate toggles, changing what every
    other viewer sees and what the next calculation produces — including
    cross-talk between different operators' patients.
 4. **Compute**: trigger dose calculations (CPU-heavy on human meshes) and
    exports — availability and integrity impact, not just confidentiality.
 
-Fixed port 8765 makes the service trivially discoverable; the 30 s
-reconnect window keeps stale tabs privileged. None of this is accidental —
+Fixed port 8765 makes the service trivially discoverable; the 30-second
+setting permits socket reattachment but is not a privilege lifetime — while
+the server remains reachable, stale tabs can reload and new clients can
+connect with full privileges. None of this is accidental —
 the operator opted in — but the blast radius of that opt-in currently has no
 in-app reminder and no technical bound beyond the network perimeter the
 operator was told to provide themselves.
@@ -161,33 +166,52 @@ one-line change plus doc updates and this assessment's packages become moot.
 
 ### Package A — Say it where it happens (cheap, do regardless)
 
-1. In-GUI banner on every tab whenever the bound host is non-loopback:
-   no-auth + shared-state + operator-acknowledged wording. This complements
-   (not duplicates) the one-time onboarding notice. Register copy in
+1. One persistent banner in the shared page shell (`ui.header` at
+   `src/guiskindose/gui/app.py:164`) whenever the bound host is non-loopback:
+   no-auth + shared-state + operator-acknowledged wording — not tab-local
+   banners per tab. Back it with an immutable resolved-network-mode
+   configuration set before `ui.run()` (test seam: set it before
+   `user.open("/")` in NiceGUI user-simulation tests, which never call
+   `run_gui()`), and assert banner-visible on LAN / banner-absent on
+   loopback in `tests/gui/test_gui_security.py`. This complements (not
+   duplicates) the one-time onboarding notice. Register copy in
    `ui_copy.json` / `help_registry.json` (plan item 7) and add a `gui_help`
    network-mode page.
 2. Startup stderr banner in network mode restating the same (value-free,
    same convention as the existing coded warning).
 3. README one-liner: loopback is per-host, not per-user — shared machines
    need their own access story.
-4. Extend `tests/gui/test_gui_security.py`: banner appears in network mode,
-   absent on loopback.
 
-### Package B — Unpredictable port in network mode (small)
+### Package B — Unpredictable port in network mode (small, verify first)
 
-Randomize the bound port when (and only when) serving non-loopback; print
-the URL to stderr. Keep `8765` for loopback so bookmarks, docs, and muscle
-memory survive. This raises opportunistic-discovery cost, not targeted
-attack cost — document it as such.
+Randomize the bound port when (and only when) serving non-loopback; keep
+`8765` for loopback so bookmarks, docs, and muscle memory survive. This is
+currently underspecified against the single `ui.run(... port=8765 ...)`
+call (`src/guiskindose/gui/app.py:454`): passing port `0` delegates selection
+to the server, but the effective port must then be recovered and advertised
+as a usable client URL (printing `0.0.0.0:<port>` is not one), and
+preselecting a free port has a bind race. Verify NiceGUI exposes the
+effective post-bind port; if it does not, add an explicit `--port` option
+and recommend a user-selected high port instead. Frame random ports as
+scan-noise reduction only — never as access control.
 
-### Package C — Single-use token gate (moderate, spike first)
+### Package C — Token-bootstrapped session gate (moderate, spike first)
 
 Print a random token to the server console at startup in network mode;
-require it (query param or header) on all served paths via light middleware;
-localhost exempt. **Spike before committing**: NiceGUI page + websocket +
-static-asset paths must all pass the gate without breaking reconnect,
-`ui.download()` exports, or the native path. If the spike shows framework
-friction (e.g. websocket upgrades bypassing middleware cleanly), stop and
+consume it once in a bootstrap exchange that issues an `HttpOnly`,
+`SameSite=Strict` session cookie, then require that cookie on HTTP routes,
+websocket upgrades, static assets, downloads, and reconnects; localhost
+exempt. Do **not** require a query token on every request: query strings leak
+through browser history and `Referer` headers — and the app currently loads
+an external Google stylesheet (`src/guiskindose/gui/app.py:160`), so a query
+token would be disclosed to a third party on every page load. Either set a
+restrictive `Referrer-Policy` or remove/self-host the font before any
+token-in-URL design.
+**Spike before committing**: NiceGUI page + websocket + static-asset paths
+must all pass the gate without breaking reconnect, `ui.download()` exports,
+or the native path. Explicit stop conditions: token leakage via URL
+persistence, cookie-less websocket authentication proving infeasible, or
+incomplete route coverage. If the spike hits any of them, stop and
 re-evaluate rather than shipping a half-gate that teaches false confidence.
 
 ### Package D — Deferred (large, only on demonstrated need)
