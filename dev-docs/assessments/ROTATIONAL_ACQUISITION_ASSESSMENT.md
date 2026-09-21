@@ -180,8 +180,9 @@ per-event `k_bs`/`k_med`/HVL/`k_tab` handling, miss semantics).
 Assumed-arc conventions (all explicit settings, all recorded in provenance):
 
 1. **Single-axis sweep**: sub-poses vary `Ap1` (primary, LAO/RAO) and hold
-   `Ap2` fixed, matching C-arm propeller rotation. Confirm per source in
-   Phase 0; do not assume it for biplane or non-standard protocols.
+   `Ap2` fixed, matching typical C-arm propeller rotation. Confirm per source
+   in Phase 0 (per-source confirmation required); do not assume it for
+   biplane or non-standard protocols.
 2. **Uniform kerma split** across sub-poses by default. This is approximate:
    constant rotation speed justifies equal dwell, but AEC modulates tube
    output with angle (lateral vs AP thickness), which an assumed arc cannot
@@ -190,14 +191,16 @@ Assumed-arc conventions (all explicit settings, all recorded in provenance):
    establishes what that pose represents (start / mid / end) for the source.
    Otherwise require explicit user input — a wrong center shifts the whole
    arc band.
-4. **Arc span**: no silent default. Clinical spins are typically ~180–220°
-   arcs, not full wrap-arounds; assuming a wider span than reality dilutes
-   dose onto never-irradiated skin. The safe direction is uncertain by
-   construction, so the span default (if any) needs physicist sign-off, and
-   a full 360° wrap must never be the quiet fallback.
+4. **Arc span**: no silent default. Clinical spins are typically on the
+   order of 180–220° arcs per source (per-source confirmation required in
+   Phase 0), not full wrap-arounds; assuming a wider span than reality
+   dilutes dose onto never-irradiated skin. The safe direction is uncertain
+   by construction, so the span default (if any) needs physicist sign-off,
+   and a full 360° wrap must never be the quiet fallback.
 
 Safety asymmetry (why this stays estimate-grade): the current static model
-errs **conservative** (concentrates dose); an over-wide assumed arc errs
+typically errs **conservative** (concentrates dose; §2 notes the global PSD
+direction is not guaranteed). An over-wide assumed arc errs
 **non-conservative** (dilutes PSD). Phase 1a warnings therefore apply with
 greater force, and GUI + exports must mark assumed-arc results as estimates,
 recording center, span, N, and the uniform-split approximation.
