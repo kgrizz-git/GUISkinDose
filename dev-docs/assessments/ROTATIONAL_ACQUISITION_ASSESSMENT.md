@@ -32,7 +32,7 @@ in §5.
 
 ### 1.1 One static geometry per event
 
-- `Beam.__init__` (`src/guiskindose/beam_class.py:58`) reads a single
+- `Beam.__init__` (`src/guiskindose/beam_class.py:63`) reads a single
   `Ap1[event]`, `Ap2[event]`, `Ap3[event]` and builds one static beam +
   detector. The full event kerma is deposited through that geometry.
 - `calculate_irradiation_event_result`
@@ -42,7 +42,7 @@ in §5.
   (`Tx/Ty/Tz`, `FS_lat/FS_long`, `Ap1–3`, `At1–3`) — see
   `FEATURE_INVENTORY.md:224` and `PSD_CALCULATION_ALGORITHM.md:147`. A spin
   recorded as one event gets exactly one cache entry and one hit-test.
-- Canonical algorithm reference: `PSD_CALCULATION_ALGORITHM.md:73,104`
+- Canonical algorithm reference: `PSD_CALCULATION_ALGORITHM.md:73`
   (per-event loop over static geometry rows).
 
 ### 1.2 Only one angle pair per event exists in the pipeline
@@ -50,26 +50,28 @@ in §5.
 - `rdsr_parser.py` extracts whatever angle concepts the RDSR carries into
   flat columns; the normalizer reads exactly two:
   `PositionerPrimaryAngle_deg → Ap1`, `PositionerSecondaryAngle_deg → Ap2`
-  (`src/guiskindose/rdsr_normalizer.py:522`, units pinned to `deg` at
-  lines 122-123).
+  (`src/guiskindose/rdsr_normalizer.py:522`; units pinned to `deg` at
+  `src/guiskindose/rdsr_normalizer.py:122`).
 - `Ap3` is hardcoded to zero (`rdsr_normalizer.py:525`, `# temp set to zero`)
   — an orthogonal gap, noted in §4 but out of scope here.
 - All four tabular adapters (`normalized`, `generic_rdsr_like`,
   `radimetrics`, `dosetrack`) map only single-valued angle columns
-  (`input_adapters/dosetrack.py:62-63`, `radimetrics.py:76-77`,
-  `generic_rdsr.py:119-124`). No adapter accepts an angle range, start/end
+  (`src/guiskindose/input_adapters/dosetrack.py:62`,
+  `src/guiskindose/input_adapters/radimetrics.py:76`,
+  `src/guiskindose/input_adapters/generic_rdsr.py:119`). No adapter accepts an angle range, start/end
   pair, or per-frame series.
 
 ### 1.3 `acquisition_type` is carried but never read
 
 - `IrradiationEventType` is parsed from RDSR concepts, mapped by the
   DoseTrack/Radimetrics/generic adapters (DoseTrack and Radimetrics default
-  it to `"Fluoroscopy"` when absent: `dosetrack.py:314-316`,
-  `radimetrics.py:210`), and stored as `acquisition_type` by the normalizer
+  it to `"Fluoroscopy"` when absent:
+  `src/guiskindose/input_adapters/dosetrack.py:314`,
+  `src/guiskindose/input_adapters/radimetrics.py:210`), and stored as `acquisition_type` by the normalizer
   (`rdsr_normalizer.py:315`, contract key `constants.py:125`).
 - Nothing in geometry, dose, GUI, or export branches on it. Fixture tables
   carry `"Fluoroscopy"` only
-  (`tests/fixtures/tabular_inputs/normalized_events.csv`).
+  (`tests/fixtures/tabular_inputs/normalized_events.csv:2`).
 - This is the natural detection hook for Phase 1 (§5.2) — *if* Phase 0
   confirms vendors actually emit a distinct rotational event-type string.
 
@@ -89,8 +91,9 @@ A:
 - **PSD**: all of K lands on the skin cells hit at P0. True PSD is spread
   over A; reported PSD is biased high at P0 (and low elsewhere). The bias
   grows with arc length and shrinks with field overlap along the arc.
-- **Dose map**: focal hotspot at P0 instead of an arc band. Downstream
-  consumers (rich exports, PACS-bound summaries) inherit the distortion.
+- **Dose map**: focal hotspot at P0 instead of an arc band. GUI Results and
+  rich exports inherit the distortion as a direct consequence of the
+  dose-map artifact.
 - **Magnitude unknown**: no spin fixture exists in-tree, so this is a
   directional claim only. Quantification needs Phase 0 data (§5.1).
 
@@ -143,9 +146,10 @@ If a distinct rotational event-type string (or a reliable heuristic, e.g.
 `K_IRP`-large single event with arc-scale neighbor deltas) emerges:
 
 1. Warn per affected event that its dose is modelled at one static pose and
-   PSD may be overstated at that pose. Follow the `beam_miss_warn` dial
-   precedent (`calculate_irradiation_event_result.py:83-89`); reuse the GUI
-   `state.calc_warnings` collector.
+   PSD may be overstated at that pose. Follow the `_emit_beam_miss_summary`
+   dial precedent
+   (`src/guiskindose/calculate_dose/calculate_irradiation_event_result.py:68`);
+   reuse the GUI `state.calc_warnings` collector.
 2. Unit tests on synthetic normalized rows; docs describe the limitation in
    the Calculate-tab help and rich-export methodology note.
 
@@ -167,8 +171,8 @@ If start/end angles (or per-frame angles) are available:
 2. Recompute geometry-dependent corrections (`k_isq`, `k_bs`, `k_tab`) per
    sub-pose; keep the event as one row in GUI/exports with a provenance note
    recording N and the arc span.
-3. Choose N by angle step with a cap: ray-casting cost scales with N (baseline
-   <5 s/event/phantom per archived perf notes), so bound N and warn when the
+3. Choose N by angle step with a cap: each sub-pose is a full new geometry
+   evaluation, so ray-casting cost scales with N. Bound N and warn when the
    cap binds.
 4. Acceptance: synthetic spin fixture (constant-kerma arc) shows PSD at/below
    the static-pose value and a contiguous arc band on the dose map; golden
