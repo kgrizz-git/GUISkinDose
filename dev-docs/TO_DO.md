@@ -20,7 +20,7 @@ be archived.
 - [ ] **GUI network-exposure hardening** — See "GUI network-exposure hardening" in
   the GUI/UX backlog section.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
-  confirming the Open Questions "Results — vs kerma" note, then deleting that section).
+  confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
   roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
 - [ ] **Rotational-acquisition handling** — See "Review rotational-acquisition
@@ -114,7 +114,7 @@ be archived.
   (fixed port 8765, no authentication, single shared process-global state) and
   adopt proportional mitigations: startup single-use token, read-only shared-view
   mode, port randomization, or stronger do-not-serve warnings. Threat-model the
-   hospital-workstation / shared-network case first; keep localhost UX unchanged.
+  hospital-workstation / shared-network case first; keep localhost UX unchanged.
 - [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
   `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
   `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via

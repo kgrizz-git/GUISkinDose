@@ -121,6 +121,10 @@ Anyone on the routable network, with no credentials, can:
    cross-talk between different operators' patients.
 4. **Compute**: trigger dose calculations (CPU-heavy on human meshes) and
    exports — availability and integrity impact, not just confidentiality.
+   Lifetime note: in browser mode the server shuts down only after the
+   *last* client disconnects (`src/guiskindose/gui/app.py:375`), so a
+   connected LAN viewer keeps the process — and the loaded PHI plus temp
+   files — alive after the operator closes their own window.
 
 Fixed port 8765 makes the service trivially discoverable; the 30-second
 client-side reconnect window covers socket reattachment after a dropped
@@ -150,6 +154,7 @@ operator was told to provide themselves.
 | 4 | No read-only view mode; no per-client state (singleton `AppState`) | Open, large |
 | 5 | README loopback wording undersells the multi-user-machine case | Open, one sentence |
 | 6 | Refuse-vs-serve policy decision (plan item 6) | Open, maintainer call |
+| 7 | Server lifetime follows the last connected client — a lingering LAN viewer keeps loaded PHI resident after the operator leaves | Open; surface in Package A scope (e.g. visible session/client indicator), no new package |
 
 ## 4. Recommendations
 

@@ -71,7 +71,7 @@ per-frame angles actually live. Details in §5.
   `src/guiskindose/input_adapters/generic_rdsr.py:119`). No adapter accepts an angle range, start/end
   pair, or per-frame series.
 
-### 1.3 `acquisition_type` is carried but never read
+### 1.3 `acquisition_type` is carried but never read by geometry or dose
 
 - `IrradiationEventType` is parsed from RDSR concepts, mapped by the
   DoseTrack/Radimetrics/generic adapters (DoseTrack and Radimetrics default
@@ -79,10 +79,14 @@ per-frame angles actually live. Details in §5.
   `src/guiskindose/input_adapters/dosetrack.py:314`,
   `src/guiskindose/input_adapters/radimetrics.py:210`), and stored as `acquisition_type` by the normalizer
   (`rdsr_normalizer.py:315`, contract key `constants.py:125`).
-- Nothing in geometry, dose, GUI, or export branches on it. Fixture tables
+- Nothing in geometry, dose, or the GUI branches on it; the only consumer is
+  rich-export reporting, which buckets it fluoroscopy/acquisition/other
+  (`src/guiskindose/export/metrics.py:61`) — a `Rotational Acquisition`
+  event already falls into the `acquisition` bucket via the `"acq"`
+  substring. Fixture tables
   carry `"Fluoroscopy"` only
   (`tests/fixtures/tabular_inputs/normalized_events.csv:2`).
-- This is the natural detection hook for Phase 1 (§5.2) — *if* Phase 0
+- This is the natural detection hook for Phase 1a (§5.2) — *if* Phase 0
   confirms vendors actually emit a distinct rotational event-type string.
 
 ### 1.4 Already-known downstream symptom
@@ -186,7 +190,7 @@ A:
   machine only. Side observation (not this item): `RF-RDSR-Philips_Allura`,
   `RF-Pat-Orientation-Modifier-Missing`, and `RF-RDSR-GE.dcm` fail our
   `rdsr_parser` (missing top-level `ManufacturerModelName` / structure) —
-  potential input-hardening follow-up, not assessed here.
+  now tracked as the TO_DO "RDSR parser input hardening" item; not assessed here.
 - **Papers as transcribed fixtures** (provenance: transcribed, not vendor
   exports): Morota et al. 2021 (Diagnostics) Table 1 — 60+ cerebral-angio
   events with LAO/RAO/CRAN per event; CVIR review 2021 Table 1 — RDSR
@@ -207,7 +211,10 @@ A:
 
 1. Warn per affected event that its dose is modelled at one static pose: the
    local dose near that pose is usually overstated, but the global PSD error
-   direction is not guaranteed (§2). Follow the `_emit_beam_miss_summary`
+   direction is not guaranteed (§2). Reuse/align with the existing
+   `_normalize_acquisition` mapping (`src/guiskindose/export/metrics.py:61`)
+   for rotational-vs-static classification rather than inventing a second
+   one. Follow the `_emit_beam_miss_summary`
    dial precedent
    (`src/guiskindose/calculate_dose/calculate_irradiation_event_result.py:68`);
    reuse the GUI `state.calc_warnings` collector.
