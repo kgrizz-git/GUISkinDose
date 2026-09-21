@@ -150,7 +150,8 @@ A:
    angle concept or event-type string is found, a note in
    `INPUT_SCHEMA_DETECTION.md` so the finding reaches adapter readers).
    Then branch on two independent questions: (a) is there a reliable
-   rotational detection signal for this source? → Phase 1a; (b) are start/end
+   rotational detection signal for this source? → Phase 1a (and, without
+   angles, the Phase 1.5 assumed-arc candidate); (b) are start/end
    or per-frame angles available for this source? → Phase 2. If neither,
    Phase 1b.
 
@@ -164,6 +165,51 @@ A:
    reuse the GUI `state.calc_warnings` collector.
 2. Unit tests on synthetic normalized rows; docs describe the limitation in
    the Calculate-tab help and rich-export methodology note.
+
+### Phase 1.5 — Assumed-arc subdivision (candidate interim approach)
+
+If Phase 0 yields a reliable rotational detection signal but no angle data
+— or the team wants a simple first stage before fixtures arrive — the event
+dose may be spread over N sub-poses spanning an **assumed** arc instead of
+measured angles. This is Phase 2 machinery with assumed rather than measured
+arc parameters, so all of Phase 2's pipeline requirements apply unchanged
+(pre-loop expansion with parent-event IDs, kerma-conserving weights,
+aggregation back to one parent row, per-pose hits/field-area/`k_isq`,
+per-event `k_bs`/`k_med`/HVL/`k_tab` handling, miss semantics).
+
+Assumed-arc conventions (all explicit settings, all recorded in provenance):
+
+1. **Single-axis sweep**: sub-poses vary `Ap1` (primary, LAO/RAO) and hold
+   `Ap2` fixed, matching C-arm propeller rotation. Confirm per source in
+   Phase 0; do not assume it for biplane or non-standard protocols.
+2. **Uniform kerma split** across sub-poses by default. This is approximate:
+   constant rotation speed justifies equal dwell, but AEC modulates tube
+   output with angle (lateral vs AP thickness), which an assumed arc cannot
+   model. State the approximation in the methodology note.
+3. **Arc center**: default to the reported static pose **only if** Phase 0
+   establishes what that pose represents (start / mid / end) for the source.
+   Otherwise require explicit user input — a wrong center shifts the whole
+   arc band.
+4. **Arc span**: no silent default. Clinical spins are typically ~180–220°
+   arcs, not full wrap-arounds; assuming a wider span than reality dilutes
+   dose onto never-irradiated skin. The safe direction is uncertain by
+   construction, so the span default (if any) needs physicist sign-off, and
+   a full 360° wrap must never be the quiet fallback.
+
+Safety asymmetry (why this stays estimate-grade): the current static model
+errs **conservative** (concentrates dose); an over-wide assumed arc errs
+**non-conservative** (dilutes PSD). Phase 1a warnings therefore apply with
+greater force, and GUI + exports must mark assumed-arc results as estimates,
+recording center, span, N, and the uniform-split approximation.
+
+Acceptance: Phase 2 criteria (kerma conservation, weighting, arc-band
+contiguity, convergence with decreasing step, golden tests) plus one limit
+check — narrowing the assumed span toward zero recovers the static-pose
+result.
+
+Open before building: default span value and center convention per vendor
+(Phase 0); whether AEC modulation is material enough to block uniform
+splitting (needs physicist input).
 
 ### Phase 1b — Documented limitation (if Phase 0 finds neither a detection signal nor angle data for the source)
 
