@@ -61,7 +61,8 @@ be archived.
 - [ ] **Anode-angle awareness in HVL lookup** — add device-model anode-angle mapping, angle-aware lookup, and
   nearest-angle warnings; see [hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md).
 - [ ] **Review rotational-acquisition handling (see Next Up)** — determine whether spin/rotational acquisitions need dose spread
-  across per-frame or start/end angles.
+  across per-frame or start/end angles. Assessment + evidence-gated recommendations:
+  [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md).
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.

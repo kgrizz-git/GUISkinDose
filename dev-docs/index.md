@@ -147,6 +147,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/DOCUMENTATION_TOOLING_DECISION_2026-09-11.md](assessments/DOCUMENTATION_TOOLING_DECISION_2026-09-11.md) | **Decision** — keep Sphinx + RTD, restyle with PyData Sphinx Theme; re-verified shortlist (MkDocs stack now maintenance-mode), revisit triggers, theme-swap follow-up. Closes the `TO_DO.md` evaluation item. |
 | [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md) | **COMPLETE** — Phase 3 user-facing doc cross-check (help, feature matrix, Sphinx, community, UI copy, CLI). Doc GAPs → Phase 3.5. |
 | [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md) | **CURRENT** — standing documentation-assessment record: hub-doc + docstring + user-facing verdict matrix, docstring coverage (0 missing), accepted gaps, and event-driven re-assessment triggers. Phase 4 artifact of the documentation-assessment plan. |
+| [assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md) | **NEEDS REVIEW** — spin acquisitions deposit full event kerma at one static `Ap1`/`Ap2` pose; evidence-gated Phase 0 → warn → arc-subdivision recommendations for the `TO_DO.md` Next Up item. |
 
 ---
 
