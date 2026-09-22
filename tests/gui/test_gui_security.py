@@ -88,3 +88,21 @@ def test_icon_font_is_bundled_locally() -> None:
     module_source = inspect.getsource(gui_app)
     assert "fonts.googleapis.com" not in module_source
     assert "fonts.gstatic.com" not in module_source
+
+
+def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
+    """run_gui() must mount the package static dir before starting the server."""
+    from pathlib import Path
+
+    captured: dict = {}
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
+    monkeypatch.setattr(
+        gui_app.app,
+        "add_static_files",
+        lambda url_path, local_dir, **_kw: captured.setdefault("static", (url_path, local_dir)),
+    )
+    gui_app.run_gui(native=False)
+    url_path, local_dir = captured["static"]
+    assert url_path == "/guiskindose-static"
+    assert Path(local_dir).is_dir()
+    assert gui_app.material_symbols_stylesheet_href().startswith(url_path)

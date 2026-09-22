@@ -64,7 +64,7 @@ The implementation phases must close these known findings before privacy SAST be
 - The phi-scan workflow excludes `tests/fixtures/` and treats findings as an ignored step failure.
 - Scanner and gate output normally prints repository paths; a sensitive tracked filename could therefore leak in CI.
 - CI does not verify that tests left tracked, untracked, and ignored sensitive artifacts clean.
-- Non-loopback GUI hosting has no runtime acknowledgement despite shared process-global clinical state and no auth.
+- ~~Non-loopback GUI hosting has no runtime acknowledgement despite shared process-global clinical state and no auth.~~ **Resolved 2026-09-22:** non-loopback is refused outright; the `--host`/`--allow-network` flags are removed.
 - The baseline sensitive-asset inventory is not yet fully reviewed. Deleted assets may also leave stale entries.
 
 ## 4. Delivery order

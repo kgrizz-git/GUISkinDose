@@ -82,8 +82,9 @@ see §4.
 ### 1.3 Partially shipped neighbours
 
 - Privacy-plan Phase 9 (`dev-docs/plans/PRIVACY_HARDENING_PLAN.md:324`):
-  items 1 (onboarding notice) and 3–4 (loopback default, `--allow-network`
-  gate) shipped — the first-run onboarding dialog
+  items 1 (onboarding notice) and 3 (loopback default) shipped; item 4
+  (`--allow-network` gate) shipped then **retired 2026-09-22** by outright
+  refusal (see §1.1). The first-run onboarding dialog
   (`src/guiskindose/gui/app.py:104`, dismissable) already carries
   network-aware copy. Item 5 (explain no-auth/shared-state) exists in
   README/CLI/docstring/onboarding, but there is **no persistent or
@@ -111,6 +112,9 @@ see §4.
   one clarifying sentence (Package A).
 
 ### Case B — opt-in LAN (`--host 0.0.0.0 --allow-network`)
+
+> Rejected alternative (refused 2026-09-22, see §4) — retained for the
+> threat-model reasoning that motivated refusal.
 
 Anyone on the routable network, with no credentials, can:
 
