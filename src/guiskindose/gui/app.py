@@ -78,9 +78,20 @@ def material_symbols_stylesheet_href() -> str:
     return f"{_STATIC_URL}/fonts/material-symbols-outlined.css"
 
 
+_STATIC_REGISTERED = False
+
+
 def register_gui_static_files() -> None:
-    """Serve package-bundled GUI assets (icon font) over the local server."""
+    """Serve package-bundled GUI assets (icon font) over the local server.
+
+    Idempotent: repeated ``run_gui()`` calls in one process (REPL, dev
+    reloads) must not stack duplicate static routes.
+    """
+    global _STATIC_REGISTERED
+    if _STATIC_REGISTERED:
+        return
     app.add_static_files(_STATIC_URL, _STATIC_DIR)
+    _STATIC_REGISTERED = True
 
 
 def _update_nav_classes(nav_buttons: list[tuple[ui.button, str]]) -> None:

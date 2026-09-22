@@ -11,6 +11,8 @@ from __future__ import annotations
 import filecmp
 from pathlib import Path
 
+import pytest
+
 from guiskindose.gui import ui_copy
 from guiskindose.gui.ui_copy import copy_text
 
@@ -42,3 +44,16 @@ def test_copy_text_falls_back_to_repo_catalog(monkeypatch) -> None:
 
     monkeypatch.setattr(ui_copy, "_PACKAGED_CATALOG_TRAVERSABLE", _Missing())
     assert copy_text("onboarding.privacy_notice")
+
+
+def test_missing_catalog_everywhere_raises_helpful_error(monkeypatch, tmp_path) -> None:
+    """Two absent catalogs surface the sync script, not a bare FileNotFoundError."""
+
+    class _Missing:
+        def is_file(self) -> bool:
+            return False
+
+    monkeypatch.setattr(ui_copy, "_PACKAGED_CATALOG_TRAVERSABLE", _Missing())
+    monkeypatch.setattr(ui_copy, "_REPO_CATALOG", tmp_path / "nope.json")
+    with pytest.raises(RuntimeError, match="sync_ui_copy"):
+        copy_text("onboarding.privacy_notice")

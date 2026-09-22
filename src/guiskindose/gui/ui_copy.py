@@ -19,9 +19,16 @@ def _read_catalog_text() -> str:
     in wheels, where ``dev-docs/`` does not exist. The repo fallback keeps
     exotic source layouts working and is byte-identical when in sync.
     """
-    if _PACKAGED_CATALOG_TRAVERSABLE.is_file():
-        return _PACKAGED_CATALOG_TRAVERSABLE.read_text(encoding="utf-8")
-    return _REPO_CATALOG.read_text(encoding="utf-8")
+    for candidate in (_PACKAGED_CATALOG_TRAVERSABLE, _REPO_CATALOG):
+        try:
+            if candidate.is_file():
+                return candidate.read_text(encoding="utf-8")
+        except OSError:
+            continue
+    raise RuntimeError(
+        "UI-copy catalog not found: run scripts/sync_ui_copy.py to mirror "
+        "dev-docs/ui_copy.json into the package"
+    )
 
 
 def _load_catalog() -> dict[str, Any]:

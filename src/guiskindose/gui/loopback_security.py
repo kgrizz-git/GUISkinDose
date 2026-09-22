@@ -33,7 +33,7 @@ import secrets
 from dataclasses import dataclass, field
 from http.cookies import SimpleCookie
 from typing import Any
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, urlencode
 
 from itsdangerous import BadSignature, URLSafeSerializer
 
@@ -133,10 +133,25 @@ def _set_session_cookie(config: LoopbackSecurityConfig) -> bytes:
 
 def _strip_token_param(query_string: bytes) -> bytes:
     # Only called after _token_valid passed on the same bytes, so decoding
-    # cannot fail here.
+    # cannot fail here. Re-encode with urlencode (not string interpolation)
+    # so values containing '+' or '%20' round-trip instead of corrupting.
     params = parse_qsl(query_string.decode("ascii"), keep_blank_values=True)
     kept = [(k, v) for k, v in params if k != TOKEN_QUERY_PARAM]
-    return "&".join(f"{k}={v}" for k, v in kept).encode("ascii")
+    return urlencode(kept).encode("ascii")
+
+
+def _redirect_location(scope: dict, rest: bytes) -> bytes:
+    # Prefer raw_path (original bytes): re-encoding the decoded path can
+    # silently drop characters outside latin-1 on the redirect target.
+    raw_path = scope.get("raw_path")
+    location = (
+        raw_path
+        if isinstance(raw_path, bytes) and raw_path
+        else (scope.get("path", "/") or "/").encode("utf-8")
+    )
+    if rest:
+        location += b"?" + rest
+    return location
 
 
 async def _respond(send: Any, status: int, body: bytes, headers: list[tuple[bytes, bytes]] | None = None) -> None:
@@ -174,11 +189,8 @@ class LoopbackSecurityMiddleware:
             return
         if config.require_token and not _session_valid(config, headers.get("cookie", "")):
             if _token_valid(config, scope.get("query_string", b"")):
-                path = scope.get("path", "/") or "/"
-                location = path.encode("latin-1", "ignore")
                 rest = _strip_token_param(scope.get("query_string", b""))
-                if rest:
-                    location += b"?" + rest
+                location = _redirect_location(scope, rest)
                 await _respond(
                     send,
                     302,

@@ -153,6 +153,41 @@ def test_bootstrap_redirect_strips_token(live_config) -> None:
     assert locations == [b"/?foo=bar"]
 
 
+def test_bootstrap_redirect_preserves_query_encoding(live_config) -> None:
+    """Values with '+'/'%20' must round-trip, not corrupt into spaces."""
+    token, _ = live_config
+    sent = asyncio.run(
+        _run(
+            LoopbackSecurityMiddleware(_ok_app),
+            _http_scope(path="/", query=f"token={token}&note=a%2Fb+c".encode("ascii")),
+        )
+    )
+    locations = [
+        value
+        for message in sent
+        if message["type"] == "http.response.start"
+        for name, value in message.get("headers", [])
+        if name == b"location"
+    ]
+    assert locations == [b"/?note=a%2Fb+c"]
+
+
+def test_bootstrap_redirect_uses_raw_path_bytes(live_config) -> None:
+    """Non-latin-1 path characters must survive the redirect unmangled."""
+    token, _ = live_config
+    scope = _http_scope(path="/caf\u00e9", query=f"token={token}".encode("ascii"))
+    scope["raw_path"] = "/caf%C3%A9".encode("ascii")
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), scope))
+    locations = [
+        value
+        for message in sent
+        if message["type"] == "http.response.start"
+        for name, value in message.get("headers", [])
+        if name == b"location"
+    ]
+    assert locations == ["/caf%C3%A9".encode("ascii")]
+
+
 def test_wrong_token_and_tampered_cookie_rejected(live_config) -> None:
     _, _ = live_config
     mw = LoopbackSecurityMiddleware(_ok_app)
