@@ -408,28 +408,31 @@ def _configure_native_window() -> tuple[int, int]:
     return prefs.width, prefs.height
 
 
-def _resolve_bind_host(host: str | None, *, allow_network: bool) -> str:
-    """Return the GUI bind host, requiring an explicit network acknowledgement."""
+def _resolve_bind_host(host: str | None) -> str:
+    """Return the GUI bind host, refusing anything but the IPv4 loopback.
+
+    Only the literal ``127.0.0.1`` is accepted (``localhost`` is normalized
+    to it so binding never depends on the resolver). Anything else raises:
+    the unauthenticated GUI must not serve off-host.
+    """
     bind_host = host or "127.0.0.1"
-    if bind_host not in ("127.0.0.1", "localhost"):
-        if not allow_network:
-            raise ValueError("network_gui_binding_requires_explicit_acknowledgement")
-        logger.warning("non_loopback_gui_binding_requested")
+    if bind_host == "localhost":
+        bind_host = "127.0.0.1"
+    if bind_host != "127.0.0.1":
+        raise ValueError("non_loopback_gui_binding_refused")
     return bind_host
 
 
 # ── entry point ────────────────────────────────────────────────────────────
 
 
-def run_gui(native: bool = False, host: str | None = None, *, allow_network: bool = False) -> None:
+def run_gui(native: bool = False, host: str | None = None) -> None:
     """Launch the GUISkinDose NiceGUI app.
 
-    Binds to 127.0.0.1 (localhost only) by default. The GUI has no authentication
-    and loads PHI-derived RDSR data into a single process-global, shared state, so
-    it must not be exposed on the network unintentionally — and NiceGUI's browser
-    mode would otherwise default to 0.0.0.0 (all interfaces). A non-loopback
-    ``host`` also requires the explicit ``allow_network`` acknowledgement; only
-    enable it on a trusted network and behind appropriate access controls.
+    Always binds to 127.0.0.1 (localhost only): the GUI has no authentication
+    and loads PHI-derived RDSR data into a single process-global, shared state,
+    so it refuses to serve off-host. (Native mode uses the same loopback
+    server, shown in an embedded window instead of a browser tab.)
     """
     configure_logging()
     dprint("GUI", f"Starting run_gui, native={native}")
@@ -448,7 +451,7 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
     if native:
         window_size = _configure_native_window()
 
-    bind_host = _resolve_bind_host(host, allow_network=allow_network)
+    bind_host = _resolve_bind_host(host)
 
     try:
         ui.run(

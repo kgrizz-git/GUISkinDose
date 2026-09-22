@@ -85,19 +85,16 @@ library with habitus scaling. Details in
 ### Privacy / network
 
 The GUI has **no authentication** and loads PHI-derived RDSR data into a single
-shared, process-global state. Browser mode binds to `127.0.0.1` (localhost
-only) by default — reachable only from the machine it runs on.
+shared, process-global state. It always binds to `127.0.0.1` (localhost only) —
+reachable only from the machine it runs on — and refuses any non-loopback host.
+There is no LAN/remote mode: do not try to expose it with a proxy; move the
+computation to the machine where the data may reside instead.
 
-Serving it to other hosts is opt-in via `--host`, which additionally requires
-`--allow-network` as an explicit acknowledgement:
-
-```bash
-python -m guiskindose --mode gui --host 0.0.0.0 --allow-network   # serve on the LAN
-```
-
-Only do this on a trusted network, and behind your own access controls, since
-anyone who can reach the port can view loaded patient data, trigger exports,
-and mutate shared settings.
+Loopback is per-host, not per-user: anyone logged into the same machine can
+open the GUI port in their browser and sees the same shared state. OS accounts
+alone do not protect it — the port accepts any local connection with no login —
+so shared workstations need their own access story (e.g. one operator at a time,
+or per-operator machines).
 
 ### Logging & privacy
 

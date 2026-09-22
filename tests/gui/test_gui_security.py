@@ -2,9 +2,9 @@
 Security regression tests for the GUISkinDose GUI.
 
 Covers two hardening fixes:
-  1. Browser-mode server binds to localhost (127.0.0.1) by default, so PHI-derived
-     data in the shared, unauthenticated state is not exposed on the network unless
-     a host is explicitly opted into.
+  1. Browser-mode server always binds to localhost (127.0.0.1): non-loopback
+     hosts are refused outright, since PHI-derived data lives in a shared,
+     unauthenticated process-global state.
   2. Uploads are size-capped (client-side via max_file_size and server-side via the
      guard in handle_upload) to bound memory/disk use from a hostile upload.
 """
@@ -23,7 +23,7 @@ pytest.importorskip("nicegui")
 pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 
-# ── 1. network binding ──────────────────────────────────────────────────────
+# ── 1. loopback-only binding ───────────────────────────────────────────────
 def test_run_gui_binds_localhost_by_default(monkeypatch) -> None:
     """run_gui() must pass host=127.0.0.1 to ui.run when no host is given."""
     captured: dict = {}
@@ -32,19 +32,20 @@ def test_run_gui_binds_localhost_by_default(monkeypatch) -> None:
     assert captured["host"] == "127.0.0.1"
 
 
-def test_run_gui_host_is_opt_in(monkeypatch) -> None:
-    """An acknowledged LAN host is honored and passed through verbatim."""
+def test_run_gui_normalizes_localhost_to_loopback_literal(monkeypatch) -> None:
+    """'localhost' must bind the literal 127.0.0.1, never via the resolver."""
     captured: dict = {}
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
-    gui_app.run_gui(native=False, host="0.0.0.0", allow_network=True)
-    assert captured["host"] == "0.0.0.0"
+    gui_app.run_gui(native=False, host="localhost")
+    assert captured["host"] == "127.0.0.1"
 
 
-def test_run_gui_rejects_unacknowledged_network_binding(monkeypatch) -> None:
-    """A non-loopback host requires an explicit privacy acknowledgement."""
+@pytest.mark.parametrize("host", ["0.0.0.0", "192.0.2.10", "::1", "example.com"])
+def test_run_gui_refuses_non_loopback_binding(monkeypatch, host: str) -> None:
+    """Any non-127.0.0.1 host is refused: the GUI never serves off-host."""
     monkeypatch.setattr(gui_app.ui, "run", lambda **_kw: None)
-    with pytest.raises(ValueError, match="network_gui_binding_requires_explicit_acknowledgement"):
-        gui_app.run_gui(native=False, host="0.0.0.0")
+    with pytest.raises(ValueError, match="non_loopback_gui_binding_refused"):
+        gui_app.run_gui(native=False, host=host)
 
 
 # ── 2. upload size cap ──────────────────────────────────────────────────────

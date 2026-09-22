@@ -330,9 +330,9 @@ After Phases 1–5 are clean:
    - exports may be clinical records and must be stored appropriately.
 2. Clearly label identified-export opt-ins.
 3. Keep loopback binding as default.
-4. Require a separate `--allow-network` flag plus runtime warning before binding to a non-loopback host.
-5. Explain that network mode has no built-in authentication and process-global state may be visible to connected clients.
-6. Consider refusing non-loopback mode entirely until per-client state and authentication exist.
+4. ~~Require a separate `--allow-network` flag plus runtime warning before binding to a non-loopback host.~~ **Superseded 2026-09-22:** non-loopback is refused outright (`non_loopback_gui_binding_refused`); the flags are removed.
+5. Explain that loopback mode has no built-in authentication and process-global state is visible to any local connection (README "Privacy / network").
+6. ~~Consider refusing non-loopback mode entirely until per-client state and authentication exist.~~ **Done 2026-09-22** — refusal is unconditional, not gated on Package D.
 7. Register all new warnings/tooltips/help in `ui_copy.json`, `glossary.json`, `help_registry.json`, and the feature-doc matrix.
 
 **Exit criteria**

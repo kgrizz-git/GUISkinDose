@@ -19,6 +19,15 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Security
+
+- **GUI refuses non-loopback bindings** (2026-09-22) — the GUI always binds
+  `127.0.0.1` and raises `non_loopback_gui_binding_refused` on any other host
+  (`localhost` is normalized to the literal, never resolved). The `--host` and
+  `--allow-network` CLI flags are removed: there is no LAN/remote mode. Anyone
+  on the same machine can still reach the port (no authentication), so shared
+  workstations need their own access story — see README "Privacy / network".
+
 ### Changed
 
 - **Packaged correction data by default; explicit opt-in for custom databases**

@@ -160,15 +160,38 @@ operator was told to provide themselves.
 
 ### Step 0 — Decision (maintainer, before any code)
 
-**Refuse** non-loopback entirely, or **serve with mitigations**? Refusal is
-the strongest control and the smallest diff, but it kills legitimate
-workflows (ward display screens, tablet at tableside, teaching demos on lab
-LANs). The failure mode the gate was built for — accidental exposure via a
-host typo — is already closed by the `ValueError`, and the remaining risk is
-entirely inside an explicit, twice-documented opt-in. **Recommended:
-serve-with-mitigations** (Packages A→C below), keeping localhost UX
-byte-for-byte unchanged. If the maintainer prefers refusal, that is a
-one-line change plus doc updates and this assessment's packages become moot.
+**Decided 2026-09-22: refuse non-loopback entirely.** The unauthenticated,
+shared-state GUI always binds the literal `127.0.0.1` and raises on any other
+host; the `--host` / `--allow-network` CLI surface is removed. Rationale: the
+ward-display / tableside-tablet workflows that argued for serve-with-mitigations
+do not outweigh the shared-state + no-auth combination — even a token gate
+would admit mutually-visible operators with no isolation between them
+(Package D remains the only true multi-user answer, still deferred). The
+accidental-exposure typo the gate was built for stays closed by construction:
+there is no longer any flag combination that serves off-host.
+
+Packages A–C below are therefore **moot as specified** (no network mode exists
+to banner, randomize, or gate). What survives from them:
+
+- Package A item 3 (README one-liner: loopback is per-host, not per-user) —
+  still applies and is now in `README.md`.
+- The `gui_help` network-mode page idea becomes a short loopback-scope note
+  if a help page is wanted; not required.
+
+Residual loopback risks (documented, not fixed by refusal): any local account
+can reach the port (no login); a malicious webpage in the operator's own
+browser could attempt requests at the fixed `127.0.0.1:8765` origin
+(DNS-rebinding/CSRF shape — no auth, predictable port). Possible follow-ups,
+none scheduled: Host/Origin header validation on the server (cheap,
+uvicorn/NiceGUI-level — rejects cross-origin browser traffic but not local
+processes), a randomized loopback port per launch (raises the bar for
+drive-by web pages, costs bookmark stability), per-client state + real auth
+(Package D). Record the trigger, do not schedule the work.
+
+Original Step-0 analysis (kept for the record): refusal is the strongest
+control and the smallest diff, but it kills legitimate workflows (ward display
+screens, tablet at tableside, teaching demos on lab LANs). Serve-with-mitigations
+(Packages A→C) would have kept localhost UX byte-for-byte unchanged.
 
 ### Package A — Say it where it happens (cheap, do regardless)
 
