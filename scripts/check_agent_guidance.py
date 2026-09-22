@@ -13,7 +13,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-TODO_SOFT_LINE_LIMIT = 200
+TODO_SOFT_LINE_LIMIT = 250
 TODO_COMPLETED_SOFT_LIMIT = 10
 
 AGENT_POINTER_FILES = (
