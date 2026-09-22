@@ -363,10 +363,6 @@ def test_custom_port_scopes_rejection(live_config) -> None:
     assert loopback_security.get_loopback_security_config() is None
 
 
-def _serve_forever(server) -> None:
-    server.serve_forever(poll_interval=0.05)
-
-
 def test_probe_own_server_matches_refusal_signature() -> None:
     """The auto-open gate opens only for our exact 403 refusal body."""
     import threading
@@ -374,24 +370,25 @@ def test_probe_own_server_matches_refusal_signature() -> None:
 
     from guiskindose.gui.loopback_security import _FORBIDDEN_BODY, probe_own_server
 
-    bodies: dict[int, tuple[int, bytes]] = {}
+    def _make_handler(status: int, body: bytes) -> type[BaseHTTPRequestHandler]:
+        class _Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                self.send_response(status)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
 
-    class _Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:
-            status, body = bodies[self.server.server_address[1]]
-            self.send_response(status)
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+            def log_message(self, format: str, *args: object) -> None:
+                pass
 
-        def log_message(self, format: str, *args: object) -> None:
-            pass
+        return _Handler
 
     def _run_server(status: int, body: bytes) -> int:
-        server = HTTPServer(("127.0.0.1", 0), _Handler)
+        server = HTTPServer(("127.0.0.1", 0), _make_handler(status, body))
         port = server.server_address[1]
-        bodies[port] = (status, body)
-        thread = threading.Thread(target=_serve_forever, args=(server,), daemon=True)
+        assert isinstance(port, int)
+        thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05})
+        thread.daemon = True
         thread.start()
         return port
 
@@ -404,4 +401,5 @@ def test_probe_own_server_matches_refusal_signature() -> None:
     with socket_module.socket(socket_module.AF_INET, socket_module.SOCK_STREAM) as probe:
         probe.bind(("127.0.0.1", 0))
         closed_port = probe.getsockname()[1]
+    assert isinstance(closed_port, int)
     assert probe_own_server("127.0.0.1", closed_port, timeout=0.5) is False
