@@ -59,11 +59,13 @@ derivative** only, not to the application code. Do **not** run
 
 The GUI bundles the **Material Symbols Outlined** icon font (static instance,
 opsz 24 / wght 300) under `src/guiskindose/gui/static/fonts/` so page loads
-make no third-party requests. It is **Apache 2.0** (Google), attributed in
-`NOTICE_material-symbols.txt` beside the files. Like meshes, fonts are not
-Python packages and must **not** be folded into `THIRD_PARTY_NOTICES.md`; the
-`.woff2` binary carries a hash-pinned entry in `approved_asset_inventory.json`
-(the `.css`/`.txt` sidecars are valid UTF-8 and are scanned as text).
+make no third-party requests. It is **Apache 2.0** (Google): attribution in
+`NOTICE_material-symbols.txt` plus a full license copy in
+`LICENSE-APACHE-2.0.txt` beside the font (§4(a)); both ship in the wheel via
+`MANIFEST.in`. Like meshes, fonts are not Python packages and must **not** be
+folded into `THIRD_PARTY_NOTICES.md`; the `.woff2` binary carries a
+hash-pinned entry in `approved_asset_inventory.json` (the `.css`/`.txt`
+sidecars are valid UTF-8 and are scanned as text).
 
 ## Commands
 

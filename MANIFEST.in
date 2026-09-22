@@ -9,5 +9,6 @@ include src/guiskindose/normalization_settings.json
 # gui/components/help_button.py); mirrored from docs/source/gui_help/.
 recursive-include src/guiskindose/gui/help *.md
 # Bundled Material Symbols icon font + stylesheet, served locally so the GUI
-# makes no third-party requests (attribution in gui/static/fonts/NOTICE_*).
-recursive-include src/guiskindose/gui/static *.woff2 *.css NOTICE*
+# makes no third-party requests (attribution in gui/static/fonts/NOTICE_*;
+# Apache-2.0 license copy ships beside the font per §4(a)).
+recursive-include src/guiskindose/gui/static *.woff2 *.css NOTICE* LICENSE*

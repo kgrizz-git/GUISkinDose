@@ -16,8 +16,9 @@ License:      Apache License 2.0
               https://www.apache.org/licenses/LICENSE-2.0
 
 Attribution (required by Apache 2.0 §4): this file notes the font name,
-copyright owner, and license above; the full license text is at the URL given.
-No other changes to the font bytes were made. The vendored stylesheet is the
+copyright owner, and license above; a full copy of the license ships beside
+the font in LICENSE-APACHE-2.0.txt (§4(a)).
+No changes to the font bytes were made. The vendored stylesheet is the
 upstream css2 output with only the `src` URL localized, plus one deliberate
 alignment: the `.material-symbols-outlined` class declares `font-weight: 300`
 to match the `@font-face` (upstream ships `normal` there, which resolves to

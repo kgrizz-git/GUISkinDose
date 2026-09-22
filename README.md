@@ -94,7 +94,11 @@ Loopback is per-host, not per-user: anyone logged into the same machine can
 open the GUI port in their browser and sees the same shared state. OS accounts
 alone do not protect it — the port accepts any local connection with no login —
 so shared workstations need their own access story (e.g. one operator at a time,
-or per-operator machines).
+or per-operator machines). A further residual: the port is fixed (`8765`) and
+unauthenticated, so a malicious webpage open in the operator's own browser
+could attempt requests at it (blind CSRF-style requests, cross-origin
+websocket attempts, or DNS rebinding) — avoid untrusted browsing on the
+operating machine while the GUI runs.
 
 ### Logging & privacy
 
