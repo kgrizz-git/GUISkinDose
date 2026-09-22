@@ -34,7 +34,6 @@ def get_argument_parser(arguments) -> argparse.Namespace:
     _add_top_level_args(parser)
     _add_input_args(parser)
     _add_export_args(parser)
-    _add_gui_args(parser)
     add_kerma_meter_cli_arguments(parser)
     return parser.parse_args(arguments)
 
@@ -196,31 +195,4 @@ def _add_export_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         dest="export_title",
         help="Optional report title for --export-format.",
-    )
-
-
-def _add_gui_args(parser: argparse.ArgumentParser) -> None:
-    """GUI server binding flags (--host/--allow-network; --native lives top-level)."""
-    parser.add_argument(
-        "--host",
-        required=False,
-        default=None,
-        dest="host",
-        help=(
-            "Host/interface for the GUI server to bind to. Defaults to 127.0.0.1 "
-            "(localhost only). Pass '0.0.0.0' to serve on the LAN — only on a "
-            "trusted network, since the GUI has no authentication and exposes "
-            "loaded PHI-derived data. Requires --allow-network."
-        ),
-    )
-
-    parser.add_argument(
-        "--allow-network",
-        action="store_true",
-        default=False,
-        dest="allow_network",
-        help=(
-            "Explicitly acknowledge and allow a non-loopback GUI binding. The GUI "
-            "has no authentication and may display PHI-derived data."
-        ),
     )

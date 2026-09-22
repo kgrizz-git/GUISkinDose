@@ -218,8 +218,15 @@ A:
    dial precedent
    (`src/guiskindose/calculate_dose/calculate_irradiation_event_result.py:68`);
    reuse the GUI `state.calc_warnings` collector.
-2. Unit tests on synthetic normalized rows; docs describe the limitation in
+ 2. Unit tests on synthetic normalized rows; docs describe the limitation in
    the Calculate-tab help and rich-export methodology note.
+3. **Handling ledger (early phase, do with the first shipped handling):**
+   alongside the per-event warning, surface an aggregate summary — how many
+   rotational events were present out of the total, and how each was handled
+   (static-pose estimate / assumed-arc / measured-arc / skipped) — in both
+   the GUI warnings surface and the rich-export/report methodology section,
+   so a reader of the app or the report can see the count and the treatment
+   without reconstructing it event by event.
 
 ### Phase 1.5 — Assumed-arc subdivision (candidate interim approach)
 
@@ -315,6 +322,17 @@ If start/end angles (or per-frame angles) are available:
    step; golden characterization tests pin the subdivision math. Assert no
    PSD inequality — a static-vs-arc comparison needs a fixture with a known
    expected result, chosen explicitly.
+5. **GUI representation of subdivided events** (ship with the model, not
+   after): the event-geometry view must show a rotational event as composed
+   of its sub-events — e.g. the geometry slider steps through sub-poses or
+   the event renders as its full arc band — rather than showing only the
+   parent static pose, which would contradict the dose. On the dose map,
+   give rotational sweep paths a distinct visual marker (separate color
+   overlay, or an outline/border tracing the sweep band across the skin) so
+   they read differently from static fields at a glance; assumed-arc bands
+   additionally carry the estimate-grade marking from Phase 1.5. Keep the
+   handling-ledger summary (§Phase 1a item 3) as the textual counterpart —
+   marker for the eye, ledger for the record.
 
 ### Suggested sequencing note
 

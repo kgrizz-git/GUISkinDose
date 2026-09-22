@@ -143,6 +143,8 @@ jobs:
       run: python scripts/check_cloud_scanner_exclusions.py
     - name: Check GUI help sync
       run: python scripts/sync_gui_help.py --check
+    - name: Check UI copy sync
+      run: python scripts/sync_ui_copy.py --check
     - name: Check GUI help registry
       run: python scripts/check_help_registry.py
     - name: Check UI copy catalog

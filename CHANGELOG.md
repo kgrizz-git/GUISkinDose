@@ -19,6 +19,40 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- **GUI works from non-editable installs** (2026-09-22) — in-app copy
+  (`copy_text()`, including the onboarding privacy notice and every help
+  tooltip) was read from `dev-docs/ui_copy.json`, which never ships in
+  wheels, so a `pip`-installed GUI raised `FileNotFoundError` on every page.
+  The catalog is now mirrored into the package (`scripts/sync_ui_copy.py`,
+  enforced by pre-commit + CI) and read from the installed copy with repo
+  fallback. Proven with a wheel-install reproduction.
+
+### Security
+
+- **Per-launch token + Host/Origin enforcement for the GUI** (2026-09-22) —
+  browser mode prints a launch URL (random per-launch token, valid until
+  restart, bootstrapping an `HttpOnly; SameSite=Strict` session cookie
+  required on HTTP and websocket traffic) and enforces strict Host
+  validation plus Origin checks on websockets and cross-site requests,
+  closing DNS-rebinding and drive-by vectors; the browser auto-opens the
+  launch URL instead of the bare address. Native mode keeps Host/Origin
+  checks without the token. Stale tabs and old URLs stop working after each
+  restart. See `src/guiskindose/gui/loopback_security.py`.
+- **Bundled icon font; no third-party requests** (2026-09-22) — the GUI served
+  its Material Symbols icon font from Google Fonts on every fresh page load
+  (IP + `Referer` to Google, broken icons on air-gapped networks). The font
+  (Apache 2.0, attributed in-package) is now vendored under
+  `gui/static/fonts/` and served locally; a regression test pins the absence
+  of remote font URLs.
+- **GUI refuses non-loopback bindings** (2026-09-22) — the GUI always binds
+  `127.0.0.1` and raises `non_loopback_gui_binding_refused` on any other host
+  (`localhost` is normalized to the literal, never resolved). The `--host` and
+  `--allow-network` CLI flags are removed: there is no LAN/remote mode. Anyone
+  on the same machine can still reach the port (no authentication), so shared
+  workstations need their own access story — see README "Privacy / network".
+
 ### Changed
 
 - **Packaged correction data by default; explicit opt-in for custom databases**

@@ -1,0 +1,25 @@
+NOTICE — material-symbols-outlined-300.woff2 / material-symbols-outlined.css
+==============================================================================
+
+Bundled icon font for the GUISkinDose GUI (replaces the former remote
+`<link>` to fonts.googleapis.com so the app makes no third-party requests).
+
+Source work:  "Material Symbols Outlined" (static instance: opsz 24, wght 300,
+              FILL 0, GRAD 0; single "fallback" subset as served by the
+              Google Fonts CSS API v2 for this axis configuration)
+Author:       Google
+Source:       https://fonts.google.com/icons
+              (bytes retrieved 2026-09-21 from fonts.gstatic.com via the
+              css2 API; sha256
+              0978f61784f1e3b0100d8004f062d466a3326ccd9585a39444d6d9ffca8a7a58)
+License:      Apache License 2.0
+              https://www.apache.org/licenses/LICENSE-2.0
+
+Attribution (required by Apache 2.0 §4): this file notes the font name,
+copyright owner, and license above; a full copy of the license ships beside
+the font in LICENSE-APACHE-2.0.txt (§4(a)).
+No changes to the font bytes were made. The vendored stylesheet is the
+upstream css2 output with only the `src` URL localized, plus one deliberate
+alignment: the `.material-symbols-outlined` class declares `font-weight: 300`
+to match the `@font-face` (upstream ships `normal` there, which resolves to
+the same single face, but the explicit match leaves no browser guessing).

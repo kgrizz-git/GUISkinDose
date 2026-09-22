@@ -84,20 +84,34 @@ library with habitus scaling. Details in
 
 ### Privacy / network
 
-The GUI has **no authentication** and loads PHI-derived RDSR data into a single
-shared, process-global state. Browser mode binds to `127.0.0.1` (localhost
-only) by default — reachable only from the machine it runs on.
+The GUI has **no user accounts** and loads PHI-derived RDSR data into a single
+shared, process-global state. It always binds to `127.0.0.1` (localhost only)
+and refuses any non-loopback host. There is no LAN/remote mode: do not try to
+expose it with a proxy; move the computation to the machine where the data may
+reside instead.
 
-Serving it to other hosts is opt-in via `--host`, which additionally requires
-`--allow-network` as an explicit acknowledgement:
+Loopback binding is not an authentication boundary, so browser mode adds
+three controls (see `src/guiskindose/gui/loopback_security.py`):
 
-```bash
-python -m guiskindose --mode gui --host 0.0.0.0 --allow-network   # serve on the LAN
-```
+- A **per-launch token**: the console prints a launch URL with a random secret (valid until the
+  server restarts — deliberately reusable, so a second browser profile or a
+  cleared cookie doesn't lock you out), and the browser opens it automatically.
+  Only that URL bootstraps a session (session cookie); every other request —
+  HTTP and websocket alike — needs the cookie. Stale tabs and old URLs stop working after each restart — relaunch
+  and use the new console URL.
+- **Strict Host validation**: only the loopback authority is accepted, so DNS
+  rebinding (`evil.com` resolving to `127.0.0.1`) is rejected.
+- **Origin validation**: a present-but-foreign `Origin` on websockets and
+  HTTP is a cross-site page (browsers always send `Origin`). Sockets need
+  the session whenever tokens are on — an allowlisted origin alone proves
+  nothing against local processes, which can forge it.
 
-Only do this on a trusted network, and behind your own access controls, since
-anyone who can reach the port can view loaded patient data, trigger exports,
-and mutate shared settings.
+Anyone logged into the same machine who obtains the launch URL (or an active
+session) sees the same shared state — OS accounts alone do not protect it, so
+shared workstations need their own access story (e.g. one operator at a time,
+or per-operator machines). **Native** mode enforces the same Host/Origin
+checks but no launch token (the embedded window is the trusted client), so
+another local user can still reach its port.
 
 ### Logging & privacy
 

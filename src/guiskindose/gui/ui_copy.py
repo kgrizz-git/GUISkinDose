@@ -2,16 +2,37 @@
 
 from __future__ import annotations
 
+import importlib.resources
 import json
 from pathlib import Path
 from typing import Any
 
+_PACKAGED_CATALOG_TRAVERSABLE = importlib.resources.files("guiskindose.gui").joinpath("ui_copy.json")
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_CATALOG = _REPO_ROOT / "dev-docs" / "ui_copy.json"
+_REPO_CATALOG = _REPO_ROOT / "dev-docs" / "ui_copy.json"
+
+
+def _read_catalog_text() -> str:
+    """Read the bundled catalog, falling back to the repo source of truth.
+
+    The packaged copy (mirrored by ``scripts/sync_ui_copy.py``) is what ships
+    in wheels, where ``dev-docs/`` does not exist. The repo fallback keeps
+    exotic source layouts working and is byte-identical when in sync.
+    """
+    for candidate in (_PACKAGED_CATALOG_TRAVERSABLE, _REPO_CATALOG):
+        try:
+            if candidate.is_file():
+                return candidate.read_text(encoding="utf-8")
+        except OSError:
+            continue
+    raise RuntimeError(
+        "UI-copy catalog not found: run scripts/sync_ui_copy.py to mirror "
+        "dev-docs/ui_copy.json into the package"
+    )
 
 
 def _load_catalog() -> dict[str, Any]:
-    data = json.loads(_CATALOG.read_text(encoding="utf-8"))
+    data = json.loads(_read_catalog_text())
     if not isinstance(data, dict):
         raise KeyError("ui_copy.json")
     keys = data.get("keys")

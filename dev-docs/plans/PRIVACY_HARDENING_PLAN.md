@@ -64,7 +64,7 @@ The implementation phases must close these known findings before privacy SAST be
 - The phi-scan workflow excludes `tests/fixtures/` and treats findings as an ignored step failure.
 - Scanner and gate output normally prints repository paths; a sensitive tracked filename could therefore leak in CI.
 - CI does not verify that tests left tracked, untracked, and ignored sensitive artifacts clean.
-- Non-loopback GUI hosting has no runtime acknowledgement despite shared process-global clinical state and no auth.
+- ~~Non-loopback GUI hosting has no runtime acknowledgement despite shared process-global clinical state and no auth.~~ **Resolved 2026-09-22:** non-loopback is refused outright; the `--host`/`--allow-network` flags are removed.
 - The baseline sensitive-asset inventory is not yet fully reviewed. Deleted assets may also leave stale entries.
 
 ## 4. Delivery order
@@ -330,9 +330,9 @@ After Phases 1–5 are clean:
    - exports may be clinical records and must be stored appropriately.
 2. Clearly label identified-export opt-ins.
 3. Keep loopback binding as default.
-4. Require a separate `--allow-network` flag plus runtime warning before binding to a non-loopback host.
-5. Explain that network mode has no built-in authentication and process-global state may be visible to connected clients.
-6. Consider refusing non-loopback mode entirely until per-client state and authentication exist.
+4. ~~Require a separate `--allow-network` flag plus runtime warning before binding to a non-loopback host.~~ **Superseded 2026-09-22:** non-loopback is refused outright (`non_loopback_gui_binding_refused`); the flags are removed.
+5. Explain loopback trust boundaries (README "Privacy / network" + onboarding notice): no user accounts and shared process-global state; browser mode gates access behind a per-launch token + session cookie with Host/Origin checks, native mode has Host/Origin checks without the token.
+6. ~~Consider refusing non-loopback mode entirely until per-client state and authentication exist.~~ **Done 2026-09-22** — refusal is unconditional, not gated on Package D.
 7. Register all new warnings/tooltips/help in `ui_copy.json`, `glossary.json`, `help_registry.json`, and the feature-doc matrix.
 
 **Exit criteria**

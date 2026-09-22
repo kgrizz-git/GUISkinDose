@@ -202,8 +202,7 @@ Key flags (see `python -m guiskindose --help` for the full list):
 | `--kerma-meter-correction-mode` | CF resolution mode: `file` or `prompt` (GUI-only) |
 | `--kerma-meter-explicit-label` | Force all events to this equipment label for CF lookup |
 | `--native` | Open GUI in a native desktop window (requires `[gui-native]` extra) |
-| `--host` | GUI server bind address (`127.0.0.1` applied when the flag is unset; argparse default is `None`; requires `--allow-network` for non-loopback) |
-| `--allow-network` | Acknowledge non-loopback GUI binding |
+| _(removed)_ `--host` / `--allow-network` | Removed 2026-09-22: the GUI always binds `127.0.0.1` and refuses non-loopback hosts (`_resolve_bind_host()` raises `non_loopback_gui_binding_refused`) |
 
 ---
 

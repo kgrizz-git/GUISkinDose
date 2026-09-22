@@ -14,7 +14,7 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 176
+**Assets tracked:** 177
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
@@ -194,3 +194,4 @@ file revision.
 | [`wiki/human.png`](../wiki/human.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `649b7aa25c5d` |
 | [`wiki/isq_dark.png`](../wiki/isq_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `d041f2a46a80` |
 | [`wiki/mu_en_surface_dark.png`](../wiki/mu_en_surface_dark.png) | Image | Wiki illustration | ✅ Approved — KG (2026-07-15) | — | `ba793187784a` |
+| [`src/guiskindose/gui/static/fonts/material-symbols-outlined-300.woff2`](../src/guiskindose/gui/static/fonts/material-symbols-outlined-300.woff2) | Opaque binary | Bundled Material Symbols icon font for the GUI (replaces remote Google Fonts request); attribution in NOTICE_material-symbols.txt | ✅ Approved — KG (2026-09-22) | — | `0978f61784f1` |

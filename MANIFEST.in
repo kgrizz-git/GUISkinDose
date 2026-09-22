@@ -8,3 +8,12 @@ include src/guiskindose/normalization_settings.json
 # In-app GUI help markdown (read from the installed package at runtime by
 # gui/components/help_button.py); mirrored from docs/source/gui_help/.
 recursive-include src/guiskindose/gui/help *.md
+# Bundled UI-copy catalog (read from the installed package at runtime by
+# gui/ui_copy.py); mirrored from dev-docs/ui_copy.json by
+# scripts/sync_ui_copy.py. Without this, non-editable installs raise
+# FileNotFoundError on every page render.
+include src/guiskindose/gui/ui_copy.json
+# Bundled Material Symbols icon font + stylesheet, served locally so the GUI
+# makes no third-party requests (attribution in gui/static/fonts/NOTICE_*;
+# Apache-2.0 license copy ships beside the font per §4(a)).
+recursive-include src/guiskindose/gui/static *.woff2 *.css NOTICE* LICENSE*

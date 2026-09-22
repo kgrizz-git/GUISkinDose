@@ -12,8 +12,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 import sys
+import threading
+import time
+import webbrowser
 from collections.abc import Callable
+from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
@@ -25,6 +30,13 @@ from nicegui import Client, app, ui
 from guiskindose.debug import configure_logging, dprint
 from guiskindose.privacy import opaque_exam_label, safe_error_event
 
+from .loopback_security import (
+    TOKEN_QUERY_PARAM,
+    LoopbackSecurityConfig,
+    LoopbackSecurityMiddleware,
+    configure_loopback_security,
+    generate_launch_token,
+)
 from .native_geometry import register_native_geometry_tracking
 from .notifications import install_notification_defaults
 from .onboarding import dismiss_onboarding, is_onboarding_dismissed
@@ -52,6 +64,34 @@ from .window_prefs import (
 logger = logging.getLogger(__name__)
 
 GUI_VERSION = "1.1.0"
+
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+_STATIC_URL = "/guiskindose-static"
+
+
+def material_symbols_stylesheet_href() -> str:
+    """Local URL of the bundled Material Symbols stylesheet.
+
+    The font is vendored under ``gui/static/fonts/`` (see NOTICE there) so
+    page loads make no third-party requests.
+    """
+    return f"{_STATIC_URL}/fonts/material-symbols-outlined.css"
+
+
+_STATIC_REGISTERED = False
+
+
+def register_gui_static_files() -> None:
+    """Serve package-bundled GUI assets (icon font) over the local server.
+
+    Idempotent: repeated ``run_gui()`` calls in one process (REPL, dev
+    reloads) must not stack duplicate static routes.
+    """
+    global _STATIC_REGISTERED
+    if _STATIC_REGISTERED:
+        return
+    app.add_static_files(_STATIC_URL, _STATIC_DIR)
+    _STATIC_REGISTERED = True
 
 
 def _update_nav_classes(nav_buttons: list[tuple[ui.button, str]]) -> None:
@@ -157,7 +197,7 @@ def index():
     ui.colors(primary="#2563EB", secondary="#2563EB", accent="#831843", positive="#064E3B")
     ui.add_head_html(f"<style>{MODERN_CSS}</style>")
     ui.add_head_html(
-        '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" />'
+        f'<link rel="stylesheet" href="{material_symbols_stylesheet_href()}" />'
     )
     ui.dark_mode(True)
 
@@ -408,28 +448,69 @@ def _configure_native_window() -> tuple[int, int]:
     return prefs.width, prefs.height
 
 
-def _resolve_bind_host(host: str | None, *, allow_network: bool) -> str:
-    """Return the GUI bind host, requiring an explicit network acknowledgement."""
+def _resolve_bind_host(host: str | None) -> str:
+    """Return the GUI bind host, refusing anything but the IPv4 loopback.
+
+    Only the literal ``127.0.0.1`` is accepted (``localhost`` is normalized
+    to it so binding never depends on the resolver). Anything else raises:
+    the unauthenticated GUI must not serve off-host.
+    """
     bind_host = host or "127.0.0.1"
-    if bind_host not in ("127.0.0.1", "localhost"):
-        if not allow_network:
-            raise ValueError("network_gui_binding_requires_explicit_acknowledgement")
-        logger.warning("non_loopback_gui_binding_requested")
+    if bind_host == "localhost":
+        bind_host = "127.0.0.1"
+    if bind_host != "127.0.0.1":
+        raise ValueError("non_loopback_gui_binding_refused")
     return bind_host
 
 
 # ── entry point ────────────────────────────────────────────────────────────
 
 
-def run_gui(native: bool = False, host: str | None = None, *, allow_network: bool = False) -> None:
+def _wait_for_port(host: str, port: int, *, timeout: float = 20.0) -> bool:
+    """Return True once ``host:port`` accepts a connection (best effort)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return True
+        except OSError:
+            time.sleep(0.2)
+    return False
+
+
+def _open_browser_when_ready(url: str, host: str = "127.0.0.1", port: int = 8765) -> None:
+    """Open the launch URL once the server accepts connections (best effort).
+
+    Runs on a daemon thread so slow startups don't block: the browser opens
+    only after a successful loopback connect, never before. If the server
+    never comes up (e.g. unit tests with a stubbed ``ui.run``), the thread
+    exits silently without opening anything.
+    """
+
+    def _wait_and_open() -> None:
+        if not _wait_for_port(host, port):
+            return
+        try:
+            webbrowser.open(url)
+        except Exception as exc:
+            safe_error_event(logger, "browser_auto_open", exc, level=logging.DEBUG)
+            print(f"Open the GUI manually: {url}")
+
+    thread = threading.Thread(target=_wait_and_open, name="guiskindose-browser-open", daemon=True)
+    thread.start()
+
+
+def run_gui(native: bool = False, host: str | None = None) -> None:
     """Launch the GUISkinDose NiceGUI app.
 
-    Binds to 127.0.0.1 (localhost only) by default. The GUI has no authentication
-    and loads PHI-derived RDSR data into a single process-global, shared state, so
-    it must not be exposed on the network unintentionally — and NiceGUI's browser
-    mode would otherwise default to 0.0.0.0 (all interfaces). A non-loopback
-    ``host`` also requires the explicit ``allow_network`` acknowledgement; only
-    enable it on a trusted network and behind appropriate access controls.
+    Always binds to 127.0.0.1 (localhost only): the GUI has no authentication
+    and loads PHI-derived RDSR data into a single process-global, shared state,
+    so it refuses to serve off-host. Loopback-only is still not an
+    authentication boundary, so browser mode additionally requires a
+    per-launch token (printed once to the console; bootstraps a session
+    cookie) and enforces strict Host/Origin checks — see
+    ``gui/loopback_security.py``. Native mode keeps Host/Origin enforcement
+    without the token (the embedded window is the trusted client).
     """
     configure_logging()
     dprint("GUI", f"Starting run_gui, native={native}")
@@ -448,7 +529,29 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
     if native:
         window_size = _configure_native_window()
 
-    bind_host = _resolve_bind_host(host, allow_network=allow_network)
+    bind_host = _resolve_bind_host(host)
+
+    register_gui_static_files()
+    launch_token: str | None = None
+    if native:
+        configure_loopback_security(LoopbackSecurityConfig(require_token=False))
+    else:
+        launch_token, security_config = generate_launch_token()
+        configure_loopback_security(security_config)
+    app.add_middleware(LoopbackSecurityMiddleware)
+
+    show_browser = native
+    bootstrap_url = ""
+    if launch_token is not None:
+        # The auto-opened browser must carry the launch token; ui.run's
+        # show=True would open the bare URL (403), so open it ourselves.
+        bootstrap_url = f"http://127.0.0.1:8765/?{TOKEN_QUERY_PARAM}={launch_token}"
+        print(f"GUISkinDose GUI: open {bootstrap_url}")
+        print(
+            "This launch URL is the only key: anyone on this machine with it "
+            "gains full access. It stays valid until the server restarts."
+        )
+        _open_browser_when_ready(bootstrap_url)
 
     try:
         ui.run(
@@ -458,7 +561,7 @@ def run_gui(native: bool = False, host: str | None = None, *, allow_network: boo
             window_size=window_size,
             reload=False,
             port=8765,
-            show=True,
+            show=show_browser,
             favicon="🩻",
             reconnect_timeout=30.0,
         )

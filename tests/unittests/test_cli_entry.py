@@ -79,3 +79,20 @@ def test_project_scripts_points_at_cli() -> None:
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     scripts = data["project"]["scripts"]
     assert scripts["guiskindose"] == "guiskindose.__main__:cli"
+
+
+@pytest.mark.parametrize("argv", [
+    ["--mode", "gui", "--host", "0.0.0.0"],
+    ["--mode", "gui", "--allow-network"],
+])
+def test_gui_network_flags_are_removed(argv: list[str]) -> None:
+    """`--host` / `--allow-network` are rejected: the GUI is loopback-only.
+
+    The refusal must hold at the CLI surface too, so the flags cannot be
+    silently reintroduced without breaking this test.
+    """
+    from guiskindose.cli_args import get_argument_parser
+
+    with pytest.raises(SystemExit) as excinfo:
+        get_argument_parser(argv)
+    assert excinfo.value.code == 2

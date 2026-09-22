@@ -63,3 +63,26 @@ def _isolate_gui_state():
     yield
     _cancel_leaked_timers()
     _reset_state_singleton()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_loopback_security(monkeypatch):
+    """Keep ``run_gui()`` side effects out of the simulation suite.
+
+    ``run_gui()`` registers ASGI middleware and installs a per-launch token
+    config on the process-global NiceGUI app; the user-simulation tests never
+    call ``run_gui()`` and must see neither. No-op the registrations and reset
+    the config around every test (individual tests re-patch what they assert).
+    """
+    import guiskindose.gui.app as gui_app
+    from guiskindose.gui.loopback_security import configure_loopback_security
+
+    monkeypatch.setattr(gui_app.app, "add_middleware", lambda *args, **kwargs: None)
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda *args, **kwargs: None)
+    # NOTE: _STATIC_REGISTERED is intentionally not reset here. The
+    # user-simulation harness reloads gui.app, so this fixture's module
+    # reference may differ from the one test modules hold; tests asserting on
+    # registration reset the flag on their own reference instead.
+    configure_loopback_security(None)
+    yield
+    configure_loopback_security(None)
