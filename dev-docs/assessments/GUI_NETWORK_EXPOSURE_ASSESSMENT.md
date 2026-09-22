@@ -271,6 +271,17 @@ Host/Origin without the token). The Google-font query-token caveat below is
 moot — the font has been vendored and served locally since 2026-09-22 — and
 line refs are investigation-time.*
 
+*Reviewed alternatives (declined with rationale):* a POST-body/fragment
+bootstrap handoff instead of the query token — rejected. The query token does
+appear once in uvicorn access logs, but per-launch rotation bounds that
+exposure to the current run (a logged token dies on restart), while console
+and browser-history exposure is identical in both designs; a fragment design
+would need a custom JS bootstrap page plus a new token-gated endpoint —
+complexity in the most sensitive flow for a log line of an already-expired
+secret. Non-ASCII token bytes cannot reach the hash comparison (the ASCII
+decode guard returns 403 first, pinned by
+`test_non_ascii_query_rejected`) — extra validation there would be dead code.
+
 Print a random token to the server console at startup in network mode;
 consume it once in a bootstrap exchange that issues an `HttpOnly`,
 `SameSite=Strict` session cookie (single-use was the proposal; the shipped
