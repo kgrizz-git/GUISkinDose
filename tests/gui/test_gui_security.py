@@ -163,9 +163,43 @@ def test_run_gui_registers_security_middleware_and_token_url(monkeypatch, capsys
     gui_app.run_gui(native=False)
     assert captured["middleware"] is LoopbackSecurityMiddleware
     assert captured["show"] is False
+    assert captured["port"] == 8765
     assert len(opened) == 1
     assert opened[0].startswith("http://127.0.0.1:8765/?token=")
     assert "open http://127.0.0.1:8765/?token=" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("port,expected", [(None, 8765), (9999, 9999)])
+def test_resolve_port_defaults_and_explicit(port: int | None, expected: int) -> None:
+    assert gui_app._resolve_port(port) == expected
+
+
+def test_resolve_port_zero_picks_free_loopback_port() -> None:
+    port = gui_app._resolve_port(0)
+    assert isinstance(port, int) and 1 <= port <= 65535
+
+
+@pytest.mark.parametrize("port", [-1, 65536, 100000])
+def test_resolve_port_rejects_out_of_range(port: int) -> None:
+    with pytest.raises(ValueError, match="gui_port_out_of_range"):
+        gui_app._resolve_port(port)
+
+
+def test_run_gui_honors_explicit_port(monkeypatch) -> None:
+    """An explicit port reaches ui.run, the token URL, and the Host allowlist."""
+    from guiskindose.gui.loopback_security import get_loopback_security_config
+
+    captured: dict = {}
+    opened: list = []
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, **_kw: opened.append(url))
+    gui_app.run_gui(native=False, port=9999)
+    assert captured["port"] == 9999
+    assert opened[0].startswith("http://127.0.0.1:9999/?token=")
+    config = get_loopback_security_config()
+    assert config is not None
+    assert "127.0.0.1:9999" in config.allowed_hosts
+    assert "http://127.0.0.1:9999" in config.allowed_origins
 
 
 def test_run_gui_native_skips_token_but_keeps_host_checks(monkeypatch) -> None:

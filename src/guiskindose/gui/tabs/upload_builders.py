@@ -477,11 +477,17 @@ class UploadViewRefs:
 def _build_header() -> None:
     with ui.row().classes("w-full items-center justify-between"):
         ui.label("Load File").classes("text-2xl font-bold tracking-tight")
-        HelpButton(
-            title="Upload and import help",
-            content_path="upload_workflow.md",
-            help_id="upload",
-        )
+        with ui.row().classes("items-center gap-1"):
+            HelpButton(
+                title="Upload and import help",
+                content_path="upload_workflow.md",
+                help_id="upload",
+            )
+            HelpButton(
+                title="Loopback scope and local access",
+                content_path="loopback_scope.md",
+                help_id="loopback_scope",
+            )
 
 
 def _build_normalization_warning() -> None:

@@ -59,6 +59,7 @@ def cli() -> None:
 
         run_gui(
             native=getattr(args, "native", False),
+            port=getattr(args, "port", None),
         )
     elif getattr(args, "input_preview_only", False):
         if not args.file_path:

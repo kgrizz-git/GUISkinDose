@@ -84,6 +84,18 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
         help="Open GUI in a native desktop window instead of a browser tab (requires pywebview)",
     )
 
+    parser.add_argument(
+        "--port",
+        required=False,
+        default=None,
+        type=int,
+        dest="port",
+        help=(
+            "Loopback port for the GUI server (default: 8765). Pass 0 for an "
+            "OS-assigned free port (printed in the console launch URL)."
+        ),
+    )
+
 
 def _add_input_args(parser: argparse.ArgumentParser) -> None:
     """Schema/preview/aggregate selection for tabular input handling."""

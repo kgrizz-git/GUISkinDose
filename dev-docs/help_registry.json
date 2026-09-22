@@ -7,21 +7,27 @@
       "id": "upload",
       "title": "Upload and import help",
       "source": "upload_workflow.md",
-      "gui_files": ["src/guiskindose/gui/tabs/upload_builders.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/upload_builders.py"
+      ],
       "required": true
     },
     {
       "id": "data",
       "title": "Data table help",
       "source": "data_table_workflow.md",
-      "gui_files": ["src/guiskindose/gui/tabs/data.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/data.py"
+      ],
       "required": true
     },
     {
       "id": "settings_positioning",
       "title": "Positioning and offsets",
       "source": "positioning_offsets.md",
-      "gui_files": ["src/guiskindose/gui/tabs/settings.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/settings.py"
+      ],
       "required": true
     },
     {
@@ -39,14 +45,18 @@
       "id": "settings_below_floor_kvp",
       "title": "Below-floor kVp handling",
       "source": "below_floor_kvp.md",
-      "gui_files": ["src/guiskindose/gui/tabs/settings.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/settings.py"
+      ],
       "required": true
     },
     {
       "id": "settings_kerma_meter_correction",
       "title": "Kerma-meter correction",
       "source": "kerma_meter_correction.md",
-      "gui_files": ["src/guiskindose/gui/tabs/settings.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/settings.py"
+      ],
       "required": true
     },
     {
@@ -63,21 +73,36 @@
       "id": "calculate",
       "title": "Calculation workflow",
       "source": "calculation_workflow.md",
-      "gui_files": ["src/guiskindose/gui/tabs/calculate.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/calculate.py"
+      ],
       "required": true
     },
     {
       "id": "results",
       "title": "Results help",
       "source": "results_workflow.md",
-      "gui_files": ["src/guiskindose/gui/tabs/results_builders.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/results_builders.py"
+      ],
       "required": true
     },
     {
       "id": "export",
       "title": "Export help",
       "source": "export_workflow.md",
-      "gui_files": ["src/guiskindose/gui/tabs/export.py"],
+      "gui_files": [
+        "src/guiskindose/gui/tabs/export.py"
+      ],
+      "required": true
+    },
+    {
+      "id": "loopback_scope",
+      "title": "Loopback scope and local access",
+      "source": "loopback_scope.md",
+      "gui_files": [
+        "src/guiskindose/gui/tabs/upload_builders.py"
+      ],
       "required": true
     }
   ]

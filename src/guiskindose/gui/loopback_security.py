@@ -33,7 +33,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from http.cookies import SimpleCookie
 from typing import Any
 from urllib.parse import parse_qsl, urlencode
@@ -42,6 +42,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 
 SESSION_COOKIE_NAME = "guiskindose_session"
 TOKEN_QUERY_PARAM = "token"
+DEFAULT_GUI_PORT = 8765
 
 _BAD_HOST_BODY = b"unexpected host"
 _FORBIDDEN_BODY = (
@@ -54,11 +55,26 @@ _FORBIDDEN_BODY = (
 class LoopbackSecurityConfig:
     """Per-launch security posture for the GUI server."""
 
-    allowed_hosts: tuple[str, ...] = ("127.0.0.1:8765", "localhost:8765", "127.0.0.1", "localhost")
-    allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8765", "http://localhost:8765")
+    allowed_hosts: tuple[str, ...] = (
+        f"127.0.0.1:{DEFAULT_GUI_PORT}",
+        f"localhost:{DEFAULT_GUI_PORT}",
+        "127.0.0.1",
+        "localhost",
+    )
+    allowed_origins: tuple[str, ...] = (
+        f"http://127.0.0.1:{DEFAULT_GUI_PORT}",
+        f"http://localhost:{DEFAULT_GUI_PORT}",
+    )
     session_secret: bytes = field(default_factory=lambda: secrets.token_bytes(32), repr=False)
     launch_token_hash: bytes = field(default_factory=lambda: secrets.token_bytes(32), repr=False)
     require_token: bool = True
+
+    @classmethod
+    def for_port(cls, port: int, *, require_token: bool = True) -> LoopbackSecurityConfig:
+        """Build a config scoped to one loopback port (see ``_resolve_port``)."""
+        hosts = (f"127.0.0.1:{port}", f"localhost:{port}", "127.0.0.1", "localhost")
+        origins = tuple(f"http://{host}" for host in hosts[:2])
+        return cls(allowed_hosts=hosts, allowed_origins=origins, require_token=require_token)
 
 
 _CONFIG: LoopbackSecurityConfig | None = None
@@ -75,8 +91,8 @@ def get_loopback_security_config() -> LoopbackSecurityConfig | None:
     return _CONFIG
 
 
-def generate_launch_token() -> tuple[str, LoopbackSecurityConfig]:
-    """Create a fresh per-launch token and its matching config.
+def generate_launch_token(port: int = DEFAULT_GUI_PORT) -> tuple[str, LoopbackSecurityConfig]:
+    """Create a fresh per-launch token and its matching port-scoped config.
 
     Only a SHA-256 hash of the token is kept: the cleartext exists solely in
     the returned string (printed once to the server console) and is compared
@@ -85,7 +101,7 @@ def generate_launch_token() -> tuple[str, LoopbackSecurityConfig]:
     """
     token = secrets.token_urlsafe(32)
     digest = hashlib.sha256(token.encode("ascii")).digest()
-    return token, LoopbackSecurityConfig(launch_token_hash=digest)
+    return token, replace(LoopbackSecurityConfig.for_port(port), launch_token_hash=digest)
 
 
 def _headers(scope: dict) -> dict[str, str]:
