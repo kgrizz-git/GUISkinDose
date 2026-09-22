@@ -430,7 +430,8 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 
 - syntax/lint checks should fail the workflow on errors
 - tests should fail the workflow on errors
-- pull requests receive a fast current-runtime Ubuntu check; `main` pushes cover all supported Python versions on Ubuntu;
+- pull requests receive a fast current-runtime check on Ubuntu plus one Windows
+  job; `main` pushes cover all supported Python versions on Ubuntu plus one Windows job;
   the full cross-platform matrix runs weekly and on demand
 - docs-only changes may run a smaller check set, but should still pass basic syntax and markdown/link sanity when such tooling exists
 
@@ -438,8 +439,8 @@ CI should be treated as a blocking quality gate, not only as telemetry:
 
 | Trigger | Matrix |
 |---------|--------|
-| Pull request | 1 cell — Ubuntu + Python 3.14 |
-| Push to `main` | 4 cells — Ubuntu × Python 3.11–3.14 |
+| Pull request | 2 cells — Ubuntu + Windows × Python 3.14 |
+| Push to `main` | 5 cells — Ubuntu × Python 3.11–3.14, plus Windows × Python 3.14 |
 | Weekly schedule | 8 cells — Ubuntu × Python 3.11–3.14, plus macOS/Windows × Python 3.11 and 3.14; skipped when `main` has not changed since the prior scheduled or manual compatibility sweep |
 | Manual dispatch | Same 8-cell compatibility sweep, regardless of whether `main` changed; it becomes the baseline for the next weekly run |
 
