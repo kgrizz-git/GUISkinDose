@@ -186,8 +186,10 @@ to banner, randomize, or gate). What survives from them:
 
 - Package A item 3 (README one-liner: loopback is per-host, not per-user) —
   still applies and is now in `README.md`.
-- The `gui_help` network-mode page idea becomes a short loopback-scope note
-  if a help page is wanted; not required.
+- The `gui_help` loopback-scope page (covering the malicious-webpage angle)
+  is **required**, not optional: the only in-GUI notice is the one-time,
+  dismissable onboarding dialog, so the help page is the durable in-app
+  reminder. Register it in `help_registry.json` with the follow-up PR.
 
 Residual loopback risks (documented, not fixed by refusal): any local account
 can reach the port (no login); a malicious webpage in the operator's own

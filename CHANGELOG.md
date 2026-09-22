@@ -19,6 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- **GUI works from non-editable installs** (2026-09-22) — in-app copy
+  (`copy_text()`, including the onboarding privacy notice and every help
+  tooltip) was read from `dev-docs/ui_copy.json`, which never ships in
+  wheels, so a `pip`-installed GUI raised `FileNotFoundError` on every page.
+  The catalog is now mirrored into the package (`scripts/sync_ui_copy.py`,
+  enforced by pre-commit + CI) and read from the installed copy with repo
+  fallback. Proven with a wheel-install reproduction.
+
 ### Security
 
 - **Bundled icon font; no third-party requests** (2026-09-22) — the GUI served

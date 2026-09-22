@@ -131,6 +131,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: sync-ui-copy
+        name: UI copy sync (dev-docs/ui_copy.json -> src/guiskindose/gui/ui_copy.json)
+        entry: python scripts/sync_ui_copy.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: help-registry
         name: GUI help registry
         entry: python scripts/check_help_registry.py

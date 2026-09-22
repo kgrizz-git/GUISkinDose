@@ -88,6 +88,13 @@ def test_icon_font_is_bundled_locally() -> None:
     module_source = inspect.getsource(gui_app)
     assert "fonts.googleapis.com" not in module_source
     assert "fonts.gstatic.com" not in module_source
+    gui_dir = Path(gui_app.__file__).resolve().parent
+    remote_hits = [
+        path for path in sorted(gui_dir.rglob("*.py"))
+        if "fonts.googleapis.com" in path.read_text(encoding="utf-8")
+        or "fonts.gstatic.com" in path.read_text(encoding="utf-8")
+    ]
+    assert not remote_hits, f"remote font refs in GUI modules: {remote_hits}"
 
 
 def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
