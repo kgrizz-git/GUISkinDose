@@ -69,7 +69,7 @@ be archived.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
-- [ ] **`TabularImportOptions` + CLI coordinate override flags** — GUI post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live, but the `TabularImportOptions` dataclass and `--swap-lat-lon` / `--skip-transforms` CLI surface are not wired (`cli_args.py`, `input_adapters/registry.py`). **Goal:** API + CLI parity with the GUI. **Acceptance:** unit tests for both paths. See `TABULAR_RDSR_INPUT_PLAN.md`, `VENDOR_COORDINATE_SYSTEMS.md`.
+- [ ] **`TabularImportOptions` + CLI coordinate override flags** — GUI post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live, but the `TabularImportOptions` dataclass and `--swap-lat-lon` / `--skip-transforms` CLI surface are not wired (`cli_args.py`, `input_adapters/registry.py`). **Goal:** API + CLI parity with the GUI. **Acceptance:** unit tests for both paths. See [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) and [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Tabular input Phase 5+** — implement Qaelum, DoseMonitor, and DoseWatch adapters when real export fixtures
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
@@ -134,7 +134,7 @@ be archived.
 - [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx execution of the getting-started notebook fails on a plot/HTML regression (error record + fix plan archived at
   [NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md)).
   Remaining: confirm the docs build is green (watch for a second latent failure
-  behind it), then remove this item.
+  behind it — see archived plan for the secondary tqdm failure), then remove this item.
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
   Playwright/CDP only for browser-specific gaps.
 - [ ] **Coordinate diagrams** — expand and validate `VENDOR_COORDINATE_SYSTEMS.md` diagrams against vendor data.
