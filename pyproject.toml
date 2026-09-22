@@ -235,3 +235,6 @@ ignore = [
 ]
 # No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared
 # with the safety dev dependency (nltk was safety-only; see CHANGELOG [1.0.0] `### Removed`).
+# NOTE (Dependabot): GitHub's advisory feed is independent of these ignores, and the uv.lock
+# dep_scope reads as runtime to Dependabot, so its alerts may stay open for suppressed transitive
+# dev-only advisories. CI's `uv audit` is the gate that matters.
