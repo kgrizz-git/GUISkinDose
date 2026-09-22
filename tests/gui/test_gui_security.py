@@ -66,3 +66,25 @@ async def test_uploader_has_max_file_size(user: User) -> None:
     assert any(
         u._props.get("max-file-size") == MAX_UPLOAD_BYTES for u in uploads
     ), "uploader is missing the MAX_UPLOAD_BYTES max-file-size prop"
+
+
+# ── 3. no third-party requests ──────────────────────────────────────────────
+def test_icon_font_is_bundled_locally() -> None:
+    """The icon font must come from the package, never from Google Fonts."""
+    import inspect
+    from pathlib import Path
+
+    href = gui_app.material_symbols_stylesheet_href()
+    assert not href.startswith("http"), f"remote stylesheet: {href}"
+    fonts_dir = Path(gui_app.__file__).resolve().parent / "static" / "fonts"
+    css_path = fonts_dir / Path(href).name
+    assert css_path.is_file(), f"missing bundled stylesheet: {css_path}"
+    css = css_path.read_text(encoding="utf-8")
+    assert "http" not in css, "bundled stylesheet still references a remote URL"
+    for line in css.splitlines():
+        if "url(" in line:
+            local = line.split("url(", 1)[1].split(")", 1)[0].strip().strip("'\"")
+            assert (fonts_dir / local).is_file(), f"missing bundled font: {local}"
+    module_source = inspect.getsource(gui_app)
+    assert "fonts.googleapis.com" not in module_source
+    assert "fonts.gstatic.com" not in module_source

@@ -1971,6 +1971,17 @@
     "reviewer": "KG",
     "reviewed_on": "2026-07-15"
    }
+  },
+  {
+   "path": "src/guiskindose/gui/static/fonts/material-symbols-outlined-300.woff2",
+   "sha256": "0978f61784f1e3b0100d8004f062d466a3326ccd9585a39444d6d9ffca8a7a58",
+   "kind": "opaque_binary",
+   "purpose": "Bundled Material Symbols icon font for the GUI (replaces remote Google Fonts request); attribution in NOTICE_material-symbols.txt",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-09-22"
+   }
   }
  ]
 }

@@ -21,6 +21,12 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Bundled icon font; no third-party requests** (2026-09-22) — the GUI served
+  its Material Symbols icon font from Google Fonts on every fresh page load
+  (IP + `Referer` to Google, broken icons on air-gapped networks). The font
+  (Apache 2.0, attributed in-package) is now vendored under
+  `gui/static/fonts/` and served locally; a regression test pins the absence
+  of remote font URLs.
 - **GUI refuses non-loopback bindings** (2026-09-22) — the GUI always binds
   `127.0.0.1` and raises `non_loopback_gui_binding_refused` on any other host
   (`localhost` is normalized to the literal, never resolved). The `--host` and

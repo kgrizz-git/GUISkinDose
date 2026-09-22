@@ -14,6 +14,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable
+from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
@@ -52,6 +53,23 @@ from .window_prefs import (
 logger = logging.getLogger(__name__)
 
 GUI_VERSION = "1.1.0"
+
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+_STATIC_URL = "/guiskindose-static"
+
+
+def material_symbols_stylesheet_href() -> str:
+    """Local URL of the bundled Material Symbols stylesheet.
+
+    The font is vendored under ``gui/static/fonts/`` (see NOTICE there) so
+    page loads make no third-party requests.
+    """
+    return f"{_STATIC_URL}/fonts/material-symbols-outlined.css"
+
+
+def register_gui_static_files() -> None:
+    """Serve package-bundled GUI assets (icon font) over the local server."""
+    app.add_static_files(_STATIC_URL, _STATIC_DIR)
 
 
 def _update_nav_classes(nav_buttons: list[tuple[ui.button, str]]) -> None:
@@ -157,7 +175,7 @@ def index():
     ui.colors(primary="#2563EB", secondary="#2563EB", accent="#831843", positive="#064E3B")
     ui.add_head_html(f"<style>{MODERN_CSS}</style>")
     ui.add_head_html(
-        '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" />'
+        f'<link rel="stylesheet" href="{material_symbols_stylesheet_href()}" />'
     )
     ui.dark_mode(True)
 
@@ -452,6 +470,8 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
         window_size = _configure_native_window()
 
     bind_host = _resolve_bind_host(host)
+
+    register_gui_static_files()
 
     try:
         ui.run(
