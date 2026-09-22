@@ -116,11 +116,9 @@ def _token_valid(config: LoopbackSecurityConfig, query_string: bytes) -> bool:
     for name, value in params:
         if name != TOKEN_QUERY_PARAM:
             continue
-        try:
-            candidate = hashlib.sha256(value.encode("ascii")).digest()
-        except (UnicodeEncodeError, ValueError):
-            continue
-        if hmac.compare_digest(candidate, config.launch_token_hash):
+        if hmac.compare_digest(
+            hashlib.sha256(value.encode("ascii")).digest(), config.launch_token_hash
+        ):
             return True
     return False
 
@@ -134,10 +132,9 @@ def _set_session_cookie(config: LoopbackSecurityConfig) -> bytes:
 
 
 def _strip_token_param(query_string: bytes) -> bytes:
-    try:
-        params = [(k, v) for k, v in parse_qsl(query_string.decode("ascii"), keep_blank_values=True)]
-    except (UnicodeDecodeError, ValueError):
-        return b""
+    # Only called after _token_valid passed on the same bytes, so decoding
+    # cannot fail here.
+    params = parse_qsl(query_string.decode("ascii"), keep_blank_values=True)
     kept = [(k, v) for k, v in params if k != TOKEN_QUERY_PARAM]
     return "&".join(f"{k}={v}" for k, v in kept).encode("ascii")
 

@@ -177,3 +177,28 @@ def test_native_style_config_skips_token(live_config) -> None:
     configure_loopback_security(LoopbackSecurityConfig(require_token=False))
     sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _http_scope()))
     assert _status(sent) == 200
+
+
+def test_non_http_scope_passes_through(live_config) -> None:
+    _, _ = live_config
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), {"type": "lifespan"}))
+    assert _status(sent) == 200
+
+
+def test_non_ascii_query_rejected(live_config) -> None:
+    _, _ = live_config
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _http_scope(query=b"\xff\xfetoken=x")))
+    assert _status(sent) == 403
+
+
+def test_malformed_cookie_treated_as_no_session(live_config, monkeypatch) -> None:
+    _, _ = live_config
+    import guiskindose.gui.loopback_security as loopback_security
+
+    class _Unparseable:
+        def load(self, _header: str) -> None:
+            raise ValueError("bad cookie")
+
+    monkeypatch.setattr(loopback_security, "SimpleCookie", lambda: _Unparseable())
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _http_scope(cookie="x=y")))
+    assert _status(sent) == 403

@@ -178,3 +178,42 @@ def test_wait_for_port_detects_open_and_closed_ports() -> None:
     finally:
         server.close()
     assert gui_app._wait_for_port("127.0.0.1", port, timeout=0.3) is False
+
+
+def test_browser_auto_open_waits_for_server(monkeypatch) -> None:
+    """The opener thread fires only once the port accepts connections."""
+    import time as time_module
+
+    opened: list = []
+    monkeypatch.setattr(gui_app.webbrowser, "open", lambda url: opened.append(url))
+    monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
+    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    deadline = time_module.monotonic() + 5.0
+    while not opened and time_module.monotonic() < deadline:
+        time_module.sleep(0.05)
+    assert opened == ["http://127.0.0.1:8765/?token=t"]
+
+
+def test_browser_auto_open_stays_quiet_without_server(monkeypatch, capsys) -> None:
+    """No server, no browser window — and a failed open degrades to a message."""
+    import time as time_module
+
+    opened: list = []
+    monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: False)
+    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    time_module.sleep(0.3)
+    assert opened == []
+    assert capsys.readouterr().out == ""
+
+    def _boom(_url: str) -> None:
+        raise RuntimeError("no browser")
+
+    monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(gui_app.webbrowser, "open", _boom)
+    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    deadline = time_module.monotonic() + 5.0
+    seen = ""
+    while "Open the GUI manually" not in seen and time_module.monotonic() < deadline:
+        time_module.sleep(0.05)
+        seen += capsys.readouterr().out
+    assert "Open the GUI manually: http://127.0.0.1:8765/?token=t" in seen

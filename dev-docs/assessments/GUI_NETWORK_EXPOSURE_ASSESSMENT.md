@@ -58,6 +58,22 @@ Step 0 has since been decided as refusal — Packages A–C are moot as specifie
   normalization, and parametrized refusal. Upload size caps ride in the same
   file (DoS bounding, orthogonal to network auth).
 
+### 1.1b Loopback controls — token + Host/Origin (shipped 2026-09-22)
+
+Refusal keeps remote machines away but is not an authentication boundary, so
+browser mode additionally ships (`src/guiskindose/gui/loopback_security.py`,
+wired in `run_gui` before `ui.run`):
+
+- a **per-launch token**: random secret printed once to the console as a
+  one-time launch URL (auto-opened when the port accepts connections);
+  bootstraps an `HttpOnly; SameSite=Strict` session cookie. Only the token
+  hash is retained (constant-time compare); stale tabs die on restart.
+- **strict Host validation** (loopback authority only — DNS rebinding
+  rejected) and **Origin checks** on websocket handshakes and cross-site
+  HTTP, enforced via a pure-ASGI middleware (unit-tested without a server).
+- Native mode keeps Host/Origin without the token (embedded window is the
+  trusted client); another local user can still reach its port.
+
 *Gate history (superseded, kept for the record):* before refusal, an unset
 host bound `127.0.0.1` while a non-loopback `--host` required the explicit
 `--allow-network` acknowledgement (`network_gui_binding_requires_explicit_acknowledgement`),
