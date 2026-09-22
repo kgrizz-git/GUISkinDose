@@ -8,11 +8,13 @@
 
 Investigated: 2026-09-21
 
-For `TO_DO.md` item *"GUI network-exposure hardening"* (Next Up): evaluate
-the residual risk of opt-in LAN serving (fixed port 8765, no authentication,
-single shared process-global state) and adopt proportional mitigations,
-threat-modelling the hospital-workstation / shared-network case first while
-keeping localhost UX unchanged.
+For `TO_DO.md` item *"GUI network-exposure hardening"* (Next Up): this
+assessment evaluated opt-in LAN serving risk and recommended mitigations.
+**Decided 2026-09-22 (see §4): non-loopback is refused outright** — there is
+no network mode, and Packages A–C are moot as specified. What stands: the
+loopback threat model (§2 Case A), the residual loopback risks (§4), and the
+deferred Package D trigger. The pre-decision analysis below is kept for the
+reasoning record.
 
 ## Summary
 
@@ -90,8 +92,8 @@ see §4.
   README/CLI/docstring/onboarding, but there is **no persistent or
   mode-aware in-GUI surface** (nothing reflects actual LAN serving, and the
   dialog can be permanently dismissed). Item 6 (refuse non-loopback until
-  per-client state + auth) is an open policy decision. Item 7 (registry
-  entries) has the onboarding privacy line (`dev-docs/ui_copy.json:49`,
+  per-client state + auth) is **decided 2026-09-22** (refusal shipped; see
+  §1.1/§4). Item 7 (registry entries) has the onboarding privacy line (`dev-docs/ui_copy.json:49`,
   which does include network wording) but no dedicated network-mode banner
   or help page.
 - In-app help (`docs/source/gui_help/`) has no network-mode page; the only
@@ -157,13 +159,13 @@ operator was told to provide themselves.
 
 | # | Gap | Status |
 |---|---|---|
-| 1 | No in-GUI network-mode indication — all warnings live in CLI/README/logs, invisible to someone viewing the served GUI | Open |
-| 2 | Fixed predictable port 8765, no randomization or override | Open |
-| 3 | No token/auth layer (NiceGUI `>=2.0.0` per `pyproject.toml:38` brings none; needs custom middleware covering page + websocket + static paths) | Open, needs spike |
-| 4 | No read-only view mode; no per-client state (singleton `AppState`) | Open, large |
-| 5 | README loopback wording undersells the multi-user-machine case | Open, one sentence |
-| 6 | Refuse-vs-serve policy decision (plan item 6) | Open, maintainer call |
-| 7 | Server lifetime follows the last connected client — a lingering LAN viewer keeps loaded PHI resident after the operator leaves | Open; surface in Package A scope (e.g. visible session/client indicator), no new package |
+| 1 | No in-GUI network-mode indication | **Moot** — refused 2026-09-22; there is no network mode to indicate |
+| 2 | Fixed predictable port 8765, no randomization or override | Open (residual: drive-by local pages know the port; see §4 follow-ups) |
+| 3 | No token/auth layer | **Moot** — refused 2026-09-22; no network mode to gate |
+| 4 | No read-only view mode; no per-client state (singleton `AppState`) | Deferred (Package D trigger: demonstrated clinical-LAN need; not scheduled) |
+| 5 | README loopback wording undersells the multi-user-machine case | **Done** — README "Privacy / network" now states per-host-not-per-user |
+| 6 | Refuse-vs-serve policy decision (plan item 6) | **Decided 2026-09-22** — refuse (see §4) |
+| 7 | Server lifetime follows the last connected client | **Moot as LAN risk** — loopback-only; local-process lifetime semantics unchanged |
 
 ## 4. Recommendations
 
@@ -204,6 +206,8 @@ screens, tablet at tableside, teaching demos on lab LANs). Serve-with-mitigation
 
 ### Package A — Say it where it happens (cheap, do regardless)
 
+*Moot as specified (no network mode); line refs are investigation-time.*
+
 1. One persistent banner in the shared page shell (`ui.header` at
    `src/guiskindose/gui/app.py:164`) whenever the bound host is non-loopback:
    no-auth + shared-state + operator-acknowledged wording — not tab-local
@@ -222,6 +226,8 @@ screens, tablet at tableside, teaching demos on lab LANs). Serve-with-mitigation
 
 ### Package B — Unpredictable port in network mode (small, verify first)
 
+*Moot as specified (no network mode); line refs are investigation-time.*
+
 Randomize the bound port when (and only when) serving non-loopback; keep
 `8765` for loopback so bookmarks, docs, and muscle memory survive. This is
 currently underspecified against the single `ui.run(... port=8765 ...)`
@@ -235,16 +241,20 @@ scan-noise reduction only — never as access control.
 
 ### Package C — Token-bootstrapped session gate (moderate, spike first)
 
+*Moot as specified (no network mode); line refs are investigation-time.*
+
 Print a random token to the server console at startup in network mode;
 consume it once in a bootstrap exchange that issues an `HttpOnly`,
 `SameSite=Strict` session cookie, then require that cookie on HTTP routes,
 websocket upgrades, static assets, downloads, and reconnects; localhost
 exempt. Do **not** require a query token on every request: query strings leak
-through browser history and `Referer` headers — and the app currently loads
-an external Google stylesheet (`src/guiskindose/gui/app.py:160`), so a query
-token would be disclosed to a third party on every page load. Either set a
-restrictive `Referrer-Policy` or remove/self-host the font before any
-token-in-URL design.
+through browser history and `Referer` headers — and, at the time of writing,
+the app loaded an external Google stylesheet (`src/guiskindose/gui/app.py:160`
+then), so a query token would have been disclosed to a third party on every
+page load. (That request is gone: the font has been vendored and served
+locally since 2026-09-22.) Either set a restrictive `Referrer-Policy` or
+remove/self-host the font before any token-in-URL design — the latter is now
+already the case.
 **Spike before committing**: NiceGUI page + websocket + static-asset paths
 must all pass the gate without breaking reconnect, `ui.download()` exports,
 or the native path. Explicit stop conditions: token leakage via URL
@@ -262,13 +272,20 @@ schedule the work.
 
 ### Suggested sequencing note
 
-Step 0 decision → Package A (one PR) → Package B (one PR) → Package C spike
-(go/no-go) → D only on trigger. Each package extends `test_gui_security.py`;
-localhost behavior must stay pinned unchanged throughout.
+Superseded by the §4 refusal: no packages ship. Residual follow-ups (separate
+PR, per TO_DO): loopback-scope help note, Host/Origin validation, randomized
+loopback port; Package D only on trigger.
 
 ---
 
 ## Files examined
+
+(Current code refs: `app.py:429` `_resolve_bind_host`, `app.py:447` `run_gui`,
+`app.py:477` `ui.run`, `app.py:482-486` port/reload/reconnect, `main.py:554`
+/ `__main__.py:60` dispatch, `state.py:127` `busy` / `:137` singleton. The
+pre-refusal refs below — `app.py:411-467`, `cli_args.py:202-226`,
+`main.py:552`, `__main__.py:63` — are the investigation-time locations, kept
+so the history reads against the right tree.)
 
 - `src/guiskindose/gui/app.py` (esp. lines 411-467)
 - `src/guiskindose/gui/state.py` (esp. lines 18-137)
