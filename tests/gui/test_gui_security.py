@@ -125,3 +125,55 @@ def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
     assert url_path == "/guiskindose-static"
     assert Path(local_dir).is_dir()
     assert gui_app.material_symbols_stylesheet_href().startswith(url_path)
+
+
+# ── 4. loopback security wiring ─────────────────────────────────────────────
+def test_run_gui_registers_security_middleware_and_token_url(monkeypatch, capsys) -> None:
+    """Browser mode installs Host/Origin/token controls and opens the token URL."""
+    from guiskindose.gui.loopback_security import LoopbackSecurityMiddleware
+
+    captured: dict = {}
+    opened: list = []
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
+    monkeypatch.setattr(
+        gui_app.app, "add_middleware", lambda cls, **_kw: captured.setdefault("middleware", cls)
+    )
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, **_kw: opened.append(url))
+    gui_app.run_gui(native=False)
+    assert captured["middleware"] is LoopbackSecurityMiddleware
+    assert captured["show"] is False
+    assert len(opened) == 1
+    assert opened[0].startswith("http://127.0.0.1:8765/?token=")
+    assert "open http://127.0.0.1:8765/?token=" in capsys.readouterr().out
+
+
+def test_run_gui_native_skips_token_but_keeps_host_checks(monkeypatch) -> None:
+    """Native mode enforces Host/Origin without the token (trusted embedded client)."""
+    from guiskindose.gui.loopback_security import get_loopback_security_config
+
+    captured: dict = {}
+    opened: list = []
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
+    monkeypatch.setattr(gui_app, "_configure_native_window", lambda: (1024, 768))
+    monkeypatch.setattr(gui_app, "_register_native_focus_handler", lambda: None)
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda *a, **k: opened.append(a))
+    gui_app.run_gui(native=True)
+    assert captured["show"] is True
+    assert opened == []
+    assert get_loopback_security_config() is not None
+    assert get_loopback_security_config().require_token is False
+
+
+def test_wait_for_port_detects_open_and_closed_ports() -> None:
+    """The auto-open gate fires only after a real loopback connect."""
+    import socket as socket_module
+
+    server = socket_module.socket(socket_module.AF_INET, socket_module.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    port = server.getsockname()[1]
+    try:
+        assert gui_app._wait_for_port("127.0.0.1", port, timeout=5.0) is True
+    finally:
+        server.close()
+    assert gui_app._wait_for_port("127.0.0.1", port, timeout=0.3) is False

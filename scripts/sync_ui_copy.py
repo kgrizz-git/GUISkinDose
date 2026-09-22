@@ -43,7 +43,9 @@ def sync(source: Path, target: Path, *, check: bool) -> int:
         )
         return 1
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(source.read_bytes())
+    tmp_target = target.with_name(f"{target.name}.tmp")
+    tmp_target.write_bytes(source.read_bytes())
+    tmp_target.replace(target)
     print(f"mirrored {source.name} -> {target}")
     return 0
 

@@ -84,21 +84,31 @@ library with habitus scaling. Details in
 
 ### Privacy / network
 
-The GUI has **no authentication** and loads PHI-derived RDSR data into a single
-shared, process-global state. It always binds to `127.0.0.1` (localhost only) —
-reachable only from the machine it runs on — and refuses any non-loopback host.
-There is no LAN/remote mode: do not try to expose it with a proxy; move the
-computation to the machine where the data may reside instead.
+The GUI has **no user accounts** and loads PHI-derived RDSR data into a single
+shared, process-global state. It always binds to `127.0.0.1` (localhost only)
+and refuses any non-loopback host. There is no LAN/remote mode: do not try to
+expose it with a proxy; move the computation to the machine where the data may
+reside instead.
 
-Loopback is per-host, not per-user: anyone logged into the same machine can
-open the GUI port in their browser and sees the same shared state. OS accounts
-alone do not protect it — the port accepts any local connection with no login —
-so shared workstations need their own access story (e.g. one operator at a time,
-or per-operator machines). A further residual: the port is fixed (`8765`) and
-unauthenticated, so a malicious webpage open in the operator's own browser
-could attempt requests at it (blind CSRF-style requests, cross-origin
-websocket attempts, or DNS rebinding) — avoid untrusted browsing on the
-operating machine while the GUI runs.
+Loopback binding is not an authentication boundary, so browser mode adds
+three controls (see `src/guiskindose/gui/loopback_security.py`):
+
+- A **per-launch token**: the console prints a one-time launch URL with a
+  random secret, and the browser opens it automatically. Only that URL
+  bootstraps a session (session cookie); every other request needs the
+  cookie. Stale tabs and old URLs stop working after each restart — relaunch
+  and use the new console URL.
+- **Strict Host validation**: only the loopback authority is accepted, so DNS
+  rebinding (`evil.com` resolving to `127.0.0.1`) is rejected.
+- **Origin validation**: websocket handshakes and cross-site HTTP requests
+  must carry a loopback origin.
+
+Anyone logged into the same machine who obtains the launch URL (or an active
+session) sees the same shared state — OS accounts alone do not protect it, so
+shared workstations need their own access story (e.g. one operator at a time,
+or per-operator machines). **Native** mode enforces the same Host/Origin
+checks but no launch token (the embedded window is the trusted client), so
+another local user can still reach its port.
 
 ### Logging & privacy
 

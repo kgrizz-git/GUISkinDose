@@ -160,8 +160,8 @@ operator was told to provide themselves.
 | # | Gap | Status |
 |---|---|---|
 | 1 | No in-GUI network-mode indication | **Moot** — refused 2026-09-22; there is no network mode to indicate |
-| 2 | Fixed predictable port 8765, no randomization or override | Open (residual: drive-by local pages know the port; see §4 follow-ups) |
-| 3 | No token/auth layer | **Moot** — refused 2026-09-22; no network mode to gate |
+| 2 | Fixed predictable port 8765, no randomization or override | Open, modest (residual: known-port probing; see §4 follow-ups) |
+| 3 | No token/auth layer | **Done in browser mode** (per-launch token + session cookie, 2026-09-22); Host/Origin checks in both modes; no per-user isolation (see gap 4) |
 | 4 | No read-only view mode; no per-client state (singleton `AppState`) | Deferred (Package D trigger: demonstrated clinical-LAN need; not scheduled) |
 | 5 | README loopback wording undersells the multi-user-machine case | **Done** — README "Privacy / network" now states per-host-not-per-user |
 | 6 | Refuse-vs-serve policy decision (plan item 6) | **Decided 2026-09-22** — refuse (see §4) |
@@ -191,15 +191,16 @@ to banner, randomize, or gate). What survives from them:
   dismissable onboarding dialog, so the help page is the durable in-app
   reminder. Register it in `help_registry.json` with the follow-up PR.
 
-Residual loopback risks (documented, not fixed by refusal): any local account
-can reach the port (no login); a malicious webpage in the operator's own
-browser could attempt requests at the fixed `127.0.0.1:8765` origin
-(DNS-rebinding/CSRF shape — no auth, predictable port). Possible follow-ups,
-none scheduled: Host/Origin header validation on the server (cheap,
-uvicorn/NiceGUI-level — rejects cross-origin browser traffic but not local
-processes), a randomized loopback port per launch (raises the bar for
-drive-by web pages, costs bookmark stability), per-client state + real auth
-(Package D). Record the trigger, do not schedule the work.
+Residual loopback risks (after the 2026-09-22 controls): browser mode now
+requires a per-launch token (console URL bootstraps a `HttpOnly;
+SameSite=Strict` session cookie; stale tabs die on restart) and enforces
+strict Host/Origin checks, closing the DNS-rebinding and cross-site drive-by
+paths in both modes (native: Host/Origin without the token). What remains:
+anyone on the machine with the launch URL or an active session shares the
+full-privilege singleton state (no per-user isolation); token hygiene is the
+operator's (console output, browser history on shared profiles). Possible
+follow-ups, none scheduled: randomized loopback port (modest), per-client
+state + real auth (Package D). Record the trigger, do not schedule the work.
 
 Original Step-0 analysis (kept for the record): refusal is the strongest
 control and the smallest diff, but it kills legitimate workflows (ward display
@@ -243,7 +244,13 @@ scan-noise reduction only — never as access control.
 
 ### Package C — Token-bootstrapped session gate (moderate, spike first)
 
-*Moot as specified (no network mode); line refs are investigation-time.*
+*Shipped 2026-09-22 in loopback-adapted form (no spike needed — no network
+mode): per-launch token printed to the console bootstraps an `HttpOnly;
+SameSite=Strict` session cookie in browser mode; strict Host validation and
+Origin checks on websocket/state-changing routes apply in both modes (native:
+Host/Origin without the token). The Google-font query-token caveat below is
+moot — the font has been vendored and served locally since 2026-09-22 — and
+line refs are investigation-time.*
 
 Print a random token to the server console at startup in network mode;
 consume it once in a bootstrap exchange that issues an `HttpOnly`,
