@@ -5,6 +5,10 @@ Short active backlog for GUISkinDose. Keep this file focused on actionable work 
 map (PyPI, GitHub notes vs changelog, deferred portable executables):
 [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md).
 
+House rule: keep each item to a few lines — what, why, acceptance. Design detail, evidence, and
+history belong in the linked plan, assessment, or maintenance log, not here. Keep this file near
+250 lines (checked by `scripts/check_agent_guidance.py`).
+
 For harness rules, validation commands, and plan conventions, see
 [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md). For backlog lifecycle rules, see
 [AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md): completed items must be removed from this file after their user-facing or
@@ -37,12 +41,11 @@ be archived.
   1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Manual Smokes** — Compile and execute manual smokes for shipped features:
-  - *Multi-exam*: exercise multi-file upload, per-exam overrides, calculate, and results accordion in the GUI.
-  - *Correction safety / tube identity*: unmatched model → Default warning names real scanner; GE-family unmatched does **not** claim Tx/Tz auto-swap applied; valid Plane A; ambiguous Plane B / DoseTrack map; multi-exam mixed match/fallback (see [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation).
-  - *Settings phantom preview*: run the acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
-  - *Rich export browser/native save*: verify Export-tab modal in real browser and native pywebview mode.
-  - *Rich export native file dialogs*: run Windows manual smoke for native 'Open file / Open folder'.
-  - *Results table*: run a manual Results smoke to confirm '—' vs kerma behavior (see Open Questions).
+  - *Multi-exam*: multi-file upload, per-exam overrides, calculate, results accordion.
+  - *Correction safety / tube identity*: run the scenarios in [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation — unmatched model names the real scanner, GE-family unmatched claims no Tx/Tz auto-swap, ambiguous Plane B / DoseTrack map, valid Plane A, multi-exam mixed match/fallback.
+  - *Settings phantom preview*: acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
+  - *Rich export*: Export-tab modal in browser + native pywebview; Windows native file dialogs.
+  - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
 
 ## Product Backlog
 
@@ -54,52 +57,25 @@ be archived.
   integration notes: [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md). Fun/demo backlog:
   [FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md). Demo v1 + QA/demo gate / thick bariatric are
   archived under `plans/archive/`.
-- [ ] **Consider user-imported custom meshes** — explore a GUI/CLI pipeline so users can bring their own STL (or similar) meshes as patient phantoms: upload → unit/orientation/scale into the PSD frame → watertight/face-up validate → local (non-committed) cache → Settings selector + preview. Reuse ideas from `scripts/phantom_gen/ingest_fun_mesh.py` / `validate_phantom.py`; keep license/redistribution responsibility with the user (see [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md) for shippable vs local-only mesh policy).
+- [ ] **Consider user-imported custom meshes** — GUI/CLI pipeline for user-supplied STL phantoms: orient/scale into the PSD frame, watertight/face-up validate, local non-committed cache, Settings selector + preview (prior art: `scripts/phantom_gen/ingest_fun_mesh.py`, `validate_phantom.py`). License/redistribution stays with the user (see [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md)).
 - [ ] **Simplified DICOM-only estimate** — investigate a fast pre-scan/fallback estimate from DICOM fields without
   the full phantom-mesh pipeline.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
 - [ ] **Anode-angle awareness in HVL lookup** — add device-model anode-angle mapping, angle-aware lookup, and
   nearest-angle warnings; see [hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md).
-- [ ] **Review rotational-acquisition handling (see Next Up)** — determine whether spin/rotational acquisitions need dose spread
-  across per-frame or start/end angles. Assessment + evidence-gated recommendations:
-  [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md).
-- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF
-  test files fail `rdsr_parser`: `RF-RDSR-Philips_Allura.dcm` and
-  `RF-Pat-Orientation-Modifier-Missing.dcm` lack top-level
-  `Manufacturer`/`ManufacturerModelName` (`AttributeError`);
-  `RF-RDSR-GE.dcm` raises a structural `IndexError`. Observed during the
-  rotational-assessment fixture survey ([assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md),
-  Phase 0 lead inventory). **Goal:** fail-soft or clear errors on missing
-  top-level attributes and atypical event structures. **Constraint:** the upstream files carry
-  populated identifier fields — do not vendor them; reproduce with synthetic or cleared
-  fixtures. **Acceptance:** unit tests with minimal synthetic RDSRs covering each failure;
-  no behavior change on the bundled fixtures.
+- [ ] **Review rotational-acquisition handling (see Next Up)** — assessment + evidence-gated plan done:
+  [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Next: Phase 0 spin fixtures, then detection/warning and arc handling.
+- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
-- [ ] **`TabularImportOptions` + CLI coordinate override flags** — Phase 3 §5 audit found
-  `VENDOR_COORDINATE_SYSTEMS.md` previously described a future `TabularImportOptions` dataclass and
-  `--swap-lat-lon` / `--skip-transforms` CLI flags as if they shipped with the GUI toggles. GUI
-  post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live via `AppState` /
-  `exam_transforms.py`; the dataclass, `skip_manufacturer_transforms`, `custom_translation_offset`,
-  and CLI flags are not wired in `cli_args.py` or `input_adapters/registry.py`. **Goal:** expose the
-  same override surface on `read_and_normalize_input()` and headless CLI. **Acceptance:** unit tests
-  for API + CLI paths; docs describe shipped GUI vs API/CLI parity. See
-  `TABULAR_RDSR_INPUT_PLAN.md` and `VENDOR_COORDINATE_SYSTEMS.md`.
+- [ ] **`TabularImportOptions` + CLI coordinate override flags** — GUI post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live, but the `TabularImportOptions` dataclass and `--swap-lat-lon` / `--skip-transforms` CLI surface are not wired (`cli_args.py`, `input_adapters/registry.py`). **Goal:** API + CLI parity with the GUI. **Acceptance:** unit tests for both paths. See [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) and [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Tabular input Phase 5+** — implement Qaelum, DoseMonitor, and DoseWatch adapters when real export fixtures
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same
-  case to pin exact regression values. GE table-travel direction (positive lateral = patient left, longitudinal =
-  cranial, height = down for HFS) and the normalizer-level `Tx`/`Tz` correction are already confirmed; this item
-  is for pinning raw numeric fixture values only. See [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md)
-  and [plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
-- [ ] **Vendor coordinate validation** — confirm per-vendor export frames (including
-  beam lateral/longitudinal position-field usage and gaps) and Philips
-  double-correction risk against source RDSRs before expanding vendor adapters.
-  Distinct from the matched-GE-fixture acquisition above (external data
-  dependency): this item is code-level validation once fixtures exist. See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+- [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same case to pin regression values (travel-direction conventions already confirmed). See [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) and [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
+- [ ] **Vendor coordinate validation** — confirm per-vendor export frames (beam position-field usage, gaps) and Philips double-correction risk against source RDSRs before expanding adapters. Code-level validation once fixtures exist (distinct from the GE acquisition above). See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Patient orientation support (prone / decubitus + auto-detect)** — HFS/FFS already exist in settings, GUI, and
   geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
   [assessment](assessments/PATIENT_ORIENTATION_ASSESSMENT.md).
@@ -107,45 +83,8 @@ be archived.
 
 ### GUI / UX
 
-- [ ] **GUI network-exposure hardening** — loopback-by-default is already enforced
-  (`gui/app.py:411` `_resolve_bind_host`: non-loopback `--host` raises without
-  explicit `--allow-network`). Threat model + decision-first recommendations:
-  [assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Evaluate the residual risk of opt-in LAN serving
-  (fixed port 8765, no authentication, single shared process-global state) and
-  adopt proportional mitigations: startup single-use token, read-only shared-view
-  mode, port randomization, or stronger do-not-serve warnings. Threat-model the
-  hospital-workstation / shared-network case first; keep localhost UX unchanged.
-- [ ] **Native GUI optional file logging** — Phase 3 §4 audit found README/PRIVACY previously claimed
-  `<tempdir>/guiskindose-gui.log`, but `run_gui()` and `__main__` call `configure_logging()` **without**
-  `log_file` (`gui/app.py`, `__main__.py`). **Today:** one console sink only (stderr via
-  `logging.StreamHandler` in `guiskindose.debug`); no log file in any mode, including `--native`.
-  **Redaction / privacy model (stderr today; same rules would apply to a file sink):**
-  - **Not a blanket redaction filter** on every log line — console and file share the same logger tree,
-    formatters, and call sites. Privacy is enforced by **what we log**, plus **handler levels**.
-  - **Value-free error paths (stderr today):** GUI/CLI boundaries use `safe_error_event()` /
-    `safe_user_error()` (`guiskindose.privacy`) — operation code + exception **class** only on the
-    one-line summary; optional value-free traceback at DEBUG (package-relative `path:lineno in func`,
-    no exception message, no absolute paths, no locals). CLI uncaught exceptions go through
-    `install_value_safe_excepthook()` (generic stderr message, no raw traceback). GUI load failures
-    use the same pattern (`gui/exam_loaders.py` → `_record_load_failure`).
-  - **Routine INFO/WARNING (stderr today):** convention avoids patient identifiers and source paths
-    (e.g. upload logs suffix + byte count, RDSR read logs extension only). Prefer `safe_warning()`
-    for coded metrics; avoid string metrics that could become filenames.
-  - **Opt-in DEBUG (`debug.json` → `dprint` categories):** when a category is enabled, DEBUG lines
-    go to **stderr** (and would also go to a file once wired). These are developer toggles, not
-    clinical-safe by default — review before sharing captures. Do not assume “debug on ⇒ fully
-    redacted”; review output for PHI before pasting or attaching logs.
-  - **File handler level gate (when `log_file=` is used):** `_file_handler_level()` keeps the file at
-    **INFO** unless a `dprint` category is explicitly enabled, then **DEBUG** — so module DEBUG
-    records (which *could* include paths if a call site regresses) are excluded from the file by
-    default. Same records as stderr that pass the file handler’s level; **no separate redaction pass**
-    on write. Rotation: ~1 MiB × 4, session purge, POSIX `0o600` (`debug.py`).
-  **Goal:** when `--native` / pywebview mode is active, pass a temp-path `log_file` into
-  `configure_logging()` so diagnostics are visible without a terminal. **Acceptance:** manual native
-  smoke shows the log file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` describe console + optional
-  file sinks and the redaction/level model accurately; unit test that native startup registers a file
-  handler (mock temp dir); privacy review confirms no new path/identifier logging on the enabled path.
-  **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
+- [ ] **GUI network-exposure hardening** — loopback-by-default enforced (`gui/app.py:411`); threat model + decision-first recommendations: [assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Next: Step-0 serve-vs-refuse decision, then banner → random-port → token-spike packages.
+- [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
@@ -180,22 +119,8 @@ be archived.
   and release documentation audit checklist generation (fold into
   [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
-- [ ] **Re-check ignored dependency advisories** — quarterly (or before each release; see release checklist in
-  [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)), run
-  `python scripts/audit_dependencies.py` and review `[tool.uv.audit]` in `pyproject.toml`.
-  (2026-07-09: bumped transitive dev-only `nltk` 3.9.4 → 3.10.0 and removed
-  `GHSA-p4gq-832x-fm9v` / `PYSEC-2026-597` suppressions.
-  2026-07-17: added mcp GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
-  suppressions while semgrep pins `mcp==1.23.3`; remove when semgrep bumps or relaxes the pin.)
-  (2026-07-18: confirmed GitHub Dependabot still opens alerts for these GHSA IDs — alerts #2/#3/#4 on
-  `kgrizz-git/GUISkinDose` — because the `uv.lock`-level `dep_scope` reads as `runtime` to Dependabot and GitHub's
-  advisory feed is independent of `[tool.uv.audit]` ignores. CI's `uv audit` is the gate that matters; the Dependabot
-  alerts are informational and should stay open until semgrep bumps/relaxes its `mcp==1.23.3` pin
-  (patched versions are `mcp >=1.27.2` / `>=1.28.1`). Context: `mcp` is transitive via the optional Semgrep MCP server
-  path and is not imported or run by GUISkinDose runtime code, so the CVEs are not exploitable in this repo.
-  2026-09-03: removed the `safety` dev dependency (and its main-only CI scan job), which removes
-  transitive `nltk` entirely — the `GHSA-8mgp-746c-j5xp` / CVE-2026-81726 `ignore-until-fixed`
-  entry and the `nltk` pin were deleted in the same change.)
+- [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
+  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. Current state: Dependabot alerts #2/#3/#4 stay open until semgrep relaxes its `mcp==1.23.3` pin (`mcp` is transitive dev-only, not exploitable here); `nltk` advisory resolved when `safety` was removed (2026-09-03). CI's `uv audit` is the gate that matters.
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
@@ -206,14 +131,10 @@ be archived.
   once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
-- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx
-  execution of `docs/source/getting_started/getting_started.ipynb` failed with
-  `RuntimeError: Expected HTML output but dose calculation returned no data`
-  (plot modes + html regression from 2026-06-07; fix plan archived at
+- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx execution of the getting-started notebook fails on a plot/HTML regression (error record + fix plan archived at
   [NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md)).
   Remaining: confirm the docs build is green (watch for a second latent failure
-  behind it, e.g. the `tqdm_notebook.disp` incompatibility seen in CI build
-  logs); then remove this item.
+  behind it — see archived plan for the secondary tqdm failure), then remove this item.
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
   Playwright/CDP only for browser-specific gaps.
 - [ ] **Coordinate diagrams** — expand and validate `VENDOR_COORDINATE_SYSTEMS.md` diagrams against vendor data.
@@ -222,38 +143,12 @@ be archived.
 
 ## Deferred Until Needed
 
-- [ ] **Privacy hardening follow-ons (parked)** — implemented through Phase 9
-  ([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 (private
-  history/release-object audit) still needs an approved private environment. The
-  items below are follow-on evaluations or policy decisions, not a restart of
-  Phases 0-9. Revisit only when privacy work is next prioritized:
-  - *Nested and unsupported container admission policy* — evaluate recursive inspection
-    versus blocking for nested archives and unsupported container types (for example
-    7z/RAR); the current ZIP/TAR/GZIP and Office/iWork gate scans first-level text
-    and requires manual embedded-file/image/DICOM clearance.
-  - *Local OCR quality bake-off* — `scripts/run_image_privacy_advisory.py` already runs
-    local Tesseract OCR (value-suppressed) for admission of rendered assets. Remaining:
-    benchmark Tesseract vs a local-only ML OCR option on synthetic
-    image/PDF/Office/iWork/DICOM burned-in fixtures; record false positives/misses,
-    runtime, and report safety; decide whether to keep Tesseract-only, add ML OCR, or
-    change admission gating. Do not upload reports or add OCR to CI until that write-up
-    exists. See [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md).
-  - *Local PII/PHI detector evaluation* — use
-    [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md)'s synthetic-fixture protocol
-    to benchmark the existing Presidio runner against Fastino GLiNER2. Record false
-    positives/misses, thresholds, elapsed time, and peak memory without logging matched
-    values; decide whether either is worth retaining as a scheduled advisory check.
-  - *NVIDIA GLiNER-PII macOS trial* — following
-    [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md), verify local Python/PyTorch
-    execution, MPS/CPU behavior, model-license fit, download/cache location,
-    throughput, and memory on the 128-GB Mac. Keep it local and advisory; do not add it
-    to CI or use LM Studio as its runtime unless the trial establishes a supported path.
-  - *DICOM pixel-PHI scanner keep/drop* — `scripts/run_dicom_phi_advisory.py` already
-    wraps `dicom-phi-scan` (CPU, ephemeral raw report, count-only summary) for
-    conditional admission. Remaining: run it only on synthetic DICOM fixtures, confirm
-    report output cannot leak findings, and decide whether to keep it as a local advisory
-    step. It must never replace human DICOM inventory clearance or run in public CI
-    without a separate approval.
+- [ ] **Privacy hardening follow-ons (parked)** — Phases 0-9 done ([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 needs an approved private environment. Follow-ons below are parked evaluations, not a restart. Revisit only when privacy work is next prioritized:
+  - *Nested/unsupported containers* — recursive inspection vs blocking for nested archives and exotic types (7z/RAR); current gate scans first-level text + requires manual clearance.
+  - *Local OCR bake-off* — benchmark Tesseract vs local-only ML OCR on synthetic burned-in fixtures (accuracy, runtime, report safety); no CI/uploads until written up. See [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md).
+  - *Local PII detector evaluation* — benchmark the Presidio runner vs Fastino GLiNER2 on the synthetic-fixture protocol; keep only if worth a scheduled advisory check.
+  - *NVIDIA GLiNER-PII macOS trial* — verify local execution, licensing, throughput, and memory on the Mac; advisory only, never CI.
+  - *DICOM pixel-PHI scanner keep/drop* — decide whether the `dicom-phi-scan` wrapper stays as a local advisory step on synthetic fixtures; never replaces human clearance or runs in public CI.
 - [ ] **HTML/PNG export root-cause fix (awaiting fresh repro)** — Phase 1 (raise +
   actionable errors) shipped; Phase 0 never captured the original multi-exam
   exception, so Phase 2 has no evidence to work from. Demoted from Next Up
