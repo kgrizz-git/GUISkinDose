@@ -11,9 +11,12 @@ registered by ``run_gui()`` before ``ui.run()``:
    DNS-rebinding origin (``evil.com`` resolving to ``127.0.0.1``) is rejected
    before touching app code. Stops remote pages; local processes can forge
    ``Host:`` and are not the target here.
-2. **Origin validation** — websocket handshakes must carry an allowlisted
-   loopback ``Origin`` (browsers always send one); HTTP requests carrying an
-   ``Origin`` must also match. Cross-site drive-by traffic is rejected.
+2. **Origin validation** — a present-but-foreign ``Origin`` on websockets
+   or HTTP is a cross-site page (browsers always send ``Origin``). Sockets
+   additionally need the session whenever tokens are on — an allowlisted
+   ``Origin`` alone proves nothing against local processes, which can forge
+   it. Native mode skips the session check, tolerating embedded webviews
+   that omit the header (remote pages cannot omit it).
 3. **Per-launch token** (browser mode) — a random secret printed once to the
    server console bootstraps an ``HttpOnly; SameSite=Strict`` session cookie.
    This is the only control that also stops *other local users*: they can open
@@ -183,11 +186,15 @@ class LoopbackSecurityMiddleware:
             return
         origin = headers.get("origin", "")
         if scope["type"] == "websocket":
-            if origin not in config.allowed_origins:
+            # A present-but-foreign Origin is a cross-site page (browsers
+            # always send Origin, so it cannot be "missing" for them).
+            if origin and origin not in config.allowed_origins:
                 await send({"type": "websocket.close", "code": 4403})
                 return
-            # Same session requirement as HTTP: without it, a local client
-            # presenting forged headers could ride an active NiceGUI client.
+            # The session is required whenever tokens are on — even with an
+            # allowlisted Origin, which local processes can forge. Native
+            # mode (require_token=False) skips this, tolerating embedded
+            # webviews that omit the Origin header entirely.
             if config.require_token and not _session_valid(config, headers.get("cookie", "")):
                 await send({"type": "websocket.close", "code": 4403})
                 return

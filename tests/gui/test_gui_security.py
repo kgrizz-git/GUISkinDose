@@ -86,6 +86,8 @@ def _blocked_remote_hosts(text: str) -> set[str]:
         if host in _BLOCKED_FONT_HOSTS:
             hosts.add(host)
     return hosts
+
+
 def test_icon_font_is_bundled_locally() -> None:
     """The icon font must come from the package, never from Google Fonts."""
     href = gui_app.material_symbols_stylesheet_href()

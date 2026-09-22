@@ -101,8 +101,10 @@ three controls (see `src/guiskindose/gui/loopback_security.py`):
   and use the new console URL.
 - **Strict Host validation**: only the loopback authority is accepted, so DNS
   rebinding (`evil.com` resolving to `127.0.0.1`) is rejected.
-- **Origin validation**: websocket handshakes and cross-site HTTP requests
-  must carry a loopback origin.
+- **Origin validation**: a present-but-foreign `Origin` on websockets and
+  HTTP is a cross-site page (browsers always send `Origin`). Sockets need
+  the session whenever tokens are on — an allowlisted origin alone proves
+  nothing against local processes, which can forge it.
 
 Anyone logged into the same machine who obtains the launch URL (or an active
 session) sees the same shared state — OS accounts alone do not protect it, so

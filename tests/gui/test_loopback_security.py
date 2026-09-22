@@ -122,6 +122,18 @@ def test_websocket_requires_allowlisted_origin(live_config) -> None:
     assert _status(asyncio.run(_run(mw, _ws_scope()))) == 4403
 
 
+def test_websocket_missing_origin_with_session_passes(live_config) -> None:
+    """Browsers always send Origin, so a missing one is a non-browser client:
+    admitted with a session, rejected without (browser mode)."""
+    token, _ = live_config
+    mw = LoopbackSecurityMiddleware(_ok_app)
+    assert _status(asyncio.run(_run(mw, _ws_scope()))) == 4403
+    sent = asyncio.run(_run(mw, _http_scope(query=f"token={token}".encode("ascii"))))
+    cookie = _set_cookie(sent)
+    sent = asyncio.run(_run(mw, _ws_scope(cookie=cookie)))
+    assert sent and sent[0]["type"] == "websocket.accept"
+
+
 def test_websocket_requires_session_cookie(live_config) -> None:
     """Sockets skip nothing: no cookie (or a forged one) means no socket."""
     token, _ = live_config
@@ -158,6 +170,8 @@ def test_native_websocket_needs_no_cookie() -> None:
             )
         )
         assert _status(sent) == 4403
+        sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _ws_scope()))
+        assert sent and sent[0]["type"] == "websocket.accept"
     finally:
         configure_loopback_security(None)
 
