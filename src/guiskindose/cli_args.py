@@ -14,6 +14,23 @@ from guiskindose.cli_kerma_meter import add_kerma_meter_cli_arguments
 from guiskindose.constants import RUN_ARGUMENTS_MODE_GUI, RUN_ARGUMENTS_MODE_HEADLESS
 
 
+def _gui_port_value(raw: str) -> int:
+    """Parse ``--port``: 0 means OS-assigned, otherwise 1-65535.
+
+    Raises ``argparse.ArgumentTypeError`` (clean usage error, exit 2) instead
+    of letting an out-of-range value reach ``_resolve_port`` as an unhandled
+    ``ValueError``. ``_resolve_port`` keeps its own check for programmatic
+    callers.
+    """
+    try:
+        port = int(raw)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError(f"invalid port value: {raw!r}") from None
+    if port != 0 and not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"port out of range (0-65535): {port}")
+    return port
+
+
 def get_argument_parser(arguments) -> argparse.Namespace:
     """Parse CLI argv into an argparse Namespace for guiskindose."""
     parser = argparse.ArgumentParser(
@@ -88,7 +105,7 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
         "--port",
         required=False,
         default=None,
-        type=int,
+        type=_gui_port_value,
         dest="port",
         help=(
             "Loopback port for the GUI server (default: 8765). Pass 0 for an "
