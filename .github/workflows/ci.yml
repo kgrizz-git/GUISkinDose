@@ -240,15 +240,19 @@ jobs:
           if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
             # The weekly/manual compatibility sweep covers every supported Python on
             # Ubuntu and the oldest/newest versions on macOS (10x billing) and
-            # Windows (2x billing). Keep these expensive runners off the merge path.
+            # Windows (2x billing). Only one Windows job rides the merge path (below).
             CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"ubuntu-latest","python-version":"3.14"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.14"},{"os":"windows-latest","python-version":"3.11"},{"os":"windows-latest","python-version":"3.14"}]}'
           elif [[ "$EVENT_NAME" == "push" && "$REF" == "refs/heads/main" ]]; then
-            # Every merge gets the full supported-version range on inexpensive Ubuntu.
-            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"ubuntu-latest","python-version":"3.14"}]}'
+            # Every merge gets the full supported-version range on inexpensive Ubuntu,
+            # plus one Windows job: platform-specific failures (e.g. CRLF-sensitive
+            # byte hashes, issue #107) otherwise surface only on the weekly sweep.
+            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.11"},{"os":"ubuntu-latest","python-version":"3.12"},{"os":"ubuntu-latest","python-version":"3.13"},{"os":"ubuntu-latest","python-version":"3.14"},{"os":"windows-latest","python-version":"3.14"}]}'
           else
-            # PRs get a current-runtime signal quickly; main and the weekly sweep
-            # provide the remaining supported-version and OS coverage.
-            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.14"}]}'
+            # PRs get a current-runtime signal quickly, plus one Windows job so
+            # platform-specific failures surface before merge (issue #107); main
+            # and the weekly sweep provide the remaining supported-version and
+            # OS coverage.
+            CONFIG='{"include":[{"os":"ubuntu-latest","python-version":"3.14"},{"os":"windows-latest","python-version":"3.14"}]}'
           fi
           echo "config=$CONFIG" >> "$GITHUB_OUTPUT"
 

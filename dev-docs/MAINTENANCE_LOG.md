@@ -10,6 +10,19 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Windows CI manifest-hash failure from CRLF checkouts** (2026-09-21) —
+  scheduled `ci` failed only on `windows-latest` (issue #107):
+  `correction_validation.py` hashes raw CSV bytes while Windows checkouts
+  convert line endings without a `.gitattributes` policy. Added repo-wide
+  `*.csv text eol=lf`, plus one `windows-latest` / 3.14 job on the push and
+  PR build matrix so platform-specific failures surface before merge (the
+  full OS matrix still runs on schedule). Note: `.gitattributes` governs fresh
+  checkouts only — an existing Windows working tree keeps its CRLF copies
+  until `git add --renormalize .` or a fresh clone. The new job immediately caught a
+  second latent Windows-only failure: `test_resolve_explicit_and_warns_once`
+  asserted the POSIX-only `/abs/custom.db` is absolute (drive-relative, not
+  absolute, on Windows); it now builds the absolute path from `tmp_path`.
+
 - **Correction-data Phase D: wheel/sdist distribution proof** (2026-09-19) —
   `tests/unittests/test_packaging.py` asserts every manifest-declared
   `runtime_lookup` CSV plus the manifest JSON in the wheel (sdist file-list

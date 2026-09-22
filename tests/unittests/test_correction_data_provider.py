@@ -74,10 +74,12 @@ def test_resolve_defaults_to_packaged():
     assert resolve_corrections_source("corrections.db") == ("packaged", None)
 
 
-def test_resolve_explicit_and_warns_once(recwarn: pytest.WarningsRecorder):
+def test_resolve_explicit_and_warns_once(recwarn: pytest.WarningsRecorder, tmp_path: Path):
     source, path = resolve_corrections_source("custom.db")
     assert source == "explicit" and str(path) == "custom.db"
-    source, path = resolve_corrections_source("/abs/custom.db")
+    # tmp_path is absolute on every OS; a POSIX literal like "/abs/custom.db"
+    # is drive-relative (not absolute) on Windows (issue #107 follow-up).
+    source, path = resolve_corrections_source(str(tmp_path / "custom.db"))
     assert source == "explicit" and path is not None and path.is_absolute()
     assert len([w for w in recwarn.list if issubclass(w.category, DeprecationWarning)]) == 2
     resolve_corrections_source("other.db")
