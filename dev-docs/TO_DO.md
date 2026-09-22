@@ -42,7 +42,7 @@ be archived.
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Manual Smokes** — Compile and execute manual smokes for shipped features:
   - *Multi-exam*: multi-file upload, per-exam overrides, calculate, results accordion.
-  - *Correction safety / tube identity*: run the scenarios in [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation.
+  - *Correction safety / tube identity*: run the scenarios in [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation — unmatched model names the real scanner, GE-family unmatched claims no Tx/Tz auto-swap, ambiguous Plane B / DoseTrack map, valid Plane A, multi-exam mixed match/fallback.
   - *Settings phantom preview*: acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
   - *Rich export*: Export-tab modal in browser + native pywebview; Windows native file dialogs.
   - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
@@ -57,7 +57,7 @@ be archived.
   integration notes: [ADDITIONAL_PHANTOMS.md](ADDITIONAL_PHANTOMS.md). Fun/demo backlog:
   [FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md). Demo v1 + QA/demo gate / thick bariatric are
   archived under `plans/archive/`.
-- [ ] **Consider user-imported custom meshes** — explore a GUI/CLI pipeline so users can bring their own STL (or similar) meshes as patient phantoms: upload → unit/orientation/scale into the PSD frame → watertight/face-up validate → local (non-committed) cache → Settings selector + preview. Reuse ideas from `scripts/phantom_gen/ingest_fun_mesh.py` / `validate_phantom.py`; keep license/redistribution responsibility with the user (see [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md) for shippable vs local-only mesh policy).
+- [ ] **Consider user-imported custom meshes** — GUI/CLI pipeline for user-supplied STL phantoms: orient/scale into the PSD frame, watertight/face-up validate, local non-committed cache, Settings selector + preview (prior art: `scripts/phantom_gen/ingest_fun_mesh.py`, `validate_phantom.py`). License/redistribution stays with the user (see [references/fun_phantom_provenance.md](references/fun_phantom_provenance.md)).
 - [ ] **Simplified DICOM-only estimate** — investigate a fast pre-scan/fallback estimate from DICOM fields without
   the full phantom-mesh pipeline.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
@@ -74,7 +74,7 @@ be archived.
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
   behavior is stable.
-- [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same case to pin regression values (travel-direction conventions already confirmed). See [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md).
+- [ ] **GE coordinate fixture confirmation** — obtain one matched GE DICOM RDSR + tabular export from the same case to pin regression values (travel-direction conventions already confirmed). See [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) and [COORDINATE_CONVENTIONS_CLEANUP_PLAN.md](plans/archive/COORDINATE_CONVENTIONS_CLEANUP_PLAN.md) Task 7.
 - [ ] **Vendor coordinate validation** — confirm per-vendor export frames (beam position-field usage, gaps) and Philips double-correction risk against source RDSRs before expanding adapters. Code-level validation once fixtures exist (distinct from the GE acquisition above). See [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
 - [ ] **Patient orientation support (prone / decubitus + auto-detect)** — HFS/FFS already exist in settings, GUI, and
   geometry. Remaining: prone/decubitus positions and optional DICOM `PatientPosition` auto-detection. See
@@ -84,7 +84,7 @@ be archived.
 ### GUI / UX
 
 - [ ] **GUI network-exposure hardening** — loopback-by-default enforced (`gui/app.py:411`); threat model + decision-first recommendations: [assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Next: Step-0 serve-vs-refuse decision, then banner → random-port → token-spike packages.
-- [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path.
+- [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
@@ -120,7 +120,7 @@ be archived.
   [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
 - [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
-  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. Current state: Dependabot alerts #2/#3/#4 stay open until semgrep relaxes its `mcp==1.23.3` pin (`mcp` is transitive dev-only, not exploitable here); `nltk` left with the removed `safety` dep (2026-09-03). CI's `uv audit` is the gate that matters.
+  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. Current state: Dependabot alerts #2/#3/#4 stay open until semgrep relaxes its `mcp==1.23.3` pin (`mcp` is transitive dev-only, not exploitable here); `nltk` advisory resolved when `safety` was removed (2026-09-03). CI's `uv audit` is the gate that matters.
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
@@ -131,14 +131,10 @@ be archived.
   once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
-- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx
-  execution of `docs/source/getting_started/getting_started.ipynb` failed with
-  `RuntimeError: Expected HTML output but dose calculation returned no data`
-  (plot modes + html regression from 2026-06-07; fix plan archived at
+- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx execution of the getting-started notebook fails on a plot/HTML regression (error record + fix plan archived at
   [NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md)).
   Remaining: confirm the docs build is green (watch for a second latent failure
-  behind it, e.g. the `tqdm_notebook.disp` incompatibility seen in CI build
-  logs); then remove this item.
+  behind it), then remove this item.
 - [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
   Playwright/CDP only for browser-specific gaps.
 - [ ] **Coordinate diagrams** — expand and validate `VENDOR_COORDINATE_SYSTEMS.md` diagrams against vendor data.
