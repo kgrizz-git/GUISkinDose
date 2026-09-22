@@ -266,6 +266,15 @@ def test_non_ascii_query_rejected(live_config) -> None:
     assert _status(sent) == 403
 
 
+def test_percent_encoded_unicode_token_rejected_without_error(live_config) -> None:
+    """%C3%A9 decodes past the ASCII-bytes guard; it must 403, not 500."""
+    _, _ = live_config
+    sent = asyncio.run(
+        _run(LoopbackSecurityMiddleware(_ok_app), _http_scope(query=b"token=%C3%A9"))
+    )
+    assert _status(sent) == 403
+
+
 def test_malformed_cookie_treated_as_no_session(live_config, monkeypatch) -> None:
     _, _ = live_config
     import guiskindose.gui.loopback_security as loopback_security

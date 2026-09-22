@@ -274,13 +274,14 @@ line refs are investigation-time.*
 *Reviewed alternatives (declined with rationale):* a POST-body/fragment
 bootstrap handoff instead of the query token — rejected. The query token does
 appear once in uvicorn access logs, but per-launch rotation bounds that
-exposure to the current run (a logged token dies on restart), while console
-and browser-history exposure is identical in both designs; a fragment design
+exposure to the current run (the token dies on restart). A fragment design
+would additionally keep the token out of access logs and browser history, but
+the console print (needed for manual open) remains in both designs, and it
 would need a custom JS bootstrap page plus a new token-gated endpoint —
-complexity in the most sensitive flow for a log line of an already-expired
-secret. Non-ASCII token bytes cannot reach the hash comparison (the ASCII
-decode guard returns 403 first, pinned by
-`test_non_ascii_query_rejected`) — extra validation there would be dead code.
+complexity in the most sensitive flow for a modest narrowing. Non-ASCII
+token bytes are rejected on the 403 path: raw non-ASCII fails the query
+decode guard, and percent-decoded Unicode is refused before hashing
+(`test_percent_encoded_unicode_token_rejected`).
 
 Print a random token to the server console at startup in network mode;
 consume it once in a bootstrap exchange that issues an `HttpOnly`,

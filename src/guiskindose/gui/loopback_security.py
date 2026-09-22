@@ -116,6 +116,10 @@ def _token_valid(config: LoopbackSecurityConfig, query_string: bytes) -> bool:
     for name, value in params:
         if name != TOKEN_QUERY_PARAM:
             continue
+        # Percent-decoding can yield non-ASCII text from pure-ASCII bytes
+        # (e.g. token=%C3%A9); reject it on the 403 path, never hash it.
+        if not value.isascii():
+            continue
         if hmac.compare_digest(
             hashlib.sha256(value.encode("ascii")).digest(), config.launch_token_hash
         ):
