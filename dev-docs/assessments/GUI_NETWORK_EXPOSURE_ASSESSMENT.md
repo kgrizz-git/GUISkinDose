@@ -1,7 +1,8 @@
-> **NEEDS REVIEW** — This assessment has not yet been reviewed by a domain
-> expert, and its Step-0 refuse-vs-serve recommendation is a maintainer
-> decision, not a decided outcome. Code-path claims are verified against the
-> tree.
+> **Status 2026-09-22** — Step 0 is decided: non-loopback is refused outright
+> (see §4). §1.1 and the Summary describe the pre-decision state for the
+> record; the current behavior is loopback-only (§4 + code references below).
+> Code-path claims verified against the tree 2026-09-21, line references
+> refreshed 2026-09-22.
 
 # GUI Network-Exposure Hardening Assessment
 
@@ -15,48 +16,52 @@ keeping localhost UX unchanged.
 
 ## Summary
 
-Accidental exposure is already closed: loopback-by-default is enforced in
-code (`src/guiskindose/gui/app.py:411`), a non-loopback `--host` without
-`--allow-network` raises instead of serving, and regression tests pin both
-behaviors. What remains is **deliberate** exposure plus one often-missed
-property of the default: loopback is per-host, not per-user, and every
-connected browser — local or LAN — shares one unauthenticated `AppState`
-singleton with full privileges.
+Off-host serving is refused by construction: the GUI always binds the literal
+`127.0.0.1` (`_resolve_bind_host`, `src/guiskindose/gui/app.py:429`,
+normalizes `localhost`, raises `non_loopback_gui_binding_refused` on anything
+else), the `--host`/`--allow-network` CLI surface is removed, and regression
+tests pin default/normalized/refused behavior. What remains is one often-missed
+property of the loopback default: loopback is per-host, not per-user, and every
+local browser shares one unauthenticated `AppState` singleton with full
+privileges (see §1.2, still current).
 
-**Recommendation:** keep opt-in LAN serving (refusal would kill legitimate
-workflows; the typo-risk the gate was built for is already closed), but bound
-it: (A) in-GUI network-mode banner + startup banner + doc tweaks, (B) port
-randomization in network mode, (C) a spiked single-use token gate, and
-explicitly defer (D) per-client state / real auth. Step 0 is a maintainer
-decision — see §4.
+**Pre-decision record (kept for the threat-model reasoning):** accidental
+exposure was already closed by loopback-by-default plus the explicit-ack gate;
+the open question was deliberate LAN serving. **Recommendation at the time:**
+keep opt-in LAN serving with mitigations (A) network-mode banner + startup
+banner + doc tweaks, (B) port randomization in network mode, (C) a spiked
+single-use token gate, explicitly deferring (D) per-client state / real auth.
+Step 0 has since been decided as refusal — Packages A–C are moot as specified
+(see §4 for what survives and the residual loopback risks).
 
 ---
 
 ## 1. What exists today
 
-### 1.1 Loopback default + explicit-acknowledgement gate (shipped)
+### 1.1 Loopback-only refusal (shipped 2026-09-22; gate history below)
 
-- `_resolve_bind_host` (`src/guiskindose/gui/app.py:411`): unset host binds
-  `127.0.0.1`; anything outside `127.0.0.1`/`localhost` without
-  `allow_network` raises `ValueError`
-  (`network_gui_binding_requires_explicit_acknowledgement`), otherwise logs a
-  value-free warning. IPv6 `::1` is conservatively treated as network (not in
-  the exempt tuple) — correct behavior, no change needed.
-- `run_gui` docstring (`src/guiskindose/gui/app.py:424`) states no-auth,
-  shared-state, and trusted-network-only framing; the single dispatch in
-  `main.py:552` (mirrored in `__main__.py:63`) means browser and `--native`
-  modes share the same gate — native still binds `host:port` under the hood
-  (`ui.run` at `src/guiskindose/gui/app.py:454`), so `--native --host
-  0.0.0.0` without the flag is refused too.
-- CLI help (`src/guiskindose/cli_args.py:202`, flag at `:217`) and README
-  (`README.md:87`) both warn: no authentication, PHI-derived data, trusted
-  network + own access controls. README enumerates LAN consequences plainly
-  (`README.md:98`): anyone reaching the port can view loaded patient data,
-  trigger exports, and mutate shared settings.
-- Regression tests (`tests/gui/test_gui_security.py:27`, `:35`, `:43`) pin
-  localhost-by-default, acknowledged-LAN passthrough, and unacknowledged
-  refusal. Upload size caps ride in the same file (DoS bounding, orthogonal
-  to network auth).
+- `_resolve_bind_host` (`src/guiskindose/gui/app.py:429`): only the literal
+  `127.0.0.1` is accepted (`localhost` is normalized to it, never resolved);
+  anything else — including IPv6 `::1` (fail-closed) — raises `ValueError`
+  (`non_loopback_gui_binding_refused`). The `--host`/`--allow-network` CLI
+  flags are removed; `run_gui` (`src/guiskindose/gui/app.py:447`) keeps a
+  validated `host` knob for programmatic callers only.
+- The single dispatch in `main.py:554` (mirrored in `__main__.py:60`) means
+  browser and `--native` modes share the same refusal — native still binds
+  `host:port` under the hood (`ui.run` at `src/guiskindose/gui/app.py:477`),
+  so there is no native back door to network serving.
+- README (`README.md` "Privacy / network") states the refusal plus the
+  per-host-not-per-user consequence. Regression tests
+  (`tests/gui/test_gui_security.py`) pin localhost-by-default, literal
+  normalization, and parametrized refusal. Upload size caps ride in the same
+  file (DoS bounding, orthogonal to network auth).
+
+*Gate history (superseded, kept for the record):* before refusal, an unset
+host bound `127.0.0.1` while a non-loopback `--host` required the explicit
+`--allow-network` acknowledgement (`network_gui_binding_requires_explicit_acknowledgement`),
+with a value-free warning on acknowledged LAN binds. The acknowledgement model
+was retired because even admitted users shared one state with no isolation —
+see §4.
 ### 1.2 Single shared process-global state (by design, load-bearing)
 
 - `state = AppState()` (`src/guiskindose/gui/state.py:137`) is a module-level
@@ -67,11 +72,11 @@ decision — see §4.
   nothing. Every connected browser sees and mutates the same patients,
   settings, and results — there are no sessions, no users, no read-only
   viewers.
-- Fixed port `8765` with no `--port` flag (`src/guiskindose/gui/app.py:460`;
-  `cli_args.py` has no port option): predictable and scannable on any host
-  that can route to the machine. `reload=False` and a 30 s client-reconnect
-  window (`src/guiskindose/gui/app.py:459`, `:463`) are sane; neither
-  substitutes for access control — any browser pointed at the URL, new or
+- Fixed port `8765` with no `--port` flag (`src/guiskindose/gui/app.py:483`;
+  `cli_args.py` has no port option): predictable for drive-by local pages.
+  `reload=False` and a 30 s client-reconnect window
+  (`src/guiskindose/gui/app.py:482`, `:486`) are sane; neither substitutes
+  for access control — any local browser pointed at the URL, new or
   reattached, is a full-privilege client.
 
 ### 1.3 Partially shipped neighbours

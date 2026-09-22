@@ -10,4 +10,4 @@ include src/guiskindose/normalization_settings.json
 recursive-include src/guiskindose/gui/help *.md
 # Bundled Material Symbols icon font + stylesheet, served locally so the GUI
 # makes no third-party requests (attribution in gui/static/fonts/NOTICE_*).
-recursive-include src/guiskindose/gui/static *.woff2 *.css
+recursive-include src/guiskindose/gui/static *.woff2 *.css NOTICE*
