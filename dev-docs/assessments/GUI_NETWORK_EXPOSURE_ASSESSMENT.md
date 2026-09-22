@@ -32,7 +32,9 @@ exposure was already closed by loopback-by-default plus the explicit-ack gate;
 the open question was deliberate LAN serving. **Recommendation at the time:**
 keep opt-in LAN serving with mitigations (A) network-mode banner + startup
 banner + doc tweaks, (B) port randomization in network mode, (C) a spiked
-single-use token gate, explicitly deferring (D) per-client state / real auth.
+token gate (proposed as single-use; shipped instead as a launch-lifetime
+bearer — deliberately reusable so a cleared cookie or second profile doesn't
+lock the operator out), explicitly deferring (D) per-client state / real auth.
 Step 0 has since been decided as refusal — Packages A–C are moot as specified
 (see §4 for what survives and the residual loopback risks).
 
@@ -271,9 +273,10 @@ line refs are investigation-time.*
 
 Print a random token to the server console at startup in network mode;
 consume it once in a bootstrap exchange that issues an `HttpOnly`,
-`SameSite=Strict` session cookie, then require that cookie on HTTP routes,
-websocket upgrades, static assets, downloads, and reconnects; localhost
-exempt. Do **not** require a query token on every request: query strings leak
+`SameSite=Strict` session cookie (single-use was the proposal; the shipped
+loopback gate above keeps the token valid until restart instead), then
+require that cookie on HTTP routes, websocket upgrades, static assets,
+downloads, and reconnects; localhost exempt. Do **not** require a query token on every request: query strings leak
 through browser history and `Referer` headers — and, at the time of writing,
 the app loaded an external Google stylesheet (`src/guiskindose/gui/app.py:160`
 then), so a query token would have been disclosed to a third party on every

@@ -140,6 +140,28 @@ def test_websocket_requires_session_cookie(live_config) -> None:
     assert sent and sent[0]["type"] == "websocket.accept"
 
 
+def test_native_websocket_needs_no_cookie() -> None:
+    """Native exemption covers sockets too (Host/Origin still enforced)."""
+    configure_loopback_security(LoopbackSecurityConfig(require_token=False))
+    try:
+        sent = asyncio.run(
+            _run(
+                LoopbackSecurityMiddleware(_ok_app),
+                _ws_scope(origin="http://127.0.0.1:8765"),
+            )
+        )
+        assert sent and sent[0]["type"] == "websocket.accept"
+        sent = asyncio.run(
+            _run(
+                LoopbackSecurityMiddleware(_ok_app),
+                _ws_scope(origin="http://evil.com"),
+            )
+        )
+        assert _status(sent) == 4403
+    finally:
+        configure_loopback_security(None)
+
+
 def test_bootstrap_issues_cookie_then_session_passes(live_config) -> None:
     token, _ = live_config
     mw = LoopbackSecurityMiddleware(_ok_app)
