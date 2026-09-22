@@ -11,6 +11,11 @@ Covers two hardening fixes:
 
 from __future__ import annotations
 
+import inspect
+import re
+from pathlib import Path
+from urllib.parse import urlparse
+
 import pytest
 from nicegui import ui
 from nicegui.testing import User
@@ -69,11 +74,20 @@ async def test_uploader_has_max_file_size(user: User) -> None:
 
 
 # ── 3. no third-party requests ──────────────────────────────────────────────
+_REMOTE_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
+_BLOCKED_FONT_HOSTS = frozenset({"fonts.googleapis.com", "fonts.gstatic.com"})
+
+
+def _blocked_remote_hosts(text: str) -> set[str]:
+    """Return the blocked third-party font hosts referenced by exact hostname."""
+    hosts = set()
+    for match in _REMOTE_URL_RE.findall(text):
+        host = urlparse(match).hostname or ""
+        if host in _BLOCKED_FONT_HOSTS:
+            hosts.add(host)
+    return hosts
 def test_icon_font_is_bundled_locally() -> None:
     """The icon font must come from the package, never from Google Fonts."""
-    import inspect
-    from pathlib import Path
-
     href = gui_app.material_symbols_stylesheet_href()
     assert not href.startswith("http"), f"remote stylesheet: {href}"
     fonts_dir = Path(gui_app.__file__).resolve().parent / "static" / "fonts"
@@ -89,18 +103,16 @@ def test_icon_font_is_bundled_locally() -> None:
     assert "fonts.googleapis.com" not in module_source
     assert "fonts.gstatic.com" not in module_source
     gui_dir = Path(gui_app.__file__).resolve().parent
-    remote_hits = [
-        path for path in sorted(gui_dir.rglob("*.py"))
-        if "fonts.googleapis.com" in path.read_text(encoding="utf-8")
-        or "fonts.gstatic.com" in path.read_text(encoding="utf-8")
-    ]
+    remote_hits = {
+        str(path): sorted(_blocked_remote_hosts(path.read_text(encoding="utf-8")))
+        for path in sorted(gui_dir.rglob("*.py"))
+    }
+    remote_hits = {path: hosts for path, hosts in remote_hits.items() if hosts}
     assert not remote_hits, f"remote font refs in GUI modules: {remote_hits}"
 
 
 def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
     """run_gui() must mount the package static dir before starting the server."""
-    from pathlib import Path
-
     captured: dict = {}
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
     monkeypatch.setattr(

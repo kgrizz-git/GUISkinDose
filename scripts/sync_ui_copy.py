@@ -25,10 +25,8 @@ def repo_root_from_script() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def main(*, check: bool) -> int:
-    root = repo_root_from_script()
-    source = root / SOURCE_REPO_FILE
-    target = root / TARGET_REPO_FILE
+def sync(source: Path, target: Path, *, check: bool) -> int:
+    """Mirror ``source`` to ``target`` (or report drift with ``check``)."""
     if not source.is_file():
         sys.stderr.write(f"error: source catalog does not exist: {source}\n")
         return 1
@@ -44,16 +42,35 @@ def main(*, check: bool) -> int:
             "scripts/sync_ui_copy.py to fix.\n"
         )
         return 1
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(source.read_bytes())
-    print(f"mirrored {SOURCE_REPO_FILE} -> {TARGET_REPO_FILE}")
+    print(f"mirrored {source.name} -> {target}")
     return 0
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Mirror dev-docs/ui_copy.json to src/guiskindose/gui/ui_copy.json "
+            "(or check with --check)."
+        )
+    )
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Exit nonzero when the bundled copy drifts instead of fixing it.",
+        help="Exit non-zero if the bundled copy drifts; do not write.",
     )
-    raise SystemExit(main(check=parser.parse_args().check))
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=repo_root_from_script(),
+        help="Repository root (default: parent of scripts/).",
+    )
+    args = parser.parse_args(argv)
+
+    repo_root = args.repo_root.resolve()
+    return sync(repo_root / SOURCE_REPO_FILE, repo_root / TARGET_REPO_FILE, check=args.check)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
