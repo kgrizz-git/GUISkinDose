@@ -72,8 +72,11 @@ wired in `run_gui` before `ui.run`):
   and websocket traffic alike. Only the token hash is retained
   (constant-time compare); stale tabs die on restart.
 - **strict Host validation** (loopback authority only — DNS rebinding
-  rejected) and **Origin checks** on websocket handshakes and cross-site
-  HTTP, enforced via a pure-ASGI middleware (unit-tested without a server).
+  rejected) and **Origin checks**: a present-but-foreign Origin is always
+  rejected; sockets additionally need the session whenever tokens are on
+  (an allowlisted Origin alone proves nothing against local processes,
+  which can forge it). Native skips the session check, tolerating embedded
+  webviews that omit Origin entirely (remote pages cannot omit it).
 - Native mode keeps Host/Origin without the token (embedded window is the
   trusted client); another local user can still reach its port.
 
@@ -265,11 +268,11 @@ scan-noise reduction only — never as access control.
 
 *Shipped 2026-09-22 in loopback-adapted form (no spike needed — no network
 mode): per-launch token printed to the console bootstraps an `HttpOnly;
-SameSite=Strict` session cookie in browser mode; strict Host validation and
-Origin checks on websocket/state-changing routes apply in both modes (native:
-Host/Origin without the token). The Google-font query-token caveat below is
-moot — the font has been vendored and served locally since 2026-09-22 — and
-line refs are investigation-time.*
+SameSite=Strict` session cookie in browser mode (required on HTTP and
+websocket traffic alike); strict Host validation and Origin checks apply in
+both modes with the native session exemption above. The Google-font
+query-token caveat below is moot — the font has been vendored and served
+locally since 2026-09-22 — and line refs are investigation-time.*
 
 *Reviewed alternatives (declined with rationale):* a POST-body/fragment
 bootstrap handoff instead of the query token — rejected. The query token does
