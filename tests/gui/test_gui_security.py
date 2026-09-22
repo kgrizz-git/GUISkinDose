@@ -242,11 +242,30 @@ def test_browser_auto_open_waits_for_server(monkeypatch) -> None:
     opened: list = []
     monkeypatch.setattr(gui_app.webbrowser, "open", lambda url: opened.append(url))
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(gui_app, "probe_own_server", lambda *args, **kwargs: True)
     gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
     deadline = time_module.monotonic() + 5.0
     while not opened and time_module.monotonic() < deadline:
         time_module.sleep(0.05)
     assert opened == ["http://127.0.0.1:8765/?token=t"]
+
+
+def test_browser_auto_open_refuses_foreign_listener(monkeypatch, capsys) -> None:
+    """A squatter on the port gets guidance, never the token URL."""
+    import time as time_module
+
+    opened: list = []
+    monkeypatch.setattr(gui_app.webbrowser, "open", lambda url: opened.append(url))
+    monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(gui_app, "probe_own_server", lambda *args, **kwargs: False)
+    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    deadline = time_module.monotonic() + 5.0
+    seen = ""
+    while "not serving this GUI" not in seen and time_module.monotonic() < deadline:
+        time_module.sleep(0.05)
+        seen += capsys.readouterr().out
+    assert opened == []
+    assert "not serving this GUI" in seen
 
 
 def test_browser_auto_open_stays_quiet_without_server(monkeypatch, capsys) -> None:
@@ -264,6 +283,7 @@ def test_browser_auto_open_stays_quiet_without_server(monkeypatch, capsys) -> No
         raise RuntimeError("no browser")
 
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(gui_app, "probe_own_server", lambda *args, **kwargs: True)
     monkeypatch.setattr(gui_app.webbrowser, "open", _boom)
     gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
     deadline = time_module.monotonic() + 5.0

@@ -34,6 +34,7 @@ import hashlib
 import hmac
 import secrets
 from dataclasses import dataclass, field, replace
+from http import client as http_client
 from http.cookies import SimpleCookie
 from typing import Any
 from urllib.parse import parse_qsl, urlencode
@@ -175,6 +176,28 @@ def _redirect_location(scope: dict, rest: bytes) -> bytes:
     if rest:
         location += b"?" + rest
     return location
+
+
+def probe_own_server(host: str, port: int, *, timeout: float = 2.0) -> bool:
+    """Return True when the listener answers like our middleware.
+
+    A bare ``/`` with no session must come back 403 carrying the exact
+    refusal body. Anything else — a foreign service squatting a raced or
+    stale port, an error page, silence — means the token URL must not
+    auto-open there.
+    """
+    if host not in ("127.0.0.1", "localhost") or not 1 <= port <= 65535:
+        return False
+    try:
+        connection = http_client.HTTPConnection(host, port, timeout=timeout)
+        try:
+            connection.request("GET", "/")
+            response = connection.getresponse()
+            return response.status == 403 and response.read() == _FORBIDDEN_BODY
+        finally:
+            connection.close()
+    except (OSError, ValueError, http_client.HTTPException):
+        return False
 
 
 async def _respond(send: Any, status: int, body: bytes, headers: list[tuple[bytes, bytes]] | None = None) -> None:

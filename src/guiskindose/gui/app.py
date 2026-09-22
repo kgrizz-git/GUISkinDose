@@ -37,6 +37,7 @@ from .loopback_security import (
     LoopbackSecurityMiddleware,
     configure_loopback_security,
     generate_launch_token,
+    probe_own_server,
 )
 from .native_geometry import register_native_geometry_tracking
 from .notifications import install_notification_defaults
@@ -490,6 +491,12 @@ def _open_browser_when_ready(url: str, host: str = "127.0.0.1", port: int = 8765
 
     def _wait_and_open() -> None:
         if not _wait_for_port(host, port):
+            return
+        if not probe_own_server(host, port):
+            print(
+                f"Port {port} is not serving this GUI; open the console "
+                f"launch URL manually once it is: {url}"
+            )
             return
         try:
             webbrowser.open(url)

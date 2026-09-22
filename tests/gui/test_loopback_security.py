@@ -300,3 +300,108 @@ def test_malformed_cookie_treated_as_no_session(live_config, monkeypatch) -> Non
     monkeypatch.setattr(loopback_security, "SimpleCookie", lambda: _Unparseable())
     sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _http_scope(cookie="x=y")))
     assert _status(sent) == 403
+
+
+def _config_for_port(port: int, *, require_token: bool = True):
+    from guiskindose.gui.loopback_security import LoopbackSecurityConfig
+
+    return LoopbackSecurityConfig.for_port(port, require_token=require_token)
+
+
+def test_custom_port_scopes_rejection(live_config) -> None:
+    """A config for :9999 rejects :8765 Host/Origin values, accepts its own."""
+    token, live = live_config
+    from dataclasses import replace
+
+    import guiskindose.gui.loopback_security as loopback_security
+
+    configure_loopback_security(
+        replace(_config_for_port(9999), launch_token_hash=live.launch_token_hash)
+    )
+    try:
+        mw = LoopbackSecurityMiddleware(_ok_app)
+        assert (
+            _status(
+                asyncio.run(
+                    _run(
+                        mw,
+                        _http_scope(
+                            host="127.0.0.1:8765",
+                            origin="http://127.0.0.1:8765",
+                            query=f"token={token}".encode("ascii"),
+                        ),
+                    )
+                )
+            )
+            == 400
+        )
+        sent = asyncio.run(
+            _run(mw, _http_scope(host="127.0.0.1:9999", query=f"token={token}".encode("ascii")))
+        )
+        assert _status(sent) == 302
+        cookie = _set_cookie(sent)
+        sent = asyncio.run(
+            _run(
+                mw,
+                _ws_scope(
+                    host="127.0.0.1:9999", origin="http://127.0.0.1:9999", cookie=cookie
+                ),
+            )
+        )
+        assert sent and sent[0]["type"] == "websocket.accept"
+        sent = asyncio.run(
+            _run(
+                mw,
+                _ws_scope(
+                    host="127.0.0.1:9999", origin="http://127.0.0.1:8765", cookie=cookie
+                ),
+            )
+        )
+        assert _status(sent) == 4403
+    finally:
+        configure_loopback_security(None)
+    assert loopback_security.get_loopback_security_config() is None
+
+
+def _serve_forever(server) -> None:
+    server.serve_forever(poll_interval=0.05)
+
+
+def test_probe_own_server_matches_refusal_signature() -> None:
+    """The auto-open gate opens only for our exact 403 refusal body."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from guiskindose.gui.loopback_security import _FORBIDDEN_BODY, probe_own_server
+
+    bodies: dict[int, tuple[int, bytes]] = {}
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            status, body = bodies[self.server.server_port]
+            self.send_response(status)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args) -> None:
+            pass
+
+    def _run_server(status: int, body: bytes) -> int:
+        server = HTTPServer(("127.0.0.1", 0), _Handler)
+        port = server.server_address[1]
+        bodies[port] = (status, body)
+        thread = threading.Thread(target=_serve_forever, args=(server,), daemon=True)
+        thread.start()
+        return port
+
+    own = _run_server(403, _FORBIDDEN_BODY)
+    assert probe_own_server("127.0.0.1", own) is True
+    assert probe_own_server("127.0.0.1", _run_server(403, b"forbidden")) is False
+    assert probe_own_server("127.0.0.1", _run_server(200, b"ok")) is False
+    import socket as socket_module
+
+    with socket_module.socket(socket_module.AF_INET, socket_module.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        closed_port = probe.getsockname()[1]
+    assert probe_own_server("127.0.0.1", closed_port, timeout=0.5) is False
