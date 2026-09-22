@@ -160,8 +160,9 @@ def test_run_gui_native_skips_token_but_keeps_host_checks(monkeypatch) -> None:
     gui_app.run_gui(native=True)
     assert captured["show"] is True
     assert opened == []
-    assert get_loopback_security_config() is not None
-    assert get_loopback_security_config().require_token is False
+    config = get_loopback_security_config()
+    assert config is not None
+    assert config.require_token is False
 
 
 def test_wait_for_port_detects_open_and_closed_ports() -> None:
