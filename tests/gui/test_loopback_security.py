@@ -47,10 +47,12 @@ def _http_scope(
     }
 
 
-def _ws_scope(*, host: str = "127.0.0.1:8765", origin: str = "") -> dict:
+def _ws_scope(*, host: str = "127.0.0.1:8765", origin: str = "", cookie: str = "") -> dict:
     headers = [(b"host", host.encode("latin-1"))]
     if origin:
         headers.append((b"origin", origin.encode("latin-1")))
+    if cookie:
+        headers.append((b"cookie", cookie.encode("latin-1")))
     return {"type": "websocket", "path": "/socket.io/", "headers": headers}
 
 
@@ -118,7 +120,23 @@ def test_websocket_requires_allowlisted_origin(live_config) -> None:
     mw = LoopbackSecurityMiddleware(_ok_app)
     assert _status(asyncio.run(_run(mw, _ws_scope(origin="http://evil.com")))) == 4403
     assert _status(asyncio.run(_run(mw, _ws_scope()))) == 4403
-    sent = asyncio.run(_run(mw, _ws_scope(origin="http://127.0.0.1:8765")))
+
+
+def test_websocket_requires_session_cookie(live_config) -> None:
+    """Sockets skip nothing: no cookie (or a forged one) means no socket."""
+    token, _ = live_config
+    mw = LoopbackSecurityMiddleware(_ok_app)
+    origin = "http://127.0.0.1:8765"
+    assert _status(asyncio.run(_run(mw, _ws_scope(origin=origin)))) == 4403
+    assert (
+        _status(
+            asyncio.run(_run(mw, _ws_scope(origin=origin, cookie=f"{SESSION_COOKIE_NAME}=tampered")))
+        )
+        == 4403
+    )
+    sent = asyncio.run(_run(mw, _http_scope(query=f"token={token}".encode("ascii"))))
+    cookie = _set_cookie(sent)
+    sent = asyncio.run(_run(mw, _ws_scope(origin=origin, cookie=cookie)))
     assert sent and sent[0]["type"] == "websocket.accept"
 
 

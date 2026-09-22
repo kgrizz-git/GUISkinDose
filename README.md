@@ -93,10 +93,11 @@ reside instead.
 Loopback binding is not an authentication boundary, so browser mode adds
 three controls (see `src/guiskindose/gui/loopback_security.py`):
 
-- A **per-launch token**: the console prints a one-time launch URL with a
-  random secret, and the browser opens it automatically. Only that URL
-  bootstraps a session (session cookie); every other request needs the
-  cookie. Stale tabs and old URLs stop working after each restart — relaunch
+- A **per-launch token**: the console prints a launch URL with a random secret (valid until the
+  server restarts — deliberately reusable, so a second browser profile or a
+  cleared cookie doesn't lock you out), and the browser opens it automatically.
+  Only that URL bootstraps a session (session cookie); every other request —
+  HTTP and websocket alike — needs the cookie. Stale tabs and old URLs stop working after each restart — relaunch
   and use the new console URL.
 - **Strict Host validation**: only the loopback authority is accepted, so DNS
   rebinding (`evil.com` resolving to `127.0.0.1`) is rejected.

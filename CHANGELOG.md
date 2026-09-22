@@ -32,13 +32,14 @@ That keeps SemVer and contributor history organized.
 ### Security
 
 - **Per-launch token + Host/Origin enforcement for the GUI** (2026-09-22) —
-  browser mode prints a one-time launch URL (random per-launch token
-  bootstrapping an `HttpOnly; SameSite=Strict` session cookie) and enforces
-  strict Host validation plus Origin checks on websockets and cross-site
-  requests, closing DNS-rebinding and drive-by vectors; the browser
-  auto-opens the launch URL instead of the bare address. Native mode keeps
-  Host/Origin checks without the token. Stale tabs and old URLs stop working
-  after each restart. See `src/guiskindose/gui/loopback_security.py`.
+  browser mode prints a launch URL (random per-launch token, valid until
+  restart, bootstrapping an `HttpOnly; SameSite=Strict` session cookie
+  required on HTTP and websocket traffic) and enforces strict Host
+  validation plus Origin checks on websockets and cross-site requests,
+  closing DNS-rebinding and drive-by vectors; the browser auto-opens the
+  launch URL instead of the bare address. Native mode keeps Host/Origin
+  checks without the token. Stale tabs and old URLs stop working after each
+  restart. See `src/guiskindose/gui/loopback_security.py`.
 - **Bundled icon font; no third-party requests** (2026-09-22) — the GUI served
   its Material Symbols icon font from Google Fonts on every fresh page load
   (IP + `Referer` to Google, broken icons on air-gapped networks). The font

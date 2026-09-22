@@ -543,11 +543,14 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
     show_browser = native
     bootstrap_url = ""
     if launch_token is not None:
-        # The auto-opened browser must carry the one-time token; ui.run's
+        # The auto-opened browser must carry the launch token; ui.run's
         # show=True would open the bare URL (403), so open it ourselves.
         bootstrap_url = f"http://127.0.0.1:8765/?{TOKEN_QUERY_PARAM}={launch_token}"
         print(f"GUISkinDose GUI: open {bootstrap_url}")
-        print("This one-time launch URL grants full access to the GUI on this machine.")
+        print(
+            "This launch URL is the only key: anyone on this machine with it "
+            "gains full access. It stays valid until the server restarts."
+        )
         _open_browser_when_ready(bootstrap_url)
 
     try:

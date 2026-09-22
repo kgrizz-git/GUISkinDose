@@ -64,10 +64,11 @@ Refusal keeps remote machines away but is not an authentication boundary, so
 browser mode additionally ships (`src/guiskindose/gui/loopback_security.py`,
 wired in `run_gui` before `ui.run`):
 
-- a **per-launch token**: random secret printed once to the console as a
-  one-time launch URL (auto-opened when the port accepts connections);
-  bootstraps an `HttpOnly; SameSite=Strict` session cookie. Only the token
-  hash is retained (constant-time compare); stale tabs die on restart.
+- a **per-launch token**: random secret printed to the console as a launch
+  URL (valid until restart, auto-opened when the port accepts connections);
+  bootstraps an `HttpOnly; SameSite=Strict` session cookie required on HTTP
+  and websocket traffic alike. Only the token hash is retained
+  (constant-time compare); stale tabs die on restart.
 - **strict Host validation** (loopback authority only — DNS rebinding
   rejected) and **Origin checks** on websocket handshakes and cross-site
   HTTP, enforced via a pure-ASGI middleware (unit-tested without a server).

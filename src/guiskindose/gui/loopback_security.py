@@ -43,7 +43,7 @@ TOKEN_QUERY_PARAM = "token"
 _BAD_HOST_BODY = b"unexpected host"
 _FORBIDDEN_BODY = (
     b"forbidden: restart the GUI and open the console URL "
-    b"(it carries a one-time launch token)"
+    b"(it carries the launch token)"
 )
 
 
@@ -180,6 +180,11 @@ class LoopbackSecurityMiddleware:
         origin = headers.get("origin", "")
         if scope["type"] == "websocket":
             if origin not in config.allowed_origins:
+                await send({"type": "websocket.close", "code": 4403})
+                return
+            # Same session requirement as HTTP: without it, a local client
+            # presenting forged headers could ride an active NiceGUI client.
+            if config.require_token and not _session_valid(config, headers.get("cookie", "")):
                 await send({"type": "websocket.close", "code": 4403})
                 return
             await self.app(scope, receive, send)
