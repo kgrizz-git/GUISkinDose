@@ -378,13 +378,13 @@ def test_probe_own_server_matches_refusal_signature() -> None:
 
     class _Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
-            status, body = bodies[self.server.server_port]
+            status, body = bodies[self.server.server_address[1]]
             self.send_response(status)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, *args) -> None:
+        def log_message(self, format: str, *args: object) -> None:
             pass
 
     def _run_server(status: int, body: bytes) -> int:
