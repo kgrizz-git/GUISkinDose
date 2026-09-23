@@ -209,6 +209,13 @@ A:
 
 #### Phase 0 findings (surveyed 2026-09-22; geometry columns only, no identifiers)
 
+Provenance: read-only blobless sparse clone of Bitbucket
+`openrem/openrem` (`develop` at `d168bd48` 2026-02-06), scope
+`openrem/remapp/tests/test_files/` only, kept in gitignored
+`tmp/openrem-upstream/` on the investigating machine — never committed,
+never vendored. Parsed with our `rdsr_parser` via a gitignored scratch
+script that prints geometry columns only (since deleted).
+
 Ran our `rdsr_parser` over the RF files above (scratch script, gitignored;
 no fixture vendored). Per-source results:
 
