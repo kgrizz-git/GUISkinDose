@@ -1,6 +1,6 @@
 # Documentation index
 
-_Date: 2026-09-21_
+_Date: 2026-09-22_
 
 Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) for agent orientation, then [HARNESS_ENGINEERING.md](HARNESS_ENGINEERING.md) for validation commands and the source-of-truth map.
 
@@ -147,7 +147,7 @@ Diagnostics and assessments of code quality, refactoring, bug checks, or securit
 | [assessments/DOCUMENTATION_TOOLING_DECISION_2026-09-11.md](assessments/DOCUMENTATION_TOOLING_DECISION_2026-09-11.md) | **Decision** — keep Sphinx + RTD, restyle with PyData Sphinx Theme; re-verified shortlist (MkDocs stack now maintenance-mode), revisit triggers, theme-swap follow-up. Closes the `TO_DO.md` evaluation item. |
 | [assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md](assessments/DOCUMENTATION_PHASE3_CROSSCHECK_CHECKLIST.md) | **COMPLETE** — Phase 3 user-facing doc cross-check (help, feature matrix, Sphinx, community, UI copy, CLI). Doc GAPs → Phase 3.5. |
 | [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md) | **CURRENT** — standing documentation-assessment record: hub-doc + docstring + user-facing verdict matrix, docstring coverage (0 missing), accepted gaps, and event-driven re-assessment triggers. Phase 4 artifact of the documentation-assessment plan. |
-| [assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md) | **NEEDS REVIEW** — spin acquisitions deposit full event kerma at one static `Ap1`/`Ap2` pose; evidence-gated Phase 0 → warn → arc-subdivision recommendations for the `TO_DO.md` Next Up item. |
+| [assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md) | **DESIGN ADJUDICATED 2026-09-22** — current-code/evidence record for rotational acquisitions; Phase 1.5 and Phase 2 are superseded/redefined by the accepted coverage-envelope plan. |
 | [assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md) | **DECIDED + SHIPPED 2026-09-22** — non-loopback refused outright (no LAN mode); browser mode adds a per-launch token + strict Host/Origin checks (`gui/loopback_security.py`). Remaining: help note, random port (modest), per-client state deferred to a trigger. Pre-decision mitigation packages kept for the record. |
 
 ---
@@ -175,6 +175,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/PR_CODE_REVIEW_FIXES_PLAN.md](plans/PR_CODE_REVIEW_FIXES_PLAN.md) | **Active** — Resolve open CodeRabbit PR review comments on branch refactor/sonar-lizard-fixes. |
+| [plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md](plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md) | **Source of truth; initial implementation complete** (2026-09-22) — pointwise full-kerma coverage envelope as the rotational default, with separate physical scenarios, explicit contracts, controls, disclosures, and a practical acceptance bar. |
 | [plans/archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_D_DISTRIBUTION_PROOF_PLAN.md) | **Complete** (2026-09-19) — Correction-data Phase D: wheel/sdist distribution proof, clean-env install, numerical parity (master §5, last delivery). |
 | [plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_A_MANIFEST_VALIDATION_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase A: manifest, validation, device_info substitution (PR #101). |
 | [plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md](plans/archive/CORRECTION_DATA_PHASE_B_PROVIDER_SWAP_PLAN.md) | **Complete** (2026-09-18) — Correction-data Phase B: packaged-CSV provider swap, explicit read-only SQLite adapter, export descriptor (PR #102). |

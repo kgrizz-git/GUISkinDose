@@ -179,6 +179,12 @@ def rebuild_rdsr_df(state: AppState) -> None:
     """
     import pandas as pd
 
+    # The event set changed: prompt suppressions no longer apply. This covers
+    # loads, removals, and re-parses — every caller rebuilds after a
+    # composition change, never after a mere offset tweak.
+    state.below_floor_prompt_suppressed = False
+    state.rotational_prompt_suppressed = False
+
     if not state.loaded_exams:
         state.rdsr_df = None
         state.input_revision += 1

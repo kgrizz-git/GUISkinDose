@@ -70,6 +70,7 @@ def build_settings(
     base["below_floor_kvp_policy"] = app_state.below_floor_kvp_policy
     base["below_floor_kvp_manual"] = app_state.below_floor_kvp_manual
     base["beam_miss_warn"] = app_state.beam_miss_warn
+    base["rotational_handling"] = app_state.rotational_handling
     base["silence_pydicom_warnings"] = True
 
     base["kerma_meter_correction"] = {
