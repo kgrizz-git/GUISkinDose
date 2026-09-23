@@ -126,11 +126,24 @@ A:
 
 ## 4. Explicit non-goals and adjacent gaps
 
-- **Per-frame image-header ingestion** (e.g. reading XA multi-frame
-  functional groups for per-frame positioner angles) is out of scope: the
-  pipeline consumes RDSR + tabular event tables, not image objects. If Phase 0
-  shows angles live *only* in image headers, that finding alone decides
-  whether this item stays feasible.
+- **Per-frame image-header ingestion** is out of scope today but tracked as
+  a future input source (see below): the pipeline consumes RDSR + tabular
+  event tables, not image objects.
+- **XA headers carry measured direction/trajectory (verified 2026-09-22
+  against the DICOM standard; no code touches them yet).** Classic RDSR has
+  no direction concept (confirmed by 69-concept survey of the Canon file),
+  but one layer out: multi-frame XA IOD, XA Positioner Module (C.8.7.5) —
+  `Positioner Motion (0018,1500)` STATIC/DYNAMIC flag plus signed
+  `Positioner Primary/Secondary Angle Increment (0018,1520/1521)` (single
+  average per-frame value or full per-frame vector; standardized sign:
+  primary positive = RAO→LAO through anterior, secondary positive =
+  CAU→CRA; required when DYNAMIC). X-Ray 3D Angiographic Image Storage goes
+  further: `X-Ray 3D Acquisition Sequence (0018,9507)` with scan arc
+  `(0018,9508/9509)`, start angles `(0018,9510/9511)`, increments
+  `(0018,9514/9515)` + increment-direction attributes, and per-projection
+  isocenter angles (`(0018,9538)` → `(0018,9463/9464)`). Ingesting these
+  needs image-object parsing plus same-case RDSR↔XA matching — tracked in
+  TO_DO, not this item.
 - **`Ap3` hardcoded zero** (`rdsr_normalizer.py:525`) is a separate gap
   affecting detector-rotation modelling for all events, not just spins.
   Tracked here for visibility; do not bundle the fixes.
