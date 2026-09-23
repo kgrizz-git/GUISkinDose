@@ -162,6 +162,24 @@ def test_hits_stay_aligned_with_corrections_and_union_is_a_superset():
     assert sum(union) >= sum(hits)
 
 
+def test_include_static_pose_false_still_envelopes_with_aligned_slots():
+    """include_static_pose=False drops only the explicit static append."""
+    output = _run(_frame_with_spin().copy(), _settings(angular_step_deg=10.0, include_static_pose=False))
+
+    details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
+    assert details["include_static_pose"] is False
+    assert details["unique_candidate_count"] > 2
+
+    hits = output[c.OUTPUT_KEY_HITS][1]
+    union = output[c.OUTPUT_KEY_HITS_UNION][1]
+    k_bs = output[c.OUTPUT_KEY_CORRECTION_BACK_SCATTER][1]
+    k_isq = output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][1]
+
+    assert len(hits) == len(union)
+    assert sum(hits) == len(k_bs) == len(k_isq)
+    assert all(not hit or union[index] for index, hit in enumerate(hits))
+
+
 def test_contradictory_event_envelopes_with_reason_recorded():
     """Stationary-coded but moving, usable endpoints: enveloped + flagged."""
     frame = generate_synthetic_normalized_events(1)

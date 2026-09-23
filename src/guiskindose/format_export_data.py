@@ -499,6 +499,13 @@ class PySkinDoseOutput:
                 "\tThe k_tab_statuses list is not the same length as the number of events"
             )
 
+        if self.hits_union is not None and len(self.hits_union) != n_events:
+            error = True
+            error_message.append(
+                "Hits union:\n"
+                "\tThe hits_union list is not the same length as the number of events"
+            )
+
         if error:
             raise ValueError("\n\n".join(error_message))
 

@@ -20,6 +20,7 @@ from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
 from guiskindose.phantom_class import Phantom
+from guiskindose.rotational_acquisition import circular_separation_deg
 from guiskindose.rotational_envelope import (
     CandidateResult,
     HandlingLedger,
@@ -34,6 +35,11 @@ if TYPE_CHECKING:
     from guiskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
+
+# Pose-match tolerance for recognizing the reported static pose among the
+# candidate poses (angles are re-derived through _canonical, so compare on
+# the circle rather than by raw float equality).
+_STATIC_POSE_TOL_DEG = 1e-9
 
 
 def _rotational_mode(settings: "PyskindoseSettings | None") -> str:
@@ -202,9 +208,11 @@ def _calculate_envelope_event(
         domain_label = "full_circle"
 
     # Static-pose evaluation first: its arrays feed the legacy per-event slots
-    # and the geometry cache; its dose is discarded, never accumulated. The
-    # live cache arrays are threaded through so a new_geometry=False event
-    # reuses the true preceding geometry instead of collapsing to empties.
+    # and the geometry cache, and its dose vector doubles as the static-pose
+    # candidate response (see _static_candidate below) so the loop never
+    # repeats that geometry/physics work. The live cache arrays are threaded
+    # through so a new_geometry=False event reuses the true preceding geometry
+    # instead of collapsing to empties.
     static_hits, static_table_hits, static_field_area, static_k_isq = perform_calculations_for_new_geometries(
         normalized_data=normalized_data,
         event=ev,
@@ -217,7 +225,7 @@ def _calculate_envelope_event(
         field_area=cached_field_area,
         k_isq=cached_k_isq,
     )
-    _, static_k_bs, static_k_med = compute_event_dose_vector(
+    static_vector, static_k_bs, static_k_med = compute_event_dose_vector(
         event_frame=normalized_data.iloc[[ev]],
         event=ev,
         hits=static_hits,
@@ -293,9 +301,50 @@ def _calculate_envelope_event(
 
     union_mask: list[bool] = [False] * n_cells
 
+    def _is_static_pose(pose_ap1: float, pose_ap2: float) -> bool:
+        return (
+            circular_separation_deg(pose_ap1, ap1) <= _STATIC_POSE_TOL_DEG
+            and circular_separation_deg(pose_ap2, ap2) <= _STATIC_POSE_TOL_DEG
+        )
+
+    def _static_candidate(pose_index: int) -> tuple[CandidateResult, list[bool]]:
+        """Reuse the slot/static evaluation as that pose's candidate response.
+
+        The reported static pose is always a domain member (path start or the
+        ``include_static_pose`` append), and re-evaluating it in the loop would
+        repeat identical geometry/physics work already done for the legacy
+        slots and the geometry cache.
+        """
+        if not any(static_hits):
+            return (
+                CandidateResult(
+                    candidate_id=f"candidate_{pose_index}",
+                    dose_vector=static_vector,
+                    hit_count=0,
+                    missed=True,
+                ),
+                list(static_hits),
+            )
+        k_bs_vals = np.atleast_1d(np.asarray(static_k_bs, dtype=float))
+        return (
+            CandidateResult(
+                candidate_id=f"candidate_{pose_index}",
+                dose_vector=static_vector,
+                hit_count=int(sum(1 for hit in static_hits if hit)),
+                missed=False,
+                k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
+                k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
+                k_med=float(static_k_med),
+            ),
+            list(static_hits),
+        )
+
     def _generate() -> Any:
         for pose_index, (pose_ap1, pose_ap2) in enumerate(domain.unique_poses):
-            result, candidate_hits = _compute(pose_index, pose_ap1, pose_ap2)
+            if _is_static_pose(pose_ap1, pose_ap2):
+                result, candidate_hits = _static_candidate(pose_index)
+            else:
+                result, candidate_hits = _compute(pose_index, pose_ap1, pose_ap2)
             for index, hit in enumerate(candidate_hits):
                 union_mask[index] = union_mask[index] or bool(hit)
             yield result
@@ -316,8 +365,9 @@ def _calculate_envelope_event(
     pad.position(data_norm=normalized_data, event=ev)
 
     output[c.OUTPUT_KEY_DOSE_MAP] += evaluation.dose_vector
-    # Discard the static-pose dose computed above: the envelope vector is the
-    # event contribution. The static evaluation exists only for slots/cache.
+    # The envelope vector (cellwise max over candidates, including the reused
+    # static-pose response) is the event contribution; the static dose is
+    # never accumulated separately.
 
     # output["hits"] stays the STATIC-pose hit list so it remains index-aligned
     # with the per-hit-cell correction arrays stored below (k_isq and k_bs both
