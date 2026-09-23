@@ -13,6 +13,7 @@ import logging
 import numbers
 from math import isclose
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -404,8 +405,8 @@ def rotational_survey(state: AppState) -> dict[str, object]:
     """
     from guiskindose.rotational_acquisition import classify_rotational_event
 
-    frames: list[tuple[str, object]] = []
-    exam_frames = [
+    frames: list[tuple[str, Any]] = []
+    exam_frames: list[tuple[str, Any]] = [
         (f"Exam {i + 1}", getattr(exam, "normalized_data", None))
         for i, exam in enumerate(state.loaded_exams)
     ]
@@ -424,18 +425,19 @@ def rotational_survey(state: AppState) -> dict[str, object]:
     unresolved = survey["unresolved"]
     assert isinstance(unresolved, list)
     for label, frame in frames:
-        for index, (_, row) in enumerate(frame.iterrows()):
+        frame_df = cast("pd.DataFrame", frame)
+        for index, (_, row) in enumerate(frame_df.iterrows()):
             try:
                 result = classify_rotational_event(dict(row))
                 classification = result.classification
             except Exception:
                 classification = "unknown"
                 result = None
-            survey["total"] = int(survey["total"]) + 1
+            survey["total"] = int(cast(int, survey["total"])) + 1
             if classification in survey:
-                survey[classification] = int(survey[classification]) + 1
+                survey[classification] = int(cast(int, survey[classification])) + 1
             else:
-                survey["unknown"] = int(survey["unknown"]) + 1
+                survey["unknown"] = int(cast(int, survey["unknown"])) + 1
             needs_attention = classification in ("positioner_motion", "unknown") or (
                 classification == "rotational"
                 and (result is None or not result.usable_endpoints)
