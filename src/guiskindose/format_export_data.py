@@ -22,6 +22,8 @@ from guiskindose.constants import (
     OUTPUT_KEY_DOSE_MAP,
     OUTPUT_KEY_HITS,
     OUTPUT_KEY_KERMA_CORRECTED,
+    OUTPUT_KEY_ROTATIONAL_ENVELOPE,
+    OUTPUT_KEY_ROTATIONAL_HANDLING,
     PHANTOM_MODEL_HUMAN,
     PLOT_TRACE_ORDER_BEAM_WIREFRAME,
     PLOT_TRACE_ORDER_DETECTOR_WIREFRAME,
@@ -391,6 +393,10 @@ class PySkinDoseOutput:
     kerma_meter_correction: list[float] | None = None
     kerma_corrected: list[float] | None = None
     k_tab_statuses: list[str] | None = None
+    # Rotational handling ledger + envelope details (additive; None when no
+    # rotational evaluation ran). Passed straight through to dict/JSON.
+    rotational_handling: dict[str, Any] | None = None
+    rotational_envelope: dict[str, Any] | None = None
 
     # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
     psd: float = field(init=False)
@@ -573,6 +579,8 @@ class PySkinDoseOutput:
                 },
             },
             "dose_map": [(ind, dose) for ind, dose in enumerate(self.dose_map.tolist()) if dose > 0.0],
+            "rotational_handling": self.rotational_handling,
+            "rotational_envelope": self.rotational_envelope,
             "corrections": {
                 "correction_value_index": self.sparse_hit_indices(),
                 "backscatter": self.backscatter_correction,
@@ -726,6 +734,8 @@ def format_analysis_result_for_export(
         kerma_meter_correction=analysis_result.get(OUTPUT_KEY_CORRECTION_KERMA_METER),
         kerma_corrected=analysis_result.get(OUTPUT_KEY_KERMA_CORRECTED),
         k_tab_statuses=analysis_result.get(OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
+        rotational_handling=analysis_result.get(OUTPUT_KEY_ROTATIONAL_HANDLING),
+        rotational_envelope=analysis_result.get(OUTPUT_KEY_ROTATIONAL_ENVELOPE),
     )
 
     if settings.output_format == RUN_ARGUMENTS_OUTPUT_DICT:

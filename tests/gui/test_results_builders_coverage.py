@@ -48,6 +48,7 @@ def _controller() -> rb.ResultsTabController:
     ctrl.refs.dosemap_spinner = MagicMock(visible=False)
     ctrl.refs.corr_table = MagicMock(rows=[], update=MagicMock())
     ctrl.refs.agg_psd_metric = MagicMock()
+    ctrl.refs.rotational_badge = MagicMock(visible=False)
     ctrl.refs.agg_events_metric = MagicMock()
     ctrl.refs.agg_totals_metric = MagicMock()
     ctrl.refs.run_warnings_label = MagicMock()
@@ -317,3 +318,56 @@ def test_multi_exam_results_clears_when_incomplete() -> None:
     assert ctrl.last_rendered_run_id is None
     cast(MagicMock, ctrl.refs.agg_dosemap_plot.update_figure).assert_called_with({})
     cast(MagicMock, ctrl.refs.run_warnings_label.set_visibility).assert_called_with(False)
+
+
+def test_rotational_badge_hidden_without_handling(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(state, "output", {"psd": 1.0}, raising=False)
+    ctrl._refresh_rotational_badge()
+    ctrl.refs.rotational_badge.set_text.assert_called_once_with("")
+    assert ctrl.refs.rotational_badge.visible is False
+
+
+def test_rotational_badge_shows_envelope_summary(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(
+        state,
+        "output",
+        {
+            "rotational_handling": {
+                "aggregate": {
+                    "rotational_count": 1,
+                    "positioner_motion_count": 0,
+                    "total_events": 10,
+                    "any_fallback_to_static": False,
+                }
+            }
+        },
+        raising=False,
+    )
+    ctrl._refresh_rotational_badge()
+    text = ctrl.refs.rotational_badge.set_text.call_args[0][0]
+    assert "1 rotational" in text and "10 events" in text
+    assert ctrl.refs.rotational_badge.visible is True
+
+
+def test_rotational_badge_notes_fallback(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(
+        state,
+        "output",
+        {
+            "rotational_handling": {
+                "aggregate": {
+                    "rotational_count": 0,
+                    "positioner_motion_count": 2,
+                    "total_events": 5,
+                    "any_fallback_to_static": True,
+                }
+            }
+        },
+        raising=False,
+    )
+    ctrl._refresh_rotational_badge()
+    text = ctrl.refs.rotational_badge.set_text.call_args[0][0]
+    assert "2 positioner-motion" in text and "fallback" in text

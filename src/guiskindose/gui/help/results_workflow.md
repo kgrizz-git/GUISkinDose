@@ -10,6 +10,10 @@ Single-exam results show:
 - Total DAP and fluoro time when the input source provides those fields.
 - Interactive 3D dose map.
 - Per-event correction-factor summary.
+- A rotational-handling badge whenever rotational or moving events were
+  detected (estimate-grade coverage envelope with event counts; static
+  fallbacks are flagged). Per-event handling lives in the calculation
+  warnings and rich-report ledger.
 
 Multi-exam results show aggregate and per-exam values where the calculation output contains enough metadata:
 

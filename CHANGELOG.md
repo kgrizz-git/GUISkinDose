@@ -27,7 +27,9 @@ That keeps SemVer and contributor history organized.
   instead of silently collapsing to one static pose; `rotational_handling`
   setting (`coverage`/`static`, `scenarios` deferred), pre-calculation
   prompt, handling ledger in outputs, and methodology disclosures. Design:
-  `dev-docs/plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md`.
+  `dev-docs/plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md`. Exports carry the
+  handling ledger and methodology (DOCX/XLSX sections, dict/JSON fields);
+  the Results tab shows a handling badge.
 
 ### Fixed
 

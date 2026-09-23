@@ -39,6 +39,8 @@ _EXPECTED_TOP_KEYS = {
     "dose_map",
     "corrections",
     "events",
+    "rotational_handling",
+    "rotational_envelope",
 }
 
 

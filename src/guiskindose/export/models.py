@@ -209,6 +209,9 @@ class ExamSection:
     # DICOM RDSR (units read+asserted, not converted) and normalized inputs.
     unit_conversions: dict[str, str] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    # Rotational handling ledger + envelope details from the calculation
+    # (additive; None when the calculation predates rotational evaluation).
+    rotational_handling: dict[str, Any] | None = None
 
 
 @dataclass

@@ -105,6 +105,7 @@ def build_document(payload: ExportPayload):
     _add_result_sections(doc, payload)
     _add_settings_section(doc, payload)
     _add_corrections_section(doc, payload)
+    _add_rotational_section(doc, payload)
     _add_image_section(doc, payload)
     return doc
 
@@ -160,6 +161,30 @@ def _add_corrections_section(doc, payload: ExportPayload) -> None:
     _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections])
     if corrections_use_kerma_meter(payload):
         doc.add_paragraph(KERMA_METER_WEIGHTING_FOOTNOTE)
+
+
+def _add_rotational_section(doc, payload: ExportPayload) -> None:
+    """Add rotational-handling methodology plus the per-exam ledger."""
+    from guiskindose.export.sections import (
+        rotational_ledger_table,
+        rotational_methodology_paragraph,
+    )
+
+    blocks = [
+        (exam.exam_id if payload.is_multi_exam else None, exam.rotational_handling)
+        for exam in payload.exams
+    ]
+    blocks = [(label, handling) for label, handling in blocks if handling]
+    if not blocks:
+        return
+    doc.add_heading("Rotational handling", level=2)
+    for label, handling in blocks:
+        if label is not None:
+            doc.add_heading(f"Exam {label}", level=3)
+        paragraph = rotational_methodology_paragraph(handling)
+        if paragraph:
+            doc.add_paragraph(paragraph)
+        _table(doc, rotational_ledger_table(handling))
 
 
 def _add_image_section(doc, payload: ExportPayload) -> None:

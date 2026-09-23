@@ -80,6 +80,31 @@ class ResultsTabController:
             self.refs.dap_metric.set_text(f"{dap:.2f} Gy·cm²" if dap is not None else "N/A")
             fluoro = total_fluoro_time_s(state.rdsr_df)
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
+            self._refresh_rotational_badge()
+
+    def _rotational_badge_text(self) -> str:
+        """One-line rotational-handling summary for the Results badge."""
+        output = state.output
+        handling = output.get("rotational_handling") if isinstance(output, dict) else None
+        if not handling:
+            return ""
+        aggregate = handling.get("aggregate", {})
+        rotational = int(aggregate.get("rotational_count", 0) or 0)
+        motion = int(aggregate.get("positioner_motion_count", 0) or 0)
+        total = int(aggregate.get("total_events", 0) or 0)
+        if rotational + motion <= 0:
+            return ""
+        fallback = " · static fallbacks — see warnings" if aggregate.get("any_fallback_to_static") else ""
+        return (
+            f"Estimate-grade rotational envelope: {rotational} rotational + "
+            f"{motion} positioner-motion of {total} events{fallback}"
+        )
+
+    def _refresh_rotational_badge(self) -> None:
+        """Show or hide the rotational-handling badge."""
+        text = self._rotational_badge_text()
+        self.refs.rotational_badge.set_text(text)
+        self.refs.rotational_badge.visible = bool(text)
 
     async def refresh_dosemap(self) -> None:
         """Refresh dosemap."""
@@ -412,6 +437,7 @@ class ResultsViewRefs:
     events_metric: ui.label = None  # type: ignore[assignment]
     dap_metric: ui.label = None  # type: ignore[assignment]
     fluoro_metric: ui.label = None  # type: ignore[assignment]
+    rotational_badge: ui.label = None  # type: ignore[assignment]
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
@@ -479,6 +505,9 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
                 ctrl.refs.fluoro_metric = ui.label("—").classes(
                     "text-3xl text-white font-bold"
                 )
+        with ui.row().classes(_METRIC_ROW_CLASSES):
+            ctrl.refs.rotational_badge = ui.label("").classes("text-sm text-grey-7")
+            ctrl.refs.rotational_badge.visible = False
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")

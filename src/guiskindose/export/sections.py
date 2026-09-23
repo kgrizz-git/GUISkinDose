@@ -1,5 +1,6 @@
 """Per-exam report sections: settings snapshot (§4), equipment (§3),
-phantom/geometry (§6), and coordinate corrections (§5)."""
+phantom/geometry (§6), coordinate corrections (§5), and rotational
+handling methodology (§7b)."""
 
 from __future__ import annotations
 
@@ -178,3 +179,50 @@ def coordinate_section(exam: ExportExamSource, settings: Any) -> dict[str, Any]:
             "d_lat": offset.d_lat,
         },
     }
+
+
+def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | None:
+    """One methodology paragraph for rotational handling, or None when absent."""
+    if not handling:
+        return None
+    aggregate = handling.get("aggregate", {})
+    rotational = int(aggregate.get("rotational_count", 0) or 0)
+    motion = int(aggregate.get("positioner_motion_count", 0) or 0)
+    total = int(aggregate.get("total_events", 0) or 0)
+    kerma = float(aggregate.get("rotational_kerma", 0.0) or 0.0)
+    total_kerma = float(aggregate.get("total_kerma", 0.0) or 0.0)
+    fraction = (100.0 * kerma / total_kerma) if total_kerma > 0 else 0.0
+    fallback = " Static fallbacks occurred — see the ledger." if aggregate.get("any_fallback_to_static") else ""
+    return (
+        f"Rotational handling (estimate-grade conditional coverage envelope, "
+        f"not a guaranteed bound): {rotational} rotational + {motion} "
+        f"positioner-motion of {total} events ({fraction:.1f}% of K_IRP in "
+        f"rotational envelopes). Each enveloped event is evaluated at full "
+        f"event kerma over its candidate poses and contributes the cellwise "
+        f"maximum; kerma records are unchanged (multiplier 1.0)."
+        f"{fallback}"
+    )
+
+
+def rotational_ledger_table(handling: dict[str, Any] | None) -> list[list[str]]:
+    """Per-event ledger rows (header + one row per detected event)."""
+    header = ["Event", "Classification", "Handling", "Endpoints (Ap1/Ap2)", "Candidates", "K_IRP"]
+    if not handling:
+        return [header]
+    rows = [header]
+    for row in handling.get("rows", []):
+        endpoints = (
+            f"({row.get('ap1_start')}/{row.get('ap2_start')}) → "
+            f"({row.get('ap1_end')}/{row.get('ap2_end')})"
+        )
+        rows.append(
+            [
+                str(row.get("event_index", "")),
+                str(row.get("classification", "")),
+                str(row.get("effective_handling", "")),
+                endpoints,
+                str(row.get("unique_candidate_count", "")),
+                str(row.get("kerma", "")),
+            ]
+        )
+    return rows
