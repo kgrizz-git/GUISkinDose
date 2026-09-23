@@ -263,6 +263,49 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
+async def rotational_prompt(survey: dict[str, int]) -> bool:
+    """Confirm rotational-acquisition handling before a calculation.
+
+    Shows detected rotational/positioner-motion counts with the default
+    coverage-envelope treatment and writes the chosen handling back to
+    ``state`` so the run uses it. Returns ``True`` to proceed, ``False`` on
+    Cancel. Scenarios mode stays API/CLI-only until nominal-arc selection
+    UI exists, so the prompt offers coverage vs static.
+    """
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
+        ui.label("Rotational or moving acquisitions detected").classes(_DIALOG_TITLE_CLASSES)
+        ui.label(
+            f"{survey['rotational']} rotational + {survey['positioner_motion']} "
+            f"positioner-motion of {survey['total']} loaded event(s) will be "
+            "treated as conditional coverage envelopes (estimate-grade), not "
+            "single static poses. Unresolved events fall back to static with "
+            "a warning."
+        ).classes(_DIALOG_BODY_CLASSES)
+
+        handling_select = ui.select(
+            ["coverage", "static"],
+            label="Handling",
+            value=state.rotational_handling
+            if state.rotational_handling in ("coverage", "static")
+            else "coverage",
+        ).classes("w-full")
+
+        dont_ask = ui.checkbox("Don't ask again this session")
+
+        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Run", on_click=lambda: dialog.submit("run")).classes(_PRIMARY_BTN_CLASSES)
+
+    result = await dialog
+    if result != "run":
+        return False
+
+    state.rotational_handling = handling_select.value
+    if dont_ask.value:
+        state.rotational_prompt_suppressed = True
+    return True
+
+
 async def kerma_meter_prompt() -> None:
     """Collect per-(equipment, tube) CF values before calculation when mode=prompt.
 
@@ -338,6 +381,8 @@ class _CalculationController:
             return
         if not await self._below_floor_policy_is_ready():
             return
+        if not await self._rotational_is_ready():
+            return
         if not await self._kerma_meter_is_ready():
             return
 
@@ -353,6 +398,17 @@ class _CalculationController:
             return True
         n_below = below_floor_event_count(state)
         return n_below <= 0 or await below_floor_prompt(n_below)
+
+    async def _rotational_is_ready(self) -> bool:
+        """Return True when rotational handling is set or the user confirms the prompt."""
+        if state.rotational_prompt_suppressed:
+            return True
+        from guiskindose.gui.helpers import rotational_survey
+
+        survey = rotational_survey(state)
+        if survey["rotational"] + survey["positioner_motion"] <= 0:
+            return True
+        return await rotational_prompt(survey)
 
     async def _explicit_label_collapse_ok(self) -> bool:
         """True unless the user cancels collapsing multiple units onto one label."""

@@ -19,6 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- **Rotational coverage envelope (estimate-grade)** (2026-09-22) — events
+  detected as rotational are evaluated as conditional upper coverage
+  envelopes (full event kerma per candidate pose, cellwise maximum kept)
+  instead of silently collapsing to one static pose; `rotational_handling`
+  setting (`coverage`/`static`, `scenarios` deferred), pre-calculation
+  prompt, handling ledger in outputs, and methodology disclosures. Design:
+  `dev-docs/plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md`.
+
 ### Fixed
 
 - **RDSR parser fail-soft on malformed inputs** (2026-09-22) — two upstream

@@ -392,6 +392,37 @@ def below_floor_event_count(state: AppState) -> int:
     return total
 
 
+def rotational_survey(state: AppState) -> dict[str, int]:
+    """Classify loaded events for the rotational pre-calc prompt.
+
+    Returns counts by classification plus the total, summed over the active
+    frame and all loaded exams. Pure classification — no dose math, no
+    identifier handling (counts only).
+    """
+    from guiskindose.rotational_acquisition import classify_rotational_event
+
+    frames: list = []
+    if state.rdsr_df is not None:
+        frames.append(state.rdsr_df)
+    for exam in state.loaded_exams:
+        df = getattr(exam, "normalized_data", None)
+        if df is not None:
+            frames.append(df)
+    survey = {"rotational": 0, "positioner_motion": 0, "unknown": 0, "total": 0}
+    for frame in frames:
+        for _, row in frame.iterrows():
+            try:
+                classification = classify_rotational_event(dict(row)).classification
+            except Exception:
+                classification = "unknown"
+            survey["total"] += 1
+            if classification in survey:
+                survey[classification] += 1
+            else:
+                survey["unknown"] += 1
+    return survey
+
+
 def _patch_tqdm(progress_cb, total: int):
     """Monkey-patch tqdm so dose calculation progress reaches the UI."""
     try:
