@@ -74,6 +74,17 @@ def test_parser_tolerates_missing_manufacturer_model_name():
     assert parsed.iloc[0]["ManufacturerModelName"] is None
 
 
+def test_parser_tolerates_missing_manufacturer():
+    """Symmetric guard: a missing top-level Manufacturer parses as None."""
+    data_raw = _event_dataset()
+    del data_raw.Manufacturer
+
+    parsed = rdsr_parser(data_raw)  # type: ignore[arg-type]
+
+    assert len(parsed) == 1
+    assert parsed.iloc[0]["Manufacturer"] is None
+
+
 def test_parser_tolerates_empty_measured_value_sequence():
     """Upstream GE pattern: valueless angle concepts parse as None."""
     data_raw = _event_dataset()
@@ -88,10 +99,39 @@ def test_parser_tolerates_empty_measured_value_sequence():
     parsed = rdsr_parser(data_raw)  # type: ignore[arg-type]
     row = parsed.iloc[0]
 
-    assert row["PositionerPrimaryAngle"] is None
-    assert row["PositionerSecondaryAngle"] is None
+    assert row["PositionerPrimaryAngle_deg"] is None
+    assert row["PositionerSecondaryAngle_deg"] is None
     # Unaffected values on the same event still parse.
     assert row["DoseAreaProduct_mGy"] == [1.0, 2.0]
+
+
+def test_valueless_angles_flow_through_beam_normalization():
+    """Integration: None angles normalize to NaN Ap instead of AttributeError."""
+    import pandas as pd
+
+    from guiskindose.rdsr_normalizer import _normalize_beam_parameters
+    from guiskindose.settings.normalization_settings import NormalizationSettings
+
+    data_raw = _event_dataset()
+    event = data_raw.ContentSequence[0]
+    for concept in ("Positioner Primary Angle", "Positioner Secondary Angle"):
+        empty = _content(concept)
+        empty.MeasuredValueSequence = Sequence([])
+        event.ContentSequence.append(empty)
+    event.ContentSequence.append(_measured_content("KVP", 80.0, "kV"))
+    event.ContentSequence.append(_measured_content("DoseRP", 0.01, "Gy"))
+    event.ContentSequence.append(_measured_content("CollimatedFieldArea", 0.04, "m2"))
+    parsed = rdsr_parser(data_raw)  # type: ignore[arg-type]
+
+    norm_settings = NormalizationSettings([])
+    norm_settings.field_size_mode = "CFA"
+    data_norm = _normalize_beam_parameters(
+        parsed, pd.DataFrame(index=parsed.index), norm_settings
+    )
+
+    assert len(data_norm) == 1
+    assert pd.isna(data_norm.iloc[0]["Ap1"])
+    assert pd.isna(data_norm.iloc[0]["Ap2"])
 
 
 def test_preview_suppresses_event_values_by_default(capsys):

@@ -102,7 +102,10 @@ def _store_content_value(
         if not measured or not units:
             # Valueless concept (e.g. GE events carrying empty positioner
             # angle sequences): record absence instead of crashing the file.
-            parsed[tag] = None
+            # DICOM angle concepts are degree-valued by definition, so those
+            # keep the conventional _deg column (downstream NaN handling
+            # applies); anything else stays unsuffixed.
+            parsed[tag + "_deg" if tag.endswith("Angle") else tag] = None
         else:
             tag = _measured_tag(content, remove_unit_dots=not nested)
             _store_value(
@@ -151,7 +154,7 @@ def _top_level_attr(data_raw: pydicom.Dataset, attr: str) -> object | None:
 def _parse_irradiation_event(data_raw: pydicom.FileDataset, event: pydicom.Dataset) -> dict:
     """Extract the legacy flat dictionary for one irradiation event."""
     parsed = {
-        KEY_RDSR_MANUFACTURER: data_raw.Manufacturer,
+        KEY_RDSR_MANUFACTURER: _top_level_attr(data_raw, KEY_RDSR_MANUFACTURER),
         KEY_RDSR_MANUFACTURER_MODEL_NAME: _top_level_attr(data_raw, KEY_RDSR_MANUFACTURER_MODEL_NAME),
         # Study-level unit identity (constant across events when present).
         KEY_RDSR_STATION_NAME: _top_level_attr(data_raw, KEY_RDSR_STATION_NAME),

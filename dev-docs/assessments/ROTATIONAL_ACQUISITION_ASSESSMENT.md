@@ -243,16 +243,21 @@ no fixture vendored). Per-source results:
   contains rotational acquisitions.** Allura: 3 events (1 fluoro +
   2 stationary), static poses, no end-angle columns (but table/wedge/beam
   angle columns present). GE: 8 fluoroscopy events; the start/end angle
-  *slots* exist (113739/113740-pattern concepts) but every value sequence is
+  *  slots* exist (113739/113740-pattern concepts) but every value sequence is
   empty, so all angle columns are None. Lesson for detection design:
   **concept-presence ≠ data-presence** — rotational signals must be
   value-based (113613 string, or end angles populated *and* unequal), never
-  column-based. The guards also advance the TO_DO parser-hardening item
-  (`RF-Pat-Orientation-Modifier-Missing` still open).
+  column-based. Boundary, stated plainly: the GE file *parses* (valueless
+  angles flow as NaN through beam angulation), but full normalization still
+  stops later on unrelated missing source-geometry concepts (e.g.
+  `DistanceSourcetoIsocenter_mm`) — sparse-file defaults are a separate gap,
+  same class as the angle-less files below. The guards also advance the
+  TO_DO parser-hardening item (`RF-Pat-Orientation-Modifier-Missing`
+  still open).
 - **GE OEC MiniView / Canon Ultimaxi — no angle concepts at all.** 22 fluoro
   / 13 fluoro + 5 stationary; raw concept survey finds zero positioner-angle
-  concepts. No geometry is recoverable from these files, ever — Phase 1b
-  territory by construction.
+  concepts, so no arc subdivision can ever be keyed off these files (other
+  geometry components are a separate question, unexamined here).
 - **Tabular side:** our `normalized` schema carries `acquisition_type`, so a
   tabular exporter *could* signal rotation — but no public DoseTrack /
   Radimetrics / Qaelum sample exists to confirm any of them do (negative

@@ -27,7 +27,8 @@ That keeps SemVer and contributor history organized.
   `MeasuredValueSequence`/units (`IndexError`). The model tag now reads
   `None` when absent and empty value sequences record `None`, with synthetic
   regression tests (no fixture vendoring). Numerical results on parseable
-  files are unchanged. — the loopback port was fixed at 8765
+  files are unchanged.
+- **GUI `--port` flag** (2026-09-22) — the loopback port was fixed at 8765
   with no override. `--port <n>` selects a loopback port, `--port 0` takes
   an OS-assigned free port (printed in the console launch URL); the token,
   Host, and Origin controls are scoped to the effective port. Default stays
