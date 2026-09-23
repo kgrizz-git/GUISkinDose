@@ -160,7 +160,12 @@ class PyskindoseSettings:
         if not isinstance(include_static_pose, bool):
             raise ValueError("include_static_pose must be a boolean")
         self.include_static_pose: bool = include_static_pose
-        angular_step = float(tmp.get(KEY_PARAM_ROTATIONAL_ANGULAR_STEP, ROTATIONAL_ANGULAR_STEP_DEFAULT))
+        angular_step_raw = tmp.get(KEY_PARAM_ROTATIONAL_ANGULAR_STEP, ROTATIONAL_ANGULAR_STEP_DEFAULT)
+        # bool is a subclass of int in Python and float(True) == 1.0, which
+        # would silently land inside the accepted range. Reject it explicitly.
+        if isinstance(angular_step_raw, bool):
+            raise ValueError("angular_step_deg must be a number, not a boolean")
+        angular_step = float(angular_step_raw)
         if not ROTATIONAL_ANGULAR_STEP_MIN <= angular_step <= ROTATIONAL_ANGULAR_STEP_MAX:
             raise ValueError(
                 f"angular_step_deg must be within "

@@ -53,6 +53,13 @@ def test_angular_step_deg_rejects_out_of_range_values():
             _settings_with(angular_step_deg=value)
 
 
+def test_angular_step_deg_rejects_boolean_values():
+    # float(True) == 1.0 would silently pass the range check otherwise.
+    for value in (True, False):
+        with pytest.raises(ValueError, match="angular_step_deg"):
+            _settings_with(angular_step_deg=value)
+
+
 def test_include_static_pose_defaults_true_when_absent():
     base = load_settings_example_json()
     del base["include_static_pose"]
