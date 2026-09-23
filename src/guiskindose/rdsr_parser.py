@@ -96,6 +96,13 @@ def _store_content_value(
                 "AcquisitionPlane_CodingSchemeDesignator",
                 getattr(code_seq, "CodingSchemeDesignator", None),
             )
+        if tag == "IrradiationEventType":
+            _store_value(parsed, "IrradiationEventType_CodeValue", getattr(code_seq, "CodeValue", None))
+            _store_value(
+                parsed,
+                "IrradiationEventType_CodingSchemeDesignator",
+                getattr(code_seq, "CodingSchemeDesignator", None),
+            )
     elif KEY_RDSR_MEASURED_VALUE_SEQUENCE in content:
         measured = content.MeasuredValueSequence
         units = getattr(measured[0], "MeasurementUnitsCodeSequence", []) if measured else []
