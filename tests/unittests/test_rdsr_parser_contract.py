@@ -63,6 +63,37 @@ def test_parser_preserves_legacy_duplicate_measurement_and_detector_rules():
     assert row[KEY_RDSR_DETECTORSIZE_MM] == "250"
 
 
+def test_parser_tolerates_missing_manufacturer_model_name():
+    """Upstream Allura pattern: absent top-level model tag parses as None."""
+    data_raw = _event_dataset()
+    del data_raw.ManufacturerModelName
+
+    parsed = rdsr_parser(data_raw)  # type: ignore[arg-type]
+
+    assert len(parsed) == 1
+    assert parsed.iloc[0]["ManufacturerModelName"] is None
+
+
+def test_parser_tolerates_empty_measured_value_sequence():
+    """Upstream GE pattern: valueless angle concepts parse as None."""
+    data_raw = _event_dataset()
+    event = data_raw.ContentSequence[0]
+    empty_angles = _content("Positioner Primary Angle")
+    empty_angles.MeasuredValueSequence = Sequence([])
+    event.ContentSequence.append(empty_angles)
+    unitless = _measured_content("Positioner Secondary Angle", 5.0, "deg")
+    unitless.MeasuredValueSequence[0].MeasurementUnitsCodeSequence = Sequence([])
+    event.ContentSequence.append(unitless)
+
+    parsed = rdsr_parser(data_raw)  # type: ignore[arg-type]
+    row = parsed.iloc[0]
+
+    assert row["PositionerPrimaryAngle"] is None
+    assert row["PositionerSecondaryAngle"] is None
+    # Unaffected values on the same event still parse.
+    assert row["DoseAreaProduct_mGy"] == [1.0, 2.0]
+
+
 def test_preview_suppresses_event_values_by_default(capsys):
     input_file = Path(__file__).resolve().parent.parent / "fixtures" / "tabular_inputs" / "normalized_events.csv"
 

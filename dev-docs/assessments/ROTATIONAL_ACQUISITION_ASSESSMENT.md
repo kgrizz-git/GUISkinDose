@@ -229,9 +229,19 @@ no fixture vendored). Per-source results:
   present, so the Siemens rotational event-type string is still unobserved.
 - **Philips Azurion — start only.** 89 events (72 fluoro + 17 stationary),
   no end-angle columns. Same gap: Philips rotational string unobserved.
-- **Philips Allura / GE — parser failures, confirmed.** `AttributeError`
-  (missing `ManufacturerModelName`) and `IndexError` respectively —
-  evidence for the TO_DO parser-hardening item, not this one.
+- **Philips Allura / GE — parse after guards (2026-09-22 update).** Both
+  failed at first (`AttributeError` on absent `ManufacturerModelName`;
+  `IndexError` on empty `MeasuredValueSequence`) and now parse with narrowly
+  scoped fail-soft guards plus synthetic regression tests — **neither file
+  contains rotational acquisitions.** Allura: 3 events (1 fluoro +
+  2 stationary), static poses, no end-angle columns (but table/wedge/beam
+  angle columns present). GE: 8 fluoroscopy events; the start/end angle
+  *slots* exist (113739/113740-pattern concepts) but every value sequence is
+  empty, so all angle columns are None. Lesson for detection design:
+  **concept-presence ≠ data-presence** — rotational signals must be
+  value-based (113613 string, or end angles populated *and* unequal), never
+  column-based. The guards also advance the TO_DO parser-hardening item
+  (`RF-Pat-Orientation-Modifier-Missing` still open).
 - **GE OEC MiniView / Canon Ultimaxi — no angle concepts at all.** 22 fluoro
   / 13 fluoro + 5 stationary; raw concept survey finds zero positioner-angle
   concepts. No geometry is recoverable from these files, ever — Phase 1b
