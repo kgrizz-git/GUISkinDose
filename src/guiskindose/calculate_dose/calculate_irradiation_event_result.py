@@ -226,13 +226,19 @@ def _calculate_envelope_event(
     rotational_mode: str,
     step_deg: float,
     include_static: bool,
+    cached_hits: list[bool],
+    cached_table_hits: list[bool],
+    cached_field_area: list[float],
+    cached_k_isq: np.ndarray,
 ) -> tuple[list[bool], list[bool], list[float], np.ndarray, LedgerEventInput, dict[str, Any], bool]:
     """Evaluate one rotational event as a coverage envelope.
 
     Returns ``(hits, table_hits, field_area, k_isq, ledger_input, details,
     missed)`` where the geometry arrays are the static-pose evaluation (cache
-    continuity for the next event) while the dose map receives the cellwise
-    maximum over all candidates. Per-event kerma records are unchanged.
+    continuity for the next event — including the ``new_geometry=False`` reuse
+    path, which is why the live cache arrays are threaded in rather than
+    rebuilt from empties) while the dose map receives the cellwise maximum
+    over all candidates. Per-event kerma records are unchanged.
     """
     del rotational_mode  # coverage is established by the caller.
     ap1 = float(row["Ap1"])
@@ -261,7 +267,9 @@ def _calculate_envelope_event(
         domain_label = "full_circle"
 
     # Static-pose evaluation first: its arrays feed the legacy per-event slots
-    # and the geometry cache; its dose is discarded, never accumulated.
+    # and the geometry cache; its dose is discarded, never accumulated. The
+    # live cache arrays are threaded through so a new_geometry=False event
+    # reuses the true preceding geometry instead of collapsing to empties.
     static_hits, static_table_hits, static_field_area, static_k_isq = (
         perform_calculations_for_new_geometries(
             normalized_data=normalized_data,
@@ -270,10 +278,10 @@ def _calculate_envelope_event(
             patient=patient,
             table=table,
             pad=pad,
-            hits=[],
-            table_hits=[],
-            field_area=[],
-            k_isq=np.array([]),
+            hits=cached_hits,
+            table_hits=cached_table_hits,
+            field_area=cached_field_area,
+            k_isq=cached_k_isq,
         )
     )
     _, static_k_bs, static_k_med = compute_event_dose_vector(
@@ -296,7 +304,7 @@ def _calculate_envelope_event(
     k_tab_scalar = k_tab[ev]
     n_cells = len(patient.r)
 
-    def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> CandidateResult:
+    def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, list[bool]]:
         frame = _candidate_frame(parent_frame.iloc[0], pose_ap1, pose_ap2)
         candidate_hits, candidate_table_hits, candidate_field_area, candidate_k_isq = (
             perform_calculations_for_new_geometries(
@@ -313,11 +321,14 @@ def _calculate_envelope_event(
             )
         )
         if not any(candidate_hits):
-            return CandidateResult(
-                candidate_id=f"candidate_{pose_index}",
-                dose_vector=np.zeros(n_cells),
-                hit_count=0,
-                missed=True,
+            return (
+                CandidateResult(
+                    candidate_id=f"candidate_{pose_index}",
+                    dose_vector=np.zeros(n_cells),
+                    hit_count=0,
+                    missed=True,
+                ),
+                list(candidate_hits),
             )
         vector, candidate_k_bs, candidate_k_med = compute_event_dose_vector(
             event_frame=frame,
@@ -334,35 +345,46 @@ def _calculate_envelope_event(
             emit_warnings=False,
         )
         k_bs_vals = np.atleast_1d(np.asarray(candidate_k_bs, dtype=float))
-        union_holder.append(candidate_hits)
-        return CandidateResult(
-            candidate_id=f"candidate_{pose_index}",
-            dose_vector=vector,
-            hit_count=int(sum(1 for _ in filter(None, candidate_hits))),
-            missed=False,
-            k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
-            k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
-            k_med=float(candidate_k_med),
+        return (
+            CandidateResult(
+                candidate_id=f"candidate_{pose_index}",
+                dose_vector=vector,
+                hit_count=int(sum(1 for _ in filter(None, candidate_hits))),
+                missed=False,
+                k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
+                k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
+                k_med=float(candidate_k_med),
+            ),
+            list(candidate_hits),
         )
 
-    union_holder: list[list[bool]] = []
-    evaluations: list[CandidateResult] = []
-    for pose_index, (pose_ap1, pose_ap2) in enumerate(domain.unique_poses):
-        evaluations.append(_compute(pose_index, pose_ap1, pose_ap2))
+    union_mask: list[bool] = [False] * n_cells
+
+    def _generate() -> Any:
+        for pose_index, (pose_ap1, pose_ap2) in enumerate(domain.unique_poses):
+            result, candidate_hits = _compute(pose_index, pose_ap1, pose_ap2)
+            for index, hit in enumerate(candidate_hits):
+                union_mask[index] = union_mask[index] or bool(hit)
+            yield result
+
     evaluation = evaluate_envelope(
-        evaluations,
+        _generate(),
         n_cells=n_cells,
         zeros=np.zeros,
         maximum=np.maximum,
         argmax_cell=lambda vector: (int(np.argmax(vector)), float(np.max(vector))),
     )
 
+    # Restore the parent static pose on the shared phantoms: candidates leave
+    # them positioned at the final synthetic pose, and the returned phantom
+    # plus any intervening cache-dependent reads must observe the parent.
+    patient.position(data_norm=normalized_data, event=ev)
+    table.position(data_norm=normalized_data, event=ev)
+    pad.position(data_norm=normalized_data, event=ev)
+
     output[c.OUTPUT_KEY_DOSE_MAP] += evaluation.dose_vector
 
-    union_hits: list[bool] = [False] * n_cells
-    for candidate_hits in union_holder:
-        for index, hit in enumerate(candidate_hits):
-            union_hits[index] = union_hits[index] or bool(hit)
+    union_hits: list[bool] = union_mask
 
     output[c.OUTPUT_KEY_HITS][ev] = union_hits
     output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
@@ -400,6 +422,11 @@ def _calculate_envelope_event(
         "direction_source": "unknown",
         "multiplier": 1.0,
         "aggregation_rule": "max_within_sum_between",
+        # Semantic split, stated explicitly: the union hit mask describes all
+        # cells touched by any candidate, while the legacy per-event
+        # correction slots below record the reported static pose only.
+        "hits_basis": "candidate_union",
+        "legacy_correction_basis": "static_pose",
     }
     ledger_input = LedgerEventInput(
         event_index=ev,
@@ -628,6 +655,10 @@ def calculate_irradiation_event_result(
                 rotational_mode=rotational_mode,
                 step_deg=step_deg,
                 include_static=include_static,
+                cached_hits=hits,
+                cached_table_hits=table_hits,
+                cached_field_area=field_area,
+                cached_k_isq=k_isq,
             )
             ledger_inputs.append(ledger_input)
             envelope_details[ev] = details

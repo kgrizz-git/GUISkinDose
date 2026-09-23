@@ -88,3 +88,58 @@ def test_static_mode_matches_legacy_numbers():
     assert handling["rows"][1]["requested_handling"] == "Static"
     assert handling["aggregate"]["any_fallback_to_static"] is False
     assert static[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE] == {}
+
+
+def _frame_with_unchanged_geometry_spin():
+    """Spin whose static pose exactly matches the preceding event."""
+    frame = generate_synthetic_normalized_events(2)
+    for column in ("Tx", "Ty", "Tz", "Ap1", "Ap2", "Ap3", "At1", "At2", "At3", "FS_lat", "FS_long"):
+        frame.at[1, column] = frame.at[0, column]
+    frame.at[1, "acquisition_type"] = "Rotational Acquisition"
+    frame.at[1, "acquisition_type_code"] = "113613"
+    frame.at[1, "acquisition_type_coding_scheme"] = "DCM"
+    frame.at[1, "acquisition_type_meaning"] = "Rotational Acquisition"
+    frame.at[1, "Ap1_end"] = float(frame["Ap1"].to_numpy()[1]) + 60.0
+    frame.at[1, "Ap2_end"] = float(frame["Ap2"].to_numpy()[1])
+    return frame
+
+
+def test_envelope_reuses_cache_on_unchanged_geometry():
+    """new_geometry=False reuses the preceding static arrays, not empties."""
+    from guiskindose.geom_calc import check_new_geometry
+
+    frame = _frame_with_unchanged_geometry_spin()
+    assert check_new_geometry(frame) == [True, False]
+    output = _run(frame.copy(), _settings(angular_step_deg=10.0))
+    assert output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][1] is output[
+        c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW
+    ][0]
+    assert output[c.OUTPUT_KEY_ROTATIONAL_HANDLING]["rows"][1]["effective_handling"] == "coverage"
+
+
+def test_phantoms_restored_to_static_pose_after_envelope(monkeypatch):
+    """Shared phantoms must observe the parent pose, not the last candidate."""
+    from guiskindose.phantom_class import Phantom
+
+    calls: list = []
+    original_position = Phantom.position
+
+    def _recording_position(self, data_norm, event):
+        calls.append((self, data_norm is _frame_holder[0], event))
+        return original_position(self, data_norm=data_norm, event=event)
+
+    _frame_holder: list = []
+    frame = _frame_with_spin().copy()
+    _frame_holder.append(frame)
+    monkeypatch.setattr(Phantom, "position", _recording_position)
+    _run(frame, _settings(angular_step_deg=10.0))
+    parent_calls = [call for call in calls if call[1] and call[2] == 1]
+    assert parent_calls, "parent static pose must be (re)positioned last"
+
+
+def test_envelope_details_disclose_mixed_slot_semantics():
+    """Union hits vs static-only correction slots are labeled in output."""
+    output = _run(_frame_with_spin().copy(), _settings(angular_step_deg=10.0))
+    details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
+    assert details["hits_basis"] == "candidate_union"
+    assert details["legacy_correction_basis"] == "static_pose"
