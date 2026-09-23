@@ -46,7 +46,7 @@ KEY_PARAM_BELOW_FLOOR_KVP_POLICY = "below_floor_kvp_policy"
 KEY_PARAM_BELOW_FLOOR_KVP_MANUAL = "below_floor_kvp_manual"
 KEY_PARAM_BEAM_MISS_WARN = "beam_miss_warn"
 KEY_PARAM_ROTATIONAL_HANDLING = "rotational_handling"
-KEY_PARAM_ROTATIONAL_INCLUDE_STATIC = "rotational_include_static_pose"
+KEY_PARAM_ROTATIONAL_INCLUDE_STATIC = "include_static_pose"
 KEY_PARAM_ROTATIONAL_ANGULAR_STEP = "angular_step_deg"
 
 ROTATIONAL_HANDLING_COVERAGE = "coverage"

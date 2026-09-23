@@ -26,6 +26,7 @@ class CandidateDomain:
     paths: tuple[CandidatePath, ...] = ()
     include_static_pose: bool = True
     unique_pose_count: int = 0
+    unique_poses: tuple[tuple[float, float], ...] = ()
 
 
 def _canonical(angle: float) -> float:
@@ -50,13 +51,30 @@ def _path_angles(start: float, delta: float, count: int) -> tuple[float, ...]:
     return tuple(out)
 
 
+def _raw_displacements(start_raw: float, end_raw: float) -> tuple[float, float]:
+    """Positive/negative wrapped displacements (sign-preserving)."""
+    delta_pos = (end_raw - start_raw) % 360.0
+    return delta_pos, delta_pos - 360.0
+
+
 def _signed_displacements(start_raw: float, end_raw: float) -> tuple[float, float]:
     """Short/long signed displacements preserving wraparound direction."""
-    delta_pos = (end_raw - start_raw) % 360.0
-    delta_neg = delta_pos - 360.0
+    delta_pos, delta_neg = _raw_displacements(start_raw, end_raw)
     if abs(delta_pos) <= abs(delta_neg):
         return delta_pos, delta_neg
     return delta_neg, delta_pos
+
+
+def _path_labels(delta_pos: float, delta_neg: float) -> tuple[tuple[str, float], tuple[str, float]]:
+    """Label the two hypotheses; at 180 neither is shorter, so name the sign."""
+    if abs(delta_pos) == 180.0:
+        return (("positive_180", delta_pos), ("negative_180", delta_neg))
+    short, long = (
+        (delta_pos, delta_neg)
+        if abs(delta_pos) <= abs(delta_neg)
+        else (delta_neg, delta_pos)
+    )
+    return (("short", short), ("long", long))
 
 
 def wrapped_paths(
@@ -77,9 +95,10 @@ def wrapped_paths(
     """
     start = _canonical(start_raw)
     other = _canonical(other_start_raw)
-    short, long = _signed_displacements(start_raw, end_raw)
+    delta_pos = (end_raw - start_raw) % 360.0
+    delta_neg = delta_pos - 360.0
     paths = []
-    for label, delta in (("short", short), ("long", long)):
+    for label, delta in _path_labels(delta_pos, delta_neg):
         length = abs(delta)
         count = max(2, math.ceil(length / step_deg) + 1)
         angles = _path_angles(start, delta, count)
@@ -90,6 +109,13 @@ def wrapped_paths(
 
 
 def _deduplicate(poses: list[tuple[float, float]], *, tolerance_deg: float = 1e-9) -> list[tuple[float, float]]:
+    """Angle-level first-pass dedup over (Ap1, Ap2) pairs.
+
+    The dose loop performs the final dedup over complete geometry poses
+    before evaluating (a legacy static candidate may share angles while
+    differing elsewhere); generator callers must not assume these poses
+    are pairwise distinct in full geometry.
+    """
     unique: list[tuple[float, float]] = []
     for ap1, ap2 in poses:
         if not any(
@@ -122,10 +148,10 @@ def build_candidate_domain(
     """
     paths: list[CandidatePath] = []
     if primary_moves and secondary_moves and ap1_end is not None and ap2_end is not None:
-        primaries = _signed_displacements(ap1_start, ap1_end)
-        secondaries = _signed_displacements(ap2_start, ap2_end)
-        for p_label, p_delta in zip(("short", "long"), primaries, strict=True):
-            for s_label, s_delta in zip(("short", "long"), secondaries, strict=True):
+        primaries = _path_labels(*_raw_displacements(ap1_start, ap1_end))
+        secondaries = _path_labels(*_raw_displacements(ap2_start, ap2_end))
+        for p_label, p_delta in primaries:
+            for s_label, s_delta in secondaries:
                 # Shared count from the slower axis so neither advances
                 # more than step_deg per sample; same t_j couples them.
                 count = max(
@@ -157,7 +183,12 @@ def build_candidate_domain(
     if include_static_pose and static_ap1 is not None and static_ap2 is not None:
         poses.append((_canonical(static_ap1), _canonical(static_ap2)))
     unique = _deduplicate(poses)
-    return CandidateDomain(paths=tuple(paths), include_static_pose=include_static_pose, unique_pose_count=len(unique))
+    return CandidateDomain(
+        paths=tuple(paths),
+        include_static_pose=include_static_pose,
+        unique_pose_count=len(unique),
+        unique_poses=tuple(unique),
+    )
 
 
 def closed_circle_domain(
@@ -178,7 +209,13 @@ def closed_circle_domain(
         ap1_angles_deg=angles,
         ap2_angles_deg=tuple([_canonical(ap2_fixed)] * count),
     )
-    return CandidateDomain(paths=(path,), include_static_pose=True, unique_pose_count=len(set(angles)))
+    unique = _deduplicate(list(zip(angles, path.ap2_angles_deg, strict=True)))
+    return CandidateDomain(
+        paths=(path,),
+        include_static_pose=True,
+        unique_pose_count=len(unique),
+        unique_poses=tuple(unique),
+    )
 
 
 @dataclass(frozen=True)
@@ -204,6 +241,36 @@ class HandlingLedgerRow:
     direction_source: str = "unknown"
     kerma: float | None = None
     dap: float | None = None
+    multiplier: float = 1.0
+    aggregation_rule: str = "max_within_sum_between"
+
+
+@dataclass
+class LedgerEventInput:
+    """One event's contribution to the handling ledger.
+
+    ``requested_handling`` is what was asked (Auto/Coverage/Static);
+    ``effective_handling`` is what ran. A static fallback is an effective
+    ``static`` whose request was anything but an explicit ``Static``.
+    """
+
+    event_index: int
+    classification: RotationalClassification
+    requested_handling: str = "Auto"
+    effective_handling: str = "static"
+    fallback_reason: str = ""
+    ap1_start: float | None = None
+    ap2_start: float | None = None
+    ap1_end: float | None = None
+    ap2_end: float | None = None
+    candidate_domain: str = ""
+    requested_path_count: int = 0
+    unique_candidate_count: int = 0
+    angular_step_deg: float = 1.0
+    include_static_pose: bool = True
+    direction_source: str = "unknown"
+    kerma: float | None = None
+    dap: float | None = None
 
 
 @dataclass(frozen=True)
@@ -219,41 +286,55 @@ class HandlingLedger:
     any_fallback_to_static: bool = False
 
 
-def build_handling_ledger(
-    classifications: list[
-        tuple[int, RotationalClassification, str, float | None, float | None]
-    ],
-) -> HandlingLedger:
+def build_handling_ledger(entries: list[LedgerEventInput]) -> HandlingLedger:
     """Assemble per-event ledger rows plus aggregate counts.
 
-    Each entry is ``(event_index, classification, effective_handling, kerma,
-    dap)`` where ``classification`` is a ``RotationalClassification``.
     Dose-weighted materiality (kerma sums) accompanies the counts so "1 of
-    100 events" cannot mislead. No dose math happens here.
+    100 events" cannot mislead. ``any_fallback_to_static`` fires only for
+    effective-``static`` outcomes that were NOT explicitly requested — an
+    intentional Static override is recorded, not flagged. No dose math here.
     """
     rows: list[HandlingLedgerRow] = []
     rotational_kerma = 0.0
     total_kerma = 0.0
     counts = {"rotational": 0, "positioner_motion": 0, "static": 0, "unknown": 0}
     any_fallback = False
-    for event_index, classification, handling, kerma, dap in classifications:
+    for entry in entries:
+        classification = entry.classification
         counts[classification.classification] = counts.get(classification.classification, 0) + 1
-        if kerma is not None and math.isfinite(kerma):
-            total_kerma += kerma
+        if entry.kerma is not None and math.isfinite(entry.kerma):
+            total_kerma += entry.kerma
             if classification.classification == "rotational":
-                rotational_kerma += kerma
-        if handling == "static" and classification.classification in ("rotational", "positioner_motion"):
-            any_fallback = True
+                rotational_kerma += entry.kerma
+        fallback = (
+            entry.effective_handling == "static"
+            and entry.requested_handling != "Static"
+            and classification.classification in ("rotational", "positioner_motion")
+        )
+        any_fallback = any_fallback or fallback
         rows.append(
             HandlingLedgerRow(
-                event_index=event_index,
+                event_index=entry.event_index,
                 classification=classification.classification,
                 reason_codes=classification.reason_codes,
                 confidence=classification.confidence,
-                effective_handling=handling,
-                ap1_start=None,
-                kerma=kerma,
-                dap=dap,
+                requested_handling=entry.requested_handling,
+                effective_handling=entry.effective_handling,
+                fallback_reason=entry.fallback_reason,
+                ap1_start=entry.ap1_start,
+                ap2_start=entry.ap2_start,
+                ap1_end=entry.ap1_end,
+                ap2_end=entry.ap2_end,
+                primary_separation_deg=classification.primary_separation_deg,
+                secondary_separation_deg=classification.secondary_separation_deg,
+                candidate_domain=entry.candidate_domain,
+                requested_path_count=entry.requested_path_count,
+                unique_candidate_count=entry.unique_candidate_count,
+                angular_step_deg=entry.angular_step_deg,
+                include_static_pose=entry.include_static_pose,
+                direction_source=entry.direction_source,
+                kerma=entry.kerma,
+                dap=entry.dap,
             )
         )
     return HandlingLedger(
@@ -274,6 +355,7 @@ __all__ = [
     "CandidatePath",
     "HandlingLedger",
     "HandlingLedgerRow",
+    "LedgerEventInput",
     "build_candidate_domain",
     "build_handling_ledger",
     "closed_circle_domain",

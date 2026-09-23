@@ -28,6 +28,24 @@ def test_wrapped_paths_keep_both_directions():
 def test_exact_180_keeps_both_signed_paths():
     short, long = wrapped_paths(0.0, 180.0, step_deg=1.0, axis="primary")
     assert len(short.ap1_angles_deg) == len(long.ap1_angles_deg) == 181
+    assert {short.path_id, long.path_id} == {"primary_positive_180", "primary_negative_180"}
+
+
+def test_domain_carries_deduplicated_poses():
+    domain = build_candidate_domain(
+        ap1_start=90.0,
+        ap2_start=0.0,
+        ap1_end=-120.0,
+        ap2_end=0.0,
+        primary_moves=True,
+        secondary_moves=False,
+        step_deg=1.0,
+        include_static_pose=True,
+        static_ap1=90.0,
+        static_ap2=0.0,
+    )
+    assert domain.unique_pose_count == len(domain.unique_poses) == 360
+    assert (90.0, 0.0) in domain.unique_poses
 
 
 def test_endpoints_pinned_exactly():
@@ -90,6 +108,7 @@ def test_closed_circle_has_no_duplicate_endpoint():
 
 def test_handling_ledger_reports_kerma_weighted_counts():
     from guiskindose.rotational_acquisition import classify_rotational_event
+    from guiskindose.rotational_envelope import LedgerEventInput
 
     spin = classify_rotational_event(
         {
@@ -104,7 +123,26 @@ def test_handling_ledger_reports_kerma_weighted_counts():
     )
     plain = classify_rotational_event({"Ap1": 0.0, "Ap2": 0.0, "Ap1_end": 0.0, "Ap2_end": 0.0})
     ledger = build_handling_ledger(
-        [(48, spin, "coverage", 11.0, 1.0), (0, plain, "static", 89.0, 9.0)]
+        [
+            LedgerEventInput(
+                event_index=48,
+                classification=spin,
+                requested_handling="Auto",
+                effective_handling="coverage",
+                ap1_start=90.0,
+                ap2_start=0.0,
+                ap1_end=-120.0,
+                ap2_end=0.0,
+                candidate_domain="primary_short+primary_long",
+                requested_path_count=2,
+                unique_candidate_count=360,
+                kerma=11.0,
+                dap=1.0,
+            ),
+            LedgerEventInput(
+                event_index=0, classification=plain, effective_handling="static", kerma=89.0, dap=9.0
+            ),
+        ]
     )
     assert ledger.total_events == 2
     assert ledger.rotational_count == 1
@@ -112,11 +150,18 @@ def test_handling_ledger_reports_kerma_weighted_counts():
     assert ledger.rotational_kerma == pytest.approx(11.0)
     assert ledger.total_kerma == pytest.approx(100.0)
     assert ledger.any_fallback_to_static is False
-    assert ledger.rows[0].reason_codes and ledger.rows[0].confidence == "coded"
+    row = ledger.rows[0]
+    assert row.reason_codes and row.confidence == "coded"
+    assert row.ap1_end == pytest.approx(-120.0)
+    assert row.primary_separation_deg == pytest.approx(150.0)
+    assert row.unique_candidate_count == 360
+    assert row.multiplier == pytest.approx(1.0)
+    assert row.aggregation_rule == "max_within_sum_between"
 
 
 def test_handling_ledger_flags_static_fallback():
     from guiskindose.rotational_acquisition import classify_rotational_event
+    from guiskindose.rotational_envelope import LedgerEventInput
 
     spin = classify_rotational_event(
         {
@@ -127,5 +172,46 @@ def test_handling_ledger_flags_static_fallback():
             "acquisition_type": "Rotational Acquisition",
         }
     )
-    ledger = build_handling_ledger([(0, spin, "static", 5.0, None)])
+    ledger = build_handling_ledger(
+        [
+            LedgerEventInput(
+                event_index=0,
+                classification=spin,
+                requested_handling="Auto",
+                effective_handling="static",
+                fallback_reason="trajectory_unresolved",
+                kerma=5.0,
+                dap=None,
+            )
+        ]
+    )
     assert ledger.any_fallback_to_static is True
+    assert ledger.rows[0].fallback_reason == "trajectory_unresolved"
+
+
+def test_handling_ledger_explicit_static_is_not_fallback():
+    from guiskindose.rotational_acquisition import classify_rotational_event
+    from guiskindose.rotational_envelope import LedgerEventInput
+
+    spin = classify_rotational_event(
+        {
+            "Ap1": 90.0,
+            "Ap2": 0.0,
+            "Ap1_end": -120.0,
+            "Ap2_end": 0.0,
+            "acquisition_type": "Rotational Acquisition",
+        }
+    )
+    ledger = build_handling_ledger(
+        [
+            LedgerEventInput(
+                event_index=0,
+                classification=spin,
+                requested_handling="Static",
+                effective_handling="static",
+                kerma=5.0,
+                dap=None,
+            )
+        ]
+    )
+    assert ledger.any_fallback_to_static is False

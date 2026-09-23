@@ -221,6 +221,10 @@ Deduplicate only after all requested paths and the optional legacy static pose
 have been generated. Compare the complete geometry pose; compare circular
 angles modulo 360 with absolute tolerance `1e-9` degrees. Preserve requested
 path IDs/counts in the ledger even when endpoints collapse to one unique pose.
+Dedup runs in two stages: the generator deduplicates angle pairs (its only
+pose knowledge), and the dose loop re-deduplicates over complete geometry
+poses before evaluating, since a legacy static candidate may share angles
+while differing elsewhere.
 
 ### Measured endpoints
 

@@ -154,7 +154,7 @@ class PyskindoseSettings:
                 f"rotational_handling must be one of {', '.join(ROTATIONAL_HANDLING_MODES)}"
             )
         self.rotational_handling: str = rotational_handling
-        self.rotational_include_static_pose: bool = bool(
+        self.include_static_pose: bool = bool(
             tmp.get(KEY_PARAM_ROTATIONAL_INCLUDE_STATIC, True)
         )
         angular_step = float(tmp.get(KEY_PARAM_ROTATIONAL_ANGULAR_STEP, ROTATIONAL_ANGULAR_STEP_DEFAULT))

@@ -10,7 +10,7 @@
     "below_floor_kvp_manual": 70.0,
     "beam_miss_warn": "per_event",
     "rotational_handling": "coverage",
-    "rotational_include_static_pose": true,
+    "include_static_pose": true,
     "angular_step_deg": 1.0,
     "silence_pydicom_warnings": true,
     "plot": {
