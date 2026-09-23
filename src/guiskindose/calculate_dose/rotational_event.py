@@ -27,6 +27,7 @@ from guiskindose.rotational_envelope import (
     build_candidate_domain,
     closed_circle_domain,
     evaluate_envelope,
+    is_disclosed_row,
 )
 
 if TYPE_CHECKING:
@@ -62,65 +63,6 @@ def _candidate_frame(parent_row: pd.Series, ap1: float, ap2: float) -> pd.DataFr
     frame["Ap1"] = ap1
     frame["Ap2"] = ap2
     return frame
-
-
-def _evaluate_candidate(
-    *,
-    frame: pd.DataFrame,
-    candidate_id: str,
-    kerma_full: float,
-    spline: CubicSpline,
-    k_tab_scalar: float,
-    corrections_db: str,
-    patient: Phantom,
-    table: Phantom,
-    pad: Phantom,
-    n_cells: int,
-) -> CandidateResult:
-    """Full-K dose response of one candidate pose (no shared-state writes)."""
-    hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
-        normalized_data=frame,
-        event=0,
-        new_geometry=True,
-        patient=patient,
-        table=table,
-        pad=pad,
-        hits=[],
-        table_hits=[],
-        field_area=[],
-        k_isq=np.array([]),
-    )
-    if not any(hits):
-        return CandidateResult(
-            candidate_id=candidate_id,
-            dose_vector=np.zeros(n_cells),
-            hit_count=0,
-            missed=True,
-        )
-    vector, k_bs, k_med = compute_event_dose_vector(
-        event_frame=frame,
-        event=0,
-        hits=hits,
-        table_hits=table_hits,
-        field_area=field_area,
-        k_isq=k_isq,
-        k_bs_spline=spline,
-        k_tab_scalar=k_tab_scalar,
-        kerma_full=kerma_full,
-        corrections_db=corrections_db,
-        n_cells=n_cells,
-        emit_warnings=False,
-    )
-    k_bs_vals = np.atleast_1d(np.asarray(k_bs, dtype=float))
-    return CandidateResult(
-        candidate_id=candidate_id,
-        dose_vector=vector,
-        hit_count=int(sum(1 for _ in filter(None, hits))),
-        missed=False,
-        k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
-        k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
-        k_med=float(k_med),
-    )
 
 
 def _is_contradictory(classification: Any) -> bool:
@@ -208,9 +150,6 @@ def _calculate_envelope_event(
     row: pd.Series,
     classification: Any,
     normalized_data: pd.DataFrame,
-    total_events: int,
-    exam_id: str | None,
-    settings: "PyskindoseSettings | None",
     patient: Phantom,
     table: Phantom,
     pad: Phantom,
@@ -383,7 +322,14 @@ def _calculate_envelope_event(
     pad.position(data_norm=normalized_data, event=ev)
 
     output[c.OUTPUT_KEY_DOSE_MAP] += evaluation.dose_vector
+    # Discard the static-pose dose computed above: the envelope vector is the
+    # event contribution. The static evaluation exists only for slots/cache.
 
+    # NOTE for future readers of output["hits"]: this is the candidate UNION
+    # mask for enveloped events, not the static-pose hit list (see
+    # details["hits_basis"]). Correction tables keyed off hits must account
+    # for that; the static-pose corrections in the slots below describe the
+    # reported pose only (details["legacy_correction_basis"]).
     union_hits: list[bool] = union_mask
 
     output[c.OUTPUT_KEY_HITS][ev] = union_hits
@@ -446,31 +392,40 @@ def _calculate_envelope_event(
         direction_source="unknown",
         kerma=reported_kerma,
         dap=dap,
+        k_bs_range=evaluation.k_bs_range,
+        k_med_range=evaluation.k_med_range,
     )
     return static_hits, static_table_hits, static_field_area, static_k_isq, ledger_input, details, missed
 
 
-def _emit_rotational_summary(ledger: HandlingLedger, *, total_events: int) -> None:
-    """One aggregate log line for rotational handling (beam-miss precedent)."""
-    contradictory = sum(
-        1 for row in ledger.rows if "contradictory_static" in row.reason_codes
-    )
-    if (
-        ledger.rotational_count == 0
-        and ledger.positioner_motion_count == 0
-        and contradictory == 0
-    ):
+def _emit_rotational_summary(ledger: HandlingLedger) -> None:
+    """One aggregate log line for rotational handling (beam-miss precedent).
+
+    The envelope-kerma fraction sums coverage rows only: detection-weighted
+    sums would mislabel static-handled kerma as enveloped.
+    """
+    disclosed = [
+        {
+            "classification": row.classification,
+            "reason_codes": list(row.reason_codes),
+            "effective_handling": row.effective_handling,
+            "kerma": row.kerma,
+        }
+        for row in ledger.rows
+    ]
+    disclosed = [row for row in disclosed if is_disclosed_row(row)]
+    if not disclosed:
         return
-    fraction = (
-        ledger.rotational_kerma / ledger.total_kerma if ledger.total_kerma > 0 else 0.0
-    )
+    enveloped = [row for row in disclosed if row["effective_handling"] == "coverage"]
+    envelope_kerma = sum(float(row["kerma"] or 0.0) for row in enveloped)
+    contradictory = sum(1 for row in disclosed if "contradictory_static" in row["reason_codes"])
+    fraction = envelope_kerma / ledger.total_kerma if ledger.total_kerma > 0 else 0.0
     logger.warning(
-        "Rotational handling: %d rotational + %d positioner-motion of %d events "
+        "Rotational handling: %d enveloped of %d disclosed events "
         "(%.1f%% of K_IRP in rotational envelopes); contradictory stationary "
         "declarations: %d; static fallbacks: %s.",
-        ledger.rotational_count,
-        ledger.positioner_motion_count,
-        total_events,
+        len(enveloped),
+        len(disclosed),
         100.0 * fraction,
         contradictory,
         "yes" if ledger.any_fallback_to_static else "no",

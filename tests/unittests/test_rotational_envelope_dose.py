@@ -234,7 +234,7 @@ def test_summary_names_contradictory_declarations():
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:
-        _emit_rotational_summary(ledger, total_events=1)
+        _emit_rotational_summary(ledger)
     finally:
         logger.removeHandler(handler)
     assert any("contradictory stationary declarations: 1" in message for message in messages)

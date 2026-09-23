@@ -13,6 +13,7 @@ from guiskindose.constants import (
     KEY_NORMALIZATION_MANUFACTURER,
     KEY_NORMALIZATION_MODEL_NAME,
 )
+from guiskindose.rotational_envelope import is_disclosed_row
 
 from ._exam_view import ExamView
 from .models import ExportExamSource
@@ -186,22 +187,13 @@ def has_rotational_content(handling: dict[str, Any] | None) -> bool:
 
     The dose loop always emits the ledger dict, even for all-static datasets
     — a bare non-empty dict must not trigger a "Rotational handling" section
-    claiming envelope processing. Detected rotational/positioner rows qualify,
-    as do contradictory stationary declarations (unknown class carrying the
-    contradictory_static reason).
+    claiming envelope processing. See :func:`is_disclosed_row` for the
+    qualifying set (shared with badges and the summary log).
     """
     if not handling:
         return False
     rows = handling.get("rows", [])
-    return any(_is_disclosed_row(row) for row in rows)
-
-
-def _is_disclosed_row(row: object) -> bool:
-    if not isinstance(row, dict):
-        return False
-    if row.get("classification") in ("rotational", "positioner_motion"):
-        return True
-    return "contradictory_static" in (row.get("reason_codes") or [])
+    return any(is_disclosed_row(row) for row in rows)
 
 
 def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | None:
@@ -215,11 +207,7 @@ def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | N
         return None
     assert handling is not None
     rows = [row for row in handling.get("rows", []) if isinstance(row, dict)]
-    detected = [
-        row
-        for row in rows
-        if row.get("classification") in ("rotational", "positioner_motion")
-    ]
+    detected = [row for row in rows if is_disclosed_row(row)]
     enveloped = [row for row in detected if row.get("effective_handling") == "coverage"]
     static = [row for row in detected if row.get("effective_handling") == "static"]
     envelope_kerma = sum(float(row.get("kerma") or 0.0) for row in enveloped)
@@ -237,6 +225,17 @@ def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | N
             "candidate poses with the cellwise maximum kept; kerma records "
             "are unchanged (multiplier 1.0)."
         )
+        degenerate = sum(
+            1
+            for row in enveloped
+            if isinstance(row, dict) and int(row.get("unique_candidate_count", 2) or 2) <= 1
+        )
+        if degenerate:
+            mechanics += (
+                f" {degenerate} envelope(s) collapsed to a single candidate "
+                f"pose (requested paths deduplicated); those equal a static "
+                f"evaluation at that pose."
+            )
     else:
         treatment = (
             f"{len(static)} detected event(s) ran static; no envelope was computed"
@@ -244,22 +243,65 @@ def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | N
         mechanics = ""
     if static and enveloped:
         treatment += f"; {len(static)} detected event(s) ran static with warnings"
+    # Plan-mandated envelope elements: step, domain, direction, static
+    # inclusion, fixed-geometry assumptions, endpoint concept codes.
+    steps = sorted({row.get("angular_step_deg") for row in enveloped if row.get("angular_step_deg") is not None})
+    domains = sorted({str(row.get("candidate_domain", "")) for row in enveloped if row.get("candidate_domain")})
+    directions = sorted({str(row.get("direction_source", "")) for row in enveloped if row.get("direction_source")})
+    statics = sum(1 for row in enveloped if row.get("include_static_pose"))
+    elements = ""
+    if enveloped:
+        elements = (
+            f" Candidate domains: {', '.join(domains) or 'n/a'}; angular step(s): "
+            f"{', '.join(str(step) for step in steps) or 'n/a'}°; direction: "
+            f"{', '.join(directions) or 'unknown'}; static pose included in "
+            f"{statics}/{len(enveloped)} envelope(s). Start/end angles use the "
+            f"DCM positioner concepts (primary 112011/end 113739, secondary "
+            f"112012/end 113740); table position, field, spectrum, and "
+            f"distances are held fixed unless a measured source says otherwise."
+        )
     fallback = " Static fallbacks occurred — see the ledger." if aggregate.get("any_fallback_to_static") else ""
     return (
         f"Rotational handling: {treatment} out of {total} events "
         f"({fraction:.1f}% of K_IRP in rotational envelopes)."
         f"{mechanics}"
+        f"{elements}"
         f"{fallback}"
     )
 
 
+def _format_range(value: object) -> str:
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return "—"
+    low, high = value
+    if low is None or high is None:
+        return "—"
+    return f"{low:g} to {high:g}"
+
+
 def rotational_ledger_table(handling: dict[str, Any] | None) -> list[list[str]]:
-    """Per-event ledger rows (header + one row per detected event)."""
-    header = ["Event", "Classification", "Handling", "Endpoints (Ap1/Ap2)", "Candidates", "K_IRP"]
+    """Per-event ledger rows (header + one row per disclosed event).
+
+    Only disclosed rows (shared predicate: detected rotational /
+    positioner-motion plus contradictory declarations) render — a 49-event
+    exam with one spin yields a 1-row table, not 49 rows of static noise.
+    """
+    header = [
+        "Event",
+        "Classification",
+        "Handling",
+        "Endpoints (Ap1/Ap2)",
+        "Candidates",
+        "Step°",
+        "k_bs range",
+        "K_IRP",
+    ]
     if not handling:
         return [header]
     rows = [header]
     for row in handling.get("rows", []):
+        if not is_disclosed_row(row):
+            continue
         endpoints = (
             f"({row.get('ap1_start')}/{row.get('ap2_start')}) → "
             f"({row.get('ap1_end')}/{row.get('ap2_end')})"
@@ -271,6 +313,8 @@ def rotational_ledger_table(handling: dict[str, Any] | None) -> list[list[str]]:
                 str(row.get("effective_handling", "")),
                 endpoints,
                 str(row.get("unique_candidate_count", "")),
+                str(row.get("angular_step_deg", "")),
+                _format_range(row.get("k_bs_range")),
                 str(row.get("kerma", "")),
             ]
         )

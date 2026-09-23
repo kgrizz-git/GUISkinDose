@@ -59,14 +59,6 @@ def _raw_displacements(start_raw: float, end_raw: float) -> tuple[float, float]:
     return delta_pos, delta_pos - 360.0
 
 
-def _signed_displacements(start_raw: float, end_raw: float) -> tuple[float, float]:
-    """Short/long signed displacements preserving wraparound direction."""
-    delta_pos, delta_neg = _raw_displacements(start_raw, end_raw)
-    if abs(delta_pos) <= abs(delta_neg):
-        return delta_pos, delta_neg
-    return delta_neg, delta_pos
-
-
 def _path_labels(delta_pos: float, delta_neg: float) -> tuple[tuple[str, float], tuple[str, float]]:
     """Label the two hypotheses; at 180 neither is shorter, so name the sign."""
     if abs(delta_pos) == 180.0:
@@ -327,6 +319,8 @@ class HandlingLedgerRow:
     dap: float | None = None
     multiplier: float = 1.0
     aggregation_rule: str = "max_within_sum_between"
+    k_bs_range: tuple[float | None, float | None] | None = None
+    k_med_range: tuple[float | None, float | None] | None = None
 
 
 @dataclass
@@ -355,6 +349,8 @@ class LedgerEventInput:
     direction_source: str = "unknown"
     kerma: float | None = None
     dap: float | None = None
+    k_bs_range: tuple[float | None, float | None] | None = None
+    k_med_range: tuple[float | None, float | None] | None = None
 
 
 @dataclass(frozen=True)
@@ -368,6 +364,23 @@ class HandlingLedger:
     rotational_kerma: float = 0.0
     total_kerma: float = 0.0
     any_fallback_to_static: bool = False
+
+
+def is_disclosed_row(row: object) -> bool:
+    """Whether a ledger row belongs in disclosure surfaces.
+
+    Detected rotational/positioner-motion rows plus contradictory stationary
+    declarations (unknown class carrying ``contradictory_static``). Every
+    badge, paragraph, table, and summary must use this predicate — never raw
+    classification counts — so contradictory rows cannot fall through the
+    cracks of any single surface.
+    """
+    if not isinstance(row, dict):
+        return False
+    if row.get("classification") in ("rotational", "positioner_motion"):
+        return True
+    reasons = row.get("reason_codes") or []
+    return "contradictory_static" in reasons
 
 
 def build_handling_ledger(entries: list[LedgerEventInput]) -> HandlingLedger:
@@ -422,6 +435,8 @@ def build_handling_ledger(entries: list[LedgerEventInput]) -> HandlingLedger:
                 direction_source=entry.direction_source,
                 kerma=entry.kerma,
                 dap=entry.dap,
+                k_bs_range=entry.k_bs_range,
+                k_med_range=entry.k_med_range,
             )
         )
     return HandlingLedger(
@@ -446,5 +461,6 @@ __all__ = [
     "build_candidate_domain",
     "build_handling_ledger",
     "closed_circle_domain",
+    "is_disclosed_row",
     "wrapped_paths",
 ]

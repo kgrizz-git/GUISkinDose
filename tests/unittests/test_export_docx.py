@@ -171,3 +171,13 @@ def test_docx_renders_rotational_methodology_and_ledger():
     tables_text = "\n".join(cell.text for table in doc.tables for row in table.rows for cell in row.cells)
     assert "rotational" in tables_text
     assert "coverage" in tables_text
+
+
+def test_methodology_notes_collapsed_domain():
+    from guiskindose.export.sections import rotational_methodology_paragraph
+
+    handling = dict(_handling())
+    handling["rows"] = [dict(handling["rows"][0], unique_candidate_count=1)]
+    text = rotational_methodology_paragraph(handling)
+    assert text is not None
+    assert "collapsed to a single candidate pose" in text

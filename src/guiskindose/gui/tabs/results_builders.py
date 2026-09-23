@@ -85,30 +85,28 @@ class ResultsTabController:
     def _rotational_badge_text(self) -> str:
         """One-line rotational-handling summary for the Results badge.
 
-        Counts what actually ran (ledger effective handling), not what was
-        detected: explicitly static runs show a static-only badge, never
-        an envelope claim.
+        Counts what actually ran over disclosed rows (shared predicate),
+        never bare detection counts: an explicitly static run shows no
+        envelope. Contradictory rows are disclosed rows too.
         """
+        from guiskindose.rotational_envelope import is_disclosed_row
+
         output = state.output
         handling = output.get("rotational_handling") if isinstance(output, dict) else None
         if not handling:
             return ""
-        rows = handling.get("rows", [])
-        enveloped = sum(1 for row in rows if isinstance(row, dict) and row.get("effective_handling") == "coverage")
+        rows = [row for row in handling.get("rows", []) if is_disclosed_row(row)]
+        enveloped = sum(1 for row in rows if row.get("effective_handling") == "coverage")
         explicit_static = sum(
             1
             for row in rows
-            if isinstance(row, dict)
-            and row.get("classification") in ("rotational", "positioner_motion")
-            and row.get("effective_handling") == "static"
+            if row.get("effective_handling") == "static"
             and row.get("requested_handling") == "Static"
         )
         fallback_static = sum(
             1
             for row in rows
-            if isinstance(row, dict)
-            and row.get("classification") in ("rotational", "positioner_motion")
-            and row.get("effective_handling") == "static"
+            if row.get("effective_handling") == "static"
             and row.get("requested_handling") != "Static"
         )
         detected = enveloped + explicit_static + fallback_static
@@ -132,9 +130,12 @@ class ResultsTabController:
     def _refresh_agg_rotational_badge(self, res: Any) -> None:
         """Aggregate rotational badge across multi-exam outputs.
 
-        Counts what actually ran (ledger effective handling per exam), never
-        bare detection counts: an explicitly static run shows no envelope.
+        Counts what actually ran over disclosed rows (shared predicate),
+        never bare detection counts: an explicitly static run shows no
+        envelope. Contradictory rows are disclosed rows too.
         """
+        from guiskindose.rotational_envelope import is_disclosed_row
+
         enveloped = 0
         static = 0
         total = 0
@@ -143,9 +144,7 @@ class ResultsTabController:
             if not isinstance(handling, dict):
                 continue
             for row in handling.get("rows", []):
-                if not isinstance(row, dict):
-                    continue
-                if row.get("classification") not in ("rotational", "positioner_motion"):
+                if not is_disclosed_row(row):
                     continue
                 total += 1
                 if row.get("effective_handling") == "coverage":

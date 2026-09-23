@@ -224,9 +224,6 @@ def calculate_irradiation_event_result(
                 row=row,
                 classification=classification,
                 normalized_data=normalized_data,
-                total_events=total_events,
-                exam_id=exam_id,
-                settings=settings,
                 patient=patient,
                 table=table,
                 pad=pad,
@@ -348,6 +345,8 @@ def calculate_irradiation_event_result(
                 "dap": row.dap,
                 "multiplier": row.multiplier,
                 "aggregation_rule": row.aggregation_rule,
+                "k_bs_range": list(row.k_bs_range) if row.k_bs_range is not None else None,
+                "k_med_range": list(row.k_med_range) if row.k_med_range is not None else None,
             }
             for row in ledger.rows
         ],
@@ -365,5 +364,5 @@ def calculate_irradiation_event_result(
         "processed_event_count": total_events,
     }
     output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE] = envelope_details
-    _emit_rotational_summary(ledger, total_events=total_events)
+    _emit_rotational_summary(ledger)
     return output
