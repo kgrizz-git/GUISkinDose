@@ -195,6 +195,15 @@ def test_present_but_bad_baseline_geometry_blocks_use():
     assert "missing_baseline_geometry" in result.reason_codes
 
 
+@pytest.mark.parametrize("field", ["Ap3", "At1", "At2", "At3", "kVp", "DSI"])
+def test_present_but_bad_pose_fields_block_use(field):
+    row = _row(Ap1_end=100.0, Ap3=0.0, At1=0.0, At2=0.0, At3=0.0, kVp=80.0, DSI=100.0)
+    row[field] = float("inf")
+    result = classify_rotational_event(row)
+    assert result.usable_baseline_geometry is False
+    assert "missing_baseline_geometry" in result.reason_codes
+
+
 def test_absent_baseline_fields_do_not_block_use():
     result = classify_rotational_event(_row(Ap1_end=100.0))
     assert result.usable_baseline_geometry is True

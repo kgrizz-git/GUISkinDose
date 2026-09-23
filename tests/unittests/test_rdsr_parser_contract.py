@@ -63,6 +63,32 @@ def test_parser_preserves_legacy_duplicate_measurement_and_detector_rules():
     assert row[KEY_RDSR_DETECTORSIZE_MM] == "250"
 
 
+def _coded_content(concept_name: str, meaning: str, code: str, scheme: str) -> Dataset:
+    content = _content(concept_name)
+    code_seq = Dataset()
+    code_seq.CodeMeaning = meaning
+    code_seq.CodeValue = code
+    code_seq.CodingSchemeDesignator = scheme
+    content.ConceptCodeSequence = Sequence([code_seq])
+    return content
+
+
+def test_parser_preserves_event_type_identity_columns():
+    """IrradiationEventType meaning + DCM code/scheme all survive parsing."""
+    data_raw = _event_dataset()
+    event = data_raw.ContentSequence[0]
+    event.ContentSequence.append(
+        _coded_content("Irradiation Event Type", "Rotational Acquisition", "113613", "DCM")
+    )
+
+    parsed = rdsr_parser(data_raw)  # type: ignore[arg-type]
+    row = parsed.iloc[0]
+
+    assert row["IrradiationEventType"] == "Rotational Acquisition"
+    assert row["IrradiationEventType_CodeValue"] == "113613"
+    assert row["IrradiationEventType_CodingSchemeDesignator"] == "DCM"
+
+
 def test_parser_tolerates_missing_manufacturer_model_name():
     """Upstream Allura pattern: absent top-level model tag parses as None."""
     data_raw = _event_dataset()

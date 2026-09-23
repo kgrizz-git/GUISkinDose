@@ -27,11 +27,19 @@ _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 # Normalized-frame numeric prerequisites for a usable baseline geometry.
 # Only keys actually present in the input are checked: absence is not
-# evidence of unusability, but a present-but-nonfinite value is.
+# evidence of unusability (the classifier also serves minimal/partial rows;
+# the envelope builder re-validates evaluability before computing), but a
+# present-but-nonfinite value fails the baseline.
 BASELINE_NUMERIC_FIELDS = (
     "Tx",
     "Ty",
     "Tz",
+    "Ap1",
+    "Ap2",
+    "Ap3",
+    "At1",
+    "At2",
+    "At3",
     "kVp",
     "K_IRP",
     "DSD",
