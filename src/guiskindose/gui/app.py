@@ -31,11 +31,13 @@ from guiskindose.debug import configure_logging, dprint
 from guiskindose.privacy import opaque_exam_label, safe_error_event
 
 from .loopback_security import (
+    DEFAULT_GUI_PORT,
     TOKEN_QUERY_PARAM,
     LoopbackSecurityConfig,
     LoopbackSecurityMiddleware,
     configure_loopback_security,
     generate_launch_token,
+    probe_own_server,
 )
 from .native_geometry import register_native_geometry_tracking
 from .notifications import install_notification_defaults
@@ -490,6 +492,12 @@ def _open_browser_when_ready(url: str, host: str = "127.0.0.1", port: int = 8765
     def _wait_and_open() -> None:
         if not _wait_for_port(host, port):
             return
+        if not probe_own_server(host, port):
+            print(
+                f"Port {port} is not serving this GUI; open the console "
+                f"launch URL manually once it is: {url}"
+            )
+            return
         try:
             webbrowser.open(url)
         except Exception as exc:
@@ -500,7 +508,27 @@ def _open_browser_when_ready(url: str, host: str = "127.0.0.1", port: int = 8765
     thread.start()
 
 
-def run_gui(native: bool = False, host: str | None = None) -> None:
+def _resolve_port(port: int | None) -> int:
+    """Return the effective loopback port.
+
+    ``None`` keeps the default (bookmarks, docs, muscle memory survive);
+    ``0`` asks the OS for a free port, printed in the console launch URL;
+    anything else must be a valid TCP port. The ``0`` path binds and releases
+    a probe socket, so a (tiny, loopback-only) bind race remains — documented,
+    not hidden.
+    """
+    if port is None:
+        return DEFAULT_GUI_PORT
+    if port == 0:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            return probe.getsockname()[1]
+    if not 1 <= port <= 65535:
+        raise ValueError("gui_port_out_of_range")
+    return port
+
+
+def run_gui(native: bool = False, host: str | None = None, port: int | None = None) -> None:
     """Launch the GUISkinDose NiceGUI app.
 
     Always binds to 127.0.0.1 (localhost only): the GUI has no authentication
@@ -530,13 +558,14 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
         window_size = _configure_native_window()
 
     bind_host = _resolve_bind_host(host)
+    bind_port = _resolve_port(port)
 
     register_gui_static_files()
     launch_token: str | None = None
     if native:
-        configure_loopback_security(LoopbackSecurityConfig(require_token=False))
+        configure_loopback_security(LoopbackSecurityConfig.for_port(bind_port, require_token=False))
     else:
-        launch_token, security_config = generate_launch_token()
+        launch_token, security_config = generate_launch_token(bind_port)
         configure_loopback_security(security_config)
     app.add_middleware(LoopbackSecurityMiddleware)
 
@@ -545,13 +574,13 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
     if launch_token is not None:
         # The auto-opened browser must carry the launch token; ui.run's
         # show=True would open the bare URL (403), so open it ourselves.
-        bootstrap_url = f"http://127.0.0.1:8765/?{TOKEN_QUERY_PARAM}={launch_token}"
+        bootstrap_url = f"http://127.0.0.1:{bind_port}/?{TOKEN_QUERY_PARAM}={launch_token}"
         print(f"GUISkinDose GUI: open {bootstrap_url}")
         print(
             "This launch URL is the only key: anyone on this machine with it "
             "gains full access. It stays valid until the server restarts."
         )
-        _open_browser_when_ready(bootstrap_url)
+        _open_browser_when_ready(bootstrap_url, port=bind_port)
 
     try:
         ui.run(
@@ -560,7 +589,7 @@ def run_gui(native: bool = False, host: str | None = None) -> None:
             host=bind_host,
             window_size=window_size,
             reload=False,
-            port=8765,
+            port=bind_port,
             show=show_browser,
             favicon="🩻",
             reconnect_timeout=30.0,

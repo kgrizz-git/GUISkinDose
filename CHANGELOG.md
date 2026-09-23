@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **GUI `--port` flag** (2026-09-22) — the loopback port was fixed at 8765
+  with no override. `--port <n>` selects a loopback port, `--port 0` takes
+  an OS-assigned free port (printed in the console launch URL); the token,
+  Host, and Origin controls are scoped to the effective port. Default stays
+  8765 so bookmarks and docs survive.
 - **GUI works from non-editable installs** (2026-09-22) — in-app copy
   (`copy_text()`, including the onboarding privacy notice and every help
   tooltip) was read from `dev-docs/ui_copy.json`, which never ships in

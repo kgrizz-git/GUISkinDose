@@ -553,6 +553,7 @@ if __name__ == "__main__":
         from guiskindose.gui.app import run_gui
         run_gui(
             native=getattr(args, "native", False),
+            port=getattr(args, "port", None),
         )
     else:
         if (run_settings := args.settings) is None:

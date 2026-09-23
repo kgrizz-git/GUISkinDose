@@ -96,3 +96,29 @@ def test_gui_network_flags_are_removed(argv: list[str]) -> None:
     with pytest.raises(SystemExit) as excinfo:
         get_argument_parser(argv)
     assert excinfo.value.code == 2
+
+
+@pytest.mark.parametrize("argv,expected", [
+    (["--mode", "gui"], None),
+    (["--mode", "gui", "--port", "9999"], 9999),
+    (["--mode", "gui", "--port", "0"], 0),
+])
+def test_gui_port_flag_parses(argv: list[str], expected: int | None) -> None:
+    """`--port` selects the loopback port (0 = OS-assigned)."""
+    from guiskindose.cli_args import get_argument_parser
+
+    assert get_argument_parser(argv).port == expected
+
+
+@pytest.mark.parametrize("argv", [
+    ["--mode", "gui", "--port", "70000"],
+    ["--mode", "gui", "--port", "-1"],
+    ["--mode", "gui", "--port", "notaport"],
+])
+def test_gui_port_flag_rejects_bad_values(argv: list[str]) -> None:
+    """Out-of-range/non-integer ports fail as usage errors, not tracebacks."""
+    from guiskindose.cli_args import get_argument_parser
+
+    with pytest.raises(SystemExit) as excinfo:
+        get_argument_parser(argv)
+    assert excinfo.value.code == 2

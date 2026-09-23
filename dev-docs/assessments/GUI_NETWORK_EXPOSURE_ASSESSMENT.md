@@ -96,8 +96,10 @@ see §4.
   nothing. Every connected browser sees and mutates the same patients,
   settings, and results — there are no sessions, no users, no read-only
   viewers.
-- Fixed port `8765` with no `--port` flag (`src/guiskindose/gui/app.py:483`;
-  `cli_args.py` has no port option): predictable for drive-by local pages.
+- Default port `8765` with an opt-out `--port` flag (`src/guiskindose/gui/app.py`;
+  `--port 0` takes an OS-assigned free port, printed in the console launch
+  URL): predictable by default for drive-by local pages — pass `--port 0`
+  when that matters.
   `reload=False` and a 30 s client-reconnect window
   (`src/guiskindose/gui/app.py:482`, `:486`) are sane; neither substitutes
   for access control — any local browser pointed at the URL, new or
@@ -182,7 +184,7 @@ operator was told to provide themselves.
 | # | Gap | Status |
 |---|---|---|
 | 1 | No in-GUI network-mode indication | **Moot** — refused 2026-09-22; there is no network mode to indicate |
-| 2 | Fixed predictable port 8765, no randomization or override | Open, modest (residual: known-port probing; see §4 follow-ups) |
+| 2 | Fixed predictable port 8765, no randomization or override | **Done** — `--port` flag with `--port 0` for an OS-assigned free port (default stays 8765); Host/Origin/token controls are port-scoped |
 | 3 | No token/auth layer | **Done in browser mode** (per-launch token + session cookie, 2026-09-22); Host/Origin checks in both modes; no per-user isolation (see gap 4) |
 | 4 | No read-only view mode; no per-client state (singleton `AppState`) | Deferred (Package D trigger: demonstrated clinical-LAN need; not scheduled) |
 | 5 | README loopback wording undersells the multi-user-machine case | **Done** — README "Privacy / network" now states per-host-not-per-user |
