@@ -185,9 +185,7 @@ def classify_rotational_event(event: RotationalEventInput | dict) -> RotationalC
             acquisition_type=event.get("acquisition_type"),
             acquisition_type_code=event.get("acquisition_type_code"),
             acquisition_type_coding_scheme=event.get("acquisition_type_coding_scheme"),
-            acquisition_type_meaning=event.get(
-                "acquisition_type_meaning", event.get("acquisition_type")
-            ),
+            acquisition_type_meaning=event.get("acquisition_type_meaning", event.get("acquisition_type")),
             protocol_text=event.get("protocol_text", event.get("AcquisitionProtocol")),
             ap1=event.get("Ap1", event.get("ap1")),
             ap2=event.get("Ap2", event.get("ap2")),
@@ -219,15 +217,9 @@ def classify_rotational_event(event: RotationalEventInput | dict) -> RotationalC
     scheme = _normalize_meaning(data.acquisition_type_coding_scheme)
     code_effective = code if (code and scheme == "dcm") else ""
 
-    is_stepping = code_effective == CODE_STEPPING or (
-        not code_effective and meaning == MEANING_STEPPING
-    )
-    is_rotational_type = code_effective == CODE_ROTATIONAL or (
-        not code_effective and meaning == MEANING_ROTATIONAL
-    )
-    is_stationary = code_effective == CODE_STATIONARY or (
-        not code_effective and meaning == MEANING_STATIONARY
-    )
+    is_stepping = code_effective == CODE_STEPPING or (not code_effective and meaning == MEANING_STEPPING)
+    is_rotational_type = code_effective == CODE_ROTATIONAL or (not code_effective and meaning == MEANING_ROTATIONAL)
+    is_stationary = code_effective == CODE_STATIONARY or (not code_effective and meaning == MEANING_STATIONARY)
     has_alias = _text_alias_present(data.acquisition_type, data.acquisition_type_meaning, data.protocol_text)
 
     ap1 = _finite_deg(data.ap1)
@@ -235,21 +227,15 @@ def classify_rotational_event(event: RotationalEventInput | dict) -> RotationalC
     ap1_end = _finite_deg(data.ap1_end)
     ap2_end = _finite_deg(data.ap2_end)
 
-    primary_sep = (
-        circular_separation_deg(ap1, ap1_end) if ap1 is not None and ap1_end is not None else None
-    )
-    secondary_sep = (
-        circular_separation_deg(ap2, ap2_end) if ap2 is not None and ap2_end is not None else None
-    )
+    primary_sep = circular_separation_deg(ap1, ap1_end) if ap1 is not None and ap1_end is not None else None
+    secondary_sep = circular_separation_deg(ap2, ap2_end) if ap2 is not None and ap2_end is not None else None
     primary_motion = primary_sep is not None and primary_sep >= MOTION_THRESHOLD_DEG
     secondary_motion = secondary_sep is not None and secondary_sep >= MOTION_THRESHOLD_DEG
     any_motion = primary_motion or secondary_motion
 
     endpoints_populated = (primary_sep is not None) or (secondary_sep is not None)
     equal_endpoints = endpoints_populated and not any_motion
-    usable_baseline = (
-        ap1 is not None and ap2 is not None and _baseline_usable(data, raw)
-    )
+    usable_baseline = ap1 is not None and ap2 is not None and _baseline_usable(data, raw)
     # Usable when at least one axis moves and any non-moving axis still has a
     # finite start to hold fixed.
     usable_endpoints = any_motion and usable_baseline

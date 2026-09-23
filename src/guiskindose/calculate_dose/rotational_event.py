@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 def _rotational_mode(settings: "PyskindoseSettings | None") -> str:
     if settings is None:
         return c.ROTATIONAL_HANDLING_COVERAGE
@@ -67,10 +68,7 @@ def _candidate_frame(parent_row: pd.Series, ap1: float, ap2: float) -> pd.DataFr
 
 def _is_contradictory(classification: Any) -> bool:
     """Stationary-coded event with measured endpoint motion (unknown class)."""
-    return (
-        classification.classification == "unknown"
-        and "contradictory_static" in classification.reason_codes
-    )
+    return classification.classification == "unknown" and "contradictory_static" in classification.reason_codes
 
 
 def _use_envelope(classification: Any, rotational_mode: str) -> bool:
@@ -207,19 +205,17 @@ def _calculate_envelope_event(
     # and the geometry cache; its dose is discarded, never accumulated. The
     # live cache arrays are threaded through so a new_geometry=False event
     # reuses the true preceding geometry instead of collapsing to empties.
-    static_hits, static_table_hits, static_field_area, static_k_isq = (
-        perform_calculations_for_new_geometries(
-            normalized_data=normalized_data,
-            event=ev,
-            new_geometry=new_geometry_flag,
-            patient=patient,
-            table=table,
-            pad=pad,
-            hits=cached_hits,
-            table_hits=cached_table_hits,
-            field_area=cached_field_area,
-            k_isq=cached_k_isq,
-        )
+    static_hits, static_table_hits, static_field_area, static_k_isq = perform_calculations_for_new_geometries(
+        normalized_data=normalized_data,
+        event=ev,
+        new_geometry=new_geometry_flag,
+        patient=patient,
+        table=table,
+        pad=pad,
+        hits=cached_hits,
+        table_hits=cached_table_hits,
+        field_area=cached_field_area,
+        k_isq=cached_k_isq,
     )
     _, static_k_bs, static_k_med = compute_event_dose_vector(
         event_frame=normalized_data.iloc[[ev]],
@@ -428,5 +424,3 @@ def _emit_rotational_summary(ledger: HandlingLedger) -> None:
         contradictory,
         "yes" if ledger.any_fallback_to_static else "no",
     )
-
-
