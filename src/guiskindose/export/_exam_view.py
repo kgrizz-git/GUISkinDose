@@ -34,6 +34,10 @@ class ExamView:
     air_kerma_corrected: float | None = None
     kerma_reported: list[float] | None = None
     k_tab_statuses: list[str] = field(default_factory=list)
+    # Rotational handling ledger + envelope details (additive; None when the
+    # calculation ran without rotational evaluation, e.g. older outputs).
+    rotational_handling: dict[str, Any] | None = None
+    rotational_envelope: dict[str, Any] | None = None
 
     def peak_vertex(self) -> tuple[int | None, float]:
         """Return ``(vertex_index, dose)`` of the peak dose cell.
@@ -110,6 +114,8 @@ def view_from_dict(output: dict[str, Any]) -> ExamView:
                 or []
             )
         ],
+        rotational_handling=output.get("rotational_handling"),
+        rotational_envelope=output.get("rotational_envelope"),
     )
 
 
@@ -135,4 +141,6 @@ def view_from_output(obj: Any) -> ExamView:
         air_kerma_corrected=float(obj.air_kerma_corrected),
         kerma_reported=kerma_reported,
         k_tab_statuses=[str(s) for s in (getattr(obj, "k_tab_statuses", None) or [])],
+        rotational_handling=getattr(obj, "rotational_handling", None),
+        rotational_envelope=getattr(obj, "rotational_envelope", None),
     )

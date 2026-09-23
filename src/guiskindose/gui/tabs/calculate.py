@@ -263,6 +263,117 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
+def rotational_prompt_required(survey: dict[str, object]) -> bool:
+    """Whether the rotational pre-calc prompt must appear.
+
+    Fires on rotational, positioner-motion, or contradictory-stationary
+    rows — a contradictory-only dataset must not run silently.
+    """
+    contradictory = 0
+    unresolved = survey.get("unresolved", [])
+    if isinstance(unresolved, list):
+        for entry in unresolved:
+            if (
+                isinstance(entry, tuple)
+                and len(entry) == 4
+                and isinstance(entry[3], list)
+                and "contradictory_static" in entry[3]
+            ):
+                contradictory += 1
+    return (
+        _survey_count(survey, "rotational")
+        + _survey_count(survey, "positioner_motion")
+        + contradictory
+        > 0
+    )
+
+
+def _survey_count(survey: dict[str, object], key: str) -> int:
+    """Typed read of a survey counter (survey values are untyped objects)."""
+    value = survey.get(key, 0)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+    return 0
+
+
+async def rotational_prompt(survey: dict[str, object]) -> bool:
+    """Confirm rotational-acquisition handling before a calculation.
+
+    Rotational events run as conditional coverage envelopes; positioner-motion
+    and otherwise unresolved events fall back to static poses with warnings
+    (explicit per-event override does not exist yet — see the plan). The
+    expander lists unresolved events by index with reason codes only (no
+    values, no identifiers). Writes the chosen handling back to ``state``;
+    returns ``True`` to proceed, ``False`` on Cancel. Scenarios mode stays
+    API/CLI-only until nominal-arc selection UI exists, so the prompt offers
+    coverage vs static.
+    """
+    rotational = _survey_count(survey, "rotational")
+    motion = _survey_count(survey, "positioner_motion")
+    total = _survey_count(survey, "total")
+    unresolved_raw = survey.get("unresolved", [])
+    unresolved: list = list(unresolved_raw) if isinstance(unresolved_raw, list) else []
+    contradictory = sum(
+        1
+        for entry in unresolved
+        if isinstance(entry, tuple)
+        and len(entry) == 4
+        and isinstance(entry[3], list)
+        and "contradictory_static" in entry[3]
+    )
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
+        ui.label("Rotational or moving acquisitions detected").classes(_DIALOG_TITLE_CLASSES)
+        ui.label(
+            f"{rotational} rotational event(s) of {total} loaded will run as "
+            "conditional coverage envelopes (estimate-grade), not single "
+            "static poses."
+        ).classes(_DIALOG_BODY_CLASSES)
+        if contradictory:
+            ui.label(
+                f"{contradictory} event(s) declare stationary acquisition but "
+                "show endpoint motion — a data contradiction. They run static "
+                "only with an explicit choice here; the conflict is recorded "
+                "in the ledger."
+            ).classes(_DIALOG_BODY_CLASSES)
+        if motion:
+            ui.label(
+                f"{motion} positioner-motion event(s) need an explicit override "
+                "that does not exist yet — they will use static poses with a "
+                "warning."
+            ).classes(_DIALOG_BODY_CLASSES)
+        if unresolved:
+            with ui.expansion(f"{len(unresolved)} event(s) need attention", icon="warning").classes("w-full"):
+                for label, index, classification, reasons in unresolved:
+                    ui.label(
+                        f"{label} event {index}: {classification} ({', '.join(reasons)})"
+                    ).classes("text-sm text-grey-7")
+
+        handling_select = ui.select(
+            ["coverage", "static"],
+            label="Handling",
+            value=state.rotational_handling
+            if state.rotational_handling in ("coverage", "static")
+            else "coverage",
+        ).classes("w-full")
+
+        dont_ask = ui.checkbox("Don't ask again this session")
+
+        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
+            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
+            ui.button("Run", on_click=lambda: dialog.submit("run")).classes(_PRIMARY_BTN_CLASSES)
+
+    result = await dialog
+    if result != "run":
+        return False
+
+    state.rotational_handling = handling_select.value
+    if dont_ask.value:
+        state.rotational_prompt_suppressed = True
+    return True
+
+
 async def kerma_meter_prompt() -> None:
     """Collect per-(equipment, tube) CF values before calculation when mode=prompt.
 
@@ -338,6 +449,8 @@ class _CalculationController:
             return
         if not await self._below_floor_policy_is_ready():
             return
+        if not await self._rotational_is_ready():
+            return
         if not await self._kerma_meter_is_ready():
             return
 
@@ -353,6 +466,17 @@ class _CalculationController:
             return True
         n_below = below_floor_event_count(state)
         return n_below <= 0 or await below_floor_prompt(n_below)
+
+    async def _rotational_is_ready(self) -> bool:
+        """Return True when rotational handling is set or the user confirms the prompt."""
+        if state.rotational_prompt_suppressed:
+            return True
+        from guiskindose.gui.helpers import rotational_survey
+
+        survey = rotational_survey(state)
+        if not rotational_prompt_required(survey):
+            return True
+        return await rotational_prompt(survey)
 
     async def _explicit_label_collapse_ok(self) -> bool:
         """True unless the user cancels collapsing multiple units onto one label."""

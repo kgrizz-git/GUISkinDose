@@ -118,6 +118,7 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
             else {}
         ),
         warnings=(list(exam_src.extra_warnings) if exam_src else []),
+        rotational_handling=view.rotational_handling,
     )
 
 

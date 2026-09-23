@@ -141,6 +141,9 @@ def calculate_dose(
     # (skip / manual / exam_average), before the HVL lookup sees them. Default
     # 'snap' is a no-op here — fetch_and_append_hvl clamps + flags such events.
     # calculate_dose runs once per exam, so 'exam_average' is naturally per-exam.
+    # Source count is captured first: the handling ledger distinguishes events
+    # detected in source from events processed after discard policies.
+    source_event_count = len(normalized_data)
     normalized_data = apply_below_floor_kvp_policy(
         data_norm=normalized_data,
         policy=settings.below_floor_kvp_policy,
@@ -194,6 +197,7 @@ def calculate_dose(
         settings=settings,
         exam_id=exam_id,
         kerma_cf=kerma_cf,
+        source_event_count=source_event_count,
     )
 
     output[c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES] = k_tab_statuses

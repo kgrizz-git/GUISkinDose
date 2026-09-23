@@ -59,6 +59,17 @@ NORMALIZED_OPTIONAL_IDENTITY_COLUMNS: frozenset[str] = frozenset(
     }
 )
 
+# Optional rotational columns (additive contract; absence is not an error).
+NORMALIZED_OPTIONAL_ROTATIONAL_COLUMNS: frozenset[str] = frozenset(
+    {
+        "ap1_end",
+        "ap2_end",
+        "acquisition_type_code",
+        "acquisition_type_coding_scheme",
+        "acquisition_type_meaning",
+    }
+)
+
 # Maps lowercase canonical name → proper-case name expected by analyze_data().
 # Matches the column names produced by rdsr_normalizer().
 NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
@@ -68,6 +79,9 @@ NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
     "did": "DID",
     "dsirp": "DSIRP",
     "acquisition_type": "acquisition_type",
+    "acquisition_type_code": "acquisition_type_code",
+    "acquisition_type_coding_scheme": "acquisition_type_coding_scheme",
+    "acquisition_type_meaning": "acquisition_type_meaning",
     "acquisition_plane": "acquisition_plane",
     "tx": "Tx",
     "ty": "Ty",
@@ -80,6 +94,8 @@ NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
     "ap1": "Ap1",
     "ap2": "Ap2",
     "ap3": "Ap3",
+    "ap1_end": "Ap1_end",
+    "ap2_end": "Ap2_end",
     "dsl": "DSL",
     "fs_lat": "FS_lat",
     "fs_long": "FS_long",
@@ -94,8 +110,12 @@ NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
 # Required columns only — identity columns are optional.
 NORMALIZED_REQUIRED_COLUMNS: frozenset[str] = NORMALIZED_COLUMN_NAMES
 
-# Names recognized during header detection (required + optional identity).
-NORMALIZED_HEADER_NAMES: frozenset[str] = NORMALIZED_COLUMN_NAMES | NORMALIZED_OPTIONAL_IDENTITY_COLUMNS
+# Names recognized during header detection (required + optional identity + rotational).
+NORMALIZED_HEADER_NAMES: frozenset[str] = (
+    NORMALIZED_COLUMN_NAMES
+    | NORMALIZED_OPTIONAL_IDENTITY_COLUMNS
+    | NORMALIZED_OPTIONAL_ROTATIONAL_COLUMNS
+)
 
 # Columns that should be numeric after loading.
 _NUMERIC_COLUMNS = frozenset(
@@ -105,6 +125,7 @@ _NUMERIC_COLUMNS = frozenset(
         "At1", "At2", "At3",
         "filter_thickness_Cu", "filter_thickness_Al",
         "Ap1", "Ap2", "Ap3",
+        "Ap1_end", "Ap2_end",
         "DSL", "FS_lat", "FS_long",
         "kVp", "K_IRP",
     }
