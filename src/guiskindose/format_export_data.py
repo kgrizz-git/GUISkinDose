@@ -376,8 +376,8 @@ class PySkinDoseOutput:
     sparse_union_hit_indices() : list[list[int]]
         Build one cell-index list for each radiation event covering every cell touched by any
         evaluated candidate pose. A superset of ``sparse_hit_indices()`` for rotational coverage
-        envelopes, and therefore NOT aligned with the correction arrays. Empty when no rotational
-        envelope was evaluated.
+        envelopes, and therefore NOT aligned with the correction arrays for those events.
+        Equals ``sparse_hit_indices()`` for statically handled events.
     backscatter_correction : list[list[float]]
         The backscatter corrections used for each cell hit given as a list of floats where the event and cell index of
         each float is given by getting the same list index element from ``sparse_hit_indices()``.

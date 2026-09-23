@@ -194,6 +194,7 @@ def test_contradictory_event_envelopes_with_reason_recorded():
     assert handling["rows"][0]["classification"] == "unknown"
     assert handling["rows"][0]["effective_handling"] == "coverage"
     assert "contradictory_static" in handling["rows"][0]["reason_codes"]
+    assert handling["rows"][0]["fallback_reason"] == ""
     assert handling["aggregate"]["any_fallback_to_static"] is False
 
 
@@ -217,6 +218,16 @@ def test_contradictory_event_without_baseline_falls_back_loudly(caplog):
     assert handling["rows"][0]["effective_handling"] == "static"
     assert handling["rows"][0]["fallback_reason"] == "contradictory_static"
     assert handling["aggregate"]["any_fallback_to_static"] is True
+
+
+def test_unusable_rotational_domain_records_documented_fallback_reason():
+    frame = _frame_with_spin()
+    frame.at[1, "Tx"] = np.nan
+    output = _run(frame, _settings(angular_step_deg=10.0))
+    row = output[c.OUTPUT_KEY_ROTATIONAL_HANDLING]["rows"][1]
+    assert row["classification"] == "rotational"
+    assert row["effective_handling"] == "static"
+    assert row["fallback_reason"] == "trajectory_unresolved"
 
 
 def test_summary_names_contradictory_declarations():

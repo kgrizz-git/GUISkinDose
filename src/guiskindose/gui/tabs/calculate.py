@@ -306,9 +306,8 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
     (explicit per-event override does not exist yet — see the plan). The
     expander lists unresolved events by index with reason codes only (no
     values, no identifiers). Writes the chosen handling back to ``state``;
-    returns ``True`` to proceed, ``False`` on Cancel. Scenarios mode stays
-    API/CLI-only until nominal-arc selection UI exists, so the prompt offers
-    coverage vs static.
+    returns ``True`` to proceed, ``False`` on Cancel. Scenario calculations
+    are deferred, so the prompt offers coverage vs static.
     """
     rotational = _survey_count(survey, "rotational")
     motion = _survey_count(survey, "positioner_motion")
@@ -326,16 +325,18 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
         ui.label("Rotational or moving acquisitions detected").classes(_DIALOG_TITLE_CLASSES)
         ui.label(
-            f"{rotational} rotational event(s) of {total} loaded will run as "
-            "conditional coverage envelopes (estimate-grade), not single "
-            "static poses."
+            f"{rotational} rotational event(s) of {total} loaded were detected. "
+            "With Coverage selected, events with usable geometry run as "
+            "conditional coverage envelopes (estimate-grade); events without "
+            "usable geometry fall back to the reported static pose."
         ).classes(_DIALOG_BODY_CLASSES)
         if contradictory:
             ui.label(
                 f"{contradictory} event(s) declare stationary acquisition but "
-                "show endpoint motion — a data contradiction. They run static "
-                "only with an explicit choice here; the conflict is recorded "
-                "in the ledger."
+                "show endpoint motion — a data contradiction. With Coverage "
+                "selected, usable endpoints are enveloped; otherwise the "
+                "reported static pose is used. The conflict is recorded in "
+                "the ledger."
             ).classes(_DIALOG_BODY_CLASSES)
         if motion:
             ui.label(

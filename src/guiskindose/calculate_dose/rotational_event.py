@@ -114,7 +114,7 @@ def _static_ledger_input(
     elif rotational_mode == c.ROTATIONAL_HANDLING_SCENARIOS:
         requested, effective, fallback = "Scenarios", "static", "scenario_mode_deferred"
     elif classification.classification in ("rotational", "positioner_motion"):
-        requested, effective, fallback = "Auto", "static", "unusable_domain"
+        requested, effective, fallback = "Auto", "static", "trajectory_unresolved"
         if "contradictory_static" in classification.reason_codes:
             fallback = "contradictory_static"
         if classification.classification == "positioner_motion":
@@ -426,7 +426,9 @@ def _calculate_envelope_event(
         classification=classification,
         requested_handling="Auto",
         effective_handling="coverage",
-        fallback_reason="contradictory_static" if _is_contradictory(classification) else "",
+        # The contradiction is already present in reason_codes; this event
+        # ran as coverage, so it did not fall back to static.
+        fallback_reason="",
         ap1_start=ap1,
         ap2_start=ap2,
         ap1_end=ap1_end,

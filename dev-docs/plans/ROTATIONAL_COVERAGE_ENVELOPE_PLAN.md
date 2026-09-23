@@ -9,7 +9,7 @@ with separate scenario results available for physically realizable estimates.
 This plan supersedes the assumed-arc default in the rotational-acquisition
 assessment Phase 1.5 and redefines Phase 2. The assessment remains the evidence
 and current-code record; this plan is the implementation source of truth.
-Status: initial envelope implementation complete (classifier, normalizer contract, dose loop, prompt, exports, badge); scenarios/nominal UI deferred (see Open follow-ups).
+Status: initial envelope implementation complete (classifier, normalizer contract, dose loop, prompt, exports, badge); scenario calculations and nominal selection deferred (see Open follow-ups).
 
 The clinical goal is useful improvement with honest limitations, not exact
 trajectory reconstruction from data that classic RDSR does not contain. A
@@ -151,10 +151,11 @@ lower `text_alias` confidence; do not export raw protocol text.
 Classification precedence is deterministic: an exact stepping identity wins
 `positioner_motion`. An explicit stationary identity together with endpoint
 motion yields `unknown` plus `contradictory_static`; neither declaration nor
-angles silently override the other. It raises a high-severity pre-calculation
-notice and requires an explicit per-event `Coverage` or `Static` selection
-(`Auto` cannot proceed). Otherwise an exact rotational identity, a rotational
-text alias, or either endpoint-motion reason yields `rotational`; an exact
+angles silently override the other. It raises a pre-calculation notice; in
+this first release the global `coverage` choice envelopes usable endpoints
+and records the contradiction, while unusable geometry falls back to static.
+Per-event selection is deferred. Otherwise an exact rotational identity, a
+rotational text alias, or either endpoint-motion reason yields `rotational`; an exact
 stationary identity or populated equal endpoints yields `static`; all remaining
 rows are `unknown`. Other unknown rows retain today's static calculation
 without a rotational prompt or bound claim.
@@ -386,8 +387,10 @@ scenario details control and requires explicit confirmation.
 Deferred to a later slice (not in the first release): per-event override
 controls in the GUI, their persistence across recalculation, provenance
 export of overrides, and reset-on-new-dataset for overrides. Likewise,
-`scenarios` handling and nominal-arc selection UI are API/CLI-only until
-that slice; the pre-calc prompt offers `coverage` vs `static` only.
+`scenarios` is accepted by settings but currently records a static fallback
+with `scenario_mode_deferred`; physical scenario calculations and nominal-arc
+selection remain unimplemented. The pre-calc prompt offers `coverage` vs
+`static` only.
 
 `include_static_pose=false` means "do not add the separate legacy static
 candidate." It cannot remove a reported start pose that is inherently an arc
