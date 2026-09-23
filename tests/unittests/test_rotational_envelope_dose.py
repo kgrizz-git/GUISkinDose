@@ -29,8 +29,10 @@ def _frame_with_spin():
     frame.at[1, "acquisition_type_code"] = "113613"
     frame.at[1, "acquisition_type_coding_scheme"] = "DCM"
     frame.at[1, "acquisition_type_meaning"] = "Rotational Acquisition"
-    frame.at[1, "Ap1_end"] = float(frame.at[1, "Ap1"]) + 60.0
-    frame.at[1, "Ap2_end"] = float(frame.at[1, "Ap2"])
+    ap1_values = frame["Ap1"].to_numpy()
+    ap2_values = frame["Ap2"].to_numpy()
+    frame.at[1, "Ap1_end"] = float(ap1_values[1]) + 60.0
+    frame.at[1, "Ap2_end"] = float(ap2_values[1])
     return frame
 
 
