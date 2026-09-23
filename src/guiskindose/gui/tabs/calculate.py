@@ -263,6 +263,16 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
+def _survey_count(survey: dict[str, object], key: str) -> int:
+    """Typed read of a survey counter (survey values are untyped objects)."""
+    value = survey.get(key, 0)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+    return 0
+
+
 async def rotational_prompt(survey: dict[str, object]) -> bool:
     """Confirm rotational-acquisition handling before a calculation.
 
@@ -275,11 +285,11 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
     API/CLI-only until nominal-arc selection UI exists, so the prompt offers
     coverage vs static.
     """
-    rotational = int(survey.get("rotational", 0))
-    motion = int(survey.get("positioner_motion", 0))
-    total = int(survey.get("total", 0))
-    unresolved = survey.get("unresolved", [])
-    assert isinstance(unresolved, list)
+    rotational = _survey_count(survey, "rotational")
+    motion = _survey_count(survey, "positioner_motion")
+    total = _survey_count(survey, "total")
+    unresolved_raw = survey.get("unresolved", [])
+    unresolved: list = list(unresolved_raw) if isinstance(unresolved_raw, list) else []
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
         ui.label("Rotational or moving acquisitions detected").classes(_DIALOG_TITLE_CLASSES)
         ui.label(
