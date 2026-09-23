@@ -245,9 +245,15 @@ def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | N
         treatment += f"; {len(static)} detected event(s) ran static with warnings"
     # Plan-mandated envelope elements: step, domain, direction, static
     # inclusion, fixed-geometry assumptions, endpoint concept codes.
-    steps = sorted({row.get("angular_step_deg") for row in enveloped if row.get("angular_step_deg") is not None})
-    domains = sorted({str(row.get("candidate_domain", "")) for row in enveloped if row.get("candidate_domain")})
-    directions = sorted({str(row.get("direction_source", "")) for row in enveloped if row.get("direction_source")})
+    steps = sorted(
+        {float(row["angular_step_deg"]) for row in enveloped if isinstance(row.get("angular_step_deg"), (int, float))}
+    )
+    domains = sorted(
+        {str(row["candidate_domain"]) for row in enveloped if row.get("candidate_domain")}
+    )
+    directions = sorted(
+        {str(row["direction_source"]) for row in enveloped if row.get("direction_source")}
+    )
     statics = sum(1 for row in enveloped if row.get("include_static_pose"))
     elements = ""
     if enveloped:
