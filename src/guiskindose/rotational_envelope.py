@@ -11,6 +11,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from guiskindose.rotational_acquisition import RotationalClassification
+
 
 @dataclass(frozen=True)
 class CandidatePath:
@@ -218,7 +220,9 @@ class HandlingLedger:
 
 
 def build_handling_ledger(
-    classifications: list[tuple[int, object, str, float | None, float | None]],
+    classifications: list[
+        tuple[int, RotationalClassification, str, float | None, float | None]
+    ],
 ) -> HandlingLedger:
     """Assemble per-event ledger rows plus aggregate counts.
 
