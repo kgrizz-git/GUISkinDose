@@ -63,8 +63,10 @@ be archived.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
 - [ ] **Anode-angle awareness in HVL lookup** — add device-model anode-angle mapping, angle-aware lookup, and
   nearest-angle warnings; see [hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md).
-- [ ] **Review rotational-acquisition handling (see Next Up)** — assessment + evidence-gated plan done:
-  [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Next: Phase 0 spin fixtures, then detection/warning and arc handling.
+- [ ] **Rotational-acquisition handling (see Next Up)** — evidence assessment complete; accepted implementation
+  source of truth: [coverage-envelope plan](plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md), with the historical/current-code
+  [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Next: shared detection/normalizer contract, then the
+  default envelope and disclosures. Additional vendor fixtures improve profiles but do not block the first release.
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
