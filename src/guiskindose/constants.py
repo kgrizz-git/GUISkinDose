@@ -45,6 +45,21 @@ KEY_PARAM_SILENCE_PYDICOM_WARNINGS = "silence_pydicom_warnings"
 KEY_PARAM_BELOW_FLOOR_KVP_POLICY = "below_floor_kvp_policy"
 KEY_PARAM_BELOW_FLOOR_KVP_MANUAL = "below_floor_kvp_manual"
 KEY_PARAM_BEAM_MISS_WARN = "beam_miss_warn"
+KEY_PARAM_ROTATIONAL_HANDLING = "rotational_handling"
+KEY_PARAM_ROTATIONAL_INCLUDE_STATIC = "rotational_include_static_pose"
+KEY_PARAM_ROTATIONAL_ANGULAR_STEP = "angular_step_deg"
+
+ROTATIONAL_HANDLING_COVERAGE = "coverage"
+ROTATIONAL_HANDLING_SCENARIOS = "scenarios"
+ROTATIONAL_HANDLING_STATIC = "static"
+ROTATIONAL_HANDLING_MODES = (
+    ROTATIONAL_HANDLING_COVERAGE,
+    ROTATIONAL_HANDLING_SCENARIOS,
+    ROTATIONAL_HANDLING_STATIC,
+)
+ROTATIONAL_ANGULAR_STEP_DEFAULT = 1.0
+ROTATIONAL_ANGULAR_STEP_MIN = 0.25
+ROTATIONAL_ANGULAR_STEP_MAX = 10.0
 
 # Below-floor kVp handling — events with kVp below the lowest tabulated HVL kVp
 # (the table floor) have no tabulated beam quality. HVL_KVP_FLOOR is that floor;
