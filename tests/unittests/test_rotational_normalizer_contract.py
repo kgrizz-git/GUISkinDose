@@ -33,7 +33,7 @@ def _parsed_frame() -> pd.DataFrame:
 def _norm_settings():
     norm = NormalizationSettings([])
     norm.field_size_mode = "CFA"
-    norm.detector_side_length = 20.0
+    norm.detector_side_length = "20.0"
     return norm
 
 
