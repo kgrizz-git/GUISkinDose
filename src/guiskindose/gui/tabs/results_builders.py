@@ -80,90 +80,6 @@ class ResultsTabController:
             self.refs.dap_metric.set_text(f"{dap:.2f} Gy·cm²" if dap is not None else "N/A")
             fluoro = total_fluoro_time_s(state.rdsr_df)
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
-            self._refresh_rotational_badge()
-
-    def _rotational_badge_text(self) -> str:
-        """One-line rotational-handling summary for the Results badge.
-
-        Counts what actually ran over disclosed rows (shared predicate),
-        never bare detection counts: an explicitly static run shows no
-        envelope. Contradictory rows are disclosed rows too.
-        """
-        from guiskindose.rotational_envelope import is_disclosed_row
-
-        output = state.output
-        handling = output.get("rotational_handling") if isinstance(output, dict) else None
-        if not handling:
-            return ""
-        rows = [row for row in handling.get("rows", []) if is_disclosed_row(row)]
-        enveloped = sum(1 for row in rows if row.get("effective_handling") == "coverage")
-        explicit_static = sum(
-            1
-            for row in rows
-            if row.get("effective_handling") == "static"
-            and row.get("requested_handling") == "Static"
-        )
-        fallback_static = sum(
-            1
-            for row in rows
-            if row.get("effective_handling") == "static"
-            and row.get("requested_handling") != "Static"
-        )
-        detected = enveloped + explicit_static + fallback_static
-        if detected <= 0:
-            return ""
-        parts = []
-        if enveloped:
-            parts.append(f"{enveloped} envelope(s)")
-        if explicit_static:
-            parts.append(f"{explicit_static} static (as configured)")
-        if fallback_static:
-            parts.append(f"{fallback_static} static fallback(s)")
-        return "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {detected} rotational/moving events)"
-
-    def _refresh_rotational_badge(self) -> None:
-        """Show or hide the rotational-handling badge."""
-        text = self._rotational_badge_text()
-        self.refs.rotational_badge.set_text(text)
-        self.refs.rotational_badge.visible = bool(text)
-
-    def _refresh_agg_rotational_badge(self, res: Any) -> None:
-        """Aggregate rotational badge across multi-exam outputs.
-
-        Counts what actually ran over disclosed rows (shared predicate),
-        never bare detection counts: an explicitly static run shows no
-        envelope. Contradictory rows are disclosed rows too.
-        """
-        from guiskindose.rotational_envelope import is_disclosed_row
-
-        enveloped = 0
-        static = 0
-        total = 0
-        for exam in getattr(res, "exams", []) or []:
-            handling = getattr(getattr(exam, "output", None), "rotational_handling", None)
-            if not isinstance(handling, dict):
-                continue
-            for row in handling.get("rows", []):
-                if not is_disclosed_row(row):
-                    continue
-                total += 1
-                if row.get("effective_handling") == "coverage":
-                    enveloped += 1
-                elif row.get("effective_handling") == "static":
-                    static += 1
-        if enveloped + static <= 0:
-            self.refs.agg_rotational_badge.set_text("")
-            self.refs.agg_rotational_badge.visible = False
-            return
-        parts = []
-        if enveloped:
-            parts.append(f"{enveloped} envelope(s)")
-        if static:
-            parts.append(f"{static} static")
-        self.refs.agg_rotational_badge.set_text(
-            "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational/moving events)"
-        )
-        self.refs.agg_rotational_badge.visible = True
 
     async def refresh_dosemap(self) -> None:
         """Refresh dosemap."""
@@ -251,7 +167,6 @@ class ResultsTabController:
         else:
             self.refs.run_warnings_label.set_text("")
             self.refs.run_warnings_label.set_visibility(False)
-        self._refresh_agg_rotational_badge(res)
 
     def _set_multi_exam_totals(self) -> None:
         """Render DAP and fluoroscopy totals when those values are available."""
@@ -497,14 +412,12 @@ class ResultsViewRefs:
     events_metric: ui.label = None  # type: ignore[assignment]
     dap_metric: ui.label = None  # type: ignore[assignment]
     fluoro_metric: ui.label = None  # type: ignore[assignment]
-    rotational_badge: ui.label = None  # type: ignore[assignment]
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
     agg_psd_metric: ui.label = None  # type: ignore[assignment]
     agg_events_metric: ui.label = None  # type: ignore[assignment]
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
-    agg_rotational_badge: ui.label = None  # type: ignore[assignment]
     run_warnings_label: ui.label = None  # type: ignore[assignment]
     agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
@@ -567,9 +480,6 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
                     "text-3xl text-white font-bold"
                 )
         with ui.row().classes(_METRIC_ROW_CLASSES):
-            ctrl.refs.rotational_badge = ui.label("").classes("text-sm text-grey-7")
-            ctrl.refs.rotational_badge.visible = False
-        with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
                 ctrl.refs.dosemap_spinner = ui.spinner(
@@ -620,8 +530,6 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
                 "text-sm text-grey-4"
             )
             ctrl.refs.agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
-            ctrl.refs.agg_rotational_badge = ui.label("").classes("text-sm text-grey-7")
-            ctrl.refs.agg_rotational_badge.visible = False
 
         ctrl.refs.run_warnings_label = ui.label("").classes(
             "text-sm text-orange-400 whitespace-pre-wrap w-full"

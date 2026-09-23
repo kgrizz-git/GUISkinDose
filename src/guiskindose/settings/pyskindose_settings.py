@@ -21,15 +21,7 @@ from guiskindose.constants import (
     KEY_PARAM_MODE,
     KEY_PARAM_RDSR_FILENAME,
     KEY_PARAM_REMOVE_INVALID_ROWS,
-    KEY_PARAM_ROTATIONAL_ANGULAR_STEP,
-    KEY_PARAM_ROTATIONAL_HANDLING,
-    KEY_PARAM_ROTATIONAL_INCLUDE_STATIC,
     KEY_PARAM_SILENCE_PYDICOM_WARNINGS,
-    ROTATIONAL_ANGULAR_STEP_DEFAULT,
-    ROTATIONAL_ANGULAR_STEP_MAX,
-    ROTATIONAL_ANGULAR_STEP_MIN,
-    ROTATIONAL_HANDLING_COVERAGE,
-    ROTATIONAL_HANDLING_MODES,
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_HTML,
     RUN_ARGUMENTS_OUTPUT_JSON,
@@ -145,25 +137,6 @@ class PyskindoseSettings:
         )
 
         self.beam_miss_warn: str = tmp.get(KEY_PARAM_BEAM_MISS_WARN, "per_event")
-
-        # Rotational-acquisition handling (coverage envelope by default).
-        # Invalid values fail fast rather than silently degrading.
-        rotational_handling = tmp.get(KEY_PARAM_ROTATIONAL_HANDLING, ROTATIONAL_HANDLING_COVERAGE)
-        if rotational_handling not in ROTATIONAL_HANDLING_MODES:
-            raise ValueError(
-                f"rotational_handling must be one of {', '.join(ROTATIONAL_HANDLING_MODES)}"
-            )
-        self.rotational_handling: str = rotational_handling
-        self.include_static_pose: bool = bool(
-            tmp.get(KEY_PARAM_ROTATIONAL_INCLUDE_STATIC, True)
-        )
-        angular_step = float(tmp.get(KEY_PARAM_ROTATIONAL_ANGULAR_STEP, ROTATIONAL_ANGULAR_STEP_DEFAULT))
-        if not ROTATIONAL_ANGULAR_STEP_MIN <= angular_step <= ROTATIONAL_ANGULAR_STEP_MAX:
-            raise ValueError(
-                f"angular_step_deg must be within "
-                f"{ROTATIONAL_ANGULAR_STEP_MIN}-{ROTATIONAL_ANGULAR_STEP_MAX} degrees"
-            )
-        self.angular_step_deg: float = angular_step
 
         km_raw = tmp.get("kerma_meter_correction")
         self.kerma_meter_correction = KermaMeterCorrectionSettings(

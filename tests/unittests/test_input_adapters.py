@@ -246,38 +246,6 @@ class TestNormalizedAdapter:
         result = self._load_and_adapt("normalized_events.csv")
         assert pd.api.types.is_numeric_dtype(result.normalized_data["kVp"])
 
-    def test_optional_rotational_columns_map_and_coerce(self, tmp_path):
-        from guiskindose.input_adapters import normalized as adapter
-        from guiskindose.input_adapters.tabular_loader import read_csv
-
-        base = (
-            "model,DSD,DSI,DID,DSIRP,acquisition_type,acquisition_plane,"
-            "Tx,Ty,Tz,At1,At2,At3,filter_thickness_Cu,filter_thickness_Al,"
-            "Ap1,Ap2,Ap3,DSL,FS_lat,FS_long,kVp,K_IRP,"
-            "Ap1_end,Ap2_end,acquisition_type_code,acquisition_type_coding_scheme,"
-            "acquisition_type_meaning\n"
-            "X,1,2,3,4,Rotational Acquisition,Single,0,0,0,0,0,0,0,0,"
-            "90,0,0,20,10,10,80,0.01,"
-            "-120,0,113613,DCM,Rotational Acquisition\n"
-        )
-        p = tmp_path / "rot.csv"
-        p.write_text(base, encoding="utf-8")
-        result = adapter.adapt(read_csv(p), original_filename="rot.csv")
-        from guiskindose.input_adapters.models import InputAdapterResult
-
-        assert isinstance(result, InputAdapterResult)
-        frame = result.normalized_data
-        assert frame["Ap1_end"].iloc[0] == -120.0
-        assert frame["Ap2_end"].iloc[0] == 0.0
-        assert pd.api.types.is_numeric_dtype(frame["Ap1_end"])
-        assert frame["acquisition_type_code"].iloc[0] == "113613"
-        assert frame["acquisition_type_coding_scheme"].iloc[0] == "DCM"
-        assert frame["acquisition_type_meaning"].iloc[0] == "Rotational Acquisition"
-
-    def test_absent_rotational_columns_still_valid(self):
-        result = self._load_and_adapt("normalized_events.csv")
-        assert "Ap1_end" not in result.normalized_data.columns
-
 
 # ── registry ──────────────────────────────────────────────────────────────────
 

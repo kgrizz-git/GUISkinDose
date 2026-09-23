@@ -150,8 +150,6 @@ def test_serialized_export_shape_remains_stable(settings, trio, data_norm) -> No
         "dose_map",
         "corrections",
         "events",
-        "rotational_handling",
-        "rotational_envelope",
     }
     assert set(exported["corrections"]) == {
         "correction_value_index",

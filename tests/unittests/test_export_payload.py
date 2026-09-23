@@ -413,19 +413,3 @@ def test_payload_plane_identity_audit_empty_when_columns_absent():
     src = _single_source(_two_event_output(), df=pd.DataFrame())
     payload = collect_export_payload(src, with_images=False)
     assert payload.exams[0].plane_identity_audit == {}
-
-
-def test_object_view_carries_rotational_handling():
-    """Multi-exam path: PySkinDoseOutput attrs must reach the ExamView."""
-    output = _fake_output_obj(_two_event_output())
-    handling = {"rows": [{"classification": "rotational", "effective_handling": "coverage"}], "aggregate": {}}
-    output.rotational_handling = handling
-    output.rotational_envelope = {"0": {"winner_candidate_id": "candidate_3"}}
-    view = view_from_output(output)
-    assert view.rotational_handling is handling
-    assert view.rotational_envelope == {"0": {"winner_candidate_id": "candidate_3"}}
-
-
-def test_object_view_defaults_without_rotational_attrs():
-    """Older outputs without the new attrs yield None (additive contract)."""
-    assert view_from_output(_fake_output_obj(_two_event_output())).rotational_handling is None

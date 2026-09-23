@@ -28,8 +28,8 @@ if TYPE_CHECKING:  # avoid importing heavy deps at module import time
 
 # Rich-export payload schema version. Separate from ``EXPORT_SCHEMA_VERSION``
 # (the JSON/dict export schema) — increment when ``ExportPayload`` changes
-# incompatibly. v3 adds the per-exam rotational handling ledger.
-RICH_EXPORT_SCHEMA_VERSION = 3
+# incompatibly.
+RICH_EXPORT_SCHEMA_VERSION = 2
 
 APP_NAME = "GUISkinDose"
 
@@ -209,9 +209,6 @@ class ExamSection:
     # DICOM RDSR (units read+asserted, not converted) and normalized inputs.
     unit_conversions: dict[str, str] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
-    # Rotational handling ledger + envelope details from the calculation
-    # (additive; None when the calculation predates rotational evaluation).
-    rotational_handling: dict[str, Any] | None = None
 
 
 @dataclass

@@ -105,7 +105,6 @@ def build_document(payload: ExportPayload):
     _add_result_sections(doc, payload)
     _add_settings_section(doc, payload)
     _add_corrections_section(doc, payload)
-    _add_rotational_section(doc, payload)
     _add_image_section(doc, payload)
     return doc
 
@@ -128,7 +127,6 @@ def _add_result_sections(doc, payload: ExportPayload) -> None:
     _table(doc, [["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)])
     if payload.is_multi_exam:
         _add_per_exam_results(doc, payload)
-    _add_rotational_methodology(doc, payload)
 
 
 def _add_per_exam_results(doc, payload: ExportPayload) -> None:
@@ -162,46 +160,6 @@ def _add_corrections_section(doc, payload: ExportPayload) -> None:
     _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections])
     if corrections_use_kerma_meter(payload):
         doc.add_paragraph(KERMA_METER_WEIGHTING_FOOTNOTE)
-
-
-def _rotational_blocks(payload: ExportPayload) -> list:
-    """Per-exam (label, handling) pairs that merit rotational reporting."""
-    from guiskindose.export.sections import has_rotational_content
-
-    return [
-        (exam.exam_id if payload.is_multi_exam else None, exam.rotational_handling)
-        for exam in payload.exams
-        if has_rotational_content(exam.rotational_handling)
-    ]
-
-
-def _add_rotational_methodology(doc, payload: ExportPayload) -> None:
-    """Methodology statement near the PSD result (plan: not in the appendix)."""
-    from guiskindose.export.sections import rotational_methodology_paragraph
-
-    blocks = _rotational_blocks(payload)
-    if not blocks:
-        return
-    for label, handling in blocks:
-        if label is not None:
-            doc.add_paragraph(f"Exam {label} rotational methodology:")
-        paragraph = rotational_methodology_paragraph(handling)
-        if paragraph:
-            doc.add_paragraph(paragraph)
-
-
-def _add_rotational_section(doc, payload: ExportPayload) -> None:
-    """Per-exam ledger tables in the appendix (after corrections)."""
-    from guiskindose.export.sections import rotational_ledger_table
-
-    blocks = _rotational_blocks(payload)
-    if not blocks:
-        return
-    doc.add_heading("Rotational handling ledger", level=2)
-    for label, handling in blocks:
-        if label is not None:
-            doc.add_heading(f"Exam {label}", level=3)
-        _table(doc, rotational_ledger_table(handling))
 
 
 def _add_image_section(doc, payload: ExportPayload) -> None:

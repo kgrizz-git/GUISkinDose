@@ -189,39 +189,6 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
     _autofit(ws)
 
 
-def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
-    """Populate the Rotational handling sheet; return False when nothing to show."""
-    from guiskindose.export.sections import (
-        has_rotational_content,
-        rotational_ledger_table,
-        rotational_methodology_paragraph,
-    )
-
-    blocks = [
-        (exam.exam_id if payload.is_multi_exam else None, exam.rotational_handling)
-        for exam in payload.exams
-    ]
-    blocks = [(label, handling) for label, handling in blocks if has_rotational_content(handling)]
-    if not blocks:
-        return False
-    ws = _new_sheet(wb, "Rotational handling")
-    ws.sheet_view.showGridLines = True
-    r = 1
-    for label, handling in blocks:
-        if label is not None:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {label} ---")).font = _BOLD
-            r += 1
-        paragraph = rotational_methodology_paragraph(handling)
-        if paragraph:
-            cell = ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(paragraph))
-            cell.alignment = _WRAP
-            r += 1
-        r = _write_rows(ws, rotational_ledger_table(handling), start_row=r, header=True)
-        r += 1
-    _autofit(ws)
-    return True
-
-
 def _warnings_sheet(wb: Workbook, payload: ExportPayload) -> None:
     """Populate the Warnings sheet from payload alerts."""
     ws = _new_sheet(wb, "Warnings")
@@ -272,7 +239,6 @@ def build_workbook(payload: ExportPayload) -> Workbook:
     _results_sheet(wb, payload)
     _settings_sheet(wb, payload)
     _corrections_sheet(wb, payload)
-    _rotational_sheet(wb, payload)
     _warnings_sheet(wb, payload)
     _images_sheet(wb, payload)
     return wb

@@ -15,22 +15,8 @@ from guiskindose.calculate_dose.add_correction_and_event_dose_to_output import (
 from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
-from guiskindose.calculate_dose.rotational_event import (
-    _angular_step,
-    _calculate_envelope_event,
-    _emit_rotational_summary,
-    _include_static,
-    _rotational_mode,
-    _static_ledger_input,
-    _use_envelope,
-)
 from guiskindose.grid_interp import format_event_indices
 from guiskindose.phantom_class import Phantom
-from guiskindose.rotational_acquisition import classify_rotational_event
-from guiskindose.rotational_envelope import (
-    LedgerEventInput,
-    build_handling_ledger,
-)
 
 if TYPE_CHECKING:
     from guiskindose.settings import PyskindoseSettings
@@ -123,7 +109,6 @@ def calculate_irradiation_event_result(
     settings: "PyskindoseSettings | None" = None,
     exam_id: str | None = None,
     kerma_cf: list[float] | None = None,
-    source_event_count: int | None = None,
 ) -> dict[str, Any]:
     """Conducts skin dose calculation.
 
@@ -188,123 +173,54 @@ def calculate_irradiation_event_result(
     )
 
     missed_event_indices: list[int] = []
-    ledger_inputs: list[LedgerEventInput] = []
-    envelope_details: dict[int, dict[str, Any]] = {}
-    rotational_mode = _rotational_mode(settings)
-    step_deg = _angular_step(settings)
-    include_static = _include_static(settings)
-    dap_series = normalized_data.get("DoseAreaProduct_Gym2")
-    classifications = [classify_rotational_event(dict(normalized_data.iloc[ev])) for ev in range(event, total_events)]
 
-    for loop_index, ev in enumerate(range(event, total_events)):
+    for ev in range(event, total_events):
         logger.debug(f"Calculating irradiation event {ev + 1} out of {total_events}")
-        classification = classifications[loop_index]
-        row = normalized_data.iloc[ev]
+
+        hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
+            normalized_data=normalized_data,
+            event=ev,
+            new_geometry=new_geometry[ev],
+            patient=patient,
+            table=table,
+            pad=pad,
+            hits=hits,
+            table_hits=table_hits,
+            field_area=field_area,
+            k_isq=k_isq,
+        )
+
+        if not any(hits):
+            missed_event_indices.append(ev)
+            msg = _beam_miss_event_message(
+                normalized_data, event=ev, total_events=total_events, exam_id=exam_id
+            )
+            if settings is not None and settings.beam_miss_warn == "per_event":
+                logger.warning(msg)
+
+        logger.debug("Saving event data")
 
         reported_kerma = float(normalized_data.K_IRP[ev])
         cf = float(kerma_cf[ev]) if ev < len(kerma_cf) else 1.0
-        kerma_full = reported_kerma * cf
-        try:
-            dap_value = None if dap_series is None else dap_series.iloc[ev]
-            dap = None if dap_value is None or (isinstance(dap_value, float) and np.isnan(dap_value)) else float(dap_value)
-        except (IndexError, KeyError, TypeError, ValueError):
-            dap = None
+        output[c.OUTPUT_KEY_HITS][ev] = hits
+        output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
+        output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf
+        output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = cf
+        output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][ev] = k_isq
 
-        if _use_envelope(classification, rotational_mode):
-            (
-                hits,
-                table_hits,
-                field_area,
-                k_isq,
-                ledger_input,
-                details,
-                event_missed,
-            ) = _calculate_envelope_event(
-                ev=ev,
-                row=row,
-                classification=classification,
-                normalized_data=normalized_data,
-                patient=patient,
-                table=table,
-                pad=pad,
-                back_scatter_interpolation=back_scatter_interpolation,
-                k_tab=k_tab,
-                kerma_full=kerma_full,
-                cf=cf,
-                reported_kerma=reported_kerma,
-                dap=dap,
-                corrections_db=corrections_db,
-                output=output,
-                new_geometry_flag=new_geometry[ev],
-                step_deg=step_deg,
-                include_static=include_static,
-                cached_hits=hits,
-                cached_table_hits=table_hits,
-                cached_field_area=field_area,
-                cached_k_isq=k_isq,
-            )
-            ledger_inputs.append(ledger_input)
-            envelope_details[ev] = details
-            if event_missed:
-                missed_event_indices.append(ev)
-                msg = _beam_miss_event_message(
-                    normalized_data, event=ev, total_events=total_events, exam_id=exam_id
-                )
-                if settings is not None and settings.beam_miss_warn == "per_event":
-                    logger.warning(msg)
-        else:
-            hits, table_hits, field_area, k_isq = perform_calculations_for_new_geometries(
-                normalized_data=normalized_data,
-                event=ev,
-                new_geometry=new_geometry[ev],
-                patient=patient,
-                table=table,
-                pad=pad,
-                hits=hits,
-                table_hits=table_hits,
-                field_area=field_area,
-                k_isq=k_isq,
-            )
-
-            if not any(hits):
-                missed_event_indices.append(ev)
-                msg = _beam_miss_event_message(
-                    normalized_data, event=ev, total_events=total_events, exam_id=exam_id
-                )
-                if settings is not None and settings.beam_miss_warn == "per_event":
-                    logger.warning(msg)
-
-            logger.debug("Saving event data")
-
-            output[c.OUTPUT_KEY_HITS][ev] = hits
-            output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
-            output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf
-            output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = cf
-            output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][ev] = k_isq
-
-            output = add_corrections_and_event_dose_to_output(
-                normalized_data=normalized_data,
-                event=ev,
-                hits=hits,
-                table_hits=table_hits,
-                patient=patient,
-                back_scatter_interpolation=back_scatter_interpolation,
-                field_area=field_area,
-                k_tab=k_tab,
-                output=output,
-                corrections_db=corrections_db,
-                kerma_cf=cf,
-            )
-            ledger_inputs.append(
-                _static_ledger_input(
-                    ev=ev,
-                    row=row,
-                    classification=classification,
-                    rotational_mode=rotational_mode,
-                    kerma=reported_kerma,
-                    dap=dap,
-                )
-            )
+        output = add_corrections_and_event_dose_to_output(
+            normalized_data=normalized_data,
+            event=ev,
+            hits=hits,
+            table_hits=table_hits,
+            patient=patient,
+            back_scatter_interpolation=back_scatter_interpolation,
+            field_area=field_area,
+            k_tab=k_tab,
+            output=output,
+            corrections_db=corrections_db,
+            kerma_cf=cf,
+        )
 
         if pbar is not None:
             pbar.update()
@@ -316,52 +232,4 @@ def calculate_irradiation_event_result(
         missed_event_indices, total_events=total_events, settings=settings
     )
     output["missed_event_indices"] = missed_event_indices
-
-    ledger = build_handling_ledger(ledger_inputs)
-    output[c.OUTPUT_KEY_ROTATIONAL_HANDLING] = {
-        "rows": [
-            {
-                "event_index": row.event_index,
-                "classification": row.classification,
-                "reason_codes": list(row.reason_codes),
-                "confidence": row.confidence,
-                "requested_handling": row.requested_handling,
-                "effective_handling": row.effective_handling,
-                "fallback_reason": row.fallback_reason,
-                "ap1_start": row.ap1_start,
-                "ap2_start": row.ap2_start,
-                "ap1_end": row.ap1_end,
-                "ap2_end": row.ap2_end,
-                "primary_separation_deg": row.primary_separation_deg,
-                "secondary_separation_deg": row.secondary_separation_deg,
-                "candidate_domain": row.candidate_domain,
-                "requested_path_count": row.requested_path_count,
-                "unique_candidate_count": row.unique_candidate_count,
-                "angular_step_deg": row.angular_step_deg,
-                "include_static_pose": row.include_static_pose,
-                "direction_source": row.direction_source,
-                "kerma": row.kerma,
-                "dap": row.dap,
-                "multiplier": row.multiplier,
-                "aggregation_rule": row.aggregation_rule,
-                "k_bs_range": list(row.k_bs_range) if row.k_bs_range is not None else None,
-                "k_med_range": list(row.k_med_range) if row.k_med_range is not None else None,
-            }
-            for row in ledger.rows
-        ],
-        "aggregate": {
-            "total_events": ledger.total_events,
-            "rotational_count": ledger.rotational_count,
-            "positioner_motion_count": ledger.positioner_motion_count,
-            "static_count": ledger.static_count,
-            "unknown_count": ledger.unknown_count,
-            "rotational_kerma": ledger.rotational_kerma,
-            "total_kerma": ledger.total_kerma,
-            "any_fallback_to_static": ledger.any_fallback_to_static,
-        },
-        "source_event_count": total_events if source_event_count is None else source_event_count,
-        "processed_event_count": total_events,
-    }
-    output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE] = envelope_details
-    _emit_rotational_summary(ledger)
     return output

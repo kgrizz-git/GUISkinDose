@@ -17,12 +17,7 @@ from .constants import (
     KEY_NORMALIZATION_ACQUISITION_PLANE_RESOLUTION,
     KEY_NORMALIZATION_ACQUISITION_PLANE_SOURCE_KIND,
     KEY_NORMALIZATION_ACQUISITION_TYPE,
-    KEY_NORMALIZATION_ACQUISITION_TYPE_CODE,
-    KEY_NORMALIZATION_ACQUISITION_TYPE_CODING_SCHEME,
-    KEY_NORMALIZATION_ACQUISITION_TYPE_MEANING,
     KEY_NORMALIZATION_AIR_KERMA,
-    KEY_NORMALIZATION_AP1_END,
-    KEY_NORMALIZATION_AP2_END,
     KEY_NORMALIZATION_DEVICE_SERIAL,
     KEY_NORMALIZATION_DISTANCE_ISOCENTER_DETECTOR,
     KEY_NORMALIZATION_DISTANCE_SOURCE_DETECTOR,
@@ -319,20 +314,6 @@ def _normalize_machine_parameters(
     data_norm[KEY_NORMALIZATION_DISTANCE_SOURCE_IRP] = data_norm.DSI - 15
     data_norm[KEY_NORMALIZATION_ACQUISITION_TYPE] = data_parsed.IrradiationEventType
     data_norm[KEY_NORMALIZATION_ACQUISITION_PLANE] = data_parsed.AcquisitionPlane
-    # Additive rotational identity: raw coded acquisition identity preserved
-    # alongside the legacy meaning column (AcquisitionPlane_CodeValue pattern).
-    for parsed_col, norm_col in (
-        ("IrradiationEventType_CodeValue", KEY_NORMALIZATION_ACQUISITION_TYPE_CODE),
-        (
-            "IrradiationEventType_CodingSchemeDesignator",
-            KEY_NORMALIZATION_ACQUISITION_TYPE_CODING_SCHEME,
-        ),
-        ("IrradiationEventType", KEY_NORMALIZATION_ACQUISITION_TYPE_MEANING),
-    ):
-        if parsed_col in data_parsed.columns:
-            data_norm[norm_col] = data_parsed[parsed_col]
-        else:
-            data_norm[norm_col] = None
 
     # Additive plane-identity audit fields.  The legacy acquisition_plane column
     # is preserved verbatim because corrections._match_device_rows() compares it
@@ -542,16 +523,6 @@ def _normalize_beam_parameters(
     data_norm["Ap2"] = norm.rot_dir.Ap2 * data_parsed.PositionerSecondaryAngle_deg
     # temp set to zero
     data_norm["Ap3"] = norm.rot_dir.Ap3 * [0] * len(data_norm)
-    # Additive rotational end angles under the same rot_dir convention; None
-    # when the source did not populate them (static or angle-less files).
-    for parsed_col, sign, norm_col in (
-        ("PositionerPrimaryEndAngle_deg", norm.rot_dir.Ap1, KEY_NORMALIZATION_AP1_END),
-        ("PositionerSecondaryEndAngle_deg", norm.rot_dir.Ap2, KEY_NORMALIZATION_AP2_END),
-    ):
-        if parsed_col in data_parsed.columns:
-            data_norm[norm_col] = sign * pd.to_numeric(data_parsed[parsed_col], errors="coerce")
-        else:
-            data_norm[norm_col] = np.nan
 
     # detector side length
     data_norm["DSL"] = norm.detector_side_length

@@ -20,18 +20,6 @@ The manual `Tx ↔ Tz` import toggle is an expert correction for non-DICOM tabul
 
 Calculation uses the active `table_origin` metadata and the below-floor kVp settings `below_floor_kvp_policy` and `below_floor_kvp_manual`.
 
-## Rotational acquisitions
-
-Events detected as rotational (recognized spin type, or start/end angles
-that differ) are treated as conditional coverage envelopes by default
-(`rotational_handling = coverage`): the full event kerma is evaluated at
-each candidate pose and the cellwise maximum is kept. A pre-calculation
-prompt offers `static` instead (legacy one-pose math). `scenarios` handling
-is API/CLI-only for now; per-event overrides are a later slice. The result is an
-estimate-grade envelope, not a guaranteed bound; the Results warnings and
-rich reports record per-event handling. See Results help (rotational-handling badge) and the rich-report
-Rotational handling section for the per-event handling ledger.
-
 ## Before Running
 
 1. Use the Geometry tab to check a few representative events.
