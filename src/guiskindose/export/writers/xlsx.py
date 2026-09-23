@@ -192,6 +192,7 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
 def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
     """Populate the Rotational handling sheet; return False when nothing to show."""
     from guiskindose.export.sections import (
+        has_rotational_content,
         rotational_ledger_table,
         rotational_methodology_paragraph,
     )
@@ -200,7 +201,7 @@ def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
         (exam.exam_id if payload.is_multi_exam else None, exam.rotational_handling)
         for exam in payload.exams
     ]
-    blocks = [(label, handling) for label, handling in blocks if handling]
+    blocks = [(label, handling) for label, handling in blocks if has_rotational_content(handling)]
     if not blocks:
         return False
     ws = _new_sheet(wb, "Rotational handling")

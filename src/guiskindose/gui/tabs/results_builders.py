@@ -83,28 +83,65 @@ class ResultsTabController:
             self._refresh_rotational_badge()
 
     def _rotational_badge_text(self) -> str:
-        """One-line rotational-handling summary for the Results badge."""
+        """One-line rotational-handling summary for the Results badge.
+
+        Counts what actually ran (ledger effective handling), not what was
+        detected: explicitly static runs show no envelope badge.
+        """
         output = state.output
         handling = output.get("rotational_handling") if isinstance(output, dict) else None
         if not handling:
             return ""
-        aggregate = handling.get("aggregate", {})
-        rotational = int(aggregate.get("rotational_count", 0) or 0)
-        motion = int(aggregate.get("positioner_motion_count", 0) or 0)
-        total = int(aggregate.get("total_events", 0) or 0)
-        if rotational + motion <= 0:
-            return ""
-        fallback = " · static fallbacks — see warnings" if aggregate.get("any_fallback_to_static") else ""
-        return (
-            f"Estimate-grade rotational envelope: {rotational} rotational + "
-            f"{motion} positioner-motion of {total} events{fallback}"
+        rows = handling.get("rows", [])
+        enveloped = sum(1 for row in rows if isinstance(row, dict) and row.get("effective_handling") == "coverage")
+        static = sum(
+            1
+            for row in rows
+            if isinstance(row, dict)
+            and row.get("classification") in ("rotational", "positioner_motion")
+            and row.get("effective_handling") == "static"
         )
+        total = len(rows)
+        if enveloped + static <= 0:
+            return ""
+        parts = []
+        if enveloped:
+            parts.append(f"{enveloped} envelope(s)")
+        if static:
+            parts.append(f"{static} static fallback(s)")
+        return "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational events)"
 
     def _refresh_rotational_badge(self) -> None:
         """Show or hide the rotational-handling badge."""
         text = self._rotational_badge_text()
         self.refs.rotational_badge.set_text(text)
         self.refs.rotational_badge.visible = bool(text)
+
+    def _refresh_agg_rotational_badge(self, res: Any) -> None:
+        """Aggregate rotational badge across multi-exam outputs."""
+        rotational = 0
+        motion = 0
+        total = 0
+        fallback = False
+        for exam in getattr(res, "exams", []) or []:
+            handling = getattr(getattr(exam, "output", None), "rotational_handling", None)
+            if not isinstance(handling, dict):
+                continue
+            aggregate = handling.get("aggregate", {})
+            rotational += int(aggregate.get("rotational_count", 0) or 0)
+            motion += int(aggregate.get("positioner_motion_count", 0) or 0)
+            total += int(aggregate.get("total_events", 0) or 0)
+            fallback = fallback or bool(aggregate.get("any_fallback_to_static"))
+        if rotational + motion <= 0:
+            self.refs.agg_rotational_badge.set_text("")
+            self.refs.agg_rotational_badge.visible = False
+            return
+        suffix = " · static fallbacks — see warnings" if fallback else ""
+        self.refs.agg_rotational_badge.set_text(
+            f"Estimate-grade rotational envelope: {rotational} rotational + "
+            f"{motion} positioner-motion of {total} events{suffix}"
+        )
+        self.refs.agg_rotational_badge.visible = True
 
     async def refresh_dosemap(self) -> None:
         """Refresh dosemap."""
@@ -192,6 +229,7 @@ class ResultsTabController:
         else:
             self.refs.run_warnings_label.set_text("")
             self.refs.run_warnings_label.set_visibility(False)
+        self._refresh_agg_rotational_badge(res)
 
     def _set_multi_exam_totals(self) -> None:
         """Render DAP and fluoroscopy totals when those values are available."""
@@ -444,6 +482,7 @@ class ResultsViewRefs:
     agg_psd_metric: ui.label = None  # type: ignore[assignment]
     agg_events_metric: ui.label = None  # type: ignore[assignment]
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
+    agg_rotational_badge: ui.label = None  # type: ignore[assignment]
     run_warnings_label: ui.label = None  # type: ignore[assignment]
     agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
@@ -559,6 +598,8 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
                 "text-sm text-grey-4"
             )
             ctrl.refs.agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
+            ctrl.refs.agg_rotational_badge = ui.label("").classes("text-sm text-grey-7")
+            ctrl.refs.agg_rotational_badge.visible = False
 
         ctrl.refs.run_warnings_label = ui.label("").classes(
             "text-sm text-orange-400 whitespace-pre-wrap w-full"

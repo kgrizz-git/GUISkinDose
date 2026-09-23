@@ -198,6 +198,31 @@ def test_xlsx_rotational_sheet_present_with_handling():
     assert "rotational" in values
 
 
+def test_xlsx_rotational_sheet_absent_for_all_static():
+    import copy
+
+    payload = _payload_with_handling([0.01, 0.01])
+    handling = copy.deepcopy(payload.exams[0].rotational_handling)
+    handling["rows"] = [
+        {**row, "classification": "static", "effective_handling": "static"}
+        for row in handling["rows"]
+    ]
+    handling["aggregate"] = {
+        "total_events": 2,
+        "rotational_count": 0,
+        "positioner_motion_count": 0,
+        "static_count": 2,
+        "unknown_count": 0,
+        "rotational_kerma": 0.0,
+        "total_kerma": 0.02,
+        "any_fallback_to_static": False,
+    }
+    payload.exams[0].rotational_handling = handling
+    data = render_xlsx_bytes(payload)
+    wb = load_workbook(filename=io.BytesIO(data))
+    assert "Rotational handling" not in wb.sheetnames
+
+
 def test_xlsx_rotational_sheet_absent_without_handling():
     s = _settings()
     src = ExportSource(

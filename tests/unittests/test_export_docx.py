@@ -121,6 +121,34 @@ def _payload_with_handling():
     return collect_export_payload(src, with_images=False)
 
 
+def test_docx_omits_rotational_section_for_all_static():
+
+    from docx import Document  # type: ignore[import-untyped]
+
+    handling = _handling()
+    handling["rows"] = [
+        {**row, "classification": "static", "effective_handling": "static"}
+        for row in handling["rows"]
+    ]
+    handling["aggregate"] = {
+        "total_events": 4,
+        "rotational_count": 0,
+        "positioner_motion_count": 0,
+        "static_count": 4,
+        "unknown_count": 0,
+        "rotational_kerma": 0.0,
+        "total_kerma": 0.05,
+        "any_fallback_to_static": False,
+    }
+    base = _payload_with_handling()
+    base.exams[0].rotational_handling = handling
+    from guiskindose.export.writers.docx import render_docx_bytes
+
+    doc = Document(io.BytesIO(render_docx_bytes(base)))
+    text = "\n".join(p.text for p in doc.paragraphs)
+    assert "Rotational handling ledger" not in text
+
+
 def test_docx_omits_rotational_section_without_handling():
     from docx import Document  # type: ignore[import-untyped]
 

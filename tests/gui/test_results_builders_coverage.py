@@ -49,6 +49,7 @@ def _controller() -> rb.ResultsTabController:
     ctrl.refs.corr_table = MagicMock(rows=[], update=MagicMock())
     ctrl.refs.agg_psd_metric = MagicMock()
     ctrl.refs.rotational_badge = MagicMock(visible=False)
+    ctrl.refs.agg_rotational_badge = MagicMock(visible=False)
     ctrl.refs.agg_events_metric = MagicMock()
     ctrl.refs.agg_totals_metric = MagicMock()
     ctrl.refs.run_warnings_label = MagicMock()
@@ -328,27 +329,76 @@ def test_rotational_badge_hidden_without_handling(monkeypatch):
     assert ctrl.refs.rotational_badge.visible is False
 
 
+def _handling_output(rows):
+    return {"rotational_handling": {"rows": rows, "aggregate": {}}}
+
+
 def test_rotational_badge_shows_envelope_summary(monkeypatch):
     ctrl = _controller()
     monkeypatch.setattr(
         state,
         "output",
-        {
-            "rotational_handling": {
-                "aggregate": {
-                    "rotational_count": 1,
-                    "positioner_motion_count": 0,
-                    "total_events": 10,
-                    "any_fallback_to_static": False,
+        _handling_output(
+            [
+                {
+                    "classification": "rotational",
+                    "effective_handling": "coverage",
                 }
-            }
-        },
+            ]
+        ),
         raising=False,
     )
     ctrl._refresh_rotational_badge()
     text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
-    assert "1 rotational" in text and "10 events" in text
+    assert "1 envelope" in text
     assert ctrl.refs.rotational_badge.visible is True
+
+
+def test_rotational_badge_static_run_shows_no_envelope(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(
+        state,
+        "output",
+        _handling_output(
+            [
+                {
+                    "classification": "rotational",
+                    "effective_handling": "static",
+                }
+            ]
+        ),
+        raising=False,
+    )
+    ctrl._refresh_rotational_badge()
+    text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
+    assert "envelope" not in text and "static fallback" in text
+    assert ctrl.refs.rotational_badge.visible is True
+
+
+def test_agg_rotational_badge_sums_across_exams(monkeypatch):
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    res = _NS(
+        exams=[
+            _NS(output=_NS(rotational_handling={"aggregate": {"rotational_count": 1, "positioner_motion_count": 0, "total_events": 4, "any_fallback_to_static": False}})),
+            _NS(output=_NS(rotational_handling={"aggregate": {"rotational_count": 0, "positioner_motion_count": 1, "total_events": 3, "any_fallback_to_static": True}})),
+        ]
+    )
+    ctrl._refresh_agg_rotational_badge(res)
+    text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
+    assert "1 rotational" in text and "1 positioner-motion" in text and "7 events" in text
+    assert "fallback" in text
+    assert ctrl.refs.agg_rotational_badge.visible is True
+
+
+def test_agg_rotational_badge_hidden_without_handling(monkeypatch):
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    ctrl._refresh_agg_rotational_badge(_NS(exams=[_NS(output=_NS(rotational_handling=None))]))
+    cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).assert_called_once_with("")
+    assert ctrl.refs.agg_rotational_badge.visible is False
 
 
 def test_rotational_badge_notes_fallback(monkeypatch):
@@ -356,18 +406,14 @@ def test_rotational_badge_notes_fallback(monkeypatch):
     monkeypatch.setattr(
         state,
         "output",
-        {
-            "rotational_handling": {
-                "aggregate": {
-                    "rotational_count": 0,
-                    "positioner_motion_count": 2,
-                    "total_events": 5,
-                    "any_fallback_to_static": True,
-                }
-            }
-        },
+        _handling_output(
+            [
+                {"classification": "positioner_motion", "effective_handling": "static"},
+                {"classification": "positioner_motion", "effective_handling": "static"},
+            ]
+        ),
         raising=False,
     )
     ctrl._refresh_rotational_badge()
     text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
-    assert "2 positioner-motion" in text and "fallback" in text
+    assert "2 static fallback" in text
