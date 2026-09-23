@@ -125,7 +125,9 @@ def test_docx_omits_rotational_section_without_handling():
     from docx import Document  # type: ignore[import-untyped]
 
     doc = Document(io.BytesIO(render_docx_bytes(_payload())))
-    headings = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+    headings = [
+        p.text for p in doc.paragraphs if p.style is not None and p.style.name.startswith("Heading")
+    ]
     assert "Rotational handling" not in headings
 
 
