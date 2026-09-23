@@ -263,6 +263,9 @@ class TestNormalizedAdapter:
         p = tmp_path / "rot.csv"
         p.write_text(base, encoding="utf-8")
         result = adapter.adapt(read_csv(p), original_filename="rot.csv")
+        from guiskindose.input_adapters.models import InputAdapterResult
+
+        assert isinstance(result, InputAdapterResult)
         frame = result.normalized_data
         assert frame["Ap1_end"].iloc[0] == -120.0
         assert frame["Ap2_end"].iloc[0] == 0.0
