@@ -157,8 +157,10 @@ def test_rotational_survey_flags_contradictory_rows():
     survey = rotational_survey(st)
     assert survey["rotational"] == 0
     assert survey["positioner_motion"] == 0
-    assert len(survey["unresolved"]) == 1
-    assert "contradictory_static" in survey["unresolved"][0][3]
+    unresolved = survey["unresolved"]
+    assert isinstance(unresolved, list) and len(unresolved) == 1
+    first = unresolved[0]
+    assert isinstance(first, tuple) and "contradictory_static" in first[3]
 
 
 def test_cli_default_handling_is_coverage():
