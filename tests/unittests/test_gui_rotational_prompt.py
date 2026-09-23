@@ -47,10 +47,55 @@ def test_rotational_survey_counts_across_frames():
     st = AppState()
     st.rdsr_df = _spin_frame()
     st.loaded_exams = [SimpleNamespace(normalized_data=_spin_frame())]
-    # Active frame (1 spin) + loaded exam (1 spin); each frame contributes.
+    # rdsr_df is the concatenation of loaded exams: count exams only, once.
     survey = rotational_survey(st)
-    assert survey["rotational"] == 2
-    assert survey["total"] == 4
+    assert survey["rotational"] == 1
+    assert survey["total"] == 2
+    assert survey["unresolved"] == []
+
+
+def test_rotational_survey_falls_back_to_rdsr_df():
+    st = AppState()
+    st.rdsr_df = _spin_frame()
+    survey = rotational_survey(st)
+    assert survey["rotational"] == 1
+    assert survey["total"] == 2
+
+
+def test_rotational_survey_lists_unresolved():
+    st = AppState()
+    frame = pd.DataFrame(
+        [
+            {
+                "Ap1": 90.0,
+                "Ap2": 0.0,
+                "Ap1_end": None,
+                "Ap2_end": None,
+                "acquisition_type": "Rotational Acquisition",
+            },
+            {
+                "Ap1": 0.0,
+                "Ap2": 0.0,
+                "Ap1_end": 10.0,
+                "Ap2_end": 0.0,
+                "acquisition_type": "Stepping Acquisition",
+                "acquisition_type_code": "113612",
+                "acquisition_type_coding_scheme": "DCM",
+            },
+        ]
+    )
+    st.loaded_exams = [SimpleNamespace(normalized_data=frame)]
+    survey = rotational_survey(st)
+    assert survey["rotational"] == 1
+    assert survey["positioner_motion"] == 1
+    assert len(survey["unresolved"]) == 2
+    labels = {(entry[0], entry[1], entry[2]) for entry in survey["unresolved"]}
+    assert ("Exam 1", 0, "rotational") in labels
+    assert ("Exam 1", 1, "positioner_motion") in labels
+    # Privacy-safe: indices + reason codes only, no values.
+    assert survey["unresolved"][0][3] and all(
+        isinstance(reason, str) for reason in survey["unresolved"][0][3]
+    )
 
 
 def test_rotational_survey_zero_when_static():
@@ -70,6 +115,7 @@ def test_rotational_survey_empty_state():
         "positioner_motion": 0,
         "unknown": 0,
         "total": 0,
+        "unresolved": [],
     }
 
 

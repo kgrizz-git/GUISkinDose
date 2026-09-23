@@ -392,34 +392,63 @@ def below_floor_event_count(state: AppState) -> int:
     return total
 
 
-def rotational_survey(state: AppState) -> dict[str, int]:
+def rotational_survey(state: AppState) -> dict[str, object]:
     """Classify loaded events for the rotational pre-calc prompt.
 
-    Returns counts by classification plus the total, summed over the active
-    frame and all loaded exams. Pure classification — no dose math, no
-    identifier handling (counts only).
+    Uses loaded exams when present (``state.rdsr_df`` is their
+    concatenation — counting both would double-count); falls back to
+    ``rdsr_df`` only when no exam frames exist. Returns counts plus a
+    privacy-safe unresolved list of ``(exam, index, classification,
+    reasons)`` tuples — indices and reason codes only, no event values.
+    Pure classification — no dose math, no identifier handling.
     """
     from guiskindose.rotational_acquisition import classify_rotational_event
 
-    frames: list = []
-    if state.rdsr_df is not None:
-        frames.append(state.rdsr_df)
-    for exam in state.loaded_exams:
-        df = getattr(exam, "normalized_data", None)
-        if df is not None:
-            frames.append(df)
-    survey = {"rotational": 0, "positioner_motion": 0, "unknown": 0, "total": 0}
-    for frame in frames:
-        for _, row in frame.iterrows():
+    frames: list[tuple[str, object]] = []
+    exam_frames = [
+        (f"Exam {i + 1}", getattr(exam, "normalized_data", None))
+        for i, exam in enumerate(state.loaded_exams)
+    ]
+    exam_frames = [(label, df) for label, df in exam_frames if df is not None]
+    if exam_frames:
+        frames = exam_frames
+    elif state.rdsr_df is not None:
+        frames = [("Exam 1", state.rdsr_df)]
+    survey: dict[str, object] = {
+        "rotational": 0,
+        "positioner_motion": 0,
+        "unknown": 0,
+        "total": 0,
+        "unresolved": [],
+    }
+    unresolved = survey["unresolved"]
+    assert isinstance(unresolved, list)
+    for label, frame in frames:
+        for index, (_, row) in enumerate(frame.iterrows()):
             try:
-                classification = classify_rotational_event(dict(row)).classification
+                result = classify_rotational_event(dict(row))
+                classification = result.classification
             except Exception:
                 classification = "unknown"
-            survey["total"] += 1
+                result = None
+            survey["total"] = int(survey["total"]) + 1
             if classification in survey:
-                survey[classification] += 1
+                survey[classification] = int(survey[classification]) + 1
             else:
-                survey["unknown"] += 1
+                survey["unknown"] = int(survey["unknown"]) + 1
+            needs_attention = classification in ("positioner_motion", "unknown") or (
+                classification == "rotational"
+                and (result is None or not result.usable_endpoints)
+            )
+            if needs_attention:
+                unresolved.append(
+                    (
+                        label,
+                        index,
+                        classification,
+                        list(result.reason_codes) if result is not None else ["unclassified"],
+                    )
+                )
     return survey
 
 

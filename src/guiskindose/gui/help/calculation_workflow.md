@@ -26,7 +26,8 @@ Events detected as rotational (recognized spin type, or start/end angles
 that differ) are treated as conditional coverage envelopes by default
 (`rotational_handling = coverage`): the full event kerma is evaluated at
 each candidate pose and the cellwise maximum is kept. A pre-calculation
-prompt offers `static` instead (legacy one-pose math). The result is an
+prompt offers `static` instead (legacy one-pose math). `scenarios` handling
+is API/CLI-only for now; per-event overrides are a later slice. The result is an
 estimate-grade envelope, not a guaranteed bound; the Results warnings and
 rich reports record per-event handling. See the loopback-scope help for
 where to read the handling ledger.

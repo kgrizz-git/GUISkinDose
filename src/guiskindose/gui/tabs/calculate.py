@@ -263,24 +263,42 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
-async def rotational_prompt(survey: dict[str, int]) -> bool:
+async def rotational_prompt(survey: dict[str, object]) -> bool:
     """Confirm rotational-acquisition handling before a calculation.
 
-    Shows detected rotational/positioner-motion counts with the default
-    coverage-envelope treatment and writes the chosen handling back to
-    ``state`` so the run uses it. Returns ``True`` to proceed, ``False`` on
-    Cancel. Scenarios mode stays API/CLI-only until nominal-arc selection
-    UI exists, so the prompt offers coverage vs static.
+    Rotational events run as conditional coverage envelopes; positioner-motion
+    and otherwise unresolved events fall back to static poses with warnings
+    (explicit per-event override does not exist yet — see the plan). The
+    expander lists unresolved events by index with reason codes only (no
+    values, no identifiers). Writes the chosen handling back to ``state``;
+    returns ``True`` to proceed, ``False`` on Cancel. Scenarios mode stays
+    API/CLI-only until nominal-arc selection UI exists, so the prompt offers
+    coverage vs static.
     """
+    rotational = int(survey.get("rotational", 0))
+    motion = int(survey.get("positioner_motion", 0))
+    total = int(survey.get("total", 0))
+    unresolved = survey.get("unresolved", [])
+    assert isinstance(unresolved, list)
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
         ui.label("Rotational or moving acquisitions detected").classes(_DIALOG_TITLE_CLASSES)
         ui.label(
-            f"{survey['rotational']} rotational + {survey['positioner_motion']} "
-            f"positioner-motion of {survey['total']} loaded event(s) will be "
-            "treated as conditional coverage envelopes (estimate-grade), not "
-            "single static poses. Unresolved events fall back to static with "
-            "a warning."
+            f"{rotational} rotational event(s) of {total} loaded will run as "
+            "conditional coverage envelopes (estimate-grade), not single "
+            "static poses."
         ).classes(_DIALOG_BODY_CLASSES)
+        if motion:
+            ui.label(
+                f"{motion} positioner-motion event(s) need an explicit override "
+                "that does not exist yet — they will use static poses with a "
+                "warning."
+            ).classes(_DIALOG_BODY_CLASSES)
+        if unresolved:
+            with ui.expansion(f"{len(unresolved)} event(s) need attention", icon="warning").classes("w-full"):
+                for label, index, classification, reasons in unresolved:
+                    ui.label(
+                        f"{label} event {index}: {classification} ({', '.join(reasons)})"
+                    ).classes("text-sm text-grey-7")
 
         handling_select = ui.select(
             ["coverage", "static"],

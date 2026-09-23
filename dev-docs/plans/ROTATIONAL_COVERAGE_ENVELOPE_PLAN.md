@@ -383,6 +383,12 @@ Per rotational/positioner-motion event: `Auto`, `Coverage`, or `Static`.
 and no per-event Nominal button; scenario path selection belongs in the
 scenario details control and requires explicit confirmation.
 
+Deferred to a later slice (not in the first release): per-event override
+controls in the GUI, their persistence across recalculation, provenance
+export of overrides, and reset-on-new-dataset for overrides. Likewise,
+`scenarios` handling and nominal-arc selection UI are API/CLI-only until
+that slice; the pre-calc prompt offers `coverage` vs `static` only.
+
 `include_static_pose=false` means "do not add the separate legacy static
 candidate." It cannot remove a reported start pose that is inherently an arc
 endpoint or a member of the type-only 360-degree domain. The GUI tooltip and
