@@ -415,6 +415,10 @@ def rotational_survey(state: AppState) -> dict[str, object]:
         frames = exam_frames
     elif state.rdsr_df is not None:
         frames = [("Exam 1", state.rdsr_df)]
+    # NOTE: indices below are pre-policy source positions. The dose loop may
+    # drop rows (e.g. below-floor kVp skip), so the handling ledger's
+    # post-policy event_index can differ; match rows by exam + classification
+    # + angles, never by bare index, across the two.
     survey: dict[str, object] = {
         "rotational": 0,
         "positioner_motion": 0,

@@ -37,8 +37,9 @@ from guiskindose.settings import PyskindoseSettings
 # Export JSON schema version — increment when ``PySkinDoseOutput.to_dict()`` (or
 # ``MultiExamResult.to_dict()``) changes incompatibly: field removed, renamed, or
 # type changed. Not tied to package semver; downstream consumers should read this
-# before parsing nested fields.
-EXPORT_SCHEMA_VERSION = 2
+# before parsing nested fields. v3 adds the rotational_handling ledger and
+# rotational_envelope detail fields.
+EXPORT_SCHEMA_VERSION = 3
 
 
 def _plane_identity_column_list(data_norm: pd.DataFrame, column: str, n_events: int) -> list[str]:

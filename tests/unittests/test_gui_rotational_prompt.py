@@ -136,3 +136,38 @@ def test_build_settings_rejects_invalid_handling():
     st.rotational_handling = "bogus"
     with pytest.raises(ValueError, match="rotational_handling"):
         build_settings(st)
+
+
+def test_rotational_survey_flags_contradictory_rows():
+    st = AppState()
+    frame = pd.DataFrame(
+        [
+            {
+                "Ap1": 0.0,
+                "Ap2": 0.0,
+                "Ap1_end": 50.0,
+                "Ap2_end": 0.0,
+                "acquisition_type": "Stationary Acquisition",
+                "acquisition_type_code": "113611",
+                "acquisition_type_coding_scheme": "DCM",
+            },
+        ]
+    )
+    st.loaded_exams = [SimpleNamespace(normalized_data=frame)]
+    survey = rotational_survey(st)
+    assert survey["rotational"] == 0
+    assert survey["positioner_motion"] == 0
+    assert len(survey["unresolved"]) == 1
+    assert "contradictory_static" in survey["unresolved"][0][3]
+
+
+def test_cli_default_handling_is_coverage():
+    """Headless runs default to coverage; the prompt lives in GUI code only."""
+    from guiskindose import load_settings_example_json
+    from guiskindose.settings import PyskindoseSettings
+
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    assert settings.rotational_handling == "coverage"
+    import guiskindose.calculate_dose.calculate_irradiation_event_result as loop
+
+    assert not hasattr(loop, "rotational_prompt")

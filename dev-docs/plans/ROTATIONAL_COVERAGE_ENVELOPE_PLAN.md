@@ -9,7 +9,7 @@ with separate scenario results available for physically realizable estimates.
 This plan supersedes the assumed-arc default in the rotational-acquisition
 assessment Phase 1.5 and redefines Phase 2. The assessment remains the evidence
 and current-code record; this plan is the implementation source of truth.
-Status: design accepted, not yet implemented.
+Status: initial envelope implementation complete (classifier, normalizer contract, dose loop, prompt, exports, badge); scenarios/nominal UI deferred (see Open follow-ups).
 
 The clinical goal is useful improvement with honest limitations, not exact
 trajectory reconstruction from data that classic RDSR does not contain. A
@@ -521,6 +521,13 @@ implementation PRs, but each behavior ships with its tests and affected docs.
 
 ## Open follow-ups (not gates)
 
+- GUI controls for `angular_step_deg`/`include_static_pose` plus the
+  tooltip/ledger semantics for the static flag (currently accepted in
+  settings but geometrically inert whenever the reported static pose
+  coincides with an arc endpoint, which the pipeline always passes).
+- Value-safe warning-content tests, AEC-weight dominance characterization,
+  and decreasing-step convergence characterization beyond the N-invariance
+  pin already in `test_rotational_envelope_dose.py`.
 - Extend exact rotational type indicators as real inputs become available.
 - Ingest measured direction/per-frame trajectory from matched XA/Enhanced XA
   objects as a separate future input source.

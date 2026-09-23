@@ -86,7 +86,8 @@ class ResultsTabController:
         """One-line rotational-handling summary for the Results badge.
 
         Counts what actually ran (ledger effective handling), not what was
-        detected: explicitly static runs show no envelope badge.
+        detected: explicitly static runs show a static-only badge, never
+        an envelope claim.
         """
         output = state.output
         handling = output.get("rotational_handling") if isinstance(output, dict) else None
@@ -120,7 +121,7 @@ class ResultsTabController:
             parts.append(f"{explicit_static} static (as configured)")
         if fallback_static:
             parts.append(f"{fallback_static} static fallback(s)")
-        return "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {detected} rotational events)"
+        return "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {detected} rotational/moving events)"
 
     def _refresh_rotational_badge(self) -> None:
         """Show or hide the rotational-handling badge."""
@@ -161,7 +162,7 @@ class ResultsTabController:
         if static:
             parts.append(f"{static} static")
         self.refs.agg_rotational_badge.set_text(
-            "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational events)"
+            "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational/moving events)"
         )
         self.refs.agg_rotational_badge.visible = True
 

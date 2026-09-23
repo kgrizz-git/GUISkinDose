@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+from guiskindose.format_export_data import EXPORT_SCHEMA_VERSION
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
@@ -83,7 +85,7 @@ class TestMultiExamResultSerialization:
     def test_to_dict_structure(self):
         mr = self._make_multi()
         d = mr.to_dict()
-        assert d["schema_version"] == 2
+        assert d["schema_version"] == EXPORT_SCHEMA_VERSION
         assert "exams" in d
         assert len(d["exams"]) == 2
         assert "aggregate_dose_map" in d

@@ -186,16 +186,22 @@ def has_rotational_content(handling: dict[str, Any] | None) -> bool:
 
     The dose loop always emits the ledger dict, even for all-static datasets
     — a bare non-empty dict must not trigger a "Rotational handling" section
-    claiming envelope processing. Only detected rotational or
-    positioner-motion rows qualify.
+    claiming envelope processing. Detected rotational/positioner rows qualify,
+    as do contradictory stationary declarations (unknown class carrying the
+    contradictory_static reason).
     """
     if not handling:
         return False
     rows = handling.get("rows", [])
-    return any(
-        isinstance(row, dict) and row.get("classification") in ("rotational", "positioner_motion")
-        for row in rows
-    )
+    return any(_is_disclosed_row(row) for row in rows)
+
+
+def _is_disclosed_row(row: object) -> bool:
+    if not isinstance(row, dict):
+        return False
+    if row.get("classification") in ("rotational", "positioner_motion"):
+        return True
+    return "contradictory_static" in (row.get("reason_codes") or [])
 
 
 def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | None:

@@ -143,3 +143,129 @@ def test_envelope_details_disclose_mixed_slot_semantics():
     details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
     assert details["hits_basis"] == "candidate_union"
     assert details["legacy_correction_basis"] == "static_pose"
+
+
+def test_contradictory_event_envelopes_with_reason_recorded():
+    """Stationary-coded but moving, usable endpoints: enveloped + flagged."""
+    frame = generate_synthetic_normalized_events(1)
+    frame.at[0, "acquisition_type"] = "Stationary Acquisition"
+    frame.at[0, "acquisition_type_code"] = "113611"
+    frame.at[0, "acquisition_type_coding_scheme"] = "DCM"
+    frame.at[0, "acquisition_type_meaning"] = "Stationary Acquisition"
+    frame.at[0, "Ap1_end"] = float(frame["Ap1"].to_numpy()[0]) + 60.0
+    frame.at[0, "Ap2_end"] = float(frame["Ap2"].to_numpy()[0])
+    output = _run(frame.copy(), _settings(angular_step_deg=10.0))
+    handling = output[c.OUTPUT_KEY_ROTATIONAL_HANDLING]
+    assert handling["rows"][0]["classification"] == "unknown"
+    assert handling["rows"][0]["effective_handling"] == "coverage"
+    assert "contradictory_static" in handling["rows"][0]["reason_codes"]
+    assert handling["aggregate"]["any_fallback_to_static"] is False
+
+
+def test_contradictory_event_without_baseline_falls_back_loudly(caplog):
+    """Contradictory with unusable baseline: static + fallback reason."""
+    import logging
+
+    import numpy as _np
+
+    frame = generate_synthetic_normalized_events(1)
+    frame.at[0, "acquisition_type"] = "Stationary Acquisition"
+    frame.at[0, "acquisition_type_code"] = "113611"
+    frame.at[0, "acquisition_type_coding_scheme"] = "DCM"
+    frame.at[0, "acquisition_type_meaning"] = "Stationary Acquisition"
+    frame.at[0, "Ap1_end"] = float(frame["Ap1"].to_numpy()[0]) + 60.0
+    frame.at[0, "Ap2_end"] = float(frame["Ap2"].to_numpy()[0])
+    frame.at[0, "Tx"] = _np.nan
+    with caplog.at_level(logging.WARNING):
+        output = _run(frame.copy(), _settings(angular_step_deg=10.0))
+    handling = output[c.OUTPUT_KEY_ROTATIONAL_HANDLING]
+    assert handling["rows"][0]["effective_handling"] == "static"
+    assert handling["rows"][0]["fallback_reason"] == "contradictory_static"
+    assert handling["aggregate"]["any_fallback_to_static"] is True
+
+
+def test_summary_names_contradictory_declarations():
+    """The aggregate log names the contradictory count.
+
+    NOTE: uses a dedicated handler on the module logger (repo convention)
+    because pytest caplog is blind once configure_logging() sets
+    propagate=False suite-wide. The integration test above proves the data
+    reaches the ledger; this proves the wording.
+    """
+    import logging
+
+    from guiskindose.calculate_dose.rotational_event import (
+        _emit_rotational_summary,
+    )
+    from guiskindose.rotational_acquisition import classify_rotational_event
+    from guiskindose.rotational_envelope import LedgerEventInput, build_handling_ledger
+
+    classification = classify_rotational_event(
+        {
+            "Ap1": 0.0,
+            "Ap2": 0.0,
+            "Ap1_end": 50.0,
+            "Ap2_end": 0.0,
+            "acquisition_type": "Stationary Acquisition",
+            "acquisition_type_code": "113611",
+            "acquisition_type_coding_scheme": "DCM",
+        }
+    )
+    ledger = build_handling_ledger(
+        [
+            LedgerEventInput(
+                event_index=0,
+                classification=classification,
+                requested_handling="Auto",
+                effective_handling="static",
+                fallback_reason="contradictory_static",
+                kerma=1.0,
+                dap=None,
+            )
+        ]
+    )
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("guiskindose.calculate_dose.rotational_event")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        _emit_rotational_summary(ledger, total_events=1)
+    finally:
+        logger.removeHandler(handler)
+    assert any("contradictory stationary declarations: 1" in message for message in messages)
+
+
+def test_envelope_total_scales_sublinearly_with_candidates():
+    """Max-not-sum at dose-loop level: doubling candidates must not ~double dose.
+
+    A per-candidate summation bug would scale the map total with N; the
+    cellwise maximum is N-invariant up to sampling differences.
+    """
+    import numpy as _np
+
+    coarse = _run(_frame_with_spin().copy(), _settings(angular_step_deg=10.0))
+    fine = _run(_frame_with_spin().copy(), _settings(angular_step_deg=2.0))
+    coarse_total = float(_np.sum(coarse[c.OUTPUT_KEY_DOSE_MAP]))
+    fine_total = float(_np.sum(fine[c.OUTPUT_KEY_DOSE_MAP]))
+    coarse_n = coarse[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]["unique_candidate_count"]
+    fine_n = fine[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]["unique_candidate_count"]
+    assert fine_n > 2 * coarse_n
+    # A per-candidate summation bug would scale the total ~5x here; the
+    # cellwise maximum is N-invariant up to sampling differences.
+    assert abs(fine_total - coarse_total) / max(coarse_total, 1e-12) < 0.5
+
+
+def test_static_mode_is_deterministic_across_runs():
+    """Two identical static runs agree exactly (no envelope leakage)."""
+    first = _run(_frame_with_spin().copy(), _settings(rotational_handling="static"))
+    second = _run(_frame_with_spin().copy(), _settings(rotational_handling="static"))
+    import numpy as _np
+
+    assert _np.array_equal(
+        first[c.OUTPUT_KEY_DOSE_MAP], second[c.OUTPUT_KEY_DOSE_MAP]
+    )

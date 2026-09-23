@@ -290,6 +290,14 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
     total = _survey_count(survey, "total")
     unresolved_raw = survey.get("unresolved", [])
     unresolved: list = list(unresolved_raw) if isinstance(unresolved_raw, list) else []
+    contradictory = sum(
+        1
+        for entry in unresolved
+        if isinstance(entry, tuple)
+        and len(entry) == 4
+        and isinstance(entry[3], list)
+        and "contradictory_static" in entry[3]
+    )
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
         ui.label("Rotational or moving acquisitions detected").classes(_DIALOG_TITLE_CLASSES)
         ui.label(
@@ -297,6 +305,13 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
             "conditional coverage envelopes (estimate-grade), not single "
             "static poses."
         ).classes(_DIALOG_BODY_CLASSES)
+        if contradictory:
+            ui.label(
+                f"{contradictory} event(s) declare stationary acquisition but "
+                "show endpoint motion — a data contradiction. They run static "
+                "only with an explicit choice here; the conflict is recorded "
+                "in the ledger."
+            ).classes(_DIALOG_BODY_CLASSES)
         if motion:
             ui.label(
                 f"{motion} positioner-motion event(s) need an explicit override "
@@ -434,7 +449,23 @@ class _CalculationController:
         from guiskindose.gui.helpers import rotational_survey
 
         survey = rotational_survey(state)
-        if _survey_count(survey, "rotational") + _survey_count(survey, "positioner_motion") <= 0:
+        unresolved = survey.get("unresolved", [])
+        contradictory = 0
+        if isinstance(unresolved, list):
+            for entry in unresolved:
+                if (
+                    isinstance(entry, tuple)
+                    and len(entry) == 4
+                    and isinstance(entry[3], list)
+                    and "contradictory_static" in entry[3]
+                ):
+                    contradictory += 1
+        if (
+            _survey_count(survey, "rotational")
+            + _survey_count(survey, "positioner_motion")
+            + contradictory
+            <= 0
+        ):
             return True
         return await rotational_prompt(survey)
 

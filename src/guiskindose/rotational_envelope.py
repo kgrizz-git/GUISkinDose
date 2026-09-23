@@ -393,7 +393,10 @@ def build_handling_ledger(entries: list[LedgerEventInput]) -> HandlingLedger:
         fallback = (
             entry.effective_handling == "static"
             and entry.requested_handling != "Static"
-            and classification.classification in ("rotational", "positioner_motion")
+            and (
+                classification.classification in ("rotational", "positioner_motion")
+                or "contradictory_static" in classification.reason_codes
+            )
         )
         any_fallback = any_fallback or fallback
         rows.append(

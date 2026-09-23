@@ -29,8 +29,8 @@ each candidate pose and the cellwise maximum is kept. A pre-calculation
 prompt offers `static` instead (legacy one-pose math). `scenarios` handling
 is API/CLI-only for now; per-event overrides are a later slice. The result is an
 estimate-grade envelope, not a guaranteed bound; the Results warnings and
-rich reports record per-event handling. See the loopback-scope help for
-where to read the handling ledger.
+rich reports record per-event handling. See Results help (rotational-handling badge) and the rich-report
+Rotational handling section for the per-event handling ledger.
 
 ## Before Running
 
