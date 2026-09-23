@@ -173,3 +173,34 @@ def test_cli_default_handling_is_coverage():
     import guiskindose.calculate_dose.calculate_irradiation_event_result as loop
 
     assert not hasattr(loop, "rotational_prompt")
+
+
+def test_prompt_required_on_contradictory_only_dataset():
+    from guiskindose.gui.tabs.calculate import rotational_prompt_required
+
+    st = AppState()
+    frame = pd.DataFrame(
+        [
+            {
+                "Ap1": 0.0,
+                "Ap2": 0.0,
+                "Ap1_end": 50.0,
+                "Ap2_end": 0.0,
+                "acquisition_type": "Stationary Acquisition",
+                "acquisition_type_code": "113611",
+                "acquisition_type_coding_scheme": "DCM",
+            },
+        ]
+    )
+    st.loaded_exams = [SimpleNamespace(normalized_data=frame)]
+    assert rotational_prompt_required(rotational_survey(st)) is True
+
+
+def test_prompt_not_required_for_all_static():
+    from guiskindose.gui.tabs.calculate import rotational_prompt_required
+
+    st = AppState()
+    st.rdsr_df = pd.DataFrame(
+        [{"Ap1": 0.0, "Ap2": 0.0, "Ap1_end": 0.0, "Ap2_end": 0.0, "acquisition_type": "Fluoroscopy"}]
+    )
+    assert rotational_prompt_required(rotational_survey(st)) is False

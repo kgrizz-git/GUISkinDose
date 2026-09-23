@@ -162,7 +162,6 @@ def _calculate_envelope_event(
     corrections_db: str,
     output: dict[str, Any],
     new_geometry_flag: bool,
-    rotational_mode: str,
     step_deg: float,
     include_static: bool,
     cached_hits: list[bool],
@@ -179,7 +178,6 @@ def _calculate_envelope_event(
     rebuilt from empties) while the dose map receives the cellwise maximum
     over all candidates. Per-event kerma records are unchanged.
     """
-    del rotational_mode  # coverage is established by the caller.
     ap1 = float(row["Ap1"])
     ap2 = float(row["Ap2"])
     ap1_end = _finite_or_none(row.get("Ap1_end"))

@@ -181,3 +181,73 @@ def test_methodology_notes_collapsed_domain():
     text = rotational_methodology_paragraph(handling)
     assert text is not None
     assert "collapsed to a single candidate pose" in text
+
+
+def test_methodology_covers_contradictory_envelope():
+    from guiskindose.export.sections import rotational_methodology_paragraph
+
+    handling = dict(_handling())
+    handling["rows"] = [
+        {
+            "event_index": 0,
+            "classification": "unknown",
+            "reason_codes": ["type_code_stationary", "contradictory_static"],
+            "confidence": "coded",
+            "requested_handling": "Auto",
+            "effective_handling": "coverage",
+            "fallback_reason": "contradictory_static",
+            "ap1_start": 0.0,
+            "ap2_start": 0.0,
+            "ap1_end": 50.0,
+            "ap2_end": 0.0,
+            "primary_separation_deg": 50.0,
+            "secondary_separation_deg": 0.0,
+            "candidate_domain": "endpoint_paths",
+            "requested_path_count": 2,
+            "unique_candidate_count": 60,
+            "angular_step_deg": 1.0,
+            "include_static_pose": True,
+            "direction_source": "unknown",
+            "kerma": 0.005,
+            "dap": None,
+            "multiplier": 1.0,
+            "aggregation_rule": "max_within_sum_between",
+        }
+    ]
+    handling["aggregate"] = {
+        "total_events": 1,
+        "rotational_count": 0,
+        "positioner_motion_count": 0,
+        "static_count": 0,
+        "unknown_count": 1,
+        "rotational_kerma": 0.0,
+        "total_kerma": 0.005,
+        "any_fallback_to_static": False,
+    }
+    text = rotational_methodology_paragraph(handling)
+    assert text is not None
+    assert "1 event(s) ran as conditional coverage envelopes" in text
+    assert "100.0% of K_IRP in rotational envelopes" in text
+
+
+def test_ledger_table_renders_disclosed_rows_only():
+    from guiskindose.export.sections import rotational_ledger_table
+
+    handling = dict(_handling())
+    handling["rows"] = handling["rows"] + [
+        {
+            "event_index": 0,
+            "classification": "static",
+            "reason_codes": ["equal_endpoints"],
+            "effective_handling": "static",
+        },
+        {
+            "event_index": 1,
+            "classification": "static",
+            "reason_codes": ["equal_endpoints"],
+            "effective_handling": "static",
+        },
+    ]
+    table = rotational_ledger_table(handling)
+    assert len(table) == 2  # header + the single disclosed row
+    assert table[1][0] == "3"

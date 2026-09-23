@@ -263,6 +263,31 @@ async def below_floor_prompt(n_below: int) -> bool:
     return True
 
 
+def rotational_prompt_required(survey: dict[str, object]) -> bool:
+    """Whether the rotational pre-calc prompt must appear.
+
+    Fires on rotational, positioner-motion, or contradictory-stationary
+    rows — a contradictory-only dataset must not run silently.
+    """
+    contradictory = 0
+    unresolved = survey.get("unresolved", [])
+    if isinstance(unresolved, list):
+        for entry in unresolved:
+            if (
+                isinstance(entry, tuple)
+                and len(entry) == 4
+                and isinstance(entry[3], list)
+                and "contradictory_static" in entry[3]
+            ):
+                contradictory += 1
+    return (
+        _survey_count(survey, "rotational")
+        + _survey_count(survey, "positioner_motion")
+        + contradictory
+        > 0
+    )
+
+
 def _survey_count(survey: dict[str, object], key: str) -> int:
     """Typed read of a survey counter (survey values are untyped objects)."""
     value = survey.get(key, 0)
@@ -449,23 +474,7 @@ class _CalculationController:
         from guiskindose.gui.helpers import rotational_survey
 
         survey = rotational_survey(state)
-        unresolved = survey.get("unresolved", [])
-        contradictory = 0
-        if isinstance(unresolved, list):
-            for entry in unresolved:
-                if (
-                    isinstance(entry, tuple)
-                    and len(entry) == 4
-                    and isinstance(entry[3], list)
-                    and "contradictory_static" in entry[3]
-                ):
-                    contradictory += 1
-        if (
-            _survey_count(survey, "rotational")
-            + _survey_count(survey, "positioner_motion")
-            + contradictory
-            <= 0
-        ):
+        if not rotational_prompt_required(survey):
             return True
         return await rotational_prompt(survey)
 

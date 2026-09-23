@@ -391,6 +391,35 @@ def test_agg_rotational_badge_sums_across_exams(monkeypatch):
     assert ctrl.refs.agg_rotational_badge.visible is True
 
 
+def test_badges_include_contradictory_rows():
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    rows = [
+        {
+            "classification": "unknown",
+            "effective_handling": "coverage",
+            "requested_handling": "Auto",
+            "reason_codes": ["type_code_stationary", "contradictory_static"],
+        }
+    ]
+    monkeypatch_state = {"rotational_handling": {"rows": rows, "aggregate": {}}}
+    import guiskindose.gui.tabs.results_builders as _rb
+
+    original = _rb.state.output
+    _rb.state.output = monkeypatch_state
+    try:
+        ctrl._refresh_rotational_badge()
+        text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
+        assert "1 envelope" in text
+        res = _NS(exams=[_NS(output=_NS(rotational_handling=monkeypatch_state["rotational_handling"]))])
+        ctrl._refresh_agg_rotational_badge(res)
+        agg = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
+        assert "1 envelope" in agg
+    finally:
+        _rb.state.output = original
+
+
 def test_agg_rotational_badge_static_run_shows_no_envelope():
     from types import SimpleNamespace as _NS
 

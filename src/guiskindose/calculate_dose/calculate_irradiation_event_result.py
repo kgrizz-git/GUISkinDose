@@ -236,7 +236,6 @@ def calculate_irradiation_event_result(
                 corrections_db=corrections_db,
                 output=output,
                 new_geometry_flag=new_geometry[ev],
-                rotational_mode=rotational_mode,
                 step_deg=step_deg,
                 include_static=include_static,
                 cached_hits=hits,
