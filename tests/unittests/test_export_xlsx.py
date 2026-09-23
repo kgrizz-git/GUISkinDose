@@ -202,7 +202,9 @@ def test_xlsx_rotational_sheet_absent_for_all_static():
     import copy
 
     payload = _payload_with_handling([0.01, 0.01])
-    handling = copy.deepcopy(payload.exams[0].rotational_handling)
+    base_handling = payload.exams[0].rotational_handling
+    assert base_handling is not None
+    handling = copy.deepcopy(base_handling)
     handling["rows"] = [
         {**row, "classification": "static", "effective_handling": "static"}
         for row in handling["rows"]
