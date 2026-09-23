@@ -21,7 +21,13 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
-- **GUI `--port` flag** (2026-09-22) — the loopback port was fixed at 8765
+- **RDSR parser fail-soft on malformed inputs** (2026-09-22) — two upstream
+  OpenREM patterns crashed `rdsr_parser` outright: a missing top-level
+  `ManufacturerModelName` (`AttributeError`) and valueless
+  `MeasuredValueSequence`/units (`IndexError`). The model tag now reads
+  `None` when absent and empty value sequences record `None`, with synthetic
+  regression tests (no fixture vendoring). Numerical results on parseable
+  files are unchanged. — the loopback port was fixed at 8765
   with no override. `--port <n>` selects a loopback port, `--port 0` takes
   an OS-assigned free port (printed in the console launch URL); the token,
   Host, and Origin controls are scoped to the effective port. Default stays
