@@ -242,6 +242,7 @@ def _build_output_template(total_number_of_events: int, dose_map_size: int) -> d
     """
     return {
         c.OUTPUT_KEY_HITS: [[] for _ in range(total_number_of_events)],
+        c.OUTPUT_KEY_HITS_UNION: [[] for _ in range(total_number_of_events)],
         c.OUTPUT_KEY_KERMA: [0.0] * total_number_of_events,
         c.OUTPUT_KEY_KERMA_CORRECTED: [0.0] * total_number_of_events,
         c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW: [

@@ -249,6 +249,11 @@ OUTPUT_KEY_CORRECTION_TABLE_STATUSES = "k_tab_statuses"
 OUTPUT_KEY_CORRECTION_KERMA_METER = "k_meter"
 OUTPUT_KEY_DOSE_MAP = "dose_map"
 OUTPUT_KEY_HITS = "hits"
+# Cells touched by ANY evaluated candidate pose. Equals OUTPUT_KEY_HITS for
+# statically handled events; a superset for rotational coverage envelopes.
+# Deliberately separate because the per-event correction arrays are indexed
+# by OUTPUT_KEY_HITS and must stay aligned with it.
+OUTPUT_KEY_HITS_UNION = "hits_union"
 OUTPUT_KEY_KERMA = "kerma"
 OUTPUT_KEY_KERMA_CORRECTED = "kerma_corrected"
 OUTPUT_KEY_ROTATIONAL_HANDLING = "rotational_handling"

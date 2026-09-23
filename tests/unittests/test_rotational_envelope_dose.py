@@ -141,8 +141,25 @@ def test_envelope_details_disclose_mixed_slot_semantics():
     """Union hits vs static-only correction slots are labeled in output."""
     output = _run(_frame_with_spin().copy(), _settings(angular_step_deg=10.0))
     details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
-    assert details["hits_basis"] == "candidate_union"
+    assert details["hits_basis"] == "static_pose"
+    assert details["union_hits_basis"] == "candidate_union"
     assert details["legacy_correction_basis"] == "static_pose"
+
+
+def test_hits_stay_aligned_with_corrections_and_union_is_a_superset():
+    """output["hits"] indexes the correction arrays; the union lives elsewhere."""
+    output = _run(_frame_with_spin().copy(), _settings(angular_step_deg=10.0))
+
+    hits = output[c.OUTPUT_KEY_HITS][1]
+    union = output[c.OUTPUT_KEY_HITS_UNION][1]
+    k_bs = output[c.OUTPUT_KEY_CORRECTION_BACK_SCATTER][1]
+    k_isq = output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][1]
+
+    assert len(hits) == len(union)
+    assert sum(hits) == len(k_bs) == len(k_isq)
+    # Every static hit is covered by the candidate union, never the reverse.
+    assert all(not hit or union[index] for index, hit in enumerate(hits))
+    assert sum(union) >= sum(hits)
 
 
 def test_contradictory_event_envelopes_with_reason_recorded():

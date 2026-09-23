@@ -246,7 +246,7 @@ async def below_floor_prompt(n_below: int) -> bool:
         ).classes("w-full")
         manual_kvp.bind_visibility_from(policy_select, "value", backward=lambda v: v == "manual")
 
-        dont_ask = ui.checkbox("Don't ask again this session")
+        dont_ask = ui.checkbox("Don't ask again until the loaded data changes")
 
         with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
             ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
@@ -358,7 +358,7 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
             else "coverage",
         ).classes("w-full")
 
-        dont_ask = ui.checkbox("Don't ask again this session")
+        dont_ask = ui.checkbox("Don't ask again until the loaded data changes")
 
         with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
             ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")

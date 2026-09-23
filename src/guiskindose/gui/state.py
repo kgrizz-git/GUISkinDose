@@ -87,7 +87,8 @@ class AppState:
     # Rotational-acquisition handling: "coverage" (default envelope),
     # "static" (legacy), or "scenarios" (deferred physical alternatives).
     # rotational_prompt_suppressed silences the pre-calc prompt once the user
-    # picks "don't ask again".
+    # picks "don't ask again"; rebuild_rdsr_df() clears it whenever the loaded
+    # event set changes.
     rotational_handling: str = "coverage"
     rotational_prompt_suppressed: bool = False
 

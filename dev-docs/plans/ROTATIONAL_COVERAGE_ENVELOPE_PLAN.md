@@ -399,7 +399,7 @@ event classifies as rotational or positioner motion, unless suppressed for
 the session. It shows counts by classification, the default handling, any
 type-only unresolved events, and a link/expander for event details. `Run`
 writes the selected global handling to GUI state; `Cancel` aborts calculation;
-`Don't ask again this session` suppresses repeats only for that session.
+`Don't ask again until the loaded data changes` suppresses repeats only for the currently loaded event set; `rebuild_rdsr_df()` clears the flag on any load, removal, or re-parse.
 Per-event overrides survive recalculation for the loaded dataset and are
 included in settings/provenance export. Loading a new dataset clears them and
 the prompt suppression. CLI/API never prompt: they use settings, emit the
@@ -518,6 +518,23 @@ implementation PRs, but each behavior ships with its tests and affected docs.
 - Add the user-visible behavior to `CHANGELOG.md`, update `TO_DO.md`, and keep
   this plan plus `dev-docs/index.md` current. Archive the plan only after all
   accepted slices are shipped or explicitly moved to follow-up work.
+
+## Hit-mask output contract
+
+`output["hits"]` always records the **static (reported) pose** hit list, for
+enveloped events as well as static ones, because the per-event correction
+arrays (`k_isq`, `k_bs`) carry one entry per static hit and downstream
+consumers pair them positionally via
+`PySkinDoseOutput.sparse_hit_indices()` / the exported
+`corrections.correction_value_index`.
+
+The candidate-union mask — every skin cell touched by any evaluated pose — is
+published separately as `output["hits_union"]`, exported as the top-level
+`union_hit_indices` list. It is a superset of `hits` for enveloped events and
+equal to it for statically handled ones, so it must never be used to index the
+correction arrays. `rotational_envelope[event]` labels this split explicitly:
+`hits_basis="static_pose"`, `union_hits_basis="candidate_union"`,
+`legacy_correction_basis="static_pose"`.
 
 ## Open follow-ups (not gates)
 

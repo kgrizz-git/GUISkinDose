@@ -319,14 +319,16 @@ def _calculate_envelope_event(
     # Discard the static-pose dose computed above: the envelope vector is the
     # event contribution. The static evaluation exists only for slots/cache.
 
-    # NOTE for future readers of output["hits"]: this is the candidate UNION
-    # mask for enveloped events, not the static-pose hit list (see
-    # details["hits_basis"]). Correction tables keyed off hits must account
-    # for that; the static-pose corrections in the slots below describe the
-    # reported pose only (details["legacy_correction_basis"]).
+    # output["hits"] stays the STATIC-pose hit list so it remains index-aligned
+    # with the per-hit-cell correction arrays stored below (k_isq and k_bs both
+    # have one entry per static hit; PySkinDoseOutput.sparse_hit_indices()
+    # pairs them positionally). The candidate union mask — every cell touched by
+    # any evaluated pose — is published separately under output["hits_union"],
+    # which is a superset and therefore cannot index those arrays.
     union_hits: list[bool] = union_mask
 
-    output[c.OUTPUT_KEY_HITS][ev] = union_hits
+    output[c.OUTPUT_KEY_HITS][ev] = list(static_hits)
+    output[c.OUTPUT_KEY_HITS_UNION][ev] = union_hits
     output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
     output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf
     output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = cf
@@ -362,10 +364,11 @@ def _calculate_envelope_event(
         "direction_source": "unknown",
         "multiplier": 1.0,
         "aggregation_rule": "max_within_sum_between",
-        # Semantic split, stated explicitly: the union hit mask describes all
-        # cells touched by any candidate, while the legacy per-event
-        # correction slots below record the reported static pose only.
-        "hits_basis": "candidate_union",
+        # Semantic split, stated explicitly: output["hits"] and the per-event
+        # correction slots both describe the reported static pose, while
+        # output["hits_union"] describes every cell touched by any candidate.
+        "hits_basis": "static_pose",
+        "union_hits_basis": "candidate_union",
         "legacy_correction_basis": "static_pose",
     }
     ledger_input = LedgerEventInput(

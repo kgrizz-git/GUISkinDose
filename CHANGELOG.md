@@ -35,9 +35,10 @@ That keeps SemVer and contributor history organized.
 
 - **RDSR parser fail-soft on malformed inputs** (2026-09-22) — two upstream
   OpenREM patterns crashed `rdsr_parser` outright: a missing top-level
-  `ManufacturerModelName` (`AttributeError`) and valueless
-  `MeasuredValueSequence`/units (`IndexError`). The model tag now reads
-  `None` when absent and empty value sequences record `None`, with synthetic
+  `Manufacturer` or `ManufacturerModelName` (`AttributeError`) and valueless
+  `MeasuredValueSequence`/units (`IndexError`). Both top-level tags now read
+  `None` when absent and empty value sequences record `None` without
+  overwriting a populated value from a duplicate content item, with synthetic
   regression tests (no fixture vendoring). Numerical results on parseable
   files are unchanged.
 - **GUI `--port` flag** (2026-09-22) — the loopback port was fixed at 8765

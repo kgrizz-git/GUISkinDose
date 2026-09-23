@@ -21,6 +21,7 @@ from guiskindose.constants import (
     OUTPUT_KEY_CORRECTION_TABLE_STATUSES,
     OUTPUT_KEY_DOSE_MAP,
     OUTPUT_KEY_HITS,
+    OUTPUT_KEY_HITS_UNION,
     OUTPUT_KEY_KERMA_CORRECTED,
     OUTPUT_KEY_ROTATIONAL_ENVELOPE,
     OUTPUT_KEY_ROTATIONAL_HANDLING,
@@ -37,9 +38,16 @@ from guiskindose.settings import PyskindoseSettings
 # Export JSON schema version — increment when ``PySkinDoseOutput.to_dict()`` (or
 # ``MultiExamResult.to_dict()``) changes incompatibly: field removed, renamed, or
 # type changed. Not tied to package semver; downstream consumers should read this
-# before parsing nested fields. v3 adds the rotational_handling ledger and
-# rotational_envelope detail fields.
+# before parsing nested fields. v3 adds the rotational_handling ledger,
+# rotational_envelope detail fields, and union_hit_indices.
 EXPORT_SCHEMA_VERSION = 3
+
+
+def normalize_hit_masks(masks: Any) -> list[list[bool]] | None:
+    """Normalise per-event hit masks (lists or arrays) to plain bool lists."""
+    if masks is None:
+        return None
+    return [[bool(hit) for hit in event] for event in masks]
 
 
 def _plane_identity_column_list(data_norm: pd.DataFrame, column: str, n_events: int) -> list[str]:
@@ -365,6 +373,11 @@ class PySkinDoseOutput:
         The total dose map given as a numpy array where the values correspond to the resulting dose in Gy
     sparse_hit_indices() : list[list[int]]
         Build one cell-index list for each radiation event, aligned with correction arrays.
+    sparse_union_hit_indices() : list[list[int]]
+        Build one cell-index list for each radiation event covering every cell touched by any
+        evaluated candidate pose. A superset of ``sparse_hit_indices()`` for rotational coverage
+        envelopes, and therefore NOT aligned with the correction arrays. Empty when no rotational
+        envelope was evaluated.
     backscatter_correction : list[list[float]]
         The backscatter corrections used for each cell hit given as a list of floats where the event and cell index of
         each float is given by getting the same list index element from ``sparse_hit_indices()``.
@@ -398,6 +411,9 @@ class PySkinDoseOutput:
     # rotational evaluation ran). Passed straight through to dict/JSON.
     rotational_handling: dict[str, Any] | None = None
     rotational_envelope: dict[str, Any] | None = None
+    # Candidate-union hit masks (superset of ``hits`` for enveloped events).
+    # Never used to index the correction arrays; see sparse_union_hit_indices().
+    hits_union: list[list[bool]] | None = None
 
     # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
     psd: float = field(init=False)
@@ -530,6 +546,16 @@ class PySkinDoseOutput:
             for event_hits in self.hits
         ]
 
+    def sparse_union_hit_indices(self) -> list[list[int]]:
+        """Build sparse candidate-union hit-cell indices, or [] when unavailable.
+
+        Not aligned with the per-event correction arrays: use
+        :meth:`sparse_hit_indices` for anything indexing those.
+        """
+        if self.hits_union is None:
+            return []
+        return [[ind for ind, hit in enumerate(event_hits) if hit] for event_hits in self.hits_union]
+
     def to_dict(self) -> dict[str, Any]:
         """Converts the output data into a dict
 
@@ -582,6 +608,7 @@ class PySkinDoseOutput:
             "dose_map": [(ind, dose) for ind, dose in enumerate(self.dose_map.tolist()) if dose > 0.0],
             "rotational_handling": self.rotational_handling,
             "rotational_envelope": self.rotational_envelope,
+            "union_hit_indices": self.sparse_union_hit_indices(),
             "corrections": {
                 "correction_value_index": self.sparse_hit_indices(),
                 "backscatter": self.backscatter_correction,
@@ -737,6 +764,7 @@ def format_analysis_result_for_export(
         k_tab_statuses=analysis_result.get(OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
         rotational_handling=analysis_result.get(OUTPUT_KEY_ROTATIONAL_HANDLING),
         rotational_envelope=analysis_result.get(OUTPUT_KEY_ROTATIONAL_ENVELOPE),
+        hits_union=normalize_hit_masks(analysis_result.get(OUTPUT_KEY_HITS_UNION)),
     )
 
     if settings.output_format == RUN_ARGUMENTS_OUTPUT_DICT:

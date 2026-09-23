@@ -41,7 +41,9 @@ def _store_value(
     duplicate_as_tuple: bool = False,
 ) -> None:
     """Store an extracted value, preserving the parser's legacy duplicate form."""
-    if tag not in parsed:
+    # A recorded None means "seen but valueless": treat it as absent so a later
+    # populated occurrence replaces it instead of forming a [None, value] pair.
+    if tag not in parsed or parsed[tag] is None:
         parsed[tag] = value
     elif duplicate_as_tuple:
         parsed[tag] = (parsed[tag], value)
@@ -112,7 +114,11 @@ def _store_content_value(
             # DICOM angle concepts are degree-valued by definition, so those
             # keep the conventional _deg column (downstream NaN handling
             # applies); anything else stays unsuffixed.
-            parsed[tag + "_deg" if tag.endswith("Angle") else tag] = None
+            empty_tag = tag + "_deg" if tag.endswith("Angle") else tag
+            # Only record absence when nothing populated that tag already:
+            # a valueless duplicate must not erase a real measurement.
+            if empty_tag not in parsed:
+                parsed[empty_tag] = None
         else:
             tag = _measured_tag(content, remove_unit_dots=not nested)
             _store_value(

@@ -154,9 +154,12 @@ class PyskindoseSettings:
                 f"rotational_handling must be one of {', '.join(ROTATIONAL_HANDLING_MODES)}"
             )
         self.rotational_handling: str = rotational_handling
-        self.include_static_pose: bool = bool(
-            tmp.get(KEY_PARAM_ROTATIONAL_INCLUDE_STATIC, True)
-        )
+        # Fail fast on non-bool input rather than coercing: bool("false") is
+        # True, which would silently invert the caller's intent.
+        include_static_pose = tmp.get(KEY_PARAM_ROTATIONAL_INCLUDE_STATIC, True)
+        if not isinstance(include_static_pose, bool):
+            raise ValueError("include_static_pose must be a boolean")
+        self.include_static_pose: bool = include_static_pose
         angular_step = float(tmp.get(KEY_PARAM_ROTATIONAL_ANGULAR_STEP, ROTATIONAL_ANGULAR_STEP_DEFAULT))
         if not ROTATIONAL_ANGULAR_STEP_MIN <= angular_step <= ROTATIONAL_ANGULAR_STEP_MAX:
             raise ValueError(

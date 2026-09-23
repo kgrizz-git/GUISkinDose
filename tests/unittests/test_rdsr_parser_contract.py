@@ -131,6 +131,34 @@ def test_parser_tolerates_empty_measured_value_sequence():
     assert row["DoseAreaProduct_mGy"] == [1.0, 2.0]
 
 
+def test_populated_angle_survives_a_later_valueless_duplicate():
+    """A valueless duplicate must not erase an already-parsed angle."""
+    data_raw = _event_dataset()
+    event = data_raw.ContentSequence[0]
+    event.ContentSequence.append(_measured_content("Positioner Primary Angle", 12.5, "deg"))
+    empty = _content("Positioner Primary Angle")
+    empty.MeasuredValueSequence = Sequence([])
+    event.ContentSequence.append(empty)
+
+    row = rdsr_parser(data_raw).iloc[0]  # type: ignore[arg-type]
+
+    assert row["PositionerPrimaryAngle_deg"] == 12.5
+
+
+def test_valueless_angle_followed_by_a_populated_one_keeps_the_value():
+    """The reverse item order must not leave a [None, value] duplicate pair."""
+    data_raw = _event_dataset()
+    event = data_raw.ContentSequence[0]
+    empty = _content("Positioner Primary Angle")
+    empty.MeasuredValueSequence = Sequence([])
+    event.ContentSequence.append(empty)
+    event.ContentSequence.append(_measured_content("Positioner Primary Angle", 12.5, "deg"))
+
+    row = rdsr_parser(data_raw).iloc[0]  # type: ignore[arg-type]
+
+    assert row["PositionerPrimaryAngle_deg"] == 12.5
+
+
 def test_valueless_angles_flow_through_beam_normalization():
     """Integration: None angles normalize to NaN Ap instead of AttributeError."""
     import pandas as pd

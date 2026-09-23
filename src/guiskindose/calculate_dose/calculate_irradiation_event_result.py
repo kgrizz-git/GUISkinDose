@@ -277,6 +277,8 @@ def calculate_irradiation_event_result(
             logger.debug("Saving event data")
 
             output[c.OUTPUT_KEY_HITS][ev] = hits
+            # No candidate poses were evaluated: the union is the static hit set.
+            output[c.OUTPUT_KEY_HITS_UNION][ev] = hits
             output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
             output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf
             output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = cf
