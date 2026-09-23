@@ -198,43 +198,51 @@ def has_rotational_content(handling: dict[str, Any] | None) -> bool:
     )
 
 
-def _effective_counts(handling: dict[str, Any]) -> tuple[int, int, int]:
-    """(coverage_rows, static_rows, total_rows) from ledger effective handling."""
-    rows = handling.get("rows", [])
-    coverage = sum(1 for row in rows if isinstance(row, dict) and row.get("effective_handling") == "coverage")
-    static = sum(
-        1
-        for row in rows
-        if isinstance(row, dict)
-        and row.get("classification") in ("rotational", "positioner_motion")
-        and row.get("effective_handling") == "static"
-    )
-    return coverage, static, len(rows)
-
-
 def rotational_methodology_paragraph(handling: dict[str, Any] | None) -> str | None:
-    """One methodology paragraph for rotational handling, or None when absent."""
+    """One methodology paragraph for rotational handling, or None when absent.
+
+    Every number derives from what actually ran (ledger effective handling):
+    envelope kerma sums only coverage rows, and envelope mechanics are stated
+    only when at least one event ran enveloped.
+    """
     if not has_rotational_content(handling):
         return None
     assert handling is not None
+    rows = [row for row in handling.get("rows", []) if isinstance(row, dict)]
+    detected = [
+        row
+        for row in rows
+        if row.get("classification") in ("rotational", "positioner_motion")
+    ]
+    enveloped = [row for row in detected if row.get("effective_handling") == "coverage"]
+    static = [row for row in detected if row.get("effective_handling") == "static"]
+    envelope_kerma = sum(float(row.get("kerma") or 0.0) for row in enveloped)
     aggregate = handling.get("aggregate", {})
-    total = int(aggregate.get("total_events", 0) or 0)
-    kerma = float(aggregate.get("rotational_kerma", 0.0) or 0.0)
     total_kerma = float(aggregate.get("total_kerma", 0.0) or 0.0)
-    fraction = (100.0 * kerma / total_kerma) if total_kerma > 0 else 0.0
-    coverage, static, _ = _effective_counts(handling)
-    treatment = (
-        f"{coverage} event(s) ran as conditional coverage envelopes "
-        f"(estimate-grade, not a guaranteed bound)"
-    )
-    if static:
-        treatment += f"; {static} detected event(s) ran static with warnings"
+    fraction = (100.0 * envelope_kerma / total_kerma) if total_kerma > 0 else 0.0
+    total = int(aggregate.get("total_events", 0) or 0)
+    if enveloped:
+        treatment = (
+            f"{len(enveloped)} event(s) ran as conditional coverage envelopes "
+            f"(estimate-grade, not a guaranteed bound)"
+        )
+        mechanics = (
+            " Enveloped events are evaluated at full event kerma over "
+            "candidate poses with the cellwise maximum kept; kerma records "
+            "are unchanged (multiplier 1.0)."
+        )
+    else:
+        treatment = (
+            f"{len(static)} detected event(s) ran static; no envelope was computed"
+        )
+        mechanics = ""
+    if static and enveloped:
+        treatment += f"; {len(static)} detected event(s) ran static with warnings"
     fallback = " Static fallbacks occurred — see the ledger." if aggregate.get("any_fallback_to_static") else ""
     return (
         f"Rotational handling: {treatment} out of {total} events "
-        f"({fraction:.1f}% of K_IRP in rotational envelopes). Enveloped events "
-        f"are evaluated at full event kerma over candidate poses with the "
-        f"cellwise maximum kept; kerma records are unchanged (multiplier 1.0)."
+        f"({fraction:.1f}% of K_IRP in rotational envelopes)."
+        f"{mechanics}"
         f"{fallback}"
     )
 

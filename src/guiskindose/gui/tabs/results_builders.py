@@ -94,22 +94,33 @@ class ResultsTabController:
             return ""
         rows = handling.get("rows", [])
         enveloped = sum(1 for row in rows if isinstance(row, dict) and row.get("effective_handling") == "coverage")
-        static = sum(
+        explicit_static = sum(
             1
             for row in rows
             if isinstance(row, dict)
             and row.get("classification") in ("rotational", "positioner_motion")
             and row.get("effective_handling") == "static"
+            and row.get("requested_handling") == "Static"
         )
-        total = len(rows)
-        if enveloped + static <= 0:
+        fallback_static = sum(
+            1
+            for row in rows
+            if isinstance(row, dict)
+            and row.get("classification") in ("rotational", "positioner_motion")
+            and row.get("effective_handling") == "static"
+            and row.get("requested_handling") != "Static"
+        )
+        detected = enveloped + explicit_static + fallback_static
+        if detected <= 0:
             return ""
         parts = []
         if enveloped:
             parts.append(f"{enveloped} envelope(s)")
-        if static:
-            parts.append(f"{static} static fallback(s)")
-        return "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational events)"
+        if explicit_static:
+            parts.append(f"{explicit_static} static (as configured)")
+        if fallback_static:
+            parts.append(f"{fallback_static} static fallback(s)")
+        return "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {detected} rotational events)"
 
     def _refresh_rotational_badge(self) -> None:
         """Show or hide the rotational-handling badge."""
@@ -118,28 +129,39 @@ class ResultsTabController:
         self.refs.rotational_badge.visible = bool(text)
 
     def _refresh_agg_rotational_badge(self, res: Any) -> None:
-        """Aggregate rotational badge across multi-exam outputs."""
-        rotational = 0
-        motion = 0
+        """Aggregate rotational badge across multi-exam outputs.
+
+        Counts what actually ran (ledger effective handling per exam), never
+        bare detection counts: an explicitly static run shows no envelope.
+        """
+        enveloped = 0
+        static = 0
         total = 0
-        fallback = False
         for exam in getattr(res, "exams", []) or []:
             handling = getattr(getattr(exam, "output", None), "rotational_handling", None)
             if not isinstance(handling, dict):
                 continue
-            aggregate = handling.get("aggregate", {})
-            rotational += int(aggregate.get("rotational_count", 0) or 0)
-            motion += int(aggregate.get("positioner_motion_count", 0) or 0)
-            total += int(aggregate.get("total_events", 0) or 0)
-            fallback = fallback or bool(aggregate.get("any_fallback_to_static"))
-        if rotational + motion <= 0:
+            for row in handling.get("rows", []):
+                if not isinstance(row, dict):
+                    continue
+                if row.get("classification") not in ("rotational", "positioner_motion"):
+                    continue
+                total += 1
+                if row.get("effective_handling") == "coverage":
+                    enveloped += 1
+                elif row.get("effective_handling") == "static":
+                    static += 1
+        if enveloped + static <= 0:
             self.refs.agg_rotational_badge.set_text("")
             self.refs.agg_rotational_badge.visible = False
             return
-        suffix = " · static fallbacks — see warnings" if fallback else ""
+        parts = []
+        if enveloped:
+            parts.append(f"{enveloped} envelope(s)")
+        if static:
+            parts.append(f"{static} static")
         self.refs.agg_rotational_badge.set_text(
-            f"Estimate-grade rotational envelope: {rotational} rotational + "
-            f"{motion} positioner-motion of {total} events{suffix}"
+            "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational events)"
         )
         self.refs.agg_rotational_badge.visible = True
 

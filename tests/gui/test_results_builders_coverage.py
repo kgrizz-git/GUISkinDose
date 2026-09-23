@@ -381,15 +381,28 @@ def test_agg_rotational_badge_sums_across_exams(monkeypatch):
     ctrl = _controller()
     res = _NS(
         exams=[
-            _NS(output=_NS(rotational_handling={"aggregate": {"rotational_count": 1, "positioner_motion_count": 0, "total_events": 4, "any_fallback_to_static": False}})),
-            _NS(output=_NS(rotational_handling={"aggregate": {"rotational_count": 0, "positioner_motion_count": 1, "total_events": 3, "any_fallback_to_static": True}})),
+            _NS(output=_NS(rotational_handling={"rows": [{"classification": "rotational", "effective_handling": "coverage", "requested_handling": "Auto"}]})),
+            _NS(output=_NS(rotational_handling={"rows": [{"classification": "positioner_motion", "effective_handling": "static", "requested_handling": "Auto"}]})),
         ]
     )
     ctrl._refresh_agg_rotational_badge(res)
     text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
-    assert "1 rotational" in text and "1 positioner-motion" in text and "7 events" in text
-    assert "fallback" in text
+    assert "1 envelope" in text and "1 static" in text and "2 rotational events" in text
     assert ctrl.refs.agg_rotational_badge.visible is True
+
+
+def test_agg_rotational_badge_static_run_shows_no_envelope():
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    res = _NS(
+        exams=[
+            _NS(output=_NS(rotational_handling={"rows": [{"classification": "rotational", "effective_handling": "static", "requested_handling": "Static"}]})),
+        ]
+    )
+    ctrl._refresh_agg_rotational_badge(res)
+    text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
+    assert "envelope" not in text and "1 static" in text
 
 
 def test_agg_rotational_badge_hidden_without_handling(monkeypatch):
