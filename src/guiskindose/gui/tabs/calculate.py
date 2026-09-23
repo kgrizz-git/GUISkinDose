@@ -434,7 +434,7 @@ class _CalculationController:
         from guiskindose.gui.helpers import rotational_survey
 
         survey = rotational_survey(state)
-        if survey["rotational"] + survey["positioner_motion"] <= 0:
+        if _survey_count(survey, "rotational") + _survey_count(survey, "positioner_motion") <= 0:
             return True
         return await rotational_prompt(survey)
 

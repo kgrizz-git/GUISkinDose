@@ -88,14 +88,16 @@ def test_rotational_survey_lists_unresolved():
     survey = rotational_survey(st)
     assert survey["rotational"] == 1
     assert survey["positioner_motion"] == 1
-    assert len(survey["unresolved"]) == 2
-    labels = {(entry[0], entry[1], entry[2]) for entry in survey["unresolved"]}
+    unresolved = survey["unresolved"]
+    assert isinstance(unresolved, list)
+    assert len(unresolved) == 2
+    labels = {(entry[0], entry[1], entry[2]) for entry in unresolved}
     assert ("Exam 1", 0, "rotational") in labels
     assert ("Exam 1", 1, "positioner_motion") in labels
     # Privacy-safe: indices + reason codes only, no values.
-    assert survey["unresolved"][0][3] and all(
-        isinstance(reason, str) for reason in survey["unresolved"][0][3]
-    )
+    first = unresolved[0]
+    assert isinstance(first, tuple)
+    assert first[3] and all(isinstance(reason, str) for reason in first[3])
 
 
 def test_rotational_survey_zero_when_static():
