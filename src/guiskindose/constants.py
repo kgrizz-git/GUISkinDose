@@ -251,6 +251,8 @@ OUTPUT_KEY_DOSE_MAP = "dose_map"
 OUTPUT_KEY_HITS = "hits"
 OUTPUT_KEY_KERMA = "kerma"
 OUTPUT_KEY_KERMA_CORRECTED = "kerma_corrected"
+OUTPUT_KEY_ROTATIONAL_HANDLING = "rotational_handling"
+OUTPUT_KEY_ROTATIONAL_ENVELOPE = "rotational_envelope"
 
 PHANTOM_MESH_ADULT_MALE = "hudfrid"
 

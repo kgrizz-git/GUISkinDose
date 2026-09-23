@@ -215,3 +215,74 @@ def test_handling_ledger_explicit_static_is_not_fallback():
         ]
     )
     assert ledger.any_fallback_to_static is False
+
+
+def _numpy_shim():
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    return np
+
+
+def test_evaluate_envelope_takes_cellwise_maximum():
+    import numpy as _np
+
+    from guiskindose.rotational_envelope import CandidateResult, evaluate_envelope
+
+    results = [
+        CandidateResult(
+            candidate_id="a",
+            dose_vector=_np.array([5.0, 0.0, 1.0]),
+            hit_count=2,
+            missed=False,
+            k_bs_min=1.1,
+            k_bs_max=1.2,
+            k_med=1.03,
+        ),
+        CandidateResult(
+            candidate_id="b",
+            dose_vector=_np.array([3.0, 4.0, 1.0]),
+            hit_count=2,
+            missed=False,
+            k_bs_min=1.0,
+            k_bs_max=1.4,
+            k_med=1.05,
+        ),
+        CandidateResult(
+            candidate_id="c",
+            dose_vector=_np.array([0.0, 0.0, 0.0]),
+            hit_count=0,
+            missed=True,
+        ),
+    ]
+    evaluation = evaluate_envelope(
+        results,
+        n_cells=3,
+        zeros=_np.zeros,
+        maximum=_np.maximum,
+        argmax_cell=lambda vector: (int(_np.argmax(vector)), float(_np.max(vector))),
+    )
+    assert list(evaluation.dose_vector) == [5.0, 4.0, 1.0]
+    assert evaluation.winner_candidate_id == "a"
+    assert evaluation.candidate_count == 3
+    assert evaluation.hit_candidate_count == 2
+    assert evaluation.total_miss is False
+    assert evaluation.k_bs_range == (1.0, 1.4)
+    assert evaluation.k_med_range == (1.03, 1.05)
+
+
+def test_evaluate_envelope_empty_stream_is_zero_vector():
+    import numpy as _np
+
+    from guiskindose.rotational_envelope import evaluate_envelope
+
+    evaluation = evaluate_envelope(
+        [],
+        n_cells=4,
+        zeros=_np.zeros,
+        maximum=_np.maximum,
+        argmax_cell=lambda vector: (0, 0.0),
+    )
+    assert list(evaluation.dose_vector) == [0.0, 0.0, 0.0, 0.0]
+    assert evaluation.winner_candidate_id is None
+    assert evaluation.total_miss is False

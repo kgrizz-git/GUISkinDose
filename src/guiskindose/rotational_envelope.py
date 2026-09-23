@@ -9,7 +9,9 @@ See ``dev-docs/plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from typing import Any
 
 from guiskindose.rotational_acquisition import RotationalClassification
 
@@ -215,6 +217,88 @@ def closed_circle_domain(
         include_static_pose=True,
         unique_pose_count=len(unique),
         unique_poses=tuple(unique),
+    )
+
+
+@dataclass(frozen=True)
+class CandidateResult:
+    """One candidate pose's full-K dose response (physics side provides it)."""
+
+    candidate_id: str
+    dose_vector: Any
+    hit_count: int = 0
+    missed: bool = True
+    k_bs_min: float | None = None
+    k_bs_max: float | None = None
+    k_med: float | None = None
+
+
+@dataclass(frozen=True, eq=False)
+class EnvelopeEvaluation:
+    """Streaming cellwise maximum over candidate responses.
+
+    Only the running maximum is retained: N full maps never sit resident.
+    """
+
+    dose_vector: Any
+    winner_candidate_id: str | None
+    candidate_count: int
+    hit_candidate_count: int
+    total_miss: bool
+    k_bs_range: tuple[float | None, float | None]
+    k_med_range: tuple[float | None, float | None]
+
+
+def evaluate_envelope(
+    results: Iterable[CandidateResult],
+    *,
+    n_cells: int,
+    zeros: Callable[[int], Any],
+    maximum: Callable[[Any, Any], Any],
+    argmax_cell: Callable[[Any], tuple[int, float]],
+) -> EnvelopeEvaluation:
+    """Fold candidate dose vectors into their cellwise maximum.
+
+    ``zeros``/``maximum``/``argmax_cell`` are injected so this stays free of
+    numpy: ``argmax_cell`` returns ``(index, value)`` of the hottest cell.
+    An empty candidate stream yields an all-zero vector with no winner.
+    """
+    running = zeros(n_cells)
+    winner: str | None = None
+    best_value = 0.0
+    count = 0
+    hit_count = 0
+    bs_min: float | None = None
+    bs_max: float | None = None
+    med_min: float | None = None
+    med_max: float | None = None
+    for result in results:
+        count += 1
+        if not result.missed:
+            hit_count += 1
+        running = maximum(running, result.dose_vector)
+        _, value = argmax_cell(result.dose_vector)
+        if not result.missed and value > best_value:
+            best_value = value
+            winner = result.candidate_id
+        for bound, new in (("min", result.k_bs_min), ("max", result.k_bs_max)):
+            if new is None or not math.isfinite(new):
+                continue
+            if bound == "min":
+                bs_min = new if bs_min is None else min(bs_min, new)
+            else:
+                bs_max = new if bs_max is None else max(bs_max, new)
+        if result.k_med is not None and math.isfinite(result.k_med):
+            med_min = result.k_med if med_min is None else min(med_min, result.k_med)
+            med_max = result.k_med if med_max is None else max(med_max, result.k_med)
+    return EnvelopeEvaluation(
+        dose_vector=running,
+        winner_candidate_id=winner,
+        candidate_count=count,
+        hit_candidate_count=hit_count,
+        total_miss=count > 0 and hit_count == 0,
+        k_bs_range=(bs_min, bs_max),
+        k_med_range=(med_min, med_max),
     )
 
 
