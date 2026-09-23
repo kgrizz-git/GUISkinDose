@@ -339,7 +339,6 @@ def _calculate_envelope_event(
     output[c.OUTPUT_KEY_CORRECTION_MEDIUM][ev] = static_k_med
     output[c.OUTPUT_KEY_CORRECTION_TABLE][ev] = k_tab[ev]
 
-    winner_index = None
     winner_ap1: float | None = None
     winner_ap2: float | None = None
     if evaluation.winner_candidate_id is not None:
@@ -347,7 +346,8 @@ def _calculate_envelope_event(
             winner_index = int(evaluation.winner_candidate_id.split("_")[1])
             winner_ap1, winner_ap2 = domain.unique_poses[winner_index]
         except (IndexError, ValueError):
-            winner_index = None
+            # Malformed candidate id: keep winner_ap1/winner_ap2 as None.
+            pass
 
     missed = evaluation.total_miss
     details = {

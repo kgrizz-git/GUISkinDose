@@ -83,6 +83,7 @@ def _normalize_code(value: object) -> str:
         if as_float.is_integer():
             return str(int(as_float))
     except (TypeError, ValueError):
+        # Not an integer-formatted float: keep the original text unchanged.
         pass
     return text
 
