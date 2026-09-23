@@ -207,6 +207,49 @@ A:
   exports; no fluoroscopy-RDSR datasets on Zenodo/Kaggle; OpenREM demo data
   is computer-generated with exports disabled; pydicom-data ships no RDSR.
 
+#### Phase 0 findings (surveyed 2026-09-22; geometry columns only, no identifiers)
+
+Ran our `rdsr_parser` over the RF files above (scratch script, gitignored;
+no fixture vendored). Per-source results:
+
+- **Canon Alphenix (rotational file) — the positive case.** 49 events: 48
+  fluoroscopy + 1 `Rotational Acquisition` (row 48, protocol `Gastro Roll 4s
+  40cm`, DoseRP 0.011131 Gy). The spin row carries start **and** end angles:
+  primary 90.0 → −120.0 (210° sweep), secondary 0.0 → 0.0. Fluoro rows carry
+  start angles with NaN end angles. **Reported pose = arc START**: our
+  pipeline consumes `PositionerPrimaryAngle_deg`, so today the whole spin is
+  modelled at its 90° start pose. The `Rotational Acquisition` CodeMeaning
+  flows through the parser into `IrradiationEventType` — a working detection
+  signal for this source pattern.
+- **Eurocolumbus Fly4 — static with ends.** 4 fluoroscopy events; end angles
+  populated and **equal** to start (6.0/183.0). Consequence: `end ≠ start`
+  discriminates rotation from static on sources that populate both.
+- **Siemens Zee (+`_adjusted` twin) — start only.** 8 fluoroscopy events,
+  varied static poses, **no end-angle columns emitted at all**. No spin
+  present, so the Siemens rotational event-type string is still unobserved.
+- **Philips Azurion — start only.** 89 events (72 fluoro + 17 stationary),
+  no end-angle columns. Same gap: Philips rotational string unobserved.
+- **Philips Allura / GE — parser failures, confirmed.** `AttributeError`
+  (missing `ManufacturerModelName`) and `IndexError` respectively —
+  evidence for the TO_DO parser-hardening item, not this one.
+- **GE OEC MiniView / Canon Ultimaxi — no angle concepts at all.** 22 fluoro
+  / 13 fluoro + 5 stationary; raw concept survey finds zero positioner-angle
+  concepts. No geometry is recoverable from these files, ever — Phase 1b
+  territory by construction.
+- **Tabular side:** our `normalized` schema carries `acquisition_type`, so a
+  tabular exporter *could* signal rotation — but no public DoseTrack /
+  Radimetrics / Qaelum sample exists to confirm any of them do (negative
+  result stands).
+
+Branch answers (§5): (a) reliable detection signal — **yes** for
+Canon-pattern sources (113613 string) and end-populating sources
+(`end ≠ start`); **unknown** for Siemens/Philips spins (no spin observed),
+**impossible** for angle-less files. (b) start/end angles — **yes** for
+Canon only (single fixture; Phase 2 needs more). Arc-center convention
+established for Canon: reported pose = START (matters for Phase 1.5/2
+center choices). Still wanted: Siemens/Philips spins with end angles, any
+matched GE DICOM + tabular pair, and any second measured-arc fixture.
+
 ### Phase 1a — Detection + warning (whenever Phase 0 yields a reliable rotational signal for the source, independent of angle availability)
 
 1. Warn per affected event that its dose is modelled at one static pose: the
