@@ -538,6 +538,10 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
     if gui.get("input_schema") is not None and gui["input_schema"] != app_state.input_schema:
         result.schema_or_sheet_changed = True
     _apply_present(app_state, "input_schema", gui.get("input_schema"))
+    if gui.get("input_source_type"):
+        # Truthy (not just non-null): the loader owns this descriptor, and an
+        # empty-string document value must not wipe a loaded session's type.
+        app_state.input_source_type = gui["input_source_type"]
     if _apply_sheet(app_state, "input_sheet_name", gui.get("input_sheet_name")):
         result.schema_or_sheet_changed = True
     for key in ("swap_lat_lon", "flip_ap1", "flip_ap2"):

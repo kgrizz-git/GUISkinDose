@@ -636,6 +636,20 @@ def test_passthrough_carries_through_session_to_reexport():
     assert reemitted["future_key"] == {"nested": True}
 
 
+def test_applier_restores_input_source_type_but_never_blanks_it():
+    document = _identified_document()  # input_source_type "xlsx"
+    state = _session_with_same_inputs_loaded()
+    state.input_source_type = ""
+
+    apply_run_state(document, state)
+    assert state.input_source_type == "xlsx"
+
+    document["gui_state"]["input_source_type"] = ""
+    state.input_source_type = "xlsx"
+    apply_run_state(document, state)
+    assert state.input_source_type == "xlsx"
+
+
 def test_applier_exam_count_mismatch_names_counts():
     document = _identified_document()  # 1 exam
     state = AppState()  # 0 loaded
