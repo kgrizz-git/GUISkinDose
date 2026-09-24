@@ -186,6 +186,56 @@ class PyskindoseSettings:
 
         self.dosetrack_plane_code_map = parse_plane_code_map(tmp.get("dosetrack_plane_code_map"))
 
+    def to_settings_dict(self) -> dict[str, Any]:
+        """Return settings as a dict round-trippable through the constructor.
+
+        The emitted shape matches `settings_example.json`
+        (`PyskindoseSettings(settings=s.to_settings_dict())` reproduces `s`).
+        `dosetrack_plane_code_map` integer keys are stringified for JSON
+        safety; the constructor's `parse_plane_code_map` accepts int-like
+        keys, so the map survives the round trip. Runtime-only state
+        (`output_format`, `file_result_output_path`, `normalization_settings`,
+        kerma `in_memory_table`) is intentionally excluded.
+
+        Returns
+        -------
+        dict
+            Settings dict in the `settings_example.json` shape.
+        """
+        plane_code_map = self.dosetrack_plane_code_map
+        return {
+            KEY_PARAM_MODE: self.mode,
+            KEY_PARAM_RDSR_FILENAME: self.rdsr_filename,
+            KEY_PARAM_ESTIMATE_K_TAB: self.estimate_k_tab,
+            KEY_PARAM_K_TAB_VAL: self.k_tab_val,
+            KEY_PARAM_INHERENT_FILTRATION: self.inherent_filtration,
+            KEY_PARAM_SILENCE_PYDICOM_WARNINGS: self.silence_pydicom_warnings,
+            KEY_PARAM_REMOVE_INVALID_ROWS: self.remove_invalid_rows,
+            KEY_PARAM_BELOW_FLOOR_KVP_POLICY: self.below_floor_kvp_policy,
+            KEY_PARAM_BELOW_FLOOR_KVP_MANUAL: self.below_floor_kvp_manual,
+            KEY_PARAM_BEAM_MISS_WARN: self.beam_miss_warn,
+            KEY_PARAM_ROTATIONAL_HANDLING: self.rotational_handling,
+            KEY_PARAM_ROTATIONAL_INCLUDE_STATIC: self.include_static_pose,
+            KEY_PARAM_ROTATIONAL_ANGULAR_STEP: self.angular_step_deg,
+            "corrections_db_path": self.corrections_db_path,
+            "phantom": self.phantom.to_dict(),
+            "plot": self.plot.to_dict(),
+            "kerma_meter_correction": self.kerma_meter_correction.to_dict(),
+            "dosetrack_plane_code_map": (
+                None if plane_code_map is None else {str(code): meaning for code, meaning in plane_code_map.items()}
+            ),
+        }
+
+    def to_json(self) -> str:
+        """Return settings as a JSON string (see `to_settings_dict`).
+
+        Returns
+        -------
+        str
+            JSON-serialized settings dict.
+        """
+        return json.dumps(self.to_settings_dict())
+
     @staticmethod
     def _initialize_output_path(output_path: str | Path | None, output_format: str) -> Path:
         """Resolve the plot/output directory for the chosen output_format."""

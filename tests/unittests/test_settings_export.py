@@ -15,6 +15,7 @@ from guiskindose.settings.kerma_meter_correction_settings import (
 from guiskindose.settings.patient_offset import PatientOffset
 from guiskindose.settings.phantom_settings import PhantomSettings
 from guiskindose.settings.plot_settings import Plotsettings
+from guiskindose.settings.pyskindose_settings import PyskindoseSettings
 
 
 def _example_phantom_dict():
@@ -109,3 +110,81 @@ def test_example_json_still_parses_as_valid_settings_dict():
     raw = json.dumps(load_settings_example_json())
 
     assert json.loads(raw)["mode"] == "plot_event"
+
+
+# --- Phase 1 chunk 2: top-level PyskindoseSettings round-trip ---
+
+EXPECTED_TOP_LEVEL_KEYS = {
+    "mode",
+    "rdsr_filename",
+    "estimate_k_tab",
+    "k_tab_val",
+    "inherent_filtration",
+    "silence_pydicom_warnings",
+    "remove_invalid_rows",
+    "below_floor_kvp_policy",
+    "below_floor_kvp_manual",
+    "beam_miss_warn",
+    "rotational_handling",
+    "include_static_pose",
+    "angular_step_deg",
+    "corrections_db_path",
+    "phantom",
+    "plot",
+    "kerma_meter_correction",
+    "dosetrack_plane_code_map",
+}
+
+
+def test_top_level_key_inventory_matches_normalized_example_keys():
+    example_keys = set(load_settings_example_json())
+    serialized = PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()
+
+    # The only sanctioned difference: the nullable dosetrack map, absent from
+    # the example file, is always emitted (None when unset).
+    assert set(serialized) == example_keys | {"dosetrack_plane_code_map"}
+
+
+def test_top_level_to_settings_dict_matches_example_values():
+    example = load_settings_example_json()
+    serialized = PyskindoseSettings(settings=example).to_settings_dict()
+
+    expected = dict(example)
+    expected.setdefault("dosetrack_plane_code_map", None)
+    assert serialized == expected
+
+
+def test_top_level_idempotence_through_reconstruction():
+    first = PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()
+
+    second = PyskindoseSettings(settings=first).to_settings_dict()
+
+    assert second == first
+
+
+def test_to_json_parses_back_to_settings_dict():
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+
+    assert json.loads(settings.to_json()) == settings.to_settings_dict()
+
+
+def test_dosetrack_plane_code_map_round_trips_on_api_path():
+    base = load_settings_example_json()
+    base["dosetrack_plane_code_map"] = {"1": "Single Plane", "2": "Plane A"}
+    settings = PyskindoseSettings(settings=base)
+
+    serialized = settings.to_settings_dict()
+
+    assert serialized["dosetrack_plane_code_map"] == {"1": "Single Plane", "2": "Plane A"}
+    rebuilt = PyskindoseSettings(settings=serialized)
+    assert rebuilt.dosetrack_plane_code_map == {1: "Single Plane", 2: "Plane A"}
+    assert rebuilt.to_settings_dict() == serialized
+
+
+def test_settings_slice_accepted_as_constructor_input():
+    # Simulates `--settings` receiving an extracted document["settings"] slice.
+    document = {"settings": PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()}
+
+    settings = PyskindoseSettings(settings=document["settings"])
+
+    assert settings.to_settings_dict() == document["settings"]
