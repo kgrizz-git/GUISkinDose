@@ -121,8 +121,8 @@ serializes the runtime `dict[tuple[str, str], float]` as a nested
     model never round-trips.
 - `normalization_settings` is embedded because it is a separate constructor arg
   today yet materially changes results (vendor translation/rotation/field-size).
-  Serialization contract: **Phase 2 deliverable** `NormalizationSettings.to_dict()`
-  emits profile dicts round-trippable through its constructor input
+  Serialization contract: **Phase 2 deliverable** `NormalizationSettings.to_profile_list()`
+  emits a profile-dict list round-trippable through its constructor input
   (`normalization_settings_list`), i.e. the on-disk JSON keys
   `translation_offset`, `translation_direction`, `rotation_direction`,
   manufacturer/models matching keys, `field_size_mode`, `detector_side_length`,
@@ -130,9 +130,9 @@ serializes the runtime `dict[tuple[str, str], float]` as a nested
   Runtime-matched per-exam outcomes live in `gui_state.exams[]` instead
   (`normalization_method`, `source_type`, `schema`). The DICOM loader's meta
   dict lacks a `study_id` key today (tabular loaders set it) — the serializer
-  reads `meta.get("study_id")` (or Phase 2 patches `load_rdsr()` to emit
-  `study_id: None` for uniformity; pick one and note it in tests).
-- ``gui_state.exams[]` mirrors `loaded_exam_meta` **user-editable + reconstruction
+  reads `meta.get("study_id")` and Phase 2 does **not** patch the loader
+  (uniformity is tested via `.get()` semantics, not new keys).
+- `gui_state.exams[]` mirrors `loaded_exam_meta` **user-editable + reconstruction
   fields**: offsets (`d_lon`/`d_ver`/`d_lat`), `table_origin_override` +
   `table_origin_detected` (runtime type is a `{"x","y","z"}` dict populated at
   load, zeroed for tabular; the example's `null` is the export default while
@@ -152,7 +152,10 @@ serializes the runtime `dict[tuple[str, str], float]` as a nested
   and rides the **include-identifiers gate** when it is a **string name** (named
   sheets embed source text; default export stores `null`, matching the redaction
   decision). **Integer sheet indices are positional and opaque — they are
-  preserved even in redacted exports** (only string names are gated).
+  preserved even in redacted exports** (only string names are gated). The same
+  rule applies to per-exam `sheet`: string names ride the gate, integer indices
+  are preserved — re-export comparison after import must see the same policy on
+  both sides.
 - `gui_state.kerma_meter_in_memory_table` serializes session CF overrides
   (`AppState.kerma_meter_in_memory_table`, applied at calc time and omitted by
   `KermaMeterCorrectionSettings.to_dict()`): nested
@@ -181,7 +184,7 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
 |---|---|---|
 | `PyskindoseSettings.to_settings_dict()` | `settings/pyskindose_settings.py` | Emit the `settings_example.json` shape from the live object; `to_json()` convenience. Sub-object handling: `KermaMeterCorrectionSettings.to_dict()` **already exists** — reuse it; `PhantomDimensions` already has `to_dict_pad()`/`to_dict_cylinder()` — the `dimension` block composes those (no new colliding `to_dict()`); `PhantomSettings`/`Plotsettings`/`PatientOffset` gain focused `to_dict()`. Round-trip: `PyskindoseSettings(settings=s.to_settings_dict())` reproduces `s`, **including `dosetrack_plane_code_map`**. |
 | Run-state serializer | `gui/run_state.py` (new, <300 lines; **not** `gui/helpers.py`, already ~634 lines) | Assemble document from `build_settings()` + `AppState`; redact identifiers unless opted in; never serialize `base_data` (DataFrame) or other runtime objects. |
-| Run-state applier | same module | Validate schema/version, apply settings → widget-bound state fields (inverse of the assembly rule above), normalization → `_initialize_normalization_settings` path, gui_state → per-exam meta/toggles. **Sequencing:** apply `input_schema`/`input_sheet_name` first and complete any required tabular **re-parse before** writing per-exam offsets/toggles — an async re-parse rebuilds `loaded_exam_meta` and would wipe restored offsets (race). **Dual-write couplings (both required):** coordinate toggles (global `swap_lat_lon`/`flip_ap1`/`flip_ap2` ↔ `loaded_exam_meta[0]` in single-exam sessions, per `import_preview` behavior) **and patient offsets** (global `d_lon`/`d_ver`/`d_lat` ↔ `loaded_exam_meta[0]` via the existing `offset_handlers.sync_global_patient_offset_to_single_exam_meta` / `restore_globals_from_exam_meta` helpers). **Import prerequisite (user-facing):** the same inputs must already be loaded in the same order/count; import applies corrections positionally and its error message names the diverging exam; when identifiers were included, `study_id` may be used to verify pairing before positional apply. **Import must trigger an explicit UI refresh (`reset_results()` + tab/per-exam rebuild) — mutating `AppState` alone does not reliably update already-rendered NiceGUI widgets.** |
+| Run-state applier | same module | Validate schema/version, apply settings → widget-bound state fields (inverse of the assembly rule above), normalization → the public `normalization_settings=` constructor argument path, gui_state → per-exam meta/toggles. **Identifier fields are read-only on import:** never write `file_name`, `file_path`, `input_sheet_name`, `input_manufacturer`, `input_model`, `study_id`, or `corrections_db_path` into the live session (a redacted document carries `null`s, which would wipe the paths the mandatory re-parse needs); identifiers are used for pairing verification and provenance display only. **Restore `kerma_meter_in_memory_table`:** un-nest the JSON `{"equipment": {"tube": factor}}` form back to `dict[tuple[str, str], float]` on `AppState`. **Sequencing:** apply `input_schema`/`input_sheet_name` first and complete any required tabular **re-parse before** writing per-exam offsets/toggles — an async re-parse rebuilds `loaded_exam_meta` and would wipe restored offsets (race). **Dual-write couplings (both required):** coordinate toggles (global `swap_lat_lon`/`flip_ap1`/`flip_ap2` ↔ `loaded_exam_meta[0]` in single-exam sessions, per `import_preview` behavior) **and patient offsets** (global `d_lon`/`d_ver`/`d_lat` ↔ `loaded_exam_meta[0]` via the existing `offset_handlers.sync_global_patient_offset_to_single_exam_meta` / `restore_globals_from_exam_meta` helpers). **Import prerequisite (user-facing):** the same inputs must already be loaded in the same order/count; import applies corrections positionally and its error message names the diverging exam; when identifiers were included, `study_id` may be used to verify pairing before positional apply. **Import must trigger an explicit UI refresh (`reset_results()` + tab/per-exam rebuild) — mutating `AppState` alone does not reliably update already-rendered NiceGUI widgets.** |
 | GUI export/import controls | `gui/tabs/settings.py` (or export tab) | "Save run configuration…" / "Load run configuration…" using the existing `_write_or_download` native/browser pattern and an upload dialog; include-identifiers checkbox on export. |
 | API/CLI | `pyskindose_settings.py`, `cli_args.py` | `to_settings_dict()` is the API surface; `--settings` already loads the settings slice — document that exported documents' `settings` key is accepted there. |
 
@@ -212,7 +215,7 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
    `document["settings"]` slice** (not the whole run-state envelope).
 2. **Phase 2 — run-state document.** Serializer + applier + schema validation
    (integer `schema_version` gate, key tolerance, redaction default). Adds
-   `NormalizationSettings.to_dict()` (constructor-input key shape —
+   `NormalizationSettings.to_profile_list()` (constructor-input key shape —
    `translation_offset`/`translation_direction`/`rotation_direction`).
    Serializes `kerma_meter_in_memory_table` in nested JSON form. `study_id`
    resolution: the serializer reads `meta.get("study_id")` (no loader patch —
@@ -270,7 +273,7 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
   `input_manufacturer`/`input_model`), basename-only paths when identifiers are
   included, `file_path` stringify-or-null, runtime-object exclusion
   (`base_data`, `loaded_exams`, figures, `import_provenance`,
-  `multi_exam_result`), schema-major rejection.
+  `multi_exam_result`), schema_version rejection.
 - `tests/gui/test_run_state_roundtrip.py` (new): Phase 3 — export state → mutate
   every bound field → import → assert restoration **and widget-visible refresh**
   (rendered tab values, not just `AppState`); exam-count mismatch message names
@@ -312,7 +315,7 @@ offset wipe race on import; `plot_dosemap` forced `False` by `build_settings`;
 prerequisite (same inputs, same order/count; `study_id` verify when present);
 `input_manufacturer`/`input_model` redaction; single-exam dual-write coupling;
 `opaque_exam_label` casing; `dicom_rdsr` schema example; never-serialized
-runtime-object list; schema-major-only rejection rule; kerma basename-only
+runtime-object list; integer schema-version rejection rule; kerma basename-only
 paths; `--settings` slice testing — all incorporated.
 
 Round 3 (gemini-3.8-flash-high, composer-2.5, 2026-09-24): `schema_version`
@@ -333,3 +336,13 @@ export→import→export comparison (`plot_dosemap` conflict); single-exam
 from redaction; Phase 1 tests made idempotence-based; `study_id` fork resolved
 (serializer `.get()`, no loader patch); leftover "major-version" wording
 removed — all incorporated.
+
+Round 5 (gemini-3.8-flash-high + composer-2.5, 2026-09-24): applier
+identifier fields declared read-only (never write JSON `null`s or
+basename-only paths into the live session; pairing and provenance display
+only); `kerma_meter_in_memory_table` un-nests to
+`dict[tuple[str, str], float]` on restore; serializer renamed to
+`NormalizationSettings.to_profile_list()` (returns a list); `study_id` fork
+closed to serializer-only; `exams[].sheet` inherits the integer exemption;
+cosmetic fixes ("schema-version" test label, backtick typo, public
+constructor-arg naming) incorporated.
