@@ -516,6 +516,22 @@ def test_applier_exam_count_mismatch_names_counts():
         apply_run_state(document, state)
 
 
+def test_applier_count_mismatch_leaves_session_untouched():
+    document = _identified_document()  # 1 exam
+    state = AppState()  # 0 loaded
+
+    with pytest.raises(RunStateError):
+        apply_run_state(document, state)
+
+    # Structural failure must precede all mutation: globals, schema, and
+    # homes are exactly as before the call.
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert state.loaded_exam_meta == []
+    assert getattr(state, "normalization_profiles", None) is None
+    assert getattr(state, "phantom_dimensions", None) is None
+
+
 def test_applier_tier1_facts_verify_but_never_write():
     document = _identified_document()
     state = _session_with_same_inputs_loaded()

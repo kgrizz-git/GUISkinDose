@@ -47,11 +47,15 @@ def build_run_config_card(ctx: PageContext) -> None:
         status_label = ui.label("").classes("text-xs text-grey-5")
         with ui.row().classes("w-full gap-2"):
             ui.button("Save run configuration", icon="save", on_click=lambda: _on_save(include_ids, status_label))
-            ui.upload(
-                on_upload=lambda e: _on_load(e, ctx, status_label),
-                label="LOAD RUN CONFIGURATION",
-                max_file_size=_CONFIG_UPLOAD_MAX_BYTES,
-            ).props('accept=".json" flat bordered color=deep-purple auto-upload').classes("uploader-no-list")
+            uploader = (
+                ui.upload(
+                    label="LOAD RUN CONFIGURATION",
+                    max_file_size=_CONFIG_UPLOAD_MAX_BYTES,
+                )
+                .props('accept=".json" flat bordered color=deep-purple auto-upload')
+                .classes("uploader-no-list")
+            )
+            uploader.on_upload(lambda e: _on_load(e, ctx, status_label, uploader))
 
 
 async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
@@ -76,8 +80,17 @@ async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
     status_label.set_text(f"Saved run configuration ({len(content)} bytes).")
 
 
-async def _on_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
+async def _on_load(e: Any, ctx: PageContext, status_label: ui.label, uploader: ui.upload) -> None:
     """Parse an uploaded run-configuration document and apply it to GUI state."""
+    try:
+        await _do_load(e, ctx, status_label)
+    finally:
+        # Always clear the widget so the same file can be re-uploaded after a fix.
+        uploader.reset()
+
+
+async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
+    """Implement `_on_load` (split out so the `finally` reset always runs)."""
     try:
         raw = await e.file.read()
     except Exception as exc:
@@ -150,5 +163,11 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
     if not ok:
         ui.notify(f"Re-parse after import failed: {msg}. Per-exam offsets may be stale.", type="negative")
         return
-    apply_run_state(document, state)  # restore offsets onto the rebuilt metas
-    reset_results()
+    try:
+        # Restore offsets onto the rebuilt metas (Tier-3 re-apply is idempotent).
+        # Guarded: the re-parsed file may yield a different exam count than the
+        # document (e.g. file changed since export) — offsets are already lost
+        # to the rebuild, so fail with a notification, not a traceback.
+        apply_run_state(document, state)
+    except RunStateError as exc:
+        ui.notify(f"Re-parse changed the exam set ({exc}). Per-exam offsets could not be restored.", type="negative")

@@ -471,11 +471,21 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
             f"older schema_version {version} (supported {RUN_STATE_SCHEMA_VERSION}); proceeding best-effort."
         )
     result.passthrough = {key: value for key, value in document.items() if key not in _TOP_LEVEL_PASSTHROUGH_EXCLUDE}
+    # Structural checks before any mutation: a count or shape mismatch must
+    # fail with the session untouched, never half-applied.
+    doc_exams = (document.get("gui_state") or {}).get("exams") or []
+    live_metas = app_state.loaded_exam_meta
+    if len(doc_exams) != len(live_metas):
+        raise RunStateError(
+            f"exam count mismatch: document has {len(doc_exams)} exam(s), "
+            f"session has {len(live_metas)} loaded — load the same inputs in the same order/count."
+        )
+    profiles = document.get("normalization_settings")
+    if profiles is not None and not isinstance(profiles, list):
+        raise RunStateError(f"normalization_settings must be a list, got {type(profiles).__name__}")
     result.mode = _apply_settings_slice(document.get("settings") or {}, app_state, result.warnings)
     profiles = document.get("normalization_settings")
     if profiles is not None:
-        if not isinstance(profiles, list):
-            raise RunStateError(f"normalization_settings must be a list, got {type(profiles).__name__}")
         from guiskindose.settings.normalization_settings import NormalizationSettings
 
         NormalizationSettings(profiles)  # validate shape now; Phase 3 applies to settings
@@ -490,13 +500,6 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
         _apply_present(app_state, key, gui.get(key))
     if "kerma_meter_in_memory_table" in gui:
         app_state.kerma_meter_in_memory_table = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"])
-    doc_exams = gui.get("exams") or []
-    live_metas = app_state.loaded_exam_meta
-    if len(doc_exams) != len(live_metas):
-        raise RunStateError(
-            f"exam count mismatch: document has {len(doc_exams)} exam(s), "
-            f"session has {len(live_metas)} loaded — load the same inputs in the same order/count."
-        )
     for index, (exam, meta) in enumerate(zip(doc_exams, live_metas, strict=True)):
         if _apply_exam(exam, meta, index, result.warnings):
             result.schema_or_sheet_changed = True
