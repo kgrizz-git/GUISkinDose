@@ -7,8 +7,15 @@ Covers `Plotsettings.to_dict()` (including the `colorscale` fix),
 """
 
 import json
+from pathlib import Path
 
 from guiskindose import load_settings_example_json
+from guiskindose.gui.run_state import (
+    RUN_STATE_SCHEMA,
+    RUN_STATE_SCHEMA_VERSION,
+    serialize_run_state,
+)
+from guiskindose.gui.state import AppState
 from guiskindose.settings.kerma_meter_correction_settings import (
     KermaMeterCorrectionSettings,
 )
@@ -245,3 +252,166 @@ def test_normalization_custom_profile_with_swap_flag_survives():
     rebuilt = NormalizationSettings(NormalizationSettings(profiles).to_profile_list())
 
     assert rebuilt.to_profile_list()[0]["swap_lateral_longitudinal"] is True
+
+
+# --- Phase 2 chunk B: run-state serializer ---
+
+
+def _example_settings():
+    return PyskindoseSettings(settings=load_settings_example_json())
+
+
+def _populated_state():
+    state = AppState()
+    state.input_schema = "dosetrack"
+    state.input_source_type = "xlsx"
+    state.input_sheet_name = "Events"
+    state.swap_lat_lon = True
+    state.flip_ap1 = True
+    state.kerma_meter_in_memory_table = {("Acme", "TubeA"): 1.02}
+    state.loaded_exam_meta = [
+        {
+            "d_lon": 1.0,
+            "d_ver": 2.0,
+            "d_lat": 3.0,
+            "table_origin_override": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+            "swap_lat_lon": True,
+            "flip_ap1": False,
+            "flip_ap2": True,
+            "flip_tx": True,
+            "flip_ty": False,
+            "flip_tz": True,
+            "source_type": "xlsx",
+            "schema": "dosetrack",
+            "sheet": "Events",
+            "normalization_method": "Matched",
+            "study_id": "STUDY-1",
+            "file_name": "export.xlsx",
+            "file_path": Path("/data/inbox/export.xlsx"),
+            "input_manufacturer": "Acme",
+            "input_model": "X1000",
+        }
+    ]
+    return state
+
+
+def _settings_with_kerma_file():
+    base = load_settings_example_json()
+    base["kerma_meter_correction"] = {
+        "enable": True,
+        "mode": "file",
+        "file": "/data/cf/corrections.xlsx",
+        "file_sheet": "CF",
+        "default_factor": 1.02,
+        "explicit_label": "Lab-1",
+        "prompt_at_calc": False,
+    }
+    return PyskindoseSettings(settings=base)
+
+
+def test_serializer_redacts_identifiers_by_default():
+    document = serialize_run_state(_settings_with_kerma_file(), _populated_state(), created="2026-09-24T00:00:00+00:00")
+
+    assert document["schema"] == RUN_STATE_SCHEMA
+    assert document["schema_version"] == RUN_STATE_SCHEMA_VERSION
+    assert document["settings"]["rdsr_filename"] is None
+    assert document["settings"]["corrections_db_path"] is None
+    kerma = document["settings"]["kerma_meter_correction"]
+    assert kerma["file"] is None
+    assert kerma["file_sheet"] is None
+    assert kerma["explicit_label"] is None
+    assert kerma["default_factor"] == 1.02  # non-identifying config survives
+    gui_state = document["gui_state"]
+    assert gui_state["input_sheet_name"] is None  # string name gated
+    exam = gui_state["exams"][0]
+    assert exam["label"] == "Exam 1"  # always opaque
+    assert exam["sheet"] is None
+    assert exam["study_id"] is None
+    assert exam["file_name"] is None
+    assert exam["file_path"] is None
+    assert exam["input_manufacturer"] is None
+    assert exam["input_model"] is None
+    # Non-identifying reconstruction state survives redaction.
+    assert exam["d_lon"] == 1.0
+    assert exam["flip_tx"] is True
+    assert exam["normalization_method"] == "Matched"
+
+
+def test_serializer_include_identifiers_restores_gated_values_basename_only():
+    document = serialize_run_state(_settings_with_kerma_file(), _populated_state(), include_identifiers=True)
+
+    kerma = document["settings"]["kerma_meter_correction"]
+    assert kerma["file"] == "corrections.xlsx"  # basename only, never absolute
+    assert kerma["file_sheet"] == "CF"
+    assert kerma["explicit_label"] == "Lab-1"
+    gui_state = document["gui_state"]
+    assert gui_state["input_sheet_name"] == "Events"
+    exam = gui_state["exams"][0]
+    assert exam["sheet"] == "Events"
+    assert exam["study_id"] == "STUDY-1"
+    assert exam["file_name"] == "export.xlsx"
+    assert exam["file_path"] == "export.xlsx"  # Path object stringified to basename
+    assert exam["input_manufacturer"] == "Acme"
+    assert exam["input_model"] == "X1000"
+
+
+def test_serializer_integer_sheet_indices_survive_redacted_exports():
+    state = AppState()
+    state.input_sheet_name = 2
+    state.loaded_exam_meta = [{"sheet": 0}]
+
+    document = serialize_run_state(_example_settings(), state)
+
+    assert document["gui_state"]["input_sheet_name"] == 2
+    assert document["gui_state"]["exams"][0]["sheet"] == 0  # falsy-but-valid index kept
+
+
+def test_serializer_applies_plot_dosemap_overlay():
+    state = AppState()
+    state.plot_dosemap = True
+
+    document = serialize_run_state(_example_settings(), state)
+
+    # The example builds plot_dosemap False (build_settings forces False);
+    # the export reads the AppState value instead.
+    assert document["settings"]["plot"]["plot_dosemap"] is True
+
+
+def test_serializer_nests_in_memory_table():
+    redacted = serialize_run_state(_example_settings(), _populated_state())
+    assert redacted["gui_state"]["kerma_meter_in_memory_table"] == {"Acme": {"TubeA": 1.02}}
+
+    empty = serialize_run_state(_example_settings(), AppState())
+    assert empty["gui_state"]["kerma_meter_in_memory_table"] is None
+
+
+def test_serializer_document_is_json_serializable_with_no_runtime_leakage():
+    import pandas as pd
+
+    state = _populated_state()
+    state.rdsr_df = pd.DataFrame({"a": [1]})  # runtime object must never leak in
+
+    document = serialize_run_state(
+        _example_settings(),
+        state,
+        normalization_profiles=_default_profiles(),
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+    )
+
+    assert json.loads(json.dumps(document)) == document
+    assert document["normalization_settings"] == _default_profiles()
+    assert document["app_version"] == "1.0.0"
+    assert document["created"] == "2026-09-24T00:00:00+00:00"
+    assert [exam["label"] for exam in document["gui_state"]["exams"]] == ["Exam 1"]
+
+
+def test_serializer_defaults_for_empty_state():
+    document = serialize_run_state(_example_settings(), AppState())
+
+    assert document["gui_state"]["exams"] == []
+    assert document["gui_state"]["input_sheet_name"] == 0  # default index preserved
+    assert document["normalization_settings"] == []
+    assert document["created"]  # current UTC timestamp by default
+    assert document["app_version"]  # installed package version by default
