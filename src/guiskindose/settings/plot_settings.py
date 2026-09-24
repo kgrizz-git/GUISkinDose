@@ -3,10 +3,10 @@
 Controls notebook mode, dark mode, interactivity, and procedure plot
 behaviour.
 """
-from guiskindose.constants import DOSEMAP_COLORSCALE_KEY
+from guiskindose.constants import DOSEMAP_COLORSCALE, DOSEMAP_COLORSCALE_KEY
 from guiskindose.helpers.create_attributes_string import create_attributes_string
 
-DEFAULT_COLORSCALE = "jet"
+DEFAULT_COLORSCALE = DOSEMAP_COLORSCALE
 
 
 class Plotsettings:

@@ -22,7 +22,12 @@ def _example_phantom_dict():
 
 
 def test_plot_to_dict_round_trips_through_constructor():
-    original = Plotsettings(plt_dict=load_settings_example_json()["plot"])
+    source = load_settings_example_json()["plot"]
+    original = Plotsettings(plt_dict=source)
+
+    # Pin against the source dict: idempotence alone cannot catch a dropped
+    # optional key (both sides would share the same blind spot via defaults).
+    assert original.to_dict() == source
 
     rebuilt = Plotsettings(plt_dict=original.to_dict())
 
@@ -45,7 +50,12 @@ def test_plot_colorscale_custom_value_survives():
 
 
 def test_phantom_to_dict_round_trips_through_constructor():
-    original = PhantomSettings(ptm_dim=_example_phantom_dict())
+    source = _example_phantom_dict()
+    original = PhantomSettings(ptm_dim=source)
+
+    # Pin against the source dict (see plot test: idempotence alone cannot
+    # catch a dropped optional key).
+    assert original.to_dict() == source
 
     rebuilt = PhantomSettings(ptm_dim=original.to_dict())
 
@@ -71,8 +81,12 @@ def test_patient_offset_to_dict_round_trips_through_constructor():
 
 
 def test_kerma_to_dict_round_trips_through_constructor():
-    raw = load_settings_example_json().get("kerma_meter_correction", {})
-    original = KermaMeterCorrectionSettings(raw)
+    source = load_settings_example_json().get("kerma_meter_correction", {})
+    original = KermaMeterCorrectionSettings(source)
+
+    # Pin against the source dict (see plot test: idempotence alone cannot
+    # catch a dropped optional key).
+    assert original.to_dict() == source
 
     rebuilt = KermaMeterCorrectionSettings(original.to_dict())
 
