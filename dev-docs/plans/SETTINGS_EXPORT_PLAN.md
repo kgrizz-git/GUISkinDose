@@ -184,7 +184,7 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
 |---|---|---|
 | `PyskindoseSettings.to_settings_dict()` | `settings/pyskindose_settings.py` | Emit the `settings_example.json` shape from the live object; `to_json()` convenience. Sub-object handling: `KermaMeterCorrectionSettings.to_dict()` **already exists** — reuse it; `PhantomDimensions` already has `to_dict_pad()`/`to_dict_cylinder()` — the `dimension` block composes those (no new colliding `to_dict()`); `PhantomSettings`/`Plotsettings`/`PatientOffset` gain focused `to_dict()`. Round-trip: `PyskindoseSettings(settings=s.to_settings_dict())` reproduces `s`, **including `dosetrack_plane_code_map`**. |
 | Run-state serializer | `gui/run_state.py` (new, <300 lines; **not** `gui/helpers.py`, already ~634 lines) | Assemble document from `build_settings()` + `AppState`; redact identifiers unless opted in; never serialize `base_data` (DataFrame) or other runtime objects. |
-| Run-state applier | same module | Validate schema/version, apply settings → widget-bound state fields (inverse of the assembly rule above), normalization → the public `normalization_settings=` constructor argument path, gui_state → per-exam meta/toggles. **Identifier fields are skip-if-null on import:** imported `null` values (redacted identifiers) and basename-only paths **never overwrite** live session state — they are skipped, preserving `state.file_path`, kerma `file`/`file_sheet`/`explicit_label`, `input_sheet_name`, `input_manufacturer`, `input_model`, `study_id`, and `corrections_db_path`, all of which the mandatory re-parse needs. **Non-null values in the document do apply** — integer sheet indices (preserved even in redacted exports) and, when identifiers were included, real filenames, sheet names, and kerma labels — so sheet selection and kerma configuration restore. Identifiers otherwise serve pairing verification (e.g. `study_id` match) and provenance display. **Restore `kerma_meter_in_memory_table`:** un-nest the JSON `{"equipment": {"tube": factor}}` form back to `dict[tuple[str, str], float]` on `AppState`. **Sequencing:** apply `input_schema`/`input_sheet_name` first and complete any required tabular **re-parse before** writing per-exam offsets/toggles — an async re-parse rebuilds `loaded_exam_meta` and would wipe restored offsets (race). **Dual-write couplings (both required):** coordinate toggles (global `swap_lat_lon`/`flip_ap1`/`flip_ap2` ↔ `loaded_exam_meta[0]` in single-exam sessions, per `import_preview` behavior) **and patient offsets** (global `d_lon`/`d_ver`/`d_lat` ↔ `loaded_exam_meta[0]` via the existing `offset_handlers.sync_global_patient_offset_to_single_exam_meta` / `restore_globals_from_exam_meta` helpers). **Import prerequisite (user-facing):** the same inputs must already be loaded in the same order/count; import applies corrections positionally and its error message names the diverging exam; when identifiers were included, `study_id` may be used to verify pairing before positional apply. **Import must trigger an explicit UI refresh (`reset_results()` + tab/per-exam rebuild) — mutating `AppState` alone does not reliably update already-rendered NiceGUI widgets.** |
+| Run-state applier | same module | Validate schema/version, apply settings → widget-bound state fields (inverse of the assembly rule above), normalization → wrap `document["normalization_settings"]` in `NormalizationSettings(...)` first, then pass via the public `normalization_settings=` argument on `PyskindoseSettings` (the kwarg does **not** accept a bare list — it takes `Path | str | dict | NormalizationSettings | None`), gui_state → per-exam meta/toggles. **Identifier fields are skip-if-null on import, and derived data facts never apply:** imported `null` values (redacted identifiers) and basename-only paths **never overwrite** live session state — they are skipped, preserving `state.file_path`, kerma `file`/`file_sheet`/`explicit_label`, `corrections_db_path`, and sheet selections, which the mandatory re-parse and calculation need. **Derived facts are never written at all**, `null` or not: `file_name`, `file_path`, `input_manufacturer`, `input_model`, and `study_id` describe the currently loaded files (rebuilt by every load/re-parse), so the applier uses them for pairing verification and display only. **Non-null configuration values do apply** — integer sheet indices (preserved even in redacted exports) and, when identifiers were included, real sheet names and kerma labels — so sheet selection and kerma configuration restore. **Restore `kerma_meter_in_memory_table`:** un-nest the JSON `{"equipment": {"tube": factor}}` form back to `dict[tuple[str, str], float]` on `AppState`. **Sequencing:** apply `input_schema`/`input_sheet_name` first and complete any required tabular **re-parse before** writing per-exam offsets/toggles — an async re-parse rebuilds `loaded_exam_meta` and would wipe restored offsets (race). **Dual-write couplings (both required):** coordinate toggles (global `swap_lat_lon`/`flip_ap1`/`flip_ap2` ↔ `loaded_exam_meta[0]` in single-exam sessions, per `import_preview` behavior) **and patient offsets** (global `d_lon`/`d_ver`/`d_lat` ↔ `loaded_exam_meta[0]` via the existing `offset_handlers.sync_global_patient_offset_to_single_exam_meta` / `restore_globals_from_exam_meta` helpers). **Import prerequisite (user-facing):** the same inputs must already be loaded in the same order/count; import applies corrections positionally and its error message names the diverging exam; when identifiers were included, `study_id` may be used to verify pairing before positional apply. **Import must trigger an explicit UI refresh (`reset_results()` + tab/per-exam rebuild) — mutating `AppState` alone does not reliably update already-rendered NiceGUI widgets.** |
 | GUI export/import controls | `gui/tabs/settings.py` (or export tab) | "Save run configuration…" / "Load run configuration…" using the existing `_write_or_download` native/browser pattern and an upload dialog; include-identifiers checkbox on export. |
 | API/CLI | `pyskindose_settings.py`, `cli_args.py` | `to_settings_dict()` is the API surface; `--settings` already loads the settings slice — document that exported documents' `settings` key is accepted there. |
 
@@ -251,8 +251,9 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
   the round trip — **explicitly including `dosetrack_plane_code_map` (API path),
   per-exam `flip_tx`/`flip_ty`/`flip_tz`, `plot_dosemap`, `colorscale`, and
   `kerma_meter_in_memory_table`** (table-driven test enumerates them — no
-  silent drops). `input_sheet_name` survives **when identifiers are included**;
-  it is `null` in redacted exports by design.
+  silent drops). `input_sheet_name` string names survive **when identifiers are
+  included** (they are `null` in redacted exports by design); **integer sheet
+  indices survive in both modes**.
 - Import of a document whose `schema_version` exceeds the supported integer
   fails loudly; equal-version documents import with unknown extras preserved on
   re-export.
@@ -271,7 +272,9 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
   flips, `plot_dosemap`, `colorscale`, `kerma_meter_in_memory_table` nested
   form), redaction matrix (filenames, paths, study/sheet identifiers,
   `input_manufacturer`/`input_model`), basename-only paths when identifiers are
-  included, `file_path` stringify-or-null, runtime-object exclusion
+  included, `file_path` stringify-or-null, absent keys treated exactly like
+  redacted `null`s on import, explicit falsy-guard test that sheet index `0`
+  survives (`0 or None` collapse is a bug — `None`-check only), runtime-object exclusion
   (`base_data`, `loaded_exams`, figures, `import_provenance`,
   `multi_exam_result`), schema_version rejection.
 - `tests/gui/test_run_state_roundtrip.py` (new): Phase 3 — export state → mutate
@@ -349,8 +352,16 @@ constructor-arg naming) incorporated.
 
 Round 6 (gemini-3.8-flash-high **APPROVE** with 1 cosmetic; composer-2.5
 REQUEST CHANGES, 2026-09-24): applier identifier rules rewritten as
-skip-if-null (redacted `null`s/basename-only paths never overwrite live
-state; non-null values — integer sheets, included identifiers — still apply,
-fixing the re-parse conflict); kerma `file`/`file_sheet`/`explicit_label`
-added to the skip list; acceptance reworded for the integer exemption;
-review-notes wording aligned with the applier row.
+skip-if-null; kerma `file`/`file_sheet`/`explicit_label` added to the skip
+list; acceptance reworded for the integer exemption; review-notes wording
+aligned.
+
+Round 7 (gemini-3.8-flash-high + composer-2.5, 2026-09-24): identifiers split
+into **derived data facts** (`file_name`, `file_path`,
+`input_manufacturer`/`input_model`, `study_id` — never applied, pairing and
+display only) vs **skipped-if-null configuration** (kerma paths/labels, sheet
+selections, `corrections_db_path` — `null`s skipped, non-`null`s apply);
+normalization applier wraps the list in `NormalizationSettings(...)` (the
+`PyskindoseSettings` kwarg rejects bare lists); acceptance names the integer
+sheet exemption; skip list covers per-exam paths too; absent keys equal
+redacted `null`s; explicit falsy guard for sheet index `0`.
