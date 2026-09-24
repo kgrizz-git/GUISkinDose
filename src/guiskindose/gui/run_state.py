@@ -66,12 +66,15 @@ _KERMA_SETTING_TO_STATE = (
 
 # Import-settable homes with no GUI widget (Phase 3 adds these AppState
 # fields; setattr works before and after). None = example-JSON default.
+# `phantom_dimensions` is a full dimension dict; `max_events...` a scalar.
 _STATE_HOME_KEYS = (
     "normalization_profiles",
     "dosetrack_plane_code_map",
     "include_static_pose",
     "angular_step_deg",
     "corrections_db_path",
+    "phantom_dimensions",
+    "max_events_for_patient_inclusion",
 )
 
 _PLOT_SETTING_TO_STATE = (
@@ -389,38 +392,14 @@ def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[st
     _apply_present(app_state, "angular_step_deg", settings.get("angular_step_deg"))
     _apply_present(app_state, "dosetrack_plane_code_map", settings.get("dosetrack_plane_code_map"))
     _apply_present(app_state, "corrections_db_path", settings.get("corrections_db_path"))
-    _warn_homeless_settings(settings, warnings)
+    _apply_present(app_state, "phantom_dimensions", phantom.get("dimension"))
+    _apply_present(app_state, "max_events_for_patient_inclusion", plot.get("max_events_for_patient_inclusion"))
     return settings.get("mode", "calculate_dose")
-
-
-def _warn_homeless_settings(settings: dict, warnings: list[str]) -> None:
-    """Warn loudly for non-default values with no AppState home (no silent drops).
-
-    Phantom dimensions and `max_events_for_patient_inclusion` have no widget
-    or home today, so custom values cannot be restored; `plot_event_index` is
-    an explicit non-goal (settings-resident run arg) and stays silent.
-    """
-    import guiskindose
-
-    example = guiskindose.load_settings_example_json()
-    example_dims = (example.get("phantom") or {}).get("dimension") or {}
-    live_dims = (settings.get("phantom") or {}).get("dimension") or {}
-    differing = sorted(key for key, value in live_dims.items() if example_dims.get(key) != value)
-    if differing:
-        warnings.append(
-            "custom phantom dimensions cannot be restored to GUI state "
-            f"(no mapping yet): {', '.join(differing)} — recalculate from defaults or set via API."
-        )
-    example_max = (example.get("plot") or {}).get("max_events_for_patient_inclusion")
-    if settings.get("plot", {}).get("max_events_for_patient_inclusion", example_max) != example_max:
-        warnings.append(
-            "custom plot.max_events_for_patient_inclusion cannot be restored to GUI state (no mapping yet)."
-        )
 
 
 def _verify_exam_pairing(exam: dict, meta: dict, index: int, warnings: list[str]) -> None:
     """Tier 1: derived data facts verify pairing; they are never written."""
-    for key in ("study_id", "file_name"):
+    for key in ("study_id", "file_name", "input_manufacturer", "input_model"):
         expected, live = exam.get(key), meta.get(key)
         if expected is not None and live is not None and str(expected) != str(live):
             warnings.append(f"Exam {index + 1}: document {key} {expected!r} differs from loaded {live!r}.")

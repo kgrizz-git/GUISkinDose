@@ -572,6 +572,10 @@ def test_applier_tier3_restores_configuration():
     assert state.include_static_pose is True
     assert state.angular_step_deg == 1.0
     assert state.corrections_db_path == "corrections.db"
+    # Default dimensions/max-events store their (default) values; the
+    # Phase-3 builder overlays them over the same defaults (no-op).
+    assert state.phantom_dimensions == load_settings_example_json()["phantom"]["dimension"]
+    assert state.max_events_for_patient_inclusion == 0
     # Null map leaves the home unset (None = default); a real map is stored
     # verbatim for build_settings to parse (Phase 3 home).
     assert getattr(state, "dosetrack_plane_code_map", None) is None
@@ -632,15 +636,29 @@ def test_applier_detected_origin_untouched_override_applies():
     assert state.loaded_exam_meta[0]["table_origin_override"] is None
 
 
-def test_applier_homeless_custom_dimensions_warn_loudly():
+def test_applier_custom_dimensions_and_max_events_restore_to_homes():
     document = _identified_document()
     document["settings"]["phantom"]["dimension"]["cylinder_length"] = 999.0
     document["settings"]["plot"]["max_events_for_patient_inclusion"] = 3
+    state = _session_with_same_inputs_loaded()
 
-    result = apply_run_state(document, _session_with_same_inputs_loaded())
+    result = apply_run_state(document, state)
 
-    assert any("cylinder_length" in w for w in result.warnings)
-    assert any("max_events_for_patient_inclusion" in w for w in result.warnings)
+    assert state.phantom_dimensions["cylinder_length"] == 999.0
+    assert state.max_events_for_patient_inclusion == 3
+    # Homed values restore silently (no homeless-dimension warnings remain).
+    assert not [w for w in result.warnings if "dimension" in w]
+
+
+def test_applier_manufacturer_model_pairing_verification():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    state.loaded_exam_meta[0]["input_manufacturer"] = "Other"
+
+    result = apply_run_state(document, state)
+
+    assert state.loaded_exam_meta[0]["input_manufacturer"] == "Other"  # untouched
+    assert any("input_manufacturer" in w for w in result.warnings)
 
 
 def test_applier_passthrough_preserved_for_reexport():

@@ -105,6 +105,12 @@ serializes the runtime `dict[tuple[str, str], float]` as a nested
     same `AppState`-home treatment (`None` = `null` in GUI exports, set on
     import): the API path (`to_settings_dict()` of a settings object that has
     it) preserves it, and the GUI path round-trips it too.
+  - `phantom_dimensions` (full dimension dict) and
+    `max_events_for_patient_inclusion` have no GUI widgets but are restorable
+    import targets with the same home treatment (`None` = example defaults);
+    `build_settings()` overlays a non-`None` dimension home over the example
+    defaults (never replaces, so partial documents cannot break
+    construction).
   - `rdsr_filename` is a **legacy API field with no GUI source** (`build_settings`
     never sets it; the GUI tracks inputs per exam): GUI exports always emit
     `null` for it — even with include-identifiers — and import treats it as a
@@ -175,16 +181,20 @@ else comes from the constructed `PyskindoseSettings`; forced constants
 the legacy `rdsr_filename` are emitted as their constructed values and are not
 restorable choices (GUI always exports `rdsr_filename` `null`). State-backed
 fields (`include_static_pose`, `angular_step_deg`, `dosetrack_plane_code_map`,
-`normalization_profiles`, `corrections_db_path`) are read from their
-`AppState` homes by **both** `build_settings()` and the serializer — one
-source of truth per field. The applier inverts exactly this rule. Acceptance compares
+`normalization_profiles`, `corrections_db_path`, `phantom_dimensions`,
+`max_events_for_patient_inclusion`) are read from their `AppState` homes by
+**both** `build_settings()` and the serializer — one source of truth per
+field (`None` home = example-JSON default; `build_settings` overlays a
+non-`None` `phantom_dimensions` dict over the example defaults so partial
+hand-crafted documents cannot break construction). The applier inverts exactly
+this rule. Acceptance compares
 **exports through this assembly path** (re-export comparison), never raw
 `build_settings()` output — see acceptance #1.
 
 | Piece | Location | Notes |
 |---|---|---|
 | `PyskindoseSettings.to_settings_dict()` | `settings/pyskindose_settings.py` | Emit the `settings_example.json` shape from the live object; `to_json()` convenience. Sub-object handling: `KermaMeterCorrectionSettings.to_dict()` **already exists** — reuse it; `PhantomDimensions` already has `to_dict_pad()`/`to_dict_cylinder()` — the `dimension` block composes those (no new colliding `to_dict()`); `PhantomSettings`/`Plotsettings`/`PatientOffset` gain focused `to_dict()`. Round-trip: `PyskindoseSettings(settings=s.to_settings_dict())` reproduces `s`, **including `dosetrack_plane_code_map`**. |
-| Run-state serializer | `gui/run_state.py` (new, <300 lines; **not** `gui/helpers.py`, already ~634 lines) | Assemble document from `build_settings()` + `AppState`; redact identifiers unless opted in; never serialize `base_data` (DataFrame) or other runtime objects. |
+| Run-state serializer | `gui/run_state.py` (new, <600 lines; **not** `gui/helpers.py`, already ~634 lines) | Assemble document from `build_settings()` + `AppState`; redact identifiers unless opted in; never serialize `base_data` (DataFrame) or other runtime objects. Serializer and applier stay in one module (inverse operations sharing helpers); the original <300 budget proved jointly unsatisfiable with that instruction once review findings added mismatch warnings, passthrough, and dual-write logic — still far under the 800 CI cap. |
 | Run-state applier | same module | Validate schema/version; apply settings → widget-bound state fields (inverse of the assembly rule above); wrap `document["normalization_settings"]` in `NormalizationSettings(...)` first, then pass via the public `normalization_settings=` argument on `PyskindoseSettings` (the kwarg does **not** accept a bare list — it takes `Path | str | dict | NormalizationSettings | None`); gui_state → per-exam meta/toggles. Import rule, sequencing, couplings, prerequisite, and refresh below. |
 | GUI export/import controls | `gui/tabs/settings.py` (or export tab) | "Save run configuration…" / "Load run configuration…" using the existing `_write_or_download` native/browser pattern and an upload dialog; include-identifiers checkbox on export. |
 | API/CLI | `pyskindose_settings.py`, `cli_args.py` | `to_settings_dict()` is the API surface; `--settings` already loads the settings slice — document that exported documents' `settings` key is accepted there. |
@@ -206,7 +216,8 @@ vs live, leaving the live value untouched. **Tier 3 — configuration
 sheet indices (preserved even in redacted exports), real sheet names and kerma
 `file_sheet`/`explicit_label` when identifiers were included, and the AppState-homed
 keys (`normalization_profiles`, `dosetrack_plane_code_map`,
-`include_static_pose`, `angular_step_deg`, `corrections_db_path`). Absent keys
+`include_static_pose`, `angular_step_deg`, `corrections_db_path`,
+`phantom_dimensions`, `max_events_for_patient_inclusion`). Absent keys
 equal redacted `null`s; sheet index `0` is guarded by `None`-check, never
 falsiness. An imported custom `corrections_db_path` that does not resolve fails
 loudly at calculation (honest failure beats silently using the default DB).
@@ -271,9 +282,12 @@ NiceGUI widgets.
    checkbox, dialogs/notifications; `build_settings()` stays the single mapping
    point (import inverts it field-by-field via a constants-vs-state-backed
    mapping table kept next to `build_settings` so the two cannot drift).
-   Adds the five new `AppState` homes (`normalization_profiles`,
+   Adds the seven new `AppState` homes (`normalization_profiles`,
    `dosetrack_plane_code_map`, `include_static_pose`, `angular_step_deg`,
-   `corrections_db_path`) and wires them through `build_settings()`; the
+   `corrections_db_path`, `phantom_dimensions` (full dict; `None` = example
+   defaults), `max_events_for_patient_inclusion`) and wires them through
+   `build_settings()` (dimension home overlays the example defaults, never
+   replaces, so partial documents cannot break construction); the
    serializer reads the same homes, so builder, applier, and serializer share
    one source of truth per field. Explicit post-import UI refresh
    (tab/per-exam rebuild). GUI tests mirroring
@@ -305,9 +319,10 @@ NiceGUI widgets.
    the round trip — **explicitly including `normalization_settings`,
    `dosetrack_plane_code_map` (API and GUI paths via its `AppState` home),
    `include_static_pose`, `angular_step_deg`, `corrections_db_path`,
-   per-exam `flip_tx`/`flip_ty`/`flip_tz`, `plot_dosemap`, `colorscale`, and
-   `kerma_meter_in_memory_table`** (table-driven test enumerates them — no
-   silent drops). `input_sheet_name` string names survive **when identifiers are
+   `phantom_dimensions` and `max_events_for_patient_inclusion` (GUI paths via
+   their `AppState` homes), per-exam `flip_tx`/`flip_ty`/`flip_tz`,
+   `plot_dosemap`, `colorscale`, and `kerma_meter_in_memory_table`**
+   (table-driven test enumerates them — no silent drops). `input_sheet_name` string names survive **when identifiers are
    included** (they are `null` in redacted exports by design); **integer sheet
    indices survive in both modes**.
 4. Import of a document whose `schema_version` exceeds the supported integer
@@ -334,11 +349,12 @@ NiceGUI widgets.
   (`base_data`, `loaded_exams`, figures, `import_provenance`,
   `multi_exam_result`), schema_version rejection, file-handle mismatch warnings
   (loaded basename differs from the document's; document references an unloaded
-  file — live value untouched in both cases), imported custom
-  `corrections_db_path` applied to its `AppState` home and read back by the
-  serializer, `build_settings()` wiring for all five new homes
-  (`normalization_profiles`, `dosetrack_plane_code_map`,
-  `include_static_pose`, `angular_step_deg`, `corrections_db_path`).
+   file — live value untouched in both cases), imported custom
+   `corrections_db_path` applied to its `AppState` home and read back by the
+   serializer, `build_settings()` wiring for all seven new homes
+   (`normalization_profiles`, `dosetrack_plane_code_map`,
+   `include_static_pose`, `angular_step_deg`, `corrections_db_path`,
+   `phantom_dimensions`, `max_events_for_patient_inclusion`).
 - `tests/gui/test_run_state_roundtrip.py` (new): Phase 3 — export state → mutate
   every bound field → import → assert restoration **and widget-visible refresh**
   (rendered tab values, not just `AppState`); exam-count mismatch message names
