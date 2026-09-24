@@ -321,6 +321,10 @@ def validate_run_state_document(document: Any) -> None:
     for key in ("phantom", "plot", "kerma_meter_correction"):
         if settings.get(key) is not None and not isinstance(settings[key], dict):
             raise RunStateError(f"settings.{key} must be a mapping, got {type(settings[key]).__name__}")
+    phantom = settings.get("phantom") or {}
+    for key in ("patient_offset", "dimension"):
+        if phantom.get(key) is not None and not isinstance(phantom[key], dict):
+            raise RunStateError(f"settings.phantom.{key} must be a mapping, got {type(phantom[key]).__name__}")
     gui = _require_section(document, "gui_state")
     exams = gui.get("exams")
     if exams is not None:

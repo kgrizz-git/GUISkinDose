@@ -549,6 +549,20 @@ def test_applier_rejects_malformed_sections_before_mutating():
         apply_run_state(document, state)
     _assert_pristine(state)
 
+    document = json.loads(json.dumps(base))
+    document["settings"]["phantom"]["patient_offset"] = "x"
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.phantom\.patient_offset must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["phantom"]["dimension"] = ["not", "a", "dict"]
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.phantom\.dimension must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
 
 def _assert_pristine(state: AppState) -> None:
     """Validation precedes all mutation: a fresh session is byte-identical."""
