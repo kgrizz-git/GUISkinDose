@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from nicegui import ui
@@ -23,6 +24,7 @@ pytest.importorskip("nicegui")
 pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 from guiskindose import load_settings_example_json  # noqa: E402
+from guiskindose.gui.page_context import PageContext  # noqa: E402
 from guiskindose.gui.run_state import serialize_run_state  # noqa: E402
 from guiskindose.gui.state import AppState, state  # noqa: E402
 from guiskindose.gui.tabs import _run_config as run_config_mod  # noqa: E402
@@ -114,18 +116,29 @@ def _upload_event(document: dict) -> SimpleNamespace:
     return SimpleNamespace(file=SimpleNamespace(read=_read))
 
 
-def _stub_ctx(calls: list[str]) -> SimpleNamespace:
-    return SimpleNamespace(
-        refresh_event_table=lambda: calls.append("event_table"),
-        refresh_exams_table=lambda: calls.append("exams_table"),
-        refresh_import_preview=lambda: calls.append("import_preview"),
-        refresh_per_exam=lambda: calls.append("per_exam"),
-        refresh_geometry_tab=lambda: calls.append("geometry_tab"),
+def _stub_ctx(calls: list[str]) -> PageContext:
+    ctx = PageContext(
+        tabs=MagicMock(),
+        file_label=MagicMock(),
+        events_label=MagicMock(),
+        psd_label=MagicMock(),
+        run_btn_drawer=MagicMock(),
     )
+    ctx.refresh_event_table = lambda: calls.append("event_table")
+    ctx.refresh_exams_table = lambda: calls.append("exams_table")
+    ctx.refresh_import_preview = lambda: calls.append("import_preview")
+    ctx.refresh_per_exam = lambda: calls.append("per_exam")
+    ctx.refresh_geometry_tab = lambda: calls.append("geometry_tab")
+    return ctx
+
+
+def _client(user: User) -> Any:
+    assert user.client is not None
+    return user.client
 
 
 def _number_by_label(user: User, label: str) -> Any:
-    for el in user.client.elements.values():
+    for el in _client(user).elements.values():
         if isinstance(el, ui.number) and el._props.get("label") == label:
             return el
     raise AssertionError(f"ui.number with label {label!r} not found")
@@ -148,7 +161,7 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     state.calculation_done = True
     state.output = {"psd": 1.0}
     calls: list[str] = []
-    with user.client:
+    with _client(user):
         status = ui.label("")
     await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
     assert state.d_lon == 1.0
@@ -171,7 +184,7 @@ async def test_import_updates_rendered_widget_values(user: User) -> None:
     assert lon.value == 0
     _seed_single_exam()
     calls: list[str] = []
-    with user.client:
+    with _client(user):
         status = ui.label("")
     await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
     # Reactive binding propagates on the next client round-trips: poll
@@ -194,7 +207,7 @@ async def test_import_mismatch_warning_surfaces_live_untouched(user: User) -> No
     await user.open("/")
     _seed_single_exam()
     state.kerma_meter_file = "/other/place/custom.xlsx"
-    with user.client:
+    with _client(user):
         status = ui.label("")
     await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
     assert state.kerma_meter_file == "/other/place/custom.xlsx"
@@ -232,7 +245,7 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
         return True, "ok"
 
     monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
-    with user.client:
+    with _client(user):
         status = ui.label("")
     document = _make_document()
     document["gui_state"]["input_sheet_name"] = "Other"

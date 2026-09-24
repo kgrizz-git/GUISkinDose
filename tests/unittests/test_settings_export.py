@@ -803,7 +803,9 @@ def test_applier_custom_dimensions_and_max_events_restore_to_homes():
 
     result = apply_run_state(document, state)
 
-    assert state.phantom_dimensions["cylinder_length"] == 999.0
+    dims = state.phantom_dimensions
+    assert isinstance(dims, dict)
+    assert dims["cylinder_length"] == 999.0
     assert state.max_events_for_patient_inclusion == 3
     # Homed values restore silently (no homeless-dimension warnings remain).
     assert not [w for w in result.warnings if "dimension" in w]
