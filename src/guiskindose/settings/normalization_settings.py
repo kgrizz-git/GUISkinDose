@@ -3,6 +3,7 @@
 Holds manufacturer/model match rules, translation and rotation direction
 overrides, and field-size mode selection used by the RDSR normalizer.
 """
+import copy
 import re
 from typing import Any
 
@@ -209,6 +210,25 @@ class NormalizationSettings:
     def update_attrs_str(self):
         """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="normalization", indent_level=0)
+
+    def to_profile_list(self) -> list[dict[str, Any]]:
+        """Return profiles as a list round-trippable through the constructor.
+
+        Emits deep copies in constructor-input key shape (on-disk JSON keys
+        such as `translation_offset`/`translation_direction`/
+        `rotation_direction` — not runtime attribute abbreviations), so
+        `NormalizationSettings(s.to_profile_list())` reproduces the profile
+        list. Runtime-matched state (`trans_offset`, `normalization_method`,
+        …) is intentionally excluded; values are preserved as-is (no type
+        coercion).
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Deep-copied profile dicts (mutating the result cannot affect the
+            live object).
+        """
+        return copy.deepcopy(self.normalization_settings_list)
 
     def to_printable_string(self, color: str = "blue"):
         """Render normalization settings as a Rich-formatted string.

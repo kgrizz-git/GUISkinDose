@@ -12,6 +12,7 @@ from guiskindose import load_settings_example_json
 from guiskindose.settings.kerma_meter_correction_settings import (
     KermaMeterCorrectionSettings,
 )
+from guiskindose.settings.normalization_settings import NormalizationSettings
 from guiskindose.settings.patient_offset import PatientOffset
 from guiskindose.settings.phantom_settings import PhantomSettings
 from guiskindose.settings.plot_settings import Plotsettings
@@ -197,3 +198,50 @@ def test_settings_slice_accepted_as_constructor_input():
     settings = PyskindoseSettings(settings=document["settings"])
 
     assert settings.to_settings_dict() == document["settings"]
+
+
+# --- Phase 2 chunk A: NormalizationSettings.to_profile_list ---
+
+
+def _default_profiles():
+    from pathlib import Path
+
+    return json.loads(
+        (Path(__file__).parent.parent.parent / "src" / "guiskindose" / "normalization_settings.json").read_text()
+    )["normalization_settings"]
+
+
+def test_normalization_to_profile_list_round_trips_through_constructor():
+    original = NormalizationSettings(_default_profiles())
+
+    rebuilt = NormalizationSettings(original.to_profile_list())
+
+    assert rebuilt.to_profile_list() == original.to_profile_list()
+
+
+def test_normalization_to_profile_list_matches_on_disk_shape():
+    profiles = NormalizationSettings(_default_profiles()).to_profile_list()
+
+    assert profiles == _default_profiles()
+    assert profiles[0]["translation_offset"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+    assert profiles[0]["translation_direction"] == {"x": "+", "y": "+", "z": "+"}
+
+
+def test_normalization_to_profile_list_returns_copies_not_aliases():
+    original = NormalizationSettings(_default_profiles())
+
+    exported = original.to_profile_list()
+    exported[0]["manufacturer"] = "MUTATED"
+    exported[0]["translation_offset"]["x"] = 999.0
+
+    assert original.to_profile_list()[0]["manufacturer"] != "MUTATED"
+    assert original.to_profile_list()[0]["translation_offset"]["x"] != 999.0
+
+
+def test_normalization_custom_profile_with_swap_flag_survives():
+    profiles = _default_profiles()
+    profiles[0]["swap_lateral_longitudinal"] = True
+
+    rebuilt = NormalizationSettings(NormalizationSettings(profiles).to_profile_list())
+
+    assert rebuilt.to_profile_list()[0]["swap_lateral_longitudinal"] is True
