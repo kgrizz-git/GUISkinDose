@@ -95,16 +95,17 @@ serializes the runtime `dict[tuple[str, str], float]` as a nested
     `build_settings()` force-writes `False` ("we handle plotting ourselves"), so
     the export reads the **AppState** value and import restores it to state.
   - `include_static_pose` / `angular_step_deg` have no GUI widgets (documented
-    deferral) and are not on `AppState`: GUI exports emit the values a
-    `PyskindoseSettings` loaded from `settings_example.json` carries, and import
-    treats them as constants (like `silence_pydicom_warnings`, and like the
-    `build_settings`-forced plot constants `plot.interactivity` /
-    `plot.notebook_mode`).
-  - `dosetrack_plane_code_map` is CLI-only today (`--plane-code-map`): GUI
-    sessions legitimately export `null`; the API path (`to_settings_dict()` of a
-    settings object that has it) preserves it — Phase 1 round-trip tests cover
-    the API path, since example-JSON equality cannot catch its loss (it is
-    absent from `settings_example.json`).
+    deferral) but are restorable import targets: each gets an `AppState` home
+    (`None` = example-JSON default), `build_settings()` reads the home, the
+    serializer reads the same home, and import writes it — so an imported
+    non-default survives re-export. True constants stay out:
+    `silence_pydicom_warnings` and the `build_settings`-forced plot constants
+    (`plot.interactivity` / `plot.notebook_mode`) are emitted as constructed
+    values and never applied.
+  - `dosetrack_plane_code_map` is CLI-only today (`--plane-code-map`) but gets
+    the same `AppState`-home treatment (`None` = `null` in GUI exports, set on
+    import): the API path (`to_settings_dict()` of a settings object that has
+    it) still preserves it, and the GUI path now round-trips it too.
   - `rdsr_filename` is a **legacy API field with no GUI source** (`build_settings`
     never sets it; the GUI tracks inputs per exam): GUI exports always emit
     `null` for it — even with include-identifiers — and import treats it as a
@@ -174,9 +175,12 @@ AppState-override overlay** — today only `plot.plot_dosemap` (source
 `AppState.plot_dosemap`; `build_settings` force-writes `False`). Everything
 else comes from the constructed `PyskindoseSettings`; forced constants
 (`silence_pydicom_warnings`, `plot.interactivity`, `plot.notebook_mode`) and
-legacy fields (`include_static_pose`, `angular_step_deg`, `rdsr_filename`,
-`dosetrack_plane_code_map`) are emitted as their constructed values and are not
-restorable choices. The applier inverts exactly this rule. Acceptance compares
+the legacy `rdsr_filename` are emitted as their constructed values and are not
+restorable choices (GUI always exports `rdsr_filename` `null`). State-backed
+fields (`include_static_pose`, `angular_step_deg`, `dosetrack_plane_code_map`,
+`normalization_profiles`, `corrections_db_path`) are read from their
+`AppState` homes by **both** `build_settings()` and the serializer — one
+source of truth per field. The applier inverts exactly this rule. Acceptance compares
 **exports through this assembly path** (re-export comparison), never raw
 `build_settings()` output — see acceptance #1.
 
@@ -184,7 +188,29 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
 |---|---|---|
 | `PyskindoseSettings.to_settings_dict()` | `settings/pyskindose_settings.py` | Emit the `settings_example.json` shape from the live object; `to_json()` convenience. Sub-object handling: `KermaMeterCorrectionSettings.to_dict()` **already exists** — reuse it; `PhantomDimensions` already has `to_dict_pad()`/`to_dict_cylinder()` — the `dimension` block composes those (no new colliding `to_dict()`); `PhantomSettings`/`Plotsettings`/`PatientOffset` gain focused `to_dict()`. Round-trip: `PyskindoseSettings(settings=s.to_settings_dict())` reproduces `s`, **including `dosetrack_plane_code_map`**. |
 | Run-state serializer | `gui/run_state.py` (new, <300 lines; **not** `gui/helpers.py`, already ~634 lines) | Assemble document from `build_settings()` + `AppState`; redact identifiers unless opted in; never serialize `base_data` (DataFrame) or other runtime objects. |
-| Run-state applier | same module | Validate schema/version, apply settings → widget-bound state fields (inverse of the assembly rule above), normalization → wrap `document["normalization_settings"]` in `NormalizationSettings(...)` first, then pass via the public `normalization_settings=` argument on `PyskindoseSettings` (the kwarg does **not** accept a bare list — it takes `Path | str | dict | NormalizationSettings | None`), gui_state → per-exam meta/toggles. **Identifier fields are skip-if-null on import, and derived data facts never apply:** imported `null` values (redacted identifiers) and basename-only paths **never overwrite** live session state — they are skipped, preserving `state.file_path`, kerma `file`/`file_sheet`/`explicit_label`, `corrections_db_path`, and sheet selections, which the mandatory re-parse and calculation need. **Derived facts are never written at all**, `null` or not: `file_name`, `file_path`, `input_manufacturer`, `input_model`, and `study_id` describe the currently loaded files (rebuilt by every load/re-parse), so the applier uses them for pairing verification and display only. **Non-null configuration values do apply** — integer sheet indices (preserved even in redacted exports) and, when identifiers were included, real sheet names and kerma labels — so sheet selection and kerma configuration restore. **Restore `kerma_meter_in_memory_table`:** un-nest the JSON `{"equipment": {"tube": factor}}` form back to `dict[tuple[str, str], float]` on `AppState`. **Sequencing:** apply `input_schema`/`input_sheet_name` first and complete any required tabular **re-parse before** writing per-exam offsets/toggles — an async re-parse rebuilds `loaded_exam_meta` and would wipe restored offsets (race). **Dual-write couplings (both required):** coordinate toggles (global `swap_lat_lon`/`flip_ap1`/`flip_ap2` ↔ `loaded_exam_meta[0]` in single-exam sessions, per `import_preview` behavior) **and patient offsets** (global `d_lon`/`d_ver`/`d_lat` ↔ `loaded_exam_meta[0]` via the existing `offset_handlers.sync_global_patient_offset_to_single_exam_meta` / `restore_globals_from_exam_meta` helpers). **Import prerequisite (user-facing):** the same inputs must already be loaded in the same order/count; import applies corrections positionally and its error message names the diverging exam; when identifiers were included, `study_id` may be used to verify pairing before positional apply. **Import must trigger an explicit UI refresh (`reset_results()` + tab/per-exam rebuild) — mutating `AppState` alone does not reliably update already-rendered NiceGUI widgets.** |
+| Run-state applier | same module | Validate schema/version, apply settings → widget-bound state fields (inverse of the assembly rule above), normalization → wrap `document["normalization_settings"]` in `NormalizationSettings(...)` first, then pass via the public `normalization_settings=` argument on `PyskindoseSettings` (the kwarg does **not** accept a bare list — it takes `Path | str | dict | NormalizationSettings | None`), gui_state → per-exam meta/toggles. **Import follows a three-tier rule. Tier 1 — derived data facts (never
+  written):** `file_name`, `file_path`, `input_manufacturer`, `input_model`,
+  and `study_id` describe the currently loaded files (rebuilt by every
+  load/re-parse); the applier uses them for pairing verification and display
+  only. **Tier 2 — picker-owned file handles (never downgraded):**
+  `state.file_path`, kerma `file`, and per-exam absolute paths hold working
+  absolute locations from user file-picking. Imported `null`s and basename-only
+  values **never overwrite** them — a basename cannot restore a file location,
+  and writing one over a working path would break the live session (so kerma
+  `file` basenames are deliberately not written back; the same-inputs
+  prerequisite requires the same kerma workbook to be loaded). Divergence warns
+  loudly instead — loaded-file basename differs from the document's, or the
+  document references a file that is not loaded — naming expected vs live,
+  leaving the live value untouched. **Tier 3 — configuration (skip-if-null,
+  apply-if-present):** every other non-null value applies — integer sheet
+  indices (preserved even in redacted exports), real sheet names and kerma
+  `file_sheet`/`explicit_label` when identifiers were included, and the
+  AppState-homed keys (`normalization_profiles`, `dosetrack_plane_code_map`,
+  `include_static_pose`, `angular_step_deg`, `corrections_db_path`). Absent
+  keys equal redacted `null`s; sheet index `0` is guarded by `None`-check,
+  never falsiness. An imported custom `corrections_db_path` that does not
+  resolve fails loudly at calculation (honest failure beats silently using the
+  default DB). **Restore `kerma_meter_in_memory_table`:** un-nest the JSON `{"equipment": {"tube": factor}}` form back to `dict[tuple[str, str], float]` on `AppState`. **Sequencing:** apply `input_schema`/`input_sheet_name` first and complete any required tabular **re-parse before** writing per-exam offsets/toggles — an async re-parse rebuilds `loaded_exam_meta` and would wipe restored offsets (race). **Dual-write couplings (both required):** coordinate toggles (global `swap_lat_lon`/`flip_ap1`/`flip_ap2` ↔ `loaded_exam_meta[0]` in single-exam sessions, per `import_preview` behavior) **and patient offsets** (global `d_lon`/`d_ver`/`d_lat` ↔ `loaded_exam_meta[0]` via the existing `offset_handlers.sync_global_patient_offset_to_single_exam_meta` / `restore_globals_from_exam_meta` helpers). **Import prerequisite (user-facing):** the same inputs must already be loaded in the same order/count; import applies corrections positionally and its error message names the diverging exam; when identifiers were included, `study_id` may be used to verify pairing before positional apply. **Import must trigger an explicit UI refresh (`reset_results()` + tab/per-exam rebuild) — mutating `AppState` alone does not reliably update already-rendered NiceGUI widgets.** |
 | GUI export/import controls | `gui/tabs/settings.py` (or export tab) | "Save run configuration…" / "Load run configuration…" using the existing `_write_or_download` native/browser pattern and an upload dialog; include-identifiers checkbox on export. |
 | API/CLI | `pyskindose_settings.py`, `cli_args.py` | `to_settings_dict()` is the API surface; `--settings` already loads the settings slice — document that exported documents' `settings` key is accepted there. |
 
@@ -227,8 +253,13 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
 3. **Phase 3 — GUI surface.** Export/import controls, include-identifiers
    checkbox, dialogs/notifications; `build_settings()` stays the single mapping
    point (import inverts it field-by-field via a constants-vs-state-backed
-   mapping table kept next to `build_settings` so the two cannot drift);
-   explicit post-import UI refresh (tab/per-exam rebuild). GUI tests mirroring
+   mapping table kept next to `build_settings` so the two cannot drift).
+   Phase 3 adds the five new `AppState` homes (`normalization_profiles`,
+   `dosetrack_plane_code_map`, `include_static_pose`, `angular_step_deg`,
+   `corrections_db_path`) and wires them through `build_settings()`; the
+   serializer reads the same homes, so builder, applier, and serializer share
+   one source of truth per field. Explicit post-import UI refresh
+   (tab/per-exam rebuild). GUI tests mirroring
    `test_gui_rotational_prompt.py` style, asserting rendered widget values.
 4. **Phase 4 — docs + closeout.** Help page (`docs/source/gui_help/` + sync),
    `feature_doc_matrix.json` entry, `CHANGELOG.md`, `TO_DO.md` item removal
@@ -236,19 +267,27 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
 
 ## Acceptance criteria
 
-- Export → clear GUI state → re-import same inputs (same order/count) → export
-  again: the two documents are **identical through the serializer's assembly
-  path** (export → import → export comparison — never raw `build_settings()`
-  output, which forces `plot.plot_dosemap` `False`), modulo redacted fields and
-  the `created` timestamp. The exported per-exam fields (`gui_state.exams[]`
-  key set) survive exactly, modulo redacted fields.
+- Export → clear GUI state → re-import (the same inputs already loaded in the
+  same order/count — **including the kerma correction workbook when the
+  document references one**) → export again: the two documents are **identical
+  through the serializer's assembly path** (export → import → export
+  comparison — never raw `build_settings()` output, which forces
+  `plot.plot_dosemap` `False`), modulo redacted fields and the `created`
+  timestamp. The exported per-exam fields (`gui_state.exams[]` key set)
+  survive exactly, modulo redacted fields. Import never fabricates file
+  locations: picker-owned paths round-trip as document values (identical
+  basenames/`null`s on re-export under this prerequisite), and any divergence
+  surfaces as a loud mismatch warning — never a silent overwrite or a blind
+  basename write.
 - Default export contains no source filenames, absolute paths, or exam labels
   beyond `opaque_exam_label` ordinals ("Exam N"); string sheet/study
   identifiers ride the gate (integer sheet indices are positional and exempt).
   Include-identifiers restores the gated values; path-valued fields
   (`file_path`, kerma `file`) are **basename-only** even then.
 - All physics/phantom/correction fields listed under "document schema" survive
-  the round trip — **explicitly including `dosetrack_plane_code_map` (API path),
+  the round trip — **explicitly including `normalization_settings`,
+  `dosetrack_plane_code_map` (API and GUI paths via its `AppState` home),
+  `include_static_pose`, `angular_step_deg`, `corrections_db_path`,
   per-exam `flip_tx`/`flip_ty`/`flip_tz`, `plot_dosemap`, `colorscale`, and
   `kerma_meter_in_memory_table`** (table-driven test enumerates them — no
   silent drops). `input_sheet_name` string names survive **when identifiers are
@@ -276,7 +315,13 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
   redacted `null`s on import, explicit falsy-guard test that sheet index `0`
   survives (`0 or None` collapse is a bug — `None`-check only), runtime-object exclusion
   (`base_data`, `loaded_exams`, figures, `import_provenance`,
-  `multi_exam_result`), schema_version rejection.
+  `multi_exam_result`), schema_version rejection, file-handle mismatch warnings
+  (loaded basename differs from the document's; document references an unloaded
+  file — live value untouched in both cases), imported custom
+  `corrections_db_path` applied to its `AppState` home and read back by the
+  serializer, `build_settings()` wiring for all five new homes
+  (`normalization_profiles`, `dosetrack_plane_code_map`,
+  `include_static_pose`, `angular_step_deg`, `corrections_db_path`).
 - `tests/gui/test_run_state_roundtrip.py` (new): Phase 3 — export state → mutate
   every bound field → import → assert restoration **and widget-visible refresh**
   (rendered tab values, not just `AppState`); exam-count mismatch message names
@@ -284,7 +329,8 @@ restorable choices. The applier inverts exactly this rule. Acceptance compares
   offsets apply (no wipe); **both** single-exam dual-write couplings preserved
   (global toggles ↔ `loaded_exam_meta[0]`; global offsets ↔ `loaded_exam_meta[0]`
   via `offset_handlers` helpers); round-trip compares exports through the
-  assembly path (export → import → export).
+  assembly path (export → import → export); file-handle mismatch warnings
+  surface as user-visible notifications on import.
 - No fixture files required (synthetic dicts only) — privacy gate unaffected.
 
 ## Open questions (resolve during Phase 3)
@@ -365,3 +411,19 @@ normalization applier wraps the list in `NormalizationSettings(...)` (the
 `PyskindoseSettings` kwarg rejects bare lists); acceptance names the integer
 sheet exemption; skip list covers per-exam paths too; absent keys equal
 redacted `null`s; explicit falsy guard for sheet index `0`.
+
+Round 8 (gemini-3.8-flash-high + composer-2.5, 2026-09-24): both reviewers hit
+the same structural gap from opposite sides — cursor (REQUEST CHANGES) showed
+imported `normalization_settings` and other non-widget restorable keys had no
+`AppState` home, so `build_settings()` silently dropped them; agy showed kerma
+`file` / `corrections_db_path` never restored. Import rules reworked into three
+tiers: derived facts (never written), picker-owned file handles (never
+downgraded — mismatch warns loudly instead of blind basename writes, which
+would break live sessions since a basename cannot restore a location),
+configuration via five new `AppState` homes (`normalization_profiles`,
+`dosetrack_plane_code_map`, `include_static_pose`, `angular_step_deg`,
+`corrections_db_path`) wired through `build_settings()` with the serializer
+reading the same source; `include_static_pose` / `angular_step_deg` /
+`dosetrack_plane_code_map` promoted from import-constants to restorable state;
+round-trip prerequisite extended to the kerma workbook; unresolvable imported
+`corrections_db_path` fails loudly at calculation.
