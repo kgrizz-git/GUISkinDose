@@ -346,3 +346,11 @@ un-nests to
 closed to serializer-only; `exams[].sheet` inherits the integer exemption;
 cosmetic fixes ("schema-version" test label, backtick typo, public
 constructor-arg naming) incorporated.
+
+Round 6 (gemini-3.8-flash-high **APPROVE** with 1 cosmetic; composer-2.5
+REQUEST CHANGES, 2026-09-24): applier identifier rules rewritten as
+skip-if-null (redacted `null`s/basename-only paths never overwrite live
+state; non-null values — integer sheets, included identifiers — still apply,
+fixing the re-parse conflict); kerma `file`/`file_sheet`/`explicit_label`
+added to the skip list; acceptance reworded for the integer exemption;
+review-notes wording aligned with the applier row.
