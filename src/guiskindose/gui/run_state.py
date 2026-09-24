@@ -268,7 +268,16 @@ def serialize_run_state(
 
 
 class RunStateError(ValueError):
-    """Raised when a run-state document cannot be applied."""
+    """Raised when a run-state document cannot be applied.
+
+    Carries a stable machine-readable `code` so callers can map failures to
+    fixed user-facing messages without exposing document text (privacy).
+    Unknown situations use "malformed_document".
+    """
+
+    def __init__(self, message: str, code: str = "malformed_document") -> None:
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass
@@ -305,12 +314,15 @@ def validate_run_state_document(document: Any) -> None:
     if not isinstance(document, dict):
         raise RunStateError(f"run-state document must be a mapping, got {type(document).__name__}")
     if document.get("schema") != RUN_STATE_SCHEMA:
-        raise RunStateError(f"unsupported run-state schema {document.get('schema')!r}")
+        raise RunStateError(f"unsupported run-state schema {document.get('schema')!r}", code="unsupported_schema")
     version = document.get("schema_version")
     if isinstance(version, bool) or not isinstance(version, int):
-        raise RunStateError(f"schema_version must be an integer, got {version!r}")
+        raise RunStateError(f"schema_version must be an integer, got {version!r}", code="unsupported_schema_version")
     if version > RUN_STATE_SCHEMA_VERSION:
-        raise RunStateError(f"unsupported schema_version {version} (this build supports {RUN_STATE_SCHEMA_VERSION})")
+        raise RunStateError(
+            f"unsupported schema_version {version} (this build supports {RUN_STATE_SCHEMA_VERSION})",
+            code="unsupported_schema_version",
+        )
     settings = _require_section(document, "settings")
     for key in ("phantom", "plot", "kerma_meter_correction"):
         if settings.get(key) is not None and not isinstance(settings[key], dict):
@@ -492,6 +504,31 @@ def _sync_single_exam_couplings(app_state: AppState) -> None:
     meta["d_lat"] = app_state.d_lat
 
 
+def _trial_apply_settings(settings: dict, profiles: Any, app_state: AppState) -> None:
+    """Validate the merged post-import state by building settings on a copy.
+
+    Applies the settings slice to a shallow copy — scalar rebinding only, so
+    the live session cannot be affected — then constructs the real settings
+    object from it. Constructor failures (invalid plane-code map, out-of-range
+    angular step, non-bool flags) become `RunStateError` here at import time
+    instead of surfacing later at calculation with half-applied state behind
+    them. The message keeps the underlying detail for logs/tests; the GUI
+    surfaces only the fixed per-code message.
+    """
+    import copy
+
+    from guiskindose.gui.settings_builder import build_settings
+
+    trial = copy.copy(app_state)
+    _apply_settings_slice(settings, trial, [])
+    if profiles:
+        trial.normalization_profiles = profiles
+    try:
+        build_settings(trial)
+    except Exception as exc:
+        raise RunStateError(f"imported settings failed validation: {exc}", code="invalid_settings") from exc
+
+
 def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
     """Apply a run-state document to GUI state, returning warnings for the UI.
 
@@ -512,7 +549,6 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
             f"older schema_version {version} (supported {RUN_STATE_SCHEMA_VERSION}); proceeding best-effort."
         )
     result.passthrough = {key: value for key, value in document.items() if key not in _TOP_LEVEL_PASSTHROUGH_EXCLUDE}
-    app_state.run_state_passthrough = dict(result.passthrough)
     # Structural checks before any mutation: a count or shape mismatch must
     # fail with the session untouched, never half-applied (shapes already
     # validated above; only counts remain).
@@ -522,8 +558,11 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
     if len(doc_exams) != len(live_metas):
         raise RunStateError(
             f"exam count mismatch: document has {len(doc_exams)} exam(s), "
-            f"session has {len(live_metas)} loaded — load the same inputs in the same order/count."
+            f"session has {len(live_metas)} loaded — load the same inputs in the same order/count.",
+            code="exam_count_mismatch",
         )
+    _trial_apply_settings(_require_section(document, "settings"), document.get("normalization_settings"), app_state)
+    app_state.run_state_passthrough = dict(result.passthrough)
     result.mode = _apply_settings_slice(_require_section(document, "settings"), app_state, result.warnings)
     profiles = document.get("normalization_settings")
     if profiles:

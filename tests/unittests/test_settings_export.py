@@ -674,6 +674,51 @@ def test_applier_count_mismatch_leaves_session_untouched():
     assert getattr(state, "phantom_dimensions", None) is None
 
 
+def test_applier_count_mismatch_leaves_passthrough_unwritten():
+    document = _identified_document()  # 1 exam
+    document["future_key"] = {"nested": True}
+    state = AppState()  # 0 loaded
+
+    with pytest.raises(RunStateError, match="exam count mismatch"):
+        apply_run_state(document, state)
+
+    assert state.run_state_passthrough == {}
+
+
+def test_applier_error_codes():
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state({"schema": "nope", "schema_version": 1}, _session_with_same_inputs_loaded())
+    assert exc_info.value.code == "unsupported_schema"
+
+    document = _identified_document()
+    document["schema_version"] = 99
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, _session_with_same_inputs_loaded())
+    assert exc_info.value.code == "unsupported_schema_version"
+
+    document = _identified_document()
+    document["settings"] = ["a"]
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, _session_with_same_inputs_loaded())
+    assert exc_info.value.code == "malformed_document"
+
+
+def test_applier_trial_build_rejects_invalid_homes_before_mutating():
+    document = _identified_document()
+    document["settings"]["dosetrack_plane_code_map"] = {"nope": "Single Plane"}
+    state = _session_with_same_inputs_loaded()
+
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, state)
+
+    assert exc_info.value.code == "invalid_settings"
+    # Trial runs before live mutation: globals and homes are pristine.
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert getattr(state, "dosetrack_plane_code_map", None) is None
+    assert state.run_state_passthrough == {}
+
+
 def test_applier_tier1_facts_verify_but_never_write():
     document = _identified_document()
     state = _session_with_same_inputs_loaded()

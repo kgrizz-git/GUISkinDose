@@ -216,6 +216,23 @@ async def test_import_mismatch_warning_surfaces_live_untouched(user: User) -> No
 
 
 @pytest.mark.asyncio
+async def test_import_refuses_while_busy(user: User) -> None:
+    """An in-flight operation blocks import before anything is applied."""
+    await user.open("/")
+    _seed_single_exam()
+    state.busy = True
+    try:
+        with _client(user):
+            status = ui.label("")
+        await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
+    finally:
+        state.busy = False
+    assert state.input_schema == "auto"  # nothing applied
+    assert state.d_lon == 0.0
+    assert user.notify.contains("Busy")
+
+
+@pytest.mark.asyncio
 async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
     """Schema change triggers re-parse; offsets land on the rebuilt metas."""
     await user.open("/")

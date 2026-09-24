@@ -67,8 +67,8 @@ def build_run_config_card(ctx: PageContext) -> None:
 
 async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
     """Serialize the live run state and persist it (native dialog or download)."""
-    settings_obj = build_settings(state)
     try:
+        settings_obj = build_settings(state)
         document = serialize_run_state(
             settings_obj,
             state,
@@ -76,11 +76,11 @@ async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
             include_identifiers=bool(include_ids.value),
             passthrough=dict(state.run_state_passthrough),
         )
+        content = json.dumps(document, indent=2).encode("utf-8")
     except Exception as exc:
         safe_error_event(logger, "run_config_serialize", exc)
         ui.notify("Could not serialize the run configuration. Check the log for details.", type="negative")
         return
-    content = json.dumps(document, indent=2).encode("utf-8")
     save_path = await _get_save_path(_CONFIG_DEFAULT_NAME, "json")
     if save_path is None and _is_native_mode():
         return  # user cancelled the native dialog
@@ -97,6 +97,19 @@ async def _on_load(e: Any, ctx: PageContext, status_label: ui.label, uploader: u
         uploader.reset()
 
 
+_IMPORT_ERROR_MESSAGES = {
+    "exam_count_mismatch": (
+        "Cannot apply run configuration: the document covers a different number of exams "
+        "than currently loaded. Load the same inputs in the same order and count, then re-import."
+    ),
+    "unsupported_schema": "Cannot apply run configuration: this file is not a run-configuration document.",
+    "unsupported_schema_version": ("Cannot apply run configuration: the document needs a newer application version."),
+    "invalid_settings": (
+        "Cannot apply run configuration: the imported settings failed validation. Check the log for details."
+    ),
+}
+
+
 async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
     """Implement `_on_load` (split out so the `finally` reset always runs)."""
     try:
@@ -111,11 +124,19 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
         safe_error_event(logger, "run_config_parse", exc)
         ui.notify("The uploaded file is not valid JSON.", type="negative")
         return
+    if state.busy:
+        ui.notify(
+            "Busy — please wait for the current operation to finish before importing a configuration.",
+            type="warning",
+        )
+        return
     try:
         result = apply_run_state(document, state)
     except RunStateError as exc:
         safe_error_event(logger, "run_config_apply", exc)
-        ui.notify(safe_user_error("run_config_apply"), type="negative", timeout=8000)
+        ui.notify(
+            _IMPORT_ERROR_MESSAGES.get(exc.code, safe_user_error("run_config_apply")), type="negative", timeout=8000
+        )
         return
     _notify_warnings(result.warnings)
     if result.mode != "calculate_dose":
