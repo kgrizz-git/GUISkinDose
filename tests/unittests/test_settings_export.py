@@ -9,11 +9,17 @@ Covers `Plotsettings.to_dict()` (including the `colorscale` fix),
 import json
 from pathlib import Path
 
+import pytest
+
 from guiskindose import load_settings_example_json
 from guiskindose.gui.run_state import (
     RUN_STATE_SCHEMA,
     RUN_STATE_SCHEMA_VERSION,
+    ApplyResult,
+    RunStateError,
+    apply_run_state,
     serialize_run_state,
+    validate_run_state_document,
 )
 from guiskindose.gui.state import AppState
 from guiskindose.settings.kerma_meter_correction_settings import (
@@ -267,7 +273,12 @@ def _populated_state():
     state.input_source_type = "xlsx"
     state.input_sheet_name = "Events"
     state.swap_lat_lon = True
-    state.flip_ap1 = True
+    state.flip_ap1 = False
+    state.flip_ap2 = True
+    # Synced single-exam session: globals match the per-exam offsets below.
+    state.d_lon = 1.0
+    state.d_ver = 2.0
+    state.d_lat = 3.0
     state.kerma_meter_in_memory_table = {("Acme", "TubeA"): 1.02}
     state.loaded_exam_meta = [
         {
@@ -307,6 +318,9 @@ def _settings_with_kerma_file():
         "explicit_label": "Lab-1",
         "prompt_at_calc": False,
     }
+    # Match the populated state's synced globals so the document is
+    # self-consistent (as a real build_settings() + AppState pair would be).
+    base["phantom"]["patient_offset"] = {"d_lon": 1.0, "d_ver": 2.0, "d_lat": 3.0}
     return PyskindoseSettings(settings=base)
 
 
@@ -433,3 +447,250 @@ def test_serializer_defaults_for_empty_state():
     assert document["normalization_settings"] == []
     assert document["created"]  # current UTC timestamp by default
     assert document["app_version"]  # installed package version by default
+
+
+# --- Phase 2 chunk C: run-state applier ---
+
+
+def _identified_document():
+    return serialize_run_state(
+        _settings_with_kerma_file(),
+        _populated_state(),
+        normalization_profiles=_default_profiles(),
+        include_identifiers=True,
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+    )
+
+
+def _session_with_same_inputs_loaded():
+    """Fresh state with the same inputs loaded (the import prerequisite)."""
+    state = AppState()
+    state.kerma_meter_file = "/data/cf/corrections.xlsx"
+    state.input_source_type = "xlsx"  # set by the loader, like table_origin_detected
+    state.loaded_exam_meta = [
+        {
+            "file_name": "export.xlsx",
+            "file_path": Path("/data/inbox/export.xlsx"),
+            "study_id": "STUDY-1",
+            "input_manufacturer": "Acme",
+            "input_model": "X1000",
+            "source_type": "xlsx",
+            "schema": "dosetrack",
+            "sheet": "Events",
+            "normalization_method": "Matched",
+            "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+        }
+    ]
+    return state
+
+
+def test_applier_rejects_bad_envelope():
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": "something.else", "schema_version": 1})
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": 2})
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": "1"})
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": True})
+    with pytest.raises(RunStateError):
+        validate_run_state_document("not a dict")
+
+
+def test_applier_accepts_older_version_with_warning():
+    document = _identified_document()
+    document["schema_version"] = 0
+
+    result = apply_run_state(document, _session_with_same_inputs_loaded())
+
+    assert any("older schema_version 0" in warning for warning in result.warnings)
+
+
+def test_applier_exam_count_mismatch_names_counts():
+    document = _identified_document()  # 1 exam
+    state = AppState()  # 0 loaded
+
+    with pytest.raises(RunStateError, match=r"1 exam.*0 loaded"):
+        apply_run_state(document, state)
+
+
+def test_applier_tier1_facts_verify_but_never_write():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    state.loaded_exam_meta[0]["study_id"] = "OTHER-STUDY"
+
+    result = apply_run_state(document, state)
+
+    assert state.loaded_exam_meta[0]["study_id"] == "OTHER-STUDY"  # untouched
+    assert any("study_id" in warning for warning in result.warnings)
+
+
+def test_applier_tier2_never_downgrades_file_handles():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    assert state.kerma_meter_file == "/data/cf/corrections.xlsx"  # absolute kept
+    assert state.loaded_exam_meta[0]["file_path"] == Path("/data/inbox/export.xlsx")
+    # Matching basenames and pairing facts produce no file warnings.
+    assert result.warnings == []
+
+
+def test_applier_tier2_warns_on_mismatch_and_unloaded():
+    document = _identified_document()
+    state = AppState()  # nothing loaded
+    state.loaded_exam_meta = [{"file_path": Path("/elsewhere/other.xlsx")}]
+
+    result = apply_run_state(document, state)
+
+    assert state.kerma_meter_file is None  # never fabricated
+    assert any("kerma correction file" in w and "not loaded" in w for w in result.warnings)
+    assert any("Exam 1 input file" in w and "mismatch" in w for w in result.warnings)
+
+
+def test_applier_tier3_restores_configuration():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    assert isinstance(result, ApplyResult)
+    assert result.mode == "plot_event"  # carried from the example-based settings
+    assert result.applied_exams == 1
+    assert state.input_schema == "dosetrack"
+    assert state.input_sheet_name == "Events"
+    assert state.swap_lat_lon is True
+    assert state.plot_dosemap is True  # overlay: populated state default
+    assert state.kerma_meter_default_factor == 1.02
+    assert state.kerma_meter_explicit_label == "Lab-1"
+    assert state.kerma_meter_file_sheet == "CF"
+    assert state.phantom_model == "cylinder"  # example default
+    # Homes (no widget yet; setattr-created).
+    assert state.normalization_profiles == _default_profiles()
+    assert state.include_static_pose is True
+    assert state.angular_step_deg == 1.0
+    assert state.corrections_db_path == "corrections.db"
+    # Null map leaves the home unset (None = default); a real map is stored
+    # verbatim for build_settings to parse (Phase 3 home).
+    assert getattr(state, "dosetrack_plane_code_map", None) is None
+    document["settings"]["dosetrack_plane_code_map"] = {"1": "Single Plane"}
+    apply_run_state(document, state)
+    assert state.dosetrack_plane_code_map == {"1": "Single Plane"}
+    # Per-exam geometry applied, and globals synced from the settings slice.
+    assert (state.d_lon, state.d_ver, state.d_lat) == (1.0, 2.0, 3.0)
+    meta = state.loaded_exam_meta[0]
+    assert (meta["d_lon"], meta["d_ver"], meta["d_lat"]) == (1.0, 2.0, 3.0)
+    assert meta["flip_tx"] is True
+    assert meta["table_origin_override"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+    # Runtime outcomes never overwritten.
+    assert meta["normalization_method"] == "Matched"
+
+
+def test_applier_unnests_in_memory_table_and_clears_on_null():
+    document = _identified_document()  # table present in populated state
+    state = _session_with_same_inputs_loaded()
+
+    apply_run_state(document, state)
+    assert state.kerma_meter_in_memory_table == {("Acme", "TubeA"): 1.02}
+
+    document["gui_state"]["kerma_meter_in_memory_table"] = None
+    apply_run_state(document, state)
+    assert state.kerma_meter_in_memory_table is None
+
+
+def test_applier_single_exam_dual_write_syncs_globals_to_meta():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    # Divergent live meta: globals from the document must win (single-exam
+    # calculation consumes the globals).
+    state.loaded_exam_meta[0]["d_lon"] = 99.0
+    state.loaded_exam_meta[0]["swap_lat_lon"] = False
+
+    apply_run_state(document, state)
+
+    assert state.d_lon == 1.0
+    assert state.loaded_exam_meta[0]["d_lon"] == 1.0
+    assert state.loaded_exam_meta[0]["swap_lat_lon"] is True
+
+
+def test_applier_detected_origin_untouched_override_applies():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    live_detected = {"x": 9.0, "y": 9.0, "z": 9.0}
+    state.loaded_exam_meta[0]["table_origin_detected"] = live_detected
+
+    apply_run_state(document, state)
+
+    # Detected is recomputed at load; import leaves the live value alone.
+    assert state.loaded_exam_meta[0]["table_origin_detected"] == live_detected
+    assert state.loaded_exam_meta[0]["table_origin_override"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+
+    document["gui_state"]["exams"][0]["table_origin_override"] = None
+    apply_run_state(document, state)
+    assert state.loaded_exam_meta[0]["table_origin_override"] is None
+
+
+def test_applier_homeless_custom_dimensions_warn_loudly():
+    document = _identified_document()
+    document["settings"]["phantom"]["dimension"]["cylinder_length"] = 999.0
+    document["settings"]["plot"]["max_events_for_patient_inclusion"] = 3
+
+    result = apply_run_state(document, _session_with_same_inputs_loaded())
+
+    assert any("cylinder_length" in w for w in result.warnings)
+    assert any("max_events_for_patient_inclusion" in w for w in result.warnings)
+
+
+def test_applier_passthrough_preserved_for_reexport():
+    document = _identified_document()
+    document["future_key"] = {"nested": True}
+
+    result = apply_run_state(document, _session_with_same_inputs_loaded())
+
+    assert result.passthrough == {"future_key": {"nested": True}}
+    reemitted = serialize_run_state(_example_settings(), _populated_state(), passthrough=result.passthrough)
+    assert reemitted["future_key"] == {"nested": True}
+
+
+def test_applier_schema_or_sheet_change_flagged():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    state.input_schema = "dosetrack"  # already matches: no change to flag
+    state.input_sheet_name = "Events"
+
+    result = apply_run_state(document, state)
+    assert result.schema_or_sheet_changed is False
+
+    document["gui_state"]["input_sheet_name"] = "Other"
+    result = apply_run_state(document, state)
+    assert result.schema_or_sheet_changed is True
+
+
+def test_export_import_export_round_trip_identity():
+    settings = _settings_with_kerma_file()
+    first = serialize_run_state(
+        settings,
+        _populated_state(),
+        normalization_profiles=_default_profiles(),
+        include_identifiers=True,
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+    )
+
+    # Clear state, reload the same inputs (prerequisite), import.
+    fresh = _session_with_same_inputs_loaded()
+    result = apply_run_state(first, fresh)
+
+    assert result.applied_exams == 1
+    second = serialize_run_state(
+        settings,
+        fresh,
+        normalization_profiles=fresh.normalization_profiles,
+        include_identifiers=True,
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+        passthrough=result.passthrough,
+    )
+    assert second == first
