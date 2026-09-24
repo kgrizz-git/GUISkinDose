@@ -204,6 +204,25 @@
       ],
       "help": ["docs/source/gui_help/export_workflow.md"]
     },
+    "run_configuration": {
+      "status": "shipped",
+      "code": [
+        "src/guiskindose/gui/run_state.py",
+        "src/guiskindose/gui/tabs/_run_config.py",
+        "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/settings_builder.py",
+        "src/guiskindose/settings/pyskindose_settings.py"
+      ],
+      "tests": [
+        "tests/unittests/test_settings_export.py",
+        "tests/gui/test_run_state_roundtrip.py"
+      ],
+      "docs": [
+        "dev-docs/plans/SETTINGS_EXPORT_PLAN.md",
+        "CHANGELOG.md"
+      ],
+      "help": ["docs/source/gui_help/run_configuration.md"]
+    },
     "dose_map_per_exam": {
       "status": "shipped",
       "code": [

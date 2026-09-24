@@ -21,6 +21,7 @@ from guiskindose.gui.run_state import RunStateError, apply_run_state, serialize_
 from guiskindose.gui.settings_builder import build_settings
 from guiskindose.privacy import safe_error_event
 
+from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result
 from ..helpers import load_tabular
 from ..io_helpers import _get_save_path, _is_native_mode
@@ -38,7 +39,13 @@ _MAX_SHOWN_WARNINGS = 5
 def build_run_config_card(ctx: PageContext) -> None:
     """Render the Settings-tab run-configuration card and wire its handlers."""
     with ui.card().classes("modern-card w-full"):
-        ui.label("Run configuration").classes("text-subtitle2 q-mb-sm")
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label("Run configuration").classes("text-subtitle2 q-mb-sm")
+            HelpButton(
+                title="Run configuration help",
+                content_path="run_configuration.md",
+                help_id="run_configuration",
+            )
         ui.label(
             "Save the full run state (settings, corrections, per-exam offsets) as JSON, "
             "or load one back to reproduce a run."

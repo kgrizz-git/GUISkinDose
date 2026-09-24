@@ -21,6 +21,16 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Reproducible run configuration (settings export/import)** (2026-09-24) —
+  the Settings tab can save the full GUI run state (settings, normalization
+  profiles, phantom geometry, corrections, per-exam offsets) as a versioned
+  JSON document and load it back to reproduce a run exactly. Source
+  identifiers are redacted by default behind an explicit opt-in checkbox;
+  file mismatches warn loudly without touching the live session; tabular
+  inputs re-parse before per-exam offsets are restored; unknown future keys
+  survive re-export. Programmatic API: `PyskindoseSettings.to_settings_dict()`
+  / `to_json()`. Design: `dev-docs/plans/SETTINGS_EXPORT_PLAN.md`.
+
 - **Rotational coverage envelope (estimate-grade)** (2026-09-22) — events
   detected as rotational are evaluated as conditional upper coverage
   envelopes (full event kerma per candidate pose, cellwise maximum kept)
