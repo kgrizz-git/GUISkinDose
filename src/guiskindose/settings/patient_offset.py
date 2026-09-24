@@ -50,3 +50,17 @@ class PatientOffset:
     def update_attrs_str(self):
         """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="patient offset", indent_level=1)
+
+    def to_dict(self):
+        """Return the offset as a dict round-trippable through the constructor.
+
+        Returns
+        -------
+        dict
+            Keys mirror the offset constants (`d_lat`, `d_ver`, `d_lon`).
+        """
+        return {
+            OFFSET_LATERAL_KEY: self.d_lat,
+            OFFSET_VERTICAL_KEY: self.d_ver,
+            OFFSET_LONGITUDINAL_KEY: self.d_lon,
+        }
