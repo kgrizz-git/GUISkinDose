@@ -150,6 +150,9 @@ def test_serialized_export_shape_remains_stable(settings, trio, data_norm) -> No
         "dose_map",
         "corrections",
         "events",
+        "rotational_handling",
+        "rotational_envelope",
+        "union_hit_indices",
     }
     assert set(exported["corrections"]) == {
         "correction_value_index",
@@ -171,6 +174,14 @@ def test_rejects_hits_length_mismatch(settings, trio, data_norm) -> None:
     with pytest.raises(ValueError, match="Hits"):
         _build(patient, table, pad, settings, data_norm,
                hits=[[] for _ in range(len(data_norm) + 1)])
+
+
+def test_rejects_hits_union_length_mismatch(settings, trio, data_norm) -> None:
+    """hits_union length != data_norm length must raise ValueError naming the field."""
+    patient, table, pad = trio
+    with pytest.raises(ValueError, match="Hits union"):
+        _build(patient, table, pad, settings, data_norm,
+               hits_union=[[] for _ in range(len(data_norm) + 1)])
 
 
 def test_rejects_backscatter_length_mismatch(settings, trio, data_norm) -> None:

@@ -1,6 +1,9 @@
-> **NEEDS REVIEW** — This assessment has not yet been reviewed by a domain expert
-> (medical physicist). Code-path claims are verified against the tree; DICOM
-> encoding claims are marked where fixture evidence is still missing.
+> **DESIGN ADJUDICATED 2026-09-22** — The maintainer/medical physicist reviewed
+> the evidence and accepted the separate
+> [rotational coverage-envelope plan](../plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md).
+> This assessment remains the historical evidence/current-code record. Its
+> Phase 1.5 assumed-arc default is superseded, and its Phase 2 kerma-spreading
+> machinery now applies to optional scenario results, not the default envelope.
 
 # Rotational-Acquisition Handling Assessment
 
@@ -26,13 +29,18 @@ the parser already emits End Angle columns generically when vendors populate
 them (verified §5.1) — and per-frame angles have no concept anywhere, so
 there is still nothing modelled even where data exists.
 
-**Recommendation:** evidence first, then detection/warning and — only where
+**Historical recommendation:** evidence first, then detection/warning and — only where
 angles exist — modelling. Gate detection and modelling independently per
 input source: a validated spin fixture for each source being implemented
 decides what that source supports. Vendor exports are supporting parity
 evidence where available, not a universal prerequisite. Do not build
 arc-subdivision for a source until that source shows where start/end or
 per-frame angles actually live. Details in §5.
+
+The accepted coverage-envelope plan relaxes that gate: synthetic contract
+tests plus the observed Canon characteristics are enough for the first
+estimate-grade implementation. Additional vendor evidence improves automatic
+profiles and measured inputs iteratively.
 
 ---
 
@@ -122,15 +130,28 @@ A:
 | 2 | Per-frame angle series (RDSR or image headers) | **Unknown** — same fixture dependency; image-header ingestion would additionally be out of RDSR scope (see §4) |
 | 3 | Rotational `IrradiationEventType` strings per vendor | **Confirmed** — CodeMeaning `Rotational Acquisition` (DCM 113613, CID 10002; siblings 113611 Stationary / 113612 Stepping) observed in OpenREM `RF-RDSR-Canon-Alphenix-rotational.dcm` (1 of 49 events; rest `Fluoroscopy`). Remaining unknown: per-vendor emission consistency |
 | 4 | Angle-range columns in DoseTrack/Radimetrics exports | **Unknown** — current column maps show single-valued angles only; needs a real spin export |
-| 5 | Arc-subdivision dose model | **Not built** — angle data now confirmed obtainable upstream (see §5.1); blocked on in-tree fixture clearance and per-source arc semantics (see Phase 2) |
+| 5 | Rotational dose model | **Not built; design accepted** — the coverage-envelope plan permits a first release from synthetic contract tests plus the observed Canon characteristics; additional cleared fixtures refine later profiles and measured inputs |
 
 ## 4. Explicit non-goals and adjacent gaps
 
-- **Per-frame image-header ingestion** (e.g. reading XA multi-frame
-  functional groups for per-frame positioner angles) is out of scope: the
-  pipeline consumes RDSR + tabular event tables, not image objects. If Phase 0
-  shows angles live *only* in image headers, that finding alone decides
-  whether this item stays feasible.
+- **Per-frame image-header ingestion** is out of scope today but tracked as
+  a future input source (see below): the pipeline consumes RDSR + tabular
+  event tables, not image objects.
+- **XA headers carry measured direction/trajectory (verified 2026-09-22
+  against the DICOM standard; no code touches them yet).** Classic RDSR has
+  no direction concept (confirmed by 69-concept survey of the Canon file),
+  but one layer out: multi-frame XA IOD, XA Positioner Module (C.8.7.5) —
+  `Positioner Motion (0018,1500)` STATIC/DYNAMIC flag plus signed
+  `Positioner Primary/Secondary Angle Increment (0018,1520/1521)` (single
+  average per-frame value or full per-frame vector; standardized sign:
+  primary positive = RAO→LAO through anterior, secondary positive =
+  CAU→CRA; required when DYNAMIC). X-Ray 3D Angiographic Image Storage goes
+  further: `X-Ray 3D Acquisition Sequence (0018,9507)` with scan arc
+  `(0018,9508/9509)`, start angles `(0018,9510/9511)`, increments
+  `(0018,9514/9515)` + increment-direction attributes, and per-projection
+  isocenter angles (`(0018,9538)` → `(0018,9463/9464)`). Ingesting these
+  needs image-object parsing plus same-case RDSR↔XA matching — tracked in
+  TO_DO, not this item.
 - **`Ap3` hardcoded zero** (`rdsr_normalizer.py:525`) is a separate gap
   affecting detector-rotation modelling for all events, not just spins.
   Tracked here for visibility; do not bundle the fixes.
@@ -207,15 +228,85 @@ A:
   exports; no fluoroscopy-RDSR datasets on Zenodo/Kaggle; OpenREM demo data
   is computer-generated with exports disabled; pydicom-data ships no RDSR.
 
+#### Phase 0 findings (surveyed 2026-09-22; geometry columns only, no identifiers)
+
+Provenance: read-only blobless sparse clone of Bitbucket
+`openrem/openrem` (`develop` at `d168bd48` 2026-02-06), scope
+`openrem/remapp/tests/test_files/` only, kept in gitignored
+`tmp/openrem-upstream/` on the investigating machine — never committed,
+never vendored. Parsed with our `rdsr_parser` via a gitignored scratch
+script that prints geometry columns only (since deleted).
+
+Ran our `rdsr_parser` over the RF files above (scratch script, gitignored;
+no fixture vendored). Per-source results:
+
+- **Canon Alphenix (rotational file) — the positive case.** 49 events: 48
+  fluoroscopy + 1 `Rotational Acquisition` (row 48, protocol `Gastro Roll 4s
+  40cm`, DoseRP 0.011131 Gy). The spin row carries start **and** end angles:
+  primary 90.0 → −120.0 (210° sweep), secondary 0.0 → 0.0. Fluoro rows carry
+  start angles with NaN end angles. **Reported pose = arc START**: our
+  pipeline consumes `PositionerPrimaryAngle_deg`, so today the whole spin is
+  modelled at its 90° start pose. The `Rotational Acquisition` CodeMeaning
+  flows through the parser into `IrradiationEventType` — a working detection
+  signal for this source pattern.
+- **Eurocolumbus Fly4 — static with ends.** 4 fluoroscopy events; end angles
+  populated and **equal** to start (6.0/183.0). Consequence: `end ≠ start`
+  discriminates rotation from static on sources that populate both.
+- **Siemens Zee (+`_adjusted` twin) — start only.** 8 fluoroscopy events,
+  varied static poses, **no end-angle columns emitted at all**. No spin
+  present, so the Siemens rotational event-type string is still unobserved.
+- **Philips Azurion — start only.** 89 events (72 fluoro + 17 stationary),
+  no end-angle columns. Same gap: Philips rotational string unobserved.
+- **Philips Allura / GE — parse after guards (2026-09-22 update).** Both
+  failed at first (`AttributeError` on absent `ManufacturerModelName`;
+  `IndexError` on empty `MeasuredValueSequence`) and now parse with narrowly
+  scoped fail-soft guards plus synthetic regression tests — **neither file
+  contains rotational acquisitions.** Allura: 3 events (1 fluoro +
+  2 stationary), static poses, no end-angle columns (but table/wedge/beam
+  angle columns present). GE: 8 fluoroscopy events; the start/end angle
+  *  slots* exist (113739/113740-pattern concepts) but every value sequence is
+  empty, so all angle columns are None. Lesson for detection design:
+  **concept-presence ≠ data-presence** — rotational signals must be
+  value-based (113613 string, or end angles populated *and* unequal), never
+  column-based. Boundary, stated plainly: the GE file *parses* (valueless
+  angles flow as NaN through beam angulation), but full normalization still
+  stops later on unrelated missing source-geometry concepts (e.g.
+  `DistanceSourcetoIsocenter_mm`) — sparse-file defaults are a separate gap,
+  same class as the angle-less files below. The guards also advance the
+  TO_DO parser-hardening item (`RF-Pat-Orientation-Modifier-Missing`
+  still open).
+- **GE OEC MiniView / Canon Ultimaxi — no angle concepts at all.** 22 fluoro
+  / 13 fluoro + 5 stationary; raw concept survey finds zero positioner-angle
+  concepts, so no arc subdivision can ever be keyed off these files (other
+  geometry components are a separate question, unexamined here).
+- **Tabular side:** our `normalized` schema carries `acquisition_type`, so a
+  tabular exporter *could* signal rotation — but no public DoseTrack /
+  Radimetrics / Qaelum sample exists to confirm any of them do (negative
+  result stands).
+
+Branch answers (§5): (a) reliable detection signal — **yes** for
+Canon-pattern sources (113613 string) and end-populating sources
+(`end ≠ start`); **unknown** for Siemens/Philips spins (no spin observed),
+**impossible** for angle-less files. (b) start/end angles — **yes** for
+Canon only (single fixture; sufficient for the accepted initial synthetic
+contract, with broader vendor evidence still wanted). Arc-center convention
+established for Canon: reported pose = START (matters for Phase 1.5/2
+center choices). Still wanted: Siemens/Philips spins with end angles, any
+matched GE DICOM + tabular pair, and any second measured-arc fixture.
+
 ### Phase 1a — Detection + warning (whenever Phase 0 yields a reliable rotational signal for the source, independent of angle availability)
 
-1. Warn per affected event that its dose is modelled at one static pose: the
-   local dose near that pose is usually overstated, but the global PSD error
-   direction is not guaranteed (§2). Reuse/align with the existing
-   `_normalize_acquisition` mapping (`src/guiskindose/export/metrics.py:61`)
-   for rotational-vs-static classification rather than inventing a second
-   one. Follow the `_emit_beam_miss_summary`
-   dial precedent
+The warning/ledger intent remains current. The accepted plan supersedes the
+classifier detail below: use its shared reason-coded classifier in calculation
+and export, not the existing coarse export-metrics substring mapping.
+
+1. Warn per affected event how it was handled. Under the accepted default, a
+   rotational event contributes the conditional pointwise coverage envelope,
+   not a one-pose physical reconstruction; static fallback or override must be
+   named explicitly. Retain the caution that the legacy static estimate can
+   over- or under-read global PSD (§2), while the envelope claim remains
+   conditional on its declared candidate domain. Follow the
+   `_emit_beam_miss_summary` dial precedent
    (`src/guiskindose/calculate_dose/calculate_irradiation_event_result.py:68`);
    reuse the GUI `state.calc_warnings` collector.
  2. Unit tests on synthetic normalized rows; docs describe the limitation in
@@ -228,7 +319,13 @@ A:
    so a reader of the app or the report can see the count and the treatment
    without reconstructing it event by event.
 
-### Phase 1.5 — Assumed-arc subdivision (candidate interim approach)
+### Phase 1.5 — Assumed-arc subdivision (superseded design record; do not implement as the default)
+
+The accepted plan replaces this proposed default with a full-event-kerma,
+pointwise-max coverage envelope. The assumed arc survives only as an explicit
+scenario input. In particular, the prohibition below on a quiet 360° fallback
+applies to a **kerma-spreading physical scenario**; it does not prohibit the
+plan's type-confirmed 360° max-envelope candidate domain.
 
 If Phase 0 yields a reliable rotational detection signal but no angle data
 — or the team wants a simple first stage before fixtures arrive — the event
@@ -287,7 +384,21 @@ to a documented limitation (help page + export methodology note stating spins
 are modelled at the reported static pose), keep the TO_DO pointer, and close
 the modelling question until a source format change reopens it.
 
-### Phase 2 — Arc-subdivision model (only if Phase 0 yields angle data)
+### Phase 2 — Arc-subdivision model (redefined by the accepted plan)
+
+The expansion/weighting design below remains relevant to optional physical
+scenario results. It must not be used for the default coverage envelope: that
+path evaluates each candidate with full parent-event K, takes the cellwise
+maximum within the parent event, and never exposes or sums candidates as
+kerma-bearing synthetic events. The accepted plan also removes a second
+vendor fixture as a universal first-release gate; synthetic contract tests and
+the observed Canon characteristics are sufficient to ship the initial,
+explicitly approximate model.
+
+The accepted plan also supersedes item 5's mandatory sweep-path visualization
+for the first release. Results badges, warnings, and the handling ledger are
+required immediately; a Geometry-tab arc overlay can follow without delaying
+the dose-model correction.
 
 If start/end angles (or per-frame angles) are available:
 
@@ -336,9 +447,10 @@ If start/end angles (or per-frame angles) are available:
 
 ### Suggested sequencing note
 
-Phase 0 is small, user-invisible, and unblocks the whole item — it fits as a
-first slice whenever this Next Up item is pulled. Phases 1–2 are separate
-PRs behind Phase 0's findings.
+Phase 0 supplied enough evidence for the accepted initial design. Implement
+the shared classifier/normalizer contract first, then the envelope calculation
+and disclosures; scenario controls can follow as a separate slice. Continue
+collecting vendor evidence without making it a universal delivery gate.
 
 ---
 

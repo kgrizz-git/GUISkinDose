@@ -13,6 +13,7 @@ import logging
 import numbers
 from math import isclose
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -390,6 +391,71 @@ def below_floor_event_count(state: AppState) -> int:
         if df is not None:
             total += len(count_below_floor_events(df))
     return total
+
+
+def rotational_survey(state: AppState) -> dict[str, object]:
+    """Classify loaded events for the rotational pre-calc prompt.
+
+    Uses loaded exams when present (``state.rdsr_df`` is their
+    concatenation — counting both would double-count); falls back to
+    ``rdsr_df`` only when no exam frames exist. Returns counts plus a
+    privacy-safe unresolved list of ``(exam, index, classification,
+    reasons)`` tuples — indices and reason codes only, no event values.
+    Pure classification — no dose math, no identifier handling.
+    """
+    from guiskindose.rotational_acquisition import classify_rotational_event
+
+    frames: list[tuple[str, Any]] = []
+    exam_frames: list[tuple[str, Any]] = [
+        (f"Exam {i + 1}", getattr(exam, "normalized_data", None))
+        for i, exam in enumerate(state.loaded_exams)
+    ]
+    exam_frames = [(label, df) for label, df in exam_frames if df is not None]
+    if exam_frames:
+        frames = exam_frames
+    elif state.rdsr_df is not None:
+        frames = [("Exam 1", state.rdsr_df)]
+    # NOTE: indices below are pre-policy source positions. The dose loop may
+    # drop rows (e.g. below-floor kVp skip), so the handling ledger's
+    # post-policy event_index can differ; match rows by exam + classification
+    # + angles, never by bare index, across the two.
+    survey: dict[str, object] = {
+        "rotational": 0,
+        "positioner_motion": 0,
+        "unknown": 0,
+        "total": 0,
+        "unresolved": [],
+    }
+    unresolved = survey["unresolved"]
+    assert isinstance(unresolved, list)
+    for label, frame in frames:
+        frame_df = cast("pd.DataFrame", frame)
+        for index, (_, row) in enumerate(frame_df.iterrows()):
+            try:
+                result = classify_rotational_event(dict(row))
+                classification = result.classification
+            except Exception:
+                classification = "unknown"
+                result = None
+            survey["total"] = int(cast(int, survey["total"])) + 1
+            if classification in survey:
+                survey[classification] = int(cast(int, survey[classification])) + 1
+            else:
+                survey["unknown"] = int(cast(int, survey["unknown"])) + 1
+            needs_attention = classification in ("positioner_motion", "unknown") or (
+                classification == "rotational"
+                and (result is None or not result.usable_endpoints)
+            )
+            if needs_attention:
+                unresolved.append(
+                    (
+                        label,
+                        index,
+                        classification,
+                        list(result.reason_codes) if result is not None else ["unclassified"],
+                    )
+                )
+    return survey
 
 
 def _patch_tqdm(progress_cb, total: int):

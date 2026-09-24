@@ -48,6 +48,8 @@ def _controller() -> rb.ResultsTabController:
     ctrl.refs.dosemap_spinner = MagicMock(visible=False)
     ctrl.refs.corr_table = MagicMock(rows=[], update=MagicMock())
     ctrl.refs.agg_psd_metric = MagicMock()
+    ctrl.refs.rotational_badge = MagicMock(visible=False)
+    ctrl.refs.agg_rotational_badge = MagicMock(visible=False)
     ctrl.refs.agg_events_metric = MagicMock()
     ctrl.refs.agg_totals_metric = MagicMock()
     ctrl.refs.run_warnings_label = MagicMock()
@@ -317,3 +319,143 @@ def test_multi_exam_results_clears_when_incomplete() -> None:
     assert ctrl.last_rendered_run_id is None
     cast(MagicMock, ctrl.refs.agg_dosemap_plot.update_figure).assert_called_with({})
     cast(MagicMock, ctrl.refs.run_warnings_label.set_visibility).assert_called_with(False)
+
+
+def test_rotational_badge_hidden_without_handling(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(state, "output", {"psd": 1.0}, raising=False)
+    ctrl._refresh_rotational_badge()
+    cast(MagicMock, ctrl.refs.rotational_badge.set_text).assert_called_once_with("")
+    assert ctrl.refs.rotational_badge.visible is False
+
+
+def _handling_output(rows):
+    return {"rotational_handling": {"rows": rows, "aggregate": {}}}
+
+
+def test_rotational_badge_shows_envelope_summary(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(
+        state,
+        "output",
+        _handling_output(
+            [
+                {
+                    "classification": "rotational",
+                    "effective_handling": "coverage",
+                }
+            ]
+        ),
+        raising=False,
+    )
+    ctrl._refresh_rotational_badge()
+    text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
+    assert "1 envelope" in text
+    assert ctrl.refs.rotational_badge.visible is True
+
+
+def test_rotational_badge_static_run_shows_no_envelope(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(
+        state,
+        "output",
+        _handling_output(
+            [
+                {
+                    "classification": "rotational",
+                    "effective_handling": "static",
+                }
+            ]
+        ),
+        raising=False,
+    )
+    ctrl._refresh_rotational_badge()
+    text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
+    assert "envelope" not in text and "static fallback" in text
+    assert ctrl.refs.rotational_badge.visible is True
+
+
+def test_agg_rotational_badge_sums_across_exams(monkeypatch):
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    res = _NS(
+        exams=[
+            _NS(output=_NS(rotational_handling={"rows": [{"classification": "rotational", "effective_handling": "coverage", "requested_handling": "Auto"}]})),
+            _NS(output=_NS(rotational_handling={"rows": [{"classification": "positioner_motion", "effective_handling": "static", "requested_handling": "Auto"}]})),
+        ]
+    )
+    ctrl._refresh_agg_rotational_badge(res)
+    text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
+    assert "1 envelope" in text and "1 static" in text and "2 rotational/moving events" in text
+    assert ctrl.refs.agg_rotational_badge.visible is True
+
+
+def test_badges_include_contradictory_rows():
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    rows = [
+        {
+            "classification": "unknown",
+            "effective_handling": "coverage",
+            "requested_handling": "Auto",
+            "reason_codes": ["type_code_stationary", "contradictory_static"],
+        }
+    ]
+    monkeypatch_state = {"rotational_handling": {"rows": rows, "aggregate": {}}}
+    import guiskindose.gui.tabs.results_builders as _rb
+
+    original = _rb.state.output
+    _rb.state.output = monkeypatch_state
+    try:
+        ctrl._refresh_rotational_badge()
+        text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
+        assert "1 envelope" in text
+        res = _NS(exams=[_NS(output=_NS(rotational_handling=monkeypatch_state["rotational_handling"]))])
+        ctrl._refresh_agg_rotational_badge(res)
+        agg = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
+        assert "1 envelope" in agg
+    finally:
+        _rb.state.output = original
+
+
+def test_agg_rotational_badge_static_run_shows_no_envelope():
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    res = _NS(
+        exams=[
+            _NS(output=_NS(rotational_handling={"rows": [{"classification": "rotational", "effective_handling": "static", "requested_handling": "Static"}]})),
+        ]
+    )
+    ctrl._refresh_agg_rotational_badge(res)
+    text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
+    assert "envelope" not in text and "1 static" in text
+
+
+def test_agg_rotational_badge_hidden_without_handling(monkeypatch):
+    from types import SimpleNamespace as _NS
+
+    ctrl = _controller()
+    ctrl._refresh_agg_rotational_badge(_NS(exams=[_NS(output=_NS(rotational_handling=None))]))
+    cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).assert_called_once_with("")
+    assert ctrl.refs.agg_rotational_badge.visible is False
+
+
+def test_rotational_badge_notes_fallback(monkeypatch):
+    ctrl = _controller()
+    monkeypatch.setattr(
+        state,
+        "output",
+        _handling_output(
+            [
+                {"classification": "positioner_motion", "effective_handling": "static"},
+                {"classification": "positioner_motion", "effective_handling": "static"},
+            ]
+        ),
+        raising=False,
+    )
+    ctrl._refresh_rotational_badge()
+    text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
+    assert "2 static fallback" in text

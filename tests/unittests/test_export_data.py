@@ -39,6 +39,9 @@ _EXPECTED_TOP_KEYS = {
     "dose_map",
     "corrections",
     "events",
+    "rotational_handling",
+    "rotational_envelope",
+    "union_hit_indices",
 }
 
 
@@ -188,3 +191,11 @@ def test_inject_html_meta_only_first_head_annotated():
     html = b"<head>A</head><head>B</head>"
     out = gui_io._inject_html_tabular_meta(html, {"schema": "x"})
     assert out.count(b"guiskindose:tabular_input") == 1
+
+
+def test_schema_versions_are_current():
+    """Pin the bumped versions so future shape changes force a deliberate bump."""
+    from guiskindose.export.models import RICH_EXPORT_SCHEMA_VERSION
+
+    assert EXPORT_SCHEMA_VERSION == 3
+    assert RICH_EXPORT_SCHEMA_VERSION == 3

@@ -15,6 +15,7 @@ from guiskindose.format_export_data import (
     MultiExamResult,
     PySkinDoseOutput,
     format_analysis_result_for_export,
+    normalize_hit_masks,
 )
 from guiskindose.helpers.calculate_rotation_matrices import calculate_rotation_matrices
 from guiskindose.input_adapters.models import InputAdapterResult
@@ -263,6 +264,9 @@ def _multi_exam_output(
         kerma_meter_correction=raw_output.get(c.OUTPUT_KEY_CORRECTION_KERMA_METER),
         kerma_corrected=raw_output.get(c.OUTPUT_KEY_KERMA_CORRECTED),
         k_tab_statuses=raw_output.get(c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
+        rotational_handling=raw_output.get(c.OUTPUT_KEY_ROTATIONAL_HANDLING),
+        rotational_envelope=raw_output.get(c.OUTPUT_KEY_ROTATIONAL_ENVELOPE),
+        hits_union=normalize_hit_masks(raw_output.get(c.OUTPUT_KEY_HITS_UNION)),
     )
 
 

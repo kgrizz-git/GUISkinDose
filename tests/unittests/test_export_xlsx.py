@@ -127,3 +127,113 @@ def test_write_xlsx_missing_images():
     data = render_xlsx_bytes(payload)  # must not raise
     wb = load_workbook(io.BytesIO(data))
     assert not cast(Any, wb["Images"])._images
+
+
+def _out_with_handling(kerma):
+    out = _out(kerma)
+    out["rotational_handling"] = {
+        "rows": [
+            {
+                "event_index": 0,
+                "classification": "rotational",
+                "reason_codes": ["primary_endpoint_motion"],
+                "confidence": "angle_motion",
+                "requested_handling": "Auto",
+                "effective_handling": "coverage",
+                "fallback_reason": "",
+                "ap1_start": 90.0,
+                "ap2_start": 0.0,
+                "ap1_end": -120.0,
+                "ap2_end": 0.0,
+                "primary_separation_deg": 150.0,
+                "secondary_separation_deg": 0.0,
+                "candidate_domain": "endpoint_paths",
+                "requested_path_count": 2,
+                "unique_candidate_count": 360,
+                "angular_step_deg": 1.0,
+                "include_static_pose": True,
+                "direction_source": "unknown",
+                "kerma": 0.011,
+                "dap": None,
+                "multiplier": 1.0,
+                "aggregation_rule": "max_within_sum_between",
+            }
+        ],
+        "aggregate": {
+            "total_events": 2,
+            "rotational_count": 1,
+            "positioner_motion_count": 0,
+            "static_count": 1,
+            "unknown_count": 0,
+            "rotational_kerma": 0.011,
+            "total_kerma": 0.02,
+            "any_fallback_to_static": False,
+        },
+        "source_event_count": 2,
+        "processed_event_count": 2,
+    }
+    return out
+
+
+def _payload_with_handling(kerma):
+    s = _settings()
+    src = ExportSource(
+        execution_context="cli",
+        output_dict=_out_with_handling(kerma),
+        exams=[ExportExamSource("e1", pd.DataFrame(), None, "e1.dcm", s, (0, 0, 0))],
+        file_name="e1.dcm",
+    )
+    return collect_export_payload(src, with_images=False)
+
+
+def test_xlsx_rotational_sheet_present_with_handling():
+    payload = _payload_with_handling([0.01, 0.01])
+    data = render_xlsx_bytes(payload)
+    wb = load_workbook(filename=io.BytesIO(data))
+    assert "Rotational handling" in wb.sheetnames
+    values = "\n".join(
+        str(cell.value) for row in wb["Rotational handling"].iter_rows() for cell in row if cell.value
+    )
+    assert "conditional coverage envelope" in values
+    assert "rotational" in values
+
+
+def test_xlsx_rotational_sheet_absent_for_all_static():
+    import copy
+
+    payload = _payload_with_handling([0.01, 0.01])
+    base_handling = payload.exams[0].rotational_handling
+    assert base_handling is not None
+    handling = copy.deepcopy(base_handling)
+    handling["rows"] = [
+        {**row, "classification": "static", "effective_handling": "static"}
+        for row in handling["rows"]
+    ]
+    handling["aggregate"] = {
+        "total_events": 2,
+        "rotational_count": 0,
+        "positioner_motion_count": 0,
+        "static_count": 2,
+        "unknown_count": 0,
+        "rotational_kerma": 0.0,
+        "total_kerma": 0.02,
+        "any_fallback_to_static": False,
+    }
+    payload.exams[0].rotational_handling = handling
+    data = render_xlsx_bytes(payload)
+    wb = load_workbook(filename=io.BytesIO(data))
+    assert "Rotational handling" not in wb.sheetnames
+
+
+def test_xlsx_rotational_sheet_absent_without_handling():
+    s = _settings()
+    src = ExportSource(
+        execution_context="cli",
+        output_dict=_out([0.01, 0.01]),
+        exams=[ExportExamSource("e1", pd.DataFrame(), None, "e1.dcm", s, (0, 0, 0))],
+        file_name="e1.dcm",
+    )
+    payload = collect_export_payload(src, with_images=False)
+    data = render_xlsx_bytes(payload)
+    wb = load_workbook(filename=io.BytesIO(data))
+    assert "Rotational handling" not in wb.sheetnames

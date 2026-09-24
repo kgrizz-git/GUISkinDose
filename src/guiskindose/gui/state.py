@@ -84,6 +84,14 @@ class AppState:
     below_floor_prompt_suppressed: bool = False
     beam_miss_warn: str = "summary"
 
+    # Rotational-acquisition handling: "coverage" (default envelope),
+    # "static" (legacy), or "scenarios" (deferred physical alternatives).
+    # rotational_prompt_suppressed silences the pre-calc prompt once the user
+    # picks "don't ask again"; rebuild_rdsr_df() clears it whenever the loaded
+    # event set changes.
+    rotational_handling: str = "coverage"
+    rotational_prompt_suppressed: bool = False
+
     # Kerma-meter correction (CF = measured / reported), per equipment × tube.
     kerma_meter_enable: bool = False
     kerma_meter_mode: str = "file"

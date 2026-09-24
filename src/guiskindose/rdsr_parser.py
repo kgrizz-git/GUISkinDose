@@ -41,7 +41,9 @@ def _store_value(
     duplicate_as_tuple: bool = False,
 ) -> None:
     """Store an extracted value, preserving the parser's legacy duplicate form."""
-    if tag not in parsed:
+    # A recorded None means "seen but valueless": treat it as absent so a later
+    # populated occurrence replaces it instead of forming a [None, value] pair.
+    if tag not in parsed or parsed[tag] is None:
         parsed[tag] = value
     elif duplicate_as_tuple:
         parsed[tag] = (parsed[tag], value)
@@ -96,14 +98,35 @@ def _store_content_value(
                 "AcquisitionPlane_CodingSchemeDesignator",
                 getattr(code_seq, "CodingSchemeDesignator", None),
             )
+        if tag == "IrradiationEventType":
+            _store_value(parsed, "IrradiationEventType_CodeValue", getattr(code_seq, "CodeValue", None))
+            _store_value(
+                parsed,
+                "IrradiationEventType_CodingSchemeDesignator",
+                getattr(code_seq, "CodingSchemeDesignator", None),
+            )
     elif KEY_RDSR_MEASURED_VALUE_SEQUENCE in content:
-        tag = _measured_tag(content, remove_unit_dots=not nested)
-        _store_value(
-            parsed,
-            tag,
-            content.MeasuredValueSequence[0].NumericValue,
-            duplicate_as_tuple=nested,
-        )
+        measured = content.MeasuredValueSequence
+        units = getattr(measured[0], "MeasurementUnitsCodeSequence", []) if measured else []
+        if not measured or not units:
+            # Valueless concept (e.g. GE events carrying empty positioner
+            # angle sequences): record absence instead of crashing the file.
+            # DICOM angle concepts are degree-valued by definition, so those
+            # keep the conventional _deg column (downstream NaN handling
+            # applies); anything else stays unsuffixed.
+            empty_tag = tag + "_deg" if tag.endswith("Angle") else tag
+            # Only record absence when nothing populated that tag already:
+            # a valueless duplicate must not erase a real measurement.
+            if empty_tag not in parsed:
+                parsed[empty_tag] = None
+        else:
+            tag = _measured_tag(content, remove_unit_dots=not nested)
+            _store_value(
+                parsed,
+                tag,
+                content.MeasuredValueSequence[0].NumericValue,
+                duplicate_as_tuple=nested,
+            )
     elif KEY_RDSR_TEXT_VALUE in content:
         if not nested and tag == KEY_RDSR_COMMENT:
             _extract_detector_size(parsed, content.TextValue)
@@ -144,8 +167,8 @@ def _top_level_attr(data_raw: pydicom.Dataset, attr: str) -> object | None:
 def _parse_irradiation_event(data_raw: pydicom.FileDataset, event: pydicom.Dataset) -> dict:
     """Extract the legacy flat dictionary for one irradiation event."""
     parsed = {
-        KEY_RDSR_MANUFACTURER: data_raw.Manufacturer,
-        KEY_RDSR_MANUFACTURER_MODEL_NAME: data_raw.ManufacturerModelName,
+        KEY_RDSR_MANUFACTURER: _top_level_attr(data_raw, KEY_RDSR_MANUFACTURER),
+        KEY_RDSR_MANUFACTURER_MODEL_NAME: _top_level_attr(data_raw, KEY_RDSR_MANUFACTURER_MODEL_NAME),
         # Study-level unit identity (constant across events when present).
         KEY_RDSR_STATION_NAME: _top_level_attr(data_raw, KEY_RDSR_STATION_NAME),
         KEY_RDSR_DEVICE_SERIAL: _top_level_attr(data_raw, KEY_RDSR_DEVICE_SERIAL),

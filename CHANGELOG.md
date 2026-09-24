@@ -19,8 +19,28 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- **Rotational coverage envelope (estimate-grade)** (2026-09-22) — events
+  detected as rotational are evaluated as conditional upper coverage
+  envelopes (full event kerma per candidate pose, cellwise maximum kept)
+  instead of silently collapsing to one static pose; `rotational_handling`
+  setting (`coverage`/`static`, `scenarios` deferred), pre-calculation
+  prompt, handling ledger in outputs, and methodology disclosures. Design:
+  `dev-docs/plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md`. Exports carry the
+  handling ledger and methodology (DOCX/XLSX sections, dict/JSON fields);
+  the Results tab shows a handling badge.
+
 ### Fixed
 
+- **RDSR parser fail-soft on malformed inputs** (2026-09-22) — two upstream
+  OpenREM patterns crashed `rdsr_parser` outright: a missing top-level
+  `Manufacturer` or `ManufacturerModelName` (`AttributeError`) and valueless
+  `MeasuredValueSequence`/units (`IndexError`). Both top-level tags now read
+  `None` when absent and empty value sequences record `None` without
+  overwriting a populated value from a duplicate content item, with synthetic
+  regression tests (no fixture vendoring). Numerical results on parseable
+  files are unchanged.
 - **GUI `--port` flag** (2026-09-22) — the loopback port was fixed at 8765
   with no override. `--port <n>` selects a loopback port, `--port 0` takes
   an OS-assigned free port (printed in the console launch URL); the token,
