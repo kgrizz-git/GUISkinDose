@@ -142,7 +142,16 @@ def test_top_level_key_inventory_matches_normalized_example_keys():
 
     # The only sanctioned difference: the nullable dosetrack map, absent from
     # the example file, is always emitted (None when unset).
-    assert set(serialized) == example_keys | {"dosetrack_plane_code_map"}
+    assert set(serialized) == EXPECTED_TOP_LEVEL_KEYS
+    assert example_keys | {"dosetrack_plane_code_map"} == EXPECTED_TOP_LEVEL_KEYS
+
+
+def test_to_settings_dict_excludes_runtime_only_state():
+    serialized = PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()
+
+    for key in ("output_format", "file_result_output_path", "normalization_settings", "in_memory_table"):
+        assert key not in serialized
+    assert "in_memory_table" not in serialized["kerma_meter_correction"]
 
 
 def test_top_level_to_settings_dict_matches_example_values():
