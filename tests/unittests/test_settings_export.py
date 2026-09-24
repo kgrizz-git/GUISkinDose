@@ -785,11 +785,22 @@ def test_serializer_reads_homes_through_built_settings():
     state = AppState()
     state.phantom_dimensions = {"cylinder_length": 999.0}
     state.corrections_db_path = "custom.db"
+    state.include_static_pose = False
+    state.angular_step_deg = 2.0
+    state.dosetrack_plane_code_map = {"1": "Single Plane"}
+    state.max_events_for_patient_inclusion = 5
+    state.normalization_profiles = [dict(_default_profiles()[0], manufacturer="Custom")]
     built = build_settings(state)
 
-    redacted = serialize_run_state(built, state)
-    assert redacted["settings"]["phantom"]["dimension"]["cylinder_length"] == 999.0
-    assert redacted["settings"]["corrections_db_path"] is None  # still gated
+    redacted = serialize_run_state(built, state, normalization_profiles=state.normalization_profiles)
+    settings_slice = redacted["settings"]
+    assert settings_slice["phantom"]["dimension"]["cylinder_length"] == 999.0
+    assert settings_slice["corrections_db_path"] is None  # still gated
+    assert settings_slice["include_static_pose"] is False
+    assert settings_slice["angular_step_deg"] == 2.0
+    assert settings_slice["dosetrack_plane_code_map"] == {"1": "Single Plane"}
+    assert settings_slice["plot"]["max_events_for_patient_inclusion"] == 5
+    assert redacted["normalization_settings"] == state.normalization_profiles
 
     identified = serialize_run_state(built, state, include_identifiers=True)
     assert identified["settings"]["corrections_db_path"] == "custom.db"
