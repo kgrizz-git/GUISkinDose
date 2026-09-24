@@ -103,7 +103,10 @@ be archived.
 - [ ] **Offset UX polish** — Geometry patient/table-origin sliders and Settings → Per-exam corrections already
   support interactive overrides (single- and multi-exam). Remaining: clearer per-exam offset summary, inline
   Geometry hints, and less nesting for advanced coordinate fixes. Optional arrow graphic is deferred separately.
-- [ ] **Reproducible settings export** — export `PyskindoseSettings` or GUI state as JSON to easily reload and reproduce runs.
+- [ ] **Reproducible settings export** — export full GUI run state as JSON
+  (settings + normalization + per-exam corrections; source filenames redacted by
+  default) and re-import to reproduce runs. Plan:
+  [SETTINGS_EXPORT_PLAN.md](plans/SETTINGS_EXPORT_PLAN.md).
 - [ ] **3D mesh export** — export the patient phantom mesh with vertex colors (e.g., PLY format) for use in external 3D tools.
 - [ ] **DICOM export** — export a DICOM Secondary Capture of the dose map or a DICOM SR to push results back to PACS.
 
