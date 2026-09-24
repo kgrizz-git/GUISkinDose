@@ -218,7 +218,7 @@
         "tests/gui/test_run_state_roundtrip.py"
       ],
       "docs": [
-        "dev-docs/plans/SETTINGS_EXPORT_PLAN.md",
+        "dev-docs/plans/archive/SETTINGS_EXPORT_PLAN.md",
         "CHANGELOG.md"
       ],
       "help": ["docs/source/gui_help/run_configuration.md"]

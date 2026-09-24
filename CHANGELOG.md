@@ -29,7 +29,7 @@ That keeps SemVer and contributor history organized.
   file mismatches warn loudly without touching the live session; tabular
   inputs re-parse before per-exam offsets are restored; unknown future keys
   survive re-export. Programmatic API: `PyskindoseSettings.to_settings_dict()`
-  / `to_json()`. Design: `dev-docs/plans/SETTINGS_EXPORT_PLAN.md`.
+  / `to_json()`. Design: `dev-docs/plans/archive/SETTINGS_EXPORT_PLAN.md`.
 
 - **Rotational coverage envelope (estimate-grade)** (2026-09-22) — events
   detected as rotational are evaluated as conditional upper coverage
