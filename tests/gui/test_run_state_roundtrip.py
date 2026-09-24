@@ -174,9 +174,12 @@ async def test_import_updates_rendered_widget_values(user: User) -> None:
     with user.client:
         status = ui.label("")
     await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
-    # Reactive binding propagates on the next client round-trip.
-    await user.should_see("Run configuration")
-    await asyncio.sleep(0.2)
+    # Reactive binding propagates on the next client round-trips: poll
+    # instead of sleeping a fixed span (flaky under load).
+    for _ in range(50):
+        if _number_by_label(user, "Longitudinal").value == 1.0:
+            break
+        await asyncio.sleep(0.1)
     assert _number_by_label(user, "Longitudinal").value == 1.0
 
 
@@ -208,7 +211,10 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
 
     def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
         reparse_calls.append(str(file_path))
-        # Simulate the rebuild wiping per-exam offsets/toggles.
+        # Simulate the rebuild wiping per-exam offsets/toggles AND landing on
+        # a different sheet than the document: only the post-rebuild re-apply
+        # can restore the documented values (a self-fulfilling fake would
+        # write "Other" itself and prove nothing).
         app_state.loaded_exam_meta = [
             {
                 "file_name": "export.xlsx",
@@ -218,7 +224,7 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
                 "input_model": "X1000",
                 "source_type": "xlsx",
                 "schema": "dosetrack",
-                "sheet": "Other",
+                "sheet": "WrongSheet",
                 "normalization_method": "Matched",
                 "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
             }

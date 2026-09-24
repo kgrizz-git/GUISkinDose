@@ -32,9 +32,13 @@ toggles, input schema) is not representable at all.
    (runtime-privacy rule). They export as `null`/absent by default and are
    included only behind an explicit include-identifiers checkbox, mirroring
    the rich-export policy (`export.include_identifiers`). When identifiers are
-   included, path-valued fields (`file_path`, kerma `file`) export as the
-   user-facing **basename only** — never an absolute path. `file_path` is a
-   `pathlib.Path` at runtime: the serializer must stringify-or-null it.
+    included, path-valued fields (`file_path`, kerma `file`) export as the
+    user-facing **basename only** — never an absolute path. `file_path` is a
+    `pathlib.Path` at runtime: the serializer must stringify-or-null it.
+    Exception: `corrections_db_path` exports **verbatim** when identifiers are
+    included (no basename reduction) — the calculation resolves that path, so
+    reducing it would break the restored run; an unresolvable imported value
+    fails loudly at calculation instead.
 
 ## Document schema (v1)
 

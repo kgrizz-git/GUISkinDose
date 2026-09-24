@@ -67,6 +67,7 @@ async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
             state,
             normalization_profiles=settings_obj.normalization_settings.to_profile_list(),
             include_identifiers=bool(include_ids.value),
+            passthrough=dict(state.run_state_passthrough),
         )
     except Exception as exc:
         safe_error_event(logger, "run_config_serialize", exc)
@@ -129,11 +130,17 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
 
 
 def _notify_warnings(warnings: list[str]) -> None:
-    """Surface import warnings, capped so multi-exam storms stay readable."""
+    """Surface import warnings, capped so multi-exam storms stay readable.
+
+    Only the count is logged: warning text may carry source identifiers when
+    the document was exported with them, so it must never reach the log.
+    """
+    if warnings:
+        logger.warning("run-state import produced %d warning(s)", len(warnings))
     for warning in warnings[:_MAX_SHOWN_WARNINGS]:
         ui.notify(warning, type="warning", timeout=8000)
     if len(warnings) > _MAX_SHOWN_WARNINGS:
-        ui.notify(f"+{len(warnings) - _MAX_SHOWN_WARNINGS} more warnings — see the log.", type="warning")
+        ui.notify(f"+{len(warnings) - _MAX_SHOWN_WARNINGS} more import warnings.", type="warning")
 
 
 async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed: bool) -> None:

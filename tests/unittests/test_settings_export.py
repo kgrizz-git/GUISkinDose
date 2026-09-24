@@ -280,6 +280,16 @@ def _populated_state():
     state.d_lon = 1.0
     state.d_ver = 2.0
     state.d_lat = 3.0
+    # Synced with _settings_with_kerma_file() so build_settings(state) emits
+    # the same slice (the assembly path the round-trip test must use).
+    state.phantom_model = "cylinder"
+    state.beam_miss_warn = "per_event"
+    state.kerma_meter_enable = True
+    state.kerma_meter_mode = "file"
+    state.kerma_meter_file = "/data/cf/corrections.xlsx"
+    state.kerma_meter_file_sheet = "CF"
+    state.kerma_meter_default_factor = 1.02
+    state.kerma_meter_explicit_label = "Lab-1"
     state.kerma_meter_in_memory_table = {("Acme", "TubeA"): 1.02}
     state.loaded_exam_meta = [
         {
@@ -508,6 +518,110 @@ def test_applier_accepts_older_version_with_warning():
     assert any("older schema_version 0" in warning for warning in result.warnings)
 
 
+def test_applier_rejects_malformed_sections_before_mutating():
+    base = _identified_document()
+
+    document = json.loads(json.dumps(base))
+    document["settings"] = ["a"]
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match="settings must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["gui_state"] = "nope"
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match="gui_state must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["phantom"] = "x"
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.phantom must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["plot"] = 5
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.plot must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+
+def _assert_pristine(state: AppState) -> None:
+    """Validation precedes all mutation: a fresh session is byte-identical."""
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert state.d_lon == 0.0
+    assert getattr(state, "normalization_profiles", None) is None
+    assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
+
+
+def test_applier_rejects_mistyped_kerma_exams_profiles_table():
+    base = _identified_document()
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["kerma_meter_correction"] = "x"
+    with pytest.raises(RunStateError, match="kerma_meter_correction"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["gui_state"]["exams"] = ["oops"]
+    with pytest.raises(RunStateError, match=r"exams\[0\]"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["normalization_settings"] = {"not": "a list"}
+    with pytest.raises(RunStateError, match="normalization_settings must be a list"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["normalization_settings"] = ["str"]
+    with pytest.raises(RunStateError, match=r"normalization_settings\[0\]"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["gui_state"]["kerma_meter_in_memory_table"] = {"Eq": {"Tube": "nan"}}
+    with pytest.raises(RunStateError, match="must be a number"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+
+def test_applier_empty_normalization_list_keeps_current_profiles():
+    document = _identified_document()
+    document["normalization_settings"] = []
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    assert getattr(state, "normalization_profiles", None) is None
+    assert any("empty normalization_settings ignored" in w for w in result.warnings)
+
+
+def test_builder_empty_normalization_home_falls_back_to_defaults():
+    state = AppState()
+    state.normalization_profiles = []
+
+    assert build_settings(state).normalization_settings.to_profile_list() == _default_profiles()
+
+
+def test_passthrough_carries_through_session_to_reexport():
+    document = _identified_document()
+    document["future_key"] = {"nested": True}
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+    assert result.applied_exams == 1
+
+    # The GUI save path reads the session field (mirrors _on_save).
+    assert state.run_state_passthrough == {"future_key": {"nested": True}}
+    reemitted = serialize_run_state(
+        _example_settings(), _populated_state(), passthrough=dict(state.run_state_passthrough)
+    )
+    assert reemitted["future_key"] == {"nested": True}
+
+
 def test_applier_exam_count_mismatch_names_counts():
     document = _identified_document()  # 1 exam
     state = AppState()  # 0 loaded
@@ -704,11 +818,15 @@ def test_applier_schema_or_sheet_change_flagged():
 
 
 def test_export_import_export_round_trip_identity():
-    settings = _settings_with_kerma_file()
+    # Both exports go through the assembly path (build_settings + overlay):
+    # a raw example-based object would carry builder-forced constants
+    # (notebook_mode) the GUI can never reproduce.
+    populated = _populated_state()
+    built = build_settings(populated, mode="plot_event")
     first = serialize_run_state(
-        settings,
-        _populated_state(),
-        normalization_profiles=_default_profiles(),
+        built,
+        populated,
+        normalization_profiles=built.normalization_settings.to_profile_list(),
         include_identifiers=True,
         app_version="1.0.0",
         created="2026-09-24T00:00:00+00:00",
@@ -719,8 +837,12 @@ def test_export_import_export_round_trip_identity():
     result = apply_run_state(first, fresh)
 
     assert result.applied_exams == 1
+    # Rebuild the settings from the IMPORTED state (not the original object):
+    # identity holds only if the applier restored everything the builder
+    # reads. Mode comes from the document.
+    rebuilt_settings = build_settings(fresh, mode=first["settings"]["mode"])
     second = serialize_run_state(
-        settings,
+        rebuilt_settings,
         fresh,
         normalization_profiles=fresh.normalization_profiles,
         include_identifiers=True,

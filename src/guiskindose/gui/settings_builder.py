@@ -122,11 +122,13 @@ def build_settings(
     base["plot"]["colorscale"] = app_state.colorscale
 
     normalization_arg = None
-    if app_state.normalization_profiles is not None:
+    if app_state.normalization_profiles:
         from guiskindose.settings.normalization_settings import NormalizationSettings
 
         # Wrap first: the PyskindoseSettings kwarg takes
         # Path | str | dict | NormalizationSettings | None, not a bare list.
+        # An empty list means "unspecified" and keeps the default profiles:
+        # a zero-profile build would silently disable vendor normalization.
         normalization_arg = NormalizationSettings(app_state.normalization_profiles)
 
     return PyskindoseSettings(settings=base, normalization_settings=normalization_arg, output_format=output_format)

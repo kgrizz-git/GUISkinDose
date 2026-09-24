@@ -288,13 +288,25 @@ class ApplyResult:
     passthrough: dict[str, Any] = field(default_factory=dict)
 
 
+def _require_section(document: dict, key: str) -> dict:
+    """Return ``document[key]`` (or ``{}`` when absent/null), rejecting mistypes."""
+    value = document.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise RunStateError(f"{key} must be a mapping, got {type(value).__name__}")
+    return value
+
+
 def validate_run_state_document(document: Any) -> None:
-    """Check envelope schema/version, raising `RunStateError` when invalid.
+    """Check envelope schema/version and section shapes, raising `RunStateError`.
 
     Greater-than-supported `schema_version` is rejected loudly; equal is
-    accepted; older is accepted with a warning collected by the caller via
-    `apply_run_state` (validation itself stays warning-free so the GUI can
-    decide surfacing). Non-integer versions are rejected.
+    accepted; older is accepted (the caller warns). Non-integer versions are
+    rejected. Every structural check runs here — before `apply_run_state`
+    mutates anything — so malformed inner types (`settings` as a list,
+    `exams` holding strings, non-dict profiles, ragged kerma tables) fail
+    with the session untouched instead of `AttributeError` mid-apply.
     """
     if not isinstance(document, dict):
         raise RunStateError(f"run-state document must be a mapping, got {type(document).__name__}")
@@ -305,6 +317,33 @@ def validate_run_state_document(document: Any) -> None:
         raise RunStateError(f"schema_version must be an integer, got {version!r}")
     if version > RUN_STATE_SCHEMA_VERSION:
         raise RunStateError(f"unsupported schema_version {version} (this build supports {RUN_STATE_SCHEMA_VERSION})")
+    settings = _require_section(document, "settings")
+    for key in ("phantom", "plot", "kerma_meter_correction"):
+        if settings.get(key) is not None and not isinstance(settings[key], dict):
+            raise RunStateError(f"settings.{key} must be a mapping, got {type(settings[key]).__name__}")
+    gui = _require_section(document, "gui_state")
+    exams = gui.get("exams")
+    if exams is not None:
+        if not isinstance(exams, list):
+            raise RunStateError(f"gui_state.exams must be a list, got {type(exams).__name__}")
+        for index, exam in enumerate(exams):
+            if not isinstance(exam, dict):
+                raise RunStateError(f"gui_state.exams[{index}] must be a mapping, got {type(exam).__name__}")
+    profiles = document.get("normalization_settings")
+    if profiles is not None:
+        if not isinstance(profiles, list):
+            raise RunStateError(f"normalization_settings must be a list, got {type(profiles).__name__}")
+        for index, profile in enumerate(profiles):
+            if not isinstance(profile, dict):
+                raise RunStateError(f"normalization_settings[{index}] must be a mapping, got {type(profile).__name__}")
+    table = gui.get("kerma_meter_in_memory_table")
+    if table is not None:
+        if not isinstance(table, dict) or any(not isinstance(tubes, dict) for tubes in table.values()):
+            raise RunStateError("kerma_meter_in_memory_table must be a mapping of mappings")
+        for equipment, tubes in table.items():
+            for tube, factor in tubes.items():
+                if isinstance(factor, bool) or not isinstance(factor, (int, float)):
+                    raise RunStateError(f"kerma_meter_in_memory_table[{equipment!r}][{tube!r}] must be a number")
 
 
 def _display_basename(value: Any) -> str | None:
@@ -471,26 +510,27 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
             f"older schema_version {version} (supported {RUN_STATE_SCHEMA_VERSION}); proceeding best-effort."
         )
     result.passthrough = {key: value for key, value in document.items() if key not in _TOP_LEVEL_PASSTHROUGH_EXCLUDE}
+    app_state.run_state_passthrough = dict(result.passthrough)
     # Structural checks before any mutation: a count or shape mismatch must
-    # fail with the session untouched, never half-applied.
-    doc_exams = (document.get("gui_state") or {}).get("exams") or []
+    # fail with the session untouched, never half-applied (shapes already
+    # validated above; only counts remain).
+    gui_section = _require_section(document, "gui_state")
+    doc_exams = gui_section.get("exams") or []
     live_metas = app_state.loaded_exam_meta
     if len(doc_exams) != len(live_metas):
         raise RunStateError(
             f"exam count mismatch: document has {len(doc_exams)} exam(s), "
             f"session has {len(live_metas)} loaded — load the same inputs in the same order/count."
         )
+    result.mode = _apply_settings_slice(_require_section(document, "settings"), app_state, result.warnings)
     profiles = document.get("normalization_settings")
-    if profiles is not None and not isinstance(profiles, list):
-        raise RunStateError(f"normalization_settings must be a list, got {type(profiles).__name__}")
-    result.mode = _apply_settings_slice(document.get("settings") or {}, app_state, result.warnings)
-    profiles = document.get("normalization_settings")
-    if profiles is not None:
-        from guiskindose.settings.normalization_settings import NormalizationSettings
-
-        NormalizationSettings(profiles)  # validate shape now; Phase 3 applies to settings
+    if profiles:
         _apply_present(app_state, "normalization_profiles", profiles)
-    gui = document.get("gui_state") or {}
+    elif profiles is not None:
+        # An empty list means "unspecified", never "wipe all profiles": a
+        # zero-profile build would silently disable vendor normalization.
+        result.warnings.append("empty normalization_settings ignored; keeping current profiles.")
+    gui = gui_section
     if gui.get("input_schema") is not None and gui["input_schema"] != app_state.input_schema:
         result.schema_or_sheet_changed = True
     _apply_present(app_state, "input_schema", gui.get("input_schema"))

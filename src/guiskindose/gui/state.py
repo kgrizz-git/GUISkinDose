@@ -118,6 +118,10 @@ class AppState:
     corrections_db_path: str | None = None
     phantom_dimensions: dict | None = None
     max_events_for_patient_inclusion: int | None = None
+    # Unknown top-level run-state keys preserved across import → re-export
+    # (acceptance: forward tolerance). Written by apply_run_state, read back
+    # by the export path; never interpreted.
+    run_state_passthrough: dict = field(default_factory=dict)
 
     # ── Calculation results ────────────────────────────────────────────────
     output: dict[str, Any] | None = None
