@@ -1,0 +1,154 @@
+"""Run-configuration export/import card (settings export, Phase 3 chunk E).
+
+"Save run configuration" serializes the full GUI run state via
+`build_settings()` + `serialize_run_state()` (Settings-tab checkbox gates
+source identifiers). "Load run configuration" parses an uploaded JSON
+document through `apply_run_state()`, re-parses tabular inputs when the
+schema/sheet changed (single-file sessions), then resets results and
+refreshes every tab. Warnings surface as notifications; `RunStateError`
+fails loudly without mutating anything user-visible beyond the notify.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any
+
+from nicegui import run, ui
+
+from guiskindose.gui.run_state import RunStateError, apply_run_state, serialize_run_state
+from guiskindose.gui.settings_builder import build_settings
+from guiskindose.privacy import safe_error_event
+
+from ..concurrency import operation_guard, require_io_result
+from ..helpers import load_tabular
+from ..io_helpers import _get_save_path, _is_native_mode
+from ..page_context import PageContext
+from ..state import reset_results, state
+from .export import _write_or_download
+
+logger = logging.getLogger(__name__)
+
+_CONFIG_DEFAULT_NAME = "guiskindose_run_config.json"
+_CONFIG_UPLOAD_MAX_BYTES = 8 * 1024 * 1024
+_MAX_SHOWN_WARNINGS = 5
+
+
+def build_run_config_card(ctx: PageContext) -> None:
+    """Render the Settings-tab run-configuration card and wire its handlers."""
+    with ui.card().classes("modern-card w-full"):
+        ui.label("Run configuration").classes("text-subtitle2 q-mb-sm")
+        ui.label(
+            "Save the full run state (settings, corrections, per-exam offsets) as JSON, "
+            "or load one back to reproduce a run."
+        ).classes("text-xs text-grey-5 q-mb-md")
+        include_ids = ui.checkbox("Include source identifiers (filenames, paths, labels)").classes("text-xs q-mb-sm")
+        status_label = ui.label("").classes("text-xs text-grey-5")
+        with ui.row().classes("w-full gap-2"):
+            ui.button("Save run configuration", icon="save", on_click=lambda: _on_save(include_ids, status_label))
+            ui.upload(
+                on_upload=lambda e: _on_load(e, ctx, status_label),
+                label="LOAD RUN CONFIGURATION",
+                max_file_size=_CONFIG_UPLOAD_MAX_BYTES,
+            ).props('accept=".json" flat bordered color=deep-purple auto-upload').classes("uploader-no-list")
+
+
+async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
+    """Serialize the live run state and persist it (native dialog or download)."""
+    settings_obj = build_settings(state)
+    try:
+        document = serialize_run_state(
+            settings_obj,
+            state,
+            normalization_profiles=settings_obj.normalization_settings.to_profile_list(),
+            include_identifiers=bool(include_ids.value),
+        )
+    except Exception as exc:
+        safe_error_event(logger, "run_config_serialize", exc)
+        ui.notify("Could not serialize the run configuration. Check the log for details.", type="negative")
+        return
+    content = json.dumps(document, indent=2).encode("utf-8")
+    save_path = await _get_save_path(_CONFIG_DEFAULT_NAME, "json")
+    if save_path is None and _is_native_mode():
+        return  # user cancelled the native dialog
+    _write_or_download(save_path, content, _CONFIG_DEFAULT_NAME, "Run configuration saved.", "run_config_write")
+    status_label.set_text(f"Saved run configuration ({len(content)} bytes).")
+
+
+async def _on_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
+    """Parse an uploaded run-configuration document and apply it to GUI state."""
+    try:
+        raw = await e.file.read()
+    except Exception as exc:
+        safe_error_event(logger, "run_config_read", exc)
+        ui.notify("Could not read the uploaded file.", type="negative")
+        return
+    try:
+        document = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        safe_error_event(logger, "run_config_parse", exc)
+        ui.notify("The uploaded file is not valid JSON.", type="negative")
+        return
+    try:
+        result = apply_run_state(document, state)
+    except RunStateError as exc:
+        safe_error_event(logger, "run_config_apply", exc)
+        ui.notify(f"Cannot apply run configuration: {exc}", type="negative", timeout=8000)
+        return
+    _notify_warnings(result.warnings)
+    if result.mode != "calculate_dose":
+        ui.notify(
+            f"Document mode is {result.mode!r}, which the GUI cannot run — "
+            "settings imported; calculation will use 'calculate_dose'.",
+            type="warning",
+            timeout=8000,
+        )
+    await _resequence_reparse_if_needed(document, result.schema_or_sheet_changed)
+    reset_results()
+    ctx.refresh_event_table()
+    ctx.refresh_exams_table()
+    ctx.refresh_import_preview()
+    ctx.refresh_per_exam()
+    ctx.refresh_geometry_tab()
+    status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
+    ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
+
+
+def _notify_warnings(warnings: list[str]) -> None:
+    """Surface import warnings, capped so multi-exam storms stay readable."""
+    for warning in warnings[:_MAX_SHOWN_WARNINGS]:
+        ui.notify(warning, type="warning", timeout=8000)
+    if len(warnings) > _MAX_SHOWN_WARNINGS:
+        ui.notify(f"+{len(warnings) - _MAX_SHOWN_WARNINGS} more warnings — see the log.", type="warning")
+
+
+async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed: bool) -> None:
+    """Re-parse tabular inputs after a schema/sheet change, then re-apply exams.
+
+    `apply_run_state` already wrote the new schema/sheet plus the per-exam
+    offsets — but the re-parse rebuilds `loaded_exam_meta`, wiping those
+    offsets. Re-running the (Tier-3-idempotent) applier afterwards restores
+    them onto the fresh metas. Multi-exam sessions have no single re-parse
+    entry point, so they get loud guidance instead of silent staleness.
+    """
+    if not schema_or_sheet_changed:
+        return
+    if state.is_multi_exam or state.input_source_type not in ("csv", "tsv", "xlsx") or state.file_path is None:
+        ui.notify(
+            "Schema/sheet changed with multiple (or non-tabular) inputs — "
+            "reload the files, then re-import the configuration to restore per-exam offsets.",
+            type="warning",
+            timeout=0,
+            close_button="Dismiss",
+        )
+        return
+    with operation_guard("re-parsing after configuration import") as proceed:
+        if not proceed:
+            return
+        ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
+    if not ok:
+        ui.notify(f"Re-parse after import failed: {msg}. Per-exam offsets may be stale.", type="negative")
+        return
+    apply_run_state(document, state)  # restore offsets onto the rebuilt metas
+    reset_results()
