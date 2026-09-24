@@ -73,6 +73,22 @@ def build_settings(
     base["rotational_handling"] = app_state.rotational_handling
     base["silence_pydicom_warnings"] = True
 
+    # Imported run-state homes (None = example-JSON default, left in place).
+    if app_state.include_static_pose is not None:
+        base["include_static_pose"] = app_state.include_static_pose
+    if app_state.angular_step_deg is not None:
+        base["angular_step_deg"] = app_state.angular_step_deg
+    if app_state.dosetrack_plane_code_map is not None:
+        base["dosetrack_plane_code_map"] = app_state.dosetrack_plane_code_map
+    if app_state.corrections_db_path is not None:
+        base["corrections_db_path"] = app_state.corrections_db_path
+    if app_state.phantom_dimensions is not None:
+        # Overlay, never replace: partial hand-crafted documents cannot drop
+        # keys the PhantomDimensions constructor requires.
+        base["phantom"]["dimension"].update(app_state.phantom_dimensions)
+    if app_state.max_events_for_patient_inclusion is not None:
+        base["plot"]["max_events_for_patient_inclusion"] = app_state.max_events_for_patient_inclusion
+
     base["kerma_meter_correction"] = {
         "enable": app_state.kerma_meter_enable,
         "mode": app_state.kerma_meter_mode,
@@ -105,4 +121,12 @@ def build_settings(
     base["plot"]["notebook_mode"] = False
     base["plot"]["colorscale"] = app_state.colorscale
 
-    return PyskindoseSettings(settings=base, output_format=output_format)
+    normalization_arg = None
+    if app_state.normalization_profiles is not None:
+        from guiskindose.settings.normalization_settings import NormalizationSettings
+
+        # Wrap first: the PyskindoseSettings kwarg takes
+        # Path | str | dict | NormalizationSettings | None, not a bare list.
+        normalization_arg = NormalizationSettings(app_state.normalization_profiles)
+
+    return PyskindoseSettings(settings=base, normalization_settings=normalization_arg, output_format=output_format)

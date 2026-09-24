@@ -106,6 +106,19 @@ class AppState:
     dark_mode: bool = True
     colorscale: str = "jet"
 
+    # ── Imported run-state homes (settings export/import) ────────────────
+    # Restorable configuration with no GUI widget. None = example-JSON
+    # default (builder leaves the default in place); non-None values are
+    # wired through build_settings() and read back by the run-state
+    # serializer, so an imported non-default survives re-export.
+    normalization_profiles: list[dict] | None = None
+    dosetrack_plane_code_map: dict | None = None
+    include_static_pose: bool | None = None
+    angular_step_deg: float | None = None
+    corrections_db_path: str | None = None
+    phantom_dimensions: dict | None = None
+    max_events_for_patient_inclusion: int | None = None
+
     # ── Calculation results ────────────────────────────────────────────────
     output: dict[str, Any] | None = None
     calculation_done: bool = False

@@ -21,6 +21,7 @@ from guiskindose.gui.run_state import (
     serialize_run_state,
     validate_run_state_document,
 )
+from guiskindose.gui.settings_builder import build_settings
 from guiskindose.gui.state import AppState
 from guiskindose.settings.kerma_meter_correction_settings import (
     KermaMeterCorrectionSettings,
@@ -712,3 +713,83 @@ def test_export_import_export_round_trip_identity():
         passthrough=result.passthrough,
     )
     assert second == first
+
+
+# --- Phase 3 chunk D: AppState homes + build_settings wiring ---
+
+
+def test_builder_homes_default_to_example_values():
+    built = build_settings(AppState()).to_settings_dict()
+    example = load_settings_example_json()
+
+    assert built["include_static_pose"] == example["include_static_pose"] is True
+    assert built["angular_step_deg"] == example["angular_step_deg"] == 1.0
+    assert built["dosetrack_plane_code_map"] is None
+    assert built["corrections_db_path"] == example["corrections_db_path"]
+    assert built["phantom"]["dimension"] == example["phantom"]["dimension"]
+    assert built["plot"]["max_events_for_patient_inclusion"] == example["plot"]["max_events_for_patient_inclusion"]
+    assert AppState().normalization_profiles is None
+
+
+def test_builder_default_normalization_matches_file_profiles():
+    built = build_settings(AppState())
+
+    assert built.normalization_settings.to_profile_list() == _default_profiles()
+
+
+def test_builder_wires_scalar_and_map_homes():
+    state = AppState()
+    state.include_static_pose = False
+    state.angular_step_deg = 2.0
+    state.dosetrack_plane_code_map = {"1": "Single Plane"}
+    state.corrections_db_path = "custom.db"
+    state.max_events_for_patient_inclusion = 5
+
+    built = build_settings(state)
+    serialized = built.to_settings_dict()
+
+    assert serialized["include_static_pose"] is False
+    assert serialized["angular_step_deg"] == 2.0
+    assert built.dosetrack_plane_code_map == {1: "Single Plane"}
+    assert serialized["dosetrack_plane_code_map"] == {"1": "Single Plane"}
+    assert serialized["corrections_db_path"] == "custom.db"
+    assert serialized["plot"]["max_events_for_patient_inclusion"] == 5
+    # Idempotent through reconstruction.
+    assert PyskindoseSettings(settings=serialized).to_settings_dict() == serialized
+
+
+def test_builder_dimensions_home_overlays_without_replacing():
+    state = AppState()
+    state.phantom_dimensions = {"cylinder_length": 999.0}
+    example_dims = load_settings_example_json()["phantom"]["dimension"]
+
+    dims = build_settings(state).to_settings_dict()["phantom"]["dimension"]
+
+    assert dims["cylinder_length"] == 999.0
+    assert {k: v for k, v in dims.items() if k != "cylinder_length"} == {
+        k: v for k, v in example_dims.items() if k != "cylinder_length"
+    }
+
+
+def test_builder_normalization_home_replaces_default_profiles():
+    state = AppState()
+    state.normalization_profiles = [dict(_default_profiles()[0], manufacturer="Custom")]
+
+    built = build_settings(state)
+
+    assert built.normalization_settings.to_profile_list() == state.normalization_profiles
+    assert built.normalization_settings.to_profile_list() != _default_profiles()
+
+
+def test_serializer_reads_homes_through_built_settings():
+    state = AppState()
+    state.phantom_dimensions = {"cylinder_length": 999.0}
+    state.corrections_db_path = "custom.db"
+    built = build_settings(state)
+
+    redacted = serialize_run_state(built, state)
+    assert redacted["settings"]["phantom"]["dimension"]["cylinder_length"] == 999.0
+    assert redacted["settings"]["corrections_db_path"] is None  # still gated
+
+    identified = serialize_run_state(built, state, include_identifiers=True)
+    assert identified["settings"]["corrections_db_path"] == "custom.db"
