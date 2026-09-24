@@ -64,18 +64,12 @@ _KERMA_SETTING_TO_STATE = (
     ("prompt_at_calc", "kerma_meter_prompt_at_calc"),
 )
 
-# Import-settable homes with no GUI widget (Phase 3 adds these AppState
-# fields; setattr works before and after). None = example-JSON default.
-# `phantom_dimensions` is a full dimension dict; `max_events...` a scalar.
-_STATE_HOME_KEYS = (
-    "normalization_profiles",
-    "dosetrack_plane_code_map",
-    "include_static_pose",
-    "angular_step_deg",
-    "corrections_db_path",
-    "phantom_dimensions",
-    "max_events_for_patient_inclusion",
-)
+# Import-settable homes with no GUI widget: `normalization_profiles`,
+# `dosetrack_plane_code_map`, `include_static_pose`, `angular_step_deg`,
+# `corrections_db_path`, `phantom_dimensions` (full dimension dict),
+# `max_events_for_patient_inclusion` (scalar). None = example-JSON default.
+# (Kept as a comment, not a tuple: the homes are written explicitly in
+# `_apply_settings_slice`, so a central list would be dead inventory.)
 
 _PLOT_SETTING_TO_STATE = (
     ("dark_mode", "dark_mode"),
@@ -476,6 +470,10 @@ def _apply_exam(exam: dict, meta: dict, index: int, warnings: list[str]) -> bool
 
 def _sync_single_exam_couplings(app_state: AppState) -> None:
     """Mirror global toggles/offsets into meta[0] for single-exam sessions.
+
+    The single-exam test is `len(loaded_exam_meta) == 1`, which coincides with
+    `not is_multi_exam` by the documented invariant that `loaded_exam_meta`
+    is parallel to `loaded_exams` (multi-exam means >1 loaded).
 
     Same direction as `offset_handlers.sync_global_patient_offset_to_single_exam_meta`
     (offsets) and the `import_preview` toggle behavior: single-exam
