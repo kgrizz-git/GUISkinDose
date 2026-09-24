@@ -19,7 +19,7 @@ from nicegui import run, ui
 
 from guiskindose.gui.run_state import RunStateError, apply_run_state, serialize_run_state
 from guiskindose.gui.settings_builder import build_settings
-from guiskindose.privacy import safe_error_event
+from guiskindose.privacy import safe_error_event, safe_user_error
 
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result
@@ -115,7 +115,7 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
         result = apply_run_state(document, state)
     except RunStateError as exc:
         safe_error_event(logger, "run_config_apply", exc)
-        ui.notify(f"Cannot apply run configuration: {exc}", type="negative", timeout=8000)
+        ui.notify(safe_user_error("run_config_apply"), type="negative", timeout=8000)
         return
     _notify_warnings(result.warnings)
     if result.mode != "calculate_dose":
@@ -184,4 +184,5 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
         # to the rebuild, so fail with a notification, not a traceback.
         apply_run_state(document, state)
     except RunStateError as exc:
-        ui.notify(f"Re-parse changed the exam set ({exc}). Per-exam offsets could not be restored.", type="negative")
+        safe_error_event(logger, "run_config_reapply", exc)
+        ui.notify("Re-parse changed the exam set. Per-exam offsets could not be restored.", type="negative")
