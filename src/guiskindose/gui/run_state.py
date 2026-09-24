@@ -272,12 +272,18 @@ class RunStateError(ValueError):
 
     Carries a stable machine-readable `code` so callers can map failures to
     fixed user-facing messages without exposing document text (privacy).
-    Unknown situations use "malformed_document".
+    Every raise site passes an explicit code; structural problems use
+    "malformed_document" via `_malformed()`.
     """
 
     def __init__(self, message: str, code: str = "malformed_document") -> None:
         super().__init__(message)
         self.code = code
+
+
+def _malformed(message: str) -> RunStateError:
+    """Build a structural-validation error with its code stated explicitly."""
+    return RunStateError(message, code="malformed_document")
 
 
 @dataclass
@@ -297,7 +303,7 @@ def _require_section(document: dict, key: str) -> dict:
     if value is None:
         return {}
     if not isinstance(value, dict):
-        raise RunStateError(f"{key} must be a mapping, got {type(value).__name__}")
+        raise _malformed(f"{key} must be a mapping, got {type(value).__name__}")
     return value
 
 
@@ -312,7 +318,7 @@ def validate_run_state_document(document: Any) -> None:
     with the session untouched instead of `AttributeError` mid-apply.
     """
     if not isinstance(document, dict):
-        raise RunStateError(f"run-state document must be a mapping, got {type(document).__name__}")
+        raise _malformed(f"run-state document must be a mapping, got {type(document).__name__}")
     if document.get("schema") != RUN_STATE_SCHEMA:
         raise RunStateError(f"unsupported run-state schema {document.get('schema')!r}", code="unsupported_schema")
     version = document.get("schema_version")
@@ -326,34 +332,34 @@ def validate_run_state_document(document: Any) -> None:
     settings = _require_section(document, "settings")
     for key in ("phantom", "plot", "kerma_meter_correction"):
         if settings.get(key) is not None and not isinstance(settings[key], dict):
-            raise RunStateError(f"settings.{key} must be a mapping, got {type(settings[key]).__name__}")
+            raise _malformed(f"settings.{key} must be a mapping, got {type(settings[key]).__name__}")
     phantom = settings.get("phantom") or {}
     for key in ("patient_offset", "dimension"):
         if phantom.get(key) is not None and not isinstance(phantom[key], dict):
-            raise RunStateError(f"settings.phantom.{key} must be a mapping, got {type(phantom[key]).__name__}")
+            raise _malformed(f"settings.phantom.{key} must be a mapping, got {type(phantom[key]).__name__}")
     gui = _require_section(document, "gui_state")
     exams = gui.get("exams")
     if exams is not None:
         if not isinstance(exams, list):
-            raise RunStateError(f"gui_state.exams must be a list, got {type(exams).__name__}")
+            raise _malformed(f"gui_state.exams must be a list, got {type(exams).__name__}")
         for index, exam in enumerate(exams):
             if not isinstance(exam, dict):
-                raise RunStateError(f"gui_state.exams[{index}] must be a mapping, got {type(exam).__name__}")
+                raise _malformed(f"gui_state.exams[{index}] must be a mapping, got {type(exam).__name__}")
     profiles = document.get("normalization_settings")
     if profiles is not None:
         if not isinstance(profiles, list):
-            raise RunStateError(f"normalization_settings must be a list, got {type(profiles).__name__}")
+            raise _malformed(f"normalization_settings must be a list, got {type(profiles).__name__}")
         for index, profile in enumerate(profiles):
             if not isinstance(profile, dict):
-                raise RunStateError(f"normalization_settings[{index}] must be a mapping, got {type(profile).__name__}")
+                raise _malformed(f"normalization_settings[{index}] must be a mapping, got {type(profile).__name__}")
     table = gui.get("kerma_meter_in_memory_table")
     if table is not None:
         if not isinstance(table, dict) or any(not isinstance(tubes, dict) for tubes in table.values()):
-            raise RunStateError("kerma_meter_in_memory_table must be a mapping of mappings")
+            raise _malformed("kerma_meter_in_memory_table must be a mapping of mappings")
         for equipment, tubes in table.items():
             for tube, factor in tubes.items():
                 if isinstance(factor, bool) or not isinstance(factor, (int, float)):
-                    raise RunStateError(f"kerma_meter_in_memory_table[{equipment!r}][{tube!r}] must be a number")
+                    raise _malformed(f"kerma_meter_in_memory_table[{equipment!r}][{tube!r}] must be a number")
 
 
 def _display_basename(value: Any) -> str | None:
@@ -395,11 +401,13 @@ def _unnest_in_memory_table(nested: Any) -> dict[tuple[str, str], float] | None:
     if nested is None:
         return None
     if not isinstance(nested, dict):
-        raise RunStateError(f"kerma_meter_in_memory_table must be a mapping, got {type(nested).__name__}")
+        raise _malformed(f"kerma_meter_in_memory_table must be a mapping, got {type(nested).__name__}")
     try:
         return {(equipment, tube): factor for equipment, tubes in nested.items() for tube, factor in tubes.items()}
     except (AttributeError, TypeError, ValueError) as exc:
-        raise RunStateError(f"malformed kerma_meter_in_memory_table: {exc}") from exc
+        # Static message: {exc} may carry document-derived text; the chain
+        # (`from exc`) preserves detail for debugging without surfacing it.
+        raise _malformed("malformed kerma_meter_in_memory_table entries") from exc
 
 
 def _warn_file_mismatch(warnings: list[str], what: str, expected: str, live: str | None) -> None:
