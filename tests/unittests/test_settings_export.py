@@ -367,6 +367,24 @@ def test_serializer_integer_sheet_indices_survive_redacted_exports():
     assert document["gui_state"]["exams"][0]["sheet"] == 0  # falsy-but-valid index kept
 
 
+def test_serializer_basename_never_leaks_windows_paths():
+    state = AppState()
+    state.loaded_exam_meta = [
+        {"file_path": "C:\\fakepath\\export.xlsx"},
+        {"file_path": "C:\\"},
+        {"file_path": "/"},
+    ]
+
+    document = serialize_run_state(_example_settings(), state, include_identifiers=True)
+    exams = document["gui_state"]["exams"]
+
+    # Backslash separators normalize on any host OS: no absolute path leaks.
+    assert exams[0]["file_path"] == "export.xlsx"
+    # Bare roots have no basename: None, not "".
+    assert exams[1]["file_path"] is None
+    assert exams[2]["file_path"] is None
+
+
 def test_serializer_applies_plot_dosemap_overlay():
     state = AppState()
     state.plot_dosemap = True

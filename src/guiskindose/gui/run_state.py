@@ -8,7 +8,6 @@ module too (added in chunk C); the GUI surface wiring is Phase 3.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from guiskindose.privacy import opaque_exam_label
@@ -47,6 +46,9 @@ def _basename_or_none(value: Any, include_identifiers: bool) -> Any:
 
     Returns ``None`` for ``None``/empty input, and ``None`` (redacted) for
     real paths unless identifiers are included — never an absolute path.
+    Windows separators are normalized first so basenames extract correctly on
+    any host OS (POSIX ``Path`` treats backslash as a regular character,
+    which would otherwise leak full ``C:\\...`` paths through).
     """
     if value is None:
         return None
@@ -55,7 +57,8 @@ def _basename_or_none(value: Any, include_identifiers: bool) -> Any:
         return None
     if not include_identifiers:
         return None
-    return Path(text).name
+    basename = text.replace("\\", "/").split("/")[-1]
+    return basename or None
 
 
 def _nest_in_memory_table(
