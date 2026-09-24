@@ -60,6 +60,13 @@ def test_angular_step_deg_rejects_boolean_values():
             _settings_with(angular_step_deg=value)
 
 
+def test_angular_step_deg_rejects_non_numeric_values():
+    # float("5") == 5.0 would silently coerce a string config value.
+    for value in ("5", None):
+        with pytest.raises(ValueError, match="angular_step_deg"):
+            _settings_with(angular_step_deg=value)
+
+
 def test_include_static_pose_defaults_true_when_absent():
     base = load_settings_example_json()
     del base["include_static_pose"]
