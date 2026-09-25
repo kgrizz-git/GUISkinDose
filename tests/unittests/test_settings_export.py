@@ -429,9 +429,10 @@ def test_serializer_nests_in_memory_table():
     assert identified["gui_state"]["kerma_meter_in_memory_table"] == {"Acme": {"TubeA": 1.02}}
 
     # Equipment/tube keys resolve to serials and station names: redacted
-    # exports must not carry them.
+    # exports omit the key entirely (not null) so importing one leaves the
+    # live table untouched instead of clearing it.
     redacted = serialize_run_state(_example_settings(), _populated_state())
-    assert redacted["gui_state"]["kerma_meter_in_memory_table"] is None
+    assert "kerma_meter_in_memory_table" not in redacted["gui_state"]
 
     empty = serialize_run_state(_example_settings(), AppState(), include_identifiers=True)
     assert empty["gui_state"]["kerma_meter_in_memory_table"] is None
@@ -869,6 +870,17 @@ def test_applier_unnests_in_memory_table_and_clears_on_null():
     document["gui_state"]["kerma_meter_in_memory_table"] = None
     apply_run_state(document, state)
     assert state.kerma_meter_in_memory_table is None
+
+
+def test_applier_redacted_document_leaves_live_table_alone():
+    redacted = serialize_run_state(_example_settings(), _populated_state())
+    assert "kerma_meter_in_memory_table" not in redacted["gui_state"]
+    state = _session_with_same_inputs_loaded()
+    state.kerma_meter_in_memory_table = {("Live", "Tube"): 1.05}
+
+    apply_run_state(redacted, state)
+
+    assert state.kerma_meter_in_memory_table == {("Live", "Tube"): 1.05}
 
 
 def test_applier_single_exam_dual_write_syncs_globals_to_meta():

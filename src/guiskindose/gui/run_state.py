@@ -183,8 +183,10 @@ def _serialize_settings(
     `PyskindoseSettings.to_settings_dict()` plus the AppState-override
     overlay (today only ``plot.plot_dosemap``). ``rdsr_filename`` has no GUI
     source and always exports ``null``. ``corrections_db_path`` and the
-    kerma ``file``/``file_sheet``/``explicit_label`` ride the identifiers
-    gate (paths basename-only; integer sheets exempt).
+    kerma ``file_sheet``/``explicit_label`` ride the identifiers gate
+    (integer sheets exempt); kerma ``file`` is basename-only when included.
+    Exception: ``corrections_db_path`` exports verbatim (never basename-only)
+    so the calculation can resolve it.
     """
     serialized = settings.to_settings_dict()
     serialized["plot"]["plot_dosemap"] = bool(app_state.plot_dosemap)
@@ -259,15 +261,19 @@ def serialize_run_state(
             "swap_lat_lon": bool(app_state.swap_lat_lon),
             "flip_ap1": bool(app_state.flip_ap1),
             "flip_ap2": bool(app_state.flip_ap2),
-            "kerma_meter_in_memory_table": _nest_in_memory_table(
-                app_state.kerma_meter_in_memory_table, include_identifiers
-            ),
             "exams": [
                 _serialize_exam(meta, index, include_identifiers)
                 for index, meta in enumerate(app_state.loaded_exam_meta)
             ],
         },
     }
+    # The CF override table keys are equipment identifiers: omit the key
+    # entirely from redacted exports (rather than null) so importing one
+    # leaves the live table untouched instead of clearing it.
+    if include_identifiers:
+        document["gui_state"]["kerma_meter_in_memory_table"] = _nest_in_memory_table(
+            app_state.kerma_meter_in_memory_table, include_identifiers
+        )
     if passthrough and include_identifiers:
         for key, value in passthrough.items():
             document.setdefault(key, value)
@@ -354,7 +360,6 @@ _SNAPSHOT_ATTRS = (
     # (all are scalars or rebind-only; the failed load's own warnings stay).
     "is_multi_exam",
     "file_name",
-    "import_provenance",
     "import_warnings",
     "manufacturer",
     "model",
