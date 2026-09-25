@@ -131,10 +131,14 @@ def _basename_or_none(value: Any, include_identifiers: bool) -> Any:
 
 
 def _nest_in_memory_table(
-    table: dict[tuple[str, str], float] | None,
+    table: dict[tuple[str, str], float] | None, include_identifiers: bool
 ) -> dict[str, dict[str, float]] | None:
-    """Serialize the session CF override table to nested JSON form."""
-    if table is None:
+    """Serialize the session CF override table to nested JSON form.
+
+    Equipment/tube keys resolve to serials and station names, so they are
+    identifiers: redacted exports emit `None` (like every other gated field).
+    """
+    if table is None or not include_identifiers:
         return None
     nested: dict[str, dict[str, float]] = {}
     for (equipment, tube), factor in table.items():
@@ -255,7 +259,9 @@ def serialize_run_state(
             "swap_lat_lon": bool(app_state.swap_lat_lon),
             "flip_ap1": bool(app_state.flip_ap1),
             "flip_ap2": bool(app_state.flip_ap2),
-            "kerma_meter_in_memory_table": _nest_in_memory_table(app_state.kerma_meter_in_memory_table),
+            "kerma_meter_in_memory_table": _nest_in_memory_table(
+                app_state.kerma_meter_in_memory_table, include_identifiers
+            ),
             "exams": [
                 _serialize_exam(meta, index, include_identifiers)
                 for index, meta in enumerate(app_state.loaded_exam_meta)
@@ -343,6 +349,33 @@ _SNAPSHOT_ATTRS = (
     "swap_lat_lon",
     "flip_ap1",
     "flip_ap2",
+    # Loader-rebound display state: a successful re-parse overwrites these
+    # even when the follow-up apply then fails, so rollback restores them too
+    # (all are scalars or rebind-only; the failed load's own warnings stay).
+    "is_multi_exam",
+    "file_name",
+    "import_provenance",
+    "import_warnings",
+    "manufacturer",
+    "model",
+    "input_manufacturer",
+    "input_model",
+    "normalization_method",
+    "normalization_warnings",
+    "table_offset_x",
+    "table_offset_y",
+    "table_offset_z",
+    "import_has_errors",
+)
+
+# Reference-snapshotted (never deep-copied): the applier never touches these
+# and the loader only ever rebinds them, so saving the reference is exact and
+# free. `loaded_exams` gets a shallow list copy because the loader appends to
+# (rather than rebinds after) the drop on some paths.
+_SNAPSHOT_REF_ATTRS = (
+    "rdsr_df",
+    "rdsr_raw_df",
+    "import_provenance",
 )
 
 
@@ -352,20 +385,23 @@ def snapshot_app_state(app_state: AppState) -> dict[str, Any]:
     Homes and tables are deep-copied (the applier rebinds them, but a later
     caller could mutate through); scalars are immutable. `loaded_exam_meta`
     entries are mutated in place by the applier, so they are deep-copied too.
-    `loaded_exams` / `rdsr_df` / `rdsr_raw_df` are snapshotted by reference:
-    the applier never touches them, and the loader only ever rebinds (never
-    mutates in place), so restoring the saved references is exact and free —
-    no DataFrame is ever copied. All other runtime objects (figures,
-    `import_provenance`, warnings) are loader-owned and intentionally
-    excluded.
+    `loaded_exams` is shallow-copied and `rdsr_df` / `rdsr_raw_df` /
+    `import_provenance` are snapshotted by reference: the applier never
+    touches them, and the loader only ever rebinds (never mutates in place),
+    so restoring the saved references is exact and free — no DataFrame is
+    ever copied. Loader-rebound display fields (exam-count
+    flag, provenance, warnings, scanner labels) are included as scalars or
+    rebind-only references, because a successful re-parse overwrites them
+    before a follow-up apply can fail. Figures stay excluded (untouched by
+    either path).
     """
     import copy
 
     snapshot = {attr: copy.deepcopy(getattr(app_state, attr)) for attr in _SNAPSHOT_ATTRS}
     snapshot["loaded_exam_meta"] = copy.deepcopy(app_state.loaded_exam_meta)
     snapshot["loaded_exams"] = list(app_state.loaded_exams)
-    snapshot["rdsr_df"] = app_state.rdsr_df
-    snapshot["rdsr_raw_df"] = app_state.rdsr_raw_df
+    for attr in _SNAPSHOT_REF_ATTRS:
+        snapshot[attr] = getattr(app_state, attr)
     return snapshot
 
 
@@ -377,8 +413,8 @@ def restore_app_state_snapshot(app_state: AppState, snapshot: dict[str, Any]) ->
         setattr(app_state, attr, copy.deepcopy(snapshot[attr]))
     app_state.loaded_exam_meta = copy.deepcopy(snapshot["loaded_exam_meta"])
     app_state.loaded_exams = list(snapshot["loaded_exams"])
-    app_state.rdsr_df = snapshot["rdsr_df"]
-    app_state.rdsr_raw_df = snapshot["rdsr_raw_df"]
+    for attr in _SNAPSHOT_REF_ATTRS:
+        setattr(app_state, attr, snapshot[attr])
 
 
 def _require_section(document: dict, key: str) -> dict:
@@ -609,11 +645,33 @@ def _trial_apply_settings(settings: dict, profiles: Any, app_state: AppState) ->
     """
     import copy
 
+    from guiskindose.constants import (
+        KEY_NORMALIZATION_DETECTOR_SIDE_LENGTH,
+        KEY_NORMALIZATION_FIELD_SIZE_MODE,
+        KEY_NORMALIZATION_MANUFACTURER,
+        KEY_NORMALIZATION_MODELS,
+    )
     from guiskindose.gui.settings_builder import build_settings
 
     trial = copy.copy(app_state)
     _apply_settings_slice(settings, trial, [])
     if profiles:
+        # The constructor stores the list verbatim, so required keys are
+        # checked here — otherwise a keyless profile would import cleanly and
+        # raise KeyError inside update_used_settings at the next file load.
+        required = (
+            KEY_NORMALIZATION_MANUFACTURER,
+            KEY_NORMALIZATION_MODELS,
+            KEY_NORMALIZATION_FIELD_SIZE_MODE,
+            KEY_NORMALIZATION_DETECTOR_SIDE_LENGTH,
+        )
+        for index, profile in enumerate(profiles):
+            missing = [key for key in required if key not in profile]
+            if missing:
+                raise RunStateError(
+                    f"normalization_settings[{index}] missing required keys: {', '.join(missing)}",
+                    code="invalid_settings",
+                )
         trial.normalization_profiles = profiles
     try:
         build_settings(trial)

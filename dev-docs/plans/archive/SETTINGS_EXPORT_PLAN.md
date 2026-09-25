@@ -167,7 +167,9 @@ serializes the runtime `dict[tuple[str, str], float]` as a nested
 - `gui_state.kerma_meter_in_memory_table` serializes session CF overrides
   (`AppState.kerma_meter_in_memory_table`, applied at calc time and omitted by
   `KermaMeterCorrectionSettings.to_dict()`): nested
-  `{"equipment": {"tube": factor}}` JSON form.
+  `{"equipment": {"tube": factor}}` JSON form. Equipment/tube keys resolve to
+  device serials and station names, so the table rides the
+  include-identifiers gate (`null` in redacted exports).
 - `schema_version` is a **single integer** (the example shows `1`): documents
   whose `schema_version` is **greater than the supported integer are rejected**
   with a clear error; **equal** versions are accepted, unknown keys are ignored

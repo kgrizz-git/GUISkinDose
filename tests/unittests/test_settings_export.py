@@ -425,10 +425,15 @@ def test_serializer_applies_plot_dosemap_overlay():
 
 
 def test_serializer_nests_in_memory_table():
-    redacted = serialize_run_state(_example_settings(), _populated_state())
-    assert redacted["gui_state"]["kerma_meter_in_memory_table"] == {"Acme": {"TubeA": 1.02}}
+    identified = serialize_run_state(_example_settings(), _populated_state(), include_identifiers=True)
+    assert identified["gui_state"]["kerma_meter_in_memory_table"] == {"Acme": {"TubeA": 1.02}}
 
-    empty = serialize_run_state(_example_settings(), AppState())
+    # Equipment/tube keys resolve to serials and station names: redacted
+    # exports must not carry them.
+    redacted = serialize_run_state(_example_settings(), _populated_state())
+    assert redacted["gui_state"]["kerma_meter_in_memory_table"] is None
+
+    empty = serialize_run_state(_example_settings(), AppState(), include_identifiers=True)
     assert empty["gui_state"]["kerma_meter_in_memory_table"] is None
 
 
@@ -614,6 +619,19 @@ def test_applier_empty_normalization_list_keeps_current_profiles():
 
     assert getattr(state, "normalization_profiles", None) is None
     assert any("empty normalization_settings ignored" in w for w in result.warnings)
+
+
+def test_applier_rejects_keyless_profiles_before_mutating():
+    document = _identified_document()
+    document["normalization_settings"] = [{"manufacturer": "Acme"}]
+    state = _session_with_same_inputs_loaded()
+
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, state)
+
+    assert exc_info.value.code == "invalid_settings"
+    assert state.input_schema == "auto"
+    assert getattr(state, "normalization_profiles", None) is None
 
 
 def test_builder_empty_normalization_home_falls_back_to_defaults():

@@ -148,11 +148,16 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
         ui.notify(
             _IMPORT_ERROR_MESSAGES.get(exc.code, safe_user_error("run_config_apply")), type="negative", timeout=8000
         )
-        ctx.refresh_event_table()
-        ctx.refresh_exams_table()
-        ctx.refresh_import_preview()
-        ctx.refresh_per_exam()
-        ctx.refresh_geometry_tab()
+        _refresh_all(ctx)
+        return
+    except Exception as exc:
+        # Post-validation apply is structured to be infallible, but a snapshot
+        # was taken and never restored on this path — close the hole rather
+        # than leave half-applied state behind an unhandled traceback.
+        restore_app_state_snapshot(state, snapshot)
+        safe_error_event(logger, "run_config_apply_unexpected", exc)
+        ui.notify(safe_user_error("run_config_apply"), type="negative", timeout=8000)
+        _refresh_all(ctx)
         return
     _notify_warnings(result.warnings)
     if result.mode != "calculate_dose":
@@ -169,20 +174,21 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
         # restored state (whose pre-import results stay valid, so no reset);
         # the failure itself was already notified.
         restore_app_state_snapshot(state, snapshot)
-        ctx.refresh_event_table()
-        ctx.refresh_exams_table()
-        ctx.refresh_import_preview()
-        ctx.refresh_per_exam()
-        ctx.refresh_geometry_tab()
+        _refresh_all(ctx)
         return
     reset_results()
+    _refresh_all(ctx)
+    status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
+    ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
+
+
+def _refresh_all(ctx: PageContext) -> None:
+    """Repaint every tab bound to run state after an import or a rollback."""
     ctx.refresh_event_table()
     ctx.refresh_exams_table()
     ctx.refresh_import_preview()
     ctx.refresh_per_exam()
     ctx.refresh_geometry_tab()
-    status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
-    ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
 
 
 def _notify_warnings(warnings: list[str]) -> None:

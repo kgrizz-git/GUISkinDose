@@ -289,6 +289,25 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
 
 
 @pytest.mark.asyncio
+async def test_import_unexpected_error_restores_and_notifies(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-RunStateError during apply still rolls back with a generic notify."""
+    await user.open("/")
+    _seed_single_exam()
+
+    def _boom(document: dict, app_state: AppState) -> None:
+        app_state.input_schema = "mutated"
+        raise RuntimeError("simulated unexpected failure")
+
+    monkeypatch.setattr(run_config_mod, "apply_run_state", _boom)
+    with _client(user):
+        status = ui.label("")
+    await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
+    assert state.input_schema == "auto"
+    assert user.notify.contains("Operation failed")
+    assert not user.notify.contains("Run configuration loaded")
+
+
+@pytest.mark.asyncio
 async def test_import_second_apply_failure_restores_original_exams(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
     """A re-parse that changes the exam count rolls back exams with the state."""
     await user.open("/")
@@ -300,7 +319,11 @@ async def test_import_second_apply_failure_restores_original_exams(user: User, m
         # Successful re-parse yielding a different exam count: the guarded
         # second apply raises, so rollback must restore the original exams
         # alongside the scalars (next calc must see old exams + old state).
+        # The fake also flips loader-owned display state, as a real re-parse
+        # would, to prove rollback covers it too.
         app_state.loaded_exams = [object(), object()]
+        app_state.is_multi_exam = True
+        app_state.import_provenance = SimpleNamespace(schema_name="dosetrack")
         app_state.loaded_exam_meta = [{}, {}]
         return True, "ok"
 
@@ -315,6 +338,8 @@ async def test_import_second_apply_failure_restores_original_exams(user: User, m
     assert state.loaded_exams == original_exams
     assert len(state.loaded_exam_meta) == 1
     assert state.input_schema == "auto"
+    assert state.is_multi_exam is False
+    assert state.import_provenance is None
 
 
 @pytest.mark.asyncio
