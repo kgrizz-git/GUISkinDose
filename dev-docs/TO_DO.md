@@ -19,14 +19,10 @@ be archived.
 
 ## Next Up
 
-- [ ] **GUI network-exposure hardening** — See "GUI network-exposure hardening" in
-  the GUI/UX backlog section.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
   roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
-- [ ] **Rotational-acquisition handling** — See "Review rotational-acquisition
-  handling" in the Product Backlog (Input Data And Calculation) section.
 
 ## Active Work
 
@@ -61,7 +57,7 @@ be archived.
 - [ ] **Run examples in JupyterLab and compare** — confirm notebook examples remain useful and current.
 - [ ] **Anode-angle awareness in HVL lookup** — add device-model anode-angle mapping, angle-aware lookup, and
   nearest-angle warnings; see [hvl-interpolation-and-below-floor-kvp.md](plans/archive/hvl-interpolation-and-below-floor-kvp.md).
-- [ ] **Rotational-acquisition handling (see Next Up)** — initial envelope implementation complete
+- [ ] **Rotational-acquisition handling** — initial envelope implementation complete
   (classifier, normalizer contract, dose loop, prompt, exports, badge); source of truth:
   [coverage-envelope plan](plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md), with the historical/current-code
   [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Remaining: per-event override UI,
