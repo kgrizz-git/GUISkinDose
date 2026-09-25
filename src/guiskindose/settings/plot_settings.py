@@ -3,7 +3,10 @@
 Controls notebook mode, dark mode, interactivity, and procedure plot
 behaviour.
 """
+from guiskindose.constants import DOSEMAP_COLORSCALE, DOSEMAP_COLORSCALE_KEY
 from guiskindose.helpers.create_attributes_string import create_attributes_string
+
+DEFAULT_COLORSCALE = DOSEMAP_COLORSCALE
 
 
 class Plotsettings:
@@ -32,6 +35,9 @@ class Plotsettings:
     plot_event_index : int
         Index for the event that should be plotted when mode="plot_event" is
         chosen.
+    colorscale : str
+        Plotly colorscale name for dose maps (e.g. "jet"). Bound in the GUI;
+        defaults to "jet" to match `AppState.colorscale`.
 
     """
 
@@ -50,12 +56,31 @@ class Plotsettings:
         self.plot_dosemap = plt_dict.get("plot_dosemap", True)
         self.max_events_for_patient_inclusion = plt_dict.get("max_events_for_patient_inclusion", 10)
         self.plot_event_index = plt_dict.get("plot_event_index", 0)
+        self.colorscale = plt_dict.get(DOSEMAP_COLORSCALE_KEY, DEFAULT_COLORSCALE)
 
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="plot", indent_level=0)
 
     def update_attrs_str(self):
         """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="plot", indent_level=0)
+
+    def to_dict(self):
+        """Return plot settings as a dict round-trippable through the constructor.
+
+        Returns
+        -------
+        dict
+            Keys mirror the constructor input, including `colorscale`.
+        """
+        return {
+            "interactivity": self.interactivity,
+            "dark_mode": self.dark_mode,
+            "notebook_mode": self.notebook_mode,
+            "plot_dosemap": self.plot_dosemap,
+            "max_events_for_patient_inclusion": self.max_events_for_patient_inclusion,
+            "plot_event_index": self.plot_event_index,
+            DOSEMAP_COLORSCALE_KEY: self.colorscale,
+        }
 
     def to_printable_string(self, color: str = "blue"):
         """Render plot settings as a Rich-formatted string.

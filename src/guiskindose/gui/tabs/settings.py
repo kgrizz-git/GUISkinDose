@@ -36,6 +36,7 @@ from ..state import reset_results, state
 from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..ui_copy import copy_text
 from ._per_exam import build_per_exam_section
+from ._run_config import build_run_config_card
 
 # Shared Quasar/Tailwind row class for Settings section headers (python:S1192).
 _SETTINGS_HEADER_ROW_CLASSES = "w-full items-center justify-between"
@@ -88,6 +89,8 @@ def build(ctx: PageContext) -> None:
 
     with ui.tab_panel("settings"), ui.column().classes("max-w-4xl mx-auto w-full gap-6"):
         ui.label("Calculation Settings").classes("text-2xl font-bold tracking-tight")
+
+        build_run_config_card(ctx)
 
         _build_phantom_section(ctx, _on_phantom_pose_change)
 

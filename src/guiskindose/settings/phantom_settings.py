@@ -75,6 +75,27 @@ class PhantomSettings:
         """Refresh the cached attribute summary string."""
         self.attrs_str = create_attributes_string(attrs_parent=self, object_name="phantom", indent_level=0)
 
+    def to_dict(self):
+        """Return phantom settings as a dict round-trippable through the constructor.
+
+        Returns
+        -------
+        dict
+            Keys mirror the constructor input; the `dimension` block composes
+            `PhantomDimensions.to_dict_pad()` (full key set the constructor
+            requires).
+        """
+        return {
+            KEY_PARAM_PHANTOM_MODEL: self.model,
+            KEY_PARAM_HUMAN_MESH: self.human_mesh,
+            "scale_lat": self.scale_lat,
+            "scale_ap": self.scale_ap,
+            "scale_lon": self.scale_lon,
+            "patient_orientation": self.patient_orientation,
+            "patient_offset": self.patient_offset.to_dict(),
+            "dimension": self.dimension.to_dict_pad(),
+        }
+
     def to_printable_string(self, color: str = "light_slate_blue"):
         """Render phantom settings as a Rich-formatted string.
 

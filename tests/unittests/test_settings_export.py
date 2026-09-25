@@ -1,0 +1,1096 @@
+"""Phase 1 (chunk 1) — sub-object settings round-trips for export.
+
+Covers `Plotsettings.to_dict()` (including the `colorscale` fix),
+`PhantomSettings.to_dict()`, `PatientOffset.to_dict()`, reuse of the existing
+`KermaMeterCorrectionSettings.to_dict()`, and removal of the dead root
+`plot_event_index` key from `settings_example.json`.
+"""
+
+import json
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from guiskindose import load_settings_example_json
+from guiskindose.gui.run_state import (
+    RUN_STATE_SCHEMA,
+    RUN_STATE_SCHEMA_VERSION,
+    ApplyResult,
+    RunStateError,
+    apply_run_state,
+    restore_app_state_snapshot,
+    serialize_run_state,
+    snapshot_app_state,
+    validate_run_state_document,
+)
+from guiskindose.gui.settings_builder import build_settings
+from guiskindose.gui.state import AppState
+from guiskindose.settings.kerma_meter_correction_settings import (
+    KermaMeterCorrectionSettings,
+)
+from guiskindose.settings.normalization_settings import NormalizationSettings
+from guiskindose.settings.patient_offset import PatientOffset
+from guiskindose.settings.phantom_settings import PhantomSettings
+from guiskindose.settings.plot_settings import Plotsettings
+from guiskindose.settings.pyskindose_settings import PyskindoseSettings
+
+
+def _example_phantom_dict():
+    return load_settings_example_json()["phantom"]
+
+
+def test_plot_to_dict_round_trips_through_constructor():
+    source = load_settings_example_json()["plot"]
+    original = Plotsettings(plt_dict=source)
+
+    # Pin against the source dict: idempotence alone cannot catch a dropped
+    # optional key (both sides would share the same blind spot via defaults).
+    assert original.to_dict() == source
+
+    rebuilt = Plotsettings(plt_dict=original.to_dict())
+
+    assert rebuilt.to_dict() == original.to_dict()
+
+
+def test_plot_colorscale_defaults_to_jet_when_absent():
+    settings = Plotsettings(plt_dict={})
+
+    assert settings.colorscale == "jet"
+    assert settings.to_dict()["colorscale"] == "jet"
+
+
+def test_plot_colorscale_custom_value_survives():
+    settings = Plotsettings(plt_dict={"colorscale": "viridis"})
+
+    rebuilt = Plotsettings(plt_dict=settings.to_dict())
+
+    assert rebuilt.colorscale == "viridis"
+
+
+def test_phantom_to_dict_round_trips_through_constructor():
+    source = _example_phantom_dict()
+    original = PhantomSettings(ptm_dim=source)
+
+    # Pin against the source dict (see plot test: idempotence alone cannot
+    # catch a dropped optional key).
+    assert original.to_dict() == source
+
+    rebuilt = PhantomSettings(ptm_dim=original.to_dict())
+
+    assert rebuilt.to_dict() == original.to_dict()
+
+
+def test_phantom_to_dict_carries_scales_offset_and_full_dimensions():
+    serialized = PhantomSettings(ptm_dim=_example_phantom_dict()).to_dict()
+
+    assert serialized["scale_lat"] == 1.0
+    assert serialized["scale_ap"] == 1.0
+    assert serialized["scale_lon"] == 1.0
+    assert serialized["patient_offset"] == {"d_lat": 0, "d_ver": 0, "d_lon": 0}
+    assert serialized["dimension"] == PhantomSettings(ptm_dim=_example_phantom_dict()).dimension.to_dict_pad()
+
+
+def test_patient_offset_to_dict_round_trips_through_constructor():
+    original = PatientOffset(offset={"d_lat": 1, "d_ver": -2, "d_lon": 3})
+
+    rebuilt = PatientOffset(offset=original.to_dict())
+
+    assert (rebuilt.d_lat, rebuilt.d_ver, rebuilt.d_lon) == (1, -2, 3)
+
+
+def test_kerma_to_dict_round_trips_through_constructor():
+    source = load_settings_example_json().get("kerma_meter_correction", {})
+    original = KermaMeterCorrectionSettings(source)
+
+    # Pin against the source dict (see plot test: idempotence alone cannot
+    # catch a dropped optional key).
+    assert original.to_dict() == source
+
+    rebuilt = KermaMeterCorrectionSettings(original.to_dict())
+
+    assert rebuilt.to_dict() == original.to_dict()
+
+
+def test_example_json_has_no_dead_root_plot_event_index():
+    example = load_settings_example_json()
+
+    assert "plot_event_index" not in example
+    assert example["plot"]["plot_event_index"] == 1
+
+
+def test_example_json_plot_block_carries_colorscale():
+    assert load_settings_example_json()["plot"]["colorscale"] == "jet"
+
+
+def test_example_json_still_parses_as_valid_settings_dict():
+    # The dead-key removal must not break the example as constructor input.
+    raw = json.dumps(load_settings_example_json())
+
+    assert json.loads(raw)["mode"] == "plot_event"
+
+
+# --- Phase 1 chunk 2: top-level PyskindoseSettings round-trip ---
+
+EXPECTED_TOP_LEVEL_KEYS = {
+    "mode",
+    "rdsr_filename",
+    "estimate_k_tab",
+    "k_tab_val",
+    "inherent_filtration",
+    "silence_pydicom_warnings",
+    "remove_invalid_rows",
+    "below_floor_kvp_policy",
+    "below_floor_kvp_manual",
+    "beam_miss_warn",
+    "rotational_handling",
+    "include_static_pose",
+    "angular_step_deg",
+    "corrections_db_path",
+    "phantom",
+    "plot",
+    "kerma_meter_correction",
+    "dosetrack_plane_code_map",
+}
+
+
+def test_top_level_key_inventory_matches_normalized_example_keys():
+    example_keys = set(load_settings_example_json())
+    serialized = PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()
+
+    # The only sanctioned difference: the nullable dosetrack map, absent from
+    # the example file, is always emitted (None when unset).
+    assert set(serialized) == EXPECTED_TOP_LEVEL_KEYS
+    assert example_keys | {"dosetrack_plane_code_map"} == EXPECTED_TOP_LEVEL_KEYS
+
+
+def test_to_settings_dict_excludes_runtime_only_state():
+    serialized = PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()
+
+    for key in ("output_format", "file_result_output_path", "normalization_settings", "in_memory_table"):
+        assert key not in serialized
+    assert "in_memory_table" not in serialized["kerma_meter_correction"]
+
+
+def test_top_level_to_settings_dict_matches_example_values():
+    example = load_settings_example_json()
+    serialized = PyskindoseSettings(settings=example).to_settings_dict()
+
+    expected = dict(example)
+    expected.setdefault("dosetrack_plane_code_map", None)
+    assert serialized == expected
+
+
+def test_top_level_idempotence_through_reconstruction():
+    first = PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()
+
+    second = PyskindoseSettings(settings=first).to_settings_dict()
+
+    assert second == first
+
+
+def test_to_json_parses_back_to_settings_dict():
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+
+    assert json.loads(settings.to_json()) == settings.to_settings_dict()
+
+
+def test_dosetrack_plane_code_map_round_trips_on_api_path():
+    base = load_settings_example_json()
+    base["dosetrack_plane_code_map"] = {"1": "Single Plane", "2": "Plane A"}
+    settings = PyskindoseSettings(settings=base)
+
+    serialized = settings.to_settings_dict()
+
+    assert serialized["dosetrack_plane_code_map"] == {"1": "Single Plane", "2": "Plane A"}
+    rebuilt = PyskindoseSettings(settings=serialized)
+    assert rebuilt.dosetrack_plane_code_map == {1: "Single Plane", 2: "Plane A"}
+    assert rebuilt.to_settings_dict() == serialized
+
+
+def test_settings_slice_accepted_as_constructor_input():
+    # Simulates `--settings` receiving an extracted document["settings"] slice.
+    document = {"settings": PyskindoseSettings(settings=load_settings_example_json()).to_settings_dict()}
+
+    settings = PyskindoseSettings(settings=document["settings"])
+
+    assert settings.to_settings_dict() == document["settings"]
+
+
+# --- Phase 2 chunk A: NormalizationSettings.to_profile_list ---
+
+
+def _default_profiles():
+    from pathlib import Path
+
+    return json.loads(
+        (Path(__file__).parent.parent.parent / "src" / "guiskindose" / "normalization_settings.json").read_text()
+    )["normalization_settings"]
+
+
+def test_normalization_to_profile_list_round_trips_through_constructor():
+    original = NormalizationSettings(_default_profiles())
+
+    rebuilt = NormalizationSettings(original.to_profile_list())
+
+    assert rebuilt.to_profile_list() == original.to_profile_list()
+
+
+def test_normalization_to_profile_list_matches_on_disk_shape():
+    profiles = NormalizationSettings(_default_profiles()).to_profile_list()
+
+    assert profiles == _default_profiles()
+    assert profiles[0]["translation_offset"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+    assert profiles[0]["translation_direction"] == {"x": "+", "y": "+", "z": "+"}
+
+
+def test_normalization_to_profile_list_returns_copies_not_aliases():
+    original = NormalizationSettings(_default_profiles())
+
+    exported = original.to_profile_list()
+    exported[0]["manufacturer"] = "MUTATED"
+    exported[0]["translation_offset"]["x"] = 999.0
+
+    assert original.to_profile_list()[0]["manufacturer"] != "MUTATED"
+    assert original.to_profile_list()[0]["translation_offset"]["x"] != 999.0
+
+
+def test_normalization_custom_profile_with_swap_flag_survives():
+    profiles = _default_profiles()
+    profiles[0]["swap_lateral_longitudinal"] = True
+
+    rebuilt = NormalizationSettings(NormalizationSettings(profiles).to_profile_list())
+
+    assert rebuilt.to_profile_list()[0]["swap_lateral_longitudinal"] is True
+
+
+# --- Phase 2 chunk B: run-state serializer ---
+
+
+def _example_settings():
+    return PyskindoseSettings(settings=load_settings_example_json())
+
+
+def _populated_state():
+    state = AppState()
+    state.input_schema = "dosetrack"
+    state.input_source_type = "xlsx"
+    state.input_sheet_name = "Events"
+    state.swap_lat_lon = True
+    state.flip_ap1 = False
+    state.flip_ap2 = True
+    # Synced single-exam session: globals match the per-exam offsets below.
+    state.d_lon = 1.0
+    state.d_ver = 2.0
+    state.d_lat = 3.0
+    # Synced with _settings_with_kerma_file() so build_settings(state) emits
+    # the same slice (the assembly path the round-trip test must use).
+    state.phantom_model = "cylinder"
+    state.beam_miss_warn = "per_event"
+    state.kerma_meter_enable = True
+    state.kerma_meter_mode = "file"
+    state.kerma_meter_file = "/data/cf/corrections.xlsx"
+    state.kerma_meter_file_sheet = "CF"
+    state.kerma_meter_default_factor = 1.02
+    state.kerma_meter_explicit_label = "Lab-1"
+    state.kerma_meter_in_memory_table = {("Acme", "TubeA"): 1.02}
+    state.loaded_exam_meta = [
+        {
+            "d_lon": 1.0,
+            "d_ver": 2.0,
+            "d_lat": 3.0,
+            "table_origin_override": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+            "swap_lat_lon": True,
+            "flip_ap1": False,
+            "flip_ap2": True,
+            "flip_tx": True,
+            "flip_ty": False,
+            "flip_tz": True,
+            "source_type": "xlsx",
+            "schema": "dosetrack",
+            "sheet": "Events",
+            "normalization_method": "Matched",
+            "study_id": "STUDY-1",
+            "file_name": "export.xlsx",
+            "file_path": Path("/data/inbox/export.xlsx"),
+            "input_manufacturer": "Acme",
+            "input_model": "X1000",
+        }
+    ]
+    return state
+
+
+def _settings_with_kerma_file():
+    base = load_settings_example_json()
+    base["kerma_meter_correction"] = {
+        "enable": True,
+        "mode": "file",
+        "file": "/data/cf/corrections.xlsx",
+        "file_sheet": "CF",
+        "default_factor": 1.02,
+        "explicit_label": "Lab-1",
+        "prompt_at_calc": False,
+    }
+    # Match the populated state's synced globals so the document is
+    # self-consistent (as a real build_settings() + AppState pair would be).
+    base["phantom"]["patient_offset"] = {"d_lon": 1.0, "d_ver": 2.0, "d_lat": 3.0}
+    return PyskindoseSettings(settings=base)
+
+
+def test_serializer_redacts_identifiers_by_default():
+    document = serialize_run_state(_settings_with_kerma_file(), _populated_state(), created="2026-09-24T00:00:00+00:00")
+
+    assert document["schema"] == RUN_STATE_SCHEMA
+    assert document["schema_version"] == RUN_STATE_SCHEMA_VERSION
+    assert document["settings"]["rdsr_filename"] is None
+    assert document["settings"]["corrections_db_path"] is None
+    kerma = document["settings"]["kerma_meter_correction"]
+    assert kerma["file"] is None
+    assert kerma["file_sheet"] is None
+    assert kerma["explicit_label"] is None
+    assert kerma["default_factor"] == 1.02  # non-identifying config survives
+    gui_state = document["gui_state"]
+    assert gui_state["input_sheet_name"] is None  # string name gated
+    exam = gui_state["exams"][0]
+    assert exam["label"] == "Exam 1"  # always opaque
+    assert exam["sheet"] is None
+    assert exam["study_id"] is None
+    assert exam["file_name"] is None
+    assert exam["file_path"] is None
+    assert exam["input_manufacturer"] is None
+    assert exam["input_model"] is None
+    # Non-identifying reconstruction state survives redaction.
+    assert exam["d_lon"] == 1.0
+    assert exam["flip_tx"] is True
+    assert exam["normalization_method"] == "Matched"
+
+
+def test_serializer_include_identifiers_restores_gated_values_basename_only():
+    document = serialize_run_state(_settings_with_kerma_file(), _populated_state(), include_identifiers=True)
+
+    kerma = document["settings"]["kerma_meter_correction"]
+    assert kerma["file"] == "corrections.xlsx"  # basename only, never absolute
+    assert kerma["file_sheet"] == "CF"
+    assert kerma["explicit_label"] == "Lab-1"
+    gui_state = document["gui_state"]
+    assert gui_state["input_sheet_name"] == "Events"
+    exam = gui_state["exams"][0]
+    assert exam["sheet"] == "Events"
+    assert exam["study_id"] == "STUDY-1"
+    assert exam["file_name"] == "export.xlsx"
+    assert exam["file_path"] == "export.xlsx"  # Path object stringified to basename
+    assert exam["input_manufacturer"] == "Acme"
+    assert exam["input_model"] == "X1000"
+
+
+def test_serializer_integer_sheet_indices_survive_redacted_exports():
+    state = AppState()
+    state.input_sheet_name = 2
+    state.loaded_exam_meta = [{"sheet": 0}]
+
+    document = serialize_run_state(_example_settings(), state)
+
+    assert document["gui_state"]["input_sheet_name"] == 2
+    assert document["gui_state"]["exams"][0]["sheet"] == 0  # falsy-but-valid index kept
+
+
+def test_serializer_basename_never_leaks_windows_paths():
+    state = AppState()
+    state.loaded_exam_meta = [
+        {"file_path": "C:\\fakepath\\export.xlsx"},
+        {"file_path": "C:\\"},
+        {"file_path": "/"},
+    ]
+
+    document = serialize_run_state(_example_settings(), state, include_identifiers=True)
+    exams = document["gui_state"]["exams"]
+
+    # Backslash separators normalize on any host OS: no absolute path leaks.
+    assert exams[0]["file_path"] == "export.xlsx"
+    # Bare roots have no basename: None, not "".
+    assert exams[1]["file_path"] is None
+    assert exams[2]["file_path"] is None
+
+
+def test_serializer_applies_plot_dosemap_overlay():
+    state = AppState()
+    state.plot_dosemap = True
+
+    document = serialize_run_state(_example_settings(), state)
+
+    # The example builds plot_dosemap False (build_settings forces False);
+    # the export reads the AppState value instead.
+    assert document["settings"]["plot"]["plot_dosemap"] is True
+
+
+def test_serializer_nests_in_memory_table():
+    identified = serialize_run_state(_example_settings(), _populated_state(), include_identifiers=True)
+    assert identified["gui_state"]["kerma_meter_in_memory_table"] == {"Acme": {"TubeA": 1.02}}
+
+    # Equipment/tube keys resolve to serials and station names: redacted
+    # exports omit the key entirely (not null) so importing one leaves the
+    # live table untouched instead of clearing it.
+    redacted = serialize_run_state(_example_settings(), _populated_state())
+    assert "kerma_meter_in_memory_table" not in redacted["gui_state"]
+
+    empty = serialize_run_state(_example_settings(), AppState(), include_identifiers=True)
+    assert empty["gui_state"]["kerma_meter_in_memory_table"] is None
+
+
+def test_serializer_document_is_json_serializable_with_no_runtime_leakage():
+    import pandas as pd
+
+    state = _populated_state()
+    state.rdsr_df = pd.DataFrame({"a": [1]})  # runtime object must never leak in
+
+    document = serialize_run_state(
+        _example_settings(),
+        state,
+        normalization_profiles=_default_profiles(),
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+    )
+
+    assert json.loads(json.dumps(document)) == document
+    assert document["normalization_settings"] == _default_profiles()
+    assert document["app_version"] == "1.0.0"
+    assert document["created"] == "2026-09-24T00:00:00+00:00"
+    assert [exam["label"] for exam in document["gui_state"]["exams"]] == ["Exam 1"]
+
+
+def test_serializer_defaults_for_empty_state():
+    document = serialize_run_state(_example_settings(), AppState())
+
+    assert document["gui_state"]["exams"] == []
+    assert document["gui_state"]["input_sheet_name"] == 0  # default index preserved
+    assert document["normalization_settings"] == []
+    assert document["created"]  # current UTC timestamp by default
+    assert document["app_version"]  # installed package version by default
+
+
+# --- Phase 2 chunk C: run-state applier ---
+
+
+def _identified_document():
+    return serialize_run_state(
+        _settings_with_kerma_file(),
+        _populated_state(),
+        normalization_profiles=_default_profiles(),
+        include_identifiers=True,
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+    )
+
+
+def _session_with_same_inputs_loaded():
+    """Fresh state with the same inputs loaded (the import prerequisite)."""
+    state = AppState()
+    state.kerma_meter_file = "/data/cf/corrections.xlsx"
+    state.input_source_type = "xlsx"  # set by the loader, like table_origin_detected
+    state.loaded_exam_meta = [
+        {
+            "file_name": "export.xlsx",
+            "file_path": Path("/data/inbox/export.xlsx"),
+            "study_id": "STUDY-1",
+            "input_manufacturer": "Acme",
+            "input_model": "X1000",
+            "source_type": "xlsx",
+            "schema": "dosetrack",
+            "sheet": "Events",
+            "normalization_method": "Matched",
+            "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+        }
+    ]
+    return state
+
+
+def test_applier_rejects_bad_envelope():
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": "something.else", "schema_version": 1})
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": 2})
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": "1"})
+    with pytest.raises(RunStateError):
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": True})
+    with pytest.raises(RunStateError):
+        validate_run_state_document("not a dict")
+
+
+def test_applier_accepts_older_version_with_warning():
+    document = _identified_document()
+    document["schema_version"] = 0
+
+    result = apply_run_state(document, _session_with_same_inputs_loaded())
+
+    assert any("older schema_version 0" in warning for warning in result.warnings)
+
+
+def test_applier_rejects_malformed_sections_before_mutating():
+    base = _identified_document()
+
+    document = json.loads(json.dumps(base))
+    document["settings"] = ["a"]
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match="settings must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["gui_state"] = "nope"
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match="gui_state must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["phantom"] = "x"
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.phantom must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["plot"] = 5
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.plot must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["phantom"]["patient_offset"] = "x"
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.phantom\.patient_offset must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["phantom"]["dimension"] = ["not", "a", "dict"]
+    state = _session_with_same_inputs_loaded()
+    with pytest.raises(RunStateError, match=r"settings\.phantom\.dimension must be a mapping"):
+        apply_run_state(document, state)
+    _assert_pristine(state)
+
+
+def _assert_pristine(state: AppState) -> None:
+    """Validation precedes all mutation: a fresh session is byte-identical."""
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert state.d_lon == 0.0
+    assert getattr(state, "normalization_profiles", None) is None
+    assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
+
+
+def test_applier_rejects_mistyped_kerma_exams_profiles_table():
+    base = _identified_document()
+
+    document = json.loads(json.dumps(base))
+    document["settings"]["kerma_meter_correction"] = "x"
+    with pytest.raises(RunStateError, match="kerma_meter_correction"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["gui_state"]["exams"] = ["oops"]
+    with pytest.raises(RunStateError, match=r"exams\[0\]"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["normalization_settings"] = {"not": "a list"}
+    with pytest.raises(RunStateError, match="normalization_settings must be a list"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["normalization_settings"] = ["str"]
+    with pytest.raises(RunStateError, match=r"normalization_settings\[0\]"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+    document = json.loads(json.dumps(base))
+    document["gui_state"]["kerma_meter_in_memory_table"] = {"Eq": {"Tube": "nan"}}
+    with pytest.raises(RunStateError, match="must be a number"):
+        apply_run_state(document, _session_with_same_inputs_loaded())
+
+
+def test_applier_empty_normalization_list_keeps_current_profiles():
+    document = _identified_document()
+    document["normalization_settings"] = []
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    assert getattr(state, "normalization_profiles", None) is None
+    assert any("empty normalization_settings ignored" in w for w in result.warnings)
+
+
+def test_applier_rejects_keyless_profiles_before_mutating():
+    document = _identified_document()
+    document["normalization_settings"] = [{"manufacturer": "Acme"}]
+    state = _session_with_same_inputs_loaded()
+
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, state)
+
+    assert exc_info.value.code == "invalid_settings"
+    assert state.input_schema == "auto"
+    assert getattr(state, "normalization_profiles", None) is None
+
+
+def test_builder_empty_normalization_home_falls_back_to_defaults():
+    state = AppState()
+    state.normalization_profiles = []
+
+    assert build_settings(state).normalization_settings.to_profile_list() == _default_profiles()
+
+
+def test_passthrough_carries_through_session_to_reexport():
+    document = _identified_document()
+    document["future_key"] = {"nested": True}
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+    assert result.applied_exams == 1
+
+    # The GUI save path reads the session field (mirrors _on_save).
+    assert state.run_state_passthrough == {"future_key": {"nested": True}}
+    identified = serialize_run_state(
+        _example_settings(),
+        _populated_state(),
+        include_identifiers=True,
+        passthrough=dict(state.run_state_passthrough),
+    )
+    assert identified["future_key"] == {"nested": True}
+
+
+def test_passthrough_never_leaks_into_redacted_exports():
+    # Unknown keys may carry identifiers: redacted exports drop them even
+    # when the session carries them over from an identified import.
+    redacted = serialize_run_state(
+        _example_settings(),
+        _populated_state(),
+        passthrough={"future_key": {"nested": True}},
+    )
+    assert "future_key" not in redacted
+
+
+def test_snapshot_restore_returns_pristine_session():
+    state = _session_with_same_inputs_loaded()
+    sentinel_exams = [object(), object()]
+    state.loaded_exams = sentinel_exams
+    sentinel_df = pd.DataFrame({"a": [1]})
+    state.rdsr_df = sentinel_df
+    snapshot = snapshot_app_state(state)
+
+    apply_run_state(_identified_document(), state)
+    assert state.input_schema == "dosetrack"  # mutated
+    state.loaded_exams = [object()]  # loader-style rebind
+    state.rdsr_df = pd.DataFrame({"a": [2]})
+
+    restore_app_state_snapshot(state, snapshot)
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert state.d_lon == 0.0
+    assert getattr(state, "normalization_profiles", None) is None
+    assert state.run_state_passthrough == {}
+    assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
+    # Reference snapshots restore loader-rebound state by identity, free.
+    assert state.loaded_exams == sentinel_exams
+    assert state.rdsr_df is sentinel_df
+    # Restoring twice is safe (snapshots are deep copies).
+    restore_app_state_snapshot(state, snapshot)
+    assert state.input_schema == "auto"
+
+
+def test_applier_restores_input_source_type_but_never_blanks_it():
+    document = _identified_document()  # input_source_type "xlsx"
+    state = _session_with_same_inputs_loaded()
+    state.input_source_type = ""
+
+    apply_run_state(document, state)
+    assert state.input_source_type == "xlsx"
+
+    document["gui_state"]["input_source_type"] = ""
+    state.input_source_type = "xlsx"
+    apply_run_state(document, state)
+    assert state.input_source_type == "xlsx"
+
+
+def test_applier_exam_count_mismatch_names_counts():
+    document = _identified_document()  # 1 exam
+    state = AppState()  # 0 loaded
+
+    with pytest.raises(RunStateError, match=r"1 exam.*0 loaded"):
+        apply_run_state(document, state)
+
+
+def test_applier_count_mismatch_leaves_session_untouched():
+    document = _identified_document()  # 1 exam
+    state = AppState()  # 0 loaded
+
+    with pytest.raises(RunStateError):
+        apply_run_state(document, state)
+
+    # Structural failure must precede all mutation: globals, schema, and
+    # homes are exactly as before the call.
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert state.loaded_exam_meta == []
+    assert getattr(state, "normalization_profiles", None) is None
+    assert getattr(state, "phantom_dimensions", None) is None
+
+
+def test_applier_count_mismatch_leaves_passthrough_unwritten():
+    document = _identified_document()  # 1 exam
+    document["future_key"] = {"nested": True}
+    state = AppState()  # 0 loaded
+
+    with pytest.raises(RunStateError, match="exam count mismatch"):
+        apply_run_state(document, state)
+
+    assert state.run_state_passthrough == {}
+
+
+def test_applier_error_codes():
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state({"schema": "nope", "schema_version": 1}, _session_with_same_inputs_loaded())
+    assert exc_info.value.code == "unsupported_schema"
+
+    document = _identified_document()
+    document["schema_version"] = 99
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, _session_with_same_inputs_loaded())
+    assert exc_info.value.code == "unsupported_schema_version"
+
+    document = _identified_document()
+    document["settings"] = ["a"]
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, _session_with_same_inputs_loaded())
+    assert exc_info.value.code == "malformed_document"
+
+
+def test_applier_trial_build_rejects_invalid_homes_before_mutating():
+    document = _identified_document()
+    document["settings"]["dosetrack_plane_code_map"] = {"nope": "Single Plane"}
+    state = _session_with_same_inputs_loaded()
+
+    with pytest.raises(RunStateError) as exc_info:
+        apply_run_state(document, state)
+
+    assert exc_info.value.code == "invalid_settings"
+    # Trial runs before live mutation: globals and homes are pristine.
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert getattr(state, "dosetrack_plane_code_map", None) is None
+    assert state.run_state_passthrough == {}
+
+
+def test_applier_tier1_facts_verify_but_never_write():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    state.loaded_exam_meta[0]["study_id"] = "OTHER-STUDY"
+
+    result = apply_run_state(document, state)
+
+    assert state.loaded_exam_meta[0]["study_id"] == "OTHER-STUDY"  # untouched
+    assert any("study_id" in warning for warning in result.warnings)
+
+
+def test_applier_tier2_never_downgrades_file_handles():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    assert state.kerma_meter_file == "/data/cf/corrections.xlsx"  # absolute kept
+    assert state.loaded_exam_meta[0]["file_path"] == Path("/data/inbox/export.xlsx")
+    # Matching basenames and pairing facts produce no file warnings.
+    assert result.warnings == []
+
+
+def test_applier_tier2_warns_on_mismatch_and_unloaded():
+    document = _identified_document()
+    state = AppState()  # nothing loaded
+    state.loaded_exam_meta = [{"file_path": Path("/elsewhere/other.xlsx")}]
+
+    result = apply_run_state(document, state)
+
+    assert state.kerma_meter_file is None  # never fabricated
+    assert any("kerma correction file" in w and "not loaded" in w for w in result.warnings)
+    assert any("Exam 1 input file" in w and "mismatch" in w for w in result.warnings)
+
+
+def test_applier_tier3_restores_configuration():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    assert isinstance(result, ApplyResult)
+    assert result.mode == "plot_event"  # carried from the example-based settings
+    assert result.applied_exams == 1
+    assert state.input_schema == "dosetrack"
+    assert state.input_sheet_name == "Events"
+    assert state.swap_lat_lon is True
+    assert state.plot_dosemap is True  # overlay: populated state default
+    assert state.kerma_meter_default_factor == 1.02
+    assert state.kerma_meter_explicit_label == "Lab-1"
+    assert state.kerma_meter_file_sheet == "CF"
+    assert state.phantom_model == "cylinder"  # example default
+    # Homes (no widget yet; setattr-created).
+    assert state.normalization_profiles == _default_profiles()
+    assert state.include_static_pose is True
+    assert state.angular_step_deg == 1.0
+    assert state.corrections_db_path == "corrections.db"
+    # Default dimensions/max-events store their (default) values; the
+    # Phase-3 builder overlays them over the same defaults (no-op).
+    assert state.phantom_dimensions == load_settings_example_json()["phantom"]["dimension"]
+    assert state.max_events_for_patient_inclusion == 0
+    # Null map leaves the home unset (None = default); a real map is stored
+    # verbatim for build_settings to parse (Phase 3 home).
+    assert getattr(state, "dosetrack_plane_code_map", None) is None
+    document["settings"]["dosetrack_plane_code_map"] = {"1": "Single Plane"}
+    apply_run_state(document, state)
+    assert state.dosetrack_plane_code_map == {"1": "Single Plane"}
+    # Per-exam geometry applied, and globals synced from the settings slice.
+    assert (state.d_lon, state.d_ver, state.d_lat) == (1.0, 2.0, 3.0)
+    meta = state.loaded_exam_meta[0]
+    assert (meta["d_lon"], meta["d_ver"], meta["d_lat"]) == (1.0, 2.0, 3.0)
+    assert meta["flip_tx"] is True
+    assert meta["table_origin_override"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+    # Runtime outcomes never overwritten.
+    assert meta["normalization_method"] == "Matched"
+
+
+def test_applier_unnests_in_memory_table_and_clears_on_null():
+    document = _identified_document()  # table present in populated state
+    state = _session_with_same_inputs_loaded()
+
+    apply_run_state(document, state)
+    assert state.kerma_meter_in_memory_table == {("Acme", "TubeA"): 1.02}
+
+    document["gui_state"]["kerma_meter_in_memory_table"] = None
+    apply_run_state(document, state)
+    assert state.kerma_meter_in_memory_table is None
+
+
+def test_applier_redacted_document_leaves_live_table_alone():
+    redacted = serialize_run_state(_example_settings(), _populated_state())
+    assert "kerma_meter_in_memory_table" not in redacted["gui_state"]
+    state = _session_with_same_inputs_loaded()
+    state.kerma_meter_in_memory_table = {("Live", "Tube"): 1.05}
+
+    apply_run_state(redacted, state)
+
+    assert state.kerma_meter_in_memory_table == {("Live", "Tube"): 1.05}
+
+
+def test_applier_single_exam_dual_write_syncs_globals_to_meta():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    # Divergent live meta: globals from the document must win (single-exam
+    # calculation consumes the globals).
+    state.loaded_exam_meta[0]["d_lon"] = 99.0
+    state.loaded_exam_meta[0]["swap_lat_lon"] = False
+
+    apply_run_state(document, state)
+
+    assert state.d_lon == 1.0
+    assert state.loaded_exam_meta[0]["d_lon"] == 1.0
+    assert state.loaded_exam_meta[0]["swap_lat_lon"] is True
+
+
+def test_applier_detected_origin_untouched_override_applies():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    live_detected = {"x": 9.0, "y": 9.0, "z": 9.0}
+    state.loaded_exam_meta[0]["table_origin_detected"] = live_detected
+
+    apply_run_state(document, state)
+
+    # Detected is recomputed at load; import leaves the live value alone.
+    assert state.loaded_exam_meta[0]["table_origin_detected"] == live_detected
+    assert state.loaded_exam_meta[0]["table_origin_override"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+
+    document["gui_state"]["exams"][0]["table_origin_override"] = None
+    apply_run_state(document, state)
+    assert state.loaded_exam_meta[0]["table_origin_override"] is None
+
+
+def test_applier_custom_dimensions_and_max_events_restore_to_homes():
+    document = _identified_document()
+    document["settings"]["phantom"]["dimension"]["cylinder_length"] = 999.0
+    document["settings"]["plot"]["max_events_for_patient_inclusion"] = 3
+    state = _session_with_same_inputs_loaded()
+
+    result = apply_run_state(document, state)
+
+    dims = state.phantom_dimensions
+    assert isinstance(dims, dict)
+    assert dims["cylinder_length"] == 999.0
+    assert state.max_events_for_patient_inclusion == 3
+    # Homed values restore silently (no homeless-dimension warnings remain).
+    assert not [w for w in result.warnings if "dimension" in w]
+
+
+def test_applier_manufacturer_model_pairing_verification():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    state.loaded_exam_meta[0]["input_manufacturer"] = "Other"
+
+    result = apply_run_state(document, state)
+
+    assert state.loaded_exam_meta[0]["input_manufacturer"] == "Other"  # untouched
+    assert any("input_manufacturer" in w for w in result.warnings)
+
+
+def test_applier_passthrough_preserved_for_reexport():
+    document = _identified_document()
+    document["future_key"] = {"nested": True}
+
+    result = apply_run_state(document, _session_with_same_inputs_loaded())
+
+    assert result.passthrough == {"future_key": {"nested": True}}
+    reemitted = serialize_run_state(
+        _example_settings(), _populated_state(), include_identifiers=True, passthrough=result.passthrough
+    )
+    assert reemitted["future_key"] == {"nested": True}
+
+
+def test_applier_schema_or_sheet_change_flagged():
+    document = _identified_document()
+    state = _session_with_same_inputs_loaded()
+    state.input_schema = "dosetrack"  # already matches: no change to flag
+    state.input_sheet_name = "Events"
+
+    result = apply_run_state(document, state)
+    assert result.schema_or_sheet_changed is False
+
+    document["gui_state"]["input_sheet_name"] = "Other"
+    result = apply_run_state(document, state)
+    assert result.schema_or_sheet_changed is True
+
+
+def test_export_import_export_round_trip_identity():
+    # Both exports go through the assembly path (build_settings + overlay):
+    # a raw example-based object would carry builder-forced constants
+    # (notebook_mode) the GUI can never reproduce.
+    populated = _populated_state()
+    built = build_settings(populated, mode="plot_event")
+    first = serialize_run_state(
+        built,
+        populated,
+        normalization_profiles=built.normalization_settings.to_profile_list(),
+        include_identifiers=True,
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+    )
+
+    # Clear state, reload the same inputs (prerequisite), import.
+    fresh = _session_with_same_inputs_loaded()
+    result = apply_run_state(first, fresh)
+
+    assert result.applied_exams == 1
+    # Rebuild the settings from the IMPORTED state (not the original object):
+    # identity holds only if the applier restored everything the builder
+    # reads. Mode comes from the document.
+    rebuilt_settings = build_settings(fresh, mode=first["settings"]["mode"])
+    second = serialize_run_state(
+        rebuilt_settings,
+        fresh,
+        normalization_profiles=fresh.normalization_profiles,
+        include_identifiers=True,
+        app_version="1.0.0",
+        created="2026-09-24T00:00:00+00:00",
+        passthrough=result.passthrough,
+    )
+    assert second == first
+
+
+# --- Phase 3 chunk D: AppState homes + build_settings wiring ---
+
+
+def test_builder_homes_default_to_example_values():
+    built = build_settings(AppState()).to_settings_dict()
+    example = load_settings_example_json()
+
+    assert built["include_static_pose"] == example["include_static_pose"] is True
+    assert built["angular_step_deg"] == example["angular_step_deg"] == 1.0
+    assert built["dosetrack_plane_code_map"] is None
+    assert built["corrections_db_path"] == example["corrections_db_path"]
+    assert built["phantom"]["dimension"] == example["phantom"]["dimension"]
+    assert built["plot"]["max_events_for_patient_inclusion"] == example["plot"]["max_events_for_patient_inclusion"]
+    assert AppState().normalization_profiles is None
+
+
+def test_builder_default_normalization_matches_file_profiles():
+    built = build_settings(AppState())
+
+    assert built.normalization_settings.to_profile_list() == _default_profiles()
+
+
+def test_builder_wires_scalar_and_map_homes():
+    state = AppState()
+    state.include_static_pose = False
+    state.angular_step_deg = 2.0
+    state.dosetrack_plane_code_map = {"1": "Single Plane"}
+    state.corrections_db_path = "custom.db"
+    state.max_events_for_patient_inclusion = 5
+
+    built = build_settings(state)
+    serialized = built.to_settings_dict()
+
+    assert serialized["include_static_pose"] is False
+    assert serialized["angular_step_deg"] == 2.0
+    assert built.dosetrack_plane_code_map == {1: "Single Plane"}
+    assert serialized["dosetrack_plane_code_map"] == {"1": "Single Plane"}
+    assert serialized["corrections_db_path"] == "custom.db"
+    assert serialized["plot"]["max_events_for_patient_inclusion"] == 5
+    # Idempotent through reconstruction.
+    assert PyskindoseSettings(settings=serialized).to_settings_dict() == serialized
+
+
+def test_builder_dimensions_home_overlays_without_replacing():
+    state = AppState()
+    state.phantom_dimensions = {"cylinder_length": 999.0}
+    example_dims = load_settings_example_json()["phantom"]["dimension"]
+
+    dims = build_settings(state).to_settings_dict()["phantom"]["dimension"]
+
+    assert dims["cylinder_length"] == 999.0
+    assert {k: v for k, v in dims.items() if k != "cylinder_length"} == {
+        k: v for k, v in example_dims.items() if k != "cylinder_length"
+    }
+
+
+def test_builder_normalization_home_replaces_default_profiles():
+    state = AppState()
+    state.normalization_profiles = [dict(_default_profiles()[0], manufacturer="Custom")]
+
+    built = build_settings(state)
+
+    assert built.normalization_settings.to_profile_list() == state.normalization_profiles
+    assert built.normalization_settings.to_profile_list() != _default_profiles()
+
+
+def test_serializer_reads_homes_through_built_settings():
+    state = AppState()
+    state.phantom_dimensions = {"cylinder_length": 999.0}
+    state.corrections_db_path = "custom.db"
+    state.include_static_pose = False
+    state.angular_step_deg = 2.0
+    state.dosetrack_plane_code_map = {"1": "Single Plane"}
+    state.max_events_for_patient_inclusion = 5
+    state.normalization_profiles = [dict(_default_profiles()[0], manufacturer="Custom")]
+    built = build_settings(state)
+
+    redacted = serialize_run_state(built, state, normalization_profiles=state.normalization_profiles)
+    settings_slice = redacted["settings"]
+    assert settings_slice["phantom"]["dimension"]["cylinder_length"] == 999.0
+    assert settings_slice["corrections_db_path"] is None  # still gated
+    assert settings_slice["include_static_pose"] is False
+    assert settings_slice["angular_step_deg"] == 2.0
+    assert settings_slice["dosetrack_plane_code_map"] == {"1": "Single Plane"}
+    assert settings_slice["plot"]["max_events_for_patient_inclusion"] == 5
+    assert redacted["normalization_settings"] == state.normalization_profiles
+
+    identified = serialize_run_state(built, state, include_identifiers=True)
+    assert identified["settings"]["corrections_db_path"] == "custom.db"

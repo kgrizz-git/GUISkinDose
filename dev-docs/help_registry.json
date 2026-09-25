@@ -97,6 +97,15 @@
       "required": true
     },
     {
+      "id": "run_configuration",
+      "title": "Run configuration help",
+      "source": "run_configuration.md",
+      "gui_files": [
+        "src/guiskindose/gui/tabs/_run_config.py"
+      ],
+      "required": true
+    },
+    {
       "id": "loopback_scope",
       "title": "Loopback scope and local access",
       "source": "loopback_scope.md",
