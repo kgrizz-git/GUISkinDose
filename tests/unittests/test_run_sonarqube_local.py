@@ -9,9 +9,11 @@ import pytest
 from scripts.run_sonarqube_local import (
     build_scanner_command,
     classify_failure,
+    project_version_from_pyproject,
     sanitize_host_url,
     validate_host,
     validate_scanner_binary,
+    write_freshness_state,
 )
 
 
@@ -67,3 +69,41 @@ def test_scanner_command_rejects_control_characters_in_host(tmp_path: Path) -> N
 def test_sanitize_host_url_emits_loopback_literals() -> None:
     assert sanitize_host_url("http://127.0.0.1:9000", allow_remote=False) == "http://127.0.0.1:9000"
     assert sanitize_host_url("http://[::1]:9000", allow_remote=False) == "http://[::1]:9000"
+
+
+def test_scanner_command_passes_project_version(tmp_path: Path) -> None:
+    binary = tmp_path / "sonar-scanner"
+    binary.write_text("#!/bin/sh\n", encoding="utf-8")
+    resolved = binary.resolve()
+
+    command = build_scanner_command(resolved, "http://localhost:9000", wait_for_quality_gate=True)
+    assert not any(part.startswith("-Dsonar.projectVersion=") for part in command)
+
+    versioned = build_scanner_command(
+        resolved, "http://localhost:9000", wait_for_quality_gate=True, project_version="1.0.0"
+    )
+    assert "-Dsonar.projectVersion=1.0.0" in versioned
+
+    with pytest.raises(ValueError, match="invalid SonarQube host URL"):
+        build_scanner_command(
+            resolved,
+            "http://localhost:9000",
+            wait_for_quality_gate=True,
+            project_version="1.0\n-Dsonar.extra=1",
+        )
+
+
+def test_project_version_from_pyproject(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "x"\nversion = "1.2.3"\n', encoding="utf-8")
+    assert project_version_from_pyproject(tmp_path) == "1.2.3"
+    assert project_version_from_pyproject(tmp_path / "missing") is None
+
+
+def test_write_freshness_state_round_trips(tmp_path: Path) -> None:
+    import json
+
+    from scripts.run_sonarqube_local import FRESHNESS_STATE_PATH
+
+    write_freshness_state(tmp_path, {"last_scan_commit": "abc123", "issues_count": None})
+    payload = json.loads((tmp_path / FRESHNESS_STATE_PATH).read_text(encoding="utf-8"))
+    assert payload["last_scan_commit"] == "abc123"
