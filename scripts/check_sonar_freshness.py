@@ -193,6 +193,16 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
             file=sys.stderr,
         )
         return 1
+    except ValueError as exc:
+        # json.JSONDecodeError is handled above with its detail; anything else
+        # here is a decode failure (e.g. non-UTF-8 bytes in the state file).
+        print(
+            f"Sonar freshness gate: state file is undecodable ({type(exc).__name__}).\n"
+            "Re-run the scan to regenerate it:\n"
+            f"    {REFRESH_COMMAND}",
+            file=sys.stderr,
+        )
+        return 1
 
     last_scan_commit = state.get("last_scan_commit")
     if not last_scan_commit or not isinstance(last_scan_commit, str):

@@ -61,6 +61,9 @@ leave the prior state so the budget is not reset by a red scan). After history r
 blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
 pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
 
+`SONAR_HOST_URL` comes from the exported environment in both helpers (overridable per-invocation via
+`--host-url`); only `SONAR_TOKEN` is additionally read from the repo-local `.env`.
+
 ```bash
 # Enable the gate, then scan to create the baseline state:
 #   SONAR_FRESHNESS_GATE=1 in .env

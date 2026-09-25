@@ -13,10 +13,15 @@ import scripts.check_sonar_freshness as gate
 
 
 def _git(args: list[str], path: Path, capture: bool = False) -> str:
-    # No core.hooksPath override: fresh tmp repos carry only sample hooks, and
-    # the /dev/null literal is not portable to Windows CI runners.
+    # Point hooks at a guaranteed-empty dir (portable, unlike /dev/null): fresh
+    # tmp repos carry only sample hooks, but a global core.hooksPath could
+    # otherwise inject a developer machine's hooks into fixture commits.
+    hooks_dir = path / "empty-hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
         "git",
+        "-c",
+        f"core.hooksPath={hooks_dir}",
         "-c",
         "commit.gpgsign=false",
         "-c",
@@ -98,6 +103,17 @@ def test_invalid_state_blocks(fixture_repo: Path, monkeypatch: pytest.MonkeyPatc
     state_path.write_text("{not json\n", encoding="utf-8")
     monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
     assert gate.main(["--state", str(state_path)]) == 1
+
+
+def test_non_utf8_state_blocks_with_hint(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    state_path.parent.mkdir(parents=True)
+    state_path.write_bytes(b"\xff\xfe{\x00not-utf8")
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+    assert gate.main(["--state", str(state_path)]) == 1
+    assert "Re-run the scan to regenerate it" in capsys.readouterr().err
 
 
 def test_dangling_scan_commit_blocks(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
