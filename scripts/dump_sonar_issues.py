@@ -62,8 +62,10 @@ def load_token_from_dotenv(root: Path) -> str | None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        if key.strip() == "SONAR_TOKEN" and value.strip():
-            return value.strip()
+        if key.strip() == "SONAR_TOKEN":
+            cleaned = clean_env_value(value)
+            if cleaned:
+                return cleaned
     return None
 
 
@@ -72,6 +74,14 @@ def resolve_token(root: Path) -> str | None:
     if exported and exported.strip():
         return exported.strip()
     return load_token_from_dotenv(root)
+
+
+def clean_env_value(raw: str) -> str:
+    """Tolerate quoted values and trailing ` #` comments in .env files."""
+    value = raw.strip().split(" #", 1)[0].strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1]
+    return value
 
 
 def check_host_loopback(host_url: str, *, allow_remote: bool) -> str:
@@ -134,8 +144,23 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
     return payload
 
 
-def summarize_issues(issues: list[dict]) -> str:
-    lines = ["# SonarQube unresolved issues", "", f"Total: {len(issues)}", ""]
+def page_complete(*, batch_empty: bool, collected: int, total: int, cap: int) -> bool:
+    """Decide whether issue pagination is done (pure; unit-tested)."""
+    if batch_empty:
+        return True
+    # A missing `paging` block reports total 0: keep fetching rather than
+    # silently truncating after the first page.
+    if total > 0 and collected >= total:
+        return True
+    return collected >= cap
+
+
+def summarize_issues(issues: list[dict], *, truncated: bool = False, cap: int = 0) -> str:
+    lines = ["# SonarQube unresolved issues", ""]
+    total_line = f"Total: {len(issues)}"
+    if truncated:
+        total_line += f" (truncated to --cap {cap})"
+    lines += [total_line, ""]
     for issue in issues:
         severity = issue.get("severity", "?")
         rule = issue.get("rule", "?")
@@ -166,11 +191,18 @@ def prune_dumps(issues_dir: Path, *, keep_days: int = 30, keep_minimum: int = 5)
     keep = set(ordered[: max(len(recent), keep_minimum, 1)])
 
     removed = 0
+    failed = 0
     for stamp in ordered:
         if stamp not in keep:
             for path in stamps[stamp]:
-                path.unlink()
+                try:
+                    path.unlink()
+                except OSError:
+                    failed += 1
+                    continue
                 removed += 1
+    if failed:
+        print(f"warning: could not remove {failed} stale dump file(s).", file=sys.stderr)
     return removed, len(keep)
 
 
@@ -243,16 +275,24 @@ def main(argv: list[str] | None = None) -> int:
         while True:
             payload = fetch_issues_page(host_url, token, component, page, args.page_size)
             batch = payload["issues"]
-            if not batch:
-                break
             collected.extend(batch)
-            total = payload.get("paging", {}).get("total", 0) if isinstance(payload.get("paging"), dict) else 0
-            if len(collected) >= total or len(collected) >= args.cap:
+            paging = payload.get("paging")
+            total = paging.get("total", 0) if isinstance(paging, dict) else 0
+            if page_complete(
+                batch_empty=not batch,
+                collected=len(collected),
+                total=total if isinstance(total, int) else 0,
+                cap=args.cap,
+            ):
                 break
             page += 1
     except RuntimeError as exc:
         print(f"ERROR: {exc}.", file=sys.stderr)
         return 1
+
+    truncated = len(collected) > args.cap
+    if truncated:
+        collected = collected[: args.cap]
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     issues_dir = root / ISSUES_DIRNAME
@@ -261,13 +301,16 @@ def main(argv: list[str] | None = None) -> int:
     issues_summary = issues_dir / f"{timestamp}.md"
     try:
         issues_json.write_text(json.dumps(collected, indent=2) + "\n", encoding="utf-8")
-        issues_summary.write_text(summarize_issues(collected), encoding="utf-8")
+        issues_summary.write_text(
+            summarize_issues(collected, truncated=truncated, cap=args.cap), encoding="utf-8"
+        )
         shutil.copyfile(issues_summary, root / LATEST_SUMMARY)
         shutil.copyfile(issues_json, root / LATEST_JSON)
     except OSError as exc:
         print(f"ERROR: could not write issue dumps ({type(exc).__name__}).", file=sys.stderr)
         return 1
 
+    state_file = root / STATE_PATH
     refreshed = refresh_state_counts(
         root, issues_count=len(collected), issues_path=f"{ISSUES_DIRNAME.as_posix()}/{timestamp}.json"
     )
@@ -277,8 +320,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Summary: {LATEST_SUMMARY.as_posix()}")
     if refreshed:
         print("State counts refreshed in tmp/sonar-state.json.")
-    else:
+    elif not state_file.is_file():
         print("No state file to refresh; run scripts/run_sonarqube_local.py to create one.")
+    else:
+        print("State file is present but invalid; run scripts/run_sonarqube_local.py to regenerate it.")
     print(f"Pruned {removed} stale dump file(s); keeping {kept} timestamp(s).")
     return 0
 

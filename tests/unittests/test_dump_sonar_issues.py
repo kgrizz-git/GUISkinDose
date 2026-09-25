@@ -9,6 +9,8 @@ import pytest
 
 from scripts.dump_sonar_issues import (
     check_host_loopback,
+    clean_env_value,
+    page_complete,
     project_key_from_properties,
     prune_dumps,
     refresh_state_counts,
@@ -76,3 +78,53 @@ def test_prune_dumps_keeps_recent_minimum(tmp_path: Path) -> None:
     removed, kept = prune_dumps(issues_dir)
     assert removed == 0
     assert kept == 2
+
+
+def test_prune_dumps_removes_beyond_minimum(tmp_path: Path) -> None:
+    issues_dir = tmp_path / "dumps"
+    issues_dir.mkdir()
+    for day in range(1, 7):  # 6 stale stamps; minimum keeps 5
+        stamp = f"2020-01-0{day}T120000Z"
+        (issues_dir / f"{stamp}.json").write_text("[]", encoding="utf-8")
+        (issues_dir / f"{stamp}.md").write_text("#", encoding="utf-8")
+    removed, kept = prune_dumps(issues_dir)
+    assert removed == 2
+    assert kept == 5
+    assert not (issues_dir / "2020-01-01T120000Z.json").exists()
+
+
+def test_refresh_state_counts_rejects_corrupt_or_commitless_state(tmp_path: Path) -> None:
+    state_file = tmp_path / "tmp" / "sonar-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text("{not json\n", encoding="utf-8")
+    assert refresh_state_counts(tmp_path, issues_count=1, issues_path="tmp/sonar-issues/x.json") is False
+    state_file.write_text(json.dumps({"issues_count": 1}), encoding="utf-8")
+    assert refresh_state_counts(tmp_path, issues_count=1, issues_path="tmp/sonar-issues/x.json") is False
+
+
+@pytest.mark.parametrize(
+    ("batch_empty", "collected", "total", "cap", "expected"),
+    [
+        (True, 0, 0, 2000, True),  # empty page always ends pagination
+        (False, 500, 1200, 2000, False),  # more pages reported
+        (False, 1200, 1200, 2000, True),  # server total reached
+        (False, 500, 0, 2000, False),  # missing paging block: keep fetching
+        (False, 2000, 0, 2000, True),  # cap reached without paging info
+        (False, 2100, 5000, 2000, True),  # cap reached before server total
+    ],
+)
+def test_page_complete(batch_empty: bool, collected: int, total: int, cap: int, expected: bool) -> None:
+    assert page_complete(batch_empty=batch_empty, collected=collected, total=total, cap=cap) is expected
+
+
+def test_summarize_issues_marks_truncation() -> None:
+    summary = summarize_issues([{"severity": "x"}], truncated=True, cap=1)
+    assert "Total: 1 (truncated to --cap 1)" in summary
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [('squ_abc123', "squ_abc123"), ('"squ_abc123"', "squ_abc123"), ("'squ_abc123'", "squ_abc123")],
+)
+def test_clean_env_value(raw: str, expected: str) -> None:
+    assert clean_env_value(raw) == expected

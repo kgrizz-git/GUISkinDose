@@ -13,10 +13,10 @@ import scripts.check_sonar_freshness as gate
 
 
 def _git(args: list[str], path: Path, capture: bool = False) -> str:
+    # No core.hooksPath override: fresh tmp repos carry only sample hooks, and
+    # the /dev/null literal is not portable to Windows CI runners.
     cmd = [
         "git",
-        "-c",
-        "core.hooksPath=/dev/null",
         "-c",
         "commit.gpgsign=false",
         "-c",
@@ -56,7 +56,7 @@ def _commit(path: Path, name: str) -> str:
     return _git(["rev-parse", "HEAD"], path, capture=True)
 
 
-def _write_state(state_path: Path, commit: str, issues_count: int = 3) -> None:
+def _write_state(state_path: Path, commit: str, issues_count: int | None = 3) -> None:
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(
         json.dumps(
@@ -123,6 +123,73 @@ def test_commit_stage_at_budget_blocks(fixture_repo: Path, monkeypatch: pytest.M
     _write_state(state_path, scan_sha)
     monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
     assert gate.main(["--state", str(state_path)]) == 1
+
+
+def test_commit_stage_warns_but_allows_near_budget(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scan_sha = _commit(fixture_repo, "a")
+    for i in range(7):  # 7 since scan -> pending 8 (>= 80% warn threshold, < 10 budget)
+        _commit(fixture_repo, f"b{i}")
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    _write_state(state_path, scan_sha)
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+    assert gate.main(["--state", str(state_path)]) == 0
+    assert "WARNING" in capsys.readouterr().err
+
+
+def test_missing_last_scan_commit_blocks(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        json.dumps({"last_scan_time": "2026-09-25T12:00:00Z", "issues_count": 3}), encoding="utf-8"
+    )
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+    assert gate.main(["--state", str(state_path)]) == 1
+
+
+def test_block_message_renders_unknown_issue_count(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scan_sha = _commit(fixture_repo, "a")
+    for i in range(9):
+        _commit(fixture_repo, f"b{i}")
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    _write_state(state_path, scan_sha, issues_count=None)
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+    assert gate.main(["--state", str(state_path)]) == 1
+    assert "Issues on record: unknown" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("raw", "expected"), [("abc", 10), ("0", 10), ("-3", 10), ("", 10), ("7", 7)])
+def test_resolve_max_commits_fallbacks(monkeypatch: pytest.MonkeyPatch, raw: str, expected: int) -> None:
+    if raw == "":
+        monkeypatch.delenv("SONAR_GATE_MAX_COMMITS", raising=False)
+    else:
+        monkeypatch.setenv("SONAR_GATE_MAX_COMMITS", raw)
+    assert gate.resolve_max_commits() == expected
+
+
+@pytest.mark.parametrize("quoted", ['"1"', "'1'", '"1" # enabled', "1 # enabled"])
+def test_dotenv_tolerates_quotes_and_comments(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch, quoted: str
+) -> None:
+    scan_sha = _commit(fixture_repo, "a")
+    for i in range(9):
+        _commit(fixture_repo, f"b{i}")
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    _write_state(state_path, scan_sha)
+    (fixture_repo / ".env").write_text(f"SONAR_FRESHNESS_GATE={quoted}\n", encoding="utf-8")
+    monkeypatch.delenv("SONAR_FRESHNESS_GATE", raising=False)
+    assert gate.main(["--state", str(state_path)]) == 1
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("1", "1"), ('"1"', "1"), ("'1'", "1"), ('"1" # on', "1"), ("  1  ", "1"), ("squ_abc", "squ_abc")],
+)
+def test_clean_env_value(raw: str, expected: str) -> None:
+    assert gate.clean_env_value(raw) == expected
 
 
 def test_push_stage_allows_at_scan_commit(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:

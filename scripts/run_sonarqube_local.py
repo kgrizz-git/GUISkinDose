@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,7 @@ SOURCE_ROOTS = ("src", "scripts", "tests")
 EXCLUDED_PARTS = {"__pycache__", ".scannerwork"}
 EXCLUDED_PREFIXES = ("src/guiskindose/example_data/", "src/guiskindose/phantom_data/", "tests/fixtures/")
 INVALID_HOST_URL = "invalid SonarQube host URL"
+INVALID_PROJECT_VERSION = "invalid project version"
 
 
 def repo_root() -> Path:
@@ -86,7 +88,7 @@ def build_scanner_command(
     command = [str(binary), f"-Dsonar.host.url={host_url}"]
     if project_version:
         if any(ch in project_version for ch in "\r\n\x00"):
-            raise ValueError(INVALID_HOST_URL)
+            raise ValueError(INVALID_PROJECT_VERSION)
         command.append(f"-Dsonar.projectVersion={project_version}")
     if wait_for_quality_gate:
         command.extend(["-Dsonar.qualitygate.wait=true", "-Dsonar.qualitygate.timeout=300"])
@@ -175,20 +177,16 @@ def write_state(root: Path, payload: dict[str, object]) -> None:
 
 
 def project_version_from_pyproject(root: Path) -> str | None:
-    """Read the project version from pyproject.toml (cosmetic scanner label)."""
+    """Read the project version from the [project] table (cosmetic scanner label)."""
     try:
-        text = (root / "pyproject.toml").read_text(encoding="utf-8")
-    except OSError:
+        with (root / "pyproject.toml").open("rb") as handle:
+            data = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError):
         return None
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if line.startswith("version"):
-            _, separator, value = line.partition("=")
-            if not separator:
-                continue
-            cleaned = value.strip().strip("\"'")
-            if cleaned and all(ch not in cleaned for ch in "\r\n\x00"):
-                return cleaned
+    project = data.get("project")
+    version = project.get("version") if isinstance(project, dict) else None
+    if isinstance(version, str) and version and all(ch not in version for ch in "\r\n\x00"):
+        return version
     return None
 
 

@@ -24,6 +24,9 @@ The state file (``tmp/sonar-state.json`` by default) is written by
 Exit codes:
     0 - gate off, or within budget.
     1 - missing/invalid state, stale (rebase/amend), or over budget / stale scan.
+
+Note: the push stage evaluates the checked-out HEAD, not the pushed refspecs —
+pushing another branch from this checkout is judged against HEAD's freshness.
 """
 from __future__ import annotations
 
@@ -74,7 +77,7 @@ def load_env_file(path: Path) -> None:
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), value.strip())
+            os.environ.setdefault(key.strip(), clean_env_value(value))
 
 
 def env_is_on(name: str) -> bool:
@@ -82,6 +85,14 @@ def env_is_on(name: str) -> bool:
     if value is None:
         return False
     return value.strip().lower() in {"1", "true", "yes"}
+
+
+def clean_env_value(raw: str) -> str:
+    """Tolerate quoted values and trailing ` #` comments in .env files."""
+    value = raw.strip().split(" #", 1)[0].strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1]
+    return value
 
 
 def git_head_sha() -> str:
@@ -142,9 +153,10 @@ def _refresh_hint(
     issues_count: object,
     issues_summary: str,
 ) -> str:
+    issues_label = "unknown" if issues_count is None else issues_count
     return (
         f"Last scan: {last_scan_commit[:12]} at {last_time}\n"
-        f"Issues on record: {issues_count}\n"
+        f"Issues on record: {issues_label}\n"
         f"Dumped issues: {issues_summary}\n"
         "Re-run the scan to refresh:\n"
         f"    {REFRESH_COMMAND}"
@@ -163,9 +175,19 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
 
     try:
         state = load_state(state_path)
-    except (json.JSONDecodeError, OSError) as exc:
+    except json.JSONDecodeError as exc:
         print(
             f"Sonar freshness gate: state file is invalid ({exc}).\n"
+            "Re-run the scan to regenerate it:\n"
+            f"    {REFRESH_COMMAND}",
+            file=sys.stderr,
+        )
+        return 1
+    except OSError as exc:
+        # Never print the raw exception: it embeds the (by default absolute)
+        # state path. The exception type is enough to diagnose permissions/IO.
+        print(
+            f"Sonar freshness gate: state file is unreadable ({type(exc).__name__}).\n"
             "Re-run the scan to regenerate it:\n"
             f"    {REFRESH_COMMAND}",
             file=sys.stderr,
@@ -184,6 +206,7 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
 
     last_time = state.get("last_scan_time", "unknown")
     issues_count = state.get("issues_count")
+    issues_label = "unknown" if issues_count is None else issues_count
     issues_summary = state.get("issues_summary_path", "tmp/sonar-latest-issues.md")
 
     try:
@@ -229,7 +252,7 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
             f"Sonar freshness gate BLOCKED: {pending} commits pending "
             f"(>= budget of {max_commits}, counting the in-flight commit).\n"
             f"Last scan: {last_scan_commit[:12]} at {last_time}\n"
-            f"Issues on record: {issues_count}\n"
+            f"Issues on record: {issues_label}\n"
             f"Dumped issues: {issues_summary}\n"
             "Re-run the scan to reset the budget:\n"
             f"    {REFRESH_COMMAND}",

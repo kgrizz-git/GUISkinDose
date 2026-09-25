@@ -84,7 +84,7 @@ def test_scanner_command_passes_project_version(tmp_path: Path) -> None:
     )
     assert "-Dsonar.projectVersion=1.0.0" in versioned
 
-    with pytest.raises(ValueError, match="invalid SonarQube host URL"):
+    with pytest.raises(ValueError, match="invalid project version"):
         build_scanner_command(
             resolved,
             "http://localhost:9000",
@@ -97,6 +97,21 @@ def test_project_version_from_pyproject(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "x"\nversion = "1.2.3"\n', encoding="utf-8")
     assert project_version_from_pyproject(tmp_path) == "1.2.3"
     assert project_version_from_pyproject(tmp_path / "missing") is None
+
+
+def test_project_version_ignores_other_tables_and_comments(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.example]\ntool_version = "9.9.9"\n[project]\nname = "x"\nversion = "1.2.3"  # release\n',
+        encoding="utf-8",
+    )
+    assert project_version_from_pyproject(tmp_path) == "1.2.3"
+
+
+def test_project_version_invalid_toml_returns_none(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[project\nversion = \n", encoding="utf-8")
+    assert project_version_from_pyproject(tmp_path) is None
+    (tmp_path / "pyproject.toml").write_text("[tool.example]\nname = \"x\"\n", encoding="utf-8")
+    assert project_version_from_pyproject(tmp_path) is None
 
 
 def test_write_freshness_state_round_trips(tmp_path: Path) -> None:

@@ -58,7 +58,8 @@ enforced by `scripts/check_sonar_freshness.py` (via `scripts/run_sonar_freshness
 unless `SONAR_FRESHNESS_GATE=1` is set in the repo-local `.env` (see `.env.example`). The gate keys off
 `tmp/sonar-state.json`, which `scripts/run_sonarqube_local.py` rewrites after each successful analysis (failures
 leave the prior state so the budget is not reset by a red scan). After history rewrites (rebase/amend) the gate
-blocks until a fresh scan re-anchors the state.
+blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
+pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
 
 ```bash
 # Enable the gate, then scan to create the baseline state:
