@@ -9,6 +9,7 @@ Covers `Plotsettings.to_dict()` (including the `colorscale` fix),
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from guiskindose import load_settings_example_json
@@ -656,14 +657,14 @@ def test_snapshot_restore_returns_pristine_session():
     state = _session_with_same_inputs_loaded()
     sentinel_exams = [object(), object()]
     state.loaded_exams = sentinel_exams
-    sentinel_df = object()
+    sentinel_df = pd.DataFrame({"a": [1]})
     state.rdsr_df = sentinel_df
     snapshot = snapshot_app_state(state)
 
     apply_run_state(_identified_document(), state)
     assert state.input_schema == "dosetrack"  # mutated
     state.loaded_exams = [object()]  # loader-style rebind
-    state.rdsr_df = object()
+    state.rdsr_df = pd.DataFrame({"a": [2]})
 
     restore_app_state_snapshot(state, snapshot)
     assert state.input_schema == "auto"
