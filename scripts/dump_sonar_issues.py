@@ -329,7 +329,6 @@ def main(argv: list[str] | None = None) -> int:
         print("ERROR: --page-size and --cap must be positive integers.", file=sys.stderr)
         return 2
 
-    collected: list[dict] = []
     try:
         collected, truncated = fetch_all_issues(
             host_url, token, component, page_size=args.page_size, cap=args.cap
