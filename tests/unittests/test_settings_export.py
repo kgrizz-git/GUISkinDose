@@ -630,10 +630,24 @@ def test_passthrough_carries_through_session_to_reexport():
 
     # The GUI save path reads the session field (mirrors _on_save).
     assert state.run_state_passthrough == {"future_key": {"nested": True}}
-    reemitted = serialize_run_state(
-        _example_settings(), _populated_state(), passthrough=dict(state.run_state_passthrough)
+    identified = serialize_run_state(
+        _example_settings(),
+        _populated_state(),
+        include_identifiers=True,
+        passthrough=dict(state.run_state_passthrough),
     )
-    assert reemitted["future_key"] == {"nested": True}
+    assert identified["future_key"] == {"nested": True}
+
+
+def test_passthrough_never_leaks_into_redacted_exports():
+    # Unknown keys may carry identifiers: redacted exports drop them even
+    # when the session carries them over from an identified import.
+    redacted = serialize_run_state(
+        _example_settings(),
+        _populated_state(),
+        passthrough={"future_key": {"nested": True}},
+    )
+    assert "future_key" not in redacted
 
 
 def test_applier_restores_input_source_type_but_never_blanks_it():
@@ -874,7 +888,9 @@ def test_applier_passthrough_preserved_for_reexport():
     result = apply_run_state(document, _session_with_same_inputs_loaded())
 
     assert result.passthrough == {"future_key": {"nested": True}}
-    reemitted = serialize_run_state(_example_settings(), _populated_state(), passthrough=result.passthrough)
+    reemitted = serialize_run_state(
+        _example_settings(), _populated_state(), include_identifiers=True, passthrough=result.passthrough
+    )
     assert reemitted["future_key"] == {"nested": True}
 
 

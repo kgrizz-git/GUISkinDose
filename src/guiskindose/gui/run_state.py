@@ -227,7 +227,8 @@ def serialize_run_state(
     passthrough : dict[str, Any] | None
         Unknown top-level keys preserved from a previously imported document
         (see `ApplyResult.passthrough`); merged without overwriting canonical
-        keys.
+        keys, and only when `include_identifiers` is set — unknown keys may
+        carry identifiers, so a redacted export must never copy them.
 
     Returns
     -------
@@ -261,7 +262,7 @@ def serialize_run_state(
             ],
         },
     }
-    if passthrough:
+    if passthrough and include_identifiers:
         for key, value in passthrough.items():
             document.setdefault(key, value)
     return document

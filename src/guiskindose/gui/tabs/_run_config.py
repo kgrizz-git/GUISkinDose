@@ -146,13 +146,15 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
             type="warning",
             timeout=8000,
         )
-    await _resequence_reparse_if_needed(document, result.schema_or_sheet_changed)
+    resequence_ok = await _resequence_reparse_if_needed(document, result.schema_or_sheet_changed)
     reset_results()
     ctx.refresh_event_table()
     ctx.refresh_exams_table()
     ctx.refresh_import_preview()
     ctx.refresh_per_exam()
     ctx.refresh_geometry_tab()
+    if not resequence_ok:
+        return  # failure already notified; never show a success status
     status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
     ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
 
@@ -171,7 +173,7 @@ def _notify_warnings(warnings: list[str]) -> None:
         ui.notify(f"+{len(warnings) - _MAX_SHOWN_WARNINGS} more import warnings.", type="warning")
 
 
-async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed: bool) -> None:
+async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed: bool) -> bool:
     """Re-parse tabular inputs after a schema/sheet change, then re-apply exams.
 
     `apply_run_state` already wrote the new schema/sheet plus the per-exam
@@ -179,9 +181,12 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
     offsets. Re-running the (Tier-3-idempotent) applier afterwards restores
     them onto the fresh metas. Multi-exam sessions have no single re-parse
     entry point, so they get loud guidance instead of silent staleness.
+
+    Returns False when loading or re-applying fails (caller must suppress its
+    success status), True when the re-parse succeeded or was unnecessary.
     """
     if not schema_or_sheet_changed:
-        return
+        return True
     if state.is_multi_exam or state.input_source_type not in ("csv", "tsv", "xlsx") or state.file_path is None:
         ui.notify(
             "Schema/sheet changed with multiple (or non-tabular) inputs — "
@@ -190,14 +195,14 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
             timeout=0,
             close_button="Dismiss",
         )
-        return
+        return True
     with operation_guard("re-parsing after configuration import") as proceed:
         if not proceed:
-            return
+            return True
         ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
     if not ok:
         ui.notify(f"Re-parse after import failed: {msg}. Per-exam offsets may be stale.", type="negative")
-        return
+        return False
     try:
         # Restore offsets onto the rebuilt metas (Tier-3 re-apply is idempotent).
         # Guarded: the re-parsed file may yield a different exam count than the
@@ -207,3 +212,5 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
     except RunStateError as exc:
         safe_error_event(logger, "run_config_reapply", exc)
         ui.notify("Re-parse changed the exam set. Per-exam offsets could not be restored.", type="negative")
+        return False
+    return True

@@ -331,7 +331,9 @@ NiceGUI widgets.
    indices survive in both modes**.
 4. Import of a document whose `schema_version` exceeds the supported integer
    fails loudly; equal-version documents import with unknown extras preserved on
-   re-export.
+   re-export — when identifiers are included. Unknown keys may carry
+   identifiers, so redacted exports drop them; the applier still collects them
+   into the session for identified re-exports.
 5. After import, rendered GUI widgets reflect the imported values (Phase 3 test
    exercises the refresh path on live widgets — state-only assertions do not
    satisfy this criterion), and schema/sheet changes take effect without wiping

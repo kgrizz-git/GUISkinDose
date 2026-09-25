@@ -160,6 +160,10 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     _seed_single_exam()
     state.calculation_done = True
     state.output = {"psd": 1.0}
+    # Align schema/sheet with the document: this test covers restore/refresh,
+    # not re-parse (dedicated tests below own that path).
+    state.input_schema = "dosetrack"
+    state.input_sheet_name = "Events"
     calls: list[str] = []
     with _client(user):
         status = ui.label("")
@@ -230,6 +234,26 @@ async def test_import_refuses_while_busy(user: User) -> None:
     assert state.input_schema == "auto"  # nothing applied
     assert state.d_lon == 0.0
     assert user.notify.contains("Busy")
+
+
+@pytest.mark.asyncio
+async def test_import_reparse_failure_suppresses_success_status(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed re-parse notifies failure and never shows the success status."""
+    await user.open("/")
+    _seed_single_exam()
+
+    def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        return False, "boom"
+
+    monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
+    with _client(user):
+        status = ui.label("")
+    document = _make_document()
+    document["gui_state"]["input_sheet_name"] = "Other"
+    await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
+    assert user.notify.contains("Re-parse after import failed")
+    assert not user.notify.contains("Run configuration loaded")
+    assert status.text == ""
 
 
 @pytest.mark.asyncio
