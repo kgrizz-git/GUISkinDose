@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -126,6 +128,17 @@ def test_write_freshness_state_round_trips(tmp_path: Path) -> None:
     assert payload["last_scan_commit"] == "abc123"
 
 
+@contextlib.contextmanager
+def _isolated_env() -> Iterator[None]:
+    """Snapshot/restore process env: code-under-test mutates os.environ directly."""
+    saved = dict(os.environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
+
+
 def test_load_env_defaults_from_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SONAR_TOKEN", raising=False)
     monkeypatch.delenv("SONAR_HOST_URL", raising=False)
@@ -133,15 +146,17 @@ def test_load_env_defaults_from_dotenv(tmp_path: Path, monkeypatch: pytest.Monke
         'SONAR_TOKEN="squ_test" # local token\nSONAR_HOST_URL=http://localhost:9000\nOTHER=ignored\n',
         encoding="utf-8",
     )
-    load_env_defaults(tmp_path)
-    assert os.environ["SONAR_TOKEN"] == "squ_test"
-    assert os.environ["SONAR_HOST_URL"] == "http://localhost:9000"
-    assert "OTHER" not in os.environ
+    with _isolated_env():
+        load_env_defaults(tmp_path)
+        assert os.environ["SONAR_TOKEN"] == "squ_test"
+        assert os.environ["SONAR_HOST_URL"] == "http://localhost:9000"
+        assert "OTHER" not in os.environ
 
 
 def test_load_env_defaults_exported_wins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SONAR_TOKEN", "exported")
     monkeypatch.delenv("SONAR_HOST_URL", raising=False)
     (tmp_path / ".env").write_text("SONAR_TOKEN=file-token\n", encoding="utf-8")
-    load_env_defaults(tmp_path)
-    assert os.environ["SONAR_TOKEN"] == "exported"
+    with _isolated_env():
+        load_env_defaults(tmp_path)
+        assert os.environ["SONAR_TOKEN"] == "exported"
