@@ -289,6 +289,35 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
 
 
 @pytest.mark.asyncio
+async def test_import_second_apply_failure_restores_original_exams(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A re-parse that changes the exam count rolls back exams with the state."""
+    await user.open("/")
+    _seed_single_exam()
+    original_exams = [object()]
+    state.loaded_exams = original_exams
+
+    def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        # Successful re-parse yielding a different exam count: the guarded
+        # second apply raises, so rollback must restore the original exams
+        # alongside the scalars (next calc must see old exams + old state).
+        app_state.loaded_exams = [object(), object()]
+        app_state.loaded_exam_meta = [{}, {}]
+        return True, "ok"
+
+    monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
+    with _client(user):
+        status = ui.label("")
+    document = _make_document()
+    document["gui_state"]["input_sheet_name"] = "Other"
+    await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
+    assert user.notify.contains("could not be restored")
+    assert not user.notify.contains("Run configuration loaded")
+    assert state.loaded_exams == original_exams
+    assert len(state.loaded_exam_meta) == 1
+    assert state.input_schema == "auto"
+
+
+@pytest.mark.asyncio
 async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
     """Schema change triggers re-parse; offsets land on the rebuilt metas."""
     await user.open("/")

@@ -654,10 +654,16 @@ def test_passthrough_never_leaks_into_redacted_exports():
 
 def test_snapshot_restore_returns_pristine_session():
     state = _session_with_same_inputs_loaded()
+    sentinel_exams = [object(), object()]
+    state.loaded_exams = sentinel_exams
+    sentinel_df = object()
+    state.rdsr_df = sentinel_df
     snapshot = snapshot_app_state(state)
 
     apply_run_state(_identified_document(), state)
     assert state.input_schema == "dosetrack"  # mutated
+    state.loaded_exams = [object()]  # loader-style rebind
+    state.rdsr_df = object()
 
     restore_app_state_snapshot(state, snapshot)
     assert state.input_schema == "auto"
@@ -666,6 +672,9 @@ def test_snapshot_restore_returns_pristine_session():
     assert getattr(state, "normalization_profiles", None) is None
     assert state.run_state_passthrough == {}
     assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
+    # Reference snapshots restore loader-rebound state by identity, free.
+    assert state.loaded_exams == sentinel_exams
+    assert state.rdsr_df is sentinel_df
     # Restoring twice is safe (snapshots are deep copies).
     restore_app_state_snapshot(state, snapshot)
     assert state.input_schema == "auto"

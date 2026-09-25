@@ -352,13 +352,20 @@ def snapshot_app_state(app_state: AppState) -> dict[str, Any]:
     Homes and tables are deep-copied (the applier rebinds them, but a later
     caller could mutate through); scalars are immutable. `loaded_exam_meta`
     entries are mutated in place by the applier, so they are deep-copied too.
-    Runtime objects (`base_data` DataFrames, figures, `loaded_exams`) are
-    never touched by the applier and intentionally excluded.
+    `loaded_exams` / `rdsr_df` / `rdsr_raw_df` are snapshotted by reference:
+    the applier never touches them, and the loader only ever rebinds (never
+    mutates in place), so restoring the saved references is exact and free —
+    no DataFrame is ever copied. All other runtime objects (figures,
+    `import_provenance`, warnings) are loader-owned and intentionally
+    excluded.
     """
     import copy
 
     snapshot = {attr: copy.deepcopy(getattr(app_state, attr)) for attr in _SNAPSHOT_ATTRS}
     snapshot["loaded_exam_meta"] = copy.deepcopy(app_state.loaded_exam_meta)
+    snapshot["loaded_exams"] = list(app_state.loaded_exams)
+    snapshot["rdsr_df"] = app_state.rdsr_df
+    snapshot["rdsr_raw_df"] = app_state.rdsr_raw_df
     return snapshot
 
 
@@ -369,6 +376,9 @@ def restore_app_state_snapshot(app_state: AppState, snapshot: dict[str, Any]) ->
     for attr in _SNAPSHOT_ATTRS:
         setattr(app_state, attr, copy.deepcopy(snapshot[attr]))
     app_state.loaded_exam_meta = copy.deepcopy(snapshot["loaded_exam_meta"])
+    app_state.loaded_exams = list(snapshot["loaded_exams"])
+    app_state.rdsr_df = snapshot["rdsr_df"]
+    app_state.rdsr_raw_df = snapshot["rdsr_raw_df"]
 
 
 def _require_section(document: dict, key: str) -> dict:
