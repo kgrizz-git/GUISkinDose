@@ -28,6 +28,7 @@ import os
 import re
 import shutil
 import sys
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -173,7 +174,8 @@ def summarize_issues(issues: list[dict], *, truncated: bool = False, cap: int = 
     return "\n".join(lines) + "\n"
 
 
-def prune_dumps(issues_dir: Path, *, keep_days: int = 30, keep_minimum: int = 5) -> tuple[int, int]:
+def collect_dump_stamps(issues_dir: Path) -> dict[str, list[Path]]:
+    """Group timestamped dump files by UTC stamp; ignore anything else."""
     stamps: dict[str, list[Path]] = {}
     for path in issues_dir.glob("*"):
         if not path.is_file():
@@ -181,26 +183,44 @@ def prune_dumps(issues_dir: Path, *, keep_days: int = 30, keep_minimum: int = 5)
         match = re.fullmatch(r"(\d{4}-\d{2}-\d{2}T\d{6}Z)\.(?:json|md)", path.name)
         if match:
             stamps.setdefault(match.group(1), []).append(path)
+    return stamps
 
-    def stamp_datetime(stamp: str) -> datetime:
-        return datetime.strptime(stamp, "%Y-%m-%dT%H%M%SZ").replace(tzinfo=timezone.utc)
 
+def stamp_datetime(stamp: str) -> datetime:
+    return datetime.strptime(stamp, "%Y-%m-%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+
+
+def stamps_to_keep(
+    stamps: Mapping[str, list[Path]], *, keep_days: int, keep_minimum: int
+) -> set[str]:
+    """All in-cutoff stamps, always retaining at least keep_minimum timestamps."""
     ordered = sorted(stamps, key=stamp_datetime, reverse=True)
     cutoff = datetime.now(timezone.utc) - timedelta(days=keep_days)
     recent = [stamp for stamp in ordered if stamp_datetime(stamp) >= cutoff]
-    keep = set(ordered[: max(len(recent), keep_minimum, 1)])
+    return set(ordered[: max(len(recent), keep_minimum, 1)])
 
+
+def remove_stale_stamps(stamps: Mapping[str, list[Path]], keep: set[str]) -> tuple[int, int]:
+    """Delete non-kept stamps; return (removed, failed) without aborting."""
     removed = 0
     failed = 0
-    for stamp in ordered:
-        if stamp not in keep:
-            for path in stamps[stamp]:
-                try:
-                    path.unlink()
-                except OSError:
-                    failed += 1
-                    continue
-                removed += 1
+    for stamp in stamps:
+        if stamp in keep:
+            continue
+        for path in stamps[stamp]:
+            try:
+                path.unlink()
+            except OSError:
+                failed += 1
+                continue
+            removed += 1
+    return removed, failed
+
+
+def prune_dumps(issues_dir: Path, *, keep_days: int = 30, keep_minimum: int = 5) -> tuple[int, int]:
+    stamps = collect_dump_stamps(issues_dir)
+    keep = stamps_to_keep(stamps, keep_days=keep_days, keep_minimum=keep_minimum)
+    removed, failed = remove_stale_stamps(stamps, keep)
     if failed:
         print(f"warning: could not remove {failed} stale dump file(s).", file=sys.stderr)
     return removed, len(keep)
@@ -225,6 +245,46 @@ def refresh_state_counts(root: Path, *, issues_count: int, issues_path: str) -> 
     except OSError:
         return False
     return True
+
+
+def fetch_all_issues(host_url: str, token: str, component: str, *, page_size: int, cap: int) -> tuple[list[dict], bool]:
+    """Fetch every unresolved issue page; trim hard to cap. Returns (issues, truncated)."""
+    collected: list[dict] = []
+    page = 1
+    while True:
+        payload = fetch_issues_page(host_url, token, component, page, page_size)
+        batch = payload["issues"]
+        collected.extend(batch)
+        total = 0
+        paging = payload.get("paging")
+        if isinstance(paging, dict):
+            raw_total = paging.get("total", 0)
+            if isinstance(raw_total, int):
+                total = raw_total
+        if page_complete(
+            batch_empty=not batch,
+            collected=len(collected),
+            total=total,
+            cap=cap,
+        ):
+            break
+        page += 1
+    if len(collected) > cap:
+        return collected[:cap], True
+    return collected, False
+
+
+def write_issue_dumps(root: Path, collected: list[dict], timestamp: str, *, truncated: bool, cap: int) -> Path:
+    """Write timestamped + stable-pointer dumps; return the issues directory."""
+    issues_dir = root / ISSUES_DIRNAME
+    issues_dir.mkdir(parents=True, exist_ok=True)
+    issues_json = issues_dir / f"{timestamp}.json"
+    issues_summary = issues_dir / f"{timestamp}.md"
+    issues_json.write_text(json.dumps(collected, indent=2) + "\n", encoding="utf-8")
+    issues_summary.write_text(summarize_issues(collected, truncated=truncated, cap=cap), encoding="utf-8")
+    shutil.copyfile(issues_summary, root / LATEST_SUMMARY)
+    shutil.copyfile(issues_json, root / LATEST_JSON)
+    return issues_dir
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -270,42 +330,17 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     collected: list[dict] = []
-    page = 1
     try:
-        while True:
-            payload = fetch_issues_page(host_url, token, component, page, args.page_size)
-            batch = payload["issues"]
-            collected.extend(batch)
-            paging = payload.get("paging")
-            total = paging.get("total", 0) if isinstance(paging, dict) else 0
-            if page_complete(
-                batch_empty=not batch,
-                collected=len(collected),
-                total=total if isinstance(total, int) else 0,
-                cap=args.cap,
-            ):
-                break
-            page += 1
+        collected, truncated = fetch_all_issues(
+            host_url, token, component, page_size=args.page_size, cap=args.cap
+        )
     except RuntimeError as exc:
         print(f"ERROR: {exc}.", file=sys.stderr)
         return 1
 
-    truncated = len(collected) > args.cap
-    if truncated:
-        collected = collected[: args.cap]
-
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
-    issues_dir = root / ISSUES_DIRNAME
-    issues_dir.mkdir(parents=True, exist_ok=True)
-    issues_json = issues_dir / f"{timestamp}.json"
-    issues_summary = issues_dir / f"{timestamp}.md"
     try:
-        issues_json.write_text(json.dumps(collected, indent=2) + "\n", encoding="utf-8")
-        issues_summary.write_text(
-            summarize_issues(collected, truncated=truncated, cap=args.cap), encoding="utf-8"
-        )
-        shutil.copyfile(issues_summary, root / LATEST_SUMMARY)
-        shutil.copyfile(issues_json, root / LATEST_JSON)
+        issues_dir = write_issue_dumps(root, collected, timestamp, truncated=truncated, cap=args.cap)
     except OSError as exc:
         print(f"ERROR: could not write issue dumps ({type(exc).__name__}).", file=sys.stderr)
         return 1

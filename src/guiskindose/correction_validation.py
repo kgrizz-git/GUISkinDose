@@ -27,6 +27,10 @@ Severity = Literal["error", "advisory"]
 
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
+# Transmission factors live in (0, 1]; anything below this is physically
+# indistinguishable from zero (and neutralized at runtime like exact zeros).
+_ZERO_TRANSMISSION_TOL = 1e-9
+
 
 def _quoted_identifier(name: str) -> str:
     """Quote a table name for SQL after strict allowlist validation.
@@ -192,9 +196,10 @@ def check_support_transmission(
     """Range policy for patient-support transmission values.
 
     Non-finite, negative, and above-1.0 values are hard errors (unphysical,
-    dose-inflating). Exact zeros are a known-invalid inherited class (304
-    AlluraClarity Plane B rows) handled as warned-neutral at runtime, so they
-    are advisory here — not a dataset error.
+    dose-inflating). Zero or near-zero values are a known-invalid inherited
+    class (304 AlluraClarity Plane B rows) handled as warned-neutral at runtime
+    (anything ``<= 0`` is neutralized there), so they are advisory here — not
+    a dataset error.
     """
     issues: list[ValidationIssue] = []
     if value_column not in df.columns:
@@ -221,13 +226,14 @@ def check_support_transmission(
                 table_name, value_column, "out_of_range", f"Column {value_column!r} holds values above 1.0 (unphysical).", "error"
             )
         )
-    if bool((values == 0.0).any()):
+    zero_mask = (values >= 0.0) & (values < _ZERO_TRANSMISSION_TOL)
+    if bool(zero_mask.any()):
         issues.append(
             ValidationIssue(
                 table_name,
                 value_column,
                 "zero_transmission",
-                f"Column {value_column!r} holds {(values == 0.0).sum()} exact-zero rows (known-invalid inherited class; warned-neutral at runtime).",
+                f"Column {value_column!r} holds {zero_mask.sum()} zero or near-zero rows (known-invalid inherited class; warned-neutral at runtime).",
                 "advisory",
             )
         )

@@ -31,6 +31,13 @@ class CandidateDomain:
     unique_poses: tuple[tuple[float, float], ...] = ()
 
 
+# Half-turn detection tolerance: wrapped 180-degree displacements are computed
+# in floating point, so an exact `== 180.0` can miss by drift. RDSR angles are
+# far coarser than this, so anything this close to a half turn keeps both
+# signed directions (the conservative envelope choice).
+_HALF_TURN_TOL_DEG = 1e-9
+
+
 def _canonical(angle: float) -> float:
     return angle % 360.0
 
@@ -61,7 +68,7 @@ def _raw_displacements(start_raw: float, end_raw: float) -> tuple[float, float]:
 
 def _path_labels(delta_pos: float, delta_neg: float) -> tuple[tuple[str, float], tuple[str, float]]:
     """Label the two hypotheses; at 180 neither is shorter, so name the sign."""
-    if abs(delta_pos) == 180.0:
+    if abs(abs(delta_pos) - 180.0) <= _HALF_TURN_TOL_DEG:
         return (("positive_180", delta_pos), ("negative_180", delta_neg))
     short, long = (
         (delta_pos, delta_neg)
