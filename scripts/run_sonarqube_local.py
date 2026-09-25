@@ -213,6 +213,34 @@ def write_freshness_state(root: Path, payload: dict[str, object]) -> None:
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def load_env_defaults(root: Path) -> None:
+    """Fill SONAR_TOKEN/SONAR_HOST_URL from repo .env when not exported.
+
+    Same setdefault idiom as the gate and dump helpers: an exported value
+    always wins, the file is parsed (never sourced), and values tolerate
+    quotes and trailing ` #` comments. Lets `python
+    scripts/run_sonarqube_local.py` work in a plain shell on any OS.
+    """
+    if os.environ.get("SONAR_TOKEN") and os.environ.get("SONAR_HOST_URL"):
+        return
+    try:
+        text = (root / ".env").read_text(encoding="utf-8")
+    except OSError:
+        return
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key not in {"SONAR_TOKEN", "SONAR_HOST_URL"}:
+            continue
+        cleaned = value.strip().split(" #", 1)[0].strip()
+        if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {"'", '"'}:
+            cleaned = cleaned[1:-1]
+        os.environ.setdefault(key, cleaned)
+
+
 def classify_failure(log_path: Path) -> str:
     try:
         content = log_path.read_text(encoding="utf-8", errors="replace").lower()
@@ -228,8 +256,9 @@ def classify_failure(log_path: Path) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
     root = repo_root()
+    load_env_defaults(root)
+    args = parse_args(argv)
     located = shutil.which("sonar-scanner")
     if located is None:
         print("ERROR: SonarQube local analysis did not run (scanner_missing).", file=sys.stderr)

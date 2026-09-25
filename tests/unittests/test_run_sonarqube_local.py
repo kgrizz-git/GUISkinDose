@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from scripts.run_sonarqube_local import (
     build_scanner_command,
     classify_failure,
+    load_env_defaults,
     project_version_from_pyproject,
     sanitize_host_url,
     validate_host,
@@ -122,3 +124,24 @@ def test_write_freshness_state_round_trips(tmp_path: Path) -> None:
     write_freshness_state(tmp_path, {"last_scan_commit": "abc123", "issues_count": None})
     payload = json.loads((tmp_path / FRESHNESS_STATE_PATH).read_text(encoding="utf-8"))
     assert payload["last_scan_commit"] == "abc123"
+
+
+def test_load_env_defaults_from_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONAR_HOST_URL", raising=False)
+    (tmp_path / ".env").write_text(
+        'SONAR_TOKEN="squ_test" # local token\nSONAR_HOST_URL=http://localhost:9000\nOTHER=ignored\n',
+        encoding="utf-8",
+    )
+    load_env_defaults(tmp_path)
+    assert os.environ["SONAR_TOKEN"] == "squ_test"
+    assert os.environ["SONAR_HOST_URL"] == "http://localhost:9000"
+    assert "OTHER" not in os.environ
+
+
+def test_load_env_defaults_exported_wins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SONAR_TOKEN", "exported")
+    monkeypatch.delenv("SONAR_HOST_URL", raising=False)
+    (tmp_path / ".env").write_text("SONAR_TOKEN=file-token\n", encoding="utf-8")
+    load_env_defaults(tmp_path)
+    assert os.environ["SONAR_TOKEN"] == "exported"

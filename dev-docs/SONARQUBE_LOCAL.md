@@ -61,8 +61,11 @@ leave the prior state so the budget is not reset by a red scan). After history r
 blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
 pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
 
-`SONAR_HOST_URL` comes from the exported environment in both helpers (overridable per-invocation via
-`--host-url`); only `SONAR_TOKEN` is additionally read from the repo-local `.env`.
+`SONAR_TOKEN` is read from the exported environment or the repo-local `.env` by all three helpers
+(exported wins; the file is parsed, never sourced). `SONAR_HOST_URL` comes from the exported environment
+in the gate and dump helpers (overridable per-invocation via `--host-url`); the runner additionally falls
+back to `.env`, so a plain `python scripts/run_sonarqube_local.py` works in any shell on any OS — no
+`export` dance needed.
 
 ```bash
 # Enable the gate, then scan to create the baseline state:
