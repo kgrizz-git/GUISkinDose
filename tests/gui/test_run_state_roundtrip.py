@@ -241,6 +241,8 @@ async def test_import_reparse_failure_suppresses_success_status(user: User, monk
     """A failed re-parse notifies failure and never shows the success status."""
     await user.open("/")
     _seed_single_exam()
+    state.calculation_done = True
+    state.output = {"psd": 1.0}
 
     def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
         return False, "boom"
@@ -255,11 +257,35 @@ async def test_import_reparse_failure_suppresses_success_status(user: User, monk
     assert not user.notify.contains("Run configuration loaded")
     assert status.text == ""
     # Transactional rollback: pass-1 values over old data would silently mix
-    # into the next calculation, so the session is restored wholesale.
+    # into the next calculation, so the session is restored wholesale —
+    # including the pre-import results, which stay valid.
     assert state.input_schema == "auto"
     assert state.input_sheet_name == 0
     assert state.d_lon == 0.0
     assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
+    assert state.calculation_done is True
+    assert state.output == {"psd": 1.0}
+
+
+@pytest.mark.asyncio
+async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) -> None:
+    """A rejected import restores state, repaints, and preserves results."""
+    await user.open("/")
+    _seed_single_exam()
+    state.calculation_done = True
+    state.output = {"psd": 1.0}
+    calls: list[str] = []
+    with _client(user):
+        status = ui.label("")
+    document = _make_document()
+    document["gui_state"]["exams"] = []  # 0 vs 1 loaded
+    await run_config_mod._do_load(_upload_event(document), _stub_ctx(calls), status)
+    assert state.input_schema == "auto"  # restored, not half-applied
+    assert state.d_lon == 0.0
+    assert state.calculation_done is True  # pre-import results stay valid
+    assert state.output == {"psd": 1.0}
+    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab"]
+    assert not user.notify.contains("Run configuration loaded")
 
 
 @pytest.mark.asyncio

@@ -166,16 +166,21 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
     if not resequence_ok:
         # Roll back the pass-1 values: they sit over old parsed data and
         # would silently mix into the next calculation. Refresh repaints the
-        # restored state; the failure itself was already notified.
+        # restored state (whose pre-import results stay valid, so no reset);
+        # the failure itself was already notified.
         restore_app_state_snapshot(state, snapshot)
+        ctx.refresh_event_table()
+        ctx.refresh_exams_table()
+        ctx.refresh_import_preview()
+        ctx.refresh_per_exam()
+        ctx.refresh_geometry_tab()
+        return
     reset_results()
     ctx.refresh_event_table()
     ctx.refresh_exams_table()
     ctx.refresh_import_preview()
     ctx.refresh_per_exam()
     ctx.refresh_geometry_tab()
-    if not resequence_ok:
-        return  # failure already notified; never show a success status
     status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
     ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
 
