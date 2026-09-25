@@ -17,7 +17,13 @@ from typing import Any
 
 from nicegui import run, ui
 
-from guiskindose.gui.run_state import RunStateError, apply_run_state, serialize_run_state
+from guiskindose.gui.run_state import (
+    RunStateError,
+    apply_run_state,
+    restore_app_state_snapshot,
+    serialize_run_state,
+    snapshot_app_state,
+)
 from guiskindose.gui.settings_builder import build_settings
 from guiskindose.privacy import safe_error_event, safe_user_error
 
@@ -130,13 +136,23 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
             type="warning",
         )
         return
+    # Snapshot first: if the re-parse fails later, the pass-1 Tier-3 values
+    # sitting over old parsed data would silently mix on the next calculation.
+    # Rolling back makes a failed import atomic (all-or-nothing).
+    snapshot = snapshot_app_state(state)
     try:
         result = apply_run_state(document, state)
     except RunStateError as exc:
+        restore_app_state_snapshot(state, snapshot)
         safe_error_event(logger, "run_config_apply", exc)
         ui.notify(
             _IMPORT_ERROR_MESSAGES.get(exc.code, safe_user_error("run_config_apply")), type="negative", timeout=8000
         )
+        ctx.refresh_event_table()
+        ctx.refresh_exams_table()
+        ctx.refresh_import_preview()
+        ctx.refresh_per_exam()
+        ctx.refresh_geometry_tab()
         return
     _notify_warnings(result.warnings)
     if result.mode != "calculate_dose":
@@ -147,6 +163,11 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
             timeout=8000,
         )
     resequence_ok = await _resequence_reparse_if_needed(document, result.schema_or_sheet_changed)
+    if not resequence_ok:
+        # Roll back the pass-1 values: they sit over old parsed data and
+        # would silently mix into the next calculation. Refresh repaints the
+        # restored state; the failure itself was already notified.
+        restore_app_state_snapshot(state, snapshot)
     reset_results()
     ctx.refresh_event_table()
     ctx.refresh_exams_table()

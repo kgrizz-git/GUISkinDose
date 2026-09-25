@@ -298,6 +298,79 @@ class ApplyResult:
     passthrough: dict[str, Any] = field(default_factory=dict)
 
 
+# Every AppState attribute `apply_run_state` may write (kerma_meter_file is
+# Tier-2 and never written). `loaded_exam_meta` entries are mutated in place
+# and snapshotted separately (deep).
+_SNAPSHOT_ATTRS = (
+    "estimate_k_tab",
+    "k_tab_val",
+    "inherent_filtration",
+    "remove_invalid_rows",
+    "below_floor_kvp_policy",
+    "below_floor_kvp_manual",
+    "beam_miss_warn",
+    "rotational_handling",
+    "phantom_model",
+    "human_mesh",
+    "phantom_scale_lat",
+    "phantom_scale_ap",
+    "phantom_scale_lon",
+    "patient_orientation",
+    "d_lon",
+    "d_ver",
+    "d_lat",
+    "dark_mode",
+    "colorscale",
+    "plot_dosemap",
+    "kerma_meter_enable",
+    "kerma_meter_mode",
+    "kerma_meter_file_sheet",
+    "kerma_meter_explicit_label",
+    "kerma_meter_default_factor",
+    "kerma_meter_prompt_at_calc",
+    "kerma_meter_in_memory_table",
+    "include_static_pose",
+    "angular_step_deg",
+    "dosetrack_plane_code_map",
+    "corrections_db_path",
+    "phantom_dimensions",
+    "max_events_for_patient_inclusion",
+    "normalization_profiles",
+    "run_state_passthrough",
+    "input_schema",
+    "input_source_type",
+    "input_sheet_name",
+    "swap_lat_lon",
+    "flip_ap1",
+    "flip_ap2",
+)
+
+
+def snapshot_app_state(app_state: AppState) -> dict[str, Any]:
+    """Capture everything `apply_run_state` may mutate, for rollback.
+
+    Homes and tables are deep-copied (the applier rebinds them, but a later
+    caller could mutate through); scalars are immutable. `loaded_exam_meta`
+    entries are mutated in place by the applier, so they are deep-copied too.
+    Runtime objects (`base_data` DataFrames, figures, `loaded_exams`) are
+    never touched by the applier and intentionally excluded.
+    """
+    import copy
+
+    snapshot = {attr: copy.deepcopy(getattr(app_state, attr)) for attr in _SNAPSHOT_ATTRS}
+    snapshot["loaded_exam_meta"] = copy.deepcopy(app_state.loaded_exam_meta)
+    return snapshot
+
+
+def restore_app_state_snapshot(app_state: AppState, snapshot: dict[str, Any]) -> None:
+    """Restore a snapshot from `snapshot_app_state` (failed-import rollback)."""
+    import copy
+
+    for attr in _SNAPSHOT_ATTRS:
+        setattr(app_state, attr, copy.deepcopy(snapshot[attr]))
+    app_state.loaded_exam_meta = copy.deepcopy(snapshot["loaded_exam_meta"])
+
+
 def _require_section(document: dict, key: str) -> dict:
     """Return ``document[key]`` (or ``{}`` when absent/null), rejecting mistypes."""
     value = document.get(key)

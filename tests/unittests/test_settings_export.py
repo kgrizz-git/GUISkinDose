@@ -18,7 +18,9 @@ from guiskindose.gui.run_state import (
     ApplyResult,
     RunStateError,
     apply_run_state,
+    restore_app_state_snapshot,
     serialize_run_state,
+    snapshot_app_state,
     validate_run_state_document,
 )
 from guiskindose.gui.settings_builder import build_settings
@@ -648,6 +650,25 @@ def test_passthrough_never_leaks_into_redacted_exports():
         passthrough={"future_key": {"nested": True}},
     )
     assert "future_key" not in redacted
+
+
+def test_snapshot_restore_returns_pristine_session():
+    state = _session_with_same_inputs_loaded()
+    snapshot = snapshot_app_state(state)
+
+    apply_run_state(_identified_document(), state)
+    assert state.input_schema == "dosetrack"  # mutated
+
+    restore_app_state_snapshot(state, snapshot)
+    assert state.input_schema == "auto"
+    assert state.estimate_k_tab is True
+    assert state.d_lon == 0.0
+    assert getattr(state, "normalization_profiles", None) is None
+    assert state.run_state_passthrough == {}
+    assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
+    # Restoring twice is safe (snapshots are deep copies).
+    restore_app_state_snapshot(state, snapshot)
+    assert state.input_schema == "auto"
 
 
 def test_applier_restores_input_source_type_but_never_blanks_it():

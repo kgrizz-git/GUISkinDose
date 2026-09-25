@@ -254,6 +254,12 @@ async def test_import_reparse_failure_suppresses_success_status(user: User, monk
     assert user.notify.contains("Re-parse after import failed")
     assert not user.notify.contains("Run configuration loaded")
     assert status.text == ""
+    # Transactional rollback: pass-1 values over old data would silently mix
+    # into the next calculation, so the session is restored wholesale.
+    assert state.input_schema == "auto"
+    assert state.input_sheet_name == 0
+    assert state.d_lon == 0.0
+    assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
 
 
 @pytest.mark.asyncio
