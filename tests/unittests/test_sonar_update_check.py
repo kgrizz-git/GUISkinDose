@@ -100,8 +100,8 @@ def test_reports_outdated_server_and_records_check(tmp_path: Path) -> None:
         tmp_path, HOST, "scanner", fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW
     )
     assert messages == [
-        "SonarQube update available: server 26.7.0.124771 -> 26.9.0.129388. To update, back up, then pull and "
-        "restart the compose stack; see dev-docs/SONARQUBE_LOCAL.md."
+        "SonarQube update available: server 26.7.0.124771 -> 26.9.0.129388. To update, back up, then bump the "
+        "image pin in compose.sonarqube.yaml; see dev-docs/SONARQUBE_LOCAL.md."
     ]
     assert json.loads((tmp_path / UPDATE_STATE_PATH).read_text(encoding="utf-8"))["last_checked"] == NOW.isoformat()
 
@@ -155,3 +155,26 @@ def test_unreachable_server_does_not_record_check(tmp_path: Path) -> None:
 def test_fetch_text_refuses_non_https_public_urls(url: str) -> None:
     with pytest.raises(ValueError, match="unsupported"):
         fetch_text(url)
+
+
+def test_invalid_version_does_not_record_check(tmp_path: Path) -> None:
+    """A malformed version (e.g. an HTML error page) leaves the check due."""
+    fetch, _calls = fake_fetch(server="<html>Service Unavailable</html>")
+    result = run_update_check(tmp_path, HOST, "scanner", fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW)
+    assert result == []
+    assert not (tmp_path / UPDATE_STATE_PATH).exists()
+
+
+def test_state_write_failure_is_advisory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An OSError while recording the check must not stop the runner."""
+    import scripts.sonar_update_check as update_check
+
+    def fail_write(_path: Path, _now: datetime) -> None:
+        raise OSError("read-only")
+
+    monkeypatch.setattr(update_check, "record_check", fail_write)
+    fetch, _calls = fake_fetch()
+    messages = run_update_check(
+        tmp_path, HOST, "scanner", fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW
+    )
+    assert len(messages) == 1

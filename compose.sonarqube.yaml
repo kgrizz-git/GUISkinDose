@@ -6,12 +6,14 @@
 #
 #   docker compose -f compose.sonarqube.yaml up -d
 #
-# Upgrade and backup steps live in dev-docs/SONARQUBE_LOCAL.md.
+# Images are pinned to a reviewed release tag plus its immutable digest. Bump
+# both only during a planned upgrade; the steps live in
+# dev-docs/SONARQUBE_LOCAL.md.
 name: sonarqube-local
 
 services:
   sonarqube:
-    image: sonarqube:community
+    image: sonarqube:26.9.0.129388-community@sha256:4905574ab8584dcac1a06c01cdc43a4ce9e369723ac4a7ab1d029c1bf71e6fe9
     container_name: sonarqube-local
     depends_on:
       db:
@@ -29,7 +31,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:17
+    image: postgres:17.11@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
     environment:
       POSTGRES_USER: sonar
       POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:?Set SONAR_DB_PASSWORD in .env}

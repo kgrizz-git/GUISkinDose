@@ -23,6 +23,7 @@ import json
 import re
 import subprocess
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
@@ -35,7 +36,7 @@ HUB_TAGS_URL = (
     "https://hub.docker.com/v2/namespaces/library/repositories/sonarqube/tags?page_size=100&ordering=last_updated"
 )
 SCANNER_RELEASE_URL = "https://api.github.com/repos/SonarSource/sonar-scanner-cli/releases/latest"
-SERVER_UPDATE_HINT = "back up, then pull and restart the compose stack; see dev-docs/SONARQUBE_LOCAL.md"
+SERVER_UPDATE_HINT = "back up, then bump the image pin in compose.sonarqube.yaml; see dev-docs/SONARQUBE_LOCAL.md"
 SCANNER_UPDATE_HINT = "run brew upgrade sonar-scanner, or download it from SonarSource"
 _LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 _VERSION_RE = re.compile(r"^\d+(?:\.\d+){1,3}$")
@@ -158,9 +159,12 @@ def run_update_check(
     except (OSError, ValueError):
         local_server = None
     local_scanner = scanner_version(scanner_binary)
-    if latest_server is None or latest_scanner is None or local_server is None or local_scanner is None:
+    versions = (latest_server, latest_scanner, local_server, local_scanner)
+    if any(parse_version(version) is None for version in versions):
         return []
-    record_check(state_path, current)
+    # Advisory only: a failed state write leaves the check due and lets the analysis run.
+    with suppress(OSError):
+        record_check(state_path, current)
     messages = [
         _compare("server", local_server, latest_server, SERVER_UPDATE_HINT),
         _compare("sonar-scanner", local_scanner, latest_scanner, SCANNER_UPDATE_HINT),

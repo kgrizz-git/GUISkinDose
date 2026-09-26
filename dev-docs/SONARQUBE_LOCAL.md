@@ -36,9 +36,12 @@ The runner checks at most weekly for a newer server image or scanner and prints 
 
 ```bash
 docker compose -f compose.sonarqube.yaml exec -T db pg_dump -U sonar sonar > tmp/sonarqube-backup.sql
-docker compose -f compose.sonarqube.yaml pull
+# Edit compose.sonarqube.yaml: set the new <version>-community tag and its digest.
 docker compose -f compose.sonarqube.yaml up -d
 ```
+
+Both images are pinned to a release tag plus its immutable digest, so nothing changes until the pin is edited. The
+digest for a tag is shown on Docker Hub, or by `docker buildx imagetools inspect sonarqube:<tag>`.
 
 The server migrates its database on start. Open `http://localhost:9000/setup` if it asks for a manual upgrade step.
 Rules ship inside the server's analyzers, so upgrading the server updates the rules.
