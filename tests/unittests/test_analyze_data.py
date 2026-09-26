@@ -49,11 +49,15 @@ def test_plot_modes_html_return_none_without_raising(mode: str) -> None:
 
 def test_dose_mode_html_missing_output_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(analyze_data_module, "calculate_dose", lambda **kwargs: (None, None, None))
+    frame = _frame()
+    settings = _settings(c.MODE_CALCULATE_DOSE)
     with pytest.raises(RuntimeError, match=r"Expected HTML output but dose calculation returned no data."):
-        analyze_data(normalized_data=_frame(), settings=_settings(c.MODE_CALCULATE_DOSE))
+        analyze_data(normalized_data=frame, settings=settings)
 
 
 def test_plot_dosemap_html_missing_output_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(analyze_data_module, "calculate_dose", lambda **kwargs: (None, None, None))
+    frame = _frame()
+    settings = _settings(c.MODE_PLOT_DOSEMAP)
     with pytest.raises(RuntimeError, match=r"Expected HTML output but dose calculation returned no data."):
-        analyze_data(normalized_data=_frame(), settings=_settings(c.MODE_PLOT_DOSEMAP))
+        analyze_data(normalized_data=frame, settings=settings)

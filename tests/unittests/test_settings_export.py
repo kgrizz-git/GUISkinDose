@@ -587,28 +587,33 @@ def test_applier_rejects_mistyped_kerma_exams_profiles_table():
 
     document = json.loads(json.dumps(base))
     document["settings"]["kerma_meter_correction"] = "x"
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError, match="kerma_meter_correction"):
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
 
     document = json.loads(json.dumps(base))
     document["gui_state"]["exams"] = ["oops"]
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError, match=r"exams\[0\]"):
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
 
     document = json.loads(json.dumps(base))
     document["normalization_settings"] = {"not": "a list"}
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError, match="normalization_settings must be a list"):
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
 
     document = json.loads(json.dumps(base))
     document["normalization_settings"] = ["str"]
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError, match=r"normalization_settings\[0\]"):
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
 
     document = json.loads(json.dumps(base))
     document["gui_state"]["kerma_meter_in_memory_table"] = {"Eq": {"Tube": "nan"}}
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError, match="must be a number"):
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
 
 
 def test_applier_empty_normalization_list_keeps_current_profiles():
@@ -750,20 +755,23 @@ def test_applier_count_mismatch_leaves_passthrough_unwritten():
 
 
 def test_applier_error_codes():
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError) as exc_info:
-        apply_run_state({"schema": "nope", "schema_version": 1}, _session_with_same_inputs_loaded())
+        apply_run_state({"schema": "nope", "schema_version": 1}, session)
     assert exc_info.value.code == "unsupported_schema"
 
     document = _identified_document()
     document["schema_version"] = 99
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError) as exc_info:
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
     assert exc_info.value.code == "unsupported_schema_version"
 
     document = _identified_document()
     document["settings"] = ["a"]
+    session = _session_with_same_inputs_loaded()
     with pytest.raises(RunStateError) as exc_info:
-        apply_run_state(document, _session_with_same_inputs_loaded())
+        apply_run_state(document, session)
     assert exc_info.value.code == "malformed_document"
 
 

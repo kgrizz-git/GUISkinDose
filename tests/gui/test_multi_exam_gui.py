@@ -52,7 +52,8 @@ class TestGuiPerExamOffsets:
 
         st = self._fresh_state()
         ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
-        assert ok and st.is_multi_exam
+        assert ok
+        assert st.is_multi_exam
 
         # Give each exam a distinct offset, as the per-exam spinboxes would.
         st.loaded_exam_meta[0]["d_lon"] = 5.0
@@ -206,7 +207,8 @@ class TestGuiPerExamTransforms:
         ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
         assert ok
         for meta in st.loaded_exam_meta:
-            assert "base_data" in meta and meta["base_data"] is not None
+            assert "base_data" in meta
+            assert meta["base_data"] is not None
 
 
 # ── GUI per-exam table-origin override (Phase 2.5) ────────────────────────

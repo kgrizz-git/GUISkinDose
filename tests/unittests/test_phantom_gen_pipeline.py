@@ -127,7 +127,8 @@ def test_validate_catalog_id_and_blender_argv_builders(tmp_path: Path):
     )
     assert argv[0] == str(validated)
     assert argv[1:4] == ["-b", "-P", str((REPO_ROOT / "scripts/phantom_gen/mpfb_generate.py").resolve())]
-    assert "--catalog-id" in argv and "ped_5y_male" in argv
+    assert "--catalog-id" in argv
+    assert "ped_5y_male" in argv
     with pytest.raises(ValueError):
         build_blender_generate_argv(
             validated,
@@ -310,7 +311,8 @@ def test_check_expect_ranges():
     expect = {"height_z": [70.0, 110.0], "width_x": [40.0, 60.0], "thickness_y": [15.0, 30.0]}
     assert check_expect_ranges(ext, expect) == []
     failures = check_expect_ranges({**ext, "height_z": 50.0}, expect)
-    assert failures and "height_z" in failures[0]
+    assert failures
+    assert "height_z" in failures[0]
 
 
 def test_affine_control_uniform_height_preserves_ratios(tmp_path: Path):

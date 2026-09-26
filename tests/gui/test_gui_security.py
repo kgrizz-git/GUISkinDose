@@ -118,7 +118,7 @@ def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
     captured: dict = {}
     # Reset on this module's own reference: the user-simulation harness
     # reloads gui.app, so conftest cannot reset it for us (see below).
-    gui_app._STATIC_REGISTERED = False
+    monkeypatch.setattr(gui_app, "_STATIC_REGISTERED", False)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
     monkeypatch.setattr(
         gui_app.app,
@@ -138,7 +138,7 @@ def test_static_registration_is_idempotent(monkeypatch) -> None:
     # Same-reference reset: gui.app is reloaded by the user-simulation
     # harness, so this module's reference may be stale relative to
     # sys.modules — reset and call through the identical object.
-    gui_app._STATIC_REGISTERED = False
+    monkeypatch.setattr(gui_app, "_STATIC_REGISTERED", False)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: None)
     monkeypatch.setattr(
         gui_app.app, "add_static_files", lambda *args, **kw: calls.append(args)
@@ -176,7 +176,8 @@ def test_resolve_port_defaults_and_explicit(port: int | None, expected: int) -> 
 
 def test_resolve_port_zero_picks_free_loopback_port() -> None:
     port = gui_app._resolve_port(0)
-    assert isinstance(port, int) and 1 <= port <= 65535
+    assert isinstance(port, int)
+    assert 1 <= port <= 65535
 
 
 @pytest.mark.parametrize("port", [-1, 65536, 100000])

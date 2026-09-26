@@ -157,6 +157,12 @@ async def test_calculate_tab_renders_summary(user: User) -> None:
     await user.should_see("INPUT DATA", retries=30)
 
 
+def _clear_preview_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Empty the module-level k_tab preview cache for this test only."""
+    for field in ("key", "value", "error"):
+        monkeypatch.setattr(calc_tab._preview_cache, field, None)
+
+
 def test_k_tab_status_summary_reads_nested_dict_and_multi_exam() -> None:
     """Post-calc summary must read nested export keys and multi-exam outputs."""
     from types import SimpleNamespace
@@ -218,9 +224,7 @@ def test_k_tab_preview_caches_and_suppresses_warnings(monkeypatch: pytest.Monkey
             KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM: [0.0],
         }
     )
-    calc_tab._preview_cache.key = None
-    calc_tab._preview_cache.value = None
-    calc_tab._preview_cache.error = None
+    _clear_preview_cache(monkeypatch)
 
     import importlib
 
@@ -252,7 +256,7 @@ def test_k_tab_preview_caches_and_suppresses_warnings(monkeypatch: pytest.Monkey
     assert log.level == prior_level
 
 
-def test_k_tab_preview_invalid_estimated_value_is_safe() -> None:
+def test_k_tab_preview_invalid_estimated_value_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
     """Invalid estimated k_tab_val must not raise inside the summary binder."""
     import pandas as pd
 
@@ -268,9 +272,7 @@ def test_k_tab_preview_invalid_estimated_value_is_safe() -> None:
     state.calc_run_id = 1
     state.input_revision = 8
     state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
-    calc_tab._preview_cache.key = None
-    calc_tab._preview_cache.value = None
-    calc_tab._preview_cache.error = None
+    _clear_preview_cache(monkeypatch)
 
     assert calc_tab._format_k_tab_status_summary() == "k_tab preview: unavailable"
 
@@ -290,9 +292,7 @@ def test_k_tab_preview_guards_non_value_error(monkeypatch: pytest.MonkeyPatch) -
     state.calc_run_id = 2
     state.input_revision = 9
     state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})
-    calc_tab._preview_cache.key = None
-    calc_tab._preview_cache.value = None
-    calc_tab._preview_cache.error = None
+    _clear_preview_cache(monkeypatch)
 
     import importlib
 

@@ -71,6 +71,30 @@ def test_refresh_state_counts_preserves_scan_commit(tmp_path: Path, monkeypatch:
     assert state["issues_count"] == 7
 
 
+def test_refresh_state_counts_drops_unknown_keys(tmp_path: Path) -> None:
+    state_file = tmp_path / "tmp" / "sonar-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(json.dumps({"last_scan_commit": "abc", "extra": "x"}), encoding="utf-8")
+    assert refresh_state_counts(tmp_path, issues_count=2, issues_path="tmp/sonar-issues/x.json") is True
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    assert "extra" not in state
+    assert state["issues_summary_path"] == "tmp/sonar-latest-issues.md"
+
+
+def test_refresh_state_counts_refuses_state_outside_root(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    (root / "tmp").mkdir(parents=True)
+    outside = tmp_path / "outside.json"
+    original = json.dumps({"last_scan_commit": "abc"})
+    outside.write_text(original, encoding="utf-8")
+    try:
+        (root / "tmp" / "sonar-state.json").symlink_to(outside)
+    except OSError:
+        pytest.skip("symlinks unavailable on this platform")
+    assert refresh_state_counts(root, issues_count=1, issues_path="tmp/sonar-issues/x.json") is False
+    assert outside.read_text(encoding="utf-8") == original
+
+
 def test_refresh_state_counts_missing_file_is_false(tmp_path: Path) -> None:
     assert refresh_state_counts(tmp_path, issues_count=1, issues_path="tmp/sonar-issues/x.json") is False
 
@@ -236,10 +260,11 @@ def test_issue_entries_with_null_component_or_message_are_accepted(monkeypatch: 
 
 def test_redirects_are_refused_for_credentialed_requests() -> None:
     request = Request("http://localhost:9000/api/issues/search", headers={"Authorization": "Bearer tok"})
+    handler = dsi._RefuseRedirects()
+    body = BytesIO()
+    headers = HTTPMessage()
     with pytest.raises(HTTPError, match="redirect refused"):
-        dsi._RefuseRedirects().redirect_request(
-            request, BytesIO(), 302, "Found", HTTPMessage(), "http://elsewhere/"
-        )
+        handler.redirect_request(request, body, 302, "Found", headers, "http://elsewhere/")
 
 
 def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -298,11 +323,13 @@ def test_main_writes_dumps_and_refreshes_state(
     assert dsi.main(["--host-url", "http://localhost:9000"]) == 0
 
     out = capsys.readouterr().out
-    assert "issues on record: 1" in out and "State counts refreshed" in out
+    assert "issues on record: 1" in out
+    assert "State counts refreshed" in out
     assert "tok" not in out
     assert json.loads((root / "tmp" / "sonar-latest-issues.json").read_text(encoding="utf-8"))[0]["line"] == 1
     refreshed = json.loads(state.read_text(encoding="utf-8"))
-    assert refreshed["issues_count"] == 1 and refreshed["last_scan_commit"] == "a" * 40
+    assert refreshed["issues_count"] == 1
+    assert refreshed["last_scan_commit"] == "a" * 40
 
 
 @pytest.mark.parametrize(("state_text", "expected"), [(None, "No state file"), ("{bad", "present but invalid")])

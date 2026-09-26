@@ -357,8 +357,9 @@ def test_all_exam_miss_scenario():
 
 
 def test_no_result_raises():
+    source = ExportSource(execution_context="cli")
     with pytest.raises(ExportError):
-        collect_export_payload(ExportSource(execution_context="cli"), with_images=False)
+        collect_export_payload(source, with_images=False)
 
 
 # ── real-fixture integration ───────────────────────────────────────────────────

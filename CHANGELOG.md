@@ -73,6 +73,12 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Repository scripts refuse paths outside the checkout** (2026-09-26) —
+  `scripts/check_sonar_freshness.py --state` now rejects a path outside the
+  repository, and `scripts/sync_ui_copy.py` no longer accepts `--repo-root`
+  (it always mirrors within its own checkout). The GUI's bundled icon font
+  also declares a generic fallback family.
+
 - **Per-launch token + Host/Origin enforcement for the GUI** (2026-09-22) —
   browser mode prints a launch URL (random per-launch token, valid until
   restart, bootstrapping an `HttpOnly; SameSite=Strict` session cookie

@@ -49,7 +49,6 @@ _EXPECTED_TOP_KEYS = {
 def _quiet_logs():
     """The calculation logs verbosely at DEBUG; keep test output readable."""
     logging.getLogger("guiskindose").setLevel(logging.WARNING)
-    yield
 
 
 def _settings(output_format: str) -> PyskindoseSettings:
@@ -88,9 +87,12 @@ def test_dict_export_has_expected_structure():
     assert set(out.keys()) == _EXPECTED_TOP_KEYS
     assert out["schema_version"] == EXPORT_SCHEMA_VERSION
     assert isinstance(out["schema_version"], int)
-    assert isinstance(out["psd"], float) and out["psd"] > 0
-    assert isinstance(out["air_kerma"], float) and out["air_kerma"] > 0
-    assert isinstance(out["air_kerma_corrected"], float) and out["air_kerma_corrected"] > 0
+    assert isinstance(out["psd"], float)
+    assert out["psd"] > 0
+    assert isinstance(out["air_kerma"], float)
+    assert out["air_kerma"] > 0
+    assert isinstance(out["air_kerma_corrected"], float)
+    assert out["air_kerma_corrected"] > 0
 
 
 def test_dict_export_is_json_serializable_without_nan():

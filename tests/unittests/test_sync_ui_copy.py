@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+import scripts.sync_ui_copy as sync_ui_copy
 from scripts.sync_ui_copy import main, sync
 
 
@@ -69,13 +72,21 @@ def test_sync_reports_missing_source(tmp_path: Path, capsys) -> None:
     assert "does not exist" in capsys.readouterr().err
 
 
-def test_main_check_against_repo_root(tmp_path: Path) -> None:
+def test_main_check_against_repo_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sync_ui_copy, "repo_root_from_script", lambda: tmp_path)
     source_dir = tmp_path / "dev-docs"
     source_dir.mkdir()
     (source_dir / "ui_copy.json").write_text('{"keys": {}}', encoding="utf-8")
 
-    assert main(["--check", "--repo-root", str(tmp_path)]) == 1
-    assert main(["--repo-root", str(tmp_path)]) == 0
+    assert main(["--check"]) == 1
+    assert main([]) == 0
     target = tmp_path / "src" / "guiskindose" / "gui" / "ui_copy.json"
     assert target.read_text(encoding="utf-8") == '{"keys": {}}'
-    assert main(["--check", "--repo-root", str(tmp_path)]) == 0
+    assert main(["--check"]) == 0
+
+
+def test_main_refuses_repo_root_override() -> None:
+    """The root is fixed to the checkout, so a CLI root override is rejected."""
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--repo-root", "elsewhere"])
+    assert excinfo.value.code == 2

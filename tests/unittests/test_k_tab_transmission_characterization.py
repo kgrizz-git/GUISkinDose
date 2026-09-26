@@ -109,20 +109,22 @@ class TestEstimateKTabValidation:
 
     def test_estimate_k_tab_zero_raises_value_error(self):
         data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane", n=3)
+        db_path = _db_path()
         with pytest.raises(ValueError, match="Invalid estimated k_tab_val"):
             calculate_k_tab(
                 data_norm=data,
-                corrections_db=_db_path(),
+                corrections_db=db_path,
                 estimate_k_tab=True,
                 k_tab_val=0.0,
             )
 
     def test_estimate_k_tab_greater_than_one_raises_value_error(self):
         data = _frame(kvp=80, cu=0.3, al=0, model="AXIOM-Artis", plane="Single Plane", n=2)
+        db_path = _db_path()
         with pytest.raises(ValueError, match="Invalid estimated k_tab_val"):
             calculate_k_tab(
                 data_norm=data,
-                corrections_db=_db_path(),
+                corrections_db=db_path,
                 estimate_k_tab=True,
                 k_tab_val=1.5,
             )

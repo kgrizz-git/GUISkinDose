@@ -56,7 +56,7 @@ def _ws_scope(*, host: str = "127.0.0.1:8765", origin: str = "", cookie: str = "
     return {"type": "websocket", "path": "/socket.io/", "headers": headers}
 
 
-@pytest.fixture()
+@pytest.fixture
 def live_config():
     token, config = generate_launch_token()
     configure_loopback_security(config)
@@ -131,7 +131,8 @@ def test_websocket_missing_origin_with_session_passes(live_config) -> None:
     sent = asyncio.run(_run(mw, _http_scope(query=f"token={token}".encode("ascii"))))
     cookie = _set_cookie(sent)
     sent = asyncio.run(_run(mw, _ws_scope(cookie=cookie)))
-    assert sent and sent[0]["type"] == "websocket.accept"
+    assert sent
+    assert sent[0]["type"] == "websocket.accept"
 
 
 def test_websocket_requires_session_cookie(live_config) -> None:
@@ -149,7 +150,8 @@ def test_websocket_requires_session_cookie(live_config) -> None:
     sent = asyncio.run(_run(mw, _http_scope(query=f"token={token}".encode("ascii"))))
     cookie = _set_cookie(sent)
     sent = asyncio.run(_run(mw, _ws_scope(origin=origin, cookie=cookie)))
-    assert sent and sent[0]["type"] == "websocket.accept"
+    assert sent
+    assert sent[0]["type"] == "websocket.accept"
 
 
 def test_native_websocket_needs_no_cookie() -> None:
@@ -162,7 +164,8 @@ def test_native_websocket_needs_no_cookie() -> None:
                 _ws_scope(origin="http://127.0.0.1:8765"),
             )
         )
-        assert sent and sent[0]["type"] == "websocket.accept"
+        assert sent
+        assert sent[0]["type"] == "websocket.accept"
         sent = asyncio.run(
             _run(
                 LoopbackSecurityMiddleware(_ok_app),
@@ -171,7 +174,8 @@ def test_native_websocket_needs_no_cookie() -> None:
         )
         assert _status(sent) == 4403
         sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _ws_scope()))
-        assert sent and sent[0]["type"] == "websocket.accept"
+        assert sent
+        assert sent[0]["type"] == "websocket.accept"
     finally:
         configure_loopback_security(None)
 
@@ -348,7 +352,8 @@ def test_custom_port_scopes_rejection(live_config) -> None:
                 ),
             )
         )
-        assert sent and sent[0]["type"] == "websocket.accept"
+        assert sent
+        assert sent[0]["type"] == "websocket.accept"
         sent = asyncio.run(
             _run(
                 mw,

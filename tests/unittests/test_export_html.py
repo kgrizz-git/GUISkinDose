@@ -60,4 +60,5 @@ def test_dispatcher_all_formats():
         if fmt == "pdf":
             pytest.importorskip("reportlab")  # optional `export` extra
         data = render_bytes(payload, fmt)
-        assert isinstance(data, bytes) and len(data) > 100
+        assert isinstance(data, bytes)
+        assert len(data) > 100
