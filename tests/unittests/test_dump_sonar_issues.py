@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from http.client import HTTPMessage
+from io import BytesIO
 from pathlib import Path
 from typing import Self
 from urllib.error import HTTPError
@@ -198,7 +200,9 @@ def test_remote_host_requires_https_but_loopback_http_is_fine() -> None:
 def test_redirects_are_refused_for_credentialed_requests() -> None:
     request = Request("http://localhost:9000/api/issues/search", headers={"Authorization": "Bearer tok"})
     with pytest.raises(HTTPError, match="redirect refused"):
-        dsi._RefuseRedirects().redirect_request(request, None, 302, "Found", {}, "http://elsewhere/")
+        dsi._RefuseRedirects().redirect_request(
+            request, BytesIO(), 302, "Found", HTTPMessage(), "http://elsewhere/"
+        )
 
 
 def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatch) -> None:
