@@ -27,6 +27,14 @@ pytest.importorskip("nicegui")
 
 pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
+_REAL_LOOPBACK_PORT_IS_FREE = gui_app._loopback_port_is_free
+
+
+@pytest.fixture(autouse=True)
+def _default_port_free(monkeypatch):
+    """Keep default-port tests hermetic when 8765 is busy on the dev machine."""
+    monkeypatch.setattr(gui_app, "_loopback_port_is_free", lambda _p: True)
+
 
 # ── 1. loopback-only binding ───────────────────────────────────────────────
 def test_run_gui_binds_localhost_by_default(monkeypatch) -> None:
@@ -172,6 +180,58 @@ def test_run_gui_registers_security_middleware_and_token_url(monkeypatch, capsys
 @pytest.mark.parametrize("port,expected", [(None, 8765), (9999, 9999)])
 def test_resolve_port_defaults_and_explicit(port: int | None, expected: int) -> None:
     assert gui_app._resolve_port(port) == expected
+
+
+def test_resolve_port_default_falls_back_to_next_free_port(monkeypatch, capsys) -> None:
+    """A busy default moves to the next free port and says so."""
+    busy = {8765, 8766}
+    monkeypatch.setattr(gui_app, "_loopback_port_is_free", lambda p: p not in busy)
+    assert gui_app._resolve_port(None) == 8767
+    assert "Port 8765 is in use; using port 8767" in capsys.readouterr().out
+
+
+def test_resolve_port_default_falls_back_to_os_assigned(monkeypatch, capsys) -> None:
+    """If the whole fallback span is busy, the OS picks a loopback port."""
+    monkeypatch.setattr(gui_app, "_loopback_port_is_free", lambda _p: False)
+    monkeypatch.setattr(gui_app, "_os_assigned_loopback_port", lambda: 54321)
+    assert gui_app._resolve_port(None) == 54321
+    assert "using port 54321" in capsys.readouterr().out
+
+
+def test_resolve_port_explicit_port_never_falls_back(monkeypatch) -> None:
+    """An explicit --port is used as-is even when busy (fails loudly at bind)."""
+    monkeypatch.setattr(gui_app, "_loopback_port_is_free", lambda _p: False)
+    assert gui_app._resolve_port(9999) == 9999
+
+
+def test_loopback_port_is_free_detects_busy_port() -> None:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as holder:
+        holder.bind(("127.0.0.1", 0))
+        holder.listen()
+        busy_port = holder.getsockname()[1]
+        assert _REAL_LOOPBACK_PORT_IS_FREE(busy_port) is False
+
+
+def test_run_gui_default_port_fallback_scopes_security(monkeypatch) -> None:
+    """A fallback port reaches ui.run and the Host allowlist, not the default."""
+    from guiskindose.gui.loopback_security import get_loopback_security_config
+
+    captured: dict = {}
+    opened: list = []
+    monkeypatch.setattr(gui_app, "_loopback_port_is_free", lambda p: p != 8765)
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, **kw: opened.append((url, kw)))
+    gui_app.run_gui(native=False)
+    assert captured["port"] == 8766
+    assert opened[0][0].startswith("http://127.0.0.1:8766/?token=")
+    assert opened[0][1]["port"] == 8766
+    assert captured["host"] == "127.0.0.1"
+    config = get_loopback_security_config()
+    assert config is not None
+    assert "127.0.0.1:8766" in config.allowed_hosts
+    assert "127.0.0.1:8765" not in config.allowed_hosts
 
 
 def test_resolve_port_zero_picks_free_loopback_port() -> None:

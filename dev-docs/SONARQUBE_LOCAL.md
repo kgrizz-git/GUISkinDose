@@ -7,6 +7,45 @@ The tracked [`../sonar-project.properties`](../sonar-project.properties) file co
 it contains no server URL or token. The runner defaults to `http://localhost:9000`, accepts `SONAR_HOST_URL` and
 `SONAR_TOKEN` from the local environment, and refuses a non-loopback host unless `--allow-remote` is explicit.
 
+## Server setup and upgrades
+
+[`../compose.sonarqube.yaml`](../compose.sonarqube.yaml) runs the server with PostgreSQL. The embedded H2 database
+does not support upgrades, so a server started with a bare `docker run sonarqube:community` can fail its migration
+and lose projects and tokens. The compose file also pins the port to `127.0.0.1` and keeps data in named volumes,
+so recreating the server cannot drop them by accident. It holds no secrets: set `SONAR_DB_PASSWORD` in `.env`.
+
+One server serves every repository on the machine. Keep a single stack running; other repositories only need
+their own `sonar.projectKey`, `SONAR_HOST_URL`, and token.
+
+```bash
+# macOS with Colima: brew install docker-compose, then add
+#   "cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]  to ~/.docker/config.json
+docker compose -f compose.sonarqube.yaml up -d
+```
+
+SonarQube's embedded Elasticsearch needs `vm.max_map_count` of at least 524288 and `nofile` of at least 131072 on the
+Docker host (the Linux VM under Colima or Docker Desktop). If the server container exits during startup, check those
+limits against SonarSource's Docker requirements.
+
+Moving from an old H2 container: stop it (`docker stop sonarqube`) but keep it and its volumes as a fallback, start
+the stack, log in at `http://localhost:9000` (default `admin`/`admin`, change it), create the projects, and put a
+new token in each repository's `.env`. Remove the old container and its volumes once the new server works.
+
+The runner checks at most weekly for a newer server image or scanner and prints a note; it never updates anything
+(`--check-updates` forces the check, `--no-update-check` skips it). To upgrade the server, back up first:
+
+```bash
+docker compose -f compose.sonarqube.yaml exec -T db pg_dump -U sonar sonar > tmp/sonarqube-backup.sql
+# Edit compose.sonarqube.yaml: set the new <version>-community tag and its digest.
+docker compose -f compose.sonarqube.yaml up -d
+```
+
+Both images are pinned to a release tag plus its immutable digest, so nothing changes until the pin is edited. The
+digest for a tag is shown on Docker Hub, or by `docker buildx imagetools inspect sonarqube:<tag>`.
+
+The server migrates its database on start. Open `http://localhost:9000/setup` if it asks for a manual upgrade step.
+Rules ship inside the server's analyzers, so upgrading the server updates the rules.
+
 ## Coverage for Sonar (two-pass: non-GUI + GUI)
 
 SonarCloud CI uploads a combined `coverage.xml` that includes NiceGUI tests so GUI modules count toward

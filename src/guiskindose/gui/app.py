@@ -508,21 +508,51 @@ def _open_browser_when_ready(url: str, host: str = "127.0.0.1", port: int = 8765
     thread.start()
 
 
+# Default-port fallback: try the next few ports before asking the OS, so a
+# busy 8765 (another local app) still launches on a predictable port.
+_DEFAULT_PORT_FALLBACK_SPAN = 10
+
+
+def _loopback_port_is_free(port: int) -> bool:
+    """Return True if ``127.0.0.1:port`` can be bound right now."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+def _os_assigned_loopback_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
 def _resolve_port(port: int | None) -> int:
     """Return the effective loopback port.
 
-    ``None`` keeps the default (bookmarks, docs, muscle memory survive);
+    ``None`` prefers the default (bookmarks, docs, muscle memory survive);
+    if it is busy, the next few ports are tried, then an OS-assigned one.
     ``0`` asks the OS for a free port, printed in the console launch URL;
-    anything else must be a valid TCP port. The ``0`` path binds and releases
-    a probe socket, so a (tiny, loopback-only) bind race remains — documented,
-    not hidden.
+    anything else must be a valid TCP port and is used as-is (an explicit
+    choice fails loudly rather than silently moving). Probing binds and
+    releases a socket, so a (tiny, loopback-only) bind race remains —
+    documented, not hidden. Fallback never widens exposure: the bind host
+    stays 127.0.0.1 and the token/Host/Origin controls follow the port.
     """
     if port is None:
-        return DEFAULT_GUI_PORT
+        for candidate in range(DEFAULT_GUI_PORT, DEFAULT_GUI_PORT + _DEFAULT_PORT_FALLBACK_SPAN):
+            if _loopback_port_is_free(candidate):
+                if candidate != DEFAULT_GUI_PORT:
+                    print(f"Port {DEFAULT_GUI_PORT} is in use; using port {candidate} instead.")
+                return candidate
+        fallback = _os_assigned_loopback_port()
+        last = DEFAULT_GUI_PORT + _DEFAULT_PORT_FALLBACK_SPAN - 1
+        print(f"Ports {DEFAULT_GUI_PORT}-{last} are in use; using port {fallback} instead.")
+        return fallback
     if port == 0:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-            probe.bind(("127.0.0.1", 0))
-            return probe.getsockname()[1]
+        return _os_assigned_loopback_port()
     if not 1 <= port <= 65535:
         raise ValueError("gui_port_out_of_range")
     return port
