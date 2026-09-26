@@ -70,7 +70,7 @@ back to `.env`, so a plain `python scripts/run_sonarqube_local.py` works in any 
 ```bash
 # Enable the gate, then scan to create the baseline state:
 #   SONAR_FRESHNESS_GATE=1 in .env
-colima start default && python scripts/run_sonarqube_local.py
+python scripts/run_sonarqube_local.py   # start the local server first, e.g. `colima start default` on macOS
 ```
 
 ## Timestamped issue dumps

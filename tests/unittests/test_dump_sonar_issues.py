@@ -192,7 +192,7 @@ def test_non_utf8_dotenv_yields_no_token(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_check_host_rejects_malformed_urls() -> None:
-    for url in ("ftp://localhost", "http://", "http://localhost\n:9000"):
+    for url in ("ftp://localhost", "http://", "http://localhost\n:9000", "http://localhost:abc", "http://localhost:999999"):
         with pytest.raises(ValueError, match="invalid"):
             check_host_loopback(url, allow_remote=True)
 

@@ -107,6 +107,10 @@ def check_host_loopback(host_url: str, *, allow_remote: bool) -> str:
     scheme = (parsed.scheme or "").lower()
     if scheme not in {"http", "https"} or not hostname:
         raise ValueError("invalid SonarQube host URL")
+    try:
+        _ = parsed.port  # raises for a non-numeric or out-of-range port
+    except ValueError as exc:
+        raise ValueError("invalid SonarQube host URL") from exc
     if hostname not in ALLOWED_LOCAL_HOSTS:
         if not allow_remote:
             raise ValueError("non-loopback SonarQube host requires --allow-remote")

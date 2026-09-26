@@ -45,7 +45,9 @@ WARN_FRACTION = 0.8
 # Full SHA-1 or SHA-256 object name; rejects option-like values before they reach git argv.
 COMMIT_SHA_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
-REFRESH_COMMAND = "colima start default && python scripts/run_sonarqube_local.py"
+# Portable: start the local SonarQube server however this machine runs it
+# (e.g. `colima start default` on macOS), then re-scan.
+REFRESH_COMMAND = "python scripts/run_sonarqube_local.py  (with the local SonarQube server running)"
 
 # Git hook/test runners export these so child `git` uses the parent repo.
 # Gate commands must honor `cwd=repo_root()` instead.
