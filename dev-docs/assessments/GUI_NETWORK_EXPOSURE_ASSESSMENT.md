@@ -99,7 +99,9 @@ see §4.
 - Default port `8765` with an opt-out `--port` flag (`src/guiskindose/gui/app.py`;
   `--port 0` takes an OS-assigned free port, printed in the console launch
   URL): predictable by default for drive-by local pages — pass `--port 0`
-  when that matters.
+  when that matters. If 8765 is busy and no `--port` is given, the launcher
+  falls back to 8766-8774, then an OS-assigned port; the bind host and the
+  port-scoped token/Host/Origin controls are unchanged by the fallback.
   `reload=False` and a 30 s client-reconnect window
   (`src/guiskindose/gui/app.py:482`, `:486`) are sane; neither substitutes
   for access control — any local browser pointed at the URL, new or

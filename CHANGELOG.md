@@ -58,6 +58,11 @@ That keeps SemVer and contributor history organized.
   overwriting a populated value from a duplicate content item, with synthetic
   regression tests (no fixture vendoring). Numerical results on parseable
   files are unchanged.
+- **GUI default-port fallback** (2026-09-26) — launching while another app
+  held port 8765 failed with "address already in use". Without `--port`, the
+  GUI now tries 8766-8774 and then an OS-assigned port, and prints the port it
+  chose. It still binds only to 127.0.0.1, and the token, Host, and Origin
+  checks follow the chosen port. An explicit `--port` is never substituted.
 - **GUI `--port` flag** (2026-09-22) — the loopback port was fixed at 8765
   with no override. `--port <n>` selects a loopback port, `--port 0` takes
   an OS-assigned free port (printed in the console launch URL); the token,
