@@ -72,15 +72,18 @@ def _git_cwd_env() -> dict[str, str]:
 
 
 def load_env_file(path: Path) -> None:
-    if not path.exists():
+    # An unreadable or non-UTF-8 .env is ignored rather than crashing the hook
+    # (this runs before the opt-in check, so a crash would block every commit).
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
         return
-    with open(path, encoding="utf-8") as handle:
-        for raw_line in handle:
-            line = raw_line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), clean_env_value(value))
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), clean_env_value(value))
 
 
 def env_is_on(name: str) -> bool:

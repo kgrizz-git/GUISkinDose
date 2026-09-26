@@ -185,6 +185,12 @@ def test_resolve_token_prefers_export_then_dotenv(tmp_path: Path, monkeypatch: p
     assert dsi.resolve_token(tmp_path / "missing") is None
 
 
+def test_non_utf8_dotenv_yields_no_token(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    (tmp_path / ".env").write_bytes(b"SONAR_TOKEN=\xff\xfe\n")
+    assert dsi.resolve_token(tmp_path) is None
+
+
 def test_check_host_rejects_malformed_urls() -> None:
     for url in ("ftp://localhost", "http://", "http://localhost\n:9000"):
         with pytest.raises(ValueError, match="invalid"):

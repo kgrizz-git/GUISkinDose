@@ -225,7 +225,7 @@ def load_env_defaults(root: Path) -> None:
         return
     try:
         text = (root / ".env").read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return
     for raw_line in text.splitlines():
         line = raw_line.strip()

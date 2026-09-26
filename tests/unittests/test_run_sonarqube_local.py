@@ -160,3 +160,12 @@ def test_load_env_defaults_exported_wins(tmp_path: Path, monkeypatch: pytest.Mon
     with _isolated_env():
         load_env_defaults(tmp_path)
         assert os.environ["SONAR_TOKEN"] == "exported"
+
+
+def test_load_env_defaults_ignores_non_utf8_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONAR_HOST_URL", raising=False)
+    (tmp_path / ".env").write_bytes(b"SONAR_TOKEN=\xff\xfe\n")
+    with _isolated_env():
+        load_env_defaults(tmp_path)
+        assert "SONAR_TOKEN" not in os.environ

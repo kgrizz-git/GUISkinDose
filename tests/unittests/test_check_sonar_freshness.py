@@ -256,3 +256,12 @@ def test_exported_env_wins_over_dotenv(fixture_repo: Path, monkeypatch: pytest.M
     (fixture_repo / ".env").write_text("SONAR_FRESHNESS_GATE=1\n", encoding="utf-8")
     monkeypatch.setenv("SONAR_FRESHNESS_GATE", "0")
     assert gate.main(["--state", str(state_path)]) == 0
+
+
+def test_non_utf8_dotenv_is_ignored_not_fatal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # load_env_file runs before the opt-in check; a crash here would block every commit.
+    monkeypatch.delenv("SONAR_FRESHNESS_GATE", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_bytes(b"SONAR_FRESHNESS_GATE=\xff\xfe\n")
+    gate.load_env_file(env_file)
+    assert "SONAR_FRESHNESS_GATE" not in os.environ

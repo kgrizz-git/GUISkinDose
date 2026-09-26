@@ -67,7 +67,7 @@ def load_token_from_dotenv(root: Path) -> str | None:
         return None
     try:
         text = env_file.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     for raw_line in text.splitlines():
         line = raw_line.strip()
