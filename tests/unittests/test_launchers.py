@@ -121,13 +121,16 @@ def test_launcher_parity() -> None:
     """Both launchers agree on the 3.11 floor, native-by-default, and skip-install exit 0."""
     bat = BAT.read_text(encoding="utf-8")
     sh = SH.read_text(encoding="utf-8")
-    assert "3.11" in bat and "3.11" in sh
-    assert "default is 2" in bat.lower() and "default is 2" in sh.lower()
+    assert "3.11" in bat
+    assert "3.11" in sh
+    assert "default is 2" in bat.lower()
+    assert "default is 2" in sh.lower()
     assert "exit /b 0" in bat
     assert re.search(r"rerun.*exit 0", sh, re.DOTALL | re.IGNORECASE) is not None
     # Install menus allow-list: only empty input takes the native default;
     # garbage choices are rejected, never silently installed.
-    assert "Invalid install option" in sh and "Invalid install option" in bat
+    assert "Invalid install option" in sh
+    assert "Invalid install option" in bat
     assert '"${install_choice:-2}"' in sh
     # Delayed expansion: tainted set /p input must never be %-expanded into
     # parsed command text (quote/& injection); compare the literal value.
@@ -136,11 +139,13 @@ def test_launcher_parity() -> None:
     assert bat.count('!install_choice!') == 5
     # Same tainted-input class for the mode choice and env-var echoes: delayed
     # form everywhere a value meets parsed command text inside a block.
-    assert '%choice%' not in bat and bat.count('!choice!') == 3
+    assert '%choice%' not in bat
+    assert bat.count('!choice!') == 3
     assert '%VIRTUAL_ENV%' not in bat
     # Same class for version echoes: every in-block Got:/Found: message shows
     # the delayed-expansion literal, never the parse-time value.
-    assert 'Got: %PYTHON_VERSION%' not in bat and 'Found: %PYTHON_VERSION%' not in bat
+    assert 'Got: %PYTHON_VERSION%' not in bat
+    assert 'Found: %PYTHON_VERSION%' not in bat
 
 
 WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")

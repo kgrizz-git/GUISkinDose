@@ -196,7 +196,8 @@ def test_cli_rewrite_no_changes(tmp_path: Path, capsys: pytest.CaptureFixture[st
     ret = main(["rewrite", "--inventory", str(inv_path)])
     assert ret == 0
     captured = capsys.readouterr()
-    assert "No" in captured.out and "paths to rewrite" in captured.out
+    assert "No" in captured.out
+    assert "paths to rewrite" in captured.out
 
 
 # ---------------------------------------------------------------------------

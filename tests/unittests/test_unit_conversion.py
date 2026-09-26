@@ -128,11 +128,13 @@ def test_expected_units_pass_for_standard_frame():
 
 
 def test_unexpected_dose_unit_raises_named_error():
+    frame = _rdsr_frame(dose_col="DoseRP_mGy")
     with pytest.raises(RdsrUnitError) as excinfo:
-        _verify_expected_units(_rdsr_frame(dose_col="DoseRP_mGy"))
+        _verify_expected_units(frame)
     msg = str(excinfo.value)
     assert "reference point dose" in msg
-    assert "mGy" in msg and "Gy" in msg
+    assert "mGy" in msg
+    assert "Gy" in msg
 
 
 def test_wholly_absent_concept_does_not_raise_unit_error():

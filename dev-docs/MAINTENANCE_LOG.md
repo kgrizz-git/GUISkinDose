@@ -10,6 +10,23 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **SonarCloud security/reliability findings and SonarQube 26.9 test rules** (2026-09-26) —
+  cleared the SonarCloud E security and C reliability drivers. `scripts/sync_ui_copy.py`
+  drops its unused `--repo-root` option (the root is always the checkout) and mirrors with
+  `shutil.copyfile`. `scripts/check_sonar_freshness.py` refuses a `--state` path outside
+  the repository (`contained_path`: `os.path.realpath` + `startswith(root + os.sep)`).
+  `scripts/dump_sonar_issues.py` confines the state file the same way and rebuilds it from
+  known keys instead of echoing file content back to disk. Loopback `http://` origins carry
+  a `# NOSONAR` (they must stay plain HTTP). Reliability: removed an always-true branch
+  guard in `help_button.py`, added a generic fallback family to the bundled Material
+  Symbols CSS, and replaced a self-comparison NaN assert. Test rules: split composite
+  asserts (S9073), hoisted setup calls out of `pytest.raises` blocks (S5778), removed
+  redundant fixture arguments and useless `yield`s (S9117/S9083/S9100), and moved
+  non-singleton global mutations to `monkeypatch` (S8997). S8997 is suppressed for
+  `tests/gui/**` in both Sonar property files because the autouse `_isolate_gui_state`
+  fixture resets the `state` singleton around every test; `check_sonar_properties.py`
+  now checks those suppression keys for parity.
+
 - **Windows CI manifest-hash failure from CRLF checkouts** (2026-09-21) —
   scheduled `ci` failed only on `windows-latest` (issue #107):
   `correction_validation.py` hashes raw CSV bytes while Windows checkouts

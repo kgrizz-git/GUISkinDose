@@ -44,7 +44,6 @@ _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 @pytest.fixture(autouse=True)
 def _quiet_logs():
     logging.getLogger("guiskindose").setLevel(logging.WARNING)
-    yield
 
 
 @pytest.fixture

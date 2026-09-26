@@ -14,7 +14,8 @@ SCRIPT = ROOT / "scripts" / "check_licenses.py"
 
 def _load_module():
     spec = importlib.util.spec_from_file_location("check_licenses", SCRIPT)
-    assert spec and spec.loader
+    assert spec
+    assert spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules["check_licenses"] = module
     spec.loader.exec_module(module)

@@ -371,7 +371,8 @@ def test_rotational_badge_static_run_shows_no_envelope(monkeypatch):
     )
     ctrl._refresh_rotational_badge()
     text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
-    assert "envelope" not in text and "static fallback" in text
+    assert "envelope" not in text
+    assert "static fallback" in text
     assert ctrl.refs.rotational_badge.visible is True
 
 
@@ -387,7 +388,9 @@ def test_agg_rotational_badge_sums_across_exams(monkeypatch):
     )
     ctrl._refresh_agg_rotational_badge(res)
     text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
-    assert "1 envelope" in text and "1 static" in text and "2 rotational/moving events" in text
+    assert "1 envelope" in text
+    assert "1 static" in text
+    assert "2 rotational/moving events" in text
     assert ctrl.refs.agg_rotational_badge.visible is True
 
 
@@ -431,7 +434,8 @@ def test_agg_rotational_badge_static_run_shows_no_envelope():
     )
     ctrl._refresh_agg_rotational_badge(res)
     text = cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).call_args[0][0]
-    assert "envelope" not in text and "1 static" in text
+    assert "envelope" not in text
+    assert "1 static" in text
 
 
 def test_agg_rotational_badge_hidden_without_handling(monkeypatch):

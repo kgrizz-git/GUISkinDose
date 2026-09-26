@@ -46,8 +46,9 @@ class TestDetectHeaderRow:
         from guiskindose.input_adapters.column_mapper import detect_header_row
 
         df = pd.DataFrame([["1.0", "2.0", "3.0"], ["4.0", "5.0", "6.0"]])
+        required = frozenset({"model", "dsd", "dsi", "kvp"})
         with pytest.raises(ValueError, match="Could not locate a header row"):
-            detect_header_row(df, frozenset({"model", "dsd", "dsi", "kvp"}))
+            detect_header_row(df, required)
 
     def test_large_export_with_many_unmapped_columns(self):
         """A 100-column export where only 6 columns are known must still succeed."""
@@ -405,8 +406,9 @@ class TestGenericRdsrAdapter:
         p = tmp_path / "bad.csv"
         p.write_text(csv_text, encoding="utf-8")
         loaded = read_csv(p)
+        settings = _default_settings()
         with pytest.raises(ValueError, match="Missing required"):
-            adapter.adapt(loaded, original_filename="bad.csv", settings=_default_settings())
+            adapter.adapt(loaded, original_filename="bad.csv", settings=settings)
 
 
 # ── schema auto-detection ─────────────────────────────────────────────────────
@@ -575,8 +577,9 @@ class TestRadimetricsAdapter:
         p = tmp_path / "bad.csv"
         p.write_text(csv_text, encoding="utf-8")
         loaded = read_csv(p)
+        settings = _default_settings()
         with pytest.raises(ValueError, match="Missing required"):
-            adapter.adapt(loaded, original_filename="bad.csv", settings=_default_settings())
+            adapter.adapt(loaded, original_filename="bad.csv", settings=settings)
 
     def test_auto_detects_radimetrics(self):
         from guiskindose.input_adapters.models import InputAdapterResult
@@ -710,10 +713,9 @@ class TestDoseTrackAdapter:
         )
         p = tmp_path / "legacy_plane.csv"
         p.write_text(csv_text, encoding="utf-8")
+        settings = _default_settings()
         with pytest.raises(ValueError) as exc_info:
-            read_and_normalize_input(
-                p, input_schema="dosetrack", settings=_default_settings()
-            )
+            read_and_normalize_input(p, input_schema="dosetrack", settings=settings)
         assert exc_info.value.__cause__ is not None
         assert "non-CID-10003" in str(exc_info.value.__cause__)
         assert "plane_code_map" in str(exc_info.value.__cause__)
@@ -785,8 +787,9 @@ class TestDoseTrackAdapter:
         p = tmp_path / "no_equip.csv"
         p.write_text(csv_text, encoding="utf-8")
         loaded = read_csv(p)
+        settings = _default_settings()
         with pytest.raises(ValueError, match="Equipment Name"):
-            adapter.adapt(loaded, original_filename="no_equip.csv", settings=_default_settings())
+            adapter.adapt(loaded, original_filename="no_equip.csv", settings=settings)
 
     def test_auto_detects_dosetrack(self):
         from guiskindose.input_adapters.models import InputAdapterResult

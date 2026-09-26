@@ -74,7 +74,7 @@ class LoopbackSecurityConfig:
     def for_port(cls, port: int, *, require_token: bool = True) -> LoopbackSecurityConfig:
         """Build a config scoped to one loopback port (see ``_resolve_port``)."""
         hosts = (f"127.0.0.1:{port}", f"localhost:{port}", "127.0.0.1", "localhost")
-        origins = tuple(f"http://{host}" for host in hosts[:2])
+        origins = tuple(f"http://{host}" for host in hosts[:2])  # NOSONAR - loopback origins are plain HTTP by design
         return cls(allowed_hosts=hosts, allowed_origins=origins, require_token=require_token)
 
 

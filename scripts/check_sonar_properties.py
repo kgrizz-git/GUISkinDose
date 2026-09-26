@@ -8,6 +8,10 @@ SHARED_KEYS = (
     "sonar.exclusions",
     "sonar.test.exclusions",
     "sonar.coverage.exclusions",
+    # Issue suppressions must match too, or local and cloud analyses report different issue sets.
+    "sonar.issue.ignore.multicriteria",
+    "sonar.issue.ignore.multicriteria.guistate.ruleKey",
+    "sonar.issue.ignore.multicriteria.guistate.resourceKey",
 )
 CONFIGURATION_FILES = ("sonar-project.properties", ".sonarcloud.properties")
 

@@ -96,7 +96,8 @@ def test_make_phantom_preview_fig_unknown_stem_returns_none():
 def test_make_phantom_preview_fig_uniform_scale_changes_spans():
     base = make_phantom_preview_fig(_snapshot())
     scaled = make_phantom_preview_fig(_snapshot(scale_lat=1.2, scale_ap=1.2, scale_lon=1.2))
-    assert base is not None and scaled is not None
+    assert base is not None
+    assert scaled is not None
     bp, sp = _patient_trace(base), _patient_trace(scaled)
     assert _span(sp, "x") / _span(bp, "x") == pytest.approx(1.2, rel=0.05)
     assert _span(sp, "y") / _span(bp, "y") == pytest.approx(1.2, rel=0.05)
@@ -106,7 +107,8 @@ def test_make_phantom_preview_fig_uniform_scale_changes_spans():
 def test_make_phantom_preview_fig_nonuniform_scale_changes_corresponding_spans():
     base = make_phantom_preview_fig(_snapshot())
     scaled = make_phantom_preview_fig(_snapshot(scale_lat=1.2, scale_ap=0.8, scale_lon=1.4))
-    assert base is not None and scaled is not None
+    assert base is not None
+    assert scaled is not None
     bp, sp = _patient_trace(base), _patient_trace(scaled)
     assert _span(sp, "x") / _span(bp, "x") == pytest.approx(1.2, rel=0.05)
     assert _span(sp, "y") / _span(bp, "y") == pytest.approx(0.8, rel=0.05)
@@ -116,7 +118,8 @@ def test_make_phantom_preview_fig_nonuniform_scale_changes_corresponding_spans()
 def test_make_phantom_preview_fig_offsets_shift_patient():
     zero = make_phantom_preview_fig(_snapshot())
     shifted = make_phantom_preview_fig(_snapshot(d_lon=10.0, d_ver=5.0, d_lat=-7.0))
-    assert zero is not None and shifted is not None
+    assert zero is not None
+    assert shifted is not None
     zp, sp = _patient_trace(zero), _patient_trace(shifted)
     # position_patient_phantom_on_table translate order is [d_lon, d_ver, d_lat]
     # mapped onto phantom r columns [x, y, z] after placement.
@@ -131,7 +134,8 @@ def test_make_phantom_preview_fig_offsets_shift_patient():
 def test_make_phantom_preview_fig_feet_first_differs_from_head_first():
     head = make_phantom_preview_fig(_snapshot(patient_orientation="head_first_supine"))
     feet = make_phantom_preview_fig(_snapshot(patient_orientation="feet_first_supine"))
-    assert head is not None and feet is not None
+    assert head is not None
+    assert feet is not None
     hp, fp = _patient_trace(head), _patient_trace(feet)
     assert not np.allclose(np.asarray(hp["z"]), np.asarray(fp["z"]))
 

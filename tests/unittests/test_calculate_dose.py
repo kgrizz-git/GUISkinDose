@@ -83,7 +83,6 @@ _MUTABLE_PER_EVENT_KEYS = (
 @pytest.fixture(autouse=True)
 def _quiet_logs():
     logging.getLogger("guiskindose").setLevel(logging.WARNING)
-    yield
 
 
 # ── template builder (fast, isolated) ──────────────────────────────────
@@ -95,11 +94,13 @@ def test_output_template_placeholder_types_match_final_slot_types():
 
     assert len(template[c.OUTPUT_KEY_HITS]) == n
     for v in template[c.OUTPUT_KEY_HITS]:
-        assert isinstance(v, list) and v == []
+        assert isinstance(v, list)
+        assert v == []
 
     assert len(template[c.OUTPUT_KEY_KERMA]) == n
     for v in template[c.OUTPUT_KEY_KERMA]:
-        assert isinstance(v, float) and v == 0.0
+        assert isinstance(v, float)
+        assert v == 0.0
 
     for key in (
         c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW,
@@ -107,7 +108,8 @@ def test_output_template_placeholder_types_match_final_slot_types():
     ):
         assert len(template[key]) == n
         for v in template[key]:
-            assert isinstance(v, np.ndarray) and v.size == 0
+            assert isinstance(v, np.ndarray)
+            assert v.size == 0
 
     for key in (
         c.OUTPUT_KEY_CORRECTION_MEDIUM,
@@ -115,7 +117,8 @@ def test_output_template_placeholder_types_match_final_slot_types():
     ):
         assert len(template[key]) == n
         for v in template[key]:
-            assert isinstance(v, float) and v == 0.0
+            assert isinstance(v, float)
+            assert v == 0.0
 
     assert template[c.OUTPUT_KEY_DOSE_MAP].shape == (50,)
     assert np.all(template[c.OUTPUT_KEY_DOSE_MAP] == 0.0)

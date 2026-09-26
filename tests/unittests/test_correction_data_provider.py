@@ -64,7 +64,9 @@ def test_get_table_returns_isolated_copies():
 
 def test_packaged_hash_deterministic_hex():
     first, second = packaged_source_hash(), packaged_source_hash()
-    assert first == second and len(first) == 64 and int(first, 16) >= 0
+    assert first == second
+    assert len(first) == 64
+    assert int(first, 16) >= 0
 
 
 def test_resolve_defaults_to_packaged():
@@ -76,11 +78,14 @@ def test_resolve_defaults_to_packaged():
 
 def test_resolve_explicit_and_warns_once(recwarn: pytest.WarningsRecorder, tmp_path: Path):
     source, path = resolve_corrections_source("custom.db")
-    assert source == "explicit" and str(path) == "custom.db"
+    assert source == "explicit"
+    assert str(path) == "custom.db"
     # tmp_path is absolute on every OS; a POSIX literal like "/abs/custom.db"
     # is drive-relative (not absolute) on Windows (issue #107 follow-up).
     source, path = resolve_corrections_source(str(tmp_path / "custom.db"))
-    assert source == "explicit" and path is not None and path.is_absolute()
+    assert source == "explicit"
+    assert path is not None
+    assert path.is_absolute()
     assert len([w for w in recwarn.list if issubclass(w.category, DeprecationWarning)]) == 2
     resolve_corrections_source("other.db")
     assert len([w for w in recwarn.list if issubclass(w.category, DeprecationWarning)]) == 2
@@ -161,7 +166,8 @@ def test_default_lookup_creates_no_cwd_files(tmp_path: Path, monkeypatch: pytest
     monkeypatch.chdir(tmp_path)
     frame = pd.DataFrame({"kVp": [70.0], "filter_thickness_Cu": [0.0], "filter_thickness_Al": [0.0]})
     out = fetch_and_append_hvl(data_norm=frame, inherent_filtration=2.5, corrections_db="corrections.db")
-    assert "HVL" in out.columns and out["HVL"].notna().all()
+    assert "HVL" in out.columns
+    assert out["HVL"].notna().all()
     assert list(tmp_path.iterdir()) == []
 
 
@@ -187,4 +193,5 @@ def test_export_descriptor_has_no_paths(tmp_path: Path):
     assert snap2["corrections_db_source"]["source"] == "explicit-sqlite"
     assert len(snap2["corrections_db_source"]["sha256"]) == 64
     payload2 = json.dumps(snap2, default=str)
-    assert str(tmp_path) not in payload2 and ".db" not in payload2
+    assert str(tmp_path) not in payload2
+    assert ".db" not in payload2

@@ -60,7 +60,8 @@ def test_disabled_matches_baseline_psd():
     table2, pad2 = _table_pad(settings_on)
     _, out_on, _ = calculate_dose(data_norm.copy(), settings_on, table2, pad2)
 
-    assert out_off is not None and out_on is not None
+    assert out_off is not None
+    assert out_on is not None
     assert np.allclose(out_off[c.OUTPUT_KEY_DOSE_MAP], out_on[c.OUTPUT_KEY_DOSE_MAP])
     assert out_on[c.OUTPUT_KEY_KERMA] == pytest.approx(out_off[c.OUTPUT_KEY_KERMA])
     assert out_on[c.OUTPUT_KEY_KERMA_CORRECTED] == pytest.approx(out_on[c.OUTPUT_KEY_KERMA])
@@ -80,7 +81,8 @@ def test_constant_cf_scales_psd_and_preserves_reported_kerma():
     k_irp_before = data_norm[c.KEY_NORMALIZATION_AIR_KERMA].tolist()
     _, out_cf, _ = calculate_dose(data_norm.copy(), settings_cf, table2, pad2)
 
-    assert out_base is not None and out_cf is not None
+    assert out_base is not None
+    assert out_cf is not None
     assert data_norm[c.KEY_NORMALIZATION_AIR_KERMA].tolist() == pytest.approx(k_irp_before)
     assert out_cf[c.OUTPUT_KEY_KERMA] == pytest.approx(out_base[c.OUTPUT_KEY_KERMA])
     expected_corrected = [k * 1.5 for k in out_base[c.OUTPUT_KEY_KERMA]]

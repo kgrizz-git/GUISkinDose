@@ -41,6 +41,8 @@ ISSUES_DIRNAME = Path("tmp/sonar-issues")
 LATEST_JSON = Path("tmp/sonar-latest-issues.json")
 LATEST_SUMMARY = Path("tmp/sonar-latest-issues.md")
 STATE_PATH = Path("tmp/sonar-state.json")
+# Scan-identity keys carried over from the existing state (written by run_sonarqube_local.py).
+STATE_KEYS = frozenset({"last_scan_commit", "last_scan_time"})
 DEFAULT_PAGE_SIZE = 500
 DEFAULT_CAP = 2000
 REQUEST_TIMEOUT = 30
@@ -266,7 +268,10 @@ def prune_dumps(issues_dir: Path, *, keep_days: int = 30, keep_minimum: int = 5)
 
 def refresh_state_counts(root: Path, *, issues_count: int, issues_path: str) -> bool:
     """Update counts in an existing state file; never create one from a dump."""
-    state_file = root / STATE_PATH
+    base = os.path.realpath(root)
+    state_file = Path(os.path.realpath(os.path.join(base, STATE_PATH)))
+    if not str(state_file).startswith(base + os.sep):
+        return False
     if not state_file.is_file():
         return False
     try:
@@ -275,11 +280,17 @@ def refresh_state_counts(root: Path, *, issues_count: int, issues_path: str) -> 
         return False
     if not isinstance(state, dict) or not state.get("last_scan_commit"):
         return False
-    state["issues_count"] = issues_count
-    state["issues_path"] = issues_path
-    state["issues_summary_path"] = LATEST_SUMMARY.as_posix()
+    # Rebuild the state from known keys instead of echoing arbitrary file content back to disk.
+    refreshed: dict[str, object] = {
+        key: value for key, value in state.items() if key in STATE_KEYS and isinstance(value, str)
+    }
+    refreshed["issues_count"] = issues_count
+    refreshed["issues_path"] = issues_path
+    refreshed["issues_summary_path"] = LATEST_SUMMARY.as_posix()
     try:
-        state_file.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with open(state_file, "w", encoding="utf-8") as handle:
+            json.dump(refreshed, handle, indent=2, sort_keys=True)
+            handle.write("\n")
     except OSError:
         return False
     return True
