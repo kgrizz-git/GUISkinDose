@@ -26,8 +26,9 @@ from collections.abc import Callable
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlparse
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 UPDATE_STATE_PATH = Path("tmp/sonar-update-check.json")
 CHECK_INTERVAL = timedelta(days=7)
@@ -45,7 +46,18 @@ _SCANNER_VERSION_RE = re.compile(r"SonarScanner CLI (\d+(?:\.\d+){1,3})\b")
 # The server-version request carries no credentials, but it still must not
 # leave the machine through an HTTP(S)_PROXY.
 _LOOPBACK_OPENER = build_opener(ProxyHandler({}))
-_PUBLIC_OPENER = build_opener()
+
+
+class _HttpsOnlyRedirects(HTTPRedirectHandler):
+    """Follow a public redirect only when its target is still HTTPS."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urlparse(newurl).scheme != "https":
+            raise HTTPError(req.full_url, code, "non-HTTPS redirect refused", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_PUBLIC_OPENER = build_opener(_HttpsOnlyRedirects)
 
 FetchText = Callable[[str], str]
 

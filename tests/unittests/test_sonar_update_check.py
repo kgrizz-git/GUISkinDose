@@ -12,6 +12,7 @@ from scripts.sonar_update_check import (
     HUB_TAGS_URL,
     SCANNER_RELEASE_URL,
     UPDATE_STATE_PATH,
+    _HttpsOnlyRedirects,
     check_due,
     fetch_text,
     latest_community_version,
@@ -169,6 +170,7 @@ def test_invalid_version_does_not_record_check(tmp_path: Path) -> None:
 
 def test_state_write_failure_is_advisory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An OSError while recording the check must not stop the runner."""
+
     def fail_write(_path: Path, _now: datetime) -> None:
         raise OSError("read-only")
 
@@ -178,3 +180,20 @@ def test_state_write_failure_is_advisory(tmp_path: Path, monkeypatch: pytest.Mon
         tmp_path, HOST, "scanner", fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW
     )
     assert len(messages) == 1
+
+
+def test_public_redirects_must_stay_https() -> None:
+    """A redirect to plain HTTP is refused; an HTTPS redirect is followed."""
+    from http.client import HTTPMessage
+    from io import BytesIO
+    from urllib.error import HTTPError
+    from urllib.request import Request
+
+    handler = _HttpsOnlyRedirects()
+    request = Request("https://api.github.com/x")
+    body, headers = BytesIO(), HTTPMessage()
+    with pytest.raises(HTTPError, match="non-HTTPS redirect refused"):
+        handler.redirect_request(request, body, 302, "Found", headers, "http://example.com/x")
+    followed = handler.redirect_request(request, body, 302, "Found", headers, "https://objects.github.com/x")
+    assert followed is not None
+    assert followed.full_url == "https://objects.github.com/x"
