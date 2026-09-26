@@ -115,11 +115,16 @@ def test_support_transmission_zeros_are_advisory_not_errors():
     assert _codes(issues, severity="advisory") == {"zero_transmission"}
 
 
-def test_support_transmission_near_zero_is_advisory():
+def test_support_transmission_tiny_positive_is_not_zero_advisory():
+    # Runtime neutralizes only <= 0; a tiny positive is used as-is, so the
+    # advisory must not claim it is warned-neutral.
     df = pd.DataFrame({"k_patient_support": [1e-12, 0.5]})
-    issues = check_support_transmission(df)
-    assert _codes(issues) == set()
-    assert _codes(issues, severity="advisory") == {"zero_transmission"}
+    assert check_support_transmission(df) == []
+
+
+def test_support_transmission_negative_zero_is_advisory():
+    df = pd.DataFrame({"k_patient_support": [-0.0, 0.5]})
+    assert _codes(check_support_transmission(df), severity="advisory") == {"zero_transmission"}
 
 
 def test_support_transmission_tiny_negative_is_error_only():

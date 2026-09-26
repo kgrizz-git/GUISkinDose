@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -41,6 +42,8 @@ from pathlib import Path
 DEFAULT_STATE_PATH = "tmp/sonar-state.json"
 DEFAULT_MAX_COMMITS = 10
 WARN_FRACTION = 0.8
+# Full SHA-1 or SHA-256 object name; rejects option-like values before they reach git argv.
+COMMIT_SHA_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 REFRESH_COMMAND = "colima start default && python scripts/run_sonarqube_local.py"
 
@@ -205,9 +208,9 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
         return 1
 
     last_scan_commit = state.get("last_scan_commit")
-    if not last_scan_commit or not isinstance(last_scan_commit, str):
+    if not isinstance(last_scan_commit, str) or not COMMIT_SHA_RE.fullmatch(last_scan_commit):
         print(
-            "Sonar freshness gate: state file has no last_scan_commit.\n"
+            "Sonar freshness gate: state file has no valid last_scan_commit.\n"
             "Re-run the scan to regenerate it:\n"
             f"    {REFRESH_COMMAND}",
             file=sys.stderr,

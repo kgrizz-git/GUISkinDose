@@ -123,6 +123,17 @@ def test_dangling_scan_commit_blocks(fixture_repo: Path, monkeypatch: pytest.Mon
     assert gate.main(["--state", str(state_path)]) == 1
 
 
+@pytest.mark.parametrize("bad_commit", ["--help", "HEAD", "deadbeef"])
+def test_non_sha_scan_commit_blocks_before_git(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], bad_commit: str
+) -> None:
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    _write_state(state_path, bad_commit)
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+    assert gate.main(["--state", str(state_path)]) == 1
+    assert "no valid last_scan_commit" in capsys.readouterr().err
+
+
 def test_commit_stage_within_budget_allows(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     scan_sha = _commit(fixture_repo, "a")
     state_path = fixture_repo / "tmp" / "sonar-state.json"
