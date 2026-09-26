@@ -59,9 +59,17 @@ def test_latest_community_version_follows_community_digest() -> None:
     assert latest_community_version(HUB_TAGS) == "26.9.0.129388"
 
 
-def test_latest_community_version_falls_back_to_highest_tag() -> None:
-    payload = {"results": [{"name": "25.1.0.1-community"}, {"name": "25.10.0.2-community"}]}
-    assert latest_community_version(payload) == "25.10.0.2"
+def test_latest_community_version_requires_digest_match() -> None:
+    """Without a digest-matched versioned tag, report nothing rather than guess."""
+    unpinned = {"results": [{"name": "25.1.0.1-community"}, {"name": "25.10.0.2-community"}]}
+    assert latest_community_version(unpinned) is None
+    other_digest = {
+        "results": [
+            {"name": "community", "digest": "sha256:new"},
+            {"name": "25.10.0.2-community", "digest": "sha256:old"},
+        ]
+    }
+    assert latest_community_version(other_digest) is None
 
 
 @pytest.mark.parametrize("payload", [None, {}, {"results": "x"}, {"results": [{"name": "community"}]}])

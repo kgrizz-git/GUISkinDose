@@ -23,6 +23,10 @@ their own `sonar.projectKey`, `SONAR_HOST_URL`, and token.
 docker compose -f compose.sonarqube.yaml up -d
 ```
 
+SonarQube's embedded Elasticsearch needs `vm.max_map_count` of at least 524288 and `nofile` of at least 131072 on the
+Docker host (the Linux VM under Colima or Docker Desktop). If the server container exits during startup, check those
+limits against SonarSource's Docker requirements.
+
 Moving from an old H2 container: stop it (`docker stop sonarqube`) but keep it and its volumes as a fallback, start
 the stack, log in at `http://localhost:9000` (default `admin`/`admin`, change it), create the projects, and put a
 new token in each repository's `.env`. Remove the old container and its volumes once the new server works.

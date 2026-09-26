@@ -57,7 +57,11 @@ def parse_version(raw: object) -> tuple[int, ...] | None:
 
 
 def latest_community_version(tags_payload: object) -> str | None:
-    """Return the newest ``<version>-community`` tag, preferring the ``community`` digest."""
+    """Return the ``<version>-community`` tag that shares the ``community`` tag's digest.
+
+    Returns None when no versioned tag on the fetched page matches, rather than
+    guessing from the highest tag and printing a spurious advisory.
+    """
     results = tags_payload.get("results") if isinstance(tags_payload, dict) else None
     if not isinstance(results, list):
         return None
@@ -69,10 +73,8 @@ def latest_community_version(tags_payload: object) -> str | None:
         parsed = parse_version(match.group(1)) if match else None
         if match and parsed:
             versioned.append((parsed, match.group(1), tag.get("digest")))
-    if not versioned:
-        return None
     pinned = [entry for entry in versioned if community_digest and entry[2] == community_digest]
-    return max(pinned or versioned)[1]
+    return max(pinned)[1] if pinned else None
 
 
 def scanner_version_from_output(output: str) -> str | None:

@@ -219,11 +219,14 @@ def test_run_gui_default_port_fallback_scopes_security(monkeypatch) -> None:
     from guiskindose.gui.loopback_security import get_loopback_security_config
 
     captured: dict = {}
+    opened: list = []
     monkeypatch.setattr(gui_app, "_loopback_port_is_free", lambda p: p != 8765)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
-    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, **_kw: None)
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, **kw: opened.append((url, kw)))
     gui_app.run_gui(native=False)
     assert captured["port"] == 8766
+    assert opened[0][0].startswith("http://127.0.0.1:8766/?token=")
+    assert opened[0][1]["port"] == 8766
     assert captured["host"] == "127.0.0.1"
     config = get_loopback_security_config()
     assert config is not None
