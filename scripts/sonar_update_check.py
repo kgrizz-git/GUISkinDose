@@ -48,12 +48,21 @@ _SCANNER_VERSION_RE = re.compile(r"SonarScanner CLI (\d+(?:\.\d+){1,3})\b")
 _LOOPBACK_OPENER = build_opener(ProxyHandler({}))
 
 
+# Public requests may only reach the two release-metadata hosts, directly or by redirect.
+_PUBLIC_HOSTS = frozenset(urlparse(url).hostname for url in (HUB_TAGS_URL, SCANNER_RELEASE_URL))
+
+
+def _is_allowed_public_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme == "https" and (parsed.hostname or "").lower() in _PUBLIC_HOSTS
+
+
 class _HttpsOnlyRedirects(HTTPRedirectHandler):
-    """Follow a public redirect only when its target is still HTTPS."""
+    """Follow a public redirect only to an HTTPS URL on an allowlisted host."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        if urlparse(newurl).scheme != "https":
-            raise HTTPError(req.full_url, code, "non-HTTPS redirect refused", headers, fp)
+        if not _is_allowed_public_url(newurl):
+            raise HTTPError(req.full_url, code, "redirect to unapproved URL refused", headers, fp)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -106,12 +115,12 @@ def local_scanner_version(binary: str) -> str | None:
 
 
 def fetch_text(url: str) -> str:
-    """GET a fixed https URL or a loopback server URL; raise OSError/ValueError on trouble."""
+    """GET an allowlisted HTTPS URL or a loopback server URL; raise OSError/ValueError on trouble."""
     parsed = urlparse(url)
     hostname = (parsed.hostname or "").lower()
     if hostname in _LOOPBACK_HOSTS and parsed.scheme in {"http", "https"}:
         opener = _LOOPBACK_OPENER
-    elif parsed.scheme == "https":
+    elif _is_allowed_public_url(url):
         opener = _PUBLIC_OPENER
     else:
         raise ValueError("unsupported update-check URL")

@@ -182,8 +182,12 @@ def test_state_write_failure_is_advisory(tmp_path: Path, monkeypatch: pytest.Mon
     assert len(messages) == 1
 
 
-def test_public_redirects_must_stay_https() -> None:
-    """A redirect to plain HTTP is refused; an HTTPS redirect is followed."""
+@pytest.mark.parametrize(
+    "target",
+    ["http://api.github.com/x", "https://example.com/x", "https://objects.githubusercontent.com/x"],
+)
+def test_public_redirects_refused_off_allowlist(target: str) -> None:
+    """A redirect must stay HTTPS and on the two release-metadata hosts."""
     from http.client import HTTPMessage
     from io import BytesIO
     from urllib.error import HTTPError
@@ -192,8 +196,23 @@ def test_public_redirects_must_stay_https() -> None:
     handler = _HttpsOnlyRedirects()
     request = Request("https://api.github.com/x")
     body, headers = BytesIO(), HTTPMessage()
-    with pytest.raises(HTTPError, match="non-HTTPS redirect refused"):
-        handler.redirect_request(request, body, 302, "Found", headers, "http://example.com/x")
-    followed = handler.redirect_request(request, body, 302, "Found", headers, "https://objects.github.com/x")
+    with pytest.raises(HTTPError, match="unapproved URL refused"):
+        handler.redirect_request(request, body, 302, "Found", headers, target)
+
+
+def test_public_redirect_within_allowlist_is_followed() -> None:
+    from http.client import HTTPMessage
+    from io import BytesIO
+    from urllib.request import Request
+
+    request = Request("https://api.github.com/x")
+    followed = _HttpsOnlyRedirects().redirect_request(
+        request, BytesIO(), 302, "Found", HTTPMessage(), "https://hub.docker.com/v2/y"
+    )
     assert followed is not None
-    assert followed.full_url == "https://objects.github.com/x"
+    assert followed.full_url == "https://hub.docker.com/v2/y"
+
+
+def test_fetch_text_refuses_unlisted_https_host() -> None:
+    with pytest.raises(ValueError, match="unsupported"):
+        fetch_text("https://example.com/releases")
