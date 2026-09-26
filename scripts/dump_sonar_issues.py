@@ -44,6 +44,7 @@ STATE_PATH = Path("tmp/sonar-state.json")
 DEFAULT_PAGE_SIZE = 500
 DEFAULT_CAP = 2000
 REQUEST_TIMEOUT = 30
+INVALID_HOST_URL = "invalid SonarQube host URL"
 
 
 class _RefuseRedirects(HTTPRedirectHandler):
@@ -101,16 +102,16 @@ def check_host_loopback(host_url: str, *, allow_remote: bool) -> str:
     from urllib.parse import urlparse
 
     if any(ch in host_url for ch in "\r\n\x00"):
-        raise ValueError("invalid SonarQube host URL")
+        raise ValueError(INVALID_HOST_URL)
     parsed = urlparse(host_url)
     hostname = (parsed.hostname or "").lower()
     scheme = (parsed.scheme or "").lower()
     if scheme not in {"http", "https"} or not hostname:
-        raise ValueError("invalid SonarQube host URL")
+        raise ValueError(INVALID_HOST_URL)
     try:
         _ = parsed.port  # raises for a non-numeric or out-of-range port
     except ValueError as exc:
-        raise ValueError("invalid SonarQube host URL") from exc
+        raise ValueError(INVALID_HOST_URL) from exc
     if hostname not in ALLOWED_LOCAL_HOSTS:
         if not allow_remote:
             raise ValueError("non-loopback SonarQube host requires --allow-remote")
@@ -154,7 +155,7 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
         raise RuntimeError(f"issue search returned HTTP {status}; state untouched")
     try:
         payload = json.loads(body.decode("utf-8"))
-    except (ValueError, UnicodeDecodeError) as exc:
+    except ValueError as exc:  # includes UnicodeDecodeError
         raise RuntimeError("issue search returned invalid JSON; state untouched") from exc
     if not isinstance(payload, dict):
         raise RuntimeError("issue search returned a non-object response; state untouched")
