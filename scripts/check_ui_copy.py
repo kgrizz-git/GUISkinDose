@@ -165,7 +165,7 @@ def validate_glossary(repo_root: Path, *, strict: bool = False) -> ValidationRes
 
     collected_aliases: dict[str, str] = {}
     for term, item in terms.items():
-        _validate_glossary_entry(term, item, collected_aliases, result, strict)
+        _validate_glossary_entry(term, item, collected_aliases, result)
 
     warnings = _scan_terminology(repo_root)
     result.errors.extend(warnings if strict else [])
@@ -178,7 +178,6 @@ def _validate_glossary_entry(
     item: dict,
     aliases: dict[str, str],
     result: ValidationResult,
-    strict: bool,
 ) -> None:
     if not isinstance(item, dict):
         result.errors.append(f"{term}: glossary entry must be an object")

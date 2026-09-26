@@ -81,7 +81,7 @@ STALE_PATTERN_RE = re.compile(
     re.IGNORECASE,
 )
 
-INVENTORY_NOT_IMPLEMENTED_RE = re.compile(  # NOSONAR: S8786 false positive — capture bounded by literal |.
+INVENTORY_NOT_IMPLEMENTED_RE = re.compile(  # NOSONAR - S8786 false positive: capture bounded by literal |.
     r"\|\s*(?P<feature>[^|]+?)\s*\|\s*Planned,\s*not implemented\s*\|",
     re.IGNORECASE,
 )

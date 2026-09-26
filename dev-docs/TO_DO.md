@@ -19,6 +19,12 @@ be archived.
 
 ## Next Up
 
+- [ ] **Complexity gates with grandfathered caps + ratchet** — SonarQube is the only
+  complexity check today (ruff select has no C901/PLR0912; no lizard hook/CI) and 26
+  S3776 findings face zero automated resistance. Add an enforced gate (ruff C901/PLR0912
+  or lizard) with per-function grandfathered caps for the current baseline and automated
+  ratchet-down as functions are decomposed. Acceptance: new/changed code above the caps
+  fails pre-push/CI; caps file only ever tightens.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization

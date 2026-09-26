@@ -65,6 +65,22 @@ repos:
         always_run: true
         stages: [pre-commit, pre-push]
 
+      - id: sonar-freshness-commit
+        name: Sonar freshness gate (commit budget, opt-in)
+        entry: bash scripts/run_sonar_freshness_check.sh --stage commit
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: sonar-freshness-push
+        name: Sonar freshness gate (push strict, opt-in)
+        entry: bash scripts/run_sonar_freshness_check.sh --stage push
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       - id: sensitive-content
         name: sensitive content and approved assets
         entry: python scripts/check_sensitive_content.py --require-approved-assets

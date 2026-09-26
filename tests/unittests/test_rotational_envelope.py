@@ -31,6 +31,16 @@ def test_exact_180_keeps_both_signed_paths():
     assert {short.path_id, long.path_id} == {"primary_positive_180", "primary_negative_180"}
 
 
+def test_near_180_float_drift_keeps_both_signed_paths():
+    short, long = wrapped_paths(0.0, 180.0 + 1e-12, step_deg=1.0, axis="primary")
+    assert {short.path_id, long.path_id} == {"primary_positive_180", "primary_negative_180"}
+
+
+def test_clearly_off_180_splits_short_and_long():
+    short, long = wrapped_paths(0.0, 179.5, step_deg=1.0, axis="primary")
+    assert {short.path_id, long.path_id} == {"primary_short", "primary_long"}
+
+
 def test_domain_carries_deduplicated_poses():
     domain = build_candidate_domain(
         ap1_start=90.0,

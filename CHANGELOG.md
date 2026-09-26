@@ -43,6 +43,13 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Float-equality checks in dose validation and rotational paths** (2026-09-25) —
+  `check_support_transmission()` now builds its zero-row advisory from the same
+  `<= 0` test the runtime uses to neutralize values, instead of float `== 0.0`
+  (negatives remain hard errors). `_path_labels()` treated a wrapped displacement as a half turn only on
+  exact `== 180.0`, which float drift can miss; it now keeps both signed directions
+  within `1e-9` degrees (the conservative envelope choice). Flagged by local
+  SonarQube as major bugs (S1244); no numerical change on well-formed inputs.
 - **RDSR parser fail-soft on malformed inputs** (2026-09-22) — two upstream
   OpenREM patterns crashed `rdsr_parser` outright: a missing top-level
   `Manufacturer` or `ManufacturerModelName` (`AttributeError`) and valueless

@@ -12,18 +12,21 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
 SETTINGS_PATH = Path("sonar-project.properties")
+FRESHNESS_STATE_PATH = Path("tmp/sonar-state.json")
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 ALLOWED_SCANNER_NAMES = {"sonar-scanner", "sonar-scanner.bat"}
 SOURCE_ROOTS = ("src", "scripts", "tests")
 EXCLUDED_PARTS = {"__pycache__", ".scannerwork"}
 EXCLUDED_PREFIXES = ("src/guiskindose/example_data/", "src/guiskindose/phantom_data/", "tests/fixtures/")
 INVALID_HOST_URL = "invalid SonarQube host URL"
+INVALID_PROJECT_VERSION = "invalid project version"
 
 
 def repo_root() -> Path:
@@ -74,9 +77,19 @@ def validate_host(url: str, *, allow_remote: bool) -> None:
     sanitize_host_url(url, allow_remote=allow_remote)
 
 
-def build_scanner_command(binary: Path, host_url: str, *, wait_for_quality_gate: bool) -> list[str]:
+def build_scanner_command(
+    binary: Path,
+    host_url: str,
+    *,
+    wait_for_quality_gate: bool,
+    project_version: str | None = None,
+) -> list[str]:
     """Build an argv list for sonar-scanner after host/binary validation."""
     command = [str(binary), f"-Dsonar.host.url={host_url}"]
+    if project_version:
+        if any(ch in project_version for ch in "\r\n\x00"):
+            raise ValueError(INVALID_PROJECT_VERSION)
+        command.append(f"-Dsonar.projectVersion={project_version}")
     if wait_for_quality_gate:
         command.extend(["-Dsonar.qualitygate.wait=true", "-Dsonar.qualitygate.timeout=300"])
     return command
@@ -163,6 +176,71 @@ def write_state(root: Path, payload: dict[str, object]) -> None:
         target.chmod(0o600)
 
 
+def project_version_from_pyproject(root: Path) -> str | None:
+    """Read the project version from the [project] table (cosmetic scanner label)."""
+    try:
+        with (root / "pyproject.toml").open("rb") as handle:
+            data = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    project = data.get("project")
+    version = project.get("version") if isinstance(project, dict) else None
+    if isinstance(version, str) and version and all(ch not in version for ch in "\r\n\x00"):
+        return version
+    return None
+
+
+def git_head_sha(root: Path) -> str | None:
+    """Resolve HEAD for the freshness-gate receipt; None when unavailable."""
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    sha = result.stdout.strip()
+    if result.returncode or not sha:
+        return None
+    return sha
+
+
+def write_freshness_state(root: Path, payload: dict[str, object]) -> None:
+    """Mirror the gate state under tmp/ (gitignored) after a successful scan."""
+    target = root / FRESHNESS_STATE_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def load_env_defaults(root: Path) -> None:
+    """Fill SONAR_TOKEN/SONAR_HOST_URL from repo .env when not exported.
+
+    Same setdefault idiom as the gate and dump helpers: an exported value
+    always wins, the file is parsed (never sourced), and values tolerate
+    quotes and trailing ` #` comments. Lets `python
+    scripts/run_sonarqube_local.py` work in a plain shell on any OS.
+    """
+    if os.environ.get("SONAR_TOKEN") and os.environ.get("SONAR_HOST_URL"):
+        return
+    try:
+        text = (root / ".env").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key not in {"SONAR_TOKEN", "SONAR_HOST_URL"}:
+            continue
+        cleaned = value.strip().split(" #", 1)[0].strip()
+        if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {"'", '"'}:
+            cleaned = cleaned[1:-1]
+        os.environ.setdefault(key, cleaned)
+
+
 def classify_failure(log_path: Path) -> str:
     try:
         content = log_path.read_text(encoding="utf-8", errors="replace").lower()
@@ -178,8 +256,9 @@ def classify_failure(log_path: Path) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
     root = repo_root()
+    load_env_defaults(root)
+    args = parse_args(argv)
     located = shutil.which("sonar-scanner")
     if located is None:
         print("ERROR: SonarQube local analysis did not run (scanner_missing).", file=sys.stderr)
@@ -187,10 +266,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         safe_host_url = sanitize_host_url(args.host_url, allow_remote=args.allow_remote)
         binary = validate_scanner_binary(located)
+        project_version = project_version_from_pyproject(root)
         command = build_scanner_command(
             binary,
             safe_host_url,
             wait_for_quality_gate=not args.no_quality_gate_wait,
+            project_version=project_version,
         )
     except ValueError as exc:
         print(f"ERROR: SonarQube local analysis refused ({exc}).", file=sys.stderr)
@@ -226,6 +307,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         failure_reason = None if completed.returncode == 0 else classify_failure(log_path)
 
     status = "passed" if completed.returncode == 0 else "failed"
+    completed_at = datetime.now(timezone.utc).isoformat()
+    scan_commit = git_head_sha(root)
     write_state(
         root,
         {
@@ -237,12 +320,28 @@ def main(argv: Sequence[str] | None = None) -> int:
             "input_count": input_count,
             "settings_sha256": settings_sha256,
             "scanner_version_sha256": version_sha256,
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "scan_commit": scan_commit,
+            "project_version": project_version,
+            "completed_at": completed_at,
         },
     )
     if completed.returncode:
         print(f"SonarQube local analysis did not pass ({failure_reason}); private state recorded.", file=sys.stderr)
         return 1
+    if scan_commit is not None:
+        # Reset the freshness-gate budget; issue counts stay unknown until
+        # scripts/dump_sonar_issues.py refreshes them.
+        write_freshness_state(
+            root,
+            {
+                "last_scan_commit": scan_commit,
+                "last_scan_time": completed_at,
+                "issues_count": None,
+                "issues_summary_path": "tmp/sonar-latest-issues.md",
+                "source_sha256": content_sha256,
+                "status": status,
+            },
+        )
     print("SonarQube local analysis and quality gate passed; private state recorded under Git metadata.")
     return 0
 

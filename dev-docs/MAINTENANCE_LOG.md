@@ -140,6 +140,19 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Opt-in SonarQube freshness gate and issue dumps (local hooks)** (2026-09-25) —
+  ported the WeekendDigest local-sonar conveniences without replacing the
+  value-suppressed `scripts/run_sonarqube_local.py`: `scripts/check_sonar_freshness.py`
+  (commit-budget / push-strict gate keyed off gitignored `tmp/sonar-state.json`,
+  silent unless `SONAR_FRESHNESS_GATE=1`), `scripts/dump_sonar_issues.py`
+  (timestamped `tmp/sonar-issues/` dumps with stable latest pointers and 30-day
+  pruning), and the `scripts/run_sonar_freshness_check.sh` hook wrapper. The runner
+  now records the scan commit, rewrites the gate state on success only, and passes
+  `-Dsonar.projectVersion` from `pyproject.toml`. Wired as `sonar-freshness-commit`
+  (pre-commit) and `sonar-freshness-push` (pre-push) hooks; see
+  `dev-docs/SONARQUBE_LOCAL.md`. Added `tests/unittests/test_check_sonar_freshness.py`
+  and `test_dump_sonar_issues.py`; extended `test_run_sonarqube_local.py`.
+
 - **Structured `k_tab` result type and per-event status tracking** (2026-09-10) —
   replaced the `list[float]` return of `calculate_k_tab()` with a `KTabResult`
   dataclass carrying `.values` and `.statuses` (`estimated`, `exact`,
