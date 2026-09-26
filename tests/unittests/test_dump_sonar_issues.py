@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Self
 
 import pytest
 
+import scripts.dump_sonar_issues as dsi
 from scripts.dump_sonar_issues import (
     check_host_loopback,
     clean_env_value,
@@ -128,3 +130,150 @@ def test_summarize_issues_marks_truncation() -> None:
 )
 def test_clean_env_value(raw: str, expected: str) -> None:
     assert clean_env_value(raw) == expected
+
+
+# --- token resolution, HTTP fetch, and main() with a stubbed urlopen ---
+
+class _FakeResponse:
+    def __init__(self, body: bytes, status: int = 200) -> None:
+        self.status = status
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+
+def _stub_pages(monkeypatch: pytest.MonkeyPatch, pages: list[object], seen: list[str] | None = None) -> None:
+    """Serve each page in order; bytes/int entries simulate raw bodies or HTTP statuses."""
+    queue = list(pages)
+
+    def fake_urlopen(request, timeout):
+        if seen is not None:
+            seen.append(request.get_header("Authorization"))
+        item = queue.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        if isinstance(item, int):
+            return _FakeResponse(b"{}", status=item)
+        if isinstance(item, bytes):
+            return _FakeResponse(item)
+        return _FakeResponse(json.dumps(item).encode("utf-8"))
+
+    monkeypatch.setattr(dsi, "urlopen", fake_urlopen)
+
+
+def _issue(n: int) -> dict:
+    return {"severity": "MINOR", "rule": "python:S1", "component": f"k:src/f{n}.py", "line": n, "message": "m"}
+
+
+def test_resolve_token_prefers_export_then_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / ".env").write_text("# c\nOTHER=1\nSONAR_TOKEN=\nSONAR_TOKEN='from-file' # note\n", encoding="utf-8")
+    monkeypatch.setenv("SONAR_TOKEN", "  exported  ")
+    assert dsi.resolve_token(tmp_path) == "exported"
+    monkeypatch.delenv("SONAR_TOKEN")
+    assert dsi.resolve_token(tmp_path) == "from-file"
+    assert dsi.resolve_token(tmp_path / "missing") is None
+
+
+def test_check_host_rejects_malformed_urls() -> None:
+    for url in ("ftp://localhost", "http://", "http://localhost\n:9000"):
+        with pytest.raises(ValueError, match="invalid"):
+            check_host_loopback(url, allow_remote=True)
+
+
+def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+    _stub_pages(
+        monkeypatch,
+        [
+            {"issues": [_issue(1), _issue(2)], "paging": {"total": 5}},
+            {"issues": [_issue(3), _issue(4)], "paging": {"total": 5}},
+        ],
+        seen,
+    )
+    issues, truncated = dsi.fetch_all_issues("http://localhost:9000/", "tok", "k", page_size=2, cap=3)
+    assert [i["line"] for i in issues] == [1, 2, 3]
+    assert truncated is True
+    assert seen == ["Bearer tok", "Bearer tok"]
+
+
+@pytest.mark.parametrize(
+    ("page", "match"),
+    [
+        (500, "HTTP 500"),
+        (b"not json", "invalid JSON"),
+        ({"errors": [{"msg": "x"}]}, "returned errors"),
+        ({"paging": {}}, "no issues array"),
+        (OSError("down"), "request failed"),
+    ],
+)
+def test_fetch_issues_page_failures_raise(monkeypatch: pytest.MonkeyPatch, page: object, match: str) -> None:
+    _stub_pages(monkeypatch, [page])
+    with pytest.raises(RuntimeError, match=match):
+        dsi.fetch_issues_page("http://localhost:9000", "tok", "k", 1, 10)
+
+
+def _fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, key: bool = True) -> Path:
+    if key:
+        (tmp_path / "sonar-project.properties").write_text("sonar.projectKey=k\n", encoding="utf-8")
+    monkeypatch.setattr(dsi, "repo_root", lambda: tmp_path)
+    monkeypatch.setenv("SONAR_TOKEN", "tok")
+    return tmp_path
+
+
+def test_main_writes_dumps_and_refreshes_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _fake_repo(tmp_path, monkeypatch)
+    state = root / "tmp" / "sonar-state.json"
+    state.parent.mkdir(parents=True)
+    state.write_text(json.dumps({"last_scan_commit": "a" * 40}), encoding="utf-8")
+    _stub_pages(monkeypatch, [{"issues": [_issue(1)], "paging": {"total": 1}}])
+
+    assert dsi.main(["--host-url", "http://localhost:9000"]) == 0
+
+    out = capsys.readouterr().out
+    assert "issues on record: 1" in out and "State counts refreshed" in out
+    assert "tok" not in out
+    assert json.loads((root / "tmp" / "sonar-latest-issues.json").read_text(encoding="utf-8"))[0]["line"] == 1
+    refreshed = json.loads(state.read_text(encoding="utf-8"))
+    assert refreshed["issues_count"] == 1 and refreshed["last_scan_commit"] == "a" * 40
+
+
+@pytest.mark.parametrize(("state_text", "expected"), [(None, "No state file"), ("{bad", "present but invalid")])
+def test_main_reports_missing_or_invalid_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    state_text: str | None,
+    expected: str,
+) -> None:
+    root = _fake_repo(tmp_path, monkeypatch)
+    if state_text is not None:
+        (root / "tmp").mkdir()
+        (root / "tmp" / "sonar-state.json").write_text(state_text, encoding="utf-8")
+    _stub_pages(monkeypatch, [{"issues": []}])
+    assert dsi.main(["--host-url", "http://localhost:9000"]) == 0
+    assert expected in capsys.readouterr().out
+
+
+def test_main_refusals_and_fetch_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _fake_repo(tmp_path, monkeypatch, key=False)
+    assert dsi.main(["--host-url", "https://sonar.example.com"]) == 2
+    assert dsi.main(["--host-url", "http://localhost:9000"]) == 2  # no project key
+    assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k", "--cap", "0"]) == 2
+    monkeypatch.delenv("SONAR_TOKEN")
+    assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k"]) == 2
+    monkeypatch.setenv("SONAR_TOKEN", "tok")
+    _stub_pages(monkeypatch, [503])
+    assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k"]) == 1
+    assert not (root / "tmp").exists()
+    assert "tok" not in capsys.readouterr().err
