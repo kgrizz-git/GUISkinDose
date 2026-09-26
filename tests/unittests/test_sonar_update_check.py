@@ -167,12 +167,10 @@ def test_invalid_version_does_not_record_check(tmp_path: Path) -> None:
 
 def test_state_write_failure_is_advisory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An OSError while recording the check must not stop the runner."""
-    import scripts.sonar_update_check as update_check
-
     def fail_write(_path: Path, _now: datetime) -> None:
         raise OSError("read-only")
 
-    monkeypatch.setattr(update_check, "record_check", fail_write)
+    monkeypatch.setattr("scripts.sonar_update_check.record_check", fail_write)
     fetch, _calls = fake_fetch()
     messages = run_update_check(
         tmp_path, HOST, "scanner", fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW
