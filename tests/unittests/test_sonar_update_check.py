@@ -111,7 +111,8 @@ def test_reports_outdated_scanner(tmp_path: Path) -> None:
     messages = run_update_check(
         tmp_path, HOST, "scanner", fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW
     )
-    assert len(messages) == 1 and "sonar-scanner 8.1.0.6389 -> 8.2.0.1" in messages[0]
+    assert len(messages) == 1
+    assert "sonar-scanner 8.1.0.6389 -> 8.2.0.1" in messages[0]
 
 
 def test_skips_network_when_recently_checked(tmp_path: Path) -> None:
@@ -125,7 +126,8 @@ def test_skips_network_when_recently_checked(tmp_path: Path) -> None:
     forced = run_update_check(
         tmp_path, HOST, "scanner", force=True, fetch=fetch, scanner_version=lambda _b: "8.1.0.6389", now=NOW
     )
-    assert calls and forced
+    assert calls
+    assert forced
 
 
 def test_offline_skips_silently_and_stays_due(tmp_path: Path) -> None:
