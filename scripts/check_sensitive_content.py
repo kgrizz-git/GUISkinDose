@@ -161,7 +161,8 @@ SENSITIVE_PATTERNS = (
         "MACOS_TEMP_PATH",
         re.compile(r"(?<![A-Za-z0-9_./-])/private/(?:var|tmp)/[^\s)>`\"']+"),
     ),
-    ("WINDOWS_USER_PATH", re.compile(r"(?i)(?<![A-Za-z0-9_])(?:[A-Z]:\\\\Users\\\\)[^\s)>`\"']+")),
+    # Single- and JSON-escaped double-backslash drive paths; POSIX_HOME_PATH covers the forward-slash form.
+    ("WINDOWS_USER_PATH", re.compile(r"(?i)(?<![A-Z0-9_])[A-Z]:\\{1,2}Users\\{1,2}[^\s)>`\"']+")),
     ("FILE_URI", re.compile(r"(?i)file:///(?:Users|home|private|var)/[^\s)>`\"']+")),
     (
         "PRIVATE_IPV4_ADDRESS",

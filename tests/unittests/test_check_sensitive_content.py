@@ -204,6 +204,25 @@ def test_diagnostic_artifact_and_internal_endpoint_are_blocked_without_echoing_v
     assert "192.168" not in "\n".join(finding.render() for finding in findings)
 
 
+def test_windows_user_paths_are_blocked_in_all_separator_forms(tmp_path: Path) -> None:
+    notes = tmp_path / "notes.txt"
+    # Split the drive prefix so this source line does not self-match the gate.
+    drive = "C" + ":"
+    notes.write_text(
+        drive + "\\Users\\someone\\x\n" + drive + "\\\\Users\\\\someone\n" + drive + "/" + "Users/someone/x\n",
+        encoding="utf-8",
+    )
+    _write_policy(tmp_path, [])
+
+    findings = run_checks(tmp_path, paths=["notes.txt"])
+    assert [(finding.rule, finding.location) for finding in findings] == [
+        ("WINDOWS_USER_PATH", "1"),
+        ("WINDOWS_USER_PATH", "2"),
+        ("POSIX_HOME_PATH", "3"),
+    ]
+    assert "someone" not in "\n".join(finding.render() for finding in findings)
+
+
 def test_private_ipv6_addresses_are_blocked_without_echoing_value(tmp_path: Path) -> None:
     config = tmp_path / "modality.cfg"
     # Split the prefix hextet from its colons so this source line does not self-match
