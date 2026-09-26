@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Self
+from urllib.error import HTTPError
+from urllib.request import Request
 
 import pytest
 
@@ -132,7 +134,7 @@ def test_clean_env_value(raw: str, expected: str) -> None:
     assert clean_env_value(raw) == expected
 
 
-# --- token resolution, HTTP fetch, and main() with a stubbed urlopen ---
+# --- token resolution, HTTP fetch, and main() with a stubbed opener ---
 
 class _FakeResponse:
     def __init__(self, body: bytes, status: int = 200) -> None:
@@ -153,7 +155,7 @@ def _stub_pages(monkeypatch: pytest.MonkeyPatch, pages: list[object], seen: list
     """Serve each page in order; bytes/int entries simulate raw bodies or HTTP statuses."""
     queue = list(pages)
 
-    def fake_urlopen(request, timeout):
+    def fake_open(request, timeout):
         if seen is not None:
             seen.append(request.get_header("Authorization"))
         item = queue.pop(0)
@@ -165,7 +167,7 @@ def _stub_pages(monkeypatch: pytest.MonkeyPatch, pages: list[object], seen: list
             return _FakeResponse(item)
         return _FakeResponse(json.dumps(item).encode("utf-8"))
 
-    monkeypatch.setattr(dsi, "urlopen", fake_urlopen)
+    monkeypatch.setattr(dsi._NO_REDIRECT_OPENER, "open", fake_open)
 
 
 def _issue(n: int) -> dict:
@@ -185,6 +187,18 @@ def test_check_host_rejects_malformed_urls() -> None:
     for url in ("ftp://localhost", "http://", "http://localhost\n:9000"):
         with pytest.raises(ValueError, match="invalid"):
             check_host_loopback(url, allow_remote=True)
+
+
+def test_remote_host_requires_https_but_loopback_http_is_fine() -> None:
+    with pytest.raises(ValueError, match="requires https"):
+        check_host_loopback("http://sonar.example.com", allow_remote=True)
+    assert check_host_loopback("http://127.0.0.1:9000", allow_remote=False)
+
+
+def test_redirects_are_refused_for_credentialed_requests() -> None:
+    request = Request("http://localhost:9000/api/issues/search", headers={"Authorization": "Bearer tok"})
+    with pytest.raises(HTTPError, match="redirect refused"):
+        dsi._RefuseRedirects().redirect_request(request, None, 302, "Found", {}, "http://elsewhere/")
 
 
 def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -210,6 +224,7 @@ def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatc
         (b"not json", "invalid JSON"),
         ({"errors": [{"msg": "x"}]}, "returned errors"),
         ({"paging": {}}, "no issues array"),
+        (b"[1, 2]", "non-object"),
         (OSError("down"), "request failed"),
     ],
 )

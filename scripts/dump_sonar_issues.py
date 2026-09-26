@@ -31,8 +31,9 @@ import sys
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -43,6 +44,16 @@ STATE_PATH = Path("tmp/sonar-state.json")
 DEFAULT_PAGE_SIZE = 500
 DEFAULT_CAP = 2000
 REQUEST_TIMEOUT = 30
+
+
+class _RefuseRedirects(HTTPRedirectHandler):
+    """Fail on 3xx so the Authorization header is never forwarded to another URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001, ANN201, ARG002
+        raise HTTPError(req.full_url, code, "redirect refused for credentialed request", headers, fp)
+
+
+_NO_REDIRECT_OPENER = build_opener(_RefuseRedirects)
 
 
 def repo_root() -> Path:
@@ -96,8 +107,11 @@ def check_host_loopback(host_url: str, *, allow_remote: bool) -> str:
     scheme = (parsed.scheme or "").lower()
     if scheme not in {"http", "https"} or not hostname:
         raise ValueError("invalid SonarQube host URL")
-    if hostname not in ALLOWED_LOCAL_HOSTS and not allow_remote:
-        raise ValueError("non-loopback SonarQube host requires --allow-remote")
+    if hostname not in ALLOWED_LOCAL_HOSTS:
+        if not allow_remote:
+            raise ValueError("non-loopback SonarQube host requires --allow-remote")
+        if scheme != "https":
+            raise ValueError("non-loopback SonarQube host requires https")
     return host_url
 
 
@@ -127,7 +141,7 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
     try:
         # URL is built from a validated loopback host plus a fixed SonarQube
         # API path; the scheme/host are allowlisted in check_host_loopback.
-        with urlopen(request, timeout=REQUEST_TIMEOUT) as response:  # nosec B310
+        with _NO_REDIRECT_OPENER.open(request, timeout=REQUEST_TIMEOUT) as response:  # nosec B310
             status = response.status
             body = response.read()
     except OSError as exc:
@@ -138,6 +152,8 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
         payload = json.loads(body.decode("utf-8"))
     except (ValueError, UnicodeDecodeError) as exc:
         raise RuntimeError("issue search returned invalid JSON; state untouched") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("issue search returned a non-object response; state untouched")
     if payload.get("errors"):
         raise RuntimeError(f"issue search returned errors: {payload['errors']}")
     if not isinstance(payload.get("issues"), list):

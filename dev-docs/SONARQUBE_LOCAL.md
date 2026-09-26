@@ -80,7 +80,8 @@ colima start default && python scripts/run_sonarqube_local.py
 `tmp/sonar-latest-issues.*` pointers the gate references. Dumps older than 30 days are pruned (always keeping
 the 5 most recent). The token comes from `SONAR_TOKEN` (exported or repo-local `.env`) and is never printed;
 non-200 API responses abort without touching state. When a state file exists, issue counts are refreshed in
-place without changing `last_scan_commit`.
+place without changing `last_scan_commit`. A non-loopback `--allow-remote` host must use HTTPS, and the credentialed request refuses
+redirects so the token is never forwarded to another URL.
 
 ```bash
 python scripts/dump_sonar_issues.py
