@@ -170,6 +170,7 @@ def _stub_pages(monkeypatch: pytest.MonkeyPatch, pages: list[object], seen: list
         return _FakeResponse(json.dumps(item).encode("utf-8"))
 
     monkeypatch.setattr(dsi._NO_REDIRECT_OPENER, "open", fake_open)
+    monkeypatch.setattr(dsi._LOOPBACK_OPENER, "open", fake_open)
 
 
 def _issue(n: int) -> dict:
@@ -203,6 +204,36 @@ def test_remote_host_requires_https_but_loopback_http_is_fine() -> None:
     assert check_host_loopback("http://127.0.0.1:9000", allow_remote=False)
 
 
+def _handlers(opener: object) -> list[object]:
+    # OpenerDirector.handlers is a runtime attribute missing from typeshed.
+    return list(getattr(opener, "handlers", []))
+
+
+def test_loopback_uses_proxy_free_opener_and_remote_keeps_default() -> None:
+    assert dsi._opener_for("http://localhost:9000") is dsi._LOOPBACK_OPENER
+    assert dsi._opener_for("http://[::1]:9000") is dsi._LOOPBACK_OPENER
+    assert dsi._opener_for("https://sonar.example.com") is dsi._NO_REDIRECT_OPENER
+    # An empty ProxyHandler displaces the env-reading default and registers no
+    # proxy_open methods, so no proxy handler is present at all.
+    handlers = _handlers(dsi._LOOPBACK_OPENER)
+    assert not any(isinstance(h, dsi.ProxyHandler) for h in handlers)
+    assert any(isinstance(h, dsi._RefuseRedirects) for h in handlers)
+
+
+def test_loopback_opener_ignores_proxy_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HTTP_PROXY", "http://proxy.invalid:3128")
+    monkeypatch.setenv("http_proxy", "http://proxy.invalid:3128")
+    with_env = dsi.build_opener(dsi._RefuseRedirects)
+    assert any(isinstance(h, dsi.ProxyHandler) for h in _handlers(with_env))  # control: env proxy is picked up
+    no_proxy = dsi.build_opener(dsi.ProxyHandler({}), dsi._RefuseRedirects)
+    assert not any(isinstance(h, dsi.ProxyHandler) for h in _handlers(no_proxy))
+
+
+def test_issue_entries_with_null_component_or_message_are_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_pages(monkeypatch, [{"issues": [{"component": None, "message": None}, {}]}])
+    assert len(dsi.fetch_issues_page("http://localhost:9000", "tok", "k", 1, 10)["issues"]) == 2
+
+
 def test_redirects_are_refused_for_credentialed_requests() -> None:
     request = Request("http://localhost:9000/api/issues/search", headers={"Authorization": "Bearer tok"})
     with pytest.raises(HTTPError, match="redirect refused"):
@@ -234,6 +265,9 @@ def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatc
         (b"not json", "invalid JSON"),
         ({"errors": [{"msg": "x"}]}, "returned errors"),
         ({"paging": {}}, "no issues array"),
+        ({"issues": ["x"]}, "non-object issue"),
+        ({"issues": [{"component": 3}]}, "non-text component"),
+        ({"issues": [{"message": ["m"]}]}, "non-text message"),
         (b"[1, 2]", "non-object"),
         (OSError("down"), "request failed"),
     ],

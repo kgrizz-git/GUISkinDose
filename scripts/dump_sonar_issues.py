@@ -32,8 +32,8 @@ from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.parse import urlencode
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.parse import urlencode, urlparse
+from urllib.request import HTTPRedirectHandler, OpenerDirector, ProxyHandler, Request, build_opener
 
 
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -55,6 +55,24 @@ class _RefuseRedirects(HTTPRedirectHandler):
 
 
 _NO_REDIRECT_OPENER = build_opener(_RefuseRedirects)
+# Loopback requests bypass any HTTP(S)_PROXY so the bearer token never leaves the machine.
+_LOOPBACK_OPENER = build_opener(ProxyHandler({}), _RefuseRedirects)
+
+
+def _opener_for(host_url: str) -> OpenerDirector:
+    hostname = (urlparse(host_url).hostname or "").lower()
+    return _LOOPBACK_OPENER if hostname in ALLOWED_LOCAL_HOSTS else _NO_REDIRECT_OPENER
+
+
+def _validate_issues(issues: list[object]) -> None:
+    """Reject malformed entries before any dump file is written."""
+    for issue in issues:
+        if not isinstance(issue, dict):
+            raise RuntimeError("issue search returned a non-object issue entry; state untouched")
+        for field in ("component", "message"):
+            value = issue.get(field)
+            if value is not None and not isinstance(value, str):
+                raise RuntimeError(f"issue search returned a non-text {field}; state untouched")
 
 
 def repo_root() -> Path:
@@ -99,8 +117,6 @@ def clean_env_value(raw: str) -> str:
 
 def check_host_loopback(host_url: str, *, allow_remote: bool) -> str:
     """Accept loopback hosts; refuse anything else without --allow-remote."""
-    from urllib.parse import urlparse
-
     if any(ch in host_url for ch in "\r\n\x00"):
         raise ValueError(INVALID_HOST_URL)
     parsed = urlparse(host_url)
@@ -146,7 +162,7 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
     try:
         # URL is built from a validated loopback host plus a fixed SonarQube
         # API path; the scheme/host are allowlisted in check_host_loopback.
-        with _NO_REDIRECT_OPENER.open(request, timeout=REQUEST_TIMEOUT) as response:  # nosec B310
+        with _opener_for(host_url).open(request, timeout=REQUEST_TIMEOUT) as response:  # nosec B310
             status = response.status
             body = response.read()
     except OSError as exc:
@@ -163,6 +179,7 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
         raise RuntimeError(f"issue search returned errors: {payload['errors']}")
     if not isinstance(payload.get("issues"), list):
         raise RuntimeError("issue search response has no issues array; state untouched")
+    _validate_issues(payload["issues"])
     return payload
 
 
