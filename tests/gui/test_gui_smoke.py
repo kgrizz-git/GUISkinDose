@@ -31,3 +31,15 @@ async def test_index_page_renders(user: User) -> None:
     await user.should_see("GUISkinDose")
     await user.should_see("1 · Upload")
     await user.should_see("Run Calculation")
+
+
+@pytest.mark.asyncio
+async def test_onboarding_dialog_shows_intended_use_disclaimer(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The startup dialog leads with the not-FDA-cleared / clinician-responsibility notice."""
+    import guiskindose.gui.app as gui_app
+    from guiskindose.gui.ui_copy import copy_text
+
+    monkeypatch.setattr(gui_app, "is_onboarding_dismissed", lambda: False)
+    await user.open("/")
+    await user.should_see("Welcome to GUISkinDose", retries=20)
+    await user.should_see(copy_text("onboarding.intended_use"))

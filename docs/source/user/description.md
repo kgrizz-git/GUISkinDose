@@ -12,3 +12,10 @@ phantom. The real position of the phantom on the tabletop can be taken into acco
 of voxelized phantoms can be incorporated in GUISkinDose.
 
 ![img.png](figures/ExampleSkinDoseMap.png)
+
+## Intended use and responsibility
+
+GUISkinDose is **not FDA-cleared** or otherwise certified as a medical device. It is intended for research,
+education, development, and institutional quality assurance, and its results are not independently validated for
+patient-care decisions. Qualified medical physicists and physicians are responsible for reviewing its inputs and
+outputs, evaluating patient skin dose, and making any clinical decisions.

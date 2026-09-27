@@ -152,6 +152,9 @@ def _show_onboarding_dialog() -> None:
             ui.label("Welcome to GUISkinDose").classes("text-h5")
 
         with ui.scroll_area().classes("w-full"):
+            ui.label(copy_text("onboarding.intended_use")).classes(
+                "text-sm text-orange-4 q-pa-sm q-mb-md rounded-borders"
+            ).style("border: 1px solid currentColor")
             ui.markdown(
                 dedent(
                     f"""
