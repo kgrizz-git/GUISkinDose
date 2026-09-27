@@ -62,12 +62,22 @@ def test_refresh_state_counts_preserves_scan_commit(tmp_path: Path, monkeypatch:
     state_file = tmp_path / "tmp" / "sonar-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
-        json.dumps({"last_scan_commit": "abc", "last_scan_time": "t", "issues_count": None}),
+        json.dumps(
+            {
+                "last_scan_commit": "abc",
+                "last_scan_time": "t",
+                "source_sha256": "f00d",
+                "status": "passed",
+                "issues_count": None,
+            }
+        ),
         encoding="utf-8",
     )
     assert refresh_state_counts(tmp_path, issues_count=7, issues_path="tmp/sonar-issues/x.json") is True
     state = json.loads(state_file.read_text(encoding="utf-8"))
     assert state["last_scan_commit"] == "abc"
+    assert state["source_sha256"] == "f00d"
+    assert state["status"] == "passed"
     assert state["issues_count"] == 7
 
 

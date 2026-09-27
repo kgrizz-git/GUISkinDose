@@ -17,8 +17,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   the repository (`contained_path`: `os.path.realpath` + `startswith(root + os.sep)`).
   `scripts/dump_sonar_issues.py` confines the state file the same way and rebuilds it from
   known keys instead of echoing file content back to disk. Loopback `http://` origins carry
-  a `# NOSONAR` (they must stay plain HTTP). Reliability: removed an always-true branch
-  guard in `help_button.py`, added a generic fallback family to the bundled Material
+  a `# NOSONAR` (they must stay plain HTTP). Reliability: removed a redundant duplicate
+  validation in `help_button.py`, added a generic fallback family to the bundled Material
   Symbols CSS, and replaced a self-comparison NaN assert. Test rules: split composite
   asserts (S9073), hoisted setup calls out of `pytest.raises` blocks (S5778), removed
   redundant fixture arguments and useless `yield`s (S9117/S9083/S9100), and moved

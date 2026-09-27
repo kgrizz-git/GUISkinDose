@@ -42,7 +42,7 @@ LATEST_JSON = Path("tmp/sonar-latest-issues.json")
 LATEST_SUMMARY = Path("tmp/sonar-latest-issues.md")
 STATE_PATH = Path("tmp/sonar-state.json")
 # Scan-identity keys carried over from the existing state (written by run_sonarqube_local.py).
-STATE_KEYS = frozenset({"last_scan_commit", "last_scan_time"})
+STATE_KEYS = frozenset({"last_scan_commit", "last_scan_time", "source_sha256", "status"})
 DEFAULT_PAGE_SIZE = 500
 DEFAULT_CAP = 2000
 REQUEST_TIMEOUT = 30

@@ -282,6 +282,22 @@ def test_state_traversal_is_refused(fixture_repo: Path, monkeypatch: pytest.Monk
     assert gate.main(["--state", "../sonar-state.json"]) == 1
 
 
+def test_state_symlink_escaping_repo_is_refused(
+    fixture_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A state path inside the repo that symlinks outside it is refused (realpath, not abspath)."""
+    outside = tmp_path / "outside-state.json"
+    _write_state(outside, _git(["rev-parse", "HEAD"], fixture_repo, capture=True))
+    link = fixture_repo / "tmp" / "linked-state.json"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlinks unavailable on this platform")
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+    assert gate.main(["--state", "tmp/linked-state.json"]) == 1
+
+
 def test_contained_path_resolves_relative_under_root(fixture_repo: Path) -> None:
     resolved = gate.contained_path("tmp/sonar-state.json", fixture_repo)
     assert resolved == Path(os.path.realpath(fixture_repo)) / "tmp" / "sonar-state.json"
