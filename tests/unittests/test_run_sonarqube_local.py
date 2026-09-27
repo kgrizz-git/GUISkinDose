@@ -169,3 +169,13 @@ def test_load_env_defaults_ignores_non_utf8_dotenv(tmp_path: Path, monkeypatch: 
     with _isolated_env():
         load_env_defaults(tmp_path)
         assert "SONAR_TOKEN" not in os.environ
+
+
+def test_update_check_flags_parse_and_are_exclusive() -> None:
+    from scripts.run_sonarqube_local import parse_args
+
+    assert parse_args([]).check_updates is False
+    assert parse_args(["--check-updates"]).check_updates is True
+    assert parse_args(["--no-update-check"]).no_update_check is True
+    with pytest.raises(SystemExit):
+        parse_args(["--check-updates", "--no-update-check"])

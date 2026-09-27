@@ -18,6 +18,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
+try:
+    from sonar_update_check import run_update_check
+except ModuleNotFoundError:  # Imported as scripts.run_sonarqube_local in tests.
+    from scripts.sonar_update_check import run_update_check
+
 SETTINGS_PATH = Path("sonar-project.properties")
 FRESHNESS_STATE_PATH = Path("tmp/sonar-state.json")
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -108,6 +113,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Allow a non-loopback SonarQube host after a separate data-processing review.",
     )
     parser.add_argument("--no-quality-gate-wait", action="store_true", help="Do not wait for the quality gate result.")
+    update_check = parser.add_mutually_exclusive_group()
+    update_check.add_argument(
+        "--check-updates",
+        action="store_true",
+        help="Check now for a newer SonarQube server or scanner (normally at most weekly).",
+    )
+    update_check.add_argument(
+        "--no-update-check", action="store_true", help="Skip the weekly server/scanner update check."
+    )
     return parser.parse_args(argv)
 
 def git_path(root: Path, name: str) -> Path:
@@ -287,6 +301,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, RuntimeError) as exc:
         print(f"ERROR: SonarQube local analysis preparation failed ({type(exc).__name__}).", file=sys.stderr)
         return 2
+
+    if not args.no_update_check:
+        for message in run_update_check(root, safe_host_url, str(binary), force=args.check_updates):
+            print(f"NOTE: {message}", flush=True)
 
     print(f"SonarQube local analysis started: tracked_inputs={input_count}; scanner output suppressed.", flush=True)
     with tempfile.TemporaryDirectory(prefix="sonarqube-private-log-") as temp_dir:

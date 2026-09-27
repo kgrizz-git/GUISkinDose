@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Added
+
+- **Local SonarQube compose stack and weekly update check** (2026-09-26) —
+  `compose.sonarqube.yaml` runs the local server with PostgreSQL, because the
+  embedded H2 database does not support upgrades. It binds to loopback only
+  and keeps data in named volumes. `scripts/sonar_update_check.py` lets
+  `run_sonarqube_local.py` warn at most weekly when a newer server image or
+  scanner exists. It is advisory and never updates anything. See
+  `dev-docs/SONARQUBE_LOCAL.md`.
+
 ### Fixed
 
 - **Windows CI manifest-hash failure from CRLF checkouts** (2026-09-21) —

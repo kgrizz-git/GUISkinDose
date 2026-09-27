@@ -108,8 +108,9 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
         type=_gui_port_value,
         dest="port",
         help=(
-            "Loopback port for the GUI server (default: 8765). Pass 0 for an "
-            "OS-assigned free port (printed in the console launch URL)."
+            "Loopback port for the GUI server (default: 8765; if busy, the next "
+            "free port in 8766-8774, then an OS-assigned one). Pass 0 for an "
+            "OS-assigned free port. An explicit port is never substituted."
         ),
     )
 
