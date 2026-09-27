@@ -13,6 +13,7 @@ from scripts.sonar_update_check import (
     SCANNER_RELEASE_URL,
     UPDATE_STATE_PATH,
     _HttpsOnlyRedirects,
+    _RefuseRedirects,
     check_due,
     fetch_text,
     latest_community_version,
@@ -216,3 +217,18 @@ def test_public_redirect_within_allowlist_is_followed() -> None:
 def test_fetch_text_refuses_unlisted_https_host() -> None:
     with pytest.raises(ValueError, match="unsupported"):
         fetch_text("https://example.com/releases")
+
+
+@pytest.mark.parametrize("target", ["http://localhost:9000/elsewhere", "https://example.com/x"])
+def test_loopback_redirects_always_refused(target: str) -> None:
+    """The loopback opener follows no redirect, even back to loopback."""
+    from http.client import HTTPMessage
+    from io import BytesIO
+    from urllib.error import HTTPError
+    from urllib.request import Request
+
+    handler = _RefuseRedirects()
+    request = Request("http://localhost:9000/api/server/version")
+    body, headers = BytesIO(), HTTPMessage()
+    with pytest.raises(HTTPError, match="loopback redirect refused"):
+        handler.redirect_request(request, body, 302, "Found", headers, target)

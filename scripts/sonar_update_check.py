@@ -43,9 +43,18 @@ _LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 _VERSION_RE = re.compile(r"^\d+(?:\.\d+){1,3}$")
 _COMMUNITY_TAG_RE = re.compile(r"^(\d+(?:\.\d+){1,3})-community$")
 _SCANNER_VERSION_RE = re.compile(r"SonarScanner CLI (\d+(?:\.\d+){1,3})\b")
+
+
+class _RefuseRedirects(HTTPRedirectHandler):
+    """Never follow a redirect: the local server's version endpoint has no reason to send one."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(req.full_url, code, "loopback redirect refused", headers, fp)
+
+
 # The server-version request carries no credentials, but it still must not
-# leave the machine through an HTTP(S)_PROXY.
-_LOOPBACK_OPENER = build_opener(ProxyHandler({}))
+# leave the machine through an HTTP(S)_PROXY or a redirect.
+_LOOPBACK_OPENER = build_opener(ProxyHandler({}), _RefuseRedirects)
 
 
 # Public requests may only reach the two release-metadata hosts, directly or by redirect.
