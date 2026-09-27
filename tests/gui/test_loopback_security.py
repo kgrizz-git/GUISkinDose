@@ -454,6 +454,8 @@ def test_probe_own_server_requires_hmac_proof(live_config) -> None:
     wrong_key = _run_server(403, _FORBIDDEN_BODY, lambda nonce: _probe_proof(b"x" * 32, nonce))
     assert probe_own_server("127.0.0.1", wrong_key) is False
     assert probe_own_server("127.0.0.1", _run_server(200, b"ok")) is False
+    oversized = _run_server(403, _FORBIDDEN_BODY + b"x" * 4096, lambda nonce: _probe_proof(config.probe_secret, nonce))
+    assert probe_own_server("127.0.0.1", oversized) is False
     import socket as socket_module
 
     with socket_module.socket(socket_module.AF_INET, socket_module.SOCK_STREAM) as probe:

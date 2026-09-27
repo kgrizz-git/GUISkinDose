@@ -209,7 +209,9 @@ def probe_own_server(host: str, port: int, *, timeout: float = 2.0) -> bool:
             connection.request("GET", "/", headers={PROBE_HEADER: nonce})
             response = connection.getresponse()
             proof = response.getheader(PROOF_HEADER) or ""
-            body = response.read()
+            # Bounded read: one byte past the expected body is enough to reject
+            # an oversized reply without buffering whatever a squatter sends.
+            body = response.read(len(_FORBIDDEN_BODY) + 1)
         finally:
             connection.close()
     except (OSError, ValueError, http_client.HTTPException):
