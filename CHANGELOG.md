@@ -35,8 +35,9 @@ That keeps SemVer and contributor history organized.
   FDA-cleared or otherwise certified as a medical device, and that qualified
   medical physicists and physicians are responsible for reviewing its inputs
   and outputs and evaluating patient skin dose. The same notice now heads the
-  documentation site and the "What is GUISkinDose?" page, matching the
-  README.
+  documentation site and the "What is GUISkinDose?" page. Installs that
+  already turned off the welcome dialog see it once more after upgrading, so
+  the notice is shown at least once.
 - **Reproducible run configuration (settings export/import)** (2026-09-24) —
   the Settings tab can save the full GUI run state (settings, normalization
   profiles, phantom geometry, corrections, per-exam offsets) as a versioned
@@ -59,6 +60,13 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **GUI launch URL only auto-opens on the real GUI server** (2026-09-26) —
+  before opening the token URL, the launcher checked that the port returned
+  the GUI's public "forbidden" page, which any local program could copy. It
+  now sends a random challenge that only the running GUI can answer, using a
+  per-launch key that never leaves the process. After token login, the
+  redirect can no longer be turned into a `//other-host` link that leaves
+  loopback.
 - **Float-equality checks in dose validation and rotational paths** (2026-09-25) —
   `check_support_transmission()` now builds its zero-row advisory from the same
   `<= 0` test the runtime uses to neutralize values, instead of float `== 0.0`
