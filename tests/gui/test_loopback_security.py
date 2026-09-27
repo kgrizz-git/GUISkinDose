@@ -109,9 +109,7 @@ def test_bad_host_rejected_http(live_config) -> None:
 
 def test_bad_host_rejected_websocket(live_config) -> None:
     _, _ = live_config
-    sent = asyncio.run(
-        _run(LoopbackSecurityMiddleware(_ok_app), _ws_scope(host="evil.com", origin="http://evil.com"))
-    )
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _ws_scope(host="evil.com", origin="http://evil.com")))
     assert _status(sent) == 4403
 
 
@@ -141,12 +139,7 @@ def test_websocket_requires_session_cookie(live_config) -> None:
     mw = LoopbackSecurityMiddleware(_ok_app)
     origin = "http://127.0.0.1:8765"
     assert _status(asyncio.run(_run(mw, _ws_scope(origin=origin)))) == 4403
-    assert (
-        _status(
-            asyncio.run(_run(mw, _ws_scope(origin=origin, cookie=f"{SESSION_COOKIE_NAME}=tampered")))
-        )
-        == 4403
-    )
+    assert _status(asyncio.run(_run(mw, _ws_scope(origin=origin, cookie=f"{SESSION_COOKIE_NAME}=tampered")))) == 4403
     sent = asyncio.run(_run(mw, _http_scope(query=f"token={token}".encode("ascii"))))
     cookie = _set_cookie(sent)
     sent = asyncio.run(_run(mw, _ws_scope(origin=origin, cookie=cookie)))
@@ -246,6 +239,51 @@ def test_bootstrap_redirect_uses_raw_path_bytes(live_config) -> None:
     assert locations == ["/caf%C3%A9".encode("ascii")]
 
 
+@pytest.mark.parametrize("raw_path", [b"//evil.test/", b"/\\evil.test/", b"///evil.test"])
+def test_bootstrap_redirect_never_protocol_relative(live_config, raw_path: bytes) -> None:
+    """A '//host' path must not become a Location that leaves loopback."""
+    token, _ = live_config
+    scope = _http_scope(path="/", query=f"token={token}".encode("ascii"))
+    scope["raw_path"] = raw_path
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), scope))
+    locations = [
+        value
+        for message in sent
+        if message["type"] == "http.response.start"
+        for name, value in message.get("headers", [])
+        if name == b"location"
+    ]
+    assert locations == [b"/evil.test/" if raw_path != b"///evil.test" else b"/evil.test"]
+
+
+def test_refusal_carries_probe_proof_only_for_valid_nonce(live_config) -> None:
+    """The 403 answers a well-formed probe nonce with HMAC(probe_secret, nonce)."""
+    import hashlib
+    import hmac
+
+    _, config = live_config
+    mw = LoopbackSecurityMiddleware(_ok_app)
+
+    def proof_for(nonce: str) -> list[bytes]:
+        scope = _http_scope()
+        scope["headers"].append((b"x-guiskindose-probe", nonce.encode("latin-1")))
+        sent = asyncio.run(_run(mw, scope))
+        assert _status(sent) == 403
+        return [
+            value
+            for message in sent
+            if message["type"] == "http.response.start"
+            for name, value in message.get("headers", [])
+            if name == b"x-guiskindose-proof"
+        ]
+
+    nonce = "ab" * 16
+    expected = hmac.new(config.probe_secret, nonce.encode("ascii"), hashlib.sha256).hexdigest()
+    assert proof_for(nonce) == [expected.encode("ascii")]
+    assert proof_for("not-hex!") == []
+    assert proof_for("a" * 129) == []
+
+
 def test_wrong_token_and_tampered_cookie_rejected(live_config) -> None:
     _, _ = live_config
     mw = LoopbackSecurityMiddleware(_ok_app)
@@ -259,9 +297,7 @@ def test_state_changing_request_with_foreign_origin_rejected(live_config) -> Non
     mw = LoopbackSecurityMiddleware(_ok_app)
     sent = asyncio.run(_run(mw, _http_scope(query=f"token={token}".encode("ascii"))))
     cookie = _set_cookie(sent)
-    sent = asyncio.run(
-        _run(mw, _http_scope(method="POST", origin="http://evil.com", cookie=cookie))
-    )
+    sent = asyncio.run(_run(mw, _http_scope(method="POST", origin="http://evil.com", cookie=cookie)))
     assert _status(sent) == 403
 
 
@@ -287,9 +323,7 @@ def test_non_ascii_query_rejected(live_config) -> None:
 def test_percent_encoded_unicode_token_rejected_without_error(live_config) -> None:
     """%C3%A9 decodes past the ASCII-bytes guard; it must 403, not 500."""
     _, _ = live_config
-    sent = asyncio.run(
-        _run(LoopbackSecurityMiddleware(_ok_app), _http_scope(query=b"token=%C3%A9"))
-    )
+    sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), _http_scope(query=b"token=%C3%A9")))
     assert _status(sent) == 403
 
 
@@ -319,9 +353,7 @@ def test_custom_port_scopes_rejection(live_config) -> None:
 
     import guiskindose.gui.loopback_security as loopback_security
 
-    configure_loopback_security(
-        replace(_config_for_port(9999), launch_token_hash=live.launch_token_hash)
-    )
+    configure_loopback_security(replace(_config_for_port(9999), launch_token_hash=live.launch_token_hash))
     try:
         mw = LoopbackSecurityMiddleware(_ok_app)
         assert (
@@ -339,17 +371,13 @@ def test_custom_port_scopes_rejection(live_config) -> None:
             )
             == 400
         )
-        sent = asyncio.run(
-            _run(mw, _http_scope(host="127.0.0.1:9999", query=f"token={token}".encode("ascii")))
-        )
+        sent = asyncio.run(_run(mw, _http_scope(host="127.0.0.1:9999", query=f"token={token}".encode("ascii"))))
         assert _status(sent) == 302
         cookie = _set_cookie(sent)
         sent = asyncio.run(
             _run(
                 mw,
-                _ws_scope(
-                    host="127.0.0.1:9999", origin="http://127.0.0.1:9999", cookie=cookie
-                ),
+                _ws_scope(host="127.0.0.1:9999", origin="http://127.0.0.1:9999", cookie=cookie),
             )
         )
         assert sent
@@ -357,9 +385,7 @@ def test_custom_port_scopes_rejection(live_config) -> None:
         sent = asyncio.run(
             _run(
                 mw,
-                _ws_scope(
-                    host="127.0.0.1:9999", origin="http://127.0.0.1:8765", cookie=cookie
-                ),
+                _ws_scope(host="127.0.0.1:9999", origin="http://127.0.0.1:8765", cookie=cookie),
             )
         )
         assert _status(sent) == 4403
@@ -368,17 +394,26 @@ def test_custom_port_scopes_rejection(live_config) -> None:
     assert loopback_security.get_loopback_security_config() is None
 
 
-def test_probe_own_server_matches_refusal_signature() -> None:
-    """The auto-open gate opens only for our exact 403 refusal body."""
+def test_probe_own_server_requires_hmac_proof(live_config) -> None:
+    """The auto-open gate trusts only a listener that proves it holds probe_secret.
+
+    A squatter that copies the public 403 refusal body, without the proof, fails.
+    """
     import threading
+    from collections.abc import Callable
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
-    from guiskindose.gui.loopback_security import _FORBIDDEN_BODY, probe_own_server
+    from guiskindose.gui.loopback_security import _FORBIDDEN_BODY, _probe_proof, probe_own_server
 
-    def _make_handler(status: int, body: bytes) -> type[BaseHTTPRequestHandler]:
+    _, config = live_config
+
+    def _make_handler(status: int, body: bytes, prove: Callable[[str], str] | None) -> type[BaseHTTPRequestHandler]:
         class _Handler(BaseHTTPRequestHandler):
             def do_GET(self) -> None:
                 self.send_response(status)
+                nonce = self.headers.get("x-guiskindose-probe", "")
+                if prove is not None:
+                    self.send_header("x-guiskindose-proof", prove(nonce))
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
@@ -388,8 +423,8 @@ def test_probe_own_server_matches_refusal_signature() -> None:
 
         return _Handler
 
-    def _run_server(status: int, body: bytes) -> int:
-        server = HTTPServer(("127.0.0.1", 0), _make_handler(status, body))
+    def _run_server(status: int, body: bytes, prove: Callable[[str], str] | None = None) -> int:
+        server = HTTPServer(("127.0.0.1", 0), _make_handler(status, body, prove))
         port = server.server_address[1]
         assert isinstance(port, int)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05})
@@ -397,9 +432,12 @@ def test_probe_own_server_matches_refusal_signature() -> None:
         thread.start()
         return port
 
-    own = _run_server(403, _FORBIDDEN_BODY)
+    own = _run_server(403, _FORBIDDEN_BODY, lambda nonce: _probe_proof(config.probe_secret, nonce))
     assert probe_own_server("127.0.0.1", own) is True
-    assert probe_own_server("127.0.0.1", _run_server(403, b"forbidden")) is False
+    spoof = _run_server(403, _FORBIDDEN_BODY)
+    assert probe_own_server("127.0.0.1", spoof) is False
+    wrong_key = _run_server(403, _FORBIDDEN_BODY, lambda nonce: _probe_proof(b"x" * 32, nonce))
+    assert probe_own_server("127.0.0.1", wrong_key) is False
     assert probe_own_server("127.0.0.1", _run_server(200, b"ok")) is False
     import socket as socket_module
 
@@ -408,3 +446,10 @@ def test_probe_own_server_matches_refusal_signature() -> None:
         closed_port = probe.getsockname()[1]
     assert isinstance(closed_port, int)
     assert probe_own_server("127.0.0.1", closed_port, timeout=0.5) is False
+
+
+def test_probe_own_server_false_without_config() -> None:
+    from guiskindose.gui.loopback_security import probe_own_server
+
+    configure_loopback_security(None)
+    assert probe_own_server("127.0.0.1", 8765, timeout=0.2) is False

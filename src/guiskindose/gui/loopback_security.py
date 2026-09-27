@@ -46,10 +46,13 @@ TOKEN_QUERY_PARAM = "token"
 DEFAULT_GUI_PORT = 8765
 
 _BAD_HOST_BODY = b"unexpected host"
-_FORBIDDEN_BODY = (
-    b"forbidden: restart the GUI and open the console URL "
-    b"(it carries the launch token)"
-)
+# Challenge-response for probe_own_server(): the probe sends a fresh nonce and
+# only this process can answer with HMAC(probe_secret, nonce), so a squatter
+# that copies the public refusal body still fails the probe.
+PROBE_HEADER = "x-guiskindose-probe"
+PROOF_HEADER = "x-guiskindose-proof"
+_PROBE_NONCE_MAX = 128
+_FORBIDDEN_BODY = b"forbidden: restart the GUI and open the console URL (it carries the launch token)"
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,7 @@ class LoopbackSecurityConfig:
     )
     session_secret: bytes = field(default_factory=lambda: secrets.token_bytes(32), repr=False)
     launch_token_hash: bytes = field(default_factory=lambda: secrets.token_bytes(32), repr=False)
+    probe_secret: bytes = field(default_factory=lambda: secrets.token_bytes(32), repr=False)
     require_token: bool = True
 
     @classmethod
@@ -140,9 +144,7 @@ def _token_valid(config: LoopbackSecurityConfig, query_string: bytes) -> bool:
         # (e.g. token=%C3%A9); reject it on the 403 path, never hash it.
         if not value.isascii():
             continue
-        if hmac.compare_digest(
-            hashlib.sha256(value.encode("ascii")).digest(), config.launch_token_hash
-        ):
+        if hmac.compare_digest(hashlib.sha256(value.encode("ascii")).digest(), config.launch_token_hash):
             return True
     return False
 
@@ -150,9 +152,7 @@ def _token_valid(config: LoopbackSecurityConfig, query_string: bytes) -> bool:
 def _set_session_cookie(config: LoopbackSecurityConfig) -> bytes:
     serializer = URLSafeSerializer(config.session_secret)
     signed = serializer.dumps({"v": 1})
-    return (
-        f"{SESSION_COOKIE_NAME}={signed}; Path=/; HttpOnly; SameSite=Strict".encode("ascii")
-    )
+    return f"{SESSION_COOKIE_NAME}={signed}; Path=/; HttpOnly; SameSite=Strict".encode("ascii")
 
 
 def _strip_token_param(query_string: bytes) -> bytes:
@@ -168,36 +168,49 @@ def _redirect_location(scope: dict, rest: bytes) -> bytes:
     # Prefer raw_path (original bytes): re-encoding the decoded path can
     # silently drop characters outside latin-1 on the redirect target.
     raw_path = scope.get("raw_path")
-    location = (
-        raw_path
-        if isinstance(raw_path, bytes) and raw_path
-        else (scope.get("path", "/") or "/").encode("utf-8")
-    )
+    location = raw_path if isinstance(raw_path, bytes) and raw_path else (scope.get("path", "/") or "/").encode("utf-8")
+    # Collapse leading slashes/backslashes to one: "//evil.test/" would be a
+    # protocol-relative Location that sends the browser off loopback.
+    location = b"/" + location.lstrip(b"/\\")
     if rest:
         location += b"?" + rest
     return location
 
 
-def probe_own_server(host: str, port: int, *, timeout: float = 2.0) -> bool:
-    """Return True when the listener answers like our middleware.
+def _probe_proof(secret: bytes, nonce: str) -> str:
+    return hmac.new(secret, nonce.encode("ascii"), hashlib.sha256).hexdigest()
 
-    A bare ``/`` with no session must come back 403 carrying the exact
-    refusal body. Anything else — a foreign service squatting a raced or
-    stale port, an error page, silence — means the token URL must not
-    auto-open there.
+
+def _probe_nonce_ok(nonce: str) -> bool:
+    return 0 < len(nonce) <= _PROBE_NONCE_MAX and all(ch in "0123456789abcdef" for ch in nonce)
+
+
+def probe_own_server(host: str, port: int, *, timeout: float = 2.0) -> bool:
+    """Return True only when this process's own middleware answers.
+
+    A bare ``/`` with no session must come back 403 with the refusal body and
+    a proof header equal to ``HMAC(probe_secret, nonce)`` for a fresh random
+    nonce. The refusal body is public, so the proof is what matters: a local
+    process that grabbed the port between selection and bind cannot compute
+    it, and the token URL is never auto-opened there.
     """
-    if host not in ("127.0.0.1", "localhost") or not 1 <= port <= 65535:
+    config = _CONFIG
+    if config is None or host not in ("127.0.0.1", "localhost") or not 1 <= port <= 65535:
         return False
+    nonce = secrets.token_hex(16)
     try:
         connection = http_client.HTTPConnection(host, port, timeout=timeout)
         try:
-            connection.request("GET", "/")
+            connection.request("GET", "/", headers={PROBE_HEADER: nonce})
             response = connection.getresponse()
-            return response.status == 403 and response.read() == _FORBIDDEN_BODY
+            proof = response.getheader(PROOF_HEADER) or ""
+            body = response.read()
         finally:
             connection.close()
     except (OSError, ValueError, http_client.HTTPException):
         return False
+    expected = _probe_proof(config.probe_secret, nonce)
+    return response.status == 403 and body == _FORBIDDEN_BODY and hmac.compare_digest(proof, expected)
 
 
 async def _respond(send: Any, status: int, body: bytes, headers: list[tuple[bytes, bytes]] | None = None) -> None:
@@ -256,6 +269,12 @@ class LoopbackSecurityMiddleware:
                     ],
                 )
                 return
-            await _respond(send, 403, _FORBIDDEN_BODY)
+            nonce = headers.get(PROBE_HEADER, "")
+            proof_headers = (
+                [(PROOF_HEADER.encode("ascii"), _probe_proof(config.probe_secret, nonce).encode("ascii"))]
+                if _probe_nonce_ok(nonce)
+                else None
+            )
+            await _respond(send, 403, _FORBIDDEN_BODY, proof_headers)
             return
         await self.app(scope, receive, send)

@@ -43,6 +43,13 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **GUI launch URL only auto-opens on the real GUI server** (2026-09-26) —
+  before opening the token URL, the launcher checked that the port returned
+  the GUI's public "forbidden" page, which any local program could copy. It
+  now sends a random challenge that only the running GUI can answer, using a
+  per-launch key that never leaves the process. After token login, the
+  redirect can no longer be turned into a `//other-host` link that leaves
+  loopback.
 - **Float-equality checks in dose validation and rotational paths** (2026-09-25) —
   `check_support_transmission()` now builds its zero-row advisory from the same
   `<= 0` test the runtime uses to neutralize values, instead of float `== 0.0`

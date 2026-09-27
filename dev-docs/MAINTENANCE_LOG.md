@@ -8,6 +8,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Security
+
+- **Loopback launch probe and bootstrap redirect** (2026-09-26) —
+  `probe_own_server()` now sends a random `x-guiskindose-probe` nonce and
+  requires `x-guiskindose-proof` = HMAC-SHA256(`probe_secret`, nonce) from
+  the middleware's 403, so a process that races the chosen port and copies
+  the public refusal body no longer receives the auto-opened token URL.
+  `_redirect_location()` collapses leading `/` and `\` so a `//host` path
+  cannot become a protocol-relative `Location`. Follow-up to the #118
+  security reviews; both gaps predated that PR.
+
 ### Added
 
 - **Local SonarQube compose stack and weekly update check** (2026-09-26) —
