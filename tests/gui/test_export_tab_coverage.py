@@ -181,7 +181,8 @@ def test_figure_stamp_adds_short_notice() -> None:
     fig = go.Figure()
     stamp_figure(fig)
     annotations = fig.to_dict()["layout"]["annotations"]
-    assert [a["text"] for a in annotations] == [INTENDED_USE_SHORT]
+    assert [a["text"].replace("<br>", " ") for a in annotations] == [INTENDED_USE_SHORT]
+    assert fig.to_dict()["layout"]["margin"]["t"] >= 64
 
 
 def test_multi_exam_json_export_payload_carries_intended_use() -> None:
@@ -200,32 +201,54 @@ def test_multi_exam_json_export_payload_carries_intended_use() -> None:
     assert payload["aggregate_psd"] == 1.0
 
 
-def test_dose_map_html_export_contains_stamp(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The standalone HTML dose map carries the short notice end to end."""
-    import plotly.graph_objects as go
+_PATIENT = {
+    "patient": {
+        "patient_skin_cells": {"x": [0, 1, 0], "y": [0, 0, 1], "z": [0, 0, 0]},
+        "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]},
+    }
+}
+
+
+def _stamp_texts(fig_dict: dict) -> list[str]:
+    return [a["text"].replace("<br>", " ") for a in fig_dict["layout"].get("annotations", [])]
+
+
+def test_results_figure_itself_is_stamped() -> None:
+    """The on-screen figure carries the stamp, so Plotly's own PNG download does too."""
+    import numpy as np
 
     from guiskindose.gui import figures
     from guiskindose.intended_use import INTENDED_USE_SHORT
 
-    monkeypatch.setattr(figures, "make_dosemap_fig", lambda **_kw: go.Figure().to_dict())
-    html = figures.make_dosemap_html().decode()
-    assert INTENDED_USE_SHORT in html
+    fig_dict = figures.make_dosemap_fig(np.array([1.0, 2.0, 3.0]), _PATIENT)
+    assert fig_dict is not None
+    assert _stamp_texts(fig_dict).count(INTENDED_USE_SHORT) == 1
+
+
+def test_dose_map_html_export_contains_stamp_once() -> None:
+    import json
+    import re
+
+    import numpy as np
+
+    from guiskindose.gui import figures
+
+    html = figures.make_dosemap_html(np.array([1.0, 2.0, 3.0]), _PATIENT).decode()
+    texts = [json.loads(f'"{m}"') for m in re.findall(r'"text":"((?:[^"\\]|\\.)*)"', html)]
+    stamps = [t for t in texts if t.startswith("Not FDA-cleared")]
+    assert len(stamps) == 1
 
 
 def test_stamp_does_not_share_the_coordinate_note_corner() -> None:
     import numpy as np
 
     from guiskindose.export.images import render_dosemap_plotly_figure
-    from guiskindose.intended_use import INTENDED_USE_SHORT, stamp_figure
+    from guiskindose.intended_use import INTENDED_USE_SHORT
 
-    patient = {
-        "patient_skin_cells": {"x": [0, 1, 0], "y": [0, 0, 1], "z": [0, 0, 0]},
-        "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]},
-    }
-    fig = render_dosemap_plotly_figure(np.array([1.0, 2.0, 3.0]), patient, "jet")
-    stamp_figure(fig)
+    fig = render_dosemap_plotly_figure(np.array([1.0, 2.0, 3.0]), _PATIENT["patient"], "jet")
     annotations = fig.to_dict()["layout"]["annotations"]
-    stamp = next(a for a in annotations if a["text"] == INTENDED_USE_SHORT)
-    others = [a for a in annotations if a["text"] != INTENDED_USE_SHORT]
+    stamp = next(a for a in annotations if a["text"].replace("<br>", " ") == INTENDED_USE_SHORT)
+    others = [a for a in annotations if a is not stamp]
     assert others, "expected the coordinate-frame note"
-    assert all(stamp["yanchor"] != other["yanchor"] for other in others)
+    assert stamp["y"] >= 0.99
+    assert all(other["y"] < 0.5 for other in others)

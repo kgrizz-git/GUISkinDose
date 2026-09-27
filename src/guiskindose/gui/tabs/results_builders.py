@@ -534,7 +534,7 @@ def _build_header() -> None:
                 content_path="results_workflow.md",
                 help_id="results",
             )
-        ui.label(copy_text("results.intended_use")).classes("text-xs text-orange-4")
+        ui.label(copy_text("results.intended_use")).classes("text-xs text-orange-4 q-mb-sm")
 
 
 def _build_single_exam_section(ctrl: ResultsTabController) -> None:

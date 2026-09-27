@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from guiskindose.intended_use import stamp_figure
 from guiskindose.privacy import safe_error_event
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
@@ -169,7 +168,6 @@ def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes:
         import plotly.graph_objects as go
 
         fig = go.Figure(fig_dict)
-        stamp_figure(fig)
         return fig.to_html(full_html=True).encode()
     except Exception as exc:
         safe_error_event(logger, "dosemap_html_render", exc)
@@ -190,7 +188,6 @@ def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
 
         fig = go.Figure(fig_dict)
         fig.update_layout(scene_camera={"eye": {"x": -2.5, "y": 1.5, "z": 0}})
-        stamp_figure(fig)
         return fig.to_image(format="png")
     except Exception as exc:
         safe_error_event(logger, "dosemap_png_render", exc)

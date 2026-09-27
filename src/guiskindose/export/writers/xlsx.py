@@ -7,8 +7,9 @@ path)`` for filesystem writes.
 from __future__ import annotations
 
 import io
+import math
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -45,17 +46,34 @@ def _new_sheet(wb: Workbook, title: str) -> Worksheet:
     return cast(Worksheet, wb.create_sheet(title))
 
 
-def _autofit(ws: Worksheet) -> None:
-    """Widen columns to their longest cell (prevents ### clipping)."""
+def _autofit(ws: Worksheet, *, skip: frozenset[str] = frozenset()) -> None:
+    """Widen columns to their longest cell (prevents ### clipping).
+
+    Cells in ``skip`` (coordinates such as ``"B8"``) are wrapped paragraphs and must
+    not drive their column's width.
+    """
     widths: dict[int, int] = {}
     for row in ws.iter_rows():
         for cell in row:
-            if cell.value is None:
+            if cell.value is None or cell.coordinate in skip:
                 continue
             longest = max(len(line) for line in str(cell.value).splitlines() or [""])
             widths[cell.column] = max(widths.get(cell.column, 0), longest)
     for col, width in widths.items():
         ws.column_dimensions[get_column_letter(col)].width = min(max(width + 2, 10), 80)
+
+
+_NOTICE_MIN_WIDTH = 60
+_LINE_HEIGHT_PT = 15
+
+
+def _fit_wrapped_row(ws: Worksheet, cell: Any, *, min_width: int) -> None:
+    """Give a wrapped paragraph cell a readable column width and a row tall enough to show it."""
+    letter = get_column_letter(cell.column)
+    width = max(ws.column_dimensions[letter].width or 0, min_width)
+    ws.column_dimensions[letter].width = width
+    lines = math.ceil(len(str(cell.value)) / max(width - 2, 1))
+    ws.row_dimensions[cell.row].height = lines * _LINE_HEIGHT_PT
 
 
 def _write_rows(ws: Worksheet, rows, start_row: int = 1, *, header: bool = False) -> int:
@@ -88,6 +106,8 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
         ["Source type", payload.provenance.source_type],
     ]
     r = _write_rows(ws, meta_rows, start_row=3)
+    notice = ws.cell(row=3 + [row[0] for row in meta_rows].index("Intended use"), column=2)
+    notice.alignment = _WRAP
 
     r += 1
     ws.cell(row=r, column=1, value="Executive alerts").font = _BOLD
@@ -105,7 +125,8 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
     ws.cell(row=r, column=1, value="Cumulative summary").font = _BOLD
     r += 1
     _write_rows(ws, dosimetric_rows(payload.cumulative.metrics), start_row=r)
-    _autofit(ws)
+    _autofit(ws, skip=frozenset({notice.coordinate}))
+    _fit_wrapped_row(ws, notice, min_width=_NOTICE_MIN_WIDTH)
 
 
 def _results_sheet(wb: Workbook, payload: ExportPayload) -> None:

@@ -21,22 +21,33 @@ INTENDED_USE_SHORT = (
 )
 
 
+# Two short lines so the stamp wraps before the right-side colorbar even in a
+# narrow (~500 px) responsive HTML view; Plotly never wraps annotation text.
+_STAMP_TEXT = "Not FDA-cleared. Skin dose estimates must be reviewed<br>by a qualified medical physicist or physician."
+_STAMP_TOP_MARGIN = 64
+
+
 def stamp_figure(fig: Any) -> None:
-    """Add the short notice to an exported Plotly figure, top-left on a backing box.
+    """Add the short notice to a dose-map figure, top-left on a backing box.
 
     Top-left because the dose-map layout already uses the bottom-left corner for its
-    coordinate-frame note and the right side for the colorbar.
+    coordinate-frame note and the right side for the colorbar. The top margin grows
+    to fit the two-line stamp above the scene.
     """
     fig.add_annotation(
-        text=INTENDED_USE_SHORT,
+        text=_STAMP_TEXT,
         xref="paper",
         yref="paper",
         x=0.01,
-        y=0.99,
+        y=1,
         xanchor="left",
-        yanchor="top",
+        yanchor="bottom",
+        align="left",
         showarrow=False,
         font={"size": 11, "color": "#FB923C"},
         bgcolor="rgba(15, 23, 42, 0.75)",
         borderpad=4,
     )
+    margin = fig.layout.margin
+    if margin.t is None or margin.t < _STAMP_TOP_MARGIN:
+        fig.update_layout(margin={"t": _STAMP_TOP_MARGIN})

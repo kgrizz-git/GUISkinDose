@@ -245,3 +245,8 @@ def test_xlsx_overview_carries_intended_use_notice():
     ws = load_workbook(io.BytesIO(render_xlsx_bytes(_single_payload())))["Overview"]
     rows = {row[0]: row[1] for row in ws.iter_rows(min_col=1, max_col=2, values_only=True) if row[0]}
     assert rows["Intended use"] == INTENDED_USE_NOTICE
+    cell = next(c for c in ws["B"] if c.value == INTENDED_USE_NOTICE)
+    assert cell.alignment.wrap_text
+    width = ws.column_dimensions["B"].width
+    assert 60 <= width <= 80, "the notice wraps instead of stretching the column"
+    assert ws.row_dimensions[cell.row].height >= 15 * (len(INTENDED_USE_NOTICE) // width)
