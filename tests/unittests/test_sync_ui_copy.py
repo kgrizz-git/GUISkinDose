@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-import scripts.sync_ui_copy as sync_ui_copy
 from scripts.sync_ui_copy import main, sync
 
 
@@ -73,7 +72,7 @@ def test_sync_reports_missing_source(tmp_path: Path, capsys) -> None:
 
 
 def test_main_check_against_repo_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sync_ui_copy, "repo_root_from_script", lambda: tmp_path)
+    monkeypatch.setattr("scripts.sync_ui_copy.repo_root_from_script", lambda: tmp_path)
     source_dir = tmp_path / "dev-docs"
     source_dir.mkdir()
     (source_dir / "ui_copy.json").write_text('{"keys": {}}', encoding="utf-8")
