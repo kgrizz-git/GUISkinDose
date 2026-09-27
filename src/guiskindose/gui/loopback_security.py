@@ -185,6 +185,11 @@ def _probe_nonce_ok(nonce: str) -> bool:
     return 0 < len(nonce) <= _PROBE_NONCE_MAX and all(ch in "0123456789abcdef" for ch in nonce)
 
 
+def _is_probe_request(scope: dict) -> bool:
+    """Only the launcher's exact probe shape (GET /, no query) earns a proof."""
+    return scope.get("method") == "GET" and scope.get("path") == "/" and not scope.get("query_string")
+
+
 def probe_own_server(host: str, port: int, *, timeout: float = 2.0) -> bool:
     """Return True only when this process's own middleware answers.
 
@@ -272,7 +277,7 @@ class LoopbackSecurityMiddleware:
             nonce = headers.get(PROBE_HEADER, "")
             proof_headers = (
                 [(PROOF_HEADER.encode("ascii"), _probe_proof(config.probe_secret, nonce).encode("ascii"))]
-                if _probe_nonce_ok(nonce)
+                if _is_probe_request(scope) and _probe_nonce_ok(nonce)
                 else None
             )
             await _respond(send, 403, _FORBIDDEN_BODY, proof_headers)

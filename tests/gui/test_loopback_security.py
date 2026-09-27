@@ -239,12 +239,24 @@ def test_bootstrap_redirect_uses_raw_path_bytes(live_config) -> None:
     assert locations == ["/caf%C3%A9".encode("ascii")]
 
 
-@pytest.mark.parametrize("raw_path", [b"//evil.test/", b"/\\evil.test/", b"///evil.test"])
-def test_bootstrap_redirect_never_protocol_relative(live_config, raw_path: bytes) -> None:
-    """A '//host' path must not become a Location that leaves loopback."""
+@pytest.mark.parametrize(
+    ("path", "raw_path", "expected"),
+    [
+        ("/", b"//evil.test/", b"/evil.test/"),
+        ("/", b"/\\evil.test/", b"/evil.test/"),
+        ("/", b"///evil.test", b"/evil.test"),
+        ("/", b"\\evil.test", b"/evil.test"),
+        ("//evil.test/", None, b"/evil.test/"),
+    ],
+)
+def test_bootstrap_redirect_never_protocol_relative(
+    live_config, path: str, raw_path: bytes | None, expected: bytes
+) -> None:
+    """A '//host' path (raw_path or decoded path) must not become a Location that leaves loopback."""
     token, _ = live_config
-    scope = _http_scope(path="/", query=f"token={token}".encode("ascii"))
-    scope["raw_path"] = raw_path
+    scope = _http_scope(path=path, query=f"token={token}".encode("ascii"))
+    if raw_path is not None:
+        scope["raw_path"] = raw_path
     sent = asyncio.run(_run(LoopbackSecurityMiddleware(_ok_app), scope))
     locations = [
         value
@@ -253,7 +265,7 @@ def test_bootstrap_redirect_never_protocol_relative(live_config, raw_path: bytes
         for name, value in message.get("headers", [])
         if name == b"location"
     ]
-    assert locations == [b"/evil.test/" if raw_path != b"///evil.test" else b"/evil.test"]
+    assert locations == [expected]
 
 
 def test_refusal_carries_probe_proof_only_for_valid_nonce(live_config) -> None:
@@ -264,8 +276,8 @@ def test_refusal_carries_probe_proof_only_for_valid_nonce(live_config) -> None:
     _, config = live_config
     mw = LoopbackSecurityMiddleware(_ok_app)
 
-    def proof_for(nonce: str) -> list[bytes]:
-        scope = _http_scope()
+    def proof_for(nonce: str, *, path: str = "/", query: bytes = b"", method: str = "GET") -> list[bytes]:
+        scope = _http_scope(path=path, query=query, method=method)
         scope["headers"].append((b"x-guiskindose-probe", nonce.encode("latin-1")))
         sent = asyncio.run(_run(mw, scope))
         assert _status(sent) == 403
@@ -282,6 +294,9 @@ def test_refusal_carries_probe_proof_only_for_valid_nonce(live_config) -> None:
     assert proof_for(nonce) == [expected.encode("ascii")]
     assert proof_for("not-hex!") == []
     assert proof_for("a" * 129) == []
+    assert proof_for(nonce, path="/api/x") == []
+    assert proof_for(nonce, query=b"a=1") == []
+    assert proof_for(nonce, method="POST") == []
 
 
 def test_wrong_token_and_tampered_cookie_rejected(live_config) -> None:
@@ -453,3 +468,44 @@ def test_probe_own_server_false_without_config() -> None:
 
     configure_loopback_security(None)
     assert probe_own_server("127.0.0.1", 8765, timeout=0.2) is False
+
+
+def test_probe_own_server_against_real_middleware(live_config) -> None:
+    """End to end: probe_own_server() accepts the real middleware over TCP."""
+    import threading
+    from dataclasses import replace
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from guiskindose.gui.loopback_security import probe_own_server
+
+    middleware = LoopbackSecurityMiddleware(_ok_app)
+
+    class _AsgiBridge(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            path, _, query = self.path.partition("?")
+            scope = _http_scope(host=self.headers.get("host", ""), path=path, query=query.encode("ascii"))
+            scope["headers"] = [(k.lower().encode("latin-1"), v.encode("latin-1")) for k, v in self.headers.items()]
+            sent = asyncio.run(_run(middleware, scope))
+            start = next(m for m in sent if m["type"] == "http.response.start")
+            body = b"".join(m.get("body", b"") for m in sent if m["type"] == "http.response.body")
+            self.send_response(start["status"])
+            for name, value in start.get("headers", []):
+                self.send_header(name.decode("latin-1"), value.decode("latin-1"))
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), _AsgiBridge)
+    port = server.server_address[1]
+    assert isinstance(port, int)
+    _, config = live_config
+    configure_loopback_security(replace(config, allowed_hosts=(f"127.0.0.1:{port}",)))
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
+    thread.start()
+    try:
+        assert probe_own_server("127.0.0.1", port) is True
+    finally:
+        server.shutdown()
