@@ -16,6 +16,7 @@ from ..components import HelpButton
 from ..constants import COLORSCALES, MAX_INLINE_MAPS
 from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..state import state
+from ..ui_copy import copy_text
 
 if TYPE_CHECKING:
     from ..page_context import PageContext
@@ -533,6 +534,7 @@ def _build_header() -> None:
                 content_path="results_workflow.md",
                 help_id="results",
             )
+        ui.label(copy_text("results.intended_use")).classes("text-xs text-orange-4")
 
 
 def _build_single_exam_section(ctrl: ResultsTabController) -> None:

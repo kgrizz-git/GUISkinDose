@@ -43,3 +43,12 @@ async def test_onboarding_dialog_shows_intended_use_disclaimer(user: User, monke
     await user.open("/")
     await user.should_see("Welcome to GUISkinDose", retries=20)
     await user.should_see(copy_text("onboarding.intended_use"))
+
+
+@pytest.mark.asyncio
+async def test_results_tab_shows_intended_use_line(user: User) -> None:
+    """The Results tab keeps a short, non-dismissible intended-use line."""
+    from guiskindose.gui.ui_copy import copy_text
+
+    await user.open("/")
+    await user.should_see(copy_text("results.intended_use"), retries=20)

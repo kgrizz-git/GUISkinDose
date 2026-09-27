@@ -158,3 +158,28 @@ def test_write_or_download_browser_path(monkeypatch, _capture_notify) -> None:
     monkeypatch.setattr(ui, "download", lambda content, name: downloaded.append((content, name)))
     export_tab._write_or_download(None, b"abc", "out.txt", "saved", "test_write")
     assert downloaded == [(b"abc", "out.txt")]
+
+
+def test_json_export_payload_carries_intended_use() -> None:
+    from guiskindose.intended_use import INTENDED_USE_NOTICE
+
+    ctrl = _controller()
+    state.calculation_done = True
+    state.output = {"psd": 2.0}
+    state.multi_exam_result = None
+    state.import_provenance = None
+    payload = ctrl._build_export_payload()
+    assert payload["intended_use"] == INTENDED_USE_NOTICE
+    assert "intended_use" not in state.output
+
+
+def test_dose_map_figure_stamp_adds_short_notice() -> None:
+    import plotly.graph_objects as go
+
+    from guiskindose.gui.figures import _stamp_intended_use
+    from guiskindose.intended_use import INTENDED_USE_SHORT
+
+    fig = go.Figure()
+    _stamp_intended_use(fig)
+    annotations = fig.to_dict()["layout"]["annotations"]
+    assert [a["text"] for a in annotations] == [INTENDED_USE_SHORT]

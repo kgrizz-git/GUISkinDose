@@ -83,6 +83,7 @@ def _overview_sheet(wb: Workbook, payload: ExportPayload) -> None:
         ["Report schema version", payload.meta.schema_version],
         ["Generated", payload.meta.generated_at.isoformat(timespec="seconds")],
         ["Execution context", payload.meta.execution_context],
+        ["Intended use", payload.intended_use],
         ["Exams", payload.provenance.exam_count],
         ["Source type", payload.provenance.source_type],
     ]

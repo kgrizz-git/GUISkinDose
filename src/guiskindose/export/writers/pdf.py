@@ -89,9 +89,13 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(_PAGE[0] - _MARGIN, _MARGIN * 0.5, f"Page {self.getPageNumber()} of {total}")
 
 
+def _escape(text: object) -> str:
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def _p(text: str, style: ParagraphStyle = _CELL) -> Paragraph:
     """Wrap text in a ReportLab Paragraph with HTML escaping."""
-    return Paragraph(str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), style)
+    return Paragraph(_escape(text), style)
 
 
 def _table(rows: list[list], col_widths: list[float], *, header: bool = True) -> Table:
@@ -199,6 +203,7 @@ def _story(payload: ExportPayload) -> list:
             f"{payload.meta.execution_context} · {payload.meta.generated_at.isoformat(timespec='seconds')}",
             _BODY,
         ),
+        Paragraph(f"<b>Intended use:</b> {_escape(payload.intended_use)}", _BODY),
         Spacer(1, 8),
     ]
     story += _alert_box(payload)

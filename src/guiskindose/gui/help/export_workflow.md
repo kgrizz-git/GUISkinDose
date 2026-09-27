@@ -7,6 +7,12 @@ source filenames (may contain PHI)** is a separate, intentional action and can m
 record. Store every export in an approved destination, apply the appropriate retention policy, and avoid repository
 or shared-network locations unless they are specifically approved for clinical data.
 
+## Intended use
+
+Every export carries an intended-use notice. The rich report (XLSX, PDF, HTML, DOCX) states it in its header, the JSON
+results include an `intended_use` field, and the HTML and PNG dose maps show a short version in the corner. GUISkinDose
+is not FDA-cleared, and qualified medical physicists and physicians are responsible for reviewing its results.
+
 Use the Export tab after a calculation completes to save result artifacts.
 
 Available exports:

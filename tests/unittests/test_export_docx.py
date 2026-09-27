@@ -251,3 +251,11 @@ def test_ledger_table_renders_disclosed_rows_only():
     table = rotational_ledger_table(handling)
     assert len(table) == 2  # header + the single disclosed row
     assert table[1][0] == "3"
+
+
+def test_docx_report_carries_intended_use_notice():
+    from docx import Document  # type: ignore[import-untyped]
+
+    doc = Document(io.BytesIO(render_docx_bytes(_payload())))
+    text = "\n".join(p.text for p in doc.paragraphs)
+    assert "Intended use: GUISkinDose is not FDA-cleared" in text

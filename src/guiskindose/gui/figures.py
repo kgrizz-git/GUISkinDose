@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from guiskindose.intended_use import INTENDED_USE_SHORT
 from guiskindose.privacy import safe_error_event
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
@@ -152,6 +153,21 @@ def make_dosemap_fig(explicit_dose_map=None, explicit_patient=None):
         return None
 
 
+def _stamp_intended_use(fig) -> None:
+    """Print the short intended-use notice on an exported dose-map figure."""
+    fig.add_annotation(
+        text=INTENDED_USE_SHORT,
+        xref="paper",
+        yref="paper",
+        x=0,
+        y=0,
+        xanchor="left",
+        yanchor="bottom",
+        showarrow=False,
+        font={"size": 11, "color": "#FB923C"},
+    )
+
+
 def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes:
     """Render the dose map as a standalone interactive HTML document.
 
@@ -168,6 +184,7 @@ def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes:
         import plotly.graph_objects as go
 
         fig = go.Figure(fig_dict)
+        _stamp_intended_use(fig)
         return fig.to_html(full_html=True).encode()
     except Exception as exc:
         safe_error_event(logger, "dosemap_html_render", exc)
@@ -188,6 +205,7 @@ def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
 
         fig = go.Figure(fig_dict)
         fig.update_layout(scene_camera={"eye": {"x": -2.5, "y": 1.5, "z": 0}})
+        _stamp_intended_use(fig)
         return fig.to_image(format="png")
     except Exception as exc:
         safe_error_event(logger, "dosemap_png_render", exc)

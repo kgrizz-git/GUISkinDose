@@ -106,6 +106,7 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
         (f'<div class="meta">{_esc(m.app_name)} v{_esc(m.package_version)} · '
         f'{_esc(m.execution_context)} · {_esc(m.generated_at.isoformat(timespec="seconds"))} · '
         f'schema {m.schema_version}</div>'),
+        f'<p class="intended-use"><strong>Intended use:</strong> {_esc(payload.intended_use)}</p>',
         _alerts(payload),
         "<h2>Cumulative summary</h2>",
         _table([["Metric", "Value"], *dosimetric_rows(payload.cumulative.metrics)]),

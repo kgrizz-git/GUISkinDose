@@ -71,3 +71,12 @@ def test_write_pdf_no_images():
     ]
     data = render_pdf_bytes(payload)
     assert data.startswith(b"%PDF")
+
+
+def test_pdf_story_carries_intended_use_notice():
+    from reportlab.platypus import Paragraph
+
+    from guiskindose.export.writers.pdf import _story
+
+    texts = [flow.text for flow in _story(_payload()) if isinstance(flow, Paragraph)]
+    assert any(t.startswith("<b>Intended use:</b>") and "not FDA-cleared" in t for t in texts)
