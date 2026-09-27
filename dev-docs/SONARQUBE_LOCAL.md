@@ -40,6 +40,9 @@ docker compose -f compose.sonarqube.yaml exec -T db pg_dump -U sonar sonar > tmp
 docker compose -f compose.sonarqube.yaml up -d
 ```
 
+The backup holds the server's user accounts and token hashes. Keep it under the gitignored `tmp/` directory, never
+share it, and delete it once the upgrade works.
+
 Both images are pinned to a release tag plus its immutable digest, so nothing changes until the pin is edited. The
 digest for a tag is shown on Docker Hub, or by `docker buildx imagetools inspect sonarqube:<tag>`.
 
