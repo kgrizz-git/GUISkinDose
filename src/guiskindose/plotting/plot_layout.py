@@ -47,14 +47,17 @@ from .plot_settings import (
     fetch_slider_padding,
 )
 
+# Short lines: Plotly never wraps annotation text, so any long line runs off the
+# right edge (and under the colorbar) in narrow responsive views.
 COORDINATE_FRAME_NOTE = (
     "Display frame after vendor normalization:<br>"
     "X (Tx / LON) = PT left-right<br>"
     "Y (Ty / VER) = PT anterior-posterior / table height<br>"
     "Z (Tz / LAT) = PT superior-inferior<br>"
-    "DICOM LON/LAT are operator-table names on Siemens/Philips; GE raw LON/LAT are patient-anatomy "
-    "names and are swapped into this frame."
+    "Siemens/Philips LON/LAT: operator-table names.<br>"
+    "GE raw LON/LAT: patient-anatomy names, swapped in."
 )
+_COORDINATE_NOTE_FONT_SIZE = 10
 
 
 def coordinate_frame_annotation(color_plot_text: str) -> dict[str, Any]:
@@ -69,7 +72,7 @@ def coordinate_frame_annotation(color_plot_text: str) -> dict[str, Any]:
         "yanchor": "bottom",
         "align": "left",
         "showarrow": False,
-        "font": {"family": PLOT_FONT_FAMILY, "size": 11, "color": color_plot_text},
+        "font": {"family": PLOT_FONT_FAMILY, "size": _COORDINATE_NOTE_FONT_SIZE, "color": color_plot_text},
         "bgcolor": "rgba(0,0,0,0.35)",
         "borderpad": 4,
     }
