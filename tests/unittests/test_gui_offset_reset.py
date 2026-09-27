@@ -267,8 +267,9 @@ def test_stage_table_origin_axis_invalid_axis_leaves_meta_unchanged():
 def test_stage_table_origin_axis_invalid_value_leaves_meta_unchanged():
     meta = {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
 
+    bad_value = cast(float, "not-a-number")
     with pytest.raises(ValueError):
-        stage_table_origin_axis(meta, "x", cast(float, "not-a-number"))
+        stage_table_origin_axis(meta, "x", bad_value)
 
     assert meta == {"table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0}, "table_origin_override": None}
 

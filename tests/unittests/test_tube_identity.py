@@ -807,10 +807,10 @@ class TestDoseTrackCanonicalIdentity:
             path = f.name
 
         try:
+            input_path = Path(path)
+            settings = _default_settings()
             with pytest.raises(ValueError) as exc_info:
-                read_and_normalize_input(
-                    Path(path), input_schema="dosetrack", settings=_default_settings()
-                )
+                read_and_normalize_input(input_path, input_schema="dosetrack", settings=settings)
             # The adapter wraps the inner ValueError; check the cause for the
             # specific non-CID-10003 message.
             assert exc_info.value.__cause__ is not None

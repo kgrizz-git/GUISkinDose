@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "sync_gui_help.py"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mirror_dirs(tmp_path: Path) -> tuple[Path, Path]:
     source = tmp_path / "docs" / "source" / "gui_help"
     target = tmp_path / "src" / "guiskindose" / "gui" / "help"

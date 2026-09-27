@@ -55,8 +55,9 @@ def test_resolve_human_mesh_stl_path_rejects_parent_reference(tmp_path: Path) ->
     # Relative escape from phantom_data toward an attacker-controlled path.
     escape = Path("..") / ".." / ".." / ".." / tmp_path.name / "outside"
     # Use a stem that looks like traversal when joined under phantom_data/.
+    escape_stem = str(escape).replace("\\", "/")
     with pytest.raises(ValueError):
-        resolve_human_mesh_stl_path(str(escape).replace("\\", "/"))
+        resolve_human_mesh_stl_path(escape_stem)
 
 
 def test_phantom_string_mesh_rejects_path_traversal() -> None:

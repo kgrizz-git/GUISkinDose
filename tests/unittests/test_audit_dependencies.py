@@ -17,7 +17,8 @@ UV_AUDIT_VERSION = "uv 0.11.19"
 
 def _load_module():
     spec = importlib.util.spec_from_file_location("audit_dependencies", SCRIPT)
-    assert spec and spec.loader
+    assert spec
+    assert spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules["audit_dependencies"] = module
     spec.loader.exec_module(module)

@@ -97,7 +97,8 @@ def test_rotational_survey_lists_unresolved():
     # Privacy-safe: indices + reason codes only, no values.
     first = unresolved[0]
     assert isinstance(first, tuple)
-    assert first[3] and all(isinstance(reason, str) for reason in first[3])
+    assert first[3]
+    assert all(isinstance(reason, str) for reason in first[3])
 
 
 def test_rotational_survey_zero_when_static():
@@ -158,9 +159,11 @@ def test_rotational_survey_flags_contradictory_rows():
     assert survey["rotational"] == 0
     assert survey["positioner_motion"] == 0
     unresolved = survey["unresolved"]
-    assert isinstance(unresolved, list) and len(unresolved) == 1
+    assert isinstance(unresolved, list)
+    assert len(unresolved) == 1
     first = unresolved[0]
-    assert isinstance(first, tuple) and "contradictory_static" in first[3]
+    assert isinstance(first, tuple)
+    assert "contradictory_static" in first[3]
 
 
 def test_cli_default_handling_is_coverage():

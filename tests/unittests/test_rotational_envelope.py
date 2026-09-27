@@ -161,7 +161,8 @@ def test_handling_ledger_reports_kerma_weighted_counts():
     assert ledger.total_kerma == pytest.approx(100.0)
     assert ledger.any_fallback_to_static is False
     row = ledger.rows[0]
-    assert row.reason_codes and row.confidence == "coded"
+    assert row.reason_codes
+    assert row.confidence == "coded"
     assert row.ap1_end == pytest.approx(-120.0)
     assert row.primary_separation_deg == pytest.approx(150.0)
     assert row.unique_candidate_count == 360

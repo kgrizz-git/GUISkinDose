@@ -53,8 +53,9 @@ def test_scanner_binary_must_be_absolute_known_name(tmp_path: Path) -> None:
         validate_scanner_binary("sonar-scanner")
     other = tmp_path / "other-tool"
     other.write_text("#!/bin/sh\n", encoding="utf-8")
+    other_path = str(other.resolve())
     with pytest.raises(ValueError, match="unexpected"):
-        validate_scanner_binary(str(other.resolve()))
+        validate_scanner_binary(other_path)
 
 
 def test_scanner_command_rejects_control_characters_in_host(tmp_path: Path) -> None:

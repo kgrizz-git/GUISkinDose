@@ -37,7 +37,6 @@ _GOLDEN_N_EVENTS = 21
 @pytest.fixture(autouse=True)
 def _quiet_logs():
     logging.getLogger("guiskindose").setLevel(logging.WARNING)
-    yield
 
 
 def _run_dict() -> dict:

@@ -10,12 +10,14 @@ settings = PyskindoseSettings(settings=DEVELOPMENT_PARAMETERS)
 
 
 def test_that_print_parameters_function_updates_output_after_settings_change():
+    # A test-local instance, so the mode change cannot leak into the shared module-level settings.
+    local_settings = PyskindoseSettings(settings=DEVELOPMENT_PARAMETERS)
 
-    print_string = settings.print_parameters(return_as_string=True)
+    print_string = local_settings.print_parameters(return_as_string=True)
 
-    settings.mode = "some_other_mode"
+    local_settings.mode = "some_other_mode"
 
-    print_string_updated = settings.print_parameters(return_as_string=True)
+    print_string_updated = local_settings.print_parameters(return_as_string=True)
 
     assert print_string != print_string_updated
 

@@ -10,7 +10,7 @@ from guiskindose.rdsr_parser import rdsr_parser
 from guiskindose.settings import PyskindoseSettings
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def example_settings() -> PyskindoseSettings:
     settings_dict: dict = {
         "mode": c.MODE_PLOT_PROCEDURE,
@@ -58,51 +58,51 @@ def example_settings() -> PyskindoseSettings:
     return PyskindoseSettings(settings=settings_dict)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def example_rdsr_path() -> Path:
     return Path(__file__).parent.parent.parent / "src/guiskindose/example_data/RDSR"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def phantom_path(example_rdsr_path) -> Path:
     return example_rdsr_path / "siemens_axiom_example_procedure.dcm"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def phantom_dataset(phantom_path) -> pydicom.FileDataset:
     return pydicom.dcmread(phantom_path)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def allura_rdsr_path(example_rdsr_path) -> Path:
     return example_rdsr_path / "philips_allura_clarity_u104.dcm"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def allura_dataset(allura_rdsr_path) -> pydicom.FileDataset:
     return pydicom.dcmread(allura_rdsr_path)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def axiom_artis_rdsr_path(example_rdsr_path) -> Path:
     return example_rdsr_path / "siemens_axiom_artis.dcm"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def axiom_artis_dataset(axiom_artis_rdsr_path) -> pydicom.FileDataset:
     return pydicom.dcmread(axiom_artis_rdsr_path)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def axiom_artis_parsed(axiom_artis_dataset) -> pd.DataFrame:
     return rdsr_parser(axiom_artis_dataset)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def allura_parsed(allura_dataset) -> pd.DataFrame:
     return rdsr_parser(allura_dataset)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def axiom_artis_normalized(axiom_artis_parsed, example_settings) -> pd.DataFrame:
     return rdsr_normalizer(data_parsed=axiom_artis_parsed, settings=example_settings)

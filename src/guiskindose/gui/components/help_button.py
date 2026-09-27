@@ -33,9 +33,6 @@ class HelpButton:
         button_text: str = "",
         help_id: str | None = None,
     ):
-        if content is None and content_path is None:
-            raise ValueError("Either content or content_path must be provided")
-
         self.title = title
         self.icon = icon
         self.button_text = button_text
@@ -47,8 +44,8 @@ class HelpButton:
         elif content_path is not None:
             self.content = self._load_content(content_path)
         else:
-            # Keep this guard local to the branch so a future change cannot pass None
-            # to the file loader.
+            # The only validation of the pair lives here, next to the branch that
+            # would otherwise pass None to the file loader.
             raise ValueError("Either content or content_path must be provided")
 
         # Create the button

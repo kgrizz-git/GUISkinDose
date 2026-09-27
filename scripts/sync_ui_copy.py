@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import shutil
 import sys
 from pathlib import Path
 
@@ -44,7 +45,7 @@ def sync(source: Path, target: Path, *, check: bool) -> int:
         return 1
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp_target = target.with_name(f"{target.name}.tmp")
-    tmp_target.write_bytes(source.read_bytes())
+    shutil.copyfile(source, tmp_target)
     tmp_target.replace(target)
     print(f"mirrored {source.name} -> {target}")
     return 0
@@ -62,15 +63,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Exit non-zero if the bundled copy drifts; do not write.",
     )
-    parser.add_argument(
-        "--repo-root",
-        type=Path,
-        default=repo_root_from_script(),
-        help="Repository root (default: parent of scripts/).",
-    )
     args = parser.parse_args(argv)
 
-    repo_root = args.repo_root.resolve()
+    # The repository root is always derived from this script's location; no CLI
+    # option can redirect the mirror's reads or writes outside the checkout.
+    repo_root = repo_root_from_script()
     return sync(repo_root / SOURCE_REPO_FILE, repo_root / TARGET_REPO_FILE, check=args.check)
 
 

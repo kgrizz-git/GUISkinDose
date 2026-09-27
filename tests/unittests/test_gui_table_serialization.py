@@ -11,6 +11,7 @@ DSfloat-bearing frame.
 from __future__ import annotations
 
 import datetime
+import math
 
 import numpy as np
 import pandas as pd
@@ -64,19 +65,26 @@ def test_dsfloat_frame_serializes() -> None:
 
 def test_numbers_stay_numeric_for_sorting() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
-    assert row["dose"] == 12.5 and isinstance(row["dose"], float)
-    assert row["code"] == 7 and isinstance(row["code"], int)
-    assert row["count"] == 5 and isinstance(row["count"], int)
-    assert row["ratio"] == 2.5 and isinstance(row["ratio"], float)
-    assert row["exact"] == pytest.approx(3.14) and isinstance(row["exact"], float)
+    assert row["dose"] == 12.5
+    assert isinstance(row["dose"], float)
+    assert row["code"] == 7
+    assert isinstance(row["code"], int)
+    assert row["count"] == 5
+    assert isinstance(row["count"], int)
+    assert row["ratio"] == 2.5
+    assert isinstance(row["ratio"], float)
+    assert row["exact"] == pytest.approx(3.14)
+    assert isinstance(row["exact"], float)
     assert row["flag"] is True
     assert row["whole"] == 9
 
 
 def test_non_json_scalars_become_text_or_null() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
-    assert row["name"] == "Doe^John" and isinstance(row["name"], str)
-    assert row["uid"] == "1.2.3" and isinstance(row["uid"], str)
+    assert row["name"] == "Doe^John"
+    assert isinstance(row["name"], str)
+    assert row["uid"] == "1.2.3"
+    assert isinstance(row["uid"], str)
     assert row["raw"] == "ab"
     assert row["missing"] is None
     assert row["when"] == datetime.datetime(2026, 1, 2, 3, 4, 5)
@@ -87,14 +95,18 @@ def test_non_json_scalars_become_text_or_null() -> None:
 
 def test_nan_reaches_wire_as_null() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
-    assert row["nan"] != row["nan"]  # still NaN in the record (orjson renders null)
+    nan_value = row["nan"]
+    assert isinstance(nan_value, float)
+    assert math.isnan(nan_value)  # still NaN in the record (orjson renders null)
     assert b'"nan":null' in orjson.dumps([row])
 
 
 def test_sequences_coerce_to_text() -> None:
     row = to_json_safe_records(_dsfloat_frame())[0]
-    assert row["pair"] == "(1, 2)" and isinstance(row["pair"], str)
-    assert row["tags"] == "['a', 'b']" and isinstance(row["tags"], str)
+    assert row["pair"] == "(1, 2)"
+    assert isinstance(row["pair"], str)
+    assert row["tags"] == "['a', 'b']"
+    assert isinstance(row["tags"], str)
 
 
 def test_out_of_range_int_and_signaling_nan_fallback() -> None:
@@ -102,7 +114,8 @@ def test_out_of_range_int_and_signaling_nan_fallback() -> None:
 
     df = pd.DataFrame([{"huge": 10**30, "snan": Decimal("sNaN")}], dtype=object)
     row = to_json_safe_records(df)[0]
-    assert row["huge"] == str(10**30) and isinstance(row["huge"], str)
+    assert row["huge"] == str(10**30)
+    assert isinstance(row["huge"], str)
     assert row["snan"] == "sNaN"
     orjson.dumps([row])
 
@@ -110,8 +123,10 @@ def test_out_of_range_int_and_signaling_nan_fallback() -> None:
 def test_uint64_band_stays_numeric() -> None:
     df = pd.DataFrame([{"big": 2**63, "max": 2**64 - 1}], dtype=object)
     row = to_json_safe_records(df)[0]
-    assert row["big"] == 2**63 and isinstance(row["big"], int)
-    assert row["max"] == 2**64 - 1 and isinstance(row["max"], int)
+    assert row["big"] == 2**63
+    assert isinstance(row["big"], int)
+    assert row["max"] == 2**64 - 1
+    assert isinstance(row["max"], int)
     orjson.dumps([row])
 
 
@@ -123,11 +138,13 @@ def test_nested_dsfloat_tuple_coerces_to_text() -> None:
         orjson.dumps([{"filter": nested}])
     df = pd.DataFrame([{"filter": nested}], dtype=object)
     row = to_json_safe_records(df)[0]
-    assert row["filter"] == "('0.1', '0.2')" and isinstance(row["filter"], str)
+    assert row["filter"] == "('0.1', '0.2')"
+    assert isinstance(row["filter"], str)
     orjson.dumps([row])
 
 
 def test_raw_to_dict_would_crash_without_coercion() -> None:
     """Guard the premise: the uncoerced frame really is unserializable."""
+    records = _dsfloat_frame().to_dict("records")
     with pytest.raises(TypeError):
-        orjson.dumps(_dsfloat_frame().to_dict("records"))
+        orjson.dumps(records)

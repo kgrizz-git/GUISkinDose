@@ -83,7 +83,8 @@ def test_evaluate_reports_matches_and_exit_codes():
     todo = "- [ ] **A** — touches `src/a.py`.\n"
     code, report = evaluate(todo, ["src/a.py"], strict=False)
     assert code == 0
-    assert "src/a.py" in report and "**A**" in report
+    assert "src/a.py" in report
+    assert "**A**" in report
     code, _ = evaluate(todo, ["src/a.py"], strict=True)
     assert code == 1
 

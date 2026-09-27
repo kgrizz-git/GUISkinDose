@@ -66,6 +66,15 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def contained_path(candidate: str, root: Path) -> Path:
+    """Resolve ``candidate`` (relative paths resolve under ``root``); refuse anything outside ``root``."""
+    base = os.path.realpath(root)
+    resolved = os.path.realpath(os.path.join(base, candidate))
+    if not resolved.startswith(base + os.sep):
+        raise ValueError("path is outside the repository root")
+    return Path(resolved)
+
+
 def _git_cwd_env() -> dict[str, str]:
     env = os.environ.copy()
     for key in GIT_DIR_OVERRIDE_VARS:
@@ -310,7 +319,16 @@ def main(argv: list[str] | None = None) -> int:
     if not env_is_on("SONAR_FRESHNESS_GATE"):
         return 0
 
-    return run_gate(Path(args.state), resolve_max_commits(), args.stage)
+    try:
+        state_path = contained_path(args.state, repo_root())
+    except ValueError:
+        print(
+            "Sonar freshness gate: --state must point inside the repository; refusing it.",
+            file=sys.stderr,
+        )
+        return 1
+
+    return run_gate(state_path, resolve_max_commits(), args.stage)
 
 
 if __name__ == "__main__":

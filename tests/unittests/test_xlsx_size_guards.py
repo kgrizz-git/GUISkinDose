@@ -152,5 +152,6 @@ def test_count_decompressed_member_enforces_streamed_budget(
 
     info = zipfile.ZipInfo("xl/worksheets/sheet1.xml")
     info.file_size = 10
+    archive = _FakeArchive()
     with pytest.raises(ValueError, match="uncompressed size"):
-        tabular_loader._count_decompressed_member(_FakeArchive(), info, total_so_far=0)  # type: ignore[arg-type]
+        tabular_loader._count_decompressed_member(archive, info, total_so_far=0)  # type: ignore[arg-type]

@@ -236,7 +236,8 @@ def test_private_ipv6_addresses_are_blocked_without_echoing_value(tmp_path: Path
         ("PRIVATE_IPV6_ADDRESS", "2"),
     ]
     rendered = "\n".join(finding.render() for finding in findings)
-    assert "fd12" not in rendered and "fe80" not in rendered
+    assert "fd12" not in rendered
+    assert "fe80" not in rendered
 
 
 def test_mac_address_is_not_a_false_positive_ipv6(tmp_path: Path) -> None:

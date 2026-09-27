@@ -188,10 +188,9 @@ class TestMultiStudySplitViaRegistry:
 @pytest.fixture(autouse=True)
 def _quiet_logs():
     logging.getLogger("guiskindose").setLevel(logging.WARNING)
-    yield
 
 
-@pytest.fixture()
+@pytest.fixture
 def _suppress_plots():
     # Patch on the module object, not via the "guiskindose.analyze_data.<attr>" string.
     # The package exports a function named `analyze_data` (from .analyze_data import
