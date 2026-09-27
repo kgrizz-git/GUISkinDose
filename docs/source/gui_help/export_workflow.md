@@ -10,7 +10,7 @@ or shared-network locations unless they are specifically approved for clinical d
 ## Intended use
 
 Every export carries an intended-use notice. The rich report (XLSX, PDF, HTML, DOCX) states it in its header, the JSON
-results include an `intended_use` field, and the HTML and PNG dose maps show a short version in the corner. GUISkinDose
+results include an `intended_use` field, and exported dose-map images show a short version in the corner. GUISkinDose
 is not FDA-cleared, and qualified medical physicists and physicians are responsible for reviewing its results.
 
 Use the Export tab after a calculation completes to save result artifacts.

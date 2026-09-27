@@ -86,6 +86,7 @@ class TestMultiExamResultSerialization:
         mr = self._make_multi()
         d = mr.to_dict()
         assert d["schema_version"] == EXPORT_SCHEMA_VERSION
+        assert d["intended_use"].startswith("GUISkinDose is not FDA-cleared")
         assert "exams" in d
         assert len(d["exams"]) == 2
         assert "aggregate_dose_map" in d

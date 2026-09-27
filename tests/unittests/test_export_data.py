@@ -30,6 +30,7 @@ from guiskindose.settings import PyskindoseSettings
 _RDSR = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
 _EXPECTED_TOP_KEYS = {
     "schema_version",
+    "intended_use",
     "psd",
     "air_kerma",
     "air_kerma_corrected",
@@ -86,6 +87,7 @@ def test_dict_export_has_expected_structure():
     assert isinstance(out, dict)
     assert set(out.keys()) == _EXPECTED_TOP_KEYS
     assert out["schema_version"] == EXPORT_SCHEMA_VERSION
+    assert out["intended_use"].startswith("GUISkinDose is not FDA-cleared")
     assert isinstance(out["schema_version"], int)
     assert isinstance(out["psd"], float)
     assert out["psd"] > 0

@@ -51,4 +51,6 @@ async def test_results_tab_shows_intended_use_line(user: User) -> None:
     from guiskindose.gui.ui_copy import copy_text
 
     await user.open("/")
+    await user.should_see("6 · Results", retries=20)
+    user.find("6 · Results").click()
     await user.should_see(copy_text("results.intended_use"), retries=20)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -173,13 +173,59 @@ def test_json_export_payload_carries_intended_use() -> None:
     assert "intended_use" not in state.output
 
 
-def test_dose_map_figure_stamp_adds_short_notice() -> None:
+def test_figure_stamp_adds_short_notice() -> None:
     import plotly.graph_objects as go
 
-    from guiskindose.gui.figures import _stamp_intended_use
-    from guiskindose.intended_use import INTENDED_USE_SHORT
+    from guiskindose.intended_use import INTENDED_USE_SHORT, stamp_figure
 
     fig = go.Figure()
-    _stamp_intended_use(fig)
+    stamp_figure(fig)
     annotations = fig.to_dict()["layout"]["annotations"]
     assert [a["text"] for a in annotations] == [INTENDED_USE_SHORT]
+
+
+def test_multi_exam_json_export_payload_carries_intended_use() -> None:
+    from guiskindose.intended_use import INTENDED_USE_NOTICE
+
+    ctrl = _controller()
+    state.calculation_done = True
+    state.output = None
+    state.import_provenance = None
+    state.multi_exam_result = cast(Any, SimpleNamespace(to_dict=lambda **_kw: {"aggregate_psd": 1.0}))
+    try:
+        payload = ctrl._build_export_payload()
+    finally:
+        state.multi_exam_result = None
+    assert payload["intended_use"] == INTENDED_USE_NOTICE
+    assert payload["aggregate_psd"] == 1.0
+
+
+def test_dose_map_html_export_contains_stamp(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The standalone HTML dose map carries the short notice end to end."""
+    import plotly.graph_objects as go
+
+    from guiskindose.gui import figures
+    from guiskindose.intended_use import INTENDED_USE_SHORT
+
+    monkeypatch.setattr(figures, "make_dosemap_fig", lambda **_kw: go.Figure().to_dict())
+    html = figures.make_dosemap_html().decode()
+    assert INTENDED_USE_SHORT in html
+
+
+def test_stamp_does_not_share_the_coordinate_note_corner() -> None:
+    import numpy as np
+
+    from guiskindose.export.images import render_dosemap_plotly_figure
+    from guiskindose.intended_use import INTENDED_USE_SHORT, stamp_figure
+
+    patient = {
+        "patient_skin_cells": {"x": [0, 1, 0], "y": [0, 0, 1], "z": [0, 0, 0]},
+        "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]},
+    }
+    fig = render_dosemap_plotly_figure(np.array([1.0, 2.0, 3.0]), patient, "jet")
+    stamp_figure(fig)
+    annotations = fig.to_dict()["layout"]["annotations"]
+    stamp = next(a for a in annotations if a["text"] == INTENDED_USE_SHORT)
+    others = [a for a in annotations if a["text"] != INTENDED_USE_SHORT]
+    assert others, "expected the coordinate-frame note"
+    assert all(stamp["yanchor"] != other["yanchor"] for other in others)

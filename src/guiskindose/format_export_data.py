@@ -32,6 +32,7 @@ from guiskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_JSON,
 )
+from guiskindose.intended_use import INTENDED_USE_NOTICE
 from guiskindose.phantom_class import Phantom
 from guiskindose.settings import PyskindoseSettings
 
@@ -578,6 +579,7 @@ class PySkinDoseOutput:
             raise TypeError("patient_export() returned an unsupported patient payload")
         return {
             "schema_version": EXPORT_SCHEMA_VERSION,
+            "intended_use": INTENDED_USE_NOTICE,
             "psd": self.psd,
             "air_kerma": self.air_kerma,
             "air_kerma_corrected": self.air_kerma_corrected,
@@ -701,6 +703,7 @@ class MultiExamResult:
             exams.append(serialized)
         return {
             "schema_version": EXPORT_SCHEMA_VERSION,
+            "intended_use": INTENDED_USE_NOTICE,
             "exams": exams,
             "aggregate_dose_map": self.aggregate_dose_map.tolist(),
             "aggregate_psd": self.aggregate_psd,
