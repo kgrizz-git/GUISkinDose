@@ -95,3 +95,33 @@ def test_native_window_save_after_dismiss_preserves_onboarding_flag(tmp_path, mo
     loaded = json.loads(target.read_text(encoding="utf-8"))
     assert loaded["onboardingDismissed"] is True
     assert loaded["native_window"]["width"] == 900
+
+
+def test_intended_use_ack_is_separate_and_versioned(tmp_path, monkeypatch):
+    """Dismissing onboarding does not count as seeing the intended-use notice."""
+    from guiskindose.gui import onboarding
+
+    target = tmp_path / "gui.json"
+    target.write_text(json.dumps({"onboardingDismissed": True}), encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
+
+    assert onboarding.is_intended_use_acknowledged() is False
+    onboarding.acknowledge_intended_use()
+    assert onboarding.is_intended_use_acknowledged() is True
+    stored = json.loads(target.read_text(encoding="utf-8"))
+    assert stored["onboardingDismissed"] is True
+    assert stored[onboarding.INTENDED_USE_ACK_KEY] == onboarding.INTENDED_USE_NOTICE_VERSION
+
+    monkeypatch.setattr(onboarding, "INTENDED_USE_NOTICE_VERSION", onboarding.INTENDED_USE_NOTICE_VERSION + 1)
+    assert onboarding.is_intended_use_acknowledged() is False
+
+
+def test_intended_use_ack_tolerates_bad_values(tmp_path, monkeypatch):
+    from guiskindose.gui import onboarding
+
+    target = tmp_path / "gui.json"
+    target.write_text(json.dumps({onboarding.INTENDED_USE_ACK_KEY: "garbage"}), encoding="utf-8")
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
+    assert onboarding.is_intended_use_acknowledged() is False

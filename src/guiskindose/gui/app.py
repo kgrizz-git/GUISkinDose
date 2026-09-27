@@ -41,7 +41,12 @@ from .loopback_security import (
 )
 from .native_geometry import register_native_geometry_tracking
 from .notifications import install_notification_defaults
-from .onboarding import dismiss_onboarding, is_onboarding_dismissed
+from .onboarding import (
+    acknowledge_intended_use,
+    dismiss_onboarding,
+    is_intended_use_acknowledged,
+    is_onboarding_dismissed,
+)
 from .page_context import PageContext
 from .state import state
 from .styles import MODERN_CSS
@@ -145,16 +150,23 @@ def _restore_loaded_state(ctx: PageContext) -> None:
 
 def _show_onboarding_dialog() -> None:
     """Schedule the one-time onboarding dialog unless the user already dismissed it."""
-    if is_onboarding_dismissed():
+    if is_onboarding_dismissed() and is_intended_use_acknowledged():
         return
-    with ui.dialog().props("persistent") as dialog, ui.card().classes("modern-card w-full max-w-md max-h-[80vh] p-6"):
+    with (
+        ui.dialog().props("persistent") as dialog,
+        ui.card().classes("modern-card w-full max-w-md max-h-[85vh] p-6 no-wrap"),
+    ):
         with ui.row().classes("w-full justify-between items-center q-mb-sm"):
             ui.label("Welcome to GUISkinDose").classes("text-h5")
 
-        with ui.scroll_area().classes("w-full"):
-            ui.label(copy_text("onboarding.intended_use")).classes(
-                "text-sm text-orange-4 q-pa-sm q-mb-md rounded-borders"
-            ).style("border: 1px solid currentColor")
+        # Outside the scroller so the whole notice is always visible above the fold.
+        ui.label(copy_text("onboarding.intended_use")).classes(
+            "w-full text-sm text-orange-4 q-pa-sm rounded-borders"
+        ).style("border: 1px solid currentColor")
+
+        # Quasar scroll areas need an explicit height; keep it bounded so the
+        # checkbox and "Got it" stay on screen in short windows.
+        with ui.scroll_area().classes("w-full").style("height: min(16rem, 30vh)"):
             ui.markdown(
                 dedent(
                     f"""
@@ -181,6 +193,7 @@ def _show_onboarding_dialog() -> None:
         dont_show = ui.checkbox("Don't show this again").classes("q-mt-md")
 
         def on_ok() -> None:
+            acknowledge_intended_use()
             if dont_show.value:
                 dismiss_onboarding()
             dialog.close()

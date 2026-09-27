@@ -40,6 +40,32 @@ async def test_onboarding_dialog_shows_intended_use_disclaimer(user: User, monke
     from guiskindose.gui.ui_copy import copy_text
 
     monkeypatch.setattr(gui_app, "is_onboarding_dismissed", lambda: False)
+    monkeypatch.setattr(gui_app, "is_intended_use_acknowledged", lambda: False)
     await user.open("/")
     await user.should_see("Welcome to GUISkinDose", retries=20)
     await user.should_see(copy_text("onboarding.intended_use"))
+
+
+@pytest.mark.asyncio
+async def test_dismissed_onboarding_still_shows_unacknowledged_notice(
+    user: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Upgrading installs that turned onboarding off still see the notice once."""
+    import guiskindose.gui.app as gui_app
+    from guiskindose.gui.ui_copy import copy_text
+
+    monkeypatch.setattr(gui_app, "is_onboarding_dismissed", lambda: True)
+    monkeypatch.setattr(gui_app, "is_intended_use_acknowledged", lambda: False)
+    await user.open("/")
+    await user.should_see(copy_text("onboarding.intended_use"), retries=20)
+
+
+@pytest.mark.asyncio
+async def test_no_dialog_once_dismissed_and_acknowledged(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    import guiskindose.gui.app as gui_app
+
+    monkeypatch.setattr(gui_app, "is_onboarding_dismissed", lambda: True)
+    monkeypatch.setattr(gui_app, "is_intended_use_acknowledged", lambda: True)
+    await user.open("/")
+    await user.should_see("1 · Upload", retries=20)
+    await user.should_not_see("Welcome to GUISkinDose")

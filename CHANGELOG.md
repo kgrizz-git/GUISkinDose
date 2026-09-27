@@ -26,8 +26,9 @@ That keeps SemVer and contributor history organized.
   FDA-cleared or otherwise certified as a medical device, and that qualified
   medical physicists and physicians are responsible for reviewing its inputs
   and outputs and evaluating patient skin dose. The same notice now heads the
-  documentation site and the "What is GUISkinDose?" page, matching the
-  README.
+  documentation site and the "What is GUISkinDose?" page. Installs that
+  already turned off the welcome dialog see it once more after upgrading, so
+  the notice is shown at least once.
 - **Reproducible run configuration (settings export/import)** (2026-09-24) —
   the Settings tab can save the full GUI run state (settings, normalization
   profiles, phantom geometry, corrections, per-exam offsets) as a versioned
