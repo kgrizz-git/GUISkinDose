@@ -226,7 +226,6 @@ def test_results_figure_itself_is_stamped() -> None:
 
 
 def test_dose_map_html_export_contains_stamp_once() -> None:
-    import json
     import re
 
     import numpy as np
