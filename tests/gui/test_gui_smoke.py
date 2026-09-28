@@ -83,3 +83,30 @@ async def test_results_tab_shows_intended_use_line(user: User, monkeypatch: pyte
     await user.should_see("6 · Results", retries=20)
     user.find("6 · Results").click()
     await user.should_see(copy_text("results.intended_use"), retries=20)
+
+
+@pytest.mark.asyncio
+async def test_got_it_persists_dismissal_and_acknowledgment(
+    user: User, monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Clicking through the real dialog records both choices, and it stays hidden on reload."""
+    import json
+
+    from guiskindose.gui import onboarding, window_prefs
+
+    target = tmp_path / "gui.json"
+    monkeypatch.setattr(window_prefs, "config_path", lambda: target)
+    monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
+
+    await user.open("/")
+    await user.should_see("Welcome to GUISkinDose", retries=20)
+    user.find("Don't show this again").click()
+    user.find("Got it").click()
+
+    stored = json.loads(target.read_text(encoding="utf-8"))
+    assert stored[onboarding.ONBOARDING_KEY] is True
+    assert stored[onboarding.INTENDED_USE_ACK_KEY] == onboarding.INTENDED_USE_NOTICE_VERSION
+
+    await user.open("/")
+    await user.should_see("1 · Upload", retries=20)
+    await user.should_not_see("Welcome to GUISkinDose")

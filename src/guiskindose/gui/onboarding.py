@@ -45,11 +45,10 @@ def reset_onboarding() -> None:
 
 def is_intended_use_acknowledged() -> bool:
     """Return whether the user already acknowledged the current intended-use notice."""
-    data = load_gui_config()
-    try:
-        return int(data.get(INTENDED_USE_ACK_KEY, 0)) >= INTENDED_USE_NOTICE_VERSION
-    except (TypeError, ValueError):
-        return False
+    value = load_gui_config().get(INTENDED_USE_ACK_KEY)
+    # Only a real integer counts: bool is an int subclass (a stray `true` is not
+    # version 1), and floats or strings must not be truncated into a version.
+    return isinstance(value, int) and not isinstance(value, bool) and value >= INTENDED_USE_NOTICE_VERSION
 
 
 def acknowledge_intended_use() -> None:
