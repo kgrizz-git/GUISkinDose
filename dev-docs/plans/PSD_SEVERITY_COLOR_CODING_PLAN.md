@@ -84,10 +84,30 @@ Add severity tokens to `MODERN_CSS` in `src/guiskindose/gui/styles.py` next to t
 with matching `.text-dose-pending`, `.text-dose-low`, `.text-dose-elevated`, `.text-dose-high`
 utility classes mirroring the existing `.text-aurora-*` pattern.
 
-Contrast against `--bg-primary` (`#0e0e0e`) is comfortably above WCAG AA for all four at the large
-type sizes used (`text-h6` sidebar, `text-4xl`/`text-5xl` Results). `#FACC15` on `#0e0e0e` is the
-tightest and still clears AA for large text. Do **not** darken the yellow to chase AAA — it stops
-reading as yellow.
+Measured contrast against `--bg-primary` (`#0e0e0e`), WCAG 2.1 relative luminance:
+
+| Token | Hex | Ratio | AA large (3:1) | AA normal (4.5:1) |
+|-------|-----|-------|----------------|-------------------|
+| `--dose-pending` | `#94A3B8` | 7.53 | pass | pass |
+| `--dose-low` | `#22C55E` | 8.47 | pass | pass |
+| `--dose-elevated` | `#FACC15` | 12.61 | pass | pass |
+| `--dose-high` | `#EF4444` | 5.13 | pass | pass |
+| *current* sidebar `text-pink-5` | `#EC4899` | 5.47 | pass | pass |
+| *current* `text-aurora-purple` | `#4338CA` | **2.44** | **fail** | **fail** |
+
+All four new tokens clear AA for **normal** text, not just large, so they are safe at every size the
+GUI uses — including the per-exam accordion (`results_builders.py:406`), which is the smallest.
+
+The last row is the finding that matters: `--aurora-purple` at `#4338CA` on the near-black background
+is **2.44:1**, which fails AA even for large text. Two of today's four PSD readouts use it. So this
+change is an accessibility fix, not only a semantics fix — worth saying in the PR description.
+
+Out of scope but adjacent: the same `text-aurora-purple` is used for non-PSD chrome, including the
+"Aggregate Peak Skin Dose" *section header* at `results_builders.py:616`. This plan deliberately leaves
+that header purple — it is a label, not a value, and re-colouring brand chrome belongs with the
+"Visual refinement" backlog item, not here. Do not silently widen the diff to chase it.
+
+Do **not** darken the yellow to chase AAA — it stops reading as yellow, and it already passes AA.
 
 Two design-intent points to record in `DESIGN.md` §2 when this lands:
 
@@ -99,9 +119,14 @@ Two design-intent points to record in `DESIGN.md` §2 when this lands:
 
 ### 3.2 One shared module — concrete
 
-New file `src/guiskindose/gui/dose_severity.py`. It imports nothing from NiceGUI, so its tests live in
-`tests/unittests/` (the `tests/gui/` vs `tests/unittests/` split is enforced by a pre-push hook and by
-the core CI matrix, which has no `gui` extra).
+New file `src/guiskindose/gui/dose_severity.py`.
+
+**The NiceGUI import must be `TYPE_CHECKING`-only.** The band logic is pure, and the plan puts its
+tests in `tests/unittests/` — but the core CI matrix installs no `gui` extra, and a pre-push hook
+enforces the `tests/gui/` vs `tests/unittests/` split precisely because a `nicegui` import from
+`tests/unittests/` breaks that matrix. `ui` is used only in an annotation, so guarding the import costs
+nothing and keeps the pure tests in the pure directory. Get this wrong and the module is untestable
+where it belongs.
 
 ```python
 """Peak-skin-dose severity bands and their presentation classes.
@@ -113,9 +138,10 @@ readout of PSD routes through here so the four call sites cannot drift apart.
 from __future__ import annotations
 
 import math
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
-from nicegui import ui  # only for the type of `apply_psd_band`'s argument
+if TYPE_CHECKING:  # nicegui is an optional extra; the core CI matrix has no `gui`
+    from nicegui import ui
 
 # Band edges in mGy. The upper edge belongs to the higher band, so exactly
 # 5000 mGy is "elevated" and exactly 10000 mGy is "high" — the conservative
@@ -249,6 +275,41 @@ only carrier. Each banded readout also gets:
 - **a tooltip naming the band and its range**, so the number can be interpreted without seeing the
   colour at all.
 
+Concretely, a banded readout is a row of icon + value, with the tooltip on the row so it covers both:
+
+```python
+from guiskindose.gui.dose_severity import (
+    apply_psd_band,
+    psd_band_copy_key,
+    psd_band_icon,
+    psd_text_class,
+)
+from guiskindose.gui.ui_copy import copy_text
+
+with ui.row().classes("items-center justify-center gap-2") as psd_row:
+    ctrl.refs.psd_icon = ui.icon(psd_band_icon(None)).classes("icon-outlined text-dose-pending")
+    ctrl.refs.psd_metric = ui.label("—").classes("text-4xl font-bold text-dose-pending")
+ctrl.refs.psd_row = psd_row
+```
+
+and on refresh, all three move together — which is the reason for a single helper rather than three
+call sites:
+
+```python
+def _apply_psd_presentation(self, psd: float | None) -> None:
+    """Move colour, icon, and tooltip to ``psd``'s band in one place."""
+    apply_psd_band(self.refs.psd_metric, psd)
+    apply_psd_band(self.refs.psd_icon, psd)
+    self.refs.psd_icon.set_name(psd_band_icon(psd))
+    self.refs.psd_icon.set_visibility(bool(psd_band_icon(psd)))
+    self.refs.psd_row.tooltip(copy_text(psd_band_copy_key(psd)))
+```
+
+Two details not to miss: `ui.icon("")` renders an empty glyph box, so the pending state must hide the
+icon (`set_visibility(False)`) rather than set an empty name; and repeated `.tooltip(...)` calls on the
+same element append a second tooltip in some NiceGUI versions — verify against the pinned version and,
+if it does, hold a `ui.tooltip` reference and call `set_text` on it instead.
+
 Concrete `dev-docs/ui_copy.json` additions (canonical; mirrored to
 `src/guiskindose/gui/ui_copy.json` by `python scripts/sync_ui_copy.py`):
 
@@ -307,6 +368,9 @@ Three existing tests assert the literal reset string and must be updated in the 
 
 These use `MagicMock()` for `ctx.psd_label`, so `apply_psd_band`'s `.classes(remove=…, add=…)` call
 records harmlessly and can be asserted directly.
+
+Checked, not assumed: no test anywhere asserts `text-pink-5`, `text-aurora-purple`, or `text-white` on
+a PSD element, so replacing those classes breaks nothing beyond the two string assertions above.
 
 New tests:
 

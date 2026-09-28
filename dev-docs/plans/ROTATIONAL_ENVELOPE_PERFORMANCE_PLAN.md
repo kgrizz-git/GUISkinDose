@@ -25,6 +25,15 @@ one event:
 
 - `Tx`, `Ty`, `Tz`, `At1–At3` and the derived `Rx`/`Ry`/`Rz` are **constant** → `Phantom.position`
   (`phantom_class.py:376`) produces a bit-identical `patient.r` every time (Phase 1a).
+
+  Worth spelling out, because it is the one thing a reader can get backwards: `Rx`/`Ry`/`Rz` are
+  DataFrame columns built by `helpers/calculate_rotation_matrices.py` from **`At1`/`At2`/`At3` only**
+  — the *table* rotation. Its module docstring says so outright: "Positioner (C-arm) angles
+  Ap1/Ap2/Ap3 are handled separately in beam geometry, not here." `Beam.__init__` builds its own,
+  separate rotation matrices from `Ap1`/`Ap2`/`Ap3` (`beam_class.py:73–99`) and never touches the
+  phantom. So the candidate angles move the beam and cannot move the phantom — verified: for a
+  candidate frame, `Rx`/`Ry`/`Rz` come through equal to the parent's, and a reused frame yields
+  `beam.r` and `beam.N` bit-identical to a freshly built one.
 - `kVp` and `HVL` are **constant** → `calculate_k_med`'s `(kvp, hvl, snapped fsl)` lookup key varies
   only through `fsl`, which is snapped to one of five tabulated values (Phase 1f).
 - `FS_lat`, `FS_long`, `DSD`, `DSI`, `DID`, `DSL`, `K_IRP` are **constant** → every scalar
@@ -69,7 +78,10 @@ the positioning columns match the parent — cheap, runs once per candidate, and
 wrong answer into a loud failure:
 
 ```python
-_POSE_INVARIANT_COLUMNS = ("Tx", "Ty", "Tz", "At1", "At2", "At3")
+# Rx/Ry/Rz are included even though they are derived from At1-At3: they are
+# what position() actually reads, so guarding the derived value as well as its
+# inputs keeps the check honest if calculate_rotation_matrices ever changes.
+_POSE_INVARIANT_COLUMNS = ("Tx", "Ty", "Tz", "At1", "At2", "At3", "Rx", "Ry", "Rz")
 ```
 
 **Correct the stale comment** at `rotational_event.py:360` while here. "candidates leave them
@@ -151,11 +163,25 @@ def scale_field_area(...) -> list[float]:
     return scale_field_area_array(...).tolist()
 ```
 
-**Stated caveat.** `np.round` scales by 10 and rounds; builtin `round` is decimal-aware. They can in
-principle disagree on an exact decimal tie. The values are already quantized to 0.1 cm² and only feed
-`sqrt` into a cubic spline, so the effect is orders of magnitude below any physical resolution — but
-the new test should assert `np.allclose` against the old comprehension, not exact equality, and say
-why in a comment. The full-pipeline golden in §4 is the real guard.
+**The rounding question, settled by measurement.** `np.round` scales by 10 and rounds; builtin
+`round` is decimal-aware, so they can in principle disagree on an exact decimal tie — and this plan
+requires the existing `assert_array_equal` golden (§4.1) to pass *without regeneration*, so a single
+tie would be a showstopper rather than a rounding nicety. It was therefore checked directly rather
+than argued:
+
+- Every field-area value the example procedure produces was computed both ways: **30 222 values
+  across the cylinder, plane, and human phantoms, all identical, max difference `0.000e+00`.**
+- End to end, with 1c *and* 1d patched in, the golden dose map for
+  `siemens_axiom_artis.dcm` + cylinder matched the committed
+  `tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy` **exactly**
+  (`np.array_equal` true, PSD `1.3020214659058027` before and after, per-event hit counts and `k_med`
+  unchanged).
+
+So the new unit test should assert **exact** equality against the old comprehension, not
+`np.allclose` — asserting a tolerance would hide precisely the tie this was checked for. The residual
+theoretical risk is only that some *future* fixture lands on a tie, and the golden gate is what would
+catch it; note that in the test's docstring so a future failure is read correctly rather than being
+papered over with a tolerance.
 
 ### 1d. Vectorize the entrance-cell filter in `check_hit`
 
@@ -187,10 +213,12 @@ the plane and the 3D-entrance branch and must pass unchanged.
   via `running = maximum(running, ...)`. The module is deliberately numpy-free, so **do not change
   it**; pass an in-place-capable callable from the dose loop instead:
   `maximum=lambda a, b: np.maximum(a, b, out=a)`. Its contract (returns the folded array) still holds.
-- `argmax_cell` (`rotational_envelope.py:279`) computes `np.argmax` **and** `np.max` but the caller
-  discards the index. Pass `argmax_cell=lambda v: (0, float(v.max()))` — or, better, widen nothing and
-  simply stop computing the argmax inside the injected lambda. The index is unused today; if it is
-  ever wanted, it must come back as a real feature with a test, not as an accidental by-product.
+- `argmax_cell` (`rotational_envelope.py:279`) computes `np.argmax` **and** `np.max`, but the caller
+  destructures `_, value =` and throws the index away. `evaluate_envelope` unpacks a two-tuple, so the
+  contract must stay a two-tuple: pass `argmax_cell=lambda v: (0, float(v.max()))` and stop computing
+  the argmax. That is the only change here — do **not** try to narrow `evaluate_envelope`'s signature.
+  The index is dead today; if it is ever wanted, it comes back as a real feature with a test, not as an
+  accidental by-product.
 
 ### 1f. Memoize `calculate_k_med` on its snapped lookup key
 
@@ -205,10 +233,16 @@ Each call runs `_load_correction_table`, which returns `cached.copy(deep=True)` 
 (§0), so the whole event needs at most five distinct lookups and usually one.
 
 Split the function: keep `calculate_k_med`'s signature, move the table work into a cached
-`_k_med_for_key(kvp, hvl, fsl, corrections_db)` behind an explicit small cache. Prefer an explicit
-dict keyed on `(float(kvp), float(hvl), int(fsl), corrections_db)` over `functools.lru_cache`, so
-`correction_data.clear_cache()` (tests only) has a matching `clear` to call and the cache cannot
-outlive a corrections-source change. Wire that clear into whatever `clear_cache` already resets.
+`_k_med_for_key(kvp, hvl, fsl, source_key)` behind an explicit small cache. Prefer an explicit dict
+over `functools.lru_cache`, so `correction_data.clear_cache()` (tests only) has a matching `clear` to
+call and the cache cannot outlive a corrections-source change. Wire that clear into whatever
+`clear_cache` already resets.
+
+Key on `(float(kvp), float(hvl), int(fsl), source_key)` where `source_key` is the **resolved** source
+identity from `resolve_corrections_source`, not the raw `corrections_db` string. The raw string would
+give the same database separate cache entries when reached by different spellings — the test suite
+passes both `"corrections.db"` and absolute paths — which is not a correctness bug but does silently
+throw away the cache.
 
 There is already a `NOTE (perf follow-up, only if profiles ever care)` at `corrections.py:207`
 anticipating this — replace it with a pointer to this plan.
@@ -218,11 +252,37 @@ anticipating this — replace it with a pointer to this plan.
 **File:** `src/guiskindose/calculate_dose/rotational_event.py:63`
 
 `_candidate_frame` constructs `pd.DataFrame([parent_row.values], columns=parent_row.index)` per
-candidate: 0.24 ms, and it produces an **all-object-dtype** frame, which then makes every scalar
-column read inside `Beam.__init__` slower than it needs to be. Build it once in
-`_calculate_envelope_event` and assign the two angle cells per pose
-(`frame.at[0, "Ap1"] = ...`). Keep `_candidate_frame` as the one-shot builder so its index-reset
-contract (`event=0` positional addressing) stays in one place and documented.
+candidate: 0.24 ms of pure construction cost. Build it once in `_calculate_envelope_event` and assign
+the two angle cells per pose (`frame.at[0, "Ap1"] = ...`). Keep `_candidate_frame` as the one-shot
+builder so its index-reset contract (`event=0` positional addressing) stays in one place and
+documented.
+
+Verified rather than assumed, since reusing a frame across poses invites dtype surprises: the frame is
+**mixed**-dtype (`float64`, `int64`, `str`, `object`), not all-object as first supposed; `.at`
+assignment leaves `Ap1`/`Ap2` as `float64` and changes no other column's dtype; and `Beam` built from
+the reused frame gives `beam.r` and `beam.N` bit-identical to one built from a fresh frame, at
+`Ap1` = 0, 37.5, and 180 degrees.
+
+### 1h. Type annotations and API-surface decisions
+
+Two things Phases 1b and 1c imply that are easy to leave half-done. This repo runs **basedpyright** as
+a pre-push hook, so a half-updated annotation fails the push, not CI.
+
+- `perform_calculations_for_new_geometries` annotates `hits: list[bool]`, `table_hits: list[bool]`,
+  `field_area: list[float]` and returns `tuple[list[bool], list[bool], list[float], np.ndarray]`.
+  After 1b/1c the hot path carries arrays. Widen the parameters to accept either
+  (`Sequence[bool] | np.ndarray`) and make the return type say what it actually returns. Same for
+  `compute_event_dose_vector`'s `hits`/`table_hits`/`field_area`. Update the numpydoc blocks in the
+  same edit — the docstrings state `List[bool]` in prose and `check_doc_freshness.py` scans docs, not
+  docstrings, so nothing will catch a stale one but a reader.
+- There is already precedent for why the boundary conversion is explicit rather than
+  `ndarray.tolist()`: `geom_calc.py:662` builds `[bool(hit) for hit in hits]` with a comment that newer
+  numpy stubs type `tolist()` as unassignable to `list[bool]` under basedpyright. Expect the same
+  friction at any new boundary and reuse that pattern.
+- **`check_hit_mask` and `scale_field_area_array` are internal.** Do **not** add them to
+  `guiskindose/__init__.py`. The public surface stays `check_hit` and `scale_field_area`, which is the
+  whole point of adding variants beside them rather than changing them. State this in their docstrings
+  so a later contributor does not "helpfully" export them.
 
 ---
 
@@ -267,7 +327,7 @@ Phase 1 is done when all of the following hold.
    (`tests/unittests/test_calculate_dose.py:371`) already ends in
    `np.testing.assert_array_equal(dose_map, expected_dose_map)` against a saved `.npy`. It must pass
    **without regenerating the golden file**. This is the primary gate for 1b, 1c, 1d, and 1f.
-2. **New rotational golden.** There is no envelope dose-map golden today. Add one: run
+2. **New rotational golden (§4.2).** There is no envelope dose-map golden today. Add one: run
    `_frame_with_spin()` from `tests/unittests/test_rotational_envelope_dose.py` at a fixed
    `angular_step_deg`, save the dose map, and assert `assert_array_equal` against it. Generate the
    golden from `main` **before** starting Phase 1, commit it first, and never regenerate it inside
@@ -279,10 +339,18 @@ Phase 1 is done when all of the following hold.
 4. **`test_psd_algorithm_doc.py` passes.** `dev-docs/PSD_CALCULATION_ALGORITHM.md` is machine-checked
    against the code. 1a changes when phantoms are positioned, and 1b changes the hit-mask type — check
    whether the doc describes either, and update the doc in the same PR if so.
-5. **`test_phantoms_restored_to_static_pose_after_envelope` passes unchanged.** It asserts a
-   parent-frame `Phantom.position` call at the envelope event exists. 1a keeps both the static-pose
-   call and the explicit restore, so it should — verify rather than assume, because this is the test
-   most likely to be surprised by 1a.
+5. **`test_phantoms_restored_to_static_pose_after_envelope` passes unchanged**
+   (`tests/unittests/test_rotational_envelope_dose.py:120`). It collects every `Phantom.position` call
+   and asserts `assert parent_calls` — that *at least one* parent-frame call at the envelope event
+   exists. After 1a there are **two** (the new unconditional positioning at the top of
+   `_calculate_envelope_event`, plus the existing restore at the bottom) instead of one-per-candidate.
+   A non-empty check is satisfied by two, so it passes; the point is that the test constrains
+   existence, not count. If anyone later tightens it to an exact count, it must be written against 1a's
+   two calls.
+
+   Related: the phantom-positioning change alters *when* `Phantom.position` runs, so it is the one
+   Phase-1 edit whose correctness is not provable from arithmetic alone. The new rotational golden in
+   §4.2 is what actually gates it.
 6. **A recorded before/after timing**, committed as a note in this plan or the assessment. Not a
    strict CI assertion (machine-dependent), but the number must be written down so a future regression
    is visible.
