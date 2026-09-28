@@ -123,6 +123,6 @@ def test_intended_use_ack_tolerates_bad_values(tmp_path, monkeypatch):
     target = tmp_path / "gui.json"
     monkeypatch.setattr(window_prefs, "config_path", lambda: target)
     monkeypatch.setattr(window_prefs, "new_config_path", lambda: target)
-    for bad in ("garbage", True, None, [1]):
+    for bad in ("garbage", "1", True, None, [1], 1.9, 0.5, 1.0):
         target.write_text(json.dumps({onboarding.INTENDED_USE_ACK_KEY: bad}), encoding="utf-8")
         assert onboarding.is_intended_use_acknowledged() is False, bad
