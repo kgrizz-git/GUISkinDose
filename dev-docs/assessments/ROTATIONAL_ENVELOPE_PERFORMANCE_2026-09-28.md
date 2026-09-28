@@ -122,6 +122,11 @@ Carry hit masks as `np.ndarray[bool]` through `perform_calculations_for_new_geom
 `compute_event_dose_vector`, `scale_field_area`, and `check_table_hits`, and convert to `list[bool]`
 only at the `output[...]` boundary where the published contract requires a list.
 
+Two traps the plan covers in detail and this summary would otherwise hide: the boundary conversion must
+be `.tolist()` (or a `bool()` comprehension) because `list(ndarray)` yields `np.bool_` elements that are
+not JSON-serializable; and the `sum(hits)` / `any(hits)` call sites must move to `.any()` in the same
+edit, or iterating an ndarray in Python makes the change a net regression.
+
 Worth ~6 ms of the 13.8 ms per candidate, and it speeds up static events too. Note there is an
 existing reason the boundary conversion is explicit: `geom_calc.py:662` builds `[bool(h) for h in …]`
 because newer numpy stubs fail basedpyright on `ndarray.tolist() -> list[bool]`. Keep that conversion
@@ -156,8 +161,15 @@ should assert `np.allclose`, not exact equality, and say why.
 bool_entrance = [np.dot(temp1[i], temp2[i]) <= 0 for i in range(len(temp1))]
 ```
 
-is a row-wise dot product. `np.einsum("ij,ij->i", temp1, temp2) <= 0` is the same arithmetic:
-**0.015 ms vs 1.435 ms** (96×). This helps every event and every phantom, not just rotational.
+is a row-wise dot product. `np.einsum("ij,ij->i", temp1, temp2) <= 0` computes the same quantity at
+**0.015 ms vs 1.435 ms** (96×), and helps every event and every 3D phantom, not just rotational.
+
+It is **not** bitwise identical, though, and an earlier draft of this line wrongly said it was:
+`np.dot` on a 1-D pair goes through BLAS `ddot` while `einsum` uses numpy's own summation order. Over
+500 000 random 3-vector pairs, 34 % of the row products differ in the last ulp (max `1.819e-12`) — but
+**0** flipped across the `<= 0` boundary, and the full-pipeline golden matched exactly. Only the sign
+reaches the result, so the change is safe in practice while being gated by the golden rather than
+guaranteed by construction. The plan carries the full risk statement and a revert path.
 
 ### 3.5 Envelope bookkeeping loops over all cells in Python (bit-exact fix)
 

@@ -39,12 +39,15 @@ same intent without two spellings to keep in sync. Drop the unit too: the sideba
 
 Colour the PSD text **and** its value by band:
 
-| Band | PSD | Meaning |
-|------|-----|---------|
+| Band | PSD | Colour |
+|------|-----|--------|
 | Not calculated | no value | light grey |
-| Low | `< 5000 mGy` | green |
-| Elevated | `5000–10000 mGy` | yellow |
-| High | `> 10000 mGy` | red |
+| Low | `psd < 5000` | green |
+| Elevated | `5000 <= psd < 10000` | yellow |
+| High | `psd >= 10000` | red |
+
+(Written as explicit comparisons rather than `5000–10000` / `> 10000`, so the table cannot drift from
+the edge convention below or from the user-facing copy in §3.4.)
 
 The maintainer also asked whether a continuous gradient would be better than three steps. See §5.
 
@@ -247,7 +250,7 @@ apply_psd_band(self.ctx.psd_label, state.psd)
 `apply_psd_band(self.refs.psd_metric, state.psd)` next to the existing `set_text`.
 
 **5. Results aggregate metric.** Build (`results_builders.py:618`) drops `text-white` for
-`text-dose-pending`. Three refresh sites, and they do **not** all band the same way:
+`text-dose-pending`. Four refresh sites, and they do **not** all band the same way:
 
 | Line | Text today | Band on |
 |------|-----------|---------|
@@ -258,6 +261,18 @@ apply_psd_band(self.ctx.psd_label, state.psd)
 
 The `:318` and `:327` split is the one easy thing to get wrong here: a deselected subset must go grey,
 and a selected subset must band on its own maximum, not on the whole-run aggregate.
+
+**Multi-exam sidebar semantics — state them rather than leaving them implicit.** `helpers.py:319`
+sets `state.psd = float(multi_result.aggregate_psd)` for a multi-exam run (against `:362`,
+`state.psd = float(output["psd"])`, for a single exam). So the sidebar bands on the **aggregate** PSD
+whenever several exams are loaded, with no extra work. That is the right semantic — the sidebar is a
+whole-run status readout — but it should be written down, because acceptance §6.3 otherwise reads as if
+the sidebar only ever shows a single-exam value.
+
+**One edge to pin deliberately, not by accident:** `compute_subset_aggregate`
+(`results_builders.py:55`) returns `subset_psd = 0.0` when the combined map is empty but not `None`.
+`psd_band(0.0)` is `"low"`, so that case shows **green**, not pending grey. Defensible — zero really is
+below 5000 — but the test should assert it on purpose so a later reader does not "fix" it into pending.
 
 **6. Results per-exam accordion** — `results_builders.py:406`. Replace `text-aurora-purple` with
 `psd_text_class(exam_res.output.psd)` at construction time. This is the only place where several bands
@@ -323,17 +338,23 @@ Concrete `dev-docs/ui_copy.json` additions (canonical; mirrored to
   "owner": "gui/dose_severity.py"
 },
 "results.psd_band.elevated": {
-  "text": "Elevated — peak skin dose 5000 to 10000 mGy",
+  "text": "Elevated — peak skin dose 5000 to just under 10000 mGy",
   "owner": "gui/dose_severity.py"
 },
 "results.psd_band.high": {
-  "text": "High — peak skin dose above 10000 mGy",
+  "text": "High — peak skin dose 10000 mGy or above",
   "owner": "gui/dose_severity.py"
 }
 ```
 
-Two constraints on that copy: `check_ui_copy.py` rejects "maximum skin dose" (use **peak skin dose**),
-and the band names must also be added to `dev-docs/glossary.json` since they are user-facing terms.
+**The awkward phrasing is deliberate — do not "clean it up".** An earlier draft said Elevated is
+"5000 to 10000 mGy" and High is "above 10000 mGy", which **contradicts the edge convention in §2.1**: a
+reader at exactly 10000 mGy would see the High colour next to a tooltip telling them High means *above*
+10000. "5000 to just under 10000" and "10000 mGy or above" are unlovely but correct, and the acceptance
+tests pin the tooltip text at both edges for precisely this reason.
+
+Two further constraints: `check_ui_copy.py` rejects "maximum skin dose" (use **peak skin dose**), and
+the band names must also be added to `dev-docs/glossary.json` since they are user-facing terms.
 
 The numeric edges must appear in prose in exactly one place: the `results_workflow.md` help page
 (canonical under `docs/source/gui_help/`, mirrored by `python scripts/sync_gui_help.py`). Write them
@@ -414,10 +435,13 @@ The hue-ramp variant is rejected for its own reasons, recorded so it does not ge
    red, red respectively, in the sidebar and on Results, and the Results aggregate and per-exam rows
    band independently.
 4. Each banded readout carries an icon and a band-name tooltip, so the band is readable without
-   colour.
-5. `python scripts/check_ui_copy.py`, `check_help_registry.py`, and the mirror/token generators pass;
+   colour, and the tooltip text at exactly `5000` and exactly `10000` mGy names the band the colour is
+   actually showing (the §3.4 wording trap).
+5. A multi-exam run bands the sidebar on the aggregate PSD; a subset selection of zero exams shows
+   pending grey, and a subset whose maximum is `0.0` shows green — both asserted deliberately.
+6. `python scripts/check_ui_copy.py`, `check_help_registry.py`, and the mirror/token generators pass;
    `dev-docs/UI_values.md` regenerated.
-6. Band edges live in named constants with the clinical note from §2.2 recorded next to them.
+7. Band edges live in named constants with the clinical note from §2.2 recorded next to them.
 
 ## 7. Out of scope
 

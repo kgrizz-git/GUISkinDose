@@ -73,9 +73,11 @@ pad.position(data_norm=normalized_data, event=ev)
 then pass `reposition=False` from the candidate `_compute` call (`rotational_event.py:251`). Leave the
 static-pose call at `:216` as-is (`reposition` defaults true) so its behaviour is untouched.
 
-Guard the invariant rather than trusting it. In `_candidate_frame`, after building the frame, assert
-the positioning columns match the parent — cheap, runs once per candidate, and turns a future silent
-wrong answer into a loud failure:
+Guard the invariant rather than trusting it. After building the candidate frame, assert its
+positioning columns match the parent — this turns a future silent wrong answer into a loud failure.
+Note the interaction with 1g: once the frame is built once per event, the guard runs **once per event**,
+not once per candidate, which makes it free enough to keep in production rather than behind a debug
+flag:
 
 ```python
 # Rx/Ry/Rz are included even though they are derived from At1-At3: they are
@@ -121,11 +123,64 @@ def check_hit(self, patient: Phantom) -> list[bool]:
 `compute_event_dose_vector` and `scale_field_area` accept either (`np.asarray(hits, dtype=bool)` is a
 no-op on an array).
 
-Convert back to `list[bool]` **at the output boundary only** — one conversion per event rather than
-five per candidate:
+**Convert the `sum()` / `any()` call sites in the same edit — this is not optional.** `sum()` and
+`any()` over an ndarray iterate it element by element in Python, boxing every value, so leaving them
+alone turns Phase 1b into a *net regression*. Measured on 41 022 elements:
+
+| Expression | Cost | Replace with | Cost |
+|---|---|---|---|
+| `sum(list[bool])` (today) | 63 µs | — | — |
+| `sum(ndarray)` (after 1b, unfixed) | **964 µs** | `mask.any()` | **0.5 µs** |
+| `any(ndarray)` all-miss (after 1b, unfixed) | 161 µs | `mask.any()` | 0.7 µs |
+| — | — | `np.count_nonzero(mask)` | 1.2 µs |
+
+The sites, all on the per-candidate path:
+
+- `perform_calculations_for_new_geometries.py:77` — `if sum(hits):` → `if hits.any():`
+- `add_correction_and_event_dose_to_output.py:40` — `if not sum(hits):` → `if not hits.any():`
+- `rotational_event.py:264` — `if not any(candidate_hits):` → `if not candidate_mask.any():`
+
+Two of those run per candidate, so left unfixed they add ~1.9 ms to a per-candidate budget of ~0.9 ms
+and the 19× headline collapses to roughly 6–7×. The prototype these numbers come from never called
+`sum()` — it used `.any()` throughout — so this is the plan under-transcribing its own prototype, not a
+flaw in the measurement. Anyone implementing 1b from the earlier draft would have missed it.
+
+**Convert back to `list[bool]` at the output boundary with `.tolist()`, never `list(...)`.** This is a
+silent-corruption trap, verified on numpy 2.4.2:
+
+| Expression | Element type | `isinstance(x, bool)` | `json.dumps` |
+|---|---|---|---|
+| `list(mask)` | `np.bool_` | **False** | **raises `TypeError`** |
+| `mask.tolist()` | `bool` | True | OK |
+
+`list(ndarray)` yields `np.bool_` elements, which are *not* Python bools and are **not JSON
+serializable** — so a dict/JSON export would raise at the boundary. Worse, the guard tests would not
+catch it: `test_calculate_dose.py:354`'s `isinstance(output["hits"][ev], list)` checks only the outer
+type and passes deceptively, and `format_export_data.py:759`'s
+`event if isinstance(event, list) else event.tolist()` would pass the `np.bool_` elements straight
+through into `PySkinDoseOutput.hits`.
+
+The sites:
 
 - `calculate_irradiation_event_result.py:279` / `:281`
-- `rotational_event.py:380` (already `list(static_hits)`) / `:381`
+- `rotational_event.py:380` — currently `list(static_hits)`, which is correct **only** while
+  `static_hits` is a list. Once 1b makes it an array this line must change to `.tolist()`. An earlier
+  draft of this plan described it as "already `list(static_hits)`", which is exactly the wrong
+  reading — treat it as a required edit.
+- `rotational_event.py:381` (the union mask, now an array per 1e)
+
+**Use the comprehension form, not `.tolist()`, wherever basedpyright sees a `list[bool]` return.** The
+`check_hit` wrapper shown above cannot literally be `return self.check_hit_mask(...).tolist()`: newer
+numpy stubs type `tolist()` as unassignable to `list[bool]`, which is the documented reason
+`geom_calc.py:662` already writes `[bool(hit) for hit in hits]`. Use that form in any annotated
+`-> list[bool]` position and keep `.tolist()` for the unannotated output-dict assignments.
+
+**Reconcile with the assessment on `check_table_hits`.** The assessment's §3.2 includes
+`check_table_hits` (`geom_calc.py:582`) in the ndarray conversion; this plan's file list for 1b
+originally omitted `geom_calc.py`. Decision: **include it** — return the mask as an array so
+`temp[table_hits] = k_tab_scalar` (`add_correction_and_event_dose_to_output.py:57-58`) stops converting
+a list per candidate. Same public-API treatment as 1b/1c if any caller needs the list form; today the
+only caller is `perform_calculations_for_new_geometries.py:79`.
 
 Two tests pin that the published value really is a list
 (`test_calculate_dose.py:354`, `test_rotational_envelope_dose.py:78`), which is the behaviour we want;
@@ -195,9 +250,32 @@ hits[hits] = bool_entrance
 hits[hits] = np.einsum("ij,ij->i", temp1, temp2) <= 0
 ```
 
-Identical arithmetic — a row-wise dot product. Measured 1.435 ms → 0.015 ms (96×). Benefits every
-event and every 3D phantom, not just rotational ones. `tests/unittests/test_beam_hit.py` covers both
-the plane and the 3D-entrance branch and must pass unchanged.
+Measured 1.435 ms → 0.015 ms (96×). Benefits every event and every 3D phantom, not just rotational
+ones. `tests/unittests/test_beam_hit.py` covers both the plane and the 3D-entrance branch and must pass
+unchanged.
+
+**This is the one Phase-1 edit that is NOT bit-identical by construction.** An earlier draft called it
+"identical arithmetic"; that is wrong. `np.dot` on a 1-D float64 pair dispatches to BLAS `ddot`, while
+`np.einsum` uses numpy's own kernels with a different summation order. Measured over 500 000 random
+3-vector pairs with mixed magnitudes: **170 848 (34 %) of the row dot products differ bitwise**, max
+absolute difference `1.819e-12`.
+
+What makes it usable anyway is that only the **sign** feeds the result — `<= 0` — and a differing last
+ulp changes the sign only when the true dot product is within an ulp of zero:
+
+- **0 of 500 000** trials flipped across the `<= 0` boundary.
+- End to end on real data, the golden dose map matched exactly with 1c *and* 1d applied.
+
+So the honest classification is *equivalent up to floating point, gated by the golden* — the same class
+as 1c, not a class of its own. Consequences to accept before implementing:
+
+- A boundary flip would not be a last-ulp dose wiggle. It adds or removes a cell from the hit mask, and
+  that cell's dose changes by the **full event contribution** — a visible dose-map artefact.
+- The evidence is one machine's BLAS. CI runs the golden on Ubuntu and Windows at PR time and macOS
+  weekly, so einsum-vs-that-platform's-BLAS agreement is a **new, untested equivalence**. If a
+  platform's golden goes red on this edit and nothing else, 1d is the cause.
+- **Revert path:** 1d is independent of every other edit. Drop it and keep the rest; the remaining
+  Phase-1 work still delivers the great majority of the speedup, since 1d is 1.4 ms of 13.8 ms.
 
 ### 1e. Vectorize the envelope bookkeeping loops
 
@@ -244,8 +322,26 @@ give the same database separate cache entries when reached by different spelling
 passes both `"corrections.db"` and absolute paths — which is not a correctness bug but does silently
 throw away the cache.
 
+**The warning hoist, with a mechanism rather than an instruction.** `_warn_once`
+(`correction_data.py:152-155`) returns early when `emit_warnings=False` **before** adding the class to
+`_warned`, so it does not latch. That produces a concrete regression if the memo wraps the warning:
+
+1. An envelope event runs first. Its candidates pass `emit_warnings=False`
+   (`rotational_event.py:240`, `:286`), so the deprecation warning is suppressed and the memo is
+   populated for key `K`.
+2. A later legacy-static event hits the same key `K` with `emit_warnings=True` (the default from
+   `add_corrections_and_event_dose_to_output`). It gets a cache hit, never calls
+   `_load_correction_table`, and therefore **never reaches `resolve_corrections_source`** — losing a
+   warning the code emits today.
+
+So the split must be: the memoized helper covers the *table lookup only*, and
+`calculate_k_med` calls `resolve_corrections_source` (or whatever raises the source-level warning)
+**unconditionally on every call, outside the memo**, threading the real `emit_warnings` through. The
+cache key then covers the lookup; the warning decision is never cached. Add a regression test for
+exactly the ordering above — envelope event first, static event second, warning still emitted.
+
 There is already a `NOTE (perf follow-up, only if profiles ever care)` at `corrections.py:207`
-anticipating this — replace it with a pointer to this plan.
+anticipating this work — replace it with a pointer to this plan.
 
 ### 1g. Build the candidate frame once per event
 
@@ -297,6 +393,13 @@ candidate domain (§0).
 
 Expected: 360-pose envelope ~0.32 s → ~0.20 s.
 
+**Record one hazard now, before anyone starts Phase 2:** `Beam.__init__` reads
+`data_norm.DSL[0]` — index `[0]`, not `event` (`beam_class.py:161`) — while every other scalar is read
+at `event`. Hoisting "per-event scalars" must preserve that quirk exactly and take `DSL` the same way it
+is taken today. Do **not** silently "fix" it to `DSL[event]` as part of a performance change: if `DSL`
+ever varies across events, that is a numbers change wearing a refactor's clothes, and it belongs in its
+own PR with its own golden discussion.
+
 This changes `Beam.__init__`'s surface, and `Beam` is constructed from plotting and geometry-preview
 code paths too, so it needs its own review and its own PR. Shape to aim for: a small frozen
 `BeamGeometryInputs` record built once per event, with `Beam.from_inputs(inputs, ap1, ap2, ap3)`
@@ -327,18 +430,30 @@ Phase 1 is done when all of the following hold.
    (`tests/unittests/test_calculate_dose.py:371`) already ends in
    `np.testing.assert_array_equal(dose_map, expected_dose_map)` against a saved `.npy`. It must pass
    **without regenerating the golden file**. This is the primary gate for 1b, 1c, 1d, and 1f.
-2. **New rotational golden (§4.2).** There is no envelope dose-map golden today. Add one: run
-   `_frame_with_spin()` from `tests/unittests/test_rotational_envelope_dose.py` at a fixed
-   `angular_step_deg`, save the dose map, and assert `assert_array_equal` against it. Generate the
-   golden from `main` **before** starting Phase 1, commit it first, and never regenerate it inside
-   this work. Without this, Phase 1a and 1e have no exact gate.
+2. **New rotational golden — and it must use a cylinder, not a plane.** There is no envelope
+   dose-map golden today. Add one: run `_frame_with_spin()` from
+   `tests/unittests/test_rotational_envelope_dose.py` at a fixed `angular_step_deg`, save the dose map,
+   and assert `assert_array_equal`. Generate it from `main` **before** starting Phase 1, commit it
+   first, and never regenerate it inside this work. Without it, Phases 1a and 1e have no exact gate.
+
+   **Override the phantom model to `cylinder`.** That test module's `_settings` helper forces
+   `phantom.model = "plane"` (`test_rotational_envelope_dose.py:19`), and the entrance-cell filter that
+   1d rewrites is guarded by `if patient.phantom_model != "plane"` (`beam_class.py:208`). A
+   plane-phantom rotational golden would therefore gate 1a, 1b, 1c, 1e, and 1f but **never execute 1d
+   at all** — leaving 1d's only exact gate the *static* Siemens cylinder golden, and leaving the
+   envelope path (the thing actually being optimized, and where grazing cells with
+   `dot(v, n) ≈ 0` live) untested for it. A cylinder run is still cheap and closes that hole.
 3. **Existing suites pass unchanged**, except the four `check_hit`-mocking assertions in
    `tests/unittests/test_calculate_dose.py` called out in 1b. Specifically:
    `test_rotational_envelope.py`, `test_rotational_envelope_dose.py`, `test_beam_hit.py`,
    `test_rotational_acquisition.py`, `test_rotational_normalizer_contract.py`.
-4. **`test_psd_algorithm_doc.py` passes.** `dev-docs/PSD_CALCULATION_ALGORITHM.md` is machine-checked
-   against the code. 1a changes when phantoms are positioned, and 1b changes the hit-mask type — check
-   whether the doc describes either, and update the doc in the same PR if so.
+4. **`test_psd_algorithm_doc.py` passes — and the doc needs no change.** Resolved rather than left as
+   a check: `dev-docs/PSD_CALCULATION_ALGORITHM.md:175-186` describes this stage as "Patient, table,
+   and pad are positioned for this event" and "yielding boolean `hits`". Both stay true after 1a (still
+   positioned for this event, just once) and 1b (still boolean, different container). The doc test pins
+   entry-point *names*, and 1a only adds a keyword parameter to
+   `perform_calculations_for_new_geometries`, so the name survives. Re-run the test rather than
+   assuming, but do not expect a doc edit.
 5. **`test_phantoms_restored_to_static_pose_after_envelope` passes unchanged**
    (`tests/unittests/test_rotational_envelope_dose.py:120`). It collects every `Phantom.position` call
    and asserts `assert parent_calls` — that *at least one* parent-frame call at the envelope event
