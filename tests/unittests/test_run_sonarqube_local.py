@@ -247,25 +247,27 @@ def test_generate_coverage_runs_every_command(monkeypatch: pytest.MonkeyPatch, t
     assert all(cwd == tmp_path and check is False for _, cwd, check in calls)
 
 
+@pytest.mark.parametrize("failure_index", [0, 1])
 def test_generate_coverage_stops_after_failure(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    failure_index: int,
 ) -> None:
-    returncodes = iter((0, 1))
     calls = 0
 
     def fake_run(_command: list[str], *, cwd: Path, check: bool) -> SimpleNamespace:
         nonlocal calls
+        returncode = int(calls == failure_index)
         calls += 1
         assert cwd == tmp_path
         assert check is False
-        return SimpleNamespace(returncode=next(returncodes))
+        return SimpleNamespace(returncode=returncode)
 
     monkeypatch.setattr("scripts.run_sonarqube_local.subprocess.run", fake_run)
 
     assert generate_coverage(tmp_path) is False
-    assert calls == 2
+    assert calls == failure_index + 1
     assert "coverage generation failed" in capsys.readouterr().err
 
 
@@ -284,7 +286,9 @@ def test_prepare_coverage_generates_or_requires_current_report(
     assert generated == [tmp_path]
 
     assert prepare_coverage(tmp_path, regenerate=False) is False
+    assert generated == [tmp_path]
     assert "(missing); rerun with --generate-coverage" in capsys.readouterr().err
 
     (tmp_path / "coverage.xml").write_text("<coverage/>\n", encoding="utf-8")
     assert prepare_coverage(tmp_path, regenerate=False) is True
+    assert generated == [tmp_path]
