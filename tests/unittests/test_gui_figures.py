@@ -109,3 +109,9 @@ def test_make_dosemap_png_raises_and_logs_on_render_exception(monkeypatch, caplo
     from guiskindose.gui.figures import make_dosemap_png
 
     _assert_logs_operation_code(monkeypatch, caplog, make_dosemap_png, "dosemap_png_render")
+
+
+def test_coordinate_note_lines_stay_short():
+    """Plotly never wraps annotations, so every line must fit a narrow (~500 px) view."""
+    lines = COORDINATE_FRAME_NOTE.split("<br>")
+    assert max(len(line) for line in lines) <= 55

@@ -60,6 +60,11 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Coordinate-frame note no longer runs off narrow dose maps** (2026-09-27)
+  — the bottom-left note on 3D plots ended with a ~100-character line that
+  ran past the right edge and under the colorbar in narrow views. Plotly never
+  wraps annotation text, so that line is now split into two short ones and the
+  note uses a 10 px font.
 - **GUI launch URL only auto-opens on the real GUI server** (2026-09-26) —
   before opening the token URL, the launcher checked that the port returned
   the GUI's public "forbidden" page, which any local program could copy. It
