@@ -6,6 +6,7 @@ import contextlib
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,7 +15,9 @@ from scripts.run_sonarqube_local import (
     classify_failure,
     coverage_commands,
     coverage_report_problem,
+    generate_coverage,
     load_env_defaults,
+    prepare_coverage,
     project_version_from_pyproject,
     sanitize_host_url,
     validate_host,
@@ -215,3 +218,60 @@ def test_coverage_commands_match_combined_ci_scope() -> None:
         assert "--cov=src/guiskindose" in command
         assert "--cov=scripts" in command
         assert "--cov=tests" in command
+
+
+def test_generate_coverage_runs_every_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    calls: list[tuple[list[str], Path, bool]] = []
+
+    def fake_run(command: list[str], *, cwd: Path, check: bool) -> SimpleNamespace:
+        calls.append((command, cwd, check))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr("scripts.run_sonarqube_local.subprocess.run", fake_run)
+
+    assert generate_coverage(tmp_path) is True
+    assert [call[0] for call in calls] == coverage_commands()
+    assert all(cwd == tmp_path and check is False for _, cwd, check in calls)
+
+
+def test_generate_coverage_stops_after_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    returncodes = iter((0, 1))
+    calls = 0
+
+    def fake_run(_command: list[str], *, cwd: Path, check: bool) -> SimpleNamespace:
+        nonlocal calls
+        calls += 1
+        assert cwd == tmp_path
+        assert check is False
+        return SimpleNamespace(returncode=next(returncodes))
+
+    monkeypatch.setattr("scripts.run_sonarqube_local.subprocess.run", fake_run)
+
+    assert generate_coverage(tmp_path) is False
+    assert calls == 2
+    assert "coverage generation failed" in capsys.readouterr().err
+
+
+def test_prepare_coverage_generates_or_requires_current_report(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    generated: list[Path] = []
+    monkeypatch.setattr(
+        "scripts.run_sonarqube_local.generate_coverage",
+        lambda root: generated.append(root) is None,
+    )
+
+    assert prepare_coverage(tmp_path, regenerate=True) is True
+    assert generated == [tmp_path]
+
+    assert prepare_coverage(tmp_path, regenerate=False) is False
+    assert "(missing); rerun with --generate-coverage" in capsys.readouterr().err
+
+    (tmp_path / "coverage.xml").write_text("<coverage/>\n", encoding="utf-8")
+    assert prepare_coverage(tmp_path, regenerate=False) is True
