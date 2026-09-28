@@ -1,6 +1,7 @@
 # Rotational Coverage-Envelope Performance Assessment
 
-Investigated: 2026-09-28 · Status: **assessment + phased fix plan, nothing implemented**
+Investigated: 2026-09-28 · Status: **evidence record; execution plan lives in**
+[plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](../plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md)
 
 For the maintainer's question: *"the rotational acquisition coverage calculation is somewhat slow —
 are there any inefficiencies that can be improved without degrading quality or accuracy?"*
@@ -239,26 +240,11 @@ off for a far off-isocentre phantom, but that is not the case that is slow.
 
 ## 5. Phased fix plan
 
-**Phase 1 — bit-exact hot-loop cleanup (the 19× win).** §3.1, §3.2, §3.3, §3.4, §3.5, §3.6, §3.7.
-No physics, contract, domain, ledger, or output-key change. Acceptance:
-
-- A golden-value regression on an existing envelope fixture reproduces the current dose map to
-  `np.allclose` with `atol=0`, and the current `psd` exactly. The existing
-  `tests/unittests/test_rotational_envelope_dose.py` and `test_rotational_envelope.py` pass unchanged.
-- `python -m pytest tests/unittests/test_psd_algorithm_doc.py` still passes — the algorithm doc is
-  machine-checked, and §3.1's "position once per event" is a statement about execution order that the
-  doc may describe. Check `dev-docs/PSD_CALCULATION_ALGORITHM.md` and update it in the same PR if so.
-- A committed timing check (not a strict CI assertion — machine-dependent) recording before/after, so
-  the gain does not silently regress.
-
-**Phase 2 — `Beam` scalar hoisting.** §3.8. Another ~35 % off the Phase-1 time. Touches
-`Beam.__init__`'s signature, so it needs its own review.
-
-**Phase 3 — optional, only if still wanted.** §3.9 dedup, and candidate-level progress reporting:
-the dose loop calls `pbar.update()` once per **event** (`calculate_irradiation_event_result.py:312`),
-so a single multi-second rotational event reports no progress at all and the GUI's
-`_update_progress` (`gui/tabs/calculate.py:522`) has nothing to show. After Phase 1 a 360-pose event
-is ~0.3 s and this stops mattering; for a 4000-pose `0.25`° domain it still would.
+Moved to [plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](../plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md),
+which carries the per-file change list, the invariant the whole thing rests on, the tests that need
+updating, and the acceptance gate. In outline: Phase 1 is the seven bit-exact hot-loop edits above
+(the 19x win), Phase 2 hoists `Beam`'s per-event scalar reads (~35 % more), Phase 3 is the optional
+`_deduplicate` rewrite and candidate-level progress reporting.
 
 ## 6. What this does not change
 

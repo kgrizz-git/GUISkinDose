@@ -1,6 +1,6 @@
 # PSD Severity Colour-Coding Plan
 
-Created: 2026-09-28 · Status: **plan only, not implemented**
+Created: 2026-09-28 · Revised: 2026-09-28 (maintainer decisions folded in) · Status: **ready to implement**
 
 Make the peak-skin-dose (PSD) readout tell the reader at a glance where the estimate sits relative to
 skin-reaction dose bands, and make every PSD readout in the GUI agree on colour and wording.
@@ -26,7 +26,12 @@ not even a design token — `--aurora-pink` is `#831843`, while `text-pink-5` is
 The sidebar shows `PSD: 0.00 mGy` on load and after every invalidation
 (`gui/tabs/calculate.py:539`, `gui/tabs/upload_builders.py:329` and `:373`,
 `gui/tabs/_per_exam.py:48`). A literal zero reads as a computed result, not as "nothing computed yet".
-Results already uses `"—"` for the same state. The sidebar should match.
+
+**Decided:** show a dash placeholder instead of `0.00 mGy`. Use the **em dash `—`**, matching the
+placeholder Results already builds with (`results_builders.py:547`, `:618`), rather than introducing a
+second placeholder style — the maintainer asked for `---`, and one dash glyph used everywhere is the
+same intent without two spellings to keep in sync. Drop the unit too: the sidebar reads `PSD: —`, not
+`PSD: — mGy`.
 
 ---
 
@@ -92,63 +97,187 @@ Two design-intent points to record in `DESIGN.md` §2 when this lands:
 - Green/yellow/red is not distinguishable for the most common colour-vision deficiencies. Colour must
   therefore never be the only carrier — see §3.3.
 
-### 3.2 One shared helper
+### 3.2 One shared module — concrete
 
-Add a single pure function so all four sites cannot drift again. Suggested home:
-`src/guiskindose/gui/dose_severity.py` (new, small, non-NiceGUI so it is unit-testable without the
-`gui` extra — note `tests/gui/` vs `tests/unittests/` placement is enforced by a pre-push hook, and a
-pure module means the tests can live in `tests/unittests/`).
+New file `src/guiskindose/gui/dose_severity.py`. It imports nothing from NiceGUI, so its tests live in
+`tests/unittests/` (the `tests/gui/` vs `tests/unittests/` split is enforced by a pre-push hook and by
+the core CI matrix, which has no `gui` extra).
 
 ```python
-PSD_BAND_ELEVATED_MGY = 5000.0
-PSD_BAND_HIGH_MGY = 10000.0
+"""Peak-skin-dose severity bands and their presentation classes.
 
-def psd_band(psd: float | None) -> str: ...        # "pending" | "low" | "elevated" | "high"
-def psd_text_class(psd: float | None) -> str: ...  # "text-dose-pending" | ...
-def psd_band_label(psd: float | None) -> str: ...  # "Not calculated" | "Low" | "Elevated" | "High"
+Single source of truth for how a PSD value is coloured and named. Every GUI
+readout of PSD routes through here so the four call sites cannot drift apart.
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Final
+
+from nicegui import ui  # only for the type of `apply_psd_band`'s argument
+
+# Band edges in mGy. The upper edge belongs to the higher band, so exactly
+# 5000 mGy is "elevated" and exactly 10000 mGy is "high" — the conservative
+# reading. See the SRDL note in the plan before changing these.
+PSD_BAND_ELEVATED_MGY: Final = 5000.0
+PSD_BAND_HIGH_MGY: Final = 10000.0
+
+_BANDS: Final = ("pending", "low", "elevated", "high")
+_TEXT_CLASSES: Final = {band: f"text-dose-{band}" for band in _BANDS}
+_ALL_TEXT_CLASSES: Final = " ".join(_TEXT_CLASSES.values())
+_ICONS: Final = {"pending": "", "low": "check_circle", "elevated": "warning", "high": "error"}
+_COPY_KEYS: Final = {band: f"results.psd_band.{band}" for band in _BANDS}
+
+
+def psd_band(psd: float | None) -> str:
+    """Severity band for a PSD in mGy: pending / low / elevated / high.
+
+    ``None`` and any non-finite value are ``"pending"`` — nothing has been
+    calculated, or what was calculated is not a number. A negative value
+    cannot occur physically but maps to ``"low"`` rather than raising.
+    """
+    if psd is None:
+        return "pending"
+    try:
+        value = float(psd)
+    except (TypeError, ValueError):
+        return "pending"
+    if not math.isfinite(value):
+        return "pending"
+    if value >= PSD_BAND_HIGH_MGY:
+        return "high"
+    if value >= PSD_BAND_ELEVATED_MGY:
+        return "elevated"
+    return "low"
+
+
+def psd_text_class(psd: float | None) -> str:
+    """Tailwind-style text colour class for ``psd``'s band."""
+    return _TEXT_CLASSES[psd_band(psd)]
+
+
+def psd_band_icon(psd: float | None) -> str:
+    """Material symbol name for ``psd``'s band; empty string when pending."""
+    return _ICONS[psd_band(psd)]
+
+
+def psd_band_copy_key(psd: float | None) -> str:
+    """``dev-docs/ui_copy.json`` key naming ``psd``'s band and its range."""
+    return _COPY_KEYS[psd_band(psd)]
+
+
+def apply_psd_band(element: ui.element, psd: float | None) -> None:
+    """Swap ``element``'s severity class to the one matching ``psd``.
+
+    The whole class family is removed first: NiceGUI appends classes, so
+    re-banding without a remove would leave two colours fighting.
+    """
+    element.classes(remove=_ALL_TEXT_CLASSES, add=psd_text_class(psd))
 ```
 
-`psd_band(None)` and any non-finite value return `"pending"`. A negative PSD cannot occur but should
-also map to `"low"` rather than raising.
+Edge-case note worth stating in the test: `psd_band` is written with `>=` against the *upper* edge
+first, so the band boundaries are `[0, 5000)` low, `[5000, 10000)` elevated, `[10000, ∞)` high. This
+matches §2.1.
 
-### 3.3 Call sites
+### 3.3 Call sites — concrete edits
 
-Each site sets both the text and the class. NiceGUI needs the previous severity class removed before
-the new one is added, so give every PSD element a small wrapper that does
-`element.classes(remove="text-dose-pending text-dose-low text-dose-elevated text-dose-high", add=new)`.
-Putting that wrapper in the same new module keeps the class list in one place.
+Six edits. Each sets text and band together; none of them re-derives a threshold.
 
-1. **Sidebar** (`app.py:244`) — build with `"PSD: —"` and `text-dose-pending`. Replace the
-   `text-pink-5` class. Keep `text-h6 font-bold q-mt-xs`.
-2. **Sidebar reset paths** — `calculate.py:539`, `upload_builders.py:329`, `upload_builders.py:373`,
-   `_per_exam.py:48` all currently set `"PSD: 0.00 mGy"`; they must set `"PSD: —"` plus the pending
-   class. Best done by routing all four through one `reset_psd_label(ctx)` helper.
-3. **Sidebar success path** (`calculate.py:545`) — set text and the banded class together.
-4. **Results single-exam metric** (`results_builders.py:547` built, `:75` refreshed) — replace the
-   hard-coded `text-aurora-purple` with the banded class; `"—"` placeholder already correct.
-5. **Results aggregate metric** (`results_builders.py:618` built, `:239`/`:311`/`:327` refreshed) —
-   replace `text-white` with the banded class. **Band the numeric aggregate only.** The subset branch
-   writes `"— mGy (no exams selected)"` (`:318`), which must stay pending-grey, and
-   `f"{subset_psd:.2f} mGy (subset)"`, which bands on `subset_psd`.
-6. **Results per-exam accordion** (`results_builders.py:406`) — replace `text-aurora-purple` with the
-   band for that exam's own PSD. This is the one site where several different bands appear at once,
-   which is exactly the useful case.
+**1. Sidebar construction** — `src/guiskindose/gui/app.py:244`
+
+```python
+# before
+psd_label = ui.label("PSD: 0.00 mGy").classes("text-h6 text-pink-5 font-bold q-mt-xs")
+# after
+psd_label = ui.label(PSD_PENDING_TEXT).classes("text-h6 font-bold q-mt-xs text-dose-pending")
+```
+
+**2. One reset helper, four callers.** Add to `dose_severity.py`:
+
+```python
+PSD_PENDING_TEXT: Final = "PSD: —"
+
+
+def reset_psd_label(label: ui.label) -> None:
+    """Return the sidebar PSD readout to its not-calculated state."""
+    label.set_text(PSD_PENDING_TEXT)
+    apply_psd_band(label, None)
+```
+
+and route all four current `set_text("PSD: 0.00 mGy")` sites through it —
+`gui/tabs/calculate.py:539`, `gui/tabs/upload_builders.py:329`, `gui/tabs/upload_builders.py:373`,
+`gui/tabs/_per_exam.py:48`. They become `reset_psd_label(self.ctx.psd_label)` (or `ctx.psd_label`).
+
+**3. Sidebar success path** — `gui/tabs/calculate.py:545`
+
+```python
+self.ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
+apply_psd_band(self.ctx.psd_label, state.psd)
+```
+
+**4. Results single-exam metric.** Build (`results_builders.py:547`) drops the hard-coded
+`text-aurora-purple` in favour of `text-dose-pending`; refresh (`results_builders.py:75`) adds
+`apply_psd_band(self.refs.psd_metric, state.psd)` next to the existing `set_text`.
+
+**5. Results aggregate metric.** Build (`results_builders.py:618`) drops `text-white` for
+`text-dose-pending`. Three refresh sites, and they do **not** all band the same way:
+
+| Line | Text today | Band on |
+|------|-----------|---------|
+| `:239` | `f"{res.aggregate_psd:.2f} mGy"` | `res.aggregate_psd` |
+| `:311` | `f"{res.aggregate_psd:.2f} mGy"` | `res.aggregate_psd` |
+| `:318` | `"— mGy (no exams selected)"` | `None` → pending grey |
+| `:327` | `f"{subset_psd:.2f} mGy (subset)"` | `subset_psd`, **not** the full aggregate |
+
+The `:318` and `:327` split is the one easy thing to get wrong here: a deselected subset must go grey,
+and a selected subset must band on its own maximum, not on the whole-run aggregate.
+
+**6. Results per-exam accordion** — `results_builders.py:406`. Replace `text-aurora-purple` with
+`psd_text_class(exam_res.output.psd)` at construction time. This is the only place where several bands
+are visible at once, which is the most useful case: it shows which exam in a multi-exam run drives the
+peak.
 
 ### 3.4 Non-colour carriers (required, not optional)
 
-Because green/yellow/red alone excludes colour-blind users, each banded readout also gets:
+Green/yellow/red alone excludes the most common colour-vision deficiencies, so colour is never the
+only carrier. Each banded readout also gets:
 
-- a leading Material symbol keyed to the band (`check_circle` / `warning` / `error`, nothing for
-  pending) — the icon font is already loaded (`material_symbols_stylesheet_href()` in `app.py`); and
-- a tooltip / caption naming the band and its range, e.g.
-  `"Elevated — 5000–10000 mGy"`. New `dev-docs/ui_copy.json` keys under a
-  `results.psd_band.*` prefix, mirrored to `src/guiskindose/gui/ui_copy.json` by
-  `python scripts/sync_ui_copy.py`.
+- **a leading Material symbol** keyed to the band — `check_circle` / `warning` / `error`, and nothing
+  at all when pending. The icon font is already loaded (`material_symbols_stylesheet_href()`,
+  `app.py:217`), and the repo already uses the `icon-outlined` class convention.
+- **a tooltip naming the band and its range**, so the number can be interpreted without seeing the
+  colour at all.
 
-The band names and numeric edges must appear in exactly one place in prose too: add them to the
-`results_workflow.md` help page (canonical copy lives in `docs/source/gui_help/`, mirrored by
-`python scripts/sync_gui_help.py`) with the "estimate, not a measurement" framing already used
-elsewhere on that tab.
+Concrete `dev-docs/ui_copy.json` additions (canonical; mirrored to
+`src/guiskindose/gui/ui_copy.json` by `python scripts/sync_ui_copy.py`):
+
+```json
+"results.psd_band.pending": {
+  "text": "Not calculated yet",
+  "owner": "gui/dose_severity.py"
+},
+"results.psd_band.low": {
+  "text": "Low — peak skin dose below 5000 mGy",
+  "owner": "gui/dose_severity.py"
+},
+"results.psd_band.elevated": {
+  "text": "Elevated — peak skin dose 5000 to 10000 mGy",
+  "owner": "gui/dose_severity.py"
+},
+"results.psd_band.high": {
+  "text": "High — peak skin dose above 10000 mGy",
+  "owner": "gui/dose_severity.py"
+}
+```
+
+Two constraints on that copy: `check_ui_copy.py` rejects "maximum skin dose" (use **peak skin dose**),
+and the band names must also be added to `dev-docs/glossary.json` since they are user-facing terms.
+
+The numeric edges must appear in prose in exactly one place: the `results_workflow.md` help page
+(canonical under `docs/source/gui_help/`, mirrored by `python scripts/sync_gui_help.py`). Write them
+with the same "estimate, not a measurement" framing the tab already uses — the bands describe where a
+*modelled* PSD sits, and do not claim a clinical finding.
 
 ---
 
@@ -167,48 +296,56 @@ Docs-and-copy checks that will fail if this lands without them:
   anchor is added.
 - `dev-docs/glossary.json` — add the band names if they are used as user-facing terms.
 
-### 4.1 Tests that will break
+### 4.1 Tests
 
-Three tests assert the literal reset string and must be updated in the same PR:
+Three existing tests assert the literal reset string and must be updated in the same PR:
 
-- `tests/gui/test_per_exam_coverage.py:47` — `assert_called_with("PSD: 0.00 mGy")`
-- `tests/gui/test_calculate_tab_coverage.py:95` — `assert_called_with("PSD: 9.50 mGy")` (text only,
-  survives; the class assertion is new)
-- `tests/gui/test_calculate_tab_coverage.py:121` — `assert_called_with("PSD: 0.00 mGy")`
+- `tests/gui/test_per_exam_coverage.py:47` — `assert_called_with("PSD: 0.00 mGy")` → `"PSD: —"`.
+- `tests/gui/test_calculate_tab_coverage.py:121` — `assert_called_with("PSD: 0.00 mGy")` → `"PSD: —"`.
+- `tests/gui/test_calculate_tab_coverage.py:95` — `assert_called_with("PSD: 9.50 mGy")`. The text is
+  unchanged, so this passes as-is; extend it to also assert the band class.
 
-New tests to add:
+These use `MagicMock()` for `ctx.psd_label`, so `apply_psd_band`'s `.classes(remove=…, add=…)` call
+records harmlessly and can be asserted directly.
 
-- `tests/unittests/` — `psd_band` table test covering `None`, `NaN`, `0`, `4999.99`, `5000.0`,
-  `10000.0`, `10000.01`, and a large value. The two exact edges are the ones worth pinning.
-- `tests/gui/` — each of the four call sites applies the expected class for a known PSD, and the
-  reset paths apply `text-dose-pending` with `"PSD: —"`.
+New tests:
+
+- `tests/unittests/test_dose_severity.py` — table test over `psd_band`: `None`, `float("nan")`,
+  `float("inf")`, `0.0`, `4999.99`, **`5000.0`**, `9999.99`, **`10000.0`**, `10000.01`, `1e9`, and a
+  negative. The two exact edges are the assertions that actually pin §2.1; everything else is
+  regression padding.
+- `tests/unittests/test_dose_severity.py` — `apply_psd_band` removes the whole class family before
+  adding one, so re-banding the same element twice leaves exactly one severity class.
+- `tests/gui/` — each of the six call sites in §3.3 applies the expected class for a known PSD; the
+  four reset paths yield `"PSD: —"` + `text-dose-pending`; and the aggregate subset cases at `:318`
+  and `:327` band on pending and on `subset_psd` respectively.
 
 ---
 
-## 5. Continuous gradient — recommendation
+## 5. Continuous gradient — decided: no
 
-**Keep the discrete bands.** A continuous hue ramp would be prettier and is technically easy (HSL
-interpolation from green through yellow to red, clamped at the ends), but for this readout it is the
-worse choice:
+**Decided: discrete bands only. No gradient, no meter bar.**
+
+For the record, the maintainer asked what the meter bar idea actually was and what its maximum would
+be — a fair question, and the answer exposes why it was a weak idea. It would have been a horizontal
+fill bar under the Results PSD number, filling left-to-right as dose rises, with the fill tinted the
+band colour. Its maximum would have had to be an arbitrary ceiling (`10000 mGy`, i.e. the red edge),
+which means **every** high-dose case pins the bar at 100 % and the bar stops carrying information
+exactly where the reader cares most. There is no natural maximum for peak skin dose, so there is no
+honest full-scale value. Dropped.
+
+The hue-ramp variant is rejected for its own reasons, recorded so it does not get re-proposed:
 
 - A reader cannot recover a threshold from a hue. "Is this amber or is it yellow?" is not a question a
-  dose readout should provoke, and the whole point of the colour is to answer "which band am I in?".
-- It makes the state untestable in any meaningful way — you end up asserting interpolated hex strings.
+  dose readout should provoke, and the point of the colour is to answer "which band am I in?".
 - It cannot be paired with an icon or a band name, so it loses the colour-blind fallback in §3.4.
-
-A reasonable middle ground, if the hard steps feel abrupt: keep discrete text colour, and add a thin
-continuous meter bar underneath the Results PSD card whose fill fraction is
-`min(psd / PSD_BAND_HIGH_MGY, 1.0)` and whose fill uses the band colour. That gives the "how far into
-the band am I" feel without making the colour itself ambiguous. Treat it as an optional follow-on,
-not part of this plan's acceptance.
-
----
+- It is untestable in any useful way — you end up asserting interpolated hex strings.
 
 ## 6. Acceptance
 
 1. All four PSD readouts use the same shared helper; no site hard-codes a PSD colour.
 2. Before any calculation, and after every invalidation, the sidebar reads `PSD: —` in light grey —
-   no `0.00`.
+   no `0.00`, no unit.
 3. A run with PSD `4999`, `5000`, `9999`, `10000`, and `10001` mGy produces green, yellow, yellow,
    red, red respectively, in the sidebar and on Results, and the Results aggregate and per-exam rows
    band independently.
@@ -224,3 +361,5 @@ not part of this plan's acceptance.
 - Banding air kerma, DAP, or fluoro time. Only PSD has agreed reaction bands.
 - Exports (DOCX/XLSX/HTML). If banding is wanted there, that is a separate pass over
   `src/guiskindose/export/`.
+- A continuous gradient or a fill/meter bar. Decided against in §5; do not re-add without a new
+  decision recorded there.

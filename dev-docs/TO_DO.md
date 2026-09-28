@@ -76,7 +76,8 @@ be archived.
   `scale_field_area` and `check_hit` entrance test, no redundant per-candidate phantom repositioning,
   memoized `k_med`, one reused candidate frame. **Acceptance:** existing rotational dose tests pass
   unchanged and a golden dose map reproduces exactly; no default, contract, or disclosure change.
-  Evidence + phased plan: [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
+  Plan: [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md);
+  evidence: [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
@@ -102,7 +103,7 @@ be archived.
   (sidebar `text-pink-5`, Results `text-aurora-purple`, aggregate `text-white`), and the sidebar shows
   `PSD: 0.00 mGy` before anything is calculated. **Goal:** one shared helper bands every readout — grey
   when pending, green `< 5000`, yellow `5000-10000`, red `> 10000` mGy — with an icon and band-name
-  tooltip so colour is not the only carrier, and `PSD: -` as the pending placeholder. Continuous gradient
+  tooltip so colour is not the only carrier, and `PSD: —` as the pending placeholder. Continuous gradient
   considered and rejected. Plan: [PSD_SEVERITY_COLOR_CODING_PLAN.md](plans/PSD_SEVERITY_COLOR_CODING_PLAN.md).
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
