@@ -6,6 +6,7 @@ import numpy as np
 import plotly.graph_objects as go
 from PIL import Image
 
+from guiskindose.intended_use import stamp_figure
 from guiskindose.phantom_class import Phantom
 from guiskindose.plotting.create_layout_for_dose_map_plots import (
     create_layout_for_dose_map_plots,
@@ -123,6 +124,7 @@ def create_dose_map_plot(patient: Phantom, settings: PyskindoseSettings, dose_ma
 
     # create figure
     fig = go.Figure(data=phantom_mesh, layout=layout)
+    stamp_figure(fig)
 
     if settings.plot.interactivity:
         fig.show()

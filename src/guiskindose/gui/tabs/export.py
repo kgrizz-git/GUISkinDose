@@ -20,6 +20,7 @@ from pathlib import Path
 from nicegui import run, ui
 
 from guiskindose.export import MissingExportDependencyError
+from guiskindose.intended_use import INTENDED_USE_NOTICE
 from guiskindose.privacy import safe_error_event, safe_user_error
 from guiskindose.safe_output import atomic_write_private
 
@@ -185,6 +186,7 @@ class ExportTabController:
             payload = state.multi_exam_result.to_dict(include_source_identifiers=self._include_ids())
         else:
             payload = dict(state.output or {})
+        payload["intended_use"] = INTENDED_USE_NOTICE
         if state.import_provenance is not None:
             payload["tabular_input"] = _tabular_input_meta(
                 state.file_name,

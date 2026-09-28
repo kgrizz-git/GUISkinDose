@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -158,3 +158,96 @@ def test_write_or_download_browser_path(monkeypatch, _capture_notify) -> None:
     monkeypatch.setattr(ui, "download", lambda content, name: downloaded.append((content, name)))
     export_tab._write_or_download(None, b"abc", "out.txt", "saved", "test_write")
     assert downloaded == [(b"abc", "out.txt")]
+
+
+def test_json_export_payload_carries_intended_use() -> None:
+    from guiskindose.intended_use import INTENDED_USE_NOTICE
+
+    ctrl = _controller()
+    state.calculation_done = True
+    state.output = {"psd": 2.0}
+    state.multi_exam_result = None
+    state.import_provenance = None
+    payload = ctrl._build_export_payload()
+    assert payload["intended_use"] == INTENDED_USE_NOTICE
+    assert "intended_use" not in state.output
+
+
+def test_figure_stamp_adds_short_notice() -> None:
+    import plotly.graph_objects as go
+
+    from guiskindose.intended_use import INTENDED_USE_SHORT, stamp_figure
+
+    fig = go.Figure()
+    stamp_figure(fig)
+    annotations = fig.to_dict()["layout"]["annotations"]
+    assert [a["text"].replace("<br>", " ") for a in annotations] == [INTENDED_USE_SHORT]
+    assert fig.to_dict()["layout"]["margin"]["t"] >= 64
+
+
+def test_multi_exam_json_export_payload_carries_intended_use() -> None:
+    from guiskindose.intended_use import INTENDED_USE_NOTICE
+
+    ctrl = _controller()
+    state.calculation_done = True
+    state.output = None
+    state.import_provenance = None
+    state.multi_exam_result = cast(Any, SimpleNamespace(to_dict=lambda **_kw: {"aggregate_psd": 1.0}))
+    try:
+        payload = ctrl._build_export_payload()
+    finally:
+        state.multi_exam_result = None
+    assert payload["intended_use"] == INTENDED_USE_NOTICE
+    assert payload["aggregate_psd"] == 1.0
+
+
+_PATIENT = {
+    "patient": {
+        "patient_skin_cells": {"x": [0, 1, 0], "y": [0, 0, 1], "z": [0, 0, 0]},
+        "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]},
+    }
+}
+
+
+def _stamp_texts(fig_dict: dict) -> list[str]:
+    return [a["text"].replace("<br>", " ") for a in fig_dict["layout"].get("annotations", [])]
+
+
+def test_results_figure_itself_is_stamped() -> None:
+    """The on-screen figure carries the stamp, so Plotly's own PNG download does too."""
+    import numpy as np
+
+    from guiskindose.gui import figures
+    from guiskindose.intended_use import INTENDED_USE_SHORT
+
+    fig_dict = figures.make_dosemap_fig(np.array([1.0, 2.0, 3.0]), _PATIENT)
+    assert fig_dict is not None
+    assert _stamp_texts(fig_dict).count(INTENDED_USE_SHORT) == 1
+
+
+def test_dose_map_html_export_contains_stamp_once() -> None:
+    import re
+
+    import numpy as np
+
+    from guiskindose.gui import figures
+
+    html = figures.make_dosemap_html(np.array([1.0, 2.0, 3.0]), _PATIENT).decode()
+    texts = [json.loads(f'"{m}"') for m in re.findall(r'"text":"((?:[^"\\]|\\.)*)"', html)]
+    stamps = [t for t in texts if t.startswith("Not FDA-cleared")]
+    assert len(stamps) == 1
+
+
+def test_stamp_does_not_share_the_coordinate_note_corner() -> None:
+    import numpy as np
+
+    from guiskindose.export.images import render_dosemap_plotly_figure
+    from guiskindose.intended_use import INTENDED_USE_SHORT
+
+    fig = render_dosemap_plotly_figure(np.array([1.0, 2.0, 3.0]), _PATIENT["patient"], "jet")
+    annotations = fig.to_dict()["layout"]["annotations"]
+    stamp = next(a for a in annotations if a["text"].replace("<br>", " ") == INTENDED_USE_SHORT)
+    others = [a for a in annotations if a is not stamp]
+    assert others, "expected the coordinate-frame note"
+    assert stamp["y"] >= 0.99
+    assert all(other["y"] < 0.5 for other in others)

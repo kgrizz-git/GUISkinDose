@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
+from guiskindose.intended_use import INTENDED_USE_NOTICE
+
 if TYPE_CHECKING:  # avoid importing heavy deps at module import time
     import pandas as pd
 
@@ -264,6 +266,7 @@ class ExportPayload:
     cumulative: CumulativeSection
     warnings: WarningsBlock
     images: list[ImageEntry] = field(default_factory=list)
+    intended_use: str = INTENDED_USE_NOTICE
     coordinate_convention: str = (
         "Head-first supine (HFS): +X lateral (patient left), +Y anterior→posterior "
         "(down toward floor), +Z cranial. Plot labels: X - LON / PT L-R, "

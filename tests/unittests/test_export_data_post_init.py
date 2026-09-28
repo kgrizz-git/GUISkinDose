@@ -140,6 +140,7 @@ def test_serialized_export_shape_remains_stable(settings, trio, data_norm) -> No
 
     assert set(exported) == {
         "schema_version",
+        "intended_use",
         "psd",
         "air_kerma",
         "air_kerma_corrected",

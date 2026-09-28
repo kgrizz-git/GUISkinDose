@@ -21,6 +21,15 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Intended-use notice on the Results tab and in every export** (2026-09-27) —
+  the Results tab now keeps a short line that GUISkinDose is not FDA-cleared
+  and that a qualified medical physicist or physician must review skin dose
+  estimates. It stays visible even after the welcome dialog is dismissed. The
+  rich report (XLSX, PDF, HTML, DOCX) states the full notice in its header.
+  The dict/JSON calculation output (GUI JSON export, `main()`, and CLI
+  multi-file output) gains an additive top-level `intended_use` field. Exported
+  dose-map images (HTML, PNG, and the rich report's embedded views) show the
+  short notice in the corner.
 - **Intended-use disclaimer at startup and in the docs** (2026-09-27) — the
   GUI's welcome dialog now opens with a notice that GUISkinDose is not
   FDA-cleared or otherwise certified as a medical device, and that qualified

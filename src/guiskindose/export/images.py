@@ -11,6 +11,8 @@ from typing import Any
 
 import numpy as np
 
+from guiskindose.intended_use import stamp_figure
+
 # Camera eye presets (Plotly scene_camera.eye), oblique 3/4 views so the long
 # phantom axis is visible. In the unified frame +Y is posterior (toward the
 # floor for head-first supine), so the two presets face OPPOSITE Y sides — one
@@ -129,7 +131,9 @@ def render_dosemap_plotly_figure(
             },
         },
     )
-    return go.Figure(data=[mesh], layout=layout)
+    fig = go.Figure(data=[mesh], layout=layout)
+    stamp_figure(fig)
+    return fig
 
 
 def render_dosemap_png(

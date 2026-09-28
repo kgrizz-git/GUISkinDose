@@ -72,6 +72,20 @@ async def test_no_dialog_once_dismissed_and_acknowledged(user: User, monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_results_tab_shows_intended_use_line(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Results tab keeps a short, non-dismissible intended-use line."""
+    import guiskindose.gui.app as gui_app
+    from guiskindose.gui.ui_copy import copy_text
+
+    monkeypatch.setattr(gui_app, "is_onboarding_dismissed", lambda: True)
+    monkeypatch.setattr(gui_app, "is_intended_use_acknowledged", lambda: True)
+    await user.open("/")
+    await user.should_see("6 · Results", retries=20)
+    user.find("6 · Results").click()
+    await user.should_see(copy_text("results.intended_use"), retries=20)
+
+
+@pytest.mark.asyncio
 async def test_got_it_persists_dismissal_and_acknowledgment(
     user: User, monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:

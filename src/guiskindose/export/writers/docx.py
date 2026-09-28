@@ -120,6 +120,9 @@ def _add_document_header(doc, payload: ExportPayload) -> None:
     )
     run.font.size = Pt(9)
     run.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
+    notice = doc.add_paragraph()
+    notice.add_run("Intended use: ").bold = True
+    notice.add_run(payload.intended_use)
 
 
 def _add_result_sections(doc, payload: ExportPayload) -> None:

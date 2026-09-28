@@ -62,3 +62,12 @@ def test_dispatcher_all_formats():
         data = render_bytes(payload, fmt)
         assert isinstance(data, bytes)
         assert len(data) > 100
+
+
+def test_html_report_carries_intended_use_notice():
+    from guiskindose.intended_use import INTENDED_USE_NOTICE
+
+    html = render_html_bytes(_payload()).decode()
+    assert "Intended use:" in html
+    assert "not FDA-cleared" in html
+    assert _payload().intended_use == INTENDED_USE_NOTICE
