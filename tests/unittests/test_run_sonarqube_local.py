@@ -12,6 +12,8 @@ import pytest
 from scripts.run_sonarqube_local import (
     build_scanner_command,
     classify_failure,
+    coverage_commands,
+    coverage_report_problem,
     load_env_defaults,
     project_version_from_pyproject,
     sanitize_host_url,
@@ -178,5 +180,38 @@ def test_update_check_flags_parse_and_are_exclusive() -> None:
     assert parse_args([]).check_updates is False
     assert parse_args(["--check-updates"]).check_updates is True
     assert parse_args(["--no-update-check"]).no_update_check is True
+    assert parse_args(["--generate-coverage"]).generate_coverage is True
     with pytest.raises(SystemExit):
         parse_args(["--check-updates", "--no-update-check"])
+
+
+def test_coverage_report_problem_detects_missing_and_stale_reports(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "package" / "module.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("value = 1\n", encoding="utf-8")
+
+    assert coverage_report_problem(tmp_path) == "missing"
+
+    report = tmp_path / "coverage.xml"
+    report.write_text("<coverage/>\n", encoding="utf-8")
+    assert coverage_report_problem(tmp_path) is None
+
+    report_mtime = report.stat().st_mtime_ns
+    portable_newer_mtime = report_mtime + 2_000_000_000
+    os.utime(source, ns=(portable_newer_mtime, portable_newer_mtime))
+    assert coverage_report_problem(tmp_path) == "stale"
+
+
+def test_coverage_commands_match_combined_ci_scope() -> None:
+    commands = coverage_commands()
+
+    assert commands[0][-2:] == ["coverage", "erase"]
+    assert "--ignore=tests/gui" in commands[1]
+    assert commands[1][commands[1].index("-n") + 1] == "auto"
+    assert "tests/gui/" in commands[2]
+    assert "--cov-append" in commands[2]
+    assert commands[-1][-2:] == ["coverage", "xml"]
+    for command in commands[1:3]:
+        assert "--cov=src/guiskindose" in command
+        assert "--cov=scripts" in command
+        assert "--cov=tests" in command

@@ -4,7 +4,7 @@
 > `upload.py` (thin entry) + `upload_builders.py` (controller / builders).
 
 This is the detailed companion to Phase 4.3 of
-[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
+[the SonarQube remediation plan](sonarqube_remediation_plan.md). It targets
 `build` in [upload.py](../../../src/guiskindose/gui/tabs/upload.py#L57), whose
 baseline cognitive complexity is **97**.
 

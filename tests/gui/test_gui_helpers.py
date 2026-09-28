@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from guiskindose.gui import helpers
+from guiskindose.gui.state import AppState
 
 
 @pytest.fixture(autouse=True)
@@ -122,3 +125,33 @@ def test_get_mesh_baseline_torso_width_excludes_t_pose_arms(mesh_name: str, expe
 
     assert torso_width == pytest.approx(expected_width_cm, abs=0.0001)
     assert torso_width < helpers.get_mesh_baseline_extents(mesh_name)[0]
+
+
+def test_run_calculation_returns_sanitized_error() -> None:
+    st = AppState()
+    st.rdsr_df = pd.DataFrame({"kVp": [80], "mAs": [1.0]})
+
+    sensitive_msg = "SECRET_PATIENT_DATA_12345"
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    handler = _Capture(level=logging.ERROR)
+    helpers._gui_logger.addHandler(handler)
+    try:
+        with patch(
+            "guiskindose.analyze_data.analyze_data",
+            side_effect=ValueError(sensitive_msg),
+        ):
+            ok, message = helpers.run_calculation(st)
+    finally:
+        helpers._gui_logger.removeHandler(handler)
+
+    assert ok is False
+    assert message == "Calculation failed. No source details were written to diagnostics."
+    diagnostic_text = "\n".join(messages)
+    assert "dose_calculation failed (error_type=ValueError" in diagnostic_text
+    assert sensitive_msg not in message
+    assert sensitive_msg not in diagnostic_text

@@ -21,6 +21,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Reliable local SonarQube coverage input** (2026-09-28) — `run_sonarqube_local.py --generate-coverage` now
+  generates the same combined non-GUI + GUI coverage used by CI before analysis. Scan-only runs fail fast when
+  `coverage.xml` is missing or older than Python inputs, preventing misleading 0% new-code gate failures.
+
 - **Local SonarQube compose stack and weekly update check** (2026-09-26) —
   `compose.sonarqube.yaml` runs the local server with PostgreSQL, because the
   embedded H2 database does not support upgrades. It binds to loopback only

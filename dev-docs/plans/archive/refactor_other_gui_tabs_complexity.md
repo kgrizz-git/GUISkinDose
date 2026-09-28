@@ -4,7 +4,7 @@
 > export, per-exam, calculate, data, geometry-preview helpers, and import preview.
 
 This is the detailed companion to Phase 4.4 of
-[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It covers the
+[the SonarQube remediation plan](sonarqube_remediation_plan.md). It covers the
 six remaining GUI findings in that phase:
 
 | Component | Function | Baseline complexity |

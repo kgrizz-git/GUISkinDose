@@ -4,7 +4,7 @@
 > `geometry.py` (thin entry) + `geometry_builders.py` (controller / builders).
 
 This is the detailed companion to Phase 4.1 of
-[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
+[the SonarQube remediation plan](sonarqube_remediation_plan.md). It targets
 `build` in [geometry.py](../../../src/guiskindose/gui/tabs/geometry.py#L81), whose
 baseline cognitive complexity is **158**. The function currently spans almost the
 whole 794-line file, so adding a controller to `geometry.py` before moving code

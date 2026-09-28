@@ -4,7 +4,7 @@
 > `results.py` (thin entry) + `results_builders.py` (controller / builders).
 
 This is the detailed companion to Phase 4.2 of
-[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets
+[the SonarQube remediation plan](sonarqube_remediation_plan.md). It targets
 `build` in [results.py](../../../src/guiskindose/gui/tabs/results.py#L50), whose
 baseline cognitive complexity is **128**.
 

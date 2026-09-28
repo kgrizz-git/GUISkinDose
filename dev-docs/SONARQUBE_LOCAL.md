@@ -52,26 +52,25 @@ Rules ship inside the server's analyzers, so upgrading the server updates the ru
 ## Coverage for Sonar (two-pass: non-GUI + GUI)
 
 SonarCloud CI uploads a combined `coverage.xml` that includes NiceGUI tests so GUI modules count toward
-new-code coverage. Locally, mirror the CI recipe when coverage metrics are wanted:
+new-code coverage. Locally, use the runner's explicit coverage mode so every quality-gate analysis has a current
+combined report:
 
 ```bash
-# Prefer the project venv / uv environment with the gui extra installed.
-coverage erase
-coverage run -m pytest --ignore=tests/gui
-coverage run --append -m pytest tests/gui/
-coverage xml
-python scripts/run_sonarqube_local.py
+# Requires the dev and gui extras (pytest-cov, pytest-xdist, and NiceGUI tests).
+python scripts/run_sonarqube_local.py --generate-coverage
 ```
 
 With `uv`:
 
 ```bash
 uv sync --extra dev --extra gui --locked
-uv run --no-sync coverage erase
-uv run --no-sync coverage run -m pytest --ignore=tests/gui
-uv run --no-sync coverage run --append -m pytest tests/gui/
-uv run --no-sync coverage xml
+uv run --no-sync python scripts/run_sonarqube_local.py --generate-coverage
 ```
+
+Without `--generate-coverage`, the runner accepts an existing `coverage.xml` only when it is newer than the Python
+files under `src/`, `scripts/`, and `tests`; otherwise it stops with a privacy-safe regeneration instruction instead
+of submitting a misleading zero-coverage analysis. Coverage generation mirrors CI: parallel non-GUI tests followed
+by serial GUI tests with appended coverage.
 
 The matrix `build` job runs the non-GUI suite for test-pass only (`--ignore=tests/gui -n auto`, no
 coverage gate). Coverage uses a single 80% standard: PRs get `coverage-pr` (combined non-GUI+GUI
@@ -112,7 +111,7 @@ back to `.env`, so a plain `python scripts/run_sonarqube_local.py` works in any 
 ```bash
 # Enable the gate, then scan to create the baseline state:
 #   SONAR_FRESHNESS_GATE=1 in .env
-python scripts/run_sonarqube_local.py   # start the local server first, e.g. `colima start default` on macOS
+python scripts/run_sonarqube_local.py --generate-coverage  # start the local server first
 ```
 
 ## Timestamped issue dumps
