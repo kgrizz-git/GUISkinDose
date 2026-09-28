@@ -205,6 +205,19 @@ def test_coverage_report_problem_detects_missing_and_stale_reports(tmp_path: Pat
     assert coverage_report_problem(tmp_path) == "stale"
 
 
+def test_coverage_report_problem_rejects_non_file_and_malformed_reports(tmp_path: Path) -> None:
+    report = tmp_path / "coverage.xml"
+    report.mkdir()
+    assert coverage_report_problem(tmp_path) == "invalid"
+
+    report.rmdir()
+    report.write_text("<coverage>", encoding="utf-8")
+    assert coverage_report_problem(tmp_path) == "invalid"
+
+    report.write_text('<!DOCTYPE coverage [<!ENTITY value "unsafe">]><coverage>&value;</coverage>', encoding="utf-8")
+    assert coverage_report_problem(tmp_path) == "invalid"
+
+
 def test_coverage_commands_match_combined_ci_scope() -> None:
     commands = coverage_commands()
 

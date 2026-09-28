@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,9 @@ from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
+
+from defusedxml import ElementTree as DefusedET
+from defusedxml.common import DefusedXmlException
 
 try:
     from sonar_update_check import run_update_check
@@ -171,9 +175,18 @@ def coverage_report_problem(root: Path) -> str | None:
     """Return a privacy-safe reason when the local coverage report is unusable."""
     coverage = root / COVERAGE_PATH
     try:
-        coverage_mtime = coverage.stat().st_mtime_ns
-    except OSError:
+        coverage_stat = coverage.stat()
+        if not stat.S_ISREG(coverage_stat.st_mode):
+            return "invalid"
+        with coverage.open("rb") as report:
+            DefusedET.parse(report)
+        coverage_mtime = coverage_stat.st_mtime_ns
+    except FileNotFoundError:
         return "missing"
+    except (DefusedET.ParseError, DefusedXmlException):
+        return "invalid"
+    except OSError:
+        return "unreadable"
 
     for source_root in SOURCE_ROOTS:
         directory = root / source_root
