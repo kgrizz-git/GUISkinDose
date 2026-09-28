@@ -1,5 +1,14 @@
 # What is GUISkinDose?
 
+## Intended use and responsibility
+
+GUISkinDose is **not FDA-cleared** or otherwise certified as a medical device. It is intended for research,
+education, development, and institutional quality assurance, and its results are not independently validated for
+patient-care decisions. Qualified medical physicists and physicians are responsible for reviewing its inputs and
+outputs, evaluating patient skin dose, and making any clinical decisions.
+
+## Overview
+
 GUISkinDose is an independently maintained fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose):
 an open-source Python package for RDSR irradiation-event skin dose estimation. This system
 translates air kerma at the PERP to skin dose estimates for all directly irradiated surfaces on 

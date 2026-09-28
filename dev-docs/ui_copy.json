@@ -45,6 +45,10 @@
       "text": "Privacy: filenames and file contents may contain PHI. Uploads are copied to a private random-name session directory and removed on clear or shutdown.",
       "owner": "gui/tabs/upload.py"
     },
+    "onboarding.intended_use": {
+      "text": "GUISkinDose is not FDA-cleared or otherwise certified as a medical device. It is intended for research, education, development, and institutional quality assurance, and its results are not independently validated for patient-care decisions. Qualified medical physicists and physicians are responsible for reviewing its inputs and outputs, evaluating patient skin dose, and making any clinical decisions.",
+      "owner": "gui/app.py"
+    },
     "onboarding.privacy_notice": {
       "text": "Processing and temporary upload storage stay on this machine. The GUI binds localhost only and refuses any other host — it will not serve other machines by itself, so do not expose it with a proxy; move the computation to the machine where the data may reside instead. Loopback binding is not an authentication boundary. Browser access needs the console launch URL (it bootstraps your session and stays valid until restart) or an active session on this machine — anyone with either sees the same shared state, so shared workstations need their own access story. Strict Host/Origin checks block cross-site pages and rebinding tricks, and in browser mode every request and socket needs the session (native mode skips the token check). Source filenames and data may contain PHI. Upload copies use private random session names and are removed on clear or shutdown; crash leftovers are removed after 24 hours. Exports can be clinical records, so choose an approved destination and retention policy.",
       "owner": "gui/app.py"

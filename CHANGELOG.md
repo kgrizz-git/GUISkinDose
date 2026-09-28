@@ -21,6 +21,14 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Intended-use disclaimer at startup and in the docs** (2026-09-27) — the
+  GUI's welcome dialog now opens with a notice that GUISkinDose is not
+  FDA-cleared or otherwise certified as a medical device, and that qualified
+  medical physicists and physicians are responsible for reviewing its inputs
+  and outputs and evaluating patient skin dose. The same notice now heads the
+  documentation site and the "What is GUISkinDose?" page. Installs that
+  already turned off the welcome dialog see it once more after upgrading, so
+  the notice is shown at least once.
 - **Reproducible run configuration (settings export/import)** (2026-09-24) —
   the Settings tab can save the full GUI run state (settings, normalization
   profiles, phantom geometry, corrections, per-exam offsets) as a versioned
