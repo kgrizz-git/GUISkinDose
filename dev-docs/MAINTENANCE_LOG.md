@@ -19,6 +19,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   cannot become a protocol-relative `Location`. Follow-up to the #118
   security reviews; both gaps predated that PR.
 
+### Changed
+
+- **Local interpreter pinned to Python 3.14** (2026-09-29) — `.envrc` now exports `UV_PYTHON=3.14`
+  (deferring to an existing value) so the development environment matches the only version a pull
+  request builds; 3.11–3.13 coverage still arrives on `main` pushes and the weekly sweep. Motivated by
+  a real miss: Python 3.14 changed `PurePath.suffix` for leading-dot names, so a test passed on a local
+  3.12 and failed both PR jobs. `uv sync --all-extras` resolves cleanly on 3.14 (including `nicegui`,
+  `pywebview`, `pytest-asyncio`, `pytest-xdist`), and the full suite passes. The `>=3.11` floor stays
+  guarded by `[tool.basedpyright] pythonVersion = "3.11"`, which is interpreter-independent; `AGENTS.md`
+  documents a runtime floor check and warns that it must redirect `UV_PROJECT_ENVIRONMENT`, because a
+  bare `uv run --python 3.11` rebuilds `.venv` itself as 3.11.
+
 ### Added
 
 - **Debuggable write-containment failures** (2026-09-29) — the `tests/conftest.py` guard that fails a run

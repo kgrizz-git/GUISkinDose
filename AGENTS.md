@@ -142,6 +142,29 @@ source of truth for dependencies; there are no `requirements*.txt` files. `uv.lo
 versions (`uv sync --all-extras`). Installing and using **`uv`** is recommended for package
 management and local development (it runs dependency audits and environment syncing much faster).
 
+### Local Python version
+
+`.envrc` pins the local interpreter to **3.14** via `UV_PYTHON`, because a pull request builds
+3.14 only (`matrix-prep` in `.github/workflows/ci.yml`); 3.11–3.13 coverage arrives later, on `main`
+pushes and the weekly sweep. Developing on another version means version-specific breakage surfaces in
+CI rather than locally — as it did when Python 3.14 changed `PurePath.suffix` for leading-dot names,
+passing on 3.12 and failing both PR jobs.
+
+`requires-python` is still `>=3.11`, and the floor is guarded statically by
+`[tool.basedpyright] pythonVersion = "3.11"`, which does not depend on the running interpreter. For a
+**runtime** check against the floor before a risky push:
+
+```bash
+UV_PROJECT_ENVIRONMENT="$PWD/tmp/venv-py311" \
+  uv run --python 3.11 --extra dev pytest --ignore=tests/gui -n auto
+```
+
+Redirecting `UV_PROJECT_ENVIRONMENT` is not optional: a bare `uv run --python 3.11` rebuilds `.venv`
+itself as 3.11, silently leaving the project environment on the wrong version. `tmp/` is gitignored, so
+the throwaway environment stays out of `git status` and out of the write-containment snapshot.
+
+Set `UV_PYTHON` yourself to override the pin; `.envrc` defers to an existing value.
+
 Optional local git hooks (fast subset of CI):
 
 ```bash
