@@ -69,6 +69,15 @@ be archived.
   [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Remaining: per-event override UI,
   scenarios/nominal-arc selection UI, XA-header direction ingestion, film/array validation.
   Additional vendor fixtures improve profiles but do not block.
+- [ ] **Rotational coverage-envelope performance** — the envelope runs a full geometry+physics pass per
+  candidate pose: 13.8 ms/pose measured, so ~5 s per 360-pose event at the default `angular_step_deg = 1.0`
+  and ~56 s for a 4078-pose coupled two-axis domain. A measured prototype is **19x faster with
+  bit-identical dose** (max diff 0.000e+00): boolean-ndarray hit masks instead of `list[bool]`, vectorized
+  `scale_field_area` and `check_hit` entrance test, no redundant per-candidate phantom repositioning,
+  memoized `k_med`, one reused candidate frame. **Acceptance:** existing rotational dose tests pass
+  unchanged and a golden dose map reproduces exactly; no default, contract, or disclosure change.
+  Plan: [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md);
+  evidence: [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
@@ -90,6 +99,12 @@ be archived.
 
 - [ ] **GUI network-exposure hardening** — non-loopback refused outright (`_resolve_bind_host()` raises; `--host`/`--allow-network` flags removed): threat model + recorded refusal decision: [  assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Shipped: non-loopback refusal, bundled font, per-launch token + strict Host/Origin checks (browser; Host/Origin only in native), packaged UI-copy catalog, loopback-scope help page, `--port` with OS-assigned support. Remaining: per-client state + real auth on a demonstrated clinical-LAN need **or shared/multi-user workstation requirement** (deferred, not scheduled — and then with TLS, authorization, session lifecycle, isolation, and audit, not auth alone).
 - [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
+- [ ] **PSD severity colour-coding** — the four PSD readouts use three different meaningless colours
+  (sidebar `text-pink-5`, Results `text-aurora-purple`, aggregate `text-white`), and the sidebar shows
+  `PSD: 0.00 mGy` before anything is calculated. **Goal:** one shared helper bands every readout — grey
+  when pending, green `< 5000`, yellow `5000-10000`, red `> 10000` mGy — with an icon and band-name
+  tooltip so colour is not the only carrier, and `PSD: —` as the pending placeholder. Continuous gradient
+  considered and rejected. Plan: [PSD_SEVERITY_COLOR_CODING_PLAN.md](plans/PSD_SEVERITY_COLOR_CODING_PLAN.md).
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized
