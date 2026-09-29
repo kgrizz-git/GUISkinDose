@@ -416,7 +416,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | Hook | What it runs |
 |---|---|
 | **basedpyright** | Full-project type check (matches CI `typecheck` job; requires `.[dev,gui]`) |
-| **semgrep** | OWASP Top 10 SAST (`p/owasp-top-ten`; needs network to fetch rules; `--metrics=off`) |
+| **semgrep** | OWASP Top 10 SAST via `scripts/run_semgrep_owasp.py` (`p/owasp-top-ten`; needs network to fetch rules; `--metrics=off`). Pinned isolated `uvx` tool, **not** a `dev` dependency — its own pins previously blocked four transitive advisory fixes. Pin lives in `dev-docs/privacy_tool_inventory.json`; weekly `ci-latest` probes the latest release for drift. |
 | **pip-audit** | Dependency vulnerability scan (`python scripts/audit_dependencies.py`; `uv audit` on `uv.lock` when `uv` >= 0.11.19 is available) |
 | **check-changelog** | `python scripts/check_changelog.py` when `src/` or `tests/` change |
 

@@ -7,12 +7,17 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
+
+if __package__:
+    from .semgrep_tool import SemgrepUnavailableError, semgrep_argv
+else:  # pragma: no cover - direct script execution (hooks, CI)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from semgrep_tool import SemgrepUnavailableError, semgrep_argv
 
 
 def repo_root() -> Path:
@@ -43,12 +48,28 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    semgrep = shutil.which("semgrep")
-    if semgrep is None:
-        print("ERROR: privacy Semgrep was not run (binary_missing).", file=sys.stderr)
+    root = repo_root()
+    try:
+        # Pinned and isolated: semgrep is not a project dependency (see
+        # scripts/semgrep_tool.py for why). Still fails loudly rather than
+        # skipping, because a silent privacy gate is worse than a broken one.
+        semgrep_command = semgrep_argv(
+            [
+                "--config",
+                str(root / ".semgrep" / "mypyskindose-privacy.yml"),
+                "--metrics=off",
+                "--json",
+                "--quiet",
+                "src",
+                "scripts",
+                "tests",
+            ],
+            root=root,
+        )
+    except SemgrepUnavailableError as exc:
+        print(f"ERROR: privacy Semgrep was not run (binary_missing: {exc}).", file=sys.stderr)
         return 2
 
-    root = repo_root()
     environment = os.environ.copy()
     environment["SEMGREP_ENABLE_VERSION_CHECK"] = "0"
     cert_file = Path("/etc/ssl/cert.pem")
@@ -56,17 +77,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         environment["SSL_CERT_FILE"] = str(cert_file)
     elif not environment.get("SSL_CERT_FILE"):
         environment.pop("SSL_CERT_FILE", None)
-    command = [
-        semgrep,
-        "--config",
-        str(root / ".semgrep" / "mypyskindose-privacy.yml"),
-        "--metrics=off",
-        "--json",
-        "--quiet",
-        "src",
-        "scripts",
-        "tests",
-    ]
+    command = semgrep_command
     try:
         with tempfile.TemporaryDirectory(prefix="guiskindose-semgrep-") as temp_dir:
             environment["SEMGREP_LOG_FILE"] = str(Path(temp_dir) / "semgrep.log")

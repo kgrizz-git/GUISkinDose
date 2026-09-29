@@ -21,6 +21,32 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Semgrep isolated as a pinned `uvx` tool; all dependency-audit suppressions removed**
+  (2026-09-29) — semgrep is no longer in the `dev` extra or `uv.lock`. Its own requirements
+  (`click<8.2`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`) were the sole reason the project carried five
+  `[tool.uv.audit]` suppressions (click PYSEC-2026-2132; mcp GHSA-jpw9-pfvf-9f58 /
+  GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w; pyjwt GHSA-w6j9-cwv2-h6wq): it held those transitive
+  packages below their fixed versions. Semgrep is only ever invoked as a CLI, never imported, so it now
+  runs via `uvx --from semgrep==<pin>` (the pattern already used for `phi-scan`). Result: `click`
+  upgraded 8.1.8 to 8.5.0, `mcp` and `pyjwt` left the lock entirely, `uv audit` reports zero
+  vulnerabilities across 271 packages, and `ignore` is empty.
+
+  The pin lives in `dev-docs/privacy_tool_inventory.json` — already the tracked source of truth for
+  scanner versions — and both entry points read it, so the hook and CI cannot drift. New
+  `scripts/semgrep_tool.py` resolves the command (raising rather than skipping when nothing can run it),
+  and new `scripts/run_semgrep_owasp.py` owns the OWASP ruleset, flags, and include-list for both the
+  pre-push hook and the CI job. That unification fixed a real inconsistency: the CI job passed
+  `--exclude` for `example_data` / `phantom_data` / `table_data` / `tests/fixtures` but the pre-push
+  hook did not, so a local run scanned clinical-adjacent data the policy says not to feed a scanner.
+  Both now exclude them (352 files scanned to 241).
+
+  **Trade-off, recorded deliberately:** Dependabot only sees `uv.lock`, so nothing auto-bumps the pin.
+  The weekly `ci-latest` workflow now runs the OWASP scan against the newest semgrep
+  (`GUISKINDOSE_SEMGREP_UNPINNED=1`) so drift and upstream breakage open a tracking issue; bumping the
+  pin stays a human step, tracked in `dev-docs/TO_DO.md` alongside the same pre-existing gap for
+  `phi-scan`.
+
+
 - **Local interpreter pinned to Python 3.14** (2026-09-29) — `.envrc` now exports `UV_PYTHON=3.14`
   (deferring to an existing value) so the development environment matches the only version a pull
   request builds; 3.11–3.13 coverage still arrives on `main` pushes and the weekly sweep. Motivated by

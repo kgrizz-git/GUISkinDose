@@ -55,6 +55,15 @@ jobs:
       if: steps.install.outcome == 'success'
       continue-on-error: true
       run: python scripts/check_gui_test_placement.py
+    - name: Semgrep OWASP scan against the LATEST semgrep (pin drift probe)
+      # Semgrep is pinned in dev-docs/privacy_tool_inventory.json and deliberately kept
+      # out of uv.lock, so Dependabot cannot bump it. This probe is what catches a pin
+      # drifting behind upstream or a newer release breaking the gate; ci.yml runs the
+      # pinned version and stays authoritative.
+      env:
+        GUISKINDOSE_SEMGREP_UNPINNED: "1"
+      run: python scripts/run_semgrep_owasp.py
+
     - name: Full test suite (core + gui) against latest deps
       id: pytest
       if: steps.install.outcome == 'success'

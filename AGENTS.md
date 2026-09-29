@@ -133,7 +133,7 @@ rename to GUISkinDose / `guiskindose`: [dev-docs/plans/archive/GUISKINDOSE_RENAM
 
 ```bash
 pip install -e .
-pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, shellcheck-py, pre-commit + stubs (matches CI)
+pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, shellcheck-py, pre-commit + stubs (matches CI)
 pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-started notebook
 ```
 
@@ -181,6 +181,15 @@ To run hooks manually:
 pre-commit run --all-files                           # pre-commit stage hooks
 pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, audit_dependencies, basedpyright, changelog)
 ```
+
+**Semgrep is not a project dependency.** It is run as a pinned isolated tool
+(`uvx --from semgrep==<pin>`), because its own requirements (`click<8.2`, `mcp==1.23.3`,
+`pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
+`dev` extra. The pin lives in `dev-docs/privacy_tool_inventory.json`; both entry points
+(`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) read it, so the hook and CI
+cannot diverge. Nothing bumps that pin automatically — Dependabot only sees `uv.lock` — so the
+weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe and opens a
+tracking issue when it breaks.
 
 The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
 needs network access (offline pushes will fail). On Windows, semgrep runs natively (beta)

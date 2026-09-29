@@ -139,7 +139,18 @@ be archived.
   [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
 - [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
-  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. Current state: Dependabot alerts #2/#3/#4 stay open until semgrep relaxes its `mcp==1.23.3` pin (`mcp` is transitive dev-only, not exploitable here); `nltk` advisory resolved when `safety` was removed (2026-09-03). CI's `uv audit` is the gate that matters.
+  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. **Current state: the ignore
+  list is empty.** All five entries it ever held (click, mcp x3, pyjwt) existed because semgrep pinned those
+  transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and Dependabot alerts
+  #2/#3/#4 should close on their own. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
+  suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
+- [ ] **Bump the pinned scanner versions** — `semgrep` (`dev-docs/privacy_tool_inventory.json`) and `phi-scan`
+  (`0.7.0`, hardcoded in `.github/workflows/phi-scan.yml`, `scripts/privacy_admission.py`, and
+  `dev-docs/references/LOCAL_PII_MODELS.md`) are isolated `uvx` tools outside `uv.lock`, so **Dependabot cannot see
+  or bump them**. Semgrep drift is at least detected: weekly `ci-latest` runs the OWASP scan unpinned and opens a
+  tracking issue. phi-scan has no such probe, and its pin is duplicated in three places. **Acceptance:** review both
+  pins at each release; consider a single source of truth for the phi-scan pin plus an unpinned probe mirroring
+  semgrep's.
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.
