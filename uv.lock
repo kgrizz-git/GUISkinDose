@@ -1425,6 +1425,7 @@ dependencies = [
 dev = [
     { name = "bandit" },
     { name = "basedpyright" },
+    { name = "defusedxml" },
     { name = "diff-cover" },
     { name = "pandas-stubs" },
     { name = "pip-audit" },
@@ -1488,6 +1489,7 @@ privacy-scan = [
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.23" },
+    { name = "defusedxml", marker = "extra == 'dev'", specifier = ">=0.7.1" },
     { name = "diff-cover", marker = "extra == 'dev'", specifier = ">=10.0" },
     { name = "en-core-web-sm", marker = "extra == 'privacy-scan'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "fast-simplification", marker = "extra == 'phantom-gen'" },

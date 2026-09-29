@@ -1,5 +1,9 @@
 # SonarQube Quality Gate Remediation Plan
 
+> **Archived 2026-09-28:** the high-severity remediation and its derived refactoring plans are complete. Historical
+> issue counts and operational commands below are retained as execution history; use
+> [SONARQUBE_LOCAL.md](../../SONARQUBE_LOCAL.md) for the current local scan workflow.
+
 **Status:** High-severity remediation complete; historical MAJOR/MINOR backlog
 remains separately scoped. The live local Quality Gate is currently a
 **new-code** gate; its status is useful evidence, but neither a passing gate nor
@@ -25,8 +29,8 @@ branch-local scan.
 This plan addresses the local-only SonarQube findings for the repository's Sonar project
 (now `kgrizz-git_GUISkinDose`; formerly the pre-rename key). SonarQube remains an optional second opinion: it does not replace the repository's tests,
 Ruff, Basedpyright, Bandit, Semgrep, dependency audits, or privacy-admission
-controls. See [SONARQUBE_LOCAL.md](../SONARQUBE_LOCAL.md) and
-[HARNESS_ENGINEERING.md](../HARNESS_ENGINEERING.md) for the operational policy.
+controls. See [SONARQUBE_LOCAL.md](../../SONARQUBE_LOCAL.md) and
+[HARNESS_ENGINEERING.md](../../HARNESS_ENGINEERING.md) for the operational policy.
 
 ---
 
@@ -71,7 +75,7 @@ new-code period can change.
    the local, loopback server. `scripts/run_sonarqube_local.py` reads environment
    variables; it does not load `.env` itself. Do not send this repository to a
    remote SonarQube/SonarCloud instance without the separate review required by
-   [SONARQUBE_LOCAL.md](../SONARQUBE_LOCAL.md).
+   [SONARQUBE_LOCAL.md](../../SONARQUBE_LOCAL.md).
 2. Generate coverage and submit one analysis:
 
    ```bash
@@ -172,16 +176,16 @@ are development tools.
 ### Phase 1: Targeted correctness, clarity, and type cleanup
 
 - **Task 1.1 — `S6729` (1 CRITICAL):** In
-  [beam_class.py](../../src/guiskindose/beam_class.py#L214), replace
+  [beam_class.py](../../../src/guiskindose/beam_class.py#L214), replace
   `np.where(hits)` indexing with direct boolean indexing (`hits[hits] =
   bool_entrance`) or an equally clear `np.nonzero` form. This is an API clarity
   cleanup, not a claim that the current one-dimensional indexing is functionally
   incorrect. Preserve the entrance-cell result for plane and non-plane phantoms.
 - **Task 1.2 — `S1244` (4 MAJOR):** Triage the equality checks in
-  [summary_formatters.py](../../src/guiskindose/gui/summary_formatters.py#L56),
-  [images.py](../../src/guiskindose/export/images.py#L36),
-  [metrics.py](../../src/guiskindose/export/metrics.py#L167), and
-  [registry.py](../../src/guiskindose/input_adapters/registry.py#L94).
+  [summary_formatters.py](../../../src/guiskindose/gui/summary_formatters.py#L56),
+  [images.py](../../../src/guiskindose/export/images.py#L36),
+  [metrics.py](../../../src/guiskindose/export/metrics.py#L167), and
+  [registry.py](../../../src/guiskindose/input_adapters/registry.py#L94).
   Do not mechanically replace every equality with `isclose`: zero may be a
   sentinel or an exact division-by-zero guard. For each finding, either make a
   semantics-preserving code change with a regression test, or have the project
@@ -215,16 +219,16 @@ historical CRITICAL count is reduced by 31 from the baseline.
 ### Phase 3: Core parsing and orchestration
 
 - **Task 3.1 — `S3776` (3):** Refactor `analyze_multiple_exams` in
-  [analyze_data.py](../../src/guiskindose/analyze_data.py#L99), plus
+  [analyze_data.py](../../../src/guiskindose/analyze_data.py#L99), plus
   `analyze_input_file` and `preview_input_file` in
-  [main.py](../../src/guiskindose/main.py#L71), into narrow loading,
+  [main.py](../../../src/guiskindose/main.py#L71), into narrow loading,
   normalization, calculation, and result-formatting helpers. Keep public entry
   points and keyword parameters unchanged. In particular, preserve opaque
   labels, warning counts, HTML-to-dict coercion for multi-exam input, explicit
   sensitive-preview opt-in, and the rule that a failed exam does not discard
   completed exams.
 - **Task 3.2 — `S3776` (1):** Refactor
-  [rdsr_parser.py](../../src/guiskindose/rdsr_parser.py#L20) by separating DICOM
+  [rdsr_parser.py](../../../src/guiskindose/rdsr_parser.py#L20) by separating DICOM
   traversal, tag extraction, and DataFrame construction. Preserve the normalized
   DataFrame contract and warning behaviour; this parser is clinical-data
   ingestion code, so characterization tests precede structural changes. Preserve
@@ -248,16 +252,16 @@ passed. The local gate remained non-OK because of unrelated in-scope backlog.
 ### Phase 4: GUI decomposition
 
 - **Task 4.1 — `S3776` (1):** Implement the
-  [Geometry Tab Refactoring Plan](archive/refactor_geometry_tab_complexity.md)
+  [Geometry Tab Refactoring Plan](refactor_geometry_tab_complexity.md)
   (**completed** 2026-07-18).
 - **Task 4.2 — `S3776` (1):** Implement the
-  [Results Tab Refactoring Plan](archive/refactor_results_tab_complexity.md)
+  [Results Tab Refactoring Plan](refactor_results_tab_complexity.md)
   (**completed** 2026-07-18).
 - **Task 4.3 — `S3776` (1):** Implement the
-  [Upload Tab Refactoring Plan](archive/refactor_upload_tab_complexity.md)
+  [Upload Tab Refactoring Plan](refactor_upload_tab_complexity.md)
   (**completed** 2026-07-18).
 - **Task 4.4 — `S3776` (6):** Implement the
-  [Remaining GUI Components Refactoring Plan](archive/refactor_other_gui_tabs_complexity.md)
+  [Remaining GUI Components Refactoring Plan](refactor_other_gui_tabs_complexity.md)
   for `export.py`, `_per_exam.py`, `calculate.py`, `data.py`,
   `geometry_preview.py` (`geometry_vendor_notice`), and
   `widgets/import_preview.py` (**completed** 2026-07-18).
@@ -271,7 +275,7 @@ alone are not sufficient for timer, binding, and event-handler changes.
 ### Phase 5: Privacy scanner decomposition
 
 - **Task 5.1 — `S3776` (4):** Implement the
-  [Privacy Scan Refactoring Plan](archive/refactor_check_sensitive_content_plan.md) for
+  [Privacy Scan Refactoring Plan](refactor_check_sensitive_content_plan.md) for
   `has_notebook_embedded_visual_output`, `_pdf_text`, `_container_text`, and
   `run_checks` (**completed** 2026-07-18).
 

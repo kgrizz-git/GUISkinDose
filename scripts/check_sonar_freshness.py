@@ -38,7 +38,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 DEFAULT_STATE_PATH = "tmp/sonar-state.json"
 DEFAULT_MAX_COMMITS = 10
 WARN_FRACTION = 0.8
@@ -47,7 +46,9 @@ COMMIT_SHA_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 # Portable: start the local SonarQube server however this machine runs it
 # (e.g. `colima start default` on macOS), then re-scan.
-REFRESH_COMMAND = "python scripts/run_sonarqube_local.py  (with the local SonarQube server running)"
+REFRESH_COMMAND = (
+    "python scripts/run_sonarqube_local.py --generate-coverage  (with the local SonarQube server running)"
+)
 
 # Git hook/test runners export these so child `git` uses the parent repo.
 # Gate commands must honor `cwd=repo_root()` instead.

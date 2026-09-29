@@ -4,19 +4,23 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import suppress
 import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import tomllib
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from contextlib import suppress
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
+
+from defusedxml import ElementTree as DefusedET
+from defusedxml.common import DefusedXmlException
 
 try:
     from sonar_update_check import run_update_check
@@ -24,6 +28,7 @@ except ModuleNotFoundError:  # Imported as scripts.run_sonarqube_local in tests.
     from scripts.sonar_update_check import run_update_check
 
 SETTINGS_PATH = Path("sonar-project.properties")
+COVERAGE_PATH = Path("coverage.xml")
 FRESHNESS_STATE_PATH = Path("tmp/sonar-state.json")
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 ALLOWED_SCANNER_NAMES = {"sonar-scanner", "sonar-scanner.bat"}
@@ -113,6 +118,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Allow a non-loopback SonarQube host after a separate data-processing review.",
     )
     parser.add_argument("--no-quality-gate-wait", action="store_true", help="Do not wait for the quality gate result.")
+    parser.add_argument(
+        "--generate-coverage",
+        action="store_true",
+        help="Run the combined non-GUI and GUI test suites and regenerate coverage.xml before analysis.",
+    )
     update_check = parser.add_mutually_exclusive_group()
     update_check.add_argument(
         "--check-updates",
@@ -128,8 +138,7 @@ def git_path(root: Path, name: str) -> Path:
     result = subprocess.run(
         ["git", "rev-parse", "--git-path", name],
         cwd=root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         check=False,
     )
@@ -142,7 +151,7 @@ def git_path(root: Path, name: str) -> Path:
 def analysis_source_paths(root: Path) -> list[Path]:
     paths: list[Path] = []
     candidates = [root / SETTINGS_PATH]
-    coverage = root / "coverage.xml"
+    coverage = root / COVERAGE_PATH
     if coverage.is_file():
         candidates.append(coverage)
     for source_root in SOURCE_ROOTS:
@@ -160,6 +169,73 @@ def analysis_source_paths(root: Path) -> list[Path]:
             continue
         paths.append(relative)
     return sorted(paths)
+
+
+def coverage_report_problem(root: Path) -> str | None:
+    """Return a privacy-safe reason when the local coverage report is unusable."""
+    coverage = root / COVERAGE_PATH
+    try:
+        coverage_stat = coverage.stat()
+        if not stat.S_ISREG(coverage_stat.st_mode):
+            return "invalid"
+        with coverage.open("rb") as report:
+            DefusedET.parse(report)
+        coverage_mtime = coverage_stat.st_mtime_ns
+    except FileNotFoundError:
+        return "missing"
+    except (DefusedET.ParseError, DefusedXmlException):
+        return "invalid"
+    except OSError:
+        return "unreadable"
+
+    for source_root in SOURCE_ROOTS:
+        directory = root / source_root
+        if not directory.is_dir():
+            continue
+        try:
+            if any(path.is_file() and path.stat().st_mtime_ns > coverage_mtime for path in directory.rglob("*.py")):
+                return "stale"
+        except OSError:
+            return "unreadable"
+    return None
+
+
+def coverage_commands() -> list[list[str]]:
+    """Build the cross-platform combined-coverage commands used before a local scan."""
+    python = sys.executable
+    scopes = ["--cov=src/guiskindose", "--cov=scripts", "--cov=tests"]
+    return [
+        [python, "-m", "coverage", "erase"],
+        [python, "-m", "pytest", "--ignore=tests/gui", "-n", "auto", *scopes, "--cov-report="],
+        [python, "-m", "pytest", "tests/gui/", *scopes, "--cov-append", "--cov-report="],
+        [python, "-m", "coverage", "xml"],
+    ]
+
+
+def generate_coverage(root: Path) -> bool:
+    """Generate combined coverage while keeping command construction shell-free."""
+    print("Generating combined non-GUI and GUI coverage before SonarQube analysis.", flush=True)
+    for command in coverage_commands():
+        completed = subprocess.run(command, cwd=root, check=False)  # NOSONAR pythonsecurity:S8705
+        if completed.returncode:
+            print("ERROR: coverage generation failed; SonarQube analysis did not run.", file=sys.stderr)
+            return False
+    return True
+
+
+def prepare_coverage(root: Path, *, regenerate: bool) -> bool:
+    """Generate coverage on request, otherwise require a current report."""
+    if regenerate:
+        return generate_coverage(root)
+    coverage_problem = coverage_report_problem(root)
+    if coverage_problem is None:
+        return True
+    print(
+        "ERROR: SonarQube local analysis requires a current coverage.xml "
+        f"({coverage_problem}); rerun with --generate-coverage.",
+        file=sys.stderr,
+    )
+    return False
 
 
 def source_digest(root: Path) -> tuple[str, int]:
@@ -209,8 +285,7 @@ def git_head_sha(root: Path) -> str | None:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         check=False,
     )
@@ -294,6 +369,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("ERROR: SonarQube local settings are missing.", file=sys.stderr)
         return 2
 
+    if not prepare_coverage(root, regenerate=args.generate_coverage):
+        return 2
+
     try:
         content_sha256, input_count = source_digest(root)
         version_sha256 = scanner_version_digest(str(binary))
@@ -325,7 +403,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         failure_reason = None if completed.returncode == 0 else classify_failure(log_path)
 
     status = "passed" if completed.returncode == 0 else "failed"
-    completed_at = datetime.now(timezone.utc).isoformat()
+    completed_at = datetime.now(UTC).isoformat()
     scan_commit = git_head_sha(root)
     write_state(
         root,

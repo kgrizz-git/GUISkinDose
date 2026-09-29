@@ -5,7 +5,7 @@
 > `scripts/check_sensitive_helpers.py` (notebook/PDF/container readers).
 
 This is the detailed companion to Phase 5 of
-[the SonarQube remediation plan](../sonarqube_remediation_plan.md). It targets all
+[the SonarQube remediation plan](sonarqube_remediation_plan.md). It targets all
 four `S3776` findings in `scripts/check_sensitive_content.py`:
 
 | Function | Baseline complexity |
