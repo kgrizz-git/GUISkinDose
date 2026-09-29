@@ -5,25 +5,25 @@ Exists so the scan target list and flags live in one place instead of being
 duplicated between the pre-push hook and the CI job, and so both use the pinned
 isolated Semgrep from :mod:`semgrep_tool` rather than whatever is on ``PATH``.
 
-Scope is an include-list, not an exclude-list: example/phantom/table data and
-test fixtures are never handed to this pass. The privacy admission gate remains
+Scope is an include-list of code surfaces, narrowed further by explicit excludes for
+approved asset/data directories that live under those surfaces, so example/phantom/table
+data is never handed to this pass. The privacy admission gate remains
 the authoritative full-content check (see
 ``dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md``).
 """
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Final
 
 if __package__:
-    from .semgrep_tool import SemgrepUnavailableError, semgrep_argv
+    from .semgrep_tool import SemgrepUnavailableError, semgrep_argv, tool_environment
 else:  # pragma: no cover - direct script execution (hooks, CI)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from semgrep_tool import SemgrepUnavailableError, semgrep_argv
+    from semgrep_tool import SemgrepUnavailableError, semgrep_argv, tool_environment
 
 # Registry ruleset; fetched over the network, so this gate needs connectivity.
 _CONFIG: Final = "p/owasp-top-ten"
@@ -35,14 +35,15 @@ _TARGETS: Final = ("src", "scripts", ".github/workflows", "docs/source/conf.py")
 _FLAGS: Final = ("--error", "--metrics=off")
 
 # Approved asset/data surfaces are kept out of this SAST pass even though they sit
-# under `src`. Previously only the CI job passed these; the pre-push hook did not,
-# so a local run scanned clinical-adjacent data the policy says not to feed to a
-# scanner. Both now share this list. See dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md.
+# under `src`. Previously only the CI job passed these; the pre-push hook did not, so a
+# local run scanned clinical-adjacent data the policy says not to feed to a scanner. Both
+# now share this list, which means the local hook is deliberately *narrower* than it was,
+# not just more consistent. (CI's `--exclude=tests/fixtures/**` is dropped: `tests` is not
+# in _TARGETS, so it never applied.) See dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md.
 _EXCLUDES: Final = (
     "--exclude=src/**/example_data/**",
     "--exclude=src/**/phantom_data/**",
     "--exclude=src/**/table_data/**",
-    "--exclude=tests/fixtures/**",
 )
 
 
@@ -54,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: OWASP Semgrep did not run ({exc}).", file=sys.stderr)
         return 2
 
-    environment = os.environ.copy()
+    environment = tool_environment()
     # Belt and braces with --metrics=off: the Semgrep Cloud App stays disabled and
     # no SEMGREP_APP_TOKEN is used.
     environment["SEMGREP_SEND_METRICS"] = "off"

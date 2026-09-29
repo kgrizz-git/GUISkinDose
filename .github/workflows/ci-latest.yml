@@ -55,14 +55,28 @@ jobs:
       if: steps.install.outcome == 'success'
       continue-on-error: true
       run: python scripts/check_gui_test_placement.py
+    # Semgrep is pinned in dev-docs/privacy_tool_inventory.json and deliberately kept out
+    # of uv.lock, so Dependabot cannot bump it. These two probes are the only thing that
+    # catches a pin drifting behind upstream or a new release breaking a gate. ci.yml runs
+    # the pinned version and stays authoritative. Both need continue-on-error like every
+    # other probe here, or a semgrep failure aborts the run before pytest.
     - name: Semgrep OWASP scan against the LATEST semgrep (pin drift probe)
-      # Semgrep is pinned in dev-docs/privacy_tool_inventory.json and deliberately kept
-      # out of uv.lock, so Dependabot cannot bump it. This probe is what catches a pin
-      # drifting behind upstream or a newer release breaking the gate; ci.yml runs the
-      # pinned version and stays authoritative.
+      id: semgrep_owasp
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
       env:
         GUISKINDOSE_SEMGREP_UNPINNED: "1"
       run: python scripts/run_semgrep_owasp.py
+
+    # The privacy ruleset is project-local (.semgrep/), so it is *more* exposed to a
+    # semgrep parser or behaviour change than the upstream OWASP pack, not less.
+    - name: Privacy Semgrep against the LATEST semgrep (pin drift probe)
+      id: semgrep_privacy
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
+      env:
+        GUISKINDOSE_SEMGREP_UNPINNED: "1"
+      run: python scripts/run_semgrep_privacy.py
 
     - name: Full test suite (core + gui) against latest deps
       id: pytest
@@ -75,12 +89,16 @@ jobs:
         (steps.install.outcome == 'failure' ||
          steps.basedpyright.outcome == 'failure' ||
          steps.gui_placement.outcome == 'failure' ||
+         steps.semgrep_owasp.outcome == 'failure' ||
+         steps.semgrep_privacy.outcome == 'failure' ||
          steps.pytest.outcome == 'failure')
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
       env:
         INSTALL_OUTCOME: ${{ steps.install.outcome }}
         BASEDPRIGHT_OUTCOME: ${{ steps.basedpyright.outcome }}
         GUI_PLACEMENT_OUTCOME: ${{ steps.gui_placement.outcome }}
+        SEMGREP_OWASP_OUTCOME: ${{ steps.semgrep_owasp.outcome }}
+        SEMGREP_PRIVACY_OUTCOME: ${{ steps.semgrep_privacy.outcome }}
         PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
       with:
         script: |
@@ -93,6 +111,8 @@ jobs:
             ['install', process.env.INSTALL_OUTCOME],
             ['basedpyright', process.env.BASEDPRIGHT_OUTCOME],
             ['gui_placement', process.env.GUI_PLACEMENT_OUTCOME],
+            ['semgrep_owasp', process.env.SEMGREP_OWASP_OUTCOME],
+            ['semgrep_privacy', process.env.SEMGREP_PRIVACY_OUTCOME],
             ['pytest', process.env.PYTEST_OUTCOME],
           ].filter(([, outcome]) => outcome === 'failure').map(([name]) => name);
 
@@ -108,6 +128,14 @@ jobs:
             gui_placement: {
               summary: 'GUI test placement check failed under unpinned deps',
               action: 'reproduce with `python scripts/check_gui_test_placement.py`; fix or move the test',
+            },
+            semgrep_owasp: {
+              summary: 'the newest semgrep broke the OWASP gate, or the pinned version has drifted behind',
+              action: 'reproduce with `GUISKINDOSE_SEMGREP_UNPINNED=1 python scripts/run_semgrep_owasp.py`; then bump or hold the pin in `dev-docs/privacy_tool_inventory.json`',
+            },
+            semgrep_privacy: {
+              summary: 'the newest semgrep broke the project privacy ruleset in `.semgrep/`',
+              action: 'reproduce with `GUISKINDOSE_SEMGREP_UNPINNED=1 python scripts/run_semgrep_privacy.py`; fix the rules or hold the pin',
             },
             pytest: {
               summary: 'unpinned pytest failed',
@@ -185,6 +213,8 @@ jobs:
         steps.install.outcome == 'success' &&
         steps.basedpyright.outcome == 'success' &&
         steps.gui_placement.outcome == 'success' &&
+        steps.semgrep_owasp.outcome == 'success' &&
+        steps.semgrep_privacy.outcome == 'success' &&
         steps.pytest.outcome == 'success'
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
       with:

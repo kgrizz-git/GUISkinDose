@@ -150,9 +150,12 @@ pushes and the weekly sweep. Developing on another version means version-specifi
 CI rather than locally — as it did when Python 3.14 changed `PurePath.suffix` for leading-dot names,
 passing on 3.12 and failing both PR jobs.
 
-`requires-python` is still `>=3.11`, and the floor is guarded statically by
-`[tool.basedpyright] pythonVersion = "3.11"`, which does not depend on the running interpreter. For a
-**runtime** check against the floor before a risky push:
+`requires-python` is still `>=3.11`. The floor is **partially** covered statically by
+`[tool.basedpyright] pythonVersion = "3.11"`, which does not depend on the running interpreter — but
+that catches only use of APIs absent in 3.11, not behaviour that differs between versions. The bug
+that motivated this pin (`PurePath.suffix` on leading-dot names) was exactly such a semantic change
+and basedpyright would not have caught it. So run the floor check when a change could be
+version-sensitive:
 
 ```bash
 UV_PROJECT_ENVIRONMENT="$PWD/tmp/venv-py311" \
@@ -182,7 +185,8 @@ pre-commit run --all-files                           # pre-commit stage hooks
 pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, audit_dependencies, basedpyright, changelog)
 ```
 
-**Semgrep is not a project dependency.** It is run as a pinned isolated tool
+**Semgrep is not a project dependency, so the two semgrep hooks now require `uv`** (for `uvx`); a
+pip-only install can no longer run them and the failure is a blocked push. It is run as a pinned isolated tool
 (`uvx --from semgrep==<pin>`), because its own requirements (`click<8.2`, `mcp==1.23.3`,
 `pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
 `dev` extra. The pin lives in `dev-docs/privacy_tool_inventory.json`; both entry points

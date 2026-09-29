@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "reviewed_on": "2026-07-16",
+  "reviewed_on": "2026-09-29",
   "scope": "Direct external tools and runtimes used or evaluated by repository privacy controls; transitive packages remain governed by uv.lock and dependency audits.",
   "tools": [
     {

@@ -3,7 +3,7 @@
 This file is generated from [`privacy_tool_inventory.json`](privacy_tool_inventory.json).
 It inventories direct external privacy tools and runtimes; it is not an approval for raw report output.
 
-Last reviewed: 2026-07-16
+Last reviewed: 2026-09-29
 
 | Tool | Status | Version | Execution | Role | Output boundary |
 |---|---|---:|---|---|---|

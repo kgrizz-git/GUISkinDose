@@ -35,7 +35,26 @@ _TOOL_ID_KEY: Final = "id"
 # Nothing auto-bumps this pin (it is intentionally outside uv.lock, so Dependabot's
 # pip ecosystem cannot see it), so that probe is what surfaces drift and upstream
 # breakage; a human then bumps the inventory version.
+#
+# Honoured ONLY in CI. Locally it would be an unaudited way to run an arbitrary
+# scanner version through the same blocking gates, which is the opposite of the
+# point; a developer wanting to try a new release can run uvx directly.
 UNPINNED_ENV: Final = "GUISKINDOSE_SEMGREP_UNPINNED"
+_CI_ENV_VARS: Final = ("CI", "GITHUB_ACTIONS")
+_TRUTHY: Final = frozenset({"1", "true", "yes", "on"})
+
+
+def _is_truthy(value: object) -> bool:
+    return value is not None and str(value).strip().lower() in _TRUTHY
+
+
+def unpinned_probe_requested(environ: object = None) -> bool:
+    """Whether the drift probe asked for the newest Semgrep, and may have it."""
+    source = os.environ if environ is None else environ
+    get = source.get  # type: ignore[union-attr]
+    if not _is_truthy(get(UNPINNED_ENV)):
+        return False
+    return any(_is_truthy(get(name)) for name in _CI_ENV_VARS)
 
 
 class SemgrepUnavailableError(RuntimeError):
@@ -63,6 +82,20 @@ def pinned_version(root: Path | None = None) -> str:
     raise SemgrepUnavailableError("no semgrep entry in the privacy tool inventory")
 
 
+def tool_environment(environ: dict[str, str] | None = None) -> dict[str, str]:
+    """Environment for the isolated tool, with the project's interpreter pin removed.
+
+    `.envrc` exports ``UV_PYTHON`` to pin the *project* to 3.14, and ``uvx`` honours it —
+    so without this the local blocking gate would run Semgrep on whatever the project
+    pins while CI runs it on the runner default. The day a Semgrep release drops that
+    interpreter, every direnv developer's pre-push gate breaks and CI stays green. Let
+    uv pick an interpreter Semgrep actually supports instead.
+    """
+    source = dict(os.environ if environ is None else environ)
+    source.pop("UV_PYTHON", None)
+    return source
+
+
 def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
     """Command that runs the pinned Semgrep with ``args``.
 
@@ -72,13 +105,19 @@ def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
     """
     uvx = shutil.which("uvx")
     if uvx is not None:
-        if os.environ.get(UNPINNED_ENV, "").strip().lower() in {"1", "true", "yes", "on"}:
+        if unpinned_probe_requested():
             print(
-                f"NOTE: {UNPINNED_ENV} is set; running the latest Semgrep instead of the "
-                "pinned version (weekly drift probe).",
+                f"NOTE: {UNPINNED_ENV} is set in CI; running the latest Semgrep instead "
+                "of the pinned version (weekly drift probe).",
                 file=sys.stderr,
             )
             return [uvx, "semgrep", *args]
+        if _is_truthy(os.environ.get(UNPINNED_ENV)):
+            print(
+                f"WARNING: ignoring {UNPINNED_ENV} outside CI; the pinned version is "
+                "what the blocking gates use. Run uvx directly to try another release.",
+                file=sys.stderr,
+            )
         return [uvx, "--from", f"semgrep=={pinned_version(root)}", "semgrep", *args]
     installed = shutil.which("semgrep")
     if installed is not None:

@@ -29,7 +29,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   packages below their fixed versions. Semgrep is only ever invoked as a CLI, never imported, so it now
   runs via `uvx --from semgrep==<pin>` (the pattern already used for `phi-scan`). Result: `click`
   upgraded 8.1.8 to 8.5.0, `mcp` and `pyjwt` left the lock entirely, `uv audit` reports zero
-  vulnerabilities across 271 packages, and `ignore` is empty.
+  vulnerabilities, and `ignore` is empty.
+
+  **This is an audit-scope change, not remediation, and should not be read as one.**
+  `semgrep==1.168.0` still declares `click~=8.1.8`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`, and its
+  isolated environment installs exactly those versions — verified directly. The vulnerable code is
+  still present and still executed by the scanner; it is simply outside the surface `uv audit`,
+  `pip-audit`, Dependabot, and grype inspect. The genuine improvement is in the *project*
+  environment, where `click` moved 8.1.8 to 8.5.0 — which reaches users, since uvicorn pulls click
+  into the `gui` extra. For mcp and pyjwt, both dev-only before and after, only the audit scope
+  changed. The tool environment is also unhashed, where `uv sync --locked` gave sha256-pinned
+  wheels; `dev-docs/TO_DO.md` tracks replacing bare `uvx --from` with a hash-locked tool project.
 
   The pin lives in `dev-docs/privacy_tool_inventory.json` — already the tracked source of truth for
   scanner versions — and both entry points read it, so the hook and CI cannot drift. New
@@ -38,7 +48,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   pre-push hook and the CI job. That unification fixed a real inconsistency: the CI job passed
   `--exclude` for `example_data` / `phantom_data` / `table_data` / `tests/fixtures` but the pre-push
   hook did not, so a local run scanned clinical-adjacent data the policy says not to feed a scanner.
-  Both now exclude them (352 files scanned to 241).
+  Both now exclude them (352 files scanned to 241) — which makes the local hook deliberately
+  narrower than it was, not merely more consistent.
 
   **Trade-off, recorded deliberately:** Dependabot only sees `uv.lock`, so nothing auto-bumps the pin.
   The weekly `ci-latest` workflow now runs the OWASP scan against the newest semgrep

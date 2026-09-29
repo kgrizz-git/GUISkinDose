@@ -97,21 +97,56 @@ class TestSemgrepArgv:
             semgrep_argv(["--version"], root=root)
 
     @pytest.mark.parametrize("truthy", ["1", "true", "YES", "on"])
-    def test_unpinned_probe_drops_the_version(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, truthy: str
+    @pytest.mark.parametrize("ci_var", ["CI", "GITHUB_ACTIONS"])
+    def test_unpinned_probe_drops_the_version_in_ci(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, truthy: str, ci_var: str
     ) -> None:
         root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
         monkeypatch.setenv(UNPINNED_ENV, truthy)
+        monkeypatch.setenv(ci_var, "true")
         monkeypatch.setattr(semgrep_tool.shutil, "which", lambda name: "/bin/uvx" if name == "uvx" else None)
         assert semgrep_argv(["--version"], root=root) == ["/bin/uvx", "semgrep", "--version"]
 
-    @pytest.mark.parametrize("falsy", ["", "0", "false", "no"])
-    def test_falsy_probe_flag_keeps_the_pin(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, falsy: str) -> None:
-        """Only an explicit opt-in may unpin the gate."""
+    def test_unpinned_probe_is_refused_outside_ci(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The hatch must not let a local `.env` unpin the *blocking* gates.
+
+        `.envrc` runs `dotenv_if_exists .env`, so without this an unaudited line in a
+        gitignored file would silently convert the privacy gate to an arbitrary version.
+        """
         root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
-        monkeypatch.setenv(UNPINNED_ENV, falsy)
+        monkeypatch.setenv(UNPINNED_ENV, "1")
+        monkeypatch.delenv("CI", raising=False)
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
         monkeypatch.setattr(semgrep_tool.shutil, "which", lambda name: "/bin/uvx" if name == "uvx" else None)
         assert "semgrep==1.2.3" in semgrep_argv(["--version"], root=root)
+        assert "ignoring" in capsys.readouterr().err
+
+    @pytest.mark.parametrize("falsy", ["", "0", "false", "no"])
+    def test_falsy_probe_flag_keeps_the_pin(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, falsy: str) -> None:
+        """Only an explicit opt-in, in CI, may unpin the gate."""
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        monkeypatch.setenv(UNPINNED_ENV, falsy)
+        monkeypatch.setenv("CI", "true")
+        monkeypatch.setattr(semgrep_tool.shutil, "which", lambda name: "/bin/uvx" if name == "uvx" else None)
+        assert "semgrep==1.2.3" in semgrep_argv(["--version"], root=root)
+
+
+class TestToolEnvironment:
+    def test_project_interpreter_pin_is_not_passed_to_the_tool(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`.envrc` pins UV_PYTHON for the project; uvx would honour it otherwise.
+
+        Left in place, the local gate would run Semgrep on the project's interpreter
+        while CI used the runner default — so a release dropping that version would
+        break every direnv developer's pre-push gate with CI still green.
+        """
+        monkeypatch.setenv("UV_PYTHON", "3.14")
+        assert "UV_PYTHON" not in semgrep_tool.tool_environment()
+
+    def test_other_variables_survive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SEMGREP_ENABLE_VERSION_CHECK", "0")
+        assert semgrep_tool.tool_environment()["SEMGREP_ENABLE_VERSION_CHECK"] == "0"
 
 
 class TestInventoryIsTheSingleSourceOfTruth:

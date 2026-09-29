@@ -2,21 +2,39 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
-import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-_RULES = Path(__file__).resolve().parents[2] / ".semgrep" / "mypyskindose-privacy.yml"
+_ROOT = Path(__file__).resolve().parents[2]
+_RULES = _ROOT / ".semgrep" / "mypyskindose-privacy.yml"
+
+
+def _semgrep_tool() -> Any:
+    spec = importlib.util.spec_from_file_location("semgrep_tool", _ROOT / "scripts" / "semgrep_tool.py")
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _scan(root: Path) -> set[str]:
-    semgrep = shutil.which("semgrep")
-    if semgrep is None:
-        pytest.skip("semgrep is not installed")
+    # Resolve the same pinned, isolated Semgrep the blocking gate uses. Previously this
+    # was `shutil.which("semgrep")` with a skip when absent, which silently reduced the
+    # regression coverage for the privacy ruleset to zero the moment semgrep stopped
+    # being a dev dependency -- it kept passing locally only where a global semgrep
+    # happened to be on PATH. Never skip on "tool missing": fail instead.
+    tool = _semgrep_tool()
+    try:
+        semgrep_prefix = tool.semgrep_argv([])
+    except tool.SemgrepUnavailableError as exc:  # pragma: no cover - environment defect
+        pytest.fail(f"privacy rules are untested: semgrep could not be resolved ({exc})")
     environment = os.environ.copy()
     cert_file = Path("/etc/ssl/cert.pem")
     if cert_file.is_file():
@@ -28,11 +46,16 @@ def _scan(root: Path) -> set[str]:
             "SEMGREP_ENABLE_VERSION_CHECK": "0",
             "SEMGREP_LOG_FILE": str(root / "semgrep.log"),
             "XDG_CACHE_HOME": str(root / ".cache"),
+            # Keep uv's own cache OUT of the scan root. `XDG_CACHE_HOME` above points
+            # into `root` to isolate semgrep's cache, but uvx honours it too, so the
+            # isolated tool's unpacked wheels landed inside the directory being scanned
+            # and produced nondeterministic findings from third-party source.
+            "UV_CACHE_DIR": str(root.parent / "uv-cache"),
         }
     )
     completed = subprocess.run(
         [
-            semgrep,
+            *semgrep_prefix,
             "--config",
             str(_RULES),
             "--metrics=off",

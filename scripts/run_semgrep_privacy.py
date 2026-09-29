@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -14,10 +13,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 if __package__:
-    from .semgrep_tool import SemgrepUnavailableError, semgrep_argv
+    from .semgrep_tool import SemgrepUnavailableError, semgrep_argv, tool_environment
 else:  # pragma: no cover - direct script execution (hooks, CI)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from semgrep_tool import SemgrepUnavailableError, semgrep_argv
+    from semgrep_tool import SemgrepUnavailableError, semgrep_argv, tool_environment
 
 
 def repo_root() -> Path:
@@ -70,7 +69,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"ERROR: privacy Semgrep was not run (binary_missing: {exc}).", file=sys.stderr)
         return 2
 
-    environment = os.environ.copy()
+    environment = tool_environment()
     environment["SEMGREP_ENABLE_VERSION_CHECK"] = "0"
     cert_file = Path("/etc/ssl/cert.pem")
     if cert_file.is_file():

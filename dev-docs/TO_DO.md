@@ -25,6 +25,15 @@ be archived.
   or lizard) with per-function grandfathered caps for the current baseline and automated
   ratchet-down as functions are decomposed. Acceptance: new/changed code above the caps
   fails pre-push/CI; caps file only ever tightens.
+- [ ] **PSD severity colour-coding** — colour every peak-skin-dose readout by dose band and replace the
+  misleading `PSD: 0.00 mGy` placeholder. Plan is ready to implement:
+  [PSD_SEVERITY_COLOR_CODING_PLAN.md](plans/PSD_SEVERITY_COLOR_CODING_PLAN.md); fuller entry under
+  Product Backlog / GUI / UX.
+- [ ] **Rotational coverage-envelope performance** — ~19x bit-exact speedup of the envelope dose loop
+  (measured; `sum()` over ndarray and the `list()` boundary are the traps). Plan:
+  [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md), evidence:
+  [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md); fuller entry under Product
+  Backlog / Input Data And Calculation.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
@@ -144,6 +153,16 @@ be archived.
   transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and Dependabot alerts
   #2/#3/#4 should close on their own. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
   suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
+- [ ] **Hash-lock the isolated scanner tools** — `semgrep` and `phi-scan` run via bare
+  `uvx --from <pkg>==<version>`, which resolves from PyPI **without hash verification**, where
+  `uv sync --locked` gave sha256-pinned wheels; a same-version re-upload would be trusted. Nothing
+  audits those tool environments either, so semgrep's own `click 8.1.8` / `mcp 1.23.3` /
+  `pyjwt 2.13.0` are now permanently invisible to `uv audit` and Dependabot (see the note in
+  `[tool.uv.audit]`). **Goal:** a `tools/semgrep/` mini-project with its own `pyproject.toml` and
+  `uv.lock`, invoked as `uv run --project tools/semgrep semgrep ...` from `scripts/semgrep_tool.py`,
+  restoring hash-pinned wheels and a lockfile a human or Renovate can read while keeping zero entries
+  in the application lock. **Acceptance:** both gates run from the locked tool project; `uv audit`
+  covers it; no bare `uvx --from` left for semgrep.
 - [ ] **Bump the pinned scanner versions** — `semgrep` (`dev-docs/privacy_tool_inventory.json`) and `phi-scan`
   (`0.7.0`, hardcoded in `.github/workflows/phi-scan.yml`, `scripts/privacy_admission.py`, and
   `dev-docs/references/LOCAL_PII_MODELS.md`) are isolated `uvx` tools outside `uv.lock`, so **Dependabot cannot see

@@ -230,14 +230,27 @@ skips = ["B101"]
 #
 # `ignore-until-fixed` suppresses a finding ONLY while no patched release exists, so the
 # audit automatically fails again once an upstream fix is published.
-# Currently EMPTY, and worth keeping that way. Every entry this project carried
-# (click PYSEC-2026-2132; mcp GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 /
-# GHSA-vj7q-gjh5-988w; pyjwt GHSA-w6j9-cwv2-h6wq) existed for one reason: semgrep
-# pinned those transitive dependencies (`click<8.2`, `mcp==1.23.3`,
-# `pyjwt[crypto]~=2.13.0`) and held them below their fixed versions. Semgrep now runs
-# as a pinned isolated tool rather than a dev dependency (scripts/semgrep_tool.py), so
-# its constraints no longer reach this lock and all five advisories resolved on their
-# own. Before adding a suppression, check whether a CLI-only tool is doing the same.
+# Currently EMPTY. Read the next paragraph before concluding anything from that.
+#
+# All five entries this project carried (click PYSEC-2026-2132; mcp GHSA-jpw9-pfvf-9f58 /
+# GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w; pyjwt GHSA-w6j9-cwv2-h6wq) existed because
+# semgrep pinned those transitive dependencies below their fixed versions. Semgrep now
+# runs as an isolated `uvx` tool (scripts/semgrep_tool.py), so its constraints no longer
+# reach this lock.
+#
+# That is NOT remediation, and must not be described as one. `semgrep==1.168.0` still
+# declares `click~=8.1.8`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`, and its isolated
+# environment demonstrably installs exactly those versions — the vulnerable code is still
+# present and still executed by the scanner, it is simply outside the surface `uv audit`,
+# `pip-audit`, Dependabot, and grype inspect. What genuinely improved is the *project*
+# environment: `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches
+# users through uvicorn in the `gui` extra. For mcp and pyjwt this is an audit-scope
+# change only; both were dev-only before and remain dev-only now.
+#
+# Two consequences worth keeping in view: the tool environment is unhashed (uvx resolves
+# from PyPI without the sha256 pinning `uv sync --locked` gave), and nothing audits it.
+# dev-docs/TO_DO.md tracks replacing bare `uvx --from` with a hash-locked tool project.
+#
 ignore = []
 # No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared
 # with the safety dev dependency (nltk was safety-only; see CHANGELOG [1.0.0] `### Removed`).
