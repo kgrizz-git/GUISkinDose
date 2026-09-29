@@ -24,7 +24,8 @@ def _load_module() -> Any:
     importable package, and a sys.path insert does not resolve for basedpyright.
     """
     spec = importlib.util.spec_from_file_location("semgrep_tool", ROOT / "scripts" / "semgrep_tool.py")
-    assert spec and spec.loader
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
