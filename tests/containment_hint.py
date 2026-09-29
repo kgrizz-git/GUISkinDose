@@ -131,15 +131,24 @@ _WITHHELD_NAME: Final = _ELLIPSIS
 # the point is to name enough to start debugging, not to dump the tree.
 MAX_REPORTED_CHANGES: Final = 20
 
-# Control characters (including the C1 range) are stripped before anything is
-# printed: a filename may legally contain a newline or an ANSI escape, and the
-# escalated levels would otherwise let it forge log lines or move the cursor.
-_CONTROL_CHARS: Final = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+# Stripped before anything is printed, because a filename may legally contain
+# any of these and the escalated levels would otherwise let it forge log lines,
+# move the cursor, or reverse how the rest of the line renders:
+#   \x00-\x1f, \x7f-\x9f  C0/C1 controls, incl. newline and ESC (ANSI escapes)
+#   \u200b-\u200f          zero-width and directional marks
+#   \u202a-\u202e          bidi embedding/override ("trojan source")
+#   \u2066-\u2069          bidi isolates
+#   \ufeff                 zero-width no-break space / BOM
+# The bidi set matters even at the `masked` level: a segment whose first or last
+# character is U+202E keeps it through first/last masking.
+_CONTROL_CHARS: Final = re.compile(
+    r"[\x00-\x1f\x7f-\x9f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
+)
 _CONTROL_PLACEHOLDER: Final = "�"
 
 
 def _sanitize(text: str) -> str:
-    """Replace control characters so a filename cannot forge or garble output."""
+    """Replace control and bidi characters so a filename cannot forge output."""
     return _CONTROL_CHARS.sub(_CONTROL_PLACEHOLDER, text)
 
 

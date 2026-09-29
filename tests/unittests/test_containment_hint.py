@@ -384,6 +384,14 @@ class TestControlCharactersCannotForgeOutput:
 
     _NEWLINE = Path("tmp/abc\nERROR: fake line/x.log")
     _ANSI = Path("tmp/abc\x1b[31mred/y.log")
+    # U+202E reverses how the rest of the line renders. It matters even at the
+    # `masked` level: as a segment's first character it survives first/last
+    # masking, which an earlier revision let through.
+    _BIDI_FIRST = Path("tmp/\u202eabcdef/x.log")
+    _BIDI_MID = Path("tmp/abc\u202egnl.xlsx_tneitaP")
+    _ZERO_WIDTH = Path("tmp/ab\u200bc.log")
+    _ISOLATE = Path("tmp/\u2066abc\u2069/y.log")
+    _BOM = Path("tmp/\ufeffabc.log")
 
     @pytest.mark.parametrize("mode", [HINT_TOKEN, HINT_MASKED, HINT_FULL])
     @pytest.mark.parametrize("path", [_NEWLINE, _ANSI])
@@ -392,6 +400,15 @@ class TestControlCharactersCannotForgeOutput:
         assert "\n" not in line
         assert "\x1b" not in line
         assert not any(ord(char) < 0x20 for char in line)
+
+    @pytest.mark.parametrize("mode", [HINT_TOKEN, HINT_MASKED, HINT_FULL])
+    @pytest.mark.parametrize("path", [_BIDI_FIRST, _BIDI_MID, _ZERO_WIDTH, _ISOLATE, _BOM])
+    def test_no_bidi_or_zero_width_characters_survive(self, mode: str, path: Path) -> None:
+        """Trojan-source characters must not reach a terminal or a log."""
+        forbidden = set(range(0x200B, 0x2010)) | set(range(0x202A, 0x202F))
+        forbidden |= set(range(0x2066, 0x206A)) | {0xFEFF}
+        line = describe_change(path, tracked=False, mode=mode)
+        assert not [char for char in line if ord(char) in forbidden]
 
     def test_forged_text_cannot_start_its_own_line(self) -> None:
         report = change_report([(_ROOT / self._NEWLINE, False)], repo_root=_ROOT, mode=HINT_FULL)

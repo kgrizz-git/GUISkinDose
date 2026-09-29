@@ -181,7 +181,10 @@ like one. `Path.suffix` is just "text after the last dot", so `x.Lastname_Firstn
 *suffix* holding the whole identifier, and a pattern such as `\.[A-Za-z0-9]{1,8}` still admits `.J` —
 a first initial dressed as an extension. Anything unrecognized reports `<unlisted-suffix>`, and at the
 `masked` level the entire filename is masked as one unit. Control characters are stripped from every
-level so a crafted filename cannot forge log lines or emit ANSI escapes.
+level so a crafted filename cannot forge log lines or emit ANSI escapes; the same pass removes
+zero-width and bidi characters (U+200B–U+200F, U+202A–U+202E, U+2066–U+2069, U+FEFF), which would
+otherwise let a name reverse how the rest of the line renders — including at the `masked` level, where a
+segment's first character survives.
 
 **Residual disclosure at the default level**, accepted deliberately: path depth, the conventional
 top-level directory, the allowlisted suffix, and the number of changed paths (up to the cap). Each is
