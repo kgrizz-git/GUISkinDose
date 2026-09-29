@@ -174,7 +174,9 @@ published layout, otherwise `<unlisted-top-level>`), path depth, and file suffix
 | `full` | exact repo-relative path | local debugging only |
 
 Both escalated levels are **refused when `CI` or `GITHUB_ACTIONS` is truthy**, so setting the variable
-in a workflow cannot widen disclosure in a world-readable log.
+in a workflow cannot widen disclosure in a world-readable log. The footer states when a request was
+refused for that reason, so a developer whose shell or devcontainer exports `CI=1` is told why the
+variable appears to do nothing instead of having to discover it.
 
 The suffix is echoed only when it is in an explicit **extension allowlist**, not when it merely looks
 like one. `Path.suffix` is just "text after the last dot", so `x.Lastname_Firstname_19700101` has a
@@ -184,7 +186,10 @@ a first initial dressed as an extension. Anything unrecognized reports `<unliste
 level so a crafted filename cannot forge log lines or emit ANSI escapes; the same pass removes
 zero-width and bidi characters (U+200B–U+200F, U+202A–U+202E, U+2066–U+2069, U+FEFF), which would
 otherwise let a name reverse how the rest of the line renders — including at the `masked` level, where a
-segment's first character survives.
+segment's first character survives — plus U+2028/U+2029, which `str.splitlines()` treats as real line
+breaks even though they are neither `\n` nor control characters. Spacing characters (U+00A0,
+U+2000–U+200A, U+3000) and weak directional marks (U+061C, U+180E) deliberately survive: none can forge
+a line or reverse rendering, and masked output is length-bounded regardless.
 
 **Residual disclosure at the default level**, accepted deliberately: path depth, the conventional
 top-level directory, the allowlisted suffix, and the number of changed paths (up to the cap). Each is

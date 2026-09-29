@@ -6,8 +6,9 @@ log, so the assertions here are mostly about what must *not* be disclosed.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 from containment_hint import (
@@ -25,6 +26,7 @@ from containment_hint import (
     masked_path,
     path_shape,
     path_token,
+    requested_mode,
     running_in_ci,
     safe_suffix,
 )
@@ -369,6 +371,12 @@ class TestEscalatedLevelsAreRefusedInCi:
     def test_a_falsy_ci_variable_is_not_ci(self, falsy: str) -> None:
         assert hint_mode({CONTAINMENT_HINT_ENV: HINT_FULL, "CI": falsy}) == HINT_FULL
 
+    @pytest.mark.parametrize("raw", [1, True, None, b"true", 0])
+    def test_non_string_ci_values_do_not_raise(self, raw: object) -> None:
+        """A reporting helper must never crash over the failure it describes."""
+        env = {CONTAINMENT_HINT_ENV: HINT_FULL, "CI": raw}
+        assert hint_mode(env) in {HINT_TOKEN, HINT_FULL}  # type: ignore[dict-item]
+
     def test_running_in_ci_detects_either_variable(self) -> None:
         assert running_in_ci({"CI": "1"})
         assert running_in_ci({"GITHUB_ACTIONS": "true"})
@@ -392,6 +400,11 @@ class TestControlCharactersCannotForgeOutput:
     _ZERO_WIDTH = Path("tmp/ab\u200bc.log")
     _ISOLATE = Path("tmp/\u2066abc\u2069/y.log")
     _BOM = Path("tmp/\ufeffabc.log")
+    # U+2028/U+2029 are real line breaks to str.splitlines() even though they
+    # are not "\n" and not below 0x20 — the two assertions an earlier revision
+    # relied on, which is how they slipped through.
+    _LINE_SEP = Path("tmp/abc\u2028ERROR: forged/x.log")
+    _PARA_SEP = Path("tmp/abc\u2029ERROR: forged.log")
 
     @pytest.mark.parametrize("mode", [HINT_TOKEN, HINT_MASKED, HINT_FULL])
     @pytest.mark.parametrize("path", [_NEWLINE, _ANSI])
@@ -402,6 +415,20 @@ class TestControlCharactersCannotForgeOutput:
         assert not any(ord(char) < 0x20 for char in line)
 
     @pytest.mark.parametrize("mode", [HINT_TOKEN, HINT_MASKED, HINT_FULL])
+    @pytest.mark.parametrize(
+        "path",
+        [_NEWLINE, _ANSI, _LINE_SEP, _PARA_SEP, _BIDI_FIRST, _ZERO_WIDTH, _ISOLATE, _BOM],
+    )
+    def test_output_is_always_exactly_one_line(self, mode: str, path: Path) -> None:
+        """The reliable invariant: `splitlines()` must see one line.
+
+        Stronger than checking for "\n" and sub-0x20 characters, which both miss
+        U+2028 and U+2029.
+        """
+        line = describe_change(path, tracked=False, mode=mode)
+        assert len(line.splitlines()) == 1
+
+    @pytest.mark.parametrize("mode", [HINT_TOKEN, HINT_MASKED, HINT_FULL])
     @pytest.mark.parametrize("path", [_BIDI_FIRST, _BIDI_MID, _ZERO_WIDTH, _ISOLATE, _BOM])
     def test_no_bidi_or_zero_width_characters_survive(self, mode: str, path: Path) -> None:
         """Trojan-source characters must not reach a terminal or a log."""
@@ -410,9 +437,20 @@ class TestControlCharactersCannotForgeOutput:
         line = describe_change(path, tracked=False, mode=mode)
         assert not [char for char in line if ord(char) in forbidden]
 
-    def test_forged_text_cannot_start_its_own_line(self) -> None:
+    _DEL = Path("tmp/abc\x7fdef/x.log")
+    _C1 = Path("tmp/abc\x85def.log")
+
+    @pytest.mark.parametrize("mode", [HINT_TOKEN, HINT_MASKED, HINT_FULL])
+    @pytest.mark.parametrize("path", [_DEL, _C1])
+    def test_del_and_c1_controls_are_stripped(self, mode: str, path: Path) -> None:
+        """DEL and the C1 range are in the class but had no fixture asserting it."""
+        line = describe_change(path, tracked=False, mode=mode)
+        assert not [char for char in line if 0x7F <= ord(char) <= 0x9F]
+
+    def test_report_lines_are_each_a_single_line(self) -> None:
+        """Supersedes an earlier check that only looked for "\n"."""
         report = change_report([(_ROOT / self._NEWLINE, False)], repo_root=_ROOT, mode=HINT_FULL)
-        assert all("\n" not in line for line in report)
+        assert all(len(line.splitlines()) == 1 for line in report)
 
 
 class TestModeFallbackInConsumers:
@@ -564,3 +602,149 @@ class TestHookWiring:
         session, _ = self._fake_session(({}, {}))
         conftest.pytest_sessionfinish(session, 0)
         assert session.exitstatus == pytest.ExitCode.TESTS_FAILED
+
+
+class TestSafeSuffixAllowlistShape:
+    """Guard the allowlist itself, not just the code that reads it.
+
+    A structural check only: it stops `.J`, `.has_underscore`, and
+    `.Lastname_Firstname` shapes from being added, but it cannot judge whether a
+    well-formed entry is semantically safe. `.secret` would pass. The real
+    control for that is a human reading a diff that adds an entry to a set
+    named for safety.
+    """
+
+    def test_every_entry_is_a_plausible_extension(self) -> None:
+        from containment_hint import _SAFE_SUFFIXES
+
+        pattern = re.compile(r"^\.[a-z0-9]{2,8}$")
+        offenders = sorted(entry for entry in _SAFE_SUFFIXES if not pattern.match(entry))
+        assert not offenders, f"not extension-shaped: {offenders}"
+
+    def test_no_entry_is_a_single_character(self) -> None:
+        """`.J` is the case that motivated replacing a pattern with a list."""
+        from containment_hint import _SAFE_SUFFIXES
+
+        assert not [entry for entry in _SAFE_SUFFIXES if len(entry) <= 2]
+
+    def test_entries_are_lowercase_so_matching_stays_case_insensitive(self) -> None:
+        from containment_hint import _SAFE_SUFFIXES
+
+        assert all(entry == entry.lower() for entry in _SAFE_SUFFIXES)
+
+    @pytest.mark.parametrize("suffix", [".log", ".dcm", ".dicom", ".xlsx", ".xlsm", ".json", ".ipynb", ".sql"])
+    def test_ordinary_artifact_extensions_are_present(self, suffix: str) -> None:
+        """An over-tight list costs debuggability, which is the whole feature."""
+        assert safe_suffix(Path(f"artifact{suffix}")) == suffix
+
+    @pytest.mark.parametrize("suffix", [".xlsm", ".dicom"])
+    def test_accepted_input_suffixes_are_present(self, suffix: str) -> None:
+        """`.xlsm` and `.dicom` are current accepted inputs, not exotic cases.
+
+        See `input_adapters/registry.py` `_TABULAR_SUFFIXES` and
+        `gui/upload_temp_files.py` `_ALLOWED_SUFFIXES`.
+        """
+        assert safe_suffix(Path(f"upload{suffix}")) == suffix
+
+
+class TestCiRefusalIsExplained:
+    """A silently ignored env var costs a developer far more than a blunt line."""
+
+    _CI_ENV: ClassVar[dict[str, str]] = {CONTAINMENT_HINT_ENV: HINT_FULL, "CI": "true"}
+
+    def test_requested_mode_reports_what_was_asked_for(self) -> None:
+        assert requested_mode(self._CI_ENV) == HINT_FULL
+        assert hint_mode(self._CI_ENV) == HINT_TOKEN
+
+    def test_footer_says_the_request_was_refused_and_why(self) -> None:
+        footer = hint_footer(hint_mode(self._CI_ENV), requested=requested_mode(self._CI_ENV))
+        assert "was refused" in footer
+        assert "CI" in footer
+        assert HINT_FULL in footer
+
+    def test_footer_is_the_normal_advice_when_nothing_was_requested(self) -> None:
+        footer = hint_footer(HINT_TOKEN, requested=HINT_TOKEN)
+        assert "was refused" not in footer
+        assert "=masked" in footer
+
+    def test_report_threads_the_request_through(self) -> None:
+        report = change_report(
+            [(_ROOT / "tmp/stray.log", False)],
+            repo_root=_ROOT,
+            mode=HINT_TOKEN,
+            requested=HINT_FULL,
+        )
+        assert "was refused" in report[-1]
+
+    @pytest.mark.parametrize("bogus", ["fulll", "", "yes"])
+    def test_an_unrecognized_request_is_not_reported_as_refused(self, bogus: str) -> None:
+        """A typo is a typo, not a CI refusal; saying "refused" would mislead."""
+        env = {CONTAINMENT_HINT_ENV: bogus, "CI": "true"}
+        footer = hint_footer(hint_mode(env), requested=requested_mode(env))
+        assert "was refused" not in footer
+
+
+class TestHookWiringDetails:
+    """Two branches `TestHookWiring` leaves untouched."""
+
+    def test_missing_reporter_still_fails_the_run(
+        self, pytestconfig: pytest.Config, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No terminal reporter must not mean a silently passing violation."""
+        conftest = _root_conftest(pytestconfig)
+        stray = conftest._REPO_ROOT / "tmp" / "stray.log"
+        monkeypatch.setattr(conftest, "_workspace_snapshot", lambda: ({}, {stray: "d"}))
+
+        class _NoReporterPluginManager:
+            @staticmethod
+            def get_plugin(_name: str) -> None:
+                return None
+
+        class _Config:
+            _privacy_workspace_snapshot = ({}, {})
+            pluginmanager = _NoReporterPluginManager()
+
+        class _Session:
+            config = _Config()
+            exitstatus = 0
+
+        session = _Session()
+        conftest.pytest_sessionfinish(session, 0)
+        assert session.exitstatus == pytest.ExitCode.TESTS_FAILED
+
+    def test_hook_honours_the_requested_disclosure_level(
+        self, pytestconfig: pytest.Config, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Pins that the hook threads the mode through.
+
+        Without this, a regression that hard-coded token-only would pass every
+        other hook test.
+        """
+        conftest = _root_conftest(pytestconfig)
+        stray = conftest._REPO_ROOT / "tmp" / "stray.log"
+        monkeypatch.setattr(conftest, "_workspace_snapshot", lambda: ({}, {stray: "d"}))
+        monkeypatch.delenv("CI", raising=False)
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+        monkeypatch.setenv(CONTAINMENT_HINT_ENV, "full")
+
+        lines: list[str] = []
+
+        class _Reporter:
+            def write_line(self, line: str, **_: object) -> None:
+                lines.append(line)
+
+        class _PluginManager:
+            @staticmethod
+            def get_plugin(name: str) -> object | None:
+                return _Reporter() if name == "terminalreporter" else None
+
+        class _Config:
+            _privacy_workspace_snapshot = ({}, {})
+            pluginmanager = _PluginManager()
+
+        class _Session:
+            config = _Config()
+            exitstatus = 0
+
+        conftest.pytest_sessionfinish(_Session(), 0)
+        assert "path=tmp/stray.log" in "\n".join(lines)

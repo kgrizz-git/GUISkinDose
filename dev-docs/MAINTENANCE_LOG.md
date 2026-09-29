@@ -30,7 +30,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   to locate the writer. Two opt-in levels go further for local debugging via
   `GUISKINDOSE_TEST_CONTAINMENT_HINT`: `masked` shows the first and last character of each name with an
   allowlisted suffix kept verbatim (`t…p/n…i.log`), and `full` shows the exact repo-relative path.
-  Both are **refused when `CI` or `GITHUB_ACTIONS` is set**, and unset or unrecognized values fail
+  Both are **refused when `CI` or `GITHUB_ACTIONS` is truthy** (and the footer says so, rather than
+  appearing to ignore the request), and unset or unrecognized values fail
   closed to the token-only default, so neither a typo nor a workflow variable can widen disclosure in a
   world-readable log.
 
@@ -39,8 +40,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `x.Lastname_Firstname_19700101`, and a shape pattern still admitted `.J` — a first initial dressed as
   an extension; the suffix is now an explicit extension allowlist. Short path segments were returned
   unmasked, which made masking the identity function for `tmp/J/D.dcm`; segments of one or two
-  characters are now withheld entirely. Control characters are stripped so a crafted filename cannot
-  forge log lines. Report construction moved to a new pure `tests/containment_hint.py`, leaving the
+  characters are now withheld entirely. Control, bidi, and line-separator characters are stripped so a
+  crafted filename cannot forge log lines or reverse how the rest of the line renders. Report construction moved to a new pure `tests/containment_hint.py`, leaving the
   hook a thin adapter, with unit tests covering the disclosure contract, the CI refusal, injection,
   allowlist drift, cap boundaries, and the hook wiring itself.
 

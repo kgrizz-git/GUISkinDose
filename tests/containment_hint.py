@@ -55,8 +55,9 @@ _HINT_MODES: Final = frozenset({HINT_TOKEN, HINT_MASKED, HINT_FULL})
 _CI_ENV_VARS: Final = ("CI", "GITHUB_ACTIONS")
 _TRUTHY: Final = frozenset({"1", "true", "yes", "on"})
 
-# Top-level entries of the published repository layout plus the gitignored
-# scratch roots named by the workspace conventions. These names are safe to
+# Top-level entries of the published repository layout plus the scratch roots
+# named by the workspace conventions (`PlotOutputs`, `backups`, `tmp` are
+# gitignored; `wiki` is tracked). These names are safe to
 # print because they are *conventional* — fixed by project layout rather than
 # derived from data. (Not simply "because .gitignore lists them": `.gitignore`
 # naming `tmp/` says nothing about what a test wrote inside it.) Anything else
@@ -77,21 +78,28 @@ _PUBLIC_TOP_LEVEL: Final = frozenset(
     }
 )
 
-# Suffixes echoed verbatim. An allowlist rather than a shape pattern because
+# Suffixes echoed verbatim. Extend this when a new artifact type shows up and
+# the hint starts reporting `<unlisted-suffix>` for something mundane: an
+# over-tight list costs debuggability, which is the point of the feature. An
+# allowlist rather than a shape pattern because
 # `Path.suffix` is merely "text after the last dot": `x.Lastname_Firstname` has
 # a *suffix* holding the identifier, and a pattern like `\.[A-Za-z0-9]{1,8}`
 # still admits `.J` — a first initial dressed as an extension.
 _SAFE_SUFFIXES: Final = frozenset(
     {
+        ".bash",
         ".bat",
         ".cfg",
+        ".conf",
         ".csv",
         ".db",
         ".dcm",
+        ".dicom",
         ".docx",
         ".gz",
         ".html",
         ".ini",
+        ".ipynb",
         ".json",
         ".jsonl",
         ".log",
@@ -106,16 +114,19 @@ _SAFE_SUFFIXES: Final = frozenset(
         ".pyc",
         ".rst",
         ".sh",
+        ".sql",
         ".stl",
         ".svg",
         ".toml",
         ".tsv",
         ".txt",
+        ".xlsm",
         ".xlsx",
         ".xml",
         ".yaml",
         ".yml",
         ".zip",
+        ".zsh",
     }
 )
 
@@ -137,13 +148,16 @@ MAX_REPORTED_CHANGES: Final = 20
 #   \x00-\x1f, \x7f-\x9f  C0/C1 controls, incl. newline and ESC (ANSI escapes)
 #   \u200b-\u200f          zero-width and directional marks
 #   \u202a-\u202e          bidi embedding/override ("trojan source")
+#   \u2028-\u2029          Unicode line/paragraph separators (real line breaks)
 #   \u2066-\u2069          bidi isolates
 #   \ufeff                 zero-width no-break space / BOM
+# Deliberately NOT stripped: ordinary and exotic spaces (U+00A0, U+2000-200A,
+# U+3000) and weak directional marks (U+061C, U+180E). None can forge a line or
+# reverse rendering the way U+202E does, masked output is length-bounded anyway,
+# and chasing full `\p{Cf}` coverage would trade clarity for no real gain.
 # The bidi set matters even at the `masked` level: a segment whose first or last
 # character is U+202E keeps it through first/last masking.
-_CONTROL_CHARS: Final = re.compile(
-    r"[\x00-\x1f\x7f-\x9f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
-)
+_CONTROL_CHARS: Final = re.compile(r"[\x00-\x1f\x7f-\x9f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]")
 _CONTROL_PLACEHOLDER: Final = "�"
 
 
@@ -152,14 +166,27 @@ def _sanitize(text: str) -> str:
     return _CONTROL_CHARS.sub(_CONTROL_PLACEHOLDER, text)
 
 
-def _is_truthy(value: str | None) -> bool:
-    return value is not None and value.strip().lower() in _TRUTHY
+def _is_truthy(value: object) -> bool:
+    """Truthy env-flag test that tolerates a non-string value.
+
+    A reporting helper must not raise over the failure it is describing, and
+    ``hint_mode`` already coerces with ``str(...)`` — this matches it rather
+    than calling ``.strip()`` on whatever it was handed.
+    """
+    return value is not None and str(value).strip().lower() in _TRUTHY
 
 
 def running_in_ci(environ: Mapping[str, str] | None = None) -> bool:
     """Whether the environment advertises itself as CI."""
     source = os.environ if environ is None else environ
     return any(_is_truthy(source.get(name)) for name in _CI_ENV_VARS)
+
+
+def requested_mode(environ: Mapping[str, str] | None = None) -> str:
+    """The level the environment asked for, before the CI refusal is applied."""
+    source = os.environ if environ is None else environ
+    value = str(source.get(CONTAINMENT_HINT_ENV, "")).strip().lower()
+    return value if value in _HINT_MODES else HINT_TOKEN
 
 
 def hint_mode(environ: Mapping[str, str] | None = None) -> str:
@@ -171,8 +198,8 @@ def hint_mode(environ: Mapping[str, str] | None = None) -> str:
     even if the variable is set in a workflow).
     """
     source = os.environ if environ is None else environ
-    value = str(source.get(CONTAINMENT_HINT_ENV, "")).strip().lower()
-    if value not in _HINT_MODES or value == HINT_TOKEN:
+    value = requested_mode(source)
+    if value == HINT_TOKEN:
         return HINT_TOKEN
     return HINT_TOKEN if running_in_ci(source) else value
 
@@ -189,6 +216,10 @@ def path_token(relative: Path) -> str:
     cross-reference between runs and releases (pinned by test), at the cost of
     being a confirmation oracle. Rely on the coarse shape fields for the
     CI-safe signal, never on the token's secrecy.
+
+    Computed from the true path, not the sanitized one, so it stays a stable
+    identity. For the rare path containing control characters that means the
+    token will not match a hash of the printed ``path=`` form.
     """
     return hashlib.sha256(relative.as_posix().encode("utf-8")).hexdigest()[:12]
 
@@ -270,8 +301,20 @@ def describe_change(
     return detail
 
 
-def hint_footer(mode: str) -> str:
-    """Trailing line telling the reader how to get a more useful hint."""
+def hint_footer(mode: str, *, requested: str | None = None) -> str:
+    """Trailing line telling the reader how to get a more useful hint.
+
+    ``requested`` is the raw env value, so a request that CI downgraded can say
+    so rather than looking ignored — otherwise a developer whose shell or
+    devcontainer exports ``CI=1`` can lose a long time wondering why the
+    variable does nothing.
+    """
+    if mode == HINT_TOKEN and requested in {HINT_MASKED, HINT_FULL}:
+        return (
+            f"{CONTAINMENT_HINT_ENV}={requested} was refused because this environment "
+            "looks like CI (CI / GITHUB_ACTIONS is set); showing tokens only. Unset that "
+            "variable if this is actually a local run."
+        )
     if mode == HINT_FULL:
         return f"Full paths shown because {CONTAINMENT_HINT_ENV}=full (local debugging only)."
     if mode == HINT_MASKED:
@@ -313,6 +356,7 @@ def change_report(
     repo_root: Path,
     mode: str,
     max_reported: int = MAX_REPORTED_CHANGES,
+    requested: str | None = None,
 ) -> list[str]:
     """Full value-safe report for a containment violation, or ``[]`` if clean.
 
@@ -329,7 +373,7 @@ def change_report(
     remainder = len(changed) - max_reported
     if remainder > 0:
         lines.append(f"  ... and {remainder} more")
-    lines.append(hint_footer(mode))
+    lines.append(hint_footer(mode, requested=requested))
     return lines
 
 

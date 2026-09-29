@@ -16,7 +16,7 @@ from importlib import import_module
 from pathlib import Path
 
 import pytest
-from containment_hint import change_report, collect_changes, hint_mode
+from containment_hint import change_report, collect_changes, hint_mode, requested_mode
 
 pytest_plugins: list[str] = []
 
@@ -115,6 +115,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         collect_changes(before, after),
         repo_root=_REPO_ROOT,
         mode=hint_mode(),
+        requested=requested_mode(),
     )
     if not report:
         return
