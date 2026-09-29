@@ -146,6 +146,61 @@ The same policy prevents tracking local logs, scanner reports/state, coverage ou
 data directories. It also fails if required privacy ignore lines are deleted. Never weaken the protected list merely
 to stage a file; prepare the asset through the documented review and inventory process instead.
 
+## Test write containment
+
+`tests/conftest.py` snapshots the checkout at session start and fails the run when a tracked file's
+digest changes or a new file appears (a small allowlist covers regenerable artifacts: `.DS_Store`,
+`.coverage*`, `corrections.db*`). **The snapshot does not consult `.gitignore` on purpose** —
+`.gitignore` stops a file being committed, not written, and a test that writes clinical values into a
+gitignored scratch path is still a privacy problem. Note the guard detects *any* change during the
+session, so a scratch script or shell redirect writing into the checkout while pytest runs will trip
+it too.
+
+The hash token is a **stable cross-reference, not a confidentiality control**: it is an unsalted
+SHA-256 over a short repo-relative path, so anyone with a candidate path can confirm it by hashing.
+That is trivial for ordinary repository paths (a clone lists them) and only meaningful protection for a
+path an observer cannot guess — which is the sensitive case. The CI-safe signal is therefore the
+deliberately coarse shape fields, not the token.
+
+Its message must stay safe for public CI logs, so by default it prints a hash token plus value-safe
+shape only: tracked-modified vs new, the top-level directory (named only when it is part of the
+published layout, otherwise `<unlisted-top-level>`), path depth, and file suffix. Set
+`GUISKINDOSE_TEST_CONTAINMENT_HINT` for more, **locally only**:
+
+| Value | Discloses | Use |
+|---|---|---|
+| unset / anything unrecognized | token + shape | default; the only level for shared logs |
+| `masked` | first and last character of each name (segments of 1–2 characters withheld entirely), allowlisted suffix verbatim | local triage when shape is not enough |
+| `full` | exact repo-relative path | local debugging only |
+
+Both escalated levels are **refused when `CI` or `GITHUB_ACTIONS` is truthy**, so setting the variable
+in a workflow cannot widen disclosure in a world-readable log. The footer states when a request was
+refused for that reason, so a developer whose shell or devcontainer exports `CI=1` is told why the
+variable appears to do nothing instead of having to discover it.
+
+The suffix is echoed only when it is in an explicit **extension allowlist**, not when it merely looks
+like one. `Path.suffix` is just "text after the last dot", so `x.Lastname_Firstname_19700101` has a
+*suffix* holding the whole identifier, and a pattern such as `\.[A-Za-z0-9]{1,8}` still admits `.J` —
+a first initial dressed as an extension. Anything unrecognized reports `<unlisted-suffix>`, and at the
+`masked` level the entire filename is masked as one unit. Control characters are stripped from every
+level so a crafted filename cannot forge log lines or emit ANSI escapes; the same pass removes
+zero-width and bidi characters (U+200B–U+200F, U+202A–U+202E, U+2066–U+2069, U+FEFF), which would
+otherwise let a name reverse how the rest of the line renders — including at the `masked` level, where a
+segment's first character survives — plus U+2028/U+2029, which `str.splitlines()` treats as real line
+breaks even though they are neither `\n` nor control characters. Spacing characters (U+00A0,
+U+2000–U+200A, U+3000) and weak directional marks (U+061C, U+180E) deliberately survive: none can forge
+a line or reverse rendering, and masked output is length-bounded regardless.
+
+**Residual disclosure at the default level**, accepted deliberately: path depth, the conventional
+top-level directory, the allowlisted suffix, and the number of changed paths (up to the cap). Each is
+coarse, but together they narrow a guessing search — which matters because the token is a confirmation
+oracle rather than a secret. Treat the default as protection against *accidental* disclosure, not
+against a *targeted* attempt to confirm a specific filename.
+
+`masked` leaks the first and last character of every path segment, which for a name derived from
+clinical data is a weak quasi-identifier — never set either value in CI or paste their output into an
+issue.
+
 ## Additional scanners
 
 ### Cloud vs local scanner scope
