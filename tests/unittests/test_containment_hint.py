@@ -283,10 +283,33 @@ class TestSuffixIsNotATrustedField:
         for leak in ("Lastname", "Firstname", "19700101"):
             assert leak not in shape
 
-    def test_shape_still_distinguishes_absent_from_withheld(self) -> None:
-        """ "No suffix at all" and "suffix withheld" are different facts."""
+    def test_shape_reports_absent_suffix_for_a_name_without_a_dot(self) -> None:
         assert "<no-suffix>" in path_shape(Path("tmp/Makefile"), tracked=False)
-        assert "<unlisted-suffix>" in path_shape(self._DOTTED_STEM, tracked=False)
+
+    @pytest.mark.parametrize("name", ["tmp/x.Lastname_Firstname_19700101", "tmp/report.2026-01-01"])
+    def test_shape_reports_withheld_suffix_for_a_dotted_identifier(self, name: str) -> None:
+        """ "No suffix at all" and "suffix withheld" are different facts.
+
+        Both inputs put the dot somewhere other than the start, so
+        ``Path.suffix`` sees a suffix on every supported Python.
+        """
+        assert "<unlisted-suffix>" in path_shape(Path(name), tracked=False)
+
+    def test_leading_dot_name_is_safe_on_every_python_version(self) -> None:
+        """Which sentinel a leading-dot name gets is version-dependent.
+
+        Python 3.14 changed ``PurePath.suffix`` so ``..Lastname_Firstname`` has
+        no suffix at all, where 3.12 reported ``.Lastname_Firstname``. Both
+        outcomes are safe, so this asserts the property that matters — the name
+        never appears — instead of pinning one sentinel. An earlier revision
+        pinned ``<unlisted-suffix>`` and passed locally on 3.12 while failing CI
+        on 3.14.
+        """
+        shape = path_shape(self._DOTTED_STEM, tracked=False)
+        assert ("<no-suffix>" in shape) or ("<unlisted-suffix>" in shape)
+        for leak in ("Lastname", "Firstname"):
+            assert leak not in shape
+        assert masked_path(self._DOTTED_STEM) == "t…p/.…e"
 
     def test_masking_covers_the_whole_name_when_the_suffix_is_unsafe(self) -> None:
         assert masked_path(self._IDENTIFIER_SUFFIX) == "t…p/x…1"
