@@ -16,6 +16,7 @@ from importlib import import_module
 from pathlib import Path
 
 import pytest
+from containment_hint import change_report, collect_changes, hint_mode
 
 pytest_plugins: list[str] = []
 
@@ -75,11 +76,7 @@ def _tracked_paths() -> set[Path]:
         check=True,
         capture_output=True,
     )
-    return {
-        _REPO_ROOT / value.decode("utf-8")
-        for value in result.stdout.split(b"\0")
-        if value
-    }
+    return {_REPO_ROOT / value.decode("utf-8") for value in result.stdout.split(b"\0") if value}
 
 
 def _workspace_snapshot() -> tuple[dict[Path, str], dict[Path, str]]:
@@ -93,11 +90,6 @@ def _workspace_snapshot() -> tuple[dict[Path, str], dict[Path, str]]:
             if path not in tracked_paths and not _is_excluded_artifact(path):
                 other[path] = _digest(path)
     return tracked, other
-
-
-def _path_token(path: Path) -> str:
-    relative = path.relative_to(_REPO_ROOT).as_posix().encode("utf-8")
-    return hashlib.sha256(relative).hexdigest()[:12]
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -119,19 +111,15 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
         return
 
-    changed = sorted(
-        path
-        for group_before, group_after in zip(before, after, strict=True)
-        for path in set(group_before) | set(group_after)
-        if group_before.get(path) != group_after.get(path)
+    report = change_report(
+        collect_changes(before, after),
+        repo_root=_REPO_ROOT,
+        mode=hint_mode(),
     )
-    if not changed:
+    if not report:
         return
     reporter = session.config.pluginmanager.get_plugin("terminalreporter")
     if reporter is not None:
-        reporter.write_line(
-            "ERROR: tests changed the checkout; value-safe path token(s): "
-            + ", ".join(_path_token(path) for path in changed[:20]),
-            red=True,
-        )
+        for line in report:
+            reporter.write_line(line, red=True)
     session.exitstatus = pytest.ExitCode.TESTS_FAILED

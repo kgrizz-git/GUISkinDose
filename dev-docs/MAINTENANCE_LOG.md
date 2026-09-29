@@ -21,6 +21,29 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Debuggable write-containment failures** (2026-09-29) — the `tests/conftest.py` guard that fails a run
+  when tests change the checkout used to print only a 12-hex SHA-256 token per path, which meant
+  identifying the offending file required brute-forcing candidate paths through the same hash. The
+  message now always adds *value-safe shape*: whether a tracked file was modified or a new file
+  appeared, the top-level directory (named only when it is a conventional repository directory), the
+  path depth, and the file suffix (only when it is an allowlisted extension). That is normally enough
+  to locate the writer. Two opt-in levels go further for local debugging via
+  `GUISKINDOSE_TEST_CONTAINMENT_HINT`: `masked` shows the first and last character of each name with an
+  allowlisted suffix kept verbatim (`t…p/n…i.log`), and `full` shows the exact repo-relative path.
+  Both are **refused when `CI` or `GITHUB_ACTIONS` is set**, and unset or unrecognized values fail
+  closed to the token-only default, so neither a typo nor a workflow variable can widen disclosure in a
+  world-readable log.
+
+  Hardening found while reviewing the first draft of this change: `Path.suffix` is only "text after the
+  last dot", so echoing it verbatim leaked the whole identifier for a name like
+  `x.Lastname_Firstname_19700101`, and a shape pattern still admitted `.J` — a first initial dressed as
+  an extension; the suffix is now an explicit extension allowlist. Short path segments were returned
+  unmasked, which made masking the identity function for `tmp/J/D.dcm`; segments of one or two
+  characters are now withheld entirely. Control characters are stripped so a crafted filename cannot
+  forge log lines. Report construction moved to a new pure `tests/containment_hint.py`, leaving the
+  hook a thin adapter, with unit tests covering the disclosure contract, the CI refusal, injection,
+  allowlist drift, cap boundaries, and the hook wiring itself.
+
 - **Reliable local SonarQube coverage input** (2026-09-28) — `run_sonarqube_local.py --generate-coverage` now
   generates the same combined non-GUI + GUI coverage used by CI before analysis. Scan-only runs fail fast when
   `coverage.xml` is missing or older than Python inputs, preventing misleading 0% new-code gate failures.
