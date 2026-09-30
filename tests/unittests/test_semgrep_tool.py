@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,21 @@ UNPINNED_ENV: str = semgrep_tool.UNPINNED_ENV
 SemgrepUnavailableError: type[Exception] = semgrep_tool.SemgrepUnavailableError
 pinned_version = semgrep_tool.pinned_version
 semgrep_argv = semgrep_tool.semgrep_argv
+TOOL_PROJECT: Path = semgrep_tool.TOOL_PROJECT
+
+
+def _locked_project(root: Path) -> Path:
+    """Give a fake root a tool project that looks hash-locked."""
+    project = root / TOOL_PROJECT
+    project.mkdir(parents=True, exist_ok=True)
+    (project / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    (project / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    return project
+
+
+def _which(**found: str) -> Any:
+    """shutil.which stub: only the named tools resolve."""
+    return lambda name: found.get(name)
 
 
 def _inventory(tmp_path: Path, tools: list[dict[str, object]]) -> Path:
@@ -75,18 +91,55 @@ class TestSemgrepArgv:
         argv = semgrep_argv(["--version"], root=root)
         assert argv == ["/bin/uvx", "--from", "semgrep==1.2.3", "semgrep", "--version"]
 
-    def test_falls_back_to_path_semgrep_with_a_warning(
+    def test_prefers_the_hash_locked_tool_project(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A version pin alone leaves ~68 transitive packages re-resolved per run."""
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        project = _locked_project(root)
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv", uvx="/bin/uvx"))
+        argv = semgrep_argv(["--version"], root=root)
+        assert argv == ["/bin/uv", "run", "--locked", "--project", str(project), "semgrep", "--version"]
+
+    def test_locked_run_refuses_a_stale_lock(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """--locked is what makes the lock load-bearing instead of decorative."""
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        _locked_project(root)
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv"))
+        assert "--locked" in semgrep_argv(["--version"], root=root)
+
+    def test_uvx_is_used_when_the_lock_is_absent(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """An unpinned local binary is usable but must announce itself."""
+        """Degrading to version-only isolation is allowed, but must say so."""
         root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
         monkeypatch.delenv(UNPINNED_ENV, raising=False)
-        monkeypatch.setattr(
-            semgrep_tool.shutil, "which", lambda name: "/usr/bin/semgrep" if name == "semgrep" else None
-        )
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv", uvx="/bin/uvx"))
         argv = semgrep_argv(["--version"], root=root)
-        assert argv == ["/usr/bin/semgrep", "--version"]
-        assert "not pinned" in capsys.readouterr().err
+        assert argv == ["/bin/uvx", "--from", "semgrep==1.2.3", "semgrep", "--version"]
+        assert "hash-locked" in capsys.readouterr().err
+
+    def test_path_semgrep_is_accepted_only_at_the_pinned_version(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(semgrep="/usr/bin/semgrep"))
+        monkeypatch.setattr(semgrep_tool, "installed_version", lambda _exe: "1.2.3")
+        assert semgrep_argv(["--version"], root=root) == ["/usr/bin/semgrep", "--version"]
+        assert "not the hash-locked ones" in capsys.readouterr().err
+
+    @pytest.mark.parametrize("reported", ["1.2.4", "0.9.0", None])
+    def test_path_semgrep_at_the_wrong_version_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reported: str | None
+    ) -> None:
+        """Otherwise the gate silently becomes advisory: it passes locally, fails in CI."""
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(semgrep="/usr/bin/semgrep"))
+        monkeypatch.setattr(semgrep_tool, "installed_version", lambda _exe: reported)
+        with pytest.raises(SemgrepUnavailableError, match=r"pinned to 1\.2\.3"):
+            semgrep_argv(["--version"], root=root)
 
     def test_raises_when_nothing_can_run_it(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Never degrade to "skip the scan"."""
@@ -147,6 +200,87 @@ class TestToolEnvironment:
     def test_other_variables_survive(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("SEMGREP_ENABLE_VERSION_CHECK", "0")
         assert semgrep_tool.tool_environment()["SEMGREP_ENABLE_VERSION_CHECK"] == "0"
+
+    def test_the_tool_never_installs_into_the_project_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`.envrc` exports UV_PROJECT_ENVIRONMENT=.venv, and `uv run` honours it.
+
+        Left in place, the hash-locked run would install Semgrep and its pinned
+        dependencies into the very environment this design keeps them out of.
+        """
+        monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", str(ROOT / ".venv"))
+        monkeypatch.setenv("VIRTUAL_ENV", str(ROOT / ".venv"))
+        environment = semgrep_tool.tool_environment()
+        assert Path(environment["UV_PROJECT_ENVIRONMENT"]) == ROOT / TOOL_PROJECT / ".venv"
+        assert "VIRTUAL_ENV" not in environment
+
+    def test_the_tool_environment_follows_a_supplied_root(self, tmp_path: Path) -> None:
+        environment = semgrep_tool.tool_environment(root=tmp_path)
+        assert Path(environment["UV_PROJECT_ENVIRONMENT"]) == tmp_path / TOOL_PROJECT / ".venv"
+
+
+class TestInstalledVersion:
+    def test_reads_the_first_output_line(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            semgrep_tool.subprocess,
+            "run",
+            lambda *_a, **_k: subprocess.CompletedProcess([], 0, "1.2.3\nextra\n", ""),
+        )
+        assert semgrep_tool.installed_version("/usr/bin/semgrep") == "1.2.3"
+
+    @pytest.mark.parametrize("outcome", [subprocess.CompletedProcess([], 2, "", "boom"), OSError("nope")])
+    def test_unreadable_versions_are_none_not_an_exception(
+        self, monkeypatch: pytest.MonkeyPatch, outcome: object
+    ) -> None:
+        """A failed probe must be reported as a mismatch, not crash the gate."""
+
+        def fake_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            if isinstance(outcome, BaseException):
+                raise outcome
+            assert isinstance(outcome, subprocess.CompletedProcess)
+            return outcome
+
+        monkeypatch.setattr(semgrep_tool.subprocess, "run", fake_run)
+        assert semgrep_tool.installed_version("/usr/bin/semgrep") is None
+
+
+class TestHashLockedToolProject:
+    def test_the_real_checkout_has_a_locked_tool_project(self) -> None:
+        assert semgrep_tool.locked_tool_project() == ROOT / TOOL_PROJECT
+
+    def test_the_tool_pin_matches_the_inventory(self) -> None:
+        """uv needs a literal requirement, so the pin exists twice; it must not drift."""
+        manifest = (ROOT / TOOL_PROJECT / "pyproject.toml").read_text(encoding="utf-8")
+        assert f'"semgrep=={pinned_version()}"' in manifest
+
+    def test_every_transitive_package_is_hash_pinned(self) -> None:
+        """The reason this project exists: uvx records no hashes."""
+        lock = (ROOT / TOOL_PROJECT / "uv.lock").read_text(encoding="utf-8")
+        assert lock.count('hash = "sha256:') > 100
+        assert f'name = "semgrep"\nversion = "{pinned_version()}"' in lock
+
+    def test_the_tool_project_is_not_in_the_root_resolution(self) -> None:
+        """Isolation is the point; a workspace member would merge it back in."""
+        assert "semgrep" not in (ROOT / "uv.lock").read_text(encoding="utf-8")
+        assert "[tool.uv.workspace]" not in (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    def test_the_resolved_command_actually_reports_the_pinned_version(self) -> None:
+        """Assert the version that runs, not just the one requested.
+
+        Deliberately no skip: as with tests/unittests/test_privacy_semgrep_rules.py, a
+        security gate that quietly does nothing is worse than one that fails.
+        """
+        command = semgrep_argv(["--version"])
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=semgrep_tool.tool_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        assert completed.returncode == 0, completed.stderr[-2000:]
+        assert completed.stdout.strip().splitlines()[0].strip() == pinned_version()
 
 
 class TestInventoryIsTheSingleSourceOfTruth:

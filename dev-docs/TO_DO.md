@@ -153,16 +153,16 @@ be archived.
   transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and Dependabot alerts
   #2/#3/#4 should close on their own. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
   suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
-- [ ] **Hash-lock the isolated scanner tools** — `semgrep` and `phi-scan` run via bare
-  `uvx --from <pkg>==<version>`, which resolves from PyPI **without hash verification**, where
-  `uv sync --locked` gave sha256-pinned wheels; a same-version re-upload would be trusted. Nothing
-  audits those tool environments either, so semgrep's own `click 8.1.8` / `mcp 1.23.3` /
-  `pyjwt 2.13.0` are now permanently invisible to `uv audit` and Dependabot (see the note in
-  `[tool.uv.audit]`). **Goal:** a `tools/semgrep/` mini-project with its own `pyproject.toml` and
-  `uv.lock`, invoked as `uv run --project tools/semgrep semgrep ...` from `scripts/semgrep_tool.py`,
-  restoring hash-pinned wheels and a lockfile a human or Renovate can read while keeping zero entries
-  in the application lock. **Acceptance:** both gates run from the locked tool project; `uv audit`
-  covers it; no bare `uvx --from` left for semgrep.
+- [ ] **Hash-lock `phi-scan`, and audit the locked tool environments** — semgrep is done:
+  `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
+  packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
+  still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
+  verification**, so a same-version re-upload would be trusted. Separately, nothing audits either
+  tool environment, so semgrep's own `click 8.1.8` / `mcp 1.23.3` / `pyjwt 2.13.0` stay invisible to
+  `uv audit` and Dependabot (see the note in `[tool.uv.audit]`) even though `tools/semgrep/uv.lock`
+  now records them in a readable, auditable form. **Acceptance:** a `tools/phi-scan/` project
+  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
+  scanner-only advisories separately from application ones so the distinction stays explicit.
 - [ ] **Bump the pinned scanner versions** — `semgrep` (`dev-docs/privacy_tool_inventory.json`) and `phi-scan`
   (`0.7.0`, hardcoded in `.github/workflows/phi-scan.yml`, `scripts/privacy_admission.py`, and
   `dev-docs/references/LOCAL_PII_MODELS.md`) are isolated `uvx` tools outside `uv.lock`, so **Dependabot cannot see

@@ -21,6 +21,40 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Semgrep's isolated environment is now hash-locked, and the resolved version is asserted**
+  (2026-09-29) — follow-up to the isolation entry below, which traded `uv sync --locked`'s
+  sha256-pinned wheels for `uvx --from semgrep==<pin>`. That pin fixed the scanner's own version but
+  re-resolved its ~68 transitive dependencies on every run with no recorded hashes, so a same-version
+  re-upload would have been trusted. New `tools/semgrep/` is a standalone uv project — deliberately
+  **not** a workspace member, since joining the workspace would merge those dependencies back into
+  the root resolution and undo the isolation — and its `uv.lock` records 942 sha256 hashes.
+  `scripts/semgrep_tool.py` now prefers `uv run --locked --project tools/semgrep`, falling back to
+  `uvx` and then to a `PATH` semgrep. Verified: the locked run reports `1.168.0`, matching the
+  inventory pin, and `semgrep` remains unimportable in the project environment.
+
+  Two traps were specific to this repo's `.envrc`. It exports `UV_PROJECT_ENVIRONMENT=.venv`, and
+  `uv run` honours it, so without redirecting it the hash-locked run would have installed semgrep and
+  its pinned dependencies straight into the environment this design exists to keep them out of; the
+  scanner environment is redirected to the gitignored `tools/semgrep/.venv`. That location is not
+  arbitrary either: pytest's write-containment snapshot (`tests/conftest.py`) prunes directories named
+  `.venv` at any depth but does **not** prune `tmp/`, and `tests/unittests/test_privacy_semgrep_rules.py`
+  runs the scanner during the suite, so putting the environment under `tmp/` would have tripped the
+  containment guard.
+
+  Also closed the gap that nothing checked which version actually ran. A `semgrep` found only on
+  `PATH` is now refused unless it reports the pinned version, because one that disagrees with CI makes
+  the gate advisory without saying so, and a test runs the resolved command and asserts its
+  `--version` output equals the inventory pin. The `--locked` flag is what makes the lock
+  load-bearing: bumping the pin now requires editing the inventory *and* re-running
+  `uv lock --project tools/semgrep`, and doing only one fails loudly.
+
+  **Not done, deliberately:** pinning the Semgrep *ruleset*. `--config=p/owasp-top-ten` is fetched
+  from the registry on each run, so the rules are mutable and the gate needs network — a rule change
+  upstream can turn a green local push into a red CI run. Vendoring the pack is not a plumbing task:
+  all 559 rules in it carry `license: Semgrep Rules License v1.0`, none under the LGPL terms of the
+  public `semgrep-rules` repository, so redistributing them in a public repo is a licensing question.
+  The cheap alternative, if this ever bites, is a digest-drift check rather than a pin.
+
 - **Semgrep isolated as a pinned `uvx` tool; all dependency-audit suppressions removed**
   (2026-09-29) — semgrep is no longer in the `dev` extra or `uv.lock`. Its own requirements
   (`click<8.2`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`) were the sole reason the project carried five
@@ -38,8 +72,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `pip-audit`, Dependabot, and grype inspect. The genuine improvement is in the *project*
   environment, where `click` moved 8.1.8 to 8.5.0 — which reaches users, since uvicorn pulls click
   into the `gui` extra. For mcp and pyjwt, both dev-only before and after, only the audit scope
-  changed. The tool environment is also unhashed, where `uv sync --locked` gave sha256-pinned
-  wheels; `dev-docs/TO_DO.md` tracks replacing bare `uvx --from` with a hash-locked tool project.
+  changed. The tool environment was also unhashed at first, where `uv sync --locked` gave
+  sha256-pinned wheels; that gap is closed by the `tools/semgrep` entry below.
 
   The pin lives in `dev-docs/privacy_tool_inventory.json` — already the tracked source of truth for
   scanner versions — and both entry points read it, so the hook and CI cannot drift. New

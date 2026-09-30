@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve a pinned, isolated Semgrep invocation.
+"""Resolve a pinned, hash-locked, isolated Semgrep invocation.
 
 Semgrep is deliberately **not** a project dependency. Its own requirements are
 tightly pinned (`click<8.2`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`), and while
@@ -9,10 +9,18 @@ carried traced back to this one package. Semgrep is only ever run as a CLI, neve
 imported, so running it as an isolated tool removes the constraint entirely
 without losing the scanner.
 
-The pinned version is read from ``dev-docs/privacy_tool_inventory.json``, which
-is already the tracked source of truth for scanner versions and is validated by
-``scripts/render_privacy_tool_inventory.py --check``. Keeping the pin there means
-the hook, the workflows, and the published inventory cannot drift apart.
+Isolation alone would cost integrity, though: ``uvx --from semgrep==<pin>`` fixes
+the scanner's own version but re-resolves its ~68 transitive dependencies on every
+run, with no recorded hashes. So the preferred invocation is a ``uv run --locked``
+against ``tools/semgrep/``, a standalone mini-project whose ``uv.lock`` pins every
+transitive package to an exact version and sha256 — restoring what ``uv sync
+--locked`` provided before Semgrep left the root lock. ``uvx`` remains a fallback.
+
+The version of record is ``dev-docs/privacy_tool_inventory.json``, already the
+tracked source of truth for scanner versions and validated by
+``scripts/render_privacy_tool_inventory.py --check``. ``tools/semgrep/pyproject.toml``
+must repeat the pin because uv needs a literal requirement; the two are checked
+against each other by ``tests/unittests/test_semgrep_tool.py``.
 
 Follows the ``uvx --from 'phi-scan==0.7.0'`` pattern already used for the PHI
 scanner (``.github/workflows/phi-scan.yml``, ``scripts/privacy_admission.py``).
@@ -23,6 +31,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Final
@@ -31,10 +40,23 @@ INVENTORY_PATH: Final = Path("dev-docs/privacy_tool_inventory.json")
 _TOOL_ID: Final = "semgrep"
 _TOOL_ID_KEY: Final = "id"
 
+# Standalone uv project carrying the hash-locked scanner environment. Not a workspace
+# member of the root project: joining the workspace would merge these dependencies back
+# into the root resolution and undo the isolation.
+TOOL_PROJECT: Final = Path("tools/semgrep")
+_TOOL_LOCK: Final = "uv.lock"
+_TOOL_MANIFEST: Final = "pyproject.toml"
+
+# Kept inside the tool project rather than under `tmp/`: pytest's write-containment
+# snapshot in tests/conftest.py prunes directories named `.venv` at any depth, but not
+# `tmp/`, and tests/unittests/test_privacy_semgrep_rules.py runs the scanner.
+_TOOL_ENV_DIRNAME: Final = ".venv"
+
 # Set by the weekly `ci-latest` probe to run the newest Semgrep instead of the pin.
-# Nothing auto-bumps this pin (it is intentionally outside uv.lock, so Dependabot's
-# pip ecosystem cannot see it), so that probe is what surfaces drift and upstream
-# breakage; a human then bumps the inventory version.
+# Nothing auto-bumps this pin (it is intentionally outside the root uv.lock, and
+# `.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot
+# sees neither lock), so that probe is what surfaces drift and upstream breakage; a
+# human then bumps the inventory version and relocks tools/semgrep.
 #
 # Honoured ONLY in CI. Locally it would be an unaudited way to run an arbitrary
 # scanner version through the same blocking gates, which is the opposite of the
@@ -42,6 +64,8 @@ _TOOL_ID_KEY: Final = "id"
 UNPINNED_ENV: Final = "GUISKINDOSE_SEMGREP_UNPINNED"
 _CI_ENV_VARS: Final = ("CI", "GITHUB_ACTIONS")
 _TRUTHY: Final = frozenset({"1", "true", "yes", "on"})
+
+_VERSION_PROBE_TIMEOUT_S: Final = 60
 
 
 def _is_truthy(value: object) -> bool:
@@ -82,47 +106,109 @@ def pinned_version(root: Path | None = None) -> str:
     raise SemgrepUnavailableError("no semgrep entry in the privacy tool inventory")
 
 
-def tool_environment(environ: dict[str, str] | None = None) -> dict[str, str]:
-    """Environment for the isolated tool, with the project's interpreter pin removed.
+def locked_tool_project(root: Path | None = None) -> Path | None:
+    """The hash-locked tool project, or None if this checkout has no usable one."""
+    base = repo_root() if root is None else root
+    project = base / TOOL_PROJECT
+    if (project / _TOOL_MANIFEST).is_file() and (project / _TOOL_LOCK).is_file():
+        return project
+    return None
 
-    `.envrc` exports ``UV_PYTHON`` to pin the *project* to 3.14, and ``uvx`` honours it —
-    so without this the local blocking gate would run Semgrep on whatever the project
-    pins while CI runs it on the runner default. The day a Semgrep release drops that
-    interpreter, every direnv developer's pre-push gate breaks and CI stays green. Let
-    uv pick an interpreter Semgrep actually supports instead.
+
+def tool_environment(environ: dict[str, str] | None = None, *, root: Path | None = None) -> dict[str, str]:
+    """Environment for the isolated tool, with the project's uv settings redirected.
+
+    Two `.envrc` exports would otherwise leak into the scanner run:
+
+    ``UV_PYTHON`` pins the *project* to 3.14 and uv honours it — so without this the
+    local blocking gate would run Semgrep on whatever the project pins while CI ran it
+    on the runner default. The day a Semgrep release drops that interpreter, every
+    direnv developer's pre-push gate breaks and CI stays green.
+
+    ``UV_PROJECT_ENVIRONMENT`` points at the project's own ``.venv``. Left in place,
+    ``uv run --project tools/semgrep`` would install Semgrep and its pinned
+    dependencies straight into the environment this change exists to keep them out of.
     """
     source = dict(os.environ if environ is None else environ)
     source.pop("UV_PYTHON", None)
+    source.pop("VIRTUAL_ENV", None)
+    base = repo_root() if root is None else root
+    source["UV_PROJECT_ENVIRONMENT"] = str(base / TOOL_PROJECT / _TOOL_ENV_DIRNAME)
     return source
+
+
+def installed_version(executable: str) -> str | None:
+    """Version reported by a Semgrep executable, or None if it cannot be read."""
+    try:
+        completed = subprocess.run(
+            [executable, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=_VERSION_PROBE_TIMEOUT_S,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip().splitlines()[0].strip() if completed.stdout.strip() else None
 
 
 def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
     """Command that runs the pinned Semgrep with ``args``.
 
-    Prefers an isolated ``uvx`` run so the version matches CI exactly. Falls back
-    to a Semgrep already on ``PATH`` only when ``uvx`` is missing, and says so on
-    stderr — an unpinned local binary may disagree with the gate that runs in CI.
+    Preference order, strongest first: a hash-locked ``uv run --locked`` against
+    ``tools/semgrep``; an isolated ``uvx --from semgrep==<pin>`` (right version,
+    unverified dependency tree); a Semgrep already on ``PATH``, which is accepted only
+    when it reports the pinned version, because an unpinned local binary that disagrees
+    with CI makes the gate advisory without saying so.
     """
+    base = repo_root() if root is None else root
+    uv = shutil.which("uv")
     uvx = shutil.which("uvx")
+
+    if unpinned_probe_requested() and uvx is not None:
+        print(
+            f"NOTE: {UNPINNED_ENV} is set in CI; running the latest Semgrep instead "
+            "of the pinned version (weekly drift probe).",
+            file=sys.stderr,
+        )
+        return [uvx, "semgrep", *args]
+    unpinned_ignored = _is_truthy(os.environ.get(UNPINNED_ENV)) and not unpinned_probe_requested()
+    if unpinned_ignored:
+        print(
+            f"WARNING: ignoring {UNPINNED_ENV} outside CI; the pinned version is "
+            "what the blocking gates use. Run uvx directly to try another release.",
+            file=sys.stderr,
+        )
+
+    project = locked_tool_project(base)
+    if uv is not None and project is not None:
+        # --locked refuses to proceed if uv.lock is stale rather than silently
+        # re-resolving, which is the whole point of having the lock.
+        return [uv, "run", "--locked", "--project", str(project), "semgrep", *args]
+
+    version = pinned_version(base)
     if uvx is not None:
-        if unpinned_probe_requested():
+        if project is None:
             print(
-                f"NOTE: {UNPINNED_ENV} is set in CI; running the latest Semgrep instead "
-                "of the pinned version (weekly drift probe).",
+                "WARNING: tools/semgrep is missing or has no uv.lock; running the pinned "
+                "version without its hash-locked dependency tree.",
                 file=sys.stderr,
             )
-            return [uvx, "semgrep", *args]
-        if _is_truthy(os.environ.get(UNPINNED_ENV)):
-            print(
-                f"WARNING: ignoring {UNPINNED_ENV} outside CI; the pinned version is "
-                "what the blocking gates use. Run uvx directly to try another release.",
-                file=sys.stderr,
-            )
-        return [uvx, "--from", f"semgrep=={pinned_version(root)}", "semgrep", *args]
+        return [uvx, "--from", f"semgrep=={version}", "semgrep", *args]
+
     installed = shutil.which("semgrep")
     if installed is not None:
+        reported = installed_version(installed)
+        if reported != version:
+            raise SemgrepUnavailableError(
+                f"the semgrep on PATH reports {reported or 'an unreadable version'}, "
+                f"but the gate is pinned to {version}; install uv so the pinned tool can be used"
+            )
         print(
-            "WARNING: uvx not found; using the semgrep on PATH, whose version is not pinned and may differ from CI.",
+            "WARNING: uv not found; using the semgrep on PATH. Its version matches the pin, "
+            "but its dependencies are not the hash-locked ones.",
             file=sys.stderr,
         )
         return [installed, *args]

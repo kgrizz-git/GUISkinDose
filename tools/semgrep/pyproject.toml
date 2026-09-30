@@ -1,0 +1,29 @@
+# Isolated, hash-locked environment for the Semgrep scanner.
+#
+# Semgrep is deliberately not a project dependency: it is only ever run as a CLI,
+# never imported, and its own tight pins (`click<8.2`, `mcp==1.23.3`,
+# `pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it
+# sat in the root `dev` extra. See scripts/semgrep_tool.py.
+#
+# This mini-project exists so that isolation does not cost integrity. `uvx --from
+# semgrep==<pin>` resolves a version but re-resolves and re-verifies its entire
+# dependency tree on every run; the uv.lock beside this file pins each of those
+# transitive packages to an exact version and sha256, which is what `uv sync --locked`
+# gave us before Semgrep left the root lock.
+#
+# Deliberately NOT a uv workspace member of the root project: joining the workspace
+# would merge these dependencies back into the root resolution and undo the isolation.
+# `.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so nothing bumps
+# this lock automatically either; the version of record is
+# dev-docs/privacy_tool_inventory.json and the weekly `ci-latest` drift probe is what
+# surfaces upstream movement.
+[project]
+name = "guiskindose-semgrep-tool"
+version = "0"
+description = "Pinned, hash-locked Semgrep scanner environment (not shipped, not importable)."
+requires-python = ">=3.10"
+dependencies = ["semgrep==1.168.0"]
+
+# Nothing here is built or installed as a package; this project only carries the lock.
+[tool.uv]
+package = false

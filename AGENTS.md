@@ -185,15 +185,31 @@ pre-commit run --all-files                           # pre-commit stage hooks
 pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, audit_dependencies, basedpyright, changelog)
 ```
 
-**Semgrep is not a project dependency, so the two semgrep hooks now require `uv`** (for `uvx`); a
-pip-only install can no longer run them and the failure is a blocked push. It is run as a pinned isolated tool
-(`uvx --from semgrep==<pin>`), because its own requirements (`click<8.2`, `mcp==1.23.3`,
+**Semgrep is not a project dependency, so the two semgrep hooks now require `uv`**; a
+pip-only install can no longer run them and the failure is a blocked push. It is run as a pinned,
+hash-locked isolated tool, because its own requirements (`click<8.2`, `mcp==1.23.3`,
 `pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
-`dev` extra. The pin lives in `dev-docs/privacy_tool_inventory.json`; both entry points
-(`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) read it, so the hook and CI
-cannot diverge. Nothing bumps that pin automatically — Dependabot only sees `uv.lock` — so the
-weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe and opens a
-tracking issue when it breaks.
+`dev` extra. `scripts/semgrep_tool.py` resolves the invocation, preferring
+`uv run --locked --project tools/semgrep`: that mini-project is a standalone uv project (**not** a
+workspace member — joining the workspace would merge the dependencies back into the root
+resolution) whose `uv.lock` pins all ~68 transitive packages by exact version and sha256. `uvx
+--from semgrep==<pin>` is the fallback, and gets the right scanner with an unverified dependency
+tree. A `semgrep` merely on `PATH` is accepted only when it reports the pinned version, since one
+that disagrees with CI makes the gate advisory without saying so.
+
+The version of record is `dev-docs/privacy_tool_inventory.json`; `tools/semgrep/pyproject.toml`
+repeats it because uv needs a literal requirement, and a test asserts the two agree. Both entry
+points (`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) resolve through
+`semgrep_tool`, so the hook and CI cannot diverge. Nothing bumps the pin automatically —
+`.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot sees neither
+lock — so the weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe
+and opens a tracking issue when it breaks. Bumping means editing the inventory *and* re-running
+`uv lock --project tools/semgrep`; `--locked` fails loudly if only one of the two is done.
+
+The scanner's environment lives at `tools/semgrep/.venv` (gitignored). Note that
+`.envrc` exports `UV_PYTHON` and `UV_PROJECT_ENVIRONMENT`, and `uv run` honours both, so
+`semgrep_tool.tool_environment()` must be used to launch it — otherwise the scanner installs
+straight into the project `.venv`.
 
 The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
 needs network access (offline pushes will fail). On Windows, semgrep runs natively (beta)
