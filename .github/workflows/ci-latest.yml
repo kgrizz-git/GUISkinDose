@@ -31,7 +31,16 @@ jobs:
   latest-deps:
     runs-on: ubuntu-latest
     steps:
+    # persist-credentials: false matters more here than in any other workflow. This job
+    # deliberately installs UNPINNED upstream releases and runs the newest Semgrep with a
+    # ruleset fetched from its registry, so it executes third-party code nobody reviewed.
+    # Leaving the checkout token in `.git/config` would put a credential carrying
+    # `issues: write` within reach of that code. Nothing here pushes or fetches, and
+    # github-script authenticates through its own `github.token`, so dropping it costs
+    # nothing. Matches the sonar-scan job in ci.yml.
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
     # Required by the two semgrep probes below, which need `uvx` to fetch the newest
     # release. `uv` is not part of the ubuntu runner image, and the unpinned
     # `pip install -e ".[dev,gui]"` below does not provide semgrep either (it is
