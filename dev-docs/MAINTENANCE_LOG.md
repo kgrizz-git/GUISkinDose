@@ -21,6 +21,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **virtualenv 21.4.2 to 21.14.1** (2026-09-30) — clears four advisories
+  (GHSA-x78j-v8h9-3j2q, and PYSEC-2026-4011 / -4012 / -4013: unverified seed wheels,
+  `pyvenv.cfg` prompt injection, and activation scripts executing commands embedded in
+  paths). Same situation as the urllib3 bump below: published after the previous push,
+  unrelated to the work it landed beside, and already pinned at the vulnerable version on
+  `main`. Dev-only, reaching the lock through `pre-commit`. `python-discovery` moved 1.4.0
+  to 1.6.1 with it as a transitive dependency.
+
 - **urllib3 2.7.0 to 2.8.0** (2026-09-30) — clears GHSA-8988-9cw3-xx77 (HTTPS proxy TLS
   configuration may be ignored or overridden) and GHSA-vxq7-64xx-v4gw (`HTTPResponse.stream()`
   buffers an unbounded chunk-size line into memory), both fixed in 2.8.0. Published after the

@@ -153,7 +153,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pytest-playwright | 0.8.0 | Apache-2.0 | homepage, https://github.com/microsoft/playwright-pytest |
 | pytest-xdist | 3.8.0 | MIT | Homepage, https://github.com/pytest-dev/pytest-xdist |
 | python-dateutil | 2.9.0.post0 | BSD-3-Clause, Apache-2.0 | https://github.com/dateutil/dateutil |
-| python-discovery | 1.4.0 | MIT | Changelog, https://github.com/tox-dev/python-discovery/releases |
+| python-discovery | 1.6.1 | MIT | Changelog, https://github.com/tox-dev/python-discovery/releases |
 | python-docx | 1.2.0 | MIT | Changelog, https://github.com/python-openxml/python-docx/blob/master/HISTORY.rst |
 | python-dotenv | 1.2.2 | BSD-3-Clause | Source, https://github.com/theskumar/python-dotenv |
 | python-engineio | 4.13.2 | MIT | Homepage, https://github.com/miguelgrinberg/python-engineio |
@@ -210,7 +210,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tzdata | 2026.2 | Apache-2.0 | https://github.com/python/tzdata |
 | urllib3 | 2.8.0 | MIT | Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst |
 | uvicorn | 0.49.0 | BSD-3-Clause | Changelog, https://uvicorn.dev/release-notes |
-| virtualenv | 21.4.2 | MIT | Documentation, https://virtualenv.pypa.io |
+| virtualenv | 21.14.1 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
 | watchfiles | 1.2.0 | MIT | https://github.com/samuelcolvin/watchfiles |
 | wcwidth | 0.8.1 | MIT | Homepage, https://github.com/jquast/wcwidth |
 | webencodings | 0.5.1 | BSD-3-Clause | https://github.com/SimonSapin/python-webencodings |
