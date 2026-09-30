@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -85,6 +86,27 @@ def _collect_copy_text_uses(repo_root: Path) -> dict[str, list[Path]]:
     return uses
 
 
+def _collect_literal_key_uses(repo_root: Path, keys: Iterable[str]) -> dict[str, list[Path]]:
+    """Keys spelled literally in scanned source, outside a ``copy_text(...)`` call.
+
+    Some keys are chosen at runtime — ``copy_text(psd_band_copy_key(psd))`` picks one of the
+    four ``results.psd_band.*`` keys by severity — so COPY_TEXT_RE never sees them and they
+    would read as unused forever, turning --strict permanently red. A key written out in
+    source is genuinely referenced, so count it.
+    """
+    uses: dict[str, list[Path]] = {}
+    scan_root = repo_root / SOURCE_SCAN_ROOT
+    if not scan_root.is_dir():
+        return uses
+    wanted = [key for key in keys if key]
+    for path in sorted(scan_root.rglob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        for key in wanted:
+            if f'"{key}"' in text or f"'{key}'" in text:
+                uses.setdefault(key, []).append(path.relative_to(repo_root))
+    return uses
+
+
 def validate_ui_copy(repo_root: Path, *, strict: bool = False) -> ValidationResult:
     repo_root = repo_root.resolve()
     result = ValidationResult()
@@ -105,6 +127,10 @@ def validate_ui_copy(repo_root: Path, *, strict: bool = False) -> ValidationResu
         if key not in keys:
             joined = ", ".join(str(path) for path in files)
             result.errors.append(f"{joined}: copy_text key is not in catalog: {key}")
+    # Runtime-selected keys are never a copy_text() literal; count the ones written out in
+    # source. Applied after the not-in-catalog check above, which must stay keyed on
+    # copy_text() uses so a typo'd literal is still reported.
+    used_keys.update(_collect_literal_key_uses(repo_root, keys))
 
     for key, item in keys.items():
         _validate_copy_entry(repo_root, key, item, used_keys, result, strict=strict)
@@ -188,9 +214,7 @@ def _validate_glossary_entry(
     _check_alias_duplicates(term, item, aliases, result)
 
 
-def _check_mandatory_text_field(
-    term: str, item: dict, field: str, result: ValidationResult
-) -> None:
+def _check_mandatory_text_field(term: str, item: dict, field: str, result: ValidationResult) -> None:
     if not _is_non_empty_string(item.get(field)):
         result.errors.append(f"{term}: {field} must be a non-empty string")
 
@@ -206,9 +230,7 @@ def _check_definition(term: str, item: dict, result: ValidationResult) -> None:
         result.errors.append(f"{term}: definition must be 240 characters or fewer")
 
 
-def _check_alias_duplicates(
-    term: str, item: dict, aliases: dict[str, str], result: ValidationResult
-) -> None:
+def _check_alias_duplicates(term: str, item: dict, aliases: dict[str, str], result: ValidationResult) -> None:
     raw_aliases = item.get("aliases")
     if not isinstance(raw_aliases, list) or not all(_is_non_empty_string(a) for a in raw_aliases):
         result.errors.append(f"{term}: aliases must be a list of non-empty strings")

@@ -134,3 +134,29 @@ def test_validate_glossary_warns_for_banned_terms(tmp_path: Path) -> None:
     result = validate_glossary(tmp_path)
 
     assert any("use 'peak skin dose'" in warning for warning in result.warnings)
+
+
+def test_a_runtime_selected_key_counts_as_used_when_spelled_in_source(tmp_path: Path) -> None:
+    """`copy_text(psd_band_copy_key(psd))` never shows the key as a copy_text literal.
+
+    Without the literal-key pass those keys read as unused forever, so --strict would go
+    permanently red the moment a catalog key is chosen at runtime.
+    """
+    _write_catalog(tmp_path)
+    _write_glossary(tmp_path)
+    _write_owner(tmp_path, text='KEYS = {"a": "sample.tooltip"}\ncopy_text(KEYS["a"])\n')
+
+    result = validate_ui_copy(tmp_path, strict=True)
+
+    assert result.errors == []
+
+
+def test_a_key_nobody_mentions_is_still_reported(tmp_path: Path) -> None:
+    """The literal-key pass must not turn the unused-key check into a no-op."""
+    _write_catalog(tmp_path)
+    _write_glossary(tmp_path)
+    _write_owner(tmp_path, text="pass\n")
+
+    result = validate_ui_copy(tmp_path, strict=True)
+
+    assert any("unused UI copy key" in error for error in result.errors)
