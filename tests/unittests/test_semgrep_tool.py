@@ -56,6 +56,20 @@ def _which(**found: str) -> Any:
     return lambda name: found.get(name)
 
 
+@pytest.fixture(autouse=True)
+def _neutral_ci_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make every test state the CI-ness it means, instead of inheriting the runner's.
+
+    Two tiers branch on CI: the unpinned drift probe, and the refusal to accept an
+    unverified dependency tree. A test that inherits `CI=true` from a GitHub runner
+    therefore exercises a different branch there than on a developer machine. Two tests
+    did exactly that — green locally, red in CI — which is the failure mode this fixture
+    removes. Tests that want CI set it explicitly.
+    """
+    for name in ("CI", "GITHUB_ACTIONS"):
+        monkeypatch.delenv(name, raising=False)
+
+
 def _inventory(tmp_path: Path, tools: list[dict[str, object]]) -> Path:
     target = tmp_path / semgrep_tool.INVENTORY_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
