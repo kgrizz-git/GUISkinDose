@@ -40,11 +40,13 @@ semgrep_argv = semgrep_tool.semgrep_argv
 TOOL_PROJECT: Path = semgrep_tool.TOOL_PROJECT
 
 
-def _locked_project(root: Path) -> Path:
-    """Give a fake root a tool project that looks hash-locked."""
+def _locked_project(root: Path, version: str = "1.2.3") -> Path:
+    """Give a fake root a tool project that looks hash-locked at ``version``."""
     project = root / TOOL_PROJECT
     project.mkdir(parents=True, exist_ok=True)
-    (project / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    (project / "pyproject.toml").write_text(
+        f'[project]\nname = "x"\ndependencies = ["semgrep=={version}"]\n', encoding="utf-8"
+    )
     (project / "uv.lock").write_text("version = 1\n", encoding="utf-8")
     return project
 
@@ -117,7 +119,7 @@ class TestSemgrepArgv:
         monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv", uvx="/bin/uvx"))
         argv = semgrep_argv(["--version"], root=root)
         assert argv == ["/bin/uvx", "--from", "semgrep==1.2.3", "semgrep", "--version"]
-        assert "hash-locked" in capsys.readouterr().err
+        assert "hash-verified" in capsys.readouterr().err
 
     def test_path_semgrep_is_accepted_only_at_the_pinned_version(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
@@ -196,10 +198,87 @@ class TestSemgrepArgv:
     def test_falsy_probe_flag_keeps_the_pin(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, falsy: str) -> None:
         """Only an explicit opt-in, in CI, may unpin the gate."""
         root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        project = _locked_project(root)
         monkeypatch.setenv(UNPINNED_ENV, falsy)
         monkeypatch.setenv("CI", "true")
-        monkeypatch.setattr(semgrep_tool.shutil, "which", lambda name: "/bin/uvx" if name == "uvx" else None)
-        assert "semgrep==1.2.3" in semgrep_argv(["--version"], root=root)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv", uvx="/bin/uvx"))
+        argv = semgrep_argv(["--version"], root=root)
+        assert argv == ["/bin/uv", "run", "--locked", "--project", str(project), "semgrep", "--version"]
+        assert argv[:2] != ["/bin/uvx", "semgrep"], "a falsy flag must never reach the unpinned probe"
+
+
+class TestInventoryIsEnforcedAtGateTime:
+    """`--locked` compares the tool manifest to its own lock; it never reads the inventory."""
+
+    def test_inventory_bumped_without_relocking_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Otherwise the gate passes on the old scanner and only pytest notices, later.
+
+        That would make the documented "single source of truth" advisory at exactly the
+        point the security argument rests on.
+        """
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "9.9.9"}])
+        _locked_project(root, version="1.2.3")
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv"))
+        with pytest.raises(SemgrepUnavailableError, match=r"inventory pins semgrep 9\.9\.9"):
+            semgrep_argv(["--version"], root=root)
+
+    def test_a_manifest_with_no_pin_is_refused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        project = _locked_project(root)
+        (project / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv"))
+        with pytest.raises(SemgrepUnavailableError, match="declares no version"):
+            semgrep_argv(["--version"], root=root)
+
+    def test_agreeing_pins_resolve_normally(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        _locked_project(root, version="1.2.3")
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv"))
+        assert "--locked" in semgrep_argv(["--version"], root=root)
+
+    def test_a_missing_lock_fails_in_ci_but_only_warns_locally(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A green CI log hides a warning, so CI must not accept unverified dependencies.
+
+        Locally a stale or partial checkout is the likely cause, and blocking the push
+        would be worse than degrading to version-only isolation.
+        """
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv", uvx="/bin/uvx"))
+
+        monkeypatch.delenv("CI", raising=False)
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+        assert semgrep_argv(["--version"], root=root)[:2] == ["/bin/uvx", "--from"]
+        assert "cannot be hash-verified" in capsys.readouterr().err
+
+        monkeypatch.setenv("CI", "true")
+        with pytest.raises(SemgrepUnavailableError, match="CI checkout must include it"):
+            semgrep_argv(["--version"], root=root)
+
+    def test_a_semgrep_inside_the_project_venv_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`.envrc` puts `.venv/bin` on PATH, and `tool_environment()` does not strip PATH.
+
+        A semgrep left there by the leak this branch fixed is the pinned version, so the
+        version check alone would accept it and the isolation would be silently undone.
+        """
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        leaked = root / ".venv" / "bin" / "semgrep"
+        leaked.parent.mkdir(parents=True)
+        leaked.write_text("#!/bin/sh\n", encoding="utf-8")
+        monkeypatch.delenv(UNPINNED_ENV, raising=False)
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(semgrep=str(leaked)))
+        monkeypatch.setattr(semgrep_tool, "installed_version", lambda _exe: "1.2.3")
+        with pytest.raises(SemgrepUnavailableError, match="leaked into it"):
+            semgrep_argv(["--version"], root=root)
 
 
 class TestToolEnvironment:

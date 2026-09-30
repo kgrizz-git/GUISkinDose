@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -106,6 +107,22 @@ def pinned_version(root: Path | None = None) -> str:
     raise SemgrepUnavailableError("no semgrep entry in the privacy tool inventory")
 
 
+def in_ci(environ: object = None) -> bool:
+    source = os.environ if environ is None else environ
+    get = source.get  # type: ignore[union-attr]
+    return any(_is_truthy(get(name)) for name in _CI_ENV_VARS)
+
+
+def tool_manifest_pin(project: Path) -> str | None:
+    """Semgrep version literal declared by the tool project, or None if unreadable."""
+    try:
+        text = (project / _TOOL_MANIFEST).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(r"semgrep==([A-Za-z0-9][A-Za-z0-9._+-]*)", text)
+    return match.group(1) if match else None
+
+
 def locked_tool_project(root: Path | None = None) -> Path | None:
     """The hash-locked tool project, or None if this checkout has no usable one."""
     base = repo_root() if root is None else root
@@ -154,6 +171,83 @@ def installed_version(executable: str) -> str | None:
     return completed.stdout.strip().splitlines()[0].strip() if completed.stdout.strip() else None
 
 
+def _probe_argv(uvx: str | None, args: list[str]) -> list[str]:
+    """Unpinned drift probe: deliberately the newest release, or nothing."""
+    if uvx is None:
+        # Falling through to the pinned paths here would be worse than failing: the probe
+        # exists to answer "has the pin drifted behind upstream?", and a run that quietly
+        # scanned the pinned version instead would answer "no" whatever upstream did. Same
+        # failure mode as the skip-when-missing this module removed.
+        raise SemgrepUnavailableError(
+            f"{UNPINNED_ENV} requested the newest Semgrep, but uvx is unavailable; "
+            "install uv in the probe workflow instead of silently probing the pin"
+        )
+    print(
+        f"NOTE: {UNPINNED_ENV} is set in CI; running the latest Semgrep instead "
+        "of the pinned version (weekly drift probe).",
+        file=sys.stderr,
+    )
+    return [uvx, "semgrep", *args]
+
+
+def _locked_argv(uv: str, project: Path, version: str, args: list[str]) -> list[str]:
+    """Strongest tier: exact versions and sha256 hashes for the whole dependency tree."""
+    declared = tool_manifest_pin(project)
+    if declared != version:
+        # `--locked` compares the tool manifest against its own lock and never reads the
+        # inventory, so without this an inventory-only bump gates green on the previous
+        # scanner and fails later in pytest — advisory exactly where it matters most.
+        raise SemgrepUnavailableError(
+            f"the inventory pins semgrep {version} but {TOOL_PROJECT}/pyproject.toml declares "
+            f"{declared or 'no version'}; update both, then run: uv lock --project {TOOL_PROJECT}"
+        )
+    # --locked then refuses to proceed if uv.lock is stale rather than silently
+    # re-resolving, which is the whole point of having the lock.
+    return [uv, "run", "--locked", "--project", str(project), "semgrep", *args]
+
+
+def _uvx_argv(uvx: str, project: Path | None, version: str, args: list[str]) -> list[str]:
+    """Middle tier: the right scanner version, with an unverified dependency tree."""
+    if project is None:
+        detail = (
+            f"{TOOL_PROJECT} is missing or has no uv.lock, so the scanner's dependency tree cannot be hash-verified"
+        )
+        # Locally this is a stale or partial checkout, and degrading to version-only
+        # isolation beats blocking the push. In CI it means the tracked lock did not
+        # arrive, and a warning would be invisible in a green log.
+        if in_ci():
+            raise SemgrepUnavailableError(f"{detail}; a CI checkout must include it")
+        print(f"WARNING: {detail}; running the pinned version without it.", file=sys.stderr)
+    return [uvx, "--from", f"semgrep=={version}", "semgrep", *args]
+
+
+def _path_argv(base: Path, version: str, args: list[str]) -> list[str]:
+    """Weakest tier: whatever is on PATH, accepted only at the pinned version."""
+    installed = shutil.which("semgrep")
+    if installed is None:
+        raise SemgrepUnavailableError("semgrep is not a project dependency; install uv (for uvx) or semgrep itself")
+    # `.envrc` puts the project venv on PATH and `tool_environment()` does not sanitise
+    # PATH, so a semgrep left behind by the leak fixed earlier on this branch would
+    # otherwise satisfy the version check below: right version, wrong environment.
+    if Path(installed).resolve().is_relative_to((base / ".venv").resolve()):
+        raise SemgrepUnavailableError(
+            "the only semgrep on PATH lives in the project virtual environment, which means "
+            "the scanner leaked into it; remove it and install uv"
+        )
+    reported = installed_version(installed)
+    if reported != version:
+        raise SemgrepUnavailableError(
+            f"the semgrep on PATH reports {reported or 'an unreadable version'}, "
+            f"but the gate is pinned to {version}; install uv so the pinned tool can be used"
+        )
+    print(
+        "WARNING: uv not found; using the semgrep on PATH. Its version matches the pin, "
+        "but its dependencies are not the hash-locked ones.",
+        file=sys.stderr,
+    )
+    return [installed, *args]
+
+
 def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
     """Command that runs the pinned Semgrep with ``args``.
 
@@ -161,28 +255,15 @@ def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
     ``tools/semgrep``; an isolated ``uvx --from semgrep==<pin>`` (right version,
     unverified dependency tree); a Semgrep already on ``PATH``, which is accepted only
     when it reports the pinned version, because an unpinned local binary that disagrees
-    with CI makes the gate advisory without saying so.
+    with CI makes the gate advisory without saying so. Every tier either returns a command
+    that runs the pinned scanner or raises; none of them degrades to running nothing.
     """
     base = repo_root() if root is None else root
     uv = shutil.which("uv")
     uvx = shutil.which("uvx")
 
     if unpinned_probe_requested():
-        if uvx is None:
-            # Falling through to the pinned paths here would be worse than failing: the
-            # probe exists to answer "has the pin drifted behind upstream?", and a run
-            # that quietly scanned the pinned version instead would answer "no" whatever
-            # upstream did. Same failure mode as the skip-when-missing this module removed.
-            raise SemgrepUnavailableError(
-                f"{UNPINNED_ENV} requested the newest Semgrep, but uvx is unavailable; "
-                "install uv in the probe workflow instead of silently probing the pin"
-            )
-        print(
-            f"NOTE: {UNPINNED_ENV} is set in CI; running the latest Semgrep instead "
-            "of the pinned version (weekly drift probe).",
-            file=sys.stderr,
-        )
-        return [uvx, "semgrep", *args]
+        return _probe_argv(uvx, args)
     # Reached only when the probe was not honoured, i.e. the flag is set outside CI.
     if _is_truthy(os.environ.get(UNPINNED_ENV)):
         print(
@@ -191,34 +272,11 @@ def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
             file=sys.stderr,
         )
 
+    # Read the inventory on every tier, the locked one included: it is the version of record.
+    version = pinned_version(base)
     project = locked_tool_project(base)
     if uv is not None and project is not None:
-        # --locked refuses to proceed if uv.lock is stale rather than silently
-        # re-resolving, which is the whole point of having the lock.
-        return [uv, "run", "--locked", "--project", str(project), "semgrep", *args]
-
-    version = pinned_version(base)
+        return _locked_argv(uv, project, version, args)
     if uvx is not None:
-        if project is None:
-            print(
-                "WARNING: tools/semgrep is missing or has no uv.lock; running the pinned "
-                "version without its hash-locked dependency tree.",
-                file=sys.stderr,
-            )
-        return [uvx, "--from", f"semgrep=={version}", "semgrep", *args]
-
-    installed = shutil.which("semgrep")
-    if installed is not None:
-        reported = installed_version(installed)
-        if reported != version:
-            raise SemgrepUnavailableError(
-                f"the semgrep on PATH reports {reported or 'an unreadable version'}, "
-                f"but the gate is pinned to {version}; install uv so the pinned tool can be used"
-            )
-        print(
-            "WARNING: uv not found; using the semgrep on PATH. Its version matches the pin, "
-            "but its dependencies are not the hash-locked ones.",
-            file=sys.stderr,
-        )
-        return [installed, *args]
-    raise SemgrepUnavailableError("semgrep is not a project dependency; install uv (for uvx) or semgrep itself")
+        return _uvx_argv(uvx, project, version, args)
+    return _path_argv(base, version, args)

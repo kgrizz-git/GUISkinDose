@@ -200,7 +200,8 @@ jobs:
     # the privacy admission gate remains the authoritative full-content check.
     # Semgrep Cloud App stays disabled (--metrics=off; no SEMGREP_APP_TOKEN).
     - name: Semgrep (OWASP Top 10 SAST)
-      # Pinned + isolated via uvx (semgrep is not a project dependency); the runner
+      # Pinned + isolated (semgrep is not a project dependency); runs from the hash-locked
+      # tools/semgrep project, with uvx only as a fallback. The runner
       # owns the ruleset, flags, and include-list so this cannot drift from the hook.
       run: uv run --no-sync python scripts/run_semgrep_owasp.py
 

@@ -186,7 +186,8 @@ pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, 
 ```
 
 **Semgrep is not a project dependency, so the two semgrep hooks now require `uv`**; a
-pip-only install can no longer run them and the failure is a blocked push. It is run as a pinned,
+pip-only install can run them only by installing semgrep at exactly the pinned version by hand,
+which the resolver accepts with a warning; anything else is a blocked push. It is run as a pinned,
 hash-locked isolated tool, because its own requirements (`click<8.2`, `mcp==1.23.3`,
 `pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
 `dev` extra. `scripts/semgrep_tool.py` resolves the invocation, preferring
@@ -204,7 +205,10 @@ points (`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) resolv
 `.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot sees neither
 lock — so the weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe
 and opens a tracking issue when it breaks. Bumping means editing the inventory *and* re-running
-`uv lock --project tools/semgrep`; `--locked` fails loudly if only one of the two is done.
+`uv lock --project tools/semgrep`. Doing only one fails loudly at gate time: `semgrep_argv`
+compares the inventory against the tool manifest before it will run the locked command, and
+`--locked` then compares that manifest against its own lock. (`--locked` alone would not catch an
+inventory-only bump, since it never reads the inventory.)
 
 The scanner's environment lives at `tools/semgrep/.venv` (gitignored). Note that
 `.envrc` exports `UV_PYTHON` and `UV_PROJECT_ENVIRONMENT`, and `uv run` honours both, so

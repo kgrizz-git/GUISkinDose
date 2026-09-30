@@ -77,7 +77,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   the gate advisory without saying so, and a test runs the resolved command and asserts its
   `--version` output equals the inventory pin. The `--locked` flag is what makes the lock
   load-bearing: bumping the pin now requires editing the inventory *and* re-running
-  `uv lock --project tools/semgrep`, and doing only one fails loudly.
+  `uv lock --project tools/semgrep`, and doing only one fails loudly. Review caught that
+  `--locked` alone did not deliver that: it compares the tool manifest to its own lock and never
+  reads the inventory, so an inventory-only bump gated green on the previous scanner and failed
+  later in pytest. `semgrep_argv` now compares the two before returning the locked command, which
+  puts the check where the security argument needs it.
 
   Three follow-up defects came out of review of that change, all fixed here. The
   privacy-rules test built its scan environment from `os.environ.copy()` rather than
