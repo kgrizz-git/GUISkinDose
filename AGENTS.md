@@ -188,9 +188,10 @@ pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, 
 **Semgrep is not a project dependency, so the two semgrep hooks now require `uv`**; a
 pip-only install can run them only by installing semgrep at exactly the pinned version by hand,
 which the resolver accepts with a warning; anything else is a blocked push. It is run as a pinned,
-hash-locked isolated tool, because its own requirements (`click<8.2`, `mcp==1.23.3`,
-`pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
-`dev` extra. `scripts/semgrep_tool.py` resolves the invocation, preferring
+hash-locked isolated tool, because its own requirements held four transitive advisories below
+their fixes while it sat in the `dev` extra. Its current pins are `click~=8.4.2`, `mcp==1.29.0`
+and `pyjwt[crypto]~=2.13.0`; that last one still blocks the pyjwt fixes, which is why the
+tool's Dependabot alerts are dismissed as unreachable rather than fixed. `scripts/semgrep_tool.py` resolves the invocation, preferring
 `uv run --locked --project tools/semgrep`: that mini-project is a standalone uv project (**not** a
 workspace member — joining the workspace would merge the dependencies back into the root
 resolution) whose `uv.lock` pins all ~68 transitive packages by exact version and sha256. `uvx

@@ -163,6 +163,12 @@ be archived.
   now records them in a readable, auditable form. **Acceptance:** a `tools/phi-scan/` project
   mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
   scanner-only advisories separately from application ones so the distinction stays explicit.
+- [ ] **Revisit the dismissed PyJWT alerts when semgrep relaxes its pin** — twelve Dependabot
+  alerts against `tools/semgrep/uv.lock` (one critical) are dismissed as not-used: they are all in
+  PyJWT's JWT/JWKS handling, which semgrep reaches only via `semgrep login`, and these gates never
+  authenticate. Every fix needs pyjwt >= 2.14.0 while semgrep pins `pyjwt[crypto]~=2.13.0` even at
+  1.178.0. **Acceptance:** when a semgrep release allows pyjwt 2.14.0+, bump the pin, relock, and
+  let the alerts close on their own rather than staying dismissed.
 - [ ] **Bump the pinned scanner versions** — `semgrep` (`dev-docs/privacy_tool_inventory.json`) and `phi-scan`
   (`0.7.0`, hardcoded in `.github/workflows/phi-scan.yml`, `scripts/privacy_admission.py`, and
   `dev-docs/references/LOCAL_PII_MODELS.md`) are isolated `uvx` tools outside `uv.lock`, so **Dependabot cannot see

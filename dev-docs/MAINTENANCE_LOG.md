@@ -21,6 +21,34 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Semgrep pin 1.168.0 to 1.178.0; the tool's Dependabot alerts triaged** (2026-09-30) —
+  hash-locking the scanner in `tools/semgrep/uv.lock` made its dependencies visible to Dependabot
+  and raised 15 alerts. That corrects a claim in the entry below: `dependabot.yml` scoping the pip
+  ecosystem to `directory: /` governs Dependabot *updates*, not *alerts*, which come from the
+  repository dependency graph and index every lockfile. So the alerts were the predicted
+  consequence of hash-locking, arriving sooner and louder than described. They are not new
+  exposure — they are the same advisories `[tool.uv.audit]` used to suppress.
+
+  Three were mcp, needing 1.27.2/1.28.1, and are genuinely **fixed**: semgrep 1.178.0 pins
+  `mcp==1.29.0`, and `click` moved 8.1.8 to 8.4.2 with it. Both gates were re-run on the new pin
+  before the bump landed. The other twelve are PyJWT, all fixed only in 2.14.0 (one in 2.15.0),
+  and semgrep still pins `pyjwt[crypto]~=2.13.0` in its newest release — so they are **not
+  fixable** here without dropping the scanner. They are dismissed as not-used, because semgrep
+  reaches JWT and JWKS code only through `semgrep login`, which these gates never call: both run
+  with `--metrics=off`, `SEMGREP_SEND_METRICS=off` and no `SEMGREP_APP_TOKEN`, and the registry
+  ruleset is fetched over plain HTTPS. Revisit when semgrep relaxes that pin.
+
+- **Five code scanning alerts cleared** (2026-09-30) — four were genuine redundant imports in
+  tests (`sqlite3` imported twice in two correction tests; `scripts.dump_sonar_issues` imported
+  both ways, once module-level and once function-local) and are fixed. The fifth,
+  `py/unused-global-variable` on `_STATIC_REGISTERED`, is a false positive: the variable is read
+  at `app.py:98` on a *later* call, which is exactly what the idempotence guard is for, and
+  CodeQL misses the cross-call read. It is dismissed rather than restructured, because
+  `tests/gui/test_gui_security.py` monkeypatches that flag and `tests/gui/conftest.py` documents
+  why it is deliberately not reset between tests — `functools.cache` would break both to satisfy
+  a false alarm. None of the five carried a security severity.
+
+
 - **No workflow persists the checkout token any more** (2026-09-30) — every
   `actions/checkout` across the seven workflows now sets `persist-credentials: false`, where
   only `sonar-scan` did. Without it the job's `GITHUB_TOKEN` stays in `.git/config` for the

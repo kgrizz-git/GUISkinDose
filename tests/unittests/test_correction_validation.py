@@ -73,10 +73,10 @@ def test_duplicate_keys_are_errors():
     assert _codes(single) == {"duplicate_key"}
     nulls = check_frame(_frame(kvp_kv=[50.0, None]), FLOAT_COLS, table_name="t", key_columns=KEYS)
     assert "null_key" in _codes(nulls)
-    composite = check_frame(
-        _frame(), FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal")
-    )
+    composite = check_frame(_frame(), FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal"))
     assert _codes(composite) == set()
+
+
 def test_composite_keys_allow_repeating_single_axes():
     grid = pd.DataFrame({"kvp_kv": [50.0, 50.0, 60.0, 60.0], "hvl_mmal": [2.0, 3.0, 2.0, 3.0]})
     issues = check_frame(grid, FLOAT_COLS, table_name="t", key_columns=("kvp_kv", "hvl_mmal"))
@@ -98,9 +98,9 @@ def test_string_columns_reject_empty_missing_and_non_string():
     assert _codes(check_frame(pd.DataFrame({"device_model": []}), specs, table_name="t")) == {"empty_column"}
     assert _codes(check_frame(pd.DataFrame({"device_model": ["a", None]}), specs, table_name="t")) == {"missing_value"}
     assert _codes(check_frame(pd.DataFrame({"device_model": ["a", 1]}), specs, table_name="t")) == {"wrong_dtype"}
-    assert _codes(check_frame(pd.DataFrame({"device_model": ["a"]}), [ColumnSpec("device_model", "Float")], table_name="t")) == {
-        "unknown_dtype"
-    }
+    assert _codes(
+        check_frame(pd.DataFrame({"device_model": ["a"]}), [ColumnSpec("device_model", "Float")], table_name="t")
+    ) == {"unknown_dtype"}
 
 
 def test_support_transmission_valid_is_clean():
@@ -138,7 +138,9 @@ def test_support_transmission_negative_and_above_one_are_errors():
     assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [-0.1, 0.5]}))) == {"out_of_range"}
     assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [0.5, 1.5]}))) == {"out_of_range"}
     assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": ["x", 0.5]}))) == {"non_finite"}
-    assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [0.5, float("inf")]}))) == {"non_finite"}
+    assert _codes(check_support_transmission(pd.DataFrame({"k_patient_support": [0.5, float("inf")]}))) == {
+        "non_finite"
+    }
     assert _codes(check_support_transmission(pd.DataFrame({"other": [1.0]}))) == {"missing_column"}
 
 
@@ -275,7 +277,6 @@ def test_explicit_db_check_is_read_only(tmp_path: Path):
 
 
 def test_explicit_db_unsafe_version_table_closes_owned_connection(tmp_path, monkeypatch):
-    import sqlite3
 
     db = tmp_path / "evilver.db"
     conn = sqlite3.connect(db)

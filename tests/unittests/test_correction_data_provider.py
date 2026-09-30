@@ -113,7 +113,9 @@ def test_explicit_parity_with_packaged(tmp_path: Path):
     db = tmp_path / "legacy.db"
     _legacy_db(db)
     for name in RUNTIME_TABLES:
-        pd.testing.assert_frame_equal(explicit_table(db, name).reset_index(drop=True), get_table(name).reset_index(drop=True))
+        pd.testing.assert_frame_equal(
+            explicit_table(db, name).reset_index(drop=True), get_table(name).reset_index(drop=True)
+        )
 
 
 def test_explicit_malformed_fails_value_free(tmp_path: Path):
@@ -125,7 +127,6 @@ def test_explicit_malformed_fails_value_free(tmp_path: Path):
 
 
 def test_explicit_table_opens_exactly_one_connection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    import sqlite3
 
     db = tmp_path / "legacy.db"
     _legacy_db(db)
