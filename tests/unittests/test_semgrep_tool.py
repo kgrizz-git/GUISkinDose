@@ -322,6 +322,26 @@ class TestToolEnvironment:
         assert Path(environment["UV_PROJECT_ENVIRONMENT"]) == ROOT / TOOL_PROJECT / ".venv"
         assert "VIRTUAL_ENV" not in environment
 
+    def test_the_scanner_runs_unauthenticated_by_construction(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Claiming "no app token" is not the same as enforcing it.
+
+        Semgrep's `get_token()` prefers SEMGREP_APP_TOKEN and otherwise reads the settings
+        file a past `semgrep login` wrote, so a developer who logged in once would send
+        their token from every local gate run. Both channels are closed here.
+        """
+        monkeypatch.setenv("SEMGREP_APP_TOKEN", "pretend-token")
+        environment = semgrep_tool.tool_environment(root=ROOT)
+        assert "SEMGREP_APP_TOKEN" not in environment
+        settings = Path(environment["SEMGREP_SETTINGS_FILE"])
+        assert settings.is_relative_to(ROOT / TOOL_PROJECT)
+        # Inside `.venv` on purpose: gitignored, and pruned by the write-containment
+        # snapshot in tests/conftest.py, which prunes `.venv` at any depth but not `tmp/`.
+        assert ".venv" in settings.parts
+
+    def test_metrics_are_off_for_every_gate_not_just_one(self) -> None:
+        """This lived in the OWASP runner only, while the docs claimed both gates had it."""
+        assert semgrep_tool.tool_environment(root=ROOT)["SEMGREP_SEND_METRICS"] == "off"
+
     def test_the_tool_environment_follows_a_supplied_root(self, tmp_path: Path) -> None:
         environment = semgrep_tool.tool_environment(root=tmp_path)
         assert Path(environment["UV_PROJECT_ENVIRONMENT"]) == tmp_path / TOOL_PROJECT / ".venv"

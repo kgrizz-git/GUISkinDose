@@ -33,10 +33,22 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `mcp==1.29.0`, and `click` moved 8.1.8 to 8.4.2 with it. Both gates were re-run on the new pin
   before the bump landed. The other twelve are PyJWT, all fixed only in 2.14.0 (one in 2.15.0),
   and semgrep still pins `pyjwt[crypto]~=2.13.0` in its newest release — so they are **not
-  fixable** here without dropping the scanner. They are dismissed as not-used, because semgrep
-  reaches JWT and JWKS code only through `semgrep login`, which these gates never call: both run
-  with `--metrics=off`, `SEMGREP_SEND_METRICS=off` and no `SEMGREP_APP_TOKEN`, and the registry
-  ruleset is fetched over plain HTTPS. Revisit when semgrep relaxes that pin.
+  fixable** here without dropping the scanner. They are dismissed as not-used: the only
+  `import jwt` anywhere in the installed scanner is `semgrep/mcp/utilities/token_verifier.py`,
+  used by `IntrospectionTokenVerifier.verify_token()` and reachable only through `semgrep mcp`,
+  which neither gate invokes. Review corrected an earlier claim here that named `semgrep login`
+  as the JWT path: login validates an opaque 64-hex API token and contains no `jwt` reference at
+  all. The conclusion held, but the stated mechanism was wrong, so the dismissal comments on the
+  twelve alerts were rewritten too.
+
+  Review also found that "no `SEMGREP_APP_TOKEN`" was an assumption rather than an enforced
+  property: `tool_environment()` copied the ambient environment, and semgrep's `get_token()`
+  prefers that variable and otherwise reads the settings file a past `semgrep login` wrote. So a
+  developer who logged in once was sending their token from every local gate run. It is now true
+  by construction — the variable is popped, `SEMGREP_SETTINGS_FILE` is redirected into the
+  gitignored tool venv, and `SEMGREP_SEND_METRICS=off` moved into the shared environment so both
+  gates get it rather than only the OWASP one. Verified by running both gates with a token
+  planted in the environment. Revisit the pin when semgrep relaxes it.
 
 - **Five code scanning alerts cleared** (2026-09-30) — four were genuine redundant imports in
   tests (`sqlite3` imported twice in two correction tests; `scripts.dump_sonar_issues` imported

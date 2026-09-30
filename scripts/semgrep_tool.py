@@ -150,7 +150,19 @@ def tool_environment(environ: dict[str, str] | None = None, *, root: Path | None
     source.pop("UV_PYTHON", None)
     source.pop("VIRTUAL_ENV", None)
     base = repo_root() if root is None else root
-    source["UV_PROJECT_ENVIRONMENT"] = str(base / TOOL_PROJECT / _TOOL_ENV_DIRNAME)
+    tool_env = base / TOOL_PROJECT / _TOOL_ENV_DIRNAME
+    source["UV_PROJECT_ENVIRONMENT"] = str(tool_env)
+
+    # Run the scanner unauthenticated, and make that true by construction rather than by
+    # assumption. Semgrep's get_token() prefers SEMGREP_APP_TOKEN and otherwise reads the
+    # settings file a past `semgrep login` wrote, so a developer who logged in once would
+    # have sent their token from every local gate run. Redirecting the settings file also
+    # keeps `semgrep login` state from leaking in; it lives inside the tool venv because
+    # that path is gitignored AND pruned by the write-containment snapshot in
+    # tests/conftest.py, which prunes `.venv` at any depth but not `tmp/`.
+    source.pop("SEMGREP_APP_TOKEN", None)
+    source["SEMGREP_SETTINGS_FILE"] = str(tool_env / "semgrep-settings.yaml")
+    source["SEMGREP_SEND_METRICS"] = "off"
     return source
 
 
