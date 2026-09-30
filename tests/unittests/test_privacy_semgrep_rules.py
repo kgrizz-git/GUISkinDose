@@ -9,8 +9,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 _ROOT = Path(__file__).resolve().parents[2]
 _RULES = _ROOT / ".semgrep" / "mypyskindose-privacy.yml"
 
@@ -30,11 +28,11 @@ def _scan(root: Path) -> set[str]:
     # regression coverage for the privacy ruleset to zero the moment semgrep stopped
     # being a dev dependency -- it kept passing locally only where a global semgrep
     # happened to be on PATH. Never skip on "tool missing": fail instead.
-    tool = _semgrep_tool()
-    try:
-        semgrep_prefix = tool.semgrep_argv([])
-    except tool.SemgrepUnavailableError as exc:  # pragma: no cover - environment defect
-        pytest.fail(f"privacy rules are untested: semgrep could not be resolved ({exc})")
+    # No try/except and no skip on purpose: if Semgrep cannot be resolved, letting the
+    # SemgrepUnavailableError propagate fails the test, which is the point. The previous
+    # `shutil.which` + `pytest.skip` quietly reduced this ruleset's regression coverage to
+    # zero the moment semgrep stopped being a dev dependency.
+    semgrep_prefix = _semgrep_tool().semgrep_argv([])
     environment = os.environ.copy()
     cert_file = Path("/etc/ssl/cert.pem")
     if cert_file.is_file():
