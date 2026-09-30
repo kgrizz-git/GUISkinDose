@@ -163,6 +163,12 @@ be archived.
   now records them in a readable, auditable form. **Acceptance:** a `tools/phi-scan/` project
   mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
   scanner-only advisories separately from application ones so the distinction stays explicit.
+- [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800
+  lines. It is deliberately exempt from the file-size cap (`APPEND_ONLY_HISTORY` in
+  `scripts/check_file_sizes.py`), so this is gardening rather than a blocker, and entries must
+  never be condensed just to shrink the file. **Acceptance:** move entries for shipped releases
+  into a dated archive file beside this one (mirroring the plans-archive convention), leave a
+  pointer at the top, and update the docs index in the same PR.
 - [ ] **Revisit the dismissed PyJWT alerts when semgrep relaxes its pin** — twelve Dependabot
   alerts against `tools/semgrep/uv.lock` (one critical) are dismissed as not-used: they are all in
   PyJWT's JWT/JWKS handling, which semgrep reaches only via `semgrep mcp` (the MCP token

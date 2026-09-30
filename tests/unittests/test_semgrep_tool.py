@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -352,11 +353,52 @@ class TestToolEnvironment:
         monkeypatch.setenv("SEMGREP_COOKIES_PATH", "/tmp/cookies.txt")
         assert "SEMGREP_COOKIES_PATH" not in semgrep_tool.tool_environment(root=ROOT)
 
-    @pytest.mark.parametrize("name", semgrep_tool._DROPPED_SEMGREP_VARS)
+    @pytest.mark.parametrize("name", semgrep_tool._DROPPED_TOOL_VARS)
     def test_every_dropped_variable_is_actually_dropped(self, monkeypatch: pytest.MonkeyPatch, name: str) -> None:
         """One case per declared name, so adding a name without honouring it fails."""
         monkeypatch.setenv(name, "ambient-value")
         assert name not in semgrep_tool.tool_environment(root=ROOT)
+
+    def test_netrc_credentials_are_not_attached_from_either_source(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """`requests` attaches Basic auth from a netrc entry matching the request host.
+
+        This one is not Semgrep's variable at all — `AppSession` subclasses
+        `requests.Session`, and `requests.utils.get_netrc_auth` reads $NETRC first and
+        otherwise `~/.netrc`. A developer with a `machine semgrep.dev` line would send those
+        credentials from every gate run, invisible to any audit of `SEMGREP_*` names.
+
+        Both sources are covered by one assertion: forcing the variable means requests never
+        falls back to the home directory, and the file it points at yields no authenticators.
+        """
+        monkeypatch.setenv("NETRC", str(tmp_path / ".netrc"))
+        assert semgrep_tool.tool_environment(root=ROOT)["NETRC"] == os.devnull
+
+        monkeypatch.delenv("NETRC", raising=False)
+        # Set even when absent, which is what stops the ~/.netrc fallback being consulted.
+        assert semgrep_tool.tool_environment(root=ROOT)["NETRC"] == os.devnull
+
+    def test_the_forced_netrc_file_yields_no_credentials(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pins the property the forced value relies on, using requests' own resolver."""
+        pytest.importorskip("requests")
+        import netrc as netrc_module
+
+        from requests.utils import get_netrc_auth
+
+        url = "https://semgrep.dev/c/p/owasp-top-ten"
+        populated = tmp_path / "netrc"
+        populated.write_text("machine semgrep.dev login alice password s3cret\n", encoding="utf-8")
+        populated.chmod(0o600)
+
+        # The channel is live: a matching entry hands over real credentials.
+        monkeypatch.setenv("NETRC", str(populated))
+        assert get_netrc_auth(url) == ("alice", "s3cret")
+
+        # And the forced value closes it.
+        monkeypatch.setenv("NETRC", semgrep_tool.tool_environment(root=ROOT)["NETRC"])
+        assert get_netrc_auth(url) is None
+        assert netrc_module.netrc(os.devnull).authenticators("semgrep.dev") is None
 
     def test_the_rule_endpoint_cannot_be_redirected_by_the_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """`config_resolver` resolves p/owasp-top-ten against SEMGREP_URL.

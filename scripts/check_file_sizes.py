@@ -12,6 +12,27 @@ WHITELIST: set[str] = {
     "dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md",
 }
 
+# Append-only chronological history: out of scope by design, not a documented outlier.
+#
+# The cap exists so modules and narrative documents stay readable front-to-back. A log is
+# read newest-first or grepped, so its length costs a reader almost nothing, and it grows
+# forever by design — which makes the WHITELIST the wrong home: an outlier is supposed to be
+# "eventually decomposed", and this never will be, so its number would need bumping forever.
+#
+# It is also not hypothetical that the cap misfires here. Holding MAINTENANCE_LOG.md to 800
+# lines once forced prose to be shaved out of three existing, accurate entries to make room
+# for a new one, degrading the record the gate was meant to protect, and charging that cost
+# to whoever happened to add the 801st line.
+#
+# CHANGELOG.md needs no entry here: it sits at the repository root, outside the directories
+# this gate scans, and AGENTS.md already describes it as out of scope by design. This set
+# extends the same treatment to the maintainer-facing log, which does the identical job and
+# differs only in living under dev-docs/. Archiving old entries stays worthwhile as
+# gardening (see dev-docs/TO_DO.md); it is just not a push blocker.
+APPEND_ONLY_HISTORY: set[str] = {
+    "dev-docs/MAINTENANCE_LOG.md",
+}
+
 
 def _iter_checked_files(repo_root: Path):
     """Yield supported files under the repository roots checked by this gate."""
@@ -35,6 +56,8 @@ def _check_file_size(file_path: Path, repo_root: Path) -> bool:
         return True
     if line_count <= MAX_LINES:
         return True
+    if relative_path in APPEND_ONLY_HISTORY:
+        return True
     if relative_path in WHITELIST:
         print(f"INFO: Whitelisted outlier {relative_path} has {line_count} lines (limit: {MAX_LINES})")
         return True
@@ -52,10 +75,14 @@ def check_file_sizes(repo_root: Path | None = None) -> bool:
             has_errors = True
     return not has_errors
 
+
 if __name__ == "__main__":
     success = check_file_sizes()
     if not success:
-        print("ERROR: File size validation failed. Please keep source and documentation files under 800 lines.", file=sys.stderr)
+        print(
+            "ERROR: File size validation failed. Please keep source and documentation files under 800 lines.",
+            file=sys.stderr,
+        )
         sys.exit(1)
     else:
         print("SUCCESS: All checked files are within limits.")

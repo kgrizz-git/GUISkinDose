@@ -70,9 +70,13 @@ _VERSION_PROBE_TIMEOUT_S: Final = 60
 
 # The gate must be unauthenticated, must fetch its rules from a known host, and must send
 # nothing incidental. `tool_environment()` inherits the ambient environment, so each of these
-# is stated rather than assumed. Auditing only Semgrep's `Env` factory fields is not enough:
-# the cookie and user-agent variables are read straight from `os.getenv` elsewhere.
-_DROPPED_SEMGREP_VARS: Final = (
+# is stated rather than assumed.
+#
+# Auditing Semgrep's own `Env` factory fields is not enough, and successive review rounds
+# proved it three times over: the cookie and user-agent variables are read straight from
+# `os.getenv` elsewhere in Semgrep, and `NETRC` is not Semgrep's at all — it belongs to
+# `requests`, which `AppSession` subclasses. Hence "tool", not "semgrep", in these names.
+_DROPPED_TOOL_VARS: Final = (
     # get_token() prefers this; without it, and with the settings file redirected below,
     # get_token() returns None and nothing attaches a credential to a request.
     "SEMGREP_APP_TOKEN",
@@ -90,7 +94,14 @@ _DROPPED_SEMGREP_VARS: Final = (
     "SEMGREP_FAIL_OPEN_URL",
 )
 
-_FORCED_SEMGREP_VARS: Final = {
+_FORCED_TOOL_VARS: Final = {
+    # Not a Semgrep variable: `requests` attaches Basic auth from a netrc entry matching the
+    # request host, reading $NETRC first and otherwise ~/.netrc. A developer with a
+    # `machine semgrep.dev` line would therefore send those credentials from every gate run,
+    # which no audit of SEMGREP_* names would ever surface. Forcing an empty file is what
+    # closes both sources at once: with NETRC set, requests never consults the home directory,
+    # and an empty file yields no authenticators. Verified both halves directly.
+    "NETRC": os.devnull,
     # Pinned, not dropped. `config_resolver` resolves `p/owasp-top-ten` against this, so an
     # ambient value silently redirects where the *rules that constitute the blocking gate*
     # come from, and the gate still passes. That is the same "advisory without saying so"
@@ -191,9 +202,9 @@ def tool_environment(environ: dict[str, str] | None = None, *, root: Path | None
     tool_env = base / TOOL_PROJECT / _TOOL_ENV_DIRNAME
     source["UV_PROJECT_ENVIRONMENT"] = str(tool_env)
 
-    for name in _DROPPED_SEMGREP_VARS:
+    for name in _DROPPED_TOOL_VARS:
         source.pop(name, None)
-    source.update(_FORCED_SEMGREP_VARS)
+    source.update(_FORCED_TOOL_VARS)
     # Not a constant: it depends on where the tool project lives. Redirecting the settings
     # file is what closes get_token()'s second channel, the token a past `semgrep login`
     # saved. It lives inside the tool venv because that path is gitignored AND pruned by the
