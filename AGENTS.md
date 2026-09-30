@@ -133,7 +133,7 @@ rename to GUISkinDose / `guiskindose`: [dev-docs/plans/archive/GUISKINDOSE_RENAM
 
 ```bash
 pip install -e .
-pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, semgrep, shellcheck-py, pre-commit + stubs (matches CI)
+pip install -e ".[dev,gui]"   # ruff, pytest, basedpyright, bandit, pip-audit, shellcheck-py, pre-commit + stubs (matches CI)
 pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-started notebook
 ```
 
@@ -141,6 +141,32 @@ Extras live in `pyproject.toml` (`gui`, `gui-native`, `dev`, `docs`, `notebooks`
 source of truth for dependencies; there are no `requirements*.txt` files. `uv.lock` pins exact
 versions (`uv sync --all-extras`). Installing and using **`uv`** is recommended for package
 management and local development (it runs dependency audits and environment syncing much faster).
+
+### Local Python version
+
+`.envrc` pins the local interpreter to **3.14** via `UV_PYTHON`, because a pull request builds
+3.14 only (`matrix-prep` in `.github/workflows/ci.yml`); 3.11–3.13 coverage arrives later, on `main`
+pushes and the weekly sweep. Developing on another version means version-specific breakage surfaces in
+CI rather than locally — as it did when Python 3.14 changed `PurePath.suffix` for leading-dot names,
+passing on 3.12 and failing both PR jobs.
+
+`requires-python` is still `>=3.11`. The floor is **partially** covered statically by
+`[tool.basedpyright] pythonVersion = "3.11"`, which does not depend on the running interpreter — but
+that catches only use of APIs absent in 3.11, not behaviour that differs between versions. The bug
+that motivated this pin (`PurePath.suffix` on leading-dot names) was exactly such a semantic change
+and basedpyright would not have caught it. So run the floor check when a change could be
+version-sensitive:
+
+```bash
+UV_PROJECT_ENVIRONMENT="$PWD/tmp/venv-py311" \
+  uv run --python 3.11 --extra dev pytest --ignore=tests/gui -n auto
+```
+
+Redirecting `UV_PROJECT_ENVIRONMENT` is not optional: a bare `uv run --python 3.11` rebuilds `.venv`
+itself as 3.11, silently leaving the project environment on the wrong version. `tmp/` is gitignored, so
+the throwaway environment stays out of `git status` and out of the write-containment snapshot.
+
+Set `UV_PYTHON` yourself to override the pin; `.envrc` defers to an existing value.
 
 Optional local git hooks (fast subset of CI):
 
@@ -158,6 +184,36 @@ To run hooks manually:
 pre-commit run --all-files                           # pre-commit stage hooks
 pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, audit_dependencies, basedpyright, changelog)
 ```
+
+**Semgrep is not a project dependency, so the two semgrep hooks now require `uv`**; a
+pip-only install can run them only by installing semgrep at exactly the pinned version by hand,
+which the resolver accepts with a warning; anything else is a blocked push. It is run as a pinned,
+hash-locked isolated tool, because its own requirements (`click<8.2`, `mcp==1.23.3`,
+`pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
+`dev` extra. `scripts/semgrep_tool.py` resolves the invocation, preferring
+`uv run --locked --project tools/semgrep`: that mini-project is a standalone uv project (**not** a
+workspace member — joining the workspace would merge the dependencies back into the root
+resolution) whose `uv.lock` pins all ~68 transitive packages by exact version and sha256. `uvx
+--from semgrep==<pin>` is the fallback, and gets the right scanner with an unverified dependency
+tree. A `semgrep` merely on `PATH` is accepted only when it reports the pinned version, since one
+that disagrees with CI makes the gate advisory without saying so.
+
+The version of record is `dev-docs/privacy_tool_inventory.json`; `tools/semgrep/pyproject.toml`
+repeats it because uv needs a literal requirement, and a test asserts the two agree. Both entry
+points (`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) resolve through
+`semgrep_tool`, so the hook and CI cannot diverge. Nothing bumps the pin automatically —
+`.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot sees neither
+lock — so the weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe
+and opens a tracking issue when it breaks. Bumping means editing the inventory *and* re-running
+`uv lock --project tools/semgrep`. Doing only one fails loudly at gate time: `semgrep_argv`
+compares the inventory against the tool manifest before it will run the locked command, and
+`--locked` then compares that manifest against its own lock. (`--locked` alone would not catch an
+inventory-only bump, since it never reads the inventory.)
+
+The scanner's environment lives at `tools/semgrep/.venv` (gitignored). Note that
+`.envrc` exports `UV_PYTHON` and `UV_PROJECT_ENVIRONMENT`, and `uv run` honours both, so
+`semgrep_tool.tool_environment()` must be used to launch it — otherwise the scanner installs
+straight into the project `.venv`.
 
 The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
 needs network access (offline pushes will fail). On Windows, semgrep runs natively (beta)

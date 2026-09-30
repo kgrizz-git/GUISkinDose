@@ -31,7 +31,33 @@ jobs:
   latest-deps:
     runs-on: ubuntu-latest
     steps:
+    # persist-credentials: false matters more here than in any other workflow. This job
+    # deliberately installs UNPINNED upstream releases and runs the newest Semgrep with a
+    # ruleset fetched from its registry, so it executes third-party code nobody reviewed.
+    # Leaving the checkout token in `.git/config` would put a credential carrying
+    # `issues: write` within reach of that code. Nothing here pushes or fetches, and
+    # github-script authenticates through its own `github.token`, so dropping it costs
+    # nothing. Every checkout in this repository now sets it; this job is just the one
+    # where it earns its keep.
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    # Required by the two semgrep probes below, which need `uvx` to fetch the newest
+    # release. `uv` is not part of the ubuntu runner image, and the unpinned
+    # `pip install -e ".[dev,gui]"` below does not provide semgrep either (it is
+    # deliberately not a project dependency). Without this, both probes *and* the pytest
+    # step would fail every Monday with "semgrep could not be resolved" and open a drift
+    # issue that has nothing to do with drift: the privacy-rules and semgrep-tool tests
+    # resolve the scanner too, and deliberately refuse to skip when it is missing.
+    #
+    # Not continue-on-error, because this is setup rather than a probe. The accepted
+    # consequence is that a failure here turns the run red without opening a tracking
+    # issue, since the open-issue condition below inspects only the probe steps — which
+    # would be `skipped`.
+    - name: Install uv (needed by the semgrep probes and the test suite)
+      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
+      with:
+        version: ">=0.11.19"
     - name: Set up Python
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
@@ -55,6 +81,29 @@ jobs:
       if: steps.install.outcome == 'success'
       continue-on-error: true
       run: python scripts/check_gui_test_placement.py
+    # Semgrep is pinned in dev-docs/privacy_tool_inventory.json and deliberately kept out
+    # of uv.lock, so Dependabot cannot bump it. These two probes are the only thing that
+    # catches a pin drifting behind upstream or a new release breaking a gate. ci.yml runs
+    # the pinned version and stays authoritative. Both need continue-on-error like every
+    # other probe here, or a semgrep failure aborts the run before pytest.
+    - name: Semgrep OWASP scan against the LATEST semgrep (pin drift probe)
+      id: semgrep_owasp
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
+      env:
+        GUISKINDOSE_SEMGREP_UNPINNED: "1"
+      run: python scripts/run_semgrep_owasp.py
+
+    # The privacy ruleset is project-local (.semgrep/), so it is *more* exposed to a
+    # semgrep parser or behaviour change than the upstream OWASP pack, not less.
+    - name: Privacy Semgrep against the LATEST semgrep (pin drift probe)
+      id: semgrep_privacy
+      if: steps.install.outcome == 'success'
+      continue-on-error: true
+      env:
+        GUISKINDOSE_SEMGREP_UNPINNED: "1"
+      run: python scripts/run_semgrep_privacy.py
+
     - name: Full test suite (core + gui) against latest deps
       id: pytest
       if: steps.install.outcome == 'success'
@@ -66,12 +115,16 @@ jobs:
         (steps.install.outcome == 'failure' ||
          steps.basedpyright.outcome == 'failure' ||
          steps.gui_placement.outcome == 'failure' ||
+         steps.semgrep_owasp.outcome == 'failure' ||
+         steps.semgrep_privacy.outcome == 'failure' ||
          steps.pytest.outcome == 'failure')
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
       env:
         INSTALL_OUTCOME: ${{ steps.install.outcome }}
         BASEDPRIGHT_OUTCOME: ${{ steps.basedpyright.outcome }}
         GUI_PLACEMENT_OUTCOME: ${{ steps.gui_placement.outcome }}
+        SEMGREP_OWASP_OUTCOME: ${{ steps.semgrep_owasp.outcome }}
+        SEMGREP_PRIVACY_OUTCOME: ${{ steps.semgrep_privacy.outcome }}
         PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
       with:
         script: |
@@ -84,6 +137,8 @@ jobs:
             ['install', process.env.INSTALL_OUTCOME],
             ['basedpyright', process.env.BASEDPRIGHT_OUTCOME],
             ['gui_placement', process.env.GUI_PLACEMENT_OUTCOME],
+            ['semgrep_owasp', process.env.SEMGREP_OWASP_OUTCOME],
+            ['semgrep_privacy', process.env.SEMGREP_PRIVACY_OUTCOME],
             ['pytest', process.env.PYTEST_OUTCOME],
           ].filter(([, outcome]) => outcome === 'failure').map(([name]) => name);
 
@@ -99,6 +154,14 @@ jobs:
             gui_placement: {
               summary: 'GUI test placement check failed under unpinned deps',
               action: 'reproduce with `python scripts/check_gui_test_placement.py`; fix or move the test',
+            },
+            semgrep_owasp: {
+              summary: 'the newest semgrep broke the OWASP gate, or the pinned version has drifted behind',
+              action: 'reproduce with `GUISKINDOSE_SEMGREP_UNPINNED=1 python scripts/run_semgrep_owasp.py`; then bump or hold the pin in `dev-docs/privacy_tool_inventory.json`',
+            },
+            semgrep_privacy: {
+              summary: 'the newest semgrep broke the project privacy ruleset in `.semgrep/`',
+              action: 'reproduce with `GUISKINDOSE_SEMGREP_UNPINNED=1 python scripts/run_semgrep_privacy.py`; fix the rules or hold the pin',
             },
             pytest: {
               summary: 'unpinned pytest failed',
@@ -176,6 +239,8 @@ jobs:
         steps.install.outcome == 'success' &&
         steps.basedpyright.outcome == 'success' &&
         steps.gui_placement.outcome == 'success' &&
+        steps.semgrep_owasp.outcome == 'success' &&
+        steps.semgrep_privacy.outcome == 'success' &&
         steps.pytest.outcome == 'success'
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
       with:

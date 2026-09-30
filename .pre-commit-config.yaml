@@ -266,7 +266,7 @@ repos:
 
       - id: semgrep
         name: semgrep (OWASP Top 10 SAST)
-        entry: semgrep --config=p/owasp-top-ten --error --metrics=off src scripts .github/workflows docs/source/conf.py
+        entry: python scripts/run_semgrep_owasp.py
         language: system
         pass_filenames: false
         always_run: true

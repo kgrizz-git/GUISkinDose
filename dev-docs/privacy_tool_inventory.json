@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "reviewed_on": "2026-07-16",
+  "reviewed_on": "2026-09-29",
   "scope": "Direct external tools and runtimes used or evaluated by repository privacy controls; transitive packages remain governed by uv.lock and dependency audits.",
   "tools": [
     {
@@ -107,10 +107,10 @@
       "name": "Semgrep",
       "status": "active",
       "version": "1.168.0",
-      "version_source": "uv.lock dev extra",
+      "version_source": "this inventory (pinned isolated uvx tool; not in uv.lock)",
       "execution": "local and GitHub Actions",
       "role": "Blocking project privacy and general SAST rules",
-      "output_policy": "Metrics disabled; project wrapper emits value-safe findings",
+      "output_policy": "Metrics disabled; project wrapper emits value-safe findings; run via scripts/run_semgrep_owasp.py and scripts/run_semgrep_privacy.py",
       "source": "https://github.com/semgrep/semgrep"
     },
     {

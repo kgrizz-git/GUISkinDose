@@ -25,6 +25,15 @@ be archived.
   or lizard) with per-function grandfathered caps for the current baseline and automated
   ratchet-down as functions are decomposed. Acceptance: new/changed code above the caps
   fails pre-push/CI; caps file only ever tightens.
+- [ ] **PSD severity colour-coding** — colour every peak-skin-dose readout by dose band and replace the
+  misleading `PSD: 0.00 mGy` placeholder. Plan is ready to implement:
+  [PSD_SEVERITY_COLOR_CODING_PLAN.md](plans/PSD_SEVERITY_COLOR_CODING_PLAN.md); fuller entry under
+  Product Backlog / GUI / UX.
+- [ ] **Rotational coverage-envelope performance** — ~19x bit-exact speedup of the envelope dose loop
+  (measured; `sum()` over ndarray and the `list()` boundary are the traps). Plan:
+  [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md), evidence:
+  [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md); fuller entry under Product
+  Backlog / Input Data And Calculation.
 - [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
   confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
@@ -139,7 +148,28 @@ be archived.
   [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
 - [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
-  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. Current state: Dependabot alerts #2/#3/#4 stay open until semgrep relaxes its `mcp==1.23.3` pin (`mcp` is transitive dev-only, not exploitable here); `nltk` advisory resolved when `safety` was removed (2026-09-03). CI's `uv audit` is the gate that matters.
+  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. **Current state: the ignore
+  list is empty.** All five entries it ever held (click, mcp x3, pyjwt) existed because semgrep pinned those
+  transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and Dependabot alerts
+  #2/#3/#4 should close on their own. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
+  suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
+- [ ] **Hash-lock `phi-scan`, and audit the locked tool environments** — semgrep is done:
+  `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
+  packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
+  still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
+  verification**, so a same-version re-upload would be trusted. Separately, nothing audits either
+  tool environment, so semgrep's own `click 8.1.8` / `mcp 1.23.3` / `pyjwt 2.13.0` stay invisible to
+  `uv audit` and Dependabot (see the note in `[tool.uv.audit]`) even though `tools/semgrep/uv.lock`
+  now records them in a readable, auditable form. **Acceptance:** a `tools/phi-scan/` project
+  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
+  scanner-only advisories separately from application ones so the distinction stays explicit.
+- [ ] **Bump the pinned scanner versions** — `semgrep` (`dev-docs/privacy_tool_inventory.json`) and `phi-scan`
+  (`0.7.0`, hardcoded in `.github/workflows/phi-scan.yml`, `scripts/privacy_admission.py`, and
+  `dev-docs/references/LOCAL_PII_MODELS.md`) are isolated `uvx` tools outside `uv.lock`, so **Dependabot cannot see
+  or bump them**. Semgrep drift is at least detected: weekly `ci-latest` runs the OWASP scan unpinned and opens a
+  tracking issue. phi-scan has no such probe, and its pin is duplicated in three places. **Acceptance:** review both
+  pins at each release; consider a single source of truth for the phi-scan pin plus an unpinned probe mirroring
+  semgrep's.
 - [ ] **Scheduled inter-release grype scan** — add a weekly `grype-scheduled.yml` workflow that builds and scans without publishing, to catch CVEs disclosed between releases. Dependabot already covers Python dep bumps; this would catch supply-chain issues in the built artifact specifically. Fits the release/artifact map in [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md); release-time grype already runs in `release.yml`.
 - [ ] **Optional supply-chain hardening** — enable GitHub code scanning/security alerts, release SBOM upload, or
   Trufflehog only if needed beyond gitleaks. Coordinate with [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) / `PUBLISHING.md` so SBOM or extra scanners attach to the real publish path.

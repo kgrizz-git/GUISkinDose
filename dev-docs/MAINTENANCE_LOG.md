@@ -19,6 +19,135 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   cannot become a protocol-relative `Location`. Follow-up to the #118
   security reviews; both gaps predated that PR.
 
+### Changed
+
+- **No workflow persists the checkout token any more** (2026-09-30) — every
+  `actions/checkout` across the seven workflows now sets `persist-credentials: false`, where
+  only `sonar-scan` did. Without it the job's `GITHUB_TOKEN` stays in `.git/config` for the
+  whole run, reachable by any third-party tool the job executes — and these jobs run plenty:
+  semgrep with a registry-fetched ruleset, `uvx`-installed phi-scan and presidio, grype, and
+  in `ci-latest` an entirely unpinned `pip install`. Two of those workflows can write
+  (`issues: write` in `ci-latest`, `security-events: write` in codeql).
+
+  Nothing needed the credential. No job pushes; `github-script`, the gitleaks action and
+  `gh` all authenticate from their own token inputs or environment. Three jobs do run
+  `git fetch` after checkout (`static-analysis`, `coverage-pr`, and the release gate), which
+  still works unauthenticated because the repository is public — noted in a comment at each
+  of those three checkouts, since that is the one thing a switch to private would break.
+
+- **virtualenv 21.4.2 to 21.14.1** (2026-09-30) — clears four advisories
+  (GHSA-x78j-v8h9-3j2q, and PYSEC-2026-4011 / -4012 / -4013: unverified seed wheels,
+  `pyvenv.cfg` prompt injection, and activation scripts executing commands embedded in
+  paths). Same situation as the urllib3 bump below: published after the previous push,
+  unrelated to the work it landed beside, and already pinned at the vulnerable version on
+  `main`. Dev-only, reaching the lock through `pre-commit`. `python-discovery` moved 1.4.0
+  to 1.6.1 with it as a transitive dependency.
+
+- **urllib3 2.7.0 to 2.8.0** (2026-09-30) — clears GHSA-8988-9cw3-xx77 (HTTPS proxy TLS
+  configuration may be ignored or overridden) and GHSA-vxq7-64xx-v4gw (`HTTPResponse.stream()`
+  buffers an unbounded chunk-size line into memory), both fixed in 2.8.0. Published after the
+  previous push and unrelated to the semgrep work it landed beside; `main` carried the same
+  2.7.0 pin. Exposure was dev-only — urllib3 arrives through `requests` under the `dev`, `docs`
+  and `notebooks` extras, not the `gui` runtime path — but the audit gate is blocking, and the
+  fix is a clean single-package relock. `uv audit` now reports no known vulnerabilities.
+
+
+- **Semgrep's isolated environment is now hash-locked, and the resolved version is asserted**
+  (2026-09-29) — follow-up to the isolation entry below, which traded `uv sync --locked`'s
+  sha256-pinned wheels for `uvx --from semgrep==<pin>`. That pin fixed the scanner's own version but
+  re-resolved its ~68 transitive dependencies on every run with no recorded hashes, so a same-version
+  re-upload would have been trusted. New `tools/semgrep/` is a standalone uv project — deliberately
+  **not** a workspace member, since joining the workspace would merge those dependencies back into
+  the root resolution and undo the isolation — and its `uv.lock` records 942 sha256 hashes.
+  `scripts/semgrep_tool.py` now prefers `uv run --locked --project tools/semgrep`, falling back to
+  `uvx` and then to a `PATH` semgrep. Verified: the locked run reports `1.168.0`, matching the
+  inventory pin, and `semgrep` remains unimportable in the project environment.
+
+  Two traps were specific to this repo's `.envrc`. It exports `UV_PROJECT_ENVIRONMENT=.venv`, and
+  `uv run` honours it, so without redirecting it the hash-locked run would have installed semgrep and
+  its pinned dependencies straight into the environment this design exists to keep them out of; the
+  scanner environment is redirected to the gitignored `tools/semgrep/.venv`. That location is not
+  arbitrary either: pytest's write-containment snapshot (`tests/conftest.py`) prunes directories named
+  `.venv` at any depth but does **not** prune `tmp/`, and `tests/unittests/test_privacy_semgrep_rules.py`
+  runs the scanner during the suite, so putting the environment under `tmp/` would have tripped the
+  containment guard.
+
+  Also closed the gap that nothing checked which version actually ran. A `semgrep` found only on
+  `PATH` is now refused unless it reports the pinned version, because one that disagrees with CI makes
+  the gate advisory without saying so, and a test runs the resolved command and asserts its
+  `--version` output equals the inventory pin. The `--locked` flag is what makes the lock
+  load-bearing: bumping the pin now requires editing the inventory *and* re-running
+  `uv lock --project tools/semgrep`, and doing only one fails loudly. Review caught that
+  `--locked` alone did not deliver that: it compares the tool manifest to its own lock and never
+  reads the inventory, so an inventory-only bump gated green on the previous scanner and failed
+  later in pytest. `semgrep_argv` now compares the two before returning the locked command, which
+  puts the check where the security argument needs it.
+
+  Three follow-up defects came out of review of that change, all fixed here. The
+  privacy-rules test built its scan environment from `os.environ.copy()` rather than
+  `tool_environment()`, so on any machine with direnv active it installed semgrep 1.168.0,
+  `click 8.1.8`, `mcp 1.23.3` and `pyjwt 2.13.0` into the project `.venv` — reproduced
+  directly, and invisible in CI because `.envrc` never runs there. `ci-latest.yml` had no
+  `uv`, which is absent from the ubuntu runner image, so both weekly drift probes and the
+  pytest step would have failed every Monday and opened a tracking issue that had nothing
+  to do with drift. And an unpinned probe request with no `uvx` fell through to the pinned
+  locked run, meaning a probe whose only question is "has the pin drifted?" would have
+  answered "no" whatever upstream did; it now raises.
+
+  **Not done, deliberately:** pinning the Semgrep *ruleset*. `--config=p/owasp-top-ten` is fetched
+  from the registry on each run, so the rules are mutable and the gate needs network — a rule change
+  upstream can turn a green local push into a red CI run. Vendoring the pack is not a plumbing task:
+  all 559 rules in it carry `license: Semgrep Rules License v1.0`, none under the LGPL terms of the
+  public `semgrep-rules` repository, so redistributing them in a public repo is a licensing question.
+  The cheap alternative, if this ever bites, is a digest-drift check rather than a pin.
+
+- **Semgrep isolated as a pinned `uvx` tool; all dependency-audit suppressions removed**
+  (2026-09-29) — semgrep is no longer in the `dev` extra or `uv.lock`. Its own requirements
+  (`click<8.2`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`) were the sole reason the project carried five
+  `[tool.uv.audit]` suppressions (click PYSEC-2026-2132; mcp GHSA-jpw9-pfvf-9f58 /
+  GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w; pyjwt GHSA-w6j9-cwv2-h6wq): it held those transitive
+  packages below their fixed versions. Semgrep is only ever invoked as a CLI, never imported, so it now
+  runs via `uvx --from semgrep==<pin>` (the pattern already used for `phi-scan`). Result: `click`
+  upgraded 8.1.8 to 8.5.0, `mcp` and `pyjwt` left the lock entirely, `uv audit` reports zero
+  vulnerabilities, and `ignore` is empty.
+
+  **This is an audit-scope change, not remediation, and should not be read as one.**
+  `semgrep==1.168.0` still declares `click~=8.1.8`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`, and its
+  isolated environment installs exactly those versions — verified directly. The vulnerable code is
+  still present and still executed by the scanner; it is simply outside the surface `uv audit`,
+  `pip-audit`, Dependabot, and grype inspect. The genuine improvement is in the *project*
+  environment, where `click` moved 8.1.8 to 8.5.0 — which reaches users, since uvicorn pulls click
+  into the `gui` extra. For mcp and pyjwt, both dev-only before and after, only the audit scope
+  changed. The tool environment was also unhashed at first, where `uv sync --locked` gave
+  sha256-pinned wheels; that gap is closed by the `tools/semgrep` entry below.
+
+  The pin lives in `dev-docs/privacy_tool_inventory.json` — already the tracked source of truth for
+  scanner versions — and both entry points read it, so the hook and CI cannot drift. New
+  `scripts/semgrep_tool.py` resolves the command (raising rather than skipping when nothing can run it),
+  and new `scripts/run_semgrep_owasp.py` owns the OWASP ruleset, flags, and include-list for both the
+  pre-push hook and the CI job. That unification fixed a real inconsistency: the CI job passed
+  `--exclude` for `example_data` / `phantom_data` / `table_data` / `tests/fixtures` but the pre-push
+  hook did not, so a local run scanned clinical-adjacent data the policy says not to feed a scanner.
+  Both now exclude them (352 files scanned to 241) — which makes the local hook deliberately
+  narrower than it was, not merely more consistent.
+
+  **Trade-off, recorded deliberately:** Dependabot only sees `uv.lock`, so nothing auto-bumps the pin.
+  The weekly `ci-latest` workflow now runs the OWASP scan against the newest semgrep
+  (`GUISKINDOSE_SEMGREP_UNPINNED=1`) so drift and upstream breakage open a tracking issue; bumping the
+  pin stays a human step, tracked in `dev-docs/TO_DO.md` alongside the same pre-existing gap for
+  `phi-scan`.
+
+
+- **Local interpreter pinned to Python 3.14** (2026-09-29) — `.envrc` now exports `UV_PYTHON=3.14`
+  (deferring to an existing value) so the development environment matches the only version a pull
+  request builds; 3.11–3.13 coverage still arrives on `main` pushes and the weekly sweep. Motivated by
+  a real miss: Python 3.14 changed `PurePath.suffix` for leading-dot names, so a test passed on a local
+  3.12 and failed both PR jobs. `uv sync --all-extras` resolves cleanly on 3.14 (including `nicegui`,
+  `pywebview`, `pytest-asyncio`, `pytest-xdist`), and the full suite passes. The `>=3.11` floor stays
+  guarded by `[tool.basedpyright] pythonVersion = "3.11"`, which is interpreter-independent; `AGENTS.md`
+  documents a runtime floor check and warns that it must redirect `UV_PROJECT_ENVIRONMENT`, because a
+  bare `uv run --python 3.11` rebuilds `.venv` itself as 3.11.
+
 ### Added
 
 - **Debuggable write-containment failures** (2026-09-29) — the `tests/conftest.py` guard that fails a run

@@ -89,7 +89,6 @@ dev = [
     "types-Pillow",
     "pip-audit>=2.7",
     "bandit>=1.8",
-    "semgrep>=1.100",
     "shellcheck-py>=0.11",
     "pre-commit>=4.0",
     "pytest>=7.0",
@@ -187,6 +186,13 @@ select = ["E4", "E7", "E9", "F", "B", "C4", "FURB", "I", "PYI", "RUF", "SIM", "U
 
 [tool.basedpyright]
 pythonVersion = "3.11"
+# Pin the environment instead of letting basedpyright guess one. The pre-push hook
+# runs bare `basedpyright` with `language: system`, so it resolves from PATH; left
+# to guess it picked a Homebrew interpreter and type-checked *that* stdlib, where
+# 3.14 t-strings fail against the 3.11 target above. CI never saw this because it
+# runs inside `uv run`, which already points at .venv.
+venvPath = "."
+venv = ".venv"
 include = ["src/guiskindose", "tests/unittests", "tests/gui", "tests/integrationtests", "scripts"]
 exclude = [
     "**/__pycache__",
@@ -224,16 +230,28 @@ skips = ["B101"]
 #
 # `ignore-until-fixed` suppresses a finding ONLY while no patched release exists, so the
 # audit automatically fails again once an upstream fix is published.
-ignore = [
-    # click 8.1.8 is pinned by semgrep (<8.2); advisory PYSEC-2026-2132 cannot be upgraded until semgrep loosens its click requirement.
-    "PYSEC-2026-2132",
-    # mcp 1.23.3 is pinned exactly by semgrep; GHSA-jpw9-pfvf-9f58 / GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w
-    # are fixed in mcp >=1.27.2 / >=1.28.1. Suppress until semgrep relaxes or bumps the pin. mcp is only
-    # pulled in for the optional Semgrep MCP server path and is not used by GUISkinDose runtime code.
-    "GHSA-jpw9-pfvf-9f58",
-    "GHSA-hvrp-rf83-w775",
-    "GHSA-vj7q-gjh5-988w",
-]
+# Currently EMPTY. Read the next paragraph before concluding anything from that.
+#
+# All five entries this project carried (click PYSEC-2026-2132; mcp GHSA-jpw9-pfvf-9f58 /
+# GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w; pyjwt GHSA-w6j9-cwv2-h6wq) existed because
+# semgrep pinned those transitive dependencies below their fixed versions. Semgrep now
+# runs as an isolated `uvx` tool (scripts/semgrep_tool.py), so its constraints no longer
+# reach this lock.
+#
+# That is NOT remediation, and must not be described as one. `semgrep==1.168.0` still
+# declares `click~=8.1.8`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`, and its isolated
+# environment demonstrably installs exactly those versions — the vulnerable code is still
+# present and still executed by the scanner, it is simply outside the surface `uv audit`,
+# `pip-audit`, Dependabot, and grype inspect. What genuinely improved is the *project*
+# environment: `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches
+# users through uvicorn in the `gui` extra. For mcp and pyjwt this is an audit-scope
+# change only; both were dev-only before and remain dev-only now.
+#
+# Two consequences worth keeping in view: the tool environment is unhashed (uvx resolves
+# from PyPI without the sha256 pinning `uv sync --locked` gave), and nothing audits it.
+# dev-docs/TO_DO.md tracks replacing bare `uvx --from` with a hash-locked tool project.
+#
+ignore = []
 # No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared
 # with the safety dev dependency (nltk was safety-only; see CHANGELOG [1.0.0] `### Removed`).
 # NOTE (Dependabot): GitHub's advisory feed is independent of these ignores, and the uv.lock
