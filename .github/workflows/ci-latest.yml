@@ -37,7 +37,8 @@ jobs:
     # Leaving the checkout token in `.git/config` would put a credential carrying
     # `issues: write` within reach of that code. Nothing here pushes or fetches, and
     # github-script authenticates through its own `github.token`, so dropping it costs
-    # nothing. Matches the sonar-scan job in ci.yml.
+    # nothing. Every checkout in this repository now sets it; this job is just the one
+    # where it earns its keep.
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
         persist-credentials: false

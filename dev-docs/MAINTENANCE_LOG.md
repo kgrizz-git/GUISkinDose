@@ -21,6 +21,20 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **No workflow persists the checkout token any more** (2026-09-30) — every
+  `actions/checkout` across the seven workflows now sets `persist-credentials: false`, where
+  only `sonar-scan` did. Without it the job's `GITHUB_TOKEN` stays in `.git/config` for the
+  whole run, reachable by any third-party tool the job executes — and these jobs run plenty:
+  semgrep with a registry-fetched ruleset, `uvx`-installed phi-scan and presidio, grype, and
+  in `ci-latest` an entirely unpinned `pip install`. Two of those workflows can write
+  (`issues: write` in `ci-latest`, `security-events: write` in codeql).
+
+  Nothing needed the credential. No job pushes; `github-script`, the gitleaks action and
+  `gh` all authenticate from their own token inputs or environment. Three jobs do run
+  `git fetch` after checkout (`static-analysis`, `coverage-pr`, and the release gate), which
+  still works unauthenticated because the repository is public — noted in a comment at each
+  of those three checkouts, since that is the one thing a switch to private would break.
+
 - **virtualenv 21.4.2 to 21.14.1** (2026-09-30) — clears four advisories
   (GHSA-x78j-v8h9-3j2q, and PYSEC-2026-4011 / -4012 / -4013: unverified seed wheels,
   `pyvenv.cfg` prompt injection, and activation scripts executing commands embedded in
