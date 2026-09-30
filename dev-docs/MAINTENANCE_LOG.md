@@ -48,7 +48,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   by construction — the variable is popped, `SEMGREP_SETTINGS_FILE` is redirected into the
   gitignored tool venv, and `SEMGREP_SEND_METRICS=off` moved into the shared environment so both
   gates get it rather than only the OWASP one. Verified by running both gates with a token
-  planted in the environment. Revisit the pin when semgrep relaxes it.
+  planted in the environment.
+
+  A second review round then found the wording still only *nearly* true: `SEMGREP_COOKIES_PATH`
+  is read with `os.getenv` in semgrep's `app/session.py` rather than through its `Env` factory,
+  so auditing the `SEMGREP_*` credential fields misses it, and an ambient value would replay a
+  saved cookie jar to semgrep.dev from these gates. `MozillaCookieJar.load()` also raises an
+  uncaught `LoadError`, so a stale path would abort a blocking gate for reasons unrelated to the
+  scanned code. It is popped too, which is what finally makes "unauthenticated by construction"
+  literal. The same round noted that jwt unreachability does not depend on any of this: the only
+  `import jwt` sits in a module imported solely by `commands/mcp.py`, so `semgrep scan` never
+  loads it. Revisit the pin when semgrep relaxes it.
 
 - **Five code scanning alerts cleared** (2026-09-30) — four were genuine redundant imports in
   tests (`sqlite3` imported twice in two correction tests; `scripts.dump_sonar_issues` imported

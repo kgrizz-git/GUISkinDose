@@ -161,6 +161,12 @@ def tool_environment(environ: dict[str, str] | None = None, *, root: Path | None
     # that path is gitignored AND pruned by the write-containment snapshot in
     # tests/conftest.py, which prunes `.venv` at any depth but not `tmp/`.
     source.pop("SEMGREP_APP_TOKEN", None)
+    # Read straight from os.getenv in semgrep's app/session.py rather than through its Env
+    # factory, which is why an audit of SEMGREP_* credential fields misses it. An ambient
+    # value would replay a saved cookie jar to semgrep.dev from these gates, and
+    # MozillaCookieJar.load() raises an uncaught LoadError on a malformed jar, so a stale
+    # path would also abort a blocking gate for reasons unrelated to the scanned code.
+    source.pop("SEMGREP_COOKIES_PATH", None)
     source["SEMGREP_SETTINGS_FILE"] = str(tool_env / "semgrep-settings.yaml")
     source["SEMGREP_SEND_METRICS"] = "off"
     return source

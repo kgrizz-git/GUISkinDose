@@ -238,11 +238,15 @@ skips = ["B101"]
 # runs as an isolated `uvx` tool (scripts/semgrep_tool.py), so its constraints no longer
 # reach this lock.
 #
-# That is NOT remediation, and must not be described as one. `semgrep==1.168.0` still
-# declares `click~=8.1.8`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`, and its isolated
-# environment demonstrably installs exactly those versions — the vulnerable code is still
-# present and still executed by the scanner, it is simply outside the surface `uv audit`,
-# `pip-audit`, Dependabot, and grype inspect. What genuinely improved is the *project*
+# Moving semgrep out was NOT remediation for everything, and must not be described as one.
+# Hash-locking it in tools/semgrep/uv.lock later put its dependencies back in view of
+# Dependabot, which indexes every lockfile regardless of this repo's update config, and the
+# pin bump to 1.178.0 then fixed the mcp advisories for real (mcp 1.23.3 -> 1.29.0, click
+# 8.1.8 -> 8.4.2). What remains unfixed is pyjwt: semgrep still declares
+# `pyjwt[crypto]~=2.13.0` at 1.178.0, so its isolated environment installs 2.13.0 and that
+# vulnerable code is still present, simply outside the surface `uv audit`, `pip-audit` and
+# grype inspect. Those twelve alerts are dismissed as unreachable — see
+# tools/semgrep/pyproject.toml for why — not fixed. What genuinely improved is the *project*
 # environment: `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches
 # users through uvicorn in the `gui` extra. For mcp and pyjwt this is an audit-scope
 # change only; both were dev-only before and remain dev-only now.

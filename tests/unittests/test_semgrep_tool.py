@@ -338,9 +338,19 @@ class TestToolEnvironment:
         # snapshot in tests/conftest.py, which prunes `.venv` at any depth but not `tmp/`.
         assert ".venv" in settings.parts
 
-    def test_metrics_are_off_for_every_gate_not_just_one(self) -> None:
-        """This lived in the OWASP runner only, while the docs claimed both gates had it."""
+    def test_metrics_are_off_for_every_gate_not_just_one(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """This lived in the OWASP runner only, while the docs claimed both gates had it.
+
+        Seeds the opposite value first: asserting "off" against an unset variable also
+        passes for a `setdefault`, which would let an ambient `on` through.
+        """
+        monkeypatch.setenv("SEMGREP_SEND_METRICS", "on")
         assert semgrep_tool.tool_environment(root=ROOT)["SEMGREP_SEND_METRICS"] == "off"
+
+    def test_a_saved_cookie_jar_is_not_replayed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """semgrep reads this one with os.getenv, so an SEMGREP_* field audit misses it."""
+        monkeypatch.setenv("SEMGREP_COOKIES_PATH", "/tmp/cookies.txt")
+        assert "SEMGREP_COOKIES_PATH" not in semgrep_tool.tool_environment(root=ROOT)
 
     def test_the_tool_environment_follows_a_supplied_root(self, tmp_path: Path) -> None:
         environment = semgrep_tool.tool_environment(root=tmp_path)
