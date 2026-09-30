@@ -84,7 +84,9 @@ _DROPPED_SEMGREP_VARS: Final = (
     "SEMGREP_USER_AGENT_APPEND",
     # Second name for the endpoint forced below; dropped so it cannot compete.
     "SEMGREP_APP_URL",
-    # Endpoint for fail-open reporting; dropped to restore Semgrep's own default.
+    # Endpoint for fail-open reporting, consulted only on the pro fail-open path these OSS
+    # gates never take, so dropping it asserts no security property. If a release ever
+    # consulted it on the OSS path, force it below instead of dropping it here.
     "SEMGREP_FAIL_OPEN_URL",
 )
 
@@ -94,7 +96,10 @@ _FORCED_SEMGREP_VARS: Final = {
     # come from, and the gate still passes. That is the same "advisory without saying so"
     # failure this module refuses for an unpinned PATH semgrep. Pinning it costs the ability
     # to point the gate at an internal mirror; doing that should be a deliberate code change,
-    # not an environment variable.
+    # not an environment variable. This is byte-identical to Semgrep's own default today, so
+    # it changes nothing until someone sets the variable — and if upstream ever moves its
+    # default endpoint, the weekly drift probe fails loudly rather than quietly following the
+    # rules to a new host, which is the outcome we want.
     "SEMGREP_URL": "https://semgrep.dev",
     # Both gates also pass --metrics=off. This lived in the OWASP runner alone while the docs
     # claimed both gates had it.

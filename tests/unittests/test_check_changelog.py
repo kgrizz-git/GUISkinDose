@@ -55,3 +55,65 @@ def test_maintenance_log_exemption_for_tests_only_pr(monkeypatch: pytest.MonkeyP
 def test_maintenance_log_does_not_exempt_src_changes(monkeypatch: pytest.MonkeyPatch) -> None:
     changed = ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"]
     assert _main_with_changed(monkeypatch, changed) == 1
+
+
+def _main_with_diff(monkeypatch: pytest.MonkeyPatch, changed: list[str], added: dict[str, list[str]]) -> int:
+    monkeypatch.setattr(check_changelog, "resolve_base", lambda: "base")
+    monkeypatch.setattr(check_changelog, "changed_files", lambda base: changed)
+    monkeypatch.setattr(check_changelog, "_added_lines", lambda base, path: added.get(path, []))
+    return check_changelog.main()
+
+
+def test_comment_only_src_change_is_satisfied_by_the_maintenance_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CHANGELOG.md documents itself as user-facing; a comment has no honest entry there."""
+    assert (
+        _main_with_diff(
+            monkeypatch,
+            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
+            {"src/a.py": ["# explain why the flag exists", ""]},
+        )
+        == 0
+    )
+
+
+def test_comment_only_still_needs_the_maintenance_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _main_with_diff(monkeypatch, ["src/a.py"], {"src/a.py": ["# just a comment"]}) == 1
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "value = 1",
+        "helper()",
+        "import os",
+        "def f() -> None:",
+        "class C:",
+        "    return None",
+    ],
+)
+def test_one_added_statement_disqualifies_the_exemption(monkeypatch: pytest.MonkeyPatch, line: str) -> None:
+    """The exemption must not become a way to slip behaviour past the changelog."""
+    assert (
+        _main_with_diff(
+            monkeypatch,
+            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
+            {"src/a.py": ["# a comment", line]},
+        )
+        == 1
+    )
+
+
+def test_a_pure_deletion_is_not_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Removing code changes behaviour, and shows up as no added lines at all."""
+    assert _main_with_diff(monkeypatch, ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"], {"src/a.py": []}) == 1
+
+
+def test_a_non_python_src_change_is_never_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert (
+        _main_with_diff(
+            monkeypatch,
+            ["src/guiskindose/gui/ui_copy.json", "dev-docs/MAINTENANCE_LOG.md"],
+            {"src/guiskindose/gui/ui_copy.json": ["  // note"]},
+        )
+        == 1
+    )

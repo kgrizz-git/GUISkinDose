@@ -21,6 +21,21 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **The changelog gate accepts a comment-only source change** (2026-09-30) —
+  `scripts/check_changelog.py` demanded a `CHANGELOG.md` entry for any `src/` diff, which
+  blocked adding a code comment. `CHANGELOG.md` states its own scope as notable *user-facing*
+  changes and directs maintainer-facing work here, so a comment has no honest entry there and
+  demanding one trains readers to skim the file. A `MAINTENANCE_LOG.md` entry now satisfies the
+  gate when every added line in the non-test files is a `#` comment or blank.
+
+  Kept deliberately literal. A first attempt allowed any added line without a statement-like
+  marker, so docstring prose would qualify — but a bare `return None` has no marker either and
+  slipped straight through, which the new tests caught before this landed. Requiring `#` has no
+  such gap, at the cost of a docstring-only edit still needing a changelog entry. Deletions
+  never qualify, since the check inspects added lines only. Tested in both directions,
+  including one case per statement form.
+
+
 - **Semgrep pin 1.168.0 to 1.178.0; the tool's Dependabot alerts triaged** (2026-09-30) —
   hash-locking the scanner in `tools/semgrep/uv.lock` made its dependencies visible to Dependabot
   and raised 15 alerts. That corrects a claim in the entry below: `dependabot.yml` scoping the pip

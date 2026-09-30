@@ -8,9 +8,11 @@ Local (pre-push):      compares HEAD against the merge-base with origin/main.
 Exit 0 (pass) when:
   - No src/ or tests/ files changed.
   - CHANGELOG.md is among the changed files.
+  - The only non-test changes add `#` comments, and MAINTENANCE_LOG.md is updated.
   - Base ref cannot be determined (fail-open to avoid blocking offline work).
 Exit 1 (fail) when src/ or tests/ files changed but CHANGELOG.md was not updated.
 """
+
 from __future__ import annotations
 
 import os
@@ -28,6 +30,34 @@ def changed_files(base: str) -> list[str]:
     if result.returncode != 0:
         return []
     return [f for f in result.stdout.splitlines() if f]
+
+
+def _added_lines(base: str, path: str) -> list[str]:
+    result = _git("diff", "--unified=0", f"{base}...HEAD", "--", path)
+    if result.returncode != 0:
+        return []
+    return [line[1:].strip() for line in result.stdout.splitlines() if line.startswith("+") and line[1:3] != "++"]
+
+
+def is_comment_only(base: str, path: str) -> bool:
+    """Whether a Python file's added lines are all ``#`` comments or blank.
+
+    Deliberately literal rather than clever. An earlier version allowed any added line that
+    lacked a statement-like marker, so that prose inside a docstring would qualify — but a
+    bare ``return None`` has no such marker either, and slipped through. Requiring ``#`` or
+    blank has no such gap.
+
+    The cost is that a docstring-only edit still demands a CHANGELOG entry. That is the safe
+    direction: the exemption exists so a comment does not have to be announced to users, not
+    to make the changelog optional for anything that merely looks harmless. Only *added*
+    lines are inspected, so a diff that deletes code is never comment-only.
+    """
+    if not path.endswith(".py"):
+        return False
+    added = _added_lines(base, path)
+    if not added:
+        return False
+    return all(not line or line.startswith("#") for line in added)
 
 
 def resolve_base() -> str | None:
@@ -65,6 +95,15 @@ def main() -> int:
     # cleanups (TO_DO item removals with test pinning) are the recurring case.
     non_test = [f for f in substantive if not f.startswith("tests/")]
     if not non_test and "dev-docs/MAINTENANCE_LOG.md" in changed:
+        return 0
+
+    # Same exemption, extended to src changes that add only `#` comments.
+    # CHANGELOG.md documents its own scope as notable *user-facing* changes and points
+    # maintainer-facing work at MAINTENANCE_LOG.md, so a comment has no honest entry in it;
+    # demanding one there trains readers to skim the file. Any behavioural change still
+    # requires CHANGELOG.md, because is_comment_only() disqualifies a file as soon as an
+    # added line looks like a statement, and ignores deletions entirely.
+    if "dev-docs/MAINTENANCE_LOG.md" in changed and all(is_comment_only(base, f) for f in non_test):
         return 0
 
     if "CHANGELOG.md" in changed:
