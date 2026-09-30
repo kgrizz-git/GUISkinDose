@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 
 from nicegui import ui
 
+from .dose_severity import PsdReadout
+
 
 def _noop() -> None:
     """Default refresher before the upload tab wires the real callables."""
@@ -36,7 +38,9 @@ class PageContext:
     tabs: ui.tabs
     file_label: ui.label
     events_label: ui.label
-    psd_label: ui.label
+    # Sidebar PSD status readout. A trio, not a bare label: the icon and the
+    # band tooltip have to be reset alongside the number, so they travel in it.
+    psd_readout: PsdReadout
     run_btn_drawer: ui.button
     # shared refresh callbacks — default to no-op, reassigned by index() after
     # the upload tab is built; this breaks the cross-handler call cycle.

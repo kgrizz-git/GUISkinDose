@@ -14,6 +14,11 @@ from nicegui import run, ui
 
 from ..components import HelpButton
 from ..constants import COLORSCALES, MAX_INLINE_MAPS
+from ..dose_severity import (
+    PsdReadout,
+    apply_psd_presentation,
+    build_psd_readout,
+)
 from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..state import state
 from ..ui_copy import copy_text
@@ -66,13 +71,33 @@ class ResultsTabController:
         self.subset_checkboxes: list[Any] = []
         self._inline_rendered: dict[int, bool] = {}
 
+    def _apply_psd_presentation(
+        self, readout: PsdReadout | None, psd: float | None, text: str | None = None
+    ) -> None:
+        """Set one banded PSD readout's text and move all three carriers to ``psd``'s band.
+
+        ``text`` is whatever the site displays, which is not always the bare
+        number ("— mGy (no exams selected)", "12.34 mGy (subset)"), so it is
+        passed in rather than formatted here; ``None`` leaves the text alone.
+
+        A no-op before ``build`` has wired the readouts, so a timer that fires
+        early cannot raise. The band itself comes from ``dose_severity``.
+        """
+        if readout is None:
+            return
+        if text is not None:
+            readout.value.set_text(text)
+        apply_psd_presentation(readout, psd)
+
     def refresh_metrics(self) -> None:
         """Refresh metrics."""
         if not state.is_multi_exam and state.calculation_done and state.psd is not None:
             from guiskindose.export._format import fmt_duration
             from guiskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
 
-            self.refs.psd_metric.set_text(f"{state.psd:.2f} mGy")
+            self._apply_psd_presentation(
+                self.refs.psd_readout, state.psd, f"{state.psd:.2f} mGy"
+            )
             self.refs.kerma_metric.set_text(f"{state.air_kerma:.1f} mGy")
             self.refs.events_metric.set_text(
                 str(len(state.rdsr_df) if state.rdsr_df is not None else 0)
@@ -236,7 +261,9 @@ class ResultsTabController:
 
     def _set_multi_exam_summary(self, res: Any) -> None:
         """Render aggregate dose, exam-count, and warning summaries."""
-        self.refs.agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
+        self._apply_psd_presentation(
+            self.refs.agg_psd_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy"
+        )
         n_ok = len(res.exams)
         n_excluded = int(getattr(res, "exams_excluded", 0) or 0)
         if n_excluded > 0:
@@ -306,16 +333,20 @@ class ResultsTabController:
             self.refs.agg_dosemap_plot.update_figure({})
             self.last_agg_map_run_id = state.calc_run_id
             return
+        agg_readout = self.refs.agg_psd_readout
         if all(state.aggregate_subset_exams):
             self.refresh_aggregate_dosemap(res)
-            self.refs.agg_psd_metric.set_text(f"{res.aggregate_psd:.2f} mGy")
+            self._apply_psd_presentation(
+                agg_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy"
+            )
         else:
             self.refs.agg_dosemap_spinner.visible = True
             combined, subset_psd = compute_subset_aggregate(res, state.aggregate_subset_exams)
             if combined is None:
                 self.refs.agg_dosemap_spinner.visible = False
                 self.refs.agg_dosemap_plot.update_figure({})
-                self.refs.agg_psd_metric.set_text("— mGy (no exams selected)")
+                # No exam is in the subset, so there is no dose to band: pending.
+                self._apply_psd_presentation(agg_readout, None, "— mGy (no exams selected)")
                 self.last_agg_map_run_id = state.calc_run_id
                 return
             first_exam_patient = res.exams[0].output.to_dict()["patient"]
@@ -324,7 +355,13 @@ class ResultsTabController:
             if fig:
                 self.refs.agg_dosemap_plot.update_figure(fig)
                 state.dosemap_fig = fig
-            self.refs.agg_psd_metric.set_text(f"{subset_psd:.2f} mGy (subset)")
+            # The subset maximum, not the whole-run aggregate: the number on
+            # screen is the subset's own peak. Note a non-empty subset whose
+            # combined map is empty yields subset_psd == 0.0, which bands low
+            # (green) rather than pending — zero really is below 5000 mGy.
+            self._apply_psd_presentation(
+                agg_readout, subset_psd, f"{subset_psd:.2f} mGy (subset)"
+            )
             self.last_agg_map_run_id = state.calc_run_id
 
     def on_subset_toggle(self, e: Any, idx: int) -> None:
@@ -403,9 +440,14 @@ class ResultsTabController:
                 with ui.row().classes("gap-4"):
                     with ui.column().classes("gap-0"):
                         ui.label("PSD").classes(_EXAM_METRIC_LABEL_CLASSES)
-                        ui.label(f"{exam_res.output.psd:.2f} mGy").classes(
-                            "text-aurora-purple font-bold"
+                        # The one place several bands are visible at once: it
+                        # shows which exam in a multi-exam run drives the peak.
+                        exam_psd = build_psd_readout(
+                            f"{exam_res.output.psd:.2f} mGy",
+                            label_classes="font-bold",
+                            row_classes="items-center gap-1",
                         )
+                        apply_psd_presentation(exam_psd, exam_res.output.psd)
                     with ui.column().classes("gap-0"):
                         ui.label("Air Kerma").classes(_EXAM_METRIC_LABEL_CLASSES)
                         ui.label(f"{exam_res.output.air_kerma:.1f} mGy").classes(
@@ -493,7 +535,9 @@ class ResultsTabController:
 class ResultsViewRefs:
     """UI element references for the Results tab."""
 
-    psd_metric: ui.label = None  # type: ignore[assignment]
+    # Banded PSD readouts: the label, its band icon, and its band tooltip move
+    # together, so they are held as one unit rather than as loose references.
+    psd_readout: PsdReadout | None = None
     kerma_metric: ui.label = None  # type: ignore[assignment]
     events_metric: ui.label = None  # type: ignore[assignment]
     dap_metric: ui.label = None  # type: ignore[assignment]
@@ -502,7 +546,7 @@ class ResultsViewRefs:
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
-    agg_psd_metric: ui.label = None  # type: ignore[assignment]
+    agg_psd_readout: PsdReadout | None = None
     agg_events_metric: ui.label = None  # type: ignore[assignment]
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
     agg_rotational_badge: ui.label = None  # type: ignore[assignment]
@@ -544,9 +588,7 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Peak Skin Dose").classes(_MUTED_CAPTION_CLASSES)
-                ctrl.refs.psd_metric = ui.label("—").classes(
-                    "text-4xl text-aurora-purple font-bold"
-                )
+                ctrl.refs.psd_readout = build_psd_readout("—", label_classes="text-4xl font-bold")
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Total Air Kerma").classes(_MUTED_CAPTION_CLASSES)
                 ctrl.refs.kerma_metric = ui.label("—").classes(
@@ -612,11 +654,13 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
             "modern-card w-full text-center border border-aurora-purple/50 "
             "bg-aurora-purple/10 p-6"
         ):
+            # The section header stays aurora purple on purpose: it is a label,
+            # not a value, and re-colouring brand chrome is out of scope here.
             ui.label("Aggregate Peak Skin Dose").classes(
                 "text-sm text-aurora-purple font-bold tracking-widest uppercase"
             )
-            ctrl.refs.agg_psd_metric = ui.label("—").classes(
-                "text-5xl text-white font-bold my-2"
+            ctrl.refs.agg_psd_readout = build_psd_readout(
+                "—", label_classes="text-5xl font-bold my-2"
             )
             ctrl.refs.agg_events_metric = ui.label("across 0 exams").classes(
                 "text-sm text-grey-4"

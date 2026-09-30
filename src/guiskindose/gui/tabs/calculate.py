@@ -1,6 +1,6 @@
 """Calculate tab — run dose calculation with settings summary and progress.
 
-Refactor plan Phase 3.3f. ``do_calculate`` touches drawer chrome (``psd_label``,
+Refactor plan Phase 3.3f. ``do_calculate`` touches drawer chrome (``psd_readout``,
 ``run_btn_drawer``) and ``tabs`` via ``PageContext``. The drawer run button's
 click handler is wired here even though the button is built in the drawer.
 """
@@ -13,6 +13,7 @@ from nicegui import run, ui
 
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result
+from ..dose_severity import apply_psd_presentation, reset_psd_label
 from ..helpers import below_floor_event_count, format_input_scanner_label, run_calculation
 from ..page_context import PageContext
 from ..state import state
@@ -536,13 +537,14 @@ class _CalculationController:
         state.psd = None
         state.air_kerma = None
         state.dosemap_fig = None
-        self.ctx.psd_label.set_text("PSD: 0.00 mGy")
+        reset_psd_label(self.ctx.psd_readout)
         self._require_controls().status_label.set_text("Calculation failed")
         ui.notify(f"Error: {message[:300]}", type="negative", timeout=10000)
 
     def _show_success(self, message: str) -> None:
         """Update PSD chrome, switch to Results, and surface any calc warnings."""
-        self.ctx.psd_label.set_text(f"PSD: {state.psd:.2f} mGy")
+        self.ctx.psd_readout.value.set_text(f"PSD: {state.psd:.2f} mGy")
+        apply_psd_presentation(self.ctx.psd_readout, state.psd)
         self.ctx.clear_offset_stale_caption()
         k_tab_summary = _format_k_tab_status_summary()
         ui.notify(f"✓ {message} · {k_tab_summary}", color="positive")

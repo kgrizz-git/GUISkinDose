@@ -18,6 +18,7 @@ from guiskindose.privacy import opaque_exam_label
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result, upload_lock
 from ..constants import EXAMPLE_FILES
+from ..dose_severity import reset_psd_label
 from ..helpers import (
     adjust_active_exam_index_after_remove,
     clear_multi_exam_state,
@@ -326,7 +327,7 @@ class UploadTabController:
         self.refs.import_preview.sheet_row.set_visibility(False)
         self.ctx.file_label.set_text(_NO_FILE_LOADED_STATUS)
         self.ctx.events_label.set_text("0 events")
-        self.ctx.psd_label.set_text("PSD: 0.00 mGy")
+        reset_psd_label(self.ctx.psd_readout)
         self.refs.upload_status.set_text(_NO_FILE_LOADED_STATUS)
         self.refs.example_select.set_value(None)
         self._build_uploader()
@@ -370,7 +371,7 @@ class UploadTabController:
             self.ctx.file_label.set_text(_drawer_file_label())
             self.ctx.events_label.set_text(f"{n_events} EVENTS")
         reset_results()
-        self.ctx.psd_label.set_text("PSD: 0.00 mGy")
+        reset_psd_label(self.ctx.psd_readout)
         self.refs.event_table.refresh()
         self.refresh_exams_table()
         self.refs.import_preview.refresh()

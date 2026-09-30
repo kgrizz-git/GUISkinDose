@@ -121,7 +121,7 @@ def _stub_ctx(calls: list[str]) -> PageContext:
         tabs=MagicMock(),
         file_label=MagicMock(),
         events_label=MagicMock(),
-        psd_label=MagicMock(),
+        psd_readout=MagicMock(),
         run_btn_drawer=MagicMock(),
     )
     ctx.refresh_event_table = lambda: calls.append("event_table")

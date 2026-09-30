@@ -2,12 +2,16 @@
 
 Single source of truth for how a PSD value is coloured and named. Every GUI
 readout of PSD routes through here so the four call sites cannot drift apart.
+Colour is never the only carrier: a banded readout is an icon + value + tooltip
+trio (:class:`PsdReadout`), and all three move together.
 """
 
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, NamedTuple
+
+from .ui_copy import copy_text
 
 if TYPE_CHECKING:  # nicegui is an optional extra; the core CI matrix has no `gui`
     from nicegui import ui
@@ -34,6 +38,9 @@ _COPY_KEYS: Final = {
 
 # Shown wherever a PSD has not been calculated, in place of a misleading "0.00 mGy".
 PSD_PENDING_TEXT: Final = "PSD: —"
+
+# Default row classes for a readout that sits in a centred metric card.
+_CENTERED_ROW_CLASSES: Final = "items-center justify-center gap-2"
 
 
 def psd_band(psd: float | None) -> str:
@@ -82,7 +89,63 @@ def apply_psd_band(element: ui.element, psd: float | None) -> None:
     element.classes(remove=_ALL_TEXT_CLASSES, add=psd_text_class(psd))
 
 
-def reset_psd_label(label: ui.label) -> None:
-    """Return the sidebar PSD readout to its not-calculated state."""
-    label.set_text(PSD_PENDING_TEXT)
-    apply_psd_band(label, None)
+class PsdReadout(NamedTuple):
+    """The element handles that make up one banded PSD readout.
+
+    A readout is never a bare number. Colour alone is unreadable for the most
+    common colour-vision deficiencies, so the value always travels with a band
+    icon and a band-name tooltip; bundling the three is what stops one of them
+    being left behind when the band changes.
+    """
+
+    row: ui.row
+    icon: ui.icon
+    value: ui.label
+    tooltip: ui.tooltip
+
+
+def build_psd_readout(
+    text: str, *, label_classes: str, row_classes: str = _CENTERED_ROW_CLASSES
+) -> PsdReadout:
+    """Build the icon + value + tooltip trio of a banded PSD readout, pending.
+
+    ``text`` is whatever the site shows before any dose exists ("—" on Results,
+    ``PSD: —`` in the sidebar). The tooltip is created here and targeted at the
+    row rather than attached per update: nicegui's ``Element.tooltip()``
+    constructs a brand-new ``q-tooltip`` element on every call, so re-calling it
+    would stack one more tooltip on each band change instead of updating it.
+    """
+    from nicegui import ui  # local import on purpose: nicegui is an optional extra
+    # and this is the only function here that needs it at run time. The band
+    # logic stays importable (and unit-testable) in the core CI matrix, which is
+    # why the module-level import is TYPE_CHECKING-only.
+
+    with ui.row().classes(row_classes) as row:
+        icon = ui.icon("").classes(f"icon-outlined {psd_text_class(None)}")
+        # ui.icon("") still renders an empty glyph box, so the pending band
+        # hides the icon rather than naming an empty symbol.
+        icon.set_visibility(False)
+        value = ui.label(text).classes(f"{label_classes} {psd_text_class(None)}")
+        tooltip = ui.tooltip(copy_text(psd_band_copy_key(None)))
+        tooltip.props(f"target=#{row.html_id}")
+    return PsdReadout(row=row, icon=icon, value=value, tooltip=tooltip)
+
+
+def apply_psd_presentation(readout: PsdReadout, psd: float | None) -> None:
+    """Move colour, icon, and tooltip of ``readout`` to ``psd``'s band at once.
+
+    The three carriers move together because any one of them left behind would
+    contradict the other two, and because colour must never be the only carrier.
+    """
+    apply_psd_band(readout.value, psd)
+    apply_psd_band(readout.icon, psd)
+    icon_name = psd_band_icon(psd)
+    readout.icon.set_name(icon_name)
+    readout.icon.set_visibility(bool(icon_name))
+    readout.tooltip.set_text(copy_text(psd_band_copy_key(psd)))
+
+
+def reset_psd_label(readout: PsdReadout) -> None:
+    """Return a PSD readout to its not-calculated state."""
+    readout.value.set_text(PSD_PENDING_TEXT)
+    apply_psd_presentation(readout, None)

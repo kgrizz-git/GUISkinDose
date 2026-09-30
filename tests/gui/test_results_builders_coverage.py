@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
+from guiskindose.gui.dose_severity import PsdReadout
 from guiskindose.gui.state import state
 from guiskindose.gui.tabs import results_builders as rb
 
@@ -37,9 +38,14 @@ def _mock_exam_output(psd: float, dose_pairs: list[tuple[int, float]], num_cells
     )
 
 
+def _mock_readout() -> PsdReadout:
+    """A banded PSD readout built from mocks: row / icon / value / tooltip."""
+    return PsdReadout(row=MagicMock(), icon=MagicMock(), value=MagicMock(), tooltip=MagicMock())
+
+
 def _controller() -> rb.ResultsTabController:
     ctrl = rb.ResultsTabController()
-    ctrl.refs.psd_metric = MagicMock()
+    ctrl.refs.psd_readout = _mock_readout()
     ctrl.refs.kerma_metric = MagicMock()
     ctrl.refs.events_metric = MagicMock()
     ctrl.refs.dap_metric = MagicMock()
@@ -47,7 +53,7 @@ def _controller() -> rb.ResultsTabController:
     ctrl.refs.dosemap_plot = MagicMock()
     ctrl.refs.dosemap_spinner = MagicMock(visible=False)
     ctrl.refs.corr_table = MagicMock(rows=[], update=MagicMock())
-    ctrl.refs.agg_psd_metric = MagicMock()
+    ctrl.refs.agg_psd_readout = _mock_readout()
     ctrl.refs.rotational_badge = MagicMock(visible=False)
     ctrl.refs.agg_rotational_badge = MagicMock(visible=False)
     ctrl.refs.agg_events_metric = MagicMock()
@@ -70,7 +76,7 @@ def test_refresh_metrics_single_exam() -> None:
 
     ctrl.refresh_metrics()
 
-    cast(MagicMock, ctrl.refs.psd_metric.set_text).assert_called_with("12.34 mGy")
+    cast(MagicMock, cast(PsdReadout, ctrl.refs.psd_readout).value.set_text).assert_called_with("12.34 mGy")
     cast(MagicMock, ctrl.refs.kerma_metric.set_text).assert_called_with("56.7 mGy")
     cast(MagicMock, ctrl.refs.events_metric.set_text).assert_called_with("8")
 
@@ -124,7 +130,7 @@ def test_refresh_multi_exam_results_updates_metrics(monkeypatch: pytest.MonkeyPa
 
     ctrl.refresh_multi_exam_results()
 
-    cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("20.00 mGy")
+    cast(MagicMock, cast(PsdReadout, ctrl.refs.agg_psd_readout).value.set_text).assert_called_with("20.00 mGy")
     cast(MagicMock, ctrl.refs.agg_events_metric.set_text).assert_called_with("across 2 exams")
     cast(MagicMock, ctrl.refs.run_warnings_label.set_visibility).assert_called_with(False)
     assert ctrl.last_rendered_run_id == 1
@@ -198,7 +204,7 @@ def test_subset_toggle_updates_aggregate_psd(monkeypatch: pytest.MonkeyPatch) ->
     event = SimpleNamespace(value=False)
     ctrl.on_subset_toggle(event, 0)
 
-    cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("40.00 mGy (subset)")
+    cast(MagicMock, cast(PsdReadout, ctrl.refs.agg_psd_readout).value.set_text).assert_called_with("40.00 mGy (subset)")
 
 
 def test_set_subset_all_refreshes_aggregate(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -291,7 +297,7 @@ def test_refresh_aggregate_subset_none_selected(monkeypatch: pytest.MonkeyPatch)
 
     ctrl.refresh_aggregate_dosemap_subset()
 
-    cast(MagicMock, ctrl.refs.agg_psd_metric.set_text).assert_called_with("— mGy (no exams selected)")
+    cast(MagicMock, cast(PsdReadout, ctrl.refs.agg_psd_readout).value.set_text).assert_called_with("— mGy (no exams selected)")
 
 
 def test_show_exam_dosemap_dialog_missing_notifies(monkeypatch: pytest.MonkeyPatch) -> None:

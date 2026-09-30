@@ -22,7 +22,7 @@ def _ctx() -> PageContext:
         tabs=MagicMock(),
         file_label=MagicMock(),
         events_label=MagicMock(),
-        psd_label=MagicMock(),
+        psd_readout=MagicMock(),
         run_btn_drawer=MagicMock(),
         refresh_per_exam=MagicMock(),
         refresh_geometry_preview=MagicMock(),
@@ -44,7 +44,7 @@ def test_invalidate_resets_psd_label() -> None:
     state.psd = 12.0
     pe._invalidate(ctx)
     assert state.calculation_done is False
-    cast(MagicMock, ctx.psd_label.set_text).assert_called_with("PSD: 0.00 mGy")
+    cast(MagicMock, ctx.psd_readout.value.set_text).assert_called_with("PSD: —")
 
 
 def test_apply_global_offset_to_all_exams() -> None:

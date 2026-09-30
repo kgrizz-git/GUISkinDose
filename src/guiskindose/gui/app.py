@@ -30,6 +30,7 @@ from nicegui import Client, app, ui
 from guiskindose.debug import configure_logging, dprint
 from guiskindose.privacy import opaque_exam_label, safe_error_event
 
+from .dose_severity import PSD_PENDING_TEXT, build_psd_readout
 from .loopback_security import (
     DEFAULT_GUI_PORT,
     TOKEN_QUERY_PARAM,
@@ -246,7 +247,14 @@ def index():
         with ui.column().classes("gap-0 q-mb-sm"):
             file_label = ui.label("No file loaded").classes("text-caption")
             events_label = ui.label("0 events").classes("text-caption")
-            psd_label = ui.label("PSD: 0.00 mGy").classes("text-h6 text-pink-5 font-bold q-mt-xs")
+            # The sidebar is a whole-run status readout, so a multi-exam run
+            # bands this on the aggregate PSD (helpers.run_calculation puts the
+            # aggregate there); a single-exam run bands on that exam's PSD.
+            psd_readout = build_psd_readout(
+                PSD_PENDING_TEXT,
+                label_classes="text-h6 font-bold",
+                row_classes="items-center gap-1 q-mt-xs",
+            )
         ui.separator().classes("q-my-sm bg-zinc-800")
         ui.label("Navigation").classes("text-caption text-grey-6 q-mb-0")
 
@@ -277,7 +285,7 @@ def index():
         tabs=tabs,
         file_label=file_label,
         events_label=events_label,
-        psd_label=psd_label,
+        psd_readout=psd_readout,
         run_btn_drawer=run_btn_drawer,
     )
 

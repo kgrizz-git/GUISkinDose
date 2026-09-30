@@ -20,6 +20,27 @@ The background must be a true "Deep Black" to allow the vibrant accents to achie
 | **Accent 3** | `--aurora-pink` | `#EC4899` | Tertiary highlight. |
 | **Text** | `--text-main` | `#F8FAFC` | High-contrast, crisp white. |
 | **Border** | `--border-brutal` | `#262626` | Sharp, defined structural lines. |
+| **Dose severity** | `--dose-pending` | `#94A3B8` | Not calculated yet. |
+| | `--dose-low` | `#22C55E` | Low band. |
+| | `--dose-elevated` | `#FACC15` | Elevated band. |
+| | `--dose-high` | `#EF4444` | High band. |
+
+### Severity colours are semantic, not brand
+
+The four `--dose-*` tokens are the **first semantic colours** in the palette — every other
+colour above is brand or accent. They are deliberately exempt from the §5 "never use
+middle-greys, keep the accent vibe" rule: their job is clinical signalling, not aesthetics,
+so they are chosen for contrast against `--bg-primary` and for band legibility rather than
+for the accent vibe. They carry no brand meaning and must not be reused as decoration.
+
+**Colour is never the only carrier.** Green / yellow / red is not reliably distinguishable
+for the most common colour-vision deficiencies, so every value in these colours also carries
+a Material symbol keyed to the band and a tooltip naming the band and its range. The three
+carriers move together in one helper; a band change that recolours the number but leaves a
+stale tooltip is a bug, not a cosmetic issue. The band names, their numeric edges, and the
+in-app wording live in `src/guiskindose/gui/dose_severity.py` and
+`dev-docs/ui_copy.json` — never inline them at a call site, and state the edges in prose in
+exactly one place: the Results help page.
 
 ## 3. Typography
 The goal is "technical elegance." 

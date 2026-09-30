@@ -316,6 +316,10 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 state.multi_exam_result = multi_result
                 state.calculation_done = True
                 state.calc_run_id += 1
+                # Multi-exam: state.psd is the AGGREGATE, not any single exam,
+                # and the sidebar PSD readout bands on whatever lands here. That
+                # is the intended semantic — the sidebar is a whole-run status
+                # readout — so a multi-exam sidebar colour is never per-exam.
                 state.psd = float(multi_result.aggregate_psd)
                 # sum of air kerma across exams
                 state.air_kerma = sum(float(e.output.air_kerma) for e in multi_result.exams)
