@@ -352,6 +352,25 @@ class TestToolEnvironment:
         monkeypatch.setenv("SEMGREP_COOKIES_PATH", "/tmp/cookies.txt")
         assert "SEMGREP_COOKIES_PATH" not in semgrep_tool.tool_environment(root=ROOT)
 
+    @pytest.mark.parametrize("name", semgrep_tool._DROPPED_SEMGREP_VARS)
+    def test_every_dropped_variable_is_actually_dropped(self, monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+        """One case per declared name, so adding a name without honouring it fails."""
+        monkeypatch.setenv(name, "ambient-value")
+        assert name not in semgrep_tool.tool_environment(root=ROOT)
+
+    def test_the_rule_endpoint_cannot_be_redirected_by_the_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`config_resolver` resolves p/owasp-top-ten against SEMGREP_URL.
+
+        An ambient value would decide which rules the blocking gate enforces, and the gate
+        would still pass — the same silent-downgrade this module refuses elsewhere. Pinned
+        rather than dropped, because dropping it only restores the same default less visibly.
+        """
+        monkeypatch.setenv("SEMGREP_URL", "https://rules.example.test")
+        monkeypatch.setenv("SEMGREP_APP_URL", "https://also.example.test")
+        environment = semgrep_tool.tool_environment(root=ROOT)
+        assert environment["SEMGREP_URL"] == "https://semgrep.dev"
+        assert "SEMGREP_APP_URL" not in environment
+
     def test_the_tool_environment_follows_a_supplied_root(self, tmp_path: Path) -> None:
         environment = semgrep_tool.tool_environment(root=tmp_path)
         assert Path(environment["UV_PROJECT_ENVIRONMENT"]) == tmp_path / TOOL_PROJECT / ".venv"

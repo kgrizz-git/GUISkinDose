@@ -44,21 +44,38 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   Review also found that "no `SEMGREP_APP_TOKEN`" was an assumption rather than an enforced
   property: `tool_environment()` copied the ambient environment, and semgrep's `get_token()`
   prefers that variable and otherwise reads the settings file a past `semgrep login` wrote. So a
-  developer who logged in once was sending their token from every local gate run. It is now true
-  by construction — the variable is popped, `SEMGREP_SETTINGS_FILE` is redirected into the
-  gitignored tool venv, and `SEMGREP_SEND_METRICS=off` moved into the shared environment so both
-  gates get it rather than only the OWASP one. Verified by running both gates with a token
-  planted in the environment.
+  developer who logged in once was sending their token from every local gate run. Both token
+  channels are now closed by construction — the variable is popped and `SEMGREP_SETTINGS_FILE` is
+  redirected into the gitignored tool venv — and `SEMGREP_SEND_METRICS=off` moved into the shared
+  environment so both gates get it rather than only the OWASP one. Verified by running both gates
+  with a token planted in the environment. Two further channels took another round to find; see
+  below before reading "unauthenticated by construction" as complete.
 
   A second review round then found the wording still only *nearly* true: `SEMGREP_COOKIES_PATH`
   is read with `os.getenv` in semgrep's `app/session.py` rather than through its `Env` factory,
   so auditing the `SEMGREP_*` credential fields misses it, and an ambient value would replay a
   saved cookie jar to semgrep.dev from these gates. `MozillaCookieJar.load()` also raises an
   uncaught `LoadError`, so a stale path would abort a blocking gate for reasons unrelated to the
-  scanned code. It is popped too, which is what finally makes "unauthenticated by construction"
-  literal. The same round noted that jwt unreachability does not depend on any of this: the only
-  `import jwt` sits in a module imported solely by `commands/mcp.py`, so `semgrep scan` never
-  loads it. Revisit the pin when semgrep relaxes it.
+  scanned code. It is popped too, along with `SEMGREP_USER_AGENT_APPEND`, which appends an
+  arbitrary string to the User-Agent of every request.
+
+  A third round found the one that was not a credential at all and mattered more.
+  `SEMGREP_URL` / `SEMGREP_APP_URL` is what `config_resolver` resolves `p/owasp-top-ten`
+  against, so an ambient value decides **which rules the blocking gate enforces** — and the gate
+  still passes. That is the same silent downgrade `semgrep_tool.py` already refuses for an
+  unpinned `PATH` semgrep, undefended until now. It is *pinned* to `https://semgrep.dev` rather
+  than dropped, with `SEMGREP_APP_URL` and `SEMGREP_FAIL_OPEN_URL` dropped so they cannot
+  compete. The cost is real and accepted: pointing the gate at an internal mirror is now a
+  deliberate code change instead of an environment variable.
+
+  The whole policy is now declared once, as `_DROPPED_SEMGREP_VARS` and `_FORCED_SEMGREP_VARS`
+  with a reason per name, because three rounds of finding one variable at a time is evidence that
+  an ad-hoc list of pops was the wrong shape. A parametrised test covers every dropped name, so
+  adding one without honouring it fails.
+
+  Throughout, jwt unreachability never depended on any of this: the only `import jwt` sits in a
+  module imported solely by `commands/mcp.py`, so `semgrep scan` never loads it. Revisit the pin
+  when semgrep relaxes it.
 
 - **Five code scanning alerts cleared** (2026-09-30) — four were genuine redundant imports in
   tests (`sqlite3` imported twice in two correction tests; `scripts.dump_sonar_issues` imported

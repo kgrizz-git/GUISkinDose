@@ -68,6 +68,39 @@ _TRUTHY: Final = frozenset({"1", "true", "yes", "on"})
 
 _VERSION_PROBE_TIMEOUT_S: Final = 60
 
+# The gate must be unauthenticated, must fetch its rules from a known host, and must send
+# nothing incidental. `tool_environment()` inherits the ambient environment, so each of these
+# is stated rather than assumed. Auditing only Semgrep's `Env` factory fields is not enough:
+# the cookie and user-agent variables are read straight from `os.getenv` elsewhere.
+_DROPPED_SEMGREP_VARS: Final = (
+    # get_token() prefers this; without it, and with the settings file redirected below,
+    # get_token() returns None and nothing attaches a credential to a request.
+    "SEMGREP_APP_TOKEN",
+    # app/session.py loads this cookie jar into the session that is otherwise
+    # unauthenticated, and MozillaCookieJar.load() raises an uncaught LoadError on a
+    # malformed jar, so a stale path would abort a blocking gate over nothing.
+    "SEMGREP_COOKIES_PATH",
+    # app/session.py appends this to the User-Agent of every request. Unsanitized egress.
+    "SEMGREP_USER_AGENT_APPEND",
+    # Second name for the endpoint forced below; dropped so it cannot compete.
+    "SEMGREP_APP_URL",
+    # Endpoint for fail-open reporting; dropped to restore Semgrep's own default.
+    "SEMGREP_FAIL_OPEN_URL",
+)
+
+_FORCED_SEMGREP_VARS: Final = {
+    # Pinned, not dropped. `config_resolver` resolves `p/owasp-top-ten` against this, so an
+    # ambient value silently redirects where the *rules that constitute the blocking gate*
+    # come from, and the gate still passes. That is the same "advisory without saying so"
+    # failure this module refuses for an unpinned PATH semgrep. Pinning it costs the ability
+    # to point the gate at an internal mirror; doing that should be a deliberate code change,
+    # not an environment variable.
+    "SEMGREP_URL": "https://semgrep.dev",
+    # Both gates also pass --metrics=off. This lived in the OWASP runner alone while the docs
+    # claimed both gates had it.
+    "SEMGREP_SEND_METRICS": "off",
+}
+
 
 def _is_truthy(value: object) -> bool:
     return value is not None and str(value).strip().lower() in _TRUTHY
@@ -153,22 +186,15 @@ def tool_environment(environ: dict[str, str] | None = None, *, root: Path | None
     tool_env = base / TOOL_PROJECT / _TOOL_ENV_DIRNAME
     source["UV_PROJECT_ENVIRONMENT"] = str(tool_env)
 
-    # Run the scanner unauthenticated, and make that true by construction rather than by
-    # assumption. Semgrep's get_token() prefers SEMGREP_APP_TOKEN and otherwise reads the
-    # settings file a past `semgrep login` wrote, so a developer who logged in once would
-    # have sent their token from every local gate run. Redirecting the settings file also
-    # keeps `semgrep login` state from leaking in; it lives inside the tool venv because
-    # that path is gitignored AND pruned by the write-containment snapshot in
-    # tests/conftest.py, which prunes `.venv` at any depth but not `tmp/`.
-    source.pop("SEMGREP_APP_TOKEN", None)
-    # Read straight from os.getenv in semgrep's app/session.py rather than through its Env
-    # factory, which is why an audit of SEMGREP_* credential fields misses it. An ambient
-    # value would replay a saved cookie jar to semgrep.dev from these gates, and
-    # MozillaCookieJar.load() raises an uncaught LoadError on a malformed jar, so a stale
-    # path would also abort a blocking gate for reasons unrelated to the scanned code.
-    source.pop("SEMGREP_COOKIES_PATH", None)
+    for name in _DROPPED_SEMGREP_VARS:
+        source.pop(name, None)
+    source.update(_FORCED_SEMGREP_VARS)
+    # Not a constant: it depends on where the tool project lives. Redirecting the settings
+    # file is what closes get_token()'s second channel, the token a past `semgrep login`
+    # saved. It lives inside the tool venv because that path is gitignored AND pruned by the
+    # write-containment snapshot in tests/conftest.py, which prunes `.venv` at any depth but
+    # not `tmp/`.
     source["SEMGREP_SETTINGS_FILE"] = str(tool_env / "semgrep-settings.yaml")
-    source["SEMGREP_SEND_METRICS"] = "off"
     return source
 
 
