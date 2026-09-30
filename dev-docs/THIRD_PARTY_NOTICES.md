@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-29).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-30).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -208,7 +208,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | typing-inspection | 0.4.2 | MIT | Homepage, https://github.com/pydantic/typing-inspection |
 | typing_extensions | 4.15.0 | PSF-2.0 | Bug Tracker, https://github.com/python/typing_extensions/issues |
 | tzdata | 2026.2 | Apache-2.0 | https://github.com/python/tzdata |
-| urllib3 | 2.7.0 | MIT | Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst |
+| urllib3 | 2.8.0 | MIT | Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst |
 | uvicorn | 0.49.0 | BSD-3-Clause | Changelog, https://uvicorn.dev/release-notes |
 | virtualenv | 21.4.2 | MIT | Documentation, https://virtualenv.pypa.io |
 | watchfiles | 1.2.0 | MIT | https://github.com/samuelcolvin/watchfiles |

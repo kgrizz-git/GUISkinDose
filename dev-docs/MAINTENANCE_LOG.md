@@ -21,6 +21,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **urllib3 2.7.0 to 2.8.0** (2026-09-30) — clears GHSA-8988-9cw3-xx77 (HTTPS proxy TLS
+  configuration may be ignored or overridden) and GHSA-vxq7-64xx-v4gw (`HTTPResponse.stream()`
+  buffers an unbounded chunk-size line into memory), both fixed in 2.8.0. Published after the
+  previous push and unrelated to the semgrep work it landed beside; `main` carried the same
+  2.7.0 pin. Exposure was dev-only — urllib3 arrives through `requests` under the `dev`, `docs`
+  and `notebooks` extras, not the `gui` runtime path — but the audit gate is blocking, and the
+  fix is a clean single-package relock. `uv audit` now reports no known vulnerabilities.
+
+
 - **Semgrep's isolated environment is now hash-locked, and the resolved version is asserted**
   (2026-09-29) — follow-up to the isolation entry below, which traded `uv sync --locked`'s
   sha256-pinned wheels for `uvx --from semgrep==<pin>`. That pin fixed the scanner's own version but
