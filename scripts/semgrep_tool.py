@@ -167,15 +167,24 @@ def semgrep_argv(args: list[str], *, root: Path | None = None) -> list[str]:
     uv = shutil.which("uv")
     uvx = shutil.which("uvx")
 
-    if unpinned_probe_requested() and uvx is not None:
+    if unpinned_probe_requested():
+        if uvx is None:
+            # Falling through to the pinned paths here would be worse than failing: the
+            # probe exists to answer "has the pin drifted behind upstream?", and a run
+            # that quietly scanned the pinned version instead would answer "no" whatever
+            # upstream did. Same failure mode as the skip-when-missing this module removed.
+            raise SemgrepUnavailableError(
+                f"{UNPINNED_ENV} requested the newest Semgrep, but uvx is unavailable; "
+                "install uv in the probe workflow instead of silently probing the pin"
+            )
         print(
             f"NOTE: {UNPINNED_ENV} is set in CI; running the latest Semgrep instead "
             "of the pinned version (weekly drift probe).",
             file=sys.stderr,
         )
         return [uvx, "semgrep", *args]
-    unpinned_ignored = _is_truthy(os.environ.get(UNPINNED_ENV)) and not unpinned_probe_requested()
-    if unpinned_ignored:
+    # Reached only when the probe was not honoured, i.e. the flag is set outside CI.
+    if _is_truthy(os.environ.get(UNPINNED_ENV)):
         print(
             f"WARNING: ignoring {UNPINNED_ENV} outside CI; the pinned version is "
             "what the blocking gates use. Run uvx directly to try another release.",

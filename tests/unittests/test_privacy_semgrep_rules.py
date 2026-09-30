@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -22,18 +21,17 @@ def _semgrep_tool() -> Any:
     return module
 
 
-def _scan(root: Path) -> set[str]:
-    # Resolve the same pinned, isolated Semgrep the blocking gate uses. Previously this
-    # was `shutil.which("semgrep")` with a skip when absent, which silently reduced the
-    # regression coverage for the privacy ruleset to zero the moment semgrep stopped
-    # being a dev dependency -- it kept passing locally only where a global semgrep
-    # happened to be on PATH. Never skip on "tool missing": fail instead.
-    # No try/except and no skip on purpose: if Semgrep cannot be resolved, letting the
-    # SemgrepUnavailableError propagate fails the test, which is the point. The previous
-    # `shutil.which` + `pytest.skip` quietly reduced this ruleset's regression coverage to
-    # zero the moment semgrep stopped being a dev dependency.
-    semgrep_prefix = _semgrep_tool().semgrep_argv([])
-    environment = os.environ.copy()
+def _scan_environment(root: Path, tool: Any) -> dict[str, str]:
+    """Environment for a scan of ``root``, built on the isolated tool's own environment.
+
+    Deliberately ``tool_environment()`` and not ``os.environ.copy()``. `.envrc` exports
+    ``UV_PROJECT_ENVIRONMENT=$PWD/.venv`` and ``uv run`` honours it, so a plain copy of the
+    environment made this test install semgrep 1.168.0 — with `click 8.1.8`, `mcp 1.23.3`
+    and `pyjwt 2.13.0` — straight into the project environment that isolating the scanner
+    exists to keep them out of. Verified: the packages appeared in the environment named by
+    that variable. It reproduced only where direnv was active, so CI stayed clean.
+    """
+    environment = tool.tool_environment()
     cert_file = Path("/etc/ssl/cert.pem")
     if cert_file.is_file():
         environment["SSL_CERT_FILE"] = str(cert_file)
@@ -51,9 +49,22 @@ def _scan(root: Path) -> set[str]:
             "UV_CACHE_DIR": str(root.parent / "uv-cache"),
         }
     )
+    return environment
+
+
+def _scan(root: Path) -> set[str]:
+    # Resolve the same pinned, isolated Semgrep the blocking gate uses, from one module
+    # instance so the command and the environment cannot come from different loads of it.
+    #
+    # No try/except and no skip on purpose: if Semgrep cannot be resolved, letting the
+    # SemgrepUnavailableError propagate fails the test, which is the point. The previous
+    # `shutil.which` + `pytest.skip` quietly reduced this ruleset's regression coverage to
+    # zero the moment semgrep stopped being a dev dependency.
+    tool = _semgrep_tool()
+    environment = _scan_environment(root, tool)
     completed = subprocess.run(
         [
-            *semgrep_prefix,
+            *tool.semgrep_argv([]),
             "--config",
             str(_RULES),
             "--metrics=off",
@@ -121,3 +132,17 @@ def safe(exc, logger, output_path, payload):
     )
 
     assert _scan(tmp_path) == set()
+
+
+def test_the_scan_never_installs_the_scanner_into_the_project_environment(tmp_path: Path) -> None:
+    """Regression test for a leak that only reproduced where direnv was active.
+
+    With `os.environ.copy()` this test ran `uv run` against the project's own
+    `UV_PROJECT_ENVIRONMENT`, installing semgrep and its advisory-bearing pins into the
+    environment the isolation exists to keep clean.
+    """
+    environment = _scan_environment(tmp_path, _semgrep_tool())
+    target = Path(environment["UV_PROJECT_ENVIRONMENT"])
+    assert target != _ROOT / ".venv"
+    assert target.is_relative_to(_ROOT / "tools")
+    assert "UV_PYTHON" not in environment

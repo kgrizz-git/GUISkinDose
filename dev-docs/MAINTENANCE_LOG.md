@@ -48,6 +48,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   load-bearing: bumping the pin now requires editing the inventory *and* re-running
   `uv lock --project tools/semgrep`, and doing only one fails loudly.
 
+  Three follow-up defects came out of review of that change, all fixed here. The
+  privacy-rules test built its scan environment from `os.environ.copy()` rather than
+  `tool_environment()`, so on any machine with direnv active it installed semgrep 1.168.0,
+  `click 8.1.8`, `mcp 1.23.3` and `pyjwt 2.13.0` into the project `.venv` — reproduced
+  directly, and invisible in CI because `.envrc` never runs there. `ci-latest.yml` had no
+  `uv`, which is absent from the ubuntu runner image, so both weekly drift probes and the
+  pytest step would have failed every Monday and opened a tracking issue that had nothing
+  to do with drift. And an unpinned probe request with no `uvx` fell through to the pinned
+  locked run, meaning a probe whose only question is "has the pin drifted?" would have
+  answered "no" whatever upstream did; it now raises.
+
   **Not done, deliberately:** pinning the Semgrep *ruleset*. `--config=p/owasp-top-ten` is fetched
   from the registry on each run, so the rules are mutable and the gate needs network — a rule change
   upstream can turn a green local push into a red CI run. Vendoring the pack is not a plumbing task:

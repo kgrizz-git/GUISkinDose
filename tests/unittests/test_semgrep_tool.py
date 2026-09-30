@@ -160,6 +160,22 @@ class TestSemgrepArgv:
         monkeypatch.setattr(semgrep_tool.shutil, "which", lambda name: "/bin/uvx" if name == "uvx" else None)
         assert semgrep_argv(["--version"], root=root) == ["/bin/uvx", "semgrep", "--version"]
 
+    def test_unpinned_probe_without_uvx_fails_instead_of_probing_the_pin(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The probe asks "has the pin drifted?"; scanning the pin would always answer no.
+
+        Falling through to the locked project here would make a green weekly run mean
+        nothing — the same silent-no-op this module refuses elsewhere.
+        """
+        root = _inventory(tmp_path, [{"id": "semgrep", "version": "1.2.3"}])
+        _locked_project(root)
+        monkeypatch.setenv(UNPINNED_ENV, "1")
+        monkeypatch.setenv("CI", "true")
+        monkeypatch.setattr(semgrep_tool.shutil, "which", _which(uv="/bin/uv"))
+        with pytest.raises(SemgrepUnavailableError, match="uvx is unavailable"):
+            semgrep_argv(["--version"], root=root)
+
     def test_unpinned_probe_is_refused_outside_ci(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
