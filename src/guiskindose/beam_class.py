@@ -187,7 +187,7 @@ class Beam:
         surface of this class stays :meth:`check_hit`, so do not export
         ``check_hit_mask`` from ``guiskindose/__init__.py``.
 
-        A description of this algoritm is presented in the wiki, please visit
+        A description of this algorithm is presented in the wiki, please visit
         https://guiskindose.readthedocs.io/en/latest/
 
         Parameters
@@ -230,7 +230,7 @@ class Beam:
     def check_hit(self, patient: Phantom) -> list[bool]:
         """Calculate which patient entrance skin cells are hit by the beam.
 
-        A description of this algoritm is presented in the wiki, please visit
+        A description of this algorithm is presented in the wiki, please visit
         https://guiskindose.readthedocs.io/en/latest/
 
         Parameters
