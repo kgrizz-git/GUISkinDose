@@ -10,6 +10,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Security
 
+- **Thirteenth PyJWT alert on the Semgrep lock dismissed** (2026-10-01) —
+  Dependabot alert 32 (GHSA-gvp8-978c-rx2q) is the same family as alerts 20–31:
+  PyJWT 2.13.0 in `tools/semgrep/uv.lock`, the isolated scanner, never a runtime
+  dependency and never shipped. This one is specifically `jwt.decode()` mutating a
+  reused `options` dict when `verify_signature` is false. The only `jwt.decode` in
+  semgrep 1.178.0 is `IntrospectionTokenVerifier.verify_token`, reached only when
+  `semgrep mcp` starts its server; the gates run `semgrep scan` only. `semgrep/cli.py`
+  imports that module eagerly, so jwt loads on every invocation, and unreachability
+  is the call, not the import. The copy-before-mutate fix is already in the pyjwt
+  2.14.0 tag; semgrep still pins `pyjwt[crypto]~=2.13.0`, and GitHub had not yet
+  stamped a patched version on the advisory. Dismissed `not_used`.
+
 - **Loopback launch probe and bootstrap redirect** (2026-09-26) —
   `probe_own_server()` now sends a random `x-guiskindose-probe` nonce and
   requires `x-guiskindose-proof` = HMAC-SHA256(`probe_secret`, nonce) from

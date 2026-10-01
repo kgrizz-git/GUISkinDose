@@ -4,7 +4,7 @@
 # never imported, and its own tight pins held four transitive advisories below their fixes
 # while it sat in the root `dev` extra. See scripts/semgrep_tool.py.
 #
-# The pyjwt pin (`~=2.13.0`, i.e. <2.14.0) still blocks twelve pyjwt advisories whose fixes
+# The pyjwt pin (`~=2.13.0`, i.e. <2.14.0) still blocks thirteen pyjwt advisories whose fixes
 # all land in 2.14.0, including one critical. They are unreachable here: the only use of the
 # jwt API in the scanner is semgrep/mcp/utilities/token_verifier.py, whose PyJWKClient and
 # jwt.decode calls run only under `semgrep mcp` — a subcommand these gates never invoke.

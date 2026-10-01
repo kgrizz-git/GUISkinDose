@@ -164,7 +164,7 @@ be archived.
   never be condensed just to shrink the file. **Acceptance:** move entries for shipped releases
   into a dated archive file beside this one (mirroring the plans-archive convention), leave a
   pointer at the top, and update the docs index in the same PR.
-- [ ] **Revisit the dismissed PyJWT alerts when semgrep relaxes its pin** — twelve Dependabot
+- [ ] **Revisit the dismissed PyJWT alerts when semgrep relaxes its pin** — thirteen Dependabot
   alerts against `tools/semgrep/uv.lock` (one critical) are dismissed as not-used: they are all in
   PyJWT's JWT/JWKS handling, which semgrep only *executes* under `semgrep mcp` (the MCP token
   verifier), a subcommand these gates never invoke — the module is imported eagerly, so being
