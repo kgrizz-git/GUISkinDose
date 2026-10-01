@@ -1,9 +1,82 @@
 """Provides the Beam class for modeling the X-ray source, beam geometry, and detector."""
 
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 
 from .phantom_class import Phantom
+
+
+@dataclass(frozen=True)
+class BeamGeometryInputs:
+    """The per-event scalars a :class:`Beam` needs, independent of its angles.
+
+    Every value here is constant across the candidate poses of one rotational
+    event, so a coverage envelope reads them once instead of once per candidate
+    (ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN, Phase 2). Frozen so a record cannot
+    be mutated into something no beam was built for.
+
+    Attributes
+    ----------
+    dsi : float
+        Source-isocenter displacement (cm), applied along +y.
+    dsd : float
+        Source-detector distance (cm).
+    fs_long : float
+        Field size, longitudinal axis (cm), at the detector plane.
+    fs_lat : float
+        Field size, lateral axis (cm), at the detector plane.
+    did : float
+        Isocenter-detector distance (cm).
+    dsl : float
+        Detector side length (cm), i.e. both in-plane detector dimensions.
+    """
+
+    dsi: float
+    dsd: float
+    fs_long: float
+    fs_lat: float
+    did: float
+    dsl: float
+
+    @classmethod
+    def from_frame(cls, data_norm: pd.DataFrame, event: int) -> "BeamGeometryInputs":
+        """Read the scalars for one event out of the normalized event table.
+
+        Parameters
+        ----------
+        data_norm : pd.DataFrame
+            Dicom RDSR information from each irradiation event. See
+            rdsr_normalizer.py for more information.
+        event : int
+            Index of the irradiation event in the procedure.
+
+        Returns
+        -------
+        BeamGeometryInputs
+            The event's beam scalars.
+
+        Notes
+        -----
+        ``DSL`` is read at index ``0``, not at ``event`` — a pre-existing quirk
+        of :class:`Beam` (detector side length is taken from the first event and
+        reused for every later one). It is preserved here deliberately rather
+        than "fixed": :class:`Beam` is constructed from many code paths, so
+        changing which row supplies ``DSL`` would change numbers for every event
+        after the first. Any change to that belongs in its own change with its
+        own numbers discussion, not in a performance refactor.
+
+        """
+        return cls(
+            dsi=float(data_norm.DSI[event]),
+            dsd=float(data_norm.DSD[event]),
+            fs_long=float(data_norm.FS_long[event]),
+            fs_lat=float(data_norm.FS_lat[event]),
+            did=float(data_norm.DID[event]),
+            # Index [0], not [event] -- see the note above.
+            dsl=float(data_norm.DSL[0]),
+        )
 
 
 class Beam:
@@ -34,6 +107,11 @@ class Beam:
     def __init__(self, data_norm: pd.DataFrame, event: int = 0, plot_setup: bool = False) -> None:
         """Initialize the beam and detector for a specific irradiation event.
 
+        A thin adapter over :meth:`from_inputs`: it reads the event's scalars
+        and angles out of ``data_norm`` and delegates. Callers that already hold
+        a :class:`BeamGeometryInputs` should use :meth:`from_inputs` directly and
+        skip the per-candidate DataFrame reads.
+
         Parameters
         ----------
         data_norm : pd.DataFrame
@@ -50,24 +128,67 @@ class Beam:
             False).
 
         """
+        inputs = BeamGeometryInputs.from_frame(data_norm=data_norm, event=event)
         # Override beam angulation if plot_setup
         if plot_setup:
-            ap1 = ap2 = ap3 = 0
-
+            self._build(inputs=inputs, ap1_deg=0.0, ap2_deg=0.0, ap3_deg=0.0)
         else:
-            # Fetch rotation angles of the X-ray tube
+            self._build(
+                inputs=inputs,
+                # Fetch rotation angles of the X-ray tube
+                ap1_deg=data_norm.Ap1[event],
+                ap2_deg=data_norm.Ap2[event],
+                ap3_deg=data_norm.Ap3[event],
+            )
 
-            # Positioner isocenter primary angle (Ap1)
-            # i.e. rotation of the X-ray beam and detector about the z axis.
-            # Historical plot alias: LAT.
-            ap1 = np.deg2rad(data_norm.Ap1[event])
-            # Positioner isocenter secondary angle (Ap2)
-            # i.e. rotation of the X-ray beam and detector about the x axis.
-            # Historical plot alias: LON.
-            ap2 = np.deg2rad(data_norm.Ap2[event])
-            # Positioner isocenter detector rotation angle (Ap3)
-            # i.e. rotation of the X-ray detector about the y axis (VERT)
-            ap3 = np.deg2rad(data_norm.Ap3[event])
+    @classmethod
+    def from_inputs(cls, inputs: BeamGeometryInputs, ap1_deg: float, ap2_deg: float, ap3_deg: float) -> "Beam":
+        """Build a beam from already-resolved scalars plus its three angles.
+
+        The angles are passed in explicitly, in degrees, rather than read from
+        an event table, so a caller evaluating many poses of one event (the
+        rotational coverage envelope) resolves the scalars once and varies only
+        the angles.
+
+        Parameters
+        ----------
+        inputs : BeamGeometryInputs
+            The event's beam scalars. These are not angles and are expected to
+            be shared by every pose built from them.
+        ap1_deg : float
+            Positioner isocenter primary angle (Ap1), in degrees.
+        ap2_deg : float
+            Positioner isocenter secondary angle (Ap2), in degrees.
+        ap3_deg : float
+            Positioner isocenter detector rotation angle (Ap3), in degrees.
+
+        Returns
+        -------
+        Beam
+            The beam and detector for that pose.
+
+        """
+        beam = cls.__new__(cls)
+        beam._build(inputs=inputs, ap1_deg=ap1_deg, ap2_deg=ap2_deg, ap3_deg=ap3_deg)
+        return beam
+
+    def _build(self, *, inputs: BeamGeometryInputs, ap1_deg: float, ap2_deg: float, ap3_deg: float) -> None:
+        """Compute the beam and detector geometry for one pose.
+
+        The shared body of both constructors: angles in degrees, scalars from a
+        :class:`BeamGeometryInputs` record.
+        """
+        # Positioner isocenter primary angle (Ap1)
+        # i.e. rotation of the X-ray beam and detector about the z axis.
+        # Historical plot alias: LAT.
+        ap1 = np.deg2rad(ap1_deg)
+        # Positioner isocenter secondary angle (Ap2)
+        # i.e. rotation of the X-ray beam and detector about the x axis.
+        # Historical plot alias: LON.
+        ap2 = np.deg2rad(ap2_deg)
+        # Positioner isocenter detector rotation angle (Ap3)
+        # i.e. rotation of the X-ray detector about the y axis (VERT)
+        ap3 = np.deg2rad(ap3_deg)
 
         # calculate rotation about x axis
         angle = ap2
@@ -100,7 +221,7 @@ class Beam:
         )
 
         # calculate source-isocenter displacement at ap1 = ap2 = 0
-        delta_r = np.array([0, data_norm.DSI[event], 0])
+        delta_r = np.array([0, inputs.dsi, 0])
 
         # Create unit-beam in the positioner coordinate system
         r = np.array(
@@ -112,11 +233,11 @@ class Beam:
                 [-0.5, -1.0, +0.5],  # r-+
             ]
         )
-        r[1:, 1] *= data_norm.DSD[event]
+        r[1:, 1] *= inputs.dsd
         # Field-size names follow the historical PySkinDose/DICOM-derived
         # aliases; see dev-docs/VENDOR_COORDINATE_SYSTEMS.md before relabeling.
-        r[1:, 0] *= data_norm.FS_long[event]
-        r[1:, 2] *= data_norm.FS_lat[event]
+        r[1:, 0] *= inputs.fs_long
+        r[1:, 2] *= inputs.fs_lat
 
         # Transform the beam from the positioner coordinate system to the
         # isocenter coordinate system. Note! The transpose operations are
@@ -158,11 +279,11 @@ class Beam:
         )
 
         # Add detector dimensions
-        detector_width = data_norm.DSL[0]
+        detector_width = inputs.dsl
         det_r[:, 0] *= detector_width
         det_r[:, 2] *= detector_width
         # Place detector at actual distance
-        det_r[:, 1] *= data_norm.DID[event]
+        det_r[:, 1] *= inputs.did
 
         # Transform the detector from the positioner coordinate system to
         # the isocenter coordinate system. Note! The transpose operations
