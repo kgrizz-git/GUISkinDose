@@ -21,6 +21,148 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Append-only history is exempt from the file-size cap** (2026-09-30) —
+  `scripts/check_file_sizes.py` scans `src`, `scripts` and `dev-docs`, so `CHANGELOG.md` was
+  already out of scope by sitting at the repository root, while this file was capped at 800 lines
+  despite doing the identical append-only job. The difference was purely where each file lives.
+  New `APPEND_ONLY_HISTORY` exempts this one by category rather than adding it to `WHITELIST`,
+  whose own comment says outliers should be "eventually decomposed" — a log grows forever by
+  design, so its number would need bumping forever.
+
+  The cap was not a hypothetical nuisance here: fitting one new entry under it forced prose out
+  of three existing, accurate, already-reviewed entries, so the gate degraded the record it
+  exists to protect and charged the cost to whoever added the 801st line. That prose is restored
+  in this commit. Archiving old entries remains worthwhile as gardening and stays in
+  `dev-docs/TO_DO.md`, but it is no longer a push blocker. A test pins that the exemption is a
+  named path rather than a blanket for `dev-docs/`.
+
+
+- **The changelog gate accepts a comment-only source change** (2026-09-30) —
+  `scripts/check_changelog.py` demanded a `CHANGELOG.md` entry for any `src/` diff, blocking a
+  code comment. `CHANGELOG.md` scopes itself to notable *user-facing* changes and directs
+  maintainer-facing work here, so a comment has no honest entry there. A `MAINTENANCE_LOG.md`
+  entry now satisfies the gate when a Python source change touches only comments and blank
+  lines.
+
+  **How it decides, after getting it wrong twice.** The first version exempted any added line
+  without a statement-like marker, so docstring prose qualified — and so did a bare
+  `return None`. The second held added and removed lines to the same rule, which closed the
+  "comment out the code" edit, but still classified the diff line by line: a real `++i` arrives
+  as `+++i`, was mistaken for a `+++ b/path` file header and dropped, so `+# a note` beside
+  `+++i` passed as comment-only. CodeRabbit found that one.
+
+  The third version stops classifying lines. It reads the whole file at the base ref and at
+  HEAD, lexes both with `tokenize`, discards COMMENT and NL tokens, and requires the remaining
+  streams to be identical. That removes the bug class rather than patching it: a `#` inside a
+  string is a STRING token, a docstring edit changes the stream and is refused, and anything
+  unreadable or unlexable is refused rather than exempted. Two reviewers tried to construct a
+  behaviour-changing counterexample and could not.
+
+  Two consequences recorded deliberately. Comment directives that tooling honours
+  (`# type: ignore`, `# noqa`, encoding cookies) are exempt, which is a judgement call pinned
+  by a test — they change linter and type-checker outcomes, not what the program computes, and
+  the required log entry records them anyway. And a *spacing-only* reformat now classifies as
+  comment-only where the second version demanded a changelog entry — `x=1` to `x = 1`, added
+  blank lines, backslash continuations. Review corrected an earlier draft of this sentence that
+  said "a pure reformat", which was too broad: quote normalisation changes the STRING spelling,
+  tab-to-space reindentation changes the INDENT token, and added parens add OP tokens, so all
+  three are still refused. Verified all four. That means the gate would probably still have
+  caught the accidental `ruff format` of `gui/app.py` earlier the same day, since real
+  `ruff format` output touches quotes and parens — but probably is luck rather than
+  enforcement, and `ruff format --check` remains the proper fix.
+
+  The real root cause of both earlier failures was the tests, not the classifiers: each stubbed
+  the layer above the bug and passed. The tests now stub only the git file read, so the
+  production lexer runs. If a fourth version is ever needed, the policy recorded in the module
+  is to delete the exemption instead and write the one changelog line.
+
+
+- **Semgrep pin 1.168.0 to 1.178.0; the tool's Dependabot alerts triaged** (2026-09-30) —
+  hash-locking the scanner in `tools/semgrep/uv.lock` made its dependencies visible to Dependabot
+  and raised 15 alerts. That corrects a claim in the entry below: `dependabot.yml` scoping the pip
+  ecosystem to `directory: /` governs Dependabot *updates*, not *alerts*, which come from the
+  repository dependency graph and index every lockfile. So the alerts were the predicted
+  consequence of hash-locking, arriving sooner and louder than described. They are not new
+  exposure — they are the same advisories `[tool.uv.audit]` used to suppress.
+
+  Three were mcp, needing 1.27.2/1.28.1, and are genuinely **fixed**: semgrep 1.178.0 pins
+  `mcp==1.29.0`, and `click` moved 8.1.8 to 8.4.2 with it. Both gates were re-run on the new pin
+  before the bump landed. The other twelve are PyJWT, all fixed only in 2.14.0 (one in 2.15.0),
+  and semgrep still pins `pyjwt[crypto]~=2.13.0` in its newest release, so they are **not
+  fixable** here without dropping the scanner. They are dismissed as not-used: the only
+  `import jwt` anywhere in the installed scanner is `semgrep/mcp/utilities/token_verifier.py`,
+  used by `IntrospectionTokenVerifier.verify_token()` and reachable only through `semgrep mcp`,
+  which neither gate invokes. Review corrected an earlier claim here that named `semgrep login`
+  as the JWT path: login validates an opaque 64-hex API token and contains no `jwt` reference at
+  all. The conclusion held, but the stated mechanism was wrong, so the dismissal comments on the
+  twelve alerts were rewritten too.
+
+  Review also found that "no `SEMGREP_APP_TOKEN`" was an assumption rather than an enforced
+  property: `tool_environment()` copied the ambient environment, and semgrep's `get_token()`
+  prefers that variable and otherwise reads the settings file a past `semgrep login` wrote. So a
+  developer who logged in once was sending their token from every local gate run. Both token
+  channels are now closed by construction — the variable is popped and `SEMGREP_SETTINGS_FILE` is
+  redirected into the gitignored tool venv — and `SEMGREP_SEND_METRICS=off` moved into the shared
+  environment so both gates get it rather than only the OWASP one. Verified by running both gates
+  with a token planted in the environment. Two further channels took another round to find; see
+  below before reading "unauthenticated by construction" as complete.
+
+  A second review round then found the wording still only *nearly* true: `SEMGREP_COOKIES_PATH`
+  is read with `os.getenv` in semgrep's `app/session.py` rather than through its `Env` factory,
+  so auditing the `SEMGREP_*` credential fields misses it, and an ambient value would replay a
+  saved cookie jar to semgrep.dev from these gates. `MozillaCookieJar.load()` also raises an
+  uncaught `LoadError`, so a stale path would abort a blocking gate for reasons unrelated to the
+  scanned code. It is popped too, along with `SEMGREP_USER_AGENT_APPEND`, which appends an
+  arbitrary string to the User-Agent of every request.
+
+  A third round found the one that was not a credential at all and mattered more.
+  `SEMGREP_URL` / `SEMGREP_APP_URL` is what `config_resolver` resolves `p/owasp-top-ten`
+  against, so an ambient value decides **which rules the blocking gate enforces** — and the gate
+  still passes. That is the same silent downgrade `semgrep_tool.py` already refuses for an
+  unpinned `PATH` semgrep, undefended until now. It is *pinned* to `https://semgrep.dev` rather
+  than dropped, with `SEMGREP_APP_URL` and `SEMGREP_FAIL_OPEN_URL` dropped so they cannot
+  compete. The cost is real and accepted: pointing the gate at an internal mirror is now a
+  deliberate code change instead of an environment variable.
+
+  A fourth round, from CodeRabbit, found the one that was not Semgrep's variable at all.
+  `AppSession` subclasses `requests.Session`, and `requests.utils.get_netrc_auth` reads `$NETRC`
+  first and otherwise `~/.netrc`, attaching Basic auth from any entry whose machine matches the
+  request host. A developer with a `machine semgrep.dev` line was therefore sending those
+  credentials from every gate run — invisible to every audit so far, all of which looked at
+  `SEMGREP_*` names and at Semgrep's own source. Demonstrated directly: with such an entry
+  `get_netrc_auth` returns the login and password, and with `NETRC` forced to `os.devnull` it
+  returns `None`. Forcing rather than dropping closes both sources at once, since a set `NETRC`
+  stops requests consulting the home directory at all.
+
+  The policy is declared once as `_DROPPED_TOOL_VARS` and `_FORCED_TOOL_VARS`, a reason per name
+  — "tool", not "semgrep", because that blind spot was in the naming too. Four rounds of finding
+  one variable at a time is evidence the ad-hoc pops were the wrong shape; a parametrised test
+  covers every dropped name.
+
+  Throughout, jwt unreachability never depended on any of this: the only use of the jwt API sits
+  in `semgrep/mcp/utilities/token_verifier.py`, whose `PyJWKClient` and `jwt.decode` calls run
+  only under `semgrep mcp`. A later review corrected the wording here — `semgrep/cli.py` imports
+  that module eagerly, so jwt *is* loaded on every invocation. Unreachability turns on it never
+  being executed, not on it never being imported; importing pyjwt runs none of the vulnerable
+  paths. Revisit the pin when semgrep relaxes it.
+
+  Two residuals recorded rather than closed. Ambient `HTTPS_PROXY` and the CA-bundle variables
+  are neither dropped nor forced, so "fetches its rules from a known host" holds at the URL
+  level and not against a TLS-intercepting proxy with an ambient-trusted CA. And the privacy
+  runner forces `SSL_CERT_FILE` to the macOS system bundle while the OWASP runner does not,
+  which predates this work but would matter to anyone behind a corporate CA.
+
+- **Five code scanning alerts cleared** (2026-09-30) — four were genuine redundant imports in
+  tests (`sqlite3` imported twice in two correction tests; `scripts.dump_sonar_issues` imported
+  both ways, once module-level and once function-local) and are fixed. The fifth,
+  `py/unused-global-variable` on `_STATIC_REGISTERED`, is a false positive: the variable is read
+  at `app.py:98` on a *later* call, which is exactly what the idempotence guard is for, and
+  CodeQL misses the cross-call read. It is dismissed rather than restructured, because
+  `tests/gui/test_gui_security.py` monkeypatches that flag and `tests/gui/conftest.py` documents
+  why it is deliberately not reset between tests — `functools.cache` would break both to satisfy
+  a false alarm. None of the five carried a security severity.
+
+
 - **No workflow persists the checkout token any more** (2026-09-30) — every
   `actions/checkout` across the seven workflows now sets `persist-credentials: false`, where
   only `sonar-scan` did. Without it the job's `GITHUB_TOKEN` stays in `.git/config` for the
@@ -34,6 +176,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `git fetch` after checkout (`static-analysis`, `coverage-pr`, and the release gate), which
   still works unauthenticated because the repository is public — noted in a comment at each
   of those three checkouts, since that is the one thing a switch to private would break.
+
+- **tornado 6.5.8 to 6.5.10** (2026-09-30) — clears GHSA-3hv7-mjh2-fv65 (unbounded query-string
+  argument count stalls the event loop), GHSA-c2m8-h5v5-343r (`StaticFileHandler` follows symlinks
+  outside the static root) and GHSA-chx6-46f5-w4vp (`CurlAsyncHTTPClient` enforces no
+  response-size limit), all fixed in 6.5.9. Third instance today of the same pattern: published
+  after the previous push, unrelated to the work it landed beside, already at the vulnerable
+  version on `main`. Dev-only, reaching the lock through `ipykernel` and `jupyter-client` under
+  the `docs` and `notebooks` extras — the GUI uses uvicorn, not tornado, so no user-facing path
+  is involved.
 
 - **virtualenv 21.4.2 to 21.14.1** (2026-09-30) — clears four advisories
   (GHSA-x78j-v8h9-3j2q, and PYSEC-2026-4011 / -4012 / -4013: unverified seed wheels,

@@ -56,9 +56,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     environment = tool_environment()
-    # Belt and braces with --metrics=off: the Semgrep Cloud App stays disabled and
-    # no SEMGREP_APP_TOKEN is used.
-    environment["SEMGREP_SEND_METRICS"] = "off"
+    # SEMGREP_SEND_METRICS=off, the app-token pop and the settings-file redirect now live in
+    # tool_environment(), so both gates get them rather than only this one.
     environment["SEMGREP_ENABLE_VERSION_CHECK"] = "0"
 
     root = Path(__file__).resolve().parents[1]

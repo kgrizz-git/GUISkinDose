@@ -234,22 +234,28 @@ skips = ["B101"]
 #
 # All five entries this project carried (click PYSEC-2026-2132; mcp GHSA-jpw9-pfvf-9f58 /
 # GHSA-hvrp-rf83-w775 / GHSA-vj7q-gjh5-988w; pyjwt GHSA-w6j9-cwv2-h6wq) existed because
-# semgrep pinned those transitive dependencies below their fixed versions. Semgrep now
-# runs as an isolated `uvx` tool (scripts/semgrep_tool.py), so its constraints no longer
-# reach this lock.
+# semgrep pinned those transitive dependencies below their fixed versions. Semgrep now runs
+# as a pinned, hash-locked isolated tool (scripts/semgrep_tool.py, tools/semgrep/), so its
+# constraints no longer reach this lock.
 #
-# That is NOT remediation, and must not be described as one. `semgrep==1.168.0` still
-# declares `click~=8.1.8`, `mcp==1.23.3`, `pyjwt[crypto]~=2.13.0`, and its isolated
-# environment demonstrably installs exactly those versions — the vulnerable code is still
-# present and still executed by the scanner, it is simply outside the surface `uv audit`,
-# `pip-audit`, Dependabot, and grype inspect. What genuinely improved is the *project*
-# environment: `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches
-# users through uvicorn in the `gui` extra. For mcp and pyjwt this is an audit-scope
-# change only; both were dev-only before and remain dev-only now.
+# Moving semgrep out was NOT remediation for everything, and must not be described as one.
+# Hash-locking it in tools/semgrep/uv.lock later put its dependencies back in view of
+# Dependabot, which indexes every lockfile regardless of this repo's update config, and the
+# pin bump to 1.178.0 then fixed the mcp advisories for real (mcp 1.23.3 -> 1.29.0, click
+# 8.1.8 -> 8.4.2). What remains unfixed is pyjwt: semgrep still declares
+# `pyjwt[crypto]~=2.13.0` at 1.178.0, so its isolated environment installs 2.13.0 and that
+# vulnerable code is still present, simply outside the surface `uv audit`, `pip-audit` and
+# grype inspect. Those twelve alerts are dismissed as unreachable — see
+# tools/semgrep/pyproject.toml for why — not fixed. The *project* environment also improved:
+# `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches users through
+# uvicorn in the `gui` extra. So of the five original entries, four are genuinely fixed
+# (click here and in the tool, the three mcp advisories in the tool) and only pyjwt remains
+# an audit-scope question — and it is answered by dismissal-as-unreachable, not silence.
 #
-# Two consequences worth keeping in view: the tool environment is unhashed (uvx resolves
-# from PyPI without the sha256 pinning `uv sync --locked` gave), and nothing audits it.
-# dev-docs/TO_DO.md tracks replacing bare `uvx --from` with a hash-locked tool project.
+# The tool environment is no longer unhashed or unwatched: tools/semgrep/uv.lock pins every
+# transitive package by sha256, and Dependabot raises alerts against it. Do not add a
+# suppression here for something the tool drags in — fix it in tools/semgrep, or triage it
+# on the alert where the reasoning stays attached to the advisory.
 #
 ignore = []
 # No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared

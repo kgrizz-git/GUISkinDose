@@ -188,9 +188,10 @@ pre-commit run --hook-stage pre-push --all-files     # pre-push hooks (semgrep, 
 **Semgrep is not a project dependency, so the two semgrep hooks now require `uv`**; a
 pip-only install can run them only by installing semgrep at exactly the pinned version by hand,
 which the resolver accepts with a warning; anything else is a blocked push. It is run as a pinned,
-hash-locked isolated tool, because its own requirements (`click<8.2`, `mcp==1.23.3`,
-`pyjwt[crypto]~=2.13.0`) held four transitive advisories below their fixes while it sat in the
-`dev` extra. `scripts/semgrep_tool.py` resolves the invocation, preferring
+hash-locked isolated tool, because its own requirements held four transitive advisories below
+their fixes while it sat in the `dev` extra. Its current pins are `click~=8.4.2`, `mcp==1.29.0`
+and `pyjwt[crypto]~=2.13.0`; that last one still blocks the pyjwt fixes, which is why the
+tool's Dependabot alerts are dismissed as unreachable rather than fixed. `scripts/semgrep_tool.py` resolves the invocation, preferring
 `uv run --locked --project tools/semgrep`: that mini-project is a standalone uv project (**not** a
 workspace member — joining the workspace would merge the dependencies back into the root
 resolution) whose `uv.lock` pins all ~68 transitive packages by exact version and sha256. `uvx
@@ -254,7 +255,7 @@ python -m guiskindose --mode gui
 - Correction factors are dimensionless floats in range 0–1 (or slightly above 1 for backscatter)
 - Coordinate conventions are nuanced: physical world geometry uses X=lateral, Y=vertical/AP, Z=longitudinal for head-first supine positioning (unified +Y points down toward the floor; the `(0,0,0)` origin is the beam isocenter, which coincides with the table head-end when the table-position readout is zero), while PySkinDose plot labels show `X - LON / PT L-R`, `Y - VER / PT A-P`, `Z - LAT / PT S-I`. RDSRs use table-position names, not x/y/z; Siemens/Philips use the DICOM/operator table convention, while GE raw data uses patient-anatomy longitudinal/lateral naming and is normalized by swapping raw long/lat into the common plotted frame. See `dev-docs/VENDOR_COORDINATE_SYSTEMS.md` before changing normalization, plotting labels, or vendor coordinate handling.
 - GUI dependencies are optional extras: `pip install guiskindose[gui]` — do not add them to core dependencies
-- **Modularity:** Keep Python source and Markdown files under `src/`, `scripts/`, and `dev-docs/` under ~800 lines unless strictly unavoidable (checked in CI; outliers must be whitelisted in `scripts/check_file_sizes.py`). Root-level append-only history (`CHANGELOG.md`) is out of scope by design, not by whitelist.
+- **Modularity:** Keep Python source and Markdown files under `src/`, `scripts/`, and `dev-docs/` under ~800 lines unless strictly unavoidable (checked in CI; outliers must be whitelisted in `scripts/check_file_sizes.py`). Append-only history is out of scope by design, not by whitelist: `CHANGELOG.md` by sitting at the repository root, and `dev-docs/MAINTENANCE_LOG.md` via `APPEND_ONLY_HISTORY` in the checker. Do not condense log entries to fit a cap.
 - **Plan lifecycle:** Completed or superseded execution plans must be archived under `dev-docs/plans/archive/` (always update `dev-docs/index.md` in the same PR).
 - **Doc paths:** Never commit absolute filesystem paths or `file://` URIs in repository docs. Use repo-relative Markdown links for tracked files and normal prose/backticks for commands or examples.
 - **Privacy admission:** Do not commit PHI/PII, internal PACS endpoints, private-network addresses (IPv4 or IPv6), or diagnostic artifacts. Run the sensitive-content gate; the commit message is checked separately at `commit-msg`. Protected ignore rules/never-track roots and conditional scanner receipts are enforced by `scripts/privacy_admission.py`; run `python scripts/privacy_admission.py run --mode staged` when the route requires it. Images, DICOM, PDFs, supported archive/document containers, and opaque binary files require hash-pinned human clearance; extensionless configuration files are scanned as text only when their complete contents are valid, NUL-free UTF-8. See `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` before adding fixtures or handling findings.

@@ -85,6 +85,11 @@ def material_symbols_stylesheet_href() -> str:
     return f"{_STATIC_URL}/fonts/material-symbols-outlined.css"
 
 
+# Read on a LATER call by register_gui_static_files() below, which is the whole point of
+# the guard. CodeQL's py/unused-global-variable misses that cross-call read and flags this
+# line; the alert is dismissed as a false positive. Do not "clean it up" into
+# functools.cache: tests/gui/test_gui_security.py monkeypatches this flag and
+# tests/gui/conftest.py documents why it is deliberately not reset between tests.
 _STATIC_REGISTERED = False
 
 
