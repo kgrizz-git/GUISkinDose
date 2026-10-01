@@ -11,11 +11,14 @@ from guiskindose.constants import (
     KEY_NORMALIZATION_KVP,
     KEY_NORMALIZATION_MODEL_NAME,
 )
+from guiskindose.correction_data import clear_cache, get_table, reset_warnings
 from guiskindose.corrections import (
+    _K_MED_CACHE,
     calculate_k_bs,
     calculate_k_isq,
     calculate_k_med,
     calculate_k_tab,
+    clear_k_med_cache,
 )
 from guiskindose.geom_calc import fetch_and_append_hvl
 
@@ -430,3 +433,87 @@ class TestExactMatchDuplicateWarning:
                 k_tab_val=0.8,
                 corrections_db=str(db_path),
             )
+
+
+def _legacy_db(path: Path) -> None:
+    """Bootstrap an explicit legacy DB holding the packaged runtime tables."""
+    import sqlite3
+
+    for name in (
+        "correction_medium_and_backscatter",
+        "correction_table_and_pad_attenuation",
+        "device_info",
+    ):
+        get_table(name).to_sql(name, sqlite3.connect(path), if_exists="replace", index=False)
+    sqlite3.connect(path).close()
+
+
+class TestKMedMemo:
+    """The memoized ``k_med`` lookup (Phase 1f).
+
+    The lookup is keyed on ``(kvp, hvl, snapped fsl, resolved source)``;
+    source resolution and its warnings stay outside the memo so a call that
+    suppressed warnings cannot swallow one a later call must emit.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _fresh_state(self):
+        clear_k_med_cache()
+        clear_cache()
+        reset_warnings()
+        yield
+        clear_k_med_cache()
+        reset_warnings()
+
+    @staticmethod
+    def _k_med(corrections_db: str, *, fsl_cm: float = 18.0, emit_warnings: bool = True) -> float:
+        return calculate_k_med(
+            data_norm=pd.DataFrame({"kVp": [80], "HVL": [4.99]}),
+            field_area=np.square([fsl_cm]).tolist(),
+            event=0,
+            corrections_db=corrections_db,
+            emit_warnings=emit_warnings,
+        )
+
+    def test_suppressed_first_call_does_not_swallow_later_warning(self, tmp_path: Path):
+        """A suppressed candidate call must not latch away the next warning.
+
+        Ordering is the trap: an envelope event's candidates run first with
+        ``emit_warnings=False``, then a legacy-static event hits the same key
+        with the default ``True``. If the resolve were inside the memo the
+        second call would be a cache hit and the warning would be lost.
+        """
+        db = tmp_path / "legacy.db"
+        _legacy_db(db)
+
+        self._k_med(str(db), emit_warnings=False)
+        assert len(_K_MED_CACHE) == 1  # memo populated for this key
+
+        reset_warnings()
+        with pytest.warns(DeprecationWarning):
+            self._k_med(str(db))
+
+    def test_repeated_key_returns_identical_value(self):
+        first = self._k_med(PATH_TO_DB)
+        assert len(_K_MED_CACHE) == 1
+        assert self._k_med(PATH_TO_DB) is first
+        assert len(_K_MED_CACHE) == 1
+
+    def test_distinct_snapped_field_size_gets_its_own_entry(self):
+        first = self._k_med(PATH_TO_DB, fsl_cm=6.0)
+        second = self._k_med(PATH_TO_DB, fsl_cm=30.0)
+        assert len(_K_MED_CACHE) == 2
+        assert second != first
+
+    def test_clear_k_med_cache_empties_memo(self):
+        self._k_med(PATH_TO_DB)
+        assert len(_K_MED_CACHE) == 1
+        clear_k_med_cache()
+        assert _K_MED_CACHE == {}
+
+    def test_provider_clear_cache_empties_memo(self):
+        """The provider clear reaches the memo through its registered hook."""
+        self._k_med(PATH_TO_DB)
+        assert len(_K_MED_CACHE) == 1
+        clear_cache()
+        assert _K_MED_CACHE == {}

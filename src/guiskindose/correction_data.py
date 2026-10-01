@@ -15,6 +15,7 @@ import re
 import sqlite3
 import threading
 import warnings
+from collections.abc import Callable
 from contextlib import suppress
 from importlib import resources
 from pathlib import Path
@@ -95,6 +96,11 @@ _HASH_CACHE: str | None = None
 # Warning classes already emitted once per process (never paths).
 _warned: set[str] = set()
 
+# Zero-argument callables run at the end of clear_cache(), so a module-level
+# cache derived from these tables (e.g. the k_med lookup memo in
+# corrections.py) cannot outlive a provider reset.
+_CACHE_CLEAR_HOOKS: list[Callable[[], None]] = []
+
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -122,12 +128,24 @@ def get_table(name: str) -> pd.DataFrame:
     return cached.copy(deep=True)
 
 
+def register_cache_clear_hook(hook: Callable[[], None]) -> None:
+    """Register a callable to run at the end of :func:`clear_cache`.
+
+    Lets a downstream module cache (keyed on resolved table content) register
+    its own clear without this module importing it, which would be circular.
+    Hooks run outside the provider lock and are not expected to raise.
+    """
+    _CACHE_CLEAR_HOOKS.append(hook)
+
+
 def clear_cache() -> None:
-    """Drop cached tables and the packaged hash (tests only)."""
+    """Drop cached tables, the packaged hash, and dependent caches (tests only)."""
     global _HASH_CACHE
     with _CACHE_LOCK:
         _CACHE.clear()
         _HASH_CACHE = None
+    for hook in tuple(_CACHE_CLEAR_HOOKS):
+        hook()
 
 
 def packaged_source_hash() -> str:

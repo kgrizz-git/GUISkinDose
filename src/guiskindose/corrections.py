@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -10,7 +11,13 @@ import pandas as pd
 import scipy.interpolate
 from scipy.interpolate import CubicSpline, RegularGridInterpolator
 
-from .correction_data import CorrectionDataError, explicit_table, get_table, resolve_corrections_source
+from .correction_data import (
+    CorrectionDataError,
+    explicit_table,
+    get_table,
+    register_cache_clear_hook,
+    resolve_corrections_source,
+)
 from .grid_interp import (
     STATUS_CLAMPED,
     STATUS_EXACT,
@@ -194,6 +201,14 @@ def calculate_k_med(
     float
         Medium correction k_med for all cells that are hit by the beam.
 
+    Notes
+    -----
+    The table lookup is memoized per ``(kvp, hvl, snapped fsl, resolved
+    source)``. Source resolution and its warnings run on every call by design,
+    outside the memo, so a suppressed call can never swallow a warning a later
+    ``emit_warnings=True`` call must emit. See Phase 1f of
+    ``dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md``.
+
     """
     # Tabulated field side length in cm
     fsl_tab = [5, 10, 20, 25, 35]
@@ -210,13 +225,46 @@ def calculate_k_med(
     # Select the closest available tabulated field size length.
     fsl = fsl_tab[int(np.argmin(np.abs(np.asarray(fsl_tab) - fsl_mean)))]
 
-    # Connect to database
-    # NOTE (perf follow-up, only if profiles ever care): per-event callers
-    # deep-copy the full medium table here before projecting 4 columns, and
-    # rely on the default emit_warnings=True instead of a threaded flag.
-    # Correct today (warn-once cache; no dry-run calls k_med); revisit with a
-    # projected cache + threaded flag only on measured need.
-    df = _load_correction_table(corrections_db, "correction_medium_and_backscatter", emit_warnings=emit_warnings)
+    # Resolve the source here, unconditionally and OUTSIDE the memo: the
+    # resolved identity is part of the memo key, and the source-level warnings
+    # must be decided on every call (see _K_MED_CACHE and Phase 1f of
+    # dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md).
+    source, db_path = resolve_corrections_source(corrections_db, emit_warnings=emit_warnings)
+
+    return _k_med_for_key(kvp=kvp, hvl=hvl, fsl=int(fsl), source=source, db_path=db_path)
+
+
+# Memo for the k_med table lookup, keyed on (kvp, hvl, snapped fsl, resolved
+# source identity) — every input the lookup depends on. The resolved identity
+# (not the raw corrections_db spelling) keeps one entry per actual database.
+# Source resolution and its warnings deliberately live OUTSIDE this cache:
+# _warn_once does not latch when emit_warnings=False, so a memo that covered
+# resolution would swallow a warning a later emit_warnings=True call must
+# still emit. An explicit dict rather than functools.lru_cache so tests have a
+# matching clear and the cache cannot outlive a corrections-source change.
+_K_MED_CACHE: dict[tuple[float, float, int, str], float] = {}
+
+
+def _k_med_for_key(kvp: float, hvl: float, fsl: int, *, source: str, db_path: Path | None) -> float:
+    """Memoized ``k_med`` lookup for one snapped key and already-resolved source."""
+    source_key = "packaged" if source == "packaged" else str(db_path)
+    key = (float(kvp), float(hvl), int(fsl), source_key)
+    cached = _K_MED_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    # Connect to the already-resolved source (same translation as
+    # _load_correction_table, which no longer sits on this path).
+    if source == "packaged":
+        df = get_table("correction_medium_and_backscatter")
+    else:
+        assert db_path is not None
+        try:
+            df = explicit_table(db_path, "correction_medium_and_backscatter")
+        except CorrectionDataError:
+            raise
+        except Exception as exc:
+            raise CorrectionDataError("Explicit correction database could not be read (value-free).") from exc
 
     # Fetch k_med = f(kVp, HVL) from database. This is table 2 in
     # [doi:10.1088/0031-9155/58/2/247]
@@ -242,7 +290,22 @@ def calculate_k_med(
         ]).iloc[0]
     )
 
+    _K_MED_CACHE[key] = k_med
     return k_med
+
+
+def clear_k_med_cache() -> None:
+    """Empty the ``k_med`` lookup memo.
+
+    Tests that reset correction data should call this; ``correction_data.clear_cache()``
+    does it automatically through the registered clear hook.
+    """
+    _K_MED_CACHE.clear()
+
+
+# Registered rather than imported the other way round: correction_data must not
+# import this module (corrections already depends on it).
+register_cache_clear_hook(clear_k_med_cache)
 
 
 def _match_device_rows(tab: pd.DataFrame, model: str, plane: str) -> pd.DataFrame:
