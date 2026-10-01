@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TypedDict
 
 import numpy as np
+import pytest
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
 from guiskindose import constants as c
@@ -138,6 +139,92 @@ def test_phantoms_restored_to_static_pose_after_envelope(monkeypatch):
     _run(frame, _settings(angular_step_deg=10.0))
     parent_calls = [call for call in calls if call[1] and call[2] == 1]
     assert parent_calls, "parent static pose must be (re)positioned last"
+
+
+def test_envelope_positions_phantoms_once_per_event_not_per_candidate(monkeypatch):
+    """Phantom positioning must not scale with the candidate count.
+
+    Before Phase 1a every candidate re-derived ``patient.r`` from the same
+    parent pose, so the count grew as ``3 + 3 * candidates + 3``: measured 114
+    calls for the 36-candidate event below (35 non-static candidates x 3
+    phantoms). That is the regression this test forbids -- the phantoms now
+    stand at the parent pose for the whole domain.
+
+    The pinned budgets below are the deliberate once-per-event cost. Each
+    ``Phantom.position`` call site positions one phantom (patient, table, pad),
+    so a site contributes 3:
+
+    - 3   event 0, the ordinary static event through
+      ``perform_calculations_for_new_geometries``;
+    - 3   event 1, the unconditional positioning at the top of
+      ``_calculate_envelope_event``;
+    - 3   event 1, that event's static-pose evaluation, only when the event has
+      new geometry. It keeps the default ``reposition=True`` so its behaviour
+      is byte-for-byte unchanged -- an accepted once-per-event duplication;
+    - 3   event 1, the explicit parent-pose restore after the candidate loop.
+
+    Hence 9 with an unchanged-geometry event 1 (its static-pose call takes the
+    ``new_geometry=False`` cache path, which returns before positioning) and 12
+    with a new-geometry one. Both are pinned because both branches must hold:
+    the candidate loop must not reposition, and the static path must not stop.
+    """
+    from guiskindose.geom_calc import check_new_geometry
+
+    calls: list = []
+    original_position = Phantom.position
+
+    def _recording_position(self, data_norm, event):
+        calls.append(event)
+        return original_position(self, data_norm=data_norm, event=event)
+
+    monkeypatch.setattr(Phantom, "position", _recording_position)
+
+    unchanged = _frame_with_spin()
+    assert check_new_geometry(unchanged) == [True, False]
+    calls.clear()
+    output = _run(unchanged, _settings(angular_step_deg=10.0))
+    assert output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]["unique_candidate_count"] == 36
+    assert calls == [0, 0, 0, 1, 1, 1, 1, 1, 1]
+
+    fresh = _frame_with_spin()
+    fresh.at[1, "FS_lat"] = float(fresh["FS_lat"].to_numpy()[1]) + 1.0
+    assert check_new_geometry(fresh) == [True, True]
+    calls.clear()
+    _run(fresh, _settings(angular_step_deg=10.0))
+    assert calls == [0, 0, 0] + [1] * 9
+
+
+def test_assert_pose_invariant_accepts_faithful_copy_and_rejects_varied_pose():
+    """The Phase 1a guard: silent quiet on a faithful frame, loud on a varied one."""
+    import pandas as pd
+
+    from guiskindose.calculate_dose.rotational_event import (
+        _assert_pose_invariant,
+        _candidate_frame,
+    )
+
+    frame = _frame_with_spin()
+    parent_row = frame.iloc[1]
+
+    # A faithful copy is exactly what the candidate builder produces: the angle
+    # columns are overridden, every guarded column is untouched.
+    faithful = _candidate_frame(parent_row, 12.5, 34.0)
+    _assert_pose_invariant(parent_row, faithful)
+
+    # A candidate that moves the table laterally would misposition the phantom.
+    varied = _candidate_frame(parent_row, 12.5, 34.0)
+    varied.at[0, "Tx"] = float(parent_row["Tx"]) + 1.0
+    with pytest.raises(RuntimeError, match="Tx"):
+        _assert_pose_invariant(parent_row, varied)
+
+    # NaN robustness: an unrecorded table offset is not a violation, and a
+    # plain != would falsely fire on it. Built through the same copy path the
+    # production helper sees.
+    nan_row = pd.Series(parent_row.copy())
+    nan_row["Tx"] = np.nan
+    nan_frame = _candidate_frame(nan_row, 0.0, 0.0)
+    assert bool(pd.isna(nan_frame.at[0, "Tx"]))
+    _assert_pose_invariant(nan_row, nan_frame)
 
 
 def test_envelope_details_disclose_mixed_slot_semantics():

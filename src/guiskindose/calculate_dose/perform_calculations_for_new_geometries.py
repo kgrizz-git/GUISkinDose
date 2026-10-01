@@ -26,6 +26,8 @@ def perform_calculations_for_new_geometries(
     table_hits: Sequence[bool] | np.ndarray,
     field_area: Sequence[float] | np.ndarray,
     k_isq: np.ndarray,
+    *,
+    reposition: bool = True,
 ) -> tuple[
     Sequence[bool] | np.ndarray,
     Sequence[bool] | np.ndarray,
@@ -65,6 +67,12 @@ def perform_calculations_for_new_geometries(
         a list of floats.
     k_isq : np.ndarray
         Inverse-square-law correction factors.
+    reposition : bool, keyword-only
+        Whether to (re)position the three phantoms at this event's pose.
+        ``False`` is for callers that have already positioned them — the
+        rotational candidate loop, where every candidate shares the parent
+        event's pose, so one positioning covers the whole domain. Defaults to
+        ``True``, which keeps every existing caller's behaviour unchanged.
 
     Returns
     -------
@@ -79,9 +87,10 @@ def perform_calculations_for_new_geometries(
 
     beam = Beam(data_norm=normalized_data, event=event, plot_setup=False)
 
-    patient.position(data_norm=normalized_data, event=event)
-    table.position(data_norm=normalized_data, event=event)
-    pad.position(data_norm=normalized_data, event=event)
+    if reposition:
+        patient.position(data_norm=normalized_data, event=event)
+        table.position(data_norm=normalized_data, event=event)
+        pad.position(data_norm=normalized_data, event=event)
 
     logger.debug("Checking which skin cells are hit by the beam")
     hits = beam.check_hit_mask(patient=patient)

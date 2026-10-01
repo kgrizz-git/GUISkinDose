@@ -6,8 +6,9 @@ this module never touches shared output dicts outside what it returns.
 """
 
 import logging
+import math
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import pandas as pd
@@ -42,6 +43,17 @@ logger = logging.getLogger(__name__)
 # the circle rather than by raw float equality).
 _STATIC_POSE_TOL_DEG = 1e-9
 
+# Columns a candidate frame must not vary: the C-arm angles Ap1/Ap2 (and Ap3)
+# move the beam only, so every candidate of one event shares these and one
+# phantom positioning at the parent pose is valid for the whole domain.
+# Rx/Ry/Rz are included even though they are derived from At1-At3: they are
+# what Phantom.position actually reads, so guarding the derived value as
+# well as its inputs keeps the check honest if calculate_rotation_matrices
+# ever changes.
+_POSE_INVARIANT_COLUMNS: Final[tuple[str, ...]] = ("Tx", "Ty", "Tz", "At1", "At2", "At3", "Rx", "Ry", "Rz")
+
+_ROTATION_MATRIX_COLUMNS: Final[frozenset[str]] = frozenset(("Rx", "Ry", "Rz"))
+
 
 def _rotational_mode(settings: "PyskindoseSettings | None") -> str:
     if settings is None:
@@ -66,11 +78,54 @@ def _candidate_frame(parent_row: pd.Series, ap1: float, ap2: float) -> pd.DataFr
 
     The index is reset to ``[0]``: downstream geometry code addresses rows
     positionally (``event=0``), and the parent index must not leak through.
+
+    Called once per event (Phase 1g): the result is also the reusable
+    candidate frame, whose two angle cells are then assigned per pose.
     """
     frame = pd.DataFrame([parent_row.values], columns=parent_row.index)
     frame["Ap1"] = ap1
     frame["Ap2"] = ap2
     return frame
+
+
+def _assert_pose_invariant(parent_row: pd.Series, frame: pd.DataFrame) -> None:
+    """Fail loudly if a candidate frame varies a column the pose fix depends on.
+
+    The phantoms are positioned once per event and that positioning is reused
+    across the whole candidate domain, which is only sound while candidates
+    differ from their parent row in the beam angles alone. Checked once per
+    event (Phase 1g builds the frame once per event too), so the cost is
+    negligible and a future regression that lets a candidate vary a pose column
+    surfaces as a clear error instead of a silently mispositioned phantom.
+
+    Raises
+    ------
+    RuntimeError
+        If any column in :data:`_POSE_INVARIANT_COLUMNS` differs between the
+        parent row and the candidate frame. The message names the column but
+        never its value: repository privacy rules forbid logging data values.
+    """
+    for column in _POSE_INVARIANT_COLUMNS:
+        parent_value: Any = parent_row[column]
+        candidate_value: Any = frame.at[0, column]
+        if column in _ROTATION_MATRIX_COLUMNS:
+            matches = np.array_equal(
+                np.asarray(parent_value, dtype=float),
+                np.asarray(candidate_value, dtype=float),
+                equal_nan=True,
+            )
+        else:
+            # NaN counts as equal to NaN: a plain != would reject the very case
+            # the guard must stay quiet about (an unrecorded table offset).
+            parent_number = float(parent_value)
+            candidate_number = float(candidate_value)
+            matches = parent_number == candidate_number or (math.isnan(parent_number) and math.isnan(candidate_number))
+        if not matches:
+            raise RuntimeError(
+                f"Candidate frame varies pose column {column!r}, which the "
+                "once-per-event phantom positioning assumes is constant. "
+                "Candidate frames may only override the beam angles."
+            )
 
 
 def _is_contradictory(classification: Any) -> bool:
@@ -205,6 +260,14 @@ def _calculate_envelope_event(
     primary_moves = "primary_endpoint_motion" in classification.reason_codes
     secondary_moves = "secondary_endpoint_motion" in classification.reason_codes
 
+    # Candidates never vary Tx/Ty/Tz or At1-At3, so one positioning at the
+    # parent pose is valid for the whole domain. Done unconditionally rather
+    # than under new_geometry_flag so the candidate loop never depends on
+    # the cache invariant.
+    patient.position(data_norm=normalized_data, event=ev)
+    table.position(data_norm=normalized_data, event=ev)
+    pad.position(data_norm=normalized_data, event=ev)
+
     if primary_moves or secondary_moves:
         domain = build_candidate_domain(
             ap1_start=ap1,
@@ -257,15 +320,20 @@ def _calculate_envelope_event(
     )
 
     parent_frame = normalized_data.iloc[[ev]]
+    # One frame for the whole domain (Phase 1g): every pose differs only in its
+    # two angle cells, which _compute assigns in place.
+    candidate_frame = _candidate_frame(parent_frame.iloc[0], ap1, ap2)
+    _assert_pose_invariant(parent_frame.iloc[0], candidate_frame)
     spline = back_scatter_interpolation[ev]
     k_tab_scalar = k_tab[ev]
     n_cells = len(patient.r)
 
     def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, list[bool]]:
-        frame = _candidate_frame(parent_frame.iloc[0], pose_ap1, pose_ap2)
+        candidate_frame.at[0, "Ap1"] = pose_ap1
+        candidate_frame.at[0, "Ap2"] = pose_ap2
         candidate_hits, candidate_table_hits, candidate_field_area, candidate_k_isq = (
             perform_calculations_for_new_geometries(
-                normalized_data=frame,
+                normalized_data=candidate_frame,
                 event=0,
                 new_geometry=True,
                 patient=patient,
@@ -275,6 +343,9 @@ def _calculate_envelope_event(
                 table_hits=[],
                 field_area=[],
                 k_isq=np.array([]),
+                # Already positioned at the parent pose above, and every
+                # candidate shares it.
+                reposition=False,
             )
         )
         # np.asarray, not sum()/any(): those iterate an ndarray element by element in
@@ -290,7 +361,7 @@ def _calculate_envelope_event(
                 [bool(hit) for hit in candidate_hits],
             )
         vector, candidate_k_bs, candidate_k_med = compute_event_dose_vector(
-            event_frame=frame,
+            event_frame=candidate_frame,
             event=0,
             hits=candidate_hits,
             table_hits=candidate_table_hits,
@@ -375,9 +446,10 @@ def _calculate_envelope_event(
         argmax_cell=lambda vector: (int(np.argmax(vector)), float(np.max(vector))),
     )
 
-    # Restore the parent static pose on the shared phantoms: candidates leave
-    # them positioned at the final synthetic pose, and the returned phantom
-    # plus any intervening cache-dependent reads must observe the parent.
+    # Restore the parent static pose on the shared phantoms. They already stand
+    # there: the candidates never reposition at all, so this is an explicit
+    # invariant restore rather than a correction, and the returned phantom plus
+    # any intervening cache-dependent reads observe the parent.
     patient.position(data_norm=normalized_data, event=ev)
     table.position(data_norm=normalized_data, event=ev)
     pad.position(data_norm=normalized_data, event=ev)
