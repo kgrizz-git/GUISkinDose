@@ -15,7 +15,14 @@ import pandas as pd
 import pytest
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
+from guiskindose import constants as c
+from guiskindose import load_settings_example_json
 from guiskindose.beam_class import Beam, BeamGeometryInputs
+from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
+    perform_calculations_for_new_geometries,
+)
+from guiskindose.phantom_class import Phantom
+from guiskindose.settings import PyskindoseSettings
 
 # Poses chosen to cover the trig quadrants and both the +-1 boundaries the
 # rotation matrices care about; a change in the sign/axis handling of any of
@@ -160,3 +167,150 @@ def test_from_inputs_ignores_angle_dtype(frame: pd.DataFrame) -> None:
             getattr(as_floats, attribute),
             err_msg=f"{attribute} differs between integer and float angle inputs",
         )
+
+
+# ── threading through perform_calculations_for_new_geometries ──────────
+
+
+def _phantoms() -> tuple[Phantom, Phantom, Phantom]:
+    """Patient (cylinder), table and pad phantoms for a geometry comparison.
+
+    A cylinder rather than the plane default: the plane phantom skips the
+    entrance-cell branch of the hit mask, so a hit-mask disagreement between
+    the two paths could hide there.
+    """
+    dimension = load_settings_example_json()
+    dimension = PyskindoseSettings(settings=dimension).phantom.dimension
+    return (
+        Phantom(phantom_model=c.PHANTOM_MODEL_CYLINDER, phantom_dim=dimension),
+        Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=dimension),
+        Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=dimension),
+    )
+
+
+def _geometry_call(
+    frame: pd.DataFrame,
+    phantoms: tuple[Phantom, Phantom, Phantom],
+    event: int,
+    *,
+    beam_inputs: BeamGeometryInputs | None = None,
+    beam_angles_deg: tuple[float, float, float] | None = None,
+):
+    """One perform_calculations call with fresh empty cache arrays."""
+    patient, table, pad = phantoms
+    return perform_calculations_for_new_geometries(
+        normalized_data=frame,
+        event=event,
+        new_geometry=True,
+        patient=patient,
+        table=table,
+        pad=pad,
+        hits=[],
+        table_hits=[],
+        field_area=[],
+        k_isq=np.array([]),
+        beam_inputs=beam_inputs,
+        beam_angles_deg=beam_angles_deg,
+    )
+
+
+@pytest.fixture
+def phantoms() -> tuple[Phantom, Phantom, Phantom]:
+    """Fresh phantoms with their reference pose saved, ready to be positioned.
+
+    ``save_position`` belongs here rather than inside ``_geometry_call``:
+    ``Phantom.position`` translates from ``r_ref``, so re-saving before each call
+    would accumulate one extra table offset per call and quietly move the
+    patient off the beam. The real caller reaches this state once, through
+    ``position_patient_phantom_on_table``.
+    """
+    phantoms = _phantoms()
+    for phantom in phantoms:
+        phantom.save_position()
+    return phantoms
+
+
+def _assert_same_geometry(left, right, context: str) -> None:
+    for index, name in enumerate(("hits", "table_hits", "field_area", "k_isq")):
+        np.testing.assert_array_equal(
+            np.asarray(left[index]),
+            np.asarray(right[index]),
+            err_msg=f"{name} differs {context}",
+        )
+
+
+def test_hoisting_at_the_row_pose_changes_nothing(frame: pd.DataFrame, phantoms) -> None:
+    """Hoisting the scalars for the row's *own* pose must be a no-op.
+
+    This is the equivalence the coverage envelope relies on: ``beam_inputs`` and
+    ``beam_angles_deg`` exist only to skip the per-candidate table reads. If they
+    changed a number, enveloped events would silently disagree with static ones.
+    Pinned against the unhoisted call rather than a stored fixture, so it stays
+    true as both sides evolve.
+    """
+    event = 1
+    row_pose = (float(frame.Ap1[event]), float(frame.Ap2[event]), float(frame.Ap3[event]))
+    inputs = BeamGeometryInputs.from_frame(data_norm=frame, event=event)
+
+    unhoisted = _geometry_call(frame, phantoms, event)
+    hoisted = _geometry_call(frame, phantoms, event, beam_inputs=inputs, beam_angles_deg=row_pose)
+
+    assert int(np.count_nonzero(np.asarray(hoisted[0], dtype=bool))) > 0, "the fixture must hit cells"
+    _assert_same_geometry(unhoisted, hoisted, "between the hoisted and unhoisted paths")
+
+
+def test_angle_override_replaces_the_row_pose(frame: pd.DataFrame, phantoms) -> None:
+    """An angle override must build *that* pose, not the row's.
+
+    Without this the previous test would still pass if the override were
+    silently dropped. Offset from the row's own angles rather than hard-coded,
+    so the beam keeps intersecting the cylinder.
+    """
+    event = 1
+    pose = (
+        float(frame.Ap1[event]) + 25.0,
+        float(frame.Ap2[event]) - 10.0,
+        float(frame.Ap3[event]) + 5.0,
+    )
+    assert pose != (float(frame.Ap1[event]), float(frame.Ap2[event]), float(frame.Ap3[event]))
+    inputs = BeamGeometryInputs.from_frame(data_norm=frame, event=event)
+
+    hoisted = _geometry_call(frame, phantoms, event, beam_inputs=inputs, beam_angles_deg=pose)
+
+    # The same pose forced into a copied frame, evaluated the original way.
+    posed = frame.copy()
+    # Ap3 is an int64 column in normalized frames, which a fractional pose cannot
+    # be written into; widen the angle columns first.
+    for column in ("Ap1", "Ap2", "Ap3"):
+        posed[column] = posed[column].astype(float)
+    posed.at[event, "Ap1"] = pose[0]
+    posed.at[event, "Ap2"] = pose[1]
+    posed.at[event, "Ap3"] = pose[2]
+    expected = _geometry_call(posed, phantoms, event)
+
+    assert int(np.count_nonzero(np.asarray(hoisted[0], dtype=bool))) > 0, "the fixture must hit cells"
+    _assert_same_geometry(hoisted, expected, "between the hoisted pose and the same pose in a frame")
+
+    # And it is genuinely a different pose from the row's, so the override is
+    # load-bearing rather than a no-op in disguise.
+    row_pose_result = _geometry_call(frame, phantoms, event)
+    assert not np.array_equal(np.asarray(hoisted[0]), np.asarray(row_pose_result[0]))
+
+
+def test_half_an_override_is_rejected(frame: pd.DataFrame, phantoms) -> None:
+    """One override without the other is an error, not a silent mixture.
+
+    Hoisting the scalars while the angles keep coming from the table (or the
+    reverse) would build a plausible-looking beam from two different sources,
+    so the pair is all-or-nothing.
+    """
+    event = 1
+    with pytest.raises(ValueError, match="beam_inputs and beam_angles_deg"):
+        _geometry_call(
+            frame,
+            phantoms,
+            event,
+            beam_inputs=BeamGeometryInputs.from_frame(data_norm=frame, event=event),
+        )
+    with pytest.raises(ValueError, match="beam_inputs and beam_angles_deg"):
+        _geometry_call(frame, phantoms, event, beam_angles_deg=(10.0, 0.0, 0.0))
