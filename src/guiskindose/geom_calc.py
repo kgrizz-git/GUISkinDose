@@ -171,6 +171,61 @@ def vector(start: np.ndarray, stop: np.ndarray, normalization=False) -> np.ndarr
     return vec
 
 
+def scale_field_area_array(
+    data_norm: pd.DataFrame,
+    event: int,
+    patient: Phantom,
+    hits: Sequence[bool] | np.ndarray,
+    source: np.ndarray,
+) -> np.ndarray:
+    """Scale X-ray field area from image detector, to phantom skin cells (array form).
+
+    Internal counterpart of :func:`scale_field_area`, holding the vectorized body:
+    the same field areas for the hit skin cells, as a 1D float array. This is the
+    form the dose loop consumes, since it avoids one ``np.linalg.norm`` call per
+    skin cell. ``scale_field_area`` remains the public surface and wraps this.
+
+    Parameters
+    ----------
+    data_norm : pd.DataFrame
+        RDSR data, normalized for compliance with PySkinDose.
+    event : int
+        Irradiation event index.
+    patient : Phantom
+        Patient phantom, i.e. instance of class Phantom.
+    hits : Sequence[bool] or np.ndarray
+        Boolean hit/miss status of each skin cell. A boolean array is accepted as well
+        as a list of booleans, of the same length as the number of patient skin cells.
+        True for all entrance skin cells that are hit by the beam for a specific
+        irradiation event.
+    source : np.array
+        (x,y,z) coordinates to the X-ray source
+
+    Returns
+    -------
+    np.ndarray
+        X-ray field area in (cm^2) for each phantom skin cell that are hit by
+        X-ray the beam
+
+    """
+    # Fetch reference distance for field size scaling,
+    # i.e. distance source to detector
+    d_ref = data_norm.DSD[event]
+
+    cells = patient.r[np.asarray(hits, dtype=bool)]
+
+    # Calculate distance scale factor, source to each hit cell
+    distances = np.linalg.norm(cells - source, axis=1)
+
+    # Fetch field side lenth lateral and longitudinal at detector plane
+    # Fetch field area at image detector plane
+    field_area_ref = data_norm.FS_lat[event] * data_norm.FS_long[event]
+
+    # Calculate field area at distance source to skin cell for all cells
+    # that are hit by the beam.
+    return np.round(field_area_ref * np.square(distances / d_ref), 1)
+
+
 def scale_field_area(
     data_norm: pd.DataFrame,
     event: int,
@@ -186,6 +241,12 @@ def scale_field_area(
     as input for k_med and k_bs correction factor calculations. This function
     conducts this scaling for all skin cells that are hit by the X-ray beam in
     a specific irradiation event.
+
+    This is a thin wrapper around the vectorized
+    :func:`scale_field_area_array`; the scaling itself, including the rounding
+    to one decimal, lives there. Kept as the public entry point because it is
+    re-exported from ``guiskindose`` and documented as returning a list of
+    floats, so it returns real Python floats rather than array elements.
 
     Parameters
     ----------
@@ -210,24 +271,15 @@ def scale_field_area(
         X-ray the beam
 
     """
-    # Fetch reference distance for field size scaling,
-    # i.e. distance source to detector
-    d_ref = data_norm.DSD[event]
+    field_area = scale_field_area_array(
+        data_norm=data_norm,
+        event=event,
+        patient=patient,
+        hits=hits,
+        source=source,
+    )
 
-    cells = patient.r[hits]
-
-    # Calculate distance scale factor
-    scale_factor = [np.linalg.norm(cell - source) / d_ref for cell in cells]
-
-    # Fetch field side lenth lateral and longitudinal at detector plane
-    # Fetch field area at image detector plane
-    field_area_ref = data_norm.FS_lat[event] * data_norm.FS_long[event]
-
-    # Calculate field area at distance source to skin cell for all cells
-    # that are hit by the beam.
-    field_area = [round(field_area_ref * np.square(scale), 1) for scale in scale_factor]
-
-    return field_area
+    return [float(area) for area in field_area]
 
 
 def count_below_floor_events(data_norm: pd.DataFrame, floor: float = c.HVL_KVP_FLOOR) -> list[int]:

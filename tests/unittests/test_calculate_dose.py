@@ -282,8 +282,8 @@ def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
         "guiskindose.calculate_dose.perform_calculations_for_new_geometries.check_table_hits",
         return_value=np.array([False]),
     ), patch(
-        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area",
-        return_value=[5.0],
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area_array",
+        return_value=np.array([5.0]),
     ), patch(
         "guiskindose.calculate_dose.perform_calculations_for_new_geometries.calculate_k_isq",
         return_value=np.array([0.5]),

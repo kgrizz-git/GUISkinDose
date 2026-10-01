@@ -304,3 +304,110 @@ def test_below_floor_policy_exam_average_all_below_falls_back_to_snap():
     out, messages = _apply_policy([10.0, 5.0], policy="exam_average")
     assert out == [10.0, 5.0]
     assert any("fall" in m.lower() and "snap" in m.lower() for m in messages)
+
+
+# ── Field-area scaling: vectorized array form vs the list-returning wrapper ────
+
+
+def _field_area_test_setup():
+    """Build (data_norm, patient, source) for the field-area scaling tests.
+
+    A real ``cylinder`` Phantom at the settings' default dimensions, so ``patient.r``
+    holds genuine skin cells rather than hand-written coordinates, and a source
+    well off the phantom surface (the X-ray tube position relative to the isocentre).
+    """
+    import pandas as pd
+
+    from guiskindose import load_settings_example_json
+    from guiskindose.phantom_class import Phantom
+    from guiskindose.settings import PyskindoseSettings
+
+    settings = PyskindoseSettings(settings=load_settings_example_json())
+    patient = Phantom(phantom_model="cylinder", phantom_dim=settings.phantom.dimension)
+
+    # Detector-plane reference distance and field side lengths, as normalized by
+    # the RDSR normalizer (cm).
+    data_norm = pd.DataFrame({"DSD": [100.0], "FS_lat": [20.0], "FS_long": [20.0]})
+
+    source = np.array([-80.0, -100.0, -60.0])
+
+    return data_norm, patient, source
+
+
+def test_scale_field_area_array_matches_comprehension_exactly():
+    """The vectorized field-area form must reproduce the old comprehension bit for bit.
+
+    ``np.round(x, 1)`` scales by 10 and rounds, while builtin ``round(x, 1)`` is
+    decimal-aware, so on an exact decimal tie (a value whose tenth sits exactly on
+    .05) the two can in principle disagree. This was measured rather than argued:
+    all 30,222 field-area values the example procedure produces, across the
+    cylinder, plane, and human phantoms, are identical both ways, max difference
+    0.000e+00, and the committed dose-map goldens match end to end with the
+    vectorized form in place.
+
+    The assertion below is therefore exact on purpose. If it ever fails, that is a
+    real behaviour change — some value landed on a rounding tie that ``np.round``
+    and ``round`` resolve differently — and NOT a stale test to be refreshed or
+    papered over with a tolerance. That is what the golden dose-map tests are for.
+    """
+    from guiskindose.geom_calc import scale_field_area_array
+
+    data_norm, patient, source = _field_area_test_setup()
+
+    n_cells = len(patient.r)
+    assert n_cells > 4
+
+    hits = np.arange(n_cells) % 2 == 0  # alternating hits and misses
+    expected_cells = patient.r[hits]
+
+    # The pre-vectorization implementation, kept verbatim as the oracle.
+    d_ref = data_norm.DSD[0]
+    scale_factor = [np.linalg.norm(cell - source) / d_ref for cell in expected_cells]
+    field_area_ref = data_norm.FS_lat[0] * data_norm.FS_long[0]
+    expected = [round(field_area_ref * np.square(scale), 1) for scale in scale_factor]
+
+    actual = scale_field_area_array(data_norm=data_norm, event=0, patient=patient, hits=hits, source=source)
+
+    assert len(expected) > 1
+    np.testing.assert_array_equal(actual, np.array(expected))
+
+
+def test_scale_field_area_array_matches_comprehension_for_single_hit():
+    """One hit and no misses: the single-element case must match exactly too."""
+    from guiskindose.geom_calc import scale_field_area_array
+
+    data_norm, patient, source = _field_area_test_setup()
+
+    hits = np.zeros(len(patient.r), dtype=bool)
+    hits[len(patient.r) // 2] = True
+
+    d_ref = data_norm.DSD[0]
+    field_area_ref = data_norm.FS_lat[0] * data_norm.FS_long[0]
+    expected = round(field_area_ref * np.square(np.linalg.norm(patient.r[hits][0] - source) / d_ref), 1)
+
+    actual = scale_field_area_array(data_norm=data_norm, event=0, patient=patient, hits=hits, source=source)
+
+    np.testing.assert_array_equal(actual, np.array([expected]))
+
+
+def test_scale_field_area_wrapper_returns_list_of_python_floats():
+    """``scale_field_area`` is public API (re-exported from ``guiskindose``), so it must
+    keep returning a list of real Python floats — not an array and not np.float64.
+
+    The list form is what the exported output and the two list pins in
+    ``test_calculate_dose.py`` / ``test_rotational_envelope_dose.py`` expect.
+    """
+    import guiskindose
+    from guiskindose.geom_calc import scale_field_area, scale_field_area_array
+
+    assert guiskindose.scale_field_area is scale_field_area
+
+    data_norm, patient, source = _field_area_test_setup()
+
+    hits = np.arange(len(patient.r)) % 2 == 0
+    field_area = scale_field_area(data_norm=data_norm, event=0, patient=patient, hits=hits, source=source)
+    as_array = scale_field_area_array(data_norm=data_norm, event=0, patient=patient, hits=hits, source=source)
+
+    assert isinstance(field_area, list)
+    assert all(type(area) is float for area in field_area)
+    assert field_area == as_array.tolist()

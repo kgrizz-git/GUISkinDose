@@ -9,7 +9,7 @@ import pandas as pd
 from guiskindose import constants as c
 from guiskindose.beam_class import Beam
 from guiskindose.corrections import calculate_k_isq
-from guiskindose.geom_calc import check_table_hits, scale_field_area
+from guiskindose.geom_calc import check_table_hits, scale_field_area_array
 from guiskindose.phantom_class import Phantom
 
 logger = logging.getLogger(__name__)
@@ -69,9 +69,9 @@ def perform_calculations_for_new_geometries(
     Returns
     -------
     tuple[Sequence[bool] or np.ndarray, Sequence[bool] or np.ndarray, Sequence[float] or np.ndarray, np.ndarray]
-        Updated hits, table_hits, field_area, and k_isq. ``hits`` is a boolean array and
-        ``table_hits`` a boolean array on the new-geometry path, while
-        ``field_area`` stays a list of floats; the ``new_geometry=False`` cache path
+        Updated hits, table_hits, field_area, and k_isq. ``hits`` is a boolean array,
+        ``table_hits`` a boolean array, and ``field_area`` a float array on the
+        new-geometry path; the ``new_geometry=False`` cache path
         passes the caller's own containers straight through.
     """
     if not new_geometry:
@@ -93,7 +93,7 @@ def perform_calculations_for_new_geometries(
         table_hits = check_table_hits(source=beam.r[0, :], table=table, beam=beam, cells=patient.r[hits])
 
         logger.debug("Calculating X-Ray field area at the location of each skin cell")
-        field_area = scale_field_area(
+        field_area = scale_field_area_array(
             data_norm=normalized_data,
             event=event,
             patient=patient,
