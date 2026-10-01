@@ -113,9 +113,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   one variable at a time is evidence the ad-hoc pops were the wrong shape; a parametrised test
   covers every dropped name.
 
-  Throughout, jwt unreachability never depended on any of this: the only `import jwt` sits in a
-  module imported solely by `commands/mcp.py`, so `semgrep scan` never loads it. Revisit the pin
-  when semgrep relaxes it.
+  Throughout, jwt unreachability never depended on any of this: the only use of the jwt API sits
+  in `semgrep/mcp/utilities/token_verifier.py`, whose `PyJWKClient` and `jwt.decode` calls run
+  only under `semgrep mcp`. A later review corrected the wording here — `semgrep/cli.py` imports
+  that module eagerly, so jwt *is* loaded on every invocation. Unreachability turns on it never
+  being executed, not on it never being imported; importing pyjwt runs none of the vulnerable
+  paths. Revisit the pin when semgrep relaxes it.
+
+  Two residuals recorded rather than closed. Ambient `HTTPS_PROXY` and the CA-bundle variables
+  are neither dropped nor forced, so "fetches its rules from a known host" holds at the URL
+  level and not against a TLS-intercepting proxy with an ambient-trusted CA. And the privacy
+  runner forces `SSL_CERT_FILE` to the macOS system bundle while the OWASP runner does not,
+  which predates this work but would matter to anyone behind a corporate CA.
 
 - **Five code scanning alerts cleared** (2026-09-30) — four were genuine redundant imports in
   tests (`sqlite3` imported twice in two correction tests; `scripts.dump_sonar_issues` imported

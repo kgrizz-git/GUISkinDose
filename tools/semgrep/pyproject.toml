@@ -5,11 +5,13 @@
 # while it sat in the root `dev` extra. See scripts/semgrep_tool.py.
 #
 # The pyjwt pin (`~=2.13.0`, i.e. <2.14.0) still blocks twelve pyjwt advisories whose fixes
-# all land in 2.14.0, including one critical. They are unreachable here: the only `import jwt`
-# in the scanner is semgrep/mcp/utilities/token_verifier.py, reached solely by `semgrep mcp`,
-# which these gates never invoke. (`semgrep login` does NOT use JWT — it validates an opaque
-# 64-hex API token.) So the Dependabot alerts raised against this lock are dismissed as
-# not-used rather than suppressed silently.
+# all land in 2.14.0, including one critical. They are unreachable here: the only use of the
+# jwt API in the scanner is semgrep/mcp/utilities/token_verifier.py, whose PyJWKClient and
+# jwt.decode calls run only under `semgrep mcp` — a subcommand these gates never invoke.
+# (`semgrep login` does NOT use JWT; it validates an opaque 64-hex API token.) Note the
+# module is *imported* eagerly via semgrep/cli.py, so jwt is loaded on any invocation; it is
+# never executed, which is what unreachability turns on. So the Dependabot alerts raised
+# against this lock are dismissed as not-used rather than suppressed silently.
 #
 # This mini-project exists so that isolation does not cost integrity. `uvx --from
 # semgrep==<pin>` resolves a version but re-resolves and re-verifies its entire

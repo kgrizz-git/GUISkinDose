@@ -8,7 +8,7 @@ Local (pre-push):      compares HEAD against the merge-base with origin/main.
 Exit 0 (pass) when:
   - No src/ or tests/ files changed.
   - CHANGELOG.md is among the changed files.
-  - The only non-test changes add `#` comments, and MAINTENANCE_LOG.md is updated.
+  - The only non-test changes add or remove `#` comments, and MAINTENANCE_LOG.md is updated.
   - Base ref cannot be determined (fail-open to avoid blocking offline work).
 Exit 1 (fail) when src/ or tests/ files changed but CHANGELOG.md was not updated.
 """
@@ -32,32 +32,51 @@ def changed_files(base: str) -> list[str]:
     return [f for f in result.stdout.splitlines() if f]
 
 
-def _added_lines(base: str, path: str) -> list[str]:
+def _changed_lines(base: str, path: str) -> tuple[list[str], list[str]] | None:
+    """Added and removed content lines for ``path``, or None if the diff is unreadable.
+
+    File headers (``+++``/``---``) are dropped by exact prefix rather than by looking at the
+    following characters: an earlier version skipped any added line starting with ``++``,
+    which also hid a real statement like ``++i`` from the check.
+    """
     result = _git("diff", "--unified=0", f"{base}...HEAD", "--", path)
     if result.returncode != 0:
-        return []
-    return [line[1:].strip() for line in result.stdout.splitlines() if line.startswith("+") and line[1:3] != "++"]
+        return None
+    added: list[str] = []
+    removed: list[str] = []
+    for line in result.stdout.splitlines():
+        if line.startswith(("+++", "---")):
+            continue
+        if line.startswith("+"):
+            added.append(line[1:].strip())
+        elif line.startswith("-"):
+            removed.append(line[1:].strip())
+    return added, removed
 
 
 def is_comment_only(base: str, path: str) -> bool:
-    """Whether a Python file's added lines are all ``#`` comments or blank.
+    """Whether a Python file's diff only adds or removes ``#`` comments and blank lines.
 
-    Deliberately literal rather than clever. An earlier version allowed any added line that
-    lacked a statement-like marker, so that prose inside a docstring would qualify — but a
-    bare ``return None`` has no such marker either, and slipped through. Requiring ``#`` or
-    blank has no such gap.
+    Deliberately literal rather than clever, twice over. A first version allowed any added
+    line lacking a statement-like marker so docstring prose would qualify, but a bare
+    ``return None`` has no marker either and slipped through. A second version inspected only
+    *added* lines, which let the everyday "comment out the code" edit through — delete
+    ``x = compute_psd()``, add ``# temporarily disabled`` — a behavioural change with no
+    changelog entry. Removed lines are therefore held to the same rule as added ones.
 
     The cost is that a docstring-only edit still demands a CHANGELOG entry. That is the safe
-    direction: the exemption exists so a comment does not have to be announced to users, not
-    to make the changelog optional for anything that merely looks harmless. Only *added*
-    lines are inspected, so a diff that deletes code is never comment-only.
+    direction: the exemption exists so a comment need not be announced to users, not to make
+    the changelog optional for anything that merely looks harmless.
     """
     if not path.endswith(".py"):
         return False
-    added = _added_lines(base, path)
-    if not added:
+    changed = _changed_lines(base, path)
+    if changed is None:
         return False
-    return all(not line or line.startswith("#") for line in added)
+    added, removed = changed
+    if not added and not removed:
+        return False
+    return all(not line or line.startswith("#") for line in (*added, *removed))
 
 
 def resolve_base() -> str | None:
@@ -97,12 +116,12 @@ def main() -> int:
     if not non_test and "dev-docs/MAINTENANCE_LOG.md" in changed:
         return 0
 
-    # Same exemption, extended to src changes that add only `#` comments.
+    # Same exemption, extended to src changes whose added and removed lines are all comments.
     # CHANGELOG.md documents its own scope as notable *user-facing* changes and points
     # maintainer-facing work at MAINTENANCE_LOG.md, so a comment has no honest entry in it;
     # demanding one there trains readers to skim the file. Any behavioural change still
-    # requires CHANGELOG.md, because is_comment_only() disqualifies a file as soon as an
-    # added line looks like a statement, and ignores deletions entirely.
+    # requires CHANGELOG.md: is_comment_only() disqualifies a file as soon as any added OR
+    # removed line looks like a statement, so commenting code out does not qualify either.
     if "dev-docs/MAINTENANCE_LOG.md" in changed and all(is_comment_only(base, f) for f in non_test):
         return 0
 

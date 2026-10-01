@@ -57,10 +57,20 @@ def test_maintenance_log_does_not_exempt_src_changes(monkeypatch: pytest.MonkeyP
     assert _main_with_changed(monkeypatch, changed) == 1
 
 
-def _main_with_diff(monkeypatch: pytest.MonkeyPatch, changed: list[str], added: dict[str, list[str]]) -> int:
+def _main_with_diff(
+    monkeypatch: pytest.MonkeyPatch,
+    changed: list[str],
+    added: dict[str, list[str]],
+    removed: dict[str, list[str]] | None = None,
+) -> int:
+    gone = removed or {}
     monkeypatch.setattr(check_changelog, "resolve_base", lambda: "base")
     monkeypatch.setattr(check_changelog, "changed_files", lambda base: changed)
-    monkeypatch.setattr(check_changelog, "_added_lines", lambda base, path: added.get(path, []))
+    monkeypatch.setattr(
+        check_changelog,
+        "_changed_lines",
+        lambda base, path: (added.get(path, []), gone.get(path, [])),
+    )
     return check_changelog.main()
 
 
@@ -114,6 +124,53 @@ def test_a_non_python_src_change_is_never_comment_only(monkeypatch: pytest.Monke
             monkeypatch,
             ["src/guiskindose/gui/ui_copy.json", "dev-docs/MAINTENANCE_LOG.md"],
             {"src/guiskindose/gui/ui_copy.json": ["  // note"]},
+        )
+        == 1
+    )
+
+
+def test_commenting_code_out_is_not_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The everyday "comment out the code" edit changes behaviour and must be announced.
+
+    Inspecting only added lines let this through: the addition is a `#` comment and the
+    deleted statement was invisible to the check.
+    """
+    assert (
+        _main_with_diff(
+            monkeypatch,
+            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
+            {"src/a.py": ["# temporarily disabled"]},
+            {"src/a.py": ["x = compute_psd()"]},
+        )
+        == 1
+    )
+
+
+def test_removing_a_comment_still_qualifies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Deleting a stale comment is as unannounceable as adding one."""
+    assert (
+        _main_with_diff(
+            monkeypatch,
+            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
+            {"src/a.py": ["# the replacement note"]},
+            {"src/a.py": ["# the stale note", ""]},
+        )
+        == 0
+    )
+
+
+def test_an_empty_diff_never_qualifies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No added and no removed lines means the diff could not be read; demand the entry."""
+    assert _main_with_diff(monkeypatch, ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"], {}, {}) == 1
+
+
+def test_a_statement_starting_with_plus_is_not_hidden(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`++i` is real code, and an earlier header filter skipped any added line starting `++`."""
+    assert (
+        _main_with_diff(
+            monkeypatch,
+            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
+            {"src/a.py": ["++i"]},
         )
         == 1
     )
