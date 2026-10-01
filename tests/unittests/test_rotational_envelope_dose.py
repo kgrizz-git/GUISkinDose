@@ -465,6 +465,9 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
     # The outer list check passes even for np.bool_ elements, which are neither
     # real bools nor JSON serializable, so pin the element type too.
     assert all(isinstance(hit, bool) for hit in output[c.OUTPUT_KEY_HITS][1])
+    # Same pin for the union, which is folded as an ndarray and converted to a
+    # list only where it is published.
+    assert all(isinstance(hit, bool) for hit in output[c.OUTPUT_KEY_HITS_UNION][1])
 
     expected_dose_map = np.load(_GOLDEN_ROTATIONAL_DOSE_MAP)
     np.testing.assert_array_equal(dose_map, expected_dose_map)

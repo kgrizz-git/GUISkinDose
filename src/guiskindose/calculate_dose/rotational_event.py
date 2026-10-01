@@ -328,10 +328,10 @@ def _calculate_envelope_event(
     k_tab_scalar = k_tab[ev]
     n_cells = len(patient.r)
 
-    def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, list[bool]]:
+    def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, np.ndarray]:
         candidate_frame.at[0, "Ap1"] = pose_ap1
         candidate_frame.at[0, "Ap2"] = pose_ap2
-        candidate_hits, candidate_table_hits, candidate_field_area, candidate_k_isq = (
+        candidate_hits_raw, candidate_table_hits, candidate_field_area, candidate_k_isq = (
             perform_calculations_for_new_geometries(
                 normalized_data=candidate_frame,
                 event=0,
@@ -348,9 +348,14 @@ def _calculate_envelope_event(
                 reposition=False,
             )
         )
-        # np.asarray, not sum()/any(): those iterate an ndarray element by element in
+        # The new-geometry path always hands back an ndarray; asarray is a no-op
+        # there and only narrows the declared Sequence|ndarray union. Keeping the
+        # raw mask (rather than a list comprehension over it) is what lets the
+        # union fold and the hit count both stay vectorized.
+        candidate_hits = np.asarray(candidate_hits_raw, dtype=bool)
+        # .any(), not sum()/any(): those iterate an ndarray element by element in
         # Python, boxing every value, which is far slower than the reduction.
-        if not np.asarray(candidate_hits, dtype=bool).any():
+        if not candidate_hits.any():
             return (
                 CandidateResult(
                     candidate_id=f"candidate_{pose_index}",
@@ -358,7 +363,7 @@ def _calculate_envelope_event(
                     hit_count=0,
                     missed=True,
                 ),
-                [bool(hit) for hit in candidate_hits],
+                candidate_hits,
             )
         vector, candidate_k_bs, candidate_k_med = compute_event_dose_vector(
             event_frame=candidate_frame,
@@ -379,16 +384,19 @@ def _calculate_envelope_event(
             CandidateResult(
                 candidate_id=f"candidate_{pose_index}",
                 dose_vector=vector,
-                hit_count=int(sum(1 for _ in filter(None, candidate_hits))),
+                hit_count=int(np.count_nonzero(candidate_hits)),
                 missed=False,
                 k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
                 k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
                 k_med=float(candidate_k_med),
             ),
-            [bool(hit) for hit in candidate_hits],
+            candidate_hits,
         )
 
-    union_mask: list[bool] = [False] * n_cells
+    # An ndarray, not a list: the union is folded once per candidate with a
+    # vectorized logical_or (Phase 1e) instead of a Python or-loop over all
+    # cells, and the published list is converted once where it is read.
+    union_mask = np.zeros(n_cells, dtype=bool)
 
     def _is_static_pose(pose_ap1: float, pose_ap2: float) -> bool:
         return (
@@ -396,7 +404,7 @@ def _calculate_envelope_event(
             and circular_separation_deg(pose_ap2, ap2) <= _STATIC_POSE_TOL_DEG
         )
 
-    def _static_candidate(pose_index: int) -> tuple[CandidateResult, list[bool]]:
+    def _static_candidate(pose_index: int) -> tuple[CandidateResult, np.ndarray]:
         """Reuse the slot/static evaluation as that pose's candidate response.
 
         The reported static pose is always a domain member (path start or the
@@ -412,20 +420,20 @@ def _calculate_envelope_event(
                     hit_count=0,
                     missed=True,
                 ),
-                [bool(hit) for hit in static_hits],
+                np.asarray(static_hits, dtype=bool),
             )
         k_bs_vals = np.atleast_1d(np.asarray(static_k_bs, dtype=float))
         return (
             CandidateResult(
                 candidate_id=f"candidate_{pose_index}",
                 dose_vector=static_vector,
-                hit_count=int(sum(1 for hit in static_hits if hit)),
+                hit_count=int(np.count_nonzero(static_hits)),
                 missed=False,
                 k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
                 k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
                 k_med=float(static_k_med),
             ),
-            [bool(hit) for hit in static_hits],
+            np.asarray(static_hits, dtype=bool),
         )
 
     def _generate() -> Any:
@@ -434,16 +442,25 @@ def _calculate_envelope_event(
                 result, candidate_hits = _static_candidate(pose_index)
             else:
                 result, candidate_hits = _compute(pose_index, pose_ap1, pose_ap2)
-            for index, hit in enumerate(candidate_hits):
-                union_mask[index] = union_mask[index] or bool(hit)
+            # asarray so the fold works whether the candidate handed back the
+            # raw ndarray or a cached list passthrough.
+            np.logical_or(union_mask, np.asarray(candidate_hits, dtype=bool), out=union_mask)
             yield result
 
     evaluation = evaluate_envelope(
         _generate(),
         n_cells=n_cells,
         zeros=np.zeros,
-        maximum=np.maximum,
-        argmax_cell=lambda vector: (int(np.argmax(vector)), float(np.max(vector))),
+        # In-place fold: evaluate_envelope only ever reads the accumulator back,
+        # and writing into it stops allocating a fresh n_cells array per
+        # candidate. The contract ("returns the folded array") still holds --
+        # np.maximum with out= returns the first argument.
+        maximum=lambda a, b: np.maximum(a, b, out=a),
+        # The caller destructures `_, value =` and discards the index, so only
+        # the peak value is computed. The two-tuple contract of
+        # evaluate_envelope is unchanged; if the index is ever wanted it comes
+        # back as a real feature, not as an accidental by-product.
+        argmax_cell=lambda vector: (0, float(vector.max())),
     )
 
     # Restore the parent static pose on the shared phantoms. They already stand
@@ -465,7 +482,10 @@ def _calculate_envelope_event(
     # pairs them positionally). The candidate union mask — every cell touched by
     # any evaluated pose — is published separately under output["hits_union"],
     # which is a superset and therefore cannot index those arrays.
-    union_hits: list[bool] = union_mask
+    # Converted here, once: union_mask is an ndarray, and list(ndarray) would
+    # publish np.bool_ elements, which are neither real bools nor JSON
+    # serializable.
+    union_hits: list[bool] = [bool(hit) for hit in union_mask]
 
     output[c.OUTPUT_KEY_HITS][ev] = [bool(hit) for hit in static_hits]
     output[c.OUTPUT_KEY_HITS_UNION][ev] = union_hits
