@@ -204,9 +204,9 @@ scales the full lateral mesh axis.
 2. If new geometry:
    - Create `Beam` for event
    - Reposition patient, table, pad (`phantom.position()`)
-   - `Beam.check_hit()` → hit list
-   - `check_table_hits()` → table-hit list
-   - `scale_field_area()` → field area per hit cell
+   - `Beam.check_hit_mask()` → boolean hit mask (array form of `check_hit`)
+   - `check_table_hits()` → boolean table-hit mask
+   - `scale_field_area_array()` → field area per hit cell (array form of `scale_field_area`)
    - `calculate_k_isq()` → inverse-square-law correction
 3. Apply corrections and accumulate dose (`add_corrections_and_event_dose_to_output`)
 

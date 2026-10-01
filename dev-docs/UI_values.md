@@ -14,10 +14,10 @@ Design tokens extracted from `MODERN_CSS` in [src/guiskindose/gui/styles.py](../
 | `--aurora-purple` | `#4338CA` | Navigation, primary actions, sidebar glow |
 | `--aurora-teal` | `#0D9488` | Input and load accents |
 | `--aurora-pink` | `#831843` | Status and highlights |
-| `--dose-pending` | `#94A3B8` | Design token |
-| `--dose-low` | `#22C55E` | Design token |
-| `--dose-elevated` | `#FACC15` | Design token |
-| `--dose-high` | `#EF4444` | Design token |
+| `--dose-pending` | `#94A3B8` | Peak skin dose not calculated yet |
+| `--dose-low` | `#22C55E` | Peak skin dose in the low band |
+| `--dose-elevated` | `#FACC15` | Peak skin dose in the elevated band |
+| `--dose-high` | `#EF4444` | Peak skin dose in the high band |
 | `--text-main` | `#F8FAFC` | Primary text |
 | `--text-muted` | `#94A3B8` | Secondary text |
 | `--glass-bg` | `rgba(33, 33, 33, 0.70)` | Card background |

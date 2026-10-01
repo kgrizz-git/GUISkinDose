@@ -57,7 +57,7 @@ The maintainer also asked whether a continuous gradient would be better than thr
 ### 2.1 Band-edge convention (must be pinned before coding)
 
 The request reads `< 5000` / `5000–10000` / `> 10000`, so the edges belong to the *higher* band:
-`psd < 5000` → green, `5000 <= psd <= 10000` → yellow, `psd > 10000` → red. Exactly `5000.00` is
+`psd < 5000` → green, `5000 <= psd < 10000` → yellow, `psd >= 10000` → red. Exactly `5000.00` is
 yellow and exactly `10000.00` is red. This is the conservative reading and the one to implement.
 
 ### 2.2 Clinical note (maintainer's call, not a blocker)

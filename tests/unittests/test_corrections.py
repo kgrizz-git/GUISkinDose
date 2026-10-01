@@ -451,8 +451,9 @@ def _legacy_db(path: Path) -> None:
 class TestKMedMemo:
     """The memoized ``k_med`` lookup (Phase 1f).
 
-    The lookup is keyed on ``(kvp, hvl, snapped fsl, resolved source)``;
-    source resolution and its warnings stay outside the memo so a call that
+    The lookup is memoized for the packaged source only, keyed on
+    ``(kvp, hvl, snapped fsl)``; explicit databases are read on every call.
+    Source resolution and its warnings stay outside the memo so a call that
     suppressed warnings cannot swallow one a later call must emit.
     """
 

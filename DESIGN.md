@@ -9,21 +9,34 @@ This design marries the rigid, structural honesty of **Brutalism** with the flui
 * **Atmosphere:** Softened by "light leaks," mesh gradients, and glowing accents that break the rigidity of the layout.
 
 ## 2. Core Color Palette
-The background must be a true "Deep Black" to allow the vibrant accents to achieve maximum luminance.
+The background must be a near-black base so the accents carry the luminance.
+
+The values below are the ones `MODERN_CSS` in
+[src/guiskindose/gui/styles.py](src/guiskindose/gui/styles.py) actually ships;
+`styles.py` is the single source of truth and
+[dev-docs/UI_values.md](dev-docs/UI_values.md) is generated from it by
+`python scripts/generate_ui_values.py`. Change a colour there, regenerate, and
+update this table in the same commit.
 
 | Role | Variable | Hex | Description |
 | :--- | :--- | :--- | :--- |
-| **Surface** | `--bg-primary` | `#050505` | Absolute dark base. |
-| **Elevation** | `--bg-secondary` | `#0D0D0D` | For cards and sidebars. |
-| **Accent 1** | `--aurora-purple` | `#A855F7` | Primary glow and brand color. |
-| **Accent 2** | `--aurora-teal` | `#2DD4BF` | Secondary glow for contrast. |
-| **Accent 3** | `--aurora-pink` | `#EC4899` | Tertiary highlight. |
+| **Surface** | `--bg-primary` | `#0e0e0e` | Near-black base. |
+| **Elevation** | `--bg-secondary` | `#1d1d1d` | For cards and sidebars. |
+| **Accent 1** | `--aurora-purple` | `#4338CA` | Navigation, primary actions, sidebar glow. |
+| **Accent 2** | `--aurora-teal` | `#0D9488` | Input and load accents. |
+| **Accent 3** | `--aurora-pink` | `#831843` | Status and highlights. |
 | **Text** | `--text-main` | `#F8FAFC` | High-contrast, crisp white. |
-| **Border** | `--border-brutal` | `#262626` | Sharp, defined structural lines. |
+| **Muted text** | `--text-muted` | `#94A3B8` | Secondary text and captions. |
+| **Border** | `--glass-border` | `rgba(255, 255, 255, 0.15)` | Sharp, defined structural lines. |
 | **Dose severity** | `--dose-pending` | `#94A3B8` | Not calculated yet. |
 | | `--dose-low` | `#22C55E` | Low band. |
 | | `--dose-elevated` | `#FACC15` | Elevated band. |
 | | `--dose-high` | `#EF4444` | High band. |
+
+The three accents are deliberately darker than a "vibrant glow" reading of §1
+would suggest, because they are used behind white text; `--aurora-purple` at
+`#4338CA` is the one known contrast problem (2.44:1 on `--bg-primary`), which is
+why it no longer carries any dose value — see the severity note below.
 
 ### Severity colours are semantic, not brand
 
@@ -73,27 +86,33 @@ Buttons should be "Active Brutalist."
 
 ---
 
-### Global CSS Implementation (Refined)
+### Global CSS sketch (illustrative, not the shipped stylesheet)
+
+This shows the shape of the implementation only. The stylesheet that actually
+runs is `MODERN_CSS` in [src/guiskindose/gui/styles.py](src/guiskindose/gui/styles.py);
+read the §2 table or [dev-docs/UI_values.md](dev-docs/UI_values.md) for the live
+values, and do not copy hexes out of this block.
+
 ```css
 :root {
-  --bg: #050505;
-  --accent: #A855F7;
-  --border: #262626;
+  --bg-primary: #0e0e0e;
+  --aurora-purple: #4338CA;
+  --glass-border: rgba(255, 255, 255, 0.15);
 }
 
 body {
-  background-color: var(--bg);
-  color: #ffffff;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
   /* Aurora Mesh Background */
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(45, 212, 191, 0.1) 0px, transparent 50%);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(126, 145, 194, 0.16) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(107, 125, 138, 0.15) 0px, transparent 60%);
 }
 
 .card {
-  border: 1px solid var(--border);
-  background: rgba(13, 13, 13, 0.7);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
-  box-shadow: 5px 5px 0px var(--accent); /* Brutalist shadow */
+  box-shadow: 5px 5px 0px var(--aurora-purple); /* Brutalist shadow */
 }
 ```

@@ -18,6 +18,25 @@ from guiskindose.rotational_acquisition import RotationalClassification
 
 @dataclass(frozen=True)
 class CandidatePath:
+    """One sampled sweep of the C-arm between an event's recorded endpoints.
+
+    RDSR records only start and end angles, never the direction travelled, so a
+    moving axis yields both the short and the long way round as separate paths
+    and the envelope covers all of them. The two angle tuples are parallel: the
+    nth pose of this path is ``(ap1_angles_deg[n], ap2_angles_deg[n])``.
+
+    Attributes
+    ----------
+    path_id : str
+        Stable label for the sweep, e.g. ``"primary_short"``, ``"primary_long"``,
+        ``"coupled_s_l"``. Reported in the handling ledger.
+    ap1_angles_deg : tuple[float, ...]
+        Primary-axis angles in degrees, in sweep order.
+    ap2_angles_deg : tuple[float, ...]
+        Secondary-axis angles in degrees, same length and order.
+
+    """
+
     path_id: str  # e.g. "primary_short", "primary_long", "coupled_s_l"
     ap1_angles_deg: tuple[float, ...]
     ap2_angles_deg: tuple[float, ...]
@@ -25,6 +44,30 @@ class CandidatePath:
 
 @dataclass
 class CandidateDomain:
+    """Every pose one rotational event is evaluated at, de-duplicated.
+
+    ``paths`` keeps the sweeps as generated (so the ledger can report how many
+    were requested), while ``unique_poses`` is the flattened, de-duplicated set
+    the dose loop actually iterates — paths overlap at their shared endpoints
+    and wherever two sweeps cross. The dose loop indexes ``unique_poses`` by
+    position, which is how a winning ``candidate_<n>`` id maps back to angles.
+
+    Attributes
+    ----------
+    paths : tuple[CandidatePath, ...]
+        The sampled sweeps, before de-duplication.
+    include_static_pose : bool
+        Whether the event's reported static pose is a domain member. ``True``
+        by default, which guarantees the envelope is never below the legacy
+        static result.
+    unique_pose_count : int
+        ``len(unique_poses)``, carried explicitly because it is a disclosed
+        field.
+    unique_poses : tuple[tuple[float, float], ...]
+        The ``(ap1, ap2)`` degree pairs to evaluate, in evaluation order.
+
+    """
+
     paths: tuple[CandidatePath, ...] = ()
     include_static_pose: bool = True
     unique_pose_count: int = 0
@@ -303,6 +346,58 @@ def evaluate_envelope(
 
 @dataclass(frozen=True)
 class HandlingLedgerRow:
+    """One event's row in the rotational handling disclosure ledger.
+
+    Flat and fully resolved on purpose: every disclosure surface (Results
+    badge, DOCX section, XLSX sheet, dict/JSON) renders from these fields
+    without re-deriving anything, so they cannot disagree. Built from a
+    :class:`LedgerEventInput` by :func:`build_handling_ledger`; no dose math
+    happens here. Use :func:`is_disclosed_row` rather than reading
+    ``classification`` directly when deciding whether a row is surfaced.
+
+    Attributes
+    ----------
+    event_index : int
+        Positional index of the event in the normalized frame.
+    classification, reason_codes, confidence : str, tuple[str, ...], str
+        Copied from the event's :class:`RotationalClassification`.
+    requested_handling : str
+        What was asked: ``"Auto"``, ``"Coverage"``, or ``"Static"``.
+    effective_handling : str
+        What actually ran: ``"coverage"`` or ``"static"``.
+    fallback_reason : str
+        Why coverage was declined, empty when it was not. An explicitly
+        requested ``Static`` run leaves this empty — it is an intentional
+        override, not a fallback — which is also why it never raises
+        :attr:`HandlingLedger.any_fallback_to_static`.
+    ap1_start, ap2_start, ap1_end, ap2_end : float | None
+        The event's recorded endpoint angles in degrees.
+    primary_separation_deg, secondary_separation_deg : float | None
+        Circular separations from the classification.
+    candidate_domain : str
+        How the domain was built: ``"endpoint_paths"`` or ``"full_circle"``.
+    requested_path_count, unique_candidate_count : int
+        Sweeps generated, and poses evaluated after de-duplication.
+    angular_step_deg : float
+        Sampling step used for this event.
+    include_static_pose : bool
+        Whether the reported static pose was a domain member.
+    direction_source : str
+        Where the rotation direction came from; ``"unknown"`` while RDSR is the
+        only input, since it does not record direction.
+    kerma, dap : float | None
+        The event's reference-point air kerma and dose-area product, carried so
+        disclosures can weight counts by dose rather than by event count.
+    multiplier : float
+        Envelope dose multiplier, fixed at ``1.0`` (full kerma per candidate).
+    aggregation_rule : str
+        ``"max_within_sum_between"`` — cellwise maximum across an event's
+        candidates, summed across events.
+    k_bs_range, k_med_range : tuple[float | None, float | None] | None
+        Observed backscatter and medium correction spans over the candidates.
+
+    """
+
     event_index: int
     classification: str
     reason_codes: tuple[str, ...] = ()
@@ -362,6 +457,32 @@ class LedgerEventInput:
 
 @dataclass(frozen=True)
 class HandlingLedger:
+    """The per-event rotational rows plus the aggregates every surface reports.
+
+    The counts and the kerma sums travel together so a disclosure can state
+    dose-weighted materiality instead of a bare "1 of 100 events". Assembled by
+    :func:`build_handling_ledger`.
+
+    Attributes
+    ----------
+    rows : tuple[HandlingLedgerRow, ...]
+        One row per event, in event order.
+    total_events : int
+        Number of rows.
+    rotational_count, positioner_motion_count, static_count, unknown_count : int
+        Row counts per classification. These are detection counts, not
+        "enveloped" counts — use :func:`is_disclosed_row` over ``rows`` for
+        what actually ran.
+    rotational_kerma, total_kerma : float
+        Summed reference-point air kerma over rotational rows and over all
+        rows, skipping non-finite values.
+    any_fallback_to_static : bool
+        True when some event ran static without an explicit ``Static``
+        request. An intentional override is recorded in its row but never
+        raises this flag.
+
+    """
+
     rows: tuple[HandlingLedgerRow, ...] = ()
     total_events: int = 0
     rotational_count: int = 0

@@ -92,9 +92,12 @@ def _collect_string_literals(path: Path) -> set[str]:
 
     Parsed with ``ast`` so a key mentioned only in a comment (not a token) or a
     docstring (a string literal, but positionally a docstring) does not count as
-    a use. Docstrings are removed by position — the first statement of a module,
-    class, or function — not by value, so a genuine literal that happens to
-    equal a docstring elsewhere is unaffected.
+    a use. Docstrings are found by position — the first statement of a module,
+    class, or function — and then discarded from the module's literal set, so a
+    catalog key that is only ever a docstring in a file does not count as used
+    there. The set is per module, so a key spelled both as a docstring and as a
+    real literal in the *same* file reads as unused there; it still counts from
+    any other file that spells it, and no catalog key is plausibly a docstring.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"))
     literals: set[str] = set()
