@@ -438,12 +438,15 @@ _GOLDEN_RTOL = 1e-12
 # this fixture exactly on the generating platform but NOT elsewhere — 48
 # mismatched cells (max rel 1.1e-15) in a Linux container, and Phase-1 code on
 # PR CI mismatched 50 cells on Ubuntu x86-64 and 19 on Windows, all 1-2 ulps,
-# with masks, counts, and every pinned scalar exact. So the exact gates below
-# are the mask/contract pins (a real regression — a flipped hit, a positioning
-# or fold bug — changes cells by full event contributions, far above _GOLDEN_RTOL,
-# and shows up in hits/hits_union exactly), while the dose-map values are bounded
-# tightly enough to forbid any of that while tolerating cross-BLAS ulp drift.
-# atol=0 so a newly-hit or newly-dropped cell (0 <-> dose) can never pass.
+# with masks, counts, and every pinned scalar unchanged. What is pinned exactly
+# below: the published list/bool contracts, the integer counts (events, cells,
+# candidates), and zero-vs-nonzero dose (atol=0). Mask VALUES are not compared
+# against stored data — the fixture is dose-map-only — so the map bound is the
+# value gate: a real regression (a flipped hit, a positioning or fold bug, a
+# one-bin k_med or 0.1 cm^2 k_bs step) moves cells by orders of magnitude more
+# than _GOLDEN_RTOL, measured smallest floor ~7.5e-6 relative (winner-to-runner-
+# up), while cross-BLAS ulp drift sits at ~1e-15. atol=0 so a newly-hit or
+# newly-dropped cell (0 <-> dose) can never pass.
 class _GoldenRotationalSpinCylinder(TypedDict):
     events: int
     dose_map_len: int
@@ -462,7 +465,13 @@ _GOLDEN_ROTATIONAL_SPIN_CYLINDER: _GoldenRotationalSpinCylinder = {
 
 
 def test_rotational_envelope_golden_baseline_spin_cylinder():
-    """Coverage-envelope output pinned; Phase-1 perf edits must stay bit-identical."""
+    """Coverage-envelope output pinned; bit-identical on the generating platform.
+
+    Off the generating platform the map is bounded at ``_GOLDEN_RTOL`` (see the
+    fixture's provenance comment above): masks and counts below pin the published
+    contracts and integer counts exactly, and any hit flip is caught by the map
+    bound's ``atol=0`` as a 0 <-> dose change.
+    """
     frame = _frame_with_spin()
     settings = _settings(angular_step_deg=1.0)
     # Mutate the returned object rather than passing a partial phantom dict as a
@@ -480,8 +489,11 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
     # Scalars with _GOLDEN_RTOL, not exact ==: they are exact on the generating
     # platform (and on the CI platforms measured so far), but the same cross-BLAS
     # ulp drift that bounds the map below can reach them on future platforms.
-    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"], rel=_GOLDEN_RTOL)
-    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"], rel=_GOLDEN_RTOL)
+    # abs=0.0 is load-bearing: pytest.approx defaults abs to 1e-12, and
+    # max(rel * |expected|, abs) would then let the small PSD pin drift ~9x looser
+    # than this comment claims.
+    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"], rel=_GOLDEN_RTOL, abs=0.0)
+    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"], rel=_GOLDEN_RTOL, abs=0.0)
     details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
     assert details["unique_candidate_count"] == golden["unique_candidate_count"]
     # Published contract: per-event hits stay a plain list.
@@ -495,7 +507,8 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
 
     expected_dose_map = np.load(_GOLDEN_ROTATIONAL_DOSE_MAP)
     # Exact on the generating platform; rtol-bounded elsewhere (see the
-    # fixture's provenance comment). Masks and counts above stay exact: a
-    # flipped hit changes a cell by a full event contribution, which both the
-    # hits/union pins and this bound (atol=0) catch at any BLAS flavour.
+    # fixture's provenance comment). The pins above are type, contract, and
+    # count pins — mask VALUES are not compared against stored data — so the
+    # map bound is the value gate: a flipped hit changes a cell by a full event
+    # contribution or flips it 0 <-> dose, which atol=0 always fails.
     np.testing.assert_allclose(dose_map, expected_dose_map, rtol=_GOLDEN_RTOL, atol=0.0)

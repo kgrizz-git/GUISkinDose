@@ -453,18 +453,23 @@ Phase 1 is done when all of the following hold.
    then ran the **pre-Phase-1** code (commit `cabc331`, no hot-loop edit at all) on Linux: it also
    fails to reproduce the fixture (48 mismatched cells, max relative difference 1.1e-15), proving the
    drift predates this work. It enters through BLAS-backed steps Phase 1 never touched —
-   `Phantom.position`'s chained `np.matmul`s (`phantom_class.py`), `Beam`'s rotation-matrix products
-   and the `(N,3)@(3,3)` beam-within dot, and scipy spline evaluation — whose last-ulp results differ
-   per BLAS flavour; Phase 1's own new kernels are bit-portable row reductions or feed booleans only.
-   The golden therefore pins exactly what *is* portable — hit masks and `hits_union` (booleans),
-   events/cells/candidate counts, and the published-list contracts — and bounds the dose-map values
-   and the psd/sum scalars at `rtol = 1e-12` with `atol = 0` (measured drift ~1e-15 relative; a
-   flipped hit changes a cell by a full event contribution, orders of magnitude above the bound and
-   caught exactly by the mask pins; `atol = 0` keeps 0 ↔ dose transitions failing). The static
-   Siemens golden is bit-exact on every platform measured (macOS, Ubuntu, Windows) and remains the
-   primary exact gate. This also answers §1d's residual-risk paragraph as it actually played out:
-   CI went red, but on ulp drift from unchanged code — 1d introduced no sign flips (the mask pins
-   were exact on all platforms), so the einsum edit stands and its revert path stays unused.
+    `Phantom.position`'s chained `np.matmul`s (`phantom_class.py`), `Beam`'s rotation-matrix products
+    and the `(N,3)@(3,3)` beam-within dot, and scipy spline evaluation — whose last-ulp results differ
+    per BLAS flavour; Phase 1's own new kernels are bit-portable row reductions or feed booleans only.
+    The golden therefore pins exactly what *is* portable — the integer counts (events, cells,
+    candidates) and the published-list contracts (plain lists of real Python bools; the fixture is
+    dose-map-only, so mask values are not compared against stored data) — and bounds the dose-map
+    values and the psd/sum scalars at `rtol = 1e-12` with `atol = 0`, which makes the map bound the
+    value gate (measured drift ~1e-15 relative; the smallest plausible real regression measured —
+    winner-to-runner-up substitution — is ~7.5e-6 relative, a one-bin k_med step ≥1.4e-8, a 0.1 cm²
+    backscatter step ≥2.5e-11, and a flipped hit changes a cell by a full event contribution or flips
+    it 0 ↔ dose, which `atol = 0` always fails). The static
+    Siemens golden is bit-exact on every platform measured (macOS, Ubuntu, Windows) and remains the
+    primary exact gate. This also answers §1d's residual-risk paragraph as it actually played out:
+    CI went red, but on ulp drift from unchanged code — 1d introduced no sign flips (measured: the
+    closest beam-plane binding in the golden run is ~1.7e-6 absolute, ~9.3e5× the plan's 1.819e-12
+    einsum-vs-BLAS ceiling, so a BLAS ulp cannot flip a sign here), so the einsum edit stands and its
+    revert path stays unused.
 3. **Existing suites pass unchanged**, except the four `check_hit`-mocking assertions in
    `tests/unittests/test_calculate_dose.py` called out in 1b. Specifically:
    `test_rotational_envelope.py`, `test_rotational_envelope_dose.py`, `test_beam_hit.py`,
@@ -516,7 +521,8 @@ domain is `closed_circle_domain`. One commit per Phase-1 edit, measured after ea
 ~8.3x on this 9 576-cell cylinder benchmark; the plan's 19x headline was measured on a
 41 022-cell human phantom where per-candidate costs dominate the run to a greater degree.
 `max |before − after|` dose map = `0.000e+00`: both committed goldens (static Siemens cylinder and
-the new rotational envelope) pass bit-identical with **no regeneration**, and the full unittest and
+the new rotational envelope) pass bit-identical with **no regeneration** — on the generating
+platform; the cross-platform behaviour is recorded immediately below — and the full unittest and
 GUI suites pass unchanged (1 930 + 302 tests at close of Phase 1).
 
 **Post-CI cross-platform measurement (2026-10-01).** PR CI showed the rotational golden — and only

@@ -219,10 +219,13 @@ class Beam:
             # different summation order, so a row dot can differ in the last ulp (measured: ~34%
             # of 500k random 3-vector pairs differ bitwise, max abs diff 1.819e-12). Only the sign
             # feeds ``<= 0``, and a flip then needs the true dot within an ulp of zero: 0 of 500k
-            # trials flipped, and the committed goldens (static Siemens cylinder, rotational
-            # envelope) match exactly with this line. Gated by the goldens: if a platform's
-            # golden goes red on this edit and nothing else, this line is the suspect, and it is
-            # independently revertible. Full analysis: ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN 1d.
+            # trials flipped, PR CI's closest binding sits ~1.7e-6 from zero (~9.3e5x that ceiling),
+            # and the committed goldens (static Siemens cylinder, rotational envelope) pass with
+            # this line — exactly on the generating platform, rtol=1e-12-bounded elsewhere (the
+            # dose chain's own BLAS drifts ~1e-15 cross-platform regardless of this line; see
+            # ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN 4.2). If a platform's golden goes red on this
+            # edit and nothing else, this line is the suspect, and it is independently
+            # revertible. Full analysis: ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN 1d.
             hits[hits] = np.einsum("ij,ij->i", temp1, temp2) <= 0
 
         return hits
