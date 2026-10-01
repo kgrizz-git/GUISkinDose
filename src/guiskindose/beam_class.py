@@ -213,9 +213,17 @@ class Beam:
             temp1 = v[hits]
             temp2 = patient.n[hits]
 
-            bool_entrance = [np.dot(temp1[i], temp2[i]) <= 0 for i in range(len(temp1))]
-
-            hits[hits] = bool_entrance
+            # Vectorized form of ``[np.dot(a, b) <= 0 for a, b in zip(temp1, temp2)]``.
+            # Equivalent up to floating point, NOT bit-identical: ``np.dot`` on a 1-D float64
+            # pair dispatches to BLAS ``ddot``, while ``einsum`` uses numpy's own kernels with a
+            # different summation order, so a row dot can differ in the last ulp (measured: ~34%
+            # of 500k random 3-vector pairs differ bitwise, max abs diff 1.819e-12). Only the sign
+            # feeds ``<= 0``, and a flip then needs the true dot within an ulp of zero: 0 of 500k
+            # trials flipped, and the committed goldens (static Siemens cylinder, rotational
+            # envelope) match exactly with this line. Gated by the goldens: if a platform's
+            # golden goes red on this edit and nothing else, this line is the suspect, and it is
+            # independently revertible. Full analysis: ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN 1d.
+            hits[hits] = np.einsum("ij,ij->i", temp1, temp2) <= 0
 
         return hits
 
