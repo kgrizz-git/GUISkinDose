@@ -180,8 +180,12 @@ class Beam:
             )
         )
 
-    def check_hit(self, patient: Phantom) -> list[bool]:
-        """Calculate which patient entrance skin cells are hit by the beam.
+    def check_hit_mask(self, patient: Phantom) -> np.ndarray:
+        """Calculate which patient entrance skin cells are hit by the beam, as an array.
+
+        This is the array form of :meth:`check_hit` and is **internal**: the public
+        surface of this class stays :meth:`check_hit`, so do not export
+        ``check_hit_mask`` from ``guiskindose/__init__.py``.
 
         A description of this algoritm is presented in the wiki, please visit
         https://guiskindose.readthedocs.io/en/latest/
@@ -194,8 +198,8 @@ class Beam:
 
         Returns
         -------
-        List[bool]
-            A boolean list of the same length as the number of patient skin
+        np.ndarray
+            A boolean array of the same length as the number of patient skin
             cells. True for all entrance skin cells that are hit by the beam.
 
         """
@@ -213,4 +217,29 @@ class Beam:
 
             hits[hits] = bool_entrance
 
-        return hits.tolist()
+        return hits
+
+    def check_hit(self, patient: Phantom) -> list[bool]:
+        """Calculate which patient entrance skin cells are hit by the beam.
+
+        A description of this algoritm is presented in the wiki, please visit
+        https://guiskindose.readthedocs.io/en/latest/
+
+        Parameters
+        ----------
+        patient : Phantom
+            Patient phantom, either of type plane, cylinder or human, i.e.
+            instance of class Phantom
+
+        Returns
+        -------
+        list[bool]
+            A boolean list of the same length as the number of patient skin
+            cells. True for all entrance skin cells that are hit by the beam.
+
+        """
+        # The comprehension form, not list(...) and not .tolist(): list() over an
+        # ndarray yields np.bool_ elements, which are not real bools and are not
+        # JSON serializable, and newer numpy stubs type tolist() as unassignable
+        # to list[bool] under basedpyright.
+        return [bool(hit) for hit in self.check_hit_mask(patient=patient)]

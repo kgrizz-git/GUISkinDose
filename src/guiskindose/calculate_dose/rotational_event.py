@@ -6,6 +6,7 @@ this module never touches shared output dicts outside what it returns.
 """
 
 import logging
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -168,11 +169,19 @@ def _calculate_envelope_event(
     new_geometry_flag: bool,
     step_deg: float,
     include_static: bool,
-    cached_hits: list[bool],
-    cached_table_hits: list[bool],
-    cached_field_area: list[float],
+    cached_hits: Sequence[bool] | np.ndarray,
+    cached_table_hits: Sequence[bool] | np.ndarray,
+    cached_field_area: Sequence[float] | np.ndarray,
     cached_k_isq: np.ndarray,
-) -> tuple[list[bool], list[bool], list[float], np.ndarray, LedgerEventInput, dict[str, Any], bool]:
+) -> tuple[
+    Sequence[bool] | np.ndarray,
+    Sequence[bool] | np.ndarray,
+    Sequence[float] | np.ndarray,
+    np.ndarray,
+    LedgerEventInput,
+    dict[str, Any],
+    bool,
+]:
     """Evaluate one rotational event as a coverage envelope.
 
     Returns ``(hits, table_hits, field_area, k_isq, ledger_input, details,
@@ -181,6 +190,13 @@ def _calculate_envelope_event(
     path, which is why the live cache arrays are threaded in rather than
     rebuilt from empties) while the dose map receives the cellwise maximum
     over all candidates. Per-event kerma records are unchanged.
+
+    The ``cached_*`` arguments accept a boolean array as well as a list of
+    booleans (and ``cached_field_area`` an array of floats): the hot path
+    carries ndarrays, while the ``new_geometry=False`` path passes the caller's
+    own containers straight through. The returned ``hits`` and ``table_hits``
+    are boolean arrays on the new-geometry path, mirroring the inputs; the
+    published ``output`` slots always hold real Python bools.
     """
     ap1 = float(row["Ap1"])
     ap2 = float(row["Ap2"])
@@ -261,7 +277,9 @@ def _calculate_envelope_event(
                 k_isq=np.array([]),
             )
         )
-        if not any(candidate_hits):
+        # np.asarray, not sum()/any(): those iterate an ndarray element by element in
+        # Python, boxing every value, which is far slower than the reduction.
+        if not np.asarray(candidate_hits, dtype=bool).any():
             return (
                 CandidateResult(
                     candidate_id=f"candidate_{pose_index}",
@@ -269,7 +287,7 @@ def _calculate_envelope_event(
                     hit_count=0,
                     missed=True,
                 ),
-                list(candidate_hits),
+                [bool(hit) for hit in candidate_hits],
             )
         vector, candidate_k_bs, candidate_k_med = compute_event_dose_vector(
             event_frame=frame,
@@ -296,7 +314,7 @@ def _calculate_envelope_event(
                 k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
                 k_med=float(candidate_k_med),
             ),
-            list(candidate_hits),
+            [bool(hit) for hit in candidate_hits],
         )
 
     union_mask: list[bool] = [False] * n_cells
@@ -315,7 +333,7 @@ def _calculate_envelope_event(
         repeat identical geometry/physics work already done for the legacy
         slots and the geometry cache.
         """
-        if not any(static_hits):
+        if not np.asarray(static_hits, dtype=bool).any():
             return (
                 CandidateResult(
                     candidate_id=f"candidate_{pose_index}",
@@ -323,7 +341,7 @@ def _calculate_envelope_event(
                     hit_count=0,
                     missed=True,
                 ),
-                list(static_hits),
+                [bool(hit) for hit in static_hits],
             )
         k_bs_vals = np.atleast_1d(np.asarray(static_k_bs, dtype=float))
         return (
@@ -336,7 +354,7 @@ def _calculate_envelope_event(
                 k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
                 k_med=float(static_k_med),
             ),
-            list(static_hits),
+            [bool(hit) for hit in static_hits],
         )
 
     def _generate() -> Any:
@@ -377,7 +395,7 @@ def _calculate_envelope_event(
     # which is a superset and therefore cannot index those arrays.
     union_hits: list[bool] = union_mask
 
-    output[c.OUTPUT_KEY_HITS][ev] = list(static_hits)
+    output[c.OUTPUT_KEY_HITS][ev] = [bool(hit) for hit in static_hits]
     output[c.OUTPUT_KEY_HITS_UNION][ev] = union_hits
     output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
     output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf

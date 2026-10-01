@@ -1,6 +1,7 @@
 """Iterates through irradiation events to calculate geometries and skin dose contributions."""
 
 import logging
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -40,12 +41,12 @@ logger = logging.getLogger(__name__)
 
 def _default_mutable_event_state(
     *,
-    table_hits: list[bool] | None,
-    field_area: list[float] | None,
+    table_hits: Sequence[bool] | np.ndarray | None,
+    field_area: Sequence[float] | np.ndarray | None,
     k_isq: np.ndarray | None,
     kerma_cf: list[float] | None,
     total_events: int,
-) -> tuple[list[bool], list[float], np.ndarray, list[float]]:
+) -> tuple[Sequence[bool] | np.ndarray, Sequence[float] | np.ndarray, np.ndarray, list[float]]:
     """Normalize optional mutable per-event buffers for the event loop."""
     return (
         [] if table_hits is None else table_hits,
@@ -109,15 +110,15 @@ def calculate_irradiation_event_result(
     total_events: int,
     new_geometry: list[bool],
     k_tab: list[float],
-    hits: list[bool],
+    hits: Sequence[bool] | np.ndarray,
     patient: Phantom,
     table: Phantom,
     pad: Phantom,
     back_scatter_interpolation: list[CubicSpline],
     output: dict[str, Any],
     corrections_db: str,
-    table_hits: list[bool] | None = None,
-    field_area: list[float] | None = None,
+    table_hits: Sequence[bool] | np.ndarray | None = None,
+    field_area: Sequence[float] | np.ndarray | None = None,
     k_isq: np.ndarray | None = None,
     pbar: tqdm | None = None,
     settings: "PyskindoseSettings | None" = None,
@@ -143,9 +144,10 @@ def calculate_irradiation_event_result(
         the preceding event. See the function check_new_geometry
     k_tab : List[float]
         List of table correction factors
-    hits : List[bool]
-        A boolean list that specifies (for a single event) the hit/miss status of each
-        skin cell upon the patient phantom.
+    hits : Sequence[bool] or np.ndarray
+        A boolean container (list of bools or boolean array) that specifies (for a single
+        event) the hit/miss status of each skin cell upon the patient phantom. It carries
+        the previous event's geometry forward when the geometry is unchanged.
     patient : Phantom
         Patient skin surface phantom
     table : Phantom
@@ -160,12 +162,12 @@ def calculate_irradiation_event_result(
         correction factors.
     corrections_db : str
         A string defining the path to the corrections SQLite db
-    table_hits : List[bool], optional
-        A boolean list that specfies (for each hit), if the bean passes through the
-        patient support table, by default None
-    field_area : List[float], optional
+    table_hits : Sequence[bool] or np.ndarray, optional
+        A boolean container (list of bools or boolean array) that specfies (for each hit),
+        if the bean passes through the patient support table, by default None
+    field_area : Sequence[float] or np.ndarray, optional
         X-ray field area in (cm^2) for each phantom skin cell that are hit by the X-ray
-        beam, by default None
+        beam (list of floats or array), by default None
     k_isq : np.array, optional
         Inverse-square-law correction factors, by default None
     pbar : tqdm
@@ -266,7 +268,7 @@ def calculate_irradiation_event_result(
                 k_isq=k_isq,
             )
 
-            if not any(hits):
+            if not np.asarray(hits, dtype=bool).any():
                 missed_event_indices.append(ev)
                 msg = _beam_miss_event_message(
                     normalized_data, event=ev, total_events=total_events, exam_id=exam_id
@@ -276,9 +278,12 @@ def calculate_irradiation_event_result(
 
             logger.debug("Saving event data")
 
-            output[c.OUTPUT_KEY_HITS][ev] = hits
+            # Comprehension, not list(...): hits is a boolean array on the new-geometry
+            # path, and list(...) would publish np.bool_ elements that are neither real
+            # bools nor JSON serializable.
+            output[c.OUTPUT_KEY_HITS][ev] = [bool(hit) for hit in hits]
             # No candidate poses were evaluated: the union is the static hit set.
-            output[c.OUTPUT_KEY_HITS_UNION][ev] = hits
+            output[c.OUTPUT_KEY_HITS_UNION][ev] = [bool(hit) for hit in hits]
             output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
             output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf
             output[c.OUTPUT_KEY_CORRECTION_KERMA_METER][ev] = cf

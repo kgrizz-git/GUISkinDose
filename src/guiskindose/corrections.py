@@ -1,6 +1,7 @@
 """Physics-based correction factors for inverse-square law, backscatter, medium, and table attenuation."""
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -159,7 +160,13 @@ def calculate_k_bs(data_norm: pd.DataFrame) -> list[CubicSpline]:
     return bs_interp
 
 
-def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int, corrections_db: str, emit_warnings: bool = True) -> float:
+def calculate_k_med(
+    data_norm: pd.DataFrame,
+    field_area: Sequence[float] | np.ndarray,
+    event: int,
+    corrections_db: str,
+    emit_warnings: bool = True,
+) -> float:
     """Calculate medium correction.
 
     This function calculates and appends the medium correction factor for all skin cells
@@ -171,9 +178,9 @@ def calculate_k_med(data_norm: pd.DataFrame, field_area: list[float], event: int
     ----------
     data_norm : pd.DataFrame
         RDSR data, normalized for compliance with PySkinDose.
-    field_area : List[float]
-        X-ray field area in (cm^2) for each phantom skin cell that are hit by the X-ray
-        beam.
+    field_area : Sequence[float] or np.ndarray
+        X-ray field area in (cm^2) for each phantom skin cell that is hit by the X-ray
+        beam. An array is accepted as well as a list of floats.
     event : int
         Irradiation event index.
     corrections_db : str

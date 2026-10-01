@@ -1,6 +1,7 @@
 """Geometry calculations for field size, beam intersections, table hits, and unit conversions."""
 
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -171,7 +172,11 @@ def vector(start: np.ndarray, stop: np.ndarray, normalization=False) -> np.ndarr
 
 
 def scale_field_area(
-    data_norm: pd.DataFrame, event: int, patient: Phantom, hits: list[bool], source: np.ndarray
+    data_norm: pd.DataFrame,
+    event: int,
+    patient: Phantom,
+    hits: Sequence[bool] | np.ndarray,
+    source: np.ndarray,
 ) -> list[float]:
     """Scale X-ray field area from image detector, to phantom skin cells.
 
@@ -190,10 +195,11 @@ def scale_field_area(
         Irradiation event index.
     patient : Phantom
         Patient phantom, i.e. instance of class Phantom.
-    hits : List[bool]
-        A boolean list of the same length as the number of patient skin
-        cells. True for all entrance skin cells that are hit by the beam for a
-        specific irradiation event.
+    hits : Sequence[bool] or np.ndarray
+        Boolean hit/miss status of each skin cell. A boolean array is accepted as well
+        as a list of booleans, of the same length as the number of patient skin cells.
+        True for all entrance skin cells that are hit by the beam for a specific
+        irradiation event.
     source : np.array
         (x,y,z) coordinates to the X-ray source
 
@@ -579,7 +585,7 @@ class Triangle:
         return hits.tolist()
 
 
-def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray) -> list[bool]:
+def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray) -> np.ndarray:
     """Check which skin cells are blocket by the patient support table.
 
     This fuctions creates two triangles covering the entire surface of the
@@ -602,8 +608,8 @@ def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray
 
     Returns
     -------
-    List[bool]
-        Boolean list of the statuses of each skin cell. True if the path from
+    np.ndarray
+        Boolean array of the statuses of each skin cell. True if the path from
         X-ray source to skin cell is blocked by the table (any of the two
         triangles), else false. Start points above triangle returns False,
         to not include hits where the table does not block the beam.
@@ -630,8 +636,8 @@ def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray
     # If over-table irradiation, return false for all points in cells
     if np.dot(np.array([0, 0, 0]) - beam.r[0, :], triangle_b_l.n) < 0:
         if cells.ndim == 1:
-            return [False]
-        return [False] * cells.shape[0]
+            return np.array([False])
+        return np.zeros(cells.shape[0], dtype=bool)
 
     # Check if beam vertices hits table on either of the triangles
     hit_t_r = triangle_t_r.check_intersection(start=source, stop=beam.r[1:, :])
@@ -645,8 +651,8 @@ def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray
     )
     if sum(beam_vertex_hits) == 4:
         if cells.ndim == 1:
-            return [True]
-        return [True] * cells.shape[0]
+            return np.array([True])
+        return np.ones(cells.shape[0], dtype=bool)
 
     # Else, check individually for all skin cells that are hit by the beam
     hit_t_r = triangle_t_r.check_intersection(start=source, stop=cells)
@@ -657,9 +663,10 @@ def check_table_hits(source: np.ndarray, table: Phantom, beam, cells: np.ndarray
     hits[hit_t_r] = True
     hits[hit_b_l] = True
 
-    # Build an explicit list[bool]: newer numpy stubs type ndarray.tolist() as a
-    # value not assignable to List[bool], which fails basedpyright on latest deps.
-    return [bool(hit) for hit in hits]
+    # Returned as a boolean array: the only caller indexes with it
+    # (``temp[table_hits] = k_tab_scalar``), and a list there would be
+    # re-converted per candidate.
+    return hits
 
 
 def convert_from_mm_to_cm(val_in_mm: float) -> float:
