@@ -61,10 +61,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   Two consequences recorded deliberately. Comment directives that tooling honours
   (`# type: ignore`, `# noqa`, encoding cookies) are exempt, which is a judgement call pinned
   by a test — they change linter and type-checker outcomes, not what the program computes, and
-  the required log entry records them anyway. And a pure reformat now classifies as
-  comment-only where the second version demanded a changelog entry; that is defensible, but
-  note it was this gate that caught an accidental `ruff format` of `gui/app.py` earlier the same
-  day, and `ruff format --check` is not enforced in this repo.
+  the required log entry records them anyway. And a *spacing-only* reformat now classifies as
+  comment-only where the second version demanded a changelog entry — `x=1` to `x = 1`, added
+  blank lines, backslash continuations. Review corrected an earlier draft of this sentence that
+  said "a pure reformat", which was too broad: quote normalisation changes the STRING spelling,
+  tab-to-space reindentation changes the INDENT token, and added parens add OP tokens, so all
+  three are still refused. Verified all four. That means the gate would probably still have
+  caught the accidental `ruff format` of `gui/app.py` earlier the same day, since real
+  `ruff format` output touches quotes and parens — but probably is luck rather than
+  enforcement, and `ruff format --check` remains the proper fix.
 
   The real root cause of both earlier failures was the tests, not the classifiers: each stubbed
   the layer above the bug and passed. The tests now stub only the git file read, so the

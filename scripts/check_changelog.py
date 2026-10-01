@@ -63,7 +63,13 @@ def _code_tokens(source: str) -> list[tuple[int, str]] | None:
                 continue
             kept.append((token.type, token.string))
     # TokenError derives from Exception, not SyntaxError, so it must be named; IndentationError
-    # does derive from SyntaxError and would be redundant. ValueError covers UnicodeDecodeError.
+    # does derive from SyntaxError and would be redundant here. The source is already `str` by
+    # this point, so nothing in this arm concerns decoding — that is handled in _file_at.
+    #
+    # RecursionError and MemoryError are deliberately not caught. generate_tokens over a str is
+    # iterative regex matching with no parse tree, so neither is reachable in practice; and if
+    # one ever were, propagating exits the hook non-zero and blocks the push with a traceback,
+    # which is fail-closed and self-announcing rather than a silent exemption.
     except (tokenize.TokenError, SyntaxError, ValueError):
         return None
     return kept
@@ -85,7 +91,9 @@ def is_comment_only(base: str, path: str) -> bool:
     get wrong, a ``#`` inside a string literal is a STRING token rather than a comment, and
     a docstring edit changes the stream and is correctly refused.
 
-    A new or deleted file is never comment-only, and neither is a file that will not lex.
+    A new or deleted file is never comment-only, and neither is a file that will not lex. An
+    unexpected failure is not silently exempted either: it propagates, the hook exits non-zero
+    and the push is blocked.
     Only ``.py`` files qualify at all: a comment-only edit to JSON or Markdown under ``src/``
     still demands a changelog entry, as it did before this exemption existed.
 

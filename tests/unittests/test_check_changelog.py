@@ -217,3 +217,26 @@ def test_an_undecodable_file_is_refused_not_crashed(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(check_changelog, "_git", explode)
     assert check_changelog._file_at("base", "src/a.py") is None
     assert check_changelog.is_comment_only("base", "src/a.py") is False
+
+
+def test_a_spacing_only_reformat_is_exempt_but_a_real_one_is_not(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pins exactly which reformats the exemption covers.
+
+    The maintenance log first claimed "a pure reformat" was exempt, which was too broad.
+    Spacing is invisible to the token stream, but quote normalisation changes the STRING
+    spelling and reindentation changes the INDENT token, so those still demand an entry —
+    which is why a real `ruff format` diff would probably still trip the gate.
+    """
+    spacing = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x=1\n"}, {"src/a.py": "x = 1\n"})
+    assert spacing == 0
+
+    quotes = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {"src/a.py": "s = 'a'\n"}, {"src/a.py": 's = "a"\n'})
+    assert quotes == 1
+
+    reindent = _main_with_sources(
+        monkeypatch, ["src/a.py", _LOG], {"src/a.py": "if x:\n\ty = 1\n"}, {"src/a.py": "if x:\n    y = 1\n"}
+    )
+    assert reindent == 1
+
+    parens = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x = 1\n"}, {"src/a.py": "x = (1)\n"})
+    assert parens == 1
