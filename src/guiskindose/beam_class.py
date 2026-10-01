@@ -8,7 +8,7 @@ import pandas as pd
 from .phantom_class import Phantom
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class BeamGeometryInputs:
     """The per-event scalars a :class:`Beam` needs, independent of its angles.
 
@@ -59,6 +59,13 @@ class BeamGeometryInputs:
 
         Notes
         -----
+        The ``float()`` calls are intentional: the record is annotated ``float``
+        and every consumer here is numpy arithmetic, so reading the pandas scalar
+        straight through would leave the annotation lying about the contents.
+        They cannot change a value -- pandas hands back a ``numpy.float64`` or
+        ``numpy.int64``, and both convert to the same IEEE double the arithmetic
+        would have used.
+
         ``DSL`` is read at index ``0``, not at ``event`` — a pre-existing quirk
         of :class:`Beam` (detector side length is taken from the first event and
         reused for every later one). It is preserved here deliberately rather
@@ -145,27 +152,30 @@ class Beam:
     def from_inputs(cls, inputs: BeamGeometryInputs, ap1_deg: float, ap2_deg: float, ap3_deg: float) -> "Beam":
         """Build a beam from already-resolved scalars plus its three angles.
 
-        The angles are passed in explicitly, in degrees, rather than read from
-        an event table, so a caller evaluating many poses of one event (the
-        rotational coverage envelope) resolves the scalars once and varies only
-        the angles.
+                The angles are passed in explicitly, in degrees, rather than read from
+                an event table, so a caller evaluating many poses of one event (the
+                rotational coverage envelope) resolves the scalars once and varies only
+                the angles.
 
-        Parameters
-        ----------
+                Parameters
+                ----------
         inputs : BeamGeometryInputs
-            The event's beam scalars. These are not angles and are expected to
-            be shared by every pose built from them.
-        ap1_deg : float
-            Positioner isocenter primary angle (Ap1), in degrees.
-        ap2_deg : float
-            Positioner isocenter secondary angle (Ap2), in degrees.
-        ap3_deg : float
-            Positioner isocenter detector rotation angle (Ap3), in degrees.
+                    The event's beam scalars. These are not angles and are expected to be
+                    shared by every pose built from them. The angles must come from the
+                    same event: nothing here can tell a matching pair from a mismatched
+                    one, so pairing one event's scalars with another's angles builds a
+                    beam that looks entirely reasonable and is simply wrong.
+                ap1_deg : float
+                    Positioner isocenter primary angle (Ap1), in degrees.
+                ap2_deg : float
+                    Positioner isocenter secondary angle (Ap2), in degrees.
+                ap3_deg : float
+                    Positioner isocenter detector rotation angle (Ap3), in degrees.
 
-        Returns
-        -------
-        Beam
-            The beam and detector for that pose.
+                Returns
+                -------
+                Beam
+                    The beam and detector for that pose.
 
         """
         beam = cls.__new__(cls)

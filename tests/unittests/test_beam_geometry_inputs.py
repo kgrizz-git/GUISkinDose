@@ -49,16 +49,33 @@ def test_dsl_quirk_is_preserved_not_fixed(frame: pd.DataFrame) -> None:
 
     Detector side length has always come from the *first* event regardless of
     which event is being built. Silently switching to ``DSL[event]`` would change
-    numbers for every event after the first, so it is pinned here as-is: this
-    test failing because a row's DSL differs is the intended signal that someone
-    changed the supply row.
+    numbers for every event after the first, so it is pinned here as-is.
+
+    The rows must actually disagree on ``DSL`` for the pin to mean anything: the
+    synthetic fixture clones one RDSR row and perturbs only ``Tx``/``Ap1``, so
+    every row would otherwise carry the same ``DSL`` and the assertion would pass
+    whichever index ``from_frame`` read. Hence the explicit per-row values, and
+    hence the assertion that they took effect.
     """
-    assert BeamGeometryInputs.from_frame(data_norm=frame, event=2).dsl == float(frame.DSL[0])
-    # And the quirk is load-bearing, not vacuous: if the fixture's rows ever
-    # agree on DSL, move the row under test and re-check rather than letting a
-    # tautology stand in for the pin.
-    if float(frame.DSL[2]) != float(frame.DSL[0]):
-        assert BeamGeometryInputs.from_frame(data_norm=frame, event=2).dsl != float(frame.DSL[2])
+    varied = frame.copy()
+    # Integer values: DSL is an int64 column, and pandas 2.x refuses a
+    # fractional assignment into it, which would raise instead of testing
+    # anything.
+    for index, dsl in enumerate((30, 35, 42)):
+        varied.at[index, "DSL"] = dsl
+    assert len({float(varied.DSL[index]) for index in range(3)}) == 3, "fixture rows must disagree on DSL"
+
+    for event in range(len(varied)):
+        assert BeamGeometryInputs.from_frame(data_norm=varied, event=event).dsl == float(varied.DSL[0])
+
+    # And the pin bites on the geometry itself: a beam built for the last event
+    # gets row 0's detector size, not its own. plot_setup zeroes the rotation, so
+    # the detector corners stay axis-aligned and the half-width is readable as
+    # max|det_r[:, 0]| == DSL / 2.
+    zero_angle_beam = Beam(data_norm=varied, event=2, plot_setup=True)
+    assert float(np.abs(zero_angle_beam.det_r[:, 0]).max()) == pytest.approx(float(varied.DSL[0]) / 2.0)
+    assert float(np.abs(zero_angle_beam.det_r[:, 2]).max()) == pytest.approx(float(varied.DSL[0]) / 2.0)
+    assert float(varied.DSL[0]) != float(varied.DSL[2])
 
 
 def test_inputs_record_is_frozen(frame: pd.DataFrame) -> None:
