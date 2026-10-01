@@ -1,6 +1,9 @@
 # PSD Severity Colour-Coding Plan
 
-Created: 2026-09-28 · Revised: 2026-09-28 (maintainer decisions folded in) · Status: **ready to implement**
+Created: 2026-09-28 · Revised: 2026-09-28 (maintainer decisions folded in) · Status: **complete
+(2026-09-30)** — implemented in two chunks on `feat/psd-colors-and-rotational-perf`: shared
+`gui/dose_severity.py` vocabulary + design tokens + copy/glossary/help wiring, then all readouts
+routed through it with icon/tooltip colour-blind fallbacks. Archived 2026-10-01.
 
 Make the peak-skin-dose (PSD) readout tell the reader at a glance where the estimate sits relative to
 skin-reaction dose bands, and make every PSD readout in the GUI agree on colour and wording.
