@@ -15,6 +15,7 @@ import pandas as pd
 from scipy.interpolate import CubicSpline
 
 from guiskindose import constants as c
+from guiskindose.beam_class import BeamGeometryInputs
 from guiskindose.calculate_dose.add_correction_and_event_dose_to_output import (
     compute_event_dose_vector,
 )
@@ -320,17 +321,27 @@ def _calculate_envelope_event(
     )
 
     parent_frame = normalized_data.iloc[[ev]]
-    # One frame for the whole domain (Phase 1g): every pose differs only in its
-    # two angle cells, which _compute assigns in place.
+    # A one-row faithful copy of the parent, built once for the whole domain
+    # (Phase 1g). Since Phase 2 the per-pose angles travel as arguments instead
+    # of being written into this frame, so it no longer varies across the loop:
+    # what it is still for is the invariant guard below, and as the event frame
+    # the candidate dose vectors are computed from (kVp and HVL, which
+    # calculate_k_med reads; both are pose-independent).
     candidate_frame = _candidate_frame(parent_frame.iloc[0], ap1, ap2)
     _assert_pose_invariant(parent_frame.iloc[0], candidate_frame)
+    # Beam scalars for this event, resolved once for the whole domain (Phase 2).
+    # Every candidate shares them -- the pose columns are the only thing
+    # _candidate_frame overrides -- so reading them per candidate was reading the
+    # same nine DataFrame cells 360 times over.
+    beam_inputs = BeamGeometryInputs.from_frame(data_norm=normalized_data, event=ev)
+    # Ap3 is a pose column no candidate overrides, so it too is fixed for the
+    # domain; read once, alongside the scalars.
+    ap3_deg = float(normalized_data.Ap3[ev])
     spline = back_scatter_interpolation[ev]
     k_tab_scalar = k_tab[ev]
     n_cells = len(patient.r)
 
     def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, np.ndarray]:
-        candidate_frame.at[0, "Ap1"] = pose_ap1
-        candidate_frame.at[0, "Ap2"] = pose_ap2
         candidate_hits_raw, candidate_table_hits, candidate_field_area, candidate_k_isq = (
             perform_calculations_for_new_geometries(
                 normalized_data=candidate_frame,
@@ -346,6 +357,8 @@ def _calculate_envelope_event(
                 # Already positioned at the parent pose above, and every
                 # candidate shares it.
                 reposition=False,
+                beam_inputs=beam_inputs,
+                beam_angles_deg=(pose_ap1, pose_ap2, ap3_deg),
             )
         )
         # The new-geometry path always hands back an ndarray; asarray is a no-op
