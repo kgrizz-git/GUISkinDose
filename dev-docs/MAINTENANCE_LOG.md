@@ -151,6 +151,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   still works unauthenticated because the repository is public — noted in a comment at each
   of those three checkouts, since that is the one thing a switch to private would break.
 
+- **tornado 6.5.8 to 6.5.10** (2026-09-30) — clears GHSA-3hv7-mjh2-fv65 (unbounded query-string
+  argument count stalls the event loop), GHSA-c2m8-h5v5-343r (`StaticFileHandler` follows symlinks
+  outside the static root) and GHSA-chx6-46f5-w4vp (`CurlAsyncHTTPClient` enforces no
+  response-size limit), all fixed in 6.5.9. Third instance today of the same pattern: published
+  after the previous push, unrelated to the work it landed beside, already at the vulnerable
+  version on `main`. Dev-only, reaching the lock through `ipykernel` and `jupyter-client` under
+  the `docs` and `notebooks` extras — the GUI uses uvicorn, not tornado, so no user-facing path
+  is involved.
+
 - **virtualenv 21.4.2 to 21.14.1** (2026-09-30) — clears four advisories
   (GHSA-x78j-v8h9-3j2q, and PYSEC-2026-4011 / -4012 / -4013: unverified seed wheels,
   `pyvenv.cfg` prompt injection, and activation scripts executing commands embedded in
