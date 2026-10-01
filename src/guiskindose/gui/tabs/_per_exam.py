@@ -25,6 +25,7 @@ from nicegui import ui
 
 from guiskindose.privacy import opaque_exam_label
 
+from ..dose_severity import reset_psd_label
 from ..helpers import (
     apply_exam_transforms,
     bump_per_exam_offsets_version,
@@ -45,7 +46,7 @@ _MUTED_CAPTION_CLASSES = "text-caption text-grey-6"
 def _invalidate(ctx: PageContext) -> None:
     """Mark results stale after any per-exam edit."""
     reset_results()
-    ctx.psd_label.set_text("PSD: 0.00 mGy")
+    reset_psd_label(ctx.psd_readout)
 
 
 def _apply_global_offset_to_all(ctx: PageContext) -> None:

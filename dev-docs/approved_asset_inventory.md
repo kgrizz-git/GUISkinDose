@@ -14,7 +14,7 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 177
+**Assets tracked:** 178
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
@@ -180,6 +180,7 @@ file revision.
 | [`src/guiskindose/phantom_data/senior_male_reduced_1000t.stl`](../src/guiskindose/phantom_data/senior_male_reduced_1000t.stl) | Opaque binary | Reduced senior male phantom mesh | ✅ Approved — KG (2026-07-15) | — | `87b10fcd07de` |
 | [`src/guiskindose/phantom_data/senior_male_reduced_3000t.stl`](../src/guiskindose/phantom_data/senior_male_reduced_3000t.stl) | Opaque binary | Reduced (~3000 triangle) preview of human phantom mesh (senior_male) | ✅ Approved — KG (2026-07-24) | — | `59bff7961b3e` |
 | [`tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy`](../tests/fixtures/golden/calculate_dose_siemens_axiom_artis_cylinder_dose_map.npy) | Opaque binary | Numeric-only dose-map golden fixture | ✅ Approved — KG (2026-07-15) | — | `ff32650b9ff0` |
+| [`tests/fixtures/golden/rotational_envelope_spin_cylinder_dose_map.npy`](../tests/fixtures/golden/rotational_envelope_spin_cylinder_dose_map.npy) | Opaque binary | Numeric-only rotational-envelope dose-map golden fixture (synthetic events) | ✅ Approved — KG (2026-09-30) | — | `37cab1f4242f` |
 | [`tests/fixtures/golden/phantom_hudfrid_normals.npy`](../tests/fixtures/golden/phantom_hudfrid_normals.npy) | Opaque binary | Numeric-only human-phantom per-vertex normals golden fixture (float64 promoted from float32 source mesh) | ✅ Approved — KG (2026-07-28) | — | `a2819181f1be` |
 | [`tests/fixtures/golden/phantom_hudfrid_vertices.npy`](../tests/fixtures/golden/phantom_hudfrid_vertices.npy) | Opaque binary | Numeric-only human-phantom vertex golden fixture (float64 promoted from float32 source mesh) | ✅ Approved — KG (2026-07-28) | — | `8b2271f7c192` |
 | [`tests/fixtures/tabular_inputs/normalized_events.xlsx`](../tests/fixtures/tabular_inputs/normalized_events.xlsx) | Office/iWork document | Normalized spreadsheet fixture | ✅ Approved — KG (2026-07-16) | files ✓ · images ✓ · DICOM ✓ | `c3342ef4461f` |

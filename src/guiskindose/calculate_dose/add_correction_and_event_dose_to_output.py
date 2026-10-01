@@ -1,6 +1,7 @@
 """Applies physics corrections and adds event skin dose to the cumulative dose map."""
 
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -18,9 +19,9 @@ def compute_event_dose_vector(
     *,
     event_frame: pd.DataFrame,
     event: int,
-    hits: list[bool],
-    table_hits: list[bool],
-    field_area: list[float],
+    hits: Sequence[bool] | np.ndarray,
+    table_hits: Sequence[bool] | np.ndarray,
+    field_area: Sequence[float] | np.ndarray,
     k_isq: np.ndarray,
     k_bs_spline: CubicSpline,
     k_tab_scalar: float,
@@ -35,9 +36,50 @@ def compute_event_dose_vector(
     inverse-square, medium, backscatter, and table-path corrections. A total
     miss yields an all-zero vector with empty backscatter and 0.0 medium
     (0.0 means "not applied", matching the legacy convention).
+
+    Parameters
+    ----------
+    event_frame : pd.DataFrame
+        RDSR data, normalized for compliance with PySkinDose.
+    event : int
+        Irradiation event index.
+    hits : Sequence[bool] or np.ndarray
+        Boolean hit/miss status of each skin cell. A boolean array is accepted as well
+        as a list of booleans.
+    table_hits : Sequence[bool] or np.ndarray
+        Whether the beam passes through the table for each hit cell. A boolean array is
+        accepted as well as a list of booleans.
+    field_area : Sequence[float] or np.ndarray
+        X-ray field area in (cm^2) for each hit skin cell. An array is accepted as well
+        as a list of floats.
+    k_isq : np.ndarray
+        Inverse-square-law correction factors.
+    k_bs_spline : CubicSpline
+        Backscatter interpolation for this event.
+    k_tab_scalar : float
+        Table correction factor for this event.
+    kerma_full : float
+        Reference-point air kerma for this event, including the kerma-meter factor.
+    corrections_db : str
+        Path to the corrections SQLite database.
+    n_cells : int
+        Number of patient skin cells.
+    emit_warnings : bool
+        Whether correction lookups emit warnings (the default is True).
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, float]
+        This pose's dose vector, its backscatter factors, and its medium factor (0.0
+        means "not applied").
+
     """
     event_dose = np.zeros(n_cells)
-    if not sum(hits):
+    # No-op when hits is already a boolean array; keeps the list form accepted.
+    hits_arr = np.asarray(hits, dtype=bool)
+    # .any(), not sum()/any(): those iterate an ndarray element by element in Python,
+    # boxing every value, which is far slower than the reduction.
+    if not hits_arr.any():
         return event_dose, np.array([]), 0.0
 
     k_bs = k_bs_spline(np.sqrt(field_area))
@@ -49,14 +91,14 @@ def compute_event_dose_vector(
         emit_warnings=emit_warnings,
     )
 
-    event_dose[hits] += kerma_full
-    event_dose[hits] *= k_isq
-    event_dose[hits] *= k_med
-    event_dose[hits] *= k_bs
+    event_dose[hits_arr] += kerma_full
+    event_dose[hits_arr] *= k_isq
+    event_dose[hits_arr] *= k_med
+    event_dose[hits_arr] *= k_bs
 
     temp = np.ones(len(table_hits))
-    temp[table_hits] = k_tab_scalar
-    event_dose[hits] *= temp
+    temp[np.asarray(table_hits, dtype=bool)] = k_tab_scalar
+    event_dose[hits_arr] *= temp
 
     return event_dose, np.asarray(k_bs), float(k_med)
 
@@ -64,11 +106,11 @@ def compute_event_dose_vector(
 def add_corrections_and_event_dose_to_output(
     normalized_data: pd.DataFrame,
     event: int,
-    hits: list[bool],
-    table_hits: list[bool],
+    hits: Sequence[bool] | np.ndarray,
+    table_hits: Sequence[bool] | np.ndarray,
     patient: Phantom,
     back_scatter_interpolation: list[CubicSpline],
-    field_area: list[float],
+    field_area: Sequence[float] | np.ndarray,
     k_tab: list[float],
     corrections_db: str,
     output: dict[str, Any],
@@ -82,22 +124,23 @@ def add_corrections_and_event_dose_to_output(
         RDSR data, normalized for compliance with PySkinDose.
     event : int
         Irradiation event index.
-    hits : List[bool]
-        A boolean list of the same length as the number of patient skin cells. True for
-        all entrance skin cells that are hit by the beam for a specific irradiation
-        event.
-    table_hits : List[bool]
-        A boolean list that specfies (for each hit), if the bean passes through the
-        patient support table, by default None
+    hits : Sequence[bool] or np.ndarray
+        Boolean hit/miss status of each skin cell, of the same length as the number of
+        patient skin cells. True for all entrance skin cells that are hit by the beam for
+        a specific irradiation event. A boolean array is accepted as well as a list of
+        booleans.
+    table_hits : Sequence[bool] or np.ndarray
+        For each hit, whether the beam passes through the patient support table. A boolean
+        array is accepted as well as a list of booleans.
     patient : Phantom
         Patient phantom, either of type plane, cylinder or human, i.e. instance of class
         Phantom
     back_scatter_interpolation : List[CubicSpline]
         List of interpolation objects to used to estimate backscatter correction from
         the correction database
-    field_area : List[float]
+    field_area : Sequence[float] or np.ndarray
         X-ray field area in (cm^2) for each phantom skin cell that are hit by the X-ray
-        beam
+        beam. An array is accepted as well as a list of floats.
     k_tab : List[float]
         List of table correction factors
     corrections_db : str

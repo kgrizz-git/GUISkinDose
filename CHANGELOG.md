@@ -21,6 +21,19 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **PSD severity colour-coding on every readout** (2026-09-30) — all four
+  peak-skin-dose readouts (sidebar, Results single-exam metric, aggregate
+  metric, per-exam accordion) now share one band helper
+  (`gui/dose_severity.py`): grey "pending" before a run (the misleading
+  `PSD: 0.00 mGy` placeholder is now `PSD: —`), green below 5000 mGy, yellow
+  from 5000 to just under 10000, red at 10000 and above — edges live in named
+  constants. Colour is never the only carrier: each banded readout carries a
+  band-keyed Material symbol and a tooltip naming the band and its range, so
+  the bands stay readable with colour-vision deficiencies. Also an
+  accessibility fix: the old `text-aurora-purple` readouts measured 2.44:1 on
+  the near-black background, failing WCAG AA even for large text; all four new
+  tokens clear AA for normal text. Design:
+  `dev-docs/plans/archive/PSD_SEVERITY_COLOR_CODING_PLAN.md`.
 - **Intended-use notice on the Results tab and in every export** (2026-09-27) —
   the Results tab now keeps a short line that GUISkinDose is not FDA-cleared
   and that a qualified medical physicist or physician must review skin dose
@@ -57,6 +70,40 @@ That keeps SemVer and contributor history organized.
   `dev-docs/plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md`. Exports carry the
   handling ledger and methodology (DOCX/XLSX sections, dict/JSON fields);
   the Results tab shows a handling badge.
+
+### Changed
+
+- **Rotational coverage envelopes are ~8x faster, bit-identical** (2026-10-01)
+  — Phase 1 of the envelope performance plan: phantoms are positioned once
+  per rotational event instead of once per candidate pose (with a
+  once-per-event pose-invariant guard), hit masks travel as boolean ndarrays
+  in the hot loop, `scale_field_area` and the entrance-cell filter are
+  vectorized, envelope bookkeeping (union fold, hit counts, cellwise maximum)
+  is vectorized with an in-place fold, the candidate frame is built once per
+  event, and `k_med` lookups are memoized per (kVp, HVL, snapped field side
+  length) for the packaged source — explicit databases are read on every
+  call, since their content can change on disk at the same path between
+  calls — with source-resolution warnings deliberately kept
+  outside the memo so a suppressed candidate pass cannot swallow a later
+  warning. Measured 1.442 s -> ~0.17-0.18 s for a 360-pose cylinder-phantom
+  envelope (~8.3x; the plan's 19x headline was measured on a 41k-cell human
+  phantom); `max |before - after|` dose map is exactly zero on the generating
+  platform, gated by a new committed rotational-envelope golden (cylinder, so
+  the entrance filter actually executes) alongside the existing static golden,
+  both passing without regeneration. The rotational chain was never bit-portable
+  across BLAS flavours — measured: even the pre-Phase-1 code drifts 1-2 ulps in
+  ~0.5% of cells off the generating platform (50 cells CI Ubuntu, 19 Windows,
+  48 in a Linux container probe of the old code), through BLAS-backed steps
+  Phase 1 did not touch — so that golden pins the integer counts and the
+  published list/bool contracts exactly, and bounds the dose values and
+  psd/sum scalars at rtol=1e-12 with atol=0 (a hit flip is a 0 <-> dose or
+  full-contribution change and always fails; the measured floor of the
+  smallest real regression is ~7.5e-6 relative, the BLAS drift ~1e-15), while
+  the static golden stays bit-exact everywhere. No default, contract, disclosure
+  field, candidate
+  domain, or aggregation rule changed; `angular_step_deg` stays 1.0. Design:
+  `dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (Phase 2, hoisting
+  `Beam`'s per-event scalars, follows in its own PR).
 
 ### Fixed
 

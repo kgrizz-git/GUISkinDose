@@ -6,7 +6,9 @@ this module never touches shared output dicts outside what it returns.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+import math
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import pandas as pd
@@ -41,6 +43,17 @@ logger = logging.getLogger(__name__)
 # the circle rather than by raw float equality).
 _STATIC_POSE_TOL_DEG = 1e-9
 
+# Columns a candidate frame must not vary: the C-arm angles Ap1/Ap2 (and Ap3)
+# move the beam only, so every candidate of one event shares these and one
+# phantom positioning at the parent pose is valid for the whole domain.
+# Rx/Ry/Rz are included even though they are derived from At1-At3: they are
+# what Phantom.position actually reads, so guarding the derived value as
+# well as its inputs keeps the check honest if calculate_rotation_matrices
+# ever changes.
+_POSE_INVARIANT_COLUMNS: Final[tuple[str, ...]] = ("Tx", "Ty", "Tz", "At1", "At2", "At3", "Rx", "Ry", "Rz")
+
+_ROTATION_MATRIX_COLUMNS: Final[frozenset[str]] = frozenset(("Rx", "Ry", "Rz"))
+
 
 def _rotational_mode(settings: "PyskindoseSettings | None") -> str:
     if settings is None:
@@ -65,11 +78,54 @@ def _candidate_frame(parent_row: pd.Series, ap1: float, ap2: float) -> pd.DataFr
 
     The index is reset to ``[0]``: downstream geometry code addresses rows
     positionally (``event=0``), and the parent index must not leak through.
+
+    Called once per event (Phase 1g): the result is also the reusable
+    candidate frame, whose two angle cells are then assigned per pose.
     """
     frame = pd.DataFrame([parent_row.values], columns=parent_row.index)
     frame["Ap1"] = ap1
     frame["Ap2"] = ap2
     return frame
+
+
+def _assert_pose_invariant(parent_row: pd.Series, frame: pd.DataFrame) -> None:
+    """Fail loudly if a candidate frame varies a column the pose fix depends on.
+
+    The phantoms are positioned once per event and that positioning is reused
+    across the whole candidate domain, which is only sound while candidates
+    differ from their parent row in the beam angles alone. Checked once per
+    event (Phase 1g builds the frame once per event too), so the cost is
+    negligible and a future regression that lets a candidate vary a pose column
+    surfaces as a clear error instead of a silently mispositioned phantom.
+
+    Raises
+    ------
+    RuntimeError
+        If any column in :data:`_POSE_INVARIANT_COLUMNS` differs between the
+        parent row and the candidate frame. The message names the column but
+        never its value: repository privacy rules forbid logging data values.
+    """
+    for column in _POSE_INVARIANT_COLUMNS:
+        parent_value: Any = parent_row[column]
+        candidate_value: Any = frame.at[0, column]
+        if column in _ROTATION_MATRIX_COLUMNS:
+            matches = np.array_equal(
+                np.asarray(parent_value, dtype=float),
+                np.asarray(candidate_value, dtype=float),
+                equal_nan=True,
+            )
+        else:
+            # NaN counts as equal to NaN: a plain != would reject the very case
+            # the guard must stay quiet about (an unrecorded table offset).
+            parent_number = float(parent_value)
+            candidate_number = float(candidate_value)
+            matches = parent_number == candidate_number or (math.isnan(parent_number) and math.isnan(candidate_number))
+        if not matches:
+            raise RuntimeError(
+                f"Candidate frame varies pose column {column!r}, which the "
+                "once-per-event phantom positioning assumes is constant. "
+                "Candidate frames may only override the beam angles."
+            )
 
 
 def _is_contradictory(classification: Any) -> bool:
@@ -168,11 +224,19 @@ def _calculate_envelope_event(
     new_geometry_flag: bool,
     step_deg: float,
     include_static: bool,
-    cached_hits: list[bool],
-    cached_table_hits: list[bool],
-    cached_field_area: list[float],
+    cached_hits: Sequence[bool] | np.ndarray,
+    cached_table_hits: Sequence[bool] | np.ndarray,
+    cached_field_area: Sequence[float] | np.ndarray,
     cached_k_isq: np.ndarray,
-) -> tuple[list[bool], list[bool], list[float], np.ndarray, LedgerEventInput, dict[str, Any], bool]:
+) -> tuple[
+    Sequence[bool] | np.ndarray,
+    Sequence[bool] | np.ndarray,
+    Sequence[float] | np.ndarray,
+    np.ndarray,
+    LedgerEventInput,
+    dict[str, Any],
+    bool,
+]:
     """Evaluate one rotational event as a coverage envelope.
 
     Returns ``(hits, table_hits, field_area, k_isq, ledger_input, details,
@@ -181,6 +245,13 @@ def _calculate_envelope_event(
     path, which is why the live cache arrays are threaded in rather than
     rebuilt from empties) while the dose map receives the cellwise maximum
     over all candidates. Per-event kerma records are unchanged.
+
+    The ``cached_*`` arguments accept a boolean array as well as a list of
+    booleans (and ``cached_field_area`` an array of floats): the hot path
+    carries ndarrays, while the ``new_geometry=False`` path passes the caller's
+    own containers straight through. The returned ``hits`` and ``table_hits``
+    are boolean arrays on the new-geometry path, mirroring the inputs; the
+    published ``output`` slots always hold real Python bools.
     """
     ap1 = float(row["Ap1"])
     ap2 = float(row["Ap2"])
@@ -188,6 +259,14 @@ def _calculate_envelope_event(
     ap2_end = _finite_or_none(row.get("Ap2_end"))
     primary_moves = "primary_endpoint_motion" in classification.reason_codes
     secondary_moves = "secondary_endpoint_motion" in classification.reason_codes
+
+    # Candidates never vary Tx/Ty/Tz or At1-At3, so one positioning at the
+    # parent pose is valid for the whole domain. Done unconditionally rather
+    # than under new_geometry_flag so the candidate loop never depends on
+    # the cache invariant.
+    patient.position(data_norm=normalized_data, event=ev)
+    table.position(data_norm=normalized_data, event=ev)
+    pad.position(data_norm=normalized_data, event=ev)
 
     if primary_moves or secondary_moves:
         domain = build_candidate_domain(
@@ -241,15 +320,20 @@ def _calculate_envelope_event(
     )
 
     parent_frame = normalized_data.iloc[[ev]]
+    # One frame for the whole domain (Phase 1g): every pose differs only in its
+    # two angle cells, which _compute assigns in place.
+    candidate_frame = _candidate_frame(parent_frame.iloc[0], ap1, ap2)
+    _assert_pose_invariant(parent_frame.iloc[0], candidate_frame)
     spline = back_scatter_interpolation[ev]
     k_tab_scalar = k_tab[ev]
     n_cells = len(patient.r)
 
-    def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, list[bool]]:
-        frame = _candidate_frame(parent_frame.iloc[0], pose_ap1, pose_ap2)
-        candidate_hits, candidate_table_hits, candidate_field_area, candidate_k_isq = (
+    def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, np.ndarray]:
+        candidate_frame.at[0, "Ap1"] = pose_ap1
+        candidate_frame.at[0, "Ap2"] = pose_ap2
+        candidate_hits_raw, candidate_table_hits, candidate_field_area, candidate_k_isq = (
             perform_calculations_for_new_geometries(
-                normalized_data=frame,
+                normalized_data=candidate_frame,
                 event=0,
                 new_geometry=True,
                 patient=patient,
@@ -259,9 +343,19 @@ def _calculate_envelope_event(
                 table_hits=[],
                 field_area=[],
                 k_isq=np.array([]),
+                # Already positioned at the parent pose above, and every
+                # candidate shares it.
+                reposition=False,
             )
         )
-        if not any(candidate_hits):
+        # The new-geometry path always hands back an ndarray; asarray is a no-op
+        # there and only narrows the declared Sequence|ndarray union. Keeping the
+        # raw mask (rather than a list comprehension over it) is what lets the
+        # union fold and the hit count both stay vectorized.
+        candidate_hits = np.asarray(candidate_hits_raw, dtype=bool)
+        # .any(), not sum()/any(): those iterate an ndarray element by element in
+        # Python, boxing every value, which is far slower than the reduction.
+        if not candidate_hits.any():
             return (
                 CandidateResult(
                     candidate_id=f"candidate_{pose_index}",
@@ -269,10 +363,10 @@ def _calculate_envelope_event(
                     hit_count=0,
                     missed=True,
                 ),
-                list(candidate_hits),
+                candidate_hits,
             )
         vector, candidate_k_bs, candidate_k_med = compute_event_dose_vector(
-            event_frame=frame,
+            event_frame=candidate_frame,
             event=0,
             hits=candidate_hits,
             table_hits=candidate_table_hits,
@@ -290,16 +384,19 @@ def _calculate_envelope_event(
             CandidateResult(
                 candidate_id=f"candidate_{pose_index}",
                 dose_vector=vector,
-                hit_count=int(sum(1 for _ in filter(None, candidate_hits))),
+                hit_count=int(np.count_nonzero(candidate_hits)),
                 missed=False,
                 k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
                 k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
                 k_med=float(candidate_k_med),
             ),
-            list(candidate_hits),
+            candidate_hits,
         )
 
-    union_mask: list[bool] = [False] * n_cells
+    # An ndarray, not a list: the union is folded once per candidate with a
+    # vectorized logical_or (Phase 1e) instead of a Python or-loop over all
+    # cells, and the published list is converted once where it is read.
+    union_mask = np.zeros(n_cells, dtype=bool)
 
     def _is_static_pose(pose_ap1: float, pose_ap2: float) -> bool:
         return (
@@ -307,7 +404,7 @@ def _calculate_envelope_event(
             and circular_separation_deg(pose_ap2, ap2) <= _STATIC_POSE_TOL_DEG
         )
 
-    def _static_candidate(pose_index: int) -> tuple[CandidateResult, list[bool]]:
+    def _static_candidate(pose_index: int) -> tuple[CandidateResult, np.ndarray]:
         """Reuse the slot/static evaluation as that pose's candidate response.
 
         The reported static pose is always a domain member (path start or the
@@ -315,7 +412,7 @@ def _calculate_envelope_event(
         repeat identical geometry/physics work already done for the legacy
         slots and the geometry cache.
         """
-        if not any(static_hits):
+        if not np.asarray(static_hits, dtype=bool).any():
             return (
                 CandidateResult(
                     candidate_id=f"candidate_{pose_index}",
@@ -323,20 +420,20 @@ def _calculate_envelope_event(
                     hit_count=0,
                     missed=True,
                 ),
-                list(static_hits),
+                np.asarray(static_hits, dtype=bool),
             )
         k_bs_vals = np.atleast_1d(np.asarray(static_k_bs, dtype=float))
         return (
             CandidateResult(
                 candidate_id=f"candidate_{pose_index}",
                 dose_vector=static_vector,
-                hit_count=int(sum(1 for hit in static_hits if hit)),
+                hit_count=int(np.count_nonzero(static_hits)),
                 missed=False,
                 k_bs_min=float(np.min(k_bs_vals)) if k_bs_vals.size else None,
                 k_bs_max=float(np.max(k_bs_vals)) if k_bs_vals.size else None,
                 k_med=float(static_k_med),
             ),
-            list(static_hits),
+            np.asarray(static_hits, dtype=bool),
         )
 
     def _generate() -> Any:
@@ -345,21 +442,31 @@ def _calculate_envelope_event(
                 result, candidate_hits = _static_candidate(pose_index)
             else:
                 result, candidate_hits = _compute(pose_index, pose_ap1, pose_ap2)
-            for index, hit in enumerate(candidate_hits):
-                union_mask[index] = union_mask[index] or bool(hit)
+            # asarray so the fold works whether the candidate handed back the
+            # raw ndarray or a cached list passthrough.
+            np.logical_or(union_mask, np.asarray(candidate_hits, dtype=bool), out=union_mask)
             yield result
 
     evaluation = evaluate_envelope(
         _generate(),
         n_cells=n_cells,
         zeros=np.zeros,
-        maximum=np.maximum,
-        argmax_cell=lambda vector: (int(np.argmax(vector)), float(np.max(vector))),
+        # In-place fold: evaluate_envelope only ever reads the accumulator back,
+        # and writing into it stops allocating a fresh n_cells array per
+        # candidate. The contract ("returns the folded array") still holds --
+        # np.maximum with out= returns the first argument.
+        maximum=lambda a, b: np.maximum(a, b, out=a),
+        # The caller destructures `_, value =` and discards the index, so only
+        # the peak value is computed. The two-tuple contract of
+        # evaluate_envelope is unchanged; if the index is ever wanted it comes
+        # back as a real feature, not as an accidental by-product.
+        argmax_cell=lambda vector: (0, float(vector.max())),
     )
 
-    # Restore the parent static pose on the shared phantoms: candidates leave
-    # them positioned at the final synthetic pose, and the returned phantom
-    # plus any intervening cache-dependent reads must observe the parent.
+    # Restore the parent static pose on the shared phantoms. They already stand
+    # there: the candidates never reposition at all, so this is an explicit
+    # invariant restore rather than a correction, and the returned phantom plus
+    # any intervening cache-dependent reads observe the parent.
     patient.position(data_norm=normalized_data, event=ev)
     table.position(data_norm=normalized_data, event=ev)
     pad.position(data_norm=normalized_data, event=ev)
@@ -375,9 +482,12 @@ def _calculate_envelope_event(
     # pairs them positionally). The candidate union mask — every cell touched by
     # any evaluated pose — is published separately under output["hits_union"],
     # which is a superset and therefore cannot index those arrays.
-    union_hits: list[bool] = union_mask
+    # Converted here, once: union_mask is an ndarray, and list(ndarray) would
+    # publish np.bool_ elements, which are neither real bools nor JSON
+    # serializable.
+    union_hits: list[bool] = [bool(hit) for hit in union_mask]
 
-    output[c.OUTPUT_KEY_HITS][ev] = list(static_hits)
+    output[c.OUTPUT_KEY_HITS][ev] = [bool(hit) for hit in static_hits]
     output[c.OUTPUT_KEY_HITS_UNION][ev] = union_hits
     output[c.OUTPUT_KEY_KERMA][ev] = reported_kerma
     output[c.OUTPUT_KEY_KERMA_CORRECTED][ev] = reported_kerma * cf

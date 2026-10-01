@@ -245,7 +245,7 @@ skips = ["B101"]
 # 8.1.8 -> 8.4.2). What remains unfixed is pyjwt: semgrep still declares
 # `pyjwt[crypto]~=2.13.0` at 1.178.0, so its isolated environment installs 2.13.0 and that
 # vulnerable code is still present, simply outside the surface `uv audit`, `pip-audit` and
-# grype inspect. Those twelve alerts are dismissed as unreachable — see
+# grype inspect. Those thirteen alerts are dismissed as unreachable — see
 # tools/semgrep/pyproject.toml for why — not fixed. The *project* environment also improved:
 # `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches users through
 # uvicorn in the `gui` extra. So of the five original entries, four are genuinely fixed

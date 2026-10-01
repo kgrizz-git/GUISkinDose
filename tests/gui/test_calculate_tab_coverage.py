@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from nicegui.testing import User
 
+from guiskindose.gui.dose_severity import _ALL_TEXT_CLASSES
 from guiskindose.gui.helpers import load_tabular
 from guiskindose.gui.page_context import PageContext
 from guiskindose.gui.state import state
@@ -25,7 +26,7 @@ def _minimal_ctx() -> PageContext:
         tabs=MagicMock(),
         file_label=MagicMock(),
         events_label=MagicMock(),
-        psd_label=MagicMock(),
+        psd_readout=MagicMock(),
         run_btn_drawer=MagicMock(),
         flush_geometry_pending=MagicMock(),
         clear_offset_stale_caption=MagicMock(),
@@ -92,7 +93,10 @@ async def test_do_calculate_success_updates_drawer_and_tabs(monkeypatch: pytest.
 
     await ctrl.do_calculate()
 
-    cast(MagicMock, ctrl.ctx.psd_label.set_text).assert_called_with("PSD: 9.50 mGy")
+    cast(MagicMock, ctrl.ctx.psd_readout.value.set_text).assert_called_with("PSD: 9.50 mGy")
+    cast(MagicMock, ctrl.ctx.psd_readout.value.classes).assert_called_with(
+        remove=_ALL_TEXT_CLASSES, add="text-dose-low"
+    )
     cast(MagicMock, ctrl.ctx.tabs.set_value).assert_called_with("results")
     assert ctrl.controls is not None
     cast(MagicMock, ctrl.controls.status_label.set_text).assert_called()
@@ -118,7 +122,10 @@ async def test_do_calculate_failure_clears_results(monkeypatch: pytest.MonkeyPat
     assert state.calculation_done is False
     assert state.output is None
     assert state.psd is None
-    cast(MagicMock, ctrl.ctx.psd_label.set_text).assert_called_with("PSD: 0.00 mGy")
+    cast(MagicMock, ctrl.ctx.psd_readout.value.set_text).assert_called_with("PSD: —")
+    cast(MagicMock, ctrl.ctx.psd_readout.value.classes).assert_called_with(
+        remove=_ALL_TEXT_CLASSES, add="text-dose-pending"
+    )
 
 
 @pytest.mark.asyncio

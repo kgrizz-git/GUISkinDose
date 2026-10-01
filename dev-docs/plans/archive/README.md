@@ -5,6 +5,7 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 | File | Status | Notes |
 |---|---|---|
 | [AUTOMATED_PHANTOM_LIBRARY_PLAN.md](AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Completed** (2026-07-21) | Headless MPFB/Blender true-shape library Phases 0–4; 10 meshes in 25.2.0. Further phantoms tracked in `ADDITIONAL_PHANTOMS.md` / `TO_DO.md`. |
+| [PSD_SEVERITY_COLOR_CODING_PLAN.md](PSD_SEVERITY_COLOR_CODING_PLAN.md) | **Completed** (2026-09-30) | Shared `gui/dose_severity.py` bands (pending/low/elevated/high) + design tokens; all four PSD readouts agree on colour and wording (`PSD: —` placeholder); icon + band-name tooltip fallbacks for colour-blind readers; WCAG AA fix for `text-aurora-purple`. Gradient/meter-bar rejected in plan §5. |
 | [PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) | Demo gate, Steamboat supine, pediatric 5y male fix, bariatric thick-extremities. |
 | [PHANTOM_MESH_NAMING_CONVENTION_PLAN.md](PHANTOM_MESH_NAMING_CONVENTION_PLAN.md) | **Completed** (2026-07-23) | Canonical `ped_*` / `adult_*` / `demo_*` stems + aliases. |
 | [MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md) | **Completed** (2026-06-24) | Parts I–V multi-exam Geometry offsets; manual smoke remains in `TO_DO.md`. |

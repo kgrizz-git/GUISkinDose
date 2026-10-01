@@ -122,6 +122,33 @@ def _text_alias_present(*texts: object) -> bool:
 
 @dataclass(frozen=True)
 class RotationalClassification:
+    """How one irradiation event's C-arm motion was classified, and on what evidence.
+
+    Attributes
+    ----------
+    classification : str
+        ``"rotational"``, ``"positioner_motion"``, ``"static"``, or ``"unknown"``.
+    reason_codes : tuple[str, ...]
+        Every signal that fed the verdict, in the order it was found (e.g.
+        ``"type_code_rotational"``, ``"primary_endpoint_motion"``,
+        ``"contradictory_static"``). The disclosure ledger reports these verbatim.
+    confidence : str
+        Strongest evidence class behind ``classification``: ``"coded"``,
+        ``"meaning"``, ``"text_alias"``, ``"angle_motion"``, or ``"none"``.
+    usable_endpoints : bool
+        At least one angle axis moves and the baseline geometry is usable, so a
+        candidate domain can be built from the recorded endpoints.
+    usable_baseline_geometry : bool
+        The event has the finite start angles and table geometry a candidate
+        pose needs; ``False`` forces the static fallback.
+    primary_separation_deg : float | None
+        Circular separation between ``Ap1`` and ``Ap1_end``, or ``None`` when
+        either endpoint is missing or non-finite.
+    secondary_separation_deg : float | None
+        The same for ``Ap2`` / ``Ap2_end``.
+
+    """
+
     classification: str  # rotational | positioner_motion | static | unknown
     reason_codes: tuple[str, ...] = ()
     confidence: str = "none"  # coded | meaning | text_alias | angle_motion | none
@@ -133,6 +160,33 @@ class RotationalClassification:
 
 @dataclass
 class RotationalEventInput:
+    """One event's raw rotational fields, before any normalization.
+
+    Deliberately typed ``object`` throughout: these come straight off an RDSR
+    row or a tabular import, so a field may be ``None``, ``pd.NA``, a numpy
+    scalar, or a string. Nothing here is truth-tested or coerced at
+    construction — :func:`classify_rotational_event` normalizes each value,
+    which is what keeps an ambiguous ``pd.NA`` from raising.
+
+    Attributes
+    ----------
+    acquisition_type, acquisition_type_code, acquisition_type_coding_scheme, acquisition_type_meaning : object
+        The DICOM acquisition-type quartet, used in that priority order: a
+        recognized code beats a meaning string, which beats free text.
+    protocol_text : object
+        Protocol or series description, searched for rotational text aliases
+        only when the coded fields say nothing.
+    ap1, ap2 : object
+        Start angles of the primary and secondary positioner axes, in degrees.
+    ap1_end, ap2_end : object
+        End angles of the same axes; absent or non-finite values mean the
+        endpoints cannot bound a candidate domain.
+    extra : dict
+        Remaining row fields, consulted for baseline-geometry usability (table
+        position and the like) without widening this dataclass per vendor.
+
+    """
+
     acquisition_type: object = None
     acquisition_type_code: object = None
     acquisition_type_coding_scheme: object = None

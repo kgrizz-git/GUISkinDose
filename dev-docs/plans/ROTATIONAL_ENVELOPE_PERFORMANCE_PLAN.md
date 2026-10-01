@@ -1,6 +1,8 @@
 # Rotational Coverage-Envelope Performance Plan
 
-Created: 2026-09-28 · Status: **ready to implement**
+Created: 2026-09-28 · Status: **Phase 1 complete (2026-10-01, PR pending) — Phase 2 to follow in
+its own PR per its own section; Phase 3 optional follow-ons remain open.** Section 4.6a records
+the measured result.
 
 Execution plan for the findings in
 [assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md](../assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
@@ -322,6 +324,19 @@ give the same database separate cache entries when reached by different spelling
 passes both `"corrections.db"` and absolute paths — which is not a correctness bug but does silently
 throw away the cache.
 
+**Post-review amendment (2026-10-01, CodeRabbit round on the PR): the memo is scoped to the
+packaged source only.** Keying explicit databases on their resolved path has a hole no path-derived
+key can see: the file's content can change on disk at the same path between calls, so a cached
+entry would serve a stale correction factor; and a path-spelled key invites a collision with the
+packaged namespace (a file literally named `packaged`). Explicit databases are therefore read and
+validated on every call — they are the legacy path, and the per-candidate memo win only ever
+mattered for the packaged default. The packaged source keeps the full memo (content immutable
+within a process; cleared through the registered `clear_cache` hook). Regression tests pin: an
+explicit call never populates the memo; a same-path content change yields a fresh factor; the
+`packaged`-named explicit file cannot share the packaged key; and the original warning-latch
+ordering (suppressed candidates first, warn on the same packaged key after) still holds, armed
+deterministically by chdir to a CWD containing a dummy `corrections.db`.
+
 **The warning hoist, with a mechanism rather than an instruction.** `_warn_once`
 (`correction_data.py:152-155`) returns early when `emit_warnings=False` **before** adding the class to
 `_warned`, so it does not latch. That produces a concrete regression if the memo wraps the warning:
@@ -443,6 +458,31 @@ Phase 1 is done when all of the following hold.
    at all** — leaving 1d's only exact gate the *static* Siemens cylinder golden, and leaving the
    envelope path (the thing actually being optimized, and where grazing cells with
    `dot(v, n) ≈ 0` live) untested for it. A cylinder run is still cheap and closes that hole.
+
+   **Measured amendment (2026-10-01, post-CI): the rotational chain is not bit-portable across BLAS
+   flavours, and that is a property of the chain, not of Phase 1.** The first PR CI run on the golden
+   showed 1–2-ulp dose-map drift — 50 of 9 576 cells on Ubuntu x86-64, 19 on Windows, disjoint index
+   sets per platform, with masks, candidate count, and every pinned scalar exact. A container probe
+   then ran the **pre-Phase-1** code (commit `cabc331`, no hot-loop edit at all) on Linux: it also
+   fails to reproduce the fixture (48 mismatched cells, max relative difference 1.1e-15), proving the
+   drift predates this work. It enters through BLAS-backed steps Phase 1 never touched —
+    `Phantom.position`'s chained `np.matmul`s (`phantom_class.py`), `Beam`'s rotation-matrix products
+    and the `(N,3)@(3,3)` beam-within dot, and scipy spline evaluation — whose last-ulp results differ
+    per BLAS flavour; Phase 1's own new kernels are bit-portable row reductions or feed booleans only.
+    The golden therefore pins exactly what *is* portable — the integer counts (events, cells,
+    candidates) and the published-list contracts (plain lists of real Python bools; the fixture is
+    dose-map-only, so mask values are not compared against stored data) — and bounds the dose-map
+    values and the psd/sum scalars at `rtol = 1e-12` with `atol = 0`, which makes the map bound the
+    value gate (measured drift ~1e-15 relative; the smallest plausible real regression measured —
+    winner-to-runner-up substitution — is ~7.5e-6 relative, a one-bin k_med step ≥1.4e-8, a 0.1 cm²
+    backscatter step ≥2.5e-11, and a flipped hit changes a cell by a full event contribution or flips
+    it 0 ↔ dose, which `atol = 0` always fails). The static
+    Siemens golden is bit-exact on every platform measured (macOS, Ubuntu, Windows) and remains the
+    primary exact gate. This also answers §1d's residual-risk paragraph as it actually played out:
+    CI went red, but on ulp drift from unchanged code — 1d introduced no sign flips (measured: the
+    closest beam-plane binding in the golden run is ~1.7e-6 absolute, ~9.3e5× the plan's 1.819e-12
+    einsum-vs-BLAS ceiling, so a BLAS ulp cannot flip a sign here), so the einsum edit stands and its
+    revert path stays unused.
 3. **Existing suites pass unchanged**, except the four `check_hit`-mocking assertions in
    `tests/unittests/test_calculate_dose.py` called out in 1b. Specifically:
    `test_rotational_envelope.py`, `test_rotational_envelope_dose.py`, `test_beam_hit.py`,
@@ -473,6 +513,38 @@ Phase 1 is done when all of the following hold.
    memoization in 1f must not accidentally cache a *warning-emitting* first call and then suppress it
    for a later legitimate caller, nor the reverse. Key the cache on the lookup only and keep the
    warning decision outside it.
+
+### 4.6a Measured result (2026-10-01, implementer's machine — acceptance 4.6)
+
+Benchmark: 360-pose closed-circle envelope (type-only rotation, no usable endpoints), cylinder
+phantom (9 576 cells), `angular_step_deg=1.0`, logging silenced — the same synthetic frame recipe
+as `tests/unittests/test_rotational_envelope_dose.py::_frame_with_spin`, with NaN endpoints so the
+domain is `closed_circle_domain`. One commit per Phase-1 edit, measured after each:
+
+| Stage | Elapsed |
+|---|---|
+| Pre-Phase-1 baseline (after the golden chunk, before any hot-loop edit) | 1.442 s |
+| After 1b (ndarray hit masks) | ~0.78 s |
+| After 1c (vectorized `scale_field_area`) | ~0.66 s |
+| After 1d (einsum entrance filter) | ~0.62–0.63 s |
+| After 1a+1g (position once per event, one candidate frame) | ~0.48 s |
+| After 1e (vectorized bookkeeping) | ~0.32–0.34 s |
+| After 1f (memoized `k_med`) — **Phase 1 complete** | **~0.17–0.18 s** |
+
+~8.3x on this 9 576-cell cylinder benchmark; the plan's 19x headline was measured on a
+41 022-cell human phantom where per-candidate costs dominate the run to a greater degree.
+`max |before − after|` dose map = `0.000e+00`: both committed goldens (static Siemens cylinder and
+the new rotational envelope) pass bit-identical with **no regeneration** — on the generating
+platform; the cross-platform behaviour is recorded immediately below — and the full unittest and
+GUI suites pass unchanged (1 930 + 302 tests at close of Phase 1).
+
+**Post-CI cross-platform measurement (2026-10-01).** PR CI showed the rotational golden — and only
+it — failing on Ubuntu and Windows with 1–2-ulp dose-map drift (50 and 19 cells respectively; masks,
+counts, scalars all exact), while the static golden passed everywhere. A Linux-container probe of the
+**pre-Phase-1** code reproduced the same drift (48 cells, max relative 1.1e-15), proving the
+rotational chain was never cross-platform bit-portable and the drift enters through BLAS-backed
+steps Phase 1 did not touch. The golden's exact pins (masks, counts, contracts) and its
+`rtol = 1e-12` value bound are recorded in section 4.2's measured amendment.
 
 ## 5. What this plan does not change
 

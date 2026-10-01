@@ -30,7 +30,7 @@ def _minimal_ctx() -> PageContext:
         tabs=MagicMock(),
         file_label=MagicMock(),
         events_label=MagicMock(),
-        psd_label=MagicMock(),
+        psd_readout=MagicMock(),
         run_btn_drawer=MagicMock(),
     )
 

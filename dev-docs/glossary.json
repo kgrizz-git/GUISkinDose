@@ -118,6 +118,18 @@
         "inferred",
         "plane resolution"
       ]
+    },
+    "psd_band": {
+      "preferred": "peak skin dose band",
+      "definition": "Display band for a peak skin dose estimate: not calculated yet, low (below 5000 mGy), elevated (5000 to just under 10000 mGy), or high (10000 mGy or above).",
+      "aliases": [
+        "psd band",
+        "psd severity band",
+        "pending",
+        "low",
+        "elevated",
+        "high"
+      ]
     }
   }
 }

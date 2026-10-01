@@ -12,6 +12,10 @@ MODERN_CSS = r"""
     --aurora-purple: #4338CA;
     --aurora-teal: #0D9488;
     --aurora-pink: #831843;
+    --dose-pending: #94A3B8;   /* same as --text-muted; light grey */
+    --dose-low: #22C55E;
+    --dose-elevated: #FACC15;
+    --dose-high: #EF4444;
     --text-main: #F8FAFC;
     --text-muted: #94A3B8;
     --glass-bg: rgba(33, 33, 33, 0.70);
@@ -26,6 +30,11 @@ MODERN_CSS = r"""
 .text-aurora-purple { color: var(--aurora-purple) !important; }
 .text-aurora-teal { color: var(--aurora-teal) !important; }
 .text-aurora-pink { color: var(--aurora-pink) !important; }
+
+.text-dose-pending { color: var(--dose-pending) !important; }
+.text-dose-low { color: var(--dose-low) !important; }
+.text-dose-elevated { color: var(--dose-elevated) !important; }
+.text-dose-high { color: var(--dose-high) !important; }
 
 body {
     background-color: var(--bg-primary) !important;

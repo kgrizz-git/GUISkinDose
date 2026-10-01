@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-09-30).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-01).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -84,7 +84,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | jupyter_core | 5.9.1 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyter_server | 2.21.1 | BSD-3-Clause | Homepage, https://jupyter-server.readthedocs.io |
 | jupyter_server_terminals | 0.5.4 | BSD-3-Clause | Homepage, https://jupyter.org |
-| jupyterlab | 4.6.2 | BSD-3-Clause | Homepage, https://jupyter.org |
+| jupyterlab | 4.6.4 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyterlab_pygments | 0.3.0 | BSD-3-Clause | Homepage, https://github.com/jupyterlab/jupyterlab_pygments |
 | jupyterlab_server | 2.28.0 | BSD-3-Clause | Homepage, https://jupyterlab-server.readthedocs.io |
 | kaleido | 1.3.0 | MIT, UNKNOWN, MIT, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN | Homepage, https://github.com/plotly/kaleido |
@@ -145,7 +145,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pyee | 13.0.1 | MIT | Repository, https://github.com/jfhbrook/pyee |
 | Pygments | 2.20.0 | BSD-2-Clause | Homepage, https://pygments.org |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
-| pypdf | 6.16.2 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
+| pypdf | 6.19.0 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
 | pytest | 9.0.3 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
 | pytest-asyncio | 1.4.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-base-url | 2.1.0 | MPL-2.0 | Homepage, https://github.com/pytest-dev/pytest-base-url |

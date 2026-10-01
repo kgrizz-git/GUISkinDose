@@ -1,6 +1,9 @@
 # PSD Severity Colour-Coding Plan
 
-Created: 2026-09-28 · Revised: 2026-09-28 (maintainer decisions folded in) · Status: **ready to implement**
+Created: 2026-09-28 · Revised: 2026-09-28 (maintainer decisions folded in) · Status: **complete
+(2026-09-30)** — implemented in two chunks on `feat/psd-colors-and-rotational-perf`: shared
+`gui/dose_severity.py` vocabulary + design tokens + copy/glossary/help wiring, then all readouts
+routed through it with icon/tooltip colour-blind fallbacks. Archived 2026-10-01.
 
 Make the peak-skin-dose (PSD) readout tell the reader at a glance where the estimate sits relative to
 skin-reaction dose bands, and make every PSD readout in the GUI agree on colour and wording.
@@ -54,7 +57,7 @@ The maintainer also asked whether a continuous gradient would be better than thr
 ### 2.1 Band-edge convention (must be pinned before coding)
 
 The request reads `< 5000` / `5000–10000` / `> 10000`, so the edges belong to the *higher* band:
-`psd < 5000` → green, `5000 <= psd <= 10000` → yellow, `psd > 10000` → red. Exactly `5000.00` is
+`psd < 5000` → green, `5000 <= psd < 10000` → yellow, `psd >= 10000` → red. Exactly `5000.00` is
 yellow and exactly `10000.00` is red. This is the conservative reading and the one to implement.
 
 ### 2.2 Clinical note (maintainer's call, not a blocker)

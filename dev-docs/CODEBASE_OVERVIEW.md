@@ -136,8 +136,8 @@ analyze_data.py         — creates Phantom objects, dispatches to mode handler
               ├─ calculate_k_tab()                     (corrections.py)
               └─ calculate_irradiation_event_result()  (iterative, per-event)
                       │
-                      ├─ Beam.check_hit()              (beam_class.py)
-                      ├─ scale_field_area()            (geom_calc.py)
+                      ├─ Beam.check_hit_mask()         (beam_class.py — array form of check_hit)
+                      ├─ scale_field_area_array()      (geom_calc.py — array form of scale_field_area)
                       ├─ k_isq, k_bs, k_med, k_tab    (corrections.py)
                       └─ accumulate dose → dose_map
                               │
@@ -368,7 +368,7 @@ Geometry-change handling and per-event dose accumulation live in
 
 Per-event processing:
 1. Creates `Beam` for the event
-2. Calls `Beam.check_hit()` to find irradiated skin cells
+2. Calls `Beam.check_hit_mask()` (the array form of `check_hit`) to find irradiated skin cells
 3. Scales field area to each skin cell
 4. Applies corrections: k_isq × k_bs × k_med × k_tab
 5. Adds corrected dose to `dose_map`

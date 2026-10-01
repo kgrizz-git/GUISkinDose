@@ -1809,6 +1809,17 @@
    }
   },
   {
+   "path": "tests/fixtures/golden/rotational_envelope_spin_cylinder_dose_map.npy",
+   "sha256": "37cab1f4242f71839156fb429532b33c7b9af250108eb1ae06e2f5c095667ffe",
+   "kind": "opaque_binary",
+   "purpose": "Numeric-only rotational-envelope dose-map golden fixture (synthetic events)",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-09-30"
+   }
+  },
+  {
    "path": "tests/fixtures/golden/phantom_hudfrid_normals.npy",
    "sha256": "a2819181f1beb817d2ceec70ba24d549e476088ad5b252481d1435e39c2a041f",
    "kind": "opaque_binary",

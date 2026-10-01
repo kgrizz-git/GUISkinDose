@@ -180,10 +180,14 @@ class Beam:
             )
         )
 
-    def check_hit(self, patient: Phantom) -> list[bool]:
-        """Calculate which patient entrance skin cells are hit by the beam.
+    def check_hit_mask(self, patient: Phantom) -> np.ndarray:
+        """Calculate which patient entrance skin cells are hit by the beam, as an array.
 
-        A description of this algoritm is presented in the wiki, please visit
+        This is the array form of :meth:`check_hit` and is **internal**: the public
+        surface of this class stays :meth:`check_hit`, so do not export
+        ``check_hit_mask`` from ``guiskindose/__init__.py``.
+
+        A description of this algorithm is presented in the wiki, please visit
         https://guiskindose.readthedocs.io/en/latest/
 
         Parameters
@@ -194,8 +198,8 @@ class Beam:
 
         Returns
         -------
-        List[bool]
-            A boolean list of the same length as the number of patient skin
+        np.ndarray
+            A boolean array of the same length as the number of patient skin
             cells. True for all entrance skin cells that are hit by the beam.
 
         """
@@ -209,8 +213,44 @@ class Beam:
             temp1 = v[hits]
             temp2 = patient.n[hits]
 
-            bool_entrance = [np.dot(temp1[i], temp2[i]) <= 0 for i in range(len(temp1))]
+            # Vectorized form of ``[np.dot(a, b) <= 0 for a, b in zip(temp1, temp2)]``.
+            # Equivalent up to floating point, NOT bit-identical: ``np.dot`` on a 1-D float64
+            # pair dispatches to BLAS ``ddot``, while ``einsum`` uses numpy's own kernels with a
+            # different summation order, so a row dot can differ in the last ulp (measured: ~34%
+            # of 500k random 3-vector pairs differ bitwise, max abs diff 1.819e-12). Only the sign
+            # feeds ``<= 0``, and a flip then needs the true dot within an ulp of zero: 0 of 500k
+            # trials flipped, PR CI's closest binding sits ~1.7e-6 from zero (~9.3e5x that ceiling),
+            # and the committed goldens (static Siemens cylinder, rotational envelope) pass with
+            # this line — exactly on the generating platform, rtol=1e-12-bounded elsewhere (the
+            # dose chain's own BLAS drifts ~1e-15 cross-platform regardless of this line; see
+            # ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN 4.2). If a platform's golden goes red on this
+            # edit and nothing else, this line is the suspect, and it is independently
+            # revertible. Full analysis: ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN 1d.
+            hits[hits] = np.einsum("ij,ij->i", temp1, temp2) <= 0
 
-            hits[hits] = bool_entrance
+        return hits
 
-        return hits.tolist()
+    def check_hit(self, patient: Phantom) -> list[bool]:
+        """Calculate which patient entrance skin cells are hit by the beam.
+
+        A description of this algorithm is presented in the wiki, please visit
+        https://guiskindose.readthedocs.io/en/latest/
+
+        Parameters
+        ----------
+        patient : Phantom
+            Patient phantom, either of type plane, cylinder or human, i.e.
+            instance of class Phantom
+
+        Returns
+        -------
+        list[bool]
+            A boolean list of the same length as the number of patient skin
+            cells. True for all entrance skin cells that are hit by the beam.
+
+        """
+        # The comprehension form, not list(...) and not .tolist(): list() over an
+        # ndarray yields np.bool_ elements, which are not real bools and are not
+        # JSON serializable, and newer numpy stubs type tolist() as unassignable
+        # to list[bool] under basedpyright.
+        return [bool(hit) for hit in self.check_hit_mask(patient=patient)]

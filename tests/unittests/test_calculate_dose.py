@@ -236,7 +236,7 @@ def test_perform_calculations_clears_stale_geometry_on_zero_hit():
     table = MagicMock()
     pad = MagicMock()
     beam = MagicMock()
-    beam.check_hit.return_value = [False, False, False]
+    beam.check_hit_mask.return_value = np.array([False, False, False])
 
     with patch(
         "guiskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
@@ -255,9 +255,9 @@ def test_perform_calculations_clears_stale_geometry_on_zero_hit():
             k_isq=stale_k_isq,
         )
 
-    assert hits == [False, False, False]
-    assert table_hits == []
-    assert field_area == []
+    np.testing.assert_array_equal(hits, [False, False, False])
+    assert len(table_hits) == 0
+    assert len(field_area) == 0
     assert k_isq.size == 0
 
 
@@ -269,21 +269,21 @@ def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
     pad = MagicMock()
 
     hit_beam = MagicMock()
-    hit_beam.check_hit.return_value = [True, False]
+    hit_beam.check_hit_mask.return_value = np.array([True, False])
     hit_beam.r = np.array([[0.0, 0.0, 100.0]])
 
     miss_beam = MagicMock()
-    miss_beam.check_hit.return_value = [False, False]
+    miss_beam.check_hit_mask.return_value = np.array([False, False])
 
     with patch(
         "guiskindose.calculate_dose.perform_calculations_for_new_geometries.Beam",
         side_effect=[hit_beam, miss_beam],
     ), patch(
         "guiskindose.calculate_dose.perform_calculations_for_new_geometries.check_table_hits",
-        return_value=[False],
+        return_value=np.array([False]),
     ), patch(
-        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area",
-        return_value=[5.0],
+        "guiskindose.calculate_dose.perform_calculations_for_new_geometries.scale_field_area_array",
+        return_value=np.array([5.0]),
     ), patch(
         "guiskindose.calculate_dose.perform_calculations_for_new_geometries.calculate_k_isq",
         return_value=np.array([0.5]),
@@ -352,6 +352,9 @@ def test_calculate_dose_runs_and_fills_per_event_slots():
     assert n > 0
     for ev in range(n):
         assert isinstance(output[c.OUTPUT_KEY_HITS][ev], list)
+        # The outer list check above passes even for np.bool_ elements, which are
+        # neither real bools nor JSON serializable, so pin the element type too.
+        assert all(isinstance(hit, bool) for hit in output[c.OUTPUT_KEY_HITS][ev])
         # numpy.float64 is a subclass of Python float
         assert isinstance(output[c.OUTPUT_KEY_KERMA][ev], float)
         assert isinstance(output[c.OUTPUT_KEY_CORRECTION_INVERSE_SQUARE_LAW][ev], np.ndarray)
