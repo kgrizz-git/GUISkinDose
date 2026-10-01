@@ -333,9 +333,20 @@ def _calculate_envelope_event(
     # Every candidate shares them -- the pose columns are the only thing
     # _candidate_frame overrides -- so reading them per candidate was reading the
     # same nine DataFrame cells 360 times over.
-    beam_inputs = BeamGeometryInputs.from_frame(data_norm=normalized_data, event=ev)
+    #
+    # Built from candidate_frame at index 0, NOT from normalized_data at ev.
+    # Those agree on every scalar except DSL: BeamGeometryInputs.from_frame takes
+    # DSL at index 0 (see its docstring), which on the index-reset candidate frame
+    # is the *parent event's* DSL. That is what the candidate loop has always
+    # used, because it built its beams from this very frame. Reading it from
+    # normalized_data instead would silently switch every enveloped event to the
+    # procedure's first-event DSL -- a numbers change, invisible on fixtures
+    # whose rows agree on DSL. (Static events still use the first event's DSL;
+    # that inconsistency predates this work and is not Phase 2's to settle.)
+    beam_inputs = BeamGeometryInputs.from_frame(data_norm=candidate_frame, event=0)
     # Ap3 is a pose column no candidate overrides, so it too is fixed for the
-    # domain; read once, alongside the scalars.
+    # domain; read once, alongside the scalars. No index quirk here, so the
+    # parent event's row is the obvious place to read it from.
     ap3_deg = float(normalized_data.Ap3[ev])
     spline = back_scatter_interpolation[ev]
     k_tab_scalar = k_tab[ev]
