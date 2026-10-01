@@ -8,16 +8,18 @@ Local (pre-push):      compares HEAD against the merge-base with origin/main.
 Exit 0 (pass) when:
   - No src/ or tests/ files changed.
   - CHANGELOG.md is among the changed files.
-  - The only non-test changes add or remove `#` comments, and MAINTENANCE_LOG.md is updated.
+  - The only non-test changes are to comments or blank lines, and MAINTENANCE_LOG.md is updated.
   - Base ref cannot be determined (fail-open to avoid blocking offline work).
 Exit 1 (fail) when src/ or tests/ files changed but CHANGELOG.md was not updated.
 """
 
 from __future__ import annotations
 
+import io
 import os
 import subprocess
 import sys
+import tokenize
 
 
 def _git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -32,51 +34,80 @@ def changed_files(base: str) -> list[str]:
     return [f for f in result.stdout.splitlines() if f]
 
 
-def _changed_lines(base: str, path: str) -> tuple[list[str], list[str]] | None:
-    """Added and removed content lines for ``path``, or None if the diff is unreadable.
+def _file_at(ref: str, path: str) -> str | None:
+    """Contents of ``path`` at ``ref``, or None when it is absent or unreadable.
 
-    File headers (``+++``/``---``) are dropped by exact prefix rather than by looking at the
-    following characters: an earlier version skipped any added line starting with ``++``,
-    which also hid a real statement like ``++i`` from the check.
+    The decode happens inside ``subprocess.run(text=True)``, so a file with non-UTF-8 bytes
+    raises before the lexer is reached and outside its ``try``. Caught here so the result is
+    a refusal like every other unreadable case, rather than a traceback from the hook.
     """
-    result = _git("diff", "--unified=0", f"{base}...HEAD", "--", path)
+    try:
+        result = _git("show", f"{ref}:{path}")
+    except (UnicodeDecodeError, OSError):
+        return None
     if result.returncode != 0:
         return None
-    added: list[str] = []
-    removed: list[str] = []
-    for line in result.stdout.splitlines():
-        if line.startswith(("+++", "---")):
-            continue
-        if line.startswith("+"):
-            added.append(line[1:].strip())
-        elif line.startswith("-"):
-            removed.append(line[1:].strip())
-    return added, removed
+    return result.stdout
+
+
+def _code_tokens(source: str) -> list[tuple[int, str]] | None:
+    """Token stream with comments and non-logical newlines removed, or None if unlexable.
+
+    Returning None on a lexical failure is deliberate: an unparseable file must not be
+    exempted just because the comparison could not be made.
+    """
+    kept: list[tuple[int, str]] = []
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(source).readline):
+            if token.type in (tokenize.COMMENT, tokenize.NL):
+                continue
+            kept.append((token.type, token.string))
+    # TokenError derives from Exception, not SyntaxError, so it must be named; IndentationError
+    # does derive from SyntaxError and would be redundant. ValueError covers UnicodeDecodeError.
+    except (tokenize.TokenError, SyntaxError, ValueError):
+        return None
+    return kept
 
 
 def is_comment_only(base: str, path: str) -> bool:
-    """Whether a Python file's diff only adds or removes ``#`` comments and blank lines.
+    """Whether a Python file changed in comments and blank lines only.
 
-    Deliberately literal rather than clever, twice over. A first version allowed any added
-    line lacking a statement-like marker so docstring prose would qualify, but a bare
-    ``return None`` has no marker either and slipped through. A second version inspected only
-    *added* lines, which let the everyday "comment out the code" edit through — delete
-    ``x = compute_psd()``, add ``# temporarily disabled`` — a behavioural change with no
-    changelog entry. Removed lines are therefore held to the same rule as added ones.
+    Decided by lexing the whole file before and after and comparing the token streams with
+    comments and blank-line newlines dropped. Equal streams mean nothing but commentary
+    moved, which is exactly what the exemption is for.
 
-    The cost is that a docstring-only edit still demands a CHANGELOG entry. That is the safe
-    direction: the exemption exists so a comment need not be announced to users, not to make
-    the changelog optional for anything that merely looks harmless.
+    Two line-based versions preceded this one and both were wrong in ways their tests did
+    not reach. The first allowed any added line lacking a statement-like marker, so a bare
+    ``return None`` slipped through. The second held added and removed lines to the same
+    rule but still parsed the diff by prefix, so a genuine ``++i`` arrived as ``+++i``, got
+    mistaken for a file header, and a real statement went unseen beside an added comment.
+    Comparing token streams removes the whole class: there is no line classification left to
+    get wrong, a ``#`` inside a string literal is a STRING token rather than a comment, and
+    a docstring edit changes the stream and is correctly refused.
+
+    A new or deleted file is never comment-only, and neither is a file that will not lex.
+    Only ``.py`` files qualify at all: a comment-only edit to JSON or Markdown under ``src/``
+    still demands a changelog entry, as it did before this exemption existed.
+
+    Comment directives that tools act on — ``# type: ignore``, ``# noqa``, ``# pragma``,
+    encoding cookies — are COMMENT tokens and so are exempt. That is deliberate: they change
+    linter, type-checker and coverage outcomes rather than what the program computes, and the
+    exemption still requires a MAINTENANCE_LOG entry, so the change is recorded either way.
+
+    If this classifier is ever wrong again, delete the exemption rather than writing a fourth
+    one; a single changelog line costs less than a classifier debugged four times.
     """
     if not path.endswith(".py"):
         return False
-    changed = _changed_lines(base, path)
-    if changed is None:
+    before = _file_at(base, path)
+    after = _file_at("HEAD", path)
+    if before is None or after is None or before == after:
         return False
-    added, removed = changed
-    if not added and not removed:
+    before_tokens = _code_tokens(before)
+    after_tokens = _code_tokens(after)
+    if before_tokens is None or after_tokens is None:
         return False
-    return all(not line or line.startswith("#") for line in (*added, *removed))
+    return before_tokens == after_tokens
 
 
 def resolve_base() -> str | None:
@@ -116,12 +147,13 @@ def main() -> int:
     if not non_test and "dev-docs/MAINTENANCE_LOG.md" in changed:
         return 0
 
-    # Same exemption, extended to src changes whose added and removed lines are all comments.
+    # Same exemption, extended to src changes that touch only comments and blank lines.
     # CHANGELOG.md documents its own scope as notable *user-facing* changes and points
     # maintainer-facing work at MAINTENANCE_LOG.md, so a comment has no honest entry in it;
     # demanding one there trains readers to skim the file. Any behavioural change still
-    # requires CHANGELOG.md: is_comment_only() disqualifies a file as soon as any added OR
-    # removed line looks like a statement, so commenting code out does not qualify either.
+    # requires CHANGELOG.md, because is_comment_only() compares the file's whole token stream
+    # before and after: anything that moves a real token, including commenting code out,
+    # fails — as does a file that cannot be lexed.
     if "dev-docs/MAINTENANCE_LOG.md" in changed and all(is_comment_only(base, f) for f in non_test):
         return 0
 

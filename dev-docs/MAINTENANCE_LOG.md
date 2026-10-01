@@ -38,17 +38,38 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 
 - **The changelog gate accepts a comment-only source change** (2026-09-30) —
-  `scripts/check_changelog.py` demanded a `CHANGELOG.md` entry for any `src/` diff, which
-  blocked adding a code comment. `CHANGELOG.md` states its own scope as notable *user-facing*
-  changes and directs maintainer-facing work here, so a comment has no honest entry there and
-  demanding one trains readers to skim the file. A `MAINTENANCE_LOG.md` entry now satisfies the
-  gate when every added line in the non-test files is a `#` comment or blank.
+  `scripts/check_changelog.py` demanded a `CHANGELOG.md` entry for any `src/` diff, blocking a
+  code comment. `CHANGELOG.md` scopes itself to notable *user-facing* changes and directs
+  maintainer-facing work here, so a comment has no honest entry there. A `MAINTENANCE_LOG.md`
+  entry now satisfies the gate when a Python source change touches only comments and blank
+  lines.
 
-  Kept deliberately literal. A first attempt allowed any added line without a statement-like
-  marker so docstring prose would qualify, but a bare `return None` has no marker either and
-  slipped through — caught by the new tests before it landed. Requiring `#` has no such gap, at
-  the cost of a docstring-only edit still needing a changelog entry. Deletions never qualify,
-  since only added lines are inspected. Tested both ways, one case per statement form.
+  **How it decides, after getting it wrong twice.** The first version exempted any added line
+  without a statement-like marker, so docstring prose qualified — and so did a bare
+  `return None`. The second held added and removed lines to the same rule, which closed the
+  "comment out the code" edit, but still classified the diff line by line: a real `++i` arrives
+  as `+++i`, was mistaken for a `+++ b/path` file header and dropped, so `+# a note` beside
+  `+++i` passed as comment-only. CodeRabbit found that one.
+
+  The third version stops classifying lines. It reads the whole file at the base ref and at
+  HEAD, lexes both with `tokenize`, discards COMMENT and NL tokens, and requires the remaining
+  streams to be identical. That removes the bug class rather than patching it: a `#` inside a
+  string is a STRING token, a docstring edit changes the stream and is refused, and anything
+  unreadable or unlexable is refused rather than exempted. Two reviewers tried to construct a
+  behaviour-changing counterexample and could not.
+
+  Two consequences recorded deliberately. Comment directives that tooling honours
+  (`# type: ignore`, `# noqa`, encoding cookies) are exempt, which is a judgement call pinned
+  by a test — they change linter and type-checker outcomes, not what the program computes, and
+  the required log entry records them anyway. And a pure reformat now classifies as
+  comment-only where the second version demanded a changelog entry; that is defensible, but
+  note it was this gate that caught an accidental `ruff format` of `gui/app.py` earlier the same
+  day, and `ruff format --check` is not enforced in this repo.
+
+  The real root cause of both earlier failures was the tests, not the classifiers: each stubbed
+  the layer above the bug and passed. The tests now stub only the git file read, so the
+  production lexer runs. If a fourth version is ever needed, the policy recorded in the module
+  is to delete the exemption instead and write the one changelog line.
 
 
 - **Semgrep pin 1.168.0 to 1.178.0; the tool's Dependabot alerts triaged** (2026-09-30) —

@@ -57,120 +57,163 @@ def test_maintenance_log_does_not_exempt_src_changes(monkeypatch: pytest.MonkeyP
     assert _main_with_changed(monkeypatch, changed) == 1
 
 
-def _main_with_diff(
+def _main_with_sources(
     monkeypatch: pytest.MonkeyPatch,
     changed: list[str],
-    added: dict[str, list[str]],
-    removed: dict[str, list[str]] | None = None,
+    before: dict[str, str],
+    after: dict[str, str],
 ) -> int:
-    gone = removed or {}
+    """Drive main() through real lexing, stubbing only git's file reads.
+
+    Deliberately stubs `_file_at` and not `is_comment_only`: two earlier versions of this
+    check were wrong inside the classifier, and tests that stubbed the layer above it passed
+    anyway. Everything below this seam is the production code path.
+    """
     monkeypatch.setattr(check_changelog, "resolve_base", lambda: "base")
     monkeypatch.setattr(check_changelog, "changed_files", lambda base: changed)
     monkeypatch.setattr(
         check_changelog,
-        "_changed_lines",
-        lambda base, path: (added.get(path, []), gone.get(path, [])),
+        "_file_at",
+        lambda ref, path: (before if ref == "base" else after).get(path),
     )
     return check_changelog.main()
 
 
-def test_comment_only_src_change_is_satisfied_by_the_maintenance_log(monkeypatch: pytest.MonkeyPatch) -> None:
+_LOG = "dev-docs/MAINTENANCE_LOG.md"
+
+
+def test_a_comment_only_change_is_satisfied_by_the_maintenance_log(monkeypatch: pytest.MonkeyPatch) -> None:
     """CHANGELOG.md documents itself as user-facing; a comment has no honest entry there."""
-    assert (
-        _main_with_diff(
-            monkeypatch,
-            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
-            {"src/a.py": ["# explain why the flag exists", ""]},
-        )
-        == 0
+    rc = _main_with_sources(
+        monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x = 1\n"}, {"src/a.py": "# why x is 1\nx = 1\n"}
     )
+    assert rc == 0
 
 
 def test_comment_only_still_needs_the_maintenance_log(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert _main_with_diff(monkeypatch, ["src/a.py"], {"src/a.py": ["# just a comment"]}) == 1
-
-
-@pytest.mark.parametrize(
-    "line",
-    [
-        "value = 1",
-        "helper()",
-        "import os",
-        "def f() -> None:",
-        "class C:",
-        "    return None",
-    ],
-)
-def test_one_added_statement_disqualifies_the_exemption(monkeypatch: pytest.MonkeyPatch, line: str) -> None:
-    """The exemption must not become a way to slip behaviour past the changelog."""
-    assert (
-        _main_with_diff(
-            monkeypatch,
-            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
-            {"src/a.py": ["# a comment", line]},
-        )
-        == 1
-    )
-
-
-def test_a_pure_deletion_is_not_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Removing code changes behaviour, and shows up as no added lines at all."""
-    assert _main_with_diff(monkeypatch, ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"], {"src/a.py": []}) == 1
-
-
-def test_a_non_python_src_change_is_never_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert (
-        _main_with_diff(
-            monkeypatch,
-            ["src/guiskindose/gui/ui_copy.json", "dev-docs/MAINTENANCE_LOG.md"],
-            {"src/guiskindose/gui/ui_copy.json": ["  // note"]},
-        )
-        == 1
-    )
+    rc = _main_with_sources(monkeypatch, ["src/a.py"], {"src/a.py": "x = 1\n"}, {"src/a.py": "# note\nx = 1\n"})
+    assert rc == 1
 
 
 def test_commenting_code_out_is_not_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The everyday "comment out the code" edit changes behaviour and must be announced.
+    """The everyday "comment out the code" edit changes behaviour and must be announced."""
+    rc = _main_with_sources(
+        monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x = compute()\n"}, {"src/a.py": "# disabled\n"}
+    )
+    assert rc == 1
 
-    Inspecting only added lines let this through: the addition is a `#` comment and the
-    deleted statement was invisible to the check.
+
+def test_a_statement_beside_an_added_comment_is_not_hidden(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression for the retired diff parser.
+
+    `++i` reached it as `+++i`, was mistaken for a `+++ b/path` file header, and vanished —
+    so a real statement counted as comment-only when it arrived next to an added comment.
+    Token comparison has no line classification left to get wrong.
     """
-    assert (
-        _main_with_diff(
-            monkeypatch,
-            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
-            {"src/a.py": ["# temporarily disabled"]},
-            {"src/a.py": ["x = compute_psd()"]},
-        )
-        == 1
+    rc = _main_with_sources(
+        monkeypatch, ["src/a.py", _LOG], {"src/a.py": "i = 0\n"}, {"src/a.py": "# a note\ni = 0\n++i\n"}
     )
+    assert rc == 1
 
 
-def test_removing_a_comment_still_qualifies(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Deleting a stale comment is as unannounceable as adding one."""
-    assert (
-        _main_with_diff(
-            monkeypatch,
-            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
-            {"src/a.py": ["# the replacement note"]},
-            {"src/a.py": ["# the stale note", ""]},
-        )
-        == 0
+def test_a_hash_inside_a_string_literal_is_not_a_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A `#` line inside a triple-quoted string is a value, and changing it changes behaviour."""
+    rc = _main_with_sources(
+        monkeypatch,
+        ["src/a.py", _LOG],
+        {"src/a.py": 's = """\n# original\n"""\n'},
+        {"src/a.py": 's = """\n# altered\n"""\n'},
     )
+    assert rc == 1
 
 
-def test_an_empty_diff_never_qualifies(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No added and no removed lines means the diff could not be read; demand the entry."""
-    assert _main_with_diff(monkeypatch, ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"], {}, {}) == 1
-
-
-def test_a_statement_starting_with_plus_is_not_hidden(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`++i` is real code, and an earlier header filter skipped any added line starting `++`."""
-    assert (
-        _main_with_diff(
-            monkeypatch,
-            ["src/a.py", "dev-docs/MAINTENANCE_LOG.md"],
-            {"src/a.py": ["++i"]},
-        )
-        == 1
+def test_a_docstring_edit_is_not_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Docstrings are STRING tokens, so the safe direction is to demand the entry."""
+    rc = _main_with_sources(
+        monkeypatch,
+        ["src/a.py", _LOG],
+        {"src/a.py": 'def f():\n    """a"""\n'},
+        {"src/a.py": 'def f():\n    """b"""\n'},
     )
+    assert rc == 1
+
+
+def test_an_unlexable_file_is_never_exempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Lexical classification failing must not grant the exemption by default."""
+    rc = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x = 1\n"}, {"src/a.py": "x = (\n"})
+    assert rc == 1
+
+
+def test_a_new_file_is_never_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`git show base:path` fails for a file that did not exist; that is not an exemption."""
+    rc = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {}, {"src/a.py": "# only a comment\n"})
+    assert rc == 1
+
+
+def test_a_non_python_src_change_is_never_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    rc = _main_with_sources(
+        monkeypatch,
+        ["src/guiskindose/gui/ui_copy.json", _LOG],
+        {"src/guiskindose/gui/ui_copy.json": "{}\n"},
+        {"src/guiskindose/gui/ui_copy.json": '{"a": 1}\n'},
+    )
+    assert rc == 1
+
+
+def test_a_mixed_diff_still_demands_the_changelog(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A comment in one file does not excuse a code change in another."""
+    rc = _main_with_sources(
+        monkeypatch,
+        ["src/a.py", "src/b.py", _LOG],
+        {"src/a.py": "x = 1\n", "src/b.py": "y = 1\n"},
+        {"src/a.py": "# note\nx = 1\n", "src/b.py": "y = 2\n"},
+    )
+    assert rc == 1
+
+
+def test_a_deleted_file_is_never_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`git show HEAD:path` fails for a file this branch removed; deletion is behavioural."""
+    rc = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {"src/a.py": "# only a comment\n"}, {})
+    assert rc == 1
+
+
+def test_identical_content_is_never_comment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A file listed as changed whose content matches — a mode change, say — is not exempt."""
+    rc = _main_with_sources(monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x = 1\n"}, {"src/a.py": "x = 1\n"})
+    assert rc == 1
+
+
+def test_a_tool_directive_comment_stays_exempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pins a judgement call rather than an accident.
+
+    `# type: ignore`, `# noqa` and friends are COMMENT tokens, so they are exempt. They
+    change linter and type-checker outcomes, not what the program computes, and the
+    MAINTENANCE_LOG entry the exemption still requires records them. If the team ever decides
+    static-analysis suppressions belong in CHANGELOG.md, this test is the one to flip.
+    """
+    rc = _main_with_sources(
+        monkeypatch, ["src/a.py", _LOG], {"src/a.py": "x = f()\n"}, {"src/a.py": "x = f()  # type: ignore\n"}
+    )
+    assert rc == 0
+
+
+def test_an_encoding_cookie_change_stays_exempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Also a COMMENT token. It matters only for non-UTF-8 source, which this repo has none of."""
+    rc = _main_with_sources(
+        monkeypatch,
+        ["src/a.py", _LOG],
+        {"src/a.py": "x = 1\n"},
+        {"src/a.py": "# -*- coding: utf-8 -*-\nx = 1\n"},
+    )
+    assert rc == 0
+
+
+def test_an_undecodable_file_is_refused_not_crashed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The decode happens in subprocess.run, outside the lexer's try, so guard it there."""
+
+    def explode(*_args: str) -> subprocess.CompletedProcess[str]:
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+
+    monkeypatch.setattr(check_changelog, "_git", explode)
+    assert check_changelog._file_at("base", "src/a.py") is None
+    assert check_changelog.is_comment_only("base", "src/a.py") is False
