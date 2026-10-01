@@ -169,6 +169,46 @@ def test_from_inputs_ignores_angle_dtype(frame: pd.DataFrame) -> None:
         )
 
 
+# ── batched beam-face normals ─────────────────────────────────────────
+
+
+def test_batched_beam_normals_equal_the_four_cross_products(frame: pd.DataFrame) -> None:
+    """``beam.N`` must be exactly the four face cross products, bit for bit.
+
+    ``Beam._build`` computes the four face normals with one batched ``np.cross``
+    instead of four scalar calls. That is only safe if the batched form is
+    numpy's own kernel doing identical arithmetic, so the pin is exact equality
+    against the explicit four-call form -- not ``allclose``. A tolerance here
+    would hide exactly the kind of drift the edit is meant to rule out.
+
+    Poses sweep past 90 degrees on each axis, where a sign or axis-order slip
+    would be largest.
+    """
+    for event in range(len(frame)):
+        inputs = BeamGeometryInputs.from_frame(data_norm=frame, event=event)
+        for pose in _POSES:
+            beam = Beam.from_inputs(inputs, *pose)
+            unit = (beam.r[1:] - beam.r[0, :]).T
+            unit = (unit / np.linalg.norm(unit, axis=0)).T
+            expected = np.vstack(
+                [
+                    np.cross(unit[0, :], unit[1, :]),
+                    np.cross(unit[1, :], unit[2, :]),
+                    np.cross(unit[2, :], unit[3, :]),
+                    np.cross(unit[3, :], unit[0, :]),
+                ]
+            )
+            np.testing.assert_array_equal(
+                beam.N,
+                expected,
+                err_msg=f"beam.N differs from the four cross products at event {event}, pose {pose}",
+            )
+            # Shape and row order are part of the contract: row i is the normal
+            # of the face between vertices i and i+1, wrapping.
+            assert beam.N.shape == (4, 3)
+            np.testing.assert_array_equal(beam.N[3], np.cross(unit[3, :], unit[0, :]))
+
+
 # ── threading through perform_calculations_for_new_geometries ──────────
 
 
