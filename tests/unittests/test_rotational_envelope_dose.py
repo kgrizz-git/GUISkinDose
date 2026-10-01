@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TypedDict
+
 import numpy as np
 from calculate_dose_recursion_helpers import generate_synthetic_normalized_events
 
@@ -315,3 +318,63 @@ def test_static_mode_is_deterministic_across_runs():
     assert _np.array_equal(
         first[c.OUTPUT_KEY_DOSE_MAP], second[c.OUTPUT_KEY_DOSE_MAP]
     )
+
+
+# ── rotational-envelope dose-map golden baseline ──────────────────────
+
+_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
+_GOLDEN_ROTATIONAL_DOSE_MAP = _FIXTURES / "rotational_envelope_spin_cylinder_dose_map.npy"
+
+# Captured 2026-09-30 from *unmodified, pre-Phase-1* code: synthetic events from
+# ``generate_synthetic_normalized_events`` (seed 42, no patient data), a 60-degree
+# spin, ``angular_step_deg = 1.0`` (360 candidates), cylinder phantom.
+#
+# The cylinder matters: ``_settings`` forces ``phantom.model = "plane"``, and the
+# entrance-cell filter under optimization is guarded by
+# ``if patient.phantom_model != "plane"``, so a plane-phantom golden would never
+# execute that code path at all.
+#
+# Do NOT regenerate this fixture as part of the rotational-envelope performance
+# work. A mismatch is a behaviour change, not a stale fixture.
+class _GoldenRotationalSpinCylinder(TypedDict):
+    events: int
+    dose_map_len: int
+    psd_mgy: float
+    dose_sum: float
+    unique_candidate_count: int
+
+
+_GOLDEN_ROTATIONAL_SPIN_CYLINDER: _GoldenRotationalSpinCylinder = {
+    "events": 2,
+    "dose_map_len": 9576,
+    "psd_mgy": 0.11001912596177693,
+    "dose_sum": 53.44510597624422,
+    "unique_candidate_count": 360,
+}
+
+
+def test_rotational_envelope_golden_baseline_spin_cylinder():
+    """Coverage-envelope output pinned; Phase-1 perf edits must stay bit-identical."""
+    frame = _frame_with_spin()
+    settings = _settings(angular_step_deg=1.0)
+    # Mutate the returned object rather than passing a partial phantom dict as a
+    # _settings override: base.update(overrides) is a top-level update, so a
+    # partial phantom dict would replace the whole phantom block.
+    settings.phantom.model = "cylinder"
+    assert settings.phantom.model == "cylinder"
+
+    output = _run(frame.copy(), settings)
+    golden = _GOLDEN_ROTATIONAL_SPIN_CYLINDER
+    dose_map = output[c.OUTPUT_KEY_DOSE_MAP]
+
+    assert len(output[c.OUTPUT_KEY_HITS]) == golden["events"]
+    assert len(dose_map) == golden["dose_map_len"]
+    assert float(np.max(dose_map)) == golden["psd_mgy"]
+    assert float(np.sum(dose_map)) == golden["dose_sum"]
+    details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
+    assert details["unique_candidate_count"] == golden["unique_candidate_count"]
+    # Published contract: per-event hits stay a plain list.
+    assert isinstance(output[c.OUTPUT_KEY_HITS][1], list)
+
+    expected_dose_map = np.load(_GOLDEN_ROTATIONAL_DOSE_MAP)
+    np.testing.assert_array_equal(dose_map, expected_dose_map)
