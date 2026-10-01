@@ -1,8 +1,8 @@
 # Rotational Coverage-Envelope Performance Plan
 
-Created: 2026-09-28 · Status: **Phase 1 complete (2026-10-01, PR pending) — Phase 2 to follow in
-its own PR per its own section; Phase 3 optional follow-ons remain open.** Section 4.6a records
-the measured result.
+Created: 2026-09-28 · Status: **Phase 1 complete (2026-10-01, PR #131) — Phase 2 complete
+(2026-10-02, this branch), Phase 3 optional follow-ons remain open.** Section 4.6a records the
+Phase 1 measurement and §2.1 the Phase 2 one.
 
 Execution plan for the findings in
 [assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md](../assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
@@ -420,6 +420,62 @@ code paths too, so it needs its own review and its own PR. Shape to aim for: a s
 `BeamGeometryInputs` record built once per event, with `Beam.from_inputs(inputs, ap1, ap2, ap3)`
 alongside the existing `Beam(data_norm=…, event=…)` constructor, which becomes a thin adapter. Do not
 remove the DataFrame constructor.
+
+### 2.1 What Phase 2 shipped, and the hazard the plan's warning actually caught
+
+Four commits: `2587848`/`ab8e2f1` (the record and `from_inputs`), `2f4296d` (threading through
+`perform_calculations_for_new_geometries`), `1ba3f33` (the candidate loop), `5f31991` (batched beam
+normals). One fix commit, `f5dcbbf`, described below.
+
+**The `DSL` warning in this section was not hypothetical — it fired, one commit late.** The plan
+warned: "`Beam.__init__` reads `data_norm.DSL[0]` — index `[0]`, not `event` … Hoisting 'per-event
+scalars' must preserve that quirk exactly." `1ba3f33` hoisted the record by calling
+`BeamGeometryInputs.from_frame(normalized_data, event=ev)`, and that is wrong for the envelope:
+
+- `from_frame` takes `DSL` at index `0`. On a full event table that is the **first** event's row.
+- The envelope's candidates were built from `candidate_frame` — a **one-row, index-reset** frame
+  whose row `0` is the **parent event's**. That is why `DSL[0]` was the parent's DSL for candidates
+  while being the first event's for static events. The two paths have always disagreed.
+- Hoisting from `normalized_data` silently switched every enveloped event to the first event's
+  detector size. Measured on a two-event spin with `DSL` 30 / 35: candidates got 30 where the
+  pre-Phase-2 code got 35. `f5dcbbf` builds the record from `candidate_frame` at index `0` instead.
+
+**And the near-miss is worth recording: this could not have been caught by a dose golden.** `DSL`
+scales `Beam.det_r` and nothing else, and `det_r` is read only by plotting and export — never by the
+hit mask, the field area, or a correction factor. So the regression mis-drew the detector box in a
+geometry plot and moved **no dose value at all**; the static and rotational goldens were right to
+pass. `tests/unittests/test_rotational_envelope_detector_size.py` therefore gates on `det_r`, varies
+`DSL` per row on purpose (a fixture whose rows agree on `DSL` hides the whole distinction — which is
+how the wrong row got committed), and includes a test that DSL never reaches the dose chain so this
+scope note cannot silently go stale.
+
+**Left alone on purpose:** the static path still reads row 0. Reconciling it with the envelope's
+parent-event read is a numbers change with its own discussion, not a performance refactor's business.
+
+### 2.2 Declined follow-on: `self.ijk` / `self.det_ijk`
+
+Both are constant per beam (2 `np.column_stack` calls, ~1.4 % of this benchmark's runtime) and could
+become module-level arrays. Not done: they are **public attributes**, and every `Beam` currently owns
+its own array, so sharing one would change that contract for a rounding-error-sized win. All current
+consumers only index and `tolist()` them (`create_mesh3d.py`, `create_wireframes.py`,
+`format_export_data.py`), so the risk is theoretical — but it is a real semantic change, and it is
+recorded here rather than smuggled into a performance commit.
+
+### 2.3 Measured result (2026-10-02, implementer's machine)
+
+Same benchmark as §4.6a: 360-pose closed-circle envelope (type-only rotation, no usable endpoints),
+cylinder phantom (9 576 cells), `angular_step_deg = 1.0`, logging silenced. Best of 5 runs.
+
+| Stage | Elapsed |
+|---|---|
+| Pre-Phase-2 baseline | 0.175 s |
+| After 2/3 (hoisted scalars, one per event) | 0.125 s |
+| After 2.4 (batched beam-face normals) | **0.119 s** |
+
+−32 % on this benchmark. The dose map stays bit-identical to the pre-Phase-2 map throughout
+(`max |before − after|` = `0.000e+00`, `array_equal` true), and the full unittest (1 949 passed,
+3 skipped) and GUI (306 passed) suites pass. The profile's remaining hot spot is
+`check_hit_mask` (0.022 s of ~0.19 s), which is per-cell work and not a repeat of anything hoisted.
 
 ## Phase 3 — optional follow-ons
 
