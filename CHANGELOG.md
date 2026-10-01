@@ -85,10 +85,17 @@ That keeps SemVer and contributor history organized.
   outside the memo so a suppressed candidate pass cannot swallow a later
   warning. Measured 1.442 s -> ~0.17-0.18 s for a 360-pose cylinder-phantom
   envelope (~8.3x; the plan's 19x headline was measured on a 41k-cell human
-  phantom); `max |before - after|` dose map is exactly zero, gated by a new
-  committed rotational-envelope golden (cylinder, so the entrance filter
-  actually executes) alongside the existing static golden, both passing
-  without regeneration. No default, contract, disclosure field, candidate
+  phantom); `max |before - after|` dose map is exactly zero on the generating
+  platform, gated by a new committed rotational-envelope golden (cylinder, so
+  the entrance filter actually executes) alongside the existing static golden,
+  both passing without regeneration. The rotational chain was never bit-portable
+  across BLAS flavours — measured: even the pre-Phase-1 code drifts 1-2 ulps in
+  ~0.5% of cells off the generating platform (50 cells CI Ubuntu, 19 Windows,
+  48 in a Linux container probe of the old code), through BLAS-backed steps
+  Phase 1 did not touch — so that golden pins masks, counts, scalars, and
+  published contracts exactly and bounds dose values at rtol=1e-12, while the
+  static golden stays bit-exact everywhere. No default, contract, disclosure
+  field, candidate
   domain, or aggregation rule changed; `angular_step_deg` stays 1.0. Design:
   `dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (Phase 2, hoisting
   `Beam`'s per-event scalars, follows in its own PR).

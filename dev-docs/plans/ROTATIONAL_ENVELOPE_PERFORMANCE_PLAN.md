@@ -445,6 +445,26 @@ Phase 1 is done when all of the following hold.
    at all** — leaving 1d's only exact gate the *static* Siemens cylinder golden, and leaving the
    envelope path (the thing actually being optimized, and where grazing cells with
    `dot(v, n) ≈ 0` live) untested for it. A cylinder run is still cheap and closes that hole.
+
+   **Measured amendment (2026-10-01, post-CI): the rotational chain is not bit-portable across BLAS
+   flavours, and that is a property of the chain, not of Phase 1.** The first PR CI run on the golden
+   showed 1–2-ulp dose-map drift — 50 of 9 576 cells on Ubuntu x86-64, 19 on Windows, disjoint index
+   sets per platform, with masks, candidate count, and every pinned scalar exact. A container probe
+   then ran the **pre-Phase-1** code (commit `cabc331`, no hot-loop edit at all) on Linux: it also
+   fails to reproduce the fixture (48 mismatched cells, max relative difference 1.1e-15), proving the
+   drift predates this work. It enters through BLAS-backed steps Phase 1 never touched —
+   `Phantom.position`'s chained `np.matmul`s (`phantom_class.py`), `Beam`'s rotation-matrix products
+   and the `(N,3)@(3,3)` beam-within dot, and scipy spline evaluation — whose last-ulp results differ
+   per BLAS flavour; Phase 1's own new kernels are bit-portable row reductions or feed booleans only.
+   The golden therefore pins exactly what *is* portable — hit masks and `hits_union` (booleans),
+   events/cells/candidate counts, and the published-list contracts — and bounds the dose-map values
+   and the psd/sum scalars at `rtol = 1e-12` with `atol = 0` (measured drift ~1e-15 relative; a
+   flipped hit changes a cell by a full event contribution, orders of magnitude above the bound and
+   caught exactly by the mask pins; `atol = 0` keeps 0 ↔ dose transitions failing). The static
+   Siemens golden is bit-exact on every platform measured (macOS, Ubuntu, Windows) and remains the
+   primary exact gate. This also answers §1d's residual-risk paragraph as it actually played out:
+   CI went red, but on ulp drift from unchanged code — 1d introduced no sign flips (the mask pins
+   were exact on all platforms), so the einsum edit stands and its revert path stays unused.
 3. **Existing suites pass unchanged**, except the four `check_hit`-mocking assertions in
    `tests/unittests/test_calculate_dose.py` called out in 1b. Specifically:
    `test_rotational_envelope.py`, `test_rotational_envelope_dose.py`, `test_beam_hit.py`,
@@ -498,6 +518,14 @@ domain is `closed_circle_domain`. One commit per Phase-1 edit, measured after ea
 `max |before − after|` dose map = `0.000e+00`: both committed goldens (static Siemens cylinder and
 the new rotational envelope) pass bit-identical with **no regeneration**, and the full unittest and
 GUI suites pass unchanged (1 930 + 302 tests at close of Phase 1).
+
+**Post-CI cross-platform measurement (2026-10-01).** PR CI showed the rotational golden — and only
+it — failing on Ubuntu and Windows with 1–2-ulp dose-map drift (50 and 19 cells respectively; masks,
+counts, scalars all exact), while the static golden passed everywhere. A Linux-container probe of the
+**pre-Phase-1** code reproduced the same drift (48 cells, max relative 1.1e-15), proving the
+rotational chain was never cross-platform bit-portable and the drift enters through BLAS-backed
+steps Phase 1 did not touch. The golden's exact pins (masks, counts, contracts) and its
+`rtol = 1e-12` value bound are recorded in section 4.2's measured amendment.
 
 ## 5. What this plan does not change
 

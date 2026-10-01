@@ -412,6 +412,12 @@ def test_static_mode_is_deterministic_across_runs():
 _FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
 _GOLDEN_ROTATIONAL_DOSE_MAP = _FIXTURES / "rotational_envelope_spin_cylinder_dose_map.npy"
 
+# Cross-BLAS ulp headroom: measured drift is ~1e-15 relative (1-2 ulps); a
+# mask flip or bookkeeping bug changes affected cells by orders of magnitude
+# more. 1e-12 sits ~3 orders above the drift and ~9+ orders below any real
+# regression. atol stays 0 so 0 <-> dose transitions always fail.
+_GOLDEN_RTOL = 1e-12
+
 # Captured 2026-09-30 from *unmodified, pre-Phase-1* code: synthetic events from
 # ``generate_synthetic_normalized_events`` (seed 42, no patient data), a 60-degree
 # spin, ``angular_step_deg = 1.0`` (360 candidates), cylinder phantom.
@@ -423,6 +429,21 @@ _GOLDEN_ROTATIONAL_DOSE_MAP = _FIXTURES / "rotational_envelope_spin_cylinder_dos
 #
 # Do NOT regenerate this fixture as part of the rotational-envelope performance
 # work. A mismatch is a behaviour change, not a stale fixture.
+#
+# The fixture holds one platform's bits, and that is a property of the dose
+# chain, not of Phase 1: it embeds BLAS-backed results (``Phantom.position``'s
+# chained matmuls, ``Beam``'s rotation-matrix products, the (N,3)@(3,3)
+# beam-within dot, scipy spline evaluation), whose last-ulp values differ per
+# BLAS flavour. Measured 2026-10-01: the *pre-Phase-1* code itself reproduces
+# this fixture exactly on the generating platform but NOT elsewhere — 48
+# mismatched cells (max rel 1.1e-15) in a Linux container, and Phase-1 code on
+# PR CI mismatched 50 cells on Ubuntu x86-64 and 19 on Windows, all 1-2 ulps,
+# with masks, counts, and every pinned scalar exact. So the exact gates below
+# are the mask/contract pins (a real regression — a flipped hit, a positioning
+# or fold bug — changes cells by full event contributions, far above _GOLDEN_RTOL,
+# and shows up in hits/hits_union exactly), while the dose-map values are bounded
+# tightly enough to forbid any of that while tolerating cross-BLAS ulp drift.
+# atol=0 so a newly-hit or newly-dropped cell (0 <-> dose) can never pass.
 class _GoldenRotationalSpinCylinder(TypedDict):
     events: int
     dose_map_len: int
@@ -456,8 +477,11 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
 
     assert len(output[c.OUTPUT_KEY_HITS]) == golden["events"]
     assert len(dose_map) == golden["dose_map_len"]
-    assert float(np.max(dose_map)) == golden["psd_mgy"]
-    assert float(np.sum(dose_map)) == golden["dose_sum"]
+    # Scalars with _GOLDEN_RTOL, not exact ==: they are exact on the generating
+    # platform (and on the CI platforms measured so far), but the same cross-BLAS
+    # ulp drift that bounds the map below can reach them on future platforms.
+    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"], rel=_GOLDEN_RTOL)
+    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"], rel=_GOLDEN_RTOL)
     details = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]
     assert details["unique_candidate_count"] == golden["unique_candidate_count"]
     # Published contract: per-event hits stay a plain list.
@@ -470,4 +494,8 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
     assert all(isinstance(hit, bool) for hit in output[c.OUTPUT_KEY_HITS_UNION][1])
 
     expected_dose_map = np.load(_GOLDEN_ROTATIONAL_DOSE_MAP)
-    np.testing.assert_array_equal(dose_map, expected_dose_map)
+    # Exact on the generating platform; rtol-bounded elsewhere (see the
+    # fixture's provenance comment). Masks and counts above stay exact: a
+    # flipped hit changes a cell by a full event contribution, which both the
+    # hits/union pins and this bound (atol=0) catch at any BLAS flavour.
+    np.testing.assert_allclose(dose_map, expected_dose_map, rtol=_GOLDEN_RTOL, atol=0.0)
