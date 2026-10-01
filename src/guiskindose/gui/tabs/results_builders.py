@@ -89,6 +89,31 @@ class ResultsTabController:
             readout.value.set_text(text)
         apply_psd_presentation(readout, psd)
 
+    def _apply_subset_psd_presentation(self, res: Any) -> None:
+        """Move the aggregate readout to the CURRENT subset selection's band.
+
+        The single source of truth for the aggregate readout's presentation,
+        shared by the subset-map refresh and the 1.5 s timer refresh: the
+        presentation is re-derived from ``state.aggregate_subset_exams`` on
+        every refresh, so a timer tick can never clobber a selected subset's
+        value, icon, or tooltip with the whole-run aggregate. Texts match
+        ``refresh_aggregate_dosemap_subset``'s figure handling: whole-run
+        aggregate when every exam is selected, pending grey when none is, and
+        the subset's own maximum otherwise — banded on the subset, not the
+        aggregate.
+        """
+        agg_readout = self.refs.agg_psd_readout
+        if all(state.aggregate_subset_exams):
+            self._apply_psd_presentation(
+                agg_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy"
+            )
+        elif not any(state.aggregate_subset_exams):
+            # No exam is in the subset, so there is no dose to band: pending.
+            self._apply_psd_presentation(agg_readout, None, "— mGy (no exams selected)")
+        else:
+            _, subset_psd = compute_subset_aggregate(res, state.aggregate_subset_exams)
+            self._apply_psd_presentation(agg_readout, subset_psd, f"{subset_psd:.2f} mGy (subset)")
+
     def refresh_metrics(self) -> None:
         """Refresh metrics."""
         if not state.is_multi_exam and state.calculation_done and state.psd is not None:
@@ -107,6 +132,12 @@ class ResultsTabController:
             fluoro = total_fluoro_time_s(state.rdsr_df)
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
             self._refresh_rotational_badge()
+        elif not state.is_multi_exam:
+            # Invalidated (or never run): the readout must not keep showing a
+            # stale banded value after the run it belonged to is gone. Back to
+            # the Results placeholder with the pending presentation — the same
+            # invalidation the sidebar readout already receives.
+            self._apply_psd_presentation(self.refs.psd_readout, None, "—")
 
     def _rotational_badge_text(self) -> str:
         """One-line rotational-handling summary for the Results badge.
@@ -241,6 +272,10 @@ class ResultsTabController:
 
         res = state.multi_exam_result
         self._set_multi_exam_summary(res)
+        # After the summary, and on every refresh: the aggregate readout is
+        # re-derived from the live subset selection so a timer tick cannot
+        # restore the whole-run aggregate over a chosen subset.
+        self._apply_subset_psd_presentation(res)
         self._set_multi_exam_totals()
         self._rebuild_multi_exam_view_when_stale(res)
         if multi_exam_results_ui_stale(self.last_agg_map_run_id, state.calc_run_id):
@@ -255,15 +290,16 @@ class ResultsTabController:
         self.subset_checkboxes.clear()
         self.last_rendered_run_id = None
         self.last_agg_map_run_id = None
+        # The aggregate readout belongs to the run that just disappeared: back
+        # to the Results placeholder with the pending presentation, the same
+        # invalidation the sidebar readout already receives.
+        self._apply_psd_presentation(self.refs.agg_psd_readout, None, "—")
         self.refs.agg_dosemap_plot.update_figure({})
         self.refs.run_warnings_label.set_text("")
         self.refs.run_warnings_label.set_visibility(False)
 
     def _set_multi_exam_summary(self, res: Any) -> None:
         """Render aggregate dose, exam-count, and warning summaries."""
-        self._apply_psd_presentation(
-            self.refs.agg_psd_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy"
-        )
         n_ok = len(res.exams)
         n_excluded = int(getattr(res, "exams_excluded", 0) or 0)
         if n_excluded > 0:
@@ -333,36 +369,28 @@ class ResultsTabController:
             self.refs.agg_dosemap_plot.update_figure({})
             self.last_agg_map_run_id = state.calc_run_id
             return
-        agg_readout = self.refs.agg_psd_readout
         if all(state.aggregate_subset_exams):
             self.refresh_aggregate_dosemap(res)
-            self._apply_psd_presentation(
-                agg_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy"
-            )
         else:
             self.refs.agg_dosemap_spinner.visible = True
-            combined, subset_psd = compute_subset_aggregate(res, state.aggregate_subset_exams)
-            if combined is None:
-                self.refs.agg_dosemap_spinner.visible = False
-                self.refs.agg_dosemap_plot.update_figure({})
-                # No exam is in the subset, so there is no dose to band: pending.
-                self._apply_psd_presentation(agg_readout, None, "— mGy (no exams selected)")
-                self.last_agg_map_run_id = state.calc_run_id
-                return
-            first_exam_patient = res.exams[0].output.to_dict()["patient"]
-            fig = make_dosemap_fig(explicit_dose_map=combined, explicit_patient=first_exam_patient)
+            combined, _subset_psd = compute_subset_aggregate(res, state.aggregate_subset_exams)
             self.refs.agg_dosemap_spinner.visible = False
-            if fig:
-                self.refs.agg_dosemap_plot.update_figure(fig)
-                state.dosemap_fig = fig
-            # The subset maximum, not the whole-run aggregate: the number on
-            # screen is the subset's own peak. Note a non-empty subset whose
-            # combined map is empty yields subset_psd == 0.0, which bands low
-            # (green) rather than pending — zero really is below 5000 mGy.
-            self._apply_psd_presentation(
-                agg_readout, subset_psd, f"{subset_psd:.2f} mGy (subset)"
-            )
-            self.last_agg_map_run_id = state.calc_run_id
+            if combined is None:
+                # No exam is in the subset: nothing to draw.
+                self.refs.agg_dosemap_plot.update_figure({})
+            else:
+                first_exam_patient = res.exams[0].output.to_dict()["patient"]
+                fig = make_dosemap_fig(explicit_dose_map=combined, explicit_patient=first_exam_patient)
+                if fig:
+                    self.refs.agg_dosemap_plot.update_figure(fig)
+                    state.dosemap_fig = fig
+        # The readout presentation is re-derived from the live selection (see
+        # _apply_subset_psd_presentation): the whole-run aggregate, the subset's
+        # own maximum, or pending grey for no exams selected. Note a non-empty
+        # subset whose combined map is empty bands low (green) on subset_psd
+        # == 0.0 — zero really is below 5000 mGy.
+        self._apply_subset_psd_presentation(res)
+        self.last_agg_map_run_id = state.calc_run_id
 
     def on_subset_toggle(self, e: Any, idx: int) -> None:
         """Handle subset toggle."""

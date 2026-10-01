@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -86,24 +87,59 @@ def _collect_copy_text_uses(repo_root: Path) -> dict[str, list[Path]]:
     return uses
 
 
+def _collect_string_literals(path: Path) -> set[str]:
+    """String literals in one module, excluding comments and docstrings.
+
+    Parsed with ``ast`` so a key mentioned only in a comment (not a token) or a
+    docstring (a string literal, but positionally a docstring) does not count as
+    a use. Docstrings are removed by position — the first statement of a module,
+    class, or function — not by value, so a genuine literal that happens to
+    equal a docstring elsewhere is unaffected.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    literals: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            literals.add(node.value)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = node.body
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                literals.discard(body[0].value.value)
+    return literals
+
+
 def _collect_literal_key_uses(repo_root: Path, keys: Iterable[str]) -> dict[str, list[Path]]:
-    """Keys spelled literally in scanned source, outside a ``copy_text(...)`` call.
+    """Keys spelled as string literals in scanned source, outside a ``copy_text(...)`` call.
 
     Some keys are chosen at runtime — ``copy_text(psd_band_copy_key(psd))`` picks one of the
     four ``results.psd_band.*`` keys by severity — so COPY_TEXT_RE never sees them and they
-    would read as unused forever, turning --strict permanently red. A key written out in
-    source is genuinely referenced, so count it.
+    would read as unused forever, turning --strict permanently red. A key written out as a
+    real string literal in code is genuinely referenced, so count it. Mentions in comments
+    and docstrings do not count: the scan reads parsed literals, not raw text.
     """
     uses: dict[str, list[Path]] = {}
     scan_root = repo_root / SOURCE_SCAN_ROOT
     if not scan_root.is_dir():
         return uses
-    wanted = [key for key in keys if key]
+    wanted = {key for key in keys if key}
+    if not wanted:
+        return uses
     for path in sorted(scan_root.rglob("*.py")):
-        text = path.read_text(encoding="utf-8")
-        for key in wanted:
-            if f'"{key}"' in text or f"'{key}'" in text:
-                uses.setdefault(key, []).append(path.relative_to(repo_root))
+        try:
+            literals = _collect_string_literals(path)
+        except SyntaxError:
+            # Unparseable scan targets are a packaging problem, not a copy
+            # problem; other gates own that. Skip the file rather than
+            # undercounting its uses.
+            continue
+        for key in sorted(wanted & literals):
+            uses.setdefault(key, []).append(path.relative_to(repo_root))
     return uses
 
 

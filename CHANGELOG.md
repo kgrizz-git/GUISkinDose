@@ -81,7 +81,9 @@ That keeps SemVer and contributor history organized.
   vectorized, envelope bookkeeping (union fold, hit counts, cellwise maximum)
   is vectorized with an in-place fold, the candidate frame is built once per
   event, and `k_med` lookups are memoized per (kVp, HVL, snapped field side
-  length, resolved source) with source-resolution warnings deliberately kept
+  length) for the packaged source — explicit databases are read on every
+  call, since their content can change on disk at the same path between
+  calls — with source-resolution warnings deliberately kept
   outside the memo so a suppressed candidate pass cannot swallow a later
   warning. Measured 1.442 s -> ~0.17-0.18 s for a 360-pose cylinder-phantom
   envelope (~8.3x; the plan's 19x headline was measured on a 41k-cell human

@@ -101,6 +101,8 @@ def _results_ctrl() -> rb.ResultsTabController:
     ctrl.refs.run_warnings_label = MagicMock()
     ctrl.refs.rotational_badge = MagicMock(visible=False)
     ctrl.refs.agg_rotational_badge = MagicMock(visible=False)
+    ctrl.refs.multi_exam_accordion_container = MagicMock()
+    ctrl.refs.subset_checkboxes_container = MagicMock()
     return ctrl
 
 
@@ -112,6 +114,12 @@ def _band_classes(readout: PsdReadout) -> set[str]:
         for call in cast(MagicMock, element.classes).call_args_list
     ]
     return {name for add in added if add for name in add.split() if name.startswith("text-dose-")}
+
+
+def _clear_band_history(readout: PsdReadout) -> None:
+    """Forget the recorded ``classes`` calls, for two-phase (high, then reset) tests."""
+    cast(MagicMock, readout.value.classes).reset_mock()
+    cast(MagicMock, readout.icon.classes).reset_mock()
 
 
 def _band_row_of(element: ui.element) -> Row | None:
@@ -232,13 +240,28 @@ def test_results_single_exam_metric_bands_on_psd() -> None:
     )
 
 
-def test_results_aggregate_metric_bands_on_aggregate_psd() -> None:
-    """Call site 5a: `_set_multi_exam_summary` bands on the whole-run aggregate."""
+def test_results_aggregate_metric_bands_on_aggregate_psd(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Call site 5a: with every exam selected, a full refresh bands on the whole-run aggregate.
+
+    The readout write moved out of ``_set_multi_exam_summary`` into
+    ``_apply_subset_psd_presentation`` so a timer tick cannot clobber a chosen
+    subset (see the timer-refresh regression tests below); this call site is
+    therefore exercised through the full ``refresh_multi_exam_results`` path,
+    with all exams selected so the whole-run aggregate is the presentation.
+    """
     ctrl = _results_ctrl()
     agg_readout = cast(PsdReadout, ctrl.refs.agg_psd_readout)
     res = _multi_result([_mock_exam("A", 10.0, [(0, 5.0)])], aggregate_psd=10_000.0)
+    state.is_multi_exam = True
+    state.calculation_done = True
+    state.multi_exam_result = res
+    state.aggregate_subset_exams = [True]
+    state.calc_run_id = 1
+    ctrl.last_rendered_run_id = 1
+    ctrl.last_agg_map_run_id = 1
+    monkeypatch.setattr(rb, "make_dosemap_fig", lambda *a, **k: {"data": [], "layout": {}})
 
-    ctrl._set_multi_exam_summary(res)
+    ctrl.refresh_multi_exam_results()
 
     cast(MagicMock, agg_readout.value.set_text).assert_called_with("10000.00 mGy")
     assert _band_classes(agg_readout) == {"text-dose-high"}
@@ -331,6 +354,126 @@ def test_aggregate_subset_of_zero_bands_low_green_deliberately(monkeypatch: pyte
     cast(MagicMock, agg_readout.tooltip.set_text).assert_called_with(
         "Low — peak skin dose below 5000 mGy"
     )
+
+
+def _timer_refresh_scenario(monkeypatch: pytest.MonkeyPatch, subset: list[bool]) -> Any:
+    """A rendered multi-exam run whose subset presentation is then timer-refreshed.
+
+    Mirrors the CodeRabbit regression: the user changes the subset checkboxes
+    (which calls ``refresh_aggregate_dosemap_subset`` and marks the aggregate
+    map fresh), then the 1.5 s ``refresh_multi_exam_results`` timer fires with
+    ``calc_run_id`` unchanged. The mock readout records every ``set_text`` /
+band call, so the test can assert on the last one.
+    """
+    ctrl = _results_ctrl()
+    res = _multi_result(
+        [
+            _mock_exam("A", 1_234.0, [(0, 1_234.0)]),
+            _mock_exam("B", 99_000.0, [(1, 99_000.0)]),
+        ],
+        aggregate_psd=99_000.0,
+    )
+    state.is_multi_exam = True
+    state.calculation_done = True
+    state.multi_exam_result = res
+    state.aggregate_subset_exams = subset
+    state.calc_run_id = 1
+    ctrl.last_rendered_run_id = 1
+    ctrl.last_agg_map_run_id = None
+    monkeypatch.setattr(rb, "make_dosemap_fig", lambda *a, **k: {"data": [], "layout": {}})
+
+    ctrl.refresh_aggregate_dosemap_subset()  # the checkbox toggle handler
+    assert ctrl.last_agg_map_run_id == 1  # subset map now fresh
+
+    ctrl.refresh_multi_exam_results()  # the timer tick, same calc_run_id
+    return ctrl
+
+
+def test_timer_refresh_does_not_clobber_subset_psd(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A timer tick cannot restore the whole-run aggregate over a chosen subset.
+
+    Before the fix, ``_set_multi_exam_summary`` wrote the whole-run aggregate
+    into the readout on every refresh, so the subset's value, icon, and tooltip
+    vanished within 1.5 s of the checkbox change.
+    """
+    ctrl = _timer_refresh_scenario(monkeypatch, [True, False])
+    agg_readout = cast(PsdReadout, ctrl.refs.agg_psd_readout)
+
+    cast(MagicMock, agg_readout.value.set_text).assert_called_with("1234.00 mGy (subset)")
+    assert _band_classes(agg_readout) == {"text-dose-low"}
+    cast(MagicMock, agg_readout.tooltip.set_text).assert_called_with(
+        "Low — peak skin dose below 5000 mGy"
+    )
+
+
+def test_no_exams_selected_presentation_survives_timer_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The pending no-exams presentation also survives the timer tick."""
+    ctrl = _timer_refresh_scenario(monkeypatch, [False, False])
+    agg_readout = cast(PsdReadout, ctrl.refs.agg_psd_readout)
+
+    cast(MagicMock, agg_readout.value.set_text).assert_called_with("— mGy (no exams selected)")
+    assert _band_classes(agg_readout) == {"text-dose-pending"}
+    cast(MagicMock, agg_readout.icon.set_visibility).assert_called_with(False)
+    cast(MagicMock, agg_readout.tooltip.set_text).assert_called_with(_PENDING_TOOLTIP)
+
+
+def test_invalid_results_reset_single_exam_readout_to_pending() -> None:
+    """After invalidation, the single-exam readout must not keep the stale band.
+
+    ``refresh_metrics`` used to do nothing when ``calculation_done`` was False,
+    so a high red result stayed on screen after the run it belonged to was
+    invalidated. It must return to the Results placeholder, pending — the same
+    invalidation the sidebar readout already receives.
+    """
+    ctrl = _results_ctrl()
+    psd_readout = cast(PsdReadout, ctrl.refs.psd_readout)
+    state.is_multi_exam = False
+    state.calculation_done = True
+    state.psd = 12_000.0
+    state.air_kerma = 0.0
+    state.rdsr_df = MagicMock(__len__=lambda s: 1)
+    for metric in ("kerma_metric", "events_metric", "dap_metric", "fluoro_metric"):
+        setattr(ctrl.refs, metric, MagicMock())
+
+    ctrl.refresh_metrics()
+    cast(MagicMock, psd_readout.value.set_text).assert_called_with("12000.00 mGy")
+    assert _band_classes(psd_readout) == {"text-dose-high"}
+    _clear_band_history(psd_readout)
+
+    state.calculation_done = False
+    ctrl.refresh_metrics()
+
+    cast(MagicMock, psd_readout.value.set_text).assert_called_with("—")
+    assert _band_classes(psd_readout) == {"text-dose-pending"}
+    cast(MagicMock, psd_readout.tooltip.set_text).assert_called_with(_PENDING_TOOLTIP)
+
+
+def test_invalid_results_reset_aggregate_readout_to_pending(monkeypatch: pytest.MonkeyPatch) -> None:
+    """After invalidation, the aggregate readout resets with the rest of the view."""
+    ctrl = _results_ctrl()
+    agg_readout = cast(PsdReadout, ctrl.refs.agg_psd_readout)
+    res = _multi_result([_mock_exam("A", 99_000.0, [(0, 99_000.0)])], aggregate_psd=99_000.0)
+    state.is_multi_exam = True
+    state.calculation_done = True
+    state.multi_exam_result = res
+    state.aggregate_subset_exams = [True]
+    state.calc_run_id = 1
+    ctrl.last_rendered_run_id = 1
+    ctrl.last_agg_map_run_id = 1
+    monkeypatch.setattr(rb, "make_dosemap_fig", lambda *a, **k: {"data": [], "layout": {}})
+
+    ctrl.refresh_multi_exam_results()
+    cast(MagicMock, agg_readout.value.set_text).assert_called_with("99000.00 mGy")
+    assert _band_classes(agg_readout) == {"text-dose-high"}
+    _clear_band_history(agg_readout)
+
+    state.calculation_done = False
+    ctrl.refresh_multi_exam_results()
+
+    cast(MagicMock, agg_readout.value.set_text).assert_called_with("—")
+    assert _band_classes(agg_readout) == {"text-dose-pending"}
+    cast(MagicMock, agg_readout.icon.set_visibility).assert_called_with(False)
+    cast(MagicMock, agg_readout.tooltip.set_text).assert_called_with(_PENDING_TOOLTIP)
 
 
 @pytest.mark.asyncio

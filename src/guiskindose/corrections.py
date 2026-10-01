@@ -203,9 +203,10 @@ def calculate_k_med(
 
     Notes
     -----
-    The table lookup is memoized per ``(kvp, hvl, snapped fsl, resolved
-    source)``. Source resolution and its warnings run on every call by design,
-    outside the memo, so a suppressed call can never swallow a warning a later
+    The table lookup is memoized per ``(kvp, hvl, snapped fsl)`` for the
+    packaged source; explicit databases are read on every call. Source
+    resolution and its warnings run on every call by design, outside the memo,
+    so a suppressed call can never swallow a warning a later
     ``emit_warnings=True`` call must emit. See Phase 1f of
     ``dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md``.
 
@@ -234,9 +235,17 @@ def calculate_k_med(
     return _k_med_for_key(kvp=kvp, hvl=hvl, fsl=int(fsl), source=source, db_path=db_path)
 
 
-# Memo for the k_med table lookup, keyed on (kvp, hvl, snapped fsl, resolved
-# source identity) — every input the lookup depends on. The resolved identity
-# (not the raw corrections_db spelling) keeps one entry per actual database.
+# Memo for the k_med table lookup — PACKAGED SOURCE ONLY, keyed on
+# (kvp, hvl, snapped fsl, "packaged"): every input the lookup depends on for a
+# source whose content is immutable within a process and reset by
+# correction_data.clear_cache() through the registered hook.
+# An explicit database is NEVER memoized: its file can change on disk at the
+# same path between calls, which no path-derived key can see (the memo would
+# serve a stale correction factor), and a path-spelled key invites collisions
+# with the packaged namespace (a file literally named "packaged"). Explicit
+# calls validate and read the database on every call; they are the legacy
+# path, and the per-candidate memo win only ever mattered for the packaged
+# default.
 # Source resolution and its warnings deliberately live OUTSIDE this cache:
 # _warn_once does not latch when emit_warnings=False, so a memo that covered
 # resolution would swallow a warning a later emit_warnings=True call must
@@ -246,12 +255,16 @@ _K_MED_CACHE: dict[tuple[float, float, int, str], float] = {}
 
 
 def _k_med_for_key(kvp: float, hvl: float, fsl: int, *, source: str, db_path: Path | None) -> float:
-    """Memoized ``k_med`` lookup for one snapped key and already-resolved source."""
-    source_key = "packaged" if source == "packaged" else str(db_path)
-    key = (float(kvp), float(hvl), int(fsl), source_key)
-    cached = _K_MED_CACHE.get(key)
-    if cached is not None:
-        return cached
+    """k_med lookup for one snapped key and an already-resolved source.
+
+    Memoized for the packaged source only; explicit databases are read on
+    every call (see ``_K_MED_CACHE``).
+    """
+    key = (float(kvp), float(hvl), int(fsl), "packaged")
+    if source == "packaged":
+        cached = _K_MED_CACHE.get(key)
+        if cached is not None:
+            return cached
 
     # Connect to the already-resolved source (same translation as
     # _load_correction_table, which no longer sits on this path).
@@ -290,7 +303,8 @@ def _k_med_for_key(kvp: float, hvl: float, fsl: int, *, source: str, db_path: Pa
         ]).iloc[0]
     )
 
-    _K_MED_CACHE[key] = k_med
+    if source == "packaged":
+        _K_MED_CACHE[key] = k_med
     return k_med
 
 

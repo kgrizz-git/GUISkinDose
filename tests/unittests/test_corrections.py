@@ -475,23 +475,80 @@ class TestKMedMemo:
             emit_warnings=emit_warnings,
         )
 
-    def test_suppressed_first_call_does_not_swallow_later_warning(self, tmp_path: Path):
+    def test_suppressed_first_call_does_not_swallow_later_warning(self, tmp_path: Path, monkeypatch):
         """A suppressed candidate call must not latch away the next warning.
 
         Ordering is the trap: an envelope event's candidates run first with
         ``emit_warnings=False``, then a legacy-static event hits the same key
         with the default ``True``. If the resolve were inside the memo the
-        second call would be a cache hit and the warning would be lost.
+        second call would be a cache hit and the warning would be lost. The
+        memo only ever holds packaged-source entries, so this pins the packaged
+        spelling: the ignored-db deprecation is armed deterministically by a
+        chdir to a temporary working directory holding a dummy
+        ``corrections.db`` (in a clean install no such file exists, so arming
+        it against the real CWD would be environment-dependent).
         """
-        db = tmp_path / "legacy.db"
-        _legacy_db(db)
+        (tmp_path / "corrections.db").write_bytes(b"dummy sentinel; resolve never reads it")
+        monkeypatch.chdir(tmp_path)
 
-        self._k_med(str(db), emit_warnings=False)
+        self._k_med(PATH_TO_DB, emit_warnings=False)
         assert len(_K_MED_CACHE) == 1  # memo populated for this key
 
         reset_warnings()
         with pytest.warns(DeprecationWarning):
-            self._k_med(str(db))
+            self._k_med(PATH_TO_DB)
+
+    def test_explicit_source_is_never_memoized(self, tmp_path: Path):
+        """Explicit databases are read on every call; the memo stays packaged-only.
+
+        Their content can change on disk at the same path between calls, which
+        no path-derived key can see, so caching them risks a stale correction
+        factor (and a path-spelled key invites a collision with the packaged
+        namespace — see the packaged-name test below).
+        """
+        db = tmp_path / "legacy.db"
+        _legacy_db(db)
+
+        first = self._k_med(str(db))
+        assert _K_MED_CACHE == {}
+        second = self._k_med(str(db))
+        assert second == first
+        assert _K_MED_CACHE == {}
+
+    def test_explicit_db_content_change_at_same_path_yields_fresh_factor(self, tmp_path: Path):
+        """Rewriting the database under the same path must not serve the old value."""
+        import sqlite3
+
+        db = tmp_path / "legacy.db"
+        _legacy_db(db)
+
+        first = self._k_med(str(db))
+
+        table = "correction_medium_and_backscatter"
+        frame = get_table(table)
+        frame["mu_en_quotient"] = frame["mu_en_quotient"] * 2.0
+        frame.to_sql(table, sqlite3.connect(db), if_exists="replace", index=False)
+
+        second = self._k_med(str(db))
+        assert second != first
+
+    def test_explicit_db_named_packaged_cannot_share_the_packaged_key(self, tmp_path: Path, monkeypatch):
+        """A file literally named "packaged" is explicit, not the packaged source.
+
+        Before the memo was scoped to the packaged source, an explicit path's
+        key was str(db_path), so this file would have collided with the
+        packaged namespace and cross-contaminated its entries.
+        """
+        monkeypatch.chdir(tmp_path)
+        packaged_value = self._k_med(PATH_TO_DB)
+        assert len(_K_MED_CACHE) == 1
+
+        db = tmp_path / "packaged"
+        _legacy_db(db)
+        explicit_value = self._k_med(str(db))
+
+        assert explicit_value == packaged_value  # same tables, by construction
+        assert list(_K_MED_CACHE.values()) == [packaged_value]  # only the packaged entry
 
     def test_repeated_key_returns_identical_value(self):
         first = self._k_med(PATH_TO_DB)

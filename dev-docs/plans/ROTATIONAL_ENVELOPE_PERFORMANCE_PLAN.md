@@ -324,6 +324,19 @@ give the same database separate cache entries when reached by different spelling
 passes both `"corrections.db"` and absolute paths — which is not a correctness bug but does silently
 throw away the cache.
 
+**Post-review amendment (2026-10-01, CodeRabbit round on the PR): the memo is scoped to the
+packaged source only.** Keying explicit databases on their resolved path has a hole no path-derived
+key can see: the file's content can change on disk at the same path between calls, so a cached
+entry would serve a stale correction factor; and a path-spelled key invites a collision with the
+packaged namespace (a file literally named `packaged`). Explicit databases are therefore read and
+validated on every call — they are the legacy path, and the per-candidate memo win only ever
+mattered for the packaged default. The packaged source keeps the full memo (content immutable
+within a process; cleared through the registered `clear_cache` hook). Regression tests pin: an
+explicit call never populates the memo; a same-path content change yields a fresh factor; the
+`packaged`-named explicit file cannot share the packaged key; and the original warning-latch
+ordering (suppressed candidates first, warn on the same packaged key after) still holds, armed
+deterministically by chdir to a CWD containing a dummy `corrections.db`.
+
 **The warning hoist, with a mechanism rather than an instruction.** `_warn_once`
 (`correction_data.py:152-155`) returns early when `emit_warnings=False` **before** adding the class to
 `_warned`, so it does not latch. That produces a concrete regression if the memo wraps the warning:

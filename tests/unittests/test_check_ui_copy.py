@@ -160,3 +160,32 @@ def test_a_key_nobody_mentions_is_still_reported(tmp_path: Path) -> None:
     result = validate_ui_copy(tmp_path, strict=True)
 
     assert any("unused UI copy key" in error for error in result.errors)
+
+
+def test_a_key_mentioned_only_in_a_comment_still_reads_unused(tmp_path: Path) -> None:
+    """The literal-key pass reads parsed string literals, not raw source text.
+
+    A key named in a comment is documentation, not a use: counting it would let
+    a catalog entry go stale while a comment keeps claiming it is referenced.
+    """
+    _write_catalog(tmp_path)
+    _write_glossary(tmp_path)
+    _write_owner(tmp_path, text='# the "sample.tooltip" key is wired elsewhere, honestly\npass\n')
+
+    result = validate_ui_copy(tmp_path, strict=True)
+
+    assert any("unused UI copy key" in error for error in result.errors)
+
+
+def test_a_key_mentioned_only_in_a_docstring_still_reads_unused(tmp_path: Path) -> None:
+    """Docstrings are string literals by token kind, but they are not uses."""
+    _write_catalog(tmp_path)
+    _write_glossary(tmp_path)
+    _write_owner(
+        tmp_path,
+        text='"""Renders "sample.tooltip" somewhere, eventually."""\npass\n',
+    )
+
+    result = validate_ui_copy(tmp_path, strict=True)
+
+    assert any("unused UI copy key" in error for error in result.errors)
