@@ -73,6 +73,26 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Rotational events now report candidate-level progress** (2026-10-02) —
+  Phase 3 of the envelope performance plan: a long rotational event advances
+  the progress bar as its candidate poses complete (fractional per-candidate
+  advances throttled to ~50 updates per event, snapped to the exact
+  finished-event count at every event boundary so the count never drifts; the
+  static path keeps its single per-event update). The CLI counter stays
+  integer on both the terminal and notebook bars (`0/10` mid-event, `3/10` at
+  boundaries, percentage still fractional), and the GUI label reads
+  `Event k / total` at boundaries with a `(rotational poses NN%)` suffix
+  mid-event. No dose change: both committed goldens pass untouched. Design:
+  `dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (§3.1).
+- **Rotational candidate dedup is O(N), semantics unchanged** (2026-10-02) —
+  Phase 3 of the envelope performance plan: `_deduplicate` uses a wrap-around
+  spatial hash that tiles the circle exactly instead of the O(N²) pairwise
+  scan — measured ~0.52 s -> ~0.005 s on a 4954-pose coupled domain — while
+  remaining an exact pairwise-tolerance test (NOT the lossy quantized-key
+  variant the plan offered; a frozen copy of the old loop is kept as an
+  oracle in the dedup unit tests, including a 0/360-seam regression case).
+  No dose change: both committed goldens pass untouched. Design:
+  `dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (§3.1).
 - **Rotational coverage envelopes are a further ~1.5x faster, bit-identical**
   (2026-10-02) — Phase 2 of the envelope performance plan: the six beam
   scalars a geometry needs are resolved once per event into a frozen record
@@ -84,7 +104,7 @@ That keeps SemVer and contributor history organized.
   `Beam(data_norm=..., event=...)` constructor is unchanged and still the
   public surface; the new `BeamGeometryInputs` / `Beam.from_inputs` sit
   beside it and are deliberately not exported from the package root.
-  Design: `dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (§2).
+  Design: `dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (§2).
 - **Rotational coverage envelopes are ~8x faster, bit-identical** (2026-10-01)
   — Phase 1 of the envelope performance plan: phantoms are positioned once
   per rotational event instead of once per candidate pose (with a
@@ -114,7 +134,7 @@ That keeps SemVer and contributor history organized.
   the static golden stays bit-exact everywhere. No default, contract, disclosure
   field, candidate
   domain, or aggregation rule changed; `angular_step_deg` stays 1.0. Design:
-  `dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (Phase 2, hoisting
+  `dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (Phase 2, hoisting
   `Beam`'s per-event scalars, follows in its own PR).
 
 ### Fixed

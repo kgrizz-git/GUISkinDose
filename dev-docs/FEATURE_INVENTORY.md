@@ -225,6 +225,9 @@ scales the full lateral mesh axis.
 
 ### 5.5 Progress reporting
 - `tqdm` progress bar during calculation (terminal or notebook variant)
+- Rotational-envelope events advance the bar fractionally as candidate poses complete (throttled,
+  snapped to the exact finished-event count at each event boundary); the CLI counter stays integer
+  while the GUI label gains an `(rotational poses NN%)` suffix mid-event
 
 ### 5.6 Diagnostics
 - Beam-miss warnings: when an irradiation event deposits zero dose (beam does not intersect the patient phantom), a per-event WARNING identifies the event index, kVp, filtration, and field area. Configurable via `beam_miss_warn` setting (`"per_event"` / `"summary"` / `"off"`); an all-miss sentinel always fires.

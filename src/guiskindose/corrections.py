@@ -208,7 +208,7 @@ def calculate_k_med(
     resolution and its warnings run on every call by design, outside the memo,
     so a suppressed call can never swallow a warning a later
     ``emit_warnings=True`` call must emit. See Phase 1f of
-    ``dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md``.
+    ``dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md``.
 
     """
     # Tabulated field side length in cm
@@ -229,7 +229,7 @@ def calculate_k_med(
     # Resolve the source here, unconditionally and OUTSIDE the memo: the
     # resolved identity is part of the memo key, and the source-level warnings
     # must be decided on every call (see _K_MED_CACHE and Phase 1f of
-    # dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md).
+    # dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md).
     source, db_path = resolve_corrections_source(corrections_db, emit_warnings=emit_warnings)
 
     return _k_med_for_key(kvp=kvp, hvl=hvl, fsl=int(fsl), source=source, db_path=db_path)
