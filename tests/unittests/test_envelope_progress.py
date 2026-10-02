@@ -91,8 +91,12 @@ def _run(frame, settings, monkeypatch: pytest.MonkeyPatch, factory):
 
 
 def test_envelope_advances_fractionally_with_bounded_updates(monkeypatch: pytest.MonkeyPatch):
-    settings = _settings(angular_step_deg=5.0)
-    _output, bar = _run(_spin_frame(2, 1), settings, monkeypatch, _RecordingPbar)
+    # 0.5 deg over both 60/300 deg paths gives ~720 candidates, far above the
+    # 50-update cap, so the throttle stride (not one update per pose) is tested.
+    settings = _settings(angular_step_deg=0.5)
+    output, bar = _run(_spin_frame(2, 1), settings, monkeypatch, _RecordingPbar)
+    candidates = output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]["unique_candidate_count"]
+    assert candidates > 4 * 50
     assert isinstance(bar, _RecordingPbar)
     # Finished-event count is exactly an integer ...
     assert bar.n == 2
@@ -101,8 +105,9 @@ def test_envelope_advances_fractionally_with_bounded_updates(monkeypatch: pytest
     fractional = [amount for amount in bar.amounts if float(amount) != int(amount)]
     assert fractional
     assert all(amount < 1.0 for amount in fractional)
-    # ... throttled to ~50 updates for the envelope event (static: 1 each).
-    assert len(bar.amounts) <= 55
+    # ... throttled to at most 50 in-loop updates plus the boundary top-up
+    # for the envelope event, and one update for the static event.
+    assert len(bar.amounts) <= 50 + 1 + 1
 
 
 def test_mixed_frame_snaps_to_exact_integers_after_every_event(monkeypatch: pytest.MonkeyPatch):
