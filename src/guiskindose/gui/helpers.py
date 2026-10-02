@@ -463,7 +463,15 @@ def rotational_survey(state: AppState) -> dict[str, object]:
 
 
 def _patch_tqdm(progress_cb, total: int):
-    """Monkey-patch tqdm so dose calculation progress reaches the UI."""
+    """Monkey-patch tqdm so dose calculation progress reaches the UI.
+
+    The dose loop advances the bar one unit per finished event, with
+    rotational-envelope events reporting fractional per-candidate progress in
+    between. Completed events render as ``Event k / total``; while an envelope
+    event is mid-flight the bar sits between integers and the label gains a
+    ``(rotational poses NN%)`` suffix. The fraction forwarded to
+    *progress_cb* is ``n / total`` clamped to ``[0, 1]``.
+    """
     try:
         import tqdm as tqdm_module
 
@@ -473,7 +481,14 @@ def _patch_tqdm(progress_cb, total: int):
             """tqdm update hook that forwards fractional progress to *progress_cb*."""
             original_update(self, n)
             if total > 0:
-                progress_cb(self.n / total, f"Event {self.n} / {total}")
+                position = self.n
+                if isclose(position, round(position), abs_tol=1e-9):
+                    label = f"Event {round(position)} / {total}"
+                else:
+                    completed = int(position)
+                    percent = int((position - completed) * 100)
+                    label = f"Event {completed} / {total} (rotational poses {percent}%)"
+                progress_cb(min(max(position / total, 0.0), 1.0), label)
 
         tqdm_module.tqdm.update = new_update  # type: ignore[method-assign]
     except Exception as exc:

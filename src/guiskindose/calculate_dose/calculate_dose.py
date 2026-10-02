@@ -216,8 +216,18 @@ def _make_progress_bar(notebook_mode: bool, total: int):
     ``ipywidgets`` installed — ``tqdm_notebook`` raises ``ImportError: IProgress not
     found`` at construction. Fall back to the plain text bar so dose calculation never
     crashes purely over progress-bar rendering.
+
+    The counter renders as integers (``{n:.0f}``): envelope events advance the
+    bar fractionally per candidate, which would otherwise print raw floats
+    (``3.4722222222222223/10``). The percentage prefix still carries the
+    fractional progress. Applies to both the plain and notebook bars.
     """
-    kwargs = {"total": total, "leave": False, "desc": "calculating skindose"}
+    kwargs = {
+        "total": total,
+        "leave": False,
+        "desc": "calculating skindose",
+        "bar_format": "{l_bar}{bar}| {n:.0f}/{total:.0f} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
+    }
     if notebook_mode:
         try:
             from tqdm import tqdm_notebook
