@@ -80,8 +80,16 @@ def _candidate_frame(parent_row: pd.Series, ap1: float, ap2: float) -> pd.DataFr
     The index is reset to ``[0]``: downstream geometry code addresses rows
     positionally (``event=0``), and the parent index must not leak through.
 
-    Called once per event (Phase 1g): the result is also the reusable
-    candidate frame, whose two angle cells are then assigned per pose.
+    Called once per event (Phase 1g). The result is **not** mutated afterwards:
+    since Phase 2 a candidate pose's angles travel as arguments
+    (``beam_angles_deg``) rather than being written into this frame, so it holds
+    the parent's angles throughout. Two things still need it — the pose-invariant
+    guard, which requires a faithful copy to check, and the event frame the
+    candidate dose vectors are computed from.
+
+    The index reset is also load-bearing for ``DSL``: ``Beam`` takes detector
+    side length at index ``0``, which on this one-row frame is the *parent
+    event's* row. See :meth:`BeamGeometryInputs.from_frame`.
     """
     frame = pd.DataFrame([parent_row.values], columns=parent_row.index)
     frame["Ap1"] = ap1

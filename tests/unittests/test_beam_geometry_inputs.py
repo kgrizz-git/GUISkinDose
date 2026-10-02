@@ -19,6 +19,7 @@ from guiskindose import constants as c
 from guiskindose import load_settings_example_json
 from guiskindose.beam_class import Beam, BeamGeometryInputs
 from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
+    _build_beam,
     perform_calculations_for_new_geometries,
 )
 from guiskindose.phantom_class import Phantom
@@ -30,6 +31,10 @@ from guiskindose.settings import PyskindoseSettings
 _POSES = ((0.0, 0.0, 0.0), (37.5, -12.25, 3.0), (180.0, 90.0, -45.0), (-179.5, 179.5, 89.9))
 
 _GEOMETRY_ATTRIBUTES = ("r", "N", "det_r", "ijk", "det_ijk")
+
+# Named once so both half-override tests match the same message, and so neither
+# test's assertion line is a verbatim copy of the other's.
+_HALF_OVERRIDE_ERROR = "beam_inputs and beam_angles_deg"
 
 
 @pytest.fixture(scope="module")
@@ -337,20 +342,46 @@ def test_angle_override_replaces_the_row_pose(frame: pd.DataFrame, phantoms) -> 
     assert not np.array_equal(np.asarray(hoisted[0]), np.asarray(row_pose_result[0]))
 
 
-def test_half_an_override_is_rejected(frame: pd.DataFrame, phantoms) -> None:
-    """One override without the other is an error, not a silent mixture.
+def test_half_an_override_is_rejected(frame: pd.DataFrame) -> None:
+    """Hoisted scalars with the angles still coming from the table: an error.
 
     Hoisting the scalars while the angles keep coming from the table (or the
     reverse) would build a plausible-looking beam from two different sources,
     so the pair is all-or-nothing.
+
+    Tested on ``_build_beam`` rather than through
+    ``perform_calculations_for_new_geometries``: that is the unit which owns the
+    validation, and it keeps a single call inside the ``pytest.raises`` block
+    (python:S5778 flags a test with more than one invocation that could raise).
     """
-    event = 1
-    with pytest.raises(ValueError, match="beam_inputs and beam_angles_deg"):
-        _geometry_call(
-            frame,
-            phantoms,
-            event,
-            beam_inputs=BeamGeometryInputs.from_frame(data_norm=frame, event=event),
+    inputs = BeamGeometryInputs.from_frame(data_norm=frame, event=1)
+    with pytest.raises(ValueError, match=_HALF_OVERRIDE_ERROR):
+        _build_beam(
+            normalized_data=frame,
+            event=1,
+            beam_inputs=inputs,
+            beam_angles_deg=None,
         )
-    with pytest.raises(ValueError, match="beam_inputs and beam_angles_deg"):
-        _geometry_call(frame, phantoms, event, beam_angles_deg=(10.0, 0.0, 0.0))
+
+
+def test_angles_without_hoisted_scalars_are_rejected(frame: pd.DataFrame) -> None:
+    """Explicit angles with the scalars still coming from the table: an error.
+
+    The mirror of :func:`test_half_an_override_is_rejected`.
+    """
+    with pytest.raises(ValueError, match=_HALF_OVERRIDE_ERROR):
+        _build_beam(
+            normalized_data=frame,
+            event=1,
+            beam_inputs=None,
+            beam_angles_deg=(10.0, 0.0, 0.0),
+        )
+
+
+def test_the_half_override_error_reaches_the_caller(frame: pd.DataFrame, phantoms) -> None:
+    """The rejection is not swallowed on the way out of the geometry step.
+
+    Pins that the guard lives where callers hit it, not just inside the helper.
+    """
+    with pytest.raises(ValueError, match=_HALF_OVERRIDE_ERROR):
+        _geometry_call(frame, phantoms, 1, beam_angles_deg=(10.0, 0.0, 0.0))
