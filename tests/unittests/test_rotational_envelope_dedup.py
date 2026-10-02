@@ -130,3 +130,14 @@ def test_coupled_like_4000_pose_domain_matches_oracle():
     assert len(poses) >= 4000
     assert _deduplicate(poses) == _legacy_deduplicate(poses)
     assert len(_deduplicate(poses)) < len(poses)  # shared endpoints actually collapse
+
+
+def test_out_of_hash_range_inputs_match_oracle():
+    """Huge, non-finite and sub-1e-12-tolerance inputs take the exact fallback."""
+    nan, inf = float("nan"), float("inf")
+    huge = [(4529231890312341.0, 0.0), (21.147679423935166, 0.0)]
+    assert _deduplicate(huge) == _legacy_deduplicate(huge) == huge[:1]
+    non_finite = [(nan, 0.0), (inf, 0.0), (0.0, 0.0), (nan, 0.0)]
+    assert _deduplicate(non_finite) == _legacy_deduplicate(non_finite)
+    tiny = [(0.0, 0.0), (0.0, 0.0), (1e-300, 0.0)]
+    assert _deduplicate(tiny, tolerance_deg=1e-306) == _legacy_deduplicate(tiny, tolerance_deg=1e-306)

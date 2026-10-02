@@ -520,6 +520,15 @@ one. The fix tiles the circle exactly (`bucket_count = floor(360 / (2 * tol))`,
 counts. Regression tests cover the reproducer on both axes plus seam-concentrated sweeps over
 non-dividing tolerances.
 
+The cross-provider review then found three direct-call corners where the hash could not match the
+predicate: angles beyond ~2^52 (where `a - b + 180` rounds the whole difference away, so the predicate
+calls two poses identical while their buckets sit far apart), NaN/inf angles (a NaN bucket index
+raises), and tolerances below ~1e-306 (the bucket count overflows). None is reachable — both call
+sites pass `_canonical` angles in `[0, 360)` at `1e-9` — but the docstring claimed unconditional
+equivalence. The hash now runs only when every angle is finite with `|angle| <= 720` and
+`tolerance_deg >= 1e-12`; anything else takes the exact pairwise loop, which makes the claim true
+for all inputs.
+
 Measured on a 4954-pose coupled domain, best of runs (3 legacy / 5 new):
 
 | Stage | Elapsed |
@@ -534,7 +543,7 @@ completed fraction, throttled to ~50 updates per event, then snapped to the exac
 event boundary (`update(remainder)`, pin assignment, `refresh`), so `pbar.n` equals the
 finished-event count exactly — no float drift across events. The static path keeps its single
 `update()`; `pbar=None` still disables reporting. The CLI bar pins integer counters (`bar_format`
-`{n:.0f}/{total:.0f}`, percentage keeps the fraction) on both the plain and notebook bars — e.g.
+`{n:.0f}/{total:.0f}`, percentage tracks sub-event progress, rounded to whole percent) on both the plain and notebook bars — e.g.
 `calculating skindose:   5%|▍         | 0/10 [00:00<00:00, ...]`. The GUI label stays
 `Event k / total` at boundaries and gains a `(rotational poses NN%)` suffix mid-event; the forwarded
 fraction is `n / total` clamped to `[0, 1]`. Multi-exam keeps its pre-existing semantics (one bar per

@@ -219,8 +219,8 @@ def _make_progress_bar(notebook_mode: bool, total: int):
 
     The counter renders as integers (``{n:.0f}``): envelope events advance the
     bar fractionally per candidate, which would otherwise print raw floats
-    (``3.4722222222222223/10``). The percentage prefix still carries the
-    fractional progress. Applies to both the plain and notebook bars.
+    (``3.4722222222222223/10``). The percentage prefix still tracks the
+    fractional progress, rounded to whole percent. Applies to both the plain and notebook bars.
     """
     kwargs = {
         "total": total,

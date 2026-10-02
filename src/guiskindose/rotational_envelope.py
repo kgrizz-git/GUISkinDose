@@ -157,6 +157,32 @@ def _angular_separation_deg(a: float, b: float) -> float:
     return abs(((a - b + 180.0) % 360.0) - 180.0)
 
 
+# Range in which the spatial-hash dedup provably matches the pairwise predicate:
+# the predicate's rounding error (~ulp of the angles) must stay far below the
+# tolerance-wide slack between a within-tolerance pair and a non-adjacent bucket.
+_HASH_MAX_ABS_DEG = 720.0
+_HASH_MIN_TOL_DEG = 1e-12
+
+
+def _hashable_domain(poses: list[tuple[float, float]], tolerance_deg: float) -> bool:
+    """Whether ``_deduplicate`` may use its spatial hash for these inputs."""
+    if not (math.isfinite(tolerance_deg) and tolerance_deg >= _HASH_MIN_TOL_DEG):
+        return False
+    return all(abs(ap1) <= _HASH_MAX_ABS_DEG and abs(ap2) <= _HASH_MAX_ABS_DEG for ap1, ap2 in poses)
+
+
+def _deduplicate_pairwise(poses: list[tuple[float, float]], *, tolerance_deg: float) -> list[tuple[float, float]]:
+    """Exact O(N^2) pairwise dedup; the reference semantics for ``_deduplicate``."""
+    unique: list[tuple[float, float]] = []
+    for ap1, ap2 in poses:
+        if not any(
+            _angular_separation_deg(ap1, u1) <= tolerance_deg and _angular_separation_deg(ap2, u2) <= tolerance_deg
+            for u1, u2 in unique
+        ):
+            unique.append((ap1, ap2))
+    return unique
+
+
 def _deduplicate(poses: list[tuple[float, float]], *, tolerance_deg: float = 1e-9) -> list[tuple[float, float]]:
     """Angle-level first-pass dedup over (Ap1, Ap2) pairs.
 
@@ -173,28 +199,25 @@ def _deduplicate(poses: list[tuple[float, float]], *, tolerance_deg: float = 1e-
     indices coincide when the bucket count is below 3). First-occurrence order
     is kept and the returned list holds the original (unmodified) tuples.
 
-    Non-positive or non-finite ``tolerance_deg`` falls back to the exact
-    pairwise loop so behaviour stays identical for degenerate tolerances.
+    The hash is used only where it provably agrees with the predicate: every
+    angle finite and within ``_HASH_MAX_ABS_DEG`` of zero, and ``tolerance_deg``
+    at least ``_HASH_MIN_TOL_DEG``. Outside that range the predicate's own
+    rounding (``a - b + 180`` loses the difference for huge angles) or a
+    NaN/overflowing bucket index would break the 3x3 neighbour guarantee, so
+    those inputs — never produced by the canonicalized generators — fall back
+    to the exact pairwise loop and behaviour stays identical.
 
     The dose loop performs the final dedup over complete geometry poses
     before evaluating (a legacy static candidate may share angles while
     differing elsewhere); generator callers must not assume these poses
     are pairwise distinct in full geometry.
     """
-    if not math.isfinite(tolerance_deg) or tolerance_deg <= 0.0:
-        unique: list[tuple[float, float]] = []
-        for ap1, ap2 in poses:
-            if not any(
-                _angular_separation_deg(ap1, u1) <= tolerance_deg
-                and _angular_separation_deg(ap2, u2) <= tolerance_deg
-                for u1, u2 in unique
-            ):
-                unique.append((ap1, ap2))
-        return unique
+    if not _hashable_domain(poses, tolerance_deg):
+        return _deduplicate_pairwise(poses, tolerance_deg=tolerance_deg)
     bucket_count = max(1, math.floor(360.0 / (2.0 * tolerance_deg)))
     width = 360.0 / bucket_count
     buckets: dict[tuple[int, int], list[tuple[float, float]]] = {}
-    unique = []
+    unique: list[tuple[float, float]] = []
     for ap1, ap2 in poses:
         key_i = math.floor((ap1 % 360.0) / width) % bucket_count
         key_j = math.floor((ap2 % 360.0) / width) % bucket_count

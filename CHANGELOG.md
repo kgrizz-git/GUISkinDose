@@ -80,7 +80,7 @@ That keeps SemVer and contributor history organized.
   finished-event count at every event boundary so the count never drifts; the
   static path keeps its single per-event update). The CLI counter stays
   integer on both the terminal and notebook bars (`0/10` mid-event, `3/10` at
-  boundaries, percentage still fractional), and the GUI label reads
+  boundaries; the percentage still tracks sub-event progress), and the GUI label reads
   `Event k / total` at boundaries with a `(rotational poses NN%)` suffix
   mid-event. No dose change: both committed goldens pass untouched. Design:
   `dev-docs/plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (§3.1).
