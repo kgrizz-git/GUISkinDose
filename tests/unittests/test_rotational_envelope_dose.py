@@ -521,8 +521,9 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
 # would need hash-pinned asset clearance and could not be compared exactly
 # across BLAS flavours anyway. Same bound as the cylinder golden: integer pins
 # exact, value pins at _GOLDEN_RTOL with abs=0. The nonzero count catches any
-# hit flip; sum of squares catches dose redistributed between cells, which psd
-# and sum alone can miss. The PSD is not pinned to a cell index: the maximum is
+# hit flip; sum of squares catches dose redistributed between cells with a
+# change in magnitude, which psd and sum alone can miss. A pure permutation of
+# equal doses between cells would pass every pin here. The PSD is not pinned to a cell index: the maximum is
 # a tie between cells on this mesh, so the argmax is not a stable identity.
 class _GoldenRotationalSpinHuman(TypedDict):
     events: int

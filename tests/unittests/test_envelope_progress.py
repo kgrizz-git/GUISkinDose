@@ -150,3 +150,14 @@ def test_pbar_none_still_works(monkeypatch: pytest.MonkeyPatch):
     assert dose_map.size > 0
     assert np.all(np.isfinite(dose_map))
     assert dose_map.max() > 0
+
+
+def test_progress_bar_survives_counter_overshoot():
+    """tqdm nulls total once n overshoots it; the bar format must not raise."""
+    import io
+
+    bar = calculate_dose_module._make_progress_bar(False, 2)
+    bar.fp = io.StringIO()
+    bar.update(5)
+    assert "5/?" in str(bar)
+    bar.close()

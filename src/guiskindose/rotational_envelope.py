@@ -157,9 +157,13 @@ def _angular_separation_deg(a: float, b: float) -> float:
     return abs(((a - b + 180.0) % 360.0) - 180.0)
 
 
-# Range in which the spatial-hash dedup provably matches the pairwise predicate:
-# the predicate's rounding error (~ulp of the angles) must stay far below the
-# tolerance-wide slack between a within-tolerance pair and a non-adjacent bucket.
+# Range in which the spatial-hash dedup provably matches the pairwise predicate.
+# A predicate-true pair must sit less than one bucket width (>= 2 * tol) apart,
+# so the predicate's rounding error may spend at most one tol of slack. For
+# |angle| <= 720 that error is <= ~2.9e-13 (half-ulps of 1440, 1620, 360, 180),
+# i.e. ~0.29 * tol at the 1e-12 floor: the bound holds with ~1.5x headroom, not
+# orders of magnitude. The two constants are coupled: raising the angle bound
+# grows the error with ulp(angle) and needs a matching rise in the tol floor.
 _HASH_MAX_ABS_DEG = 720.0
 _HASH_MIN_TOL_DEG = 1e-12
 

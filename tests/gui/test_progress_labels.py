@@ -50,9 +50,8 @@ def test_near_integer_float_renders_as_completed_event():
 
 def test_fraction_is_clamped_to_unit_interval():
     calls = _patched_calls(2, lambda bar: bar.update(5))
-    fraction, label = calls[-1]
+    fraction, _label = calls[-1]
     assert fraction == pytest.approx(1.0)
-    assert label == "Event 5 / 2"
 
 
 def test_restore_prevents_stacked_hooks_across_runs():

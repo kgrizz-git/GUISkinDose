@@ -217,7 +217,9 @@ def _make_progress_bar(notebook_mode: bool, total: int):
     found`` at construction. Fall back to the plain text bar so dose calculation never
     crashes purely over progress-bar rendering.
 
-    The counter renders as integers (``{n:.0f}``): envelope events advance the
+    The counter renders as integers (``{n:.0f}``; the total uses tqdm's own
+    ``total_fmt``, because tqdm nulls ``total`` once ``n`` overshoots it and a
+    ``{total:.0f}`` field would then raise mid-calculation): envelope events advance the
     bar fractionally per candidate, which would otherwise print raw floats
     (``3.4722222222222223/10``). The percentage prefix still tracks the
     fractional progress, rounded to whole percent. Applies to both the plain and notebook bars.
@@ -226,7 +228,7 @@ def _make_progress_bar(notebook_mode: bool, total: int):
         "total": total,
         "leave": False,
         "desc": "calculating skindose",
-        "bar_format": "{l_bar}{bar}| {n:.0f}/{total:.0f} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
+        "bar_format": "{l_bar}{bar}| {n:.0f}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
     }
     if notebook_mode:
         try:

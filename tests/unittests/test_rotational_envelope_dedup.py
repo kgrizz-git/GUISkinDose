@@ -150,3 +150,40 @@ def test_production_fallback_matches_frozen_oracle():
     poses += [(p1 + 1e-10, p2) for p1, p2 in poses[:50]]
     for tol in (1e-9, 0.5, 7.0):
         assert _deduplicate_pairwise(poses, tolerance_deg=tol) == _legacy_deduplicate(poses, tolerance_deg=tol)
+
+
+def test_canonical_domain_takes_the_hash_path(monkeypatch):
+    """Pins the speedup: generator-shaped input must never reach the O(N^2) fallback."""
+    from guiskindose import rotational_envelope
+
+    def _forbidden(*_args, **_kwargs):
+        raise AssertionError("exact fallback used on canonical input")
+
+    monkeypatch.setattr(rotational_envelope, "_deduplicate_pairwise", _forbidden)
+    domain = build_candidate_domain(
+        ap1_start=10.0,
+        ap2_start=-20.0,
+        ap1_end=200.0,
+        ap2_end=30.0,
+        primary_moves=True,
+        secondary_moves=True,
+        step_deg=1.0,
+        include_static_pose=True,
+        static_ap1=10.0,
+        static_ap2=-20.0,
+    )
+    assert domain.unique_pose_count > 0
+
+
+def test_hashable_domain_bounds():
+    from guiskindose.rotational_envelope import _hashable_domain
+
+    assert _hashable_domain([(720.0, -720.0)], 1e-12)
+    assert not _hashable_domain([(720.0000000001, 0.0)], 1e-9)
+    assert not _hashable_domain([(0.0, 0.0)], 1e-13)
+    assert not _hashable_domain([(float("nan"), 0.0)], 1e-9)
+
+
+def test_tolerance_just_below_hash_floor_matches_oracle():
+    poses = [(0.0, 0.0), (5e-14, 0.0), (2e-13, 0.0), (359.9999999999999, 0.0)]
+    assert _deduplicate(poses, tolerance_deg=1e-13) == _legacy_deduplicate(poses, tolerance_deg=1e-13)

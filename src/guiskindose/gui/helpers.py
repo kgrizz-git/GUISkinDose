@@ -492,7 +492,7 @@ def _patch_tqdm(progress_cb, total: int) -> Callable[[], None]:
             original_update(self, n)
             if total > 0:
                 position = self.n
-                if isclose(position, round(position), abs_tol=1e-9):
+                if isclose(position, round(position), rel_tol=0.0, abs_tol=1e-9):
                     label = f"Event {round(position)} / {total}"
                 else:
                     completed = int(position)
@@ -506,7 +506,10 @@ def _patch_tqdm(progress_cb, total: int) -> Callable[[], None]:
         return lambda: None
 
     def restore() -> None:
-        tqdm_module.tqdm.update = original_update  # type: ignore[method-assign]
+        # Only unwind our own hook: if another patch was layered on top since,
+        # clobbering it would strip that run's hook or reinstall a stale one.
+        if tqdm_module.tqdm.update is new_update:
+            tqdm_module.tqdm.update = original_update  # type: ignore[method-assign]
 
     return restore
 
