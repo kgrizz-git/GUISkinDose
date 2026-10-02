@@ -224,17 +224,11 @@ def _deduplicate(poses: list[tuple[float, float]], *, tolerance_deg: float = 1e-
         neighbours = {
             ((key_i + di) % bucket_count, (key_j + dj) % bucket_count) for di in (-1, 0, 1) for dj in (-1, 0, 1)
         }
-        duplicate = False
-        for key in neighbours:
-            for u1, u2 in buckets.get(key, ()):
-                if _angular_separation_deg(ap1, u1) <= tolerance_deg and _angular_separation_deg(
-                    ap2, u2
-                ) <= tolerance_deg:
-                    duplicate = True
-                    break
-            if duplicate:
-                break
-        if not duplicate:
+        if not any(
+            _angular_separation_deg(ap1, u1) <= tolerance_deg and _angular_separation_deg(ap2, u2) <= tolerance_deg
+            for key in neighbours
+            for u1, u2 in buckets.get(key, ())
+        ):
             unique.append((ap1, ap2))
             buckets.setdefault((key_i, key_j), []).append((ap1, ap2))
     return unique
