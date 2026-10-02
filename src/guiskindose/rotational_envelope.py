@@ -152,22 +152,68 @@ def wrapped_paths(
     return tuple(paths)
 
 
+def _angular_separation_deg(a: float, b: float) -> float:
+    """Circular separation of two angles in degrees, in ``[0, 180]`` (wrap-aware)."""
+    return abs(((a - b + 180.0) % 360.0) - 180.0)
+
+
 def _deduplicate(poses: list[tuple[float, float]], *, tolerance_deg: float = 1e-9) -> list[tuple[float, float]]:
     """Angle-level first-pass dedup over (Ap1, Ap2) pairs.
+
+    O(N) average via a wrap-around spatial hash; semantics are unchanged from
+    the legacy O(N^2) pairwise scan: a pose is dropped if and only if some
+    previously kept pose is within ``tolerance_deg`` on **both** axes under
+    the exact circular predicate ``_angular_separation_deg <= tolerance_deg``.
+    The circle is tiled exactly: ``floor(360 / (2 * tolerance_deg))`` buckets
+    per axis (at least one), each ``360 / bucket_count >= 2 * tolerance_deg``
+    wide, so no partial bucket can strand 0/360 neighbours more than one
+    index apart. Indices are taken modulo the bucket count and each incoming
+    pose is tested with the exact predicate against the kept poses in its
+    3x3 neighbouring buckets only (deduplicated as a key set, since neighbour
+    indices coincide when the bucket count is below 3). First-occurrence order
+    is kept and the returned list holds the original (unmodified) tuples.
+
+    Non-positive or non-finite ``tolerance_deg`` falls back to the exact
+    pairwise loop so behaviour stays identical for degenerate tolerances.
 
     The dose loop performs the final dedup over complete geometry poses
     before evaluating (a legacy static candidate may share angles while
     differing elsewhere); generator callers must not assume these poses
     are pairwise distinct in full geometry.
     """
-    unique: list[tuple[float, float]] = []
+    if not math.isfinite(tolerance_deg) or tolerance_deg <= 0.0:
+        unique: list[tuple[float, float]] = []
+        for ap1, ap2 in poses:
+            if not any(
+                _angular_separation_deg(ap1, u1) <= tolerance_deg
+                and _angular_separation_deg(ap2, u2) <= tolerance_deg
+                for u1, u2 in unique
+            ):
+                unique.append((ap1, ap2))
+        return unique
+    bucket_count = max(1, math.floor(360.0 / (2.0 * tolerance_deg)))
+    width = 360.0 / bucket_count
+    buckets: dict[tuple[int, int], list[tuple[float, float]]] = {}
+    unique = []
     for ap1, ap2 in poses:
-        if not any(
-            abs(((ap1 - u1 + 180.0) % 360.0) - 180.0) <= tolerance_deg
-            and abs(((ap2 - u2 + 180.0) % 360.0) - 180.0) <= tolerance_deg
-            for u1, u2 in unique
-        ):
+        key_i = math.floor((ap1 % 360.0) / width) % bucket_count
+        key_j = math.floor((ap2 % 360.0) / width) % bucket_count
+        neighbours = {
+            ((key_i + di) % bucket_count, (key_j + dj) % bucket_count) for di in (-1, 0, 1) for dj in (-1, 0, 1)
+        }
+        duplicate = False
+        for key in neighbours:
+            for u1, u2 in buckets.get(key, ()):
+                if _angular_separation_deg(ap1, u1) <= tolerance_deg and _angular_separation_deg(
+                    ap2, u2
+                ) <= tolerance_deg:
+                    duplicate = True
+                    break
+            if duplicate:
+                break
+        if not duplicate:
             unique.append((ap1, ap2))
+            buckets.setdefault((key_i, key_j), []).append((ap1, ap2))
     return unique
 
 
