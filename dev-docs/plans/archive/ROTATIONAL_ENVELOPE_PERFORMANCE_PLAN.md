@@ -549,6 +549,12 @@ finished-event count exactly — no float drift across events. The static path k
 fraction is `n / total` clamped to `[0, 1]`. Multi-exam keeps its pre-existing semantics (one bar per
 exam against the GUI's global total). Both dose goldens pass untouched; no dose change.
 
+**Human-mesh golden (added with Phase 3).** The cylinder golden never exercises a real STL mesh, so the
+same synthetic spin was run on `hudfrid` (41 022 cells, 360 candidates) at pre-Phase-1 commit `cabc331`
+and on the Phase 3 branch: the maps were bit-identical on macOS (`array_equal`, max |diff| = 0), at
+4.40 s → 0.35 s (~12.6x). `test_rotational_envelope_golden_baseline_spin_hudfrid` pins its counts
+exactly and PSD, sum and sum of squares at the cylinder golden's `rtol = 1e-12`.
+
 ---
 
 ## 4. Acceptance

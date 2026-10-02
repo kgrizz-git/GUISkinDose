@@ -512,3 +512,54 @@ def test_rotational_envelope_golden_baseline_spin_cylinder():
     # map bound is the value gate: a flipped hit changes a cell by a full event
     # contribution or flips it 0 <-> dose, which atol=0 always fails.
     np.testing.assert_allclose(dose_map, expected_dose_map, rtol=_GOLDEN_RTOL, atol=0.0)
+
+
+# Human-mesh twin of the cylinder golden, same synthetic spin. Generated from
+# commit cabc331 (pre-Phase-1, before any envelope performance edit); the
+# Phase 1-3 code reproduced the full 41 022-cell map bit for bit on macOS
+# (array_equal, max |diff| = 0). Scalars, not a stored .npy: a binary fixture
+# would need hash-pinned asset clearance and could not be compared exactly
+# across BLAS flavours anyway. Same bound as the cylinder golden: integer pins
+# exact, value pins at _GOLDEN_RTOL with abs=0. The nonzero count catches any
+# hit flip; sum of squares catches dose redistributed between cells, which psd
+# and sum alone can miss. The PSD is not pinned to a cell index: the maximum is
+# a tie between cells on this mesh, so the argmax is not a stable identity.
+class _GoldenRotationalSpinHuman(TypedDict):
+    events: int
+    dose_map_len: int
+    nonzero_cells: int
+    psd_mgy: float
+    dose_sum: float
+    dose_sum_sq: float
+    unique_candidate_count: int
+
+
+_GOLDEN_ROTATIONAL_SPIN_HUDFRID: _GoldenRotationalSpinHuman = {
+    "events": 2,
+    "dose_map_len": 41022,
+    "nonzero_cells": 1191,
+    "psd_mgy": 0.09513090819121497,
+    "dose_sum": 55.96181396960091,
+    "dose_sum_sq": 3.091123370168797,
+    "unique_candidate_count": 360,
+}
+
+
+def test_rotational_envelope_golden_baseline_spin_hudfrid():
+    """Coverage envelope on a real human mesh, pinned to pre-refactor output."""
+    frame = _frame_with_spin()
+    settings = _settings(angular_step_deg=1.0)
+    settings.phantom.model = "human"
+    settings.phantom.human_mesh = "hudfrid"
+
+    output = _run(frame.copy(), settings)
+    golden = _GOLDEN_ROTATIONAL_SPIN_HUDFRID
+    dose_map = np.asarray(output[c.OUTPUT_KEY_DOSE_MAP], dtype=float)
+
+    assert len(output[c.OUTPUT_KEY_HITS]) == golden["events"]
+    assert dose_map.size == golden["dose_map_len"]
+    assert int(np.count_nonzero(dose_map)) == golden["nonzero_cells"]
+    assert output[c.OUTPUT_KEY_ROTATIONAL_ENVELOPE][1]["unique_candidate_count"] == golden["unique_candidate_count"]
+    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"], rel=_GOLDEN_RTOL, abs=0.0)
+    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"], rel=_GOLDEN_RTOL, abs=0.0)
+    assert float(np.sum(dose_map * dose_map)) == pytest.approx(golden["dose_sum_sq"], rel=_GOLDEN_RTOL, abs=0.0)
