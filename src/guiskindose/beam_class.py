@@ -152,30 +152,30 @@ class Beam:
     def from_inputs(cls, inputs: BeamGeometryInputs, ap1_deg: float, ap2_deg: float, ap3_deg: float) -> "Beam":
         """Build a beam from already-resolved scalars plus its three angles.
 
-                The angles are passed in explicitly, in degrees, rather than read from
-                an event table, so a caller evaluating many poses of one event (the
-                rotational coverage envelope) resolves the scalars once and varies only
-                the angles.
+        The angles are passed in explicitly, in degrees, rather than read from
+        an event table, so a caller evaluating many poses of one event (the
+        rotational coverage envelope) resolves the scalars once and varies only
+        the angles.
 
-                Parameters
-                ----------
+        Parameters
+        ----------
         inputs : BeamGeometryInputs
-                    The event's beam scalars. These are not angles and are expected to be
-                    shared by every pose built from them. The angles must come from the
-                    same event: nothing here can tell a matching pair from a mismatched
-                    one, so pairing one event's scalars with another's angles builds a
-                    beam that looks entirely reasonable and is simply wrong.
-                ap1_deg : float
-                    Positioner isocenter primary angle (Ap1), in degrees.
-                ap2_deg : float
-                    Positioner isocenter secondary angle (Ap2), in degrees.
-                ap3_deg : float
-                    Positioner isocenter detector rotation angle (Ap3), in degrees.
+            The event's beam scalars. These are not angles and are expected to be
+            shared by every pose built from them. The angles must come from the
+            same event: nothing here can tell a matching pair from a mismatched
+            one, so pairing one event's scalars with another's angles builds a
+            beam that looks entirely reasonable and is simply wrong.
+        ap1_deg : float
+            Positioner isocenter primary angle (Ap1), in degrees.
+        ap2_deg : float
+            Positioner isocenter secondary angle (Ap2), in degrees.
+        ap3_deg : float
+            Positioner isocenter detector rotation angle (Ap3), in degrees.
 
-                Returns
-                -------
-                Beam
-                    The beam and detector for that pose.
+        Returns
+        -------
+        Beam
+            The beam and detector for that pose.
 
         """
         beam = cls.__new__(cls)
