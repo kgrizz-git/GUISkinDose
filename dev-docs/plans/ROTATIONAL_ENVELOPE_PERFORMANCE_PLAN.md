@@ -440,14 +440,21 @@ scalars' must preserve that quirk exactly." `1ba3f33` hoisted the record by call
   detector size. Measured on a two-event spin with `DSL` 30 / 35: candidates got 30 where the
   pre-Phase-2 code got 35. `f5dcbbf` builds the record from `candidate_frame` at index `0` instead.
 
-**And the near-miss is worth recording: this could not have been caught by a dose golden.** `DSL`
-scales `Beam.det_r` and nothing else, and `det_r` is read only by plotting and export — never by the
-hit mask, the field area, or a correction factor. So the regression mis-drew the detector box in a
-geometry plot and moved **no dose value at all**; the static and rotational goldens were right to
-pass. `tests/unittests/test_rotational_envelope_detector_size.py` therefore gates on `det_r`, varies
-`DSL` per row on purpose (a fixture whose rows agree on `DSL` hides the whole distinction — which is
-how the wrong row got committed), and includes a test that DSL never reaches the dose chain so this
-scope note cannot silently go stale.
+**And the near-miss is worth recording: this could not have been caught by a dose golden, and in fact
+nothing could have.** `DSL` scales `Beam.det_r` and nothing else; the dose chain reads `beam.r`,
+`beam.N` and `beam.r[0, :]`. And no candidate beam's `det_r` is read by *anything*: `from_inputs` is
+called from exactly one place — the envelope's candidate loop — while every consumer of `det_r`
+(`create_mesh3d.py`, `create_wireframes.py`, `create_geometry_plot_texts.py`,
+`format_export_data.py`) builds its own beam with `Beam(data_norm, event=…)`, where `DSL[0]` was
+already the first event's row and stayed that way. So the regression changed `det_r` on beams nothing
+inspected: no dose value moved and no plotted or exported geometry changed. It was silent in the
+strongest sense, which is precisely why it reached a commit.
+
+`tests/unittests/test_rotational_envelope_detector_size.py` therefore pins the *value* rather than
+catching a user-visible break — it is the only thing standing between that invariant and the next
+change to this loop. It varies `DSL` per row on purpose (a fixture whose rows agree on `DSL` hides
+the whole distinction) and asserts the candidates' `det_r` is exactly equal to a beam built the old
+frame way at that same pose.
 
 **Left alone on purpose:** the static path still reads row 0. Reconciling it with the envelope's
 parent-event read is a numbers change with its own discussion, not a performance refactor's business.
@@ -473,7 +480,7 @@ cylinder phantom (9 576 cells), `angular_step_deg = 1.0`, logging silenced. Best
 | After 2.4 (batched beam-face normals) | **0.119 s** |
 
 −32 % on this benchmark. The dose map stays bit-identical to the pre-Phase-2 map throughout
-(`max |before − after|` = `0.000e+00`, `array_equal` true), and the full unittest (1 949 passed,
+(`max |before − after|` = `0.000e+00`, `array_equal` true), and the full unittest (1 952 passed,
 3 skipped) and GUI (306 passed) suites pass. The profile's remaining hot spot is
 `check_hit_mask` (0.022 s of ~0.19 s), which is per-cell work and not a repeat of anything hoisted.
 

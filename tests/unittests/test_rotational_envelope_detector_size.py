@@ -17,12 +17,20 @@ Every test here varies ``DSL`` per row on purpose. With a fixture whose rows agr
 on ``DSL`` the whole distinction is invisible -- which is how reading the wrong
 row reached a commit before this file existed.
 
-Scope, stated plainly: ``DSL`` scales ``Beam.det_r`` and nothing else. ``det_r``
-is read only by the plotting and export paths, never by the hit mask, the field
-area, or any correction factor. So the wrong row here mis-drew the detector box
-in a geometry plot; it did **not** move a single dose value, and neither the dose
-goldens nor the dose-map bounds could have caught it. The gate below is therefore
-on ``det_r``, not on dose.
+Scope, stated plainly, and it is narrower than it first looks: ``DSL`` scales ``Beam.det_r`` and
+nothing else. The dose chain reads ``beam.r``, ``beam.N`` and ``beam.r[0, :]``, never ``det_r``. And
+no *candidate* beam's ``det_r`` is read by anything at all — ``Beam.from_inputs`` is called from
+exactly one place (the envelope's candidate loop), while every consumer of ``det_r``
+(``create_mesh3d``, ``create_wireframes``, ``create_geometry_plot_texts``, ``format_export_data``)
+builds its own beam from the event table, where ``DSL[0]`` was already the first event's row.
+
+So reading the wrong row changed ``det_r`` on beams that nothing inspects: no dose value moved and
+no plotted or exported geometry changed. The regression was silent, not merely ungated — which makes
+the gate below a value pin rather than a user-visible-break catcher, and the only thing standing
+between this invariant and the next change to the envelope loop.
+``test_dsl_never_reaches_the_dose_chain`` additionally pins the scope claim, so that if a future
+change starts feeding ``det_r`` into the hit mask or a correction, this reasoning is caught rather
+than silently inherited.
 """
 
 from __future__ import annotations

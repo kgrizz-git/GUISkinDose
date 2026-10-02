@@ -39,11 +39,41 @@ _HALF_OVERRIDE_ERROR = "beam_inputs and beam_angles_deg"
 
 @pytest.fixture(scope="module")
 def frame() -> pd.DataFrame:
-    return generate_synthetic_normalized_events(3)
+    """Three synthetic events with **every** beam scalar distinct per row.
+
+    The variation is load-bearing, not decoration. ``generate_synthetic_
+    normalized_events`` clones a single RDSR row and perturbs only ``Tx``/``Ap1``,
+    so on the raw fixture ``DSI``, ``DSD``, ``DID`` and ``DSL`` are identical on
+    every row and ``FS_lat == FS_long``. On that fixture a record reading
+    ``DSI[0]`` instead of ``DSI[event]`` is indistinguishable from a correct one,
+    and swapping the two field-size axes changes nothing either -- both
+    mutations pass. Measured hit counts at event 1 with those mutations were 67
+    (correct), 44 (row-0 ``DSI``) and 90 (swapped axes), so the mistakes are real
+    and only the fixture was hiding them.
+
+    ``DSL`` is int64 in normalized frames and pandas 2.x refuses a fractional
+    assignment into it, so its per-row values are integers.
+    """
+    varied = generate_synthetic_normalized_events(3)
+    for index, values in enumerate(((78.5, 119.8, 32.472, 32.472, 41.3, 30), (85.0, 125.0, 34.0, 28.0, 48.0, 35), (91.0, 131.0, 36.0, 30.0, 52.0, 42))):
+        dsi, dsd, fs_lat, fs_long, did, dsl = values
+        varied.at[index, "DSI"] = dsi
+        varied.at[index, "DSD"] = dsd
+        varied.at[index, "FS_lat"] = fs_lat
+        varied.at[index, "FS_long"] = fs_long
+        varied.at[index, "DID"] = did
+        varied.at[index, "DSL"] = dsl
+    return varied
 
 
 def test_inputs_are_read_from_the_requested_event(frame: pd.DataFrame) -> None:
-    """Every field comes from row ``event`` — except DSL, which is row 0."""
+    """Every field comes from row ``event`` — except DSL, which is row 0.
+
+    Pinned on the deliberately row-varying fixture above: on the raw synthetic
+    events these five columns are constant across rows and the field sizes are
+    square, so neither the row an index is read from nor which field-size column
+    is longitudinal could be observed at all.
+    """
     inputs = BeamGeometryInputs.from_frame(data_norm=frame, event=2)
 
     assert inputs == BeamGeometryInputs(
@@ -54,6 +84,33 @@ def test_inputs_are_read_from_the_requested_event(frame: pd.DataFrame) -> None:
         did=float(frame.DID[2]),
         dsl=float(frame.DSL[0]),
     )
+    # Not decorative: each of these must differ from row 0, or the assertion
+    # above would not be pinning the row it claims to.
+    assert float(frame.DSI[2]) != float(frame.DSI[0])
+    assert float(frame.DSD[2]) != float(frame.DSD[0])
+    assert float(frame.DID[2]) != float(frame.DID[0])
+    # And the two field sizes must be different from each other, or the record
+    # could hold them in either order without the assertion noticing.
+    assert float(frame.FS_lat[2]) != float(frame.FS_long[2])
+
+
+def test_field_size_axes_are_not_interchangeable(frame: pd.DataFrame) -> None:
+    """``fs_lat`` and ``fs_long`` reach the beam on different axes.
+
+    A swap between them is invisible on a square field, which the raw fixture
+    has on every row. On the axis-aligned ``plot_setup`` beam the geometry reads
+    the two straight off the pyramid, so the swap moves them by whole
+    centimetres — and ``assert_array_equal``, not ``pytest.approx``, because
+    this is meant to be the same arithmetic on the same numbers.
+    """
+    beam = Beam(data_norm=frame, event=2, plot_setup=True)
+
+    # The unit beam's row 1 is [+0.5, -1.0, +0.5], scaled by
+    # (FS_long, DSD, FS_lat) with the source-isocenter displacement DSI added
+    # before rotation. plot_setup zeroes the rotation, so the axes stay put.
+    np.testing.assert_array_equal(beam.r[1, 0], np.float64(0.5) * float(frame.FS_long[2]))
+    np.testing.assert_array_equal(beam.r[1, 1], float(frame.DSI[2]) - float(frame.DSD[2]))
+    np.testing.assert_array_equal(beam.r[1, 2], np.float64(0.5) * float(frame.FS_lat[2]))
 
 
 def test_dsl_quirk_is_preserved_not_fixed(frame: pd.DataFrame) -> None:
