@@ -25,11 +25,13 @@ be archived.
   or lizard) with per-function grandfathered caps for the current baseline and automated
   ratchet-down as functions are decomposed. Acceptance: new/changed code above the caps
   fails pre-push/CI; caps file only ever tightens.
-- [ ] **Rotational coverage-envelope performance — Phase 2 remains** — Phase 1 (position once per event,
-  ndarray hit masks, vectorized field area / entrance test / bookkeeping, memoized `k_med`, one candidate
-  frame) is complete 2026-10-01: ~8.3x measured on a 360-pose cylinder benchmark, bit-identical (plan §4.6a).
-  Remaining: Phase 2 hoists `Beam`'s per-event scalars (~25% of post-Phase-1 profile; needs its own PR per the
-  plan), Phase 3 optional (`_deduplicate` O(N²), candidate-level progress). Plan:
+- [ ] **Rotational coverage-envelope performance — Phase 3 optional follow-ons remain** — Phase 1
+  complete 2026-10-01 (~8.3x on a 360-pose cylinder benchmark, bit-identical; plan §4.6a) and Phase 2
+  complete 2026-10-02 (frozen `BeamGeometryInputs` hoisted per event, batched beam-face normals;
+  0.175 s → 0.119 s, a further -32%, still bit-identical; plan §2.3). Remaining: Phase 3 optional only —
+  `_deduplicate` is O(N²) (~10% of the run at 4 000 poses; a quantized-key dedup would stop being an exact
+  pairwise-tolerance test), and candidate-level progress reporting (a 360-pose event is now ~0.1 s so
+  only a 4 000-pose `0.25°` domain still wants it). Plan:
   [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md), evidence:
   [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md); fuller entry under Product
   Backlog / Input Data And Calculation.
@@ -77,16 +79,19 @@ be archived.
   [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Remaining: per-event override UI,
   scenarios/nominal-arc selection UI, XA-header direction ingestion, film/array validation.
   Additional vendor fixtures improve profiles but do not block.
-- [ ] **Rotational coverage-envelope performance — Phase 2/3 remain** — Phase 1 shipped 2026-10-01:
-  position once per event + pose guard, boolean-ndarray hit masks, vectorized `scale_field_area` and
-  `check_hit` entrance test, vectorized union/count/fold bookkeeping, memoized `k_med`, one reused
-  candidate frame — measured ~8.3x on a 360-pose cylinder benchmark, `max |before − after|` dose map
-  exactly 0 against two committed goldens (§4.6a in the plan). **Remaining:** Phase 2 — hoist `Beam`'s
-  ~14 per-event pandas scalar reads into a small frozen geometry record (`Beam.from_inputs(inputs,
-  ap1, ap2, ap3)` beside the DataFrame constructor; ~25% of the post-Phase-1 profile; preserve the
-  `DSL[0]` quirk exactly; own review + own PR), and Phase 3 optional follow-ons (O(N²) `_deduplicate`,
-  candidate-level progress reporting). Plan:
-  [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md);
+- [ ] **Rotational coverage-envelope performance — Phase 3 optional follow-ons remain** — Phase 1 shipped
+  2026-10-01: position once per event + pose guard, boolean-ndarray hit masks, vectorized
+  `scale_field_area` and `check_hit` entrance test, vectorized union/count/fold bookkeeping, memoized
+  `k_med`, one reused candidate frame — measured ~8.3x on a 360-pose cylinder benchmark,
+  `max |before − after|` dose map exactly 0 against two committed goldens (§4.6a in the plan). Phase 2
+  shipped 2026-10-02: `Beam`'s ~14 per-event pandas scalar reads hoisted into a frozen
+  `BeamGeometryInputs` record built once per event, plus batched beam-face normals — 0.175 s → 0.119 s
+  (-32%) on the same benchmark, dose map still exactly 0 (§2.3). **One trap worth carrying forward:** the
+  hoist had to read its record from the index-reset candidate frame, not the event table, because
+  `Beam` takes `DSL` at index `0` — on the candidate frame that is the *parent* event's row, on the full
+  table the *first* event's, and switching sources silently re-drew every enveloped event's detector box
+  (§2.1). **Remaining:** Phase 3 optional only (O(N²) `_deduplicate`, candidate-level progress
+  reporting). Plan: [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md);
   evidence: [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
