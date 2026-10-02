@@ -73,6 +73,18 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Rotational coverage envelopes are a further ~1.5x faster, bit-identical**
+  (2026-10-02) — Phase 2 of the envelope performance plan: the six beam
+  scalars a geometry needs are resolved once per event into a frozen record
+  instead of re-read from the event table for every candidate pose, and the
+  four beam-face normals are built with one batched cross product instead of
+  four scalar calls. Measured 0.175 s -> 0.119 s (-32%) for a 360-pose
+  cylinder-phantom envelope; `max |before - after|` dose map is exactly zero
+  and both committed goldens pass without regeneration. `Beam`'s existing
+  `Beam(data_norm=..., event=...)` constructor is unchanged and still the
+  public surface; the new `BeamGeometryInputs` / `Beam.from_inputs` sit
+  beside it and are deliberately not exported from the package root.
+  Design: `dev-docs/plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md` (§2).
 - **Rotational coverage envelopes are ~8x faster, bit-identical** (2026-10-01)
   — Phase 1 of the envelope performance plan: phantoms are positioned once
   per rotational event instead of once per candidate pose (with a

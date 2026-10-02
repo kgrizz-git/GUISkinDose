@@ -7,12 +7,45 @@ import numpy as np
 import pandas as pd
 
 from guiskindose import constants as c
-from guiskindose.beam_class import Beam
+from guiskindose.beam_class import Beam, BeamGeometryInputs
 from guiskindose.corrections import calculate_k_isq
 from guiskindose.geom_calc import check_table_hits, scale_field_area_array
 from guiskindose.phantom_class import Phantom
 
 logger = logging.getLogger(__name__)
+
+
+def _build_beam(
+    *,
+    normalized_data: pd.DataFrame,
+    event: int,
+    beam_inputs: BeamGeometryInputs | None,
+    beam_angles_deg: tuple[float, float, float] | None,
+) -> Beam:
+    """Build the event's beam, from hoisted scalars or from the event table.
+
+    With neither override this is exactly ``Beam(data_norm=normalized_data,
+    event=event)``, so every existing caller's numbers are untouched. With both,
+    the scalars and the pose angles come from the caller — the rotational
+    candidate loop, which evaluates many poses of one event against one set of
+    scalars.
+
+    Raises
+    ------
+    ValueError
+        If only one of the two overrides is supplied. Half an override would
+        silently mix one source of scalars with the other's angles, so it is
+        rejected rather than guessed at.
+    """
+    if (beam_inputs is None) != (beam_angles_deg is None):
+        raise ValueError(
+            "beam_inputs and beam_angles_deg must be given together; supply both "
+            "to hoist an event's beam scalars, or neither to read them from "
+            "normalized_data."
+        )
+    if beam_inputs is None or beam_angles_deg is None:
+        return Beam(data_norm=normalized_data, event=event, plot_setup=False)
+    return Beam.from_inputs(beam_inputs, *beam_angles_deg)
 
 
 def perform_calculations_for_new_geometries(
@@ -28,6 +61,8 @@ def perform_calculations_for_new_geometries(
     k_isq: np.ndarray,
     *,
     reposition: bool = True,
+    beam_inputs: BeamGeometryInputs | None = None,
+    beam_angles_deg: tuple[float, float, float] | None = None,
 ) -> tuple[
     Sequence[bool] | np.ndarray,
     Sequence[bool] | np.ndarray,
@@ -73,6 +108,23 @@ def perform_calculations_for_new_geometries(
         rotational candidate loop, where every candidate shares the parent
         event's pose, so one positioning covers the whole domain. Defaults to
         ``True``, which keeps every existing caller's behaviour unchanged.
+    beam_inputs : BeamGeometryInputs, keyword-only
+        Pre-resolved beam scalars, letting a caller that already holds them skip
+        the per-event table reads (Phase 2 of
+        ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN). Defaults to ``None``, which reads
+        them from ``normalized_data`` at ``event``. Only honoured together with
+        ``beam_angles_deg``.
+    beam_angles_deg : tuple[float, float, float], keyword-only
+        The pose's (Ap1, Ap2, Ap3) in degrees, overriding the angles
+        ``normalized_data`` holds at ``event``. Used by the rotational candidate
+        loop, whose poses are not in any table row. Must be given with
+        ``beam_inputs``: either both are supplied, or neither is and the beam is
+        built from ``normalized_data`` exactly as before.
+
+    Raises
+    ------
+    ValueError
+        If only one of ``beam_inputs`` and ``beam_angles_deg`` is supplied.
 
     Returns
     -------
@@ -85,7 +137,12 @@ def perform_calculations_for_new_geometries(
     if not new_geometry:
         return hits, table_hits, field_area, k_isq
 
-    beam = Beam(data_norm=normalized_data, event=event, plot_setup=False)
+    beam = _build_beam(
+        normalized_data=normalized_data,
+        event=event,
+        beam_inputs=beam_inputs,
+        beam_angles_deg=beam_angles_deg,
+    )
 
     if reposition:
         patient.position(data_norm=normalized_data, event=event)

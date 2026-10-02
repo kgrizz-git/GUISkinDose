@@ -15,6 +15,7 @@ import pandas as pd
 from scipy.interpolate import CubicSpline
 
 from guiskindose import constants as c
+from guiskindose.beam_class import BeamGeometryInputs
 from guiskindose.calculate_dose.add_correction_and_event_dose_to_output import (
     compute_event_dose_vector,
 )
@@ -79,8 +80,16 @@ def _candidate_frame(parent_row: pd.Series, ap1: float, ap2: float) -> pd.DataFr
     The index is reset to ``[0]``: downstream geometry code addresses rows
     positionally (``event=0``), and the parent index must not leak through.
 
-    Called once per event (Phase 1g): the result is also the reusable
-    candidate frame, whose two angle cells are then assigned per pose.
+    Called once per event (Phase 1g). The result is **not** mutated afterwards:
+    since Phase 2 a candidate pose's angles travel as arguments
+    (``beam_angles_deg``) rather than being written into this frame, so it holds
+    the parent's angles throughout. Two things still need it — the pose-invariant
+    guard, which requires a faithful copy to check, and the event frame the
+    candidate dose vectors are computed from.
+
+    The index reset is also load-bearing for ``DSL``: ``Beam`` takes detector
+    side length at index ``0``, which on this one-row frame is the *parent
+    event's* row. See :meth:`BeamGeometryInputs.from_frame`.
     """
     frame = pd.DataFrame([parent_row.values], columns=parent_row.index)
     frame["Ap1"] = ap1
@@ -320,17 +329,38 @@ def _calculate_envelope_event(
     )
 
     parent_frame = normalized_data.iloc[[ev]]
-    # One frame for the whole domain (Phase 1g): every pose differs only in its
-    # two angle cells, which _compute assigns in place.
+    # A one-row faithful copy of the parent, built once for the whole domain
+    # (Phase 1g). Since Phase 2 the per-pose angles travel as arguments instead
+    # of being written into this frame, so it no longer varies across the loop:
+    # what it is still for is the invariant guard below, and as the event frame
+    # the candidate dose vectors are computed from (kVp and HVL, which
+    # calculate_k_med reads; both are pose-independent).
     candidate_frame = _candidate_frame(parent_frame.iloc[0], ap1, ap2)
     _assert_pose_invariant(parent_frame.iloc[0], candidate_frame)
+    # Beam scalars for this event, resolved once for the whole domain (Phase 2).
+    # Every candidate shares them -- the pose columns are the only thing
+    # _candidate_frame overrides -- so reading them per candidate was reading the
+    # same nine DataFrame cells 360 times over.
+    #
+    # Built from candidate_frame at index 0, NOT from normalized_data at ev.
+    # Those agree on every scalar except DSL: BeamGeometryInputs.from_frame takes
+    # DSL at index 0 (see its docstring), which on the index-reset candidate frame
+    # is the *parent event's* DSL. That is what the candidate loop has always
+    # used, because it built its beams from this very frame. Reading it from
+    # normalized_data instead would silently switch every enveloped event to the
+    # procedure's first-event DSL -- a numbers change, invisible on fixtures
+    # whose rows agree on DSL. (Static events still use the first event's DSL;
+    # that inconsistency predates this work and is not Phase 2's to settle.)
+    beam_inputs = BeamGeometryInputs.from_frame(data_norm=candidate_frame, event=0)
+    # Ap3 is a pose column no candidate overrides, so it too is fixed for the
+    # domain; read once, alongside the scalars. No index quirk here, so the
+    # parent event's row is the obvious place to read it from.
+    ap3_deg = float(normalized_data.Ap3[ev])
     spline = back_scatter_interpolation[ev]
     k_tab_scalar = k_tab[ev]
     n_cells = len(patient.r)
 
     def _compute(pose_index: int, pose_ap1: float, pose_ap2: float) -> tuple[CandidateResult, np.ndarray]:
-        candidate_frame.at[0, "Ap1"] = pose_ap1
-        candidate_frame.at[0, "Ap2"] = pose_ap2
         candidate_hits_raw, candidate_table_hits, candidate_field_area, candidate_k_isq = (
             perform_calculations_for_new_geometries(
                 normalized_data=candidate_frame,
@@ -346,6 +376,8 @@ def _calculate_envelope_event(
                 # Already positioned at the parent pose above, and every
                 # candidate shares it.
                 reposition=False,
+                beam_inputs=beam_inputs,
+                beam_angles_deg=(pose_ap1, pose_ap2, ap3_deg),
             )
         )
         # The new-geometry path always hands back an ndarray; asarray is a no-op
