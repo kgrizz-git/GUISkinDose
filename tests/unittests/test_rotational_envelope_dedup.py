@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import random
 
-from guiskindose.rotational_envelope import _deduplicate, build_candidate_domain
+from guiskindose.rotational_envelope import _deduplicate, _deduplicate_pairwise, build_candidate_domain
 
 
 def _legacy_deduplicate(
@@ -141,3 +141,12 @@ def test_out_of_hash_range_inputs_match_oracle():
     assert _deduplicate(non_finite) == _legacy_deduplicate(non_finite)
     tiny = [(0.0, 0.0), (0.0, 0.0), (1e-300, 0.0)]
     assert _deduplicate(tiny, tolerance_deg=1e-306) == _legacy_deduplicate(tiny, tolerance_deg=1e-306)
+
+
+def test_production_fallback_matches_frozen_oracle():
+    """Keeps the frozen oracle honest: it must still equal the live exact fallback."""
+    rng = random.Random(5)
+    poses = [(rng.uniform(-720.0, 720.0), rng.uniform(-720.0, 720.0)) for _ in range(300)]
+    poses += [(p1 + 1e-10, p2) for p1, p2 in poses[:50]]
+    for tol in (1e-9, 0.5, 7.0):
+        assert _deduplicate_pairwise(poses, tolerance_deg=tol) == _legacy_deduplicate(poses, tolerance_deg=tol)

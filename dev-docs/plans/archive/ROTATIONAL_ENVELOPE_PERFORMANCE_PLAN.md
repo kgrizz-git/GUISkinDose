@@ -504,8 +504,8 @@ Both follow-ons landed, in two chunks.
 
 **O(N) `_deduplicate` — and it is NOT the lossy variant.** The plan offered a quantized-key dedup at
 the price of no longer being an exact pairwise-tolerance test; what shipped instead is a wrap-aware
-spatial hash with unchanged semantics: bucket width `2 * tolerance_deg`, `floor(360 / (2 * tol))`
-buckets per axis (indices modulo bucket count), the exact circular predicate applied only within the
+spatial hash with unchanged semantics: `floor(360 / (2 * tol))` buckets per axis, each
+`360 / bucket_count >= 2 * tolerance_deg` wide (indices modulo bucket count), the exact circular predicate applied only within the
 3x3 neighbouring buckets, first-occurrence order kept, original tuples returned. A frozen copy of the
 legacy O(N²) loop serves as the oracle in `tests/unittests/test_rotational_envelope_dedup.py` and is
 asserted identical on seeded near-duplicate sets, 0/360 seam cases, negative angles, exact 180°,

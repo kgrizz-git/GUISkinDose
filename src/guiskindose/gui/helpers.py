@@ -11,6 +11,7 @@ import datetime
 import decimal
 import logging
 import numbers
+from collections.abc import Callable
 from math import isclose
 from pathlib import Path
 from typing import Any, cast
@@ -252,6 +253,7 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
 
     progress_cb: optional callable(fraction: float, label: str) for UI updates.
     """
+    restore_tqdm: Callable[[], None] | None = None
     try:
         from guiskindose.analyze_data import analyze_data
         from guiskindose.debug import dprint
@@ -265,9 +267,10 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         dprint("CALCULATION", f"Phantom: {state.phantom_model}, Offsets: {state.d_lon}, {state.d_ver}, {state.d_lat}")
         dprint("CALCULATION", f"Normalization: {state.normalization_method}")
 
-        # Patch tqdm so we can forward progress to the UI
+        # Patch tqdm so we can forward progress to the UI; restored below so a
+        # later run never stacks on (and re-fires) this run's callback.
         if progress_cb is not None:
-            _patch_tqdm(progress_cb, total=event_count_from_state(state))
+            restore_tqdm = _patch_tqdm(progress_cb, total=event_count_from_state(state))
 
         if state.rdsr_df is None:
             return False, "No RDSR data loaded."
@@ -371,6 +374,9 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
     except Exception as exc:
         safe_error_event(_gui_logger, "dose_calculation", exc)
         return False, "Calculation failed. No source details were written to diagnostics."
+    finally:
+        if restore_tqdm is not None:
+            restore_tqdm()
 
 
 def event_count_from_state(state: AppState) -> int:
@@ -462,7 +468,7 @@ def rotational_survey(state: AppState) -> dict[str, object]:
     return survey
 
 
-def _patch_tqdm(progress_cb, total: int):
+def _patch_tqdm(progress_cb, total: int) -> Callable[[], None]:
     """Monkey-patch tqdm so dose calculation progress reaches the UI.
 
     The dose loop advances the bar one unit per finished event, with
@@ -471,6 +477,10 @@ def _patch_tqdm(progress_cb, total: int):
     event is mid-flight the bar sits between integers and the label gains a
     ``(rotational poses NN%)`` suffix. The fraction forwarded to
     *progress_cb* is ``n / total`` clamped to ``[0, 1]``.
+
+    Returns a callable that reinstates the original ``tqdm.update``; callers
+    must invoke it when the run ends, or each later run wraps the previous
+    run's hook and fires its stale callback too. A no-op if patching failed.
     """
     try:
         import tqdm as tqdm_module
@@ -493,6 +503,12 @@ def _patch_tqdm(progress_cb, total: int):
         tqdm_module.tqdm.update = new_update  # type: ignore[method-assign]
     except Exception as exc:
         safe_error_event(_gui_logger, "progress_hook", exc, level=logging.DEBUG)
+        return lambda: None
+
+    def restore() -> None:
+        tqdm_module.tqdm.update = original_update  # type: ignore[method-assign]
+
+    return restore
 
 
 def get_example_rdsr_files() -> list[Path]:

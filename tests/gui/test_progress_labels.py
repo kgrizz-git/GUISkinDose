@@ -16,15 +16,16 @@ def _patched_calls(total: int, actions):
 
     calls: list[tuple[float, str]] = []
     original_update = tqdm_module.tqdm.update
-    _patch_tqdm(lambda fraction, label: calls.append((fraction, label)), total=total)
+    restore = _patch_tqdm(lambda fraction, label: calls.append((fraction, label)), total=total)
     try:
         # Not disable=True: a disabled bar short-circuits update() before
         # advancing n. Render into a throwaway stream instead.
-        bar = tqdm(total=10, file=io.StringIO())
+        bar = tqdm(total=total, file=io.StringIO())
         actions(bar)
         bar.close()
     finally:
-        tqdm_module.tqdm.update = original_update
+        restore()
+    assert tqdm_module.tqdm.update is original_update
     return calls
 
 
@@ -52,3 +53,10 @@ def test_fraction_is_clamped_to_unit_interval():
     fraction, label = calls[-1]
     assert fraction == pytest.approx(1.0)
     assert label == "Event 5 / 2"
+
+
+def test_restore_prevents_stacked_hooks_across_runs():
+    """A second run must not re-fire the first run's callback."""
+    first = _patched_calls(10, lambda bar: bar.update())
+    second = _patched_calls(10, lambda bar: bar.update())
+    assert len(first) == len(second) == 1
