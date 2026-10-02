@@ -45,9 +45,11 @@ class _ProgressBar(Protocol):
 
     n: float
 
-    def update(self, n: float = 1) -> Any: ...
+    def update(self, n: float = 1) -> Any:
+        """Advance the counter by ``n`` (fractional for envelope candidates)."""
 
-    def refresh(self) -> Any: ...
+    def refresh(self) -> Any:
+        """Repaint the bar at its current counter."""
 
 # Cap on progress-bar updates per envelope event: fractional per-candidate
 # advances are throttled to this many so a 4000-pose domain stays quiet.
