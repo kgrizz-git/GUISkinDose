@@ -30,7 +30,7 @@ class _RecordingPbar:
         self.refreshes = 0
 
     def __setattr__(self, name: str, value: object) -> None:
-        if name == "n":
+        if name == "n" and isinstance(value, int | float):
             self.__dict__["n"] = value
             self.trace.append(value)
         else:
