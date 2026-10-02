@@ -68,7 +68,7 @@ def _spin_frame(n_events: int, spin_index: int):
     return frame
 
 
-def _run_with_bar_factory(frame, settings, factory):
+def _calculate(frame, settings):
     table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
     pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
     _, output, _ = calculate_dose(normalized_data=frame, settings=settings, table=table, pad=pad)
@@ -85,7 +85,7 @@ def _run(frame, settings, monkeypatch: pytest.MonkeyPatch, factory):
         return bar
 
     monkeypatch.setattr(calculate_dose_module, "_make_progress_bar", _factory)
-    output = _run_with_bar_factory(frame.copy(), settings, factory)
+    output = _calculate(frame.copy(), settings)
     assert len(bars) == 1
     return output, bars[0]
 
@@ -127,7 +127,9 @@ def test_progress_reporting_does_not_change_dose(monkeypatch: pytest.MonkeyPatch
     settings = _settings(angular_step_deg=5.0)
     frame = _spin_frame(2, 1)
     with_bar, _ = _run(frame, settings, monkeypatch, _RecordingPbar)
-    without_bar = _run_with_bar_factory(frame.copy(), settings, None)
+    # _run re-patches the factory, so this run genuinely has no progress bar.
+    without_bar, bar = _run(frame, settings, monkeypatch, lambda: None)
+    assert bar is None
     np.testing.assert_array_equal(
         with_bar[c.OUTPUT_KEY_DOSE_MAP],
         without_bar[c.OUTPUT_KEY_DOSE_MAP],
@@ -139,3 +141,7 @@ def test_pbar_none_still_works(monkeypatch: pytest.MonkeyPatch):
     output, bar = _run(_spin_frame(2, 1), settings, monkeypatch, lambda: None)
     assert bar is None
     assert output[c.OUTPUT_KEY_ROTATIONAL_HANDLING]["aggregate"]["rotational_count"] == 1
+    dose_map = np.asarray(output[c.OUTPUT_KEY_DOSE_MAP])
+    assert dose_map.size > 0
+    assert np.all(np.isfinite(dose_map))
+    assert dose_map.max() > 0

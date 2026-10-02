@@ -8,7 +8,7 @@ this module never touches shared output dicts outside what it returns.
 import logging
 import math
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Protocol
 
 import numpy as np
 import pandas as pd
@@ -35,11 +35,19 @@ from guiskindose.rotational_envelope import (
 )
 
 if TYPE_CHECKING:
-    from tqdm import tqdm
-
     from guiskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
+
+
+class _ProgressBar(Protocol):
+    """The slice of ``tqdm`` the envelope loop drives (structural, so no tqdm import)."""
+
+    n: float
+
+    def update(self, n: float = 1) -> Any: ...
+
+    def refresh(self) -> Any: ...
 
 # Cap on progress-bar updates per envelope event: fractional per-candidate
 # advances are throttled to this many so a 4000-pose domain stays quiet.
@@ -243,7 +251,7 @@ def _calculate_envelope_event(
     cached_table_hits: Sequence[bool] | np.ndarray,
     cached_field_area: Sequence[float] | np.ndarray,
     cached_k_isq: np.ndarray,
-    pbar: "tqdm | None" = None,
+    pbar: _ProgressBar | None = None,
 ) -> tuple[
     Sequence[bool] | np.ndarray,
     Sequence[bool] | np.ndarray,
