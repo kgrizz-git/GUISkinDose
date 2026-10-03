@@ -5,7 +5,7 @@ Metric: Ruff ``C901`` (McCabe cyclomatic complexity), threshold 10. New function
 at 11 or above fail. Grandfathered caps may only decrease or disappear.
 
 Caps live in ``dev-docs/complexity_caps.json``; see the plan at
-``dev-docs/plans/COMPLEXITY_GATES_PLAN.md``. ``--check`` (default) validates the
+``dev-docs/plans/archive/COMPLEXITY_GATES_PLAN.md``. ``--check`` (default) validates the
 working tree against the caps file, ``--bootstrap`` creates the initial reviewed
 baseline, ``--update`` lowers or removes caps, and ``--migrate`` records
 reviewed renames. Heavy lifting lives in ``scripts/complexity_caps_helpers.py``.

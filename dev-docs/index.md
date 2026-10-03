@@ -26,7 +26,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
-| [../scripts/check_complexity.py](../scripts/check_complexity.py) | Ruff C901 complexity checker with qualified function keys and grandfathered caps; gate wiring is in progress. |
+| [../scripts/check_complexity.py](../scripts/check_complexity.py) | Ruff C901 complexity gate with qualified function keys and grandfathered caps; wired as pre-push hook and CI static-analysis step. |
 | [../scripts/complexity_caps_helpers.py](../scripts/complexity_caps_helpers.py) | Qualified-key synthesis, cap schema, Git-history comparison, and cap update/migration helpers for the complexity checker. |
 | [complexity_caps.json](complexity_caps.json) | Machine-readable initial per-function complexity caps for the ratcheting gate. |
 | [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate (policy/CLI). |
@@ -93,7 +93,6 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, publish GUISkinDose, and retain the GitHub fork history. First `guiskindose` version is **`1.0.0`**. Mechanical rename: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) (**complete**, PR #73). GitHub/Sonar/URLs: [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) (**complete**, 2026-09-04). |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
-| [plans/COMPLEXITY_GATES_PLAN.md](plans/COMPLEXITY_GATES_PLAN.md) | Active execution plan for pinned complexity checks, grandfathered per-function caps, and a non-increasing ratchet in pre-push and CI. |
 
 ---
 
@@ -192,6 +191,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/COMPLEXITY_GATES_PLAN.md](plans/archive/COMPLEXITY_GATES_PLAN.md) | **Completed 2026-10-03** — Ruff C901 cap baseline, ratcheting checker, pre-push and CI enforcement. |
 | [plans/archive/sonarqube_remediation_plan.md](plans/archive/sonarqube_remediation_plan.md) | **Completed and archived 2026-09-28** — historical high-severity SonarQube remediation and derived complexity refactors; current operating instructions live in `SONARQUBE_LOCAL.md`. |
 | [plans/archive/documentation-assessment.md](plans/archive/documentation-assessment.md) | **Complete** (2026-09-07) — documentation & docstrings accuracy sweep, Phases 0–4. Standing matrix + triggers persist in [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md). |
 | [plans/archive/SECURITY_TOOLS_CI_PLAN.md](plans/archive/SECURITY_TOOLS_CI_PLAN.md) | **Superseded** (2026-09-03) — semgrep/gitleaks wiring was completed; the `safety` scanner path was dropped when the `safety` dev dependency (and its main-only CI job) was removed in 1.0.0 — `uv audit` + `pip-audit` remain the dependency auditors. |

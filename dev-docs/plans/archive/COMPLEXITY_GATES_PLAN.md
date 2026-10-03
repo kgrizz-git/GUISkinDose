@@ -1,8 +1,8 @@
 # Complexity Gates with Grandfathered Caps and Ratchet
 
-Status: Active execution plan
+Status: Completed and archived 2026-10-03
 Created: 2026-10-02
-Backlog: [TO_DO.md](../TO_DO.md) → Next Up
+Original backlog: `dev-docs/TO_DO.md` → Next Up (removed on completion)
 
 ## Goal and metric decision
 
@@ -19,16 +19,16 @@ environment, and check the separate `ruff-pre-commit` revision for drift.
 measures cognitive complexity; retain it as a separate review signal. Its
 snapshot finding count belongs in the linked TODO, not in the gate baseline.
 
-Preliminary decision record (2026-10-03; reconfirm on the implementation branch):
+Implementation decision record (2026-10-03):
 
 | Decision | Result to record |
 |---|---|
 | Analyzer | Ruff `C901`, locked version 0.16.2; `uv run --locked ruff check --select C901 --output-format json src scripts` |
 | Threshold | 10; new functions at 11 or above fail |
-| Scope | 209 Python files under `src/` and `scripts/` (local `rg --files` count) |
+| Scope | 211 Python files under `src/` and `scripts/` after adding the checker and helper |
 | Baseline | 20 findings (14 `src/`, 6 `scripts/`); maximum 25; review exact cap diff at bootstrap |
 | Key grammar | AST-synthesized `Class.method`, `outer.nested`, decorated/async names unchanged; verify edge cases in tests |
-| Runtime | Reviewer cold Ruff run about 0.17 seconds; remeasure full checker after implementation |
+| Runtime | Full checker cold run about 0.33-0.42 s on the target laptop (2026-10-03, two runs, incl. Ruff 0.16.2) |
 
 The comparison inventory found lizard 1.23.0 reported 88 functions above
 its CCN limit of 10, versus Ruff's 20; its scores are not interchangeable.

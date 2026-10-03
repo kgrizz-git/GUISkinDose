@@ -39,6 +39,13 @@ def complex_fn():
 """
 
 
+@pytest.fixture(autouse=True)
+def _clear_ci_base_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep synthetic Git comparisons independent of the runner's event."""
+    monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
+    monkeypatch.delenv("COMPLEXITY_BEFORE_SHA", raising=False)
+
+
 def _make_tree(root: Path, sources: dict[str, str]) -> None:
     """Write synthetic Python sources under ``src/`` in ``root``."""
     src = root / "src"
@@ -478,7 +485,10 @@ def test_check_fails_closed_when_origin_main_missing_even_if_unchanged(tmp_path:
     assert any("origin/main unavailable" in e for e in check(tmp_path))
 
 
-def test_committed_cap_raise_detected_on_branch(tmp_path: Path) -> None:
+@pytest.mark.parametrize("context", ["local", "pr", "main_push"])
+def test_committed_cap_raise_detected_on_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, context: str
+) -> None:
     _make_tree(tmp_path, {"probe.py": COMPLEX})
     _git_init(tmp_path)
     from scripts.check_complexity import bootstrap
@@ -495,7 +505,11 @@ def test_committed_cap_raise_detected_on_branch(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
     subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "raise"], cwd=tmp_path, check=True)
     subprocess.run(["git", "update-ref", "refs/remotes/origin/main", base_sha], cwd=tmp_path, check=True)
-    # WT matches HEAD (raised cap committed on the branch); local check must fail vs base.
+    if context == "pr":
+        monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    elif context == "main_push":
+        monkeypatch.setenv("COMPLEXITY_BEFORE_SHA", base_sha)
+    # WT matches HEAD; local, PR, and main-push checks must all reject the committed raise.
     assert any("raised cap" in e for e in check(tmp_path))
 
 

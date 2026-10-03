@@ -174,6 +174,31 @@ last git touch. It does not auto-delete documentation.
 point back to `AGENTS.md`, when `TO_DO.md` is drifting back into a historical ledger, or when
 active execution plans appear complete but have not been archived.
 
+### Complexity gate (Ruff C901 caps)
+
+The complexity gate is a pre-push hook and a `static-analysis` CI step. Locally, run:
+
+```bash
+uv run --extra dev --extra gui --locked python scripts/check_complexity.py
+```
+
+CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
+`uv sync --locked`.
+
+- Metric: Ruff `C901`, threshold 10; new functions scoring 11+ fail.
+- Exceptions live in `dev-docs/complexity_caps.json` (schema, metric, locked ruff version,
+  threshold, sorted `caps`/`migrations` entries). The file must be canonical: repeated
+  serialization must be byte-identical.
+- Ratchet: caps may only decrease or disappear. Use `--update` to lower/remove to measured
+  scores and `--migrate OLD NEW` to rename a cap with a provenance record (`migrations`).
+  Neither may add or raise a cap.
+- Base comparison: PRs compare the live tree against `merge-base(HEAD, origin/$GITHUB_BASE_REF)`;
+  main pushes compare against `$COMPLEXITY_BEFORE_SHA`; locally, against `merge-base(HEAD, origin/main)`.
+  An unavailable base fails closed with a `git fetch` hint.
+- SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings
+  are not part of the gate baseline or cap scores.
+- `--bootstrap` is once-only and only allowed when neither the branch nor its base has a caps file.
+
 ### Documentation freshness check
 
 Run the harness doc-freshness script before feature or status PRs:
