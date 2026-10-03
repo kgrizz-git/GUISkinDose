@@ -191,13 +191,21 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   serialization must be byte-identical.
 - Ratchet: caps may only decrease or disappear. Use `--update` to lower/remove to measured
   scores and `--migrate OLD NEW` to rename a cap with a provenance record (`migrations`).
-  Neither may add or raise a cap.
-- Base comparison: PRs compare the live tree against `merge-base(HEAD, origin/$GITHUB_BASE_REF)`;
-  main pushes compare against `$COMPLEXITY_BEFORE_SHA`; locally, against `merge-base(HEAD, origin/main)`.
-  An unavailable base fails closed with a `git fetch` hint.
+  A migrated cap may later decrease, and a sequence of reviewed renames may form a chain.
+  Neither may add or raise a cap. If a new exception is unavoidable, propose a separate,
+  reviewed policy change with a specific reason and tests before changing any caps; the
+  ordinary ratchet must remain enabled during that review.
+- Base comparison: PRs compare against the current `origin/$GITHUB_BASE_REF` tip;
+  main pushes compare against `$COMPLEXITY_BEFORE_SHA`; locally, against the current
+  `origin/main` tip. This catches cap reductions made after a feature branch diverged.
+  An unavailable base fails closed with a `git fetch` hint. Fetch before local checks
+  when `origin/main` may be stale. Local Git history lookups time out after 30 seconds
+  and fail the gate.
 - SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings
   are not part of the gate baseline or cap scores.
 - `--bootstrap` is once-only and only allowed when neither the branch nor its base has a caps file.
+  On that first PR, review the exact caps diff against the measured scores; no earlier
+  caps file exists to bound the baseline historically.
 
 ### Documentation freshness check
 

@@ -91,12 +91,13 @@ by retaining both reductions and canonical ordering.
 Use portable `pathlib` and `subprocess` argument lists, without shell pipelines.
 Live-tree validation runs even if base resolution fails. For cap history:
 
-- Local pre-push compares with `merge-base(HEAD, origin/main)`. Missing base or
+- Local pre-push compares with the current `origin/main` tip. Missing base or
   Git error fails closed: comparing only with `HEAD` cannot prove a committed
   cap change has not raised the limit. Print a command to update `origin/main`
-  and rerun. A stale local ref may conservatively reject; PR CI is authoritative.
+  and rerun. A stale local ref may miss newer cap reductions; PR CI fetches the
+  current base branch and is authoritative.
 - PR CI reads `GITHUB_BASE_REF`, fetches `origin/$GITHUB_BASE_REF`, then
-  compares with its merge base against `HEAD`; missing base fails closed. The
+  compares with that branch's current tip; missing base fails closed. The
   checkout already has `fetch-depth: 0`. On a `main` push, the workflow sets
   `COMPLEXITY_BEFORE_SHA` from `${{ github.event.before }}`; compare against
   that SHA and fail closed if it is unavailable locally. Local pre-push leaves

@@ -124,9 +124,7 @@ def test_synthesize_rejects_missing_join(tmp_path: Path) -> None:
 
 def test_synthesize_rejects_name_mismatch(tmp_path: Path) -> None:
     _make_tree(tmp_path, {"probe.py": COMPLEX})
-    import scripts.check_complexity as cc
-
-    row = next(iter(cc.qualified_names_by_row(tmp_path / "src" / "probe.py")))
+    row = next(iter(qualified_names_by_row(tmp_path / "src" / "probe.py")))
     with pytest.raises(ValueError, match="name mismatch"):
         synthesize_findings(tmp_path, [(tmp_path / "src" / "probe.py", row, "wrong_name", 11)])
 
@@ -277,6 +275,26 @@ def test_migrate_records_nonincreasing_rename(tmp_path: Path) -> None:
     assert record["new_cap"] <= record["old_cap"]
 
 
+def test_migrated_cap_can_later_decrease(tmp_path: Path) -> None:
+    from scripts.check_complexity import migrate
+
+    _make_tree(tmp_path, {"probe.py": COMPLEX.replace("complex_fn", "legacy_fn")})
+    _git_init(tmp_path)
+    assert bootstrap(tmp_path) == []
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base caps"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=tmp_path, check=True)
+    (tmp_path / "src" / "probe.py").write_text(COMPLEX, encoding="utf-8")
+    assert migrate(tmp_path, "src/probe.py:legacy_fn", "src/probe.py:complex_fn") == []
+    assert check(tmp_path) == []
+    reduced = COMPLEX.replace("    if a: a += 1\n", "", 1)
+    (tmp_path / "src" / "probe.py").write_text(reduced, encoding="utf-8")
+    from scripts.check_complexity import update
+
+    assert update(tmp_path) == []
+    assert check(tmp_path) == []
+
+
 def test_migrate_rejects_missing_old_key(tmp_path: Path) -> None:
     from scripts.check_complexity import migrate
 
@@ -348,6 +366,9 @@ def test_compare_caps_history_validates_migration_one_to_one() -> None:
         {"old_path": "src/a.py", "old_function": "f", "new_path": "src/a.py", "new_function": "f2", "old_cap": 12, "new_cap": 12}
     ]
     assert compare_caps_history(base, good) == []
+    lowered = json.loads(json.dumps(good))
+    lowered["caps"][0]["cap"] = 11
+    assert compare_caps_history(base, lowered) == []
     dup = json.loads(json.dumps(good))
     dup["migrations"].append(dict(good["migrations"][0]))
     assert any("at most once" in e for e in compare_caps_history(base, dup))
@@ -357,6 +378,22 @@ def test_compare_caps_history_validates_migration_one_to_one() -> None:
     raised_migration = json.loads(json.dumps(good))
     raised_migration["migrations"][0]["new_cap"] = 13
     assert any("migration raised cap" in e for e in compare_caps_history(base, raised_migration))
+
+
+def test_compare_caps_history_allows_migration_chain() -> None:
+    from scripts.check_complexity import compare_caps_history
+
+    base = {
+        "schema_version": 1, "metric": "ruff-c901", "tool_version": "0.16.2", "threshold": 10,
+        "caps": [{"path": "src/z.py", "function": "z", "cap": 12}], "migrations": [],
+    }
+    new = json.loads(json.dumps(base))
+    new["caps"] = [{"path": "src/c.py", "function": "c", "cap": 11}]
+    new["migrations"] = [
+        {"old_path": "src/a.py", "old_function": "a", "new_path": "src/c.py", "new_function": "c", "old_cap": 12, "new_cap": 11},
+        {"old_path": "src/z.py", "old_function": "z", "new_path": "src/a.py", "new_function": "a", "old_cap": 12, "new_cap": 12},
+    ]
+    assert compare_caps_history(base, new) == []
 
 
 def test_check_base_history_against_origin_main(tmp_path: Path) -> None:
@@ -417,6 +454,30 @@ def test_check_fails_closed_with_garbage_base_env(tmp_path: Path, monkeypatch: p
     monkeypatch.delenv("GITHUB_BASE_REF")
     monkeypatch.setenv("COMPLEXITY_BEFORE_SHA", "0" * 40)
     assert any("not available" in e for e in check(tmp_path))
+
+
+def test_check_reports_malformed_base_caps(tmp_path: Path) -> None:
+    _make_tree(tmp_path, {"probe.py": COMPLEX})
+    _git_init(tmp_path)
+    _caps_file(tmp_path, {"caps": []})
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "malformed base"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=tmp_path, check=True)
+    _caps_file(tmp_path, _measured_document(tmp_path))
+    assert any("caps file at base invalid" in error for error in check(tmp_path))
+
+
+def test_git_history_timeout_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import scripts.complexity_caps_helpers as helpers
+
+    _make_tree(tmp_path, {"probe.py": COMPLEX})
+    _caps_file(tmp_path, _measured_document(tmp_path))
+
+    def timed_out(*_args: object) -> None:
+        raise RuntimeError("Git history lookup timed out after 30 seconds")
+
+    monkeypatch.setattr(helpers, "_git", timed_out)
+    assert any("timed out" in error for error in check(tmp_path))
 
 
 def test_check_fails_closed_when_origin_main_unavailable_and_caps_differ(tmp_path: Path) -> None:
@@ -533,6 +594,63 @@ def test_bootstrap_branch_later_cap_add_detected(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
     subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "add fn_b + cap"], cwd=tmp_path, check=True)
     assert any("unexplained added cap" in e for e in check(tmp_path))
+
+
+@pytest.mark.parametrize("context", ["local", "pr"])
+def test_stale_branch_cannot_restore_caps_added_on_main(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, context: str
+) -> None:
+    """Compare with current main when the common ancestor has no caps file."""
+    _make_tree(tmp_path, {"probe.py": COMPLEX})
+    _git_init(tmp_path)
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "source"], cwd=tmp_path, check=True)
+    base_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", base_sha], cwd=tmp_path, check=True)
+    subprocess.run(["git", "checkout", "-q", "-b", "stale-feature"], cwd=tmp_path, check=True)
+    assert bootstrap(tmp_path) == []
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "feature caps"], cwd=tmp_path, check=True)
+
+    subprocess.run(["git", "checkout", "-q", "-b", "main-with-caps", base_sha], cwd=tmp_path, check=True)
+    reduced = COMPLEX.replace("    if a: a += 1\n", "", 5)
+    (tmp_path / "src" / "probe.py").write_text(reduced, encoding="utf-8")
+    _caps_file(tmp_path, _measured_document(tmp_path))
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "main caps"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "checkout", "-q", "stale-feature"], cwd=tmp_path, check=True)
+    if context == "pr":
+        monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    assert any("unexplained added cap" in error for error in check(tmp_path))
+
+
+@pytest.mark.parametrize("context", ["local", "pr"])
+def test_stale_branch_cannot_restore_cap_reduced_on_main(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, context: str
+) -> None:
+    """The current main cap governs even when the branch point had a cap."""
+    _make_tree(tmp_path, {"probe.py": COMPLEX})
+    _git_init(tmp_path)
+    assert bootstrap(tmp_path) == []
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base caps"], cwd=tmp_path, check=True)
+    base_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", base_sha], cwd=tmp_path, check=True)
+    subprocess.run(["git", "checkout", "-q", "-b", "stale-feature"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "feature"], cwd=tmp_path, check=True)
+
+    subprocess.run(["git", "checkout", "-q", "-b", "main-with-lower-cap", base_sha], cwd=tmp_path, check=True)
+    reduced = COMPLEX.replace("    if a: a += 1\n", "", 1)
+    (tmp_path / "src" / "probe.py").write_text(reduced, encoding="utf-8")
+    _caps_file(tmp_path, _measured_document(tmp_path))
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "ratchet main cap"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "checkout", "-q", "stale-feature"], cwd=tmp_path, check=True)
+    if context == "pr":
+        monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    assert any("raised cap" in error for error in check(tmp_path))
 
 
 def test_compare_caps_history_requires_old_records_preserved() -> None:

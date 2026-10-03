@@ -366,9 +366,17 @@ def measurement_errors(findings: list[Finding], document: dict[str, Any]) -> lis
     return errors
 
 
+GIT_TIMEOUT_SECONDS = 30
+
+
 def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """Run one git command in ``root`` with an argument list (no shell)."""
-    return subprocess.run(["git", *args], capture_output=True, text=True, cwd=str(root))
+    """Run a bounded local Git command with an argument list (no shell)."""
+    try:
+        return subprocess.run(
+            ["git", *args], capture_output=True, text=True, cwd=str(root), timeout=GIT_TIMEOUT_SECONDS
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Git history lookup timed out after {GIT_TIMEOUT_SECONDS} seconds") from exc
 
 
 def _in_git_repo(root: Path) -> bool:
@@ -378,10 +386,18 @@ def _in_git_repo(root: Path) -> bool:
 
 def _caps_bytes_at_ref(root: Path, ref: str) -> bytes | None:
     """Caps file bytes at ``ref``, or None when the ref/path is absent."""
-    result = _git(root, "show", f"{ref}:{CAPS_PATH.as_posix()}")
+    try:
+        result = subprocess.run(
+            ["git", "show", f"{ref}:{CAPS_PATH.as_posix()}"],
+            capture_output=True,
+            cwd=str(root),
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Git history lookup timed out after {GIT_TIMEOUT_SECONDS} seconds") from exc
     if result.returncode != 0:
         return None
-    return result.stdout.encode("utf-8")
+    return result.stdout
 
 
 def _resolve_ref(root: Path, ref: str) -> str | None:
@@ -395,40 +411,29 @@ def _resolve_ref(root: Path, ref: str) -> str | None:
     return result.stdout.strip() or None
 
 
-def _merge_base(root: Path, *refs: str) -> str | None:
-    """Merge base of the given refs, or None when it cannot be established."""
-    result = _git(root, "merge-base", *refs)
-    if result.returncode != 0:
-        return None
-    return result.stdout.strip() or None
-
-
 def _comparison_base_ref(root: Path) -> tuple[str | None, str | None]:
     """Return ``(ref, error)`` for the cap-history comparison target.
 
     CI env wins: ``GITHUB_BASE_REF`` (PR) or ``COMPLEXITY_BEFORE_SHA`` (main
-    push). Otherwise the merge base with ``origin/main``. A missing base fails
-    closed; there is no offline tolerance because a committed cap change could
-    not be told apart from an unmodified file without the base.
+    push). Otherwise compare with the current ``origin/main`` tip. Comparing
+    with the base branch tip catches cap reductions made after this branch
+    diverged. A missing base fails closed.
     """
     base_ref = os.environ.get("GITHUB_BASE_REF")
     if base_ref:
         target = _resolve_ref(root, f"origin/{base_ref}")
         if target is None:
             return None, f"origin/{base_ref} not available; run: git fetch origin {base_ref}"
-        base = _merge_base(root, "HEAD", target)
-        if base is None:
-            return None, f"merge-base HEAD origin/{base_ref} unavailable; run: git fetch origin {base_ref}"
-        return base, None
+        return target, None
     before = os.environ.get("COMPLEXITY_BEFORE_SHA")
     if before:
         if _resolve_ref(root, before) is None:
             return None, f"COMPLEXITY_BEFORE_SHA {before} not available locally"
         return before, None
-    base = _merge_base(root, "HEAD", "origin/main")
-    if base is None:
+    target = _resolve_ref(root, "origin/main")
+    if target is None:
         return None, "origin/main unavailable; run: git fetch origin main"
-    return base, None
+    return target, None
 
 
 def _first_caps_introduction_commit(root: Path, base: str | None) -> str | None:
@@ -448,23 +453,49 @@ def _migrations_unique(records: list[Any]) -> bool:
     return len(old_keys) == len(set(old_keys)) and len(new_keys) == len(set(new_keys))
 
 
-def _migration_record_errors(record: dict[str, Any], old_caps: dict[tuple[str, str], int], new_caps: dict[tuple[str, str], int]) -> list[str]:
-    """Per-record migration validity against base and current caps."""
+def _migration_record_errors(
+    record: dict[str, Any],
+    prior_cap: int,
+    from_base: bool,
+    new_caps: dict[tuple[str, str], int],
+    successor_keys: set[tuple[str, str]],
+) -> list[str]:
+    """Check one migration against its predecessor and the final caps."""
     errors: list[str] = []
     old_key = (record["old_path"], record["old_function"])
     new_key = (record["new_path"], record["new_function"])
-    if old_key not in old_caps:
-        errors.append(f"migration references unknown old key: {old_key[0]}::{old_key[1]}")
     if old_key in new_caps:
         errors.append(f"migrated old key still present: {old_key[0]}::{old_key[1]}")
-    if new_key not in new_caps:
+    if new_key not in new_caps and new_key not in successor_keys:
         errors.append(f"migration target missing from caps: {new_key[0]}::{new_key[1]}")
-    elif new_caps[new_key] != record["new_cap"]:
-        errors.append(f"migration cap mismatch: {new_key[0]}::{new_key[1]} {new_caps[new_key]} != {record['new_cap']}")
-    if old_key in old_caps and record["old_cap"] != old_caps[old_key]:
-        errors.append(f"migration old_cap mismatch: {old_key[0]}::{old_key[1]} {record['old_cap']} != {old_caps[old_key]}")
-    if old_key in old_caps and record["new_cap"] > old_caps[old_key]:
-        errors.append(f"migration raised cap: {old_key[0]}::{old_key[1]} {old_caps[old_key]} -> {record['new_cap']}")
+    elif new_key in new_caps and new_caps[new_key] > record["new_cap"]:
+        errors.append(f"migration cap exceeds recorded limit: {new_key[0]}::{new_key[1]} {new_caps[new_key]} > {record['new_cap']}")
+    if record["old_cap"] > prior_cap or (from_base and record["old_cap"] != prior_cap):
+        errors.append(f"migration old_cap mismatch: {old_key[0]}::{old_key[1]} {record['old_cap']} != {prior_cap}")
+    if record["new_cap"] > prior_cap:
+        errors.append(f"migration raised cap: {old_key[0]}::{old_key[1]} {prior_cap} -> {record['new_cap']}")
+    return errors
+
+
+def _new_migration_errors(
+    records: list[dict[str, Any]], old_caps: dict[tuple[str, str], int], new_caps: dict[tuple[str, str], int]
+) -> list[str]:
+    """Follow new migration chains from base caps regardless of record sort order."""
+    errors: list[str] = []
+    available = dict(old_caps)
+    pending = list(records)
+    successor_keys = {(r["old_path"], r["old_function"]) for r in records}
+    while pending:
+        ready = [r for r in pending if (r["old_path"], r["old_function"]) in available]
+        if not ready:
+            errors.extend(f"migration references unknown old key: {r['old_path']}::{r['old_function']}" for r in pending)
+            break
+        for record in ready:
+            old_key = (record["old_path"], record["old_function"])
+            new_key = (record["new_path"], record["new_function"])
+            errors.extend(_migration_record_errors(record, available[old_key], old_key in old_caps, new_caps, successor_keys))
+            available[new_key] = record["new_cap"]
+            pending.remove(record)
     return errors
 
 
@@ -491,8 +522,7 @@ def compare_caps_history(old: dict[str, Any] | None, new: dict[str, Any]) -> lis
     genuinely_new = [r for r, s in zip(new_records, new_serialized, strict=True) if s not in old_serialized]
     if not _migrations_unique(new_records):
         errors.append("migration records must reference each old and new key at most once")
-    for record in genuinely_new:
-        errors.extend(_migration_record_errors(record, old_caps, new_caps))
+    errors.extend(_new_migration_errors(genuinely_new, old_caps, new_caps))
     new_record_targets = {(r["new_path"], r["new_function"]) for r in genuinely_new if isinstance(r, dict)}
     errors.extend(_metadata_drift_errors(old, new))
     for key, cap in sorted(new_caps.items()):
@@ -518,11 +548,11 @@ def _metadata_drift_errors(old: dict[str, Any], new: dict[str, Any]) -> list[str
 def check_cap_history(root: Path, document: dict[str, Any], wt_bytes: bytes) -> list[str]:
     """Validate cap-file history for the current working tree.
 
-    Base resolution fails closed when unavailable. When the base predates the
-    caps file, the first introduction commit in ``base..HEAD`` supplies the
-    comparison document so later caps-only changes on the same branch are still
-    resisted. Working-tree bytes equal to the comparison base's cap bytes pass
-    without further comparison.
+    Base resolution fails closed when unavailable. When the current base branch
+    lacks caps, the first introduction commit in
+    ``base..HEAD`` supplies the comparison document so later caps-only changes
+    on the same branch are still resisted. Working-tree bytes equal to the
+    comparison base's cap bytes pass without further comparison.
     """
     if not _in_git_repo(root):
         return []
@@ -537,6 +567,9 @@ def check_cap_history(root: Path, document: dict[str, Any], wt_bytes: bytes) -> 
             old_doc = json.loads(old_bytes)
         except json.JSONDecodeError:
             return ["caps file at base unreadable"]
+        base_errors = validate_caps_document(old_doc, document["tool_version"])
+        if base_errors:
+            return [f"caps file at base invalid: {error}" for error in base_errors]
         return compare_caps_history(old_doc, document)
     return _check_via_introduction_commit(root, base, document, wt_bytes)
 
@@ -554,6 +587,9 @@ def _check_via_introduction_commit(root: Path, base: str, document: dict[str, An
             first_doc = json.loads(first_bytes)
         except json.JSONDecodeError:
             return ["caps file at introduction commit unreadable"]
+        first_errors = validate_caps_document(first_doc, document["tool_version"])
+        if first_errors:
+            return [f"caps file at introduction commit invalid: {error}" for error in first_errors]
         return compare_caps_history(first_doc, document)
     head_bytes = _caps_bytes_at_ref(root, "HEAD")
     if head_bytes is None:

@@ -154,7 +154,10 @@ def check(root: Path) -> list[str]:
         wt_bytes = caps_path.read_bytes()
     except OSError as exc:
         return [f"cannot read caps file: {exc}"]
-    return check_cap_history(root, document, wt_bytes)
+    try:
+        return check_cap_history(root, document, wt_bytes)
+    except RuntimeError as exc:
+        return [f"could not check complexity cap history: {exc}"]
 
 
 def main(argv: list[str] | None = None) -> int:
