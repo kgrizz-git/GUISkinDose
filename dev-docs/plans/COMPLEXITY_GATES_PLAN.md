@@ -92,9 +92,9 @@ Use portable `pathlib` and `subprocess` argument lists, without shell pipelines.
 Live-tree validation runs even if base resolution fails. For cap history:
 
 - Local pre-push compares with `merge-base(HEAD, origin/main)`. Missing base or
-  Git error fails closed when cap status cannot be established; print a command
-  to update `origin/main` and rerun. An unchanged cap file may pass offline.
-  A stale local ref may conservatively reject; PR CI is authoritative.
+  Git error fails closed: comparing only with `HEAD` cannot prove a committed
+  cap change has not raised the limit. Print a command to update `origin/main`
+  and rerun. A stale local ref may conservatively reject; PR CI is authoritative.
 - PR CI reads `GITHUB_BASE_REF`, fetches `origin/$GITHUB_BASE_REF`, then
   compares with its merge base against `HEAD`; missing base fails closed. The
   checkout already has `fetch-depth: 0`. On a `main` push, the workflow sets

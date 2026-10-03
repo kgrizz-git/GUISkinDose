@@ -27,6 +27,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
 | [../scripts/check_complexity.py](../scripts/check_complexity.py) | Ruff C901 complexity checker with qualified function keys and grandfathered caps; gate wiring is in progress. |
+| [../scripts/complexity_caps_helpers.py](../scripts/complexity_caps_helpers.py) | Qualified-key synthesis, cap schema, Git-history comparison, and cap update/migration helpers for the complexity checker. |
 | [complexity_caps.json](complexity_caps.json) | Machine-readable initial per-function complexity caps for the ratcheting gate. |
 | [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate (policy/CLI). |
 | [../scripts/check_sensitive_helpers.py](../scripts/check_sensitive_helpers.py) | Notebook/PDF/container reader helpers for the sensitive-content gate. |

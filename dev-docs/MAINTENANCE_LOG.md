@@ -12,8 +12,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 - **Complexity gate foundation** (2026-10-03) — added a Ruff C901 checker with
   AST-qualified function names, a reviewed baseline of 20 grandfathered caps,
-  and focused tests. Pre-push/CI enforcement and cap migration follow in the
-  active complexity-gates plan.
+  and focused tests. Follow-up added cap reductions, reviewed rename migration,
+  and Git-history checks against committed cap increases. Pre-push/CI enforcement
+  follows in the active complexity-gates plan.
 
 ### Security
 
