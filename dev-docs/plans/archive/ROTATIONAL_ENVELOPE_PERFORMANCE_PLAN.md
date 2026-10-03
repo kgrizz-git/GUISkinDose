@@ -1,15 +1,15 @@
 # Rotational Coverage-Envelope Performance Plan
 
-Created: 2026-09-28 · Status: **Phase 1 complete (2026-10-01, PR #131) — Phase 2 complete
-(2026-10-02, this branch), Phase 3 optional follow-ons remain open.** Section 4.6a records the
-Phase 1 measurement and §2.1 the Phase 2 one.
+Created: 2026-09-28 · Status: **All three phases complete — Phase 1 (2026-10-01, PR #131),
+Phase 2 and Phase 3 (2026-10-02). Archived; measurements in §4.6a (Phase 1), §2.1/§2.3
+(Phase 2), §3.1 (Phase 3).**
 
 Execution plan for the findings in
-[assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md](../assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
+[assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md](../../assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
 Read the assessment for the measurements; this file is the change list.
 
 Feature source of truth (unchanged by this plan):
-[ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md](ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md).
+[ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md](../ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md).
 
 **Goal:** make the coverage envelope ~19× faster with a **bit-identical** dose map. Measured on a
 360-pose envelope: 6.13 s → 0.32 s, `max |before − after|` = `0.000e+00`.
@@ -486,7 +486,7 @@ cylinder phantom (9 576 cells), `angular_step_deg = 1.0`, logging silenced. Best
 
 ## Phase 3 — optional follow-ons
 
-Neither is required for the speedup; both are recorded so they are not forgotten.
+Both shipped (see §3.1); the notes below are the original proposal, kept for the record.
 
 - **`_deduplicate` is O(N²)** (`rotational_envelope.py:112`). Measured 0.003 s at 360 poses, 0.048 s
   at 1440, **0.378 s** for a 4078-pose coupled domain. Negligible against today's evaluation cost, but
@@ -497,6 +497,64 @@ Neither is required for the speedup; both are recorded so they are not forgotten
   (`calculate_irradiation_event_result.py:312`), so a multi-second rotational event reports nothing and
   the GUI's `_update_progress` (`gui/tabs/calculate.py:522`) has nothing to show. After Phase 1 a
   360-pose event is ~0.3 s and this stops mattering; a 4000-pose `0.25`° domain would still benefit.
+
+### 3.1 What Phase 3 shipped (2026-10-02, implementer's machine)
+
+Both follow-ons landed, in two chunks.
+
+**O(N) `_deduplicate` — and it is NOT the lossy variant.** The plan offered a quantized-key dedup at
+the price of no longer being an exact pairwise-tolerance test; what shipped instead is a wrap-aware
+spatial hash with unchanged semantics: `floor(360 / (2 * tol))` buckets per axis, each
+`360 / bucket_count >= 2 * tolerance_deg` wide (indices modulo bucket count), the exact circular predicate applied only within the
+3x3 neighbouring buckets, first-occurrence order kept, original tuples returned. A frozen copy of the
+legacy O(N²) loop serves as the oracle in `tests/unittests/test_rotational_envelope_dedup.py` and is
+asserted identical on seeded near-duplicate sets, 0/360 seam cases, negative angles, exact 180°,
+degenerate tolerances, and a ~5000-pose coupled domain.
+
+Review caught one real bug in the first cut: with `ceil(360 / width)` buckets the last bucket is
+partial whenever 360/width is not an integer, so two poses within tolerance across the 0/360 seam
+could land two indices apart and be missed — e.g.
+`_deduplicate([(0.3, 0.0), (359.7, 0.0)], tolerance_deg=0.7)` kept both poses where the oracle keeps
+one. The fix tiles the circle exactly (`bucket_count = floor(360 / (2 * tol))`,
+`width = 360 / bucket_count >= 2 * tol`) and deduplicates the neighbour key set for tiny bucket
+counts. Regression tests cover the reproducer on both axes plus seam-concentrated sweeps over
+non-dividing tolerances.
+
+The cross-provider review then found three direct-call corners where the hash could not match the
+predicate: angles beyond ~2^52 (where `a - b + 180` rounds the whole difference away, so the predicate
+calls two poses identical while their buckets sit far apart), NaN/inf angles (a NaN bucket index
+raises), and tolerances below ~1e-306 (the bucket count overflows). None is reachable — both call
+sites pass `_canonical` angles in `[0, 360)` at `1e-9` — but the docstring claimed unconditional
+equivalence. The hash now runs only when every angle is finite with `|angle| <= 720` and
+`tolerance_deg >= 1e-12`; anything else takes the exact pairwise loop, which makes the claim true
+for all inputs.
+
+Measured on a 4954-pose coupled domain, best of runs (3 legacy / 5 new):
+
+| Stage | Elapsed |
+|---|---|
+| Legacy O(N²) | 0.513–0.533 s |
+| Spatial hash | 0.0045–0.0063 s |
+
+~85–114x on the dedup itself. All existing generator tests pass unchanged.
+
+**Candidate-level progress.** `pbar` is threaded into `_calculate_envelope_event` and advanced by
+completed fraction, throttled to ~50 updates per event, then snapped to the exact integer at the
+event boundary (`update(remainder)`, pin assignment, `refresh`), so `pbar.n` equals the
+finished-event count exactly — no float drift across events. The static path keeps its single
+`update()`; `pbar=None` still disables reporting. The CLI bar pins integer counters (`bar_format`
+`{n:.0f}/{total_fmt}`; a review caught that `{total:.0f}` raised once tqdm nulls an overshot total; percentage tracks sub-event progress, rounded to whole percent) on both the plain and notebook bars — e.g.
+`calculating skindose:   5%|▍         | 0/10 [00:00<00:00, ...]`. The GUI label stays
+`Event k / total` at boundaries and gains a `(rotational poses NN%)` suffix mid-event; the forwarded
+fraction is `n / total` clamped to `[0, 1]`. Multi-exam keeps its pre-existing semantics (one bar per
+exam against the GUI's global total). Both dose goldens pass untouched; no dose change.
+
+**Human-mesh golden (added with Phase 3).** The cylinder golden never exercises a real STL mesh, so the
+same synthetic spin was run on `hudfrid` (41 022 cells, 360 candidates) at pre-Phase-1 commit `cabc331`
+and on the Phase 3 branch: the maps were bit-identical on macOS (`array_equal`, max |diff| = 0), at
+4.40 s → 0.35 s (~12.6x, single-run macOS wall clock). `test_rotational_envelope_golden_baseline_spin_hudfrid` pins its counts
+exactly and PSD, sum and sum of squares at the cylinder golden's `rtol = 1e-12`; it stores no
+map, so its cross-platform portability is inferred from the cylinder's measured drift.
 
 ---
 

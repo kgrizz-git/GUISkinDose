@@ -1,7 +1,7 @@
 # Rotational Coverage-Envelope Performance Assessment
 
 Investigated: 2026-09-28 · Status: **evidence record; execution plan lives in**
-[plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](../plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md)
+[plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](../plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md)
 
 For the maintainer's question: *"the rotational acquisition coverage calculation is somewhat slow —
 are there any inefficiencies that can be improved without degrading quality or accuracy?"*
@@ -252,7 +252,7 @@ off for a far off-isocentre phantom, but that is not the case that is slow.
 
 ## 5. Phased fix plan
 
-Moved to [plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](../plans/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md),
+Moved to [plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](../plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md),
 which carries the per-file change list, the invariant the whole thing rests on, the tests that need
 updating, and the acceptance gate. In outline: Phase 1 is the seven bit-exact hot-loop edits above
 (the 19x win), Phase 2 hoists `Beam`'s per-event scalar reads (~35 % more), Phase 3 is the optional

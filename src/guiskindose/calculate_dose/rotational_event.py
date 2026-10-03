@@ -8,7 +8,7 @@ this module never touches shared output dicts outside what it returns.
 import logging
 import math
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Protocol
 
 import numpy as np
 import pandas as pd
@@ -38,6 +38,22 @@ if TYPE_CHECKING:
     from guiskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
+
+
+class _ProgressBar(Protocol):
+    """The slice of ``tqdm`` the envelope loop drives (structural, so no tqdm import)."""
+
+    n: float
+
+    def update(self, n: float = 1) -> Any:
+        """Advance the counter by ``n`` (fractional for envelope candidates)."""
+
+    def refresh(self) -> Any:
+        """Repaint the bar at its current counter."""
+
+# Cap on progress-bar updates per envelope event: fractional per-candidate
+# advances are throttled to this many so a 4000-pose domain stays quiet.
+_ENVELOPE_PBAR_MAX_UPDATES: Final = 50
 
 # Pose-match tolerance for recognizing the reported static pose among the
 # candidate poses (angles are re-derived through _canonical, so compare on
@@ -237,6 +253,7 @@ def _calculate_envelope_event(
     cached_table_hits: Sequence[bool] | np.ndarray,
     cached_field_area: Sequence[float] | np.ndarray,
     cached_k_isq: np.ndarray,
+    pbar: _ProgressBar | None = None,
 ) -> tuple[
     Sequence[bool] | np.ndarray,
     Sequence[bool] | np.ndarray,
@@ -261,6 +278,12 @@ def _calculate_envelope_event(
     own containers straight through. The returned ``hits`` and ``table_hits``
     are boolean arrays on the new-geometry path, mirroring the inputs; the
     published ``output`` slots always hold real Python bools.
+
+    ``pbar`` (when given) is advanced fractionally as candidates complete —
+    throttled to at most ``_ENVELOPE_PBAR_MAX_UPDATES`` updates per event —
+    then snapped to the exact next integer, so a long rotational event moves
+    the bar while ``pbar.n`` still equals the finished-event count exactly at
+    every event boundary. ``None`` disables progress reporting.
     """
     ap1 = float(row["Ap1"])
     ap2 = float(row["Ap2"])
@@ -430,6 +453,13 @@ def _calculate_envelope_event(
     # cells, and the published list is converted once where it is read.
     union_mask = np.zeros(n_cells, dtype=bool)
 
+    # Fractional progress state: the bar enters the event on an exact integer
+    # (finished-event count) and each throttled update advances the completed
+    # fraction of this event's candidate domain.
+    candidate_count = len(domain.unique_poses)
+    progress_stride = max(1, math.ceil(candidate_count / _ENVELOPE_PBAR_MAX_UPDATES))
+    event_base = pbar.n if pbar is not None else 0
+
     def _is_static_pose(pose_ap1: float, pose_ap2: float) -> bool:
         return (
             circular_separation_deg(pose_ap1, ap1) <= _STATIC_POSE_TOL_DEG
@@ -469,6 +499,7 @@ def _calculate_envelope_event(
         )
 
     def _generate() -> Any:
+        reported = 0.0
         for pose_index, (pose_ap1, pose_ap2) in enumerate(domain.unique_poses):
             if _is_static_pose(pose_ap1, pose_ap2):
                 result, candidate_hits = _static_candidate(pose_index)
@@ -477,6 +508,12 @@ def _calculate_envelope_event(
             # asarray so the fold works whether the candidate handed back the
             # raw ndarray or a cached list passthrough.
             np.logical_or(union_mask, np.asarray(candidate_hits, dtype=bool), out=union_mask)
+            if pbar is not None and (
+                pose_index + 1 == candidate_count or (pose_index + 1) % progress_stride == 0
+            ):
+                target = (pose_index + 1) / candidate_count
+                pbar.update(target - reported)
+                reported = target
             yield result
 
     evaluation = evaluate_envelope(
@@ -494,6 +531,15 @@ def _calculate_envelope_event(
         # back as a real feature, not as an accidental by-product.
         argmax_cell=lambda vector: (0, float(vector.max())),
     )
+
+    if pbar is not None:
+        # The fractional per-candidate updates above sum to ~1.0 but accumulate
+        # float error; top up the remainder, then pin the counter to the exact
+        # integer so the one-unit-per-event contract holds with no drift across
+        # events. refresh() repaints the integer count immediately.
+        pbar.update((event_base + 1) - pbar.n)
+        pbar.n = int(event_base) + 1
+        pbar.refresh()
 
     # Restore the parent static pose on the shared phantoms. They already stand
     # there: the candidates never reposition at all, so this is an explicit

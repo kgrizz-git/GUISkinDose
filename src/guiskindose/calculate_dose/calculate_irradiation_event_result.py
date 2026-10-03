@@ -170,8 +170,13 @@ def calculate_irradiation_event_result(
         beam (list of floats or array), by default None
     k_isq : np.array, optional
         Inverse-square-law correction factors, by default None
-    pbar : tqdm
-        progress bar object
+    pbar : tqdm, optional
+        Progress bar advanced one unit per finished event. Static events
+        advance it with a single ``update()``; envelope events advance it
+        fractionally per candidate inside ``_calculate_envelope_event`` and
+        snap it to the exact integer at the event boundary, so ``pbar.n``
+        always equals the finished-event count with no float drift. ``None``
+        disables progress reporting.
     kerma_cf : List[float], optional
         Per-event kerma-meter correction factors (default all 1.0).
 
@@ -244,6 +249,9 @@ def calculate_irradiation_event_result(
                 cached_table_hits=table_hits,
                 cached_field_area=field_area,
                 cached_k_isq=k_isq,
+                # The envelope event advances pbar itself (fractionally per
+                # candidate, snapped to the exact integer at its boundary).
+                pbar=pbar,
             )
             ledger_inputs.append(ledger_input)
             envelope_details[ev] = details
@@ -312,9 +320,10 @@ def calculate_irradiation_event_result(
                     dap=dap,
                 )
             )
-
-        if pbar is not None:
-            pbar.update()
+            # Static path only: envelope events advance pbar themselves (see
+            # above), so a shared update here would double-count them.
+            if pbar is not None:
+                pbar.update()
 
     if pbar is not None:
         pbar.refresh()
