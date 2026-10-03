@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Added
+
+- **Complexity gate foundation** (2026-10-03) — added a Ruff C901 checker with
+  AST-qualified function names, a reviewed baseline of 20 grandfathered caps,
+  and focused tests. Pre-push/CI enforcement and cap migration follow in the
+  active complexity-gates plan.
+
 ### Security
 
 - **Thirteenth PyJWT alert on the Semgrep lock dismissed** (2026-10-01) —

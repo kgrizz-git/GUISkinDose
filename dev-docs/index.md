@@ -26,6 +26,8 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | **Canonical location** — generated license inventory (not repo root). |
 | [../scripts/check_licenses.py](../scripts/check_licenses.py) | CI/local license audit: forbidden copyleft gate and notices inventory generator. |
 | [../scripts/check_doc_freshness.py](../scripts/check_doc_freshness.py) | CI/local doc-freshness checker: broken links, stale path references, inventory contradictions (AGENTS + CHANGELOG), advisory stale-pattern scan. |
+| [../scripts/check_complexity.py](../scripts/check_complexity.py) | Ruff C901 complexity checker with qualified function keys and grandfathered caps; gate wiring is in progress. |
+| [complexity_caps.json](complexity_caps.json) | Machine-readable initial per-function complexity caps for the ratcheting gate. |
 | [../scripts/check_sensitive_content.py](../scripts/check_sensitive_content.py) | CI/local PII/absolute-path scanner and hash-pinned sensitive-asset admission gate (policy/CLI). |
 | [../scripts/check_sensitive_helpers.py](../scripts/check_sensitive_helpers.py) | Notebook/PDF/container reader helpers for the sensitive-content gate. |
 | [../scripts/git_identity_trailers.py](../scripts/git_identity_trailers.py) | Allowlisted Dependabot / GitHub noreply identity trailers for commit-message privacy scans. |

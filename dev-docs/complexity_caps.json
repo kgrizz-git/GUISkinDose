@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "metric": "ruff-c901",
+  "tool_version": "0.16.2",
+  "threshold": 10,
+  "caps": [
+    {
+      "path": "scripts/check_docstring_inventory.py",
+      "function": "collect_missing",
+      "cap": 13
+    },
+    {
+      "path": "scripts/check_sonar_freshness.py",
+      "function": "run_gate",
+      "cap": 13
+    },
+    {
+      "path": "scripts/check_stale_brand.py",
+      "function": "check_file",
+      "cap": 16
+    },
+    {
+      "path": "scripts/rewrite_package_paths.py",
+      "function": "scan_leftover_brand",
+      "cap": 13
+    },
+    {
+      "path": "scripts/run_sonarqube_local.py",
+      "function": "main",
+      "cap": 11
+    },
+    {
+      "path": "scripts/verify_distribution.py",
+      "function": "main",
+      "cap": 18
+    },
+    {
+      "path": "src/guiskindose/__main__.py",
+      "function": "cli",
+      "cap": 16
+    },
+    {
+      "path": "src/guiskindose/calculate_dose/rotational_event.py",
+      "function": "_calculate_envelope_event",
+      "cap": 14
+    },
+    {
+      "path": "src/guiskindose/correction_validation.py",
+      "function": "check_explicit_db",
+      "cap": 17
+    },
+    {
+      "path": "src/guiskindose/correction_validation.py",
+      "function": "check_frame",
+      "cap": 23
+    },
+    {
+      "path": "src/guiskindose/correction_validation.py",
+      "function": "check_manifest_consistency",
+      "cap": 18
+    },
+    {
+      "path": "src/guiskindose/corrections.py",
+      "function": "calculate_k_tab",
+      "cap": 11
+    },
+    {
+      "path": "src/guiskindose/format_export_data.py",
+      "function": "PySkinDoseOutput._validate_lengths",
+      "cap": 12
+    },
+    {
+      "path": "src/guiskindose/geom_calc.py",
+      "function": "fetch_and_append_hvl",
+      "cap": 11
+    },
+    {
+      "path": "src/guiskindose/gui/helpers.py",
+      "function": "_json_safe_value",
+      "cap": 18
+    },
+    {
+      "path": "src/guiskindose/gui/run_state.py",
+      "function": "apply_run_state",
+      "cap": 12
+    },
+    {
+      "path": "src/guiskindose/gui/run_state.py",
+      "function": "validate_run_state_document",
+      "cap": 22
+    },
+    {
+      "path": "src/guiskindose/kerma_correction.py",
+      "function": "resolve_canonical_plane_identity",
+      "cap": 12
+    },
+    {
+      "path": "src/guiskindose/rdsr_normalizer.py",
+      "function": "_normalize_machine_parameters",
+      "cap": 13
+    },
+    {
+      "path": "src/guiskindose/rotational_acquisition.py",
+      "function": "classify_rotational_event",
+      "cap": 25
+    }
+  ],
+  "migrations": []
+}
