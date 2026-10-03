@@ -8,6 +8,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Added
+
+- **Complexity gate foundation** (2026-10-03) — added a Ruff C901 checker with
+  AST-qualified function names, a reviewed baseline of 20 grandfathered caps,
+  and focused tests. Follow-up added cap reductions, reviewed rename migration,
+  and Git-history checks against committed cap increases.
+- **Complexity gate enforcement** (2026-10-03) — wired `python scripts/check_complexity.py`
+  as a pre-push hook (locked `uv run` entry) and a `static-analysis` CI step with
+  PR base fetch and main-push `COMPLEXITY_BEFORE_SHA` context; documented in
+  `dev-docs/HARNESS_ENGINEERING.md`. A local Sonar gate follow-up split cap-entry
+  validation and a composite test assertion.
+
 ### Security
 
 - **Thirteenth PyJWT alert on the Semgrep lock dismissed** (2026-10-01) —

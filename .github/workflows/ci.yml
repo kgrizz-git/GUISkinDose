@@ -129,6 +129,18 @@ jobs:
       run: uv sync --extra dev --extra gui --locked
     - name: Activate environment
       run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+    - name: Complexity gate (Ruff C901 caps)
+      env:
+        GITHUB_BASE_REF: ${{ github.base_ref }}
+        COMPLEXITY_BEFORE_SHA: ${{ github.event.before }}
+      run: |
+        # PR: the checker needs the merge base with the fetched PR base branch.
+        # Runs inside the locked .venv from `uv sync --locked` above, equivalent
+        # to the local hook's `uv run --locked` invocation.
+        if [ -n "$GITHUB_BASE_REF" ]; then
+          git fetch --no-tags origin "$GITHUB_BASE_REF"
+        fi
+        python scripts/check_complexity.py
     - name: Check changelog updated (PR only)
       if: github.event_name == 'pull_request'
       env:
