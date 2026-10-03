@@ -594,7 +594,8 @@ def test_bootstrap_creates_validates_and_refuses_rerun(tmp_path: Path) -> None:
     assert bootstrap(tmp_path) == []
     path = tmp_path / "dev-docs" / "complexity_caps.json"
     document, errors = validate_caps_file(path, ruff_version(tmp_path))
-    assert errors == [] and document is not None
+    assert errors == []
+    assert document is not None
     assert {e["function"] for e in document["caps"]} == {"complex_fn"}
     assert bootstrap(tmp_path) != []
 

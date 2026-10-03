@@ -17,7 +17,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Complexity gate enforcement** (2026-10-03) — wired `python scripts/check_complexity.py`
   as a pre-push hook (locked `uv run` entry) and a `static-analysis` CI step with
   PR base fetch and main-push `COMPLEXITY_BEFORE_SHA` context; documented in
-  `dev-docs/HARNESS_ENGINEERING.md`.
+  `dev-docs/HARNESS_ENGINEERING.md`. A local Sonar gate follow-up split cap-entry
+  validation and a composite test assertion.
 
 ### Security
 

@@ -213,22 +213,33 @@ def _validate_cap_entries(entries: Any) -> list[str]:
         return ["caps must be a list"]
     keys: list[tuple[str, str]] = []
     for index, entry in enumerate(entries):
-        if not isinstance(entry, dict) or set(entry) != set(CAP_KEYS):
-            errors.append(f"caps[{index}] must be an object with exactly {CAP_KEYS}")
-            continue
-        if not isinstance(entry["path"], str) or not entry["path"] or entry["path"] != entry["path"].replace("\\", "/"):
-            errors.append(f"caps[{index}].path must be a POSIX relative path")
-        if not isinstance(entry["function"], str) or not entry["function"]:
-            errors.append(f"caps[{index}].function must be a non-empty string")
-        if not isinstance(entry["cap"], int) or isinstance(entry["cap"], bool) or entry["cap"] <= 0:
-            errors.append(f"caps[{index}].cap must be a positive integer")
-        if isinstance(entry.get("path"), str) and isinstance(entry.get("function"), str):
-            keys.append((entry["path"], entry["function"]))
+        entry_errors, key = _validate_cap_entry(index, entry)
+        errors.extend(entry_errors)
+        if key is not None:
+            keys.append(key)
     if len(keys) != len(set(keys)):
         errors.append("duplicate (path, function) cap entries")
     if keys != sorted(keys):
         errors.append("caps entries must be sorted by (path, function), case-sensitive")
     return errors
+
+
+def _validate_cap_entry(index: int, entry: Any) -> tuple[list[str], tuple[str, str] | None]:
+    """Validate one cap and return its key for duplicate and ordering checks."""
+    if not isinstance(entry, dict) or set(entry) != set(CAP_KEYS):
+        return [f"caps[{index}] must be an object with exactly {CAP_KEYS}"], None
+    errors: list[str] = []
+    path = entry["path"]
+    function = entry["function"]
+    cap = entry["cap"]
+    if not isinstance(path, str) or not path or "\\" in path:
+        errors.append(f"caps[{index}].path must be a POSIX relative path")
+    if not isinstance(function, str) or not function:
+        errors.append(f"caps[{index}].function must be a non-empty string")
+    if not isinstance(cap, int) or isinstance(cap, bool) or cap <= 0:
+        errors.append(f"caps[{index}].cap must be a positive integer")
+    key = (path, function) if isinstance(path, str) and isinstance(function, str) else None
+    return errors, key
 
 
 def _validate_migrations(entries: Any) -> list[str]:
