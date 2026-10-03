@@ -23,7 +23,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   PR base tip so stale branches cannot restore caps reduced on `main`; added
   regression cases for branches diverging before and after the baseline. CodeRabbit
   follow-up bounded Git history reads, kept cap blobs byte-accurate, and allowed
-  migrated caps to decrease or move through a reviewed rename chain.
+  migrated caps to decrease or move through a reviewed rename chain. Windows CI
+  exposed Git CRLF conversion in synthetic repos, so `.gitattributes` now pins
+  the canonical caps file to LF on checkout.
 
 ### Security
 

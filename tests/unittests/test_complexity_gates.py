@@ -56,7 +56,9 @@ def _make_tree(root: Path, sources: dict[str, str]) -> None:
 
 def _git_init(root: Path) -> None:
     """Give ``root`` a valid HEAD so the bootstrap guard's ref checks work."""
+    (root / ".gitattributes").write_text("dev-docs/complexity_caps.json text eol=lf\n", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "add", ".gitattributes"], cwd=root, check=True)
     subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "init"],
         cwd=root,
@@ -603,6 +605,7 @@ def test_stale_branch_cannot_restore_caps_added_on_main(
     """Compare with current main when the common ancestor has no caps file."""
     _make_tree(tmp_path, {"probe.py": COMPLEX})
     _git_init(tmp_path)
+    subprocess.run(["git", "config", "core.autocrlf", "true"], cwd=tmp_path, check=True)
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
     subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "source"], cwd=tmp_path, check=True)
     base_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
@@ -632,6 +635,7 @@ def test_stale_branch_cannot_restore_cap_reduced_on_main(
     """The current main cap governs even when the branch point had a cap."""
     _make_tree(tmp_path, {"probe.py": COMPLEX})
     _git_init(tmp_path)
+    subprocess.run(["git", "config", "core.autocrlf", "true"], cwd=tmp_path, check=True)
     assert bootstrap(tmp_path) == []
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
     subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base caps"], cwd=tmp_path, check=True)

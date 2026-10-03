@@ -4,3 +4,5 @@
 # (correction_validation.py), so CRLF conversion on Windows checkouts breaks
 # the manifest gate (issue #107). Force LF checkouts for all CSVs.
 *.csv text eol=lf
+# The complexity gate compares canonical cap bytes with Git history on Windows.
+dev-docs/complexity_caps.json text eol=lf
