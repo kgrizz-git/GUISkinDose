@@ -90,6 +90,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, publish GUISkinDose, and retain the GitHub fork history. First `guiskindose` version is **`1.0.0`**. Mechanical rename: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) (**complete**, PR #73). GitHub/Sonar/URLs: [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) (**complete**, 2026-09-04). |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
+| [plans/COMPLEXITY_GATES_PLAN.md](plans/COMPLEXITY_GATES_PLAN.md) | Active execution plan for pinned complexity checks, grandfathered per-function caps, and a non-increasing ratchet in pre-push and CI. |
 
 ---
 
