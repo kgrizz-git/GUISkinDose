@@ -49,6 +49,10 @@ COMMIT_SHA_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 REFRESH_COMMAND = (
     "python scripts/run_sonarqube_local.py --generate-coverage  (with the local SonarQube server running)"
 )
+ISSUE_REVIEW_REMINDER = (
+    "Review new local SonarQube issues since the previous scan, especially bugs and vulnerabilities; "
+    "a passing quality gate does not replace issue triage."
+)
 
 # Git hook/test runners export these so child `git` uses the parent repo.
 # Gate commands must honor `cwd=repo_root()` instead.
@@ -177,7 +181,8 @@ def _refresh_hint(
         f"Issues on record: {issues_label}\n"
         f"Dumped issues: {issues_summary}\n"
         "Re-run the scan to refresh:\n"
-        f"    {REFRESH_COMMAND}"
+        f"    {REFRESH_COMMAND}\n"
+        f"After scanning: {ISSUE_REVIEW_REMINDER}"
     )
 
 
@@ -270,6 +275,7 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
                 file=sys.stderr,
             )
             return 1
+        print(f"Sonar freshness gate: scan current. {ISSUE_REVIEW_REMINDER}")
         return 0
 
     pending = commits_count + 1  # +1 for the in-flight commit

@@ -219,12 +219,17 @@ def test_clean_env_value(raw: str, expected: str) -> None:
     assert gate.clean_env_value(raw) == expected
 
 
-def test_push_stage_allows_at_scan_commit(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_push_stage_allows_at_scan_commit(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     scan_sha = _commit(fixture_repo, "a")
     state_path = fixture_repo / "tmp" / "sonar-state.json"
     _write_state(state_path, scan_sha)
     monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
     assert gate.main(["--state", str(state_path), "--stage", "push"]) == 0
+    reminder = capsys.readouterr().out
+    assert "new local SonarQube issues" in reminder
+    assert "bugs and vulnerabilities" in reminder
 
 
 def test_push_stage_blocks_on_any_commit(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:

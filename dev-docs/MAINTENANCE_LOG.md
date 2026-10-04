@@ -32,6 +32,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   measurement from lint suppressions, validated historical caps against their own
   Ruff version so upgrades remain possible, and allowed a cap lowered by `--update`
   to be migrated in the same change without weakening the non-increasing ratchet.
+- **Local SonarQube issue review reminder** (2026-10-04) — the opt-in pre-push
+  freshness hook now prompts review of newly introduced issues, especially bugs
+  and vulnerabilities; agent guidance and the local runbook describe manual triage
+  even when the quality gate passes.
 
 ### Security
 

@@ -74,11 +74,12 @@ repos:
         stages: [pre-commit]
 
       - id: sonar-freshness-push
-        name: Sonar freshness gate (push strict, opt-in)
+        name: Sonar freshness and issue-review reminder (push strict, opt-in)
         entry: bash scripts/run_sonar_freshness_check.sh --stage push
         language: system
         pass_filenames: false
         always_run: true
+        verbose: true
         stages: [pre-push]
 
       - id: sensitive-content
