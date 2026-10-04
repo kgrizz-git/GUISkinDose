@@ -12,9 +12,19 @@ from scripts.complexity_caps_helpers import check_cap_history
 
 @pytest.fixture(autouse=True)
 def _clear_ci_base_context(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep synthetic Git history independent of the runner's event."""
-    monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
-    monkeypatch.delenv("COMPLEXITY_BEFORE_SHA", raising=False)
+    """Keep synthetic Git history independent of the runner's repository."""
+    for name in (
+        "GITHUB_BASE_REF",
+        "COMPLEXITY_BEFORE_SHA",
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_NAMESPACE",
+    ):
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_ruff_suppressions_cannot_hide_complex_functions(tmp_path: Path) -> None:
