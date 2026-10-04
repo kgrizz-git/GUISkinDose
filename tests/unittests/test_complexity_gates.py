@@ -297,6 +297,23 @@ def test_migrated_cap_can_later_decrease(tmp_path: Path) -> None:
     assert check(tmp_path) == []
 
 
+def test_update_then_migrate_keeps_lower_cap(tmp_path: Path) -> None:
+    from scripts.check_complexity import migrate, update
+
+    _make_tree(tmp_path, {"probe.py": COMPLEX.replace("complex_fn", "legacy_fn")})
+    _git_init(tmp_path)
+    assert bootstrap(tmp_path) == []
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base caps"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=tmp_path, check=True)
+    reduced = COMPLEX.replace("    if a: a += 1\n", "", 1)
+    (tmp_path / "src" / "probe.py").write_text(reduced.replace("complex_fn", "legacy_fn"), encoding="utf-8")
+    assert update(tmp_path) == []
+    (tmp_path / "src" / "probe.py").write_text(reduced.replace("complex_fn", "renamed_fn"), encoding="utf-8")
+    assert migrate(tmp_path, "src/probe.py:legacy_fn", "src/probe.py:renamed_fn") == []
+    assert check(tmp_path) == []
+
+
 def test_migrate_rejects_missing_old_key(tmp_path: Path) -> None:
     from scripts.check_complexity import migrate
 
@@ -533,10 +550,10 @@ def test_compare_caps_history_with_interleaved_sorted_migrations() -> None:
     assert compare_caps_history(old, new) == []
 
 
-def test_migration_record_must_match_base_old_cap() -> None:
+def test_migration_old_cap_may_decrease_but_not_exceed_base() -> None:
     from scripts.check_complexity import compare_caps_history
 
-    r = {"old_path": "a.py", "old_function": "f", "new_path": "a.py", "new_function": "g", "old_cap": 10, "new_cap": 10}
+    r = {"old_path": "a.py", "old_function": "f", "new_path": "a.py", "new_function": "g", "old_cap": 11, "new_cap": 11}
     old = {
         "schema_version": 1,
         "metric": "ruff-c901",
@@ -546,9 +563,11 @@ def test_migration_record_must_match_base_old_cap() -> None:
         "migrations": [],
     }
     new = json.loads(json.dumps(old))
-    new["caps"] = [{"path": "a.py", "function": "g", "cap": 10}]
+    new["caps"] = [{"path": "a.py", "function": "g", "cap": 11}]
     new["migrations"] = [r]
-    assert any("old_cap mismatch" in e for e in compare_caps_history(old, new))
+    assert compare_caps_history(old, new) == []
+    new["migrations"][0]["old_cap"] = 13
+    assert any("old_cap exceeds predecessor" in e for e in compare_caps_history(old, new))
 
 
 def test_check_fails_closed_when_origin_main_missing_even_if_unchanged(tmp_path: Path) -> None:

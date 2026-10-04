@@ -28,6 +28,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   the canonical caps file to LF on checkout.
 - **Complexity migration guard** (2026-10-04) — `--migrate` now rejects a move while
   the old function still scores above the limit, before changing the caps file.
+- **Complexity gate correctness follow-up** (2026-10-04) — isolated Ruff C901
+  measurement from lint suppressions, validated historical caps against their own
+  Ruff version so upgrades remain possible, and allowed a cap lowered by `--update`
+  to be migrated in the same change without weakening the non-increasing ratchet.
 
 ### Security
 

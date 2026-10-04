@@ -51,7 +51,7 @@ def ruff_version(root: Path) -> str:
 
 
 def ruff_findings_json(root: Path) -> list[dict[str, Any]]:
-    """Raw Ruff C901 JSON diagnostics for the scanned directories."""
+    """Raw C901 diagnostics, independent of project lint suppressions."""
     targets = [directory for directory in SCAN_DIRS if (root / directory).is_dir()]
     if not targets:
         return []
@@ -61,8 +61,10 @@ def ruff_findings_json(root: Path) -> list[dict[str, Any]]:
             "-m",
             "ruff",
             "check",
+            "--isolated",
             "--select",
             "C901",
+            "--ignore-noqa",
             "--config",
             f"lint.mccabe.max-complexity={THRESHOLD}",
             "--output-format",
@@ -304,7 +306,9 @@ def validate_caps_document(data: Any, tool_version: str) -> list[str]:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
     if data["metric"] != METRIC:
         errors.append(f"metric must be {METRIC!r}")
-    if data["tool_version"] != tool_version:
+    if not isinstance(data["tool_version"], str) or re.fullmatch(r"\d+\.\d+\.\d+", data["tool_version"]) is None:
+        errors.append("tool_version must be a Ruff version in X.Y.Z form")
+    elif data["tool_version"] != tool_version:
         errors.append(f"tool_version {data['tool_version']!r} does not match locked ruff {tool_version!r}")
     if data["threshold"] != THRESHOLD:
         errors.append(f"threshold must be {THRESHOLD}")
@@ -456,7 +460,6 @@ def _migrations_unique(records: list[Any]) -> bool:
 def _migration_record_errors(
     record: dict[str, Any],
     prior_cap: int,
-    from_base: bool,
     new_caps: dict[tuple[str, str], int],
     successor_keys: set[tuple[str, str]],
 ) -> list[str]:
@@ -470,8 +473,8 @@ def _migration_record_errors(
         errors.append(f"migration target missing from caps: {new_key[0]}::{new_key[1]}")
     elif new_key in new_caps and new_caps[new_key] > record["new_cap"]:
         errors.append(f"migration cap exceeds recorded limit: {new_key[0]}::{new_key[1]} {new_caps[new_key]} > {record['new_cap']}")
-    if record["old_cap"] > prior_cap or (from_base and record["old_cap"] != prior_cap):
-        errors.append(f"migration old_cap mismatch: {old_key[0]}::{old_key[1]} {record['old_cap']} != {prior_cap}")
+    if record["old_cap"] > prior_cap:
+        errors.append(f"migration old_cap exceeds predecessor: {old_key[0]}::{old_key[1]} {record['old_cap']} > {prior_cap}")
     if record["new_cap"] > prior_cap:
         errors.append(f"migration raised cap: {old_key[0]}::{old_key[1]} {prior_cap} -> {record['new_cap']}")
     return errors
@@ -493,7 +496,7 @@ def _new_migration_errors(
         for record in ready:
             old_key = (record["old_path"], record["old_function"])
             new_key = (record["new_path"], record["new_function"])
-            errors.extend(_migration_record_errors(record, available[old_key], old_key in old_caps, new_caps, successor_keys))
+            errors.extend(_migration_record_errors(record, available[old_key], new_caps, successor_keys))
             available[new_key] = record["new_cap"]
             pending.remove(record)
     return errors
@@ -567,7 +570,8 @@ def check_cap_history(root: Path, document: dict[str, Any], wt_bytes: bytes) -> 
             old_doc = json.loads(old_bytes)
         except json.JSONDecodeError:
             return ["caps file at base unreadable"]
-        base_errors = validate_caps_document(old_doc, document["tool_version"])
+        base_version = old_doc.get("tool_version") if isinstance(old_doc, dict) else None
+        base_errors = validate_caps_document(old_doc, base_version if isinstance(base_version, str) else "")
         if base_errors:
             return [f"caps file at base invalid: {error}" for error in base_errors]
         return compare_caps_history(old_doc, document)
@@ -587,7 +591,8 @@ def _check_via_introduction_commit(root: Path, base: str, document: dict[str, An
             first_doc = json.loads(first_bytes)
         except json.JSONDecodeError:
             return ["caps file at introduction commit unreadable"]
-        first_errors = validate_caps_document(first_doc, document["tool_version"])
+        first_version = first_doc.get("tool_version") if isinstance(first_doc, dict) else None
+        first_errors = validate_caps_document(first_doc, first_version if isinstance(first_version, str) else "")
         if first_errors:
             return [f"caps file at introduction commit invalid: {error}" for error in first_errors]
         return compare_caps_history(first_doc, document)

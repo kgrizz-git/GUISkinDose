@@ -186,6 +186,9 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
 `uv sync --locked`.
 
 - Metric: Ruff `C901`, threshold 10; new functions scoring 11+ fail.
+- The scan ignores all project Ruff configuration, including exclusions and
+  per-file ignores, plus `noqa` comments. Every non-ignored Python file under
+  `src/` and `scripts/` is measured regardless of ordinary lint exemptions.
 - Exceptions live in `dev-docs/complexity_caps.json` (schema, metric, locked ruff version,
   threshold, sorted `caps`/`migrations` entries). The file must be canonical: repeated
   serialization must be byte-identical.
@@ -194,6 +197,7 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   Run `--migrate` after the old function is removed or simplified to score 10 or less;
   it rejects an old function that still exceeds the limit without changing the file.
   A migrated cap may later decrease, and a sequence of reviewed renames may form a chain.
+  Lowering a cap with `--update` before `--migrate` is also supported in one change.
   Neither may add or raise a cap. If a new exception is unavoidable, propose a separate,
   reviewed policy change with a specific reason and tests before changing any caps; the
   ordinary ratchet must remain enabled during that review.
@@ -203,6 +207,10 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   An unavailable base fails closed with a `git fetch` hint. Fetch before local checks
   when `origin/main` may be stale. Local Git history lookups time out after 30 seconds
   and fail the gate.
+- When upgrading Ruff, update `tool_version` in the caps file to the newly locked
+  version and remeasure with `--check`; historical caps retain their own version.
+  Scores must still respect the existing caps, so a scoring change that raises a
+  function above its cap requires a code reduction or separately reviewed policy change.
 - SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings
   are not part of the gate baseline or cap scores.
 - `--bootstrap` is once-only and only allowed when neither the branch nor its base has a caps file.
