@@ -191,6 +191,8 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   serialization must be byte-identical.
 - Ratchet: caps may only decrease or disappear. Use `--update` to lower/remove to measured
   scores and `--migrate OLD NEW` to rename a cap with a provenance record (`migrations`).
+  Run `--migrate` after the old function is removed or simplified to score 10 or less;
+  it rejects an old function that still exceeds the limit without changing the file.
   A migrated cap may later decrease, and a sequence of reviewed renames may form a chain.
   Neither may add or raise a cap. If a new exception is unavoidable, propose a separate,
   reviewed policy change with a specific reason and tests before changing any caps; the

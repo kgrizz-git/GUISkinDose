@@ -166,7 +166,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="validate the tree against caps (default)")
     parser.add_argument("--bootstrap", action="store_true", help="create the initial reviewed caps baseline")
     parser.add_argument("--update", action="store_true", help="lower/remove caps to current measured scores")
-    parser.add_argument("--migrate", nargs=2, metavar=("OLD_PATH:OLD_FUNCTION", "NEW_PATH:NEW_FUNCTION"), help="rename a cap with a migration record")
+    parser.add_argument(
+        "--migrate",
+        nargs=2,
+        metavar=("OLD_PATH:OLD_FUNCTION", "NEW_PATH:NEW_FUNCTION"),
+        help="move a cap after the old function is removed or scores at most 10",
+    )
     args = parser.parse_args(argv)
     modes = [args.check, args.bootstrap, args.update, args.migrate is not None]
     if sum(modes) > 1:

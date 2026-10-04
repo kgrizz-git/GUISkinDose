@@ -669,11 +669,13 @@ def _split_key(token: str) -> tuple[str, str] | None:
 def _migration_target_errors(
     old: tuple[str, str], new: tuple[str, str], caps: dict[tuple[str, str], int], measured: dict[tuple[str, str], int]
 ) -> list[str]:
-    """Reject a rename that would create a missing or unusable cap."""
+    """Reject a rename until the old finding is gone and the new cap is valid."""
     if old not in caps:
         return [f"old cap not found: {old[0]}::{old[1]}"]
     if new in caps:
         return [f"new key already capped: {new[0]}::{new[1]}"]
+    if old in measured:
+        return [f"old function still over-limit: {old[0]}::{old[1]} (rename, remove, or simplify it in source first)"]
     if new not in measured:
         return [f"new function not over-limit: {new[0]}::{new[1]} (cap would be stale)"]
     if measured[new] > caps[old]:

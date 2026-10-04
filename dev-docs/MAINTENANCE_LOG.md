@@ -26,6 +26,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   migrated caps to decrease or move through a reviewed rename chain. Windows CI
   exposed Git CRLF conversion in synthetic repos, so `.gitattributes` now pins
   the canonical caps file to LF on checkout.
+- **Complexity migration guard** (2026-10-04) — `--migrate` now rejects a move while
+  the old function still scores above the limit, before changing the caps file.
 
 ### Security
 

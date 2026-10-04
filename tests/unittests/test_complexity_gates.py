@@ -305,12 +305,25 @@ def test_migrate_rejects_missing_old_key(tmp_path: Path) -> None:
     assert migrate(tmp_path, "src/probe.py:nope", "src/probe.py:complex_fn") != []
 
 
+def test_migrate_rejects_old_function_still_over_limit_without_writing(tmp_path: Path) -> None:
+    from scripts.check_complexity import migrate
+
+    _make_tree(tmp_path, {"probe.py": COMPLEX + "\n" + COMPLEX.replace("complex_fn", "renamed_fn")})
+    old_finding = [finding for finding in collect_findings(tmp_path) if finding.function == "complex_fn"]
+    path = _caps_file(tmp_path, canonical_document(ruff_version(tmp_path), old_finding))
+    before = path.read_bytes()
+    errors = migrate(tmp_path, "src/probe.py:complex_fn", "src/probe.py:renamed_fn")
+    assert any("old function still over-limit: src/probe.py::complex_fn" in error for error in errors)
+    assert path.read_bytes() == before
+
+
 def test_migrate_rejects_new_key_already_capped(tmp_path: Path) -> None:
     from scripts.check_complexity import migrate
 
     _make_tree(tmp_path, {"probe.py": COMPLEX})
     _caps_file(tmp_path, canonical_document(ruff_version(tmp_path), collect_findings(tmp_path)))
-    assert migrate(tmp_path, "src/probe.py:complex_fn", "src/probe.py:complex_fn") != []
+    errors = migrate(tmp_path, "src/probe.py:complex_fn", "src/probe.py:complex_fn")
+    assert any("new key already capped" in error for error in errors)
 
 
 def test_migrate_rejects_new_score_above_old_cap_without_writing(tmp_path: Path) -> None:
