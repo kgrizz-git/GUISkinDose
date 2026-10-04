@@ -174,6 +174,49 @@ last git touch. It does not auto-delete documentation.
 point back to `AGENTS.md`, when `TO_DO.md` is drifting back into a historical ledger, or when
 active execution plans appear complete but have not been archived.
 
+### Complexity gate (Ruff C901 caps)
+
+The complexity gate is a pre-push hook and a `static-analysis` CI step. Locally, run:
+
+```bash
+uv run --extra dev --extra gui --locked python scripts/check_complexity.py
+```
+
+CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
+`uv sync --locked`.
+
+- Metric: Ruff `C901`, threshold 10; new functions scoring 11+ fail.
+- The scan ignores all project Ruff configuration, including exclusions and
+  per-file ignores, plus `noqa` comments. Every non-ignored Python file under
+  `src/` and `scripts/` is measured regardless of ordinary lint exemptions.
+- Exceptions live in `dev-docs/complexity_caps.json` (schema, metric, locked ruff version,
+  threshold, sorted `caps`/`migrations` entries). The file must be canonical: repeated
+  serialization must be byte-identical.
+- Ratchet: caps may only decrease or disappear. Use `--update` to lower/remove to measured
+  scores and `--migrate OLD NEW` to rename a cap with a provenance record (`migrations`).
+  Run `--migrate` after the old function is removed or simplified to score 10 or less;
+  it rejects an old function that still exceeds the limit without changing the file.
+  A migrated cap may later decrease, and a sequence of reviewed renames may form a chain.
+  Lowering a cap with `--update` before `--migrate` is also supported in one change.
+  Neither may add or raise a cap. If a new exception is unavoidable, propose a separate,
+  reviewed policy change with a specific reason and tests before changing any caps; the
+  ordinary ratchet must remain enabled during that review.
+- Base comparison: PRs compare against the current `origin/$GITHUB_BASE_REF` tip;
+  main pushes compare against `$COMPLEXITY_BEFORE_SHA`; locally, against the current
+  `origin/main` tip. This catches cap reductions made after a feature branch diverged.
+  An unavailable base fails closed with a `git fetch` hint. Fetch before local checks
+  when `origin/main` may be stale. Local Git history lookups time out after 30 seconds
+  and fail the gate.
+- When upgrading Ruff, run `--update` to record the newly locked `tool_version`
+  (it also lowers or drops caps) and remeasure with `--check`; historical caps retain their own version.
+  Scores must still respect the existing caps, so a scoring change that raises a
+  function above its cap requires a code reduction or separately reviewed policy change.
+- SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings
+  are not part of the gate baseline or cap scores.
+- `--bootstrap` is once-only and only allowed when neither the branch nor its base has a caps file.
+  On that first PR, review the exact caps diff against the measured scores; no earlier
+  caps file exists to bound the baseline historically.
+
 ### Documentation freshness check
 
 Run the harness doc-freshness script before feature or status PRs:

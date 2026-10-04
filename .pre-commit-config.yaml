@@ -74,11 +74,12 @@ repos:
         stages: [pre-commit]
 
       - id: sonar-freshness-push
-        name: Sonar freshness gate (push strict, opt-in)
+        name: Sonar freshness and issue-review reminder (push strict, opt-in)
         entry: bash scripts/run_sonar_freshness_check.sh --stage push
         language: system
         pass_filenames: false
         always_run: true
+        verbose: true
         stages: [pre-push]
 
       - id: sensitive-content
@@ -181,6 +182,14 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+      - id: check-complexity
+        name: complexity gate (Ruff C901 caps)
+        entry: uv run --extra dev --extra gui --locked python scripts/check_complexity.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
 
       - id: check-stale-brand
         name: check for stale brand strings

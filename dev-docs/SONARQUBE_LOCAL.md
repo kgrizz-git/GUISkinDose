@@ -102,6 +102,11 @@ leave the prior state so the budget is not reset by a red scan). After history r
 blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
 pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
 
+A current scan is the first step, not the end of review. Before pushing, inspect issues introduced since the
+previous scan in SonarQube's New Code view, especially bugs and vulnerabilities, and triage them even if the
+quality gate passed. The pre-push hook prints this reminder when the opt-in gate is enabled; it does not compare
+issue counts or classify findings automatically.
+
 `SONAR_TOKEN` is read from the exported environment or the repo-local `.env` by all three helpers
 (exported wins; the file is parsed, never sourced). `SONAR_HOST_URL` comes from the exported environment
 in the gate and dump helpers (overridable per-invocation via `--host-url`); the runner additionally falls
@@ -127,6 +132,10 @@ redirects so the token is never forwarded to another URL.
 ```bash
 python scripts/dump_sonar_issues.py
 ```
+
+For a local comparison, keep the previous timestamped dump and run the command after the new scan. Compare issue
+identities, not only totals: a resolved issue can offset a newly introduced bug or vulnerability without changing
+the count. Dumps stay under gitignored `tmp/`; do not commit or paste raw issue details into a PR.
 
 ## Project version
 

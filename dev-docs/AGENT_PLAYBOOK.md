@@ -94,6 +94,11 @@ basedpyright
 For narrow script changes, run that script's unit tests and the script itself. For GUI changes, run the relevant
 NiceGUI user-simulation tests under `tests/gui/` or `tests/unittests/test_gui_*.py`.
 
+When the local SonarQube freshness gate requires a scan, also review issues introduced since the previous scan,
+especially bugs and vulnerabilities. Use the local New Code view or the private timestamped issue dumps in
+`dev-docs/SONARQUBE_LOCAL.md`; triage new findings before pushing even if the quality gate passes. The hook only
+reminds you of this review and does not enforce an issue-count comparison.
+
 `playwright` and `pytest-playwright` are installed (part of `[dev]`) with a Chromium headless shell. Use Playwright
 only when explicitly asked to verify visual layout — for example, when running the `/verify` skill on a CSS or
 layout-only change where the NiceGUI test client cannot observe the rendered result. Do not add Playwright to the

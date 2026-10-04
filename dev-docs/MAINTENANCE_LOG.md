@@ -8,6 +8,38 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Added
+
+- **Complexity gate foundation** (2026-10-03) — added a Ruff C901 checker with
+  AST-qualified function names, a reviewed baseline of 20 grandfathered caps,
+  and focused tests. Follow-up added commands for cap reductions and reviewed
+  rename migration, plus Git-history checks against committed cap increases.
+- **Complexity gate enforcement** (2026-10-03) — wired `python scripts/check_complexity.py`
+  as a pre-push hook (locked `uv run` entry) and a `static-analysis` CI step with
+  PR base fetch and main-push `COMPLEXITY_BEFORE_SHA` context; documented in
+  `dev-docs/HARNESS_ENGINEERING.md`. A local Sonar gate follow-up split cap-entry
+  validation and a composite test assertion.
+- **Complexity gate review fixes** (2026-10-03) — compare caps against the current
+  PR base tip so stale branches cannot restore caps reduced on `main`; added
+  regression cases for branches diverging before and after the baseline. CodeRabbit
+  follow-up bounded Git history reads, kept cap blobs byte-accurate, and allowed
+  migrated caps to decrease or move through a reviewed rename chain. Windows CI
+  exposed Git CRLF conversion in synthetic repos, so `.gitattributes` now pins
+  the canonical caps file to LF on checkout.
+- **Complexity migration guard** (2026-10-04) — `--migrate` now rejects a move while
+  the old function still scores above the limit, before changing the caps file.
+- **Complexity gate correctness follow-up** (2026-10-04) — isolated Ruff C901
+  measurement from lint suppressions, validated historical caps against their own
+  Ruff version so upgrades remain possible, and allowed a cap lowered by `--update`
+  to be migrated in the same change without weakening the non-increasing ratchet.
+- **Complexity update records Ruff upgrades** (2026-10-04) — `--update` now rewrites
+  `tool_version` to the locked Ruff version (still lowering or removing caps only), and the
+  stale-cap error names `--update` as its repair command.
+- **Local SonarQube issue review reminder** (2026-10-04) — the opt-in pre-push
+  freshness hook now prompts review of newly introduced issues, especially bugs
+  and vulnerabilities; agent guidance and the local runbook describe manual triage
+  even when the quality gate passes.
+
 ### Security
 
 - **Thirteenth PyJWT alert on the Semgrep lock dismissed** (2026-10-01) —
