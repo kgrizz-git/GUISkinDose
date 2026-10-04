@@ -256,6 +256,18 @@ def test_update_never_adds_caps(tmp_path: Path) -> None:
     assert any("unlisted over-limit" in e for e in check(tmp_path))
 
 
+def test_update_records_new_ruff_version(tmp_path: Path) -> None:
+    from scripts.check_complexity import update
+
+    _make_tree(tmp_path, {"probe.py": COMPLEX})
+    document = canonical_document("0.0.1", collect_findings(tmp_path))
+    _caps_file(tmp_path, document)
+    assert update(tmp_path) == []
+    rewritten = json.loads((tmp_path / "dev-docs" / "complexity_caps.json").read_bytes())
+    assert rewritten["tool_version"] == ruff_version(tmp_path)
+    assert rewritten["caps"] == document["caps"]
+
+
 def test_migrate_records_nonincreasing_rename(tmp_path: Path) -> None:
     from scripts.check_complexity import migrate
 

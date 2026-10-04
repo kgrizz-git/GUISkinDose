@@ -366,7 +366,10 @@ def measurement_errors(findings: list[Finding], document: dict[str, Any]) -> lis
             )
     for (path, function), cap in sorted(listed.items()):
         if (path, function) not in measured or measured[(path, function)] <= THRESHOLD:
-            errors.append(f"stale cap entry: {path}::{function} cap {cap} has no over-limit function")
+            errors.append(
+                f"stale cap entry: {path}::{function} cap {cap} has no over-limit function; "
+                "remove it (or run --update to do it automatically)"
+            )
     return errors
 
 
@@ -644,11 +647,15 @@ def update(root: Path) -> list[str]:
         document = json.loads(caps_path.read_bytes())
     except (OSError, json.JSONDecodeError) as exc:
         return [f"caps file unreadable: {exc}"]
-    schema_errors = validate_caps_document(document, version)
+    recorded = document.get("tool_version") if isinstance(document, dict) else None
+    schema_errors = validate_caps_document(document, recorded if isinstance(recorded, str) else version)
     if schema_errors:
         return schema_errors
     updated, changes = _update_caps_document(document, findings)
-    if updated["caps"] == document["caps"] and updated["migrations"] == document["migrations"]:
+    if recorded != version:
+        updated["tool_version"] = version
+        changes.append(f"tool_version {recorded} -> {version}")
+    if updated == document:
         print("update: no changes")
         return []
     try:

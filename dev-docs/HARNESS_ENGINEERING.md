@@ -207,8 +207,8 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   An unavailable base fails closed with a `git fetch` hint. Fetch before local checks
   when `origin/main` may be stale. Local Git history lookups time out after 30 seconds
   and fail the gate.
-- When upgrading Ruff, update `tool_version` in the caps file to the newly locked
-  version and remeasure with `--check`; historical caps retain their own version.
+- When upgrading Ruff, run `--update` to record the newly locked `tool_version`
+  (it also lowers or drops caps) and remeasure with `--check`; historical caps retain their own version.
   Scores must still respect the existing caps, so a scoring change that raises a
   function above its cap requires a code reduction or separately reviewed policy change.
 - SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings

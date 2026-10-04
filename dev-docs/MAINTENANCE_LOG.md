@@ -32,6 +32,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   measurement from lint suppressions, validated historical caps against their own
   Ruff version so upgrades remain possible, and allowed a cap lowered by `--update`
   to be migrated in the same change without weakening the non-increasing ratchet.
+- **Complexity update records Ruff upgrades** (2026-10-04) — `--update` now rewrites
+  `tool_version` to the locked Ruff version (still lowering or removing caps only), and the
+  stale-cap error names `--update` as its repair command.
 - **Local SonarQube issue review reminder** (2026-10-04) — the opt-in pre-push
   freshness hook now prompts review of newly introduced issues, especially bugs
   and vulnerabilities; agent guidance and the local runbook describe manual triage

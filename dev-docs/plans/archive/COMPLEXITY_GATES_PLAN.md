@@ -82,7 +82,8 @@ removes the old cap and adds the new key at no higher than the old cap or curren
 score. Record old/new keys and caps in the `migrations` array. CI compares each
 new mapping with the base file, validates one-to-one old-key removal and
 nonincreasing cap, and requires code review of the move. Only bootstrap writes
-metric and tool-version metadata; update and migrate must preserve them.
+metric metadata; update also records the locked Ruff `tool_version`, and migrate
+preserves both.
 Preserve migration records as provenance. Resolve concurrent cap-file conflicts
 by retaining both reductions and canonical ordering.
 
