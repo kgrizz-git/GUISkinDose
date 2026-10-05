@@ -415,12 +415,18 @@ jobs:
     # sonar-project.properties. This job stays disabled until a repository administrator
     # protects main and then explicitly sets SONAR_PROTECTED_MAIN_ENABLED=true. It is also
     # skipped when SONAR_TOKEN is absent.
+    # Waiting on the Quality Gate makes a red gate fail this job, so ci-issue-notify files a
+    # tracking issue. Set here, not in sonar-project.properties, so local scans stay opt-in.
     - name: SonarQube Cloud scan (requires token)
       if: env.SONAR_TOKEN_AVAILABLE == 'true'
       uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4  # v8.2.2
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        args: >
+          -Dsonar.qualitygate.wait=true
+          -Dsonar.qualitygate.timeout=300
 
   gitleaks:
     # PR secret scanning, gated behind privacy-gates. The standalone gitleaks.yml
