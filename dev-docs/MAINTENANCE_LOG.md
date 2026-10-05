@@ -13,7 +13,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **SonarCloud scan waits on the Quality Gate** (2026-10-05) — `sonar-scan` now passes
   `sonar.qualitygate.wait=true`, so a red gate on `main` fails the job and files a CI
   tracking issue. Before this, PR #134's S2083 false positive turned the gate red while
-  the job stayed green and no issue was filed.
+  the job stayed green and no issue was filed. `test_ci_scanner_security_policy.py`
+  now pins the flag.
 
 - **Complexity gate foundation** (2026-10-03) — added a Ruff C901 checker with
   AST-qualified function names, a reviewed baseline of 20 grandfathered caps,

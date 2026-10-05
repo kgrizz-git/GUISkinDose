@@ -22,6 +22,8 @@ def test_tokenized_sonar_is_opt_in_and_never_runs_on_pr_heads() -> None:
     assert "SONAR_TOKEN_AVAILABLE: ${{ secrets.SONAR_TOKEN != '' }}" in sonar
     assert "if: env.SONAR_TOKEN_AVAILABLE == 'true'" in sonar
     assert "SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}" in sonar
+    # A red Quality Gate must fail the job so ci-issue-notify files a tracking issue.
+    assert "-Dsonar.qualitygate.wait=true" in sonar
 
 
 def test_coderabbit_remains_requested_only_after_the_privacy_gate() -> None:
