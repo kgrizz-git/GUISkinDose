@@ -13,7 +13,7 @@ from guiskindose.kerma_correction import load_correction_periods, load_correctio
 from guiskindose.kerma_periods import period_options
 from guiskindose.settings import PyskindoseSettings
 
-_OLD = "2025-01-01|2025-12-31"
+_OLD = "1901-01-01|1901-12-31"
 
 
 def test_example_file_and_readme_are_packaged_beside_each_other() -> None:
@@ -31,7 +31,7 @@ def test_example_file_loads_as_a_table() -> None:
 
 def test_example_file_has_one_dated_pair_with_two_periods() -> None:
     periods = load_correction_periods(get_path_to_example_kerma_meter_file())
-    assert [o.label for o in period_options(periods)] == ["2026-01-01 → (open)", "2025-01-01 → 2025-12-31"]
+    assert [o.label for o in period_options(periods)] == ["1902-01-01 → (open)", "1901-01-01 → 1901-12-31"]
     dated = {pair for pair, rows in periods.items() if any(r.dated for r in rows)}
     assert dated == {("demo-room-2", "A")}
 
@@ -66,5 +66,5 @@ def test_engine_uses_the_chosen_period_of_the_example_file() -> None:
 
 def test_engine_uses_a_cli_calibration_date_with_the_example_file() -> None:
     settings = _settings()
-    settings.kerma_meter_correction.calibration_date = date(2025, 6, 1)
+    settings.kerma_meter_correction.calibration_date = date(1901, 6, 1)
     assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 1") == pytest.approx([0.98, 1.01])

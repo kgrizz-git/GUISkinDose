@@ -69,7 +69,7 @@ cannot be looked up, so the default factor applies to it.
 
 **Calibration period.** When the file has dated rows for a unit and tube of an exam, that exam
 gets a *Calibration period* selector listing the file's periods, for example
-`2026-01-01 → 2026-06-30`. Exam 1 starts on the most recent period and later exams follow the
+`1901-01-01 → 1901-12-31`. Exam 1 starts on the most recent period and later exams follow the
 previous exam's choice until you pick one. The chosen period selects that exam's file factor.
 The choice is saved with the run configuration only when identifiers are included.
 
