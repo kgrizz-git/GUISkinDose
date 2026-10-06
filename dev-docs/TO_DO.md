@@ -25,6 +25,11 @@ be archived.
   roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
+- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
+- [ ] **Kerma-meter CF workflow (file + prompt-on-miss, per-tube dose)** — select a per-equipment/tube calibration
+  file or enter factors for detected equipment on load; prompt for pairs missing from the file; default 1.0;
+  report tube A/B dose separately. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
+
 
 ## Active Work
 
@@ -65,25 +70,7 @@ be archived.
   [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Remaining: per-event override UI,
   scenarios/nominal-arc selection UI, XA-header direction ingestion, film/array validation.
   Additional vendor fixtures improve profiles but do not block.
-- [x] **Rotational coverage-envelope performance — all three phases shipped** — Phase 1 shipped
-  2026-10-01: position once per event + pose guard, boolean-ndarray hit masks, vectorized
-  `scale_field_area` and `check_hit` entrance test, vectorized union/count/fold bookkeeping, memoized
-  `k_med`, one reused candidate frame — measured ~8.3x on a 360-pose cylinder benchmark,
-  `max |before − after|` dose map exactly 0 against two committed goldens (§4.6a in the plan). Phase 2
-  shipped 2026-10-02: `Beam`'s ~14 per-event pandas scalar reads hoisted into a frozen
-  `BeamGeometryInputs` record built once per event, plus batched beam-face normals — 0.175 s → 0.119 s
-  (-32%) on the same benchmark, dose map still exactly 0 (§2.3). **One trap worth carrying forward:** the
-  hoist had to read its record from the index-reset candidate frame, not the event table, because
-  `Beam` takes `DSL` at index `0` — on the candidate frame that is the *parent* event's row, on the full
-  table the *first* event's, and switching sources silently re-drew every enveloped event's detector box
-  (§2.1). Phase 3 shipped 2026-10-02: O(N) `_deduplicate` via an exactly-tiling wrap-aware spatial
-  hash (semantics unchanged — exact pairwise predicate, oracle-tested; NOT the lossy quantized-key
-  variant), and candidate-level progress (fractional throttled updates, exact integer snap, GUI
-  `Event k / total (rotational poses NN%)` label) — both goldens untouched (§3.1). Plan (archived):
-  [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md);
-  evidence: [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
-- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
   and combine PSD/dose maps.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
