@@ -130,6 +130,20 @@
         "elevated",
         "high"
       ]
+    },
+    "tube_summary": {
+      "preferred": "dose by tube",
+      "definition": "Per-tube (single plane, plane A, plane B, unknown) reported kerma, corrected kerma, applied correction factor, and partial dose-map peak. Per-tube peaks do not add up to the peak skin dose.",
+      "aliases": [
+        "per-tube dose"
+      ]
+    },
+    "ask_for_missing": {
+      "preferred": "ask for missing correction factors",
+      "definition": "GUI setting (default on) that opens a dialog when a detected unit and tube has no entered or file correction factor. It never blocks a calculation.",
+      "aliases": [
+        "prompt_at_calc"
+      ]
     }
   }
 }

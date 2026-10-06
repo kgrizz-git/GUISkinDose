@@ -21,6 +21,19 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Kerma-meter factors: load-time dialog and per-exam unit choice** (2026-10-06) — when correction is
+  enabled, loading events lists every detected unit and tube and opens a dialog if any pair has no factor.
+  Rows are grouped by exam and pre-filled from earlier entries, then the calibration file, then the default
+  factor, each labelled with its source. Cancel never blocks: it keeps file values and earlier entries, and
+  unanswered pairs use the default factor. Calculate re-opens the dialog once if pairs are still unanswered.
+  An exam whose events carry no equipment identity gets a per-exam unit chooser (detected unit, file unit, or
+  free text), saved with the run configuration only when identifiers are included. Command-line runs never
+  prompt and log one warning with the count of pairs without a factor, never the labels.
+- **Dose by tube for biplane studies** (2026-10-06) — one partial dose map per tube (`single` / `A` / `B` /
+  `unknown`) is accumulated beside the combined map and sums to it cell by cell; the peak skin dose is
+  unchanged. The new `tube_summary` output (also in dict/JSON) gives each tube's reported kerma, corrected
+  kerma, applied correction factor, and partial-map peak, shown in Results and in the HTML, XLSX, DOCX, and
+  PDF exports. Per-tube peaks do not add up to the peak skin dose. No equipment labels appear in these outputs.
 - **PSD severity colour-coding on every readout** (2026-09-30) — all four
   peak-skin-dose readouts (sidebar, Results single-exam metric, aggregate
   metric, per-exam accordion) now share one band helper
@@ -73,6 +86,14 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Kerma-meter settings unified; `mode` and `prompt_at_calc` replaced** (2026-10-06) — correction factors
+  now resolve as manual entry, then calibration file, then default factor, and a set file always loads. The
+  exclusive `mode` setting (`file` / `prompt`) is deprecated: it still loads from settings files and the
+  `--kerma-meter-correction-mode` flag still parses, with a deprecation warning, and `prompt` maps to the new
+  `ask_for_missing` setting (default on, "Ask for missing correction factors" in Settings). `ask_for_missing`
+  replaces `prompt_at_calc`; a legacy `prompt_at_calc: true` maps to it, `false` was the old default and is
+  ignored. `mode` and `prompt_at_calc` are no longer written. "Don't ask again until the loaded data changes"
+  suppresses the dialog for the session.
 - **Radimetrics biplane exports are split into tube A and tube B events** (2026-10-06) — when a Radimetrics
   file carries per-plane `Reference Point Dose (A)` / `(B)` columns, each total-kerma row is replaced by a
   `Plane A` and a `Plane B` event whose kerma sums to the original total (previously only the total was read

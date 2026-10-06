@@ -382,7 +382,7 @@ Per-event processing:
 | `k_bs` | `calculate_k_bs()` | Backscatter (Benmakhlouf et al., field size + kVp) |
 | `k_med` | `calculate_k_med()` | Medium correction (air kerma → tissue dose) |
 | `k_tab` | `calculate_k_tab()` → `KTabResult` | Patient-support transmission. Estimated path (product default): validated `k_tab_val`. Measured path: DB by model + plane string; invalid inherited (e.g. AlluraClarity Plane B `0.0`) → warned-neutral `1.0`. Returns `.values` plus per-event `.statuses` (`estimated` / `exact` / `interpolated` / `clamped` / `no_device` / `invalid_inherited`). Multiplied only onto table-hit cells in `add_corrections_and_event_dose_to_output`. |
-| `k_meter` | `kerma_correction.resolve_correction_factors()` | Kerma-meter CF (optional; reported K_IRP × CF before physics corrections; fail-soft to `default_factor`) |
+| `k_meter` | `kerma_correction.resolve_correction_factors()` | Kerma-meter CF (optional; reported K_IRP × CF before physics corrections; manual entries > file rows > `default_factor`; `missing_keys()` finds pairs lacking a factor; `calculate_dose/tube_dose.py` adds per-tube partial maps) |
 
 ---
 
@@ -447,6 +447,7 @@ When `output_format` is `"dict"` or `"json"`, `main()` returns a structured obje
 | `pad` | Pad phantom geometry |
 | `events` | Per-event beam/table geometry (rotations, translations, distances) |
 | `corrections` | Per-event correction factors (k_isq, k_bs, k_med, k_tab) |
+| `tube_summary` | Per-tube rows (`tube`, `events`, `kerma_reported`, `kerma_corrected`, `applied_cf`, `peak_dose`); tube ids only, never equipment labels |
 
 ---
 

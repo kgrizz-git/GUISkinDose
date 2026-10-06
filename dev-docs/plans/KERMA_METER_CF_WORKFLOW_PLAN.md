@@ -1,6 +1,6 @@
 # Kerma-Meter CF Workflow Plan (file + prompt-on-miss, per-tube dose)
 
-Status: Active execution plan — Phase 0 implemented, pending review
+Status: Active execution plan — Phases 0–5 implemented, pending final review
 Created: 2026-10-06
 Owner: maintainer
 Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md)
@@ -141,22 +141,22 @@ updates the argparse help text for `--kerma-meter-correction-mode` to say it is 
 
 ### Documentation checklist
 
-- [ ] `dev-docs/PSD_CALCULATION_ALGORITHM.md` describes the per-tube partial maps, and the CF step says
+- [x] `dev-docs/PSD_CALCULATION_ALGORITHM.md` describes the per-tube partial maps, and the CF step says
   where the table comes from (Phase 4). A test checks this document against the code.
-- [ ] `docs/source/gui_help/` covers the load-time dialog, the toggle, Cancel semantics, unresolved
+- [x] `docs/source/gui_help/` covers the load-time dialog, the toggle, Cancel semantics, unresolved
   equipment, and the per-tube Results. Edit only the `docs/source/` copy, never the mirror under `src/guiskindose/gui/help/`. Run
   `scripts/sync_gui_help.py` afterwards (Phases 3–4).
-- [ ] `dev-docs/ui_copy.json` holds the new dialog, toggle, and warning text. Edit only this canonical copy. Run `scripts/sync_ui_copy.py`
+- [x] `dev-docs/ui_copy.json` holds the new dialog, toggle, and warning text. Edit only this canonical copy. Run `scripts/sync_ui_copy.py`
   afterwards (Phase 3).
-- [ ] `src/guiskindose/settings_example.json` and the settings docstrings show the new settings model and
+- [x] `src/guiskindose/settings_example.json` and the settings docstrings show the new settings model and
   the legacy `mode` shim (Phase 1).
 - [x] `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` describes the Radimetrics per-plane split and the
   `unknown` default (Phase 0).
-- [ ] `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/glossary.json`,
+- [x] `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/glossary.json`,
   `dev-docs/help_registry.json`, and `dev-docs/feature_doc_matrix.json` list the new settings and outputs.
-- [ ] `AGENTS.md` reflects the new input and GUI behaviour where it describes kerma-meter CFs,
+- [x] `AGENTS.md` reflects the new input and GUI behaviour where it describes kerma-meter CFs,
   Radimetrics, or per-tube outputs.
-- [ ] `CHANGELOG.md` notes the per-tube outputs, the settings change, the `mode` deprecation, and the
+- [x] `CHANGELOG.md` notes the per-tube outputs, the settings change, the `mode` deprecation, and the
   Radimetrics behaviour change.
 - [ ] On completion, archive this plan under `plans/archive/`, update `dev-docs/index.md`, and remove the
   TO_DO item.

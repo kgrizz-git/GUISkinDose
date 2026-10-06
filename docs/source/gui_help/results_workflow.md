@@ -16,6 +16,19 @@ Single-exam results show:
   warnings and rich-report ledger (DOCX “Rotational handling ledger”,
   XLSX “Rotational handling” sheet, dict/JSON `rotational_handling`).
 
+### Dose by tube (biplane studies)
+
+When a study contains more than one X-ray tube (plane A and plane B, or events whose
+tube could not be identified), Results adds a **Dose by tube** block. It lists, for each
+tube, the reported kerma, the corrected kerma, the applied correction factor, and the
+peak of that tube's own dose map. A tube that never reaches the phantom shows a peak of
+zero. The same table appears in the HTML, XLSX, DOCX, and PDF exports.
+
+The headline peak skin dose is the peak of the combined map, which is the sum of all
+tubes. Each tube's peak is the maximum of a different map, so **per-tube peaks do not
+add up to the peak skin dose**. Single-plane studies show no tube block, because it
+would repeat the headline numbers. Equipment names never appear in this block.
+
 ### Reading the Peak Skin Dose band
 
 Every peak skin dose readout — the sidebar status value, the single-exam and

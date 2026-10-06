@@ -225,3 +225,61 @@ def test_engine_applies_per_exam_override_for_unresolved_events(tmp_path: Path):
     assert _resolve_kerma_meter_cf(df, settings, "Exam 2") == pytest.approx([1.4, 1.4])
     settings.kerma_meter_correction.unresolved_equipment_labels = {"Exam 1": "Room-9"}
     assert _resolve_kerma_meter_cf(df, settings, None) == pytest.approx([1.4, 1.4])  # single exam = Exam 1
+
+
+class _Capture:
+    """Attach a list-collecting handler to the dose logger (caplog misses suite-wide state)."""
+
+    def __init__(self) -> None:
+        import logging
+
+        self.messages: list[str] = []
+        outer = self
+
+        class _H(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                outer.messages.append(record.getMessage())
+
+        self.handler = _H(level=logging.WARNING)
+        self.logger = logging.getLogger("guiskindose.calculate_dose.calculate_dose")
+
+    def __enter__(self) -> list[str]:
+        self.logger.addHandler(self.handler)
+        return self.messages
+
+    def __exit__(self, *exc: object) -> None:
+        self.logger.removeHandler(self.handler)
+
+
+def _resolve_with_log(df, settings):
+    from guiskindose.calculate_dose.calculate_dose import _resolve_kerma_meter_cf
+
+    with _Capture() as messages:
+        factors = _resolve_kerma_meter_cf(df, settings)
+    return factors, [m for m in messages if "no factor" in m]
+
+
+def test_missing_pairs_warning_logs_count_not_labels(tmp_path: Path):
+    """One warning reports how many pairs lack a factor, without equipment labels."""
+    import pandas as pd
+
+    cf_file = tmp_path / "cf.csv"
+    cf_file.write_text("equipment,tube,correction_factor\nsecret-room,A,1.1\n", encoding="utf-8")
+    settings = _settings(enable=True, file=str(cf_file), default_factor=0.9)
+    df = pd.DataFrame({"station_name": ["Secret-Room", "Secret-Room"], "acquisition_plane": ["Plane A", "Plane B"]})
+    factors, messages = _resolve_with_log(df, settings)
+    assert factors == pytest.approx([1.1, 0.9])
+    assert len(messages) == 1
+    assert "1 detected" in messages[0]
+    assert "secret" not in messages[0].lower()
+
+
+def test_no_missing_pairs_warning_when_table_covers_everything(tmp_path: Path):
+    import pandas as pd
+
+    cf_file = tmp_path / "cf.csv"
+    cf_file.write_text("equipment,tube,correction_factor\nroom-1,A,1.1\n", encoding="utf-8")
+    settings = _settings(enable=True, file=str(cf_file))
+    df = pd.DataFrame({"station_name": ["Room-1"], "acquisition_plane": ["Plane A"]})
+    _, messages = _resolve_with_log(df, settings)
+    assert messages == []

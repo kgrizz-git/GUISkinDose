@@ -23,7 +23,9 @@ from guiskindose.kerma_correction import (
     distinct_auto_resolved_equipment_keys,
     load_correction_table,
     merge_tables,
+    missing_keys,
     resolve_correction_factors,
+    unique_equipment_tube_keys,
 )
 from guiskindose.phantom_class import Phantom
 from guiskindose.privacy import opaque_exam_label
@@ -73,15 +75,55 @@ def _resolve_kerma_meter_cf(
             )
 
     table = merge_tables(file_table, km.in_memory_table)
+    exam_label = exam_id or opaque_exam_label(0)
+    _warn_missing_pairs(normalized_data, table, km, exam_label)
     result = resolve_correction_factors(
         normalized_data,
         table,
         explicit_label=km.explicit_label,
         default_factor=km.default_factor,
         table_metadata=table_meta,
-        fallback_label=km.unresolved_equipment_labels.get(exam_id or opaque_exam_label(0)),
+        fallback_label=km.unresolved_equipment_labels.get(exam_label),
     )
     return result.factors
+
+
+def _warn_missing_pairs(
+    normalized_data: pd.DataFrame,
+    table: dict[tuple[str, str], float] | None,
+    km: Any,
+    exam_label: str,
+) -> None:
+    """Log one warning with the count of detected ``(equipment, tube)`` pairs lacking a factor.
+
+    The dialog never opens outside the GUI, so a command-line run learns about
+    missing pairs here. Only the count is logged, never equipment labels.
+
+    Parameters
+    ----------
+    normalized_data : pd.DataFrame
+        Normalized events of one exam.
+    table : dict[tuple[str, str], float] | None
+        Merged manual + file table.
+    km : KermaMeterCorrectionSettings
+        Kerma-meter settings (explicit label, overrides, default factor).
+    exam_label : str
+        Opaque exam label selecting the per-exam identity override.
+    """
+    detected = unique_equipment_tube_keys(
+        [normalized_data],
+        explicit_label=km.explicit_label,
+        exam_labels=[exam_label],
+        unresolved_labels=km.unresolved_equipment_labels,
+    )
+    missing = missing_keys(detected, table)
+    if missing:
+        logger.warning(
+            "kerma-meter correction: %d detected (equipment, tube) pair(s) have no factor "
+            "-> default_factor=%.4g.",
+            len(missing),
+            km.default_factor,
+        )
 
 
 def calculate_dose(

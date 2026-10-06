@@ -55,7 +55,8 @@
       "title": "Kerma-meter correction",
       "source": "kerma_meter_correction.md",
       "gui_files": [
-        "src/guiskindose/gui/tabs/settings.py"
+        "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/tabs/_kerma_meter_dialog.py"
       ],
       "required": true
     },
