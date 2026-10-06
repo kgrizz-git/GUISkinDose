@@ -87,16 +87,18 @@ class KermaMeterCorrectionSettings:
         label = data.get("explicit_label")
         self.explicit_label: str | None = None if label in (None, "") else str(label)
         self.ask_for_missing: bool = bool(data.get("ask_for_missing", True))
+        # True when the input stated ask_for_missing itself; legacy keys then never override it.
+        self.ask_for_missing_explicit: bool = "ask_for_missing" in data
         if data.get("prompt_at_calc") and "ask_for_missing" not in data:
             self.ask_for_missing = True
         legacy_mode = data.get("mode")
         if legacy_mode is not None:
-            self.apply_legacy_mode(legacy_mode, explicit="ask_for_missing" in data)
+            self.apply_legacy_mode(legacy_mode)
         # Runtime-only (not serialized to example JSON).
         self.in_memory_table: dict[tuple[str, str], float] | None = data.get("in_memory_table")
         self.unresolved_equipment_labels: dict[str, str] = dict(data.get("unresolved_equipment_labels") or {})
 
-    def apply_legacy_mode(self, mode: object, *, explicit: bool = False) -> None:
+    def apply_legacy_mode(self, mode: object, *, explicit: bool | None = None) -> None:
         """Map the deprecated exclusive ``mode`` onto the unified source model.
 
         Parameters
@@ -104,8 +106,11 @@ class KermaMeterCorrectionSettings:
         mode : object
             ``"file"`` (no-op: a set file always loads) or ``"prompt"`` (sets
             ``ask_for_missing``). Case and surrounding whitespace are ignored.
-        explicit : bool
+        explicit : bool | None
             True when ``ask_for_missing`` was given explicitly; it then wins.
+            ``None`` (default) uses ``ask_for_missing_explicit`` recorded at
+            construction, so a later CLI flag cannot override an explicit
+            ``ask_for_missing=False`` from the settings file.
 
         Raises
         ------
@@ -120,6 +125,8 @@ class KermaMeterCorrectionSettings:
             "a correction file always loads and manual entries win over it. "
             "Use ask_for_missing to control the missing-factor dialog."
         )
+        if explicit is None:
+            explicit = self.ask_for_missing_explicit
         if text == "prompt" and not explicit:
             self.ask_for_missing = True
 

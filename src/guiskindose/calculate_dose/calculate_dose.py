@@ -94,7 +94,7 @@ def _warn_missing_pairs(
     km: Any,
     exam_label: str,
 ) -> None:
-    """Log one warning with the count of detected ``(equipment, tube)`` pairs lacking a factor.
+    """Log one warning (per exam) with the count of detected ``(equipment, tube)`` pairs lacking a factor.
 
     The dialog never opens outside the GUI, so a command-line run learns about
     missing pairs here. Only the count is logged, never equipment labels.

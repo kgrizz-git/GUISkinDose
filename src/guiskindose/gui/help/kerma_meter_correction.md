@@ -39,7 +39,7 @@ load. If any pair has no factor yet, a dialog opens. Each row is pre-filled in t
 2. the value from the calibration file (`from file`),
 3. the default factor (`default: review`). Please check these rows.
 
-Rows are grouped by exam, and the list scrolls. A tube shown as **unknown** cannot be looked
+Each unit and tube appears once, with the exams that use it, so a shared pair has one value. The list scrolls. A tube shown as **unknown** cannot be looked
 up, so the default factor applies to it.
 
 **Exams with no equipment identity.** If an exam carries no serial number or station name, the
@@ -47,9 +47,13 @@ dialog asks which unit it was acquired on. Pick a detected unit or a unit from t
 a new name. The exam's factors are then looked up for that unit. The choice is stored per exam
 and saved with the run configuration only when identifiers are included.
 
+**Confirm** is blocked until every factor is a number greater than zero; a blank field is an error, not a kept value. If the loaded data changes while the dialog is open, your entries are discarded with a notice.
+
 **Cancel** never blocks the run. It keeps file values and your earlier entries, and every
 unanswered pair uses the default factor. Calculate re-opens the dialog once if pairs are still
 unanswered.
+
+**Reviewing later.** Settings has a *Review correction factors…* button that opens the dialog at any time with every detected pair, so confirmed factors can be edited. The dialog also reopens when you select or clear the calibration file or sheet, or turn asking back on.
 
 **Turning it off.** Clear *Ask for missing correction factors* in Settings, or tick *Don't ask
 again until the loaded data changes* in the dialog. Loading, removing, or re-parsing events

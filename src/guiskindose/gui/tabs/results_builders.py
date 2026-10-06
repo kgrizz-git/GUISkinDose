@@ -140,6 +140,9 @@ class ResultsTabController:
             # the Results placeholder with the pending presentation — the same
             # invalidation the sidebar readout already receives.
             self._apply_psd_presentation(self.refs.psd_readout, None, "—")
+            if self.refs.tube_label is not None:
+                self.refs.tube_label.set_text("")
+                self.refs.tube_label.visible = False
 
     def _rotational_badge_text(self) -> str:
         """One-line rotational-handling summary for the Results badge.
@@ -321,6 +324,9 @@ class ResultsTabController:
         self.refs.agg_dosemap_plot.update_figure({})
         self.refs.run_warnings_label.set_text("")
         self.refs.run_warnings_label.set_visibility(False)
+        if self.refs.agg_tube_label is not None:
+            self.refs.agg_tube_label.set_text("")
+            self.refs.agg_tube_label.visible = False
 
     def _set_multi_exam_summary(self, res: Any) -> None:
         """Render aggregate dose, exam-count, and warning summaries."""

@@ -29,13 +29,15 @@ first, then from the `acquisition_plane` meaning text (`Single Plane` / `Plane A
 **Radimetrics biplane split.** A Radimetrics biplane export lists one row per event with the whole-event
 `Reference Point Dose (Total)` plus per-plane `Reference Point Dose (A)` / `(B)` columns (the older export spells them
 `Reference_Point_Dose_(A)_mGy` / `(B)`). The adapter (`input_adapters/radimetrics.py::split_biplane_events`) treats the
-file as biplane only when both per-plane columns exist and at least one row has non-zero kerma on both planes. Each such
-row is then *replaced* by a `Plane A` event and a `Plane B` event (a plane with zero kerma emits no event). Kerma is
+file as biplane only when both per-plane columns exist and at least one row has non-zero plane B kerma (a file whose
+plane B column is all zero or empty stays single-plane). Each such row is then *replaced* by a `Plane A` event and a
+`Plane B` event; a plane with zero or empty kerma emits no event, so an A-only row becomes one Plane A event and a B-only
+row one Plane B event. Kerma is
 rescaled to the exported total, so A + B equals the original total and the total is never added on top. Per-plane
 `DAP (A)` / `(B)` columns are used when present; otherwise the total DAP is shared in proportion to kerma. Fluoro time
 stays on the first emitted event of a row so procedure totals are not double counted. Rows whose per-plane kerma is
-missing or differs from the total by more than 1 % stay as a single total row whose plane is `unknown` (the total
-covers both tubes). Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
+missing or differs from the total by more than 1 % stay as a single total row. It keeps a valid plane code from the export (`Plane A` / `Plane B` / `Single Plane`); with no
+valid code its plane is `unknown`. The warning reports how many split events replaced a plane code present in the export. Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
 both planes of a row.
 
 **Missing plane column.** When a Radimetrics file has no plane column and no per-plane evidence, every event still

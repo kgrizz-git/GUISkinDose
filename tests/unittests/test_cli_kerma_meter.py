@@ -112,3 +112,19 @@ def test_mode_flag_help_says_deprecated():
     parser = argparse.ArgumentParser()
     add_kerma_meter_cli_arguments(parser)
     assert "DEPRECATED" in parser.format_help()
+
+
+def test_cli_legacy_prompt_does_not_override_explicit_ask_for_missing_false():
+    """An explicit ask_for_missing=False in the settings wins over --kerma-meter-correction-mode prompt."""
+    from guiskindose.settings.kerma_meter_correction_settings import KermaMeterCorrectionSettings
+
+    settings = _settings()
+    settings.kerma_meter_correction = KermaMeterCorrectionSettings({"ask_for_missing": False})
+    args = argparse.Namespace(
+        kerma_meter_correction=False,
+        kerma_meter_correction_file=None,
+        kerma_meter_correction_mode="prompt",
+        kerma_meter_explicit_label=None,
+    )
+    apply_kerma_meter_cli_flags(settings, args)
+    assert settings.kerma_meter_correction.ask_for_missing is False

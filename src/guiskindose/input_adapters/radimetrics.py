@@ -236,6 +236,19 @@ def _splittable_mask(total: pd.Series, a: pd.Series, b: pd.Series) -> pd.Series:
     return valid & consistent & total.notna()
 
 
+def _has_text(series: pd.Series) -> pd.Series:
+    """True where *series* holds a non-blank, non-null value."""
+    return series.notna() & series.astype(str).str.strip().ne("")
+
+
+def _kept_plane_codes(series: pd.Series) -> pd.Series:
+    """Keep recognised plane codes (``Plane A`` / ``Plane B`` / ``Single Plane``); others become None."""
+    from guiskindose.kerma_correction import normalize_tube
+
+    recognised = series.map(lambda v: normalize_tube(v) != "unknown")
+    return series.where(recognised, other=None)
+
+
 def _plane_events(
     data_df: pd.DataFrame,
     plane: str,
@@ -251,9 +264,13 @@ def _plane_events(
     is shared in proportion to kerma. Fluoro time stays on the first emitted
     plane of a row so procedure totals are not double counted.
     """
-    scale = total / (kerma["A"] + kerma["B"])
-    share = (kerma[plane] * scale) / total
     emitted = mask & (kerma[plane] > 0)
+    # Divide only on splittable rows so zero or missing rows never produce
+    # inf/nan or a RuntimeWarning.
+    scale = pd.Series(0.0, index=data_df.index)
+    scale[mask] = total[mask] / (kerma["A"][mask] + kerma["B"][mask])
+    share = pd.Series(0.0, index=data_df.index)
+    share[mask] = kerma[plane][mask] * scale[mask] / total[mask]
     part = data_df[emitted].copy()
     part["DoseRP_Gy"] = (kerma[plane] * scale)[emitted]
     part["AcquisitionPlane"] = _PLANE_MEANING[plane]
@@ -274,12 +291,15 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     dose of the whole event (``Reference Point Dose (Total)``) plus per-plane
     columns (``Reference Point Dose (A)`` / ``(B)``). Reading only the total hides
     which tube produced the dose. When both per-plane columns exist and at least
-    one row has non-zero kerma on both planes, each splittable row is *replaced*
-    by up to two events (``Plane A``, ``Plane B``). Kerma is rescaled to the
+    one row has non-zero plane B kerma, each splittable row is *replaced* by up
+    to two events (``Plane A``, ``Plane B``); a row with kerma on one plane only
+    becomes a single event of that plane. A file whose plane B column is all
+    zero or empty is not treated as biplane. Kerma is rescaled to the
     exported total, so A + B equals the original total and nothing is added on top
     of it. Rows whose per-plane kerma is missing or disagrees with the total
-    beyond ``_SPLIT_RTOL`` stay as one total row with an unknown plane, because
-    the total covers both tubes.
+    beyond ``_SPLIT_RTOL`` stay as one total row. They keep a valid explicit
+    plane code from the export (``Plane A`` / ``Plane B`` / ``Single Plane``);
+    with no valid code the plane is unknown.
 
     Per-plane DAP columns (``DAP (A)`` / ``(B)``) are used when present; otherwise
     each event receives the total DAP in proportion to its kerma.
@@ -302,7 +322,11 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     if set(dose_cols) != {"A", "B"} or "DoseRP_Gy" not in data_df.columns:
         return data_df, False
     kerma = _per_plane_kerma_gy(data_df, dose_cols)
-    if not bool(((kerma["A"] > 0) & (kerma["B"] > 0)).any()):
+    # An empty cell on one plane next to a value on the other means "no dose on
+    # that plane"; a row with both empty stays missing (unsplittable).
+    any_value = kerma["A"].notna() | kerma["B"].notna()
+    kerma = {p: values.mask(values.isna() & any_value, 0.0) for p, values in kerma.items()}
+    if not bool((kerma["B"] > 0).any()):
         return data_df, False
 
     total = pd.to_numeric(data_df["DoseRP_Gy"], errors="coerce")
@@ -315,7 +339,9 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     )
     order = pd.Series(np.arange(len(data_df)) * 2, index=data_df.index)
     rest = data_df[~mask].copy()
-    rest["AcquisitionPlane"] = None
+    explicit = data_df["AcquisitionPlane"] if "AcquisitionPlane" in data_df.columns else None
+    rest["AcquisitionPlane"] = _kept_plane_codes(rest["AcquisitionPlane"]) if explicit is not None else None
+    n_overwritten = 0 if explicit is None else int((_has_text(explicit) & mask).sum())
     frames = [rest.assign(_sort_key=order[rest.index])]
     for offset, plane in enumerate(("A", "B")):
         part = _plane_events(data_df, plane, kerma, total, mask, dap_per_plane)
@@ -323,12 +349,15 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     out = pd.concat(frames).sort_values("_sort_key", kind="stable")
     out = out.drop(columns="_sort_key").reset_index(drop=True)
     n_unsplit = int((~mask).sum())
-    ctx.warnings.append(
+    message = (
         f"Radimetrics biplane export: split {int(mask.sum())} event(s) into plane A/B events using the "
-        f"per-plane reference-point dose columns; {n_unsplit} event(s) kept as one total row with an unknown "
-        "plane. Positioner angles, kVp and table positions come from the single (RF) columns and are shared "
-        "by both planes."
+        f"per-plane reference-point dose columns; {n_unsplit} event(s) kept as one total row (plane taken "
+        "from the export when valid, otherwise unknown). Positioner angles, kVp and table positions come "
+        "from the single (RF) columns and are shared by both planes."
     )
+    if n_overwritten:
+        message += f" {n_overwritten} split event(s) replaced a plane code present in the export."
+    ctx.warnings.append(message)
     return out, True
 
 

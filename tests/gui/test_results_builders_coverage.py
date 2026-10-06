@@ -469,3 +469,19 @@ def test_rotational_badge_notes_fallback(monkeypatch):
     ctrl._refresh_rotational_badge()
     text = cast(MagicMock, ctrl.refs.rotational_badge.set_text).call_args[0][0]
     assert "2 static fallback" in text
+
+
+def test_tube_labels_cleared_when_results_invalidate() -> None:
+    ctrl = _controller()
+    ctrl.refs.tube_label = MagicMock(visible=True)
+    ctrl.refs.agg_tube_label = MagicMock(visible=True)
+    state.is_multi_exam = False
+    state.calculation_done = False
+    ctrl.refresh_metrics()
+    cast(MagicMock, ctrl.refs.tube_label.set_text).assert_called_with("")
+    assert ctrl.refs.tube_label.visible is False
+    # Multi-exam view reset clears the aggregate label too.
+    ctrl.last_rendered_run_id = 1
+    ctrl._reset_multi_exam_view()
+    cast(MagicMock, ctrl.refs.agg_tube_label.set_text).assert_called_with("")
+    assert ctrl.refs.agg_tube_label.visible is False

@@ -153,10 +153,23 @@ def build_rows(app_state: AppState, labels: dict[str, str] | None = None) -> lis
     return rows
 
 
+def valid_factor(value: object) -> bool:
+    """True for a finite number greater than zero (what a correction factor must be)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    return math.isfinite(value) and value > 0
+
+
+def invalid_pairs(rows: list[DialogRow], values: dict[Pair, float | None]) -> list[Pair]:
+    """Editable pairs whose current entry is blank, non-finite, or not above zero."""
+    bad = {(r.equipment, r.tube) for r in rows if r.editable and not valid_factor(values.get((r.equipment, r.tube)))}
+    return sorted(bad)
+
+
 def commit_confirm(
     app_state: AppState,
     rows: list[DialogRow],
-    values: dict[Pair, float],
+    values: dict[Pair, float | None],
     labels: dict[str, str],
     dont_ask: bool,
 ) -> None:
@@ -165,13 +178,21 @@ def commit_confirm(
     A row is written as a manual entry unless it came from the file and was left
     unchanged, so file values keep following the file and earlier manual entries
     are retained. Confirming a default row records it as an explicit answer.
+
+    Raises
+    ------
+    ValueError
+        If any editable pair has a blank, non-finite, or non-positive factor.
+        The dialog blocks Confirm before this point; the check keeps the state safe.
     """
+    if invalid_pairs(rows, values):
+        raise ValueError("Every correction factor must be a finite number above zero.")
     table = dict(app_state.kerma_meter_in_memory_table or {})
     for row in rows:
         pair = (row.equipment, row.tube)
-        if not row.editable or pair not in values:
+        if not row.editable:
             continue
-        value = float(values[pair])
+        value = float(values[pair])  # type: ignore[arg-type]  # validated above
         if row.source == SOURCE_FILE and math.isclose(value, row.value):
             continue
         table[pair] = value
@@ -195,17 +216,10 @@ def _unit_options(app_state: AppState) -> list[str]:
     return sorted(units)
 
 
-def _build_exam_rows(
-    exam: str,
-    rows: list[DialogRow],
-    values: dict[Pair, float],
-    labels: dict[str, str],
-    options: list[str],
-    refresh,
-) -> None:
-    """Render one exam group: optional unit chooser, then one row per pair."""
-    ui.label(exam).classes("text-subtitle2 q-mt-sm")
-    if any(r.equipment == UNRESOLVED_EQUIPMENT for r in rows):
+def _build_unit_choosers(rows: list[DialogRow], labels: dict[str, str], options: list[str], refresh) -> None:
+    """One unit chooser per exam that still has events with no equipment identity."""
+    for exam in dict.fromkeys(r.exam for r in rows if r.equipment == UNRESOLVED_EQUIPMENT):
+        ui.label(exam).classes("text-subtitle2 q-mt-sm")
         ui.label(copy_text("kerma.dialog.unresolved")).classes(_BODY)
 
         def _choose(event, exam_id: str = exam) -> None:
@@ -221,8 +235,6 @@ def _build_exam_rows(
             clearable=True,
             on_change=_choose,
         ).classes("w-full")
-    for row in rows:
-        _build_row(row, values)
 
 
 def _source_text(source: str) -> str:
@@ -234,41 +246,60 @@ def _source_text(source: str) -> str:
     return copy_text("kerma.dialog.source.default")
 
 
-def _build_row(row: DialogRow, values: dict[Pair, float]) -> None:
-    """Render one pair row with its source badge."""
+def _build_pair_row(row: DialogRow, exams: list[str], values: dict[Pair, float | None], invalid: set[Pair]) -> None:
+    """Render one pair once, listing the exams that use it, with its source badge."""
     pair = (row.equipment, row.tube)
-    with ui.row().classes("w-full items-center gap-2"):
-        if not row.editable:
-            ui.label(f"{row.equipment} / {row.tube}").classes("grow")
-            note = "kerma.dialog.unknown_tube" if row.tube == TUBE_IDENTITY_UNKNOWN else "kerma.dialog.no_identity"
-            ui.badge(copy_text(note), color="orange").props("outline")
-            return
-        values.setdefault(pair, row.value)
+    used_by = f"{copy_text('kerma.dialog.used_by')} {', '.join(exams)}"
+    with ui.column().classes("w-full gap-0"):
+        with ui.row().classes("w-full items-center gap-2"):
+            if not row.editable:
+                ui.label(f"{row.equipment} / {row.tube}").classes("grow")
+                note = "kerma.dialog.unknown_tube" if row.tube == TUBE_IDENTITY_UNKNOWN else "kerma.dialog.no_identity"
+                ui.badge(copy_text(note), color="orange").props("outline")
+            else:
+                values.setdefault(pair, row.value)
 
-        def _set(event, key: Pair = pair) -> None:
-            if event.value:
-                values[key] = float(event.value)
+                def _set(event, key: Pair = pair) -> None:
+                    values[key] = event.value  # None when blank: caught on Confirm, never kept silently
 
-        ui.number(
-            label=f"{row.equipment} / {row.tube}", value=values[pair], min=0.01, step=0.01, on_change=_set
-        ).classes("grow")
-        is_default = row.source == SOURCE_DEFAULT
-        ui.badge(_source_text(row.source), color="orange" if is_default else "primary").props(
-            "" if is_default else "outline"
-        )
+                field = ui.number(
+                    label=f"{row.equipment} / {row.tube}", value=values[pair], min=0.01, step=0.01, on_change=_set
+                ).classes("grow")
+                if pair in invalid:
+                    field.props("error")
+                is_default = row.source == SOURCE_DEFAULT
+                ui.badge(_source_text(row.source), color="orange" if is_default else "primary").props(
+                    "" if is_default else "outline"
+                )
+        ui.label(used_by).classes("text-xs text-grey-6")
+
+
+def _unique_pair_rows(rows: list[DialogRow]) -> list[tuple[DialogRow, list[str]]]:
+    """Collapse per-exam rows to one entry per pair, with the exams that use it."""
+    exams: dict[Pair, list[str]] = {}
+    first: dict[Pair, DialogRow] = {}
+    for row in rows:
+        pair = (row.equipment, row.tube)
+        first.setdefault(pair, row)
+        exams.setdefault(pair, []).append(row.exam)
+    return [(first[pair], exams[pair]) for pair in first]
 
 
 async def kerma_meter_dialog() -> None:
     """Show the correction-factor dialog; apply Confirm or Cancel to ``state``.
 
-    Rows are grouped by exam in a scrollable area. Choosing a unit for an exam
-    with unresolved equipment re-detects, so that exam's rows switch to the
-    chosen unit. Never blocks the run: the caller proceeds either way.
+    Each ``(equipment, tube)`` pair appears once, with the exams that use it, so a
+    shared pair has one value. Exams with unresolved equipment get a unit chooser;
+    choosing one re-detects. Confirm is blocked while any factor is blank or not a
+    number above zero. If the loaded data changes while the dialog is open, the
+    result is discarded with a notice. Never blocks the run: Cancel is always allowed.
     """
     from guiskindose.gui.state import state
 
+    revision = state.input_revision
     labels = dict(state.kerma_meter_unresolved_labels)
-    values: dict[Pair, float] = {}
+    values: dict[Pair, float | None] = {}
+    invalid: set[Pair] = set()
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-2xl gap-3"):
         ui.label(copy_text("kerma.dialog.title")).classes(_TITLE)
         ui.label(copy_text("kerma.dialog.body")).classes(_BODY)
@@ -276,34 +307,71 @@ async def kerma_meter_dialog() -> None:
         @ui.refreshable
         def rows_area() -> None:
             rows = build_rows(state, labels)
-            options = _unit_options(state)
-            for exam in dict.fromkeys(r.exam for r in rows):
-                _build_exam_rows(exam, [r for r in rows if r.exam == exam], values, labels, options, rows_area.refresh)
+            _build_unit_choosers(rows, labels, _unit_options(state), rows_area.refresh)
+            for row, exams in _unique_pair_rows(rows):
+                _build_pair_row(row, exams, values, invalid)
 
         with ui.scroll_area().classes("w-full h-96"):
             rows_area()
+        error = ui.label(copy_text("kerma.dialog.error_invalid")).classes("text-sm text-negative")
+        error.visible = False
         dont_ask = ui.checkbox(copy_text("kerma.dialog.dont_ask"))
+
+        def _confirm() -> None:
+            bad = invalid_pairs(build_rows(state, labels), values)
+            invalid.clear()
+            invalid.update(bad)
+            error.visible = bool(bad)
+            if bad:
+                rows_area.refresh()
+                return
+            dialog.submit("ok")
+
         with ui.row().classes(_ACTIONS):
             ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
-            ui.button("Confirm", on_click=lambda: dialog.submit("ok")).classes(_PRIMARY)
+            ui.button("Confirm", on_click=_confirm).classes(_PRIMARY)
 
     result = await dialog
-    if result == "ok":
+    if state.input_revision != revision:
+        ui.notify(copy_text("kerma.dialog.stale_discarded"), type="warning")
+    elif result == "ok":
         commit_confirm(state, build_rows(state, labels), values, labels, bool(dont_ask.value))
     else:
         commit_cancel(state, bool(dont_ask.value))
     dialog.delete()
 
 
+async def open_review_dialog() -> bool:
+    """Open the dialog on demand (Settings button) so confirmed factors can be edited.
+
+    The dialog lists every detected pair, not only missing ones. Returns False,
+    with a notice, when correction is off or no events are loaded.
+    """
+    from guiskindose.gui.state import state
+
+    if not state.kerma_meter_enable or not detect_by_exam(state):
+        ui.notify(copy_text("kerma.review.unavailable"), type="info")
+        return False
+    await kerma_meter_dialog()
+    return True
+
+
 async def maybe_prompt_after_load() -> bool:
-    """Load-time check: open the dialog once per ``(input_revision, enable)`` change.
+    """Load-time check: open the dialog once per change of the loaded events, the
+    enable switch, the calibration file or sheet, or the ask-for-missing toggle.
 
     Returns True when the dialog was shown. Skips when correction is off, asking
     is off or suppressed, or nothing is missing.
     """
     from guiskindose.gui.state import state
 
-    key = (state.input_revision, state.kerma_meter_enable)
+    key = (
+        state.input_revision,
+        state.kerma_meter_enable,
+        state.kerma_meter_file,
+        state.kerma_meter_file_sheet,
+        state.kerma_meter_ask_for_missing,
+    )
     if state.kerma_meter_checked_key == key:
         return False
     state.kerma_meter_checked_key = key

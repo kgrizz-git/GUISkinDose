@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -119,15 +120,52 @@ class TestRadimetricsBiplaneSplit:
         assert k[0] + k[1] == pytest.approx(30.0)
         assert k[2] + k[3] == pytest.approx(10.0)
 
-    def test_inconsistent_row_kept_as_total_with_unknown_plane(self, tmp_path):
+    def test_unsplittable_row_keeps_valid_explicit_plane_code(self, tmp_path):
         rows = [{"total": "30.0", _A: "18.0", _B: "12.0"}, {"total": "99.0", _A: "10.0", _B: "10.0"}]
-        # Even though the file says "Single Plane", the total covers both tubes.
         for r in rows:
             r["Acquisition Plane Code (RF)"] = "Single Plane"
         path = _write_csv(tmp_path, rows, extra_headers=[_A, _B], plane_header="Acquisition Plane Code (RF)")
         norm = _load(path).normalized_data
-        assert _tubes(norm) == ["A", "B", "unknown"]
+        assert _tubes(norm) == ["A", "B", "single"]
         assert norm["K_IRP"].to_numpy() == pytest.approx([18.0, 12.0, 99.0])
+
+    def test_unsplittable_row_without_valid_code_is_unknown(self, tmp_path):
+        rows = [{"total": "30.0", _A: "18.0", _B: "12.0"}, {"total": "99.0", _A: "10.0", _B: "10.0"}]
+        for r in rows:
+            r["Acquisition Plane Code (RF)"] = "garbled"
+        path = _write_csv(tmp_path, rows, extra_headers=[_A, _B], plane_header="Acquisition Plane Code (RF)")
+        assert _tubes(_load(path).normalized_data) == ["A", "B", "unknown"]
+
+    def test_warning_counts_overwritten_plane_codes(self, tmp_path):
+        rows = [{"total": "30.0", _A: "18.0", _B: "12.0", "Acquisition Plane Code (RF)": "Plane A"}]
+        path = _write_csv(tmp_path, rows, extra_headers=[_A, _B], plane_header="Acquisition Plane Code (RF)")
+        warnings = _load(path).warnings
+        assert any("replaced a plane code" in w and "1 split event" in w for w in warnings)
+
+    def test_alternating_single_plane_rows_are_biplane(self, tmp_path):
+        rows = [
+            {"total": "30.0", _A: "30.0", _B: "0.0"},
+            {"total": "20.0", _A: "0.0", _B: "20.0"},
+            {"total": "10.0", _A: "10.0", _B: ""},
+        ]
+        norm = _load(_write_csv(tmp_path, rows, extra_headers=[_A, _B])).normalized_data
+        assert _tubes(norm) == ["A", "B", "A"]
+        assert norm["K_IRP"].to_numpy() == pytest.approx([30.0, 20.0, 10.0])
+
+    def test_empty_plane_b_column_is_not_biplane(self, tmp_path):
+        rows = [{"total": "30.0", _A: "30.0", _B: ""}, {"total": "20.0", _A: "20.0", _B: ""}]
+        norm = _load(_write_csv(tmp_path, rows, extra_headers=[_A, _B])).normalized_data
+        assert _tubes(norm) == ["single", "single"]
+
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    def test_zero_and_missing_rows_raise_no_runtime_warning(self, tmp_path):
+        rows = [
+            {"total": "30.0", _A: "18.0", _B: "12.0"},
+            {"total": "0.0", _A: "0.0", _B: "0.0"},
+            {"total": "5.0", _A: "", _B: ""},
+        ]
+        norm = _load(_write_csv(tmp_path, rows, extra_headers=[_A, _B])).normalized_data
+        assert np.isfinite(norm["K_IRP"].to_numpy()).all()
 
     def test_missing_plane_column_yields_unknown_not_single(self, tmp_path):
         rows = [{"total": "30.0", _A: "18.0", _B: "12.0"}, {"total": "99.0", _A: "10.0", _B: "10.0"}]

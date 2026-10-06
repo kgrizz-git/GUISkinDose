@@ -35,6 +35,7 @@ from ..phantom_preview_controller import PhantomPreviewController
 from ..state import reset_results, state
 from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..ui_copy import copy_text
+from ._kerma_meter_dialog import open_review_dialog
 from ._per_exam import build_per_exam_section
 from ._run_config import build_run_config_card
 
@@ -394,6 +395,9 @@ def _build_physics_section() -> None:
                 ).bind_value(state, "kerma_meter_ask_for_missing").tooltip(
                     copy_text("settings.kerma_meter.ask_missing.tooltip")
                 )
+                ui.button(
+                    copy_text("settings.kerma_meter.review_button"), on_click=open_review_dialog
+                ).props("flat dense no-caps")
                 ui.input(
                     label="Correction table path (CSV/TSV/XLSX/JSON)",
                     value=state.kerma_meter_file or "",

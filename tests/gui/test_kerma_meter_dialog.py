@@ -290,3 +290,105 @@ def test_unresolved_labels_cleared_on_removal_or_reorder() -> None:
     state.loaded_exams = [b, a]  # reorder
     rebuild_rdsr_df(state)
     assert state.kerma_meter_unresolved_labels == {}
+
+
+# ── review follow-ups: shared pairs, validation, stale results, re-check keys ─
+
+
+def test_shared_pair_is_listed_once_with_all_its_exams() -> None:
+    state.loaded_exams = [
+        SimpleNamespace(normalized_data=_frame(["Room-1"], ["Plane A"])),
+        SimpleNamespace(normalized_data=_frame(["Room-1"], ["Plane A"])),
+    ]
+    state.kerma_meter_enable = True
+    pairs = dlg._unique_pair_rows(dlg.build_rows(state))
+    assert len(pairs) == 1
+    row, exams = pairs[0]
+    assert (row.equipment, row.tube) == ("room-1", "A")
+    assert exams == ["Exam 1", "Exam 2"]
+
+
+def test_invalid_pairs_flags_blank_zero_negative_and_nan() -> None:
+    _single_exam(stations=("Room-1",) * 4, planes=("Plane A", "Plane B", "Single Plane", "not a plane"))
+    rows = dlg.build_rows(state)
+    values = {("room-1", "A"): None, ("room-1", "B"): 0.0, ("room-1", "single"): float("nan")}
+    assert dlg.invalid_pairs(rows, values) == [("room-1", "A"), ("room-1", "B"), ("room-1", "single")]
+    ok = {("room-1", "A"): 1.0, ("room-1", "B"): 1.1, ("room-1", "single"): 0.9}
+    assert dlg.invalid_pairs(rows, ok) == []
+
+
+def test_commit_confirm_rejects_blank_factor_and_leaves_state_untouched() -> None:
+    _single_exam()
+    state.kerma_meter_in_memory_table = {("room-1", "A"): 1.3}
+    rows = dlg.build_rows(state)
+    values = {("room-1", "A"): None, ("room-1", "B"): 1.0}
+    with pytest.raises(ValueError, match="above zero"):
+        dlg.commit_confirm(state, rows, values, {}, dont_ask=False)
+    assert state.kerma_meter_in_memory_table == {("room-1", "A"): 1.3}
+
+
+async def _wait_for_task(task: asyncio.Task, user: User) -> None:
+    await asyncio.wait_for(task, timeout=5)
+
+
+@pytest.mark.asyncio
+async def test_rendered_dialog_blank_value_blocks_confirm(user: User) -> None:
+    from nicegui import ui
+
+    await user.open("/")
+    _single_exam()
+    task = asyncio.create_task(_run_in_client(user))
+    await user.should_see("Kerma-meter correction factors", retries=30)
+    assert user.client is not None
+    field = next(
+        el
+        for el in user.client.elements.values()
+        if isinstance(el, ui.number) and el._props.get("label") == "room-1 / A"
+    )
+    field.set_value(None)
+    user.find("Confirm").click()
+    await user.should_see("Enter a number greater than zero", retries=30)
+    assert not task.done()
+    assert state.kerma_meter_in_memory_table is None
+    field.set_value(1.25)  # a valid entry unblocks Confirm
+    user.find("Confirm").click()
+    await _wait_for_task(task, user)
+    assert state.kerma_meter_in_memory_table == {("room-1", "A"): 1.25, ("room-1", "B"): 1.0}
+
+
+@pytest.mark.asyncio
+async def test_stale_dialog_result_is_discarded(user: User) -> None:
+    await user.open("/")
+    _single_exam()
+    task = asyncio.create_task(_run_in_client(user))
+    await user.should_see("Kerma-meter correction factors", retries=30)
+    state.input_revision += 1  # loaded data changed while the dialog was open
+    user.find("Confirm").click()
+    await _wait_for_task(task, user)
+    assert state.kerma_meter_in_memory_table is None
+
+
+@pytest.mark.asyncio
+async def test_review_dialog_requires_enabled_correction_and_events(dialog_mock: AsyncMock, user: User) -> None:
+    await user.open("/")
+    assert user.client is not None
+    with user.client:
+        assert await dlg.open_review_dialog() is False
+    dialog_mock.assert_not_awaited()
+    _single_exam()
+    state.kerma_meter_in_memory_table = {("room-1", "A"): 1.0, ("room-1", "B"): 1.0}  # nothing missing
+    with user.client:
+        assert await dlg.open_review_dialog() is True
+    dialog_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_recheck_when_file_or_ask_toggle_changes(dialog_mock: AsyncMock, tmp_path: Path) -> None:
+    _single_exam()
+    state.kerma_meter_ask_for_missing = False
+    assert await dlg.maybe_prompt_after_load() is False
+    state.kerma_meter_ask_for_missing = True  # turning asking on re-checks
+    assert await dlg.maybe_prompt_after_load() is True
+    state.kerma_meter_file = str(_cf_file(tmp_path, "room-1,A,1.1\n"))  # selecting a file re-checks
+    assert await dlg.maybe_prompt_after_load() is True
+    assert dialog_mock.await_count == 2

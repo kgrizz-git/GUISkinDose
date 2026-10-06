@@ -28,7 +28,10 @@ That keeps SemVer and contributor history organized.
   unanswered pairs use the default factor. Calculate re-opens the dialog once if pairs are still unanswered.
   An exam whose events carry no equipment identity gets a per-exam unit chooser (detected unit, file unit, or
   free text), saved with the run configuration only when identifiers are included. Command-line runs never
-  prompt and log one warning with the count of pairs without a factor, never the labels.
+  prompt and log one warning per exam with the count of pairs without a factor, never the labels. Each pair
+  appears once in the dialog (listing the exams that use it), Confirm is blocked until every factor is a number
+  above zero, and a result is discarded with a notice if the loaded data changed while the dialog was open.
+  Settings has a "Review correction factors…" button to reopen the dialog at any time.
 - **Dose by tube for biplane studies** (2026-10-06) — one partial dose map per tube (`single` / `A` / `B` /
   `unknown`) is accumulated beside the combined map and sums to it cell by cell; the peak skin dose is
   unchanged. The new `tube_summary` output (also in dict/JSON) gives each tube's reported kerma, corrected
@@ -97,7 +100,8 @@ That keeps SemVer and contributor history organized.
 - **Radimetrics biplane exports are split into tube A and tube B events** (2026-10-06) — when a Radimetrics
   file carries per-plane `Reference Point Dose (A)` / `(B)` columns, each total-kerma row is replaced by a
   `Plane A` and a `Plane B` event whose kerma sums to the original total (previously only the total was read
-  and every event looked like one tube). A biplane export without a plane column now resolves to an unknown
+  and every event looked like one tube); rows with kerma on one plane only become a single event of that plane.
+  Rows that cannot be split keep a valid plane code from the export. A biplane export without a plane column now resolves to an unknown
   tube instead of `Single Plane`. Single-plane Radimetrics exports are unchanged. Details:
   [dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md).
 

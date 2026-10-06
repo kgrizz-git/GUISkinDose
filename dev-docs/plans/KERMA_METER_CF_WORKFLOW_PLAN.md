@@ -80,7 +80,7 @@ and reported separately whenever a biplane study is present.
    the peak of that tube's partial map. A tube that misses the phantom reports zero. The combined map is
    still the sum over all events from both tubes, and the headline PSD is still the peak of the
    combined map. Per-tube peaks do not, in general, sum to the headline PSD, and the UI must say so.
-8. **CLI parity.** `--kerma-meter-correction-file` keeps working. Non-GUI runs never prompt. Each run logs
+8. **CLI parity.** `--kerma-meter-correction-file` keeps working. Non-GUI runs never prompt. Each exam logs
    one warning with the count of missing pairs, never the labels, and uses `default_factor`.
 
 ## Out of scope
@@ -109,11 +109,11 @@ Tube identity is `acquisition_plane_canonical` (CID 10003 code, `single`/`A`/`B`
 Decisions for Radimetrics:
 
 - **Evidence rule.** The file is treated as biplane only when both per-plane dose columns exist and at least
-  one row has non-zero kerma on both planes. A file with per-plane columns where plane B is always zero is
-  single-plane and stays on the old path. The default `Single Plane` is applied only without that evidence.
+  one row has non-zero plane B kerma (A-only and B-only rows then become single-plane events). A file with
+  per-plane columns where plane B is all zero or empty is single-plane and stays on the old path. The default `Single Plane` is applied only without that evidence.
 - **Conservation.** Per-plane kerma is rescaled to the exported total (accepted when A + B is within 1 % of
   the total, to absorb export rounding). Rows that fail the check, or have missing per-plane values, stay as
-  one total row with an unknown plane, because the total covers both tubes.
+  one total row. It keeps a valid plane code from the export, otherwise its plane is unknown.
 - **DAP and fluoro time.** Per-plane DAP columns are used when present, otherwise the total DAP is split in
   proportion to kerma. Fluoro time stays on the first event of each row, so procedure totals do not double.
 - **Known limitation.** Both split events reuse the single `(RF)` angle, kVp and table columns. Independent

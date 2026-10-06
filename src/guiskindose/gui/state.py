@@ -101,10 +101,10 @@ class AppState:
     kerma_meter_ask_for_missing: bool = True
     # Dialog bookkeeping, reset by rebuild_rdsr_df() when the loaded events change:
     # "don't ask again", whether Calculate already re-opened the dialog once, and
-    # the (input_revision, enable) pair the load-time watcher last evaluated.
+    # the (input_revision, enable, file, sheet, ask) tuple the load-time watcher last evaluated.
     kerma_meter_prompt_suppressed: bool = False
     kerma_meter_calc_reprompted: bool = False
-    kerma_meter_checked_key: tuple[int, bool] | None = None
+    kerma_meter_checked_key: tuple[object, ...] | None = None
     # Identity (object ids) of the loaded exams at the last rebuild, so per-exam
     # unresolved labels (keyed by exam position) are dropped when exams are
     # removed or reordered. Appending an exam keeps them.
