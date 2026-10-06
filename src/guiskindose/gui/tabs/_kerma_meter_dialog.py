@@ -15,8 +15,8 @@ from __future__ import annotations
 from nicegui import ui
 
 from guiskindose.constants import TUBE_IDENTITY_UNKNOWN
+from guiskindose.gui.state import reset_results
 from guiskindose.gui.ui_copy import copy_text
-from guiskindose.kerma_correction import UNRESOLVED_EQUIPMENT
 
 from ._kerma_meter_model import (
     SOURCE_DEFAULT,
@@ -87,9 +87,12 @@ class _DialogView:
         self.syncing = False
 
     def build_unit_choosers(self) -> None:
-        """One unit chooser per exam that still has events with no equipment identity."""
-        rows = self.model.rows()
-        for exam in dict.fromkeys(r.exam for r in rows if r.equipment == UNRESOLVED_EQUIPMENT):
+        """One unit chooser per exam with events that carry no equipment identity.
+
+        The chooser stays after a unit was chosen (pre-selected, clearable), so the
+        choice can be changed or removed.
+        """
+        for exam in self.model.unresolved_exams():
             ui.label(exam).classes("text-subtitle2 q-mt-sm")
             ui.label(copy_text("kerma.dialog.unresolved")).classes(_BODY)
 
@@ -99,8 +102,10 @@ class _DialogView:
                 self.model.set_labels(labels)
                 self.refresh()
 
+            # The current override must be an option, or the select rejects its own value.
+            options = sorted({*unit_options(self.model.app_state), *(v for v in self.model.labels.values() if v)})
             ui.select(
-                unit_options(self.model.app_state),
+                options,
                 label=copy_text("kerma.dialog.unit_label"),
                 value=self.model.labels.get(exam) or None,
                 with_input=True,
@@ -249,7 +254,8 @@ async def kerma_meter_dialog() -> None:
     if state.input_revision != revision:
         ui.notify(copy_text("kerma.dialog.stale_discarded"), type="warning")
     elif result == "ok":
-        model.commit(bool(dont_ask.value))
+        if model.commit(bool(dont_ask.value)):
+            reset_results()  # factors, units, or periods changed: earlier results are stale
     else:
         commit_cancel(state, bool(dont_ask.value))
     dialog.delete()

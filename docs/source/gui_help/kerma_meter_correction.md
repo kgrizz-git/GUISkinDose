@@ -73,9 +73,13 @@ gets a *Calibration period* selector listing the file's periods, for example
 previous exam's choice until you pick one. The chosen period selects that exam's file factor.
 The choice is saved with the run configuration only when identifiers are included.
 
+When the file has dated rows, the dialog opens at load even if every factor is already covered, so the period is chosen on purpose instead of silently defaulting to the latest one.
+
+Confirming changes to factors, units, or periods clears earlier calculation results. Rerun the calculation before reading or exporting results.
+
 **Exams with no equipment identity.** If an exam carries no serial number or station name, the
 dialog asks which unit it was acquired on. Pick a detected unit or a unit from the file, or type
-a new name. The exam's factors are then looked up for that unit. The choice is stored per exam
+a new name. The exam's factors are then looked up for that unit. The chooser stays available afterwards (and when you reopen the dialog from Settings) so you can change the unit or clear it. The choice is stored per exam
 and saved with the run configuration only when identifiers are included.
 
 **Confirm** is blocked until every factor is a number greater than zero; a blank field is an error, not a kept value. If the loaded data changes while the dialog is open, your entries are discarded with a notice.

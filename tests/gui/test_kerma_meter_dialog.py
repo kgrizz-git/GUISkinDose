@@ -550,3 +550,105 @@ def test_example_calibration_download_offers_the_bundled_csv(monkeypatch: pytest
     monkeypatch.setattr(settings_tab.ui, "download", lambda content, name: calls.append((content, name)))
     settings_tab._download_example_calibration_file()
     assert calls == [(get_path_to_example_kerma_meter_file().read_bytes(), "calibration_factors_example.csv")]
+
+
+# ── review findings: stale results, unchosen periods, editable unit override ─
+
+
+def test_commit_reports_whether_anything_changed() -> None:
+    _single_exam()
+    model = dlg.FactorModel(state)
+    assert model.commit(dont_ask=False) is True  # first confirm stores the defaults
+    assert dlg.FactorModel(state).commit(dont_ask=False) is False  # nothing differs the second time
+    changed = dlg.FactorModel(state)
+    changed.set_value("Exam 1", ("room-1", "A"), 1.7)
+    assert changed.commit(dont_ask=False) is True
+
+
+def _calculated_state() -> None:
+    state.calculation_done = True
+    state.psd = 12.0
+    state.air_kerma = 3.0
+    state.output = {"psd": 12.0}
+
+
+@pytest.mark.asyncio
+async def test_confirm_with_edits_invalidates_results(user: User) -> None:
+    from nicegui import ui
+
+    await user.open("/")
+    _single_exam()
+    state.kerma_meter_in_memory_table = {("Exam 1", "room-1", "A"): 1.0, ("Exam 1", "room-1", "B"): 1.0}
+    _calculated_state()
+    task = asyncio.create_task(_run_in_client(user))
+    await user.should_see("Kerma-meter correction factors", retries=30)
+    assert user.client is not None
+    field = next(
+        el
+        for el in user.client.elements.values()
+        if isinstance(el, ui.number) and el._props.get("label") == "room-1 / A"
+    )
+    field.set_value(1.5)
+    user.find("Confirm").click()
+    await _wait_for_task(task, user)
+    assert state.calculation_done is False
+    assert state.output is None
+
+
+@pytest.mark.asyncio
+async def test_unchanged_confirm_keeps_results(user: User) -> None:
+    await user.open("/")
+    _single_exam()
+    state.kerma_meter_in_memory_table = {("Exam 1", "room-1", "A"): 1.0, ("Exam 1", "room-1", "B"): 1.0}
+    _calculated_state()
+    task = asyncio.create_task(_run_in_client(user))
+    await user.should_see("Kerma-meter correction factors", retries=30)
+    user.find("Confirm").click()
+    await _wait_for_task(task, user)
+    assert state.calculation_done is True
+    assert state.output == {"psd": 12.0}
+
+
+@pytest.mark.asyncio
+async def test_dated_full_hit_prompts_once_until_a_period_is_chosen(dialog_mock: AsyncMock, tmp_path: Path) -> None:
+    _single_exam(stations=("Room-1",), planes=("Plane A",))
+    state.kerma_meter_file = str(_dated_file(tmp_path))  # every pair is covered by the file
+    assert dlg.missing_pairs(state) == []
+    assert dlg.needs_prompt(state) is True
+    assert await dlg.maybe_prompt_after_load() is True
+    assert await dlg.maybe_prompt_after_load() is False  # once per load
+    dlg.FactorModel(state).commit(dont_ask=False)  # confirming records the period
+    assert state.kerma_meter_periods == {"Exam 1": _NEW}
+    assert dlg.needs_prompt(state) is False
+
+
+def test_undated_file_full_hit_does_not_prompt(tmp_path: Path) -> None:
+    _single_exam()
+    state.kerma_meter_file = str(_cf_file(tmp_path))
+    assert dlg.needs_prompt(state) is False
+
+
+def test_unit_override_can_be_changed_and_cleared_after_it_resolves_the_exam(tmp_path: Path) -> None:
+    _two_exams()
+    state.kerma_meter_file = str(_cf_file(tmp_path, "room-1,A,1.1\nroom-9,single,1.7\nroom-8,single,1.2\n"))
+    state.kerma_meter_unresolved_labels = {"Exam 2": "Room-9"}
+    model = dlg.FactorModel(state)
+    assert model.unresolved_exams() == ["Exam 2"]  # still offered although the override resolves it
+    assert [(r.equipment, r.value) for r in model.rows() if r.exam == "Exam 2"] == [("room-9", 1.7)]
+    model.set_labels({"Exam 2": "Room-8"})  # change
+    assert [(r.equipment, r.value) for r in model.rows() if r.exam == "Exam 2"] == [("room-8", 1.2)]
+    model.set_labels({"Exam 2": ""})  # clear
+    assert [r.equipment for r in model.rows() if r.exam == "Exam 2"] == ["unresolved"]
+    model.commit(dont_ask=False)
+    assert state.kerma_meter_unresolved_labels == {}
+
+
+@pytest.mark.asyncio
+async def test_rendered_dialog_keeps_the_unit_chooser_for_a_resolved_exam(user: User) -> None:
+    await user.open("/")
+    _two_exams()
+    state.kerma_meter_unresolved_labels = {"Exam 2": "Room-9"}
+    task = asyncio.create_task(_run_in_client(user))
+    await user.should_see("No equipment identity was found", retries=30)
+    user.find("Confirm").click()
+    await _wait_for_task(task, user)

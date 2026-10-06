@@ -129,13 +129,34 @@ def missing_pairs(app_state: AppState, labels: dict[str, str] | None = None) -> 
     return sorted({pair for pairs in missing_by_exam(app_state, labels).values() for pair in pairs})
 
 
+def periods_unchosen(app_state: AppState) -> list[str]:
+    """Exams with a detected pair that has dated rows in the file but no stored period choice.
+
+    Such an exam would silently use the current or most recent period, so the
+    dialog asks even when every factor is already covered.
+    """
+    periods = file_periods(app_state)
+    if not periods or not period_options(periods):
+        return []
+    dated = dated_pairs(periods)
+    return [
+        exam
+        for exam, pairs in detect_by_exam(app_state).items()
+        if any(pair in dated for pair in pairs) and not app_state.kerma_meter_periods.get(exam)
+    ]
+
+
 def needs_prompt(app_state: AppState) -> bool:
-    """True when correction is enabled, asking is on and not suppressed, and an exam misses a pair."""
+    """True when correction is on, asking is on and not suppressed, and the dialog has something to settle.
+
+    That is an exam missing a factor, or an exam with dated calibration rows and no
+    period chosen yet.
+    """
     return (
         app_state.kerma_meter_enable
         and app_state.kerma_meter_ask_for_missing
         and not app_state.kerma_meter_prompt_suppressed
-        and bool(missing_by_exam(app_state))
+        and (bool(missing_by_exam(app_state)) or bool(periods_unchosen(app_state)))
     )
 
 
@@ -256,12 +277,27 @@ class FactorModel:
         """Editable ``(exam, pair)`` rows whose value is blank, non-finite, or not above zero."""
         return [(r.exam, (r.equipment, r.tube)) for r in self.rows() if r.editable and not valid_factor(r.value)]
 
-    def commit(self, dont_ask: bool) -> None:
+    def unresolved_exams(self) -> list[str]:
+        """Exams with events that carry no equipment identity, judged without any override.
+
+        The unit chooser stays available for these exams even after a unit was
+        chosen, so the choice can be changed or cleared.
+        """
+        raw = detect_by_exam(self.app_state, {})
+        return [exam for exam, pairs in raw.items() if any(eq == UNRESOLVED_EQUIPMENT for eq, _ in pairs)]
+
+    def commit(self, dont_ask: bool) -> bool:
         """Store entered factors per exam, identity overrides, period choices, and suppression.
 
         A row is written as a manual entry for its exam unless it resolved to the
         file value for that exam's period (file values keep following the file).
         Confirming a default or followed row records it as an explicit answer.
+
+        Returns
+        -------
+        bool
+            True when the stored factors, identity overrides, or period choices
+            changed, so the caller must invalidate calculation results.
 
         Raises
         ------
@@ -271,6 +307,11 @@ class FactorModel:
         if self.invalid():
             raise ValueError("Every correction factor must be a finite number above zero.")
         state = self.app_state
+        before = (
+            dict(state.kerma_meter_in_memory_table or {}),
+            dict(state.kerma_meter_unresolved_labels),
+            dict(state.kerma_meter_periods),
+        )
         table = dict(state.kerma_meter_in_memory_table or {})
         for row in self.rows():
             if not row.editable:
@@ -286,6 +327,12 @@ class FactorModel:
         state.kerma_meter_periods = {e: k for e in self._selector_exams() if (k := self.period_of(e))}
         if dont_ask:
             state.kerma_meter_prompt_suppressed = True
+        after = (
+            dict(state.kerma_meter_in_memory_table or {}),
+            dict(state.kerma_meter_unresolved_labels),
+            dict(state.kerma_meter_periods),
+        )
+        return before != after
 
 
 def build_rows(app_state: AppState, labels: dict[str, str] | None = None) -> list[DialogRow]:

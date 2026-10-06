@@ -193,6 +193,12 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Kerma-meter dialog review fixes** (2026-10-06) — confirming changed factors, units, or calibration periods
+  now clears earlier calculation results, so a stale peak skin dose or export cannot stay active (an unchanged
+  confirm keeps them). A calibration file with dated rows now opens the dialog at load even when every factor is
+  covered, so the period is chosen deliberately. The per-exam unit chooser stays available after a unit is
+  chosen (pre-selected, clearable), including when reopened from Settings.
+
 - **Coordinate-frame note no longer runs off narrow dose maps** (2026-09-27)
   — the bottom-left note on 3D plots ended with a ~100-character line that
   ran past the right edge and under the colorbar in narrow views. Plotly never
