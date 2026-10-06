@@ -48,6 +48,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Security
 
+- **multidict 6.7.1 → 6.9.1** (2026-10-05) — lock bump for GHSA-54p9-h82j-f925
+  (reference leak in `CIMultiDict`/`MultiDict` items-view set operations), which
+  blocked the `pip-audit` pre-push hook.
 - **Thirteenth PyJWT alert on the Semgrep lock dismissed** (2026-10-01) —
   Dependabot alert 32 (GHSA-gvp8-978c-rx2q) is the same family as alerts 20–31:
   PyJWT 2.13.0 in `tools/semgrep/uv.lock`, the isolated scanner, never a runtime
