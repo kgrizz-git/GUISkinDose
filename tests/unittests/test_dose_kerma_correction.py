@@ -106,7 +106,8 @@ def test_settings_example_block_loads():
     """settings_example.json kerma_meter_correction block parses as expected."""
     settings = PyskindoseSettings(settings=load_settings_example_json())
     assert settings.kerma_meter_correction.enable is False
-    assert settings.kerma_meter_correction.mode == "file"
+    assert not hasattr(settings.kerma_meter_correction, "mode")
+    assert "mode" not in settings.kerma_meter_correction.to_dict()
 
 
 def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
@@ -115,7 +116,7 @@ def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
         KermaMeterCorrectionSettings,
     )
 
-    with pytest.raises(ValueError, match="mode must be"):
+    with pytest.raises(ValueError, match="mode must be"):  # legacy key still validated
         KermaMeterCorrectionSettings({"mode": "auto"})
     with pytest.raises(ValueError, match="default_factor"):
         KermaMeterCorrectionSettings({"default_factor": 0.0})
@@ -140,6 +141,64 @@ def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
     assert km.in_memory_table == {("a", "single"): 1.1}
     payload = km.to_dict()
     assert payload["enable"] is True
-    assert payload["mode"] == "prompt"
+    assert "mode" not in payload
     assert payload["file"] == str(cf)
     assert "in_memory_table" not in payload
+
+
+def test_legacy_mode_round_trip_maps_to_prompt_at_calc():
+    """Legacy ``mode`` loads with a warning, maps onto prompt_at_calc, and is not re-emitted."""
+    from guiskindose.settings.kerma_meter_correction_settings import KermaMeterCorrectionSettings
+
+    prompt = KermaMeterCorrectionSettings({"enable": True, "mode": "prompt"})
+    assert prompt.prompt_at_calc is True
+    file_mode = KermaMeterCorrectionSettings({"enable": True, "mode": " File "})
+    assert file_mode.prompt_at_calc is False
+    payload = prompt.to_dict()
+    assert "mode" not in payload
+    assert KermaMeterCorrectionSettings(payload).prompt_at_calc is True
+    assert KermaMeterCorrectionSettings(file_mode.to_dict()).prompt_at_calc is False
+
+
+def _cf_for_single_unit(tmp_path: Path, *, file_cf: float | None, manual_cf: float | None, **km) -> list[float]:
+    """Resolve per-event CF for the example RDSR (one unit, single tube)."""
+    from guiskindose.calculate_dose.calculate_dose import _resolve_kerma_meter_cf
+
+    if file_cf is not None:
+        cf_file = tmp_path / "cf.csv"
+        cf_file.write_text(f"equipment,tube,correction_factor\nunit-x,single,{file_cf}\n", encoding="utf-8")
+        km["file"] = str(cf_file)
+    settings = _settings(enable=True, explicit_label="unit-x", **km)
+    if manual_cf is not None:
+        settings.kerma_meter_correction.in_memory_table = {("unit-x", "single"): manual_cf}
+    data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
+    return _resolve_kerma_meter_cf(data_norm, settings)
+
+
+def test_precedence_manual_over_file_over_default(tmp_path: Path):
+    """Manual entry beats the file row, which beats default_factor."""
+    both = _cf_for_single_unit(tmp_path, file_cf=1.1, manual_cf=1.3, default_factor=0.9)
+    assert both == pytest.approx([1.3] * len(both))
+    file_only = _cf_for_single_unit(tmp_path, file_cf=1.1, manual_cf=None, default_factor=0.9)
+    assert file_only == pytest.approx([1.1] * len(file_only))
+    neither = _cf_for_single_unit(tmp_path, file_cf=None, manual_cf=None, default_factor=0.9)
+    assert neither == pytest.approx([0.9] * len(neither))
+
+
+def test_file_loads_even_when_legacy_prompt_mode_set(tmp_path: Path):
+    """Legacy mode=prompt no longer causes the file to be ignored."""
+    cf = _cf_for_single_unit(tmp_path, file_cf=1.1, manual_cf=None, mode="prompt", default_factor=0.9)
+    assert cf == pytest.approx([1.1] * len(cf))
+
+
+def test_file_miss_with_manual_entry_for_other_key_uses_default(tmp_path: Path):
+    """A manual table lacking this pair does not hide the file row for it."""
+    from guiskindose.calculate_dose.calculate_dose import _resolve_kerma_meter_cf
+
+    cf_file = tmp_path / "cf.csv"
+    cf_file.write_text("equipment,tube,correction_factor\nunit-x,single,1.1\n", encoding="utf-8")
+    settings = _settings(enable=True, explicit_label="unit-x", file=str(cf_file), default_factor=0.9)
+    settings.kerma_meter_correction.in_memory_table = {("other", "single"): 1.5}
+    data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
+    factors = _resolve_kerma_meter_cf(data_norm, settings)
+    assert factors == pytest.approx([1.1] * len(factors))

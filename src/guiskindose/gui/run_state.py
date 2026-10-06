@@ -59,7 +59,6 @@ _PHANTOM_SETTING_TO_STATE = (
 # written; file_sheet/explicit_label applied skip-if-null under Tier 3).
 _KERMA_SETTING_TO_STATE = (
     ("enable", "kerma_meter_enable"),
-    ("mode", "kerma_meter_mode"),
     ("default_factor", "kerma_meter_default_factor"),
     ("prompt_at_calc", "kerma_meter_prompt_at_calc"),
 )
@@ -335,7 +334,6 @@ _SNAPSHOT_ATTRS = (
     "colorscale",
     "plot_dosemap",
     "kerma_meter_enable",
-    "kerma_meter_mode",
     "kerma_meter_file_sheet",
     "kerma_meter_explicit_label",
     "kerma_meter_default_factor",
@@ -567,6 +565,9 @@ def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[st
     kerma = settings.get("kerma_meter_correction") or {}
     for doc_key, attr in _KERMA_SETTING_TO_STATE:
         _apply_present(app_state, attr, kerma.get(doc_key))
+    if str(kerma.get("mode", "")).strip().lower() == "prompt":
+        # Legacy exclusive mode: "prompt" becomes the unified prompt-at-calc flag.
+        app_state.kerma_meter_prompt_at_calc = True
     _apply_present(app_state, "kerma_meter_file_sheet", kerma.get("file_sheet"))
     _apply_present(app_state, "kerma_meter_explicit_label", kerma.get("explicit_label"))
     _apply_kerma_tier2(kerma, app_state, warnings)

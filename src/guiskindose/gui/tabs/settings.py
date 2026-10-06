@@ -388,13 +388,10 @@ def _build_physics_section() -> None:
                     "Enable kerma-meter correction factors",
                     value=state.kerma_meter_enable,
                 ).bind_value(state, "kerma_meter_enable").on(_MODEL_VALUE_EVENT, reset_results)
-                ui.select(
-                    {"file": "Lookup file", "prompt": "Prompt before calculation"},
-                    label="Correction mode",
-                    value=state.kerma_meter_mode,
-                ).bind_value(state, "kerma_meter_mode").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
+                ui.checkbox(
+                    "Prompt for factors before calculation",
+                    value=state.kerma_meter_prompt_at_calc,
+                ).bind_value(state, "kerma_meter_prompt_at_calc").on(_MODEL_VALUE_EVENT, reset_results)
                 ui.input(
                     label="Correction table path (CSV/TSV/XLSX/JSON)",
                     value=state.kerma_meter_file or "",

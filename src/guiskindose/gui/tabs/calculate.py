@@ -500,7 +500,7 @@ class _CalculationController:
             return True
         if not await self._explicit_label_collapse_ok():
             return False
-        if state.kerma_meter_mode == "prompt" or state.kerma_meter_prompt_at_calc:
+        if state.kerma_meter_prompt_at_calc:
             await kerma_meter_prompt()
         return True
 

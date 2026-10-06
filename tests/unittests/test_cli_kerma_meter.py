@@ -55,7 +55,7 @@ def test_apply_flags_enable_file_mode_and_label(tmp_path: Path):
     km = settings.kerma_meter_correction
     assert km.enable is True
     assert km.file == cf
-    assert km.mode == "file"
+    assert km.prompt_at_calc is False  # legacy "file" mode is a no-op
     assert km.explicit_label == "forced-unit"
 
 
@@ -74,7 +74,7 @@ def test_apply_flags_enable_switch_alone():
 
 
 def test_prompt_mode_warns_on_cli():
-    """mode=prompt is accepted but warns that CLI falls soft to default_factor.
+    """Legacy mode=prompt maps to prompt_at_calc and logs a deprecation warning.
 
     Attach a handler to the module logger — suite-wide logging state can leave
     WARNING on stderr without landing in pytest ``caplog``.
@@ -95,7 +95,7 @@ def test_prompt_mode_warns_on_cli():
             """Append the formatted log message to the capture list."""
             messages.append(record.getMessage())
 
-    logger = logging.getLogger("guiskindose.cli_kerma_meter")
+    logger = logging.getLogger("guiskindose.settings.kerma_meter_correction_settings")
     handler = _Capture(level=logging.WARNING)
     logger.addHandler(handler)
     try:
@@ -103,5 +103,12 @@ def test_prompt_mode_warns_on_cli():
     finally:
         logger.removeHandler(handler)
 
-    assert settings.kerma_meter_correction.mode == "prompt"
-    assert any("GUI-only" in msg for msg in messages)
+    assert settings.kerma_meter_correction.prompt_at_calc is True
+    assert any("deprecated" in msg for msg in messages)
+
+
+def test_mode_flag_help_says_deprecated():
+    """The legacy --kerma-meter-correction-mode flag is documented as deprecated."""
+    parser = argparse.ArgumentParser()
+    add_kerma_meter_cli_arguments(parser)
+    assert "DEPRECATED" in parser.format_help()

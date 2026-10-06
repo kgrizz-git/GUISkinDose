@@ -288,7 +288,6 @@ def _populated_state():
     state.phantom_model = "cylinder"
     state.beam_miss_warn = "per_event"
     state.kerma_meter_enable = True
-    state.kerma_meter_mode = "file"
     state.kerma_meter_file = "/data/cf/corrections.xlsx"
     state.kerma_meter_file_sheet = "CF"
     state.kerma_meter_default_factor = 1.02

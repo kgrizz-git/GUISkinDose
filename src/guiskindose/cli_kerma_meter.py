@@ -34,7 +34,11 @@ def add_kerma_meter_cli_arguments(parser: argparse.ArgumentParser) -> None:
         default=None,
         choices=("file", "prompt"),
         dest="kerma_meter_correction_mode",
-        help="CF resolution mode. 'prompt' is GUI-only; CLI falls soft to default_factor.",
+        help=(
+            "DEPRECATED. The file always loads when --kerma-meter-correction-file is set; "
+            "manual entries win over it, then default_factor. 'prompt' maps to "
+            "prompt_at_calc (GUI-only; CLI never prompts)."
+        ),
     )
     parser.add_argument(
         "--kerma-meter-explicit-label",
@@ -56,12 +60,7 @@ def apply_kerma_meter_cli_flags(settings: PyskindoseSettings, args: argparse.Nam
         km.file = Path(file_path)
     mode = getattr(args, "kerma_meter_correction_mode", None)
     if mode is not None:
-        km.mode = mode
-        if mode == "prompt":
-            logger.warning(
-                "kerma-meter correction: mode=prompt is GUI-only; "
-                "CLI will use default_factor without blocking."
-            )
+        km.apply_legacy_mode(mode)
     label = getattr(args, "kerma_meter_explicit_label", None)
     if label is not None:
         km.explicit_label = str(label)

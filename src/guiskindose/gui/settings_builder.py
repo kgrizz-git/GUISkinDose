@@ -91,7 +91,6 @@ def build_settings(
 
     base["kerma_meter_correction"] = {
         "enable": app_state.kerma_meter_enable,
-        "mode": app_state.kerma_meter_mode,
         "file": app_state.kerma_meter_file or None,
         "file_sheet": app_state.kerma_meter_file_sheet or None,
         "default_factor": app_state.kerma_meter_default_factor,

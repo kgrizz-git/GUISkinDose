@@ -94,7 +94,6 @@ class AppState:
 
     # Kerma-meter correction (CF = measured / reported), per equipment × tube.
     kerma_meter_enable: bool = False
-    kerma_meter_mode: str = "file"
     kerma_meter_file: str | None = None
     kerma_meter_file_sheet: str | None = None
     kerma_meter_default_factor: float = 1.0

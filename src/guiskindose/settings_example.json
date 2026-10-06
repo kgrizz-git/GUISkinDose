@@ -51,7 +51,6 @@
     },
     "kerma_meter_correction": {
         "enable": false,
-        "mode": "file",
         "file": null,
         "file_sheet": null,
         "default_factor": 1.0,

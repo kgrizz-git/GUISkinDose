@@ -199,7 +199,7 @@ Key flags (see `python -m guiskindose --help` for the full list):
 | `--allow-ignored-checkout-output` | Allow export to a gitignored path inside the checkout |
 | `--kerma-meter-correction` | Enable kerma-meter correction factors |
 | `--kerma-meter-correction-file` | Path to CF lookup table (CSV/TSV/XLSX/JSON) |
-| `--kerma-meter-correction-mode` | CF resolution mode: `file` or `prompt` (GUI-only) |
+| `--kerma-meter-correction-mode` | **Deprecated.** A set file always loads; manual entries win, then file, then default. `prompt` maps to `prompt_at_calc` (GUI-only) |
 | `--kerma-meter-explicit-label` | Force all events to this equipment label for CF lookup |
 | `--native` | Open GUI in a native desktop window (requires `[gui-native]` extra) |
 | _(removed)_ `--host` / `--allow-network` | Removed 2026-09-22: the GUI always binds `127.0.0.1` and refuses non-loopback hosts (`_resolve_bind_host()` raises `non_loopback_gui_binding_refused`) |

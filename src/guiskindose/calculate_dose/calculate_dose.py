@@ -42,14 +42,9 @@ def _resolve_kerma_meter_cf(
 
     file_table = None
     table_meta: dict[str, object] | None = None
-    if km.mode == "prompt" and km.in_memory_table is None:
-        # Non-GUI / prompt without a confirmed table → fail-soft.
-        logger.warning(
-            "kerma-meter correction: mode=prompt without an in-memory table; "
-            "using default_factor=%.4g for all events.",
-            km.default_factor,
-        )
-    elif km.file is not None:
+    # Precedence: manual in_memory_table > file rows > default_factor. A file
+    # always loads when set, regardless of any prompt.
+    if km.file is not None:
         try:
             file_table = load_correction_table(km.file, km.file_sheet)
             table_meta = {"source_stem": km.file.stem}

@@ -35,7 +35,6 @@ def _example_settings() -> PyskindoseSettings:
     base = load_settings_example_json()
     base["kerma_meter_correction"] = {
         "enable": True,
-        "mode": "file",
         "file": "/data/cf/corrections.xlsx",
         "file_sheet": "CF",
         "default_factor": 1.02,
@@ -389,3 +388,14 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
     meta = state.loaded_exam_meta[0]
     assert (meta["d_lon"], meta["d_ver"], meta["d_lat"]) == (1.0, 2.0, 3.0)
     assert meta["sheet"] == "Other"
+
+
+def test_legacy_kerma_mode_prompt_sets_prompt_at_calc():
+    """A run-state document saved with legacy ``mode: prompt`` maps to prompt_at_calc."""
+    from guiskindose.gui.run_state import _apply_settings_slice
+    from guiskindose.gui.state import AppState
+
+    state = AppState()
+    _apply_settings_slice({"kerma_meter_correction": {"mode": "prompt"}}, state, [])
+    assert state.kerma_meter_prompt_at_calc is True
+    assert not hasattr(state, "kerma_meter_mode")
