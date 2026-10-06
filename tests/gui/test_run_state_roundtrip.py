@@ -448,5 +448,6 @@ def test_unresolved_equipment_labels_malformed_rejected() -> None:
 
     document = _unresolved_labels_document(include_identifiers=True)
     document["gui_state"]["kerma_meter_unresolved_labels"] = {"Exam 1": 5}
+    app_state = AppState()
     with pytest.raises(RunStateError):
-        apply_run_state(document, AppState())
+        apply_run_state(document, app_state)

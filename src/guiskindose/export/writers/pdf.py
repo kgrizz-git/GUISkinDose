@@ -177,6 +177,24 @@ def _corrections_flow(payload: ExportPayload) -> list:
     return flow
 
 
+def _tube_flow(payload: ExportPayload) -> list:
+    """Build per-exam "Dose by tube" flowables (empty when no exam has a breakdown)."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, has_tube_content, tube_summary_table
+
+    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
+    if not blocks:
+        return []
+    flow: list[Any] = [Spacer(1, 8), Paragraph(TUBE_SECTION_TITLE, _H2)]
+    widths = [_CONTENT_WIDTH * 0.2] + [_CONTENT_WIDTH * 0.16] * 5
+    for exam in blocks:
+        if payload.is_multi_exam:
+            flow.append(Paragraph(f"Exam {exam.exam_id}", _BODY))
+        flow.append(_table(tube_summary_table(exam.tube_summary), widths))
+        flow.append(Spacer(1, 4))
+    flow.append(Paragraph(TUBE_NOTE, _BODY))
+    return flow
+
+
 def _images_flow(payload: ExportPayload) -> list:
     """Build dose-map image flowables for the PDF body."""
     flow: list[Any] = [Paragraph("Dose-map images", _H2)]
@@ -218,6 +236,7 @@ def _story(payload: ExportPayload) -> list:
     story.append(PageBreak())
 
     story += _corrections_flow(payload)
+    story += _tube_flow(payload)
     if payload.images:
         story.append(PageBreak())
         story += _images_flow(payload)

@@ -98,6 +98,22 @@ def _images(payload: ExportPayload) -> str:
     return "".join(parts)
 
 
+def _tube_blocks(payload: ExportPayload) -> list[str]:
+    """Per-exam "Dose by tube" tables, only for exams with a tube breakdown."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, has_tube_content, tube_summary_table
+
+    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
+    if not blocks:
+        return []
+    out = [f"<h2>{_esc(TUBE_SECTION_TITLE)}</h2>"]
+    for exam in blocks:
+        if payload.is_multi_exam:
+            out.append(f"<p>Exam {_esc(exam.exam_id)}</p>")
+        out.append(_table(tube_summary_table(exam.tube_summary)))
+    out.append(f"<p><em>{_esc(TUBE_NOTE)}</em></p>")
+    return out
+
+
 def render_html_bytes(payload: ExportPayload) -> bytes:
     """Render the HTML report to an in-memory bytes payload."""
     m = payload.meta
@@ -131,6 +147,8 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
     body.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections]))
     if corrections_use_kerma_meter(payload):
         body.append(f"<p><em>{_esc(KERMA_METER_WEIGHTING_FOOTNOTE)}</em></p>")
+
+    body.extend(_tube_blocks(payload))
 
     body.append("<h2>Settings &amp; equipment</h2>")
     for exam in payload.exams:

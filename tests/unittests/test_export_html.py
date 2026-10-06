@@ -71,3 +71,53 @@ def test_html_report_carries_intended_use_notice():
     assert "Intended use:" in html
     assert "not FDA-cleared" in html
     assert _payload().intended_use == INTENDED_USE_NOTICE
+
+
+_TUBE_SUMMARY = [
+    {"tube": "A", "events": 2, "kerma_reported": 3.0, "kerma_corrected": 3.3, "applied_cf": 1.1, "peak_dose": 4.0},
+    {"tube": "B", "events": 1, "kerma_reported": 2.0, "kerma_corrected": 2.0, "applied_cf": 1.0, "peak_dose": 0.0},
+]
+
+
+def _tube_payload(summary):
+    payload = _payload()
+    payload.exams[0].tube_summary = summary
+    return payload
+
+
+def test_all_formats_carry_dose_by_tube_section():
+    """HTML, XLSX, DOCX and PDF all show the per-tube table and the non-additive note."""
+    import io
+
+    import pytest
+    from openpyxl import load_workbook
+
+    from guiskindose.export.sections import TUBE_NOTE
+
+    payload = _tube_payload(_TUBE_SUMMARY)
+    html = render_html_bytes(payload).decode()
+    assert "Dose by tube" in html
+    assert "Plane A" in html
+    assert "Plane B" in html
+    assert TUBE_NOTE[:30] in html
+
+    wb = load_workbook(io.BytesIO(render_bytes(payload, "xlsx")))
+    assert "Dose by tube" in wb.sheetnames
+
+    docx = pytest.importorskip("docx")
+    doc = docx.Document(io.BytesIO(render_bytes(payload, "docx")))
+    assert any("Dose by tube" in p.text for p in doc.paragraphs)
+
+    pytest.importorskip("reportlab")
+    assert render_bytes(payload, "pdf").startswith(b"%PDF")
+
+
+def test_single_tube_and_missing_summary_add_no_section():
+    import io
+
+    from openpyxl import load_workbook
+
+    for summary in (None, [{**_TUBE_SUMMARY[0], "tube": "single"}]):
+        payload = _tube_payload(summary)
+        assert "Dose by tube" not in render_html_bytes(payload).decode()
+        assert "Dose by tube" not in load_workbook(io.BytesIO(render_bytes(payload, "xlsx"))).sheetnames

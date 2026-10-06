@@ -111,7 +111,7 @@ def file_table(app_state: AppState) -> dict[Pair, float] | None:
         return None
     try:
         return load_correction_table(app_state.kerma_meter_file, app_state.kerma_meter_file_sheet or None)
-    except (OSError, UnicodeError, ValueError, TypeError):
+    except (OSError, ValueError, TypeError):
         return None
 
 

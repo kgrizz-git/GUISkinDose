@@ -105,6 +105,10 @@ class AppState:
     kerma_meter_prompt_suppressed: bool = False
     kerma_meter_calc_reprompted: bool = False
     kerma_meter_checked_key: tuple[int, bool] | None = None
+    # Identity (object ids) of the loaded exams at the last rebuild, so per-exam
+    # unresolved labels (keyed by exam position) are dropped when exams are
+    # removed or reordered. Appending an exam keeps them.
+    kerma_meter_exam_signature: tuple[int, ...] = ()
     kerma_meter_in_memory_table: dict[tuple[str, str], float] | None = None
     # Per-exam identity override for events with no serial/station, keyed by the
     # opaque exam label ("Exam 1"). Values are site identifiers: never logged.

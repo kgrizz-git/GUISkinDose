@@ -42,6 +42,7 @@ _EXPECTED_TOP_KEYS = {
     "events",
     "rotational_handling",
     "rotational_envelope",
+    "tube_summary",
     "union_hit_indices",
 }
 

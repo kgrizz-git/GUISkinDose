@@ -105,6 +105,7 @@ def build_document(payload: ExportPayload):
     _add_result_sections(doc, payload)
     _add_settings_section(doc, payload)
     _add_corrections_section(doc, payload)
+    _add_tube_section(doc, payload)
     _add_rotational_section(doc, payload)
     _add_image_section(doc, payload)
     return doc
@@ -191,6 +192,21 @@ def _add_rotational_methodology(doc, payload: ExportPayload) -> None:
         paragraph = rotational_methodology_paragraph(handling)
         if paragraph:
             doc.add_paragraph(paragraph)
+
+
+def _add_tube_section(doc, payload: ExportPayload) -> None:
+    """Per-exam "Dose by tube" tables for exams with a tube breakdown."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, has_tube_content, tube_summary_table
+
+    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
+    if not blocks:
+        return
+    doc.add_heading(TUBE_SECTION_TITLE, level=2)
+    for exam in blocks:
+        if payload.is_multi_exam:
+            doc.add_heading(f"Exam {exam.exam_id}", level=3)
+        _table(doc, tube_summary_table(exam.tube_summary))
+    doc.add_paragraph(TUBE_NOTE)
 
 
 def _add_rotational_section(doc, payload: ExportPayload) -> None:

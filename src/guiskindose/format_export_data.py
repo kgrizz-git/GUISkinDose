@@ -25,6 +25,7 @@ from guiskindose.constants import (
     OUTPUT_KEY_KERMA_CORRECTED,
     OUTPUT_KEY_ROTATIONAL_ENVELOPE,
     OUTPUT_KEY_ROTATIONAL_HANDLING,
+    OUTPUT_KEY_TUBE_SUMMARY,
     PHANTOM_MODEL_HUMAN,
     PLOT_TRACE_ORDER_BEAM_WIREFRAME,
     PLOT_TRACE_ORDER_DETECTOR_WIREFRAME,
@@ -412,6 +413,8 @@ class PySkinDoseOutput:
     # rotational evaluation ran). Passed straight through to dict/JSON.
     rotational_handling: dict[str, Any] | None = None
     rotational_envelope: dict[str, Any] | None = None
+    # Per-tube kerma / applied CF / partial-map peak (tube ids only; additive).
+    tube_summary: list[dict[str, Any]] | None = None
     # Candidate-union hit masks (superset of ``hits`` for enveloped events).
     # Never used to index the correction arrays; see sparse_union_hit_indices().
     hits_union: list[list[bool]] | None = None
@@ -617,6 +620,7 @@ class PySkinDoseOutput:
             "dose_map": [(ind, dose) for ind, dose in enumerate(self.dose_map.tolist()) if dose > 0.0],
             "rotational_handling": self.rotational_handling,
             "rotational_envelope": self.rotational_envelope,
+            "tube_summary": self.tube_summary,
             "union_hit_indices": self.sparse_union_hit_indices(),
             "corrections": {
                 "correction_value_index": self.sparse_hit_indices(),
@@ -774,6 +778,7 @@ def format_analysis_result_for_export(
         k_tab_statuses=analysis_result.get(OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
         rotational_handling=analysis_result.get(OUTPUT_KEY_ROTATIONAL_HANDLING),
         rotational_envelope=analysis_result.get(OUTPUT_KEY_ROTATIONAL_ENVELOPE),
+        tube_summary=analysis_result.get(OUTPUT_KEY_TUBE_SUMMARY),
         hits_union=normalize_hit_masks(analysis_result.get(OUTPUT_KEY_HITS_UNION)),
     )
 

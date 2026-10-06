@@ -266,6 +266,7 @@ def _multi_exam_output(
         k_tab_statuses=raw_output.get(c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES),
         rotational_handling=raw_output.get(c.OUTPUT_KEY_ROTATIONAL_HANDLING),
         rotational_envelope=raw_output.get(c.OUTPUT_KEY_ROTATIONAL_ENVELOPE),
+        tube_summary=raw_output.get(c.OUTPUT_KEY_TUBE_SUMMARY),
         hits_union=normalize_hit_masks(raw_output.get(c.OUTPUT_KEY_HITS_UNION)),
     )
 

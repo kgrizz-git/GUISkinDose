@@ -38,6 +38,8 @@ class ExamView:
     # calculation ran without rotational evaluation, e.g. older outputs).
     rotational_handling: dict[str, Any] | None = None
     rotational_envelope: dict[str, Any] | None = None
+    # Per-tube kerma / CF / partial-map peak rows (tube ids only; None when absent).
+    tube_summary: list[dict[str, Any]] | None = None
 
     def peak_vertex(self) -> tuple[int | None, float]:
         """Return ``(vertex_index, dose)`` of the peak dose cell.
@@ -116,6 +118,7 @@ def view_from_dict(output: dict[str, Any]) -> ExamView:
         ],
         rotational_handling=output.get("rotational_handling"),
         rotational_envelope=output.get("rotational_envelope"),
+        tube_summary=output.get("tube_summary"),
     )
 
 
@@ -143,4 +146,5 @@ def view_from_output(obj: Any) -> ExamView:
         k_tab_statuses=[str(s) for s in (getattr(obj, "k_tab_statuses", None) or [])],
         rotational_handling=getattr(obj, "rotational_handling", None),
         rotational_envelope=getattr(obj, "rotational_envelope", None),
+        tube_summary=getattr(obj, "tube_summary", None),
     )

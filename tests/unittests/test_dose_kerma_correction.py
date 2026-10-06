@@ -160,7 +160,8 @@ def test_legacy_mode_round_trip_maps_to_ask_for_missing():
     explicit = KermaMeterCorrectionSettings({"ask_for_missing": False, "mode": "prompt", "prompt_at_calc": True})
     assert explicit.ask_for_missing is False
     payload = explicit.to_dict()
-    assert "mode" not in payload and "prompt_at_calc" not in payload
+    assert "mode" not in payload
+    assert "prompt_at_calc" not in payload
     assert KermaMeterCorrectionSettings(payload).ask_for_missing is False
 
 

@@ -21,6 +21,7 @@ from ..dose_severity import (
 )
 from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..state import state
+from ..summary_formatters import format_tube_summary
 from ..ui_copy import copy_text
 
 if TYPE_CHECKING:
@@ -132,6 +133,7 @@ class ResultsTabController:
             fluoro = total_fluoro_time_s(state.rdsr_df)
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
             self._refresh_rotational_badge()
+            self._refresh_tube_label()
         elif not state.is_multi_exam:
             # Invalidated (or never run): the readout must not keep showing a
             # stale banded value after the run it belonged to is gone. Back to
@@ -183,6 +185,28 @@ class ResultsTabController:
         text = self._rotational_badge_text()
         self.refs.rotational_badge.set_text(text)
         self.refs.rotational_badge.visible = bool(text)
+
+    def _refresh_tube_label(self) -> None:
+        """Show the per-tube dose breakdown for the single-exam run when it applies."""
+        if self.refs.tube_label is None:  # not built yet
+            return
+        output = state.output
+        summary = output.get("tube_summary") if isinstance(output, dict) else None
+        text = format_tube_summary([(None, summary)])
+        self.refs.tube_label.set_text(text)
+        self.refs.tube_label.visible = bool(text)
+
+    def _refresh_agg_tube_label(self, res: Any) -> None:
+        """Show per-exam per-tube dose breakdowns for a multi-exam run."""
+        if self.refs.agg_tube_label is None:  # not built yet
+            return
+        blocks = [
+            (f"Exam {i + 1}", getattr(getattr(exam, "output", None), "tube_summary", None))
+            for i, exam in enumerate(getattr(res, "exams", []) or [])
+        ]
+        text = format_tube_summary(blocks)
+        self.refs.agg_tube_label.set_text(text)
+        self.refs.agg_tube_label.visible = bool(text)
 
     def _refresh_agg_rotational_badge(self, res: Any) -> None:
         """Aggregate rotational badge across multi-exam outputs.
@@ -316,6 +340,7 @@ class ResultsTabController:
             self.refs.run_warnings_label.set_text("")
             self.refs.run_warnings_label.set_visibility(False)
         self._refresh_agg_rotational_badge(res)
+        self._refresh_agg_tube_label(res)
 
     def _set_multi_exam_totals(self) -> None:
         """Render DAP and fluoroscopy totals when those values are available."""
@@ -571,6 +596,7 @@ class ResultsViewRefs:
     dap_metric: ui.label = None  # type: ignore[assignment]
     fluoro_metric: ui.label = None  # type: ignore[assignment]
     rotational_badge: ui.label = None  # type: ignore[assignment]
+    tube_label: ui.label = None  # type: ignore[assignment]
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
@@ -578,6 +604,7 @@ class ResultsViewRefs:
     agg_events_metric: ui.label = None  # type: ignore[assignment]
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
     agg_rotational_badge: ui.label = None  # type: ignore[assignment]
+    agg_tube_label: ui.label = None  # type: ignore[assignment]
     run_warnings_label: ui.label = None  # type: ignore[assignment]
     agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
@@ -641,6 +668,8 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
         with ui.row().classes(_METRIC_ROW_CLASSES):
             ctrl.refs.rotational_badge = ui.label("").classes("text-sm text-grey-7")
             ctrl.refs.rotational_badge.visible = False
+        ctrl.refs.tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+        ctrl.refs.tube_label.visible = False
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
@@ -696,6 +725,8 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
             ctrl.refs.agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
             ctrl.refs.agg_rotational_badge = ui.label("").classes("text-sm text-grey-7")
             ctrl.refs.agg_rotational_badge.visible = False
+            ctrl.refs.agg_tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+            ctrl.refs.agg_tube_label.visible = False
 
         ctrl.refs.run_warnings_label = ui.label("").classes(
             "text-sm text-orange-400 whitespace-pre-wrap w-full"

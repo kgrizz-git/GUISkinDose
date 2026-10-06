@@ -325,3 +325,38 @@ def rotational_ledger_table(handling: dict[str, Any] | None) -> list[list[str]]:
             ]
         )
     return rows
+
+
+TUBE_SECTION_TITLE = "Dose by tube"
+TUBE_NOTE = (
+    "Each peak is the maximum of that tube's own partial dose map. Per-tube peaks "
+    "generally do not add up to the peak skin dose, which is the peak of the combined map."
+)
+_TUBE_NAMES = {"single": "Single plane", "A": "Plane A", "B": "Plane B", "unknown": "Unknown tube"}
+
+
+def has_tube_content(summary: list[dict[str, Any]] | None) -> bool:
+    """Whether a per-tube summary merits a report section.
+
+    A lone ``single`` tube repeats the headline numbers, so it is not shown.
+    """
+    if not summary:
+        return False
+    return len(summary) > 1 or any(row.get("tube") != "single" for row in summary)
+
+
+def tube_summary_table(summary: list[dict[str, Any]] | None) -> list[list[str]]:
+    """Header plus one row per tube present (no equipment labels)."""
+    rows = [["Tube", "Events", "Reported kerma (mGy)", "Corrected kerma (mGy)", "Applied CF", "Peak dose (mGy)"]]
+    for row in summary or []:
+        rows.append(
+            [
+                _TUBE_NAMES.get(str(row.get("tube")), str(row.get("tube"))),
+                str(row.get("events", "")),
+                f"{float(row.get('kerma_reported', 0.0)):.4g}",
+                f"{float(row.get('kerma_corrected', 0.0)):.4g}",
+                f"{float(row.get('applied_cf', 1.0)):.4g}",
+                f"{float(row.get('peak_dose', 0.0)):.4g}",
+            ]
+        )
+    return rows

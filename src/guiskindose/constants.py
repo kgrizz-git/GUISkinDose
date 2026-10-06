@@ -248,6 +248,13 @@ OUTPUT_KEY_CORRECTION_TABLE = "k_tab"
 OUTPUT_KEY_CORRECTION_TABLE_STATUSES = "k_tab_statuses"
 OUTPUT_KEY_CORRECTION_KERMA_METER = "k_meter"
 OUTPUT_KEY_DOSE_MAP = "dose_map"
+# Per-tube (single / A / B / unknown) accounting beside the combined dose map.
+# ``tube_identity`` is one tube per event; ``tube_dose_maps`` holds one partial map
+# per tube, allocated only when more than one tube is present; ``tube_summary``
+# lists per-tube kerma, applied CF and partial-map peak. No equipment labels.
+OUTPUT_KEY_TUBE_IDENTITY = "tube_identity"
+OUTPUT_KEY_TUBE_DOSE_MAPS = "tube_dose_maps"
+OUTPUT_KEY_TUBE_SUMMARY = "tube_summary"
 OUTPUT_KEY_HITS = "hits"
 # Cells touched by ANY evaluated candidate pose. Equals OUTPUT_KEY_HITS for
 # statically handled events; a superset for rotational coverage envelopes.

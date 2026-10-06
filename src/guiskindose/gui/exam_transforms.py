@@ -168,6 +168,20 @@ def exam_supports_table_origin(exam, meta: dict) -> bool:
     return any(c in cols for c in ("Tx", "Ty", "Tz"))
 
 
+def _drop_stale_unresolved_labels(state: AppState) -> None:
+    """Clear per-exam unresolved-equipment labels when exam positions shifted.
+
+    The labels are keyed by exam position ("Exam N"). If the previous exam list is
+    not a prefix of the new one (removal or reorder), a label could land on the
+    wrong exam, so all labels are cleared and the dialog asks again.
+    """
+    signature = tuple(id(exam) for exam in state.loaded_exams)
+    previous = state.kerma_meter_exam_signature
+    if signature[: len(previous)] != previous:
+        state.kerma_meter_unresolved_labels = {}
+    state.kerma_meter_exam_signature = signature
+
+
 def rebuild_rdsr_df(state: AppState) -> None:
     """Rebuild ``state.rdsr_df`` from all loaded exams' normalized data.
 
@@ -186,6 +200,7 @@ def rebuild_rdsr_df(state: AppState) -> None:
     state.rotational_prompt_suppressed = False
     state.kerma_meter_prompt_suppressed = False
     state.kerma_meter_calc_reprompted = False
+    _drop_stale_unresolved_labels(state)
 
     if not state.loaded_exams:
         state.rdsr_df = None

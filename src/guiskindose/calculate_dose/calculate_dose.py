@@ -10,6 +10,7 @@ from guiskindose import constants as c
 from guiskindose.calculate_dose.calculate_irradiation_event_result import (
     calculate_irradiation_event_result,
 )
+from guiskindose.calculate_dose.tube_dose import init_tube_outputs, summarize_tubes, tube_identities
 from guiskindose.corrections import calculate_k_bs, calculate_k_tab
 from guiskindose.geom_calc import (
     apply_below_floor_kvp_policy,
@@ -182,6 +183,8 @@ def calculate_dose(
         total_number_of_events=total_number_of_events, dose_map_size=len(patient.r)
     )
 
+    init_tube_outputs(output_template, tube_identities(normalized_data), len(patient.r))
+
     output = calculate_irradiation_event_result(
         normalized_data=normalized_data,
         event=0,
@@ -203,6 +206,7 @@ def calculate_dose(
     )
 
     output[c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES] = k_tab_statuses
+    output[c.OUTPUT_KEY_TUBE_SUMMARY] = summarize_tubes(output)
 
     # Return the post-policy frame separately so export packaging can match
     # dose-loop event lengths after below-floor ``skip`` without stuffing a

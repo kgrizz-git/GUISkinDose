@@ -254,3 +254,39 @@ async def _run_in_client(user: User) -> None:
     client = next(iter(Client.instances.values()))
     with client:
         await dlg.kerma_meter_dialog()
+
+
+# ── per-exam label drift ─────────────────────────────────────────────────────
+
+
+def test_unresolved_labels_survive_append_and_transform_rebuild() -> None:
+    from guiskindose.gui.exam_transforms import rebuild_rdsr_df
+
+    first = SimpleNamespace(normalized_data=_frame([None], ["Plane A"]))
+    state.loaded_exams = [first]
+    rebuild_rdsr_df(state)
+    state.kerma_meter_unresolved_labels = {"Exam 1": "Room-1"}
+    rebuild_rdsr_df(state)  # e.g. an offset/transform rebuild: same exams
+    assert state.kerma_meter_unresolved_labels == {"Exam 1": "Room-1"}
+    state.loaded_exams.append(SimpleNamespace(normalized_data=_frame([None], ["Plane A"])))
+    rebuild_rdsr_df(state)  # appended exam: positions unchanged
+    assert state.kerma_meter_unresolved_labels == {"Exam 1": "Room-1"}
+
+
+def test_unresolved_labels_cleared_on_removal_or_reorder() -> None:
+    from guiskindose.gui.exam_transforms import rebuild_rdsr_df
+
+    a = SimpleNamespace(normalized_data=_frame([None], ["Plane A"]))
+    b = SimpleNamespace(normalized_data=_frame([None], ["Plane B"]))
+    state.loaded_exams = [a, b]
+    rebuild_rdsr_df(state)
+    state.kerma_meter_unresolved_labels = {"Exam 2": "Room-2"}
+    state.loaded_exams.pop(0)  # b is now Exam 1: the old "Exam 2" label is stale
+    rebuild_rdsr_df(state)
+    assert state.kerma_meter_unresolved_labels == {}
+    state.loaded_exams = [a, b]
+    rebuild_rdsr_df(state)
+    state.kerma_meter_unresolved_labels = {"Exam 1": "Room-1"}
+    state.loaded_exams = [b, a]  # reorder
+    rebuild_rdsr_df(state)
+    assert state.kerma_meter_unresolved_labels == {}

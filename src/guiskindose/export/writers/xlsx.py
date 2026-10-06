@@ -211,6 +211,27 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
     _autofit(ws)
 
 
+def _tube_sheet(wb: Workbook, payload: ExportPayload) -> bool:
+    """Populate the "Dose by tube" sheet; return False when no exam has a breakdown."""
+    from guiskindose.export.sections import TUBE_NOTE, has_tube_content, tube_summary_table
+
+    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
+    if not blocks:
+        return False
+    ws = _new_sheet(wb, "Dose by tube")
+    ws.sheet_view.showGridLines = True
+    r = 1
+    for exam in blocks:
+        if payload.is_multi_exam:
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
+            r += 1
+        r = _write_rows(ws, tube_summary_table(exam.tube_summary), start_row=r, header=True)
+        r += 1
+    ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(TUBE_NOTE)).alignment = _WRAP
+    _autofit(ws)
+    return True
+
+
 def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
     """Populate the Rotational handling sheet; return False when nothing to show."""
     from guiskindose.export.sections import (
@@ -294,6 +315,7 @@ def build_workbook(payload: ExportPayload) -> Workbook:
     _results_sheet(wb, payload)
     _settings_sheet(wb, payload)
     _corrections_sheet(wb, payload)
+    _tube_sheet(wb, payload)
     _rotational_sheet(wb, payload)
     _warnings_sheet(wb, payload)
     _images_sheet(wb, payload)
