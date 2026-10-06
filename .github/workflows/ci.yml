@@ -354,8 +354,8 @@ jobs:
       # silently skip, hiding the new assertions from diff coverage.
       run: uv build
     - name: Generate combined coverage (non-GUI + GUI)
-      # pytest-cov keeps xdist workers measured; non-GUI runs parallel (-n auto),
-      # GUI stays serial (asyncio/nicegui). --cov spans src+scripts+tests so
+      # pytest-cov keeps xdist workers measured; both the non-GUI and GUI runs are
+      # parallel (-n auto). --cov spans src+scripts+tests so
       # diff-cover sees changed lines in all three.
       run: |
         uv run --no-sync coverage erase

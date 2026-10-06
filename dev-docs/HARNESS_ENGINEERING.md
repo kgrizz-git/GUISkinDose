@@ -284,7 +284,7 @@ Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the
 
 #### Writing NiceGUI `User` tests — gotchas (learned the hard way)
 
-These pass locally but fail on CI if you get them wrong; `basedpyright` and the pre-push hook **cannot** catch them (they're runtime/environment behavior, not types), so a GUI test must be validated with an actual `pytest tests/gui/` run — and ideally a CI run, since CI runners are slower than local.
+These pass locally but fail on CI if you get them wrong; `basedpyright` and the pre-push hook **cannot** catch them (they're runtime/environment behavior, not types), so a GUI test must be validated with an actual `pytest tests/gui/ -n auto` run — and ideally a CI run, since CI runners are slower than local.
 
 - **Trigger handlers via `.click()` / `.trigger()`, not `element.set_value(...)`.** A direct `set_value` fires `on_value_change` *outside* the NiceGUI client context, where `nicegui.run.io_bound` short-circuits to `None` (`core.app.is_stopping` / pool down). A handler that does `ok, msg = await run.io_bound(...)` then raises `TypeError: cannot unpack non-iterable NoneType`. `UserInteraction.click()` runs the handler inside `with user.client:`, so the I/O-bound work actually executes.
 - **Wait before interacting with elements that render lazily.** Clicking a `ui.select` option immediately after opening the dropdown races the menu render and silently no-ops on slower runners. `await user.should_see("<option label>")` first, then click it.
@@ -503,7 +503,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `privacy-gates` job + pre-push; blocking project privacy SAST |
 | phi-scan / Presidio | Scheduled secondary workflows (`phi-scan.yml` Thu; `presidio.yml` Mon) + manual dispatch. Presidio PR path triggers were removed in the Jul 2026 privacy-streamline change — it no longer runs on every PR. Both are value-suppressed with no report upload. |
 | CodeQL (GitHub code scanning) | `CodeQL analysis (Python)` job in `ci.yml` on PRs and `main`, after `privacy-gates`. GitHub Default Setup is disabled to avoid a parallel ungated run. |
-| GUI smoke tests (`pytest tests/gui/`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
+| GUI smoke tests (`pytest tests/gui/ -n auto`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | Pull requests: `gitleaks` job in `ci.yml` after `privacy-gates`; `main` pushes: separate `.github/workflows/gitleaks.yml` workflow |
 | `bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
