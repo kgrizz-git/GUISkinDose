@@ -10,6 +10,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **SonarCloud scan waits on the Quality Gate** (2026-10-05) — `sonar-scan` now passes
+  `sonar.qualitygate.wait=true`, so a red gate on `main` fails the job and files a CI
+  tracking issue. Before this, PR #134's S2083 false positive turned the gate red while
+  the job stayed green and no issue was filed. `test_ci_scanner_security_policy.py`
+  now pins the flag.
+
 - **Complexity gate foundation** (2026-10-03) — added a Ruff C901 checker with
   AST-qualified function names, a reviewed baseline of 20 grandfathered caps,
   and focused tests. Follow-up added commands for cap reductions and reviewed
@@ -42,6 +48,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Security
 
+- **multidict 6.7.1 → 6.9.1** (2026-10-05) — lock bump for GHSA-54p9-h82j-f925
+  (reference leak in `CIMultiDict`/`MultiDict` items-view set operations), which
+  blocked the `pip-audit` pre-push hook.
 - **Thirteenth PyJWT alert on the Semgrep lock dismissed** (2026-10-01) —
   Dependabot alert 32 (GHSA-gvp8-978c-rx2q) is the same family as alerts 20–31:
   PyJWT 2.13.0 in `tools/semgrep/uv.lock`, the isolated scanner, never a runtime

@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-01).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-05).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -100,7 +100,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | mdurl | 0.1.2 | MIT | Homepage, https://github.com/executablebooks/mdurl |
 | mistune | 3.3.3 | BSD-3-Clause | Documentation, https://mistune.lepture.com/ |
 | msgpack | 1.2.1 | Apache-2.0 | Homepage, https://msgpack.org/ |
-| multidict | 6.7.1 | Apache-2.0 | https://github.com/aio-libs/multidict |
+| multidict | 6.9.1 | Apache-2.0 | https://github.com/aio-libs/multidict |
 | narwhals | 2.22.1 | MIT | Homepage, https://github.com/narwhals-dev/narwhals |
 | nbclient | 0.11.0 | BSD-3-Clause | Documentation, https://nbclient.readthedocs.io |
 | nbconvert | 7.17.1 | BSD-3-Clause | Homepage, https://jupyter.org |
