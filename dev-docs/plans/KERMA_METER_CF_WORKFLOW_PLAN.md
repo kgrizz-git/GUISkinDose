@@ -51,11 +51,12 @@ and reported separately whenever a biplane study is present.
    model, and log a deprecation warning.
 2. **Detect on load.** When inputs finish loading or change, call `unique_equipment_tube_keys()`. That
    covers single-file and multi-exam loads, and the hook is the point after `gui/helpers.rebuild_rdsr_df()`.
-   Then compare the detected pairs with the selected file. Detection uses the `explicit_label` keys when
+   Then compare the detected pairs with the merged table of session entries and file rows. Detection uses the `explicit_label` keys when
    a label is set, and the existing collapse confirmation still applies.
-3. **Prompt on miss.** Open the dialog when a detected pair is missing from the file, or when no file is
-   selected. The dialog lists every detected pair and groups the rows by exam. Rows from the file are
-   pre-filled and labelled "from file". Missing rows are pre-filled with `default_factor` and flagged.
+3. **Prompt on miss.** Open the dialog when a detected pair is missing from the merged table. The dialog
+   lists every detected pair and groups the rows by exam. Each row is pre-filled in precedence order:
+   an earlier manual entry, then the file value, then `default_factor`. Each row is labelled with its
+   source ("entered", "from file", or "default"). Default rows are flagged for review.
    A Settings toggle, "Ask for missing correction factors", controls this dialog and defaults to on.
    "Don't ask again this session" follows the existing suppression pattern of the rotational and
    below-floor prompts.
@@ -65,11 +66,15 @@ and reported separately whenever a biplane study is present.
 5. **Unresolved equipment.** For events with no equipment identity, the dialog asks the user to choose
    a label for each exam. The label can be a detected unit, a file entry, or new text. The chosen label
    is stored as a per-exam identity override. Then the engine looks up the table for those events
-   instead of skipping them.
+   instead of skipping them. The override lives in GUI session state beside the other per-exam
+   overrides. It round-trips through `run_state` and settings export with the same privacy handling as
+   `explicit_label`, so labels never reach logs or per-event exports.
 6. **Tube identification.** Show tube `unknown` as a visible state in the dialog and in Results. The
    engine bookkeeping already exists. Fix the Radimetrics adapter so a biplane export maps its per-plane
-   A/B dose columns to separate events or rows, instead of reading only the total. A biplane Radimetrics
-   export with no plane column must give `unknown`, not `Single Plane`.
+   A/B dose columns to separate events, instead of reading only the total. The split replaces the
+   total row and is never added to it, so A + B must equal the original total. A biplane Radimetrics
+   export with no plane column must give `unknown`, not `Single Plane`. Any gap that the Phase 0 audit
+   finds in another adapter must be fixed, or that adapter must be documented as not supporting biplane.
 7. **Per-tube dose.** Accumulate one partial dose map for each tube (`single`, `A`, `B`, `unknown`) in
    addition to the combined map. Report, for each tube: reported kerma, corrected kerma, applied CF, and
    the peak of that tube's partial map. A tube that misses the phantom reports zero. The combined map is
@@ -90,25 +95,27 @@ and reported separately whenever a biplane study is present.
 
 | Phase | Deliverable | Acceptance |
 |---|---|---|
-| 0 | Audit tube identity per adapter, then fix the Radimetrics per-plane split and its missing-plane default. | An audit table exists. Passing tests show a synthetic biplane Radimetrics export yields A and B events, and that bundled fixtures are unchanged. |
+| 0 | Audit tube identity per adapter. Fix the Radimetrics per-plane split, its missing-plane default, and every other gap found, or document the adapter as single-plane only. | An audit table exists. Passing tests show that a synthetic biplane Radimetrics export yields A and B events whose kerma sums to the original total, that each fixed adapter emits A and B, and that bundled fixtures are unchanged. |
 | 1 | Settings: remove the exclusive mode and add the legacy `mode` / CLI shim. | Unit tests cover manual > file > default, the legacy round-trip, and the default factor. |
-| 2 | Engine: a `missing_keys(detected, table)` helper and per-exam identity overrides for unresolved equipment. | Unit tests cover a file hit, a file miss, no file, an `unknown` tube, and an overridden unresolved unit that reaches the table. |
-| 3 | GUI: load-time detection, the dialog with file pre-fill, the Settings toggle, session suppression, and the Calculate guard. | GUI tests in `tests/gui/` show that a miss opens the dialog, a full hit skips it, the toggle off skips it, and Cancel keeps file and earlier values. |
-| 4 | Per-tube partial maps and totals in Results and in the HTML/XLSX/DOCX/PDF exports. | On a synthetic biplane fixture, A and B maps sum cell by cell to the combined map. Headline PSD equals the combined-map peak. A tube that misses reports zero. Single-plane goldens are unchanged. |
-| 5 | CLI warning and the documentation checklist below. | Every checklist item is done. `check_help_registry.py`, `check_ui_copy.py`, `sync_gui_help.py`, `sync_ui_copy.py`, the doc-freshness check, and `test_psd_algorithm_doc.py` pass. |
+| 2 | Engine: a `missing_keys(detected, table)` helper and per-exam identity overrides for unresolved equipment, including their session state and `run_state` round-trip. | Unit tests cover a file hit, a file miss, no file, an `unknown` tube, an overridden unresolved unit that reaches the table, and the override round-trip. |
+| 3 | GUI: load-time detection, the dialog with manual > file > default pre-fill, the Settings toggle, session suppression, and the Calculate guard. | GUI tests in `tests/gui/` show that a miss opens the dialog, a full hit skips it, the toggle off skips it, earlier manual values are pre-filled rather than reset, and Cancel keeps file and earlier values. |
+| 4 | Per-tube partial maps and totals in Results and in the HTML/XLSX/DOCX/PDF exports. | On a synthetic biplane fixture, the partial maps of all present tubes sum cell by cell to the combined map. Per-tube reported and corrected kerma sum to the combined totals. Headline PSD equals the combined-map peak. A tube that misses reports zero. Single-plane goldens are unchanged. |
+| 5 | CLI warning and the documentation checklist below. | Every checklist item is done. `check_help_registry.py`, `check_ui_copy.py`, `sync_gui_help.py`, `sync_ui_copy.py`, `check_feature_doc_matrix.py`, `check_doc_freshness.py`, and `test_psd_algorithm_doc.py` pass. `check_docstring_inventory.py` shows no new gaps. It checks only that docstrings exist, so review NumPy style by hand. |
 
 Every phase also updates the tests, docs, and docstrings for the code it touches, in the same PR. Do not
 defer them to Phase 5. New or changed public functions, classes, and settings fields get NumPy-style
 docstrings. Examples are `missing_keys()`, the per-exam identity override, the per-tube map fields, and
-the reworked `KermaMeterCorrectionSettings`. Each phase's tests land with that phase.
+the reworked `KermaMeterCorrectionSettings`. Each phase's tests land with that phase. Phase 1 also
+updates the argparse help text for `--kerma-meter-correction-mode` to say it is deprecated.
 
 ### Documentation checklist
 
 - [ ] `dev-docs/PSD_CALCULATION_ALGORITHM.md` describes the per-tube partial maps, and the CF step says
   where the table comes from (Phase 4). A test checks this document against the code.
 - [ ] `docs/source/gui_help/` covers the load-time dialog, the toggle, Cancel semantics, unresolved
-  equipment, and the per-tube Results. Run `scripts/sync_gui_help.py` afterwards (Phases 3–4).
-- [ ] `dev-docs/ui_copy.json` holds the new dialog, toggle, and warning text. Run `scripts/sync_ui_copy.py`
+  equipment, and the per-tube Results. Edit only the `docs/source/` copy, never the mirror under `src/guiskindose/gui/help/`. Run
+  `scripts/sync_gui_help.py` afterwards (Phases 3–4).
+- [ ] `dev-docs/ui_copy.json` holds the new dialog, toggle, and warning text. Edit only this canonical copy. Run `scripts/sync_ui_copy.py`
   afterwards (Phase 3).
 - [ ] `src/guiskindose/settings_example.json` and the settings docstrings show the new settings model and
   the legacy `mode` shim (Phase 1).
@@ -116,6 +123,8 @@ the reworked `KermaMeterCorrectionSettings`. Each phase's tests land with that p
   `unknown` default (Phase 0).
 - [ ] `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/glossary.json`,
   `dev-docs/help_registry.json`, and `dev-docs/feature_doc_matrix.json` list the new settings and outputs.
+- [ ] `AGENTS.md` reflects the new input and GUI behaviour where it describes kerma-meter CFs,
+  Radimetrics, or per-tube outputs.
 - [ ] `CHANGELOG.md` notes the per-tube outputs, the settings change, the `mode` deprecation, and the
   Radimetrics behaviour change.
 - [ ] On completion, archive this plan under `plans/archive/`, update `dev-docs/index.md`, and remove the
