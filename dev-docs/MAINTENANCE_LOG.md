@@ -392,6 +392,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Fixed
 
+- **Order-dependent GUI auto-open tests** (2026-10-05) — three
+  `test_browser_auto_open_*` tests failed under `pytest -n auto`, and when run alone, because
+  conftest no-ops `_open_browser_when_ready` and they called that patched name. They now call
+  the real function captured at import time, as the file already does for
+  `_loopback_port_is_free`. CI runs `tests/gui/` serially, which hid the failure.
+
 - **SonarCloud security/reliability findings and SonarQube 26.9 test rules** (2026-09-26) —
   cleared the SonarCloud E security and C reliability drivers. `scripts/sync_ui_copy.py`
   drops its unused `--repo-root` option (the root is always the checkout) and mirrors with
