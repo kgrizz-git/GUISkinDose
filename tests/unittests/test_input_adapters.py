@@ -174,9 +174,7 @@ class TestNormalizedAdapter:
 
         loaded = load(FIXTURES / filename)
         result = adapter.adapt(loaded, original_filename=filename)
-        assert isinstance(result, InputAdapterResult), (
-            f"Expected single InputAdapterResult for {filename!r}, got list"
-        )
+        assert isinstance(result, InputAdapterResult), f"Expected single InputAdapterResult for {filename!r}, got list"
         return result
 
     def test_csv_round_trip(self):
@@ -476,11 +474,7 @@ class TestSchemaAutoDetect:
         # Header = every radimetrics known name (full recall) + a single stray
         # generic_rdsr column + many unrelated filler columns (drives precision down).
         stray_generic = min(GENERIC_RDSR_COLUMN_NAMES)
-        header = (
-            sorted(RADIMETRICS_COLUMN_NAMES)
-            + [stray_generic]
-            + [f"Unrelated Column {i}" for i in range(70)]
-        )
+        header = sorted(RADIMETRICS_COLUMN_NAMES) + [stray_generic] + [f"Unrelated Column {i}" for i in range(70)]
         data_row = ["x"] * len(header)
         raw_df = pd.DataFrame([header, data_row])
 
@@ -614,15 +608,17 @@ class TestRadimetricsLegacyFormat:
         )
         assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "radimetrics"
-        assert len(result.normalized_data) == 3
+        # Per-plane A/B kerma columns split each of the 3 total rows into A and B events.
+        assert len(result.normalized_data) == 6
         # header is the 2nd row (row 0 is a numeric index row)
         assert result.provenance.header_row_index == 1
         expected = {"model", "DSD", "DSI", "kVp", "K_IRP", "Ap1", "Ap2"}
         assert expected.issubset(set(result.normalized_data.columns))
 
-    def test_total_reference_dose_mapped_not_per_plane(self):
+    def test_total_reference_dose_mapped_and_split_per_plane(self):
         """The bare total column maps to DoseRP_Gy; the per-plane (A)/(B) columns
-        do not. K_IRP follows the total (30/20/50), not (A) 18/12/30."""
+        do not map but split each total row (30/20/50) into A (18/12/30) and B
+        (12/8/20) events whose kerma sums back to the total."""
         from guiskindose.input_adapters.models import InputAdapterResult
         from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -635,7 +631,11 @@ class TestRadimetricsLegacyFormat:
         col_map = result.provenance.column_map
         dose_sources = [src for src, tgt in col_map.items() if tgt == "DoseRP_Gy"]
         assert dose_sources == ["Reference_Point_Dose"]
-        assert result.normalized_data["K_IRP"].tolist() == [30.0, 20.0, 50.0]
+        norm = result.normalized_data
+        assert norm["acquisition_plane"].tolist() == ["Plane A", "Plane B"] * 3
+        k = norm["K_IRP"].to_numpy()
+        assert k.reshape(3, 2).sum(axis=1) == pytest.approx([30.0, 20.0, 50.0])
+        assert k == pytest.approx([18.0, 12.0, 12.0, 8.0, 30.0, 20.0])
 
 
 class TestDoseTrackAdapter:

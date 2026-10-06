@@ -18,6 +18,30 @@ Tabular exports (`.csv`, `.tsv`, `.xlsx`) are additionally supported via `input_
 > documented in
 > [INPUT_SCHEMA_DETECTION.md → Unit handling](INPUT_SCHEMA_DETECTION.md#unit-handling).
 
+## 1a. Tube identity (plane A / B) in tabular adapters
+
+Every adapter must keep the X-ray tube of each event distinguishable, because kerma-meter correction factors are
+keyed by `(equipment, tube)`. Tube identity is resolved from `acquisition_plane_canonical` (a DICOM CID 10003 code)
+first, then from the `acquisition_plane` meaning text (`Single Plane` / `Plane A` / `Plane B`), and is otherwise
+`unknown`. See the per-adapter audit in
+[plans/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md#phase-0-audit-tube-identity-per-adapter).
+
+**Radimetrics biplane split.** A Radimetrics biplane export lists one row per event with the whole-event
+`Reference Point Dose (Total)` plus per-plane `Reference Point Dose (A)` / `(B)` columns (the older export spells them
+`Reference_Point_Dose_(A)_mGy` / `(B)`). The adapter (`input_adapters/radimetrics.py::split_biplane_events`) treats the
+file as biplane only when both per-plane columns exist and at least one row has non-zero kerma on both planes. Each such
+row is then *replaced* by a `Plane A` event and a `Plane B` event (a plane with zero kerma emits no event). Kerma is
+rescaled to the exported total, so A + B equals the original total and the total is never added on top. Per-plane
+`DAP (A)` / `(B)` columns are used when present; otherwise the total DAP is shared in proportion to kerma. Fluoro time
+stays on the first emitted event of a row so procedure totals are not double counted. Rows whose per-plane kerma is
+missing or differs from the total by more than 1 % stay as a single total row whose plane is `unknown` (the total
+covers both tubes). Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
+both planes of a row.
+
+**Missing plane column.** When a Radimetrics file has no plane column and no per-plane evidence, every event still
+defaults to `Single Plane` (unchanged behaviour). When the file has per-plane evidence but no plane column, the split
+assigns `Plane A` / `Plane B` itself and unsplittable rows get `unknown`, never `Single Plane`.
+
 ## 2. Normalization Settings
 
 Different X-ray manufacturers define their reference coordinates differently. `rdsr_normalizer.py` uses `normalization_settings.json` to map these to GUISkinDose's standardized coordinate system. It matches the RDSR's `Manufacturer` and `ManufacturerModelName` to apply:

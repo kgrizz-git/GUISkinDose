@@ -12,11 +12,20 @@ warning but are not blocked.
 
 from __future__ import annotations
 
+import re
+
+import numpy as np
 import pandas as pd
 
 from guiskindose.input_adapters.base import (
+    _UNIT_SPECS,
+    DAP_INTERNAL_COL,
+    FLUORO_TIME_COL,
     AdapterContext,
+    _read_unit_factor,
+    attach_procedure_dose_totals,
     coerce_numeric_columns,
+    convert_dap_series_to_gym2,
     convert_field_with_header_units,
     run_normalizer_pipeline,
 )
@@ -174,8 +183,153 @@ _UNIT_FIELDS: list[tuple[str, str]] = [
     ("TableHeightPosition_mm", "distance"),
 ]
 
+# Per-plane columns of a biplane export (header text after separator folding), e.g.
+# "Reference Point Dose (A) mGy" / "Reference_Point_Dose_(B)_mGy" / "DAP (A) Gy-cm2".
+_PER_PLANE_DOSE_RE = re.compile(r"^reference point dose ([ab])(?: |$)")
+_PER_PLANE_DAP_RE = re.compile(r"^dap ([ab])(?: |$)")
+# A + B kerma must reproduce the exported total to within this relative tolerance
+# (export rounding); rows that disagree are not split.
+_SPLIT_RTOL = 0.01
+_PLANE_MEANING = {"A": "Plane A", "B": "Plane B"}
+
 _KNOWN_MODELS = {"AXIOM-Artis", "Artis", "Artis Q", "Artis Zee"}
 _GE_VARIANTS = {"ge medical systems", "ge healthcare", "general electric", "ge", "gems"}
+
+
+def _per_plane_columns(columns: list[str], pattern: re.Pattern[str]) -> dict[str, str]:
+    """Map plane letter (``"A"``/``"B"``) to the raw header that matches *pattern*.
+
+    Parameters
+    ----------
+    columns : list[str]
+        Column names of the renamed Radimetrics DataFrame.
+    pattern : re.Pattern[str]
+        Regex applied to each header after lowercasing and folding every run of
+        non-alphanumeric characters to one space.
+
+    Returns
+    -------
+    dict[str, str]
+        ``{"A": header, "B": header}`` for the planes found (first match wins).
+    """
+    found: dict[str, str] = {}
+    for col in columns:
+        match = pattern.match(re.sub(r"[^a-z0-9]+", " ", str(col).lower()).strip())
+        if match:
+            found.setdefault(match.group(1).upper(), col)
+    return found
+
+
+def _per_plane_kerma_gy(data_df: pd.DataFrame, dose_cols: dict[str, str]) -> dict[str, pd.Series]:
+    """Return per-plane reference-point kerma in Gy, unit read from each header."""
+    out: dict[str, pd.Series] = {}
+    for plane, col in dose_cols.items():
+        factor, _confident, _unit = _read_unit_factor(col, _UNIT_SPECS["dose"])
+        out[plane] = pd.to_numeric(data_df[col], errors="coerce") * factor
+    return out
+
+
+def _splittable_mask(total: pd.Series, a: pd.Series, b: pd.Series) -> pd.Series:
+    """True where A and B kerma are valid and sum to the total within tolerance."""
+    valid = a.notna() & b.notna() & (a >= 0) & (b >= 0) & ((a + b) > 0)
+    consistent = pd.Series(np.isclose(a + b, total, rtol=_SPLIT_RTOL, atol=1e-12), index=total.index)
+    return valid & consistent & total.notna()
+
+
+def _plane_events(
+    data_df: pd.DataFrame,
+    plane: str,
+    kerma: dict[str, pd.Series],
+    total: pd.Series,
+    mask: pd.Series,
+    dap_per_plane: dict[str, pd.Series],
+) -> pd.DataFrame:
+    """Build the events of one plane from the splittable rows of *data_df*.
+
+    Kerma is rescaled so the A and B parts add up exactly to the exported total.
+    DAP comes from the per-plane DAP column when present, otherwise the total DAP
+    is shared in proportion to kerma. Fluoro time stays on the first emitted
+    plane of a row so procedure totals are not double counted.
+    """
+    scale = total / (kerma["A"] + kerma["B"])
+    share = (kerma[plane] * scale) / total
+    emitted = mask & (kerma[plane] > 0)
+    part = data_df[emitted].copy()
+    part["DoseRP_Gy"] = (kerma[plane] * scale)[emitted]
+    part["AcquisitionPlane"] = _PLANE_MEANING[plane]
+    if plane in dap_per_plane:
+        part[DAP_INTERNAL_COL] = dap_per_plane[plane][emitted]
+    elif DAP_INTERNAL_COL in data_df.columns:
+        part[DAP_INTERNAL_COL] = (data_df[DAP_INTERNAL_COL] * share)[emitted]
+    if plane == "B" and FLUORO_TIME_COL in part.columns:
+        also_a = (mask & (kerma["A"] > 0))[emitted]
+        part.loc[also_a, FLUORO_TIME_COL] = np.nan
+    return part
+
+
+def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd.DataFrame, bool]:
+    """Split Radimetrics total-kerma rows into separate tube A and tube B events.
+
+    A biplane export lists one row per irradiation event with the reference-point
+    dose of the whole event (``Reference Point Dose (Total)``) plus per-plane
+    columns (``Reference Point Dose (A)`` / ``(B)``). Reading only the total hides
+    which tube produced the dose. When both per-plane columns exist and at least
+    one row has non-zero kerma on both planes, each splittable row is *replaced*
+    by up to two events (``Plane A``, ``Plane B``). Kerma is rescaled to the
+    exported total, so A + B equals the original total and nothing is added on top
+    of it. Rows whose per-plane kerma is missing or disagrees with the total
+    beyond ``_SPLIT_RTOL`` stay as one total row with an unknown plane, because
+    the total covers both tubes.
+
+    Per-plane DAP columns (``DAP (A)`` / ``(B)``) are used when present; otherwise
+    each event receives the total DAP in proportion to its kerma.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        Renamed frame after unit conversion and ``attach_procedure_dose_totals``.
+    ctx : AdapterContext
+        Receives a warning describing the split (counts only).
+
+    Returns
+    -------
+    tuple[pd.DataFrame, bool]
+        The (possibly expanded) frame and whether biplane evidence was found. When
+        ``False`` the frame is returned unchanged and callers keep the legacy
+        single-plane default.
+    """
+    dose_cols = _per_plane_columns(list(data_df.columns), _PER_PLANE_DOSE_RE)
+    if set(dose_cols) != {"A", "B"} or "DoseRP_Gy" not in data_df.columns:
+        return data_df, False
+    kerma = _per_plane_kerma_gy(data_df, dose_cols)
+    if not bool(((kerma["A"] > 0) & (kerma["B"] > 0)).any()):
+        return data_df, False
+
+    total = pd.to_numeric(data_df["DoseRP_Gy"], errors="coerce")
+    mask = _splittable_mask(total, kerma["A"], kerma["B"])
+    dap_cols = _per_plane_columns(list(data_df.columns), _PER_PLANE_DAP_RE)
+    dap_per_plane = (
+        {p: convert_dap_series_to_gym2(data_df[c], c, ctx) for p, c in dap_cols.items()}
+        if set(dap_cols) == {"A", "B"}
+        else {}
+    )
+    order = pd.Series(np.arange(len(data_df)) * 2, index=data_df.index)
+    rest = data_df[~mask].copy()
+    rest["AcquisitionPlane"] = None
+    frames = [rest.assign(_sort_key=order[rest.index])]
+    for offset, plane in enumerate(("A", "B")):
+        part = _plane_events(data_df, plane, kerma, total, mask, dap_per_plane)
+        frames.append(part.assign(_sort_key=order[part.index] + offset))
+    out = pd.concat(frames).sort_values("_sort_key", kind="stable")
+    out = out.drop(columns="_sort_key").reset_index(drop=True)
+    n_unsplit = int((~mask).sum())
+    ctx.warnings.append(
+        f"Radimetrics biplane export: split {int(mask.sum())} event(s) into plane A/B events using the "
+        f"per-plane reference-point dose columns; {n_unsplit} event(s) kept as one total row with an unknown "
+        "plane. Positioner angles, kVp and table positions come from the single (RF) columns and are shared "
+        "by both planes."
+    )
+    return out, True
 
 
 def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
@@ -206,8 +360,18 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
                 "do not also enable the GUI swap unless validating a site-specific export."
             )
 
-    # Radimetrics exports may omit these; rdsr_normalizer accepts the defaults.
-    for col, default in [("IrradiationEventType", "Fluoroscopy"), ("AcquisitionPlane", "Single Plane")]:
+    # Biplane exports: replace each total-kerma row by per-plane A/B events. DAP /
+    # fluoro time are derived first so the split can apportion them per event.
+    attach_procedure_dose_totals(data_df, ctx)
+    data_df, is_biplane = split_biplane_events(data_df, ctx)
+
+    # Radimetrics exports may omit these; rdsr_normalizer accepts the defaults. A
+    # missing plane column is only defaulted to "Single Plane" when there is no
+    # biplane evidence; otherwise the split has already assigned plane identity.
+    defaults = [("IrradiationEventType", "Fluoroscopy")]
+    if not is_biplane:
+        defaults.append(("AcquisitionPlane", "Single Plane"))
+    for col, default in defaults:
         if col not in data_df.columns:
             data_df[col] = default
             ctx.warnings.append(f"Column {col!r} not found in Radimetrics export; defaulted to {default!r}.")

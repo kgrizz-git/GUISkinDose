@@ -73,6 +73,13 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Radimetrics biplane exports are split into tube A and tube B events** (2026-10-06) — when a Radimetrics
+  file carries per-plane `Reference Point Dose (A)` / `(B)` columns, each total-kerma row is replaced by a
+  `Plane A` and a `Plane B` event whose kerma sums to the original total (previously only the total was read
+  and every event looked like one tube). A biplane export without a plane column now resolves to an unknown
+  tube instead of `Single Plane`. Single-plane Radimetrics exports are unchanged. Details:
+  [dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md).
+
 - **Rotational events now report candidate-level progress** (2026-10-02) —
   Phase 3 of the envelope performance plan: a long rotational event advances
   the progress bar as its candidate poses complete (fractional per-candidate

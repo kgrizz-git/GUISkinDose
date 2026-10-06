@@ -1,6 +1,6 @@
 # Kerma-Meter CF Workflow Plan (file + prompt-on-miss, per-tube dose)
 
-Status: Active execution plan — not started
+Status: Active execution plan — Phase 0 implemented, pending review
 Created: 2026-10-06
 Owner: maintainer
 Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md)
@@ -36,9 +36,9 @@ and reported separately whenever a biplane study is present.
   `None` for those events and never consults the table. Any factor typed for them is silently ignored.
 - The dose loop accumulates one combined map. The per-event CF column is exported. Nothing reports dose
   by tube.
-- Radimetrics input reads the total reference-point dose and ignores its per-plane A/B columns
-  (`input_adapters/radimetrics.py:81-90`). A Radimetrics export without a plane column defaults every
-  event to `"Single Plane"` (`radimetrics.py:210-213`). DoseTrack raises an error for unmapped numeric
+- Before Phase 0, Radimetrics input read the total reference-point dose and ignored its per-plane A/B
+  columns, and a Radimetrics export without a plane column defaulted every event to `"Single Plane"`.
+  Phase 0 fixed both (see the audit below). DoseTrack raises an error for unmapped numeric
   plane codes unless the user supplies a mapping. That safeguard stays.
 - The CLI flags are `--kerma-meter-correction`, `--kerma-meter-correction-file`,
   `--kerma-meter-correction-mode`, and `--kerma-meter-explicit-label`.
@@ -91,6 +91,37 @@ and reported separately whenever a biplane study is present.
 - Persisting manual entries back into the user's calibration file. Offer "Save as calibration file"
   as an explicit export only.
 
+## Phase 0 audit: tube identity per adapter
+
+Tube identity is `acquisition_plane_canonical` (CID 10003 code, `single`/`A`/`B`/`unknown`) first, then
+`normalize_tube(acquisition_plane)` on the meaning text. Audited 2026-10-06; tests in
+`tests/unittests/test_radimetrics_biplane.py` and `tests/unittests/test_input_adapters.py`.
+
+| Adapter | Biplane emission | Gap found | Resolution |
+|---|---|---|---|
+| DICOM RDSR (`rdsr_parser` + `rdsr_normalizer`) | Yes. CodeValue + `DCM` scheme gives a code-backed canonical `A`/`B`/`single`. Meaning text is kept. | None. A CodeValue without a `DCM` scheme gives `unknown` canonical, then meaning fallback. | No change. |
+| DoseTrack | Yes, via CID 10003 integer codes (113620 / 113621 / 113622) in `Plane Code`, canonical resolution `inferred`. | None. Non-CID codes raise unless the user maps them (`dosetrack_plane_code_map`). A missing `Plane Code` column is a required-column error. | No change. The raise-unless-mapped safeguard stays. Tests added for A/B emission. |
+| Radimetrics | Before: no. Only the whole-event total was read, so one event stood for both tubes. | (1) Per-plane `Reference Point Dose (A)`/`(B)` (and older `Reference_Point_Dose_(A/B)_mGy`) ignored. (2) A missing plane column silently became `Single Plane`. | Fixed. Rows are split into A and B events that replace the total (kerma conserved). With per-plane evidence, a missing plane column or an unsplittable row gives `unknown`. Without per-plane evidence the `Single Plane` default is kept so single-plane exports and bundled fixtures are unchanged. |
+| `generic_rdsr_like` | Yes, by meaning text only (`Plane A`/`Plane B`/`Single Plane`). No code column, so canonical is `unknown` and the engine falls back to the meaning. | The `AcquisitionPlane` column is required, so a file without it errors instead of defaulting. Unrecognized text resolves to `unknown`. | No change. Test added that `Plane A`/`Plane B` resolve to A and B. |
+| `normalized` | Yes, by meaning text in `acquisition_plane` (required column). The canonical column is not carried through; the adapter keeps only the mapped columns. | Unrecognized or blank text resolves to `unknown`. A round-tripped canonical column is dropped, but the meaning column carries the same identity. | No change. Documented here. |
+| Qaelum / DoseMonitor / DoseWatch stubs | Stub adapters only; they emit no events. | No export fixtures. | Out of scope. Document as single-plane-only until a real adapter lands. |
+
+Decisions for Radimetrics:
+
+- **Evidence rule.** The file is treated as biplane only when both per-plane dose columns exist and at least
+  one row has non-zero kerma on both planes. A file with per-plane columns where plane B is always zero is
+  single-plane and stays on the old path. The default `Single Plane` is applied only without that evidence.
+- **Conservation.** Per-plane kerma is rescaled to the exported total (accepted when A + B is within 1 % of
+  the total, to absorb export rounding). Rows that fail the check, or have missing per-plane values, stay as
+  one total row with an unknown plane, because the total covers both tubes.
+- **DAP and fluoro time.** Per-plane DAP columns are used when present, otherwise the total DAP is split in
+  proportion to kerma. Fluoro time stays on the first event of each row, so procedure totals do not double.
+- **Known limitation.** Both split events reuse the single `(RF)` angle, kVp and table columns. Independent
+  per-plane geometry stays in the *Biplane support* backlog item.
+- **Behaviour change in a bundled fixture.** `radimetrics_events_legacy.csv` has per-plane columns with both
+  planes non-zero, so its 3 total rows now load as 6 events (A, B per row, kerma summing to the old totals).
+  The fixture file is unchanged. `radimetrics_events.csv` (no per-plane columns) loads exactly as before.
+
 ## Phases
 
 | Phase | Deliverable | Acceptance |
@@ -119,7 +150,7 @@ updates the argparse help text for `--kerma-meter-correction-mode` to say it is 
   afterwards (Phase 3).
 - [ ] `src/guiskindose/settings_example.json` and the settings docstrings show the new settings model and
   the legacy `mode` shim (Phase 1).
-- [ ] `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` describes the Radimetrics per-plane split and the
+- [x] `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` describes the Radimetrics per-plane split and the
   `unknown` default (Phase 0).
 - [ ] `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/glossary.json`,
   `dev-docs/help_registry.json`, and `dev-docs/feature_doc_matrix.json` list the new settings and outputs.
