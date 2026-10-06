@@ -239,7 +239,7 @@ jobs:
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
     - name: GUI smoke tests
-      run: uv run --no-sync pytest tests/gui/ -v --tb=short
+      run: uv run --no-sync pytest tests/gui/ -n auto -v --tb=short
 
   matrix-prep:
     needs: schedule-gate
@@ -354,14 +354,14 @@ jobs:
       # silently skip, hiding the new assertions from diff coverage.
       run: uv build
     - name: Generate combined coverage (non-GUI + GUI)
-      # pytest-cov keeps xdist workers measured; non-GUI runs parallel (-n auto),
-      # GUI stays serial (asyncio/nicegui). --cov spans src+scripts+tests so
+      # pytest-cov keeps xdist workers measured; both the non-GUI and GUI runs are
+      # parallel (-n auto). --cov spans src+scripts+tests so
       # diff-cover sees changed lines in all three.
       run: |
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
-        uv run --no-sync pytest tests/gui/ \
+        uv run --no-sync pytest tests/gui/ -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     - name: Combined coverage threshold (≥80%)
@@ -408,7 +408,7 @@ jobs:
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
-        uv run --no-sync pytest tests/gui/ \
+        uv run --no-sync pytest tests/gui/ -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     # CI-based analysis is authoritative (Automatic Analysis disabled). Reads

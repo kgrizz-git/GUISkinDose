@@ -187,10 +187,17 @@ async def test_import_updates_rendered_widget_values(user: User) -> None:
     lon = _number_by_label(user, "Longitudinal")
     assert lon.value == 0
     _seed_single_exam()
+    # Align schema/sheet with the document so no re-parse runs: the seeded
+    # file does not exist, so a re-parse fails and rolls d_lon back to 0.
+    # Without this, the poll below only passed by catching the widget's
+    # transient 1.0 before the rollback — which parallel load can miss.
+    state.input_schema = "dosetrack"
+    state.input_sheet_name = "Events"
     calls: list[str] = []
     with _client(user):
         status = ui.label("")
     await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
+    assert state.d_lon == 1.0
     # Reactive binding propagates on the next client round-trips: poll
     # instead of sleeping a fixed span (flaky under load).
     for _ in range(50):

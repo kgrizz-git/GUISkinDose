@@ -28,6 +28,11 @@ pytest.importorskip("nicegui")
 pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 _REAL_LOOPBACK_PORT_IS_FREE = gui_app._loopback_port_is_free
+# conftest's autouse fixture no-ops _open_browser_when_ready on whichever gui.app
+# it imports. Whether that is this module's reference depends on test order (the
+# user-simulation harness reloads gui.app), so the auto-open tests call the real
+# function captured here. Its globals are this reference's, which they patch.
+_REAL_OPEN_BROWSER_WHEN_READY = gui_app._open_browser_when_ready
 
 
 @pytest.fixture(autouse=True)
@@ -304,7 +309,7 @@ def test_browser_auto_open_waits_for_server(monkeypatch) -> None:
     monkeypatch.setattr(gui_app.webbrowser, "open", lambda url: opened.append(url))
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
     monkeypatch.setattr(gui_app, "probe_own_server", lambda *args, **kwargs: True)
-    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    _REAL_OPEN_BROWSER_WHEN_READY("http://127.0.0.1:8765/?token=t")
     deadline = time_module.monotonic() + 5.0
     while not opened and time_module.monotonic() < deadline:
         time_module.sleep(0.05)
@@ -319,7 +324,7 @@ def test_browser_auto_open_refuses_foreign_listener(monkeypatch, capsys) -> None
     monkeypatch.setattr(gui_app.webbrowser, "open", lambda url: opened.append(url))
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
     monkeypatch.setattr(gui_app, "probe_own_server", lambda *args, **kwargs: False)
-    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    _REAL_OPEN_BROWSER_WHEN_READY("http://127.0.0.1:8765/?token=t")
     deadline = time_module.monotonic() + 5.0
     seen = ""
     while "not serving this GUI" not in seen and time_module.monotonic() < deadline:
@@ -335,7 +340,7 @@ def test_browser_auto_open_stays_quiet_without_server(monkeypatch, capsys) -> No
 
     opened: list = []
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: False)
-    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    _REAL_OPEN_BROWSER_WHEN_READY("http://127.0.0.1:8765/?token=t")
     time_module.sleep(0.3)
     assert opened == []
     assert capsys.readouterr().out == ""
@@ -346,7 +351,7 @@ def test_browser_auto_open_stays_quiet_without_server(monkeypatch, capsys) -> No
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
     monkeypatch.setattr(gui_app, "probe_own_server", lambda *args, **kwargs: True)
     monkeypatch.setattr(gui_app.webbrowser, "open", _boom)
-    gui_app._open_browser_when_ready("http://127.0.0.1:8765/?token=t")
+    _REAL_OPEN_BROWSER_WHEN_READY("http://127.0.0.1:8765/?token=t")
     deadline = time_module.monotonic() + 5.0
     seen = ""
     while "Open the GUI manually" not in seen and time_module.monotonic() < deadline:
