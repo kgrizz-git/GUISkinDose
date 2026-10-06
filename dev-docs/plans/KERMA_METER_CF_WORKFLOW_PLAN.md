@@ -95,7 +95,31 @@ and reported separately whenever a biplane study is present.
 | 2 | Engine: a `missing_keys(detected, table)` helper and per-exam identity overrides for unresolved equipment. | Unit tests cover a file hit, a file miss, no file, an `unknown` tube, and an overridden unresolved unit that reaches the table. |
 | 3 | GUI: load-time detection, the dialog with file pre-fill, the Settings toggle, session suppression, and the Calculate guard. | GUI tests in `tests/gui/` show that a miss opens the dialog, a full hit skips it, the toggle off skips it, and Cancel keeps file and earlier values. |
 | 4 | Per-tube partial maps and totals in Results and in the HTML/XLSX/DOCX/PDF exports. | On a synthetic biplane fixture, A and B maps sum cell by cell to the combined map. Headline PSD equals the combined-map peak. A tube that misses reports zero. Single-plane goldens are unchanged. |
-| 5 | CLI warning, docs, glossary, help registry, feature matrix, CHANGELOG. | `check_help_registry.py`, `check_ui_copy.py`, and the doc-freshness check pass. |
+| 5 | CLI warning and the documentation checklist below. | Every checklist item is done. `check_help_registry.py`, `check_ui_copy.py`, `sync_gui_help.py`, `sync_ui_copy.py`, the doc-freshness check, and `test_psd_algorithm_doc.py` pass. |
+
+Every phase also updates the tests, docs, and docstrings for the code it touches, in the same PR. Do not
+defer them to Phase 5. New or changed public functions, classes, and settings fields get NumPy-style
+docstrings. Examples are `missing_keys()`, the per-exam identity override, the per-tube map fields, and
+the reworked `KermaMeterCorrectionSettings`. Each phase's tests land with that phase.
+
+### Documentation checklist
+
+- [ ] `dev-docs/PSD_CALCULATION_ALGORITHM.md` describes the per-tube partial maps, and the CF step says
+  where the table comes from (Phase 4). A test checks this document against the code.
+- [ ] `docs/source/gui_help/` covers the load-time dialog, the toggle, Cancel semantics, unresolved
+  equipment, and the per-tube Results. Run `scripts/sync_gui_help.py` afterwards (Phases 3–4).
+- [ ] `dev-docs/ui_copy.json` holds the new dialog, toggle, and warning text. Run `scripts/sync_ui_copy.py`
+  afterwards (Phase 3).
+- [ ] `src/guiskindose/settings_example.json` and the settings docstrings show the new settings model and
+  the legacy `mode` shim (Phase 1).
+- [ ] `dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md` describes the Radimetrics per-plane split and the
+  `unknown` default (Phase 0).
+- [ ] `dev-docs/FEATURE_INVENTORY.md`, `dev-docs/CODEBASE_OVERVIEW.md`, `dev-docs/glossary.json`,
+  `dev-docs/help_registry.json`, and `dev-docs/feature_doc_matrix.json` list the new settings and outputs.
+- [ ] `CHANGELOG.md` notes the per-tube outputs, the settings change, the `mode` deprecation, and the
+  Radimetrics behaviour change.
+- [ ] On completion, archive this plan under `plans/archive/`, update `dev-docs/index.md`, and remove the
+  TO_DO item.
 
 ## Risks
 
