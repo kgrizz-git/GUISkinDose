@@ -202,3 +202,21 @@ def test_file_miss_with_manual_entry_for_other_key_uses_default(tmp_path: Path):
     data_norm = _norm_from_example("siemens_axiom_artis.dcm", settings)
     factors = _resolve_kerma_meter_cf(data_norm, settings)
     assert factors == pytest.approx([1.1] * len(factors))
+
+
+def test_engine_applies_per_exam_override_for_unresolved_events(tmp_path: Path):
+    """An override keyed by the opaque exam label routes unresolved events to the file table."""
+    import pandas as pd
+
+    from guiskindose.calculate_dose.calculate_dose import _resolve_kerma_meter_cf
+
+    cf_file = tmp_path / "cf.csv"
+    cf_file.write_text("equipment,tube,correction_factor\nroom-9,single,1.4\n", encoding="utf-8")
+    settings = _settings(enable=True, file=str(cf_file), default_factor=0.9)
+    df = pd.DataFrame({"acquisition_plane": ["Single Plane"] * 2})
+    assert _resolve_kerma_meter_cf(df, settings) == pytest.approx([0.9, 0.9])
+    settings.kerma_meter_correction.unresolved_equipment_labels = {"Exam 2": "Room-9"}
+    assert _resolve_kerma_meter_cf(df, settings) == pytest.approx([0.9, 0.9])  # wrong exam label
+    assert _resolve_kerma_meter_cf(df, settings, "Exam 2") == pytest.approx([1.4, 1.4])
+    settings.kerma_meter_correction.unresolved_equipment_labels = {"Exam 1": "Room-9"}
+    assert _resolve_kerma_meter_cf(df, settings, None) == pytest.approx([1.4, 1.4])  # single exam = Exam 1

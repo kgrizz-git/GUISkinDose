@@ -38,6 +38,11 @@ class KermaMeterCorrectionSettings:
     in_memory_table : dict[tuple[str, str], float] | None
         Session override (GUI prompt / tests); wins over file keys when both set.
 
+    unresolved_equipment_labels : dict[str, str]
+        Runtime-only per-exam identity overrides keyed by opaque exam label
+        (``"Exam 1"``). Used for events with no serial/station so they reach the
+        table. Never serialized by ``to_dict()`` (labels are site identifiers).
+
     Notes
     -----
     The exclusive ``mode`` setting (``"file"`` / ``"prompt"``) is deprecated and
@@ -81,6 +86,7 @@ class KermaMeterCorrectionSettings:
             self.apply_legacy_mode(legacy_mode)
         # Runtime-only (not serialized to example JSON).
         self.in_memory_table: dict[tuple[str, str], float] | None = data.get("in_memory_table")
+        self.unresolved_equipment_labels: dict[str, str] = dict(data.get("unresolved_equipment_labels") or {})
 
     def apply_legacy_mode(self, mode: object) -> None:
         """Map the deprecated exclusive ``mode`` onto the unified source model.

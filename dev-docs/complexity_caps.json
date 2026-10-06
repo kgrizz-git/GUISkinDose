@@ -82,7 +82,7 @@
     {
       "path": "src/guiskindose/gui/run_state.py",
       "function": "apply_run_state",
-      "cap": 12
+      "cap": 11
     },
     {
       "path": "src/guiskindose/gui/run_state.py",

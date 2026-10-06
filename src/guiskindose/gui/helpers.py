@@ -261,6 +261,7 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         settings = build_settings(state, mode="calculate_dose", output_format="dict")
         if state.kerma_meter_in_memory_table is not None:
             settings.kerma_meter_correction.in_memory_table = state.kerma_meter_in_memory_table
+        settings.kerma_meter_correction.unresolved_equipment_labels = dict(state.kerma_meter_unresolved_labels)
 
         # Don't log state.file_name — it can carry PHI (patient name/MRN).
         dprint("CALCULATION", "Starting calculation")

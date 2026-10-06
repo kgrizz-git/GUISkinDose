@@ -33,6 +33,9 @@ from guiskindose.grid_interp import format_event_indices
 
 logger = logging.getLogger(__name__)
 
+# Display sentinel for events with no equipment identity (never a table key).
+UNRESOLVED_EQUIPMENT = "unresolved"
+
 # Suspicious band for CF values — warn but accept.
 _CF_SUSPICIOUS_LO = 0.5
 _CF_SUSPICIOUS_HI = 2.0
@@ -130,10 +133,22 @@ def resolve_correction_keys(
     data_norm: pd.DataFrame,
     *,
     explicit_label: str | None,
+    fallback_label: str | None = None,
 ) -> list[tuple[str | None, str]]:
     """Resolve ``(equipment_label, tube)`` per event using fixed precedence.
 
-    Order: explicit_label → device_serial → station_name → unresolved (None).
+    Order: explicit_label → device_serial → station_name → fallback_label →
+    unresolved (None).
+
+    Parameters
+    ----------
+    data_norm : pd.DataFrame
+        Normalized events of one exam.
+    explicit_label : str | None
+        Forces every event to this label (wins over everything).
+    fallback_label : str | None
+        Per-exam identity override. Used only for events whose serial and station
+        are both missing, so it never replaces a detected identity.
 
     Tube identity prefers ``acquisition_plane_canonical`` when it is a recognized
     CID-backed value (``single`` / ``A`` / ``B``); otherwise falls back to
@@ -162,6 +177,7 @@ def resolve_correction_keys(
     )
 
     forced = normalize_equipment_label(explicit_label)
+    fallback = normalize_equipment_label(fallback_label)
     keys: list[tuple[str | None, str]] = []
     for i in range(n):
         tube = TUBE_IDENTITY_UNKNOWN
@@ -177,7 +193,7 @@ def resolve_correction_keys(
         equip = normalize_equipment_label(serial_col.iloc[i] if i < len(serial_col) else None)
         if equip is None:
             equip = normalize_equipment_label(station_col.iloc[i] if i < len(station_col) else None)
-        keys.append((equip, tube))
+        keys.append((equip if equip is not None else fallback, tube))
     return keys
 
 
@@ -191,17 +207,64 @@ def unique_equipment_tube_keys(
     frames: Sequence[pd.DataFrame],
     *,
     explicit_label: str | None = None,
+    exam_labels: Sequence[str] | None = None,
+    unresolved_labels: Mapping[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     """Sorted unique ``(equipment, tube)`` pairs across frames for prompt/UI.
 
     Uses the same precedence as dose resolution (``explicit_label`` → serial →
-    station). Unresolved equipment becomes the sentinel ``\"unresolved\"``.
+    station → per-exam override). The sentinel ``"unresolved"`` appears only for
+    events that are still unresolved after overrides.
+
+    Parameters
+    ----------
+    frames : Sequence[pd.DataFrame]
+        One normalized frame per exam.
+    explicit_label : str | None
+        Run-wide forced label.
+    exam_labels : Sequence[str] | None
+        Opaque exam label (``"Exam N"``) per frame, parallel to *frames*.
+    unresolved_labels : Mapping[str, str] | None
+        Per-exam identity overrides keyed by opaque exam label.
     """
     keys: set[tuple[str, str]] = set()
-    for df in frames:
-        for equip, tube in resolve_correction_keys(df, explicit_label=explicit_label):
-            keys.add((equip or "unresolved", tube))
+    for i, df in enumerate(frames):
+        label = unresolved_labels.get(exam_labels[i]) if unresolved_labels and exam_labels else None
+        for equip, tube in resolve_correction_keys(df, explicit_label=explicit_label, fallback_label=label):
+            keys.add((equip or UNRESOLVED_EQUIPMENT, tube))
     return sorted(keys)
+
+
+def missing_keys(
+    detected: Sequence[tuple[str, str]],
+    table: Mapping[tuple[str, str], float] | None,
+) -> list[tuple[str, str]]:
+    """Detected ``(equipment, tube)`` pairs that the table cannot supply a factor for.
+
+    A pair is missing when it is absent from *table* (or no table exists). Pairs
+    whose equipment is the ``"unresolved"`` sentinel or whose tube is ``unknown``
+    are always missing: the engine never consults the table for them.
+
+    Parameters
+    ----------
+    detected : Sequence[tuple[str, str]]
+        Pairs from :func:`unique_equipment_tube_keys`.
+    table : Mapping[tuple[str, str], float] | None
+        Merged manual + file table (see :func:`merge_tables`).
+
+    Returns
+    -------
+    list[tuple[str, str]]
+        Missing pairs, sorted and de-duplicated.
+    """
+    lookup = table or {}
+    return sorted(
+        {
+            (equip, tube)
+            for equip, tube in detected
+            if equip == UNRESOLVED_EQUIPMENT or tube == TUBE_IDENTITY_UNKNOWN or (equip, tube) not in lookup
+        }
+    )
 
 
 def _warn_suspicious_factor(factor: float) -> None:
@@ -445,15 +508,19 @@ def resolve_correction_factors(
     explicit_label: str | None = None,
     default_factor: float = 1.0,
     table_metadata: dict[str, Any] | None = None,
+    fallback_label: str | None = None,
 ) -> KermaMeterCorrection:
     """Resolve per-event CF list from keys + lookup table.
 
     Absent table or missing key → ``default_factor``. Never mutates ``data_norm``.
+    ``fallback_label`` is the per-exam identity override for events with no
+    serial/station; those events then reach the table instead of the
+    unresolved branch (see :func:`resolve_correction_keys`).
     """
     if not math.isfinite(default_factor) or default_factor <= 0:
         raise ValueError("default_factor must be a finite float > 0.")
 
-    keys = resolve_correction_keys(data_norm, explicit_label=explicit_label)
+    keys = resolve_correction_keys(data_norm, explicit_label=explicit_label, fallback_label=fallback_label)
     lookup = table or {}
     unresolved: list[int] = []
     table_miss: list[int] = []

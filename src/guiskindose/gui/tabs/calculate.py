@@ -201,23 +201,37 @@ def _format_k_tab_status_summary() -> str:
 
 def _normalized_data_frames() -> list:
     """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""
-    frames = []
-    if state.rdsr_df is not None:
-        frames.append(state.rdsr_df)
-    for exam in state.loaded_exams:
+    return [frame for _, frame in _labelled_frames()]
+
+
+def _labelled_frames() -> list[tuple[str, object]]:
+    """``(opaque exam label, normalized frame)`` pairs for identity discovery.
+
+    Loaded exams win when present (``rdsr_df`` is their concatenation); a
+    single-file session labels its frame ``"Exam 1"``.
+    """
+    from guiskindose.privacy import opaque_exam_label
+
+    pairs: list[tuple[str, object]] = []
+    for index, exam in enumerate(state.loaded_exams):
         nd = getattr(exam, "normalized_data", None)
         if nd is not None:
-            frames.append(nd)
-    return frames
+            pairs.append((opaque_exam_label(index), nd))
+    if not pairs and state.rdsr_df is not None:
+        pairs.append((opaque_exam_label(0), state.rdsr_df))
+    return pairs
 
 
 def _collect_equipment_tube_keys() -> list[tuple[str, str]]:
     """Sorted unique (equipment, tube) pairs across loaded normalized frames."""
     from guiskindose.kerma_correction import unique_equipment_tube_keys
 
+    pairs = _labelled_frames()
     return unique_equipment_tube_keys(
-        _normalized_data_frames(),
+        [frame for _, frame in pairs],
         explicit_label=state.kerma_meter_explicit_label,
+        exam_labels=[label for label, _ in pairs],
+        unresolved_labels=state.kerma_meter_unresolved_labels,
     )
 
 

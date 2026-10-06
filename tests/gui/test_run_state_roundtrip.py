@@ -399,3 +399,50 @@ def test_legacy_kerma_mode_prompt_sets_prompt_at_calc():
     _apply_settings_slice({"kerma_meter_correction": {"mode": "prompt"}}, state, [])
     assert state.kerma_meter_prompt_at_calc is True
     assert not hasattr(state, "kerma_meter_mode")
+
+
+def _unresolved_labels_document(*, include_identifiers: bool) -> dict:
+    populated = AppState()
+    populated.kerma_meter_unresolved_labels = {"Exam 1": "Room-7"}
+    populated.loaded_exam_meta = []
+    return serialize_run_state(
+        _example_settings(),
+        populated,
+        include_identifiers=include_identifiers,
+        app_version="1.0.0",
+        created="2026-10-06T00:00:00+00:00",
+    )
+
+
+def test_unresolved_equipment_labels_round_trip() -> None:
+    """Per-exam identity overrides survive serialize -> apply."""
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _unresolved_labels_document(include_identifiers=True)
+    assert document["gui_state"]["kerma_meter_unresolved_labels"] == {"Exam 1": "Room-7"}
+    fresh = AppState()
+    apply_run_state(document, fresh)
+    assert fresh.kerma_meter_unresolved_labels == {"Exam 1": "Room-7"}
+
+
+def test_unresolved_equipment_labels_redacted_without_identifiers() -> None:
+    """Redacted exports omit the labels, and importing one leaves live labels untouched."""
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _unresolved_labels_document(include_identifiers=False)
+    assert "kerma_meter_unresolved_labels" not in document["gui_state"]
+    assert "Room-7" not in json.dumps(document)
+    live = AppState()
+    live.kerma_meter_unresolved_labels = {"Exam 1": "Keep-Me"}
+    apply_run_state(document, live)
+    assert live.kerma_meter_unresolved_labels == {"Exam 1": "Keep-Me"}
+
+
+def test_unresolved_equipment_labels_malformed_rejected() -> None:
+    """A non-string label mapping is a malformed document."""
+    from guiskindose.gui.run_state import RunStateError, apply_run_state
+
+    document = _unresolved_labels_document(include_identifiers=True)
+    document["gui_state"]["kerma_meter_unresolved_labels"] = {"Exam 1": 5}
+    with pytest.raises(RunStateError):
+        apply_run_state(document, AppState())

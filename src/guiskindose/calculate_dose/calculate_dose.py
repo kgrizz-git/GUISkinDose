@@ -25,6 +25,7 @@ from guiskindose.kerma_correction import (
     resolve_correction_factors,
 )
 from guiskindose.phantom_class import Phantom
+from guiskindose.privacy import opaque_exam_label
 from guiskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,13 @@ logger = logging.getLogger(__name__)
 def _resolve_kerma_meter_cf(
     normalized_data: pd.DataFrame,
     settings: PyskindoseSettings,
+    exam_id: str | None = None,
 ) -> list[float]:
-    """Resolve per-event kerma-meter CF; skip I/O when disabled."""
+    """Resolve per-event kerma-meter CF; skip I/O when disabled.
+
+    ``exam_id`` (``None`` means the single exam, ``"Exam 1"``) selects the
+    per-exam identity override for events with no equipment identity.
+    """
     km = settings.kerma_meter_correction
     n = len(normalized_data)
     if not km.enable:
@@ -72,6 +78,7 @@ def _resolve_kerma_meter_cf(
         explicit_label=km.explicit_label,
         default_factor=km.default_factor,
         table_metadata=table_meta,
+        fallback_label=km.unresolved_equipment_labels.get(exam_id or opaque_exam_label(0)),
     )
     return result.factors
 
@@ -167,7 +174,7 @@ def calculate_dose(
     k_tab_values = k_tab.values
     k_tab_statuses = k_tab.statuses
 
-    kerma_cf = _resolve_kerma_meter_cf(normalized_data, settings)
+    kerma_cf = _resolve_kerma_meter_cf(normalized_data, settings, exam_id)
 
     total_number_of_events = len(normalized_data)
 

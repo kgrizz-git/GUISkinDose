@@ -100,6 +100,9 @@ class AppState:
     kerma_meter_explicit_label: str | None = None
     kerma_meter_prompt_at_calc: bool = False
     kerma_meter_in_memory_table: dict[tuple[str, str], float] | None = None
+    # Per-exam identity override for events with no serial/station, keyed by the
+    # opaque exam label ("Exam 1"). Values are site identifiers: never logged.
+    kerma_meter_unresolved_labels: dict[str, str] = field(default_factory=dict)
 
     plot_dosemap: bool = True
     dark_mode: bool = True

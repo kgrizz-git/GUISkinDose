@@ -273,6 +273,9 @@ def serialize_run_state(
         document["gui_state"]["kerma_meter_in_memory_table"] = _nest_in_memory_table(
             app_state.kerma_meter_in_memory_table, include_identifiers
         )
+    if include_identifiers:
+        # Per-exam identity overrides are site identifiers, gated like the CF table.
+        document["gui_state"]["kerma_meter_unresolved_labels"] = dict(app_state.kerma_meter_unresolved_labels)
     if passthrough and include_identifiers:
         for key, value in passthrough.items():
             document.setdefault(key, value)
@@ -339,6 +342,7 @@ _SNAPSHOT_ATTRS = (
     "kerma_meter_default_factor",
     "kerma_meter_prompt_at_calc",
     "kerma_meter_in_memory_table",
+    "kerma_meter_unresolved_labels",
     "include_static_pose",
     "angular_step_deg",
     "dosetrack_plane_code_map",
@@ -475,6 +479,7 @@ def validate_run_state_document(document: Any) -> None:
         for index, profile in enumerate(profiles):
             if not isinstance(profile, dict):
                 raise _malformed(f"normalization_settings[{index}] must be a mapping, got {type(profile).__name__}")
+    _validate_unresolved_labels(gui.get("kerma_meter_unresolved_labels"))
     table = gui.get("kerma_meter_in_memory_table")
     if table is not None:
         if not isinstance(table, dict) or any(not isinstance(tubes, dict) for tubes in table.values()):
@@ -483,6 +488,22 @@ def validate_run_state_document(document: Any) -> None:
             for tube, factor in tubes.items():
                 if isinstance(factor, bool) or not isinstance(factor, (int, float)):
                     raise _malformed(f"kerma_meter_in_memory_table[{equipment!r}][{tube!r}] must be a number")
+
+
+def _validate_unresolved_labels(labels: Any) -> None:
+    """Reject a per-exam identity-override value that is not a str -> str mapping."""
+    if labels is None:
+        return
+    if not isinstance(labels, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in labels.items()):
+        raise _malformed("kerma_meter_unresolved_labels must be a mapping of strings")
+
+
+def _apply_kerma_gui_state(gui: dict, app_state: AppState) -> None:
+    """Apply the identifier-gated kerma session state (CF table, identity overrides)."""
+    if "kerma_meter_in_memory_table" in gui:
+        app_state.kerma_meter_in_memory_table = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"])
+    if "kerma_meter_unresolved_labels" in gui:
+        app_state.kerma_meter_unresolved_labels = dict(gui["kerma_meter_unresolved_labels"] or {})
 
 
 def _display_basename(value: Any) -> str | None:
@@ -739,8 +760,7 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
         result.schema_or_sheet_changed = True
     for key in ("swap_lat_lon", "flip_ap1", "flip_ap2"):
         _apply_present(app_state, key, gui.get(key))
-    if "kerma_meter_in_memory_table" in gui:
-        app_state.kerma_meter_in_memory_table = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"])
+    _apply_kerma_gui_state(gui, app_state)
     for index, (exam, meta) in enumerate(zip(doc_exams, live_metas, strict=True)):
         if _apply_exam(exam, meta, index, result.warnings):
             result.schema_or_sheet_changed = True
