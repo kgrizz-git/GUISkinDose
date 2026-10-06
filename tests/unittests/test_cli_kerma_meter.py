@@ -55,7 +55,7 @@ def test_apply_flags_enable_file_mode_and_label(tmp_path: Path):
     km = settings.kerma_meter_correction
     assert km.enable is True
     assert km.file == cf
-    assert km.prompt_at_calc is False  # legacy "file" mode is a no-op
+    assert km.ask_for_missing is True  # legacy "file" mode is a no-op
     assert km.explicit_label == "forced-unit"
 
 
@@ -74,7 +74,7 @@ def test_apply_flags_enable_switch_alone():
 
 
 def test_prompt_mode_warns_on_cli():
-    """Legacy mode=prompt maps to prompt_at_calc and logs a deprecation warning.
+    """Legacy mode=prompt maps to ask_for_missing and logs a deprecation warning.
 
     Attach a handler to the module logger — suite-wide logging state can leave
     WARNING on stderr without landing in pytest ``caplog``.
@@ -103,7 +103,7 @@ def test_prompt_mode_warns_on_cli():
     finally:
         logger.removeHandler(handler)
 
-    assert settings.kerma_meter_correction.prompt_at_calc is True
+    assert settings.kerma_meter_correction.ask_for_missing is True
     assert any("deprecated" in msg for msg in messages)
 
 

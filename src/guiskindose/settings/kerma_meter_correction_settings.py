@@ -32,9 +32,12 @@ class KermaMeterCorrectionSettings:
         Fail-soft CF when identity is unresolved or the table misses a key.
     explicit_label : str | None
         Force every event to this equipment label (overrides serial/station).
-    prompt_at_calc : bool
-        GUI-only: open the CF prompt before calculation. Non-GUI runs never
-        prompt and use the file and ``default_factor``.
+    ask_for_missing : bool
+        GUI-only, default ``True``: open the CF dialog when a detected
+        ``(equipment, tube)`` pair has no factor (manual entry or file row).
+        Non-GUI runs never prompt and use the file and ``default_factor``.
+        Replaces the old ``prompt_at_calc`` flag, which is still accepted on
+        input (see Notes).
     in_memory_table : dict[tuple[str, str], float] | None
         Session override (GUI prompt / tests); wins over file keys when both set.
 
@@ -47,8 +50,11 @@ class KermaMeterCorrectionSettings:
     -----
     The exclusive ``mode`` setting (``"file"`` / ``"prompt"``) is deprecated and
     no longer stored. A ``mode`` key in the input dict is still accepted: it logs
-    a deprecation warning, ``"prompt"`` maps to ``prompt_at_calc=True``, and
-    ``"file"`` is a no-op. ``to_dict()`` never emits ``mode``.
+    a deprecation warning, ``"prompt"`` maps to ``ask_for_missing=True``, and
+    ``"file"`` is a no-op. A legacy ``prompt_at_calc`` of ``True`` also maps to
+    ``ask_for_missing=True``; ``False`` was only the old default and is ignored.
+    Legacy keys never override an explicit ``ask_for_missing``. ``to_dict()``
+    emits neither ``mode`` nor ``prompt_at_calc``.
     """
 
     def __init__(self, raw: dict[str, Any] | None = None):
@@ -80,22 +86,26 @@ class KermaMeterCorrectionSettings:
 
         label = data.get("explicit_label")
         self.explicit_label: str | None = None if label in (None, "") else str(label)
-        self.prompt_at_calc: bool = bool(data.get("prompt_at_calc", False))
+        self.ask_for_missing: bool = bool(data.get("ask_for_missing", True))
+        if data.get("prompt_at_calc") and "ask_for_missing" not in data:
+            self.ask_for_missing = True
         legacy_mode = data.get("mode")
         if legacy_mode is not None:
-            self.apply_legacy_mode(legacy_mode)
+            self.apply_legacy_mode(legacy_mode, explicit="ask_for_missing" in data)
         # Runtime-only (not serialized to example JSON).
         self.in_memory_table: dict[tuple[str, str], float] | None = data.get("in_memory_table")
         self.unresolved_equipment_labels: dict[str, str] = dict(data.get("unresolved_equipment_labels") or {})
 
-    def apply_legacy_mode(self, mode: object) -> None:
+    def apply_legacy_mode(self, mode: object, *, explicit: bool = False) -> None:
         """Map the deprecated exclusive ``mode`` onto the unified source model.
 
         Parameters
         ----------
         mode : object
             ``"file"`` (no-op: a set file always loads) or ``"prompt"`` (sets
-            ``prompt_at_calc``). Case and surrounding whitespace are ignored.
+            ``ask_for_missing``). Case and surrounding whitespace are ignored.
+        explicit : bool
+            True when ``ask_for_missing`` was given explicitly; it then wins.
 
         Raises
         ------
@@ -108,10 +118,10 @@ class KermaMeterCorrectionSettings:
         logger.warning(
             "kerma_meter_correction.mode is deprecated and ignored as an exclusive switch; "
             "a correction file always loads and manual entries win over it. "
-            "Use prompt_at_calc to ask before calculation."
+            "Use ask_for_missing to control the missing-factor dialog."
         )
-        if text == "prompt":
-            self.prompt_at_calc = True
+        if text == "prompt" and not explicit:
+            self.ask_for_missing = True
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize settings for export / round-trip (excludes in_memory_table)."""
@@ -121,5 +131,5 @@ class KermaMeterCorrectionSettings:
             "file_sheet": self.file_sheet,
             "default_factor": self.default_factor,
             "explicit_label": self.explicit_label,
-            "prompt_at_calc": self.prompt_at_calc,
+            "ask_for_missing": self.ask_for_missing,
         }

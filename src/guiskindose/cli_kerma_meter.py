@@ -37,7 +37,7 @@ def add_kerma_meter_cli_arguments(parser: argparse.ArgumentParser) -> None:
         help=(
             "DEPRECATED. The file always loads when --kerma-meter-correction-file is set; "
             "manual entries win over it, then default_factor. 'prompt' maps to "
-            "prompt_at_calc (GUI-only; CLI never prompts)."
+            "ask_for_missing (GUI-only; CLI never prompts)."
         ),
     )
     parser.add_argument(

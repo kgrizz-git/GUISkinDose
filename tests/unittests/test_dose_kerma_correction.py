@@ -130,7 +130,7 @@ def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
             "file_sheet": "Sheet1",
             "default_factor": 3.0,
             "explicit_label": "lab-1",
-            "prompt_at_calc": True,
+            "ask_for_missing": False,
             "in_memory_table": {("a", "single"): 1.1},
         }
     )
@@ -146,18 +146,22 @@ def test_kerma_settings_validation_and_to_dict(tmp_path: Path):
     assert "in_memory_table" not in payload
 
 
-def test_legacy_mode_round_trip_maps_to_prompt_at_calc():
-    """Legacy ``mode`` loads with a warning, maps onto prompt_at_calc, and is not re-emitted."""
+def test_legacy_mode_round_trip_maps_to_ask_for_missing():
+    """Legacy keys load, map onto ask_for_missing, and are not re-emitted."""
     from guiskindose.settings.kerma_meter_correction_settings import KermaMeterCorrectionSettings
 
+    assert KermaMeterCorrectionSettings({}).ask_for_missing is True  # new default
     prompt = KermaMeterCorrectionSettings({"enable": True, "mode": "prompt"})
-    assert prompt.prompt_at_calc is True
+    assert prompt.ask_for_missing is True
     file_mode = KermaMeterCorrectionSettings({"enable": True, "mode": " File "})
-    assert file_mode.prompt_at_calc is False
-    payload = prompt.to_dict()
-    assert "mode" not in payload
-    assert KermaMeterCorrectionSettings(payload).prompt_at_calc is True
-    assert KermaMeterCorrectionSettings(file_mode.to_dict()).prompt_at_calc is False
+    assert file_mode.ask_for_missing is True  # legacy "file" was the old default: no-op
+    assert KermaMeterCorrectionSettings({"prompt_at_calc": True}).ask_for_missing is True
+    # An explicit ask_for_missing always beats the legacy keys.
+    explicit = KermaMeterCorrectionSettings({"ask_for_missing": False, "mode": "prompt", "prompt_at_calc": True})
+    assert explicit.ask_for_missing is False
+    payload = explicit.to_dict()
+    assert "mode" not in payload and "prompt_at_calc" not in payload
+    assert KermaMeterCorrectionSettings(payload).ask_for_missing is False
 
 
 def _cf_for_single_unit(tmp_path: Path, *, file_cf: float | None, manual_cf: float | None, **km) -> list[float]:

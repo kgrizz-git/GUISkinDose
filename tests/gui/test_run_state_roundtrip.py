@@ -39,7 +39,7 @@ def _example_settings() -> PyskindoseSettings:
         "file_sheet": "CF",
         "default_factor": 1.02,
         "explicit_label": "Lab-1",
-        "prompt_at_calc": False,
+        "ask_for_missing": True,
     }
     base["phantom"]["patient_offset"] = {"d_lon": 1.0, "d_ver": 2.0, "d_lat": 3.0}
     return PyskindoseSettings(settings=base)
@@ -390,14 +390,18 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
     assert meta["sheet"] == "Other"
 
 
-def test_legacy_kerma_mode_prompt_sets_prompt_at_calc():
-    """A run-state document saved with legacy ``mode: prompt`` maps to prompt_at_calc."""
+def test_legacy_kerma_mode_prompt_sets_ask_for_missing():
+    """A run-state document saved with legacy ``mode: prompt`` maps to ask_for_missing."""
     from guiskindose.gui.run_state import _apply_settings_slice
     from guiskindose.gui.state import AppState
 
     state = AppState()
+    state.kerma_meter_ask_for_missing = False
     _apply_settings_slice({"kerma_meter_correction": {"mode": "prompt"}}, state, [])
-    assert state.kerma_meter_prompt_at_calc is True
+    assert state.kerma_meter_ask_for_missing is True
+    explicit = AppState()
+    _apply_settings_slice({"kerma_meter_correction": {"mode": "prompt", "ask_for_missing": False}}, explicit, [])
+    assert explicit.kerma_meter_ask_for_missing is False
     assert not hasattr(state, "kerma_meter_mode")
 
 

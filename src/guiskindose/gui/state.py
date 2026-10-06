@@ -98,7 +98,13 @@ class AppState:
     kerma_meter_file_sheet: str | None = None
     kerma_meter_default_factor: float = 1.0
     kerma_meter_explicit_label: str | None = None
-    kerma_meter_prompt_at_calc: bool = False
+    kerma_meter_ask_for_missing: bool = True
+    # Dialog bookkeeping, reset by rebuild_rdsr_df() when the loaded events change:
+    # "don't ask again", whether Calculate already re-opened the dialog once, and
+    # the (input_revision, enable) pair the load-time watcher last evaluated.
+    kerma_meter_prompt_suppressed: bool = False
+    kerma_meter_calc_reprompted: bool = False
+    kerma_meter_checked_key: tuple[int, bool] | None = None
     kerma_meter_in_memory_table: dict[tuple[str, str], float] | None = None
     # Per-exam identity override for events with no serial/station, keyed by the
     # opaque exam label ("Exam 1"). Values are site identifiers: never logged.

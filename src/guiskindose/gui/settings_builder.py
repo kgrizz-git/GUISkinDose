@@ -95,7 +95,7 @@ def build_settings(
         "file_sheet": app_state.kerma_meter_file_sheet or None,
         "default_factor": app_state.kerma_meter_default_factor,
         "explicit_label": app_state.kerma_meter_explicit_label or None,
-        "prompt_at_calc": app_state.kerma_meter_prompt_at_calc,
+        "ask_for_missing": app_state.kerma_meter_ask_for_missing,
     }
 
     base["phantom"]["model"] = app_state.phantom_model

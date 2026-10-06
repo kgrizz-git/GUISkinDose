@@ -329,7 +329,7 @@ def _settings_with_kerma_file():
         "file_sheet": "CF",
         "default_factor": 1.02,
         "explicit_label": "Lab-1",
-        "prompt_at_calc": False,
+        "ask_for_missing": True,
     }
     # Match the populated state's synced globals so the document is
     # self-consistent (as a real build_settings() + AppState pair would be).

@@ -184,6 +184,8 @@ def rebuild_rdsr_df(state: AppState) -> None:
     # composition change, never after a mere offset tweak.
     state.below_floor_prompt_suppressed = False
     state.rotational_prompt_suppressed = False
+    state.kerma_meter_prompt_suppressed = False
+    state.kerma_meter_calc_reprompted = False
 
     if not state.loaded_exams:
         state.rdsr_df = None

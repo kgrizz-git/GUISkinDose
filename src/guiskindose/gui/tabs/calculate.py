@@ -18,6 +18,7 @@ from ..helpers import below_floor_event_count, format_input_scanner_label, run_c
 from ..page_context import PageContext
 from ..state import state
 from ..summary_formatters import format_patient_offsets
+from ._kerma_meter_dialog import labelled_frames, prompt_at_calculate
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
 _MAX_TOASTS: int = 5
@@ -201,38 +202,8 @@ def _format_k_tab_status_summary() -> str:
 
 def _normalized_data_frames() -> list:
     """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""
-    return [frame for _, frame in _labelled_frames()]
+    return [frame for _, frame in labelled_frames(state)]
 
-
-def _labelled_frames() -> list[tuple[str, object]]:
-    """``(opaque exam label, normalized frame)`` pairs for identity discovery.
-
-    Loaded exams win when present (``rdsr_df`` is their concatenation); a
-    single-file session labels its frame ``"Exam 1"``.
-    """
-    from guiskindose.privacy import opaque_exam_label
-
-    pairs: list[tuple[str, object]] = []
-    for index, exam in enumerate(state.loaded_exams):
-        nd = getattr(exam, "normalized_data", None)
-        if nd is not None:
-            pairs.append((opaque_exam_label(index), nd))
-    if not pairs and state.rdsr_df is not None:
-        pairs.append((opaque_exam_label(0), state.rdsr_df))
-    return pairs
-
-
-def _collect_equipment_tube_keys() -> list[tuple[str, str]]:
-    """Sorted unique (equipment, tube) pairs across loaded normalized frames."""
-    from guiskindose.kerma_correction import unique_equipment_tube_keys
-
-    pairs = _labelled_frames()
-    return unique_equipment_tube_keys(
-        [frame for _, frame in pairs],
-        explicit_label=state.kerma_meter_explicit_label,
-        exam_labels=[label for label, _ in pairs],
-        unresolved_labels=state.kerma_meter_unresolved_labels,
-    )
 
 
 async def below_floor_prompt(n_below: int) -> bool:
@@ -390,40 +361,6 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
     return True
 
 
-async def kerma_meter_prompt() -> None:
-    """Collect per-(equipment, tube) CF values before calculation when mode=prompt.
-
-    Confirm stores the entered factors in ``state.kerma_meter_in_memory_table``.
-    Cancel clears that table so ``default_factor`` applies. Calculation always
-    continues after the dialog (this prompt never blocks the run).
-    """
-    sorted_keys = _collect_equipment_tube_keys()
-    with ui.dialog() as dialog, ui.card().classes("w-full max-w-xl gap-3"):
-        ui.label("Kerma-meter correction factors").classes(_DIALOG_TITLE_CLASSES)
-        ui.label(
-            "Enter CF = (real measured dose) / (unit reported dose) for each "
-            "detected (equipment, tube) pair. Cancel uses the default factor."
-        ).classes(_DIALOG_BODY_CLASSES)
-        inputs: dict[tuple[str, str], ui.number] = {}
-        for equip, tube in sorted_keys:
-            inputs[(equip, tube)] = ui.number(
-                label=f"{equip} / {tube}",
-                value=state.kerma_meter_default_factor,
-                min=0.01,
-                step=0.01,
-            ).classes("w-full")
-        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
-            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
-            ui.button("Confirm", on_click=lambda: dialog.submit("ok")).classes(_PRIMARY_BTN_CLASSES)
-
-    if (await dialog) != "ok":
-        state.kerma_meter_in_memory_table = None
-        return
-    state.kerma_meter_in_memory_table = {
-        key: float(inp.value or state.kerma_meter_default_factor) for key, inp in inputs.items()
-    }
-
-
 async def explicit_label_collapse_confirm(n_keys: int, label: str) -> bool:
     """Blocking confirmation when explicit_label would collapse distinct units."""
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg gap-3"):
@@ -514,8 +451,7 @@ class _CalculationController:
             return True
         if not await self._explicit_label_collapse_ok():
             return False
-        if state.kerma_meter_prompt_at_calc:
-            await kerma_meter_prompt()
+        await prompt_at_calculate()
         return True
 
     async def _run_calculation(self) -> tuple[bool, str]:

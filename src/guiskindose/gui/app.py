@@ -58,6 +58,7 @@ from .tabs import geometry as geometry_tab
 from .tabs import results as results_tab
 from .tabs import settings as settings_tab
 from .tabs import upload as upload_tab
+from .tabs._kerma_meter_dialog import maybe_prompt_after_load
 from .ui_copy import copy_text
 from .window_prefs import (
     NativeWindowPrefs,
@@ -300,6 +301,9 @@ def index():
 
     _restore_loaded_state(ctx)
     _show_onboarding_dialog()
+    # Load-time kerma-meter check: fires after any change of the loaded events
+    # (rebuild_rdsr_df bumps input_revision) or of the enable switch.
+    ui.timer(0.5, maybe_prompt_after_load)
 
 
 # ── native window geometry ───────────────────────────────────────────────────

@@ -389,9 +389,11 @@ def _build_physics_section() -> None:
                     value=state.kerma_meter_enable,
                 ).bind_value(state, "kerma_meter_enable").on(_MODEL_VALUE_EVENT, reset_results)
                 ui.checkbox(
-                    "Prompt for factors before calculation",
-                    value=state.kerma_meter_prompt_at_calc,
-                ).bind_value(state, "kerma_meter_prompt_at_calc").on(_MODEL_VALUE_EVENT, reset_results)
+                    copy_text("settings.kerma_meter.ask_missing"),
+                    value=state.kerma_meter_ask_for_missing,
+                ).bind_value(state, "kerma_meter_ask_for_missing").tooltip(
+                    copy_text("settings.kerma_meter.ask_missing.tooltip")
+                )
                 ui.input(
                     label="Correction table path (CSV/TSV/XLSX/JSON)",
                     value=state.kerma_meter_file or "",

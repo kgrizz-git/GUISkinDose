@@ -29,3 +29,28 @@ from the table, CF falls back to the configured default factor (usually `1.0`).
 Reported `K_IRP` in the Data table stays uncorrected. Corrected kerma is stored per event
 as `kerma_corrected` and included in exports as `air_kerma_corrected`. The GUI Results tab
 currently shows uncorrected `K_IRP` only.
+
+## Missing-factor dialog
+
+When correction is enabled, GUISkinDose lists every detected unit and tube as soon as events
+load. If any pair has no factor yet, a dialog opens. Each row is pre-filled in this order:
+
+1. a value you entered earlier (`entered manually`),
+2. the value from the calibration file (`from file`),
+3. the default factor (`default: review`). Please check these rows.
+
+Rows are grouped by exam, and the list scrolls. A tube shown as **unknown** cannot be looked
+up, so the default factor applies to it.
+
+**Exams with no equipment identity.** If an exam carries no serial number or station name, the
+dialog asks which unit it was acquired on. Pick a detected unit or a unit from the file, or type
+a new name. The exam's factors are then looked up for that unit. The choice is stored per exam
+and saved with the run configuration only when identifiers are included.
+
+**Cancel** never blocks the run. It keeps file values and your earlier entries, and every
+unanswered pair uses the default factor. Calculate re-opens the dialog once if pairs are still
+unanswered.
+
+**Turning it off.** Clear *Ask for missing correction factors* in Settings, or tick *Don't ask
+again until the loaded data changes* in the dialog. Loading, removing, or re-parsing events
+resets that choice. Command-line runs never open a dialog.

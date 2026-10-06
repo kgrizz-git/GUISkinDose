@@ -60,7 +60,7 @@ _PHANTOM_SETTING_TO_STATE = (
 _KERMA_SETTING_TO_STATE = (
     ("enable", "kerma_meter_enable"),
     ("default_factor", "kerma_meter_default_factor"),
-    ("prompt_at_calc", "kerma_meter_prompt_at_calc"),
+    ("ask_for_missing", "kerma_meter_ask_for_missing"),
 )
 
 # Import-settable homes with no GUI widget: `normalization_profiles`,
@@ -340,7 +340,7 @@ _SNAPSHOT_ATTRS = (
     "kerma_meter_file_sheet",
     "kerma_meter_explicit_label",
     "kerma_meter_default_factor",
-    "kerma_meter_prompt_at_calc",
+    "kerma_meter_ask_for_missing",
     "kerma_meter_in_memory_table",
     "kerma_meter_unresolved_labels",
     "include_static_pose",
@@ -570,6 +570,19 @@ def _apply_kerma_tier2(kerma: dict, app_state: AppState, warnings: list[str]) ->
     _warn_file_mismatch(warnings, "kerma correction file", str(expected), _display_basename(app_state.kerma_meter_file))
 
 
+def _apply_legacy_kerma_prompt(kerma: dict, app_state: AppState) -> None:
+    """Map legacy ``mode: prompt`` / ``prompt_at_calc: true`` onto ``ask_for_missing``.
+
+    An explicit ``ask_for_missing`` in the document always wins; a legacy
+    ``false`` was only the old default and is ignored.
+    """
+    if "ask_for_missing" in kerma:
+        return
+    legacy_mode = str(kerma.get("mode", "")).strip().lower()
+    if legacy_mode == "prompt" or kerma.get("prompt_at_calc") is True:
+        app_state.kerma_meter_ask_for_missing = True
+
+
 def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[str]) -> str:
     """Apply Tier-3 configuration from the settings slice; return the mode."""
     for key in _SCALAR_SETTING_TO_STATE:
@@ -586,9 +599,7 @@ def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[st
     kerma = settings.get("kerma_meter_correction") or {}
     for doc_key, attr in _KERMA_SETTING_TO_STATE:
         _apply_present(app_state, attr, kerma.get(doc_key))
-    if str(kerma.get("mode", "")).strip().lower() == "prompt":
-        # Legacy exclusive mode: "prompt" becomes the unified prompt-at-calc flag.
-        app_state.kerma_meter_prompt_at_calc = True
+    _apply_legacy_kerma_prompt(kerma, app_state)
     _apply_present(app_state, "kerma_meter_file_sheet", kerma.get("file_sheet"))
     _apply_present(app_state, "kerma_meter_explicit_label", kerma.get("explicit_label"))
     _apply_kerma_tier2(kerma, app_state, warnings)
