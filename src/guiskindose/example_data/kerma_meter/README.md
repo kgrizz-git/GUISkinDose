@@ -5,7 +5,7 @@ name and number in it is fictional. Copy it, replace the rows with your own meas
 select the copy in Settings, Kerma-meter correction, or pass it on the command line:
 
 ```text
-guiskindose --kerma-meter-correction-file my_factors.csv --kerma-meter-calibration-date 2026-03-01 ...
+guiskindose --kerma-meter-correction-file my_factors.csv --kerma-meter-calibration-date 1902-03-01 ...
 ```
 
 ## Columns
@@ -20,7 +20,7 @@ guiskindose --kerma-meter-correction-file my_factors.csv --kerma-meter-calibrati
 ## Calibration periods
 
 If a dose meter was recalibrated, give the same unit and tube one row per period. In the example,
-`DEMO-ROOM-2` tube `A` has a factor for 2025 and a new one from 2026 onward. Periods for the
+`DEMO-ROOM-2` tube `A` has a factor for 1901 and a new one from 1902 onward (placeholder years). Periods for the
 same unit and tube must not overlap, or the file is rejected.
 
 GUISkinDose never reads dates from your exam data. In the GUI you pick the period for each exam in
