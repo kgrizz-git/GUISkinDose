@@ -396,7 +396,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `test_browser_auto_open_*` tests failed under `pytest -n auto`, and when run alone, because
   conftest no-ops `_open_browser_when_ready` and they called that patched name. They now call
   the real function captured at import time, as the file already does for
-  `_loopback_port_is_free`. CI runs `tests/gui/` serially, which hid the failure.
+  `_loopback_port_is_free`. CI ran `tests/gui/` serially, which hid the failure, so the
+  `gui-smoke`, `coverage-pr`, and `sonar-scan` GUI runs now use `-n auto`.
 
 - **SonarCloud security/reliability findings and SonarQube 26.9 test rules** (2026-09-26) —
   cleared the SonarCloud E security and C reliability drivers. `scripts/sync_ui_copy.py`

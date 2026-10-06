@@ -239,7 +239,7 @@ jobs:
     - name: Install dependencies (locked)
       run: uv sync --extra dev --extra gui --locked
     - name: GUI smoke tests
-      run: uv run --no-sync pytest tests/gui/ -v --tb=short
+      run: uv run --no-sync pytest tests/gui/ -n auto -v --tb=short
 
   matrix-prep:
     needs: schedule-gate
@@ -361,7 +361,7 @@ jobs:
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
-        uv run --no-sync pytest tests/gui/ \
+        uv run --no-sync pytest tests/gui/ -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     - name: Combined coverage threshold (≥80%)
@@ -408,7 +408,7 @@ jobs:
         uv run --no-sync coverage erase
         uv run --no-sync pytest --ignore=tests/gui -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-report=
-        uv run --no-sync pytest tests/gui/ \
+        uv run --no-sync pytest tests/gui/ -n auto \
           --cov=src/guiskindose --cov=scripts --cov=tests --cov-append --cov-report=
         uv run --no-sync coverage xml
     # CI-based analysis is authoritative (Automatic Analysis disabled). Reads

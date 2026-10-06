@@ -280,7 +280,7 @@ python -m pytest tests/gui/
 python tests/scripts/launch_gui_headless.py
 ```
 
-Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the `gui-smoke` job. Core matrix tests exclude `tests/gui/` (see `--ignore=tests/gui` in CI).
+Uses NiceGUI user simulation (no browser). CI runs `tests/gui/` on Ubuntu in the `gui-smoke` job, in parallel with `-n auto` (the coverage runs in `coverage-pr` and `sonar-scan` do the same). Parallel workers vary test order, so a test that leans on a patch made in another module, or on state left by an earlier test, fails there. Run `pytest tests/gui/ -n auto` locally before pushing GUI test changes. Core matrix tests exclude `tests/gui/` (see `--ignore=tests/gui` in CI).
 
 #### Writing NiceGUI `User` tests — gotchas (learned the hard way)
 
