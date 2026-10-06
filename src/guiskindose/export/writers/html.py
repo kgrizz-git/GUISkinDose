@@ -99,19 +99,13 @@ def _images(payload: ExportPayload) -> str:
 
 
 def _tube_blocks(payload: ExportPayload) -> list[str]:
-    """Per-exam "Dose by tube" tables, only for exams with a tube breakdown."""
-    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, has_tube_content, tube_summary_table
+    """The "Dose by tube" table: one row per exam x tube (empty when no exam qualifies)."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, tube_blocks, tube_report_table
 
-    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
-    if not blocks:
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
         return []
-    out = [f"<h2>{_esc(TUBE_SECTION_TITLE)}</h2>"]
-    for exam in blocks:
-        if payload.is_multi_exam:
-            out.append(f"<p>Exam {_esc(exam.exam_id)}</p>")
-        out.append(_table(tube_summary_table(exam.tube_summary)))
-    out.append(f"<p><em>{_esc(TUBE_NOTE)}</em></p>")
-    return out
+    return [f"<h2>{_esc(TUBE_SECTION_TITLE)}</h2>", _table(rows), f"<p><em>{_esc(TUBE_NOTE)}</em></p>"]
 
 
 def render_html_bytes(payload: ExportPayload) -> bytes:

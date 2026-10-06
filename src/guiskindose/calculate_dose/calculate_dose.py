@@ -41,7 +41,20 @@ def _resolve_kerma_meter_cf(
     settings: PyskindoseSettings,
     exam_id: str | None = None,
 ) -> list[float]:
-    """Resolve per-event kerma-meter CF; skip I/O when disabled.
+    """Resolve per-event kerma-meter CF; skip I/O when disabled (see the detail variant)."""
+    return _resolve_kerma_meter_cf_detail(normalized_data, settings, exam_id)[0]
+
+
+def _resolve_kerma_meter_cf_detail(
+    normalized_data: pd.DataFrame,
+    settings: PyskindoseSettings,
+    exam_id: str | None = None,
+) -> tuple[list[float], list[str]]:
+    """Resolve per-event kerma-meter CF and its source; skip I/O when disabled.
+
+    Returns ``(factors, sources)`` where each source is ``manual``, ``file`` or
+    ``default`` (``off`` for every event when correction is disabled). Sources
+    carry no equipment labels.
 
     ``exam_id`` (``None`` means the single exam, ``"Exam 1"``) selects the
     per-exam identity override for events with no equipment identity.
@@ -49,7 +62,7 @@ def _resolve_kerma_meter_cf(
     km = settings.kerma_meter_correction
     n = len(normalized_data)
     if not km.enable:
-        return all_ones_correction(n).factors
+        return all_ones_correction(n).factors, ["off"] * n
 
     exam_label = exam_id or opaque_exam_label(0)
     file_table = None
@@ -80,7 +93,8 @@ def _resolve_kerma_meter_cf(
                 len(auto_keys),
             )
 
-    table = merge_tables(file_table, manual_for_exam(km.in_memory_table, exam_label))
+    manual = manual_for_exam(km.in_memory_table, exam_label)
+    table = merge_tables(file_table, manual)
     _warn_missing_pairs(normalized_data, table, km, exam_label)
     result = resolve_correction_factors(
         normalized_data,
@@ -90,7 +104,11 @@ def _resolve_kerma_meter_cf(
         table_metadata=table_meta,
         fallback_label=km.unresolved_equipment_labels.get(exam_label),
     )
-    return result.factors
+    sources = [
+        "manual" if key in manual else "file" if file_table and key in file_table else "default"
+        for key in result.resolved_keys
+    ]
+    return result.factors, sources
 
 
 def _warn_unselected_period(periods: dict, period_key: str | None, calibration_date: object) -> None:
@@ -239,7 +257,7 @@ def calculate_dose(
     k_tab_values = k_tab.values
     k_tab_statuses = k_tab.statuses
 
-    kerma_cf = _resolve_kerma_meter_cf(normalized_data, settings, exam_id)
+    kerma_cf, kerma_cf_sources = _resolve_kerma_meter_cf_detail(normalized_data, settings, exam_id)
 
     total_number_of_events = len(normalized_data)
 
@@ -248,6 +266,7 @@ def calculate_dose(
     )
 
     init_tube_outputs(output_template, tube_identities(normalized_data), len(patient.r))
+    output_template[c.OUTPUT_KEY_KERMA_CF_SOURCES] = kerma_cf_sources
 
     output = calculate_irradiation_event_result(
         normalized_data=normalized_data,

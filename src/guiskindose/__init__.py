@@ -59,6 +59,18 @@ def print_example_rdsr_files():
     print("\nFiles are packaged with GUISkinDose example data.")
 
 
+def get_path_to_example_kerma_meter_file():
+    """Return the pathlib.Path to the bundled example kerma-meter calibration CSV.
+
+    The file uses fictional unit names and demonstrates the columns
+    ``equipment``, ``tube``, ``correction_factor``, ``valid_from`` and ``valid_to``.
+    A README beside it explains each column.
+    """
+    from pathlib import Path
+
+    return Path(__file__).parent / "example_data" / "kerma_meter" / "calibration_factors_example.csv"
+
+
 def get_path_to_example_rdsr_files():
     """Return the pathlib.Path to the bundled example RDSR directory."""
     from pathlib import Path

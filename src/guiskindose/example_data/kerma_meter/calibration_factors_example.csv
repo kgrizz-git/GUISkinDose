@@ -1,0 +1,5 @@
+equipment,tube,correction_factor,valid_from,valid_to
+DEMO-ROOM-1,single,1.02,,
+DEMO-ROOM-2,A,0.98,2025-01-01,2025-12-31
+DEMO-ROOM-2,A,1.03,2026-01-01,
+DEMO-ROOM-2,B,1.01,,

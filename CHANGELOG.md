@@ -21,6 +21,17 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Exports show the kerma-meter factors used per tube and exam** (2026-10-06) — whenever kerma-meter
+  correction is on, the "Dose by tube" section (HTML, XLSX, DOCX, PDF, Results tab, and `tube_summary` in
+  dict/JSON) now appears even for a single-plane exam, with one row per exam and tube. Each row gives the
+  applied correction factor (a min-max range plus the kerma-weighted value when a tube's events used more than
+  one factor) and its source (`manual`, `file`, `default`, or `mixed`). With correction off the factor reads
+  "not applied" for studies that still show the section. No equipment names are included.
+- **Example kerma-meter calibration file** (2026-10-06) — a fictional starter CSV
+  (`calibration_factors_example.csv`) with a README explaining the columns, factor definition, tube values,
+  and calibration periods now ships as package data. It includes one unit and tube with two dated
+  calibration periods. Settings has a "Download example calibration file" button, and
+  `guiskindose.get_path_to_example_kerma_meter_file()` returns its path.
 - **Per-exam kerma-meter factors and calibration periods** (2026-10-06) — a dose meter recalibrated between
   exams can now have a different factor per exam: manual entries are keyed by exam, unit, and tube, and each
   exam resolves manual entry, then the file row for its calibration period, then the default factor. In the

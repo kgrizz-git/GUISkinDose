@@ -97,7 +97,8 @@ and reported separately whenever a biplane study is present.
    with the same drift-clearing and run-state privacy handling as the unresolved-equipment labels, and
    never reaches logs or per-event exports. Non-GUI runs have no chooser: `--kerma-meter-calibration-date
    YYYY-MM-DD` picks the period containing that date for every exam. Without it the period with no
-   `valid_to` (current) is used, otherwise the most recent, with a count-only warning.
+   `valid_to` (current) is used, otherwise the most recent, with a count-only warning. A fictional example
+   calibration CSV with a README ships as package data and is offered from Settings as a download.
 
 ## Out of scope
 
@@ -175,7 +176,8 @@ updates the argparse help text for `--kerma-meter-correction-mode` to say it is 
   Radimetrics, or per-tube outputs.
 - [x] `CHANGELOG.md` notes the per-tube outputs, the settings change, the `mode` deprecation, and the
   Radimetrics behaviour change.
-- [x] Phase 6: `kerma_meter_correction.md` help, `ui_copy.json`, `INPUT_DATA_FLOW_AND_OFFSETS.md` (file columns), `FEATURE_INVENTORY.md`, `CODEBASE_OVERVIEW.md` (CLI flag), `glossary.json` (calibration period), `AGENTS.md`, and `CHANGELOG.md` describe per-exam factors, calibration periods, and the CLI date.
+- [x] Phase 6: `kerma_meter_correction.md` help, `ui_copy.json`, `INPUT_DATA_FLOW_AND_OFFSETS.md` (file columns), `FEATURE_INVENTORY.md`, `CODEBASE_OVERVIEW.md` (CLI flag), `glossary.json` (calibration period), `AGENTS.md`, and `CHANGELOG.md` describe per-exam factors, calibration periods, the CLI date, and the example calibration file.
+- [x] Exports and Results show the applied kerma-meter factor and its source per tube and exam (single-plane too when correction is on), with a range and the kerma-weighted value when a tube's events used several factors, and no equipment labels. Documented in the Results help, `CHANGELOG.md`, and `PSD_CALCULATION_ALGORITHM.md` stage 7.
 - [ ] On completion, archive this plan under `plans/archive/`, update `dev-docs/index.md`, and remove the
   TO_DO item.
 

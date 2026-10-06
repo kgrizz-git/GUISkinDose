@@ -40,6 +40,10 @@ missing or differs from the total by more than 1 % stay as a single total row. I
 valid code its plane is `unknown`. The warning reports how many split events replaced a plane code present in the export. Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
 both planes of a row.
 
+**Example calibration file.** A fictional starter file ships as package data in
+`src/guiskindose/example_data/kerma_meter/` (`calibration_factors_example.csv` plus a column-by-column `README.md`);
+`guiskindose.get_path_to_example_kerma_meter_file()` returns its path, and Settings offers it as a download.
+
 **Kerma-meter calibration file periods.** The calibration file (`equipment`, `tube`, `correction_factor`) may add
 optional `valid_from` / `valid_to` ISO-date columns (either blank for an open end). Rows without dates behave as one
 open-ended calibration. Overlapping periods for the same unit and tube are a load error (`kerma_periods.py`). Dates are

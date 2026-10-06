@@ -255,6 +255,9 @@ OUTPUT_KEY_DOSE_MAP = "dose_map"
 OUTPUT_KEY_TUBE_IDENTITY = "tube_identity"
 OUTPUT_KEY_TUBE_DOSE_MAPS = "tube_dose_maps"
 OUTPUT_KEY_TUBE_SUMMARY = "tube_summary"
+# Per-event source of the applied kerma-meter CF: "manual" / "file" / "default",
+# or "off" when kerma-meter correction is disabled. Sources only, never labels.
+OUTPUT_KEY_KERMA_CF_SOURCES = "kerma_cf_sources"
 OUTPUT_KEY_HITS = "hits"
 # Cells touched by ANY evaluated candidate pose. Equals OUTPUT_KEY_HITS for
 # statically handled events; a superset for rotational coverage envelopes.

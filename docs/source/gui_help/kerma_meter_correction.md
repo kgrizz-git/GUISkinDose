@@ -23,6 +23,14 @@ CF is resolved per **individual unit × tube** (Plane A / Plane B / Single Plane
 
 ## Calibration file columns and periods
 
+**Start from the example.** Settings, Kerma-meter correction, has a *Download example
+calibration file* button. The example (`calibration_factors_example.csv`, with a README
+beside it) uses fictional unit names, and shows one unit and tube with two calibration
+periods. It is also installed with the package under `example_data/kerma_meter/`
+(`guiskindose.get_path_to_example_kerma_meter_file()` returns its path). Replace its rows with
+your own measurements, then pass your copy with `--kerma-meter-correction-file` on the
+command line or select it in Settings.
+
 The calibration file has the columns `equipment`, `tube`, and `correction_factor`. It may also
 have `valid_from` and `valid_to` (ISO dates, `YYYY-MM-DD`; either may be blank for an open end).
 Use them when a dose meter was recalibrated and the same unit and tube has different factors

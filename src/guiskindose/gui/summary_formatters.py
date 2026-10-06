@@ -79,17 +79,24 @@ def format_tube_summary(blocks: list[tuple[str | None, list[dict] | None]]) -> s
         One line per tube plus a closing note that per-tube peaks do not sum to the
         peak skin dose. No equipment labels appear.
     """
-    from guiskindose.export.sections import TUBE_NOTE, has_tube_content, tube_summary_table
+    from guiskindose.export.sections import (
+        TUBE_NOTE,
+        has_tube_content,
+        tube_cf_text,
+        tube_row_cells,
+        tube_source_text,
+    )
 
     lines: list[str] = []
     for label, summary in blocks:
         if not has_tube_content(summary):
             continue
         prefix = f"{label}: " if label else ""
-        for tube, _events, reported, corrected, cf, peak in tube_summary_table(summary)[1:]:
+        for row in summary or []:
+            tube, _events, reported, corrected, _cf, _source, peak = tube_row_cells(row)
             lines.append(
-                f"{prefix}{tube}: reported {reported} mGy, corrected {corrected} mGy "
-                f"(CF {cf}), peak {peak} mGy"
+                f"{prefix}{tube}: reported {reported} mGy, corrected {corrected} mGy, "
+                f"CF {tube_cf_text(row)} ({tube_source_text(row)}), peak {peak} mGy"
             )
     if not lines:
         return ""

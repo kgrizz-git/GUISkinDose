@@ -144,6 +144,10 @@
     "kerma.dialog.period_label": {
       "text": "Calibration period",
       "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "settings.kerma_meter.example_button": {
+      "text": "Download example calibration file",
+      "owner": "gui/tabs/settings.py"
     }
   }
 }

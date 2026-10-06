@@ -398,6 +398,9 @@ def _build_physics_section() -> None:
                 ui.button(
                     copy_text("settings.kerma_meter.review_button"), on_click=open_review_dialog
                 ).props("flat dense no-caps")
+                ui.button(
+                    copy_text("settings.kerma_meter.example_button"), on_click=_download_example_calibration_file
+                ).props("flat dense no-caps")
                 ui.input(
                     label="Correction table path (CSV/TSV/XLSX/JSON)",
                     value=state.kerma_meter_file or "",
@@ -422,6 +425,14 @@ def _build_physics_section() -> None:
                     "CF = (real measured dose) / (unit reported dose). "
                     "Radimetrics Equipment = room; DoseTrack Equipment Name is often the model."
                 ).classes("text-xs text-grey-6")
+
+
+def _download_example_calibration_file() -> None:
+    """Offer the bundled example kerma-meter calibration CSV as a browser download."""
+    from guiskindose import get_path_to_example_kerma_meter_file
+
+    path = get_path_to_example_kerma_meter_file()
+    ui.download(path.read_bytes(), path.name)
 
 
 def _build_visual_section() -> None:

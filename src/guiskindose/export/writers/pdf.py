@@ -178,21 +178,15 @@ def _corrections_flow(payload: ExportPayload) -> list:
 
 
 def _tube_flow(payload: ExportPayload) -> list:
-    """Build per-exam "Dose by tube" flowables (empty when no exam has a breakdown)."""
-    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, has_tube_content, tube_summary_table
+    """Build the "Dose by tube" flowables (one row per exam x tube; empty when nothing qualifies)."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, tube_blocks, tube_report_table
 
-    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
-    if not blocks:
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
         return []
-    flow: list[Any] = [Spacer(1, 8), Paragraph(TUBE_SECTION_TITLE, _H2)]
-    widths = [_CONTENT_WIDTH * 0.2] + [_CONTENT_WIDTH * 0.16] * 5
-    for exam in blocks:
-        if payload.is_multi_exam:
-            flow.append(Paragraph(f"Exam {exam.exam_id}", _BODY))
-        flow.append(_table(tube_summary_table(exam.tube_summary), widths))
-        flow.append(Spacer(1, 4))
-    flow.append(Paragraph(TUBE_NOTE, _BODY))
-    return flow
+    n_cols = len(rows[0])
+    widths = [_CONTENT_WIDTH / n_cols] * n_cols
+    return [Spacer(1, 8), Paragraph(TUBE_SECTION_TITLE, _H2), _table(rows, widths), Spacer(1, 4), Paragraph(TUBE_NOTE, _BODY)]
 
 
 def _images_flow(payload: ExportPayload) -> list:

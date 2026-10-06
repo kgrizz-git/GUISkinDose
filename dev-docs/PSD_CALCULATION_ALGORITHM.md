@@ -250,10 +250,11 @@ from the aggregate with an exclusion count header.
   dose-loop dict (beam-miss callouts reach users via warnings, not the export
   object); warnings are not export fields — single-exam calc warnings travel
   via GUI state, multi-exam warnings via `MultiExamResult.warnings`.
-- `tube_summary` (per-tube rows above; tube ids only, never equipment labels)
+- `tube_summary` (per-tube rows above, plus the applied CF range `cf_min`/`cf_max` and its source `cf_source`;
+  tube ids only, never equipment labels)
   rides on `PySkinDoseOutput`, the Results tab, and the HTML/XLSX/DOCX/PDF
-  exports ("Dose by tube", shown only when more than one tube, or a non-single
-  tube, is present, with a note that per-tube peaks do not add up to the PSD).
+  exports ("Dose by tube", one row per exam × tube, shown when kerma-meter correction is on or when more
+  than one tube, or a non-single tube, is present, with a note that per-tube peaks do not add up to the PSD).
 - The interactive HTML dose-map plot is rendered separately by
   `create_dose_map_plot()` in `analyze_data`, not by the export formatter.
 - Rich exports add the plane-identity audit (`source_kind` / `resolution` /

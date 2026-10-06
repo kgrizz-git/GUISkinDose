@@ -16,18 +16,24 @@ Single-exam results show:
   warnings and rich-report ledger (DOCX “Rotational handling ledger”,
   XLSX “Rotational handling” sheet, dict/JSON `rotational_handling`).
 
-### Dose by tube (biplane studies)
+### Dose by tube and the correction factors used
 
-When a study contains more than one X-ray tube (plane A and plane B, or events whose
-tube could not be identified), Results adds a **Dose by tube** block. It lists, for each
-tube, the reported kerma, the corrected kerma, the applied correction factor, and the
-peak of that tube's own dose map. A tube that never reaches the phantom shows a peak of
-zero. The same table appears in the HTML, XLSX, DOCX, and PDF exports.
+Results lists, for each tube of each exam, the reported kerma, the corrected kerma, the
+kerma-meter correction factor that was applied, where that factor came from (`manual`,
+`file`, `default`, or `mixed`), and the peak of that tube's own dose map. It appears
+whenever kerma-meter correction is on, even for a single-plane exam, so you can always see
+which factor was used. If a tube's events used more than one factor, the range and the
+kerma-weighted value are shown, for example `1.1-1.3 (weighted 1.18)`. With correction off,
+a study with more than one tube still shows the table and marks the factor `not applied`;
+a single-plane study with correction off shows nothing.
+
+The same table, with one row per exam and tube, appears in the HTML, XLSX, DOCX, and PDF
+exports and in the dict/JSON output (`tube_summary`). A tube that never reaches the phantom
+shows a peak of zero. Equipment names never appear in it, only the tube and the exam.
 
 The headline peak skin dose is the peak of the combined map, which is the sum of all
 tubes. Each tube's peak is the maximum of a different map, so **per-tube peaks do not
-add up to the peak skin dose**. Single-plane studies show no tube block, because it
-would repeat the headline numbers. Equipment names never appear in this block.
+add up to the peak skin dose**.
 
 ### Reading the Peak Skin Dose band
 

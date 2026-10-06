@@ -540,3 +540,13 @@ async def test_rendered_dialog_shows_follows_and_period_selector(user: User, tmp
     table = state.kerma_meter_in_memory_table
     assert table is not None
     assert table[("Exam 2", "room-1", "A")] == pytest.approx(1.4)
+
+
+def test_example_calibration_download_offers_the_bundled_csv(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose import get_path_to_example_kerma_meter_file
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    calls: list[tuple[bytes, str]] = []
+    monkeypatch.setattr(settings_tab.ui, "download", lambda content, name: calls.append((content, name)))
+    settings_tab._download_example_calibration_file()
+    assert calls == [(get_path_to_example_kerma_meter_file().read_bytes(), "calibration_factors_example.csv")]

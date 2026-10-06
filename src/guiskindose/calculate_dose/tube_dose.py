@@ -68,8 +68,11 @@ def summarize_tubes(output: dict[str, Any]) -> list[dict[str, Any]]:
     """Per-tube reported kerma, corrected kerma, applied CF and partial-map peak.
 
     ``applied_cf`` is corrected over reported kerma, i.e. the kerma-weighted mean
-    CF; for zero reported kerma it is the plain mean of the event CFs. A tube whose
-    events all miss the phantom reports a peak of exactly 0.0.
+    CF; for zero reported kerma it is the plain mean of the event CFs. ``cf_min`` /
+    ``cf_max`` give the range of event CFs (equal when one factor was used) and
+    ``cf_source`` is ``manual`` / ``file`` / ``default``, ``mixed`` when the tube's
+    events used more than one source, or ``off`` when correction is disabled. A
+    tube whose events all miss the phantom reports a peak of exactly 0.0.
     """
     tubes = output.get(c.OUTPUT_KEY_TUBE_IDENTITY) or []
     maps = output.get(c.OUTPUT_KEY_TUBE_DOSE_MAPS) or {}
@@ -77,6 +80,7 @@ def summarize_tubes(output: dict[str, Any]) -> list[dict[str, Any]]:
     corrected = output[c.OUTPUT_KEY_KERMA_CORRECTED]
     meter = output[c.OUTPUT_KEY_CORRECTION_KERMA_METER]
     combined = output[c.OUTPUT_KEY_DOSE_MAP]
+    sources = output.get(c.OUTPUT_KEY_KERMA_CF_SOURCES) or ["off"] * len(tubes)
     summary: list[dict[str, Any]] = []
     for tube in (t for t in TUBE_ORDER if t in set(tubes)):
         idx = [i for i, t in enumerate(tubes) if t == tube]
@@ -84,6 +88,8 @@ def summarize_tubes(output: dict[str, Any]) -> list[dict[str, Any]]:
         corr = float(sum(corrected[i] for i in idx))
         cf = corr / reported if reported > 0 else float(np.mean([meter[i] for i in idx]))
         dose = maps.get(tube, combined)
+        event_cfs = [float(meter[i]) for i in idx]
+        tube_sources = {sources[i] for i in idx}
         summary.append(
             {
                 "tube": tube,
@@ -91,6 +97,9 @@ def summarize_tubes(output: dict[str, Any]) -> list[dict[str, Any]]:
                 "kerma_reported": reported,
                 "kerma_corrected": corr,
                 "applied_cf": cf,
+                "cf_min": min(event_cfs),
+                "cf_max": max(event_cfs),
+                "cf_source": tube_sources.pop() if len(tube_sources) == 1 else "mixed",
                 "peak_dose": float(dose.max()) if dose.size else 0.0,
             }
         )

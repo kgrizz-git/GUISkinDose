@@ -195,17 +195,14 @@ def _add_rotational_methodology(doc, payload: ExportPayload) -> None:
 
 
 def _add_tube_section(doc, payload: ExportPayload) -> None:
-    """Per-exam "Dose by tube" tables for exams with a tube breakdown."""
-    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, has_tube_content, tube_summary_table
+    """The "Dose by tube" table: one row per exam x tube."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, tube_blocks, tube_report_table
 
-    blocks = [e for e in payload.exams if has_tube_content(e.tube_summary)]
-    if not blocks:
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
         return
     doc.add_heading(TUBE_SECTION_TITLE, level=2)
-    for exam in blocks:
-        if payload.is_multi_exam:
-            doc.add_heading(f"Exam {exam.exam_id}", level=3)
-        _table(doc, tube_summary_table(exam.tube_summary))
+    _table(doc, rows)
     doc.add_paragraph(TUBE_NOTE)
 
 

@@ -74,6 +74,7 @@
         "src/guiskindose/gui/tabs/_kerma_meter_dialog.py",
         "src/guiskindose/gui/tabs/_kerma_meter_model.py",
         "src/guiskindose/kerma_periods.py",
+        "src/guiskindose/example_data/kerma_meter/README.md",
         "src/guiskindose/input_adapters/radimetrics.py",
         "src/guiskindose/settings/kerma_meter_correction_settings.py"
       ],
@@ -81,6 +82,8 @@
         "tests/unittests/test_kerma_correction.py",
         "tests/unittests/test_tube_dose.py",
         "tests/unittests/test_kerma_periods.py",
+        "tests/unittests/test_tube_cf_report.py",
+        "tests/unittests/test_kerma_example_file.py",
         "tests/unittests/test_radimetrics_biplane.py",
         "tests/gui/test_kerma_meter_dialog.py",
         "tests/unittests/test_dose_kerma_correction.py",
