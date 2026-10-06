@@ -21,6 +21,20 @@ CF is resolved per **individual unit × tube** (Plane A / Plane B / Single Plane
   multiple rooms of the same model should set an explicit label or supply a custom
   station column.
 
+## Calibration file columns and periods
+
+The calibration file has the columns `equipment`, `tube`, and `correction_factor`. It may also
+have `valid_from` and `valid_to` (ISO dates, `YYYY-MM-DD`; either may be blank for an open end).
+Use them when a dose meter was recalibrated and the same unit and tube has different factors
+over time. Rows without dates behave as before. Two periods for the same unit and tube must not
+overlap, and a file that does is rejected when it loads.
+
+GUISkinDose never reads dates from your exam data. You choose the period for each exam yourself
+(see the dialog below), or on the command line with `--kerma-meter-calibration-date YYYY-MM-DD`,
+which picks the period containing that date for every exam. Without it, the period with no
+`valid_to` (the current one), otherwise the most recent, is used, and a warning with the count
+of affected pairs is logged.
+
 ## Fail-soft behavior
 
 When equipment or tube cannot be resolved, or the `(equipment, tube)` pair is missing
@@ -35,12 +49,21 @@ currently shows uncorrected `K_IRP` only.
 When correction is enabled, GUISkinDose lists every detected unit and tube as soon as events
 load. If any pair has no factor yet, a dialog opens. Each row is pre-filled in this order:
 
-1. a value you entered earlier (`entered manually`),
+1. a value you entered earlier for that exam (`entered manually`), or the previous exam's value (`↳ follows Exam N`),
 2. the value from the calibration file (`from file`),
 3. the default factor (`default: review`). Please check these rows.
 
-Each unit and tube appears once, with the exams that use it, so a shared pair has one value. The list scrolls. A tube shown as **unknown** cannot be looked
-up, so the default factor applies to it.
+Rows are grouped by exam, because a recalibrated meter can need a different factor in a later
+exam. Exam 2 and later start from the value the same unit and tube has in the previous exam and
+say **follows Exam N** until you change that row. Editing an earlier exam updates the exams that
+still follow it, and never the ones you edited. The list scrolls. A tube shown as **unknown**
+cannot be looked up, so the default factor applies to it.
+
+**Calibration period.** When the file has dated rows for a unit and tube of an exam, that exam
+gets a *Calibration period* selector listing the file's periods, for example
+`2026-01-01 → 2026-06-30`. Exam 1 starts on the most recent period and later exams follow the
+previous exam's choice until you pick one. The chosen period selects that exam's file factor.
+The choice is saved with the run configuration only when identifiers are included.
 
 **Exams with no equipment identity.** If an exam carries no serial number or station name, the
 dialog asks which unit it was acquired on. Pick a detected unit or a unit from the file, or type

@@ -169,16 +169,21 @@ def exam_supports_table_origin(exam, meta: dict) -> bool:
 
 
 def _drop_stale_unresolved_labels(state: AppState) -> None:
-    """Clear per-exam unresolved-equipment labels when exam positions shifted.
+    """Clear per-exam kerma-meter state when exam positions shifted.
 
-    The labels are keyed by exam position ("Exam N"). If the previous exam list is
-    not a prefix of the new one (removal or reorder), a label could land on the
-    wrong exam, so all labels are cleared and the dialog asks again.
+    Unresolved-equipment labels, calibration-period choices, and per-exam manual
+    factors are keyed by exam position ("Exam N"). If the previous exam list is
+    not a prefix of the new one (removal or reorder), an entry could land on the
+    wrong exam, so they are cleared and the dialog asks again. Legacy global
+    ``(equipment, tube)`` entries are kept.
     """
     signature = tuple(id(exam) for exam in state.loaded_exams)
     previous = state.kerma_meter_exam_signature
     if signature[: len(previous)] != previous:
         state.kerma_meter_unresolved_labels = {}
+        state.kerma_meter_periods = {}
+        kept = {k: v for k, v in (state.kerma_meter_in_memory_table or {}).items() if len(k) != 3}
+        state.kerma_meter_in_memory_table = kept or None
     state.kerma_meter_exam_signature = signature
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +25,10 @@ class KermaMeterCorrectionSettings:
         When False, CF is skipped (all factors 1.0) and no file I/O occurs.
     file : Path | None
         Path to a CSV/TSV/XLSX/JSON correction table. When set, it always loads.
-        Resolution order per ``(equipment, tube)``: ``in_memory_table`` (manual
-        entry), then ``file`` rows, then ``default_factor``.
+        Resolution order per exam and ``(equipment, tube)``: ``in_memory_table``
+        (manual entry for that exam), then the ``file`` row for the exam's
+        calibration period, then ``default_factor``. The file may carry optional
+        ``valid_from`` / ``valid_to`` ISO-date columns.
     file_sheet : str | int | None
         Optional Excel sheet name/index.
     default_factor : float
@@ -38,9 +41,18 @@ class KermaMeterCorrectionSettings:
         Non-GUI runs never prompt and use the file and ``default_factor``.
         Replaces the old ``prompt_at_calc`` flag, which is still accepted on
         input (see Notes).
-    in_memory_table : dict[tuple[str, str], float] | None
-        Session override (GUI prompt / tests); wins over file keys when both set.
-
+    calibration_periods : dict[str, str]
+        Runtime-only calibration-period choice per exam (opaque exam label ->
+        period key ``"<valid_from>|<valid_to>"``). Selects which dated file rows
+        apply to that exam. Never serialized.
+    calibration_date : datetime.date | None
+        Runtime-only date chosen by ``--kerma-meter-calibration-date``: the period
+        containing it applies to every exam without a ``calibration_periods`` entry.
+        Never serialized.
+    in_memory_table : dict[tuple[str, ...], float] | None
+        Session override (GUI dialog / tests); wins over file rows. Keys are
+        ``(exam label, equipment, tube)`` for per-exam entries; a legacy
+        ``(equipment, tube)`` key applies to every exam.
     unresolved_equipment_labels : dict[str, str]
         Runtime-only per-exam identity overrides keyed by opaque exam label
         (``"Exam 1"``). Used for events with no serial/station so they reach the
@@ -96,6 +108,9 @@ class KermaMeterCorrectionSettings:
             self.apply_legacy_mode(legacy_mode)
         # Runtime-only (not serialized to example JSON).
         self.in_memory_table: dict[tuple[str, str], float] | None = data.get("in_memory_table")
+        # Runtime-only calibration-period choice: per exam (GUI) or one date (CLI).
+        self.calibration_periods: dict[str, str] = dict(data.get("calibration_periods") or {})
+        self.calibration_date: date | None = data.get("calibration_date")
         self.unresolved_equipment_labels: dict[str, str] = dict(data.get("unresolved_equipment_labels") or {})
 
     def apply_legacy_mode(self, mode: object, *, explicit: bool | None = None) -> None:

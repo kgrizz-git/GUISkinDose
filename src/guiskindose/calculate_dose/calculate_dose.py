@@ -21,12 +21,14 @@ from guiskindose.geom_calc import (
 from guiskindose.kerma_correction import (
     all_ones_correction,
     distinct_auto_resolved_equipment_keys,
-    load_correction_table,
+    load_correction_periods,
+    manual_for_exam,
     merge_tables,
     missing_keys,
     resolve_correction_factors,
     unique_equipment_tube_keys,
 )
+from guiskindose.kerma_periods import dated_pairs, file_table_for_exam
 from guiskindose.phantom_class import Phantom
 from guiskindose.privacy import opaque_exam_label
 from guiskindose.settings import PyskindoseSettings
@@ -49,14 +51,18 @@ def _resolve_kerma_meter_cf(
     if not km.enable:
         return all_ones_correction(n).factors
 
+    exam_label = exam_id or opaque_exam_label(0)
     file_table = None
     table_meta: dict[str, object] | None = None
-    # Precedence: manual in_memory_table > file rows > default_factor. A file
-    # always loads when set, regardless of any prompt.
+    # Precedence per exam: manual entry for that exam > file row for its
+    # calibration period > default_factor. A file always loads when set.
     if km.file is not None:
         try:
-            file_table = load_correction_table(km.file, km.file_sheet)
+            periods = load_correction_periods(km.file, km.file_sheet)
+            period_key = km.calibration_periods.get(exam_label)
+            file_table = file_table_for_exam(periods, period_key=period_key, calibration_date=km.calibration_date)
             table_meta = {"source_stem": km.file.stem}
+            _warn_unselected_period(periods, period_key, km.calibration_date)
         except (OSError, UnicodeError, ValueError, TypeError) as exc:
             logger.warning(
                 "kerma-meter correction: failed to load table (%s); "
@@ -74,8 +80,7 @@ def _resolve_kerma_meter_cf(
                 len(auto_keys),
             )
 
-    table = merge_tables(file_table, km.in_memory_table)
-    exam_label = exam_id or opaque_exam_label(0)
+    table = merge_tables(file_table, manual_for_exam(km.in_memory_table, exam_label))
     _warn_missing_pairs(normalized_data, table, km, exam_label)
     result = resolve_correction_factors(
         normalized_data,
@@ -86,6 +91,23 @@ def _resolve_kerma_meter_cf(
         fallback_label=km.unresolved_equipment_labels.get(exam_label),
     )
     return result.factors
+
+
+def _warn_unselected_period(periods: dict, period_key: str | None, calibration_date: object) -> None:
+    """Count-only warning when dated rows exist but no calibration period was chosen.
+
+    Non-GUI runs have no period chooser, so the current (no ``valid_to``) or most
+    recent period is used. No dates are logged.
+    """
+    if period_key or calibration_date is not None:
+        return
+    n_dated = len(dated_pairs(periods))
+    if n_dated:
+        logger.warning(
+            "kerma-meter correction: %d pair(s) have dated calibration rows and no period was selected "
+            "(use --kerma-meter-calibration-date); using the current or most recent period.",
+            n_dated,
+        )
 
 
 def _warn_missing_pairs(

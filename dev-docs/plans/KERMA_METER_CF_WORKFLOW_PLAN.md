@@ -1,6 +1,6 @@
 # Kerma-Meter CF Workflow Plan (file + prompt-on-miss, per-tube dose)
 
-Status: Active execution plan — Phases 0–5 implemented, pending final review
+Status: Active execution plan — Phases 0–5 implemented; Phase 6 (per-exam factors and calibration periods) implemented; pending final review
 Created: 2026-10-06
 Owner: maintainer
 Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md)
@@ -83,6 +83,22 @@ and reported separately whenever a biplane study is present.
 8. **CLI parity.** `--kerma-meter-correction-file` keeps working. Non-GUI runs never prompt. Each exam logs
    one warning with the count of missing pairs, never the labels, and uses `default_factor`.
 
+9. **Per-exam factors and calibration periods.** A dose meter can be recalibrated between exams, so the same
+   `(equipment, tube)` may need different factors in different exams. Manual entries are keyed by
+   `(exam label, equipment, tube)`, and the engine resolves per exam: manual entry for that exam, then the
+   file row for that exam's calibration period, then `default_factor`. The dialog shows rows per exam again.
+   Exam 2 and later pre-fill with the value the same pair has in the previous exam and keep following it
+   (the row says "follows Exam N") until the user edits that row. The calibration file may carry optional
+   `valid_from` / `valid_to` columns (ISO dates, either blank for open-ended). Rows without dates behave as
+   before. Overlapping periods for the same pair are a load error. GUISkinDose never reads dates from the
+   input data (they are PHI). When the file has dated rows for a detected pair, the dialog shows a
+   per-exam "Calibration period" selector listing the file's periods. It defaults to the previous exam's
+   choice, and Exam 1 defaults to the most recent period. The choice is stored per exam in the GUI session,
+   with the same drift-clearing and run-state privacy handling as the unresolved-equipment labels, and
+   never reaches logs or per-event exports. Non-GUI runs have no chooser: `--kerma-meter-calibration-date
+   YYYY-MM-DD` picks the period containing that date for every exam. Without it the period with no
+   `valid_to` (current) is used, otherwise the most recent, with a count-only warning.
+
 ## Out of scope
 
 - Beam-quality-dependent (kVp/filter) CF bands. These remain out of scope, as in the archived plan §11.
@@ -132,6 +148,7 @@ Decisions for Radimetrics:
 | 3 | GUI: load-time detection, the dialog with manual > file > default pre-fill, the Settings toggle, session suppression, and the Calculate guard. | GUI tests in `tests/gui/` show that a miss opens the dialog, a full hit skips it, the toggle off skips it, earlier manual values are pre-filled rather than reset, and Cancel keeps file and earlier values. |
 | 4 | Per-tube partial maps and totals in Results and in the HTML/XLSX/DOCX/PDF exports. | On a synthetic biplane fixture, the partial maps of all present tubes sum cell by cell to the combined map. Per-tube reported and corrected kerma sum to the combined totals. Headline PSD equals the combined-map peak. A tube that misses reports zero. Single-plane goldens are unchanged. |
 | 5 | CLI warning and the documentation checklist below. | Every checklist item is done. `check_help_registry.py`, `check_ui_copy.py`, `sync_gui_help.py`, `sync_ui_copy.py`, `check_feature_doc_matrix.py`, `check_doc_freshness.py`, and `test_psd_algorithm_doc.py` pass. `check_docstring_inventory.py` shows no new gaps. It checks only that docstrings exist, so review NumPy style by hand. |
+| 6 | Per-exam manual factors, `valid_from` / `valid_to` calibration periods with overlap validation, the per-exam period selector and follow-previous-exam pre-fill in the dialog, `--kerma-meter-calibration-date`, per-exam missing detection, and `run_state` round-trip of per-exam entries and periods. | Unit tests cover period loading, overlap errors, undated rows unchanged, period selection by date, per-exam manual > file > default, and the CLI date. GUI tests show different values per exam, follow-previous pre-fill, edit propagation that spares edited rows, the period selector default and a choice that changes the factor, and drift clearing. |
 
 Every phase also updates the tests, docs, and docstrings for the code it touches, in the same PR. Do not
 defer them to Phase 5. New or changed public functions, classes, and settings fields get NumPy-style
@@ -158,6 +175,7 @@ updates the argparse help text for `--kerma-meter-correction-mode` to say it is 
   Radimetrics, or per-tube outputs.
 - [x] `CHANGELOG.md` notes the per-tube outputs, the settings change, the `mode` deprecation, and the
   Radimetrics behaviour change.
+- [x] Phase 6: `kerma_meter_correction.md` help, `ui_copy.json`, `INPUT_DATA_FLOW_AND_OFFSETS.md` (file columns), `FEATURE_INVENTORY.md`, `CODEBASE_OVERVIEW.md` (CLI flag), `glossary.json` (calibration period), `AGENTS.md`, and `CHANGELOG.md` describe per-exam factors, calibration periods, and the CLI date.
 - [ ] On completion, archive this plan under `plans/archive/`, update `dev-docs/index.md`, and remove the
   TO_DO item.
 

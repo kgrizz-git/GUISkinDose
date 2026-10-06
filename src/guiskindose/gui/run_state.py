@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from guiskindose.gui.run_state_kerma import apply_exam_kerma, serialize_exam_kerma, validate_exam_kerma
 from guiskindose.privacy import opaque_exam_label
 
 if TYPE_CHECKING:  # duck-typed at runtime; keeps this module GUI-light
@@ -140,8 +141,9 @@ def _nest_in_memory_table(
     if table is None or not include_identifiers:
         return None
     nested: dict[str, dict[str, float]] = {}
-    for (equipment, tube), factor in table.items():
-        nested.setdefault(equipment, {})[tube] = factor
+    for key, factor in table.items():
+        if len(key) == 2:  # legacy global entries; per-exam ones use run_state_kerma
+            nested.setdefault(key[0], {})[key[1]] = factor
     return nested
 
 
@@ -276,6 +278,7 @@ def serialize_run_state(
     if include_identifiers:
         # Per-exam identity overrides are site identifiers, gated like the CF table.
         document["gui_state"]["kerma_meter_unresolved_labels"] = dict(app_state.kerma_meter_unresolved_labels)
+        serialize_exam_kerma(app_state, document["gui_state"])
     if passthrough and include_identifiers:
         for key, value in passthrough.items():
             document.setdefault(key, value)
@@ -343,6 +346,7 @@ _SNAPSHOT_ATTRS = (
     "kerma_meter_ask_for_missing",
     "kerma_meter_in_memory_table",
     "kerma_meter_unresolved_labels",
+    "kerma_meter_periods",
     "include_static_pose",
     "angular_step_deg",
     "dosetrack_plane_code_map",
@@ -480,6 +484,7 @@ def validate_run_state_document(document: Any) -> None:
             if not isinstance(profile, dict):
                 raise _malformed(f"normalization_settings[{index}] must be a mapping, got {type(profile).__name__}")
     _validate_unresolved_labels(gui.get("kerma_meter_unresolved_labels"))
+    validate_exam_kerma(gui)
     table = gui.get("kerma_meter_in_memory_table")
     if table is not None:
         if not isinstance(table, dict) or any(not isinstance(tubes, dict) for tubes in table.values()):
@@ -501,7 +506,10 @@ def _validate_unresolved_labels(labels: Any) -> None:
 def _apply_kerma_gui_state(gui: dict, app_state: AppState) -> None:
     """Apply the identifier-gated kerma session state (CF table, identity overrides)."""
     if "kerma_meter_in_memory_table" in gui:
-        app_state.kerma_meter_in_memory_table = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"])
+        legacy = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"]) or {}
+        per_exam = {k: v for k, v in (app_state.kerma_meter_in_memory_table or {}).items() if len(k) == 3}
+        app_state.kerma_meter_in_memory_table = {**legacy, **per_exam} or None
+    apply_exam_kerma(gui, app_state)
     if "kerma_meter_unresolved_labels" in gui:
         app_state.kerma_meter_unresolved_labels = dict(gui["kerma_meter_unresolved_labels"] or {})
 

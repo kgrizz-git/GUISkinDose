@@ -451,3 +451,56 @@ def test_unresolved_equipment_labels_malformed_rejected() -> None:
     app_state = AppState()
     with pytest.raises(RunStateError):
         apply_run_state(document, app_state)
+
+
+def _per_exam_document(*, include_identifiers: bool) -> dict:
+    populated = AppState()
+    populated.kerma_meter_in_memory_table = {
+        ("Exam 1", "Acme", "A"): 1.1,
+        ("Exam 2", "Acme", "A"): 1.3,
+        ("Legacy", "T"): 1.0,
+    }
+    populated.kerma_meter_periods = {"Exam 1": "2026-01-01|2026-06-30", "Exam 2": "2026-07-01|"}
+    populated.loaded_exam_meta = []
+    return serialize_run_state(
+        _example_settings(),
+        populated,
+        include_identifiers=include_identifiers,
+        app_version="1.0.0",
+        created="2026-10-06T00:00:00+00:00",
+    )
+
+
+def test_per_exam_factors_and_periods_round_trip() -> None:
+    from guiskindose.gui.run_state import apply_run_state
+
+    fresh = AppState()
+    apply_run_state(_per_exam_document(include_identifiers=True), fresh)
+    assert fresh.kerma_meter_in_memory_table == {
+        ("Exam 1", "Acme", "A"): 1.1,
+        ("Exam 2", "Acme", "A"): 1.3,
+        ("Legacy", "T"): 1.0,
+    }
+    assert fresh.kerma_meter_periods == {"Exam 1": "2026-01-01|2026-06-30", "Exam 2": "2026-07-01|"}
+
+
+def test_per_exam_factors_and_periods_are_redacted_without_identifiers() -> None:
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _per_exam_document(include_identifiers=False)
+    dumped = json.dumps(document)
+    assert "Acme" not in dumped
+    assert "2026-01-01" not in dumped
+    live = AppState()
+    live.kerma_meter_periods = {"Exam 1": "keep"}
+    apply_run_state(document, live)
+    assert live.kerma_meter_periods == {"Exam 1": "keep"}
+
+
+def test_malformed_per_exam_values_are_rejected() -> None:
+    from guiskindose.gui.run_state import RunStateError, apply_run_state
+
+    document = _per_exam_document(include_identifiers=True)
+    document["gui_state"]["kerma_meter_exam_factors"] = {"Exam 1": {"Acme": {"A": "high"}}}
+    with pytest.raises(RunStateError):
+        apply_run_state(document, AppState())

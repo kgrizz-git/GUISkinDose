@@ -109,10 +109,13 @@ class AppState:
     # unresolved labels (keyed by exam position) are dropped when exams are
     # removed or reordered. Appending an exam keeps them.
     kerma_meter_exam_signature: tuple[int, ...] = ()
-    kerma_meter_in_memory_table: dict[tuple[str, str], float] | None = None
+    kerma_meter_in_memory_table: dict[tuple[str, ...], float] | None = None
     # Per-exam identity override for events with no serial/station, keyed by the
     # opaque exam label ("Exam 1"). Values are site identifiers: never logged.
     kerma_meter_unresolved_labels: dict[str, str] = field(default_factory=dict)
+    # Calibration period chosen per exam (opaque exam label -> "<from>|<to>" key).
+    # Calibration dates, not patient dates; kept out of logs and per-event exports.
+    kerma_meter_periods: dict[str, str] = field(default_factory=dict)
 
     plot_dosemap: bool = True
     dark_mode: bool = True

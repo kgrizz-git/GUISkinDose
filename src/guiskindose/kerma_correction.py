@@ -295,6 +295,8 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
         "acquisitionplane": "tube",
         "plane": "tube",
         "correction_factor": "correction_factor",
+        "valid_from": "valid_from",
+        "valid_to": "valid_to",
         "cf": "correction_factor",
         "factor": "correction_factor",
         "notes": "notes",
@@ -310,40 +312,14 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
 def _rows_to_factor_dict(
     rows: Sequence[Mapping[str, Any]],
 ) -> dict[tuple[str, str], float]:
-    """Build a first-wins ``(equipment, tube) → CF`` map from normalized row dicts."""
-    table: dict[tuple[str, str], float] = {}
-    duplicates = 0
-    for row in rows:
-        equip = normalize_equipment_label(row.get("equipment"))
-        tube = normalize_tube(row.get("tube"))
-        raw_cf = row.get("correction_factor")
-        if equip is None:
-            raise ValueError("Kerma-meter correction table: equipment column has an empty value.")
-        if tube == TUBE_IDENTITY_UNKNOWN:
-            raise ValueError(
-                "Kerma-meter correction table: tube column has an empty or unrecognized value."
-            )
-        if raw_cf is None:
-            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
-        try:
-            factor = float(raw_cf)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE) from exc
-        if not math.isfinite(factor) or factor <= 0:
-            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
-        key = (equip, tube)
-        if key in table:
-            duplicates += 1
-            continue
-        table[key] = factor
-        _warn_suspicious_factor(factor)
-    if duplicates:
-        logger.warning(
-            "kerma-meter correction: %d duplicate (equipment, tube) row(s); first wins.",
-            duplicates,
-        )
-    logger.debug("kerma-meter correction table loaded (%d rows)", len(table))
-    return table
+    """Build a first-wins ``(equipment, tube) → CF`` map from normalized row dicts.
+
+    Dated rows resolve to the current (no ``valid_to``) or most recent period; use
+    :func:`load_correction_periods` to choose a period explicitly.
+    """
+    from guiskindose.kerma_periods import resolve_period_table, rows_to_periods
+
+    return resolve_period_table(rows_to_periods(rows))
 
 
 def _ensure_row_budget(n_rows: int) -> None:
@@ -400,23 +376,58 @@ def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataF
     return df
 
 
-def load_correction_table(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], float]:
-    """Load a CF lookup table from CSV/TSV/XLSX/JSON.
-
-    Raises ValueError on missing file, empty data, oversized tables, or invalid values.
-    """
+def _read_correction_rows(path: Path | str, sheet: str | int | None) -> Sequence[Mapping[str, Any]]:
+    """Read the raw row dicts of a CF file (CSV/TSV/XLSX/JSON) after basic file checks."""
     path = Path(path)
     if not path.is_file():
         raise ValueError("Kerma-meter correction file not found or not a regular file.")
-
     if path.suffix.lower() == ".json":
-        rows: Sequence[Mapping[str, Any]] = _load_json_correction_rows(path)
-    else:
-        rows = cast(
-            list[dict[str, Any]],
-            _load_tabular_correction_df(path, sheet).to_dict(orient="records"),
-        )
-    return _rows_to_factor_dict(rows)
+        return _load_json_correction_rows(path)
+    return cast(
+        list[dict[str, Any]],
+        _load_tabular_correction_df(path, sheet).to_dict(orient="records"),
+    )
+
+
+def load_correction_periods(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], list[Any]]:
+    """Load a CF file keeping every calibration period (``valid_from`` / ``valid_to``).
+
+    Returns ``(equipment, tube) -> list[CalibrationRow]``. Raises ValueError on a
+    missing file, empty data, oversized tables, invalid values, or overlapping
+    periods for one pair.
+    """
+    from guiskindose.kerma_periods import rows_to_periods
+
+    return rows_to_periods(_read_correction_rows(path, sheet))
+
+
+def load_correction_table(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], float]:
+    """Load a CF lookup table from CSV/TSV/XLSX/JSON.
+
+    Rows without dates behave as one open-ended calibration. For dated rows the
+    current (no ``valid_to``) or most recent period is used; see
+    :func:`load_correction_periods` to pick another.
+
+    Raises ValueError on missing file, empty data, oversized tables, or invalid values.
+    """
+    return _rows_to_factor_dict(_read_correction_rows(path, sheet))
+
+
+def manual_for_exam(
+    table: Mapping[tuple[str, ...], float] | None,
+    exam: str,
+) -> dict[tuple[str, str], float]:
+    """Manual entries that apply to one exam.
+
+    Entries are keyed ``(exam label, equipment, tube)``. A legacy two-part key
+    ``(equipment, tube)`` applies to every exam, and an entry for the exam itself
+    wins over it.
+    """
+    if not table:
+        return {}
+    out: dict[tuple[str, str], float] = {(k[0], k[1]): v for k, v in table.items() if len(k) == 2}
+    out.update({(k[1], k[2]): v for k, v in table.items() if len(k) == 3 and k[0] == exam})
+    return out
 
 
 def merge_tables(

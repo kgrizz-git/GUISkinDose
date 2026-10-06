@@ -144,6 +144,14 @@
       "aliases": [
         "prompt_at_calc"
       ]
+    },
+    "calibration_period": {
+      "preferred": "calibration period",
+      "definition": "Date range (valid_from to valid_to, either end may be open) during which a kerma-meter correction factor applies. Chosen per exam by the user; never read from exam data.",
+      "aliases": [
+        "valid_from",
+        "valid_to"
+      ]
     }
   }
 }

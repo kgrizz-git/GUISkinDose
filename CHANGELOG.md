@@ -21,6 +21,17 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Per-exam kerma-meter factors and calibration periods** (2026-10-06) — a dose meter recalibrated between
+  exams can now have a different factor per exam: manual entries are keyed by exam, unit, and tube, and each
+  exam resolves manual entry, then the file row for its calibration period, then the default factor. In the
+  dialog, Exam 2 and later start from the previous exam's value and say "follows Exam N" until edited;
+  editing an earlier exam updates only the exams still following it. The calibration file may add optional
+  `valid_from` / `valid_to` ISO-date columns (overlapping periods for one unit and tube are a load error);
+  with dated rows, each exam gets a *Calibration period* selector (Exam 1 defaults to the most recent period,
+  later exams to the previous choice). Dates are never read from the exam data. The new
+  `--kerma-meter-calibration-date YYYY-MM-DD` flag picks the period for every exam in non-GUI runs; without it
+  the current or most recent period is used and a count-only warning is logged. Per-exam factors and period
+  choices are saved with the run configuration only when identifiers are included.
 - **Kerma-meter factors: load-time dialog and per-exam unit choice** (2026-10-06) — when correction is
   enabled, loading events lists every detected unit and tube and opens a dialog if any pair has no factor.
   Rows are grouped by exam and pre-filled from earlier entries, then the calibration file, then the default

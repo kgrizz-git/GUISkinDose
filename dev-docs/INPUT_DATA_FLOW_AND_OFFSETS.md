@@ -40,6 +40,12 @@ missing or differs from the total by more than 1 % stay as a single total row. I
 valid code its plane is `unknown`. The warning reports how many split events replaced a plane code present in the export. Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
 both planes of a row.
 
+**Kerma-meter calibration file periods.** The calibration file (`equipment`, `tube`, `correction_factor`) may add
+optional `valid_from` / `valid_to` ISO-date columns (either blank for an open end). Rows without dates behave as one
+open-ended calibration. Overlapping periods for the same unit and tube are a load error (`kerma_periods.py`). Dates are
+never read from exam data (PHI): the period of each exam is chosen in the GUI dialog or with
+`--kerma-meter-calibration-date`; otherwise the current (no `valid_to`) or most recent period applies.
+
 **Missing plane column.** When a Radimetrics file has no plane column and no per-plane evidence, every event still
 defaults to `Single Plane` (unchanged behaviour). When the file has per-plane evidence but no plane column, the split
 assigns `Plane A` / `Plane B` itself and unsplittable rows get `unknown`, never `Single Plane`.

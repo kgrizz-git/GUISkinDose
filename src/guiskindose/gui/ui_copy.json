@@ -78,7 +78,7 @@
       "owner": "gui/tabs/_kerma_meter_dialog.py"
     },
     "kerma.dialog.body": {
-      "text": "Enter CF = (real measured dose) / (unit reported dose) for each detected unit and tube. Rows marked \"default\" have no entered or file value, so please review them. Cancel keeps file values and earlier entries, and unanswered pairs use the default factor.",
+      "text": "Enter CF = (real measured dose) / (unit reported dose) for each unit and tube of each exam. Exam 2 and later follow the previous exam until you change them, so a recalibrated meter can have a different factor per exam. Rows marked \"default\" have no entered or file value, so please review them. Cancel keeps file values and earlier entries, and unanswered pairs use the default factor.",
       "owner": "gui/tabs/_kerma_meter_dialog.py"
     },
     "kerma.dialog.unresolved": {
@@ -121,10 +121,6 @@
       "text": "Open a dialog when a detected unit and tube has no entered or file factor. Never blocks a calculation.",
       "owner": "gui/tabs/settings.py"
     },
-    "kerma.dialog.used_by": {
-      "text": "Used by:",
-      "owner": "gui/tabs/_kerma_meter_dialog.py"
-    },
     "kerma.dialog.error_invalid": {
       "text": "Enter a number greater than zero for every factor, or press Cancel.",
       "owner": "gui/tabs/_kerma_meter_dialog.py"
@@ -140,6 +136,14 @@
     "settings.kerma_meter.review_button": {
       "text": "Review correction factors…",
       "owner": "gui/tabs/settings.py"
+    },
+    "kerma.dialog.source.follows": {
+      "text": "↳ follows",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.period_label": {
+      "text": "Calibration period",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
     }
   }
 }
