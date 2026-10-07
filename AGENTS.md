@@ -191,8 +191,8 @@ pip-only install can run them only by installing semgrep at exactly the pinned v
 which the resolver accepts with a warning; anything else is a blocked push. It is run as a pinned,
 hash-locked isolated tool, because its own requirements held four transitive advisories below
 their fixes while it sat in the `dev` extra. Its current pins are `click~=8.4.2`, `mcp==1.29.0`
-and `pyjwt[crypto]~=2.13.0`; that last one still blocks the pyjwt fixes, which is why the
-tool's Dependabot alerts are dismissed as unreachable rather than fixed. `scripts/semgrep_tool.py` resolves the invocation, preferring
+and `pyjwt[crypto]>=2.15.0,<3` (semgrep 1.179.0), so the lock carries a patched pyjwt; the older
+pyjwt alerts that were dismissed as unreachable should now close as fixed. `scripts/semgrep_tool.py` resolves the invocation, preferring
 `uv run --locked --project tools/semgrep`: that mini-project is a standalone uv project (**not** a
 workspace member — joining the workspace would merge the dependencies back into the root
 resolution) whose `uv.lock` pins all ~68 transitive packages by exact version and sha256. `uvx

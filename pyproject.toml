@@ -242,15 +242,13 @@ skips = ["B101"]
 # Hash-locking it in tools/semgrep/uv.lock later put its dependencies back in view of
 # Dependabot, which indexes every lockfile regardless of this repo's update config, and the
 # pin bump to 1.178.0 then fixed the mcp advisories for real (mcp 1.23.3 -> 1.29.0, click
-# 8.1.8 -> 8.4.2). What remains unfixed is pyjwt: semgrep still declares
-# `pyjwt[crypto]~=2.13.0` at 1.178.0, so its isolated environment installs 2.13.0 and that
-# vulnerable code is still present, simply outside the surface `uv audit`, `pip-audit` and
-# grype inspect. Those thirteen alerts are dismissed as unreachable — see
-# tools/semgrep/pyproject.toml for why — not fixed. The *project* environment also improved:
+# 8.1.8 -> 8.4.2). pyjwt stayed vulnerable until semgrep 1.179.0 relaxed its pin to
+# `pyjwt[crypto]>=2.15.0,<3`; the bump to 1.179.0 moved the tool lock to pyjwt 2.15.1, so the
+# alerts that had been dismissed as unreachable are now fixed too. The *project* environment also improved:
 # `click` moved 8.1.8 -> 8.5.0 there, which matters because click reaches users through
 # uvicorn in the `gui` extra. So of the five original entries, four are genuinely fixed
-# (click here and in the tool, the three mcp advisories in the tool) and only pyjwt remains
-# an audit-scope question — and it is answered by dismissal-as-unreachable, not silence.
+# (click here and in the tool, the three mcp advisories in the tool), and pyjwt is fixed in
+# the tool lock since semgrep 1.179.0.
 #
 # The tool environment is no longer unhashed or unwatched: tools/semgrep/uv.lock pins every
 # transitive package by sha256, and Dependabot raises alerts against it. Do not add a

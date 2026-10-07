@@ -128,17 +128,16 @@ be archived.
 - [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
   `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. **Current state: the ignore
   list is empty.** All five entries it ever held (click, mcp x3, pyjwt) existed because semgrep pinned those
-  transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and Dependabot alerts
-  #2/#3/#4 should close on their own. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
+  transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and the semgrep 1.179.0
+  bump moved the tool lock to patched pyjwt 2.15.1. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
   suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
 - [ ] **Hash-lock `phi-scan`, and audit the locked tool environments** — semgrep is done:
   `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
   packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
   still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
-  verification**, so a same-version re-upload would be trusted. Separately, nothing audits either
-  tool environment, so semgrep's own `click 8.1.8` / `mcp 1.23.3` / `pyjwt 2.13.0` stay invisible to
-  `uv audit` and Dependabot (see the note in `[tool.uv.audit]`) even though `tools/semgrep/uv.lock`
-  now records them in a readable, auditable form. **Acceptance:** a `tools/phi-scan/` project
+  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` audits
+  neither tool environment. Only Dependabot sees `tools/semgrep/uv.lock` (see the note in
+  `[tool.uv.audit]`). **Acceptance:** a `tools/phi-scan/` project
   mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
   scanner-only advisories separately from application ones so the distinction stays explicit.
 - [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800
@@ -147,14 +146,6 @@ be archived.
   never be condensed just to shrink the file. **Acceptance:** move entries for shipped releases
   into a dated archive file beside this one (mirroring the plans-archive convention), leave a
   pointer at the top, and update the docs index in the same PR.
-- [ ] **Revisit the dismissed PyJWT alerts when semgrep relaxes its pin** — thirteen Dependabot
-  alerts against `tools/semgrep/uv.lock` (one critical) are dismissed as not-used: they are all in
-  PyJWT's JWT/JWKS handling, which semgrep only *executes* under `semgrep mcp` (the MCP token
-  verifier), a subcommand these gates never invoke — the module is imported eagerly, so being
-  loaded is not the question; `tool_environment()` additionally runs the scanner
-  unauthenticated by construction. Every fix needs pyjwt >= 2.14.0 while semgrep pins `pyjwt[crypto]~=2.13.0` even at
-  1.178.0. **Acceptance:** when a semgrep release allows pyjwt 2.14.0+, bump the pin, relock, and
-  let the alerts close on their own rather than staying dismissed.
 - [ ] **Bump the pinned scanner versions** — `semgrep` (`dev-docs/privacy_tool_inventory.json`) and `phi-scan`
   (`0.7.0`, hardcoded in `.github/workflows/phi-scan.yml`, `scripts/privacy_admission.py`, and
   `dev-docs/references/LOCAL_PII_MODELS.md`) are isolated `uvx` tools outside `uv.lock`, so **Dependabot cannot see

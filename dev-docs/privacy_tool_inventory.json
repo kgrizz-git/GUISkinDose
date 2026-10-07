@@ -106,7 +106,7 @@
       "id": "semgrep",
       "name": "Semgrep",
       "status": "active",
-      "version": "1.178.0",
+      "version": "1.179.0",
       "version_source": "this inventory (pinned isolated uvx tool; not in uv.lock)",
       "execution": "local and GitHub Actions",
       "role": "Blocking project privacy and general SAST rules",

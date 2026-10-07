@@ -4,14 +4,10 @@
 # never imported, and its own tight pins held four transitive advisories below their fixes
 # while it sat in the root `dev` extra. See scripts/semgrep_tool.py.
 #
-# The pyjwt pin (`~=2.13.0`, i.e. <2.14.0) still blocks thirteen pyjwt advisories whose fixes
-# all land in 2.14.0, including one critical. They are unreachable here: the only use of the
-# jwt API in the scanner is semgrep/mcp/utilities/token_verifier.py, whose PyJWKClient and
-# jwt.decode calls run only under `semgrep mcp` — a subcommand these gates never invoke.
-# (`semgrep login` does NOT use JWT; it validates an opaque 64-hex API token.) Note the
-# module is *imported* eagerly via semgrep/cli.py, so jwt is loaded on any invocation; it is
-# never executed, which is what unreachability turns on. So the Dependabot alerts raised
-# against this lock are dismissed as not-used rather than suppressed silently.
+# Semgrep 1.179.0 requires `pyjwt[crypto]>=2.15.0,<3`, so the lock carries a patched pyjwt.
+# Older semgrep pinned `~=2.13.0`, which is why earlier pyjwt alerts against this lock were
+# dismissed as unreachable: jwt is only executed under `semgrep mcp`, which these gates never
+# invoke. Those alerts should now close as fixed.
 #
 # This mini-project exists so that isolation does not cost integrity. `uvx --from
 # semgrep==<pin>` resolves a version but re-resolves and re-verifies its entire
@@ -30,7 +26,7 @@ name = "guiskindose-semgrep-tool"
 version = "0"
 description = "Pinned, hash-locked Semgrep scanner environment (not shipped, not importable)."
 requires-python = ">=3.10"
-dependencies = ["semgrep==1.178.0"]
+dependencies = ["semgrep==1.179.0"]
 
 # Nothing here is built or installed as a package; this project only carries the lock.
 [tool.uv]
