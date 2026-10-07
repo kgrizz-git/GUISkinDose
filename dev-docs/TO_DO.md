@@ -51,8 +51,8 @@ be archived.
     `tests/gui/test_gui_fallback_reporting.py`. DoseTrack non-CID plane codes: no map fails value-safely, a map
     gives tubes A 3 / B 2. The smoke found `--input-preview-only` ignoring `--plane-code-map` (fixed, tested).
   - *Settings phantom preview* — **checklist green 2026-10-07** (criteria 1–4, 7, 8, 10, 11 by screenshots and plot
-    data; 5, 6, 9, 12, 13 by code and test reading). The plan (`plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md`) can be
-    archived. Note the plan text says `_reduced_1000t`; the code prefers `_reduced_3000t`.
+    data; 5, 6, 9, 12, 13 by code and test reading). Plan archived:
+    [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/archive/SETTINGS_PHANTOM_PREVIEW_PLAN.md).
   - *Rich export* — **browser modal done 2026-10-07**: HTML, XLSX, DOCX and PDF all download and open for a
     3-exam run (HTML with 5 images and no paths, XLSX 7 sheets, DOCX 12 tables / 5 images, PDF 9 pages). DOCX
     converted with LibreOffice renders cleanly (tables inside margins, Dose by tube readable, images present). Still

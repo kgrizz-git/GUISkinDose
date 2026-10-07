@@ -1,5 +1,9 @@
 # Settings Phantom Preview Implementation Plan
 
+> **Status: Complete — archived 2026-10-07.** Acceptance checklist verified by an agent-run smoke pass
+> (Playwright screenshots and plot data for criteria 1–4, 7, 8, 10, 11; code/test reading for 5, 6, 9, 12, 13).
+> Note: the shipped preview prefers `_reduced_3000t` (then `_reduced_1000t`), not `_reduced_1000t` as written below.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development`
 > (recommended) or `superpowers:executing-plans` to implement this plan task-by-task.
 > Steps use checkbox (`- [ ]`) syntax. Mark a checkbox only after the step is fully done and verified.

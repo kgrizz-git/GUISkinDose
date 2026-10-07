@@ -166,7 +166,6 @@ Phased detail derived from diagnostics or master plans.
 | [plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md) | **Packaging/runtime fix** — correction manifest and validation; package-resource provider; remove the CWD-created database default; verify wheel behavior and numerical parity. |
 | [plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md) | **Separate future feature** — validated reusable manufacturer/model coordinate and patient-support transmission profiles across API, CLI, GUI, and exports. |
 | [plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md) | **Separate research/physics work** — characterize current intersection, model closed table/pad volumes, and require scientific validation before path-length-aware transmission. |
-| [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. Manual smoke then archive. |
 | [plans/archive/SETTINGS_EXPORT_PLAN.md](plans/archive/SETTINGS_EXPORT_PLAN.md) | **Complete** — reproducible run-state export/import: full GUI state as versioned JSON with GUI import round-trip (PR #116). |
 | [plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md](plans/archive/ARMS_DOWN_PHANTOM_VARIANTS_PLAN.md) | **Complete** — additive `_arms_down` for all clinical stems (23 twins; legacy via MPFB approx). |
 | [plans/FUN_DEMO_PHANTOMS_PLAN.md](plans/FUN_DEMO_PHANTOMS_PLAN.md) | Broader fun-demo survey: nude classical (Venus/David, D1-gated), Phase 2 cartoons, bust fallbacks. v1 clothed+Steamboat execution archived (see archive entry). |
@@ -191,6 +190,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/archive/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | **Complete** (archived 2026-10-07) — Settings-tab live 3D human preview without RDSR; acceptance checklist verified by smoke pass. |
 | [plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md) | **Complete** (2026-10-07, PR #139) — per-exam × equipment × tube kerma-meter CFs with calibration periods, load-time dialog, per-tube dose reporting, Radimetrics A/B handling, Corrections tab, three-way `k_tab_mode`. |
 | [plans/archive/COMPLEXITY_GATES_PLAN.md](plans/archive/COMPLEXITY_GATES_PLAN.md) | **Completed 2026-10-03** — Ruff C901 cap baseline, ratcheting checker, pre-push and CI enforcement. |
 | [plans/archive/sonarqube_remediation_plan.md](plans/archive/sonarqube_remediation_plan.md) | **Completed and archived 2026-09-28** — historical high-severity SonarQube remediation and derived complexity refactors; current operating instructions live in `SONARQUBE_LOCAL.md`. |
