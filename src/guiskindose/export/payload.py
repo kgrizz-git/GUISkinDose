@@ -99,6 +99,13 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         ):
             if col in df.columns:
                 plane_identity_audit[key] = df[col].fillna("unknown").astype(str).tolist()
+        if "acquisition_plane" in df.columns or "acquisition_plane_canonical" in df.columns:
+            # The tube identity the kerma-meter and per-tube steps actually use: the CID
+            # code when present, else the plane meaning text. The three fields above
+            # describe only the coded (CID 10003) identity, which tabular exports lack.
+            from guiskindose.kerma_correction import resolve_correction_keys
+
+            plane_identity_audit["tube"] = [tube for _, tube in resolve_correction_keys(df, explicit_label=None)]
     return ExamSection(
         exam_id=exam_id,
         manufacturer=(_sections.equipment_section(exam_src)["manufacturer"] if exam_src else None),

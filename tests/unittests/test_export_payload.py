@@ -389,6 +389,7 @@ def test_payload_surfaces_plane_identity_audit():
     assert audit["source_kind"] == ["dicom_cid", "meaning_only"]
     assert audit["resolution"] == ["code-backed", "unknown"]
     assert audit["canonical"] == ["A", "unknown"]
+    assert audit["tube"] == ["A", "unknown"]  # code-backed A; the second event has no usable identity
 
 
 def test_payload_surfaces_k_tab_statuses_and_audit_setting_rows():
@@ -406,7 +407,7 @@ def test_payload_surfaces_k_tab_statuses_and_audit_setting_rows():
     from guiskindose.export._format import audit_setting_rows
 
     rows = dict(audit_setting_rows(exam))
-    assert rows["Plane identity (source kind)"] == "dicom_cid=1, dicom_code=1"
+    assert rows["Plane code source (CID 10003)"] == "dicom_cid=1, dicom_code=1"
     assert rows["k_tab lookup statuses"] == "exact=1, no_device=1"
 
 
@@ -430,3 +431,28 @@ def test_object_view_carries_rotational_handling():
 def test_object_view_defaults_without_rotational_attrs():
     """Older outputs without the new attrs yield None (additive contract)."""
     assert view_from_output(_fake_output_obj(_two_event_output())).rotational_handling is None
+
+
+def test_audit_reports_the_tube_identity_actually_used_for_meaning_only_planes():
+    """Tabular exports resolve A/B from the meaning text; the audit must show that, not 'unknown'."""
+    from guiskindose.export._format import audit_setting_rows
+
+    df = pd.DataFrame({
+        "acquisition_plane": ["Plane A", "Plane B", "Single Plane", "garbled"],
+        "acquisition_plane_source_kind": ["meaning_only"] * 4,
+        "acquisition_plane_resolution": ["unknown"] * 4,
+        "acquisition_plane_canonical": ["unknown"] * 4,
+    })
+    out = _two_event_output()
+    payload = collect_export_payload(_single_source(out, df=df), with_images=False)
+    exam = payload.exams[0]
+    assert exam.plane_identity_audit["tube"] == ["A", "B", "single", "unknown"]
+    rows = dict(audit_setting_rows(exam))
+    assert rows["Tube identity used (A / B / single)"] == "A=1, B=1, single=1, unknown=1"
+    assert rows["Plane code resolution (CID 10003)"] == "unknown=4"
+
+
+def test_audit_has_no_tube_row_without_any_plane_column():
+    df = pd.DataFrame({"acquisition_plane_source_kind": ["none"]})
+    payload = collect_export_payload(_single_source(_two_event_output(), df=df), with_images=False)
+    assert "tube" not in payload.exams[0].plane_identity_audit

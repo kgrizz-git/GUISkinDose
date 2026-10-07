@@ -550,9 +550,16 @@ def _format_plane_identity_audit() -> str:
         return _plane_audit_cache.value
 
     parts = []
+    if "acquisition_plane" in df.columns:
+        from collections import Counter
+
+        from guiskindose.kerma_correction import resolve_correction_keys
+
+        tubes = Counter(tube for _, tube in resolve_correction_keys(df, explicit_label=None))
+        parts.append("tube identity used: " + ", ".join(f"{k}={v}" for k, v in sorted(tubes.items())))
     for col, label in (
-        ("acquisition_plane_source_kind", "source kind"),
-        ("acquisition_plane_resolution", "resolution"),
+        ("acquisition_plane_source_kind", "plane code source"),
+        ("acquisition_plane_resolution", "plane code resolution"),
     ):
         if col in df.columns:
             counts = df[col].fillna("unknown").astype(str).value_counts()

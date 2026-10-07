@@ -217,6 +217,12 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Clearer audit lines in reports** (2026-10-07) — the import warning no longer lists columns the adapter does
+  use (the Radimetrics per-plane dose columns, the plane-code column, and the procedure DAP total) as ignored. The
+  report's plane-identity rows are labelled as the coded (CID 10003) identity, and a new "Tube identity used"
+  row shows the A / B / single / unknown counts the dose calculation actually used, so tabular exports no longer
+  read as if tube identity failed.
+
 - **Sidebar peak skin dose clears when results are invalidated** (2026-10-07) — changing a correction factor in
   the kerma-meter dialog, or any Settings or Corrections control that resets results (for example the
   transmission mode), now also returns the left sidebar status to "PSD: —" instead of leaving the old value

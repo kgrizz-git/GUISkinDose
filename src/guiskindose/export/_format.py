@@ -114,9 +114,10 @@ def audit_setting_rows(exam: ExamSection) -> list[list[str]]:
     """Settings rows for plane-identity audit and k_tab status counts."""
     rows: list[list[str]] = []
     for key, label in (
-        ("source_kind", "Plane identity (source kind)"),
-        ("resolution", "Plane identity (resolution)"),
-        ("canonical", "Plane identity (canonical)"),
+        ("tube", "Tube identity used (A / B / single)"),
+        ("source_kind", "Plane code source (CID 10003)"),
+        ("resolution", "Plane code resolution (CID 10003)"),
+        ("canonical", "Plane code canonical (CID 10003)"),
     ):
         values = exam.plane_identity_audit.get(key) or []
         if values:

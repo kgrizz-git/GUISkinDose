@@ -28,7 +28,7 @@ be archived.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — `RF-Pat-Orientation-Modifier-Missing` is
   still open. See the item in Input Data And Calculation.
 - [ ] **Kerma-meter CF workflow (file + prompt-on-miss, per-tube dose)** — Phases 0–6 are implemented and
-  reviewed. Radimetrics `(A)`/`(B)` columns are confirmed per event (one plane per row). Smokes: load-time dialog and native example download OK (user); CLI smokes automated; browser GUI smokes all passed (2026-10-07). Remaining: native-window pass of the Corrections tab and dialog, Windows native save dialog, DOCX/PDF visual check, then archive. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
+  reviewed. Radimetrics `(A)`/`(B)` columns are confirmed per event (one plane per row). Smokes: load-time dialog and native example download OK (user); CLI smokes automated; browser GUI smokes all passed (2026-10-07; also the sidebar fix, original-case labels, and PDF/DOCX tube tables). Remaining: native-window pass of the Corrections tab and dialog, Windows native save dialog, DOCX/PDF visual check, then archive. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
 
 
 ## Active Work
@@ -49,7 +49,8 @@ be archived.
   - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
   - *Kerma-meter CF workflow / Corrections tab*: done — load-time dialog and native example download (user),
     CLI scenarios (automated), and the browser GUI smokes (Playwright, 2026-10-07: dialog, periods, follows,
-    validation, Cancel, Calculate guard, per-tube Results and exports, examples, k_tab mode). Still to do: native
+    validation, Cancel, Calculate guard, per-tube Results and exports incl. PDF/DOCX, examples, k_tab mode,
+    sidebar fix, original-case labels). Still to do: native
     (pywebview) pass of the Corrections tab and dialog, Windows native save dialog, DOCX/PDF visual check.
     See [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
 

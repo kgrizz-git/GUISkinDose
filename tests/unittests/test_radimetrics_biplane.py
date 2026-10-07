@@ -284,3 +284,25 @@ class TestRadimetricsOnePlanePerRow:
     def test_a_only_fixture_parses_long_float_noise(self):
         norm = _load(FIXTURES / "radimetrics_events_a_only.csv").normalized_data
         assert norm["K_IRP"].to_numpy() == pytest.approx([6.1, 1.819, 2.5, 0.75, 3.3])
+
+
+class TestImportWarningsListOnlyIgnoredColumns:
+    def test_older_biplane_export_does_not_report_split_columns_or_the_plane_code_as_ignored(self):
+        result = _load(FIXTURES / "radimetrics_events_legacy.csv")
+        ignored = [w for w in result.warnings if "not mapped" in w]
+        assert ignored == []
+        assert "AcquisitionPlane" in result.provenance.column_map.values()  # the plane-code column is mapped
+
+    def test_split_columns_are_hidden_but_truly_unused_columns_are_still_listed(self, tmp_path):
+        extra = "Unused Vendor Note"
+        rows = [{"total": "30.0", _A: "18.0", _B: "12.0", extra: "x"}]
+        warnings = _load(_write_csv(tmp_path, rows, extra_headers=[_A, _B, extra])).warnings
+        message = next(w for w in warnings if "not mapped" in w)
+        assert extra in message
+        assert "Reference Point Dose (A)" not in message
+        assert "Reference Point Dose (B)" not in message
+
+    def test_newer_export_does_not_report_the_procedure_dap_total_as_ignored(self):
+        warnings = _load(FIXTURES / "radimetrics_events_a_only.csv").warnings
+        message = next((w for w in warnings if "not mapped" in w), "")
+        assert "DAP (Total)" not in message

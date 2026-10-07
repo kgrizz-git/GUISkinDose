@@ -57,6 +57,12 @@ Browser GUI smokes (2026-10-07, headless Playwright), all passed unless noted:
 - The k_tab mode select: the default falls back to the estimate on this model, and `measured_only` is ×1.25
   (24.36 to 30.45 mGy).
 - Cosmetic fix: the dialog now shows equipment labels in their original spelling (matching stays casefolded).
+- Playwright browser smokes (2026-10-07) also confirmed the sidebar fix (dialog edit and k_tab mode change both
+  clear it), the original-case labels, and the PDF and DOCX Dose by tube tables (no labels, paths, or dates).
+- Two misleading audit lines for the older Radimetrics biplane example were fixed: the import warning no longer
+  lists the per-plane dose columns or the plane-code column as ignored, and the report now shows "Tube identity
+  used (A / B / single)" beside the plane-code rows, which are relabelled "(CID 10003)" because they describe only
+  the coded identity.
 
 Remaining:
 - Manual passes still to do: the new Corrections tab and dialog in the native (pywebview) window, the Windows

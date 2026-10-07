@@ -80,7 +80,7 @@ RADIMETRICS_PATTERNS: dict[str, list[str]] = {
     "Manufacturer": ["manufacturer", "vendor"],
     "ManufacturerModelName": ["device model", "device"],
     "StationName": ["equipment"],
-    "AcquisitionPlane": ["acquisition plane code", "acquisition plane"],
+    "AcquisitionPlane": ["acquisition plane code", "acquisition planecode", "acquisition plane"],
     "IrradiationEventType": ["irradiation event type"],
     "PositionerPrimaryAngle_deg": ["primary angle (rf)", "primary angle"],
     "PositionerSecondaryAngle_deg": ["secondary angle (rf)", "secondary angle"],
@@ -361,6 +361,20 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     return out, True
 
 
+def consumed_split_columns(raw_headers: list[str]) -> set[str]:
+    """Per-plane dose and DAP headers that the biplane split reads (when both planes exist).
+
+    They are not in the column map, but they are not ignored either, so the import
+    warning must not list them.
+    """
+    consumed: set[str] = set()
+    for pattern in (_PER_PLANE_DOSE_RE, _PER_PLANE_DAP_RE):
+        found = _per_plane_columns(raw_headers, pattern)
+        if set(found) == {"A", "B"}:
+            consumed.update(found.values())
+    return consumed
+
+
 def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
     """Radimetrics-specific steps: numeric coercion, unit conversion, warnings."""
     # Coerce numerics (CSV reads all cells as strings)
@@ -427,4 +441,5 @@ def adapt(
         transform=_transform,
         original_filename=original_filename,
         settings=settings,
+        consumed_columns=consumed_split_columns,
     )
