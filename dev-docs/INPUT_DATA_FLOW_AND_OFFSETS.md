@@ -24,7 +24,7 @@ Every adapter must keep the X-ray tube of each event distinguishable, because ke
 keyed by `(equipment, tube)`. Tube identity is resolved from `acquisition_plane_canonical` (a DICOM CID 10003 code)
 first, then from the `acquisition_plane` meaning text (`Single Plane` / `Plane A` / `Plane B`), and is otherwise
 `unknown`. See the per-adapter audit in
-[plans/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md#phase-0-audit-tube-identity-per-adapter).
+[plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md#phase-0-audit-tube-identity-per-adapter).
 
 **Radimetrics biplane split.** Real Radimetrics exports seen so far put each event on one plane: in the older export
 exactly one of `Reference_Point_Dose_(A)_mGy` / `(B)_mGy` is filled and equals the total (rows alternate between A and

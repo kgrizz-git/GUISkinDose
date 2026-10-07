@@ -164,7 +164,6 @@ Phased detail derived from diagnostics or master plans.
 |---|---|
 | [plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) | **Completed** — prevent inherited Plane B zero transmission from silently zeroing dose; validate tube identity; fix unmatched-model GUI alerts; standardize transmission terminology. Archived 2026-09-10. |
 | [plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md) | **Packaging/runtime fix** — correction manifest and validation; package-resource provider; remove the CWD-created database default; verify wheel behavior and numerical parity. |
-| [plans/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md) | Kerma-meter CF from a calibration file plus prompt-on-miss for detected equipment/tube (default 1.0), and per-tube A/B dose reporting. |
 | [plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md) | **Separate future feature** — validated reusable manufacturer/model coordinate and patient-support transmission profiles across API, CLI, GUI, and exports. |
 | [plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md) | **Separate research/physics work** — characterize current intersection, model closed table/pad volumes, and require scientific validation before path-length-aware transmission. |
 | [plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md) | Settings-tab live 3D human preview (no RDSR); habitus scales + active-exam offsets; `PreviewSnapshot` + cross-tab refresh; face-up / back-on-support QA. Manual smoke then archive. |
@@ -192,6 +191,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md) | **Complete** (2026-10-07, PR #139) — per-exam × equipment × tube kerma-meter CFs with calibration periods, load-time dialog, per-tube dose reporting, Radimetrics A/B handling, Corrections tab, three-way `k_tab_mode`. |
 | [plans/archive/COMPLEXITY_GATES_PLAN.md](plans/archive/COMPLEXITY_GATES_PLAN.md) | **Completed 2026-10-03** — Ruff C901 cap baseline, ratcheting checker, pre-push and CI enforcement. |
 | [plans/archive/sonarqube_remediation_plan.md](plans/archive/sonarqube_remediation_plan.md) | **Completed and archived 2026-09-28** — historical high-severity SonarQube remediation and derived complexity refactors; current operating instructions live in `SONARQUBE_LOCAL.md`. |
 | [plans/archive/documentation-assessment.md](plans/archive/documentation-assessment.md) | **Complete** (2026-09-07) — documentation & docstrings accuracy sweep, Phases 0–4. Standing matrix + triggers persist in [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md). |

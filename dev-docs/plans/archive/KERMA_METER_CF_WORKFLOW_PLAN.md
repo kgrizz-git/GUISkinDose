@@ -1,13 +1,14 @@
 # Kerma-Meter CF Workflow Plan (file + prompt-on-miss, per-tube dose)
 
-Status: Active — Phases 0–6 implemented and reviewed on branch `docs/todo-trim-dose-meter-plan` (2026-10-06); closeout pending
+Status: **Complete — archived 2026-10-07.** Phases 0–6 shipped (PR #139). Remaining manual smokes moved to
+`TO_DO.md` → Manual Smokes.
 Created: 2026-10-06
 Owner: maintainer
-Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md)
+Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](KERMA_METER_CORRECTION_FACTORS_PLAN.md)
 (shipped engine, file loader, identity resolution) and
-[archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
-Related: [TO_DO.md](../TO_DO.md) — *Biplane support and recognition*;
-[CUSTOM_EQUIPMENT_PROFILES_PLAN.md](CUSTOM_EQUIPMENT_PROFILES_PLAN.md) (separate concept; do not merge).
+[archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
+Related: [TO_DO.md](../../TO_DO.md) — *Biplane support and recognition*;
+[CUSTOM_EQUIPMENT_PROFILES_PLAN.md](../CUSTOM_EQUIPMENT_PROFILES_PLAN.md) (separate concept; do not merge).
 
 ## Progress (2026-10-06)
 
@@ -67,7 +68,7 @@ Browser GUI smokes (2026-10-07, headless Playwright), all passed unless noted:
 Remaining:
 - Manual passes still to do: the new Corrections tab and dialog in the native (pywebview) window, the Windows
   native save dialog, and a visual check of the DOCX and PDF reports.
-- Then archive this plan, update `dev-docs/index.md`, and remove the TO_DO item.
+- Archived 2026-10-07; the open passes are tracked in `TO_DO.md` → Manual Smokes.
 
 Answered (2026-10-07): the Radimetrics `(A)`/`(B)` columns are per-event values, and each real row sits on one
 plane. In the older export exactly one of the two cells is filled and equals the total. In the newer export the

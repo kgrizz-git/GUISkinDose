@@ -27,9 +27,6 @@ be archived.
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — `RF-Pat-Orientation-Modifier-Missing` is
   still open. See the item in Input Data And Calculation.
-- [ ] **Kerma-meter CF workflow (file + prompt-on-miss, per-tube dose)** — Phases 0–6 are implemented and
-  reviewed. Radimetrics `(A)`/`(B)` columns are confirmed per event (one plane per row). Smokes: load-time dialog and native example download OK (user); CLI smokes automated; browser GUI smokes all passed (2026-10-07; also the sidebar fix, original-case labels, and PDF/DOCX tube tables). Remaining: native-window pass of the Corrections tab and dialog, Windows native save dialog, DOCX/PDF visual check, then archive. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
-
 
 ## Active Work
 
@@ -47,12 +44,16 @@ be archived.
   - *Settings phantom preview*: acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
   - *Rich export*: Export-tab modal in browser + native pywebview; Windows native file dialogs.
   - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
-  - *Kerma-meter CF workflow / Corrections tab*: done — load-time dialog and native example download (user),
-    CLI scenarios (automated), and the browser GUI smokes (Playwright, 2026-10-07: dialog, periods, follows,
-    validation, Cancel, Calculate guard, per-tube Results and exports incl. PDF/DOCX, examples, k_tab mode,
-    sidebar fix, original-case labels). Still to do: native
-    (pywebview) pass of the Corrections tab and dialog, Windows native save dialog, DOCX/PDF visual check.
-    See [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
+  - *Kerma-meter CF workflow / Corrections tab* ([archived plan](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md)):
+    done — load-time dialog and native example download (user), CLI scenarios (automated), browser GUI smokes
+    (Playwright, 2026-10-07), and PDF/DOCX tube tables (content checked, PDF page rendered). Still open:
+    - Native (pywebview) pass of the Corrections tab, the factor dialog and the transmission info icon. *User.*
+    - Windows: native Save As for "Download example calibration file" and the Export tab. *User.*
+    - DOCX visual layout check (content already verified). *Agent* if LibreOffice is available to render it; else user.
+  - **Agent-runnable** (an agent can drive these with headless Playwright against a local server, or the CLI):
+    *Multi-exam* (browser parts), *Correction safety / tube identity* (synthetic inputs via CLI or browser),
+    *Settings phantom preview* (screenshots of the acceptance checklist), *Rich export* (browser modal only),
+    and *Results table* ('—' vs kerma). Native-window and Windows checks need the user.
 
 ## Product Backlog
 
