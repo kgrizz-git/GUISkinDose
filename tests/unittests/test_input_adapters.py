@@ -608,17 +608,17 @@ class TestRadimetricsLegacyFormat:
         )
         assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "radimetrics"
-        # Per-plane A/B kerma columns split each of the 3 total rows into A and B events.
-        assert len(result.normalized_data) == 6
+        # Each row is one event on one plane, so the row count is unchanged.
+        assert len(result.normalized_data) == 8
         # header is the 2nd row (row 0 is a numeric index row)
         assert result.provenance.header_row_index == 1
         expected = {"model", "DSD", "DSI", "kVp", "K_IRP", "Ap1", "Ap2"}
         assert expected.issubset(set(result.normalized_data.columns))
 
-    def test_total_reference_dose_mapped_and_split_per_plane(self):
-        """The bare total column maps to DoseRP_Gy; the per-plane (A)/(B) columns
-        do not map but split each total row (30/20/50) into A (18/12/30) and B
-        (12/8/20) events whose kerma sums back to the total."""
+    def test_total_reference_dose_mapped_and_each_row_lands_on_its_plane(self):
+        """The bare total column maps to DoseRP_Gy; the per-plane (A)/(B) columns do not
+        map. Each row has exactly one plane filled, so it becomes one event on that plane
+        with its kerma unchanged."""
         from guiskindose.input_adapters.models import InputAdapterResult
         from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -632,10 +632,8 @@ class TestRadimetricsLegacyFormat:
         dose_sources = [src for src, tgt in col_map.items() if tgt == "DoseRP_Gy"]
         assert dose_sources == ["Reference_Point_Dose"]
         norm = result.normalized_data
-        assert norm["acquisition_plane"].tolist() == ["Plane A", "Plane B"] * 3
-        k = norm["K_IRP"].to_numpy()
-        assert k.reshape(3, 2).sum(axis=1) == pytest.approx([30.0, 20.0, 50.0])
-        assert k == pytest.approx([18.0, 12.0, 12.0, 8.0, 30.0, 20.0])
+        assert norm["acquisition_plane"].tolist() == [f"Plane {p}" for p in "AABABBAB"]
+        assert norm["K_IRP"].to_numpy() == pytest.approx([3.2, 1.5, 4.8, 2.1, 6.7, 0.9, 5.4, 3.9])
 
 
 class TestDoseTrackAdapter:

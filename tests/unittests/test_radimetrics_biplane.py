@@ -262,3 +262,25 @@ class TestOtherAdaptersEmitBiplaneIdentity:
         loaded.write_text("\n".join(text) + "\n", encoding="utf-8")
         norm = read_and_normalize_input(loaded, input_schema="generic_rdsr_like", settings=_settings()).normalized_data
         assert _tubes(norm)[:3] == ["A", "B", "single"]
+
+
+class TestRadimetricsOnePlanePerRow:
+    """Real exports put each event on one plane; the both-filled split is defensive only."""
+
+    def test_legacy_fixture_is_one_event_per_row_with_kerma_unchanged(self):
+        result = _load(FIXTURES / "radimetrics_events_legacy.csv")
+        norm = result.normalized_data
+        assert len(norm) == 8
+        assert _tubes(norm) == list("AABABBAB")
+        assert norm["K_IRP"].sum() == pytest.approx(28.5)  # sum of the exported totals
+
+    def test_a_only_fixture_is_not_split_and_keeps_the_single_plane_path(self):
+        result = _load(FIXTURES / "radimetrics_events_a_only.csv")
+        norm = result.normalized_data
+        assert len(norm) == 5
+        assert set(_tubes(norm)) == {"single"}  # no B events, plane column used as given
+        assert not any("biplane export" in w for w in result.warnings)
+
+    def test_a_only_fixture_parses_long_float_noise(self):
+        norm = _load(FIXTURES / "radimetrics_events_a_only.csv").normalized_data
+        assert norm["K_IRP"].to_numpy() == pytest.approx([6.1, 1.819, 2.5, 0.75, 3.3])

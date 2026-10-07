@@ -22,11 +22,13 @@ Done:
 - An example calibration file ships as package data with placeholder dates, and the tests use it.
 
 Remaining:
-- Confirm what the per-plane `(A)`/`(B)` columns mean in a real legacy Radimetrics export. The Phase 0 split
-  assumes they are per-event values. If they are cumulative per plane, revert the split and take the tube from
-  the plane-code column.
 - Run the manual GUI smoke test for the dialog, the Review button, and the per-tube Results.
-- After both, archive this plan, update `dev-docs/index.md`, and remove the TO_DO item.
+- Then archive this plan, update `dev-docs/index.md`, and remove the TO_DO item.
+
+Answered (2026-10-07): the Radimetrics `(A)`/`(B)` columns are per-event values, and each real row sits on one
+plane. In the older export exactly one of the two cells is filled and equals the total. In the newer export the
+sample has plane B empty on every row and A equal to the total. The split therefore produces one event per row
+for real files. The adapter and fixtures were updated to match (see the Phase 0 decisions).
 
 ## Objective
 
@@ -154,9 +156,15 @@ Decisions for Radimetrics:
   proportion to kerma. Fluoro time stays on the first event of each row, so procedure totals do not double.
 - **Known limitation.** Both split events reuse the single `(RF)` angle, kVp and table columns. Independent
   per-plane geometry stays in the *Biplane support* backlog item.
-- **Behaviour change in a bundled fixture.** `radimetrics_events_legacy.csv` has per-plane columns with both
-  planes non-zero, so its 3 total rows now load as 6 events (A, B per row, kerma summing to the old totals).
-  The fixture file is unchanged. `radimetrics_events.csv` (no per-plane columns) loads exactly as before.
+- **What real exports look like.** Exports seen so far put each event on one plane. In the older underscored
+  export exactly one of `Reference_Point_Dose_(A)_mGy` / `(B)_mGy` is filled and equals the total, and rows
+  alternate irregularly between A and B. In the newer export plane B is empty and A equals the total (some
+  values carry long float noise such as `6.1000000000000000`). The both-planes-filled split is kept as
+  defensive handling only; no real export has been seen with both cells filled on one row.
+- **Bundled fixtures.** `radimetrics_events_legacy.csv` now follows the older pattern (8 rows, A-only or B-only,
+  one event per row, kerma unchanged). `radimetrics_events_a_only.csv` follows the newer pattern (B blank, A =
+  Total, noisy floats) and is not split. `radimetrics_events.csv` (no per-plane columns) is unchanged. The
+  fixture values are invented.
 
 ## Phases
 

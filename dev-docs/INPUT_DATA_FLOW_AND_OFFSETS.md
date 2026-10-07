@@ -26,9 +26,14 @@ first, then from the `acquisition_plane` meaning text (`Single Plane` / `Plane A
 `unknown`. See the per-adapter audit in
 [plans/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md#phase-0-audit-tube-identity-per-adapter).
 
-**Radimetrics biplane split.** A Radimetrics biplane export lists one row per event with the whole-event
-`Reference Point Dose (Total)` plus per-plane `Reference Point Dose (A)` / `(B)` columns (the older export spells them
-`Reference_Point_Dose_(A)_mGy` / `(B)`). The adapter (`input_adapters/radimetrics.py::split_biplane_events`) treats the
+**Radimetrics biplane split.** Real Radimetrics exports seen so far put each event on one plane: in the older export
+exactly one of `Reference_Point_Dose_(A)_mGy` / `(B)_mGy` is filled and equals the total (rows alternate between A and
+B), and in the newer export plane B is empty with A equal to `Reference Point Dose (Total) mGy`. Such a row becomes one
+event on its plane with its kerma unchanged, and a file with plane B empty everywhere is not treated as biplane. The
+case below, where both plane cells are filled on one row and add up to the total, is defensive handling only and has not
+been seen in a real export. The rest of this paragraph describes it. A both-filled export lists one row per event with
+the whole-event `Reference Point Dose (Total)` plus per-plane `Reference Point Dose (A)` / `(B)` columns (the older
+export spells them `Reference_Point_Dose_(A)_mGy` / `(B)`). The adapter (`input_adapters/radimetrics.py::split_biplane_events`) treats the
 file as biplane only when both per-plane columns exist and at least one row has non-zero plane B kerma (a file whose
 plane B column is all zero or empty stays single-plane). Each such row is then *replaced* by a `Plane A` event and a
 `Plane B` event; a plane with zero or empty kerma emits no event, so an A-only row becomes one Plane A event and a B-only

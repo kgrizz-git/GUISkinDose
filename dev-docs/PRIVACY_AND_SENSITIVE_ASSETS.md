@@ -236,7 +236,9 @@ pinned, quiet, and has no report upload or AI review enabled. Version 0.7.0 is c
 CSV/TSV files; broader source-code sinks are enforced by the project Semgrep rules. Its 90-day baseline contains only
 finding hashes and metadata. The current 14 entries were reviewed by `KG` on 2026-07-17 as synthetic fixture headers,
 synthetic numeric rows, or numeric correction-table combinations—not ignored findings. One more entry, for the fictional calibration dates in the shipped example
-`example_data/kerma_meter/calibration_factors_example.csv`, was reviewed by `KG` on 2026-10-06. New or expired findings fail
+`example_data/kerma_meter/calibration_factors_example.csv`, was reviewed by `KG` on 2026-10-06. A further entry, for the synthetic Radimetrics fixture
+`tests/fixtures/tabular_inputs/radimetrics_events_a_only.csv` (invented values, placeholder `Date Performed` 1901-01-01),
+was reviewed by `KG` on 2026-10-07. New or expired findings fail
 the secondary workflow and must be triaged. phi-scan supplements, rather than replaces, the deterministic gate: it
 does not authorise a binary asset or prove a DICOM is safe.
 

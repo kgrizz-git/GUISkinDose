@@ -148,3 +148,12 @@ entries:
   severity: high
   created_at: '2026-10-06T21:27:01+00:00'
   expires_at: '2027-01-04T21:27:01+00:00'
+- file_path: tests/fixtures/tabular_inputs/radimetrics_events_a_only.csv
+  line_number: 1
+  line_content_hash: 5c5499ee3b215d99e0e19dac1f153e9f40cf58e2b3a300d15c5951607ce1d1d1
+  entity_type: ACCOUNT + DATE + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: e39ccbd7e05454afdb96ec724aec975e66c6c0a416c8613616f43d715b31e32f
+  severity: high
+  created_at: '2026-10-07T15:37:27+00:00'
+  expires_at: '2027-01-05T15:37:27+00:00'

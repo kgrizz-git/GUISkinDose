@@ -123,7 +123,7 @@ That keeps SemVer and contributor history organized.
   file carries per-plane `Reference Point Dose (A)` / `(B)` columns, each total-kerma row is replaced by a
   `Plane A` and a `Plane B` event whose kerma sums to the original total (previously only the total was read
   and every event looked like one tube); rows with kerma on one plane only become a single event of that plane.
-  Rows that cannot be split keep a valid plane code from the export. A biplane export without a plane column now resolves to an unknown
+  Rows that cannot be split keep a valid plane code from the export. Real exports put each event on one plane (the other plane cell is blank), so they load as one event per row on that plane; the both-planes-filled split is defensive. A biplane export without a plane column now resolves to an unknown
   tube instead of `Single Plane`. Single-plane Radimetrics exports are unchanged. Details:
   [dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md).
 
