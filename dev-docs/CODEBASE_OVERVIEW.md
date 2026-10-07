@@ -227,7 +227,7 @@ Top-level settings object. Key attributes:
 |-----------|------|---------|-------------|
 | `mode` | `str` | `"plot_event"` | Run mode (see below) |
 | `rdsr_filename` | `str` | — | RDSR filename (used when no `file_path` passed to `main()`) |
-| `estimate_k_tab` | `bool` | `True` | Use estimated patient-support transmission instead of measured lookup |
+| `k_tab_mode` | `str` | `measured_with_fallback` | Patient-support transmission: measured lookup with `k_tab_val` where no measured data exists (default), `estimate` (flat `k_tab_val`), or `measured_only` (1.0 where missing). Legacy `estimate_k_tab` bool is read with a deprecation warning |
 | `k_tab_val` | `float` | `0.8` | Patient-support transmission factor `(0, 1]` when estimating |
 | `inherent_filtration` | `float` | `3.1` | X-ray tube inherent filtration in mmAl |
 | `remove_invalid_rows` | `bool` | `False` | Drop events with kVp = 0 |

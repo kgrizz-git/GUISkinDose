@@ -18,6 +18,8 @@ from guiskindose.settings import PyskindoseSettings
 
 def _settings(**overrides) -> PyskindoseSettings:
     base = load_settings_example_json()
+    # Golden baselines predate the measured_with_fallback default (see CHANGELOG): pin the flat estimate.
+    base["k_tab_mode"] = "estimate"
     base["mode"] = "calculate_dose"
     base["silence_pydicom_warnings"] = True
     base["phantom"]["model"] = "plane"

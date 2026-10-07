@@ -151,13 +151,20 @@ Resolved once per exam, in this order (`calculate_dose`):
    5/10/20/25/35 cm).
 5. **Patient-support transmission** — `corrections.calculate_k_tab()` returns a
    `KTabResult` (values + per-event statuses):
-   - *Estimated* (`estimate_k_tab=True`, default): every event gets `k_tab_val`
-     (validated); the DB is not read.
-   - *Measured*: DB lookup keyed by device model + **literal**
+   - Mode `k_tab_mode` (settings; the legacy `estimate_k_tab` boolean maps
+     `True` to `estimate` and `False` to `measured_only`):
+     `measured_with_fallback` (default), `estimate`, or `measured_only`.
+   - *Estimate*: every event gets `k_tab_val` (validated); the DB is not read.
+   - *Measured fallback* (default): the measured lookup below per event. An
+     event with no usable measured value (unknown model or plane, or invalid
+     cells such as the all-`0.0` AlluraClarity Plane B rows) uses `k_tab_val`
+     (status `fallback`, one warning listing event indices, never labels).
+   - *Measured* (`measured_only`): DB lookup keyed by device model + **literal**
      `acquisition_plane` string (`"Single Plane"` / `"Plane A"` / `"Plane B"`),
      exact (kVp, Cu, Al) match first, else (kVp, Cu) interpolation with Al snap
-     and edge clamping. Unknown device/plane or invalid cells resolve to a
-     warned-neutral `1.0`, never silently to a real calibration.
+     and edge clamping. In `measured_only`, unknown device/plane or invalid
+     cells resolve to a warned-neutral `1.0`, never silently to a real
+     calibration.
 6. **Kerma-meter correction** — `kerma_correction.resolve_correction_factors()`
    resolves one factor per event keyed by (equipment, tube). The table is the
    merge of the calibration file and the session in-memory table (manual entries

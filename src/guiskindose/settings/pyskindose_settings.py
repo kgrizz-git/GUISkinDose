@@ -4,6 +4,7 @@ Aggregates mode, I/O, phantom, plot, normalization, kerma-meter, and
 physics policy settings.
 """
 import json
+import logging
 from pathlib import Path
 from typing import Any, cast
 
@@ -12,11 +13,14 @@ from rich import print
 from guiskindose.constants import (
     BELOW_FLOOR_KVP_POLICY_EXAM_AVERAGE,
     HVL_KVP_FLOOR,
+    K_TAB_MODE_DEFAULT,
+    K_TAB_MODES,
     KEY_PARAM_BEAM_MISS_WARN,
     KEY_PARAM_BELOW_FLOOR_KVP_MANUAL,
     KEY_PARAM_BELOW_FLOOR_KVP_POLICY,
     KEY_PARAM_ESTIMATE_K_TAB,
     KEY_PARAM_INHERENT_FILTRATION,
+    KEY_PARAM_K_TAB_MODE,
     KEY_PARAM_K_TAB_VAL,
     KEY_PARAM_MODE,
     KEY_PARAM_RDSR_FILENAME,
@@ -41,6 +45,7 @@ from .normalization_settings import NormalizationSettings
 from .phantom_settings import PhantomSettings
 from .plot_settings import Plotsettings
 
+logger = logging.getLogger(__name__)
 
 class PyskindoseSettings:
     """A class to store all settings required to run PySkinDose.
@@ -68,12 +73,17 @@ class PyskindoseSettings:
 
     rdsr_filename : str
         filename of the RDSR file, without the .dcm file ending.
-    estimate_k_tab : bool
-        Whether k_tab should be approximated or not. You should set this to true if you
-        have not conducted table attenuation measurements.
+    k_tab_mode : str
+        Patient-support transmission mode: ``measured_with_fallback`` (default; measured
+        lookup per event, ``k_tab_val`` where no usable measured data exists),
+        ``estimate`` (flat ``k_tab_val`` for every event), or ``measured_only``
+        (measured lookup, ``1.0`` where it is unusable). The legacy ``estimate_k_tab``
+        boolean is still read when ``k_tab_mode`` is absent (``True`` maps to
+        ``estimate``, ``False`` to ``measured_only``) with a deprecation warning.
     k_tab_val : float
-        Estimated patient-support transmission factor when ``estimate_k_tab`` is
-        True. Must be finite and in ``(0, 1]`` (``1.0`` means no attenuation).
+        Flat transmission factor in ``estimate`` mode and fallback value in
+        ``measured_with_fallback`` mode. Must be finite and in ``(0, 1]``
+        (``1.0`` means no attenuation).
     inherent_filtration : float
         X-ray tube inherent filtration, for backscatter and medium correction.
     below_floor_kvp_policy : str
@@ -125,7 +135,7 @@ class PyskindoseSettings:
         self.inherent_filtration = tmp[KEY_PARAM_INHERENT_FILTRATION]
         self.silence_pydicom_warnings = tmp[KEY_PARAM_SILENCE_PYDICOM_WARNINGS]
         self.rdsr_filename = tmp[KEY_PARAM_RDSR_FILENAME]
-        self.estimate_k_tab = tmp[KEY_PARAM_ESTIMATE_K_TAB]
+        self.k_tab_mode: str = self._initialize_k_tab_mode(tmp)
         self.phantom = PhantomSettings(ptm_dim=tmp["phantom"])
         self.plot = Plotsettings(plt_dict=tmp["plot"])
         self.corrections_db_path = tmp.get("corrections_db_path", "corrections.db")
@@ -186,6 +196,36 @@ class PyskindoseSettings:
 
         self.dosetrack_plane_code_map = parse_plane_code_map(tmp.get("dosetrack_plane_code_map"))
 
+    @property
+    def estimate_k_tab(self) -> bool:
+        """Legacy read-only view of ``k_tab_mode`` (True only for ``estimate``)."""
+        return self.k_tab_mode == "estimate"
+
+    @staticmethod
+    def _initialize_k_tab_mode(tmp: dict) -> str:
+        """Resolve ``k_tab_mode``; map the legacy ``estimate_k_tab`` boolean when it is absent.
+
+        An explicit ``k_tab_mode`` always wins. A legacy ``estimate_k_tab`` logs a
+        deprecation warning. With neither key the default is ``measured_with_fallback``.
+
+        Raises
+        ------
+        ValueError
+            If ``k_tab_mode`` is not one of the three modes.
+        """
+        mode = tmp.get(KEY_PARAM_K_TAB_MODE)
+        if mode is None:
+            if KEY_PARAM_ESTIMATE_K_TAB not in tmp:
+                return K_TAB_MODE_DEFAULT
+            logger.warning(
+                "estimate_k_tab is deprecated; use k_tab_mode (True maps to 'estimate', False to 'measured_only')."
+            )
+            return "estimate" if tmp[KEY_PARAM_ESTIMATE_K_TAB] else "measured_only"
+        mode = str(mode).strip().lower()
+        if mode not in K_TAB_MODES:
+            raise ValueError(f"k_tab_mode must be one of {sorted(K_TAB_MODES)}")
+        return mode
+
     def to_settings_dict(self) -> dict[str, Any]:
         """Return settings as a dict round-trippable through the constructor.
 
@@ -206,7 +246,7 @@ class PyskindoseSettings:
         return {
             KEY_PARAM_MODE: self.mode,
             KEY_PARAM_RDSR_FILENAME: self.rdsr_filename,
-            KEY_PARAM_ESTIMATE_K_TAB: self.estimate_k_tab,
+            KEY_PARAM_K_TAB_MODE: self.k_tab_mode,
             KEY_PARAM_K_TAB_VAL: self.k_tab_val,
             KEY_PARAM_INHERENT_FILTRATION: self.inherent_filtration,
             KEY_PARAM_SILENCE_PYDICOM_WARNINGS: self.silence_pydicom_warnings,
@@ -304,7 +344,7 @@ class PyskindoseSettings:
             f"[b u {color}]General settings[/b u {color}]\n"
             f"\t[{color}]mode:\t{self.mode}[/{color}]\n"
             f"\t[{color}]rdsr_filename:\t{self.rdsr_filename}[/{color}]\n"
-            f"\t[{color}]estimate_k_tab:\t{'True' if self.estimate_k_tab else 'False'}[/{color}]\n"
+            f"\t[{color}]k_tab_mode:\t{self.k_tab_mode}[/{color}]\n"
             f"\t[{color}]silence_pydicom_warnings:\t{'True' if self.silence_pydicom_warnings else 'False'}[/{color}]\n"
             f"\n{phantom_settings_string}"
             f"\n{plot_settings_string}"

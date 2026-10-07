@@ -74,3 +74,13 @@ def apply_exam_kerma(gui: dict[str, Any], app_state: AppState) -> None:
             for tube, factor in tubes.items():
                 table[(exam, equipment, tube)] = factor
     app_state.kerma_meter_in_memory_table = table or None
+
+
+def apply_legacy_k_tab(settings: dict[str, Any], app_state: AppState) -> None:
+    """Map a legacy ``estimate_k_tab`` boolean onto ``k_tab_mode`` when the document has no mode.
+
+    ``True`` maps to ``estimate`` and ``False`` to ``measured_only``. An explicit
+    ``k_tab_mode`` in the document always wins (it is applied by the scalar loop).
+    """
+    if settings.get("k_tab_mode") is None and isinstance(settings.get("estimate_k_tab"), bool):
+        app_state.k_tab_mode = "estimate" if settings["estimate_k_tab"] else "measured_only"

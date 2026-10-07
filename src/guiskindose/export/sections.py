@@ -21,7 +21,7 @@ from .models import ExportExamSource
 # Settings fields surfaced in the snapshot (§4).
 _SETTINGS_KEYS = (
     "mode",
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "below_floor_kvp_policy",

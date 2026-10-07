@@ -16,7 +16,7 @@ def example_settings() -> PyskindoseSettings:
         "mode": c.MODE_PLOT_PROCEDURE,
         "rdsr_filename": "siemens_axiom_example_procedure.dcm",
         "plot_event_index": 12,
-        "estimate_k_tab": False,
+        "k_tab_mode": "measured_only",
         "inherent_filtration": 3.1,
         "silence_pydicom_warnings": True,
         "k_tab_val": 0.8,

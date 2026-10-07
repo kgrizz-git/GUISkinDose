@@ -19,6 +19,19 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Changed
+
+- **Patient-support transmission has three modes, and the default changed** (2026-10-07) — the
+  `estimate_k_tab` boolean is replaced by `k_tab_mode`: `measured_with_fallback` (new default), `estimate`
+  (today's flat `k_tab_val`), and `measured_only` (today's measured lookup, 1.0 where missing). The new default
+  looks each event up in the bundled measured table and uses `k_tab_val` (default 0.8) where there is no usable
+  measured data (unknown model or plane, or the invalid all-zero AlluraClarity Plane B rows), with one warning
+  listing the event indices. **The default can change the peak skin dose on the few models with measured data**:
+  for the bundled Siemens AXIOM Artis example the peak fell about 10% (about 7% on the dose-map sum) compared
+  with the flat 0.8. The legacy `estimate_k_tab` key is still read (`true` is `estimate`, `false` is
+  `measured_only`) with a deprecation warning when `k_tab_mode` is absent, an explicit `k_tab_mode` wins, and
+  only `k_tab_mode` is written. The Corrections tab now has a mode select, and the info icon describes all three.
+
 ### Added
 
 - **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.

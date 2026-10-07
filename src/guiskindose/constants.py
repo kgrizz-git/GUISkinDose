@@ -35,7 +35,10 @@ DATA_DS_IRP = "DSIRP"
 
 KEY_PARAM_MODE = "mode"
 KEY_PARAM_RDSR_FILENAME = "rdsr_filename"
-KEY_PARAM_ESTIMATE_K_TAB = "estimate_k_tab"
+KEY_PARAM_ESTIMATE_K_TAB = "estimate_k_tab"  # legacy, read-only (see KEY_PARAM_K_TAB_MODE)
+KEY_PARAM_K_TAB_MODE = "k_tab_mode"
+K_TAB_MODE_DEFAULT = "measured_with_fallback"
+K_TAB_MODES = frozenset({"estimate", "measured_only", "measured_with_fallback"})
 KEY_PARAM_K_TAB_VAL = "k_tab_val"
 KEY_PARAM_PHANTOM_MODEL = "model"
 KEY_PARAM_HUMAN_MESH = "human_mesh"

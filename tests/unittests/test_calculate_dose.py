@@ -325,6 +325,8 @@ def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
 
 def _settings(*, phantom_model: str = "cylinder") -> PyskindoseSettings:
     base = load_settings_example_json()
+    # Golden baselines predate the measured_with_fallback default (see CHANGELOG): pin the flat estimate.
+    base["k_tab_mode"] = "estimate"
     base["mode"] = "calculate_dose"
     base["silence_pydicom_warnings"] = True
     base["phantom"]["model"] = phantom_model

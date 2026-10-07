@@ -27,6 +27,13 @@ from .settings import (
     COMPACT_FULL_WIDTH_COLUMN_CLASSES,
 )
 
+# Patient-support transmission modes -> select labels (values match corrections.K_TAB_MODES).
+K_TAB_MODE_OPTIONS = {
+    "measured_with_fallback": "Measured where available, else estimate (default)",
+    "estimate": "Estimate (one flat value)",
+    "measured_only": "Measured only (1.0 where missing)",
+}
+
 
 def build(ctx: PageContext) -> None:
     """Construct the Corrections tab panel."""
@@ -44,9 +51,11 @@ def _build_physics_section() -> None:
         ui.column().classes(_SETTINGS_SECTION_CLASSES),
     ):
         with ui.row().classes("items-center gap-1"):
-            ui.checkbox("Use estimated patient-support transmission factor", value=state.estimate_k_tab).bind_value(
-                state, "estimate_k_tab"
-            ).on(_MODEL_VALUE_EVENT, reset_results)
+            ui.select(
+                K_TAB_MODE_OPTIONS,
+                label="Patient-support transmission factor",
+                value=state.k_tab_mode,
+            ).bind_value(state, "k_tab_mode").on(_MODEL_VALUE_EVENT, reset_results).classes("min-w-[22rem]")
             HelpButton(
                 title="Patient-support transmission factor",
                 content=copy_text("settings.k_tab.info"),
@@ -54,7 +63,7 @@ def _build_physics_section() -> None:
             )
 
         with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
-            ui.label("TRANSMISSION FACTOR (patient-support)").classes("technical-label")
+            ui.label("TRANSMISSION FACTOR (flat value / fallback)").classes("technical-label")
             with ui.row().classes("items-center w-full gap-4"):
                 ui.slider(min=0.01, max=1.0, step=0.01, value=state.k_tab_val).bind_value(state, "k_tab_val").on(
                     _MODEL_VALUE_EVENT, reset_results

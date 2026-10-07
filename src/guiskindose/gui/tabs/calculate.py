@@ -22,6 +22,12 @@ from ._kerma_meter_dialog import labelled_frames, prompt_at_calculate
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
 _MAX_TOASTS: int = 5
+# Short Calculate-card labels for the patient-support transmission modes.
+_K_TAB_MODE_SUMMARY = {
+    "measured_with_fallback": "Measured, fallback to estimate",
+    "estimate": "Estimated",
+    "measured_only": "Measured only",
+}
 _SUMMARY_LABEL_CLASSES = "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
 _SUMMARY_VALUE_CLASSES = "font-bold text-[13px]"
 _SUMMARY_ROW_CLASSES = "items-baseline gap-2"
@@ -116,7 +122,7 @@ def _preview_fingerprint(frames: list) -> tuple:
     """
     return (
         state.is_multi_exam,
-        state.estimate_k_tab,
+        state.k_tab_mode,
         float(state.k_tab_val) if state.k_tab_val is not None else None,
         state.calc_run_id,
         state.input_revision,
@@ -162,7 +168,7 @@ def _preview_k_tab_statuses() -> list[str] | None:
             result = calculate_k_tab(
                 data_norm=frame,
                 corrections_db=settings.corrections_db_path,
-                estimate_k_tab=state.estimate_k_tab,
+                k_tab_mode=state.k_tab_mode,
                 k_tab_val=state.k_tab_val,
                 emit_warnings=False,
             )
@@ -644,7 +650,7 @@ def _build_physics_summary() -> None:
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Patient-support transmission factor:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(
-                    state, "estimate_k_tab", backward=lambda v: "Estimated" if v else "Measured"
+                    state, "k_tab_mode", backward=lambda v: _K_TAB_MODE_SUMMARY.get(str(v), str(v))
                 ).classes(_SUMMARY_VALUE_CLASSES)
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("k_tab lookup summary:").classes(_SUMMARY_LABEL_CLASSES)
@@ -655,7 +661,7 @@ def _build_physics_summary() -> None:
                     state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary()
                 )
                 k_tab_summary.bind_text_from(
-                    state, "estimate_k_tab", backward=lambda _v: _format_k_tab_status_summary()
+                    state, "k_tab_mode", backward=lambda _v: _format_k_tab_status_summary()
                 )
                 k_tab_summary.bind_text_from(
                     state, "input_revision", backward=lambda _v: _format_k_tab_status_summary()

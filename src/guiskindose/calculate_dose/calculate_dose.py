@@ -250,7 +250,7 @@ def calculate_dose(
 
     k_tab = calculate_k_tab(
         data_norm=normalized_data,
-        estimate_k_tab=settings.estimate_k_tab,
+        k_tab_mode=settings.k_tab_mode,
         k_tab_val=settings.k_tab_val,
         corrections_db=settings.corrections_db_path,
     )

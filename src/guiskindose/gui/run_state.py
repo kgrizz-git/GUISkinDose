@@ -12,7 +12,12 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from guiskindose.gui.run_state_kerma import apply_exam_kerma, serialize_exam_kerma, validate_exam_kerma
+from guiskindose.gui.run_state_kerma import (
+    apply_exam_kerma,
+    apply_legacy_k_tab,
+    serialize_exam_kerma,
+    validate_exam_kerma,
+)
 from guiskindose.privacy import opaque_exam_label
 
 if TYPE_CHECKING:  # duck-typed at runtime; keeps this module GUI-light
@@ -36,7 +41,7 @@ _TOP_LEVEL_PASSTHROUGH_EXCLUDE = frozenset(
 
 # Settings-slice keys restored to same-named AppState fields.
 _SCALAR_SETTING_TO_STATE = (
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "remove_invalid_rows",
@@ -319,7 +324,7 @@ class ApplyResult:
 # Tier-2 and never written). `loaded_exam_meta` entries are mutated in place
 # and snapshotted separately (deep).
 _SNAPSHOT_ATTRS = (
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "remove_invalid_rows",
@@ -608,6 +613,7 @@ def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[st
     for doc_key, attr in _KERMA_SETTING_TO_STATE:
         _apply_present(app_state, attr, kerma.get(doc_key))
     _apply_legacy_kerma_prompt(kerma, app_state)
+    apply_legacy_k_tab(settings, app_state)
     _apply_present(app_state, "kerma_meter_file_sheet", kerma.get("file_sheet"))
     _apply_present(app_state, "kerma_meter_explicit_label", kerma.get("explicit_label"))
     _apply_kerma_tier2(kerma, app_state, warnings)

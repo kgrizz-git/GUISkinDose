@@ -52,6 +52,14 @@ be archived.
 
 ### Input Data And Calculation
 
+- [ ] **Site-measured patient-support transmission (`k_tab`) values** — make it easy to add measured values
+  for specific equipment. The measured table is `table_data/correction_table_and_pad_attenuation.csv` with
+  columns `device_model`, `acquisition_plane` (`Single Plane` / `Plane A` / `Plane B`), `kvp_kv`,
+  `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support` (in `(0, 1]`), `comment`. For now, copy
+  that table into a SQLite file and point `corrections_db_path` at it (validated read-only). **Goal:** document
+  this how-to, then let users supply the rows as a profile file (see
+  [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md)). **Acceptance:** how-to in the
+  help pages; unit tests for a user-supplied row set.
 - [ ] **Explore additional phantoms** — keep expanding anthropomorphic coverage beyond the shipped MPFB v1
   catalog (Phases 0–4 complete; see
   [archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)). Survey and

@@ -70,7 +70,8 @@ class AppState:
     # cannot collide via recycled DataFrame ``id()`` values.
     input_revision: int = 0
 
-    estimate_k_tab: bool = True
+    # Patient-support transmission: measured_with_fallback | estimate | measured_only.
+    k_tab_mode: str = "measured_with_fallback"
     k_tab_val: float = 0.8
     inherent_filtration: float = 3.1
     remove_invalid_rows: bool = False

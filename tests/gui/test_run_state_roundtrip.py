@@ -505,3 +505,26 @@ def test_malformed_per_exam_values_are_rejected() -> None:
     app_state = AppState()
     with pytest.raises(RunStateError):
         apply_run_state(document, app_state)
+
+
+def test_k_tab_mode_round_trips_and_legacy_flag_maps() -> None:
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _per_exam_document(include_identifiers=True)
+    document["settings"]["k_tab_mode"] = "measured_only"
+    fresh = AppState()
+    apply_run_state(document, fresh)
+    assert fresh.k_tab_mode == "measured_only"
+
+    legacy = _per_exam_document(include_identifiers=True)
+    legacy["settings"].pop("k_tab_mode", None)
+    legacy["settings"]["estimate_k_tab"] = True
+    legacy_state = AppState()
+    apply_run_state(legacy, legacy_state)
+    assert legacy_state.k_tab_mode == "estimate"
+
+    both = _per_exam_document(include_identifiers=True)
+    both["settings"].update({"k_tab_mode": "measured_only", "estimate_k_tab": True})
+    both_state = AppState()
+    apply_run_state(both, both_state)
+    assert both_state.k_tab_mode == "measured_only"

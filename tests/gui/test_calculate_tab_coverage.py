@@ -218,7 +218,7 @@ def test_k_tab_preview_caches_and_suppresses_warnings(monkeypatch: pytest.Monkey
     state.multi_exam_result = None
     state.is_multi_exam = False
     state.loaded_exams = []
-    state.estimate_k_tab = False
+    state.k_tab_mode = "measured_only"
     state.k_tab_val = 0.8
     state.calc_run_id = 0
     state.input_revision = 7
@@ -274,7 +274,7 @@ def test_k_tab_preview_invalid_estimated_value_is_safe(monkeypatch: pytest.Monke
     state.multi_exam_result = None
     state.is_multi_exam = False
     state.loaded_exams = []
-    state.estimate_k_tab = True
+    state.k_tab_mode = "estimate"
     state.k_tab_val = 0.0
     state.calc_run_id = 1
     state.input_revision = 8
@@ -295,7 +295,7 @@ def test_k_tab_preview_guards_non_value_error(monkeypatch: pytest.MonkeyPatch) -
     state.multi_exam_result = None
     state.is_multi_exam = False
     state.loaded_exams = []
-    state.estimate_k_tab = False
+    state.k_tab_mode = "measured_only"
     state.calc_run_id = 2
     state.input_revision = 9
     state.rdsr_df = pd.DataFrame({KEY_NORMALIZATION_MODEL_NAME: ["Siemens"]})

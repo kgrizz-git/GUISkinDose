@@ -272,7 +272,8 @@
       "tests": [
         "tests/unittests/test_psd_algorithm_doc.py",
         "tests/unittests/test_calculate_dose.py",
-        "tests/unittests/test_golden_k_tab.py"
+        "tests/unittests/test_golden_k_tab.py",
+        "tests/unittests/test_k_tab_modes.py"
       ],
       "docs": [
         "dev-docs/PSD_CALCULATION_ALGORITHM.md",

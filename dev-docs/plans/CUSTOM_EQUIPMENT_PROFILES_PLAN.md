@@ -26,7 +26,7 @@ plans.
 - GUI table-origin controls are per-exam session overrides, not reusable
   manufacturer/model definitions.
 - Custom `k_tab` is limited to one global estimated transmission (which is the
-  shipped default, `estimate_k_tab: true` / `k_tab_val: 0.8`) or an undocumented
+  `k_tab_mode: estimate` / `k_tab_val: 0.8`; the shipped default is now `measured_with_fallback`) or an undocumented
   full replacement SQLite database.
 - Kerma-meter correction already supports validated user files keyed by individual
   equipment and tube; it is a useful loader/validation precedent but remains a

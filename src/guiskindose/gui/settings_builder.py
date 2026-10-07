@@ -63,7 +63,8 @@ def build_settings(
     base = load_settings_example_json()
 
     base["mode"] = mode
-    base["estimate_k_tab"] = app_state.estimate_k_tab
+    base["k_tab_mode"] = app_state.k_tab_mode
+    base.pop("estimate_k_tab", None)
     base["k_tab_val"] = app_state.k_tab_val
     base["inherent_filtration"] = app_state.inherent_filtration
     base["remove_invalid_rows"] = app_state.remove_invalid_rows

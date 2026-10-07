@@ -60,11 +60,6 @@
       "cap": 18
     },
     {
-      "path": "src/guiskindose/corrections.py",
-      "function": "calculate_k_tab",
-      "cap": 11
-    },
-    {
       "path": "src/guiskindose/format_export_data.py",
       "function": "PySkinDoseOutput._validate_lengths",
       "cap": 12

@@ -5,8 +5,8 @@ DEVELOPMENT_PARAMETERS = {
     "mode": c.MODE_PLOT_PROCEDURE,
     # RDSR filename
     "rdsr_filename": "siemens_axiom_example_procedure.dcm",
-    # Set True to estimate table correction, or False to use measured k_tab
-    "estimate_k_tab": False,
+    # k_tab_mode: measured_with_fallback | estimate | measured_only
+    "k_tab_mode": "measured_only",
     # Numeric value of estimated table correction
     "k_tab_val": 0.8,
     # plot settings

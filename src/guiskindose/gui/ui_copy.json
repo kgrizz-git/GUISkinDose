@@ -150,7 +150,7 @@
       "owner": "gui/tabs/settings.py"
     },
     "settings.k_tab.info": {
-      "text": "**Checked (estimated).** One flat factor, `k_tab_val` (default 0.8), is used for every event. It is applied only to skin cells whose beam passes through the table or pad.\n\n**Unchecked (measured).** Each event is looked up in the bundled measured table by scanner model and tube. The lookup uses kVp and Cu/Al filtration, with interpolation.\n\nIf the model or tube is unknown, or data are missing, the factor falls back to 1.0. That means no table attenuation, and a warning is shown.\n\nThe measured data cover only a few models. On other equipment, unchecking usually removes table attenuation instead of improving accuracy.",
+      "text": "**Measured where available, else estimate (default).** Each event is looked up in the bundled measured table by scanner model and tube, using kVp and Cu/Al filtration, with interpolation. If the model or tube has no usable measured data, that event uses the flat value instead, and a warning lists the events.\n\n**Estimate.** One flat value, `k_tab_val` (default 0.8), is used for every event.\n\n**Measured only.** Same lookup as the default, but an event with no usable measured data gets 1.0, which means no table attenuation. A warning is shown.\n\nThe flat value is applied only to skin cells whose beam passes through the table or pad. The measured data cover only a few models, so on other equipment the default behaves like Estimate.",
       "owner": "gui/tabs/corrections.py"
     }
   }
