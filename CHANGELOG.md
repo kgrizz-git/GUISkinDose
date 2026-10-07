@@ -217,6 +217,11 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Sidebar peak skin dose clears when results are invalidated** (2026-10-07) — changing a correction factor in
+  the kerma-meter dialog, or any Settings or Corrections control that resets results (for example the
+  transmission mode), now also returns the left sidebar status to "PSD: —" instead of leaving the old value
+  until the next calculation. The kerma-meter dialog shows equipment names in their original spelling.
+
 - **Review fixes for the CLI and the kerma-meter dialog** (2026-10-07) — a multi-exam tabular run now prints the
   structured, privacy-safe result (no source file names), and multi-file runs honour `--aggregate` through the
   same printer. A `--settings` string that is not a JSON object is treated as a path and gives a clean

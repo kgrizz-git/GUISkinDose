@@ -30,7 +30,7 @@ from nicegui import Client, app, ui
 from guiskindose.debug import configure_logging, dprint
 from guiskindose.privacy import opaque_exam_label, safe_error_event
 
-from .dose_severity import PSD_PENDING_TEXT, build_psd_readout
+from .dose_severity import PSD_PENDING_TEXT, build_psd_readout, reset_psd_label
 from .loopback_security import (
     DEFAULT_GUI_PORT,
     TOKEN_QUERY_PARAM,
@@ -216,6 +216,17 @@ def _show_onboarding_dialog() -> None:
     ui.timer(0.1, dialog.open, once=True)
 
 
+def sync_sidebar_psd(ctx: PageContext) -> None:
+    """Return the sidebar PSD readout to "PSD: —" once results were invalidated.
+
+    ``reset_results()`` clears ``state.psd`` but cannot reach the page's widgets, so
+    this runs on a short timer and resets the readout whenever no calculation is
+    current and it still shows a value.
+    """
+    if not state.calculation_done and state.psd is None and ctx.psd_readout.value.text != PSD_PENDING_TEXT:
+        reset_psd_label(ctx.psd_readout)
+
+
 # ── page ───────────────────────────────────────────────────────────────────
 @ui.page("/")
 def index():
@@ -309,6 +320,9 @@ def index():
 
     _restore_loaded_state(ctx)
     _show_onboarding_dialog()
+    # Central sidebar sync: any path that calls reset_results() (Settings, Corrections, dialogs)
+    # also clears the sidebar PSD, without each path needing the page context.
+    ui.timer(0.3, lambda: sync_sidebar_psd(ctx))
     # Load-time kerma-meter check: fires after any change of the loaded events
     # (rebuild_rdsr_df bumps input_revision) or of the enable switch.
     ui.timer(0.5, maybe_prompt_after_load)

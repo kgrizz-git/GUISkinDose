@@ -347,7 +347,7 @@ async def test_rendered_dialog_blank_value_blocks_confirm(user: User) -> None:
     field = next(
         el
         for el in user.client.elements.values()
-        if isinstance(el, ui.number) and el._props.get("label") == "room-1 / A"
+        if isinstance(el, ui.number) and el._props.get("label") == "Room-1 / A"
     )
     field.set_value(None)
     user.find("Confirm").click()
@@ -620,7 +620,7 @@ async def test_confirm_with_edits_invalidates_results(user: User) -> None:
     field = next(
         el
         for el in user.client.elements.values()
-        if isinstance(el, ui.number) and el._props.get("label") == "room-1 / A"
+        if isinstance(el, ui.number) and el._props.get("label") == "Room-1 / A"
     )
     field.set_value(1.5)
     user.find("Confirm").click()
@@ -755,3 +755,74 @@ def test_per_exam_state_round_trips_acknowledgements() -> None:
     apply_exam_kerma(section, state)
     assert state.kerma_meter_acknowledged == {("Exam 1", "room-1", "A")}
     assert state.kerma_meter_periods_acknowledged == {"Exam 1"}
+
+
+# ── sidebar PSD follows result invalidation; equipment labels keep their spelling ─
+
+
+def _show_sidebar_psd(user: User, text: str) -> None:
+    from nicegui import ui
+
+    assert user.client is not None
+    label = next(
+        el for el in user.client.elements.values() if isinstance(el, ui.label) and (el.text or "").startswith("PSD:")
+    )
+    label.set_text(text)
+
+
+@pytest.mark.asyncio
+async def test_sidebar_psd_clears_after_a_dialog_edit_invalidates_results(user: User) -> None:
+    from nicegui import ui
+
+    await user.open("/")
+    _single_exam()
+    state.kerma_meter_in_memory_table = {("Exam 1", "room-1", "A"): 1.0, ("Exam 1", "room-1", "B"): 1.0}
+    _calculated_state()
+    _show_sidebar_psd(user, "PSD: 23.20 mGy")
+    task = asyncio.create_task(_run_in_client(user))
+    await user.should_see("Kerma-meter correction factors", retries=30)
+    assert user.client is not None
+    field = next(
+        el
+        for el in user.client.elements.values()
+        if isinstance(el, ui.number) and el._props.get("label") == "Room-1 / A"
+    )
+    field.set_value(1.5)
+    user.find("Confirm").click()
+    await _wait_for_task(task, user)
+    await user.should_see("PSD: —", retries=30)
+
+
+@pytest.mark.asyncio
+async def test_sidebar_psd_clears_after_a_k_tab_mode_change_resets_results(user: User) -> None:
+    from guiskindose.gui.state import reset_results
+
+    await user.open("/")
+    _calculated_state()
+    _show_sidebar_psd(user, "PSD: 23.20 mGy")
+    state.k_tab_mode = "measured_only"  # the select binds this and calls reset_results
+    reset_results()
+    await user.should_see("PSD: —", retries=30)
+
+
+@pytest.mark.asyncio
+async def test_sidebar_psd_is_kept_while_a_calculation_is_current(user: User) -> None:
+    await user.open("/")
+    _calculated_state()
+    _show_sidebar_psd(user, "PSD: 23.20 mGy")
+    await user.should_see("PSD: 23.20 mGy", retries=10)
+    await asyncio.sleep(0.8)  # more than two sync ticks
+    await user.should_see("PSD: 23.20 mGy")
+
+
+def test_equipment_display_names_restore_the_original_spelling() -> None:
+    state.rdsr_df = pd.DataFrame(
+        {"station_name": ["DEMO-Room-2"], "device_serial": ["Serial-9"], "acquisition_plane": ["Plane A"]}
+    )
+    state.kerma_meter_enable = True
+    state.kerma_meter_explicit_label = None
+    names = dlg.equipment_display_names(state)
+    assert names["demo-room-2"] == "DEMO-Room-2"
+    assert names["serial-9"] == "Serial-9"
+    # Matching stays casefolded: the rows keep the lowercase key.
+    assert {r.equipment for r in dlg.build_rows(state)} == {"serial-9"}

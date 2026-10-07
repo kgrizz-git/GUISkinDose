@@ -29,6 +29,7 @@ from ._kerma_meter_model import (
     build_rows,
     commit_cancel,
     detect_by_exam,
+    equipment_display_names,
     labelled_frames,
     missing_by_exam,
     missing_pairs,
@@ -85,6 +86,11 @@ class _DialogView:
         self.fields: dict[tuple[str, Pair], tuple[ui.number, ui.badge]] = {}
         self.selectors: dict[str, tuple[ui.select, ui.label]] = {}
         self.syncing = False
+        self.display_names = equipment_display_names(model.app_state)
+
+    def _shown(self, equipment: str) -> str:
+        """Display spelling of an equipment label (matching stays casefolded)."""
+        return self.display_names.get(equipment, equipment)
 
     def build_unit_choosers(self) -> None:
         """One unit chooser per exam with events that carry no equipment identity.
@@ -149,7 +155,7 @@ class _DialogView:
         pair = (row.equipment, row.tube)
         with ui.row().classes("w-full items-center gap-2"):
             if not row.editable:
-                ui.label(f"{row.equipment} / {row.tube}").classes("grow")
+                ui.label(f"{self._shown(row.equipment)} / {row.tube}").classes("grow")
                 note = "kerma.dialog.unknown_tube" if row.tube == TUBE_IDENTITY_UNKNOWN else "kerma.dialog.no_identity"
                 ui.badge(copy_text(note), color="orange").props("outline")
                 return
@@ -161,7 +167,7 @@ class _DialogView:
                 self.sync()
 
             field = ui.number(
-                label=f"{row.equipment} / {row.tube}", value=row.value, min=0.01, step=0.01, on_change=_set
+                label=f"{self._shown(row.equipment)} / {row.tube}", value=row.value, min=0.01, step=0.01, on_change=_set
             ).classes("grow")
             badge = ui.badge(_source_text(row))
             self._style_badge(badge, row)

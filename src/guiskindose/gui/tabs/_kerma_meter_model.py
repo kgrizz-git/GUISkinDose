@@ -27,6 +27,7 @@ from guiskindose.kerma_correction import (
     manual_for_exam,
     merge_tables,
     missing_keys,
+    normalize_equipment_label,
     unique_equipment_tube_keys,
 )
 from guiskindose.kerma_periods import Periods, dated_pairs, file_table_for_exam, period_options
@@ -77,6 +78,33 @@ def labelled_frames(app_state: AppState) -> list[tuple[str, pd.DataFrame]]:
     if not pairs and app_state.rdsr_df is not None:
         pairs.append((opaque_exam_label(0), app_state.rdsr_df))
     return pairs
+
+
+def equipment_display_names(app_state: AppState) -> dict[str, str]:
+    """Map each casefolded equipment label to its first-seen original spelling.
+
+    Matching always uses the casefolded label; this only restores the user's
+    spelling (``DEMO-ROOM-2`` rather than ``demo-room-2``) for display. Sources are
+    the loaded frames' serial and station columns, the explicit label, and the
+    per-exam unit overrides. Labels with no known original (for example from a
+    calibration file) are not in the map.
+    """
+    seen: dict[str, str] = {}
+
+    def _note(raw: object) -> None:
+        key = normalize_equipment_label(raw) if isinstance(raw, str) else None
+        if key is not None:
+            seen.setdefault(key, str(raw).strip())
+
+    _note(app_state.kerma_meter_explicit_label)
+    for value in app_state.kerma_meter_unresolved_labels.values():
+        _note(value)
+    for _exam, frame in labelled_frames(app_state):
+        for column in ("device_serial", "station_name"):
+            if column in frame.columns:
+                for raw in frame[column].dropna().unique():
+                    _note(raw)
+    return seen
 
 
 def detect_by_exam(app_state: AppState, labels: dict[str, str] | None = None) -> dict[str, list[Pair]]:

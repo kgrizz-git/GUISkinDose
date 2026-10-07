@@ -42,10 +42,25 @@ Smoke tests (2026-10-07):
   read), `python -m guiskindose` never applied the kerma-meter flags or `--plane-code-map`, and a single-file
   run never printed its JSON result (new `--output-format json`).
 
+Browser GUI smokes (2026-10-07, headless Playwright), all passed unless noted:
+- The splash lists the Corrections tab, and the Corrections tab layout and the transmission info icon text are right.
+- The bundled examples drop-down lists both Radimetrics examples.
+- The Review dialog with the example file and explicit label DEMO-ROOM-2 shows the period selector (1902 current,
+  1901) and "from file" rows. Switching to the 1901 period changes tube A to 0.98.
+- A blank factor blocks Confirm with an inline error. Cancel keeps the file values and earlier entries.
+- A second exam (the same biplane example) shows "↳ follows Exam 1" for the manual row, and its period follows.
+- The Calculate-time guard re-opens for the unchosen Exam 2 period.
+- The per-exam × tube Results block is correct (A 0.98 from the file, B manual).
+- A Review edit clears Results; the sidebar PSD stayed stale, which was a bug, fixed 2026-10-07 by a central
+  sidebar sync (`sync_sidebar_psd`) that follows every `reset_results()` path. Covered by GUI tests.
+- The rich report (HTML and XLSX) has the Dose by tube table with no labels or paths.
+- The k_tab mode select: the default falls back to the estimate on this model, and `measured_only` is ×1.25
+  (24.36 to 30.45 mGy).
+- Cosmetic fix: the dialog now shows equipment labels in their original spelling (matching stays casefolded).
+
 Remaining:
-- Manual GUI smokes still to do: Cancel semantics, validation (blank and zero factors), multi-exam follow and
-  edit propagation, Review then invalidation of results, per-tube Results and exports, the Radimetrics examples
-  in the GUI, the Corrections tab and the transmission info icon, and the k_tab mode select.
+- Manual passes still to do: the new Corrections tab and dialog in the native (pywebview) window, the Windows
+  native save dialog, and a visual check of the DOCX and PDF reports.
 - Then archive this plan, update `dev-docs/index.md`, and remove the TO_DO item.
 
 Answered (2026-10-07): the Radimetrics `(A)`/`(B)` columns are per-event values, and each real row sits on one
