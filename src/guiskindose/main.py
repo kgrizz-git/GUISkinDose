@@ -545,6 +545,62 @@ def get_argument_parser(arguments) -> "argparse.Namespace":
     return _cli_args_get_argument_parser(arguments)
 
 
+def print_cli_result(result: object) -> None:
+    """Print a dict/JSON analysis result to stdout (a headless run with ``output_format`` dict or json).
+
+    ``None`` (html output, plots) prints nothing. Values are the dose results only;
+    no file paths or equipment labels are added.
+    """
+    if result is None:
+        return
+    import json as _json
+
+    print(result if isinstance(result, str) else _json.dumps(result, default=str))
+
+
+def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
+    """Build the run settings for a headless CLI invocation, shared by both entry points.
+
+    ``--settings`` may be a path to a JSON file or a JSON string (a path is read,
+    never echoed). With no ``--settings`` the development parameters are used. The
+    kerma-meter flags (including ``--kerma-meter-calibration-date``) and
+    ``--plane-code-map`` are then applied onto the concrete settings object.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    PyskindoseSettings
+        Settings ready for ``main()`` / the analyze helpers.
+    """
+    raw = args.settings
+    if raw is None:
+        logger.warning("No settings specified. Running with development parameters")
+        raw = DEVELOPMENT_PARAMETERS
+    elif isinstance(raw, (str, Path)):
+        try:
+            is_file = Path(raw).is_file()
+        except OSError:  # a JSON string too long or odd to be a path
+            is_file = False
+        if is_file:
+            raw = Path(raw).read_text(encoding="utf-8")
+        elif isinstance(raw, Path):
+            raise SystemExit(safe_user_error("settings_file_not_found"))
+    settings = parse_settings_to_settings_class(settings=raw)
+    if getattr(args, "output_format", None):
+        settings.output_format = args.output_format
+    apply_kerma_meter_cli_flags(settings, args)
+    plane_code_map_raw = getattr(args, "plane_code_map", None)
+    if plane_code_map_raw is not None:
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        settings.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
+    return settings
+
+
 if __name__ == "__main__":
     install_value_safe_excepthook(logger)
     args = get_argument_parser(sys.argv[1:])
@@ -556,19 +612,7 @@ if __name__ == "__main__":
             port=getattr(args, "port", None),
         )
     else:
-        if (run_settings := args.settings) is None:
-            logger.warning("No settings specified. Running with development parameters")
-            run_settings = DEVELOPMENT_PARAMETERS
-
-        # Apply kerma-meter CLI overrides onto a concrete settings object once.
-        settings_for_run = parse_settings_to_settings_class(settings=run_settings)
-        apply_kerma_meter_cli_flags(settings_for_run, args)
-        plane_code_map_raw = getattr(args, "plane_code_map", None)
-        if plane_code_map_raw is not None:
-            from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
-
-            settings_for_run.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
-        run_settings = settings_for_run
+        run_settings = prepare_cli_settings(args)
 
         file_paths_raw: list[str] = args.file_path or []
         from pathlib import Path
@@ -628,13 +672,15 @@ if __name__ == "__main__":
                         include_sensitive_values=getattr(args, "include_sensitive_preview", False),
                     )
                 else:
-                    analyze_input_file(
-                        single_path,
-                        settings=run_settings,
-                        input_schema=getattr(args, "input_schema", None),
-                        sheet_name=getattr(args, "sheet_name", 0),
+                    print_cli_result(
+                        analyze_input_file(
+                            single_path,
+                            settings=run_settings,
+                            input_schema=getattr(args, "input_schema", None),
+                            sheet_name=getattr(args, "sheet_name", 0),
+                        )
                     )
             else:
-                main(file_path=single_path, settings=run_settings)
+                print_cli_result(main(file_path=single_path, settings=run_settings))
         else:
-            main(file_path=None, settings=run_settings)
+            print_cli_result(main(file_path=None, settings=run_settings))

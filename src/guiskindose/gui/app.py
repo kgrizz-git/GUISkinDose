@@ -183,16 +183,20 @@ def _show_onboarding_dialog() -> None:
                     **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
                     CSV/TSV/XLSX data.
 
-                    **2. Settings** — Choose a phantom model and adjust physics parameters
+                    **2. Settings** — Choose a phantom model and set patient offsets
                     (defaults usually work).
 
-                    **3. Geometry** — Preview beam geometry before calculating.
+                    **3. Corrections** — Review the patient-support transmission mode and,
+                    if you have calibration factors for your dose meter, the kerma-meter
+                    correction.
 
-                    **4. Calculate** — Run the dose calculation.
+                    **4. Geometry** — Preview beam geometry before calculating.
 
-                    **5. Results** — View the 3D dose map and peak skin dose (PSD).
+                    **5. Calculate** — Run the dose calculation.
 
-                    **6. Export** — Download results as JSON, HTML, or PNG.
+                    **6. Results** — View the 3D dose map and peak skin dose (PSD).
+
+                    **7. Export** — Download results as JSON, HTML, or PNG.
 
                     **Privacy** — {copy_text("onboarding.privacy_notice")}
                     """

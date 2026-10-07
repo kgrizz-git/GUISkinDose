@@ -217,6 +217,12 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **CLI fixes found by smoke-testing** (2026-10-07) — `--settings` now reads the settings file (the path was
+  silently ignored and the example settings were used). `python -m guiskindose` and the console script now apply
+  the kerma-meter flags (including `--kerma-meter-calibration-date`) and `--plane-code-map`, as
+  `python -m guiskindose.main` already did. A single-file run can print its full result with the new
+  `--output-format json` (or `dict`).
+
 - **Kerma-meter dialog review fixes** (2026-10-06) — confirming changed factors, units, or calibration periods
   now clears earlier calculation results, so a stale peak skin dose or export cannot stay active (an unchanged
   confirm keeps them). A calibration file with dated rows now opens the dialog at load even when every factor is

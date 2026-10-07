@@ -323,10 +323,10 @@ def test_perform_calculations_zero_hit_after_hit_event_does_not_leak_k_isq():
 # ── end-to-end via calculate_dose (smoke + slot-type pin) ──────────────
 
 
-def _settings(*, phantom_model: str = "cylinder") -> PyskindoseSettings:
+def _settings(*, phantom_model: str = "cylinder", k_tab_mode: str = "estimate") -> PyskindoseSettings:
     base = load_settings_example_json()
     # Golden baselines predate the measured_with_fallback default (see CHANGELOG): pin the flat estimate.
-    base["k_tab_mode"] = "estimate"
+    base["k_tab_mode"] = k_tab_mode
     base["mode"] = "calculate_dose"
     base["silence_pydicom_warnings"] = True
     base["phantom"]["model"] = phantom_model
@@ -335,8 +335,8 @@ def _settings(*, phantom_model: str = "cylinder") -> PyskindoseSettings:
     return PyskindoseSettings(settings=base)
 
 
-def _run_calculate_dose():
-    settings = _settings()
+def _run_calculate_dose(k_tab_mode: str = "estimate"):
+    settings = _settings(k_tab_mode=k_tab_mode)
     table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
     pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
     parsed = rdsr_parser(pydicom.dcmread(str(_RDSR)), silence_pydicom_warnings=True)
@@ -525,3 +525,26 @@ def test_golden_baseline_unaffected_by_beam_miss_changes():
     output = _run_calculate_dose()
     assert "missed_event_indices" in output
     assert output["missed_event_indices"] == []
+
+
+# Goldens for the default k_tab_mode (measured_with_fallback), recorded 2026-10-07 and
+# reproduced across repeated and parallel runs. The siemens_axiom_artis example has
+# measured data for every event (all statuses "exact"), so these differ from the flat
+# estimate goldens above (PSD about -9.6%, dose sum about -7.0%).
+_GOLDEN_SIEMENS_CYLINDER_MEASURED = {
+    "psd_mgy": 1.1773171411019483,
+    "dose_sum": 44.49874396687857,
+    "k_tab_range": (0.7135, 0.7456),
+}
+
+
+def test_calculate_dose_golden_siemens_cylinder_measured_with_fallback():
+    output = _run_calculate_dose("measured_with_fallback")
+    golden = _GOLDEN_SIEMENS_CYLINDER_MEASURED
+    dose_map = output[c.OUTPUT_KEY_DOSE_MAP]
+    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"])
+    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"])
+    k_tab = output[c.OUTPUT_KEY_CORRECTION_TABLE]
+    assert all(0.0 < v <= 1.0 for v in k_tab)
+    assert (min(k_tab), max(k_tab)) == pytest.approx(golden["k_tab_range"])
+    assert set(output[c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES]) == {"exact"}

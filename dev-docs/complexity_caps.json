@@ -37,7 +37,7 @@
     {
       "path": "src/guiskindose/__main__.py",
       "function": "cli",
-      "cap": 16
+      "cap": 15
     },
     {
       "path": "src/guiskindose/calculate_dose/rotational_event.py",

@@ -198,6 +198,7 @@ Key flags (see `python -m guiskindose --help` for the full list):
 | `--include-source-identifiers` | Include source filenames in reports (may contain PHI) |
 | `--allow-ignored-checkout-output` | Allow export to a gitignored path inside the checkout |
 | `--kerma-meter-correction` | Enable kerma-meter correction factors |
+| `--output-format` | `json` / `dict`: print the full single-file result (psd, corrections, `tube_summary`, ...) to stdout as JSON |
 | `--kerma-meter-correction-file` | Path to CF lookup table (CSV/TSV/XLSX/JSON) |
 | `--kerma-meter-correction-mode` | **Deprecated.** A set file always loads; manual entries win, then file, then default. `prompt` maps to `ask_for_missing` (GUI-only) |
 | `--kerma-meter-calibration-date` | `YYYY-MM-DD`: use the calibration period (file `valid_from` / `valid_to`) containing this date for every exam; default is the current or most recent period |

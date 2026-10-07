@@ -28,7 +28,7 @@ be archived.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — `RF-Pat-Orientation-Modifier-Missing` is
   still open. See the item in Input Data And Calculation.
 - [ ] **Kerma-meter CF workflow (file + prompt-on-miss, per-tube dose)** — Phases 0–6 are implemented and
-  reviewed. Radimetrics `(A)`/`(B)` columns are confirmed per event (one plane per row). Remaining: run the GUI manual smoke test, then archive. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
+  reviewed. Radimetrics `(A)`/`(B)` columns are confirmed per event (one plane per row). Smokes: load-time dialog and example download OK (user); CLI smokes passed and are automated. Remaining: the rest of the manual GUI smokes (see the plan), then archive. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
 
 
 ## Active Work
@@ -47,6 +47,11 @@ be archived.
   - *Settings phantom preview*: acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
   - *Rich export*: Export-tab modal in browser + native pywebview; Windows native file dialogs.
   - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
+  - *Kerma-meter CF workflow / Corrections tab*: done — load-time dialog, example calibration download (native),
+    CLI scenarios (automated in `tests/unittests/test_cli_end_to_end.py`). Still to do in the GUI: Cancel
+    semantics, blank/zero validation, multi-exam follow and edit propagation, Review then results invalidation,
+    per-tube Results and export, bundled Radimetrics examples, Corrections tab and transmission info icon,
+    k_tab mode select. See [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
 
 ## Product Backlog
 

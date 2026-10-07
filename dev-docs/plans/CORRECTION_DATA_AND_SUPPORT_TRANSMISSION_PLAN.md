@@ -39,12 +39,14 @@ The authoritative baseline correction data are packaged CSVs. A root
 default setting is the relative string `"corrections.db"`, so a missing database
 is currently created in the process working directory from the packaged CSVs.
 
-**Which `k_tab` path a default run takes.** `settings_example.json` ships
-`estimate_k_tab: true` with `k_tab_val: 0.8`, and the GUI default state matches
-(`gui/state.py`). `calculate_k_tab()` returns `[k_tab_val] * len(data_norm)`
-without consulting the bundled table whenever `estimate_k_tab` is set. The bundled
+**Which `k_tab` path a default run takes.** (Updated 2026-10-07: the default is now
+`k_tab_mode: measured_with_fallback`, which replaced the `estimate_k_tab` boolean.
+Events with no usable measured value, including the Plane B zeros, use `k_tab_val`
+instead of 1.0.) Originally `settings_example.json` shipped `estimate_k_tab: true`
+with `k_tab_val: 0.8`, and `calculate_k_tab()` returned `[k_tab_val] * len(data_norm)`
+without consulting the bundled table. The bundled
 `correction_table_and_pad_attenuation` lookup — and therefore the inherited Plane B
-zeros — is reached only when a user deliberately opts out of the estimate. This
+zeros — was then reached only when a user deliberately opted out of the estimate. This
 bounds who is exposed to the Plane B hazard, but it does not reduce its severity for
 those users, and it means the *default* path is an unvalidated user-supplied scalar.
 

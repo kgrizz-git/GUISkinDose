@@ -21,8 +21,31 @@ Done:
   and tube, without equipment labels or calibration dates.
 - An example calibration file ships as package data with placeholder dates, and the tests use it.
 
+Smoke tests (2026-10-07):
+- Manual, done by the user: (1) the load-time dialog is OK. (2) The example calibration download failed in the
+  native window, was fixed (native Save As), and passed on re-test.
+- CLI, run through `python -m guiskindose` with the bundled examples (now automated in
+  `tests/unittests/test_cli_end_to_end.py`), all passed:
+  - Siemens example with the example file and explicit label DEMO-ROOM-1: single tube, CF 1.02 from the file.
+  - Older Radimetrics biplane example with the example file and DEMO-ROOM-2: calibration date 1901-06-01 gives
+    A 0.98, 1902-06-01 gives A 1.03, B 1.01 from the file either way. With no date the current period applies and
+    one count-only warning is logged.
+  - No file: one count-only warning, factors `default`, PSD equal to the uncorrected 1.1773 mGy.
+  - Both Radimetrics examples: older biplane gives tubes A and B with 4 events each, newer gives one single tube
+    with 5 events.
+  - `--output-format json` prints `tube_summary` with applied CF, range, and source.
+  - `k_tab_mode` through the settings file: `measured_with_fallback` and `measured_only` PSD 1.1773 (all
+    `exact`), `estimate` 1.3020; the legacy `estimate_k_tab: true` key maps to `estimate` with the deprecation
+    warning.
+  - Logs and stderr contain no equipment labels, file names, or paths.
+- The CLI smokes found three CLI bugs, fixed in the same change: `--settings` was ignored (the path was never
+  read), `python -m guiskindose` never applied the kerma-meter flags or `--plane-code-map`, and a single-file
+  run never printed its JSON result (new `--output-format json`).
+
 Remaining:
-- Run the manual GUI smoke test for the dialog, the Review button, and the per-tube Results.
+- Manual GUI smokes still to do: Cancel semantics, validation (blank and zero factors), multi-exam follow and
+  edit propagation, Review then invalidation of results, per-tube Results and exports, the Radimetrics examples
+  in the GUI, the Corrections tab and the transmission info icon, and the k_tab mode select.
 - Then archive this plan, update `dev-docs/index.md`, and remove the TO_DO item.
 
 Answered (2026-10-07): the Radimetrics `(A)`/`(B)` columns are per-event values, and each real row sits on one
