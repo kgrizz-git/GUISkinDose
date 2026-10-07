@@ -40,6 +40,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExamSection, ExportPayload
 
@@ -155,7 +156,7 @@ def _settings_flow(exam: ExamSection, multi: bool) -> list:
     rows.extend(audit_setting_rows(exam))
     flow: list[Any] = []
     if multi:
-        flow.append(Paragraph(f"Exam {exam.exam_id}", _H2))
+        flow.append(Paragraph(_escape(exam_heading(exam.exam_id)), _H2))
     flow.append(_table(rows, [_CONTENT_WIDTH * 0.5, _CONTENT_WIDTH * 0.5]))
     flow.append(Spacer(1, 8))
     return flow
@@ -167,7 +168,7 @@ def _corrections_flow(payload: ExportPayload) -> list:
     widths = [_CONTENT_WIDTH * 0.36] + [_CONTENT_WIDTH * 0.16] * 4
     if payload.is_multi_exam:
         for exam in payload.exams:
-            flow.append(Paragraph(f"Exam {exam.exam_id}", _BODY))
+            flow.append(Paragraph(_escape(exam_heading(exam.exam_id)), _BODY))
             flow.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections], widths))
             flow.append(Spacer(1, 4))
         flow.append(Paragraph("Cumulative (kerma-weighted)", _BODY))

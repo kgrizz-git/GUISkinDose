@@ -96,9 +96,10 @@ def format_tube_summary(blocks: Sequence[tuple[str | None, list[dict] | None]]) 
         prefix = f"{label}: " if label else ""
         for row in summary or []:
             tube, _events, reported, corrected, _cf, _source, peak = tube_row_cells(row)
+            cf_text = tube_cf_text(row)
+            source = "" if cf_text == tube_source_text(row) else f" ({tube_source_text(row)})"
             lines.append(
-                f"{prefix}{tube}: reported {reported} mGy, corrected {corrected} mGy, "
-                f"CF {tube_cf_text(row)} ({tube_source_text(row)}), peak {peak} mGy"
+                f"{prefix}{tube}: reported {reported} mGy, corrected {corrected} mGy, CF {cf_text}{source}, peak {peak} mGy"
             )
     if not lines:
         return ""

@@ -66,12 +66,14 @@ def cli() -> None:
         if not args.file_path:
             print("--input-preview-only requires --file-path", file=sys.stderr)
             sys.exit(1)
+        preview_settings = prepare_cli_settings(args)
         for single_path in args.file_path:
             preview_input_file(
                 single_path,
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
                 include_sensitive_values=getattr(args, "include_sensitive_preview", False),
+                settings=preview_settings,
             )
     else:
         run_settings = prepare_cli_settings(args)

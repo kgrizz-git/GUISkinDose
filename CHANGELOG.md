@@ -217,6 +217,12 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Fixes from the manual smoke run** (2026-10-07) — after results are invalidated or a new file is loaded, the
+  single-exam Results tab now shows `—` for Total Air Kerma, Events, DAP and fluoro time and clears the per-event
+  correction table, instead of keeping the previous run's numbers. Multi-exam reports no longer print "Exam Exam
+  1" in headings. `--input-preview-only` now honours `--plane-code-map`. The Results text for a tube with no
+  correction factor reads "CF not applied" once.
+
 - **Clearer audit lines in reports** (2026-10-07) — the import warning no longer lists columns the adapter does
   use (the Radimetrics per-plane dose columns, the plane-code column, and the procedure DAP total) as ignored. The
   report's plane-identity rows are labelled as the coded (CID 10003) identity, and a new "Tube identity used"

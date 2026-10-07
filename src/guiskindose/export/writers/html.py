@@ -23,6 +23,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExportPayload
 
@@ -134,7 +135,7 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
     body.append("<h2>Correction factors</h2>")
     if payload.is_multi_exam:
         for exam in payload.exams:
-            body.append(f"<details><summary>Exam {_esc(exam.exam_id)}</summary>")
+            body.append(f"<details><summary>{_esc(exam_heading(exam.exam_id))}</summary>")
             body.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections]))
             body.append("</details>")
         body.append("<p>Cumulative (kerma-weighted)</p>")
@@ -146,7 +147,7 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
 
     body.append("<h2>Settings &amp; equipment</h2>")
     for exam in payload.exams:
-        body.append(f"<details><summary>Exam {_esc(exam.exam_id)}</summary>")
+        body.append(f"<details><summary>{_esc(exam_heading(exam.exam_id))}</summary>")
         body.append(_table(_settings_rows(exam)))
         body.append("</details>")
 

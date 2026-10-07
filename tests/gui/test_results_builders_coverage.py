@@ -485,3 +485,18 @@ def test_tube_labels_cleared_when_results_invalidate() -> None:
     ctrl._reset_multi_exam_view()
     cast(MagicMock, ctrl.refs.agg_tube_label.set_text).assert_called_with("")
     assert ctrl.refs.agg_tube_label.visible is False
+
+
+def test_invalidated_single_exam_results_return_totals_and_table_to_placeholders() -> None:
+    """After a reset the old run's totals and per-event table must not stay on screen."""
+    ctrl = _controller()
+    ctrl.refs.corr_table = MagicMock(rows=[{"event": 1}], update=MagicMock())
+    state.is_multi_exam = False
+    state.calculation_done = False
+    state.psd = None
+    ctrl.refresh_metrics()
+    ctrl.refresh_corr_table()
+    for metric in (ctrl.refs.kerma_metric, ctrl.refs.events_metric, ctrl.refs.dap_metric, ctrl.refs.fluoro_metric):
+        cast(MagicMock, metric.set_text).assert_called_with("—")
+    assert ctrl.refs.corr_table.rows == []
+    assert ctrl.refs.rotational_badge.visible is False

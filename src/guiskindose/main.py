@@ -280,14 +280,19 @@ def preview_input_file(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     include_sensitive_values: bool = False,
+    settings: PyskindoseSettings | None = None,
 ) -> None:
-    """Print a value-safe preview unless sensitive values are explicitly requested."""
+    """Print a value-safe preview unless sensitive values are explicitly requested.
+
+    ``settings`` carries CLI choices that affect parsing, such as ``--plane-code-map``;
+    without it the bundled example settings are used.
+    """
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
     # The radimetrics/generic/dosetrack schemas need settings (rdsr_normalizer
     # does a manufacturer/model lookup), so supply defaults — preview never runs
     # a dose calculation, so example settings are sufficient.
-    settings_obj = parse_settings_to_settings_class(settings=None)
+    settings_obj = settings if settings is not None else parse_settings_to_settings_class(settings=None)
 
     raw = read_and_normalize_input(
         file_path,
@@ -681,6 +686,7 @@ if __name__ == "__main__":
                         input_schema=getattr(args, "input_schema", None),
                         sheet_name=getattr(args, "sheet_name", 0),
                         include_sensitive_values=getattr(args, "include_sensitive_preview", False),
+                        settings=run_settings,
                     )
                 else:
                     print_cli_result(

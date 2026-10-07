@@ -150,3 +150,49 @@ def test_multi_file_run_honours_the_aggregate_flag(tmp_path: Path) -> None:
     )
     assert proc.returncode == 0, proc.stderr[-300:]
     assert float(proc.stdout.strip().splitlines()[-1]) > 0
+
+
+def _noncid_dosetrack_csv(tmp_path: Path) -> Path:
+    import csv
+
+    source = Path(__file__).resolve().parents[1] / "fixtures" / "tabular_inputs" / "dosetrack_events.csv"
+    rows = list(csv.reader(source.read_text(encoding="utf-8").splitlines()))
+    column = rows[0].index("Plane Code")
+    for index, row in enumerate(rows[1:], 1):
+        row[column] = "1" if index % 2 else "2"
+    path = tmp_path / "dosetrack_noncid.csv"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        csv.writer(handle, lineterminator="\n").writerows(rows)
+    return path
+
+
+def test_dosetrack_ambiguous_plane_codes_need_a_map_and_the_map_reaches_the_preview(tmp_path: Path) -> None:
+    csv_path = _noncid_dosetrack_csv(tmp_path)
+    args = [
+        sys.executable,
+        "-m",
+        "guiskindose",
+        "-f",
+        str(csv_path),
+        "--input-schema",
+        "dosetrack",
+        "--input-preview-only",
+    ]
+    without = subprocess.run(args, capture_output=True, text=True, check=False)
+    assert without.returncode != 0
+    assert "Operation failed" in without.stderr
+    assert str(tmp_path) not in without.stderr
+    with_map = subprocess.run(
+        [*args, "--plane-code-map", "1:Plane A,2:Plane B"], capture_output=True, text=True, check=False
+    )
+    assert with_map.returncode == 0, with_map.stderr[-300:]
+    assert "Events loaded: 5" in with_map.stdout
+
+
+def test_dosetrack_plane_code_map_gives_tubes_in_a_full_run(tmp_path: Path) -> None:
+    settings = _write_settings(tmp_path / "dt.json")
+    result, _ = _run(
+        "-f", str(_noncid_dosetrack_csv(tmp_path)), "--input-schema", "dosetrack", "-s", str(settings),
+        "--plane-code-map", "1:Plane A,2:Plane B", "--output-format", "json",
+    )  # fmt: skip
+    assert {row["tube"]: row["events"] for row in result["tube_summary"]} == {"A": 3, "B": 2}

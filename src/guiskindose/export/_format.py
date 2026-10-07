@@ -162,3 +162,13 @@ def collect_alert_lines(payload: ExportPayload) -> list[tuple[str, str]]:
     if not lines:
         lines.append(("No warnings, discarded events, or QA alerts.", "ok"))
     return lines
+
+
+def exam_heading(exam_id: str) -> str:
+    """Heading text for an exam: ``Exam 1`` stays ``Exam 1``; other ids become ``Exam <id>``.
+
+    Multi-exam ids are already opaque ``Exam N`` labels, so a blind ``"Exam " + id``
+    prefix printed ``Exam Exam 1``.
+    """
+    text = str(exam_id)
+    return text if text.startswith("Exam ") else f"Exam {text}"

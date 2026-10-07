@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
+from . import _format as _format
 from . import images as _images
 from . import metrics as _metrics
 from . import sections as _sections
@@ -198,7 +199,7 @@ def _render_images(resolved: _Resolved, source: ExportSource) -> list[ImageEntry
         add("Cumulative dose map (irradiated region)", "dose", None, agg, patient0, _images.CUMULATIVE_DIMS, _images.DORSAL, True)
         if len(views) <= 10:
             for view, exam_id in zip(views, resolved.exam_ids, strict=True):
-                add(f"Exam {exam_id} (irradiated region)", "dose", exam_id, view.dense_dose_map, view.patient,
+                add(f"{_format.exam_heading(exam_id)} (irradiated region)", "dose", exam_id, view.dense_dose_map, view.patient,
                     _images.THUMBNAIL_DIMS, _images.DORSAL, True)
     else:
         eid = resolved.exam_ids[0]

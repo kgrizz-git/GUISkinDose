@@ -19,8 +19,8 @@ be archived.
 
 ## Next Up
 
-- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
-  confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
+- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (agent-runnable smokes done
+  2026-10-07; native-window and Windows checks remain for the user).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
   roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
@@ -39,21 +39,33 @@ be archived.
   1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Manual Smokes** — Compile and execute manual smokes for shipped features:
-  - *Multi-exam*: multi-file upload, per-exam overrides, calculate, results accordion.
-  - *Correction safety / tube identity*: run the scenarios in [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation — unmatched model names the real scanner, GE-family unmatched claims no Tx/Tz auto-swap, ambiguous Plane B / DoseTrack map, valid Plane A, multi-exam mixed match/fallback.
-  - *Settings phantom preview*: acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
-  - *Rich export*: Export-tab modal in browser + native pywebview; Windows native file dialogs.
-  - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
+  - *Multi-exam* — **done 2026-10-07 (headless Playwright)**: 3 bundled DICOMs uploaded together (3 exams, 70
+    events); a per-exam offset on Exam 3 only (lon 0 → 25 cm) changed Exam 3's PSD 14.08 → 10.46 mGy while Exam 1
+    (1.09) and Exam 2 (0.00) were unchanged, and the aggregate followed (14.08 → 10.46). Note: the bundled Philips
+    example misses the phantom at default offsets (all events miss, PSD 0.00 with an all-miss alert).
+  - *Correction safety / tube identity* — **done 2026-10-07**: an unmatched DICOM scanner is named in the Upload
+    alert, Geometry notice and Calculate card ("Acme Imaging Mystery X1", Default profile); a multi-exam mix of
+    matched and unmatched exams names the unmatched exam and counts fallbacks (k_tab exact=21, fallback=42); the
+    valid Philips Plane A example reports Matched. GE-family manufacturer names all match the GE wildcard profile,
+    so the "Fallback never claims a Tx/Tz auto-swap" notice cannot be reached from the GUI and stays covered by
+    `tests/gui/test_gui_fallback_reporting.py`. DoseTrack non-CID plane codes: no map fails value-safely, a map
+    gives tubes A 3 / B 2. The smoke found `--input-preview-only` ignoring `--plane-code-map` (fixed, tested).
+  - *Settings phantom preview* — **checklist green 2026-10-07** (criteria 1–4, 7, 8, 10, 11 by screenshots and plot
+    data; 5, 6, 9, 12, 13 by code and test reading). The plan (`plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md`) can be
+    archived. Note the plan text says `_reduced_1000t`; the code prefers `_reduced_3000t`.
+  - *Rich export* — **browser modal done 2026-10-07**: HTML, XLSX, DOCX and PDF all download and open for a
+    3-exam run (HTML with 5 images and no paths, XLSX 7 sheets, DOCX 12 tables / 5 images, PDF 9 pages). DOCX
+    converted with LibreOffice renders cleanly (tables inside margins, Dose by tube readable, images present). Still
+    open: native pywebview and Windows native file dialogs (*user*).
+  - *Results table* — **confirmed 2026-10-07**: the Data Table shows real K_IRP, and Results shows Total Air Kerma
+    with `—` only before a calculation and for empty correction slots (zero-hit events). The smoke found stale
+    Results totals and per-event table after results were invalidated or a new file was loaded (fixed, tested).
   - *Kerma-meter CF workflow / Corrections tab* ([archived plan](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md)):
     done — load-time dialog and native example download (user), CLI scenarios (automated), browser GUI smokes
     (Playwright, 2026-10-07), and PDF/DOCX tube tables (content checked, PDF page rendered). Still open:
     - Native (pywebview) pass of the Corrections tab, the factor dialog and the transmission info icon. *User.*
     - Windows: native Save As for "Download example calibration file" and the Export tab. *User.*
-    - DOCX visual layout check (content already verified). *Agent* if LibreOffice is available to render it; else user.
-  - **Agent-runnable** (an agent can drive these with headless Playwright against a local server, or the CLI):
-    *Multi-exam* (browser parts), *Correction safety / tube identity* (synthetic inputs via CLI or browser),
-    *Settings phantom preview* (screenshots of the acceptance checklist), *Rich export* (browser modal only),
-    and *Results table* ('—' vs kerma). Native-window and Windows checks need the user.
+    - DOCX visual layout check — done 2026-10-07 (LibreOffice render, see Rich export above).
 
 ## Product Backlog
 
@@ -237,8 +249,3 @@ be archived.
 
 - **Original flow inputs** — Do examples need JSON sidecars, different normalization settings, or other files to
   avoid unexpected body-region projections?
-- **Results “—” vs kerma (likely resolved)** — Older note: “Results table shows K_IRP as `-`.” Current GUI:
-  Data Table has a real `K_IRP (mGy)` column from the normalized events; Results shows **Total Air Kerma**
-  (sum of reported K_IRP) and a **Correction factors per event** table (`k_isq` / `k_bs` / `k_tab`) that uses
-  `—` for missing/empty correction slots (e.g. zero-hit events), not as a stand-in for kerma. Metric cards also
-  show `—` before a calculation finishes. See the Manual Smokes item in Next Up / Active Work to confirm and delete.

@@ -31,6 +31,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExamSection, ExportPayload
 
@@ -182,7 +183,7 @@ def _settings_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r = 1
     for exam in payload.exams:
         if payload.is_multi_exam:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- {exam_heading(exam.exam_id)} ---")).font = _BOLD
             r += 1
         r = _write_rows(ws, _settings_block(exam), start_row=r, header=True)
         r += 1
@@ -196,7 +197,7 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r = 1
     if payload.is_multi_exam:
         for exam in payload.exams:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- {exam_heading(exam.exam_id)} ---")).font = _BOLD
             r += 1
             rows = [CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections]
             r = _write_rows(ws, rows, start_row=r, header=True)
@@ -246,7 +247,7 @@ def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
     r = 1
     for label, handling in blocks:
         if label is not None:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {label} ---")).font = _BOLD
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- {exam_heading(label)} ---")).font = _BOLD
             r += 1
         paragraph = rotational_methodology_paragraph(handling)
         if paragraph:

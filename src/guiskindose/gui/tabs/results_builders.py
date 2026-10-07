@@ -140,6 +140,16 @@ class ResultsTabController:
             # the Results placeholder with the pending presentation — the same
             # invalidation the sidebar readout already receives.
             self._apply_psd_presentation(self.refs.psd_readout, None, "—")
+            # The totals and badges belong to the same vanished run: back to the placeholder.
+            for metric in (
+                self.refs.kerma_metric,
+                self.refs.events_metric,
+                self.refs.dap_metric,
+                self.refs.fluoro_metric,
+            ):
+                metric.set_text("—")
+            self.refs.rotational_badge.set_text("")
+            self.refs.rotational_badge.visible = False
             if self.refs.tube_label is not None:
                 self.refs.tube_label.set_text("")
                 self.refs.tube_label.visible = False
@@ -265,8 +275,13 @@ class ResultsTabController:
             await self.refresh_dosemap()
 
     def refresh_corr_table(self) -> None:
-        """Refresh corr table."""
-        if state.is_multi_exam or not state.calculation_done or state.output is None:
+        """Refresh corr table (cleared while no single-exam calculation is current)."""
+        if state.is_multi_exam:
+            return
+        if not state.calculation_done or state.output is None:
+            if self.refs.corr_table.rows:
+                self.refs.corr_table.rows = []
+                self.refs.corr_table.update()
             return
         out = state.output
         corrections = out.get("corrections", {})

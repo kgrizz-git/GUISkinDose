@@ -213,3 +213,9 @@ def test_multi_exam_export_has_an_exam_column() -> None:
     html = render_html_bytes(payload).decode()
     assert "<th>Exam</th>" in html or ">Exam<" in html
     assert "1.6" in html
+
+
+def test_gui_text_does_not_repeat_not_applied() -> None:
+    text = format_tube_summary([(None, _summary(_frame(["A", "B"]), _settings()))])
+    assert "CF not applied," in text
+    assert "not applied (not applied)" not in text

@@ -121,3 +121,10 @@ def test_single_tube_and_missing_summary_add_no_section():
         payload = _tube_payload(summary)
         assert "Dose by tube" not in render_html_bytes(payload).decode()
         assert "Dose by tube" not in load_workbook(io.BytesIO(render_bytes(payload, "xlsx"))).sheetnames
+
+
+def test_exam_heading_does_not_double_the_exam_prefix():
+    from guiskindose.export._format import exam_heading
+
+    assert exam_heading("Exam 1") == "Exam 1"
+    assert exam_heading("e1") == "Exam e1"
