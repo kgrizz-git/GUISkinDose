@@ -45,7 +45,11 @@ def validate_exam_kerma(gui: dict[str, Any]) -> None:
         or any(not isinstance(k, str) or not isinstance(v, str) for k, v in periods.items())
     ):
         raise _malformed(f"{PERIODS_KEY} must be a mapping of strings")
-    nested = gui.get(EXAM_FACTORS_KEY)
+    _validate_exam_factors(gui.get(EXAM_FACTORS_KEY), _malformed)
+
+
+def _validate_exam_factors(nested: Any, _malformed: Any) -> None:
+    """Reject a per-exam factor mapping that is not ``exam -> equipment -> tube -> number``."""
     if nested is None:
         return
     if not isinstance(nested, dict):

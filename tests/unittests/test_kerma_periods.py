@@ -72,10 +72,12 @@ def test_adjacent_periods_do_not_overlap(tmp_path: Path) -> None:
 
 
 def test_bad_date_and_reversed_period_are_errors(tmp_path: Path) -> None:
+    bad_date = _write(tmp_path, "u,A,1.1,01/02/2026,\n")
     with pytest.raises(ValueError, match="ISO dates"):
-        load_correction_periods(_write(tmp_path, "u,A,1.1,01/02/2026,\n"))
+        load_correction_periods(bad_date)
+    reversed_period = _write(tmp_path, "u,A,1.1,2026-07-01,2026-01-01\n")
     with pytest.raises(ValueError, match="must not be after"):
-        load_correction_periods(_write(tmp_path, "u,A,1.1,2026-07-01,2026-01-01\n"))
+        load_correction_periods(reversed_period)
 
 
 def test_select_row_by_date_boundaries_and_gaps() -> None:

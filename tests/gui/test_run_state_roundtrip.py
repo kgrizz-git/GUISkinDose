@@ -502,5 +502,6 @@ def test_malformed_per_exam_values_are_rejected() -> None:
 
     document = _per_exam_document(include_identifiers=True)
     document["gui_state"]["kerma_meter_exam_factors"] = {"Exam 1": {"Acme": {"A": "high"}}}
+    app_state = AppState()
     with pytest.raises(RunStateError):
-        apply_run_state(document, AppState())
+        apply_run_state(document, app_state)

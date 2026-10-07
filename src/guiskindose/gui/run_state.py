@@ -131,7 +131,7 @@ def _basename_or_none(value: Any, include_identifiers: bool) -> Any:
 
 
 def _nest_in_memory_table(
-    table: dict[tuple[str, str], float] | None, include_identifiers: bool
+    table: dict[tuple[str, ...], float] | None, include_identifiers: bool
 ) -> dict[str, dict[str, float]] | None:
     """Serialize the session CF override table to nested JSON form.
 

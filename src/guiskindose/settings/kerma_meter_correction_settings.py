@@ -74,16 +74,9 @@ class KermaMeterCorrectionSettings:
         data = raw or {}
         self.enable: bool = bool(data.get("enable", False))
         file_raw = data.get("file")
-        if file_raw is None or file_raw == "":
-            self.file: Path | None = None
-        else:
-            self.file = Path(str(file_raw))
-
+        self.file: Path | None = None if file_raw in (None, "") else Path(str(file_raw))
         sheet = data.get("file_sheet")
-        if sheet is None or sheet == "":
-            self.file_sheet: str | int | None = None
-        else:
-            self.file_sheet = sheet
+        self.file_sheet: str | int | None = None if sheet in (None, "") else sheet
 
         self.default_factor: float = float(data.get("default_factor", 1.0))
         if not math.isfinite(self.default_factor) or self.default_factor <= 0:
@@ -107,7 +100,7 @@ class KermaMeterCorrectionSettings:
         if legacy_mode is not None:
             self.apply_legacy_mode(legacy_mode)
         # Runtime-only (not serialized to example JSON).
-        self.in_memory_table: dict[tuple[str, str], float] | None = data.get("in_memory_table")
+        self.in_memory_table: dict[tuple[str, ...], float] | None = data.get("in_memory_table")
         # Runtime-only calibration-period choice: per exam (GUI) or one date (CLI).
         self.calibration_periods: dict[str, str] = dict(data.get("calibration_periods") or {})
         self.calibration_date: date | None = data.get("calibration_date")

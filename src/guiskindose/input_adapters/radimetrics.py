@@ -245,7 +245,7 @@ def _kept_plane_codes(series: pd.Series) -> pd.Series:
     """Keep recognised plane codes (``Plane A`` / ``Plane B`` / ``Single Plane``); others become None."""
     from guiskindose.kerma_correction import normalize_tube
 
-    recognised = series.map(lambda v: normalize_tube(v) != "unknown")
+    recognised = series.map(lambda v: not pd.isna(v) and normalize_tube(str(v)) != "unknown")
     return series.where(recognised, other=None)
 
 

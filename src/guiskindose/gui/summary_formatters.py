@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from .state import AppState
 
 _C6_MULTI_EXAM_PHANTOM = (
@@ -64,7 +66,7 @@ def multi_exam_phantom_offset_caption() -> str:
     return _C6_MULTI_EXAM_PHANTOM
 
 
-def format_tube_summary(blocks: list[tuple[str | None, list[dict] | None]]) -> str:
+def format_tube_summary(blocks: Sequence[tuple[str | None, list[dict] | None]]) -> str:
     """Multi-line "dose by tube" text for the Results tab; empty when not worth showing.
 
     Parameters
