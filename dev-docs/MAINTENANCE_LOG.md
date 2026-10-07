@@ -10,6 +10,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Added
 
+- **Native-window startup test moved to `tests/gui` and isolated from the shared NiceGUI app**
+  (2026-10-07) — `test_run_gui_native_persists_normalized_macos_startup` failed intermittently with
+  "Cannot add middleware after an application has started" when unit and GUI tests shared a worker,
+  because `run_gui()` registers middleware on NiceGUI's process-wide app. The module now lives
+  in `tests/gui`, whose autouse `_isolate_loopback_security` fixture already stubs
+  `app.add_middleware`.
+
 - **SonarCloud scan waits on the Quality Gate** (2026-10-05) — `sonar-scan` now passes
   `sonar.qualitygate.wait=true`, so a red gate on `main` fails the job and files a CI
   tracking issue. Before this, PR #134's S2083 false positive turned the gate red while
@@ -47,6 +54,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   even when the quality gate passes.
 
 ### Security
+
+- **Semgrep pin 1.178.0 to 1.179.0; PyJWT 2.13.0 to 2.15.1 in the scanner lock** (2026-10-07) — semgrep
+  1.179.0 relaxes its pin to `pyjwt[crypto]>=2.15.0,<3`, so `tools/semgrep/uv.lock` now carries a patched
+  PyJWT. This fixes the moderate PyJWT advisory reported against that lock and lets the older
+  alerts that were dismissed as unreachable close. `click` and `mcp` pins are unchanged. The PyJWT
+  TO_DO item is removed.
 
 - **multidict 6.7.1 → 6.9.1** (2026-10-05) — lock bump for GHSA-54p9-h82j-f925
   (reference leak in `CIMultiDict`/`MultiDict` items-view set operations), which

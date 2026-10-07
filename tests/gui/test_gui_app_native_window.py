@@ -1,4 +1,4 @@
-"""Unit tests for native-window startup behavior in gui.app."""
+"""Tests for native-window startup behavior in gui.app."""
 
 from __future__ import annotations
 

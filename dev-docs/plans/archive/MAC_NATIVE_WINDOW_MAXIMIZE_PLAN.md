@@ -5,7 +5,7 @@
 > Archived after implementation. The shipped behavior lives in
 > [src/guiskindose/gui/app.py](../../../src/guiskindose/gui/app.py)
 > with regression coverage in
-> [tests/unittests/test_gui_app_native_window.py](../../../tests/unittests/test_gui_app_native_window.py),
+> [tests/gui/test_gui_app_native_window.py](../../../tests/gui/test_gui_app_native_window.py),
 > [tests/unittests/test_window_prefs.py](../../../tests/unittests/test_window_prefs.py),
 > and [tests/gui/test_gui_security.py](../../../tests/gui/test_gui_security.py).
 
