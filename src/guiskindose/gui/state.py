@@ -117,6 +117,11 @@ class AppState:
     # Calibration period chosen per exam (opaque exam label -> "<from>|<to>" key).
     # Calibration dates, not patient dates; kept out of logs and per-event exports.
     kerma_meter_periods: dict[str, str] = field(default_factory=dict)
+    # Rows the user confirmed at their default factor, and exams whose default calibration
+    # period was accepted: remembered so the dialog does not re-ask, but not stored as
+    # factors, so a calibration file row added later still wins.
+    kerma_meter_acknowledged: set[tuple[str, str, str]] = field(default_factory=set)
+    kerma_meter_periods_acknowledged: set[str] = field(default_factory=set)
 
     plot_dosemap: bool = True
     dark_mode: bool = True

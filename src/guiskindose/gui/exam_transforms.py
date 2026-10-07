@@ -182,6 +182,8 @@ def _drop_stale_unresolved_labels(state: AppState) -> None:
     if signature[: len(previous)] != previous:
         state.kerma_meter_unresolved_labels = {}
         state.kerma_meter_periods = {}
+        state.kerma_meter_acknowledged = set()
+        state.kerma_meter_periods_acknowledged = set()
         kept = {k: v for k, v in (state.kerma_meter_in_memory_table or {}).items() if len(k) != 3}
         state.kerma_meter_in_memory_table = kept or None
     state.kerma_meter_exam_signature = signature

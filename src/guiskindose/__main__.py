@@ -122,12 +122,7 @@ def cli() -> None:
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
             )
-            if getattr(args, "aggregate_only", False):
-                print(f"{result.aggregate_psd:.4f}")
-            else:
-                import json as _json
-
-                print(_json.dumps(result.to_dict()))
+            print_cli_result(result, aggregate_only=getattr(args, "aggregate_only", False))
         elif len(file_paths) == 1:
             single_path = file_paths[0]
             if Path(single_path).suffix.lower() in _TABULAR_SUFFIXES:
@@ -137,7 +132,8 @@ def cli() -> None:
                         settings=run_settings,
                         input_schema=getattr(args, "input_schema", None),
                         sheet_name=getattr(args, "sheet_name", 0),
-                    )
+                    ),
+                    aggregate_only=getattr(args, "aggregate_only", False),
                 )
             else:
                 print_cli_result(main(file_path=single_path, settings=run_settings))

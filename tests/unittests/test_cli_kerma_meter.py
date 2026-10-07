@@ -6,6 +6,8 @@ import argparse
 import logging
 from pathlib import Path
 
+import pytest
+
 from guiskindose import load_settings_example_json
 from guiskindose.cli_kerma_meter import (
     add_kerma_meter_cli_arguments,
@@ -128,3 +130,28 @@ def test_cli_legacy_prompt_does_not_override_explicit_ask_for_missing_false():
     )
     apply_kerma_meter_cli_flags(settings, args)
     assert settings.kerma_meter_correction.ask_for_missing is False
+
+
+def test_prepare_cli_settings_reports_a_missing_settings_path_cleanly(tmp_path):
+    import argparse
+
+    from guiskindose.main import prepare_cli_settings
+
+    args = argparse.Namespace(settings=str(tmp_path / "missing.json"))
+    with pytest.raises(SystemExit):
+        prepare_cli_settings(args)
+
+
+def test_prepare_cli_settings_still_accepts_a_json_string_and_a_path(tmp_path):
+    import argparse
+    import json
+
+    from guiskindose import load_settings_example_json
+    from guiskindose.main import prepare_cli_settings
+
+    payload = json.dumps(load_settings_example_json())
+    from_string = prepare_cli_settings(argparse.Namespace(settings=payload))
+    path = tmp_path / "s.json"
+    path.write_text(payload, encoding="utf-8")
+    from_path = prepare_cli_settings(argparse.Namespace(settings=str(path)))
+    assert from_string.k_tab_mode == from_path.k_tab_mode == "measured_with_fallback"

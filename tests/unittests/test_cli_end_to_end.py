@@ -116,3 +116,37 @@ def test_radimetrics_examples_report_per_tube_summaries(tmp_path: Path) -> None:
     assert [_tubes(older)[t]["events"] for t in ("A", "B")] == [4, 4]
     assert set(_tubes(newer)) == {"single"}
     assert _tubes(newer)["single"]["events"] == 5
+
+
+def test_multi_exam_csv_prints_structured_json_without_file_names(tmp_path: Path) -> None:
+    import shutil
+
+    source = Path(__file__).resolve().parents[1] / "fixtures" / "tabular_inputs" / "normalized_events_multistudy.csv"
+    csv_path = tmp_path / "patient_name_secret.csv"
+    shutil.copy(source, csv_path)
+    settings = _write_settings(tmp_path / "multi.json")
+    proc = subprocess.run(
+        [sys.executable, "-m", "guiskindose", "-f", str(csv_path), "-s", str(settings), "--input-schema", "normalized"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr[-300:]
+    result = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert len(result["exams"]) >= 2
+    assert "aggregate_psd" in result
+    assert "patient_name_secret" not in proc.stdout + proc.stderr
+    assert str(tmp_path) not in proc.stdout + proc.stderr
+    assert "source_file" not in proc.stdout
+
+
+def test_multi_file_run_honours_the_aggregate_flag(tmp_path: Path) -> None:
+    settings = _write_settings(tmp_path / "agg.json")
+    proc = subprocess.run(
+        [sys.executable, "-m", "guiskindose", "-f", str(_RDSR), str(_RDSR), "-s", str(settings), "--aggregate"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr[-300:]
+    assert float(proc.stdout.strip().splitlines()[-1]) > 0

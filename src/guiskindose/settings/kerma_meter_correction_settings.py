@@ -103,8 +103,28 @@ class KermaMeterCorrectionSettings:
         self.in_memory_table: dict[tuple[str, ...], float] | None = data.get("in_memory_table")
         # Runtime-only calibration-period choice: per exam (GUI) or one date (CLI).
         self.calibration_periods: dict[str, str] = dict(data.get("calibration_periods") or {})
-        self.calibration_date: date | None = data.get("calibration_date")
+        self.calibration_date: date | None = self._parse_calibration_date(data.get("calibration_date"))
         self.unresolved_equipment_labels: dict[str, str] = dict(data.get("unresolved_equipment_labels") or {})
+
+    @staticmethod
+    def _parse_calibration_date(value: object) -> date | None:
+        """Coerce ``None`` / a date / an ISO ``YYYY-MM-DD`` string to a date.
+
+        Raises
+        ------
+        ValueError
+            If the value is anything else, including a malformed date string.
+        """
+        if value is None or value == "":
+            return None
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            try:
+                return date.fromisoformat(value.strip())
+            except ValueError as exc:
+                raise ValueError("kerma_meter_correction.calibration_date must be an ISO date (YYYY-MM-DD)") from exc
+        raise ValueError("kerma_meter_correction.calibration_date must be a date or an ISO date string")
 
     def apply_legacy_mode(self, mode: object, *, explicit: bool | None = None) -> None:
         """Map the deprecated exclusive ``mode`` onto the unified source model.

@@ -17,6 +17,8 @@ if TYPE_CHECKING:  # duck-typed at runtime, like run_state
 
 EXAM_FACTORS_KEY = "kerma_meter_exam_factors"
 PERIODS_KEY = "kerma_meter_periods"
+ACK_KEY = "kerma_meter_acknowledged"
+PERIODS_ACK_KEY = "kerma_meter_periods_acknowledged"
 
 
 def nest_exam_factors(table: dict[tuple[str, ...], float] | None) -> dict[str, dict[str, dict[str, float]]]:
@@ -33,6 +35,8 @@ def serialize_exam_kerma(app_state: AppState, gui_section: dict[str, Any]) -> No
     """Add per-exam factors and calibration periods to *gui_section* (identifier-gated callers only)."""
     gui_section[EXAM_FACTORS_KEY] = nest_exam_factors(app_state.kerma_meter_in_memory_table)
     gui_section[PERIODS_KEY] = dict(app_state.kerma_meter_periods)
+    gui_section[ACK_KEY] = sorted([list(key) for key in app_state.kerma_meter_acknowledged])
+    gui_section[PERIODS_ACK_KEY] = sorted(app_state.kerma_meter_periods_acknowledged)
 
 
 def validate_exam_kerma(gui: dict[str, Any]) -> None:
@@ -45,7 +49,21 @@ def validate_exam_kerma(gui: dict[str, Any]) -> None:
         or any(not isinstance(k, str) or not isinstance(v, str) for k, v in periods.items())
     ):
         raise _malformed(f"{PERIODS_KEY} must be a mapping of strings")
+    _validate_acknowledged(gui, _malformed)
     _validate_exam_factors(gui.get(EXAM_FACTORS_KEY), _malformed)
+
+
+def _validate_acknowledged(gui: dict[str, Any], _malformed: Any) -> None:
+    """Reject malformed acknowledged-row and acknowledged-period lists."""
+    rows = gui.get(ACK_KEY)
+    if rows is not None and (
+        not isinstance(rows, list)
+        or any(not isinstance(r, list) or len(r) != 3 or any(not isinstance(x, str) for x in r) for r in rows)
+    ):
+        raise _malformed(f"{ACK_KEY} must be a list of [exam, equipment, tube] string triples")
+    exams = gui.get(PERIODS_ACK_KEY)
+    if exams is not None and (not isinstance(exams, list) or any(not isinstance(x, str) for x in exams)):
+        raise _malformed(f"{PERIODS_ACK_KEY} must be a list of strings")
 
 
 def _validate_exam_factors(nested: Any, _malformed: Any) -> None:
@@ -66,6 +84,10 @@ def apply_exam_kerma(gui: dict[str, Any], app_state: AppState) -> None:
     """Apply per-exam factors (replacing only the per-exam part of the table) and periods."""
     if PERIODS_KEY in gui:
         app_state.kerma_meter_periods = dict(gui[PERIODS_KEY] or {})
+    if ACK_KEY in gui:
+        app_state.kerma_meter_acknowledged = {(r[0], r[1], r[2]) for r in gui[ACK_KEY] or []}
+    if PERIODS_ACK_KEY in gui:
+        app_state.kerma_meter_periods_acknowledged = set(gui[PERIODS_ACK_KEY] or [])
     if EXAM_FACTORS_KEY not in gui:
         return
     table = {k: v for k, v in (app_state.kerma_meter_in_memory_table or {}).items() if len(k) != 3}

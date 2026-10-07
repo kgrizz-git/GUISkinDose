@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 from guiskindose.constants import TUBE_IDENTITY_UNKNOWN
 from guiskindose.kerma_correction import (
     UNRESOLVED_EQUIPMENT,
+    effective_period,
     load_correction_periods,
     manual_for_exam,
     merge_tables,
@@ -106,11 +107,12 @@ def exam_table(app_state: AppState, exam: str, periods: Periods | None = None) -
     """Merged manual + file table for one exam (manual wins; file uses the exam's stored period)."""
     periods = file_periods(app_state) if periods is None else periods
     file_part = (
-        file_table_for_exam(periods, period_key=app_state.kerma_meter_periods.get(exam))
+        file_table_for_exam(periods, period_key=effective_period(app_state.kerma_meter_periods, exam))
         if periods is not None
         else None
     )
-    return merge_tables(file_part, manual_for_exam(app_state.kerma_meter_in_memory_table, exam))
+    manual = manual_for_exam(app_state.kerma_meter_in_memory_table, exam, periods=app_state.kerma_meter_periods)
+    return merge_tables(file_part, manual)
 
 
 def missing_by_exam(app_state: AppState, labels: dict[str, str] | None = None) -> dict[str, list[Pair]]:
@@ -118,7 +120,11 @@ def missing_by_exam(app_state: AppState, labels: dict[str, str] | None = None) -
     periods = file_periods(app_state)
     out: dict[str, list[Pair]] = {}
     for exam, pairs in detect_by_exam(app_state, labels).items():
-        miss = missing_keys(pairs, exam_table(app_state, exam, periods))
+        miss = [
+            pair
+            for pair in missing_keys(pairs, exam_table(app_state, exam, periods))
+            if (exam, *pair) not in app_state.kerma_meter_acknowledged
+        ]
         if miss:
             out[exam] = miss
     return out
@@ -142,7 +148,9 @@ def periods_unchosen(app_state: AppState) -> list[str]:
     return [
         exam
         for exam, pairs in detect_by_exam(app_state).items()
-        if any(pair in dated for pair in pairs) and not app_state.kerma_meter_periods.get(exam)
+        if any(pair in dated for pair in pairs)
+        and exam not in app_state.kerma_meter_periods
+        and exam not in app_state.kerma_meter_periods_acknowledged
     ]
 
 
@@ -247,7 +255,7 @@ class FactorModel:
         """Return ``(value, source, followed exam)`` for one exam's pair."""
         if (exam, pair) in self._edits:
             return self._edits[(exam, pair)], SOURCE_ENTERED, None
-        manual = manual_for_exam(self.app_state.kerma_meter_in_memory_table, exam)
+        manual = manual_for_exam(self.app_state.kerma_meter_in_memory_table, exam, follow=False)
         if pair in manual:
             return manual[pair], SOURCE_ENTERED, None
         prev = self._previous(exam, pair)
@@ -289,9 +297,14 @@ class FactorModel:
     def commit(self, dont_ask: bool) -> bool:
         """Store entered factors per exam, identity overrides, period choices, and suppression.
 
-        A row is written as a manual entry for its exam unless it resolved to the
-        file value for that exam's period (file values keep following the file).
-        Confirming a default or followed row records it as an explicit answer.
+        Only explicit values are stored: a value the user entered or edited (for a
+        followed or file row too) becomes a manual entry for its exam. Rows still
+        following an earlier exam store nothing, so "follows Exam N" survives
+        reopening and later edits of the earlier exam reach them. File rows store
+        nothing, so they keep following the file. A default row left untouched is
+        only recorded as acknowledged (it is not asked about again), so a file row
+        added later still wins. The same holds for calibration periods: only
+        explicit choices are stored, and an accepted default is acknowledged.
 
         Returns
         -------
@@ -307,32 +320,40 @@ class FactorModel:
         if self.invalid():
             raise ValueError("Every correction factor must be a finite number above zero.")
         state = self.app_state
-        before = (
-            dict(state.kerma_meter_in_memory_table or {}),
-            dict(state.kerma_meter_unresolved_labels),
-            dict(state.kerma_meter_periods),
-        )
+        before = self._snapshot()
         table = dict(state.kerma_meter_in_memory_table or {})
+        acknowledged = set(state.kerma_meter_acknowledged)
         for row in self.rows():
             if not row.editable:
                 continue
-            file_value = self._file_value(row.exam, (row.equipment, row.tube))
-            if row.source == SOURCE_FILE or (
-                row.source == SOURCE_FOLLOWS and file_value is not None and math.isclose(row.value, file_value)  # type: ignore[arg-type]
-            ):
-                continue
-            table[(row.exam, row.equipment, row.tube)] = float(row.value)  # type: ignore[arg-type]
+            key = (row.exam, row.equipment, row.tube)
+            if row.source == SOURCE_ENTERED:
+                table[key] = float(row.value)  # type: ignore[arg-type]
+            elif row.source == SOURCE_DEFAULT:
+                acknowledged.add(key)
         state.kerma_meter_in_memory_table = table or None
+        state.kerma_meter_acknowledged = acknowledged
         state.kerma_meter_unresolved_labels = {k: v.strip() for k, v in self.labels.items() if v and v.strip()}
-        state.kerma_meter_periods = {e: k for e in self._selector_exams() if (k := self.period_of(e))}
+        selector_exams = self._selector_exams()
+        state.kerma_meter_periods = {
+            **{e: k for e, k in state.kerma_meter_periods.items() if e not in self._period_edits},
+            **{e: k for e, k in self._period_edits.items() if e in selector_exams},
+        }
+        state.kerma_meter_periods_acknowledged = set(state.kerma_meter_periods_acknowledged) | set(selector_exams)
         if dont_ask:
             state.kerma_meter_prompt_suppressed = True
-        after = (
+        return before != self._snapshot()
+
+    def _snapshot(self) -> tuple[object, ...]:
+        """Copy of everything ``commit`` can change, for change detection."""
+        state = self.app_state
+        return (
             dict(state.kerma_meter_in_memory_table or {}),
             dict(state.kerma_meter_unresolved_labels),
             dict(state.kerma_meter_periods),
+            set(state.kerma_meter_acknowledged),
+            set(state.kerma_meter_periods_acknowledged),
         )
-        return before != after
 
 
 def build_rows(app_state: AppState, labels: dict[str, str] | None = None) -> list[DialogRow]:

@@ -61,6 +61,8 @@ def test_engine_uses_the_chosen_period_of_the_example_file() -> None:
     settings = _settings()
     settings.kerma_meter_correction.calibration_periods = {"Exam 1": _OLD}
     assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 1") == pytest.approx([0.98, 1.01])
+    assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 2") == pytest.approx([0.98, 1.01])  # follows Exam 1
+    settings.kerma_meter_correction.calibration_periods = {"Exam 1": _OLD, "Exam 2": "1902-01-01|"}
     assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 2") == pytest.approx([1.03, 1.01])
 
 

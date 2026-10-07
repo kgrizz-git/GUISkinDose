@@ -64,7 +64,7 @@ load. If any pair has no factor yet, a dialog opens. Each row is pre-filled in t
 Rows are grouped by exam, because a recalibrated meter can need a different factor in a later
 exam. Exam 2 and later start from the value the same unit and tube has in the previous exam and
 say **follows Exam N** until you change that row. Editing an earlier exam updates the exams that
-still follow it, and never the ones you edited. The list scrolls. A tube shown as **unknown**
+still follow it, and never the ones you edited. Only values you enter are stored, so a row that follows an earlier exam keeps following it after you confirm and reopen the dialog. The list scrolls. A tube shown as **unknown**
 cannot be looked up, so the default factor applies to it.
 
 **Calibration period.** When the file has dated rows for a unit and tube of an exam, that exam
@@ -83,6 +83,8 @@ a new name. The exam's factors are then looked up for that unit. The chooser sta
 and saved with the run configuration only when identifiers are included.
 
 **Confirm** is blocked until every factor is a number greater than zero; a blank field is an error, not a kept value. If the loaded data changes while the dialog is open, your entries are discarded with a notice.
+
+A row you confirm at the default factor without changing it is remembered as answered, so the dialog does not ask again. It is not stored as a factor, so a calibration file row added later still applies.
 
 **Cancel** never blocks the run. It keeps file values and your earlier entries, and every
 unanswered pair uses the default factor. Calculate re-opens the dialog once if pairs are still

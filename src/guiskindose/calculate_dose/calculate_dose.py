@@ -21,6 +21,7 @@ from guiskindose.geom_calc import (
 from guiskindose.kerma_correction import (
     all_ones_correction,
     distinct_auto_resolved_equipment_keys,
+    effective_period,
     load_correction_periods,
     manual_for_exam,
     merge_tables,
@@ -72,7 +73,7 @@ def _resolve_kerma_meter_cf_detail(
     if km.file is not None:
         try:
             periods = load_correction_periods(km.file, km.file_sheet)
-            period_key = km.calibration_periods.get(exam_label)
+            period_key = effective_period(km.calibration_periods, exam_label)
             file_table = file_table_for_exam(periods, period_key=period_key, calibration_date=km.calibration_date)
             table_meta = {"source_stem": km.file.stem}
             _warn_unselected_period(periods, period_key, km.calibration_date)
@@ -93,7 +94,7 @@ def _resolve_kerma_meter_cf_detail(
                 len(auto_keys),
             )
 
-    manual = manual_for_exam(km.in_memory_table, exam_label)
+    manual = manual_for_exam(km.in_memory_table, exam_label, periods=km.calibration_periods)
     table = merge_tables(file_table, manual)
     _warn_missing_pairs(normalized_data, table, km, exam_label)
     result = resolve_correction_factors(

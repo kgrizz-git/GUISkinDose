@@ -201,6 +201,14 @@ class PyskindoseSettings:
         """Legacy read-only view of ``k_tab_mode`` (True only for ``estimate``)."""
         return self.k_tab_mode == "estimate"
 
+    @estimate_k_tab.setter
+    def estimate_k_tab(self, value: bool) -> None:
+        """Deprecated: ``True`` sets ``estimate``, ``False`` sets ``measured_only``."""
+        logger.warning(
+            "estimate_k_tab is deprecated; set k_tab_mode instead (True maps to 'estimate', False to 'measured_only')."
+        )
+        self.k_tab_mode = "estimate" if value else "measured_only"
+
     @staticmethod
     def _initialize_k_tab_mode(tmp: dict) -> str:
         """Resolve ``k_tab_mode``; map the legacy ``estimate_k_tab`` boolean when it is absent.

@@ -352,6 +352,8 @@ _SNAPSHOT_ATTRS = (
     "kerma_meter_in_memory_table",
     "kerma_meter_unresolved_labels",
     "kerma_meter_periods",
+    "kerma_meter_acknowledged",
+    "kerma_meter_periods_acknowledged",
     "include_static_pose",
     "angular_step_deg",
     "dosetrack_plane_code_map",

@@ -217,6 +217,15 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Review fixes for the CLI and the kerma-meter dialog** (2026-10-07) — a multi-exam tabular run now prints the
+  structured, privacy-safe result (no source file names), and multi-file runs honour `--aggregate` through the
+  same printer. A `--settings` string that is not a JSON object is treated as a path and gives a clean
+  not-found error. In the dialog, rows that follow an earlier exam (and calibration periods) are no longer
+  copied into independent entries on Confirm, so they keep following after reopening; a default row confirmed
+  without a change is remembered as answered instead of stored as a factor, so a calibration file row added
+  later still wins. `settings.estimate_k_tab = ...` assignment works again (with the deprecation warning), and a
+  `calibration_date` in a settings dict is validated as an ISO date.
+
 - **CLI fixes found by smoke-testing** (2026-10-07) — `--settings` now reads the settings file (the path was
   silently ignored and the example settings were used). `python -m guiskindose` and the console script now apply
   the kerma-meter flags (including `--kerma-meter-calibration-date`) and `--plane-code-map`, as

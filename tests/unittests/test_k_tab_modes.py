@@ -71,14 +71,31 @@ def test_fallback_mode_uses_k_tab_val_not_one_when_measured_data_is_unusable(unu
     assert result.statuses[0] == "exact"
 
 
-def test_fallback_mode_warns_with_event_indices_and_no_labels(caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level(logging.WARNING, logger="guiskindose.corrections"):
+class _Capture(logging.Handler):
+    """Collect warning messages from the corrections logger (caplog misses suite-wide state)."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
+
+
+def test_fallback_mode_warns_with_event_indices_and_no_labels() -> None:
+    handler = _Capture()
+    logger = logging.getLogger("guiskindose.corrections")
+    logger.addHandler(handler)
+    try:
         _run([_MEASURED, _UNKNOWN_MODEL, _ZERO_ROWS], "measured_with_fallback")
-    messages = [r.getMessage() for r in caplog.records if "fallback k_tab_val" in r.getMessage()]
-    if messages:  # caplog can miss suite-wide logging state; when seen it must be count/index only
-        assert "2 of 3" in messages[0]
-        assert "Innova" not in messages[0]
-        assert "Allura" not in messages[0]
+    finally:
+        logger.removeHandler(handler)
+    messages = [m for m in handler.messages if "fallback k_tab_val" in m]
+    assert len(messages) == 1
+    assert "2 of 3" in messages[0]
+    assert "[1, 2]" in messages[0] or "1-2" in messages[0]
+    assert "Innova" not in messages[0]
+    assert "Allura" not in messages[0]
 
 
 def test_fallback_mode_validates_the_fallback_value() -> None:
@@ -136,3 +153,13 @@ def test_to_dict_emits_the_mode_only_and_round_trips() -> None:
 def test_invalid_mode_raises() -> None:
     with pytest.raises(ValueError, match="k_tab_mode"):
         _settings(k_tab_mode="nope")
+
+
+def test_estimate_k_tab_assignment_maps_to_a_mode_with_a_warning() -> None:
+    settings = _settings()
+    settings.estimate_k_tab = True
+    assert settings.k_tab_mode == "estimate"
+    assert settings.estimate_k_tab is True
+    settings.estimate_k_tab = False
+    assert settings.k_tab_mode == "measured_only"
+    assert settings.estimate_k_tab is False

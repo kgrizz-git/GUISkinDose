@@ -134,7 +134,10 @@ def test_engine_uses_the_exams_calibration_period(tmp_path: Path) -> None:
     settings = _settings(file=str(path))
     settings.kerma_meter_correction.calibration_periods = {"Exam 1": "2026-01-01|2026-06-30"}
     assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 1") == pytest.approx([1.10])
-    assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 2") == pytest.approx([1.25])  # default: current
+    # Exam 2 has no choice of its own and follows Exam 1's period.
+    assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 2") == pytest.approx([1.10])
+    settings.kerma_meter_correction.calibration_periods = {"Exam 1": "2026-01-01|2026-06-30", "Exam 2": "2026-07-01|"}
+    assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 2") == pytest.approx([1.25])
 
 
 def test_engine_uses_cli_calibration_date_for_every_exam(tmp_path: Path) -> None:
@@ -186,3 +189,19 @@ def test_cli_rejects_non_iso_calibration_date() -> None:
     add_kerma_meter_cli_arguments(parser)
     with pytest.raises(SystemExit):
         parser.parse_args(["--kerma-meter-calibration-date", "03/01/2026"])
+
+
+def test_calibration_date_from_a_settings_dict_is_coerced_or_rejected() -> None:
+    from guiskindose.settings.kerma_meter_correction_settings import KermaMeterCorrectionSettings
+
+    assert KermaMeterCorrectionSettings({"calibration_date": "1901-06-01"}).calibration_date == date(1901, 6, 1)
+    assert KermaMeterCorrectionSettings({"calibration_date": date(1902, 1, 2)}).calibration_date == date(1902, 1, 2)
+    assert KermaMeterCorrectionSettings({"calibration_date": None}).calibration_date is None
+    with pytest.raises(ValueError, match="ISO date"):
+        KermaMeterCorrectionSettings({"calibration_date": "06/01/1901"})
+
+
+def test_malformed_calibration_period_key_fails_soft_to_the_current_period(tmp_path: Path) -> None:
+    settings = _settings(file=str(_write(tmp_path, _TWO_PERIODS)))
+    settings.kerma_meter_correction.calibration_periods = {"Exam 1": "not-a-period-key"}
+    assert _resolve_kerma_meter_cf(_frame(), settings, "Exam 1") == pytest.approx([1.25])

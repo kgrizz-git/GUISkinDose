@@ -413,20 +413,96 @@ def load_correction_table(path: Path | str, sheet: str | int | None = None) -> d
     return _rows_to_factor_dict(_read_correction_rows(path, sheet))
 
 
+def _exam_number(label: str) -> int | None:
+    """Zero-based index of an opaque ``Exam N`` label, or ``None`` for any other label."""
+    from guiskindose.privacy import opaque_exam_index
+
+    try:
+        return opaque_exam_index(label)
+    except ValueError:
+        return None
+
+
+def effective_period(periods: Mapping[str, str] | None, exam: str) -> str | None:
+    """Calibration-period key in effect for *exam*.
+
+    Only explicitly chosen periods are stored. An exam without its own choice
+    follows the nearest earlier exam that has one; ``None`` means the default
+    (current or most recent) period.
+    """
+    if not periods:
+        return None
+    if exam in periods:
+        return periods[exam]
+    index = _exam_number(exam)
+    if index is None:
+        return None
+    earlier = [(n, key) for label, key in periods.items() if (n := _exam_number(label)) is not None and n < index]
+    return max(earlier)[1] if earlier else None
+
+
+def _followed_entries(
+    table: Mapping[tuple[str, ...], float],
+    exam: str,
+    periods: Mapping[str, str] | None,
+    skip: set[tuple[str, str]],
+) -> dict[tuple[str, str], float]:
+    """Values an exam follows from the nearest earlier exam's explicit entry, per pair.
+
+    A follower takes the value only while its calibration period equals the earlier
+    exam's, matching the dialog's "follows Exam N" rule.
+    """
+    index = _exam_number(exam)
+    if index is None:
+        return {}
+    mine = effective_period(periods, exam)
+    best: dict[tuple[str, str], tuple[int, float]] = {}
+    for key, value in table.items():
+        if len(key) != 3 or (key[1], key[2]) in skip:
+            continue
+        n = _exam_number(key[0])
+        if n is None or n >= index or effective_period(periods, key[0]) != mine:
+            continue
+        pair = (key[1], key[2])
+        if pair not in best or n > best[pair][0]:
+            best[pair] = (n, value)
+    return {pair: value for pair, (_n, value) in best.items()}
+
+
 def manual_for_exam(
     table: Mapping[tuple[str, ...], float] | None,
     exam: str,
+    *,
+    periods: Mapping[str, str] | None = None,
+    follow: bool = True,
 ) -> dict[tuple[str, str], float]:
     """Manual entries that apply to one exam.
 
     Entries are keyed ``(exam label, equipment, tube)``. A legacy two-part key
     ``(equipment, tube)`` applies to every exam, and an entry for the exam itself
-    wins over it.
+    wins over it. With ``follow`` (default), a pair with no entry for this exam
+    takes the nearest earlier exam's explicit entry while both exams use the same
+    calibration period, so "follows Exam N" survives without copying values.
+
+    Parameters
+    ----------
+    table : Mapping[tuple[str, ...], float] | None
+        The manual table (explicit entries only).
+    exam : str
+        Opaque exam label.
+    periods : Mapping[str, str] | None
+        Explicit per-exam calibration-period choices (see :func:`effective_period`).
+    follow : bool
+        Resolve followed values; ``False`` returns only legacy and own entries.
     """
     if not table:
         return {}
     out: dict[tuple[str, str], float] = {(k[0], k[1]): v for k, v in table.items() if len(k) == 2}
-    out.update({(k[1], k[2]): v for k, v in table.items() if len(k) == 3 and k[0] == exam})
+    own = {(k[1], k[2]): v for k, v in table.items() if len(k) == 3 and k[0] == exam}
+    if follow:
+        followed = _followed_entries(table, exam, periods, set(out) | set(own))
+        out.update(followed)
+    out.update(own)
     return out
 
 

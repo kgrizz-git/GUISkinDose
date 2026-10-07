@@ -545,17 +545,32 @@ def get_argument_parser(arguments) -> "argparse.Namespace":
     return _cli_args_get_argument_parser(arguments)
 
 
-def print_cli_result(result: object) -> None:
-    """Print a dict/JSON analysis result to stdout (a headless run with ``output_format`` dict or json).
+def print_cli_result(result: Any, *, aggregate_only: bool = False) -> None:
+    """Print an analysis result to stdout (a headless run with ``output_format`` dict or json).
 
-    ``None`` (html output, plots) prints nothing. Values are the dose results only;
-    no file paths or equipment labels are added.
+    ``None`` (html output, plots) prints nothing. Result objects (a multi-exam
+    result) are serialized through their privacy-safe ``to_dict()``, which omits
+    source file names; a bare ``repr`` or ``default=str`` fallback would leak them.
+    With ``aggregate_only`` a multi-exam result prints just the aggregate peak.
+
+    Parameters
+    ----------
+    result : object
+        A JSON string, a dict, or an object with ``to_dict()`` (optionally
+        ``aggregate_psd``).
+    aggregate_only : bool
+        Print only ``aggregate_psd`` for multi-exam results.
     """
     if result is None:
         return
     import json as _json
 
-    print(result if isinstance(result, str) else _json.dumps(result, default=str))
+    if aggregate_only and hasattr(result, "aggregate_psd"):
+        print(f"{result.aggregate_psd:.4f}")
+        return
+    if hasattr(result, "to_dict"):
+        result = result.to_dict()
+    print(result if isinstance(result, str) else _json.dumps(result))
 
 
 def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
@@ -580,15 +595,15 @@ def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
     if raw is None:
         logger.warning("No settings specified. Running with development parameters")
         raw = DEVELOPMENT_PARAMETERS
-    elif isinstance(raw, (str, Path)):
+    elif isinstance(raw, Path) or (isinstance(raw, str) and not raw.lstrip().startswith("{")):
+        # A path (or a string that is not a JSON object): read it, or fail cleanly.
         try:
             is_file = Path(raw).is_file()
-        except OSError:  # a JSON string too long or odd to be a path
+        except OSError:
             is_file = False
-        if is_file:
-            raw = Path(raw).read_text(encoding="utf-8")
-        elif isinstance(raw, Path):
+        if not is_file:
             raise SystemExit(safe_user_error("settings_file_not_found"))
+        raw = Path(raw).read_text(encoding="utf-8")
     settings = parse_settings_to_settings_class(settings=raw)
     if getattr(args, "output_format", None):
         settings.output_format = args.output_format
@@ -655,11 +670,7 @@ if __name__ == "__main__":
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
             )
-            if getattr(args, "aggregate_only", False):
-                print(f"{result.aggregate_psd:.4f}")
-            else:
-                import json as _json
-                print(_json.dumps(result.to_dict()))
+            print_cli_result(result, aggregate_only=getattr(args, "aggregate_only", False))
         elif len(file_paths) == 1:
             single_path = file_paths[0]
             suffix = Path(single_path).suffix.lower()
@@ -678,7 +689,8 @@ if __name__ == "__main__":
                             settings=run_settings,
                             input_schema=getattr(args, "input_schema", None),
                             sheet_name=getattr(args, "sheet_name", 0),
-                        )
+                        ),
+                        aggregate_only=getattr(args, "aggregate_only", False),
                     )
             else:
                 print_cli_result(main(file_path=single_path, settings=run_settings))

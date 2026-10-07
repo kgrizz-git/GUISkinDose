@@ -244,10 +244,9 @@ async def test_rendered_dialog_confirm_stores_entries(user: User) -> None:
     await user.should_see("default: review", retries=30)
     user.find("Confirm").click()
     await asyncio.wait_for(task, timeout=5)
-    assert state.kerma_meter_in_memory_table == {
-        ("Exam 1", "room-1", "A"): 1.0,
-        ("Exam 1", "room-1", "B"): 1.0,
-    }
+    # Untouched default rows are acknowledged, not stored as factors.
+    assert state.kerma_meter_in_memory_table is None
+    assert state.kerma_meter_acknowledged == {("Exam 1", "room-1", "A"), ("Exam 1", "room-1", "B")}
 
 
 async def _run_in_client(user: User) -> None:
@@ -358,10 +357,8 @@ async def test_rendered_dialog_blank_value_blocks_confirm(user: User) -> None:
     field.set_value(1.25)  # a valid entry unblocks Confirm
     user.find("Confirm").click()
     await _wait_for_task(task, user)
-    assert state.kerma_meter_in_memory_table == {
-        ("Exam 1", "room-1", "A"): 1.25,
-        ("Exam 1", "room-1", "B"): 1.0,
-    }
+    assert state.kerma_meter_in_memory_table == {("Exam 1", "room-1", "A"): 1.25}
+    assert ("Exam 1", "room-1", "B") in state.kerma_meter_acknowledged
 
 
 @pytest.mark.asyncio
@@ -438,7 +435,10 @@ def test_exams_can_hold_different_values_for_the_same_pair() -> None:
     assert table is not None
     assert table[("Exam 1", "room-1", "A")] == pytest.approx(1.1)
     assert table[("Exam 2", "room-1", "A")] == pytest.approx(1.3)
-    assert table[("Exam 3", "room-1", "A")] == pytest.approx(1.3)  # followed Exam 2
+    assert ("Exam 3", "room-1", "A") not in table  # Exam 3 follows Exam 2; nothing is copied
+    from guiskindose.kerma_correction import manual_for_exam
+
+    assert manual_for_exam(table, "Exam 3", periods=state.kerma_meter_periods)[("room-1", "A")] == pytest.approx(1.3)
 
 
 def test_later_exams_follow_the_previous_exam_and_say_so() -> None:
@@ -490,7 +490,7 @@ def test_choosing_an_older_period_changes_that_exams_file_factor(tmp_path: Path)
     assert model.period_of("Exam 3") == _OLD  # Exam 3 follows Exam 2's period
     assert _row(model, "Exam 2").source == dlg.SOURCE_FILE
     model.commit(dont_ask=False)
-    assert state.kerma_meter_periods == {"Exam 1": _NEW, "Exam 2": _OLD, "Exam 3": _OLD}
+    assert state.kerma_meter_periods == {"Exam 2": _OLD}  # only the explicit choice; Exam 3 follows it
     assert state.kerma_meter_in_memory_table is None  # file values are not copied into manual entries
 
 
@@ -500,13 +500,15 @@ def test_period_choice_selects_the_file_row_in_the_missing_check(tmp_path: Path)
     state.kerma_meter_file = str(_dated_file(tmp_path))
     assert dlg.missing_pairs(state) == []
     state.kerma_meter_periods = {"Exam 1": "2025-01-01|2025-12-31"}  # a period with no row for the pair
-    assert dlg.missing_by_exam(state) == {"Exam 1": [("room-1", "A")]}
+    # Exam 2 follows Exam 1's period, so it misses the pair too.
+    assert dlg.missing_by_exam(state) == {"Exam 1": [("room-1", "A")], "Exam 2": [("room-1", "A")]}
 
 
 def test_missing_is_checked_per_exam() -> None:
     _three_exams()
-    state.kerma_meter_in_memory_table = {("Exam 1", "room-1", "A"): 1.0}
-    assert dlg.missing_by_exam(state) == {"Exam 2": [("room-1", "A")], "Exam 3": [("room-1", "A")]}
+    state.kerma_meter_in_memory_table = {("Exam 2", "room-1", "A"): 1.0}
+    # Exam 3 follows Exam 2; only Exam 1 (before the first entry) is missing.
+    assert dlg.missing_by_exam(state) == {"Exam 1": [("room-1", "A")]}
     assert dlg.needs_prompt(state) is True
 
 
@@ -538,8 +540,7 @@ async def test_rendered_dialog_shows_follows_and_period_selector(user: User, tmp
     user.find("Confirm").click()
     await asyncio.wait_for(task, timeout=5)
     table = state.kerma_meter_in_memory_table
-    assert table is not None
-    assert table[("Exam 2", "room-1", "A")] == pytest.approx(1.4)
+    assert table == {("Exam 1", "room-1", "A"): 1.4}  # Exam 2 follows; nothing copied
 
 
 @pytest.mark.asyncio
@@ -651,7 +652,8 @@ async def test_dated_full_hit_prompts_once_until_a_period_is_chosen(dialog_mock:
     assert await dlg.maybe_prompt_after_load() is True
     assert await dlg.maybe_prompt_after_load() is False  # once per load
     dlg.FactorModel(state).commit(dont_ask=False)  # confirming records the period
-    assert state.kerma_meter_periods == {"Exam 1": _NEW}
+    assert state.kerma_meter_periods == {}  # the default period was accepted, not chosen explicitly
+    assert state.kerma_meter_periods_acknowledged == {"Exam 1"}
     assert dlg.needs_prompt(state) is False
 
 
@@ -685,3 +687,71 @@ async def test_rendered_dialog_keeps_the_unit_chooser_for_a_resolved_exam(user: 
     await user.should_see("No equipment identity was found", retries=30)
     user.find("Confirm").click()
     await _wait_for_task(task, user)
+
+
+# ── following survives confirm and reopen; acknowledged defaults do not mask files ──
+
+
+def test_following_survives_confirm_and_reopen() -> None:
+    _three_exams()
+    first = dlg.FactorModel(state)
+    first.set_value("Exam 1", ("room-1", "A"), 1.4)
+    first.commit(dont_ask=False)
+    assert state.kerma_meter_in_memory_table == {("Exam 1", "room-1", "A"): 1.4}
+    reopened = dlg.FactorModel(state)
+    assert [(r.value, r.source) for r in reopened.rows()] == [
+        (1.4, dlg.SOURCE_ENTERED),
+        (1.4, dlg.SOURCE_FOLLOWS),
+        (1.4, dlg.SOURCE_FOLLOWS),
+    ]
+    reopened.set_value("Exam 1", ("room-1", "A"), 1.6)
+    reopened.commit(dont_ask=False)
+    assert [r.value for r in dlg.FactorModel(state).rows()] == [1.6, 1.6, 1.6]
+
+
+def test_an_edited_exam_stops_following_after_reopen() -> None:
+    _three_exams()
+    first = dlg.FactorModel(state)
+    first.set_value("Exam 1", ("room-1", "A"), 1.4)
+    first.set_value("Exam 2", ("room-1", "A"), 1.9)
+    first.commit(dont_ask=False)
+    reopened = dlg.FactorModel(state)
+    reopened.set_value("Exam 1", ("room-1", "A"), 1.5)
+    values = [r.value for r in reopened.rows()]
+    assert values == [1.5, 1.9, 1.9]  # Exam 2 was edited; Exam 3 follows Exam 2
+
+
+def test_engine_resolves_followers_from_the_explicit_entries(tmp_path: Path) -> None:
+    from guiskindose.kerma_correction import manual_for_exam
+
+    table = {("Exam 1", "u", "A"): 1.4, ("Exam 3", "u", "A"): 1.9}
+    assert manual_for_exam(table, "Exam 2")[("u", "A")] == 1.4
+    assert manual_for_exam(table, "Exam 4")[("u", "A")] == 1.9
+    assert manual_for_exam(table, "Exam 1")[("u", "A")] == 1.4
+    # A follower stops following when its calibration period differs from the earlier exam's.
+    assert ("u", "A") not in manual_for_exam(table, "Exam 2", periods={"Exam 2": "1902-01-01|"})
+    assert manual_for_exam(table, "Exam 2", periods={"Exam 1": _OLD})[("u", "A")] == 1.4
+
+
+def test_acknowledged_default_does_not_mask_a_later_file_row(tmp_path: Path) -> None:
+    _single_exam()
+    dlg.FactorModel(state).commit(dont_ask=False)  # defaults acknowledged, nothing stored
+    assert state.kerma_meter_in_memory_table is None
+    assert dlg.needs_prompt(state) is False  # acknowledged: no re-ask
+    state.kerma_meter_file = str(_cf_file(tmp_path))  # a calibration file now covers the pairs
+    rows = dlg.FactorModel(state).rows()
+    assert [(r.value, r.source) for r in rows] == [(1.1, dlg.SOURCE_FILE), (1.2, dlg.SOURCE_FILE)]
+
+
+def test_per_exam_state_round_trips_acknowledgements() -> None:
+    from guiskindose.gui.run_state_kerma import apply_exam_kerma, serialize_exam_kerma
+
+    state.kerma_meter_acknowledged = {("Exam 1", "room-1", "A")}
+    state.kerma_meter_periods_acknowledged = {"Exam 1"}
+    section: dict = {}
+    serialize_exam_kerma(state, section)
+    state.kerma_meter_acknowledged = set()
+    state.kerma_meter_periods_acknowledged = set()
+    apply_exam_kerma(section, state)
+    assert state.kerma_meter_acknowledged == {("Exam 1", "room-1", "A")}
+    assert state.kerma_meter_periods_acknowledged == {"Exam 1"}
