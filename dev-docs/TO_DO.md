@@ -27,9 +27,9 @@ be archived.
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — `RF-Pat-Orientation-Modifier-Missing` is
   still open. See the item in Input Data And Calculation.
-- [ ] **Kerma-meter CF workflow (file + prompt-on-miss, per-tube dose)** — select a per-equipment/tube calibration
-  file or enter factors for detected equipment on load; prompt for pairs missing from the file; default 1.0;
-  report tube A/B dose separately. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
+- [ ] **Kerma-meter CF workflow (file + prompt-on-miss, per-tube dose)** — Phases 0–6 are implemented and
+  reviewed. Remaining: confirm the meaning of the Radimetrics `(A)`/`(B)` columns in a real legacy export, run
+  the GUI manual smoke test, then archive. Plan: [KERMA_METER_CF_WORKFLOW_PLAN.md](plans/KERMA_METER_CF_WORKFLOW_PLAN.md).
 
 
 ## Active Work

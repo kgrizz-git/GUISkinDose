@@ -1,6 +1,6 @@
 # Kerma-Meter CF Workflow Plan (file + prompt-on-miss, per-tube dose)
 
-Status: Active execution plan — Phases 0–5 implemented; Phase 6 (per-exam factors and calibration periods) implemented; pending final review
+Status: Active — Phases 0–6 implemented and reviewed on branch `docs/todo-trim-dose-meter-plan` (2026-10-06); closeout pending
 Created: 2026-10-06
 Owner: maintainer
 Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md)
@@ -8,6 +8,25 @@ Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](archive/KERMA_METER_
 [archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
 Related: [TO_DO.md](../TO_DO.md) — *Biplane support and recognition*;
 [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](CUSTOM_EQUIPMENT_PROFILES_PLAN.md) (separate concept; do not merge).
+
+## Progress (2026-10-06)
+
+Done:
+- Phases 0–6 are implemented, reviewed by two outside reviewers, and fixed after review.
+- The calibration file and manual entries are unified. Manual entry for an exam wins, then the file row for the
+  exam's calibration period, then `default_factor`.
+- A load-time dialog asks for missing factors and unchosen calibration periods. Exams can hold different
+  factors, and later exams follow the previous exam's entries until edited.
+- Per-tube partial dose maps and summaries are in Results and all exports. Exports show the applied CF per exam
+  and tube, without equipment labels or calibration dates.
+- An example calibration file ships as package data with placeholder dates, and the tests use it.
+
+Remaining:
+- Confirm what the per-plane `(A)`/`(B)` columns mean in a real legacy Radimetrics export. The Phase 0 split
+  assumes they are per-event values. If they are cumulative per plane, revert the split and take the tube from
+  the plane-code column.
+- Run the manual GUI smoke test for the dialog, the Review button, and the per-tube Results.
+- After both, archive this plan, update `dev-docs/index.md`, and remove the TO_DO item.
 
 ## Objective
 
