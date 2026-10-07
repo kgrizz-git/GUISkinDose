@@ -13,8 +13,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Native-window startup test moved to `tests/gui` and isolated from the shared NiceGUI app**
   (2026-10-07) — `test_run_gui_native_persists_normalized_macos_startup` failed intermittently with
   "Cannot add middleware after an application has started" when unit and GUI tests shared a worker,
-  because `run_gui()` registers middleware on NiceGUI's process-wide app. The test now stubs
-  `app.add_middleware`, and the module lives with the other NiceGUI-importing tests.
+  because `run_gui()` registers middleware on NiceGUI's process-wide app. The module now lives
+  in `tests/gui`, whose autouse `_isolate_loopback_security` fixture already stubs
+  `app.add_middleware`.
 
 - **SonarCloud scan waits on the Quality Gate** (2026-10-05) — `sonar-scan` now passes
   `sonar.qualitygate.wait=true`, so a red gate on `main` fails the job and files a CI

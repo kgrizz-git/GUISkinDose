@@ -71,9 +71,6 @@ def test_run_gui_native_persists_normalized_macos_startup(monkeypatch) -> None:
     )
     monkeypatch.setattr(gui_app, "register_native_geometry_tracking", lambda screens, prefs: None)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kwargs: None)
-    # NiceGUI's app is a process-wide singleton. When another GUI test in this worker has
-    # already started it, add_middleware raises; the test is about window geometry only.
-    monkeypatch.setattr(gui_app.app, "add_middleware", lambda *args, **kwargs: None)
     monkeypatch.setattr(gui_app.app.native, "window_args", {}, raising=False)
 
     saved: list[NativeWindowPrefs] = []

@@ -139,17 +139,16 @@ be archived.
 - [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
   `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. **Current state: the ignore
   list is empty.** All five entries it ever held (click, mcp x3, pyjwt) existed because semgrep pinned those
-  transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and Dependabot alerts
-  #2/#3/#4 should close on their own. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
+  transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and the semgrep 1.179.0
+  bump moved the tool lock to patched pyjwt 2.15.1. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
   suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
 - [ ] **Hash-lock `phi-scan`, and audit the locked tool environments** — semgrep is done:
   `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
   packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
   still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
-  verification**, so a same-version re-upload would be trusted. Separately, nothing audits either
-  tool environment, so semgrep's own `click 8.1.8` / `mcp 1.23.3` / `pyjwt 2.13.0` stay invisible to
-  `uv audit` and Dependabot (see the note in `[tool.uv.audit]`) even though `tools/semgrep/uv.lock`
-  now records them in a readable, auditable form. **Acceptance:** a `tools/phi-scan/` project
+  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` audits
+  neither tool environment. Only Dependabot sees `tools/semgrep/uv.lock` (see the note in
+  `[tool.uv.audit]`). **Acceptance:** a `tools/phi-scan/` project
   mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
   scanner-only advisories separately from application ones so the distinction stays explicit.
 - [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800

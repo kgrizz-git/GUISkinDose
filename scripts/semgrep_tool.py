@@ -2,7 +2,7 @@
 """Resolve a pinned, hash-locked, isolated Semgrep invocation.
 
 Semgrep is deliberately **not** a project dependency. Its own requirements are
-tightly pinned — currently `click~=8.4.2`, `mcp==1.29.0`, `pyjwt[crypto]~=2.13.0` —
+tightly pinned — currently `click~=8.4.2`, `mcp==1.29.0`, `pyjwt[crypto]>=2.15.0,<3` —
 and while it sat in the ``dev`` extra those pins held four transitive advisories
 unfixable in the shared lock — every `[tool.uv.audit]` suppression the project
 carried traced back to this one package. Semgrep is only ever run as a CLI, never
