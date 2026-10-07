@@ -194,7 +194,7 @@ async def test_geometry_setup_view_user_path(user: User, monkeypatch: pytest.Mon
     user.find("philips_allura_clarity_u104.dcm").click()
     await user.should_see("EVENTS", retries=50)
 
-    user.find("4 · Geometry").click()
+    user.find("5 · Geometry").click()
     await user.should_see("Setup view", retries=50)
     user.find("Setup view").click()
     await asyncio.sleep(GEOMETRY_DEBOUNCE_SEC + 0.5)

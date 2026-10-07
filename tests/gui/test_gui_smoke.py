@@ -80,8 +80,8 @@ async def test_results_tab_shows_intended_use_line(user: User, monkeypatch: pyte
     monkeypatch.setattr(gui_app, "is_onboarding_dismissed", lambda: True)
     monkeypatch.setattr(gui_app, "is_intended_use_acknowledged", lambda: True)
     await user.open("/")
-    await user.should_see("6 · Results", retries=20)
-    user.find("6 · Results").click()
+    await user.should_see("7 · Results", retries=20)
+    user.find("7 · Results").click()
     await user.should_see(copy_text("results.intended_use"), retries=20)
 
 
@@ -110,3 +110,21 @@ async def test_got_it_persists_dismissal_and_acknowledgment(
     await user.open("/")
     await user.should_see("1 · Upload", retries=20)
     await user.should_not_see("Welcome to GUISkinDose")
+
+
+@pytest.mark.asyncio
+async def test_tab_order_has_corrections_after_settings(user: User) -> None:
+    """Settings is tab 3, the new Corrections tab is 4, and the later tabs shift by one."""
+    await user.open("/")
+    for label in (
+        "3 · Settings",
+        "4 · Corrections",
+        "5 · Geometry",
+        "6 · Calculate",
+        "7 · Results",
+        "8 · Export",
+    ):
+        await user.should_see(label, retries=20)
+    user.find("4 · Corrections").click()
+    await user.should_see("Kerma-meter correction", retries=30)
+    await user.should_see("Download example calibration file", retries=30)

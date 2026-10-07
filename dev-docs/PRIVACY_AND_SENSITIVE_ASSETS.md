@@ -238,7 +238,8 @@ finding hashes and metadata. The current 14 entries were reviewed by `KG` on 202
 synthetic numeric rows, or numeric correction-table combinations—not ignored findings. One more entry, for the fictional calibration dates in the shipped example
 `example_data/kerma_meter/calibration_factors_example.csv`, was reviewed by `KG` on 2026-10-06. A further entry, for the synthetic Radimetrics fixture
 `tests/fixtures/tabular_inputs/radimetrics_events_a_only.csv` (invented values, placeholder `Date Performed` 1901-01-01),
-was reviewed by `KG` on 2026-10-07. New or expired findings fail
+was reviewed by `KG` on 2026-10-07. Two more entries, for the packaged example copies of the synthetic Radimetrics fixtures under
+`src/guiskindose/example_data/tabular/`, were reviewed by `KG` on 2026-10-07. New or expired findings fail
 the secondary workflow and must be triaged. phi-scan supplements, rather than replaces, the deterministic gate: it
 does not authorise a binary asset or prove a DICOM is safe.
 

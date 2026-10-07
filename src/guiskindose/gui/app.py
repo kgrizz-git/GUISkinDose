@@ -52,6 +52,7 @@ from .page_context import PageContext
 from .state import state
 from .styles import MODERN_CSS
 from .tabs import calculate as calculate_tab
+from .tabs import corrections as corrections_tab
 from .tabs import data as data_tab
 from .tabs import export as export_tab
 from .tabs import geometry as geometry_tab
@@ -262,10 +263,11 @@ def index():
         _add_navigation_button(nav_buttons, tab_selector, "1 · Upload", "upload")
         _add_navigation_button(nav_buttons, tab_selector, "2 · Data Table", "data")
         _add_navigation_button(nav_buttons, tab_selector, "3 · Settings", "settings")
-        _add_navigation_button(nav_buttons, tab_selector, "4 · Geometry", "geometry")
-        _add_navigation_button(nav_buttons, tab_selector, "5 · Calculate", "calculate")
-        _add_navigation_button(nav_buttons, tab_selector, "6 · Results", "results")
-        _add_navigation_button(nav_buttons, tab_selector, "7 · Export", "export")
+        _add_navigation_button(nav_buttons, tab_selector, "4 · Corrections", "corrections")
+        _add_navigation_button(nav_buttons, tab_selector, "5 · Geometry", "geometry")
+        _add_navigation_button(nav_buttons, tab_selector, "6 · Calculate", "calculate")
+        _add_navigation_button(nav_buttons, tab_selector, "7 · Results", "results")
+        _add_navigation_button(nav_buttons, tab_selector, "8 · Export", "export")
         ui.separator().classes("q-my-md bg-zinc-800")
         run_btn_drawer = ui.button("Run Calculation", icon="play_arrow").classes(
             "full-width modern-btn icon-outlined"
@@ -277,10 +279,11 @@ def index():
         ui.tab("upload", label="1 · Upload")
         ui.tab("data", label="2 · Data Table")
         ui.tab("settings", label="3 · Settings")
-        ui.tab("geometry", label="4 · Geometry")
-        ui.tab("calculate", label="5 · Calculate")
-        ui.tab("results", label="6 · Results")
-        ui.tab("export", label="7 · Export")
+        ui.tab("corrections", label="4 · Corrections")
+        ui.tab("geometry", label="5 · Geometry")
+        ui.tab("calculate", label="6 · Calculate")
+        ui.tab("results", label="7 · Results")
+        ui.tab("export", label="8 · Export")
 
     ctx = PageContext(
         tabs=tabs,
@@ -294,6 +297,7 @@ def index():
         upload_tab.build(ctx)
         data_tab.build(ctx)
         settings_tab.build(ctx)
+        corrections_tab.build(ctx)
         geometry_tab.build(ctx)
         calculate_tab.build(ctx)
         results_tab.build(ctx)

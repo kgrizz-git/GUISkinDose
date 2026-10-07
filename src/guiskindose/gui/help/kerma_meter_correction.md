@@ -23,13 +23,13 @@ CF is resolved per **individual unit × tube** (Plane A / Plane B / Single Plane
 
 ## Calibration file columns and periods
 
-**Start from the example.** Settings, Kerma-meter correction, has a *Download example
+**Start from the example.** The Corrections tab, Kerma-meter correction, has a *Download example
 calibration file* button. The example (`calibration_factors_example.csv`, with a README
 beside it) uses fictional unit names, and shows one unit and tube with two calibration
 periods. It is also installed with the package under `example_data/kerma_meter/`
 (`guiskindose.get_path_to_example_kerma_meter_file()` returns its path). Replace its rows with
 your own measurements, then pass your copy with `--kerma-meter-correction-file` on the
-command line or select it in Settings.
+command line or select it in the Corrections tab.
 
 The calibration file has the columns `equipment`, `tube`, and `correction_factor`. It may also
 have `valid_from` and `valid_to` (ISO dates, `YYYY-MM-DD`; either may be blank for an open end).
@@ -79,7 +79,7 @@ Confirming changes to factors, units, or periods clears earlier calculation resu
 
 **Exams with no equipment identity.** If an exam carries no serial number or station name, the
 dialog asks which unit it was acquired on. Pick a detected unit or a unit from the file, or type
-a new name. The exam's factors are then looked up for that unit. The chooser stays available afterwards (and when you reopen the dialog from Settings) so you can change the unit or clear it. The choice is stored per exam
+a new name. The exam's factors are then looked up for that unit. The chooser stays available afterwards (and when you reopen the dialog from the Corrections tab) so you can change the unit or clear it. The choice is stored per exam
 and saved with the run configuration only when identifiers are included.
 
 **Confirm** is blocked until every factor is a number greater than zero; a blank field is an error, not a kept value. If the loaded data changes while the dialog is open, your entries are discarded with a notice.
@@ -88,8 +88,8 @@ and saved with the run configuration only when identifiers are included.
 unanswered pair uses the default factor. Calculate re-opens the dialog once if pairs are still
 unanswered.
 
-**Reviewing later.** Settings has a *Review correction factors…* button that opens the dialog at any time with every detected pair, so confirmed factors can be edited. The dialog also reopens when you select or clear the calibration file or sheet, or turn asking back on.
+**Reviewing later.** The Corrections tab has a *Review correction factors…* button that opens the dialog at any time with every detected pair, so confirmed factors can be edited. The dialog also reopens when you select or clear the calibration file or sheet, or turn asking back on.
 
-**Turning it off.** Clear *Ask for missing correction factors* in Settings, or tick *Don't ask
+**Turning it off.** Clear *Ask for missing correction factors* in the Corrections tab, or tick *Don't ask
 again until the loaded data changes* in the dialog. Loading, removing, or re-parsing events
 resets that choice. Command-line runs never open a dialog.

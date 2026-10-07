@@ -124,6 +124,7 @@ __all__ = [
     "format_normalization_profile_label",
     "geometry_preview_caption",
     "get_example_rdsr_files",
+    "get_example_tabular_files",
     "get_excel_sheets",
     "get_human_mesh_names",
     "get_human_mesh_options",
@@ -522,6 +523,13 @@ def get_example_rdsr_files() -> list[Path]:
 
     rdsr_dir = get_path_to_example_rdsr_files()
     return sorted(rdsr_dir.glob("*.dcm"))
+
+
+def get_example_tabular_files() -> list[Path]:
+    """Return list of bundled synthetic tabular example .csv files."""
+    from guiskindose import get_path_to_example_tabular_files
+
+    return sorted(get_path_to_example_tabular_files().glob("*.csv"))
 
 
 def get_human_mesh_names() -> list[str]:

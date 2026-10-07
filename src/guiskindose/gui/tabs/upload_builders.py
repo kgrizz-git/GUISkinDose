@@ -17,7 +17,7 @@ from guiskindose.privacy import opaque_exam_label
 
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result, upload_lock
-from ..constants import EXAMPLE_FILES
+from ..constants import EXAMPLE_FILES, EXAMPLE_OPTIONS, TABULAR_EXAMPLE_FILES
 from ..dose_severity import reset_psd_label
 from ..helpers import (
     adjust_active_exam_index_after_remove,
@@ -240,6 +240,9 @@ class UploadTabController:
             if not proceed:
                 return
             path = EXAMPLE_FILES[name]
+            if name in TABULAR_EXAMPLE_FILES:
+                await self._load_tabular_example(name, path)
+                return
             snap = _snapshot_load_state()
             try:
                 # Stage against cleared exam state; keep prior uploads' temps until commit.
@@ -270,6 +273,37 @@ class UploadTabController:
                 _restore_load_state(snap)
                 self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
                 ui.notify("Could not load this example. Try again.", type="negative")
+
+    async def _load_tabular_example(self, name: str, path: Path) -> None:
+        """Load a bundled tabular example through the normal tabular import path.
+
+        The example is copied to a managed temp upload (like a user upload), parsed
+        with ``load_tabular``, and finished by the same success handler.
+        """
+        suffix = path.suffix.lower()
+        snap = _snapshot_load_state()
+        tmp_path: Path | None = None
+        try:
+            tmp_path = create_temp_upload(path.read_bytes(), suffix=suffix)
+            self.refs.upload_status.set_text("PARSING...")
+            state.input_source_type = suffix.lstrip(".")
+            ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
+            if ok:
+                state.input_sheet_name = 0
+                state.available_sheets = []
+                self.refs.import_preview.sheet_row.set_visibility(False)
+                await self._on_load_success(name, suffix, tmp_path, msg)
+            else:
+                _restore_load_state(snap)
+                remove_temp_upload(tmp_path)
+                self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
+                ui.notify(msg, type="negative", timeout=10000, multi_line=True)
+        except Exception:
+            _restore_load_state(snap)
+            if tmp_path is not None:
+                remove_temp_upload(tmp_path)
+            self.refs.upload_status.set_text(_LOAD_FAILURE_STATUS)
+            ui.notify("Could not load this example. Try again.", type="negative")
 
     async def reparse_schema(self) -> None:
         """Reparse schema."""
@@ -541,7 +575,7 @@ def _build_upload_card(ctrl: UploadTabController) -> None:
         with ui.row().classes("w-full items-center gap-3 q-mt-sm"):
             ui.label("…or try a bundled example:").classes("text-caption text-grey-5")
             ctrl.refs.example_select = ui.select(
-                options=list(EXAMPLE_FILES.keys()),
+                options=EXAMPLE_OPTIONS,
                 label="Bundled example",
                 value=None,
             ).classes("grow").mark("example-select")

@@ -148,6 +148,10 @@
     "settings.kerma_meter.example_button": {
       "text": "Download example calibration file",
       "owner": "gui/tabs/settings.py"
+    },
+    "settings.k_tab.info": {
+      "text": "**Checked (estimated).** One flat factor, `k_tab_val` (default 0.8), is used for every event. It is applied only to skin cells whose beam passes through the table or pad.\n\n**Unchecked (measured).** Each event is looked up in the bundled measured table by scanner model and tube. The lookup uses kVp and Cu/Al filtration, with interpolation.\n\nIf the model or tube is unknown, or data are missing, the factor falls back to 1.0. That means no table attenuation, and a warning is shown.\n\nThe measured data cover only a few models. On other equipment, unchecking usually removes table attenuation instead of improving accuracy.",
+      "owner": "gui/tabs/corrections.py"
     }
   }
 }

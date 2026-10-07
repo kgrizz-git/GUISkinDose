@@ -158,7 +158,7 @@ async def test_calculate_tab_renders_summary(user: User) -> None:
     assert ok
 
     await user.open("/")
-    user.find("5 · Calculate").click()
+    user.find("6 · Calculate").click()
     await user.should_see("Run Dose Calculation", retries=30)
     await user.should_see("Current settings", retries=30)
     await user.should_see("INPUT DATA", retries=30)

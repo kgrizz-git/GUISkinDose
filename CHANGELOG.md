@@ -21,6 +21,17 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.
+  Settings keeps the run configuration, phantom, per-exam offsets and coordinate fixes, and visual options.
+  The new Corrections tab (tab 4; Geometry, Calculate, Results, and Export move to 5 to 8) holds dose-physics
+  settings and kerma-meter correction. An info icon next to "Use estimated patient-support transmission
+  factor" explains the flat versus measured lookup and the fallback to 1.0.
+- **Bundled Radimetrics examples** (2026-10-07) — the Upload tab's example drop-down now also offers two
+  synthetic Radimetrics files ("older export, biplane" and "newer export, single tube") that load through the
+  normal tabular import path. The example values are invented.
+- **Example calibration download works in the native window** (2026-10-07) — "Download example calibration
+  file" opens a Save As dialog in the pywebview window, and still downloads in the browser.
+
 - **Exports show the kerma-meter factors used per tube and exam** (2026-10-06) — whenever kerma-meter
   correction is on, the "Dose by tube" section (HTML, XLSX, DOCX, PDF, Results tab, and `tube_summary` in
   dict/JSON) now appears even for a single-plane exam, with one row per exam and tube. Each row gives the

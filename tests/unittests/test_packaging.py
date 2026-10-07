@@ -161,3 +161,24 @@ def test_manifest_includes_example_kerma_meter_files() -> None:
     manifest = (Path(__file__).resolve().parents[2] / "MANIFEST.in").read_text(encoding="utf-8")
     assert "include src/guiskindose/example_data/kerma_meter/*.csv" in manifest
     assert "include src/guiskindose/example_data/kerma_meter/*.md" in manifest
+
+
+_EXAMPLE_TABULAR_FILES = (
+    "guiskindose/example_data/tabular/radimetrics_example_older_export_biplane.csv",
+    "guiskindose/example_data/tabular/radimetrics_example_newer_export_single_tube.csv",
+)
+
+
+def test_wheel_contains_example_tabular_files() -> None:
+    """The bundled synthetic tabular examples must ship in the wheel."""
+    dist = Path(__file__).resolve().parents[2] / "dist"
+    wheel = _single_artifact(dist, "guiskindose-*.whl", "wheel")
+    with zipfile.ZipFile(wheel) as archive:
+        names = set(archive.namelist())
+    missing = [path for path in _EXAMPLE_TABULAR_FILES if path not in names]
+    assert not missing, f"wheel is missing example tabular files: {missing}"
+
+
+def test_manifest_includes_example_tabular_files() -> None:
+    manifest = (Path(__file__).resolve().parents[2] / "MANIFEST.in").read_text(encoding="utf-8")
+    assert "include src/guiskindose/example_data/tabular/*.csv" in manifest

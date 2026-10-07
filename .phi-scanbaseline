@@ -157,3 +157,21 @@ entries:
   severity: high
   created_at: '2026-10-07T15:37:27+00:00'
   expires_at: '2027-01-05T15:37:27+00:00'
+- file_path: src/guiskindose/example_data/tabular/radimetrics_example_newer_export_single_tube.csv
+  line_number: 1
+  line_content_hash: 5c5499ee3b215d99e0e19dac1f153e9f40cf58e2b3a300d15c5951607ce1d1d1
+  entity_type: ACCOUNT + DATE + HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: e39ccbd7e05454afdb96ec724aec975e66c6c0a416c8613616f43d715b31e32f
+  severity: high
+  created_at: '2026-10-07T16:16:44+00:00'
+  expires_at: '2027-01-05T16:16:44+00:00'
+- file_path: src/guiskindose/example_data/tabular/radimetrics_example_older_export_biplane.csv
+  line_number: 2
+  line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
+  entity_type: HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
+  severity: high
+  created_at: '2026-10-07T16:16:44+00:00'
+  expires_at: '2027-01-05T16:16:44+00:00'

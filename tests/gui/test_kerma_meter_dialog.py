@@ -542,14 +542,47 @@ async def test_rendered_dialog_shows_follows_and_period_selector(user: User, tmp
     assert table[("Exam 2", "room-1", "A")] == pytest.approx(1.4)
 
 
-def test_example_calibration_download_offers_the_bundled_csv(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_example_calibration_browser_branch_downloads(monkeypatch: pytest.MonkeyPatch) -> None:
     from guiskindose import get_path_to_example_kerma_meter_file
-    from guiskindose.gui.tabs import settings as settings_tab
+    from guiskindose.gui import io_helpers
+    from guiskindose.gui.tabs import corrections as settings_tab
+    from guiskindose.gui.tabs import export as export_tab
+
+    async def _no_native(default_name: str, extension: str) -> None:
+        return None
 
     calls: list[tuple[bytes, str]] = []
-    monkeypatch.setattr(settings_tab.ui, "download", lambda content, name: calls.append((content, name)))
-    settings_tab._download_example_calibration_file()
+    monkeypatch.setattr(io_helpers, "_get_save_path", _no_native)
+    monkeypatch.setattr(export_tab.ui, "download", lambda content, name: calls.append((content, name)))
+    await settings_tab._download_example_calibration_file()
     assert calls == [(get_path_to_example_kerma_meter_file().read_bytes(), "calibration_factors_example.csv")]
+
+
+@pytest.mark.asyncio
+async def test_example_calibration_native_branch_saves_to_the_chosen_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from guiskindose import get_path_to_example_kerma_meter_file
+    from guiskindose.gui import io_helpers
+    from guiskindose.gui.tabs import corrections as settings_tab
+    from guiskindose.gui.tabs import export as export_tab
+
+    target = tmp_path / "chosen.csv"
+    asked: list[tuple[str, str]] = []
+
+    async def _native_save(default_name: str, extension: str) -> str:
+        asked.append((default_name, extension))
+        return str(target)
+
+    downloads: list[object] = []
+    monkeypatch.setattr(io_helpers, "_get_save_path", _native_save)
+    monkeypatch.setattr(export_tab.ui, "download", lambda *args: downloads.append(args))
+    monkeypatch.setattr(export_tab.ui, "notify", lambda *args, **kwargs: None)
+    await settings_tab._download_example_calibration_file()
+    assert asked == [("calibration_factors_example.csv", "csv")]
+    assert target.read_bytes() == get_path_to_example_kerma_meter_file().read_bytes()
+    assert downloads == []  # native save, no browser download
 
 
 # ── review findings: stale results, unchosen periods, editable unit override ─

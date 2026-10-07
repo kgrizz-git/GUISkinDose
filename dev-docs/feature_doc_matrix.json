@@ -69,6 +69,7 @@
         "src/guiskindose/kerma_correction.py",
         "src/guiskindose/calculate_dose",
         "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/tabs/corrections.py",
         "src/guiskindose/gui/tabs/calculate.py",
         "src/guiskindose/calculate_dose/tube_dose.py",
         "src/guiskindose/gui/tabs/_kerma_meter_dialog.py",

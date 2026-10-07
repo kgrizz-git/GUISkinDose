@@ -68,7 +68,7 @@ Multi-exam results show aggregate and per-exam values where the calculation outp
 - **Per-Exam Accordion**: Expand each exam to view its individual Peak Skin Dose, Air Kerma, and event count. Each exam's Peak Skin Dose is banded independently, so the accordion shows which exam in a multi-exam run drives the peak. Check **Show inline dose map** to inspect a 500px interactive 3D dose map inline within the accordion row (up to 5 inline maps simultaneously), or click **Show Dose Map** to open a modal popup dialog.
 - **Visible Exams Subset Selector**: Select specific exams or use **All** / **None** to dynamically update the aggregate dose map and recompute Peak Skin Dose for only the selected subset of exams. The aggregate value bands on the **selected subset's** own maximum, not on the whole-run aggregate. Selecting no exams shows the pending band, because there is no subset peak to band.
 
-Per-exam controls in Settings and Geometry affect the result before calculation; changing input, offsets, phantom settings, or physics settings invalidates prior results.
+Per-exam controls in Settings and Geometry affect the result before calculation; changing input, offsets, phantom settings, or corrections invalidates prior results.
 
 If the dose map is not shown, confirm that the calculation completed successfully and that dose-map rendering was enabled in Settings. Warnings from calculation or import should be reviewed before exporting a report.
 
