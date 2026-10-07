@@ -361,12 +361,20 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     return out, True
 
 
-def consumed_split_columns(raw_headers: list[str]) -> set[str]:
-    """Per-plane dose and DAP headers that the biplane split reads (when both planes exist).
+def consumed_split_columns(raw_headers: list[str], data_df: pd.DataFrame) -> set[str]:
+    """Per-plane dose and DAP headers that the biplane split reads.
 
     They are not in the column map, but they are not ignored either, so the import
-    warning must not list them.
+    warning must not list them. They count as read only when the split would run:
+    both per-plane dose columns exist and some row has plane-B dose above zero (the
+    same evidence rule as :func:`split_biplane_events`).
     """
+    dose_cols = _per_plane_columns(raw_headers, _PER_PLANE_DOSE_RE)
+    if set(dose_cols) != {"A", "B"}:
+        return set()
+    plane_b = pd.to_numeric(data_df[dose_cols["B"]], errors="coerce") if dose_cols["B"] in data_df else None
+    if plane_b is None or not bool((plane_b > 0).any()):
+        return set()
     consumed: set[str] = set()
     for pattern in (_PER_PLANE_DOSE_RE, _PER_PLANE_DAP_RE):
         found = _per_plane_columns(raw_headers, pattern)

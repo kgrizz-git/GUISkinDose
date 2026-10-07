@@ -170,5 +170,5 @@ def exam_heading(exam_id: str) -> str:
     Multi-exam ids are already opaque ``Exam N`` labels, so a blind ``"Exam " + id``
     prefix printed ``Exam Exam 1``.
     """
-    text = str(exam_id)
-    return text if text.startswith("Exam ") else f"Exam {text}"
+    text = str(exam_id).strip()
+    return text if text == "Exam" or text.startswith("Exam ") else f"Exam {text}"

@@ -306,3 +306,14 @@ class TestImportWarningsListOnlyIgnoredColumns:
         warnings = _load(FIXTURES / "radimetrics_events_a_only.csv").warnings
         message = next((w for w in warnings if "not mapped" in w), "")
         assert "DAP (Total)" not in message
+
+
+def test_split_columns_count_as_read_only_when_the_split_would_run() -> None:
+    from guiskindose.input_adapters.radimetrics import consumed_split_columns
+
+    headers = ["Reference Point Dose (A) mGy", "Reference Point Dose (B) mGy", "Reference Point Dose (Total) mGy"]
+    no_b_dose = pd.DataFrame({headers[0]: ["1.0", "2.0"], headers[1]: ["", ""], headers[2]: ["1.0", "2.0"]})
+    with_b_dose = pd.DataFrame({headers[0]: ["1.0", ""], headers[1]: ["", "2.0"], headers[2]: ["1.0", "2.0"]})
+
+    assert consumed_split_columns(headers, no_b_dose) == set()
+    assert consumed_split_columns(headers, with_b_dose) == {headers[0], headers[1]}
