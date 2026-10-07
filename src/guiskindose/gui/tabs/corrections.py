@@ -35,6 +35,9 @@ K_TAB_MODE_OPTIONS = {
 }
 
 
+_KERMA_TITLE = "Kerma-meter correction"
+
+
 def build(ctx: PageContext) -> None:
     """Construct the Corrections tab panel."""
     del ctx  # corrections need no cross-tab callbacks
@@ -121,14 +124,14 @@ def _build_physics_section() -> None:
 def _build_kerma_meter_section() -> None:
     """Kerma-meter correction expansion: factors file, review dialog, example download."""
     with (
-        ui.expansion("Kerma-meter correction", icon="speed", value=True).classes(_SETTINGS_EXPANSION_CLASSES),
+        ui.expansion(_KERMA_TITLE, icon="speed", value=True).classes(_SETTINGS_EXPANSION_CLASSES),
         ui.column().classes(_SETTINGS_SECTION_CLASSES),
         ui.column().classes("w-full gap-2"),
     ):
         with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
-            ui.label("Kerma-meter correction").classes("text-subtitle2")
+            ui.label(_KERMA_TITLE).classes("text-subtitle2")
             HelpButton(
-                title="Kerma-meter correction",
+                title=_KERMA_TITLE,
                 content_path="kerma_meter_correction.md",
                 help_id="settings_kerma_meter_correction",
             )

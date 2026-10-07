@@ -82,12 +82,7 @@ def _validate_exam_factors(nested: Any, _malformed: Any) -> None:
 
 def apply_exam_kerma(gui: dict[str, Any], app_state: AppState) -> None:
     """Apply per-exam factors (replacing only the per-exam part of the table) and periods."""
-    if PERIODS_KEY in gui:
-        app_state.kerma_meter_periods = dict(gui[PERIODS_KEY] or {})
-    if ACK_KEY in gui:
-        app_state.kerma_meter_acknowledged = {(r[0], r[1], r[2]) for r in gui[ACK_KEY] or []}
-    if PERIODS_ACK_KEY in gui:
-        app_state.kerma_meter_periods_acknowledged = set(gui[PERIODS_ACK_KEY] or [])
+    _apply_period_and_ack_state(gui, app_state)
     if EXAM_FACTORS_KEY not in gui:
         return
     table = {k: v for k, v in (app_state.kerma_meter_in_memory_table or {}).items() if len(k) != 3}
@@ -96,6 +91,16 @@ def apply_exam_kerma(gui: dict[str, Any], app_state: AppState) -> None:
             for tube, factor in tubes.items():
                 table[(exam, equipment, tube)] = factor
     app_state.kerma_meter_in_memory_table = table or None
+
+
+def _apply_period_and_ack_state(gui: dict[str, Any], app_state: AppState) -> None:
+    """Apply stored period choices and acknowledged default rows/periods when present."""
+    if PERIODS_KEY in gui:
+        app_state.kerma_meter_periods = dict(gui[PERIODS_KEY] or {})
+    if ACK_KEY in gui:
+        app_state.kerma_meter_acknowledged = {(r[0], r[1], r[2]) for r in gui[ACK_KEY] or []}
+    if PERIODS_ACK_KEY in gui:
+        app_state.kerma_meter_periods_acknowledged = set(gui[PERIODS_ACK_KEY] or [])
 
 
 def apply_legacy_k_tab(settings: dict[str, Any], app_state: AppState) -> None:

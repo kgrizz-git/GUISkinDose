@@ -99,10 +99,9 @@ def test_fallback_mode_warns_with_event_indices_and_no_labels() -> None:
 
 
 def test_fallback_mode_validates_the_fallback_value() -> None:
+    data_norm = _events([_MEASURED])
     with pytest.raises(ValueError, match="k_tab_val"):
-        calculate_k_tab(
-            data_norm=_events([_MEASURED]), corrections_db=DB, k_tab_val=0.0, k_tab_mode="measured_with_fallback"
-        )
+        calculate_k_tab(data_norm=data_norm, corrections_db=DB, k_tab_val=0.0, k_tab_mode="measured_with_fallback")
 
 
 def test_unknown_mode_is_rejected() -> None:

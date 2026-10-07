@@ -546,5 +546,6 @@ def test_calculate_dose_golden_siemens_cylinder_measured_with_fallback():
     assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"])
     k_tab = output[c.OUTPUT_KEY_CORRECTION_TABLE]
     assert all(0.0 < v <= 1.0 for v in k_tab)
-    assert (min(k_tab), max(k_tab)) == pytest.approx(golden["k_tab_range"])
+    assert min(k_tab) == pytest.approx(golden["k_tab_range"][0])
+    assert max(k_tab) == pytest.approx(golden["k_tab_range"][1])
     assert set(output[c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES]) == {"exact"}

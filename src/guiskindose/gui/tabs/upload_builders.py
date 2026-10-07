@@ -91,6 +91,9 @@ _LOAD_STATE_FIELDS = (
 )
 
 
+_PARSING_STATUS = "PARSING..."
+
+
 def upload_exceeds_limit(num_bytes: int) -> bool:
     """Upload exceeds limit."""
     return num_bytes > MAX_UPLOAD_BYTES
@@ -172,7 +175,7 @@ class UploadTabController:
             tmp_path: Path | None = None
             try:
                 tmp_path = create_temp_upload(data, suffix=suffix)
-                self.refs.upload_status.set_text("PARSING...")
+                self.refs.upload_status.set_text(_PARSING_STATUS)
                 if suffix in _TABULAR_SUFFIXES:
                     state.input_source_type = suffix.lstrip(".")
                     ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
@@ -251,7 +254,7 @@ class UploadTabController:
                 state.swap_lat_lon = False
                 state.flip_ap1 = False
                 state.flip_ap2 = False
-                self.refs.upload_status.set_text("PARSING...")
+                self.refs.upload_status.set_text(_PARSING_STATUS)
                 ok, msg = require_io_result(await run.io_bound(load_rdsr, path, state))
                 if ok:
                     clear_all_temp_uploads()
@@ -285,7 +288,7 @@ class UploadTabController:
         tmp_path: Path | None = None
         try:
             tmp_path = create_temp_upload(path.read_bytes(), suffix=suffix)
-            self.refs.upload_status.set_text("PARSING...")
+            self.refs.upload_status.set_text(_PARSING_STATUS)
             state.input_source_type = suffix.lstrip(".")
             ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
             if ok:
