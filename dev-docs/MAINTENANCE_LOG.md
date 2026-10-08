@@ -115,6 +115,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   post-normalization Tx↔Tz / Ap1 / Ap2 apply path; GUI
   `_apply_transform_flags` delegates those three flags after local
   `flip_t*` and table-origin handling.
+- **CLI coordinate flags wired through analyze/preview/export** (2026-10-08) —
+  `--swap-lat-lon` / `--flip-ap1` / `--flip-ap2` reject non-tabular paths
+  before RDSR parse. `python -m guiskindose.main` now delegates to
+  `__main__.cli()`; that function dropped below the C901 cap of 14 so
+  the grandfathered entry was removed.
 
 - **Append-only history is exempt from the file-size cap** (2026-09-30) —
   `scripts/check_file_sizes.py` scans `src`, `scripts` and `dev-docs`, so `CHANGELOG.md` was

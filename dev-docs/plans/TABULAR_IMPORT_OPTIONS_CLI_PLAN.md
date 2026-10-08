@@ -211,19 +211,19 @@ not keep advertising an unimplemented flag.
 
 ### 2 — CLI + `main`
 
-- [ ] Three `store_true` flags on `_add_input_args`; `import_options_from_args`.
-- [ ] Thread `import_options` through `analyze_input_file`,
+- [x] Three `store_true` flags on `_add_input_args`; `import_options_from_args`.
+- [x] Thread `import_options` through `analyze_input_file`,
       `analyze_multiple_input_files`, `preview_input_file`,
       `build_cli_export_source`, `run_cli_export`, `_read_input_for_analysis`,
       `_load_inputs_for_export`. Probe + load in `build_cli_export_source`
       must use the **same** options object.
-- [ ] `reject_import_options_for_non_tabular(paths, options)` before I/O.
+- [x] `reject_import_options_for_non_tabular(paths, options)` before I/O.
       Mixed batch: any flag + any non-tabular path → `UserFacingInputError`.
-- [ ] Wire CLI in **both** `__main__.py` and `main.py` `__main__` so preview,
+- [x] Wire CLI in **both** `__main__.py` and `main.py` `__main__` so preview,
       single-file analyze, multi-file analyze, and export all pass options.
       Map rejection to a usage-level exit (no calc).
-- [ ] Preview prints a count-only override note (flag names only).
-- [ ] Tests: CLI parse of the three flags; DICOM/JSON + any flag → usage
+- [x] Preview prints a count-only override note (flag names only).
+- [x] Tests: CLI parse of the three flags; DICOM/JSON + any flag → usage
       error (no calc); mixed tabular+`.dcm` + flag → reject; tabular fixture
       `--swap-lat-lon` actually swaps `Tx`/`Tz`; `normalized` swap no-op +
       angle flags still negate. Core tests without the `gui` extra.

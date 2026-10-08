@@ -10,14 +10,26 @@ adapter ``schema_name`` string, and a :class:`TabularImportOptions` instance
 Outputs: a new DataFrame copy with selected transforms applied; the input frame
 is never mutated.
 
-Requirements: pandas only; no dependency on the optional GUI extra.
+Requirements: pandas and ``UserFacingInputError`` for suffix rejection; no
+optional GUI extra.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 import pandas as pd
+
+from guiskindose.privacy import UserFacingInputError
+
+_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
+
+IMPORT_OPTIONS_NON_TABULAR_MESSAGE = (
+    "Coordinate import flags (--swap-lat-lon, --flip-ap1, --flip-ap2) apply only to "
+    "tabular inputs (.csv, .tsv, .xlsx, .xlsm)."
+)
 
 
 @dataclass(frozen=True)
@@ -31,6 +43,35 @@ class TabularImportOptions:
     def any_set(self) -> bool:
         """True if any override flag is enabled."""
         return self.swap_lat_lon or self.flip_ap1 or self.flip_ap2
+
+
+def reject_import_options_for_non_tabular(
+    paths: Sequence[str | Path],
+    options: TabularImportOptions | None,
+) -> None:
+    """Raise when coordinate import flags are set for a non-tabular path suffix.
+
+    Uses suffix only (case-insensitive); does not open or stat files.
+    """
+    if options is None or not options.any_set():
+        return
+    for path in paths:
+        if Path(path).suffix.lower() not in _TABULAR_SUFFIXES:
+            raise UserFacingInputError(IMPORT_OPTIONS_NON_TABULAR_MESSAGE)
+
+
+def coordinate_override_preview_line(options: TabularImportOptions | None) -> str | None:
+    """Return a value-safe preview line naming enabled flags, or ``None`` if none."""
+    if options is None or not options.any_set():
+        return None
+    names: list[str] = []
+    if options.swap_lat_lon:
+        names.append("swap_lat_lon")
+    if options.flip_ap1:
+        names.append("flip_ap1")
+    if options.flip_ap2:
+        names.append("flip_ap2")
+    return f"Coordinate overrides applied: {', '.join(names)}"
 
 
 def _swap_tx_tz(df: pd.DataFrame) -> None:

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from guiskindose.cli_kerma_meter import add_kerma_meter_cli_arguments
 from guiskindose.constants import RUN_ARGUMENTS_MODE_GUI, RUN_ARGUMENTS_MODE_HEADLESS
+from guiskindose.input_adapters.import_options import TabularImportOptions
 
 
 def _gui_port_value(raw: str) -> int:
@@ -187,6 +188,42 @@ def _add_input_args(parser: argparse.ArgumentParser) -> None:
         default=False,
         dest="aggregate_only",
         help="In multi-exam mode: print only the aggregate PSD to stdout instead of the full JSON.",
+    )
+
+    parser.add_argument(
+        "--swap-lat-lon",
+        action="store_true",
+        default=False,
+        dest="swap_lat_lon",
+        help=(
+            "Post-normalization expert override: swap Tx and Tz after adapter normalization. "
+            "Not the GE manufacturer swap_lateral_longitudinal rule."
+        ),
+    )
+
+    parser.add_argument(
+        "--flip-ap1",
+        action="store_true",
+        default=False,
+        dest="flip_ap1",
+        help="Post-normalization expert override: negate Ap1 (primary angle) after adapter normalization.",
+    )
+
+    parser.add_argument(
+        "--flip-ap2",
+        action="store_true",
+        default=False,
+        dest="flip_ap2",
+        help="Post-normalization expert override: negate Ap2 (secondary angle) after adapter normalization.",
+    )
+
+
+def import_options_from_args(args: argparse.Namespace) -> TabularImportOptions:
+    """Build tabular coordinate import options from parsed CLI arguments."""
+    return TabularImportOptions(
+        swap_lat_lon=bool(getattr(args, "swap_lat_lon", False)),
+        flip_ap1=bool(getattr(args, "flip_ap1", False)),
+        flip_ap2=bool(getattr(args, "flip_ap2", False)),
     )
 
 
