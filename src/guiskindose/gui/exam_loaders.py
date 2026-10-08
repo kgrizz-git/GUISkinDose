@@ -194,12 +194,12 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         # from fixed labels only, so it is shown instead of the generic error.
         _record_load_failure("DICOM_RDSR_UNIT_MISMATCH", exc)
         _restore_load_globals(state, globals_snapshot)
-        return False, str(exc)
+        return False, exc.user_message()
     except UserFacingInputError as exc:
         # Missing geometry, conflicting duplicates, no events: value-free message.
         _record_load_failure("DICOM_RDSR_INPUT", exc)
         _restore_load_globals(state, globals_snapshot)
-        return False, str(exc)
+        return False, exc.user_message()
     except Exception as exc:
         _record_load_failure("DICOM_RDSR_LOAD", exc)
         _restore_load_globals(state, globals_snapshot)
@@ -247,7 +247,7 @@ def load_tabular(
     except UserFacingInputError as exc:
         _record_load_failure("TABULAR_INPUT", exc)
         state.import_has_errors = True
-        return False, str(exc)
+        return False, exc.user_message()
     except Exception as exc:
         _record_load_failure("TABULAR_LOAD", exc)
         state.import_has_errors = True

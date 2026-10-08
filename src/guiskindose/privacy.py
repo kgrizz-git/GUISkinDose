@@ -204,8 +204,12 @@ class UserFacingInputError(ValueError):
     Subclasses must build the message only from fixed, code-owned labels and
     integer counts — never from file-derived strings (names, units, values,
     paths). Under that contract the CLI excepthook and the GUI loaders may print
-    ``str(exc)`` instead of the generic coded error.
+    :meth:`user_message` instead of the generic coded error.
     """
+
+    def user_message(self) -> str:
+        """Return the value-free message to show the user."""
+        return str(self.args[0]) if self.args else ""
 
 
 def safe_user_error(operation: str) -> str:
@@ -224,7 +228,7 @@ def install_value_safe_excepthook(logger: logging.Logger, operation: str = "cli_
             return
         safe_error_event(logger, operation_code, exc)
         if isinstance(exc, UserFacingInputError):
-            print(str(exc), file=sys.stderr)
+            print(exc.user_message(), file=sys.stderr)
             return
         print(safe_user_error(operation_code), file=sys.stderr)
 
