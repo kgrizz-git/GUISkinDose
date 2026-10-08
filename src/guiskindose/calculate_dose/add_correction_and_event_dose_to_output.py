@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.interpolate import CubicSpline
 
 from guiskindose import constants as c
+from guiskindose.calculate_dose.tube_dose import add_event_dose
 from guiskindose.corrections import calculate_k_med
 from guiskindose.phantom_class import Phantom
 
@@ -180,6 +181,6 @@ def add_corrections_and_event_dose_to_output(
         "Calculating event skin dose by applying each correction factor to the reference point air kerma"
     )
 
-    output[c.OUTPUT_KEY_DOSE_MAP] += event_dose
+    add_event_dose(output, event, event_dose)
 
     return output

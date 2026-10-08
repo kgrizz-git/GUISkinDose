@@ -135,7 +135,7 @@ def test_example_json_still_parses_as_valid_settings_dict():
 EXPECTED_TOP_LEVEL_KEYS = {
     "mode",
     "rdsr_filename",
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "silence_pydicom_warnings",
@@ -288,7 +288,6 @@ def _populated_state():
     state.phantom_model = "cylinder"
     state.beam_miss_warn = "per_event"
     state.kerma_meter_enable = True
-    state.kerma_meter_mode = "file"
     state.kerma_meter_file = "/data/cf/corrections.xlsx"
     state.kerma_meter_file_sheet = "CF"
     state.kerma_meter_default_factor = 1.02
@@ -330,7 +329,7 @@ def _settings_with_kerma_file():
         "file_sheet": "CF",
         "default_factor": 1.02,
         "explicit_label": "Lab-1",
-        "prompt_at_calc": False,
+        "ask_for_missing": True,
     }
     # Match the populated state's synced globals so the document is
     # self-consistent (as a real build_settings() + AppState pair would be).
@@ -576,7 +575,7 @@ def test_applier_rejects_malformed_sections_before_mutating():
 def _assert_pristine(state: AppState) -> None:
     """Validation precedes all mutation: a fresh session is byte-identical."""
     assert state.input_schema == "auto"
-    assert state.estimate_k_tab is True
+    assert state.k_tab_mode == "measured_with_fallback"
     assert state.d_lon == 0.0
     assert getattr(state, "normalization_profiles", None) is None
     assert state.loaded_exam_meta[0].get("d_lon", 0.0) == 0.0
@@ -692,7 +691,7 @@ def test_snapshot_restore_returns_pristine_session():
 
     restore_app_state_snapshot(state, snapshot)
     assert state.input_schema == "auto"
-    assert state.estimate_k_tab is True
+    assert state.k_tab_mode == "measured_with_fallback"
     assert state.d_lon == 0.0
     assert getattr(state, "normalization_profiles", None) is None
     assert state.run_state_passthrough == {}
@@ -737,7 +736,7 @@ def test_applier_count_mismatch_leaves_session_untouched():
     # Structural failure must precede all mutation: globals, schema, and
     # homes are exactly as before the call.
     assert state.input_schema == "auto"
-    assert state.estimate_k_tab is True
+    assert state.k_tab_mode == "measured_with_fallback"
     assert state.loaded_exam_meta == []
     assert getattr(state, "normalization_profiles", None) is None
     assert getattr(state, "phantom_dimensions", None) is None
@@ -786,7 +785,7 @@ def test_applier_trial_build_rejects_invalid_homes_before_mutating():
     assert exc_info.value.code == "invalid_settings"
     # Trial runs before live mutation: globals and homes are pristine.
     assert state.input_schema == "auto"
-    assert state.estimate_k_tab is True
+    assert state.k_tab_mode == "measured_with_fallback"
     assert getattr(state, "dosetrack_plane_code_map", None) is None
     assert state.run_state_passthrough == {}
 

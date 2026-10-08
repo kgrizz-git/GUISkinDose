@@ -43,9 +43,10 @@ Location: `src/guiskindose/gui/app.py`. Default URL: http://localhost:8765.
 
 | Aspect | Detail |
 |--------|--------|
-| Tabs | Upload, Data Table, Settings, Geometry, Calculate, Results, Export |
+| Tabs | Upload, Data Table, Settings, Corrections, Geometry, Calculate, Results, Export |
 | Input | RDSR drag-and-drop, example file loader, normalized/raw table toggle |
-| Settings | Phantom, physics, and visual settings form |
+| Settings | Run configuration, phantom, per-exam offsets, and visual settings form |
+| Corrections | Patient-support transmission mode, dose-physics settings, and kerma-meter correction (review dialog, example calibration download) |
 | Geometry | Setup / event / procedure preview; **multi-exam:** selected-exam dropdown, per-exam patient/table-origin sliders (`meta[active]`), composite preview toggle, `geometry_preview.py` slice helpers |
 | Calculation | Progress feedback, PSD / air kerma / event metrics |
 | Results | Interactive 3D dose map, correction factors table |
@@ -241,8 +242,8 @@ Organised into `ui.expansion` (collapsible) sections:
 **Phantom:**
 - Model, human mesh, orientation, offsets (same as Step 2, kept in sync)
 
-**Physics:**
-- `ui.checkbox("Use estimated k_tab")` — if checked, show `ui.slider(0.0, 1.0)` for k_tab value
+**Physics (now the Corrections tab, tab 4):**
+- `ui.select` for the patient-support transmission mode (`measured_with_fallback` default, `estimate`, `measured_only`) with `ui.slider(0.01, 1.0)` for the flat/fallback `k_tab_val`
 - `ui.number("Inherent filtration (mmAl)")` — default 3.1
 - `ui.checkbox("Remove invalid RDSR rows (kVp=0)")`
 

@@ -141,9 +141,9 @@ Acceptance:
 - This plan does not alter inherited Plane B data; immediate invalid-value safety is
   owned by the correction-safety plan.
 - This plan does not create the custom equipment-profile ingestion surface.
-- Any benchmark or comparison must set `estimate_k_tab: false` explicitly. The
-  shipped default applies one global estimated transmission and never reaches the
-  bundled table, so a default-settings run cannot exercise this plan's model.
+- Any benchmark or comparison must set `k_tab_mode: measured_only` explicitly
+  (formerly `estimate_k_tab: false`). The default `measured_with_fallback` mixes
+  measured and flat values, so it would blur a comparison against this plan's model.
 
 ## Delivery
 

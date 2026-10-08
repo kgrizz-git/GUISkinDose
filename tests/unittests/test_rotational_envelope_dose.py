@@ -18,6 +18,8 @@ from guiskindose.settings import PyskindoseSettings
 
 def _settings(**overrides) -> PyskindoseSettings:
     base = load_settings_example_json()
+    # Golden baselines predate the measured_with_fallback default (see CHANGELOG): pin the flat estimate.
+    base["k_tab_mode"] = "estimate"
     base["mode"] = "calculate_dose"
     base["silence_pydicom_warnings"] = True
     base["phantom"]["model"] = "plane"
@@ -564,3 +566,29 @@ def test_rotational_envelope_golden_baseline_spin_hudfrid():
     assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"], rel=_GOLDEN_RTOL, abs=0.0)
     assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"], rel=_GOLDEN_RTOL, abs=0.0)
     assert float(np.sum(dose_map * dose_map)) == pytest.approx(golden["dose_sum_sq"], rel=_GOLDEN_RTOL, abs=0.0)
+
+
+# Goldens for the default k_tab_mode (measured_with_fallback), recorded 2026-10-07 and
+# reproduced across repeated and parallel runs. The synthetic AXIOM-Artis frame has
+# measured data (k_tab 0.7442), so these sit about 7% below the flat-estimate goldens.
+_GOLDEN_ROTATIONAL_MEASURED = {
+    "cylinder": {"events": 2, "dose_map_len": 9576, "psd_mgy": 0.10234529192594297, "dose_sum": 52.53249986901535},
+    "hudfrid": {"events": 2, "dose_map_len": 41022, "psd_mgy": 0.08849552734487773, "dose_sum": 54.9084385939478},
+}
+
+
+@pytest.mark.parametrize("phantom", ["cylinder", "hudfrid"])
+def test_rotational_envelope_golden_measured_with_fallback(phantom: str):
+    frame = _frame_with_spin()
+    settings = _settings(angular_step_deg=1.0, k_tab_mode="measured_with_fallback")
+    settings.phantom.model = "cylinder" if phantom == "cylinder" else "human"
+    if phantom == "hudfrid":
+        settings.phantom.human_mesh = "hudfrid"
+    output = _run(frame.copy(), settings)
+    golden = _GOLDEN_ROTATIONAL_MEASURED[phantom]
+    dose_map = np.asarray(output[c.OUTPUT_KEY_DOSE_MAP], dtype=float)
+    assert len(output[c.OUTPUT_KEY_HITS]) == golden["events"]
+    assert dose_map.size == golden["dose_map_len"]
+    assert float(np.max(dose_map)) == pytest.approx(golden["psd_mgy"], rel=_GOLDEN_RTOL, abs=0.0)
+    assert float(np.sum(dose_map)) == pytest.approx(golden["dose_sum"], rel=_GOLDEN_RTOL, abs=0.0)
+    assert output[c.OUTPUT_KEY_CORRECTION_TABLE] == pytest.approx([0.7442, 0.7442])

@@ -12,6 +12,12 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from guiskindose.gui.run_state_kerma import (
+    apply_exam_kerma,
+    apply_legacy_k_tab,
+    serialize_exam_kerma,
+    validate_exam_kerma,
+)
 from guiskindose.privacy import opaque_exam_label
 
 if TYPE_CHECKING:  # duck-typed at runtime; keeps this module GUI-light
@@ -35,7 +41,7 @@ _TOP_LEVEL_PASSTHROUGH_EXCLUDE = frozenset(
 
 # Settings-slice keys restored to same-named AppState fields.
 _SCALAR_SETTING_TO_STATE = (
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "remove_invalid_rows",
@@ -59,9 +65,8 @@ _PHANTOM_SETTING_TO_STATE = (
 # written; file_sheet/explicit_label applied skip-if-null under Tier 3).
 _KERMA_SETTING_TO_STATE = (
     ("enable", "kerma_meter_enable"),
-    ("mode", "kerma_meter_mode"),
     ("default_factor", "kerma_meter_default_factor"),
-    ("prompt_at_calc", "kerma_meter_prompt_at_calc"),
+    ("ask_for_missing", "kerma_meter_ask_for_missing"),
 )
 
 # Import-settable homes with no GUI widget: `normalization_profiles`,
@@ -131,7 +136,7 @@ def _basename_or_none(value: Any, include_identifiers: bool) -> Any:
 
 
 def _nest_in_memory_table(
-    table: dict[tuple[str, str], float] | None, include_identifiers: bool
+    table: dict[tuple[str, ...], float] | None, include_identifiers: bool
 ) -> dict[str, dict[str, float]] | None:
     """Serialize the session CF override table to nested JSON form.
 
@@ -141,8 +146,9 @@ def _nest_in_memory_table(
     if table is None or not include_identifiers:
         return None
     nested: dict[str, dict[str, float]] = {}
-    for (equipment, tube), factor in table.items():
-        nested.setdefault(equipment, {})[tube] = factor
+    for key, factor in table.items():
+        if len(key) == 2:  # legacy global entries; per-exam ones use run_state_kerma
+            nested.setdefault(key[0], {})[key[1]] = factor
     return nested
 
 
@@ -274,6 +280,10 @@ def serialize_run_state(
         document["gui_state"]["kerma_meter_in_memory_table"] = _nest_in_memory_table(
             app_state.kerma_meter_in_memory_table, include_identifiers
         )
+    if include_identifiers:
+        # Per-exam identity overrides are site identifiers, gated like the CF table.
+        document["gui_state"]["kerma_meter_unresolved_labels"] = dict(app_state.kerma_meter_unresolved_labels)
+        serialize_exam_kerma(app_state, document["gui_state"])
     if passthrough and include_identifiers:
         for key, value in passthrough.items():
             document.setdefault(key, value)
@@ -314,7 +324,7 @@ class ApplyResult:
 # Tier-2 and never written). `loaded_exam_meta` entries are mutated in place
 # and snapshotted separately (deep).
 _SNAPSHOT_ATTRS = (
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "remove_invalid_rows",
@@ -335,12 +345,15 @@ _SNAPSHOT_ATTRS = (
     "colorscale",
     "plot_dosemap",
     "kerma_meter_enable",
-    "kerma_meter_mode",
     "kerma_meter_file_sheet",
     "kerma_meter_explicit_label",
     "kerma_meter_default_factor",
-    "kerma_meter_prompt_at_calc",
+    "kerma_meter_ask_for_missing",
     "kerma_meter_in_memory_table",
+    "kerma_meter_unresolved_labels",
+    "kerma_meter_periods",
+    "kerma_meter_acknowledged",
+    "kerma_meter_periods_acknowledged",
     "include_static_pose",
     "angular_step_deg",
     "dosetrack_plane_code_map",
@@ -477,6 +490,8 @@ def validate_run_state_document(document: Any) -> None:
         for index, profile in enumerate(profiles):
             if not isinstance(profile, dict):
                 raise _malformed(f"normalization_settings[{index}] must be a mapping, got {type(profile).__name__}")
+    _validate_unresolved_labels(gui.get("kerma_meter_unresolved_labels"))
+    validate_exam_kerma(gui)
     table = gui.get("kerma_meter_in_memory_table")
     if table is not None:
         if not isinstance(table, dict) or any(not isinstance(tubes, dict) for tubes in table.values()):
@@ -485,6 +500,25 @@ def validate_run_state_document(document: Any) -> None:
             for tube, factor in tubes.items():
                 if isinstance(factor, bool) or not isinstance(factor, (int, float)):
                     raise _malformed(f"kerma_meter_in_memory_table[{equipment!r}][{tube!r}] must be a number")
+
+
+def _validate_unresolved_labels(labels: Any) -> None:
+    """Reject a per-exam identity-override value that is not a str -> str mapping."""
+    if labels is None:
+        return
+    if not isinstance(labels, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in labels.items()):
+        raise _malformed("kerma_meter_unresolved_labels must be a mapping of strings")
+
+
+def _apply_kerma_gui_state(gui: dict, app_state: AppState) -> None:
+    """Apply the identifier-gated kerma session state (CF table, identity overrides)."""
+    if "kerma_meter_in_memory_table" in gui:
+        legacy = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"]) or {}
+        per_exam = {k: v for k, v in (app_state.kerma_meter_in_memory_table or {}).items() if len(k) == 3}
+        app_state.kerma_meter_in_memory_table = {**legacy, **per_exam} or None
+    apply_exam_kerma(gui, app_state)
+    if "kerma_meter_unresolved_labels" in gui:
+        app_state.kerma_meter_unresolved_labels = dict(gui["kerma_meter_unresolved_labels"] or {})
 
 
 def _display_basename(value: Any) -> str | None:
@@ -551,6 +585,19 @@ def _apply_kerma_tier2(kerma: dict, app_state: AppState, warnings: list[str]) ->
     _warn_file_mismatch(warnings, "kerma correction file", str(expected), _display_basename(app_state.kerma_meter_file))
 
 
+def _apply_legacy_kerma_prompt(kerma: dict, app_state: AppState) -> None:
+    """Map legacy ``mode: prompt`` / ``prompt_at_calc: true`` onto ``ask_for_missing``.
+
+    An explicit ``ask_for_missing`` in the document always wins; a legacy
+    ``false`` was only the old default and is ignored.
+    """
+    if "ask_for_missing" in kerma:
+        return
+    legacy_mode = str(kerma.get("mode", "")).strip().lower()
+    if legacy_mode == "prompt" or kerma.get("prompt_at_calc") is True:
+        app_state.kerma_meter_ask_for_missing = True
+
+
 def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[str]) -> str:
     """Apply Tier-3 configuration from the settings slice; return the mode."""
     for key in _SCALAR_SETTING_TO_STATE:
@@ -567,6 +614,8 @@ def _apply_settings_slice(settings: dict, app_state: AppState, warnings: list[st
     kerma = settings.get("kerma_meter_correction") or {}
     for doc_key, attr in _KERMA_SETTING_TO_STATE:
         _apply_present(app_state, attr, kerma.get(doc_key))
+    _apply_legacy_kerma_prompt(kerma, app_state)
+    apply_legacy_k_tab(settings, app_state)
     _apply_present(app_state, "kerma_meter_file_sheet", kerma.get("file_sheet"))
     _apply_present(app_state, "kerma_meter_explicit_label", kerma.get("explicit_label"))
     _apply_kerma_tier2(kerma, app_state, warnings)
@@ -738,8 +787,7 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
         result.schema_or_sheet_changed = True
     for key in ("swap_lat_lon", "flip_ap1", "flip_ap2"):
         _apply_present(app_state, key, gui.get(key))
-    if "kerma_meter_in_memory_table" in gui:
-        app_state.kerma_meter_in_memory_table = _unnest_in_memory_table(gui["kerma_meter_in_memory_table"])
+    _apply_kerma_gui_state(gui, app_state)
     for index, (exam, meta) in enumerate(zip(doc_exams, live_metas, strict=True)):
         if _apply_exam(exam, meta, index, result.warnings):
             result.schema_or_sheet_changed = True

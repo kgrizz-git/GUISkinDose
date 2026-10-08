@@ -23,6 +23,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExportPayload
 
@@ -105,6 +106,7 @@ def build_document(payload: ExportPayload):
     _add_result_sections(doc, payload)
     _add_settings_section(doc, payload)
     _add_corrections_section(doc, payload)
+    _add_tube_section(doc, payload)
     _add_rotational_section(doc, payload)
     _add_image_section(doc, payload)
     return doc
@@ -150,7 +152,7 @@ def _add_settings_section(doc, payload: ExportPayload) -> None:
     doc.add_heading("Settings & equipment", level=2)
     for exam in payload.exams:
         if payload.is_multi_exam:
-            doc.add_heading(f"Exam {exam.exam_id}", level=3)
+            doc.add_heading(exam_heading(exam.exam_id), level=3)
         _table(doc, _settings_rows(exam))
 
 
@@ -159,7 +161,7 @@ def _add_corrections_section(doc, payload: ExportPayload) -> None:
     doc.add_heading("Correction factors", level=2)
     if payload.is_multi_exam:
         for exam in payload.exams:
-            doc.add_paragraph(f"Exam {exam.exam_id}")
+            doc.add_paragraph(exam_heading(exam.exam_id))
             _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections])
         doc.add_paragraph("Cumulative (kerma-weighted)")
     _table(doc, [CORRECTION_HEADER] + [correction_row(s) for s in payload.cumulative.corrections])
@@ -187,10 +189,22 @@ def _add_rotational_methodology(doc, payload: ExportPayload) -> None:
         return
     for label, handling in blocks:
         if label is not None:
-            doc.add_paragraph(f"Exam {label} rotational methodology:")
+            doc.add_paragraph(f"{exam_heading(label)} rotational methodology:")
         paragraph = rotational_methodology_paragraph(handling)
         if paragraph:
             doc.add_paragraph(paragraph)
+
+
+def _add_tube_section(doc, payload: ExportPayload) -> None:
+    """The "Dose by tube" table: one row per exam x tube."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, tube_blocks, tube_report_table
+
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
+        return
+    doc.add_heading(TUBE_SECTION_TITLE, level=2)
+    _table(doc, rows)
+    doc.add_paragraph(TUBE_NOTE)
 
 
 def _add_rotational_section(doc, payload: ExportPayload) -> None:
@@ -203,7 +217,7 @@ def _add_rotational_section(doc, payload: ExportPayload) -> None:
     doc.add_heading("Rotational handling ledger", level=2)
     for label, handling in blocks:
         if label is not None:
-            doc.add_heading(f"Exam {label}", level=3)
+            doc.add_heading(exam_heading(label), level=3)
         _table(doc, rotational_ledger_table(handling))
 
 

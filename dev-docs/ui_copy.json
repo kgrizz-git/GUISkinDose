@@ -72,6 +72,86 @@
     "onboarding.privacy_notice": {
       "text": "Processing and temporary upload storage stay on this machine. The GUI binds localhost only and refuses any other host — it will not serve other machines by itself, so do not expose it with a proxy; move the computation to the machine where the data may reside instead. Loopback binding is not an authentication boundary. Browser access needs the console launch URL (it bootstraps your session and stays valid until restart) or an active session on this machine — anyone with either sees the same shared state, so shared workstations need their own access story. Strict Host/Origin checks block cross-site pages and rebinding tricks, and in browser mode every request and socket needs the session (native mode skips the token check). Source filenames and data may contain PHI. Upload copies use private random session names and are removed on clear or shutdown; crash leftovers are removed after 24 hours. Exports can be clinical records, so choose an approved destination and retention policy.",
       "owner": "gui/app.py"
+    },
+    "kerma.dialog.title": {
+      "text": "Kerma-meter correction factors",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.body": {
+      "text": "Enter CF = (real measured dose) / (unit reported dose) for each unit and tube of each exam. Exam 2 and later follow the previous exam until you change them, so a recalibrated meter can have a different factor per exam. Rows marked \"default\" have no entered or file value, so please review them. Cancel keeps file values and earlier entries, and unanswered pairs use the default factor.",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.unresolved": {
+      "text": "No equipment identity was found for this exam. Choose or type the unit it was acquired on so its factors can be looked up.",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.unit_label": {
+      "text": "Equipment unit for this exam",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.unknown_tube": {
+      "text": "tube unknown: default factor applies",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.no_identity": {
+      "text": "no unit: default factor applies",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.dont_ask": {
+      "text": "Don't ask again until the loaded data changes",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.source.entered": {
+      "text": "entered manually",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.source.file": {
+      "text": "from file",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.source.default": {
+      "text": "default: review",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "settings.kerma_meter.ask_missing": {
+      "text": "Ask for missing correction factors",
+      "owner": "gui/tabs/settings.py"
+    },
+    "settings.kerma_meter.ask_missing.tooltip": {
+      "text": "Open a dialog when a detected unit and tube has no entered or file factor. Never blocks a calculation.",
+      "owner": "gui/tabs/settings.py"
+    },
+    "kerma.dialog.error_invalid": {
+      "text": "Enter a number greater than zero for every factor, or press Cancel.",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.stale_discarded": {
+      "text": "The loaded data changed while the dialog was open, so your entries were discarded. Open Review correction factors to enter them again.",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.review.unavailable": {
+      "text": "Turn on kerma-meter correction and load events first.",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "settings.kerma_meter.review_button": {
+      "text": "Review correction factors…",
+      "owner": "gui/tabs/settings.py"
+    },
+    "kerma.dialog.source.follows": {
+      "text": "↳ follows",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "kerma.dialog.period_label": {
+      "text": "Calibration period",
+      "owner": "gui/tabs/_kerma_meter_dialog.py"
+    },
+    "settings.kerma_meter.example_button": {
+      "text": "Download example calibration file",
+      "owner": "gui/tabs/settings.py"
+    },
+    "settings.k_tab.info": {
+      "text": "**Measured where available, else estimate (default).** Each event is looked up in the bundled measured table by scanner model and tube, using kVp and Cu/Al filtration, with interpolation. If the model or tube has no usable measured data, that event uses the flat value instead, and a warning lists the events.\n\n**Estimate.** One flat value, `k_tab_val` (default 0.8), is used for every event.\n\n**Measured only.** Same lookup as the default, but an event with no usable measured data gets 1.0, which means no table attenuation. A warning is shown.\n\nThe flat value is applied only to skin cells whose beam passes through the table or pad. The measured data cover only a few models, so on other equipment the default behaves like Estimate.",
+      "owner": "gui/tabs/corrections.py"
     }
   }
 }

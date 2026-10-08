@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
+from . import _format as _format
 from . import images as _images
 from . import metrics as _metrics
 from . import sections as _sections
@@ -99,6 +100,13 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         ):
             if col in df.columns:
                 plane_identity_audit[key] = df[col].fillna("unknown").astype(str).tolist()
+        if "acquisition_plane" in df.columns or "acquisition_plane_canonical" in df.columns:
+            # The tube identity the kerma-meter and per-tube steps actually use: the CID
+            # code when present, else the plane meaning text. The three fields above
+            # describe only the coded (CID 10003) identity, which tabular exports lack.
+            from guiskindose.kerma_correction import resolve_correction_keys
+
+            plane_identity_audit["tube"] = [tube for _, tube in resolve_correction_keys(df, explicit_label=None)]
     return ExamSection(
         exam_id=exam_id,
         manufacturer=(_sections.equipment_section(exam_src)["manufacturer"] if exam_src else None),
@@ -119,6 +127,7 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         ),
         warnings=(list(exam_src.extra_warnings) if exam_src else []),
         rotational_handling=view.rotational_handling,
+        tube_summary=view.tube_summary,
     )
 
 
@@ -190,7 +199,7 @@ def _render_images(resolved: _Resolved, source: ExportSource) -> list[ImageEntry
         add("Cumulative dose map (irradiated region)", "dose", None, agg, patient0, _images.CUMULATIVE_DIMS, _images.DORSAL, True)
         if len(views) <= 10:
             for view, exam_id in zip(views, resolved.exam_ids, strict=True):
-                add(f"Exam {exam_id} (irradiated region)", "dose", exam_id, view.dense_dose_map, view.patient,
+                add(f"{_format.exam_heading(exam_id)} (irradiated region)", "dose", exam_id, view.dense_dose_map, view.patient,
                     _images.THUMBNAIL_DIMS, _images.DORSAL, True)
     else:
         eid = resolved.exam_ids[0]

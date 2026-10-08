@@ -168,6 +168,27 @@ def exam_supports_table_origin(exam, meta: dict) -> bool:
     return any(c in cols for c in ("Tx", "Ty", "Tz"))
 
 
+def _drop_stale_unresolved_labels(state: AppState) -> None:
+    """Clear per-exam kerma-meter state when exam positions shifted.
+
+    Unresolved-equipment labels, calibration-period choices, and per-exam manual
+    factors are keyed by exam position ("Exam N"). If the previous exam list is
+    not a prefix of the new one (removal or reorder), an entry could land on the
+    wrong exam, so they are cleared and the dialog asks again. Legacy global
+    ``(equipment, tube)`` entries are kept.
+    """
+    signature = tuple(id(exam) for exam in state.loaded_exams)
+    previous = state.kerma_meter_exam_signature
+    if signature[: len(previous)] != previous:
+        state.kerma_meter_unresolved_labels = {}
+        state.kerma_meter_periods = {}
+        state.kerma_meter_acknowledged = set()
+        state.kerma_meter_periods_acknowledged = set()
+        kept = {k: v for k, v in (state.kerma_meter_in_memory_table or {}).items() if len(k) != 3}
+        state.kerma_meter_in_memory_table = kept or None
+    state.kerma_meter_exam_signature = signature
+
+
 def rebuild_rdsr_df(state: AppState) -> None:
     """Rebuild ``state.rdsr_df`` from all loaded exams' normalized data.
 
@@ -184,6 +205,9 @@ def rebuild_rdsr_df(state: AppState) -> None:
     # composition change, never after a mere offset tweak.
     state.below_floor_prompt_suppressed = False
     state.rotational_prompt_suppressed = False
+    state.kerma_meter_prompt_suppressed = False
+    state.kerma_meter_calc_reprompted = False
+    _drop_stale_unresolved_labels(state)
 
     if not state.loaded_exams:
         state.rdsr_df = None

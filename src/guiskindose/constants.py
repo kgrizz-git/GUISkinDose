@@ -35,7 +35,10 @@ DATA_DS_IRP = "DSIRP"
 
 KEY_PARAM_MODE = "mode"
 KEY_PARAM_RDSR_FILENAME = "rdsr_filename"
-KEY_PARAM_ESTIMATE_K_TAB = "estimate_k_tab"
+KEY_PARAM_ESTIMATE_K_TAB = "estimate_k_tab"  # legacy, read-only (see KEY_PARAM_K_TAB_MODE)
+KEY_PARAM_K_TAB_MODE = "k_tab_mode"
+K_TAB_MODE_DEFAULT = "measured_with_fallback"
+K_TAB_MODES = frozenset({"estimate", "measured_only", "measured_with_fallback"})
 KEY_PARAM_K_TAB_VAL = "k_tab_val"
 KEY_PARAM_PHANTOM_MODEL = "model"
 KEY_PARAM_HUMAN_MESH = "human_mesh"
@@ -248,6 +251,16 @@ OUTPUT_KEY_CORRECTION_TABLE = "k_tab"
 OUTPUT_KEY_CORRECTION_TABLE_STATUSES = "k_tab_statuses"
 OUTPUT_KEY_CORRECTION_KERMA_METER = "k_meter"
 OUTPUT_KEY_DOSE_MAP = "dose_map"
+# Per-tube (single / A / B / unknown) accounting beside the combined dose map.
+# ``tube_identity`` is one tube per event; ``tube_dose_maps`` holds one partial map
+# per tube, allocated only when more than one tube is present; ``tube_summary``
+# lists per-tube kerma, applied CF and partial-map peak. No equipment labels.
+OUTPUT_KEY_TUBE_IDENTITY = "tube_identity"
+OUTPUT_KEY_TUBE_DOSE_MAPS = "tube_dose_maps"
+OUTPUT_KEY_TUBE_SUMMARY = "tube_summary"
+# Per-event source of the applied kerma-meter CF: "manual" / "file" / "default",
+# or "off" when kerma-meter correction is disabled. Sources only, never labels.
+OUTPUT_KEY_KERMA_CF_SOURCES = "kerma_cf_sources"
 OUTPUT_KEY_HITS = "hits"
 # Cells touched by ANY evaluated candidate pose. Equals OUTPUT_KEY_HITS for
 # statically handled events; a superset for rotational coverage envelopes.

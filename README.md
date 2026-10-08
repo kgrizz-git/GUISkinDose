@@ -43,7 +43,8 @@ repository — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 The typical way to use GUISkinDose is the NiceGUI-based graphical interface:
 **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
-**Settings** (phantom, physics, per-exam offsets) → **Geometry** preview →
+**Settings** (phantom, per-exam offsets) → **Corrections** (patient-support
+transmission, kerma-meter factors) → **Geometry** preview →
 **Calculate** → **Results** (PSD, dose map) → **Export** (JSON, dose-map
 HTML/PNG, rich XLSX/PDF/DOCX report).
 

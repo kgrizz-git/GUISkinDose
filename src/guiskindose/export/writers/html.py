@@ -23,6 +23,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExportPayload
 
@@ -98,6 +99,16 @@ def _images(payload: ExportPayload) -> str:
     return "".join(parts)
 
 
+def _tube_blocks(payload: ExportPayload) -> list[str]:
+    """The "Dose by tube" table: one row per exam x tube (empty when no exam qualifies)."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, tube_blocks, tube_report_table
+
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
+        return []
+    return [f"<h2>{_esc(TUBE_SECTION_TITLE)}</h2>", _table(rows), f"<p><em>{_esc(TUBE_NOTE)}</em></p>"]
+
+
 def render_html_bytes(payload: ExportPayload) -> bytes:
     """Render the HTML report to an in-memory bytes payload."""
     m = payload.meta
@@ -124,7 +135,7 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
     body.append("<h2>Correction factors</h2>")
     if payload.is_multi_exam:
         for exam in payload.exams:
-            body.append(f"<details><summary>Exam {_esc(exam.exam_id)}</summary>")
+            body.append(f"<details><summary>{_esc(exam_heading(exam.exam_id))}</summary>")
             body.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections]))
             body.append("</details>")
         body.append("<p>Cumulative (kerma-weighted)</p>")
@@ -132,9 +143,11 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
     if corrections_use_kerma_meter(payload):
         body.append(f"<p><em>{_esc(KERMA_METER_WEIGHTING_FOOTNOTE)}</em></p>")
 
+    body.extend(_tube_blocks(payload))
+
     body.append("<h2>Settings &amp; equipment</h2>")
     for exam in payload.exams:
-        body.append(f"<details><summary>Exam {_esc(exam.exam_id)}</summary>")
+        body.append(f"<details><summary>{_esc(exam_heading(exam.exam_id))}</summary>")
         body.append(_table(_settings_rows(exam)))
         body.append("</details>")
 

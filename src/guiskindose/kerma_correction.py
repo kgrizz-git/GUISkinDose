@@ -33,15 +33,15 @@ from guiskindose.grid_interp import format_event_indices
 
 logger = logging.getLogger(__name__)
 
+# Display sentinel for events with no equipment identity (never a table key).
+UNRESOLVED_EQUIPMENT = "unresolved"
+
 # Suspicious band for CF values — warn but accept.
 _CF_SUSPICIOUS_LO = 0.5
 _CF_SUSPICIOUS_HI = 2.0
 _MAX_TABLE_ROWS = 10_000
 
 _REQUIRED_COLUMNS = frozenset({"equipment", "tube", "correction_factor"})
-_CF_MUST_BE_POSITIVE_FINITE = (
-    "Kerma-meter correction table: correction_factor must be a finite float > 0."
-)
 _TUBE_ALIASES = {
     "single": "single",
     "single plane": "single",
@@ -50,6 +50,8 @@ _TUBE_ALIASES = {
     "b": "B",
     "plane b": "B",
 }
+
+
 @dataclass(frozen=True)
 class KermaMeterCorrection:
     """Resolved per-event kerma-meter correction factors."""
@@ -130,10 +132,22 @@ def resolve_correction_keys(
     data_norm: pd.DataFrame,
     *,
     explicit_label: str | None,
+    fallback_label: str | None = None,
 ) -> list[tuple[str | None, str]]:
     """Resolve ``(equipment_label, tube)`` per event using fixed precedence.
 
-    Order: explicit_label → device_serial → station_name → unresolved (None).
+    Order: explicit_label → device_serial → station_name → fallback_label →
+    unresolved (None).
+
+    Parameters
+    ----------
+    data_norm : pd.DataFrame
+        Normalized events of one exam.
+    explicit_label : str | None
+        Forces every event to this label (wins over everything).
+    fallback_label : str | None
+        Per-exam identity override. Used only for events whose serial and station
+        are both missing, so it never replaces a detected identity.
 
     Tube identity prefers ``acquisition_plane_canonical`` when it is a recognized
     CID-backed value (``single`` / ``A`` / ``B``); otherwise falls back to
@@ -162,6 +176,7 @@ def resolve_correction_keys(
     )
 
     forced = normalize_equipment_label(explicit_label)
+    fallback = normalize_equipment_label(fallback_label)
     keys: list[tuple[str | None, str]] = []
     for i in range(n):
         tube = TUBE_IDENTITY_UNKNOWN
@@ -177,7 +192,7 @@ def resolve_correction_keys(
         equip = normalize_equipment_label(serial_col.iloc[i] if i < len(serial_col) else None)
         if equip is None:
             equip = normalize_equipment_label(station_col.iloc[i] if i < len(station_col) else None)
-        keys.append((equip, tube))
+        keys.append((equip if equip is not None else fallback, tube))
     return keys
 
 
@@ -191,17 +206,64 @@ def unique_equipment_tube_keys(
     frames: Sequence[pd.DataFrame],
     *,
     explicit_label: str | None = None,
+    exam_labels: Sequence[str] | None = None,
+    unresolved_labels: Mapping[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     """Sorted unique ``(equipment, tube)`` pairs across frames for prompt/UI.
 
     Uses the same precedence as dose resolution (``explicit_label`` → serial →
-    station). Unresolved equipment becomes the sentinel ``\"unresolved\"``.
+    station → per-exam override). The sentinel ``"unresolved"`` appears only for
+    events that are still unresolved after overrides.
+
+    Parameters
+    ----------
+    frames : Sequence[pd.DataFrame]
+        One normalized frame per exam.
+    explicit_label : str | None
+        Run-wide forced label.
+    exam_labels : Sequence[str] | None
+        Opaque exam label (``"Exam N"``) per frame, parallel to *frames*.
+    unresolved_labels : Mapping[str, str] | None
+        Per-exam identity overrides keyed by opaque exam label.
     """
     keys: set[tuple[str, str]] = set()
-    for df in frames:
-        for equip, tube in resolve_correction_keys(df, explicit_label=explicit_label):
-            keys.add((equip or "unresolved", tube))
+    for i, df in enumerate(frames):
+        label = unresolved_labels.get(exam_labels[i]) if unresolved_labels and exam_labels else None
+        for equip, tube in resolve_correction_keys(df, explicit_label=explicit_label, fallback_label=label):
+            keys.add((equip or UNRESOLVED_EQUIPMENT, tube))
     return sorted(keys)
+
+
+def missing_keys(
+    detected: Sequence[tuple[str, str]],
+    table: Mapping[tuple[str, str], float] | None,
+) -> list[tuple[str, str]]:
+    """Detected ``(equipment, tube)`` pairs that the table cannot supply a factor for.
+
+    A pair is missing when it is absent from *table* (or no table exists). Pairs
+    whose equipment is the ``"unresolved"`` sentinel or whose tube is ``unknown``
+    are always missing: the engine never consults the table for them.
+
+    Parameters
+    ----------
+    detected : Sequence[tuple[str, str]]
+        Pairs from :func:`unique_equipment_tube_keys`.
+    table : Mapping[tuple[str, str], float] | None
+        Merged manual + file table (see :func:`merge_tables`).
+
+    Returns
+    -------
+    list[tuple[str, str]]
+        Missing pairs, sorted and de-duplicated.
+    """
+    lookup = table or {}
+    return sorted(
+        {
+            (equip, tube)
+            for equip, tube in detected
+            if equip == UNRESOLVED_EQUIPMENT or tube == TUBE_IDENTITY_UNKNOWN or (equip, tube) not in lookup
+        }
+    )
 
 
 def _warn_suspicious_factor(factor: float) -> None:
@@ -232,6 +294,8 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
         "acquisitionplane": "tube",
         "plane": "tube",
         "correction_factor": "correction_factor",
+        "valid_from": "valid_from",
+        "valid_to": "valid_to",
         "cf": "correction_factor",
         "factor": "correction_factor",
         "notes": "notes",
@@ -247,40 +311,14 @@ def _normalize_table_columns(df: pd.DataFrame) -> pd.DataFrame:
 def _rows_to_factor_dict(
     rows: Sequence[Mapping[str, Any]],
 ) -> dict[tuple[str, str], float]:
-    """Build a first-wins ``(equipment, tube) → CF`` map from normalized row dicts."""
-    table: dict[tuple[str, str], float] = {}
-    duplicates = 0
-    for row in rows:
-        equip = normalize_equipment_label(row.get("equipment"))
-        tube = normalize_tube(row.get("tube"))
-        raw_cf = row.get("correction_factor")
-        if equip is None:
-            raise ValueError("Kerma-meter correction table: equipment column has an empty value.")
-        if tube == TUBE_IDENTITY_UNKNOWN:
-            raise ValueError(
-                "Kerma-meter correction table: tube column has an empty or unrecognized value."
-            )
-        if raw_cf is None:
-            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
-        try:
-            factor = float(raw_cf)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE) from exc
-        if not math.isfinite(factor) or factor <= 0:
-            raise ValueError(_CF_MUST_BE_POSITIVE_FINITE)
-        key = (equip, tube)
-        if key in table:
-            duplicates += 1
-            continue
-        table[key] = factor
-        _warn_suspicious_factor(factor)
-    if duplicates:
-        logger.warning(
-            "kerma-meter correction: %d duplicate (equipment, tube) row(s); first wins.",
-            duplicates,
-        )
-    logger.debug("kerma-meter correction table loaded (%d rows)", len(table))
-    return table
+    """Build a first-wins ``(equipment, tube) → CF`` map from normalized row dicts.
+
+    Dated rows resolve to the current (no ``valid_to``) or most recent period; use
+    :func:`load_correction_periods` to choose a period explicitly.
+    """
+    from guiskindose.kerma_periods import resolve_period_table, rows_to_periods
+
+    return resolve_period_table(rows_to_periods(rows))
 
 
 def _ensure_row_budget(n_rows: int) -> None:
@@ -312,17 +350,12 @@ def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataF
         try:
             df = pd.read_excel(path, sheet_name=sheet_arg, dtype=str)
         except ValueError as exc:
-            raise ValueError(
-                f"Kerma-meter correction XLSX sheet {sheet_arg!r} could not be read."
-            ) from exc
+            raise ValueError(f"Kerma-meter correction XLSX sheet {sheet_arg!r} could not be read.") from exc
     elif suffix in {".csv", ".tsv"}:
         sep = "\t" if suffix == ".tsv" else ","
         df = pd.read_csv(path, sep=sep, dtype=str, encoding="utf-8-sig")
     else:
-        raise ValueError(
-            f"Unsupported kerma-meter correction file type {suffix!r}; "
-            "use .csv, .tsv, .xlsx, or .json."
-        )
+        raise ValueError(f"Unsupported kerma-meter correction file type {suffix!r}; use .csv, .tsv, .xlsx, or .json.")
 
     if df.empty:
         raise ValueError("Kerma-meter correction table is empty (no data rows).")
@@ -331,29 +364,191 @@ def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataF
     df = _normalize_table_columns(df)
     missing = _REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise ValueError(
-            f"Kerma-meter correction table missing required column(s): {sorted(missing)}."
-        )
+        raise ValueError(f"Kerma-meter correction table missing required column(s): {sorted(missing)}.")
     return df
+
+
+def _read_correction_rows(path: Path | str, sheet: str | int | None) -> Sequence[Mapping[str, Any]]:
+    """Read the raw row dicts of a CF file (CSV/TSV/XLSX/JSON) after basic file checks."""
+    path = Path(path)
+    if not path.is_file():
+        raise ValueError("Kerma-meter correction file not found or not a regular file.")
+    if path.suffix.lower() == ".json":
+        return _load_json_correction_rows(path)
+    return cast(
+        list[dict[str, Any]],
+        _load_tabular_correction_df(path, sheet).to_dict(orient="records"),
+    )
+
+
+def load_correction_periods(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], list[Any]]:
+    """Load a CF file keeping every calibration period (``valid_from`` / ``valid_to``).
+
+    Returns ``(equipment, tube) -> list[CalibrationRow]``. Raises ValueError on a
+    missing file, empty data, oversized tables, invalid values, or overlapping
+    periods for one pair.
+    """
+    from guiskindose.kerma_periods import rows_to_periods
+
+    return rows_to_periods(_read_correction_rows(path, sheet))
 
 
 def load_correction_table(path: Path | str, sheet: str | int | None = None) -> dict[tuple[str, str], float]:
     """Load a CF lookup table from CSV/TSV/XLSX/JSON.
 
+    Rows without dates behave as one open-ended calibration. For dated rows the
+    current (no ``valid_to``) or most recent period is used; see
+    :func:`load_correction_periods` to pick another.
+
     Raises ValueError on missing file, empty data, oversized tables, or invalid values.
     """
-    path = Path(path)
-    if not path.is_file():
-        raise ValueError("Kerma-meter correction file not found or not a regular file.")
+    return _rows_to_factor_dict(_read_correction_rows(path, sheet))
 
-    if path.suffix.lower() == ".json":
-        rows: Sequence[Mapping[str, Any]] = _load_json_correction_rows(path)
-    else:
-        rows = cast(
-            list[dict[str, Any]],
-            _load_tabular_correction_df(path, sheet).to_dict(orient="records"),
-        )
-    return _rows_to_factor_dict(rows)
+
+def _exam_number(label: str) -> int | None:
+    """Zero-based index of an opaque ``Exam N`` label, or ``None`` for any other label."""
+    from guiskindose.privacy import opaque_exam_index
+
+    try:
+        return opaque_exam_index(label)
+    except ValueError:
+        return None
+
+
+def effective_period(periods: Mapping[str, str] | None, exam: str) -> str | None:
+    """Calibration-period key in effect for *exam*.
+
+    Only explicit choices are stored, so a follower never goes stale when an
+    earlier exam changes. An exam without its own choice follows the nearest
+    earlier exam that has one.
+
+    Parameters
+    ----------
+    periods : Mapping[str, str] | None
+        Explicit per-exam choices, ``{"Exam N": "<from>|<to>"}``.
+    exam : str
+        Opaque exam label.
+
+    Returns
+    -------
+    str | None
+        The period key, or ``None`` for the engine default (each pair's current or
+        most recent calibration row).
+    """
+    if not periods:
+        return None
+    if exam in periods:
+        return periods[exam]
+    index = _exam_number(exam)
+    if index is None:
+        return None
+    earlier = [(n, key) for label, key in periods.items() if (n := _exam_number(label)) is not None and n < index]
+    return max(earlier)[1] if earlier else None
+
+
+def _previous_exam(exam: str) -> str | None:
+    """Label of the exam immediately before *exam* (``Exam N`` -> ``Exam N-1``), or ``None``."""
+    from guiskindose.privacy import opaque_exam_label
+
+    index = _exam_number(exam)
+    return opaque_exam_label(index - 1) if index else None
+
+
+def resolve_manual(
+    table: Mapping[tuple[str, ...], float | None],
+    periods: Mapping[str, str] | None,
+    exam: str,
+    pair: tuple[str, str],
+) -> tuple[float | None, str | None] | None:
+    """The single rule for a manual factor of one exam and pair, shared by the dialog and the engine.
+
+    Order: an entry for the exam itself, then a legacy ``(equipment, tube)`` entry
+    (applies to every exam), then *follow*: the exam immediately before takes
+    precedence only while its effective calibration period equals this exam's, and
+    its own manual-or-followed value is used. Otherwise ``None``, and the caller
+    resolves the factor from the calibration file or the default.
+
+    Why the period check: an old-period value must not silently apply to an exam
+    that uses a newer calibration, and a different-period exam in between is not
+    skipped over (old, new, old does not carry the first value to the third exam).
+    The dialog and the engine both call this function, so what the dialog shows is
+    what the calculation applies.
+
+    Parameters
+    ----------
+    table : Mapping[tuple[str, ...], float | None]
+        Manual entries keyed ``(exam, equipment, tube)`` or legacy ``(equipment, tube)``.
+        A ``None`` value is an explicit but blank entry (the dialog's unsaved edit).
+    periods : Mapping[str, str] | None
+        Explicit calibration-period choices (see :func:`effective_period`).
+    exam : str
+        Opaque exam label.
+    pair : tuple[str, str]
+        ``(equipment, tube)``.
+
+    Returns
+    -------
+    tuple[float | None, str | None] | None
+        ``(value, followed exam label)``; the label is ``None`` for an explicit entry.
+    """
+    own = (exam, *pair)
+    if own in table:
+        return table[own], None
+    if pair in table:
+        return table[pair], None
+    previous = _previous_exam(exam)
+    if previous is not None and effective_period(periods, previous) == effective_period(periods, exam):
+        resolved = resolve_manual(table, periods, previous, pair)
+        if resolved is not None:
+            return resolved[0], previous
+    return None
+
+
+def manual_for_exam(
+    table: Mapping[tuple[str, ...], float] | None,
+    exam: str,
+    *,
+    periods: Mapping[str, str] | None = None,
+    follow: bool = True,
+) -> dict[tuple[str, str], float]:
+    """Manual entries that apply to one exam, resolved with :func:`resolve_manual`.
+
+    Entries are keyed ``(exam label, equipment, tube)``; a legacy two-part key
+    applies to every exam. With ``follow`` (default) a pair with no entry for this
+    exam takes the immediately preceding exam's value while both use the same
+    calibration period, so "follows Exam N" survives without copying values.
+    This is the engine-side view of :func:`resolve_manual`.
+
+    Parameters
+    ----------
+    table : Mapping[tuple[str, ...], float] | None
+        The manual table (explicit entries only).
+    exam : str
+        Opaque exam label.
+    periods : Mapping[str, str] | None
+        Explicit per-exam calibration-period choices.
+    follow : bool
+        When ``False`` only the exam's own and the legacy entries are returned.
+
+    Returns
+    -------
+    dict[tuple[str, str], float]
+        ``{(equipment, tube): factor}`` for pairs with a usable (non-blank) value.
+    """
+    if not table:
+        return {}
+    pairs = {(k[-2], k[-1]) for k in table}
+    out: dict[tuple[str, str], float] = {}
+    for pair in pairs:
+        if follow:
+            resolved = resolve_manual(table, periods, exam, pair)
+        elif (exam, *pair) in table or pair in table:
+            resolved = (table.get((exam, *pair), table.get(pair)), None)
+        else:
+            resolved = None
+        if resolved is not None and resolved[0] is not None:
+            out[pair] = float(resolved[0])
+    return out
 
 
 def merge_tables(
@@ -394,8 +589,7 @@ def _lookup_correction(
         value = float("nan")
     if not math.isfinite(value) or value <= 0:
         logger.warning(
-            "kerma-meter correction: invalid factor for event index %d; "
-            "using default_factor=%.4g.",
+            "kerma-meter correction: invalid factor for event index %d; using default_factor=%.4g.",
             index,
             default_factor,
         )
@@ -431,8 +625,7 @@ def _log_kerma_warnings(
         )
     if table is None and n:
         logger.warning(
-            "kerma-meter correction: enabled but no table supplied; "
-            "using default_factor=%.4g for all %d event(s).",
+            "kerma-meter correction: enabled but no table supplied; using default_factor=%.4g for all %d event(s).",
             default_factor,
             n,
         )
@@ -445,15 +638,19 @@ def resolve_correction_factors(
     explicit_label: str | None = None,
     default_factor: float = 1.0,
     table_metadata: dict[str, Any] | None = None,
+    fallback_label: str | None = None,
 ) -> KermaMeterCorrection:
     """Resolve per-event CF list from keys + lookup table.
 
     Absent table or missing key → ``default_factor``. Never mutates ``data_norm``.
+    ``fallback_label`` is the per-exam identity override for events with no
+    serial/station; those events then reach the table instead of the
+    unresolved branch (see :func:`resolve_correction_keys`).
     """
     if not math.isfinite(default_factor) or default_factor <= 0:
         raise ValueError("default_factor must be a finite float > 0.")
 
-    keys = resolve_correction_keys(data_norm, explicit_label=explicit_label)
+    keys = resolve_correction_keys(data_norm, explicit_label=explicit_label, fallback_label=fallback_label)
     lookup = table or {}
     unresolved: list[int] = []
     table_miss: list[int] = []

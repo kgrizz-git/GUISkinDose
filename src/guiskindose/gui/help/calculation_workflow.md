@@ -38,3 +38,4 @@ Rotational handling section for the per-event handling ledger.
 1. Use the Geometry tab to check a few representative events.
 2. Confirm any warning banners about fallback normalization, manual swaps, or axis flips.
 3. In multi-exam mode, make sure the selected exam's offsets are intentional; Calculate uses every exam's own stored offsets and table-origin settings.
+4. In the Corrections tab, check the patient-support transmission mode. The default uses the measured table where it has data for the scanner model and tube, and the flat `k_tab_val` (default 0.8) elsewhere. Click the info icon for the three modes. The Calculate card lists how each event was resolved.

@@ -221,13 +221,19 @@ def check_duplicate_mappings(column_map: dict[str, str]) -> list[str]:
     return errors
 
 
-def unmapped_columns_warning(headers: list[str], column_map: dict[str, str]) -> str | None:
+def unmapped_columns_warning(
+    headers: list[str],
+    column_map: dict[str, str],
+    consumed: frozenset[str] | set[str] = frozenset(),
+) -> str | None:
     """Return a warning string if any source columns could not be mapped, else None.
 
     This is informational — unmapped columns are not an error unless they contain
     a required variable.  The caller is responsible for the required-column check.
+    Headers in *consumed* are used by an adapter step outside the column map (for
+    example the Radimetrics per-plane split), so they are not reported as ignored.
     """
-    unmapped = [h for h in headers if h not in column_map]
+    unmapped = [h for h in headers if h not in column_map and h not in consumed]
     if not unmapped:
         return None
     return (

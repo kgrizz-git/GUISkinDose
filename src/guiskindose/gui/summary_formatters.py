@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from .state import AppState
 
 _C6_MULTI_EXAM_PHANTOM = (
@@ -62,3 +64,43 @@ def format_scale_cm_label(scale_factor: float, baseline_cm: float) -> str:
 def multi_exam_phantom_offset_caption() -> str:
     """Settings Phantom expansion caption when global spinboxes are hidden (C6)."""
     return _C6_MULTI_EXAM_PHANTOM
+
+
+def format_tube_summary(blocks: Sequence[tuple[str | None, list[dict] | None]]) -> str:
+    """Multi-line "dose by tube" text for the Results tab; empty when not worth showing.
+
+    Parameters
+    ----------
+    blocks : list[tuple[str | None, list[dict] | None]]
+        ``(exam label or None, tube summary rows)`` per exam. Exams whose summary is a
+        lone single-plane tube are skipped, since they repeat the headline numbers.
+
+    Returns
+    -------
+    str
+        One line per tube plus a closing note that per-tube peaks do not sum to the
+        peak skin dose. No equipment labels appear.
+    """
+    from guiskindose.export.sections import (
+        TUBE_NOTE,
+        has_tube_content,
+        tube_cf_text,
+        tube_row_cells,
+        tube_source_text,
+    )
+
+    lines: list[str] = []
+    for label, summary in blocks:
+        if not has_tube_content(summary):
+            continue
+        prefix = f"{label}: " if label else ""
+        for row in summary or []:
+            tube, _events, reported, corrected, _cf, _source, peak = tube_row_cells(row)
+            cf_text = tube_cf_text(row)
+            source = "" if cf_text == tube_source_text(row) else f" ({tube_source_text(row)})"
+            lines.append(
+                f"{prefix}{tube}: reported {reported} mGy, corrected {corrected} mGy, CF {cf_text}{source}, peak {peak} mGy"
+            )
+    if not lines:
+        return ""
+    return "\n".join(["Dose by tube", *lines, TUBE_NOTE])

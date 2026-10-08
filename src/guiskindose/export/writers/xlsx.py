@@ -31,6 +31,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExamSection, ExportPayload
 
@@ -182,7 +183,7 @@ def _settings_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r = 1
     for exam in payload.exams:
         if payload.is_multi_exam:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- {exam_heading(exam.exam_id)} ---")).font = _BOLD
             r += 1
         r = _write_rows(ws, _settings_block(exam), start_row=r, header=True)
         r += 1
@@ -196,7 +197,7 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
     r = 1
     if payload.is_multi_exam:
         for exam in payload.exams:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {exam.exam_id} ---")).font = _BOLD
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- {exam_heading(exam.exam_id)} ---")).font = _BOLD
             r += 1
             rows = [CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections]
             r = _write_rows(ws, rows, start_row=r, header=True)
@@ -209,6 +210,21 @@ def _corrections_sheet(wb: Workbook, payload: ExportPayload) -> None:
         r += 1
         ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(KERMA_METER_WEIGHTING_FOOTNOTE))
     _autofit(ws)
+
+
+def _tube_sheet(wb: Workbook, payload: ExportPayload) -> bool:
+    """Populate the "Dose by tube" sheet (one row per exam x tube); False when nothing qualifies."""
+    from guiskindose.export.sections import TUBE_NOTE, tube_blocks, tube_report_table
+
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
+        return False
+    ws = _new_sheet(wb, "Dose by tube")
+    ws.sheet_view.showGridLines = True
+    r = _write_rows(ws, rows, start_row=1, header=True)
+    ws.cell(row=r + 1, column=1, value=neutralize_spreadsheet_value(TUBE_NOTE)).alignment = _WRAP
+    _autofit(ws)
+    return True
 
 
 def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
@@ -231,7 +247,7 @@ def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
     r = 1
     for label, handling in blocks:
         if label is not None:
-            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- Exam {label} ---")).font = _BOLD
+            ws.cell(row=r, column=1, value=neutralize_spreadsheet_value(f"--- {exam_heading(label)} ---")).font = _BOLD
             r += 1
         paragraph = rotational_methodology_paragraph(handling)
         if paragraph:
@@ -294,6 +310,7 @@ def build_workbook(payload: ExportPayload) -> Workbook:
     _results_sheet(wb, payload)
     _settings_sheet(wb, payload)
     _corrections_sheet(wb, payload)
+    _tube_sheet(wb, payload)
     _rotational_sheet(wb, payload)
     _warnings_sheet(wb, payload)
     _images_sheet(wb, payload)

@@ -8,7 +8,7 @@ from .models import CorrectionStat, DosimetricMetrics, ExamSection, ExportPayloa
 
 # Executive-alert palette (shared by XLSX/PDF/HTML).
 COLOR_WARNING = "FFF3CD"  # amber — warnings
-COLOR_ERROR = "F8D7DA"    # amber-red — data loss / skips / beam misses
+COLOR_ERROR = "F8D7DA"  # amber-red — data loss / skips / beam misses
 
 # Human-readable correction factor names.
 CORRECTION_LABELS = {
@@ -20,8 +20,7 @@ CORRECTION_LABELS = {
 }
 
 KERMA_METER_WEIGHTING_FOOTNOTE = (
-    "Dose-weighted means use kerma-meter-corrected K_IRP when a correction "
-    "table/prompt was applied."
+    "Dose-weighted means use kerma-meter-corrected K_IRP when a correction table/prompt was applied."
 )
 
 
@@ -31,6 +30,7 @@ def corrections_use_kerma_meter(payload: ExportPayload) -> bool:
         if any(s.key == "k_meter" for s in exam.corrections):
             return True
     return any(s.key == "k_meter" for s in payload.cumulative.corrections)
+
 
 # Patient-offset field → clear anatomical direction. The offset fields carry the
 # axis in their name: d_lon = longitudinal (superior-inferior), d_ver = vertical
@@ -114,9 +114,10 @@ def audit_setting_rows(exam: ExamSection) -> list[list[str]]:
     """Settings rows for plane-identity audit and k_tab status counts."""
     rows: list[list[str]] = []
     for key, label in (
-        ("source_kind", "Plane identity (source kind)"),
-        ("resolution", "Plane identity (resolution)"),
-        ("canonical", "Plane identity (canonical)"),
+        ("tube", "Tube identity used (A / B / single)"),
+        ("source_kind", "Plane code source (CID 10003)"),
+        ("resolution", "Plane code resolution (CID 10003)"),
+        ("canonical", "Plane code canonical (CID 10003)"),
     ):
         values = exam.plane_identity_audit.get(key) or []
         if values:
@@ -161,3 +162,23 @@ def collect_alert_lines(payload: ExportPayload) -> list[tuple[str, str]]:
     if not lines:
         lines.append(("No warnings, discarded events, or QA alerts.", "ok"))
     return lines
+
+
+def exam_heading(exam_id: str) -> str:
+    """Heading text for an exam: ``Exam 1`` stays ``Exam 1``; other ids become ``Exam <id>``.
+
+    Multi-exam ids are already opaque ``Exam N`` labels, so a blind ``"Exam " + id``
+    prefix printed ``Exam Exam 1``.
+
+    Parameters
+    ----------
+    exam_id : str
+        Exam identifier or opaque label.
+
+    Returns
+    -------
+    str
+        Heading text with exactly one ``Exam`` prefix.
+    """
+    text = str(exam_id).strip()
+    return text if text == "Exam" or text.startswith("Exam ") else f"Exam {text}"

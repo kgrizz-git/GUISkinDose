@@ -40,6 +40,7 @@ from .._format import (
     correction_row,
     corrections_use_kerma_meter,
     dosimetric_rows,
+    exam_heading,
 )
 from ..models import ExamSection, ExportPayload
 
@@ -155,7 +156,7 @@ def _settings_flow(exam: ExamSection, multi: bool) -> list:
     rows.extend(audit_setting_rows(exam))
     flow: list[Any] = []
     if multi:
-        flow.append(Paragraph(f"Exam {exam.exam_id}", _H2))
+        flow.append(Paragraph(_escape(exam_heading(exam.exam_id)), _H2))
     flow.append(_table(rows, [_CONTENT_WIDTH * 0.5, _CONTENT_WIDTH * 0.5]))
     flow.append(Spacer(1, 8))
     return flow
@@ -167,7 +168,7 @@ def _corrections_flow(payload: ExportPayload) -> list:
     widths = [_CONTENT_WIDTH * 0.36] + [_CONTENT_WIDTH * 0.16] * 4
     if payload.is_multi_exam:
         for exam in payload.exams:
-            flow.append(Paragraph(f"Exam {exam.exam_id}", _BODY))
+            flow.append(Paragraph(_escape(exam_heading(exam.exam_id)), _BODY))
             flow.append(_table([CORRECTION_HEADER] + [correction_row(s) for s in exam.corrections], widths))
             flow.append(Spacer(1, 4))
         flow.append(Paragraph("Cumulative (kerma-weighted)", _BODY))
@@ -175,6 +176,18 @@ def _corrections_flow(payload: ExportPayload) -> list:
     if corrections_use_kerma_meter(payload):
         flow.append(Paragraph(KERMA_METER_WEIGHTING_FOOTNOTE, _BODY))
     return flow
+
+
+def _tube_flow(payload: ExportPayload) -> list:
+    """Build the "Dose by tube" flowables (one row per exam x tube; empty when nothing qualifies)."""
+    from guiskindose.export.sections import TUBE_NOTE, TUBE_SECTION_TITLE, tube_blocks, tube_report_table
+
+    rows = tube_report_table(tube_blocks(payload))
+    if len(rows) < 2:
+        return []
+    n_cols = len(rows[0])
+    widths = [_CONTENT_WIDTH / n_cols] * n_cols
+    return [Spacer(1, 8), Paragraph(TUBE_SECTION_TITLE, _H2), _table(rows, widths), Spacer(1, 4), Paragraph(TUBE_NOTE, _BODY)]
 
 
 def _images_flow(payload: ExportPayload) -> list:
@@ -218,6 +231,7 @@ def _story(payload: ExportPayload) -> list:
     story.append(PageBreak())
 
     story += _corrections_flow(payload)
+    story += _tube_flow(payload)
     if payload.images:
         story.append(PageBreak())
         story += _images_flow(payload)

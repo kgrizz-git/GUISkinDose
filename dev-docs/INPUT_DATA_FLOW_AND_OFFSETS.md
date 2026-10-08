@@ -18,6 +18,60 @@ Tabular exports (`.csv`, `.tsv`, `.xlsx`) are additionally supported via `input_
 > documented in
 > [INPUT_SCHEMA_DETECTION.md → Unit handling](INPUT_SCHEMA_DETECTION.md#unit-handling).
 
+## 1a. Tube identity (plane A / B) in tabular adapters
+
+Every adapter must keep the X-ray tube of each event distinguishable, because kerma-meter correction factors are
+keyed by `(equipment, tube)`. Tube identity is resolved from `acquisition_plane_canonical` (a DICOM CID 10003 code)
+first, then from the `acquisition_plane` meaning text (`Single Plane` / `Plane A` / `Plane B`), and is otherwise
+`unknown`. See the per-adapter audit in
+[plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md#phase-0-audit-tube-identity-per-adapter).
+
+**Radimetrics biplane split.** Real Radimetrics exports seen so far put each event on one plane: in the older export
+exactly one of `Reference_Point_Dose_(A)_mGy` / `(B)_mGy` is filled and equals the total (rows alternate between A and
+B), and in the newer export plane B is empty with A equal to `Reference Point Dose (Total) mGy`. Such a row becomes one
+event on its plane with its kerma unchanged, and a file with plane B empty everywhere is not treated as biplane. The
+case below, where both plane cells are filled on one row and add up to the total, is defensive handling only and has not
+been seen in a real export. The rest of this paragraph describes it. A both-filled export lists one row per event with
+the whole-event `Reference Point Dose (Total)` plus per-plane `Reference Point Dose (A)` / `(B)` columns (the older
+export spells them `Reference_Point_Dose_(A)_mGy` / `(B)`). The adapter (`input_adapters/radimetrics.py::split_biplane_events`) treats the
+file as biplane only when both per-plane columns exist and at least one row has non-zero plane B kerma (a file whose
+plane B column is all zero or empty stays single-plane). Each such row is then *replaced* by a `Plane A` event and a
+`Plane B` event; a plane with zero or empty kerma emits no event, so an A-only row becomes one Plane A event and a B-only
+row one Plane B event. Kerma is
+rescaled to the exported total, so A + B equals the original total and the total is never added on top. Per-plane
+`DAP (A)` / `(B)` columns are used when present; otherwise the total DAP is shared in proportion to kerma. Fluoro time
+stays on the first emitted event of a row so procedure totals are not double counted. Rows whose per-plane kerma is
+missing or differs from the total by more than 1 % stay as a single total row. It keeps a valid plane code from the export (`Plane A` / `Plane B` / `Single Plane`); with no
+valid code its plane is `unknown`. The warning reports how many split events replaced a plane code present in the export. Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
+both planes of a row.
+
+**Radimetrics plane code and per-plane cells.** The plane-code column may be headed `Acquisition Plane Code`,
+`Acquisition PlaneCode`, or `Acquisition Plane`; all map to `AcquisitionPlane`. For the per-plane dose cells, a blank cell
+beside a value on the other plane means no dose on that plane and counts as 0. A non-blank cell that is not a number
+(for example `n/a`) stays missing, so the row is not split. A row with both cells blank also stays missing. The
+per-plane dose and DAP columns are reported as ignored by the import warning unless the split would run, which is the
+same evidence rule the split uses (`radimetrics.py::_plane_kerma_with_evidence`, `consumed_split_columns`).
+
+**Kerma-meter manual factors across exams.** A manual factor for an exam and pair is the exam's own entry, then a legacy
+`(equipment, tube)` entry, then the immediately preceding exam's value while both exams have the same effective
+calibration period. Otherwise the factor comes from the calibration file and then the default. One function,
+`kerma_correction.resolve_manual`, serves both the dialog and the engine. The GUI stores the period it displayed for the
+first exam on Confirm, so the engine applies what the dialog showed.
+
+**Example calibration file.** A fictional starter file ships as package data in
+`src/guiskindose/example_data/kerma_meter/` (`calibration_factors_example.csv` plus a column-by-column `README.md`);
+`guiskindose.get_path_to_example_kerma_meter_file()` returns its path, and Settings offers it as a download.
+
+**Kerma-meter calibration file periods.** The calibration file (`equipment`, `tube`, `correction_factor`) may add
+optional `valid_from` / `valid_to` ISO-date columns (either blank for an open end). Rows without dates behave as one
+open-ended calibration. Overlapping periods for the same unit and tube are a load error (`kerma_periods.py`). Dates are
+never read from exam data (PHI): the period of each exam is chosen in the GUI dialog or with
+`--kerma-meter-calibration-date`; otherwise the current (no `valid_to`) or most recent period applies.
+
+**Missing plane column.** When a Radimetrics file has no plane column and no per-plane evidence, every event still
+defaults to `Single Plane` (unchanged behaviour). When the file has per-plane evidence but no plane column, the split
+assigns `Plane A` / `Plane B` itself and unsplittable rows get `unknown`, never `Single Plane`.
+
 ## 2. Normalization Settings
 
 Different X-ray manufacturers define their reference coordinates differently. `rdsr_normalizer.py` uses `normalization_settings.json` to map these to GUISkinDose's standardized coordinate system. It matches the RDSR's `Manufacturer` and `ManufacturerModelName` to apply:

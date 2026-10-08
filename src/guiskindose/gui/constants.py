@@ -8,7 +8,7 @@ imports the tab modules), avoiding a circular import.
 
 from __future__ import annotations
 
-from .helpers import get_example_rdsr_files, get_human_mesh_options
+from .helpers import get_example_rdsr_files, get_example_tabular_files, get_human_mesh_options
 
 HUMAN_MESHES = get_human_mesh_options()
 
@@ -22,6 +22,15 @@ EXAMPLE_FILES = {
         key=lambda p: (p.name == "fake_scanner.dcm", p.name),
     )
 }
+# Readable drop-down labels for the bundled synthetic tabular examples (filename -> label).
+_TABULAR_EXAMPLE_LABELS = {
+    "radimetrics_example_older_export_biplane.csv": "Radimetrics (older export, biplane)",
+    "radimetrics_example_newer_export_single_tube.csv": "Radimetrics (newer export, single tube)",
+}
+TABULAR_EXAMPLE_FILES = {p.name: p for p in get_example_tabular_files()}
+EXAMPLE_FILES.update(TABULAR_EXAMPLE_FILES)
+# Drop-down options: key (filename) -> label. RDSR examples show their filename.
+EXAMPLE_OPTIONS = {name: _TABULAR_EXAMPLE_LABELS.get(name, name) for name in EXAMPLE_FILES}
 COLORSCALES = ["jet", "viridis", "plasma", "inferno", "magma", "turbo", "hot"]
 PHANTOM_MODELS = ["human", "cylinder", "plane"]
 ORIENTATIONS = ["head_first_supine", "feet_first_supine"]

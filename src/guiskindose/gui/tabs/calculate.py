@@ -18,9 +18,16 @@ from ..helpers import below_floor_event_count, format_input_scanner_label, run_c
 from ..page_context import PageContext
 from ..state import state
 from ..summary_formatters import format_patient_offsets
+from ._kerma_meter_dialog import labelled_frames, prompt_at_calculate
 from .settings import BELOW_FLOOR_KVP_OPTIONS, _format_table_offset_line
 
 _MAX_TOASTS: int = 5
+# Short Calculate-card labels for the patient-support transmission modes.
+_K_TAB_MODE_SUMMARY = {
+    "measured_with_fallback": "Measured, fallback to estimate",
+    "estimate": "Estimated",
+    "measured_only": "Measured only",
+}
 _SUMMARY_LABEL_CLASSES = "text-grey-5 font-normal text-[11px] uppercase tracking-tighter"
 _SUMMARY_VALUE_CLASSES = "font-bold text-[13px]"
 _SUMMARY_ROW_CLASSES = "items-baseline gap-2"
@@ -28,6 +35,7 @@ _DIALOG_TITLE_CLASSES = "text-lg font-bold"
 _DIALOG_BODY_CLASSES = "text-sm text-grey-7"
 _DIALOG_ACTIONS_CLASSES = "w-full justify-end gap-2"
 _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
+
 
 # Cache for pre-calc ``calculate_k_tab`` dry-runs. ``bind_text_from`` can refresh
 # the summary label many times; without a cache each refresh re-reads the
@@ -43,6 +51,7 @@ class _KTabPreviewCache:
 
 
 _preview_cache = _KTabPreviewCache()
+
 
 # Cache for plane-identity audit text (same bind_text_from refresh pressure).
 @dataclass
@@ -115,7 +124,7 @@ def _preview_fingerprint(frames: list) -> tuple:
     """
     return (
         state.is_multi_exam,
-        state.estimate_k_tab,
+        state.k_tab_mode,
         float(state.k_tab_val) if state.k_tab_val is not None else None,
         state.calc_run_id,
         state.input_revision,
@@ -161,7 +170,7 @@ def _preview_k_tab_statuses() -> list[str] | None:
             result = calculate_k_tab(
                 data_norm=frame,
                 corrections_db=settings.corrections_db_path,
-                estimate_k_tab=state.estimate_k_tab,
+                k_tab_mode=state.k_tab_mode,
                 k_tab_val=state.k_tab_val,
                 emit_warnings=False,
             )
@@ -201,24 +210,7 @@ def _format_k_tab_status_summary() -> str:
 
 def _normalized_data_frames() -> list:
     """DataFrames used for kerma-meter identity discovery (active + loaded exams)."""
-    frames = []
-    if state.rdsr_df is not None:
-        frames.append(state.rdsr_df)
-    for exam in state.loaded_exams:
-        nd = getattr(exam, "normalized_data", None)
-        if nd is not None:
-            frames.append(nd)
-    return frames
-
-
-def _collect_equipment_tube_keys() -> list[tuple[str, str]]:
-    """Sorted unique (equipment, tube) pairs across loaded normalized frames."""
-    from guiskindose.kerma_correction import unique_equipment_tube_keys
-
-    return unique_equipment_tube_keys(
-        _normalized_data_frames(),
-        explicit_label=state.kerma_meter_explicit_label,
-    )
+    return [frame for _, frame in labelled_frames(state)]
 
 
 async def below_floor_prompt(n_below: int) -> bool:
@@ -281,12 +273,7 @@ def rotational_prompt_required(survey: dict[str, object]) -> bool:
                 and "contradictory_static" in entry[3]
             ):
                 contradictory += 1
-    return (
-        _survey_count(survey, "rotational")
-        + _survey_count(survey, "positioner_motion")
-        + contradictory
-        > 0
-    )
+    return _survey_count(survey, "rotational") + _survey_count(survey, "positioner_motion") + contradictory > 0
 
 
 def _survey_count(survey: dict[str, object], key: str) -> int:
@@ -348,16 +335,14 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
         if unresolved:
             with ui.expansion(f"{len(unresolved)} event(s) need attention", icon="warning").classes("w-full"):
                 for label, index, classification, reasons in unresolved:
-                    ui.label(
-                        f"{label} event {index}: {classification} ({', '.join(reasons)})"
-                    ).classes("text-sm text-grey-7")
+                    ui.label(f"{label} event {index}: {classification} ({', '.join(reasons)})").classes(
+                        "text-sm text-grey-7"
+                    )
 
         handling_select = ui.select(
             ["coverage", "static"],
             label="Handling",
-            value=state.rotational_handling
-            if state.rotational_handling in ("coverage", "static")
-            else "coverage",
+            value=state.rotational_handling if state.rotational_handling in ("coverage", "static") else "coverage",
         ).classes("w-full")
 
         dont_ask = ui.checkbox("Don't ask again until the loaded data changes")
@@ -374,40 +359,6 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
     if dont_ask.value:
         state.rotational_prompt_suppressed = True
     return True
-
-
-async def kerma_meter_prompt() -> None:
-    """Collect per-(equipment, tube) CF values before calculation when mode=prompt.
-
-    Confirm stores the entered factors in ``state.kerma_meter_in_memory_table``.
-    Cancel clears that table so ``default_factor`` applies. Calculation always
-    continues after the dialog (this prompt never blocks the run).
-    """
-    sorted_keys = _collect_equipment_tube_keys()
-    with ui.dialog() as dialog, ui.card().classes("w-full max-w-xl gap-3"):
-        ui.label("Kerma-meter correction factors").classes(_DIALOG_TITLE_CLASSES)
-        ui.label(
-            "Enter CF = (real measured dose) / (unit reported dose) for each "
-            "detected (equipment, tube) pair. Cancel uses the default factor."
-        ).classes(_DIALOG_BODY_CLASSES)
-        inputs: dict[tuple[str, str], ui.number] = {}
-        for equip, tube in sorted_keys:
-            inputs[(equip, tube)] = ui.number(
-                label=f"{equip} / {tube}",
-                value=state.kerma_meter_default_factor,
-                min=0.01,
-                step=0.01,
-            ).classes("w-full")
-        with ui.row().classes(_DIALOG_ACTIONS_CLASSES):
-            ui.button("Cancel", on_click=lambda: dialog.submit("cancel")).props("flat")
-            ui.button("Confirm", on_click=lambda: dialog.submit("ok")).classes(_PRIMARY_BTN_CLASSES)
-
-    if (await dialog) != "ok":
-        state.kerma_meter_in_memory_table = None
-        return
-    state.kerma_meter_in_memory_table = {
-        key: float(inp.value or state.kerma_meter_default_factor) for key, inp in inputs.items()
-    }
 
 
 async def explicit_label_collapse_confirm(n_keys: int, label: str) -> bool:
@@ -500,8 +451,7 @@ class _CalculationController:
             return True
         if not await self._explicit_label_collapse_ok():
             return False
-        if state.kerma_meter_mode == "prompt" or state.kerma_meter_prompt_at_calc:
-            await kerma_meter_prompt()
+        await prompt_at_calculate()
         return True
 
     async def _run_calculation(self) -> tuple[bool, str]:
@@ -594,9 +544,16 @@ def _format_plane_identity_audit() -> str:
         return _plane_audit_cache.value
 
     parts = []
+    if "acquisition_plane" in df.columns or "acquisition_plane_canonical" in df.columns:
+        from collections import Counter
+
+        from guiskindose.kerma_correction import resolve_correction_keys
+
+        tubes = Counter(tube for _, tube in resolve_correction_keys(df, explicit_label=None))
+        parts.append("tube identity used: " + ", ".join(f"{k}={v}" for k, v in sorted(tubes.items())))
     for col, label in (
-        ("acquisition_plane_source_kind", "source kind"),
-        ("acquisition_plane_resolution", "resolution"),
+        ("acquisition_plane_source_kind", "plane code source"),
+        ("acquisition_plane_resolution", "plane code resolution"),
     ):
         if col in df.columns:
             counts = df[col].fillna("unknown").astype(str).value_counts()
@@ -617,9 +574,9 @@ def _build_input_data_summary() -> None:
         with ui.column().classes("gap-1"):
             with ui.column().classes("gap-0"):
                 ui.label("File:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "file_name", backward=lambda v: "Loaded" if v else "None"
-                ).classes(f"{_SUMMARY_VALUE_CLASSES} truncate w-full")
+                ui.label().bind_text_from(state, "file_name", backward=lambda v: "Loaded" if v else "None").classes(
+                    f"{_SUMMARY_VALUE_CLASSES} truncate w-full"
+                )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Events:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(
@@ -629,14 +586,9 @@ def _build_input_data_summary() -> None:
                 ui.label("Scanner:").classes(_SUMMARY_LABEL_CLASSES)
                 scanner_label = ui.label(format_input_scanner_label(state)).classes(_SUMMARY_VALUE_CLASSES)
                 for attr in ("input_manufacturer", "input_model", "manufacturer", "model"):
-                    scanner_label.bind_text_from(
-                        state, attr, backward=lambda _v: format_input_scanner_label(state)
-                    )
+                    scanner_label.bind_text_from(state, attr, backward=lambda _v: format_input_scanner_label(state))
                 method_label = ui.label().classes("text-[10px] opacity-40 italic")
-                method_label.bind_text_from(
-                    state, "normalization_method",
-                    backward=lambda v: f"({v})"
-                )
+                method_label.bind_text_from(state, "normalization_method", backward=lambda v: f"({v})")
                 matched_label = ui.label("Default profile active").classes("text-[10px] text-amber-5 italic")
                 matched_label.bind_visibility_from(
                     state,
@@ -645,9 +597,9 @@ def _build_input_data_summary() -> None:
                 )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()
-                ).classes(_SUMMARY_VALUE_CLASSES)
+                ui.label().bind_text_from(state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()).classes(
+                    _SUMMARY_VALUE_CLASSES
+                )
 
 
 def _build_phantom_setup_summary() -> None:
@@ -659,29 +611,31 @@ def _build_phantom_setup_summary() -> None:
         with ui.column().classes("gap-1"):
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Model:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "phantom_model", backward=lambda v: f"{v}"
-                ).classes(_SUMMARY_VALUE_CLASSES)
-            with ui.column().classes("gap-0"):
-                ui.label("Patient Offsets:").classes(_SUMMARY_LABEL_CLASSES)
-                patient_offset_summary = ui.label(_format_patient_offsets()).classes(
+                ui.label().bind_text_from(state, "phantom_model", backward=lambda v: f"{v}").classes(
                     _SUMMARY_VALUE_CLASSES
                 )
+            with ui.column().classes("gap-0"):
+                ui.label("Patient Offsets:").classes(_SUMMARY_LABEL_CLASSES)
+                patient_offset_summary = ui.label(_format_patient_offsets()).classes(_SUMMARY_VALUE_CLASSES)
                 patient_offset_summary.bind_text_from(
-                    state, "per_exam_offsets_version", backward=lambda _v: _format_patient_offsets(),
+                    state,
+                    "per_exam_offsets_version",
+                    backward=lambda _v: _format_patient_offsets(),
                 )
                 patient_offset_summary.bind_text_from(
                     state, "is_multi_exam", backward=lambda _v: _format_patient_offsets()
                 )
             with ui.column().classes("gap-0"):
                 ui.label("Table Offsets:").classes(_SUMMARY_LABEL_CLASSES)
-                table_offset_summary = ui.label(_format_table_offset_line()).classes(
-                    _SUMMARY_VALUE_CLASSES
-                )
-                for attr in ("table_offset_x", "table_offset_y", "table_offset_z", "normalization_method", "is_multi_exam"):
-                    table_offset_summary.bind_text_from(
-                        state, attr, backward=lambda _v: _format_table_offset_line()
-                    )
+                table_offset_summary = ui.label(_format_table_offset_line()).classes(_SUMMARY_VALUE_CLASSES)
+                for attr in (
+                    "table_offset_x",
+                    "table_offset_y",
+                    "table_offset_z",
+                    "normalization_method",
+                    "is_multi_exam",
+                ):
+                    table_offset_summary.bind_text_from(state, attr, backward=lambda _v: _format_table_offset_line())
 
 
 def _build_physics_summary() -> None:
@@ -694,27 +648,23 @@ def _build_physics_summary() -> None:
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Patient-support transmission factor:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(
-                    state, "estimate_k_tab", backward=lambda v: "Estimated" if v else "Measured"
+                    state, "k_tab_mode", backward=lambda v: _K_TAB_MODE_SUMMARY.get(str(v), str(v))
                 ).classes(_SUMMARY_VALUE_CLASSES)
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("k_tab lookup summary:").classes(_SUMMARY_LABEL_CLASSES)
                 # Refresh after calc (calc_run_id), when estimated/measured toggles,
                 # and when loaded frames change (input_revision).
                 k_tab_summary = ui.label().classes(_SUMMARY_VALUE_CLASSES)
-                k_tab_summary.bind_text_from(
-                    state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary()
-                )
-                k_tab_summary.bind_text_from(
-                    state, "estimate_k_tab", backward=lambda _v: _format_k_tab_status_summary()
-                )
+                k_tab_summary.bind_text_from(state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary())
+                k_tab_summary.bind_text_from(state, "k_tab_mode", backward=lambda _v: _format_k_tab_status_summary())
                 k_tab_summary.bind_text_from(
                     state, "input_revision", backward=lambda _v: _format_k_tab_status_summary()
                 )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Filtration:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "inherent_filtration", backward=lambda v: f"{v} mmAl"
-                ).classes(_SUMMARY_VALUE_CLASSES)
+                ui.label().bind_text_from(state, "inherent_filtration", backward=lambda v: f"{v} mmAl").classes(
+                    _SUMMARY_VALUE_CLASSES
+                )
 
 
 def _build_settings_summary_card() -> None:
@@ -723,9 +673,9 @@ def _build_settings_summary_card() -> None:
         with ui.row().classes("items-center justify-between w-full"):
             ui.label("Current settings").classes("text-xl font-bold q-mb-md")
             with ui.row().classes("items-center gap-2").bind_visibility_from(state, "is_multi_exam"):
-                ui.badge().bind_text_from(
-                    state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS"
-                ).classes("text-xs tracking-widest font-bold")
+                ui.badge().bind_text_from(state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS").classes(
+                    "text-xs tracking-widest font-bold"
+                )
                 ui.label("Per-exam patient offsets editable in Geometry and Settings tabs").classes(
                     "text-caption text-grey-5 italic"
                 )
@@ -750,9 +700,9 @@ def build(ctx: PageContext) -> None:
         _build_settings_summary_card()
 
         with ui.column().classes("w-full items-center gap-4 q-mt-xl"):
-            calc_btn = ui.button(
-                "▶  Run Calculation", on_click=controller.do_calculate, icon="bolt"
-            ).classes("modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined")
+            calc_btn = ui.button("▶  Run Calculation", on_click=controller.do_calculate, icon="bolt").classes(
+                "modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined"
+            )
             ctx.run_btn_drawer.on("click", controller.do_calculate)
 
             calc_progress = ui.linear_progress(value=0, color="indigo").classes("w-full")

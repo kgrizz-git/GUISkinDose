@@ -154,6 +154,7 @@ def main(
         return output
     return None
 
+
 def analyze_input_file(
     file_path: str | Path,
     settings: str | dict | PyskindoseSettings | None = None,
@@ -222,11 +223,11 @@ def analyze_multiple_input_files(
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
     settings_obj = parse_settings_to_settings_class(settings=settings)
-    
+
     if settings_obj.output_format == "html":
         logger.warning("HTML output format is not supported for multi-exam runs. Forcing to dict.")
         settings_obj.output_format = "dict"
-    
+
     all_exams: list[InputAdapterResult] = []
 
     resolved_paths: list[Path] = []
@@ -280,14 +281,33 @@ def preview_input_file(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     include_sensitive_values: bool = False,
+    settings: PyskindoseSettings | None = None,
 ) -> None:
-    """Print a value-safe preview unless sensitive values are explicitly requested."""
+    """Print a value-safe preview unless sensitive values are explicitly requested.
+
+    ``settings`` carries CLI choices that affect parsing, such as ``--plane-code-map``;
+    without it the bundled example settings are used, and a tabular file whose plane
+    codes need a map fails the preview.
+
+    Parameters
+    ----------
+    file_path : str | Path
+        Input file.
+    input_schema : str | None
+        Schema name, or ``None`` for auto-detection.
+    sheet_name : str | int
+        Workbook sheet for ``.xlsx`` input.
+    include_sensitive_values : bool
+        Show raw values instead of the value-safe summary.
+    settings : PyskindoseSettings | None
+        Run settings from :func:`prepare_cli_settings`.
+    """
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
     # The radimetrics/generic/dosetrack schemas need settings (rdsr_normalizer
     # does a manufacturer/model lookup), so supply defaults — preview never runs
     # a dose calculation, so example settings are sufficient.
-    settings_obj = parse_settings_to_settings_class(settings=None)
+    settings_obj = settings if settings is not None else parse_settings_to_settings_class(settings=None)
 
     raw = read_and_normalize_input(
         file_path,
@@ -465,9 +485,16 @@ def _load_inputs_for_export(resolved_paths, settings_obj, input_schema, sheet_na
                     normalized_data=data_norm,
                     raw_data=None,
                     provenance=InputProvenance(
-                        source_type=suffix.lstrip("."), schema_name="rdsr", original_filename=fp.name,
-                        header_row_index=0, detected_encoding="n/a", detected_delimiter=None,
-                        sheet_name=None, column_map={}, unit_conversions={}, warnings=[],
+                        source_type=suffix.lstrip("."),
+                        schema_name="rdsr",
+                        original_filename=fp.name,
+                        header_row_index=0,
+                        detected_encoding="n/a",
+                        detected_delimiter=None,
+                        sheet_name=None,
+                        column_map={},
+                        unit_conversions={},
+                        warnings=[],
                     ),
                     warnings=[],
                 )
@@ -545,33 +572,100 @@ def get_argument_parser(arguments) -> "argparse.Namespace":
     return _cli_args_get_argument_parser(arguments)
 
 
+def print_cli_result(result: Any, *, aggregate_only: bool = False) -> None:
+    """Print an analysis result to stdout (a headless run with ``output_format`` dict or json).
+
+    ``None`` (html output, plots) prints nothing. Result objects (a multi-exam
+    result) are serialized through their privacy-safe ``to_dict()``, which omits
+    source file names; a bare ``repr`` or ``default=str`` fallback would leak them.
+    With ``aggregate_only`` a multi-exam result prints just the aggregate peak.
+
+    Parameters
+    ----------
+    result : object
+        A JSON string, a dict, or an object with ``to_dict()`` (optionally
+        ``aggregate_psd``).
+    aggregate_only : bool
+        Print only ``aggregate_psd`` for multi-exam results.
+    """
+    if result is None:
+        return
+    import json as _json
+
+    if aggregate_only and hasattr(result, "aggregate_psd"):
+        print(f"{result.aggregate_psd:.4f}")
+        return
+    if hasattr(result, "to_dict"):
+        result = result.to_dict()
+    print(result if isinstance(result, str) else _json.dumps(result))
+
+
+def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
+    """Build the run settings for a headless CLI invocation, shared by both entry points.
+
+    ``--settings`` may be a path to a JSON file or a JSON string (a path is read,
+    never echoed). With no ``--settings`` the development parameters are used. The
+    kerma-meter flags (including ``--kerma-meter-calibration-date``) and
+    ``--plane-code-map`` are then applied onto the concrete settings object.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    PyskindoseSettings
+        Settings ready for ``main()`` / the analyze helpers.
+
+    Raises
+    ------
+    SystemExit
+        If ``--settings`` names a file that does not exist. The message never
+        contains the path.
+    """
+    raw = args.settings
+    if raw is None:
+        logger.warning("No settings specified. Running with development parameters")
+        raw = DEVELOPMENT_PARAMETERS
+    elif isinstance(raw, Path) or (isinstance(raw, str) and not raw.lstrip().startswith("{")):
+        # A path (or a string that is not a JSON object): read it, or fail cleanly.
+        try:
+            is_file = Path(raw).is_file()
+        except OSError:
+            is_file = False
+        if not is_file:
+            raise SystemExit(safe_user_error("settings_file_not_found"))
+        raw = Path(raw).read_text(encoding="utf-8")
+    settings = parse_settings_to_settings_class(settings=raw)
+    if getattr(args, "output_format", None):
+        settings.output_format = args.output_format
+    apply_kerma_meter_cli_flags(settings, args)
+    plane_code_map_raw = getattr(args, "plane_code_map", None)
+    if plane_code_map_raw is not None:
+        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
+
+        settings.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
+    return settings
+
+
 if __name__ == "__main__":
     install_value_safe_excepthook(logger)
     args = get_argument_parser(sys.argv[1:])
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from guiskindose.gui.app import run_gui
+
         run_gui(
             native=getattr(args, "native", False),
             port=getattr(args, "port", None),
         )
     else:
-        if (run_settings := args.settings) is None:
-            logger.warning("No settings specified. Running with development parameters")
-            run_settings = DEVELOPMENT_PARAMETERS
-
-        # Apply kerma-meter CLI overrides onto a concrete settings object once.
-        settings_for_run = parse_settings_to_settings_class(settings=run_settings)
-        apply_kerma_meter_cli_flags(settings_for_run, args)
-        plane_code_map_raw = getattr(args, "plane_code_map", None)
-        if plane_code_map_raw is not None:
-            from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
-
-            settings_for_run.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
-        run_settings = settings_for_run
+        run_settings = prepare_cli_settings(args)
 
         file_paths_raw: list[str] = args.file_path or []
         from pathlib import Path
+
         file_paths: list[str] = []
         for fp in file_paths_raw:
             p = Path(fp)
@@ -611,11 +705,7 @@ if __name__ == "__main__":
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
             )
-            if getattr(args, "aggregate_only", False):
-                print(f"{result.aggregate_psd:.4f}")
-            else:
-                import json as _json
-                print(_json.dumps(result.to_dict()))
+            print_cli_result(result, aggregate_only=getattr(args, "aggregate_only", False))
         elif len(file_paths) == 1:
             single_path = file_paths[0]
             suffix = Path(single_path).suffix.lower()
@@ -626,15 +716,19 @@ if __name__ == "__main__":
                         input_schema=getattr(args, "input_schema", None),
                         sheet_name=getattr(args, "sheet_name", 0),
                         include_sensitive_values=getattr(args, "include_sensitive_preview", False),
+                        settings=run_settings,
                     )
                 else:
-                    analyze_input_file(
-                        single_path,
-                        settings=run_settings,
-                        input_schema=getattr(args, "input_schema", None),
-                        sheet_name=getattr(args, "sheet_name", 0),
+                    print_cli_result(
+                        analyze_input_file(
+                            single_path,
+                            settings=run_settings,
+                            input_schema=getattr(args, "input_schema", None),
+                            sheet_name=getattr(args, "sheet_name", 0),
+                        ),
+                        aggregate_only=getattr(args, "aggregate_only", False),
                     )
             else:
-                main(file_path=single_path, settings=run_settings)
+                print_cli_result(main(file_path=single_path, settings=run_settings))
         else:
-            main(file_path=None, settings=run_settings)
+            print_cli_result(main(file_path=None, settings=run_settings))

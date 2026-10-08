@@ -304,8 +304,7 @@ def test_remove_exam_refreshes_normalization_warnings(monkeypatch: pytest.Monkey
         },
     ]
     state.normalization_warnings = [
-        "Exam 1: Scanner 'ACME X1' not found in normalization profiles. "
-        "Using default normalization settings."
+        "Exam 1: Scanner 'ACME X1' not found in normalization profiles. Using default normalization settings."
     ]
     state.is_multi_exam = True
     state.rdsr_df = MagicMock(__len__=lambda s: 1)
@@ -320,6 +319,7 @@ def test_remove_exam_refreshes_normalization_warnings(monkeypatch: pytest.Monkey
     assert state.normalization_warnings == []
     assert len(state.loaded_exam_meta) == 1
     assert state.loaded_exam_meta[0]["file_name"] == "b.dcm"
+
 
 def test_remove_matched_exam_keeps_remaining_fallback_warning(
     monkeypatch: pytest.MonkeyPatch,
@@ -352,8 +352,7 @@ def test_remove_matched_exam_keeps_remaining_fallback_warning(
     ]
     state.normalization_method = "Matched"
     state.normalization_warnings = [
-        "Exam 2: Scanner 'ACME X1' not found in normalization profiles. "
-        "Using default normalization settings."
+        "Exam 2: Scanner 'ACME X1' not found in normalization profiles. Using default normalization settings."
     ]
     state.is_multi_exam = True
     state.rdsr_df = MagicMock(__len__=lambda s: 1)
@@ -373,3 +372,35 @@ def test_remove_matched_exam_keeps_remaining_fallback_warning(
     # Single remaining exam: refresh_normalization_warnings omits "Exam N:" prefix.
     assert not state.normalization_warnings[0].startswith("Exam ")
 
+
+@pytest.mark.parametrize(
+    ("name", "n_events", "label"),
+    [
+        ("radimetrics_example_older_export_biplane.csv", 8, "Radimetrics (older export, biplane)"),
+        ("radimetrics_example_newer_export_single_tube.csv", 5, "Radimetrics (newer export, single tube)"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_load_tabular_example_uses_the_tabular_import_path(
+    monkeypatch: pytest.MonkeyPatch, name: str, n_events: int, label: str
+) -> None:
+    from guiskindose.gui.constants import EXAMPLE_OPTIONS
+
+    assert EXAMPLE_OPTIONS[name] == label
+    ctrl = _upload_controller()
+    ctrl.refs.example_select.value = name
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(ub.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
+
+    await ctrl.load_example()
+
+    assert state.input_source_type == "csv"
+    assert state.file_name == name
+    assert state.rdsr_df is not None
+    assert len(state.rdsr_df) == n_events
+    assert state.loaded_exam_meta[0]["schema"] == "radimetrics"
+    cast(MagicMock, ctrl.refs.import_preview.refresh).assert_called()

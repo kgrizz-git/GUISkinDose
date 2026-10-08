@@ -21,6 +21,7 @@ from ..dose_severity import (
 )
 from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..state import state
+from ..summary_formatters import format_tube_summary
 from ..ui_copy import copy_text
 
 if TYPE_CHECKING:
@@ -71,9 +72,7 @@ class ResultsTabController:
         self.subset_checkboxes: list[Any] = []
         self._inline_rendered: dict[int, bool] = {}
 
-    def _apply_psd_presentation(
-        self, readout: PsdReadout | None, psd: float | None, text: str | None = None
-    ) -> None:
+    def _apply_psd_presentation(self, readout: PsdReadout | None, psd: float | None, text: str | None = None) -> None:
         """Set one banded PSD readout's text and move all three carriers to ``psd``'s band.
 
         ``text`` is whatever the site displays, which is not always the bare
@@ -104,9 +103,7 @@ class ResultsTabController:
         """
         agg_readout = self.refs.agg_psd_readout
         if all(state.aggregate_subset_exams):
-            self._apply_psd_presentation(
-                agg_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy"
-            )
+            self._apply_psd_presentation(agg_readout, res.aggregate_psd, f"{res.aggregate_psd:.2f} mGy")
         elif not any(state.aggregate_subset_exams):
             # No exam is in the subset, so there is no dose to band: pending.
             self._apply_psd_presentation(agg_readout, None, "— mGy (no exams selected)")
@@ -120,24 +117,34 @@ class ResultsTabController:
             from guiskindose.export._format import fmt_duration
             from guiskindose.export.metrics import total_dap_gycm2, total_fluoro_time_s
 
-            self._apply_psd_presentation(
-                self.refs.psd_readout, state.psd, f"{state.psd:.2f} mGy"
-            )
+            self._apply_psd_presentation(self.refs.psd_readout, state.psd, f"{state.psd:.2f} mGy")
             self.refs.kerma_metric.set_text(f"{state.air_kerma:.1f} mGy")
-            self.refs.events_metric.set_text(
-                str(len(state.rdsr_df) if state.rdsr_df is not None else 0)
-            )
+            self.refs.events_metric.set_text(str(len(state.rdsr_df) if state.rdsr_df is not None else 0))
             dap = total_dap_gycm2(state.rdsr_df)
             self.refs.dap_metric.set_text(f"{dap:.2f} Gy·cm²" if dap is not None else "N/A")
             fluoro = total_fluoro_time_s(state.rdsr_df)
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
             self._refresh_rotational_badge()
+            self._refresh_tube_label()
         elif not state.is_multi_exam:
             # Invalidated (or never run): the readout must not keep showing a
             # stale banded value after the run it belonged to is gone. Back to
             # the Results placeholder with the pending presentation — the same
             # invalidation the sidebar readout already receives.
             self._apply_psd_presentation(self.refs.psd_readout, None, "—")
+            # The totals and badges belong to the same vanished run: back to the placeholder.
+            for metric in (
+                self.refs.kerma_metric,
+                self.refs.events_metric,
+                self.refs.dap_metric,
+                self.refs.fluoro_metric,
+            ):
+                metric.set_text("—")
+            self.refs.rotational_badge.set_text("")
+            self.refs.rotational_badge.visible = False
+            if self.refs.tube_label is not None:
+                self.refs.tube_label.set_text("")
+                self.refs.tube_label.visible = False
 
     def _rotational_badge_text(self) -> str:
         """One-line rotational-handling summary for the Results badge.
@@ -155,16 +162,10 @@ class ResultsTabController:
         rows = [row for row in handling.get("rows", []) if is_disclosed_row(row)]
         enveloped = sum(1 for row in rows if row.get("effective_handling") == "coverage")
         explicit_static = sum(
-            1
-            for row in rows
-            if row.get("effective_handling") == "static"
-            and row.get("requested_handling") == "Static"
+            1 for row in rows if row.get("effective_handling") == "static" and row.get("requested_handling") == "Static"
         )
         fallback_static = sum(
-            1
-            for row in rows
-            if row.get("effective_handling") == "static"
-            and row.get("requested_handling") != "Static"
+            1 for row in rows if row.get("effective_handling") == "static" and row.get("requested_handling") != "Static"
         )
         detected = enveloped + explicit_static + fallback_static
         if detected <= 0:
@@ -183,6 +184,28 @@ class ResultsTabController:
         text = self._rotational_badge_text()
         self.refs.rotational_badge.set_text(text)
         self.refs.rotational_badge.visible = bool(text)
+
+    def _refresh_tube_label(self) -> None:
+        """Show the per-tube dose breakdown for the single-exam run when it applies."""
+        if self.refs.tube_label is None:  # not built yet
+            return
+        output = state.output
+        summary = output.get("tube_summary") if isinstance(output, dict) else None
+        text = format_tube_summary([(None, summary)])
+        self.refs.tube_label.set_text(text)
+        self.refs.tube_label.visible = bool(text)
+
+    def _refresh_agg_tube_label(self, res: Any) -> None:
+        """Show per-exam per-tube dose breakdowns for a multi-exam run."""
+        if self.refs.agg_tube_label is None:  # not built yet
+            return
+        blocks = [
+            (f"Exam {i + 1}", getattr(getattr(exam, "output", None), "tube_summary", None))
+            for i, exam in enumerate(getattr(res, "exams", []) or [])
+        ]
+        text = format_tube_summary(blocks)
+        self.refs.agg_tube_label.set_text(text)
+        self.refs.agg_tube_label.visible = bool(text)
 
     def _refresh_agg_rotational_badge(self, res: Any) -> None:
         """Aggregate rotational badge across multi-exam outputs.
@@ -238,8 +261,13 @@ class ResultsTabController:
             await self.refresh_dosemap()
 
     def refresh_corr_table(self) -> None:
-        """Refresh corr table."""
-        if state.is_multi_exam or not state.calculation_done or state.output is None:
+        """Refresh corr table (cleared while no single-exam calculation is current)."""
+        if state.is_multi_exam:
+            return
+        if not state.calculation_done or state.output is None:
+            if self.refs.corr_table.rows:
+                self.refs.corr_table.rows = []
+                self.refs.corr_table.update()
             return
         out = state.output
         corrections = out.get("corrections", {})
@@ -251,22 +279,20 @@ class ResultsTabController:
         rows = []
         n = len(k_isq_list)
         for i in range(n):
-            rows.append({
-                "event": i + 1,
-                "k_isq": _mean_correction(k_isq_list, i, np),
-                "k_bs": _mean_correction(k_bs_list, i, np),
-                "k_tab": _mean_correction(k_tab_list, i, np),
-            })
+            rows.append(
+                {
+                    "event": i + 1,
+                    "k_isq": _mean_correction(k_isq_list, i, np),
+                    "k_bs": _mean_correction(k_bs_list, i, np),
+                    "k_tab": _mean_correction(k_tab_list, i, np),
+                }
+            )
         self.refs.corr_table.rows = rows
         self.refs.corr_table.update()
 
     def refresh_multi_exam_results(self) -> None:
         """Refresh aggregate metrics, run warnings, accordion, and dose-map subset."""
-        if (
-            not state.is_multi_exam
-            or not state.calculation_done
-            or state.multi_exam_result is None
-        ):
+        if not state.is_multi_exam or not state.calculation_done or state.multi_exam_result is None:
             self._reset_multi_exam_view()
             return
 
@@ -282,7 +308,13 @@ class ResultsTabController:
             self.refresh_aggregate_dosemap_subset()
 
     def _reset_multi_exam_view(self) -> None:
-        """Clear multi-exam controls after a completed multi-exam result disappears."""
+        """Clear multi-exam controls after a completed multi-exam result disappears.
+
+        Resets the exam accordion and subset checkboxes, the aggregate PSD readout, the
+        aggregate dose map, the exam-count and totals lines, the aggregate rotational
+        badge, the warnings label, and the tube label. Nothing from the vanished run
+        stays on screen.
+        """
         if self.last_rendered_run_id is None:
             return
         self._clear_multi_exam_accordion()
@@ -295,17 +327,22 @@ class ResultsTabController:
         # invalidation the sidebar readout already receives.
         self._apply_psd_presentation(self.refs.agg_psd_readout, None, "—")
         self.refs.agg_dosemap_plot.update_figure({})
+        self.refs.agg_events_metric.set_text("—")
+        self.refs.agg_totals_metric.set_text("—")
+        self.refs.agg_rotational_badge.set_text("")
+        self.refs.agg_rotational_badge.visible = False
         self.refs.run_warnings_label.set_text("")
         self.refs.run_warnings_label.set_visibility(False)
+        if self.refs.agg_tube_label is not None:
+            self.refs.agg_tube_label.set_text("")
+            self.refs.agg_tube_label.visible = False
 
     def _set_multi_exam_summary(self, res: Any) -> None:
         """Render aggregate dose, exam-count, and warning summaries."""
         n_ok = len(res.exams)
         n_excluded = int(getattr(res, "exams_excluded", 0) or 0)
         if n_excluded > 0:
-            self.refs.agg_events_metric.set_text(
-                f"from {n_ok} exam(s); {n_excluded} excluded from aggregate"
-            )
+            self.refs.agg_events_metric.set_text(f"from {n_ok} exam(s); {n_excluded} excluded from aggregate")
         else:
             self.refs.agg_events_metric.set_text(f"across {n_ok} exams")
 
@@ -316,6 +353,7 @@ class ResultsTabController:
             self.refs.run_warnings_label.set_text("")
             self.refs.run_warnings_label.set_visibility(False)
         self._refresh_agg_rotational_badge(res)
+        self._refresh_agg_tube_label(res)
 
     def _set_multi_exam_totals(self) -> None:
         """Render DAP and fluoroscopy totals when those values are available."""
@@ -413,14 +451,10 @@ class ResultsTabController:
             ui.notify("No dose map for this exam", color="warning")
             return
         dose_map_array, patient_for_fig = extract_exam_dose_map(res.exams[exam_idx].output)
-        with ui.dialog() as dialog, ui.card().classes(
-            "modern-card w-[80vw] max-w-[1200px] p-6"
-        ):
+        with ui.dialog() as dialog, ui.card().classes("modern-card w-[80vw] max-w-[1200px] p-6"):
             with ui.row().classes("w-full justify-between items-center mb-4"):
                 ui.label(f"Exam {exam_idx + 1} Dose Map").classes("text-xl font-bold")
-                ui.button(icon="close", on_click=dialog.close).props(
-                    "flat round dense"
-                ).classes("text-grey-4")
+                ui.button(icon="close", on_click=dialog.close).props("flat round dense").classes("text-grey-4")
             dialog_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
             dialog_plot = ui.plotly({}).classes("w-full").style("height:600px")
             dialog.open()
@@ -445,11 +479,7 @@ class ResultsTabController:
             for i, _exam_res in enumerate(res.exams):
                 cb = ui.checkbox(
                     f"Exam {i + 1}",
-                    value=(
-                        state.aggregate_subset_exams[i]
-                        if i < len(state.aggregate_subset_exams)
-                        else True
-                    ),
+                    value=(state.aggregate_subset_exams[i] if i < len(state.aggregate_subset_exams) else True),
                 ).classes("text-sm")
                 cb.on_value_change(lambda e, idx=i: self.on_subset_toggle(e, idx))
                 self.subset_checkboxes.append(cb)
@@ -461,9 +491,7 @@ class ResultsTabController:
                 self._build_exam_expansion(i, exam_res, res)
 
     def _build_exam_expansion(self, i: int, exam_res: Any, res: Any) -> None:
-        with ui.expansion(exam_res.exam_id, icon="personal_video").classes(
-            "w-full modern-card bg-zinc-900/50"
-        ):
+        with ui.expansion(exam_res.exam_id, icon="personal_video").classes("w-full modern-card bg-zinc-900/50"):
             with ui.row().classes("w-full items-center justify-between"):
                 with ui.row().classes("gap-4"):
                     with ui.column().classes("gap-0"):
@@ -478,9 +506,7 @@ class ResultsTabController:
                         apply_psd_presentation(exam_psd, exam_res.output.psd)
                     with ui.column().classes("gap-0"):
                         ui.label("Air Kerma").classes(_EXAM_METRIC_LABEL_CLASSES)
-                        ui.label(f"{exam_res.output.air_kerma:.1f} mGy").classes(
-                            "text-white font-bold"
-                        )
+                        ui.label(f"{exam_res.output.air_kerma:.1f} mGy").classes("text-white font-bold")
                     with ui.column().classes("gap-0"):
                         ui.label("Events").classes(_EXAM_METRIC_LABEL_CLASSES)
                         ui.label(str(exam_res.event_count)).classes("text-white font-bold")
@@ -489,34 +515,23 @@ class ResultsTabController:
                 ) as btn:
                     if len(res.exams) > 10:
                         btn.disable()
-                        btn.tooltip(
-                            "Dose map rendering disabled for >10 exams to save memory"
-                        )
+                        btn.tooltip("Dose map rendering disabled for >10 exams to save memory")
                     else:
-                        btn.on_click(
-                            lambda _e, idx=i: self.show_exam_dosemap_dialog(idx)
-                        )
+                        btn.on_click(lambda _e, idx=i: self.show_exam_dosemap_dialog(idx))
             with ui.row().classes("w-full items-center gap-2 q-mt-sm"):
                 inline_cb = ui.checkbox(
                     "Show inline dose map",
-                    value=(
-                        state.visible_exam_dosemaps[i]
-                        if i < len(state.visible_exam_dosemaps)
-                        else False
-                    ),
+                    value=(state.visible_exam_dosemaps[i] if i < len(state.visible_exam_dosemaps) else False),
                 ).classes("text-sm")
             inline_plot_container = ui.column().classes("w-full")
             inline_plot_container.visible = bool(inline_cb.value)
             inline_cb.on_value_change(
-                lambda e, idx=i, cb=inline_cb, ctr=inline_plot_container:
-                    self._on_inline_toggle(e, idx, cb, ctr)
+                lambda e, idx=i, cb=inline_cb, ctr=inline_plot_container: self._on_inline_toggle(e, idx, cb, ctr)
             )
             if inline_cb.value and not self._inline_rendered.get(i):
                 self._render_inline_dosemap(i, inline_plot_container, res)
 
-    def _on_inline_toggle(
-        self, e: Any, idx: int, cb: ui.checkbox, container: ui.column
-    ) -> None:
+    def _on_inline_toggle(self, e: Any, idx: int, cb: ui.checkbox, container: ui.column) -> None:
         is_on = bool(e.value)
         state.visible_exam_dosemaps[idx] = is_on
         container.visible = is_on
@@ -571,6 +586,7 @@ class ResultsViewRefs:
     dap_metric: ui.label = None  # type: ignore[assignment]
     fluoro_metric: ui.label = None  # type: ignore[assignment]
     rotational_badge: ui.label = None  # type: ignore[assignment]
+    tube_label: ui.label = None  # type: ignore[assignment]
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
@@ -578,6 +594,7 @@ class ResultsViewRefs:
     agg_events_metric: ui.label = None  # type: ignore[assignment]
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
     agg_rotational_badge: ui.label = None  # type: ignore[assignment]
+    agg_tube_label: ui.label = None  # type: ignore[assignment]
     run_warnings_label: ui.label = None  # type: ignore[assignment]
     agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
@@ -610,50 +627,40 @@ def _build_header() -> None:
 
 
 def _build_single_exam_section(ctrl: ResultsTabController) -> None:
-    with ui.column().bind_visibility_from(
-        state, "is_multi_exam", backward=lambda v: not v
-    ).classes(_METRIC_ROW_CLASSES):
+    with (
+        ui.column().bind_visibility_from(state, "is_multi_exam", backward=lambda v: not v).classes(_METRIC_ROW_CLASSES)
+    ):
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Peak Skin Dose").classes(_MUTED_CAPTION_CLASSES)
                 ctrl.refs.psd_readout = build_psd_readout("—", label_classes="text-4xl font-bold")
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Total Air Kerma").classes(_MUTED_CAPTION_CLASSES)
-                ctrl.refs.kerma_metric = ui.label("—").classes(
-                    "text-4xl text-white font-bold"
-                )
+                ctrl.refs.kerma_metric = ui.label("—").classes("text-4xl text-white font-bold")
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Events").classes(_MUTED_CAPTION_CLASSES)
-                ctrl.refs.events_metric = ui.label("—").classes(
-                    "text-4xl text-aurora-teal font-bold"
-                )
+                ctrl.refs.events_metric = ui.label("—").classes("text-4xl text-aurora-teal font-bold")
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Total DAP").classes(_MUTED_CAPTION_CLASSES)
-                ctrl.refs.dap_metric = ui.label("—").classes(
-                    "text-3xl text-white font-bold"
-                )
+                ctrl.refs.dap_metric = ui.label("—").classes("text-3xl text-white font-bold")
             with ui.card().classes(_METRIC_CARD_CLASSES):
                 ui.label("Total Fluoro Time").classes(_MUTED_CAPTION_CLASSES)
-                ctrl.refs.fluoro_metric = ui.label("—").classes(
-                    "text-3xl text-white font-bold"
-                )
+                ctrl.refs.fluoro_metric = ui.label("—").classes("text-3xl text-white font-bold")
         with ui.row().classes(_METRIC_ROW_CLASSES):
             ctrl.refs.rotational_badge = ui.label("").classes("text-sm text-grey-7")
             ctrl.refs.rotational_badge.visible = False
+        ctrl.refs.tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+        ctrl.refs.tube_label.visible = False
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
-                ctrl.refs.dosemap_spinner = ui.spinner(
-                    size="lg", color="indigo"
-                ).classes("absolute-center")
+                ctrl.refs.dosemap_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
                 ctrl.refs.dosemap_spinner.visible = False
         with ui.column().classes("w-80 gap-6"):
             with ui.card().classes("modern-card w-full"):
                 ui.label("Visual settings").classes("text-subtitle2 q-mb-sm")
-                ui.select(
-                    COLORSCALES, label="Colorscale", value=state.colorscale
-                ).bind_value(state, "colorscale").on(
+                ui.select(COLORSCALES, label="Colorscale", value=state.colorscale).bind_value(state, "colorscale").on(
                     "update:model-value", lambda: ctrl.refresh_dosemap()
                 ).classes("w-full")
                 ui.button(
@@ -675,31 +682,22 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
 
 def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
     """Build aggregate PSD, run-warning, per-exam accordion, and dose-map controls."""
-    with ui.column().bind_visibility_from(state, "is_multi_exam").classes(
-        _METRIC_ROW_CLASSES
-    ):
-        with ui.card().classes(
-            "modern-card w-full text-center border border-aurora-purple/50 "
-            "bg-aurora-purple/10 p-6"
-        ):
+    with ui.column().bind_visibility_from(state, "is_multi_exam").classes(_METRIC_ROW_CLASSES):
+        with ui.card().classes("modern-card w-full text-center border border-aurora-purple/50 bg-aurora-purple/10 p-6"):
             # The section header stays aurora purple on purpose: it is a label,
             # not a value, and re-colouring brand chrome is out of scope here.
             ui.label("Aggregate Peak Skin Dose").classes(
                 "text-sm text-aurora-purple font-bold tracking-widest uppercase"
             )
-            ctrl.refs.agg_psd_readout = build_psd_readout(
-                "—", label_classes="text-5xl font-bold my-2"
-            )
-            ctrl.refs.agg_events_metric = ui.label("across 0 exams").classes(
-                "text-sm text-grey-4"
-            )
+            ctrl.refs.agg_psd_readout = build_psd_readout("—", label_classes="text-5xl font-bold my-2")
+            ctrl.refs.agg_events_metric = ui.label("across 0 exams").classes("text-sm text-grey-4")
             ctrl.refs.agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
             ctrl.refs.agg_rotational_badge = ui.label("").classes("text-sm text-grey-7")
             ctrl.refs.agg_rotational_badge.visible = False
+            ctrl.refs.agg_tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+            ctrl.refs.agg_tube_label.visible = False
 
-        ctrl.refs.run_warnings_label = ui.label("").classes(
-            "text-sm text-orange-400 whitespace-pre-wrap w-full"
-        )
+        ctrl.refs.run_warnings_label = ui.label("").classes("text-sm text-orange-400 whitespace-pre-wrap w-full")
         ctrl.refs.run_warnings_label.set_visibility(False)
 
         ui.label("Per-Exam Results").classes("text-xl font-bold tracking-tight q-mt-md")
@@ -708,20 +706,14 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
         with ui.card().classes("w-full modern-card q-pa-md"):
             ui.label("Visible exams in aggregate plot").classes("text-subtitle2 q-mb-sm")
             with ui.row().classes("w-full items-center gap-2"):
-                ui.button(
-                    "All", on_click=lambda: ctrl.set_subset_all(True)
-                ).classes("modern-btn size-sm")
-                ui.button(
-                    "None", on_click=lambda: ctrl.set_subset_all(False)
-                ).classes("modern-btn size-sm")
+                ui.button("All", on_click=lambda: ctrl.set_subset_all(True)).classes("modern-btn size-sm")
+                ui.button("None", on_click=lambda: ctrl.set_subset_all(False)).classes("modern-btn size-sm")
             ctrl.refs.subset_checkboxes_container = ui.column().classes("w-full gap-1")
 
         ui.label("Aggregate Dose Map").classes("text-xl font-bold tracking-tight q-mt-xl")
         with ui.card().classes("w-full modern-card p-0 overflow-hidden relative"):
             ctrl.refs.agg_dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
-            ctrl.refs.agg_dosemap_spinner = ui.spinner(
-                size="lg", color="indigo"
-            ).classes("absolute-center")
+            ctrl.refs.agg_dosemap_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
             ctrl.refs.agg_dosemap_spinner.visible = False
 
 

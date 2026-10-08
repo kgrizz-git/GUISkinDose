@@ -39,7 +39,7 @@ async def _load_philips_example(user: User) -> None:
 
 
 async def _open_geometry_tab(user: User) -> None:
-    user.find("4 · Geometry").click()
+    user.find("5 · Geometry").click()
     await user.should_see("Setup view", retries=50)
 
 

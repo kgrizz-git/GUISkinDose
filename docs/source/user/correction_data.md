@@ -36,7 +36,7 @@ and free of local paths.
 ## Supported, legacy, and future controls
 
 - **Supported:** packaged correction data (default); explicit absolute SQLite
-  path with validation; `k_tab_val` estimated transmission; kerma-meter
+  path with validation; `k_tab_mode` patient-support transmission (measured with `k_tab_val` fallback, flat estimate, or measured only); kerma-meter
   correction tables (see the in-app kerma-meter help).
 - **Legacy / advanced:** relative `corrections_db_path` values (warn, still
   honored read-only); hand-rolled SQLite databases without a schema-version

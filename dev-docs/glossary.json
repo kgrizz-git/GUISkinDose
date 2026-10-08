@@ -91,7 +91,7 @@
     },
     "k_tab_status": {
       "preferred": "patient-support transmission lookup status",
-      "definition": "Per-event classification of how k_tab was resolved: estimated, exact, interpolated, clamped, no_device, or invalid_inherited.",
+      "definition": "Per-event classification of how k_tab was resolved: estimated, exact, interpolated, clamped, no_device, invalid_inherited, or fallback (measured data unusable, so k_tab_val was used).",
       "aliases": [
         "k_tab statuses",
         "table_statuses",
@@ -129,6 +129,28 @@
         "low",
         "elevated",
         "high"
+      ]
+    },
+    "tube_summary": {
+      "preferred": "dose by tube",
+      "definition": "Per-tube (single plane, plane A, plane B, unknown) reported kerma, corrected kerma, applied correction factor, and partial dose-map peak. Per-tube peaks do not add up to the peak skin dose.",
+      "aliases": [
+        "per-tube dose"
+      ]
+    },
+    "ask_for_missing": {
+      "preferred": "ask for missing correction factors",
+      "definition": "GUI setting (default on) that opens a dialog when a detected unit and tube has no entered or file correction factor. It never blocks a calculation.",
+      "aliases": [
+        "prompt_at_calc"
+      ]
+    },
+    "calibration_period": {
+      "preferred": "calibration period",
+      "definition": "Date range (valid_from to valid_to, either end may be open) during which a kerma-meter correction factor applies. Chosen per exam by the user; never read from exam data.",
+      "aliases": [
+        "valid_from",
+        "valid_to"
       ]
     }
   }

@@ -19,12 +19,14 @@ be archived.
 
 ## Next Up
 
-- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (includes
-  confirming the Open Questions "Results — vs kerma" note, then deleting that Open Questions entry).
+- [ ] **Manual Smokes** — See "Manual Smokes" in the Active Work section (agent-runnable smokes done
+  2026-10-07; native-window and Windows checks remain for the user).
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
   roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
+- [ ] **RDSR parser input hardening (OpenREM upstream failures)** — `RF-Pat-Orientation-Modifier-Missing` is
+  still open. See the item in Input Data And Calculation.
 
 ## Active Work
 
@@ -37,16 +39,46 @@ be archived.
   1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Manual Smokes** — Compile and execute manual smokes for shipped features:
-  - *Multi-exam*: multi-file upload, per-exam overrides, calculate, results accordion.
-  - *Correction safety / tube identity*: run the scenarios in [CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) Validation — unmatched model names the real scanner, GE-family unmatched claims no Tx/Tz auto-swap, ambiguous Plane B / DoseTrack map, valid Plane A, multi-exam mixed match/fallback.
-  - *Settings phantom preview*: acceptance checklist in [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/SETTINGS_PHANTOM_PREVIEW_PLAN.md), then archive the plan.
-  - *Rich export*: Export-tab modal in browser + native pywebview; Windows native file dialogs.
-  - *Results table*: confirm '—' vs kerma behavior (see Open Questions).
+  - *Multi-exam* — **done 2026-10-07 (headless Playwright)**: 3 bundled DICOMs uploaded together (3 exams, 70
+    events); a per-exam offset on Exam 3 only (lon 0 → 25 cm) changed Exam 3's PSD 14.08 → 10.46 mGy while Exam 1
+    (1.09) and Exam 2 (0.00) were unchanged, and the aggregate followed (14.08 → 10.46). Note: the bundled Philips
+    example misses the phantom at default offsets (all events miss, PSD 0.00 with an all-miss alert).
+  - *Correction safety / tube identity* — **done 2026-10-07**: an unmatched DICOM scanner is named in the Upload
+    alert, Geometry notice and Calculate card ("Acme Imaging Mystery X1", Default profile); a multi-exam mix of
+    matched and unmatched exams names the unmatched exam and counts fallbacks (k_tab exact=21, fallback=42); the
+    valid Philips Plane A example reports Matched. GE-family manufacturer names all match the GE wildcard profile,
+    so the "Fallback never claims a Tx/Tz auto-swap" notice cannot be reached from the GUI and stays covered by
+    `tests/gui/test_gui_fallback_reporting.py`. DoseTrack non-CID plane codes: no map fails value-safely, a map
+    gives tubes A 3 / B 2. The smoke found `--input-preview-only` ignoring `--plane-code-map` (fixed, tested).
+  - *Settings phantom preview* — **checklist green 2026-10-07** (criteria 1–4, 7, 8, 10, 11 by screenshots and plot
+    data; 5, 6, 9, 12, 13 by code and test reading). Plan archived:
+    [SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/archive/SETTINGS_PHANTOM_PREVIEW_PLAN.md).
+  - *Rich export* — **browser modal done 2026-10-07**: HTML, XLSX, DOCX and PDF all download and open for a
+    3-exam run (HTML with 5 images and no paths, XLSX 7 sheets, DOCX 12 tables / 5 images, PDF 9 pages). DOCX
+    converted with LibreOffice renders cleanly (tables inside margins, Dose by tube readable, images present). Still
+    open: native pywebview and Windows native file dialogs (*user*).
+  - *Results table* — **confirmed 2026-10-07**: the Data Table shows real K_IRP, and Results shows Total Air Kerma
+    with `—` only before a calculation and for empty correction slots (zero-hit events). The smoke found stale
+    Results totals and per-event table after results were invalidated or a new file was loaded (fixed, tested).
+  - *Kerma-meter CF workflow / Corrections tab* ([archived plan](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md)):
+    done — load-time dialog and native example download (user), CLI scenarios (automated), browser GUI smokes
+    (Playwright, 2026-10-07), and PDF/DOCX tube tables (content checked, PDF page rendered). Still open:
+    - Native (pywebview) pass of the Corrections tab, the factor dialog and the transmission info icon. *User.*
+    - Windows: native Save As for "Download example calibration file" and the Export tab. *User.*
+    - DOCX visual layout check — done 2026-10-07 (LibreOffice render, see Rich export above).
 
 ## Product Backlog
 
 ### Input Data And Calculation
 
+- [ ] **Site-measured patient-support transmission (`k_tab`) values** — make it easy to add measured values
+  for specific equipment. The measured table is `table_data/correction_table_and_pad_attenuation.csv` with
+  columns `device_model`, `acquisition_plane` (`Single Plane` / `Plane A` / `Plane B`), `kvp_kv`,
+  `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support` (in `(0, 1]`), `comment`. For now, copy
+  that table into a SQLite file and point `corrections_db_path` at it (validated read-only). **Goal:** document
+  this how-to, then let users supply the rows as a profile file (see
+  [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md)). **Acceptance:** how-to in the
+  help pages; unit tests for a user-supplied row set.
 - [ ] **Explore additional phantoms** — keep expanding anthropomorphic coverage beyond the shipped MPFB v1
   catalog (Phases 0–4 complete; see
   [archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)). Survey and
@@ -65,23 +97,6 @@ be archived.
   [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md). Remaining: per-event override UI,
   scenarios/nominal-arc selection UI, XA-header direction ingestion, film/array validation.
   Additional vendor fixtures improve profiles but do not block.
-- [x] **Rotational coverage-envelope performance — all three phases shipped** — Phase 1 shipped
-  2026-10-01: position once per event + pose guard, boolean-ndarray hit masks, vectorized
-  `scale_field_area` and `check_hit` entrance test, vectorized union/count/fold bookkeeping, memoized
-  `k_med`, one reused candidate frame — measured ~8.3x on a 360-pose cylinder benchmark,
-  `max |before − after|` dose map exactly 0 against two committed goldens (§4.6a in the plan). Phase 2
-  shipped 2026-10-02: `Beam`'s ~14 per-event pandas scalar reads hoisted into a frozen
-  `BeamGeometryInputs` record built once per event, plus batched beam-face normals — 0.175 s → 0.119 s
-  (-32%) on the same benchmark, dose map still exactly 0 (§2.3). **One trap worth carrying forward:** the
-  hoist had to read its record from the index-reset candidate frame, not the event table, because
-  `Beam` takes `DSL` at index `0` — on the candidate frame that is the *parent* event's row, on the full
-  table the *first* event's, and switching sources silently re-drew every enveloped event's detector box
-  (§2.1). Phase 3 shipped 2026-10-02: O(N) `_deduplicate` via an exactly-tiling wrap-aware spatial
-  hash (semantics unchanged — exact pairwise predicate, oracle-tested; NOT the lossy quantized-key
-  variant), and candidate-level progress (fractional throttled updates, exact integer snap, GUI
-  `Event k / total (rotational poses NN%)` label) — both goldens untouched (§3.1). Plan (archived):
-  [ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md](plans/archive/ROTATIONAL_ENVELOPE_PERFORMANCE_PLAN.md);
-  evidence: [assessment](assessments/ROTATIONAL_ENVELOPE_PERFORMANCE_2026-09-28.md).
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
 - [ ] **RDSR parser input hardening (OpenREM upstream failures)** — three upstream OpenREM RF files fail `rdsr_parser` (missing top-level `Manufacturer`/`ManufacturerModelName`; one structural `IndexError`). **Goal:** fail-soft or clear errors. **Constraint:** do not vendor identifier-bearing files; reproduce with synthetic/cleared fixtures. Survey: [assessment](assessments/ROTATIONAL_ACQUISITION_ASSESSMENT.md), Phase 0 lead inventory. **Acceptance:** unit tests per failure; no change on bundled fixtures. Progress 2026-09-22: Allura (absent model tag → None) and GE (empty value sequences → None) guards shipped with synthetic tests; `RF-Pat-Orientation-Modifier-Missing` still open.
 - [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
@@ -234,8 +249,3 @@ be archived.
 
 - **Original flow inputs** — Do examples need JSON sidecars, different normalization settings, or other files to
   avoid unexpected body-region projections?
-- **Results “—” vs kerma (likely resolved)** — Older note: “Results table shows K_IRP as `-`.” Current GUI:
-  Data Table has a real `K_IRP (mGy)` column from the normalized events; Results shows **Total Air Kerma**
-  (sum of reported K_IRP) and a **Correction factors per event** table (`k_isq` / `k_bs` / `k_tab`) that uses
-  `—` for missing/empty correction slots (e.g. zero-hit events), not as a stand-in for kerma. Metric cards also
-  show `—` before a calculation finishes. See the Manual Smokes item in Next Up / Active Work to confirm and delete.

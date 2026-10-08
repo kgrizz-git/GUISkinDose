@@ -11,6 +11,7 @@ import pandas as pd
 import scipy.interpolate
 from scipy.interpolate import CubicSpline, RegularGridInterpolator
 
+from .constants import K_TAB_MODES
 from .correction_data import (
     CorrectionDataError,
     explicit_table,
@@ -60,8 +61,9 @@ class KTabResult:
         attenuation).
     statuses : list[str]
         One status string per event.  Values are ``"estimated"``, ``"exact"``,
-        ``"interpolated"``, ``"clamped"``, ``"no_device"``, or
-        ``"invalid_inherited"``.
+        ``"interpolated"``, ``"clamped"``, ``"no_device"``,
+        ``"invalid_inherited"``, or ``"fallback"`` (measured data missing or
+        invalid, so ``k_tab_val`` was used in ``measured_with_fallback`` mode).
     """
 
     values: list[float]
@@ -475,6 +477,52 @@ def _log_k_tab_warnings(
         )
 
 
+def _resolve_k_tab_mode(k_tab_mode: str | None, estimate_k_tab: bool) -> str:
+    """Return the effective mode; the legacy boolean applies only when no mode is given."""
+    mode = k_tab_mode or ("estimate" if estimate_k_tab else "measured_only")
+    if mode not in K_TAB_MODES:
+        raise ValueError(f"k_tab_mode must be one of {sorted(K_TAB_MODES)}")
+    return mode
+
+
+def _off_grid_status(status: str, event: int, clamped: list[int], interpolated: list[int]) -> str:
+    """Map an interpolation status to its k_tab status string, recording the event index."""
+    if status == STATUS_CLAMPED:
+        clamped.append(event)
+        return "clamped"
+    if status == STATUS_INTERPOLATED:
+        interpolated.append(event)
+        return "interpolated"
+    return "exact"
+
+
+def _validate_k_tab_value_for_mode(mode: str, k_tab_val: float) -> None:
+    """Validate ``k_tab_val`` where it is used: the flat estimate or the fallback value."""
+    if mode == "estimate":
+        _validate_transmission_factor(k_tab_val, context="estimated k_tab_val")
+    elif mode == "measured_with_fallback":
+        _validate_transmission_factor(k_tab_val, context="fallback k_tab_val")
+
+
+def _apply_k_tab_fallback(
+    k_tab: list[float], statuses: list[str], events: list[int], k_tab_val: float, emit_warnings: bool
+) -> None:
+    """Give events without usable measured data ``k_tab_val`` (status ``fallback``) and warn once.
+
+    The warning carries counts and event indices only, never equipment labels.
+    """
+    ordered = sorted(events)
+    for event in ordered:
+        k_tab[event] = k_tab_val
+        statuses[event] = "fallback"
+    if emit_warnings and ordered:
+        logger.warning(
+            "k_tab: %d of %d event(s) had no usable measured table-attenuation data and use the "
+            "fallback k_tab_val=%.4g. Affected event index(es): %s.",
+            len(ordered), len(k_tab), k_tab_val, format_event_indices(ordered),
+        )
+
+
 def calculate_k_tab(
     data_norm: pd.DataFrame,
     corrections_db: str,
@@ -482,16 +530,25 @@ def calculate_k_tab(
     k_tab_val: float = 0.8,
     *,
     emit_warnings: bool = True,
+    k_tab_mode: str | None = None,
 ) -> KTabResult:
     """Resolve per-event patient-support transmission factors (``k_tab``).
 
     Transmission is dimensionless in ``(0, 1]`` (1.0 = no table/pad attenuation).
 
-    **Estimated path** (``estimate_k_tab=True``, GUI / ``settings_example.json``
-    default): validate ``k_tab_val`` and return that scalar for every event.
-    The SQLite attenuation table is **not** read.
+    Three modes (``k_tab_mode``; when ``None`` the legacy ``estimate_k_tab`` flag
+    maps ``True`` to ``estimate`` and ``False`` to ``measured_only``):
 
-    **Measured path** (``estimate_k_tab=False``): look up
+    * ``estimate``: validate ``k_tab_val`` and return that scalar for every
+      event. The SQLite attenuation table is **not** read.
+    * ``measured_only``: the measured path below; unusable events get ``1.0``.
+    * ``measured_with_fallback`` (product default): the measured path, but an
+      event with no usable measured value (unknown device/plane, or non-numeric
+      or out-of-range inherited cells such as the all-``0.0`` AlluraClarity
+      Plane B rows) uses ``k_tab_val`` instead of ``1.0`` (status ``"fallback"``,
+      one warning with event indices, never labels). ``k_tab_val`` is validated.
+
+    **Measured path**: look up
     ``correction_table_and_pad_attenuation`` by ``model`` + literal
     ``acquisition_plane`` string (``"Single Plane"`` / ``"Plane A"`` /
     ``"Plane B"``), exact (kVp, Cu, Al) match first, else (kVp, Cu)
@@ -511,12 +568,14 @@ def calculate_k_tab(
     data_norm : pd.DataFrame
         Normalized irradiation-event table.
     estimate_k_tab: bool
-        ``True`` → estimated scalar; ``False`` → measured table lookup.
-        Function default is ``False`` for backward compatibility; product
-        settings/GUI default to ``True``.
+        Legacy flag, used only when ``k_tab_mode`` is ``None``: ``True`` →
+        estimated scalar; ``False`` → measured-only lookup.
     k_tab_val: float
-        Estimated transmission when ``estimate_k_tab`` is ``True``; must be
-        finite and in ``(0, 1]``.
+        Estimated transmission (``estimate``) or fallback value
+        (``measured_with_fallback``); must be finite and in ``(0, 1]``.
+    k_tab_mode : str | None
+        ``estimate``, ``measured_only`` or ``measured_with_fallback``. Wins over
+        ``estimate_k_tab`` when given.
     corrections_db : str
         Path to the corrections SQLite database.
     emit_warnings : bool
@@ -528,8 +587,9 @@ def calculate_k_tab(
     KTabResult
         Per-event transmission factors and their lookup status strings.
     """
-    if estimate_k_tab:
-        _validate_transmission_factor(k_tab_val, context="estimated k_tab_val")
+    mode = _resolve_k_tab_mode(k_tab_mode, estimate_k_tab)
+    _validate_k_tab_value_for_mode(mode, k_tab_val)
+    if mode == "estimate":
         return KTabResult(
             values=[k_tab_val] * len(data_norm),
             statuses=["estimated"] * len(data_norm),
@@ -610,14 +670,11 @@ def calculate_k_tab(
             continue
 
         k_tab[event] = value
-        if status == STATUS_CLAMPED:
-            statuses[event] = "clamped"
-            clamped_events.append(event)
-        elif status == STATUS_INTERPOLATED:
-            statuses[event] = "interpolated"
-            interpolated_events.append(event)
-        else:
-            statuses[event] = "exact"
+        statuses[event] = _off_grid_status(status, event, clamped_events, interpolated_events)
+
+    if mode == "measured_with_fallback":
+        _apply_k_tab_fallback(k_tab, statuses, no_device_events + invalid_value_events, k_tab_val, emit_warnings)
+        no_device_events, invalid_value_events = [], []
 
     if emit_warnings:
         _log_k_tab_warnings(

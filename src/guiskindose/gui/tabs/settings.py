@@ -1,4 +1,6 @@
-"""Settings tab — phantom, physics, and visual calculation settings.
+"""Settings tab — run configuration, phantom, per-exam corrections, and visual settings.
+
+Physics and kerma-meter corrections live in the Corrections tab (``corrections.py``).
 
 Refactor plan Phase 3.3e. Mostly two-way ``state`` binds with ``reset_results``
 on change. Phantom model / mesh / orientation / habitus / offsets also refresh
@@ -7,7 +9,6 @@ the Settings phantom preview and (where needed) the Geometry preview.
 
 from __future__ import annotations
 
-import math
 from collections.abc import Callable
 
 from nicegui import ui
@@ -98,7 +99,6 @@ def build(ctx: PageContext) -> None:
         # editable block per loaded exam; registers ctx.refresh_per_exam.
         build_per_exam_section(ctx)
 
-        _build_physics_section()
         _build_visual_section()
 
 
@@ -306,119 +306,6 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
 
     # Initial paint so Settings is not blank until the first control change.
     preview_controller.schedule_refresh()
-
-
-def _build_physics_section() -> None:
-    """Physics Settings expansion: transmission factor, filtration, kVp policy, kerma meter."""
-    with ui.expansion("Physics Settings", icon="science").classes(_SETTINGS_EXPANSION_CLASSES):
-        with ui.column().classes(_SETTINGS_SECTION_CLASSES):
-            ui.checkbox("Use estimated patient-support transmission factor", value=state.estimate_k_tab).bind_value(
-                state, "estimate_k_tab"
-            ).on(_MODEL_VALUE_EVENT, reset_results)
-
-            with ui.column().classes(COMPACT_FULL_WIDTH_COLUMN_CLASSES):
-                ui.label("TRANSMISSION FACTOR (patient-support)").classes("technical-label")
-                with ui.row().classes("items-center w-full gap-4"):
-                    ui.slider(min=0.01, max=1.0, step=0.01, value=state.k_tab_val).bind_value(
-                        state, "k_tab_val"
-                    ).on(_MODEL_VALUE_EVENT, reset_results).classes("grow")
-                    ui.label().bind_text_from(
-                        state,
-                        "k_tab_val",
-                        backward=lambda v: (
-                            f"{float(v):.2f}"
-                            if isinstance(v, (int, float)) and math.isfinite(float(v))
-                            else "—"
-                        ),
-                    ).classes("mono-text font-bold")
-
-            ui.number(
-                label="Inherent filtration (mmAl)", value=state.inherent_filtration, min=0.0, step=0.1
-            ).bind_value(state, "inherent_filtration").on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
-
-            ui.checkbox("Remove invalid data (kVp = 0)", value=state.remove_invalid_rows).bind_value(
-                state, "remove_invalid_rows"
-            ).on(_MODEL_VALUE_EVENT, reset_results)
-
-            with ui.column().classes("w-full gap-2"):
-                with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
-                    ui.label("Below-floor kVp handling (< 25 kV)").classes("text-subtitle2")
-                    HelpButton(
-                        title="Below-floor kVp handling",
-                        content_path="below_floor_kvp.md",
-                        help_id="settings_below_floor_kvp",
-                    )
-                ui.select(
-                    BELOW_FLOOR_KVP_OPTIONS,
-                    label="Policy for events below the HVL table floor",
-                    value=state.below_floor_kvp_policy,
-                ).bind_value(state, "below_floor_kvp_policy").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
-
-                manual_kvp = ui.number(
-                    label="Manual kVp", value=state.below_floor_kvp_manual, min=25.0, max=175.0, step=1.0
-                ).bind_value(state, "below_floor_kvp_manual").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
-
-                def _update_manual_kvp_visibility():
-                    """Show the manual kVp field only when policy is manual."""
-                    manual_kvp.visible = state.below_floor_kvp_policy == "manual"
-
-                ui.timer(0.5, _update_manual_kvp_visibility)
-
-            ui.select(
-                BEAM_MISS_WARN_OPTIONS,
-                label="Beam-miss warning verbosity",
-                value=state.beam_miss_warn,
-            ).bind_value(state, "beam_miss_warn").on(
-                _MODEL_VALUE_EVENT, reset_results
-            ).classes("w-full")
-
-            with ui.column().classes("w-full gap-2"):
-                with ui.row().classes(_SETTINGS_HEADER_ROW_CLASSES):
-                    ui.label("Kerma-meter correction").classes("text-subtitle2")
-                    HelpButton(
-                        title="Kerma-meter correction",
-                        content_path="kerma_meter_correction.md",
-                        help_id="settings_kerma_meter_correction",
-                    )
-                ui.checkbox(
-                    "Enable kerma-meter correction factors",
-                    value=state.kerma_meter_enable,
-                ).bind_value(state, "kerma_meter_enable").on(_MODEL_VALUE_EVENT, reset_results)
-                ui.select(
-                    {"file": "Lookup file", "prompt": "Prompt before calculation"},
-                    label="Correction mode",
-                    value=state.kerma_meter_mode,
-                ).bind_value(state, "kerma_meter_mode").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
-                ui.input(
-                    label="Correction table path (CSV/TSV/XLSX/JSON)",
-                    value=state.kerma_meter_file or "",
-                ).bind_value(state, "kerma_meter_file").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
-                ui.number(
-                    label="Default factor (unresolved / table miss)",
-                    value=state.kerma_meter_default_factor,
-                    min=0.01,
-                    step=0.01,
-                ).bind_value(state, "kerma_meter_default_factor").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
-                ui.input(
-                    label="Explicit equipment label (optional override)",
-                    value=state.kerma_meter_explicit_label or "",
-                ).bind_value(state, "kerma_meter_explicit_label").on(
-                    _MODEL_VALUE_EVENT, reset_results
-                ).classes("w-full")
-                ui.label(
-                    "CF = (real measured dose) / (unit reported dose). "
-                    "Radimetrics Equipment = room; DoseTrack Equipment Name is often the model."
-                ).classes("text-xs text-grey-6")
 
 
 def _build_visual_section() -> None:

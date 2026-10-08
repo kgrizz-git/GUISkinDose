@@ -63,7 +63,8 @@ def build_settings(
     base = load_settings_example_json()
 
     base["mode"] = mode
-    base["estimate_k_tab"] = app_state.estimate_k_tab
+    base["k_tab_mode"] = app_state.k_tab_mode
+    base.pop("estimate_k_tab", None)
     base["k_tab_val"] = app_state.k_tab_val
     base["inherent_filtration"] = app_state.inherent_filtration
     base["remove_invalid_rows"] = app_state.remove_invalid_rows
@@ -91,12 +92,11 @@ def build_settings(
 
     base["kerma_meter_correction"] = {
         "enable": app_state.kerma_meter_enable,
-        "mode": app_state.kerma_meter_mode,
         "file": app_state.kerma_meter_file or None,
         "file_sheet": app_state.kerma_meter_file_sheet or None,
         "default_factor": app_state.kerma_meter_default_factor,
         "explicit_label": app_state.kerma_meter_explicit_label or None,
-        "prompt_at_calc": app_state.kerma_meter_prompt_at_calc,
+        "ask_for_missing": app_state.kerma_meter_ask_for_missing,
     }
 
     base["phantom"]["model"] = app_state.phantom_model

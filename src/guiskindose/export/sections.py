@@ -21,7 +21,7 @@ from .models import ExportExamSource
 # Settings fields surfaced in the snapshot (§4).
 _SETTINGS_KEYS = (
     "mode",
-    "estimate_k_tab",
+    "k_tab_mode",
     "k_tab_val",
     "inherent_filtration",
     "below_floor_kvp_policy",
@@ -325,3 +325,106 @@ def rotational_ledger_table(handling: dict[str, Any] | None) -> list[list[str]]:
             ]
         )
     return rows
+
+
+TUBE_SECTION_TITLE = "Dose by tube"
+TUBE_NOTE = (
+    "Each peak is the maximum of that tube's own partial dose map. Per-tube peaks "
+    "generally do not add up to the peak skin dose, which is the peak of the combined map. "
+    "Applied CF is the kerma-meter correction factor used for the tube in that exam; when the "
+    "tube's events used more than one factor, the range and the kerma-weighted value are shown. "
+    "Equipment names are not reported."
+)
+_TUBE_NAMES = {"single": "Single plane", "A": "Plane A", "B": "Plane B", "unknown": "Unknown tube"}
+_SOURCE_NAMES = {
+    "manual": "manual",
+    "file": "file",
+    "default": "default",
+    "mixed": "mixed",
+    "off": "not applied",
+}
+TUBE_HEADER = [
+    "Tube",
+    "Events",
+    "Reported kerma (mGy)",
+    "Corrected kerma (mGy)",
+    "Applied CF",
+    "Factor source",
+    "Peak dose (mGy)",
+]
+
+
+def has_tube_content(summary: list[dict[str, Any]] | None) -> bool:
+    """Whether a per-tube summary merits a report section.
+
+    Shown when kerma-meter correction was applied (even for one single-plane tube,
+    so the factor used is always reported) or when more than one tube, or a
+    non-single tube, is present. A lone uncorrected ``single`` tube repeats the
+    headline numbers and is not shown. Summaries without ``cf_source`` (older
+    outputs) count as uncorrected.
+    """
+    if not summary:
+        return False
+    corrected = any(row.get("cf_source", "off") != "off" for row in summary)
+    return corrected or len(summary) > 1 or any(row.get("tube") != "single" for row in summary)
+
+
+def tube_cf_text(row: dict[str, Any]) -> str:
+    """Applied CF for a tube row: one number, or ``min-max (weighted w)`` when it varied.
+
+    Returns ``not applied`` when correction was disabled.
+    """
+    if row.get("cf_source", "off") == "off":
+        return "not applied"
+    weighted = float(row.get("applied_cf", 1.0))
+    low = float(row.get("cf_min", weighted))
+    high = float(row.get("cf_max", weighted))
+    if f"{low:.4g}" == f"{high:.4g}":
+        return f"{weighted:.4g}"
+    return f"{low:.4g}-{high:.4g} (weighted {weighted:.4g})"
+
+
+def tube_source_text(row: dict[str, Any]) -> str:
+    """Factor source for a tube row (manual / file / default / mixed / not applied)."""
+    return _SOURCE_NAMES.get(str(row.get("cf_source", "off")), str(row.get("cf_source")))
+
+
+def tube_row_cells(row: dict[str, Any]) -> list[str]:
+    """Display cells of one tube row, in :data:`TUBE_HEADER` order (no equipment labels)."""
+    return [
+        _TUBE_NAMES.get(str(row.get("tube")), str(row.get("tube"))),
+        str(row.get("events", "")),
+        f"{float(row.get('kerma_reported', 0.0)):.4g}",
+        f"{float(row.get('kerma_corrected', 0.0)):.4g}",
+        tube_cf_text(row),
+        tube_source_text(row),
+        f"{float(row.get('peak_dose', 0.0)):.4g}",
+    ]
+
+
+def tube_report_table(blocks: list[tuple[str | None, list[dict[str, Any]] | None]]) -> list[list[str]]:
+    """One table: a row per exam x tube, with a leading Exam column when exams are labelled.
+
+    Parameters
+    ----------
+    blocks : list[tuple[str | None, list[dict] | None]]
+        ``(exam label or None, tube summary)`` per exam. Exams whose summary does
+        not merit a section (see :func:`has_tube_content`) are skipped.
+    """
+    shown = [(label, summary) for label, summary in blocks if has_tube_content(summary)]
+    labelled = any(label is not None for label, _ in shown)
+    rows = [(["Exam"] if labelled else []) + TUBE_HEADER]
+    for label, summary in shown:
+        for row in summary or []:
+            rows.append(([label or ""] if labelled else []) + tube_row_cells(row))
+    return rows
+
+
+def tube_summary_table(summary: list[dict[str, Any]] | None) -> list[list[str]]:
+    """Header plus one row per tube present for a single exam."""
+    return tube_report_table([(None, summary)])
+
+
+def tube_blocks(payload: Any) -> list[tuple[str | None, list[dict[str, Any]] | None]]:
+    """``(exam label or None, summary)`` per exam of an export payload (label only for multi-exam)."""
+    return [(e.exam_id if payload.is_multi_exam else None, e.tube_summary) for e in payload.exams]

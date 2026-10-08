@@ -10,6 +10,7 @@ from guiskindose import constants as c
 from guiskindose.calculate_dose.calculate_irradiation_event_result import (
     calculate_irradiation_event_result,
 )
+from guiskindose.calculate_dose.tube_dose import init_tube_outputs, summarize_tubes, tube_identities
 from guiskindose.corrections import calculate_k_bs, calculate_k_tab
 from guiskindose.geom_calc import (
     apply_below_floor_kvp_policy,
@@ -20,11 +21,17 @@ from guiskindose.geom_calc import (
 from guiskindose.kerma_correction import (
     all_ones_correction,
     distinct_auto_resolved_equipment_keys,
-    load_correction_table,
+    effective_period,
+    load_correction_periods,
+    manual_for_exam,
     merge_tables,
+    missing_keys,
     resolve_correction_factors,
+    unique_equipment_tube_keys,
 )
+from guiskindose.kerma_periods import dated_pairs, file_table_for_exam
 from guiskindose.phantom_class import Phantom
+from guiskindose.privacy import opaque_exam_label
 from guiskindose.settings import PyskindoseSettings
 
 logger = logging.getLogger(__name__)
@@ -33,26 +40,44 @@ logger = logging.getLogger(__name__)
 def _resolve_kerma_meter_cf(
     normalized_data: pd.DataFrame,
     settings: PyskindoseSettings,
+    exam_id: str | None = None,
 ) -> list[float]:
-    """Resolve per-event kerma-meter CF; skip I/O when disabled."""
+    """Resolve per-event kerma-meter CF; skip I/O when disabled (see the detail variant)."""
+    return _resolve_kerma_meter_cf_detail(normalized_data, settings, exam_id)[0]
+
+
+def _resolve_kerma_meter_cf_detail(
+    normalized_data: pd.DataFrame,
+    settings: PyskindoseSettings,
+    exam_id: str | None = None,
+) -> tuple[list[float], list[str]]:
+    """Resolve per-event kerma-meter CF and its source; skip I/O when disabled.
+
+    Returns ``(factors, sources)`` where each source is ``manual``, ``file`` or
+    ``default`` (``off`` for every event when correction is disabled). Sources
+    carry no equipment labels.
+
+    ``exam_id`` (``None`` means the single exam, ``"Exam 1"``) selects the
+    per-exam identity override for events with no equipment identity.
+    """
     km = settings.kerma_meter_correction
     n = len(normalized_data)
     if not km.enable:
-        return all_ones_correction(n).factors
+        return all_ones_correction(n).factors, ["off"] * n
 
+    exam_label = exam_id or opaque_exam_label(0)
     file_table = None
     table_meta: dict[str, object] | None = None
-    if km.mode == "prompt" and km.in_memory_table is None:
-        # Non-GUI / prompt without a confirmed table → fail-soft.
-        logger.warning(
-            "kerma-meter correction: mode=prompt without an in-memory table; "
-            "using default_factor=%.4g for all events.",
-            km.default_factor,
-        )
-    elif km.file is not None:
+    # Precedence per exam: manual entry for that exam > file row for its
+    # calibration period > default_factor. A file always loads when set.
+    if km.file is not None:
         try:
-            file_table = load_correction_table(km.file, km.file_sheet)
+            periods = load_correction_periods(km.file, km.file_sheet)
+            period_key = effective_period(km.calibration_periods, exam_label)
+            file_table = file_table_for_exam(periods, period_key=period_key, calibration_date=km.calibration_date)
             table_meta = {"source_stem": km.file.stem}
+            if exam_label not in km.periods_acknowledged:
+                _warn_unselected_period(periods, period_key, km.calibration_date)
         except (OSError, UnicodeError, ValueError, TypeError) as exc:
             logger.warning(
                 "kerma-meter correction: failed to load table (%s); "
@@ -70,15 +95,78 @@ def _resolve_kerma_meter_cf(
                 len(auto_keys),
             )
 
-    table = merge_tables(file_table, km.in_memory_table)
+    manual = manual_for_exam(km.in_memory_table, exam_label, periods=km.calibration_periods)
+    table = merge_tables(file_table, manual)
+    _warn_missing_pairs(normalized_data, table, km, exam_label)
     result = resolve_correction_factors(
         normalized_data,
         table,
         explicit_label=km.explicit_label,
         default_factor=km.default_factor,
         table_metadata=table_meta,
+        fallback_label=km.unresolved_equipment_labels.get(exam_label),
     )
-    return result.factors
+    sources = [
+        "manual" if key in manual else "file" if file_table and key in file_table else "default"
+        for key in result.resolved_keys
+    ]
+    return result.factors, sources
+
+
+def _warn_unselected_period(periods: dict, period_key: str | None, calibration_date: object) -> None:
+    """Count-only warning when dated rows exist but no calibration period was chosen.
+
+    Non-GUI runs have no period chooser, so the current (no ``valid_to``) or most
+    recent period is used. The caller skips exams whose default period the user
+    accepted in the GUI. No dates are logged.
+    """
+    if period_key or calibration_date is not None:
+        return
+    n_dated = len(dated_pairs(periods))
+    if n_dated:
+        logger.warning(
+            "kerma-meter correction: %d pair(s) have dated calibration rows and no period was selected "
+            "(use --kerma-meter-calibration-date); using the current or most recent period.",
+            n_dated,
+        )
+
+
+def _warn_missing_pairs(
+    normalized_data: pd.DataFrame,
+    table: dict[tuple[str, str], float] | None,
+    km: Any,
+    exam_label: str,
+) -> None:
+    """Log one warning (per exam) with the count of detected ``(equipment, tube)`` pairs lacking a factor.
+
+    The dialog never opens outside the GUI, so a command-line run learns about
+    missing pairs here. Only the count is logged, never equipment labels.
+
+    Parameters
+    ----------
+    normalized_data : pd.DataFrame
+        Normalized events of one exam.
+    table : dict[tuple[str, str], float] | None
+        Merged manual + file table.
+    km : KermaMeterCorrectionSettings
+        Kerma-meter settings (explicit label, overrides, default factor).
+    exam_label : str
+        Opaque exam label selecting the per-exam identity override.
+    """
+    detected = unique_equipment_tube_keys(
+        [normalized_data],
+        explicit_label=km.explicit_label,
+        exam_labels=[exam_label],
+        unresolved_labels=km.unresolved_equipment_labels,
+    )
+    missing = missing_keys(detected, table)
+    if missing:
+        logger.warning(
+            "kerma-meter correction: %d detected (equipment, tube) pair(s) have no factor "
+            "-> default_factor=%.4g.",
+            len(missing),
+            km.default_factor,
+        )
 
 
 def calculate_dose(
@@ -165,20 +253,23 @@ def calculate_dose(
 
     k_tab = calculate_k_tab(
         data_norm=normalized_data,
-        estimate_k_tab=settings.estimate_k_tab,
+        k_tab_mode=settings.k_tab_mode,
         k_tab_val=settings.k_tab_val,
         corrections_db=settings.corrections_db_path,
     )
     k_tab_values = k_tab.values
     k_tab_statuses = k_tab.statuses
 
-    kerma_cf = _resolve_kerma_meter_cf(normalized_data, settings)
+    kerma_cf, kerma_cf_sources = _resolve_kerma_meter_cf_detail(normalized_data, settings, exam_id)
 
     total_number_of_events = len(normalized_data)
 
     output_template = _build_output_template(
         total_number_of_events=total_number_of_events, dose_map_size=len(patient.r)
     )
+
+    init_tube_outputs(output_template, tube_identities(normalized_data), len(patient.r))
+    output_template[c.OUTPUT_KEY_KERMA_CF_SOURCES] = kerma_cf_sources
 
     output = calculate_irradiation_event_result(
         normalized_data=normalized_data,
@@ -201,6 +292,7 @@ def calculate_dose(
     )
 
     output[c.OUTPUT_KEY_CORRECTION_TABLE_STATUSES] = k_tab_statuses
+    output[c.OUTPUT_KEY_TUBE_SUMMARY] = summarize_tubes(output)
 
     # Return the post-policy frame separately so export packaging can match
     # dose-loop event lengths after below-floor ``skip`` without stuffing a

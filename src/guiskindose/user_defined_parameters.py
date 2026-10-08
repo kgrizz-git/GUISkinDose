@@ -12,8 +12,8 @@ PARAMETERS = {
     "rdsr_filename": "S1.dcm",
     # Irrading event index for mode='plot_event'
     "plot_event_index": 12,
-    # Set True to estimate table correction, or False to use measured k_tab
-    "estimate_k_tab": False,
+    # k_tab_mode: measured_with_fallback | estimate | measured_only
+    "k_tab_mode": "measured_only",
     # Numeric value of estimated table correction
     "k_tab_val": 0.8,
     # plot settings

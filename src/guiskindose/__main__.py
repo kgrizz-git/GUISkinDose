@@ -11,12 +11,13 @@ import sys
 
 from guiskindose.constants import RUN_ARGUMENTS_MODE_GUI
 from guiskindose.debug import configure_logging
-from guiskindose.dev_data import DEVELOPMENT_PARAMETERS
 from guiskindose.main import (
     analyze_input_file,
     get_argument_parser,
     main,
+    prepare_cli_settings,
     preview_input_file,
+    print_cli_result,
     run_cli_export,
     validate_export_flags,
 )
@@ -65,17 +66,17 @@ def cli() -> None:
         if not args.file_path:
             print("--input-preview-only requires --file-path", file=sys.stderr)
             sys.exit(1)
+        preview_settings = prepare_cli_settings(args)
         for single_path in args.file_path:
             preview_input_file(
                 single_path,
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
                 include_sensitive_values=getattr(args, "include_sensitive_preview", False),
+                settings=preview_settings,
             )
     else:
-        if (run_settings := args.settings) is None:
-            logger.warning("No settings specified. Running with development parameters")
-            run_settings = DEVELOPMENT_PARAMETERS
+        run_settings = prepare_cli_settings(args)
 
         file_paths_raw: list[str] = args.file_path or []
 
@@ -123,25 +124,23 @@ def cli() -> None:
                 input_schema=getattr(args, "input_schema", None),
                 sheet_name=getattr(args, "sheet_name", 0),
             )
-            if getattr(args, "aggregate_only", False):
-                print(f"{result.aggregate_psd:.4f}")
-            else:
-                import json as _json
-
-                print(_json.dumps(result.to_dict()))
+            print_cli_result(result, aggregate_only=getattr(args, "aggregate_only", False))
         elif len(file_paths) == 1:
             single_path = file_paths[0]
             if Path(single_path).suffix.lower() in _TABULAR_SUFFIXES:
-                analyze_input_file(
-                    single_path,
-                    settings=run_settings,
-                    input_schema=getattr(args, "input_schema", None),
-                    sheet_name=getattr(args, "sheet_name", 0),
+                print_cli_result(
+                    analyze_input_file(
+                        single_path,
+                        settings=run_settings,
+                        input_schema=getattr(args, "input_schema", None),
+                        sheet_name=getattr(args, "sheet_name", 0),
+                    ),
+                    aggregate_only=getattr(args, "aggregate_only", False),
                 )
             else:
-                main(file_path=single_path, settings=run_settings)
+                print_cli_result(main(file_path=single_path, settings=run_settings))
         else:
-            main(file_path=None, settings=run_settings)
+            print_cli_result(main(file_path=None, settings=run_settings))
 
 
 if __name__ == "__main__":

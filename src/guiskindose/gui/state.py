@@ -70,7 +70,8 @@ class AppState:
     # cannot collide via recycled DataFrame ``id()`` values.
     input_revision: int = 0
 
-    estimate_k_tab: bool = True
+    # Patient-support transmission: measured_with_fallback | estimate | measured_only.
+    k_tab_mode: str = "measured_with_fallback"
     k_tab_val: float = 0.8
     inherent_filtration: float = 3.1
     remove_invalid_rows: bool = False
@@ -94,13 +95,33 @@ class AppState:
 
     # Kerma-meter correction (CF = measured / reported), per equipment × tube.
     kerma_meter_enable: bool = False
-    kerma_meter_mode: str = "file"
     kerma_meter_file: str | None = None
     kerma_meter_file_sheet: str | None = None
     kerma_meter_default_factor: float = 1.0
     kerma_meter_explicit_label: str | None = None
-    kerma_meter_prompt_at_calc: bool = False
-    kerma_meter_in_memory_table: dict[tuple[str, str], float] | None = None
+    kerma_meter_ask_for_missing: bool = True
+    # Dialog bookkeeping, reset by rebuild_rdsr_df() when the loaded events change:
+    # "don't ask again", whether Calculate already re-opened the dialog once, and
+    # the (input_revision, enable, file, sheet, ask) tuple the load-time watcher last evaluated.
+    kerma_meter_prompt_suppressed: bool = False
+    kerma_meter_calc_reprompted: bool = False
+    kerma_meter_checked_key: tuple[object, ...] | None = None
+    # Identity (object ids) of the loaded exams at the last rebuild, so per-exam
+    # unresolved labels (keyed by exam position) are dropped when exams are
+    # removed or reordered. Appending an exam keeps them.
+    kerma_meter_exam_signature: tuple[int, ...] = ()
+    kerma_meter_in_memory_table: dict[tuple[str, ...], float] | None = None
+    # Per-exam identity override for events with no serial/station, keyed by the
+    # opaque exam label ("Exam 1"). Values are site identifiers: never logged.
+    kerma_meter_unresolved_labels: dict[str, str] = field(default_factory=dict)
+    # Calibration period chosen per exam (opaque exam label -> "<from>|<to>" key).
+    # Calibration dates, not patient dates; kept out of logs and per-event exports.
+    kerma_meter_periods: dict[str, str] = field(default_factory=dict)
+    # Rows the user confirmed at their default factor, and exams whose default calibration
+    # period was accepted: remembered so the dialog does not re-ask, but not stored as
+    # factors, so a calibration file row added later still wins.
+    kerma_meter_acknowledged: set[tuple[str, str, str]] = field(default_factory=set)
+    kerma_meter_periods_acknowledged: set[str] = field(default_factory=set)
 
     plot_dosemap: bool = True
     dark_mode: bool = True

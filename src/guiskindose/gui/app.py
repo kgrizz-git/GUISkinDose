@@ -30,7 +30,7 @@ from nicegui import Client, app, ui
 from guiskindose.debug import configure_logging, dprint
 from guiskindose.privacy import opaque_exam_label, safe_error_event
 
-from .dose_severity import PSD_PENDING_TEXT, build_psd_readout
+from .dose_severity import PSD_PENDING_TEXT, build_psd_readout, reset_psd_label
 from .loopback_security import (
     DEFAULT_GUI_PORT,
     TOKEN_QUERY_PARAM,
@@ -52,12 +52,14 @@ from .page_context import PageContext
 from .state import state
 from .styles import MODERN_CSS
 from .tabs import calculate as calculate_tab
+from .tabs import corrections as corrections_tab
 from .tabs import data as data_tab
 from .tabs import export as export_tab
 from .tabs import geometry as geometry_tab
 from .tabs import results as results_tab
 from .tabs import settings as settings_tab
 from .tabs import upload as upload_tab
+from .tabs._kerma_meter_dialog import maybe_prompt_after_load
 from .ui_copy import copy_text
 from .window_prefs import (
     NativeWindowPrefs,
@@ -181,16 +183,20 @@ def _show_onboarding_dialog() -> None:
                     **1. Upload** — Drag-and-drop a DICOM RDSR (`.dcm`) file, or import
                     CSV/TSV/XLSX data.
 
-                    **2. Settings** — Choose a phantom model and adjust physics parameters
+                    **2. Settings** — Choose a phantom model and set patient offsets
                     (defaults usually work).
 
-                    **3. Geometry** — Preview beam geometry before calculating.
+                    **3. Corrections** — Review the patient-support transmission mode and,
+                    if you have calibration factors for your dose meter, the kerma-meter
+                    correction.
 
-                    **4. Calculate** — Run the dose calculation.
+                    **4. Geometry** — Preview beam geometry before calculating.
 
-                    **5. Results** — View the 3D dose map and peak skin dose (PSD).
+                    **5. Calculate** — Run the dose calculation.
 
-                    **6. Export** — Download results as JSON, HTML, or PNG.
+                    **6. Results** — View the 3D dose map and peak skin dose (PSD).
+
+                    **7. Export** — Download results as JSON, HTML, or PNG.
 
                     **Privacy** — {copy_text("onboarding.privacy_notice")}
                     """
@@ -208,6 +214,24 @@ def _show_onboarding_dialog() -> None:
             ui.button("Got it", on_click=on_ok).classes("modern-btn-primary text-white")
 
     ui.timer(0.1, dialog.open, once=True)
+
+
+def sync_sidebar_psd(ctx: PageContext) -> None:
+    """Return the sidebar PSD readout to "PSD: —" once results were invalidated.
+
+    ``reset_results()`` clears ``state.psd`` but cannot reach the page's widgets, so
+    this runs on a short timer and resets the readout whenever no calculation is
+    current and it still shows a value. A timer is the simplest shared hook: every
+    path that resets results (Settings, Corrections, dialogs) gets the same clean-up
+    without needing the page context.
+
+    Parameters
+    ----------
+    ctx : PageContext
+        Page widgets, including the sidebar PSD readout.
+    """
+    if not state.calculation_done and state.psd is None and ctx.psd_readout.value.text != PSD_PENDING_TEXT:
+        reset_psd_label(ctx.psd_readout)
 
 
 # ── page ───────────────────────────────────────────────────────────────────
@@ -261,10 +285,11 @@ def index():
         _add_navigation_button(nav_buttons, tab_selector, "1 · Upload", "upload")
         _add_navigation_button(nav_buttons, tab_selector, "2 · Data Table", "data")
         _add_navigation_button(nav_buttons, tab_selector, "3 · Settings", "settings")
-        _add_navigation_button(nav_buttons, tab_selector, "4 · Geometry", "geometry")
-        _add_navigation_button(nav_buttons, tab_selector, "5 · Calculate", "calculate")
-        _add_navigation_button(nav_buttons, tab_selector, "6 · Results", "results")
-        _add_navigation_button(nav_buttons, tab_selector, "7 · Export", "export")
+        _add_navigation_button(nav_buttons, tab_selector, "4 · Corrections", "corrections")
+        _add_navigation_button(nav_buttons, tab_selector, "5 · Geometry", "geometry")
+        _add_navigation_button(nav_buttons, tab_selector, "6 · Calculate", "calculate")
+        _add_navigation_button(nav_buttons, tab_selector, "7 · Results", "results")
+        _add_navigation_button(nav_buttons, tab_selector, "8 · Export", "export")
         ui.separator().classes("q-my-md bg-zinc-800")
         run_btn_drawer = ui.button("Run Calculation", icon="play_arrow").classes(
             "full-width modern-btn icon-outlined"
@@ -276,10 +301,11 @@ def index():
         ui.tab("upload", label="1 · Upload")
         ui.tab("data", label="2 · Data Table")
         ui.tab("settings", label="3 · Settings")
-        ui.tab("geometry", label="4 · Geometry")
-        ui.tab("calculate", label="5 · Calculate")
-        ui.tab("results", label="6 · Results")
-        ui.tab("export", label="7 · Export")
+        ui.tab("corrections", label="4 · Corrections")
+        ui.tab("geometry", label="5 · Geometry")
+        ui.tab("calculate", label="6 · Calculate")
+        ui.tab("results", label="7 · Results")
+        ui.tab("export", label="8 · Export")
 
     ctx = PageContext(
         tabs=tabs,
@@ -293,6 +319,7 @@ def index():
         upload_tab.build(ctx)
         data_tab.build(ctx)
         settings_tab.build(ctx)
+        corrections_tab.build(ctx)
         geometry_tab.build(ctx)
         calculate_tab.build(ctx)
         results_tab.build(ctx)
@@ -300,6 +327,12 @@ def index():
 
     _restore_loaded_state(ctx)
     _show_onboarding_dialog()
+    # Central sidebar sync: any path that calls reset_results() (Settings, Corrections, dialogs)
+    # also clears the sidebar PSD, without each path needing the page context.
+    ui.timer(0.3, lambda: sync_sidebar_psd(ctx))
+    # Load-time kerma-meter check: fires after any change of the loaded events
+    # (rebuild_rdsr_df bumps input_revision) or of the enable switch.
+    ui.timer(0.5, maybe_prompt_after_load)
 
 
 # ── native window geometry ───────────────────────────────────────────────────

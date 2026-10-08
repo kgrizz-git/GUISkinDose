@@ -94,6 +94,18 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
+        "--output-format",
+        required=False,
+        choices=("json", "dict"),
+        default=None,
+        dest="output_format",
+        help=(
+            "Single-file runs: print the full result (psd, dose_map, corrections, tube_summary, ...) "
+            "to stdout as JSON. Without it a DICOM run only renders plots and prints nothing."
+        ),
+    )
+
+    parser.add_argument(
         "--native",
         action="store_true",
         default=False,

@@ -10,8 +10,8 @@ are included, except `corrections_db_path`, which is stored verbatim so the
 calculation can resolve it. Store every exported configuration in an approved
 destination and apply the appropriate retention policy.
 
-Use the Settings tab card to save the full GUI run state (settings, physics,
-phantom geometry, corrections, and per-exam offsets) as a single JSON
+Use the Settings tab card to save the full GUI run state (settings, corrections,
+phantom geometry, and per-exam offsets) as a single JSON
 document, or load one back to reproduce a run exactly.
 
 Saving writes the document through a native save dialog (native mode) or a

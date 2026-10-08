@@ -35,12 +35,11 @@ def _example_settings() -> PyskindoseSettings:
     base = load_settings_example_json()
     base["kerma_meter_correction"] = {
         "enable": True,
-        "mode": "file",
         "file": "/data/cf/corrections.xlsx",
         "file_sheet": "CF",
         "default_factor": 1.02,
         "explicit_label": "Lab-1",
-        "prompt_at_calc": False,
+        "ask_for_missing": True,
     }
     base["phantom"]["patient_offset"] = {"d_lon": 1.0, "d_ver": 2.0, "d_lat": 3.0}
     return PyskindoseSettings(settings=base)
@@ -389,3 +388,143 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
     meta = state.loaded_exam_meta[0]
     assert (meta["d_lon"], meta["d_ver"], meta["d_lat"]) == (1.0, 2.0, 3.0)
     assert meta["sheet"] == "Other"
+
+
+def test_legacy_kerma_mode_prompt_sets_ask_for_missing():
+    """A run-state document saved with legacy ``mode: prompt`` maps to ask_for_missing."""
+    from guiskindose.gui.run_state import _apply_settings_slice
+    from guiskindose.gui.state import AppState
+
+    state = AppState()
+    state.kerma_meter_ask_for_missing = False
+    _apply_settings_slice({"kerma_meter_correction": {"mode": "prompt"}}, state, [])
+    assert state.kerma_meter_ask_for_missing is True
+    explicit = AppState()
+    _apply_settings_slice({"kerma_meter_correction": {"mode": "prompt", "ask_for_missing": False}}, explicit, [])
+    assert explicit.kerma_meter_ask_for_missing is False
+    assert not hasattr(state, "kerma_meter_mode")
+
+
+def _unresolved_labels_document(*, include_identifiers: bool) -> dict:
+    populated = AppState()
+    populated.kerma_meter_unresolved_labels = {"Exam 1": "Room-7"}
+    populated.loaded_exam_meta = []
+    return serialize_run_state(
+        _example_settings(),
+        populated,
+        include_identifiers=include_identifiers,
+        app_version="1.0.0",
+        created="2026-10-06T00:00:00+00:00",
+    )
+
+
+def test_unresolved_equipment_labels_round_trip() -> None:
+    """Per-exam identity overrides survive serialize -> apply."""
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _unresolved_labels_document(include_identifiers=True)
+    assert document["gui_state"]["kerma_meter_unresolved_labels"] == {"Exam 1": "Room-7"}
+    fresh = AppState()
+    apply_run_state(document, fresh)
+    assert fresh.kerma_meter_unresolved_labels == {"Exam 1": "Room-7"}
+
+
+def test_unresolved_equipment_labels_redacted_without_identifiers() -> None:
+    """Redacted exports omit the labels, and importing one leaves live labels untouched."""
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _unresolved_labels_document(include_identifiers=False)
+    assert "kerma_meter_unresolved_labels" not in document["gui_state"]
+    assert "Room-7" not in json.dumps(document)
+    live = AppState()
+    live.kerma_meter_unresolved_labels = {"Exam 1": "Keep-Me"}
+    apply_run_state(document, live)
+    assert live.kerma_meter_unresolved_labels == {"Exam 1": "Keep-Me"}
+
+
+def test_unresolved_equipment_labels_malformed_rejected() -> None:
+    """A non-string label mapping is a malformed document."""
+    from guiskindose.gui.run_state import RunStateError, apply_run_state
+
+    document = _unresolved_labels_document(include_identifiers=True)
+    document["gui_state"]["kerma_meter_unresolved_labels"] = {"Exam 1": 5}
+    app_state = AppState()
+    with pytest.raises(RunStateError):
+        apply_run_state(document, app_state)
+
+
+def _per_exam_document(*, include_identifiers: bool) -> dict:
+    populated = AppState()
+    populated.kerma_meter_in_memory_table = {
+        ("Exam 1", "Acme", "A"): 1.1,
+        ("Exam 2", "Acme", "A"): 1.3,
+        ("Legacy", "T"): 1.0,
+    }
+    populated.kerma_meter_periods = {"Exam 1": "2026-01-01|2026-06-30", "Exam 2": "2026-07-01|"}
+    populated.loaded_exam_meta = []
+    return serialize_run_state(
+        _example_settings(),
+        populated,
+        include_identifiers=include_identifiers,
+        app_version="1.0.0",
+        created="2026-10-06T00:00:00+00:00",
+    )
+
+
+def test_per_exam_factors_and_periods_round_trip() -> None:
+    from guiskindose.gui.run_state import apply_run_state
+
+    fresh = AppState()
+    apply_run_state(_per_exam_document(include_identifiers=True), fresh)
+    assert fresh.kerma_meter_in_memory_table == {
+        ("Exam 1", "Acme", "A"): 1.1,
+        ("Exam 2", "Acme", "A"): 1.3,
+        ("Legacy", "T"): 1.0,
+    }
+    assert fresh.kerma_meter_periods == {"Exam 1": "2026-01-01|2026-06-30", "Exam 2": "2026-07-01|"}
+
+
+def test_per_exam_factors_and_periods_are_redacted_without_identifiers() -> None:
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _per_exam_document(include_identifiers=False)
+    dumped = json.dumps(document)
+    assert "Acme" not in dumped
+    assert "2026-01-01" not in dumped
+    live = AppState()
+    live.kerma_meter_periods = {"Exam 1": "keep"}
+    apply_run_state(document, live)
+    assert live.kerma_meter_periods == {"Exam 1": "keep"}
+
+
+def test_malformed_per_exam_values_are_rejected() -> None:
+    from guiskindose.gui.run_state import RunStateError, apply_run_state
+
+    document = _per_exam_document(include_identifiers=True)
+    document["gui_state"]["kerma_meter_exam_factors"] = {"Exam 1": {"Acme": {"A": "high"}}}
+    app_state = AppState()
+    with pytest.raises(RunStateError):
+        apply_run_state(document, app_state)
+
+
+def test_k_tab_mode_round_trips_and_legacy_flag_maps() -> None:
+    from guiskindose.gui.run_state import apply_run_state
+
+    document = _per_exam_document(include_identifiers=True)
+    document["settings"]["k_tab_mode"] = "measured_only"
+    fresh = AppState()
+    apply_run_state(document, fresh)
+    assert fresh.k_tab_mode == "measured_only"
+
+    legacy = _per_exam_document(include_identifiers=True)
+    legacy["settings"].pop("k_tab_mode", None)
+    legacy["settings"]["estimate_k_tab"] = True
+    legacy_state = AppState()
+    apply_run_state(legacy, legacy_state)
+    assert legacy_state.k_tab_mode == "estimate"
+
+    both = _per_exam_document(include_identifiers=True)
+    both["settings"].update({"k_tab_mode": "measured_only", "estimate_k_tab": True})
+    both_state = AppState()
+    apply_run_state(both, both_state)
+    assert both_state.k_tab_mode == "measured_only"

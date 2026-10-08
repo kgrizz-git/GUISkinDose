@@ -19,8 +19,80 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Changed
+
+- **The correction dialog now shows exactly what the calculation applies** (2026-10-07) — Confirm stores the
+  calibration period the dialog displayed for the first exam (later exams follow it), so a pair with no row in
+  that period shows and applies the default rather than silently using its own latest row. A manual factor is
+  inherited by the next exam only when the immediately preceding exam holds it and both exams are in the same
+  calibration period (old, new, old no longer carries an old-period value across the new one). The dialog and
+  the engine use one shared function, covered by a parametrized dialog-versus-engine consistency test.
+  Clearing a multi-exam result now also clears the exam count, totals, and rotational badge, and the Calculate
+  tube-identity audit line uses the same gate as the export.
+
+- **Patient-support transmission has three modes, and the default changed** (2026-10-07) — the
+  `estimate_k_tab` boolean is replaced by `k_tab_mode`: `measured_with_fallback` (new default), `estimate`
+  (today's flat `k_tab_val`), and `measured_only` (today's measured lookup, 1.0 where missing). The new default
+  looks each event up in the bundled measured table and uses `k_tab_val` (default 0.8) where there is no usable
+  measured data (unknown model or plane, or the invalid all-zero AlluraClarity Plane B rows), with one warning
+  listing the event indices. **The default can change the peak skin dose on the few models with measured data**:
+  for the bundled Siemens AXIOM Artis example the peak fell about 10% (about 7% on the dose-map sum) compared
+  with the flat 0.8. The legacy `estimate_k_tab` key is still read (`true` is `estimate`, `false` is
+  `measured_only`) with a deprecation warning when `k_tab_mode` is absent, an explicit `k_tab_mode` wins, and
+  only `k_tab_mode` is written. The Corrections tab now has a mode select, and the info icon describes all three.
+
 ### Added
 
+- **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.
+  Settings keeps the run configuration, phantom, per-exam offsets and coordinate fixes, and visual options.
+  The new Corrections tab (tab 4; Geometry, Calculate, Results, and Export move to 5 to 8) holds dose-physics
+  settings and kerma-meter correction. An info icon next to the three-mode "Patient-support transmission
+  factor" select explains each mode (measured with estimate fallback, estimate, measured only).
+- **Bundled Radimetrics examples** (2026-10-07) — the Upload tab's example drop-down now also offers two
+  synthetic Radimetrics files ("older export, biplane" and "newer export, single tube") that load through the
+  normal tabular import path. The example values are invented.
+- **Example calibration download works in the native window** (2026-10-07) — "Download example calibration
+  file" opens a Save As dialog in the pywebview window, and still downloads in the browser.
+
+- **Exports show the kerma-meter factors used per tube and exam** (2026-10-06) — whenever kerma-meter
+  correction is on, the "Dose by tube" section (HTML, XLSX, DOCX, PDF, Results tab, and `tube_summary` in
+  dict/JSON) now appears even for a single-plane exam, with one row per exam and tube. Each row gives the
+  applied correction factor (a min-max range plus the kerma-weighted value when a tube's events used more than
+  one factor) and its source (`manual`, `file`, `default`, or `mixed`). With correction off the factor reads
+  "not applied" for studies that still show the section. No equipment names are included.
+- **Example kerma-meter calibration file** (2026-10-06) — a fictional starter CSV
+  (`calibration_factors_example.csv`) with a README explaining the columns, factor definition, tube values,
+  and calibration periods now ships as package data. It includes one unit and tube with two dated
+  calibration periods. The Corrections tab has a "Download example calibration file" button, and
+  `guiskindose.get_path_to_example_kerma_meter_file()` returns its path.
+- **Per-exam kerma-meter factors and calibration periods** (2026-10-06) — a dose meter recalibrated between
+  exams can now have a different factor per exam: manual entries are keyed by exam, unit, and tube, and each
+  exam resolves manual entry, then the file row for its calibration period, then the default factor. In the
+  dialog, Exam 2 and later start from the previous exam's value and say "follows Exam N" until edited, but only
+  while both exams use the same calibration period; editing an earlier exam updates only the exams still
+  following it. The calibration file may add optional
+  `valid_from` / `valid_to` ISO-date columns (overlapping periods for one unit and tube are a load error);
+  with dated rows, each exam gets a *Calibration period* selector (Exam 1 defaults to the most recent period and
+  Confirm saves the period shown, later exams follow the previous choice). Dates are never read from the exam data. The new
+  `--kerma-meter-calibration-date YYYY-MM-DD` flag picks the period for every exam in non-GUI runs; without it
+  the current or most recent period is used and a count-only warning is logged. Per-exam factors and period
+  choices are saved with the run configuration only when identifiers are included.
+- **Kerma-meter factors: load-time dialog and per-exam unit choice** (2026-10-06) — when correction is
+  enabled, loading events lists every detected unit and tube and opens a dialog if any pair has no factor.
+  Rows are grouped by exam and pre-filled from earlier entries, then the calibration file, then the default
+  factor, each labelled with its source. Cancel never blocks: it keeps file values and earlier entries, and
+  unanswered pairs use the default factor. Calculate re-opens the dialog once if pairs are still unanswered.
+  An exam whose events carry no equipment identity gets a per-exam unit chooser (detected unit, file unit, or
+  free text), saved with the run configuration only when identifiers are included. Command-line runs never
+  prompt and log one warning per exam with the count of pairs without a factor, never the labels. Each pair
+  appears once in the dialog (listing the exams that use it), Confirm is blocked until every factor is a number
+  above zero, and a result is discarded with a notice if the loaded data changed while the dialog was open.
+  The Corrections tab has a "Review correction factors…" button to reopen the dialog at any time.
+- **Dose by tube for biplane studies** (2026-10-06) — one partial dose map per tube (`single` / `A` / `B` /
+  `unknown`) is accumulated beside the combined map and sums to it cell by cell; the peak skin dose is
+  unchanged. The new `tube_summary` output (also in dict/JSON) gives each tube's reported kerma, corrected
+  kerma, applied correction factor, and partial-map peak, shown in Results and in the HTML, XLSX, DOCX, and
+  PDF exports. Per-tube peaks do not add up to the peak skin dose. No equipment labels appear in these outputs.
 - **PSD severity colour-coding on every readout** (2026-09-30) — all four
   peak-skin-dose readouts (sidebar, Results single-exam metric, aggregate
   metric, per-exam accordion) now share one band helper
@@ -72,6 +144,22 @@ That keeps SemVer and contributor history organized.
   the Results tab shows a handling badge.
 
 ### Changed
+
+- **Kerma-meter settings unified; `mode` and `prompt_at_calc` replaced** (2026-10-06) — correction factors
+  now resolve as manual entry, then calibration file, then default factor, and a set file always loads. The
+  exclusive `mode` setting (`file` / `prompt`) is deprecated: it still loads from settings files and the
+  `--kerma-meter-correction-mode` flag still parses, with a deprecation warning, and `prompt` maps to the new
+  `ask_for_missing` setting (default on, "Ask for missing correction factors" in the Corrections tab). `ask_for_missing`
+  replaces `prompt_at_calc`; a legacy `prompt_at_calc: true` maps to it, `false` was the old default and is
+  ignored. `mode` and `prompt_at_calc` are no longer written. "Don't ask again until the loaded data changes"
+  suppresses the dialog for the session.
+- **Radimetrics biplane exports are split into tube A and tube B events** (2026-10-06) — when a Radimetrics
+  file carries per-plane `Reference Point Dose (A)` / `(B)` columns, each total-kerma row is replaced by a
+  `Plane A` and a `Plane B` event whose kerma sums to the original total (previously only the total was read
+  and every event looked like one tube); rows with kerma on one plane only become a single event of that plane.
+  Rows that cannot be split keep a valid plane code from the export. Real exports put each event on one plane (the other plane cell is blank), so they load as one event per row on that plane; the both-planes-filled split is defensive. A biplane export without a plane column now resolves to an unknown
+  tube instead of `Single Plane`. Single-plane Radimetrics exports are unchanged. Details:
+  [dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md](dev-docs/INPUT_DATA_FLOW_AND_OFFSETS.md).
 
 - **Rotational events now report candidate-level progress** (2026-10-02) —
   Phase 3 of the envelope performance plan: a long rotational event advances
@@ -138,6 +226,47 @@ That keeps SemVer and contributor history organized.
   `Beam`'s per-event scalars, follows in its own PR).
 
 ### Fixed
+
+- **Fixes from the manual smoke run** (2026-10-07) — after results are invalidated or a new file is loaded, the
+  single-exam Results tab now shows `—` for Total Air Kerma, Events, DAP and fluoro time and clears the per-event
+  correction table, instead of keeping the previous run's numbers. Multi-exam reports no longer print "Exam Exam
+  1" in headings. `--input-preview-only` now honours `--plane-code-map`. The Results text for a tube with no
+  correction factor reads "CF not applied" once.
+
+- **Clearer audit lines in reports** (2026-10-07) — the import warning no longer lists columns the adapter does
+  use (the Radimetrics per-plane dose columns, the plane-code column, and the procedure DAP total) as ignored. The
+  report's plane-identity rows are labelled as the coded (CID 10003) identity, and a new "Tube identity used"
+  row shows the A / B / single / unknown counts the dose calculation actually used, so tabular exports no longer
+  read as if tube identity failed. The Radimetrics per-plane columns are listed as ignored when the split does not
+  run (plane B empty everywhere), the `PlaneCode` plane column is recognised, and a non-numeric per-plane dose
+  cell (for example `n/a`) is no longer treated as zero. An exam whose default calibration period was accepted in
+  the dialog no longer logs the "unselected period" warning.
+
+- **Sidebar peak skin dose clears when results are invalidated** (2026-10-07) — changing a correction factor in
+  the kerma-meter dialog, or any Settings or Corrections control that resets results (for example the
+  transmission mode), now also returns the left sidebar status to "PSD: —" instead of leaving the old value
+  until the next calculation. The kerma-meter dialog shows equipment names in their original spelling.
+
+- **Review fixes for the CLI and the kerma-meter dialog** (2026-10-07) — a multi-exam tabular run now prints the
+  structured, privacy-safe result (no source file names), and multi-file runs honour `--aggregate` through the
+  same printer. A `--settings` string that is not a JSON object is treated as a path and gives a clean
+  not-found error. In the dialog, rows that follow an earlier exam (and calibration periods) are no longer
+  copied into independent entries on Confirm, so they keep following after reopening; a default row confirmed
+  without a change is remembered as answered instead of stored as a factor, so a calibration file row added
+  later still wins. `settings.estimate_k_tab = ...` assignment works again (with the deprecation warning), and a
+  `calibration_date` in a settings dict is validated as an ISO date.
+
+- **CLI fixes found by smoke-testing** (2026-10-07) — `--settings` now reads the settings file (the path was
+  silently ignored and the example settings were used). `python -m guiskindose` and the console script now apply
+  the kerma-meter flags (including `--kerma-meter-calibration-date`) and `--plane-code-map`, as
+  `python -m guiskindose.main` already did. A single-file run can print its full result with the new
+  `--output-format json` (or `dict`).
+
+- **Kerma-meter dialog review fixes** (2026-10-06) — confirming changed factors, units, or calibration periods
+  now clears earlier calculation results, so a stale peak skin dose or export cannot stay active (an unchanged
+  confirm keeps them). A calibration file with dated rows now opens the dialog at load even when every factor is
+  covered, so the period is chosen deliberately. The per-exam unit chooser stays available after a unit is
+  chosen (pre-selected, clearable), including when reopened from Settings.
 
 - **Coordinate-frame note no longer runs off narrow dose maps** (2026-09-27)
   — the bottom-left note on 3D plots ended with a ~100-character line that

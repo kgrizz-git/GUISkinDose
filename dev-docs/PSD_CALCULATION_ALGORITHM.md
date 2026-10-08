@@ -34,7 +34,7 @@ flowchart TD
     LOOP{"Per-event loop<br/>new_geometry?"}
     REUSE["Reuse prior<br/>hits / k_isq"]
     PROJ["Project [Beam]<br/>position · check_hit<br/>check_table_hits<br/>scale_field_area · k_isq"]
-    ACC["Accumulate<br/>K_IRP × kerma_cf × k_isq<br/>× k_med × k_bs × k_tab-on-table<br/>dose_map += event_dose"]
+    ACC["Accumulate<br/>K_IRP × kerma_cf × k_isq<br/>× k_med × k_bs × k_tab-on-table<br/>dose_map += event_dose<br/>tube partial map += event_dose"]
     MISS["Miss diagnostics<br/>missed_event_indices<br/>per-event or summary warn"]
     PSD["PSD = max dose_map<br/>PySkinDoseOutput · dict · JSON<br/>create_dose_map_plot HTML"]
     MULTI{"Multi-exam?<br/>per-exam offsets<br/>fresh table+pad · fail-soft"}
@@ -151,18 +151,32 @@ Resolved once per exam, in this order (`calculate_dose`):
    5/10/20/25/35 cm).
 5. **Patient-support transmission** — `corrections.calculate_k_tab()` returns a
    `KTabResult` (values + per-event statuses):
-   - *Estimated* (`estimate_k_tab=True`, default): every event gets `k_tab_val`
-     (validated); the DB is not read.
-   - *Measured*: DB lookup keyed by device model + **literal**
+   - Mode `k_tab_mode` (settings; the legacy `estimate_k_tab` boolean maps
+     `True` to `estimate` and `False` to `measured_only`):
+     `measured_with_fallback` (default), `estimate`, or `measured_only`.
+   - *Estimate*: every event gets `k_tab_val` (validated); the DB is not read.
+   - *Measured fallback* (default): the measured lookup below per event. An
+     event with no usable measured value (unknown model or plane, or invalid
+     cells such as the all-`0.0` AlluraClarity Plane B rows) uses `k_tab_val`
+     (status `fallback`, one warning listing event indices, never labels).
+   - *Measured* (`measured_only`): DB lookup keyed by device model + **literal**
      `acquisition_plane` string (`"Single Plane"` / `"Plane A"` / `"Plane B"`),
      exact (kVp, Cu, Al) match first, else (kVp, Cu) interpolation with Al snap
-     and edge clamping. Unknown device/plane or invalid cells resolve to a
-     warned-neutral `1.0`, never silently to a real calibration.
+     and edge clamping. In `measured_only`, unknown device/plane or invalid
+     cells resolve to a warned-neutral `1.0`, never silently to a real
+     calibration.
 6. **Kerma-meter correction** — `kerma_correction.resolve_correction_factors()`
-   resolves one factor per event keyed by (equipment, tube), from an explicit
-   label, correction file, prompt-time in-memory table, or default factor
-   (fail-soft with warnings; disabled → all `1.0`). No special-casing of A/B
-   geometry: identity comes from equipment × tube keys only.
+   resolves one factor per event keyed by (equipment, tube). The table is the
+   merge of the calibration file and the session in-memory table (manual entries
+   from the missing-factor dialog win over file rows), then `default_factor`
+   (fail-soft with warnings; disabled → all `1.0`). Resolution is per exam: the
+   file row is the one for the exam's calibration period, and a manual entry is
+   the exam's own, a legacy two-part key, or the immediately preceding exam's
+   while both share a calibration period (`resolve_manual()`, the same function
+   the dialog uses). An exam whose events have no
+   equipment identity can carry a per-exam identity override so those events
+   reach the table. No special-casing of A/B geometry: identity comes from
+   equipment × tube keys only.
 
 ## 4. Per-event field projection
 
@@ -205,8 +219,22 @@ Per hit event (`add_corrections_and_event_dose_to_output()`):
 
 ```text
 event_dose[hits] = K_IRP × kerma_cf × k_isq × k_med × k_bs × (k_tab where table_hits else 1.0)
-output["dose_map"] += event_dose
+tube_dose.add_event_dose(output, event, event_dose)   # dose_map += event_dose
 ```
+
+`add_event_dose()` also adds the vector to the event's **tube** map. The tube
+(`single` / `A` / `B` / `unknown`) is resolved per event by
+`tube_dose.tube_identities()` with the same identity rules as the kerma-meter
+step (code-backed CID 10003 plane first, then the plane meaning text). Partial
+maps are allocated only for the tubes present, and only when more than one tube
+is present (a lone tube's partial map would equal the combined map). Rotational
+envelope events accumulate through the same helper. The partial maps therefore
+sum cell by cell to the combined `dose_map`, and the combined map and the
+headline PSD are unchanged. After the loop `tube_dose.summarize_tubes()` records,
+per tube: event count, reported kerma, corrected kerma, applied CF (corrected ÷
+reported, i.e. kerma-weighted), and the peak of that tube's partial map. A tube
+whose events all miss the phantom reports a peak of 0.0. Per-tube peaks are
+maxima of different maps and do not, in general, sum to the PSD.
 
 where `k_bs` is the event spline evaluated at `sqrt(field_area)` and `k_med`
 (`corrections.calculate_k_med()`, air→water, from kVp/HVL/field via the
@@ -233,6 +261,11 @@ from the aggregate with an exclusion count header.
   dose-loop dict (beam-miss callouts reach users via warnings, not the export
   object); warnings are not export fields — single-exam calc warnings travel
   via GUI state, multi-exam warnings via `MultiExamResult.warnings`.
+- `tube_summary` (per-tube rows above, plus the applied CF range `cf_min`/`cf_max` and its source `cf_source`;
+  tube ids only, never equipment labels)
+  rides on `PySkinDoseOutput`, the Results tab, and the HTML/XLSX/DOCX/PDF
+  exports ("Dose by tube", one row per exam × tube, shown when kerma-meter correction is on or when more
+  than one tube, or a non-single tube, is present, with a note that per-tube peaks do not add up to the PSD).
 - The interactive HTML dose-map plot is rendered separately by
   `create_dose_map_plot()` in `analyze_data`, not by the export formatter.
 - Rich exports add the plane-identity audit (`source_kind` / `resolution` /
@@ -260,7 +293,8 @@ upstream baseline; do not "simplify" them away as dead complexity:
 
 - Dose-path code watched by this doc: `calculate_dose/`, `geom_calc.py`,
   `beam_class.py`, `corrections.py`, `kerma_correction.py`, `rdsr_normalizer.py`,
-  `input_adapters/`, `analyze_data.py`, `format_export_data.py`.
+  `input_adapters/`, `analyze_data.py`, `format_export_data.py`,
+  `calculate_dose/tube_dose.py`.
 - When changing those paths, run the doc-impact check and update this file in
   the same PR:
   `python scripts/check_feature_doc_matrix.py --against-ref origin/main --strict-impact`

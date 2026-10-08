@@ -361,6 +361,7 @@ def run_normalizer_pipeline(
     transform: TransformFn,
     original_filename: str,
     settings: PyskindoseSettings,
+    consumed_columns: Callable[[list[str], pd.DataFrame], set[str]] | None = None,
 ) -> InputAdapterResult:
     """Run the shared header→map→transform→normalize pipeline.
 
@@ -377,6 +378,10 @@ def run_normalizer_pipeline(
         rdsr_normalizer() is called.
     transform:
         Vendor-specific callback applied to the renamed DataFrame.
+    consumed_columns:
+        Optional callback ``(raw_headers, data_df)`` returning the source headers an adapter
+        step reads outside the column map (so they are not reported as ignored). ``data_df``
+        still carries the raw headers, so the callback can check the values it would use.
 
     Raises
     ------
@@ -394,7 +399,10 @@ def run_normalizer_pipeline(
 
     column_map, mapping_warnings = map_columns(raw_headers, patterns)
     warnings.extend(mapping_warnings)
-    unmatched_msg = unmapped_columns_warning(raw_headers, column_map)
+    consumed = consumed_columns(raw_headers, data_df) if consumed_columns is not None else set()
+    # The procedure-total DAP / fluoro-time columns are read by attach_procedure_dose_totals.
+    consumed |= {h for h in (_find_dap_total_column(raw_headers), _find_fluoro_time_total_column(raw_headers)) if h}
+    unmatched_msg = unmapped_columns_warning(raw_headers, column_map, consumed)
     if unmatched_msg:
         warnings.append(unmatched_msg)
 

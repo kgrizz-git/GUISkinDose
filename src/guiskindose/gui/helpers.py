@@ -124,6 +124,7 @@ __all__ = [
     "format_normalization_profile_label",
     "geometry_preview_caption",
     "get_example_rdsr_files",
+    "get_example_tabular_files",
     "get_excel_sheets",
     "get_human_mesh_names",
     "get_human_mesh_options",
@@ -261,6 +262,9 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         settings = build_settings(state, mode="calculate_dose", output_format="dict")
         if state.kerma_meter_in_memory_table is not None:
             settings.kerma_meter_correction.in_memory_table = state.kerma_meter_in_memory_table
+        settings.kerma_meter_correction.unresolved_equipment_labels = dict(state.kerma_meter_unresolved_labels)
+        settings.kerma_meter_correction.calibration_periods = dict(state.kerma_meter_periods)
+        settings.kerma_meter_correction.periods_acknowledged = set(state.kerma_meter_periods_acknowledged)
 
         # Don't log state.file_name — it can carry PHI (patient name/MRN).
         dprint("CALCULATION", "Starting calculation")
@@ -520,6 +524,13 @@ def get_example_rdsr_files() -> list[Path]:
 
     rdsr_dir = get_path_to_example_rdsr_files()
     return sorted(rdsr_dir.glob("*.dcm"))
+
+
+def get_example_tabular_files() -> list[Path]:
+    """Return list of bundled synthetic tabular example .csv files."""
+    from guiskindose import get_path_to_example_tabular_files
+
+    return sorted(get_path_to_example_tabular_files().glob("*.csv"))
 
 
 def get_human_mesh_names() -> list[str]:

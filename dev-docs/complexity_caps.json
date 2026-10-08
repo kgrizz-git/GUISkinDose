@@ -37,7 +37,7 @@
     {
       "path": "src/guiskindose/__main__.py",
       "function": "cli",
-      "cap": 16
+      "cap": 14
     },
     {
       "path": "src/guiskindose/calculate_dose/rotational_event.py",
@@ -60,11 +60,6 @@
       "cap": 18
     },
     {
-      "path": "src/guiskindose/corrections.py",
-      "function": "calculate_k_tab",
-      "cap": 11
-    },
-    {
       "path": "src/guiskindose/format_export_data.py",
       "function": "PySkinDoseOutput._validate_lengths",
       "cap": 12
@@ -82,7 +77,7 @@
     {
       "path": "src/guiskindose/gui/run_state.py",
       "function": "apply_run_state",
-      "cap": 12
+      "cap": 11
     },
     {
       "path": "src/guiskindose/gui/run_state.py",

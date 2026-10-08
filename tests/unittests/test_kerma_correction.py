@@ -340,3 +340,95 @@ def test_normalize_nan_inputs_and_suspicious_factor_warning(tmp_path: Path):
 
     assert table[("unit-01", "single")] == pytest.approx(3.5)
     assert any("outside the typical" in msg for msg in messages)
+
+
+# ── Phase 2: missing_keys + per-exam identity override ────────────────────────
+
+
+def _stations_frame(equipment: list, tubes: list[str]):
+    """Normalized-like frame: station name + plane meaning per event."""
+    import pandas as pd
+
+    meaning = {"single": "Single Plane", "A": "Plane A", "B": "Plane B", "unknown": "weird"}
+    return pd.DataFrame(
+        {
+            "station_name": equipment,
+            "device_serial": [None] * len(equipment),
+            "acquisition_plane": [meaning[t] for t in tubes],
+        }
+    )
+
+
+class TestMissingKeys:
+    def test_file_hit_is_not_missing(self):
+        from guiskindose.kerma_correction import missing_keys
+
+        assert missing_keys([("room-1", "A")], {("room-1", "A"): 1.1}) == []
+
+    def test_file_miss_is_missing(self):
+        from guiskindose.kerma_correction import missing_keys
+
+        assert missing_keys([("room-1", "A"), ("room-1", "B")], {("room-1", "A"): 1.1}) == [("room-1", "B")]
+
+    def test_no_table_everything_missing(self):
+        from guiskindose.kerma_correction import missing_keys
+
+        assert missing_keys([("room-1", "A")], None) == [("room-1", "A")]
+
+    def test_unknown_tube_and_unresolved_always_missing(self):
+        from guiskindose.kerma_correction import missing_keys
+
+        table = {("room-1", "unknown"): 1.2, ("unresolved", "single"): 1.2}
+        detected = [("room-1", "unknown"), ("unresolved", "single")]
+        assert missing_keys(detected, table) == sorted(detected)
+
+
+class TestUnresolvedEquipmentOverride:
+    def test_override_only_fills_events_without_identity(self):
+        from guiskindose.kerma_correction import resolve_correction_keys
+
+        df = _stations_frame(["Room-1", None], ["single", "single"])
+        keys = resolve_correction_keys(df, explicit_label=None, fallback_label="Room-9")
+        assert keys == [("room-1", "single"), ("room-9", "single")]
+
+    def test_unresolved_without_override_stays_none(self):
+        from guiskindose.kerma_correction import resolve_correction_keys
+
+        keys = resolve_correction_keys(_stations_frame([None], ["single"]), explicit_label=None)
+        assert keys == [(None, "single")]
+
+    def test_overridden_unit_reaches_table_instead_of_default(self):
+        from guiskindose.kerma_correction import resolve_correction_factors
+
+        df = _stations_frame([None, None], ["A", "single"])
+        table = {("room-9", "A"): 1.25}
+        plain = resolve_correction_factors(df, table, default_factor=0.9)
+        assert plain.factors == pytest.approx([0.9, 0.9])
+        assert plain.unresolved_event_indices == [0, 1]
+        out = resolve_correction_factors(df, table, default_factor=0.9, fallback_label="Room-9")
+        assert out.factors == pytest.approx([1.25, 0.9])
+        assert out.unresolved_event_indices == []
+        assert out.table_miss_event_indices == [1]
+
+    def test_unknown_tube_still_unresolved_with_override(self):
+        from guiskindose.kerma_correction import resolve_correction_factors
+
+        df = _stations_frame([None], ["unknown"])
+        out = resolve_correction_factors(df, {("room-9", "single"): 1.5}, fallback_label="room-9")
+        assert out.unresolved_event_indices == [0]
+
+    def test_unique_keys_reflect_overrides(self):
+        from guiskindose.kerma_correction import unique_equipment_tube_keys
+
+        frames = [_stations_frame(["Room-1"], ["single"]), _stations_frame([None], ["single"])]
+        labels = ["Exam 1", "Exam 2"]
+        assert unique_equipment_tube_keys(frames) == [("room-1", "single"), ("unresolved", "single")]
+        got = unique_equipment_tube_keys(frames, exam_labels=labels, unresolved_labels={"Exam 2": "Room-2"})
+        assert got == [("room-1", "single"), ("room-2", "single")]
+
+    def test_settings_do_not_serialize_override_labels(self):
+        from guiskindose.settings.kerma_meter_correction_settings import KermaMeterCorrectionSettings
+
+        km = KermaMeterCorrectionSettings({"unresolved_equipment_labels": {"Exam 1": "Room-7"}})
+        assert km.unresolved_equipment_labels == {"Exam 1": "Room-7"}
+        assert "Room-7" not in str(km.to_dict())

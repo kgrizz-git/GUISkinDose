@@ -22,6 +22,7 @@ from guiskindose.calculate_dose.add_correction_and_event_dose_to_output import (
 from guiskindose.calculate_dose.perform_calculations_for_new_geometries import (
     perform_calculations_for_new_geometries,
 )
+from guiskindose.calculate_dose.tube_dose import add_event_dose
 from guiskindose.phantom_class import Phantom
 from guiskindose.rotational_acquisition import circular_separation_deg
 from guiskindose.rotational_envelope import (
@@ -549,7 +550,7 @@ def _calculate_envelope_event(
     table.position(data_norm=normalized_data, event=ev)
     pad.position(data_norm=normalized_data, event=ev)
 
-    output[c.OUTPUT_KEY_DOSE_MAP] += evaluation.dose_vector
+    add_event_dose(output, ev, evaluation.dose_vector)
     # The envelope vector (cellwise max over candidates, including the reused
     # static-pose response) is the event contribution; the static dose is
     # never accumulated separately.
