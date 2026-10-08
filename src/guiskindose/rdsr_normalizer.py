@@ -49,9 +49,13 @@ from .constants import (
     PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
 )
 from .geom_calc import calculate_field_size
-from .rdsr_input_checks import (  # noqa: F401 - RdsrInputError/RdsrUnitError re-exported for callers
-    RdsrInputError,
-    RdsrUnitError,
+from .rdsr_input_checks import (
+    RdsrInputError as RdsrInputError,
+)
+from .rdsr_input_checks import (
+    RdsrUnitError as RdsrUnitError,
+)
+from .rdsr_input_checks import (
     collapse_duplicate_scalars,
     convert_scale_only_units,
     enforce_required_concepts,

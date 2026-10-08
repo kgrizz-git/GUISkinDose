@@ -51,6 +51,7 @@ def _canonical(value: Any) -> str:
         if pd.isna(value):
             return "nan"
     except (TypeError, ValueError):
+        # Non-scalar values may not support a boolean missingness check; use the fallbacks below.
         pass
     if hasattr(value, "item"):
         return _canonical(value.item())
