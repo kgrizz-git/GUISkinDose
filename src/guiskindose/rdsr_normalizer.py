@@ -114,6 +114,10 @@ def _dicom_source_kind(cid_backed: pd.Series, has_code: pd.Series, has_meaning: 
 def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> pd.DataFrame:
     """Normalize RDSR data for PySkinDose compliance.
 
+    The caller's ``data_parsed`` is never modified. Zero-dose events with
+    incomplete geometry may be dropped (see ``rdsr_input_checks``); use
+    :func:`rdsr_normalizer_with_source_rows` to align the result with the input.
+
     Parameters
     ----------
     data_parsed : pd.DataFrame
@@ -226,7 +230,21 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
     filter_thickness_Al : float
         Aluminum X-ray filter thickness in mm.
     """
+    return rdsr_normalizer_with_source_rows(data_parsed, settings)[0]
+
+
+def rdsr_normalizer_with_source_rows(
+    data_parsed: pd.DataFrame, settings: PyskindoseSettings
+) -> tuple[pd.DataFrame, list[int]]:
+    """Normalize like :func:`rdsr_normalizer`; also return each output row's input position.
+
+    Callers that carry extra per-event columns across by position (the tabular
+    adapters) need this mapping, because dose-free incomplete events may be dropped.
+    """
     data_norm = pd.DataFrame()
+    # Private copy with positional labels: the caller's frame is never modified,
+    # and the surviving index labels are the input positions of the kept events.
+    data_parsed = data_parsed.reset_index(drop=True)
 
     # Input hardening (rdsr_input_checks): repair what is safely repairable,
     # otherwise fail with one value-free RdsrInputError before any column read.
@@ -239,7 +257,9 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
     settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
 
     resolve_source_detector_distance(data_parsed)
-    enforce_required_concepts(data_parsed, settings.normalization_settings.field_size_mode)
+    data_parsed = enforce_required_concepts(data_parsed, settings.normalization_settings.field_size_mode)
+    source_rows = [int(position) for position in data_parsed.index]
+    data_parsed = data_parsed.reset_index(drop=True)
 
     for append_normalization in [
         _normalize_machine_parameters,
@@ -251,7 +271,7 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
             data_parsed=data_parsed, data_norm=data_norm, norm=settings.normalization_settings
         )
 
-    return data_norm
+    return data_norm, source_rows
 
 
 def _normalize_machine_parameters(

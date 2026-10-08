@@ -105,6 +105,11 @@ A report with no `Manufacturer` or `ManufacturerModelName` (or with values match
 Missing geometry is never defaulted. All messages are built from fixed labels and counts (`UserFacingInputError`),
 so the GUI and CLI can show them without leaking file values. The tabular adapters share this path.
 
+`rdsr_normalizer()` works on a private copy and never modifies the caller's parsed frame. Because events may be
+dropped, the tabular adapters call `rdsr_normalizer_with_source_rows()` and carry per-event DAP and fluoro time
+across by the returned input positions. A rejected GUI load leaves the previous exams' offsets and raw preview as
+they were.
+
 ## 3. The "Offset Issue" (Dose Projecting Incorrectly)
 
 If dose projects onto strange parts of the 3D human mesh (e.g., the beam hitting the head during a cardiac procedure), it is usually caused by an offset mismatch. There are **two separate offset systems** to understand:

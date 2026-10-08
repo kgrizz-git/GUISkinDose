@@ -82,3 +82,27 @@ def test_load_tabular_surfaces_input_error_message(monkeypatch: pytest.MonkeyPat
     assert ok is False
     assert "tube voltage (kVp)" in message
     assert state.import_has_errors is True
+
+
+def test_rejected_rdsr_leaves_offsets_and_raw_preview_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A rejected file must not zero the previous exams' offsets or replace the raw preview."""
+    import pandas as pd
+
+    from guiskindose.rdsr_input_checks import RdsrInputError
+
+    def _raise(*_args, **_kwargs):
+        raise RdsrInputError("This RDSR lacks data GUISkinDose needs.")
+
+    monkeypatch.setattr(exam_loaders, "rdsr_normalizer", _raise)
+    state = AppState()
+    state.d_lon, state.d_ver, state.d_lat = 5.0, -2.0, 1.5
+    state.swap_lat_lon = True
+    previous_raw = pd.DataFrame({"marker": [1]})
+    state.rdsr_raw_df = previous_raw
+
+    ok, _message = exam_loaders.load_rdsr(_EXAMPLE_RDSR, state)
+
+    assert ok is False
+    assert (state.d_lon, state.d_ver, state.d_lat) == (5.0, -2.0, 1.5)
+    assert state.swap_lat_lon is True
+    assert state.rdsr_raw_df is previous_raw

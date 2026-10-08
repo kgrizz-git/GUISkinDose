@@ -4,7 +4,8 @@ Real-world RDSRs (for example the OpenREM upstream test corpus) vary in ways
 the normalizer cannot absorb: a concept reported twice per event, a dose in
 ``mGy`` instead of ``Gy``, or source-geometry concepts left out entirely. This
 module runs before :func:`guiskindose.rdsr_normalizer.rdsr_normalizer` reads any
-column, and either repairs the frame (equal duplicates, scale-only units, the
+column, on the normalizer's private copy of the parsed frame (helpers that return
+``None`` modify the frame they are given), and either repairs the frame (equal duplicates, scale-only units, the
 Final-DSD fallback) or raises one clear :class:`RdsrInputError`.
 
 Privacy: every message is built from the fixed label tables below and integer
@@ -159,8 +160,20 @@ def _same(a: Any, b: Any) -> bool:
     return True
 
 
+def _all_agree(a: Any, b: Any) -> bool:
+    """Whether every populated leaf of a scalar concept's two cells is the same value."""
+    leaves = [v for v in _flatten(a) + _flatten(b) if not _is_blank(v)]
+    return all(_same(leaves[0], v) for v in leaves[1:])
+
+
 def _merge_variant(frame: pd.DataFrame, canonical: str, variant: str, factor: float, label: str) -> None:
-    """Fold a scale-only variant column into its canonical column, per event."""
+    """Fold a scale-only variant column into its canonical column, per event.
+
+    Scalar concepts agree when every populated copy is equal, so a canonical
+    duplicate ``[0.3, 0.3]`` agrees with a variant ``300 mGy`` (the duplicate is
+    collapsed afterwards). List-valued filter thicknesses must match entry by entry.
+    """
+    agree = _same if canonical.rsplit("_", 1)[0] in _LIST_VALUED else _all_agree
     scaled = frame[variant].map(lambda v: _scale(v, factor))
     if canonical not in frame.columns:
         frame[canonical] = scaled
@@ -173,7 +186,7 @@ def _merge_variant(frame: pd.DataFrame, canonical: str, variant: str, factor: fl
                 continue
             if _is_blank(current):
                 merged.at[idx] = extra
-            elif not _same(current, extra):
+            elif not agree(current, extra):
                 conflicts += 1
         if conflicts:
             raise RdsrInputError(
@@ -181,7 +194,7 @@ def _merge_variant(frame: pd.DataFrame, canonical: str, variant: str, factor: fl
                 f"in {conflicts} event(s). GUISkinDose cannot tell which value is correct."
             )
         frame[canonical] = merged
-    frame.drop(columns=[variant], inplace=True)
+    del frame[variant]
     logger.info("Converted %s to its canonical unit (scale-only conversion).", label)
 
 
@@ -297,8 +310,8 @@ def _zero_dose_mask(frame: pd.DataFrame) -> pd.Series:
     return pd.to_numeric(frame[dose_column], errors="coerce").eq(0)
 
 
-def enforce_required_concepts(frame: pd.DataFrame, field_size_mode: str | None) -> int:
-    """Check every required concept; drop dose-free incomplete events or raise, in place.
+def enforce_required_concepts(frame: pd.DataFrame, field_size_mode: str | None) -> pd.DataFrame:
+    """Check every required concept; return the frame without dose-free incomplete events, or raise.
 
     A concept counts as missing in an event when its column is absent or its
     value is blank. Presence-only columns must exist but may be blank.
@@ -307,7 +320,8 @@ def enforce_required_concepts(frame: pd.DataFrame, field_size_mode: str | None) 
     their geometry. When they are the *only* incomplete events, they are dropped
     (logged as a count) instead of rejecting the whole report. Otherwise one
     :class:`RdsrInputError` lists every missing concept with counts over all
-    events. Returns the number of dropped events.
+    events. The returned frame keeps the input's index labels, so callers can map
+    each kept event back to its source row.
     """
     n_events = len(frame)
     zero_dose = _zero_dose_mask(frame)
@@ -325,13 +339,12 @@ def enforce_required_concepts(frame: pd.DataFrame, field_size_mode: str | None) 
             problems.append(f"{_PRESENCE_LABELS[column]} (not reported)")
             dosed_gap = True
     if not problems:
-        return 0
+        return frame
     if not dosed_gap and not incomplete.all():
-        n_dropped = int(incomplete.sum())
-        frame.drop(index=frame.index[incomplete], inplace=True)
-        frame.reset_index(drop=True, inplace=True)
-        logger.warning("Dropped %d zero-dose event(s) with incomplete geometry; they contribute no dose.", n_dropped)
-        return n_dropped
+        logger.warning(
+            "Dropped %d zero-dose event(s) with incomplete geometry; they contribute no dose.", int(incomplete.sum())
+        )
+        return frame.loc[~incomplete]
     raise RdsrInputError(
         "This RDSR lacks data GUISkinDose needs to place the beam and patient: "
         + "; ".join(problems)

@@ -263,8 +263,9 @@ def test_all_zero_dose_incomplete_report_is_rejected_not_emptied() -> None:
 
 def test_report_without_events_raises_clear_error() -> None:
     """Siemens Varic ESR pattern: no irradiation events, so the parsed frame is empty."""
+    empty = pd.DataFrame()
     with pytest.raises(RdsrInputError, match=r"no X-ray irradiation events"):
-        _normalize(pd.DataFrame())
+        _normalize(empty)
 
 
 def test_missing_device_columns_use_default_profile(baseline: pd.DataFrame) -> None:
@@ -345,5 +346,97 @@ def test_tabular_adapter_keeps_the_input_error_message(tmp_path) -> None:
     fixture.loc[row, kvp_column] = None
     path = tmp_path / "events.csv"
     fixture.to_csv(path, index=False)
+    settings = _settings()
     with pytest.raises(RdsrInputError, match=r"tube voltage \(kVp\) \(missing in 1 of"):
-        read_and_normalize_input(path, input_schema="generic_rdsr_like", settings=_settings())
+        read_and_normalize_input(path, input_schema="generic_rdsr_like", settings=settings)
+
+
+# ── caller frames are never modified ─────────────────────────────────────────
+
+
+def test_normalizer_does_not_modify_the_callers_frame() -> None:
+    frame = _parsed()
+    frame["DoseRP_mGy"] = frame.pop("DoseRP_Gy").astype(float) * 1000
+    frame[_HEIGHT] = [[v, v] for v in frame[_HEIGHT]]
+    frame["KVP_kV"] = frame["KVP_kV"].astype(object)
+    frame.loc[0, "KVP_kV"] = None
+    frame.loc[0, "DoseRP_mGy"] = 0.0
+    before = frame.copy(deep=True)
+    normalized = _normalize(frame)
+    assert len(normalized) == _N_EVENTS - 1
+    pd.testing.assert_frame_equal(frame, before)
+
+
+def test_source_rows_map_kept_events_to_input_positions() -> None:
+    from guiskindose.rdsr_normalizer import rdsr_normalizer_with_source_rows
+
+    frame = _parsed()
+    frame["KVP_kV"] = frame["KVP_kV"].astype(object)
+    frame.loc[[0, 4], "KVP_kV"] = None
+    frame["DoseRP_Gy"] = frame["DoseRP_Gy"].astype(object)
+    frame.loc[[0, 4], "DoseRP_Gy"] = 0.0
+    frame.index = frame.index + 100  # labels must not leak into the positions
+    normalized, rows = rdsr_normalizer_with_source_rows(frame, settings=_settings())
+    assert rows == [i for i in range(_N_EVENTS) if i not in (0, 4)]
+    assert len(normalized) == len(rows)
+
+
+@pytest.mark.parametrize(
+    ("column", "variant", "label"),
+    [
+        ("CollimatedFieldArea_m2", "CollimatedFieldArea_cm2", "collimated field area"),
+        ("XRayFilterThicknessMinimum_mm", "XRayFilterThicknessMinimum_in", "minimum filter thickness"),
+        ("TableHeightPosition_mm", "TableHeightPosition_in", "table height position"),
+    ],
+)
+def test_unconvertible_units_rejected_for_other_concept_families(column: str, variant: str, label: str) -> None:
+    """Area units are never rescaled; unknown length units are rejected, not guessed."""
+    frame = _parsed()
+    frame[variant] = frame.pop(column)
+    with pytest.raises(RdsrUnitError, match=label):
+        _normalize(frame)
+
+
+def test_shutter_unit_variant_is_converted() -> None:
+    frame = pd.DataFrame({"LeftShutter_cm": [1.5], "LeftShutter_mm": [None]})
+    from guiskindose.rdsr_input_checks import convert_scale_only_units
+
+    convert_scale_only_units(frame)
+    assert list(frame.columns) == ["LeftShutter_mm"]
+    assert frame.at[0, "LeftShutter_mm"] == pytest.approx(15.0)
+
+
+def test_tabular_dap_stays_aligned_when_zero_dose_events_are_dropped(tmp_path) -> None:
+    """Per-event DAP is carried across by input position, skipping dropped events."""
+    from guiskindose.input_adapters.base import DAP_INTERNAL_COL
+    from guiskindose.input_adapters.registry import read_and_normalize_input
+
+    fixture_path = Path(__file__).resolve().parents[1] / "fixtures" / "tabular_inputs" / "dosetrack_events.csv"
+    fixture = pd.read_csv(fixture_path)
+    fixture["DAP (Gy*cm2)"] = [0.1 * (i + 1) for i in range(len(fixture))]  # distinct per event
+    dropped = 1
+    fixture["Air Kerma (mGy)"] = fixture["Air Kerma (mGy)"].astype(float)
+    fixture.loc[dropped, "Air Kerma (mGy)"] = 0.0
+    fixture["Tube Voltage Peak (kV)"] = fixture["Tube Voltage Peak (kV)"].astype(object)
+    fixture.loc[dropped, "Tube Voltage Peak (kV)"] = None
+    complete_path, gap_path = tmp_path / "complete.csv", tmp_path / "gap.csv"
+    fixture.assign(**{"Tube Voltage Peak (kV)": pd.read_csv(fixture_path)["Tube Voltage Peak (kV)"]}).to_csv(
+        complete_path, index=False
+    )
+    fixture.to_csv(gap_path, index=False)
+    settings = _settings()
+
+    complete = read_and_normalize_input(complete_path, input_schema="dosetrack", settings=settings)
+    gap = read_and_normalize_input(gap_path, input_schema="dosetrack", settings=_settings())
+
+    expected = complete.normalized_data[DAP_INTERNAL_COL].drop(index=dropped).to_numpy()
+    assert len(gap.normalized_data) == len(complete.normalized_data) - 1
+    np.testing.assert_allclose(gap.normalized_data[DAP_INTERNAL_COL].to_numpy(), expected)
+
+
+def test_canonical_duplicate_agrees_with_variant_unit(baseline: pd.DataFrame) -> None:
+    """A duplicated canonical dose and an agreeing mGy copy are not a conflict."""
+    frame = _parsed()
+    frame["DoseRP_mGy"] = frame["DoseRP_Gy"].astype(float) * 1000
+    frame["DoseRP_Gy"] = pd.Series([[v, v] for v in frame["DoseRP_Gy"]], dtype=object)
+    _assert_same_geometry(_normalize(frame), baseline)
