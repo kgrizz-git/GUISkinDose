@@ -20,6 +20,7 @@ import json
 import math
 import os
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pydicom
@@ -36,7 +37,7 @@ _DIGESTS_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "golden" / "r
 _REGEN_ENV = "GUISKINDOSE_REGEN_NORMALIZED_DIGESTS"
 
 
-def _canonical(value: object) -> str:
+def _canonical(value: Any) -> str:
     """Return a platform-stable text form of one cell."""
     if value is None:
         return "None"

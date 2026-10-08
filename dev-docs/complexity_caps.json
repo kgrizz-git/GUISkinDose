@@ -92,7 +92,7 @@
     {
       "path": "src/guiskindose/rdsr_normalizer.py",
       "function": "_normalize_machine_parameters",
-      "cap": 13
+      "cap": 12
     },
     {
       "path": "src/guiskindose/rotational_acquisition.py",

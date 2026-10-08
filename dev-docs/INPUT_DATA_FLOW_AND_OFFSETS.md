@@ -79,6 +79,32 @@ Different X-ray manufacturers define their reference coordinates differently. `r
 - **Directional Signs**: Ensures rotations (Ap1, At1, etc.) and translations move the phantom in the correct directions.
 - **Field Size Mode & Detector Length**: Ensures beam spread is calculated correctly.
 
+A report with no `Manufacturer` or `ManufacturerModelName` (or with values matching no profile) uses the
+`Default` profile and is reported as `Fallback`. If the settings have no `Default` profile, normalization raises
+`RdsrInputError`.
+
+### Input hardening and the required-concept contract
+
+`rdsr_input_checks.py` runs inside `rdsr_normalizer()` before any column is read, in this order:
+
+1. Reject an empty frame (no X-ray irradiation events).
+2. Convert scale-only unit variants (`mGy`, `cm`, `m`); reject unconvertible units (`RdsrUnitError`).
+3. Collapse per-event duplicates of scalar concepts when every copy is equal; reject disagreeing copies.
+   Filter material and thickness lists are never collapsed, because each entry belongs to one material.
+4. Resolve the normalization profile, which fixes the field-size mode.
+5. Resolve DSD per event: `DistanceSourcetoDetector_mm`, else `FinalDistanceSourcetoDetector_mm`.
+6. Check required concepts:
+   - Populated in every event: source-to-isocenter distance, DSD, the three table positions, both positioner
+     angles, kVp, and reference-point dose. The field-size mode adds `CollimatedFieldArea_m2` (`CFA`) or all four
+     shutter positions (`ASD`).
+   - Present as columns, blank values allowed: `IrradiationEventType`, `AcquisitionPlane`, and the three filter
+     columns. Blank thicknesses become 0 and a blank material takes the no-filter path.
+   Events with exactly zero reference-point dose are dropped when they are the only incomplete events, since they
+   add no dose. Otherwise one `RdsrInputError` lists every missing concept with event counts.
+
+Missing geometry is never defaulted. All messages are built from fixed labels and counts (`UserFacingInputError`),
+so the GUI and CLI can show them without leaking file values. The tabular adapters share this path.
+
 ## 3. The "Offset Issue" (Dose Projecting Incorrectly)
 
 If dose projects onto strange parts of the 3D human mesh (e.g., the beam hitting the head during a cardiac procedure), it is usually caused by an offset mismatch. There are **two separate offset systems** to understand:

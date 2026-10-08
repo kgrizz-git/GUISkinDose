@@ -1,6 +1,6 @@
 # RDSR input hardening plan (parser and normalizer)
 
-Status: active (2026-10-08). Reviewed by Codex (gpt-6.1-sol, low) on 2026-10-08; findings folded in. Branch: `fix/rdsr-parser-input-hardening`.
+Status: **complete** (2026-10-08). Reviewed by Codex (gpt-6.1-sol, low) on 2026-10-08; findings folded in. Branch: `fix/rdsr-parser-input-hardening`.
 Tracks the TO_DO item "RDSR parser input hardening (OpenREM upstream failures)".
 
 ## Problem
@@ -105,3 +105,17 @@ complete, and every other file should end in `RdsrInputError` with a readable me
 - Canonical GUI help under `docs/source/gui_help/` (upload page): rejected inputs and default-profile verification.
 - `CHANGELOG.md`, `TO_DO.md` (close the item), and the rotational assessment's Phase 0 note.
 - Archive this plan and update `dev-docs/index.md` when done.
+
+## Outcome (2026-10-08)
+
+Shipped as planned in `rdsr_input_checks.py`, with one addition found while rerunning the survey: Philips Azurion
+had 3 of 89 events with no kVp, all with zero reference-point dose. Rejecting the whole report for events that add
+no dose was wrong, so events with exactly zero dose are dropped when they are the only incomplete events
+(`enforce_required_concepts`). Counts in the error message are always over all events.
+
+Survey rerun over `tmp/openrem-upstream/`: Canon Alphenix and Philips Azurion normalize (Azurion: 86 events,
+calculates end to end). Canon Ultimaxi's mGy dose now converts, and it then stops on missing geometry. Every other
+file ends in `RdsrInputError` naming its missing concepts; Siemens Varic reports no irradiation events.
+
+Not changed: the existing opt-in `dprint` lines in `NormalizationSettings.update_used_settings` still echo the
+manufacturer and model at DEBUG (device names, already shown in the GUI's fallback notices).

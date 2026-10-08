@@ -198,6 +198,16 @@ def resolve_loaded_exam_index(exam_id: str, *, result_index: int, n_loaded: int)
     return None
 
 
+class UserFacingInputError(ValueError):
+    """An input problem whose message is safe to show the user verbatim.
+
+    Subclasses must build the message only from fixed, code-owned labels and
+    integer counts — never from file-derived strings (names, units, values,
+    paths). Under that contract the CLI excepthook and the GUI loaders may print
+    ``str(exc)`` instead of the generic coded error.
+    """
+
+
 def safe_user_error(operation: str) -> str:
     """Return a generic user-facing error carrying only a stable code."""
     return f"Operation failed ({_code(operation, label='operation')})."
@@ -213,6 +223,9 @@ def install_value_safe_excepthook(logger: logging.Logger, operation: str = "cli_
             sys.__excepthook__(exc_type, exc, None)
             return
         safe_error_event(logger, operation_code, exc)
+        if isinstance(exc, UserFacingInputError):
+            print(str(exc), file=sys.stderr)
+            return
         print(safe_user_error(operation_code), file=sys.stderr)
 
     sys.excepthook = _hook

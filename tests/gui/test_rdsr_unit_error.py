@@ -52,3 +52,33 @@ def test_generic_rdsr_failure_keeps_generic_message(monkeypatch: pytest.MonkeyPa
 
     assert ok is False
     assert message == "Could not read this DICOM RDSR file. Check the file and try again."
+
+
+def test_load_rdsr_surfaces_input_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.rdsr_input_checks import RdsrInputError
+
+    def _raise(*_args, **_kwargs):
+        raise RdsrInputError("This file contains no X-ray irradiation events, so there is nothing to calculate.")
+
+    monkeypatch.setattr(exam_loaders, "rdsr_normalizer", _raise)
+
+    ok, message = exam_loaders.load_rdsr(_EXAMPLE_RDSR, AppState())
+
+    assert ok is False
+    assert "no X-ray irradiation events" in message
+
+
+def test_load_tabular_surfaces_input_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.rdsr_input_checks import RdsrInputError
+
+    def _raise(*_args, **_kwargs):
+        raise RdsrInputError("This RDSR lacks data GUISkinDose needs: tube voltage (kVp) (missing in 1 of 3 events).")
+
+    monkeypatch.setattr(exam_loaders, "_parse_tabular", _raise)
+    state = AppState()
+
+    ok, message = exam_loaders.load_tabular(Path("events.csv"), state)
+
+    assert ok is False
+    assert "tube voltage (kVp)" in message
+    assert state.import_has_errors is True

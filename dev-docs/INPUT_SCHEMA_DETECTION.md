@@ -100,18 +100,21 @@ If a file is misdetected or ambiguous, select the schema explicitly:
 GUISkinDose has three input paths and they handle physical units differently. The goal in all three
 is that no unit is silently assumed without either being read from the source or flagged.
 
-### DICOM RDSR (reads + asserts)
+### DICOM RDSR (reads, converts scale-only variants, asserts)
 
 `rdsr_parser.py` embeds each measured value's DICOM unit code
 (`MeasurementUnitsCodeSequence`) into the column name — that is why parsed columns are named
 `DoseRP_Gy`, `DistanceSourcetoDetector_mm`, `KVP_kV`. `rdsr_normalizer.py` then reads those
-unit-suffixed columns with fixed factors (`DoseRP_Gy * 1000`, `_mm / 10`). Because access is by
-unit-suffixed name, a report using a non-standard unit yields a differently-named column
-(`DoseRP_mGy`), which would otherwise fail with an opaque `AttributeError`. `_verify_expected_units`
-detects this up front and raises **`RdsrUnitError`** with a clear, unit-naming message; the GUI
-(`gui/exam_loaders.py::load_rdsr`) surfaces that message instead of the generic
-"Could not read this DICOM RDSR file". The RDSR path is not unit-*adaptive* — it recognises only the
-standard DICOM unit — but it fails loud rather than mis-converting.
+unit-suffixed columns with fixed factors (`DoseRP_Gy * 1000`, `_mm / 10`).
+
+Before any read, `rdsr_input_checks.convert_scale_only_units` folds known scale-only variants into
+the canonical column: `mGy` → `Gy` for reference-point dose (DICOM TID 10003 specifies Gy, but some
+vendors emit mGy), and `cm` / `m` → `mm` for linear distances, table positions, shutters and filter
+thicknesses. Area units are never rescaled. The merge is per event: a populated canonical value
+wins, a variant fills a blank, and two populated values that disagree raise `RdsrInputError`.
+Any other unit raises **`RdsrUnitError`**, which names the quantity and the expected unit but never
+echoes the file's unit text. Both errors are `UserFacingInputError`s (value-free by contract), so
+the GUI loaders and the CLI show their message instead of the generic error.
 
 ### Tabular adapters (read from header, flag when unreadable)
 

@@ -181,8 +181,11 @@ class NormalizationSettings:
 
         if not setting:
             self.normalization_method = "None"
-            raise NotImplementedError(
-                f"Could not find settings for the given manufacturer and model ({manufacturer=}, {model=}) and no 'Default' entry found."
+            from guiskindose.rdsr_input_checks import RdsrInputError
+
+            raise RdsrInputError(
+                "No normalization profile matches this device, and the normalization settings have no "
+                "'Default' profile to fall back to. Add a matching or 'Default' profile."
             )
 
         setting = setting[0]

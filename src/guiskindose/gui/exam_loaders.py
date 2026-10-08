@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 import pydicom
 
-from guiskindose.privacy import safe_error_event
+from guiskindose.privacy import UserFacingInputError, safe_error_event
 from guiskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
 from guiskindose.rdsr_parser import rdsr_parser
 
@@ -178,9 +178,13 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
 
         return True, f"Loaded {len(df)} irradiation events"
     except RdsrUnitError as exc:
-        # Unit mismatch is a specific, actionable condition — surface the
-        # unit-naming message (units are not PHI) instead of the generic error.
+        # Unit mismatch is a specific, actionable condition. Its message is built
+        # from fixed labels only, so it is shown instead of the generic error.
         _record_load_failure("DICOM_RDSR_UNIT_MISMATCH", exc)
+        return False, str(exc)
+    except UserFacingInputError as exc:
+        # Missing geometry, conflicting duplicates, no events: value-free message.
+        _record_load_failure("DICOM_RDSR_INPUT", exc)
         return False, str(exc)
     except Exception as exc:
         _record_load_failure("DICOM_RDSR_LOAD", exc)
@@ -225,6 +229,10 @@ def load_tabular(
         _finalize_tabular_state(state, file_path, result)
     except SchemaDetectionError as exc:
         return _wrap_tabular_schema_detection(state, exc)
+    except UserFacingInputError as exc:
+        _record_load_failure("TABULAR_INPUT", exc)
+        state.import_has_errors = True
+        return False, str(exc)
     except Exception as exc:
         _record_load_failure("TABULAR_LOAD", exc)
         state.import_has_errors = True

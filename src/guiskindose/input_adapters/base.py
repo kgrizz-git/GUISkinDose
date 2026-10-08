@@ -35,7 +35,7 @@ from guiskindose.input_adapters.column_mapper import (
 )
 from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from guiskindose.input_adapters.tabular_loader import _RawLoad
-from guiskindose.privacy import exception_class_name
+from guiskindose.privacy import UserFacingInputError, exception_class_name
 
 if TYPE_CHECKING:
     from guiskindose.settings import PyskindoseSettings
@@ -435,6 +435,9 @@ def run_normalizer_pipeline(
 
     try:
         normalized_df = rdsr_normalizer(data_df, settings)
+    except UserFacingInputError:
+        # Value-free by contract; keep its specific message for the user.
+        raise
     except Exception as exc:
         raise ValueError(
             f"RDSR normalization failed (error_type={exception_class_name(exc)})."

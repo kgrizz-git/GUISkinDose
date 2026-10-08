@@ -21,6 +21,27 @@ For tabular files, the schema selector controls how columns are interpreted. `au
 
 Warnings in the loaded-exam list mean the importer made an assumption or found a condition that should be reviewed before clinical use. Examples include assumed DAP units, unsupported equipment names, missing optional fields, or manual table-origin overrides.
 
+## When a file is rejected
+
+Some reports cannot be placed in the room. A report may leave out the source-to-isocenter distance, table positions,
+beam angles, kVp, or the field size. GUISkinDose then rejects the file with one message listing every missing item
+and how many events lack it. It does not fill in defaults, because a guessed geometry would change the dose estimate.
+Other rejections cover a report with no X-ray irradiation events, a quantity reported twice with different values,
+and a unit GUISkinDose does not convert.
+
+Some differences are handled without rejecting the file:
+
+- A dose reported in mGy, or a distance reported in cm or m, is converted.
+- A value repeated within one event is used once when every copy agrees.
+- An event with zero reference-point dose and missing geometry is dropped, because it adds no dose. A log warning
+  gives the count.
+
+A report whose manufacturer or model matches no normalization profile uses the `Default` profile. That profile cannot
+know vendor coordinate conventions (for example the GE lateral/longitudinal swap), so verify the geometry preview
+before relying on the result.
+
+## Coordinate corrections
+
 Coordinate correction toggles apply to single-exam, non-normalized tabular uploads. They are unavailable for DICOM files, the `normalized` schema, and multi-exam mode. Use them only when a site export is known to need the correction; vendor-level normalizations documented in [Vendor Coordinate Systems](../../../dev-docs/VENDOR_COORDINATE_SYSTEMS.md) are already applied by the adapter.
 
 Technical references:

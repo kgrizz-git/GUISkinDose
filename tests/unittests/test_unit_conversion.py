@@ -15,7 +15,8 @@ from guiskindose.input_adapters.base import (
     AdapterContext,
     convert_field_with_header_units,
 )
-from guiskindose.rdsr_normalizer import RdsrUnitError, _verify_expected_units
+from guiskindose.rdsr_input_checks import verify_expected_units
+from guiskindose.rdsr_normalizer import RdsrUnitError
 
 
 def _ctx(source_header: str, target_col: str) -> AdapterContext:
@@ -124,20 +125,21 @@ def _rdsr_frame(dose_col: str = "DoseRP_Gy") -> pd.DataFrame:
 
 
 def test_expected_units_pass_for_standard_frame():
-    _verify_expected_units(_rdsr_frame())  # must not raise
+    verify_expected_units(_rdsr_frame())  # must not raise
 
 
 def test_unexpected_dose_unit_raises_named_error():
-    frame = _rdsr_frame(dose_col="DoseRP_mGy")
+    """An unconvertible unit names the quantity and expected unit, never the file's unit text."""
+    frame = _rdsr_frame(dose_col="DoseRP_rad")
     with pytest.raises(RdsrUnitError) as excinfo:
-        _verify_expected_units(frame)
+        verify_expected_units(frame)
     msg = str(excinfo.value)
     assert "reference point dose" in msg
-    assert "mGy" in msg
-    assert "Gy" in msg
+    assert "'Gy'" in msg
+    assert "rad" not in msg
 
 
 def test_wholly_absent_concept_does_not_raise_unit_error():
     """A missing column (no sibling) is left to the normal missing-column path."""
     frame = _rdsr_frame().drop(columns=["DoseRP_Gy"])
-    _verify_expected_units(frame)  # no DoseRP_* sibling → no RdsrUnitError
+    verify_expected_units(frame)  # no DoseRP_* sibling → no RdsrUnitError
