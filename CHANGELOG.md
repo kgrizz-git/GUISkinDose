@@ -21,6 +21,15 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **The correction dialog now shows exactly what the calculation applies** (2026-10-07) — Confirm stores the
+  calibration period the dialog displayed for the first exam (later exams follow it), so a pair with no row in
+  that period shows and applies the default rather than silently using its own latest row. A manual factor is
+  inherited by the next exam only when the immediately preceding exam holds it and both exams are in the same
+  calibration period (old, new, old no longer carries an old-period value across the new one). The dialog and
+  the engine use one shared function, covered by a parametrized dialog-versus-engine consistency test.
+  Clearing a multi-exam result now also clears the exam count, totals, and rotational badge, and the Calculate
+  tube-identity audit line uses the same gate as the export.
+
 - **Patient-support transmission has three modes, and the default changed** (2026-10-07) — the
   `estimate_k_tab` boolean is replaced by `k_tab_mode`: `measured_with_fallback` (new default), `estimate`
   (today's flat `k_tab_val`), and `measured_only` (today's measured lookup, 1.0 where missing). The new default

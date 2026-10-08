@@ -86,7 +86,7 @@ class _DialogView:
         self.fields: dict[tuple[str, Pair], tuple[ui.number, ui.badge]] = {}
         self.selectors: dict[str, tuple[ui.select, ui.label]] = {}
         self.syncing = False
-        self.display_names = equipment_display_names(model.app_state)
+        self.display_names = equipment_display_names(model.app_state, model.labels.values())
 
     def _shown(self, equipment: str) -> str:
         """Display spelling of an equipment label (matching stays casefolded)."""

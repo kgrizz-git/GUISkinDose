@@ -16,6 +16,7 @@ Privacy: equipment labels and calibration dates are never logged here.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,7 @@ from guiskindose.kerma_correction import (
     merge_tables,
     missing_keys,
     normalize_equipment_label,
+    resolve_manual,
     unique_equipment_tube_keys,
 )
 from guiskindose.kerma_periods import Periods, dated_pairs, file_table_for_exam, period_options
@@ -80,13 +82,14 @@ def labelled_frames(app_state: AppState) -> list[tuple[str, pd.DataFrame]]:
     return pairs
 
 
-def equipment_display_names(app_state: AppState) -> dict[str, str]:
+def equipment_display_names(app_state: AppState, extra_labels: Iterable[object] = ()) -> dict[str, str]:
     """Map each casefolded equipment label to its first-seen original spelling.
 
     Matching always uses the casefolded label; this only restores the user's
     spelling (``DEMO-ROOM-2`` rather than ``demo-room-2``) for display. Sources are
     the loaded frames' serial and station columns, the explicit label, and the
-    per-exam unit overrides. Labels with no known original (for example from a
+    per-exam unit overrides, plus ``extra_labels`` (labels typed in an open dialog).
+    Labels with no known original (for example from a
     calibration file) are not in the map.
     """
     seen: dict[str, str] = {}
@@ -97,7 +100,7 @@ def equipment_display_names(app_state: AppState) -> dict[str, str]:
             seen.setdefault(key, str(raw).strip())
 
     _note(app_state.kerma_meter_explicit_label)
-    for value in app_state.kerma_meter_unresolved_labels.values():
+    for value in (*app_state.kerma_meter_unresolved_labels.values(), *extra_labels):
         _note(value)
     for _exam, frame in labelled_frames(app_state):
         for column in ("device_serial", "station_name"):
@@ -242,17 +245,24 @@ class FactorModel:
     def _selector_exams(self) -> list[str]:
         return [e for e in self.exams if self.has_selector(e)]
 
+    def effective_periods(self) -> dict[str, str]:
+        """Period choices exactly as Confirm stores them, so the dialog shows what the engine applies.
+
+        Stored choices plus this session's edits, plus the displayed default (the file's
+        most recent period) for the first selector exam that has no choice yet. Later
+        exams follow through :func:`effective_period`, as they do in the engine.
+        """
+        selector_exams = self._selector_exams()
+        periods = {e: k for e, k in self.app_state.kerma_meter_periods.items() if e not in self._period_edits}
+        periods.update({e: k for e, k in self._period_edits.items() if e in selector_exams})
+        for exam in selector_exams:
+            if effective_period(periods, exam) is None and self.options:
+                periods[exam] = self.options[0].key
+        return periods
+
     def period_of(self, exam: str) -> str | None:
-        """Calibration period key for *exam*: its own choice, else the previous exam's, else the most recent."""
-        if not self.has_selector(exam):
-            return None
-        if exam in self._period_edits:
-            return self._period_edits[exam]
-        stored = self.app_state.kerma_meter_periods.get(exam)
-        if stored:
-            return stored
-        earlier = [e for e in self._selector_exams() if self.exams.index(e) < self.exams.index(exam)]
-        return self.period_of(earlier[-1]) if earlier else self.options[0].key
+        """Calibration period key in effect for *exam* (own choice, else an earlier exam's, else the default)."""
+        return effective_period(self.effective_periods(), exam)
 
     def period_follows(self, exam: str) -> str | None:
         """Label of the exam whose period *exam* follows, or ``None`` when it has its own choice."""
@@ -275,22 +285,21 @@ class FactorModel:
 
     # ── factors ────────────────────────────────────────────────────────────
 
-    def _previous(self, exam: str, pair: Pair) -> str | None:
-        earlier = [e for e in self.exams[: self.exams.index(exam)] if pair in self.detected.get(e, [])]
-        return earlier[-1] if earlier else None
+    def _manual_table(self) -> dict[tuple[str, ...], float | None]:
+        """Stored manual entries overlaid with this session's edits (``None`` = blank field)."""
+        table: dict[tuple[str, ...], float | None] = dict(self.app_state.kerma_meter_in_memory_table or {})
+        table.update({(exam, *pair): value for (exam, pair), value in self._edits.items()})
+        return table
 
     def resolve(self, exam: str, pair: Pair) -> tuple[float | None, str, str | None]:
-        """Return ``(value, source, followed exam)`` for one exam's pair."""
-        if (exam, pair) in self._edits:
-            return self._edits[(exam, pair)], SOURCE_ENTERED, None
-        manual = manual_for_exam(self.app_state.kerma_meter_in_memory_table, exam, follow=False)
-        if pair in manual:
-            return manual[pair], SOURCE_ENTERED, None
-        prev = self._previous(exam, pair)
-        if prev is not None and self.period_of(exam) == self.period_of(prev):
-            value, source, _ = self.resolve(prev, pair)
-            if source in (SOURCE_ENTERED, SOURCE_FOLLOWS):
-                return value, SOURCE_FOLLOWS, prev
+        """Return ``(value, source, followed exam)`` for one exam's pair.
+
+        The manual part is :func:`resolve_manual`, the very function the engine uses.
+        """
+        resolved = resolve_manual(self._manual_table(), self.effective_periods(), exam, pair)
+        if resolved is not None:
+            value, followed = resolved
+            return (value, SOURCE_ENTERED, None) if followed is None else (value, SOURCE_FOLLOWS, followed)
         file_value = self._file_value(exam, pair)
         if file_value is not None:
             return file_value, SOURCE_FILE, None
@@ -331,8 +340,13 @@ class FactorModel:
         reopening and later edits of the earlier exam reach them. File rows store
         nothing, so they keep following the file. A default row left untouched is
         only recorded as acknowledged (it is not asked about again), so a file row
-        added later still wins. The same holds for calibration periods: only
-        explicit choices are stored, and an accepted default is acknowledged.
+        added later still wins.
+
+        Calibration periods: explicit choices are stored, plus the displayed default
+        (the file's most recent period) for the first selector exam, so the engine
+        applies exactly the period the dialog showed; later exams follow it. Confirm
+        also acknowledges the period of every selector exam, so the dialog does not
+        ask again.
 
         Returns
         -------
@@ -362,12 +376,10 @@ class FactorModel:
         state.kerma_meter_in_memory_table = table or None
         state.kerma_meter_acknowledged = acknowledged
         state.kerma_meter_unresolved_labels = {k: v.strip() for k, v in self.labels.items() if v and v.strip()}
-        selector_exams = self._selector_exams()
-        state.kerma_meter_periods = {
-            **{e: k for e, k in state.kerma_meter_periods.items() if e not in self._period_edits},
-            **{e: k for e, k in self._period_edits.items() if e in selector_exams},
-        }
-        state.kerma_meter_periods_acknowledged = set(state.kerma_meter_periods_acknowledged) | set(selector_exams)
+        state.kerma_meter_periods = self.effective_periods()
+        state.kerma_meter_periods_acknowledged = set(state.kerma_meter_periods_acknowledged) | set(
+            self._selector_exams()
+        )
         if dont_ask:
             state.kerma_meter_prompt_suppressed = True
         return before != self._snapshot()

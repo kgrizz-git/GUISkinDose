@@ -490,7 +490,7 @@ def test_choosing_an_older_period_changes_that_exams_file_factor(tmp_path: Path)
     assert model.period_of("Exam 3") == _OLD  # Exam 3 follows Exam 2's period
     assert _row(model, "Exam 2").source == dlg.SOURCE_FILE
     model.commit(dont_ask=False)
-    assert state.kerma_meter_periods == {"Exam 2": _OLD}  # only the explicit choice; Exam 3 follows it
+    assert state.kerma_meter_periods == {"Exam 1": _NEW, "Exam 2": _OLD}  # displayed default + choice; Exam 3 follows
     assert state.kerma_meter_in_memory_table is None  # file values are not copied into manual entries
 
 
@@ -652,7 +652,7 @@ async def test_dated_full_hit_prompts_once_until_a_period_is_chosen(dialog_mock:
     assert await dlg.maybe_prompt_after_load() is True
     assert await dlg.maybe_prompt_after_load() is False  # once per load
     dlg.FactorModel(state).commit(dont_ask=False)  # confirming records the period
-    assert state.kerma_meter_periods == {}  # the default period was accepted, not chosen explicitly
+    assert state.kerma_meter_periods == {"Exam 1": _NEW}  # the displayed default is stored so the engine applies it
     assert state.kerma_meter_periods_acknowledged == {"Exam 1"}
     assert dlg.needs_prompt(state) is False
 

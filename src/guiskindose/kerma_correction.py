@@ -441,32 +441,56 @@ def effective_period(periods: Mapping[str, str] | None, exam: str) -> str | None
     return max(earlier)[1] if earlier else None
 
 
-def _followed_entries(
-    table: Mapping[tuple[str, ...], float],
-    exam: str,
-    periods: Mapping[str, str] | None,
-    skip: set[tuple[str, str]],
-) -> dict[tuple[str, str], float]:
-    """Values an exam follows from the nearest earlier exam's explicit entry, per pair.
+def _previous_exam(exam: str) -> str | None:
+    """Label of the exam immediately before *exam* (``Exam N`` -> ``Exam N-1``), or ``None``."""
+    from guiskindose.privacy import opaque_exam_label
 
-    A follower takes the value only while its calibration period equals the earlier
-    exam's, matching the dialog's "follows Exam N" rule.
-    """
     index = _exam_number(exam)
-    if index is None:
-        return {}
-    mine = effective_period(periods, exam)
-    best: dict[tuple[str, str], tuple[int, float]] = {}
-    for key, value in table.items():
-        if len(key) != 3 or (key[1], key[2]) in skip:
-            continue
-        n = _exam_number(key[0])
-        if n is None or n >= index or effective_period(periods, key[0]) != mine:
-            continue
-        pair = (key[1], key[2])
-        if pair not in best or n > best[pair][0]:
-            best[pair] = (n, value)
-    return {pair: value for pair, (_n, value) in best.items()}
+    return opaque_exam_label(index - 1) if index else None
+
+
+def resolve_manual(
+    table: Mapping[tuple[str, ...], float | None],
+    periods: Mapping[str, str] | None,
+    exam: str,
+    pair: tuple[str, str],
+) -> tuple[float | None, str | None] | None:
+    """The single rule for a manual factor of one exam and pair, shared by the dialog and the engine.
+
+    Order: an entry for the exam itself, then a legacy ``(equipment, tube)`` entry
+    (applies to every exam), then *follow*: the exam immediately before takes
+    precedence only while its effective calibration period equals this exam's, and
+    its own manual-or-followed value is used. Otherwise ``None``, and the caller
+    resolves the factor from the calibration file or the default.
+
+    Parameters
+    ----------
+    table : Mapping[tuple[str, ...], float | None]
+        Manual entries keyed ``(exam, equipment, tube)`` or legacy ``(equipment, tube)``.
+        A ``None`` value is an explicit but blank entry (the dialog's unsaved edit).
+    periods : Mapping[str, str] | None
+        Explicit calibration-period choices (see :func:`effective_period`).
+    exam : str
+        Opaque exam label.
+    pair : tuple[str, str]
+        ``(equipment, tube)``.
+
+    Returns
+    -------
+    tuple[float | None, str | None] | None
+        ``(value, followed exam label)``; the label is ``None`` for an explicit entry.
+    """
+    own = (exam, *pair)
+    if own in table:
+        return table[own], None
+    if pair in table:
+        return table[pair], None
+    previous = _previous_exam(exam)
+    if previous is not None and effective_period(periods, previous) == effective_period(periods, exam):
+        resolved = resolve_manual(table, periods, previous, pair)
+        if resolved is not None:
+            return resolved[0], previous
+    return None
 
 
 def manual_for_exam(
@@ -476,12 +500,11 @@ def manual_for_exam(
     periods: Mapping[str, str] | None = None,
     follow: bool = True,
 ) -> dict[tuple[str, str], float]:
-    """Manual entries that apply to one exam.
+    """Manual entries that apply to one exam, resolved with :func:`resolve_manual`.
 
-    Entries are keyed ``(exam label, equipment, tube)``. A legacy two-part key
-    ``(equipment, tube)`` applies to every exam, and an entry for the exam itself
-    wins over it. With ``follow`` (default), a pair with no entry for this exam
-    takes the nearest earlier exam's explicit entry while both exams use the same
+    Entries are keyed ``(exam label, equipment, tube)``; a legacy two-part key
+    applies to every exam. With ``follow`` (default) a pair with no entry for this
+    exam takes the immediately preceding exam's value while both use the same
     calibration period, so "follows Exam N" survives without copying values.
 
     Parameters
@@ -491,18 +514,23 @@ def manual_for_exam(
     exam : str
         Opaque exam label.
     periods : Mapping[str, str] | None
-        Explicit per-exam calibration-period choices (see :func:`effective_period`).
+        Explicit per-exam calibration-period choices.
     follow : bool
-        Resolve followed values; ``False`` returns only legacy and own entries.
+        When ``False`` only the exam's own and the legacy entries are returned.
     """
     if not table:
         return {}
-    out: dict[tuple[str, str], float] = {(k[0], k[1]): v for k, v in table.items() if len(k) == 2}
-    own = {(k[1], k[2]): v for k, v in table.items() if len(k) == 3 and k[0] == exam}
-    if follow:
-        followed = _followed_entries(table, exam, periods, set(out) | set(own))
-        out.update(followed)
-    out.update(own)
+    pairs = {(k[-2], k[-1]) for k in table}
+    out: dict[tuple[str, str], float] = {}
+    for pair in pairs:
+        if follow:
+            resolved = resolve_manual(table, periods, exam, pair)
+        elif (exam, *pair) in table or pair in table:
+            resolved = (table.get((exam, *pair), table.get(pair)), None)
+        else:
+            resolved = None
+        if resolved is not None and resolved[0] is not None:
+            out[pair] = float(resolved[0])
     return out
 
 

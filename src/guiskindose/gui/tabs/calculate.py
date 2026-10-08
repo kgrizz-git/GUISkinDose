@@ -36,6 +36,7 @@ _DIALOG_BODY_CLASSES = "text-sm text-grey-7"
 _DIALOG_ACTIONS_CLASSES = "w-full justify-end gap-2"
 _PRIMARY_BTN_CLASSES = "modern-btn modern-btn-teal"
 
+
 # Cache for pre-calc ``calculate_k_tab`` dry-runs. ``bind_text_from`` can refresh
 # the summary label many times; without a cache each refresh re-reads the
 # corrections DB (measured mode). Stored in a module-level object (not ``global``
@@ -50,6 +51,7 @@ class _KTabPreviewCache:
 
 
 _preview_cache = _KTabPreviewCache()
+
 
 # Cache for plane-identity audit text (same bind_text_from refresh pressure).
 @dataclass
@@ -211,7 +213,6 @@ def _normalized_data_frames() -> list:
     return [frame for _, frame in labelled_frames(state)]
 
 
-
 async def below_floor_prompt(n_below: int) -> bool:
     """Confirm below-floor kVp handling before a calculation.
 
@@ -272,12 +273,7 @@ def rotational_prompt_required(survey: dict[str, object]) -> bool:
                 and "contradictory_static" in entry[3]
             ):
                 contradictory += 1
-    return (
-        _survey_count(survey, "rotational")
-        + _survey_count(survey, "positioner_motion")
-        + contradictory
-        > 0
-    )
+    return _survey_count(survey, "rotational") + _survey_count(survey, "positioner_motion") + contradictory > 0
 
 
 def _survey_count(survey: dict[str, object], key: str) -> int:
@@ -339,16 +335,14 @@ async def rotational_prompt(survey: dict[str, object]) -> bool:
         if unresolved:
             with ui.expansion(f"{len(unresolved)} event(s) need attention", icon="warning").classes("w-full"):
                 for label, index, classification, reasons in unresolved:
-                    ui.label(
-                        f"{label} event {index}: {classification} ({', '.join(reasons)})"
-                    ).classes("text-sm text-grey-7")
+                    ui.label(f"{label} event {index}: {classification} ({', '.join(reasons)})").classes(
+                        "text-sm text-grey-7"
+                    )
 
         handling_select = ui.select(
             ["coverage", "static"],
             label="Handling",
-            value=state.rotational_handling
-            if state.rotational_handling in ("coverage", "static")
-            else "coverage",
+            value=state.rotational_handling if state.rotational_handling in ("coverage", "static") else "coverage",
         ).classes("w-full")
 
         dont_ask = ui.checkbox("Don't ask again until the loaded data changes")
@@ -550,7 +544,7 @@ def _format_plane_identity_audit() -> str:
         return _plane_audit_cache.value
 
     parts = []
-    if "acquisition_plane" in df.columns:
+    if "acquisition_plane" in df.columns or "acquisition_plane_canonical" in df.columns:
         from collections import Counter
 
         from guiskindose.kerma_correction import resolve_correction_keys
@@ -580,9 +574,9 @@ def _build_input_data_summary() -> None:
         with ui.column().classes("gap-1"):
             with ui.column().classes("gap-0"):
                 ui.label("File:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "file_name", backward=lambda v: "Loaded" if v else "None"
-                ).classes(f"{_SUMMARY_VALUE_CLASSES} truncate w-full")
+                ui.label().bind_text_from(state, "file_name", backward=lambda v: "Loaded" if v else "None").classes(
+                    f"{_SUMMARY_VALUE_CLASSES} truncate w-full"
+                )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Events:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(
@@ -592,14 +586,9 @@ def _build_input_data_summary() -> None:
                 ui.label("Scanner:").classes(_SUMMARY_LABEL_CLASSES)
                 scanner_label = ui.label(format_input_scanner_label(state)).classes(_SUMMARY_VALUE_CLASSES)
                 for attr in ("input_manufacturer", "input_model", "manufacturer", "model"):
-                    scanner_label.bind_text_from(
-                        state, attr, backward=lambda _v: format_input_scanner_label(state)
-                    )
+                    scanner_label.bind_text_from(state, attr, backward=lambda _v: format_input_scanner_label(state))
                 method_label = ui.label().classes("text-[10px] opacity-40 italic")
-                method_label.bind_text_from(
-                    state, "normalization_method",
-                    backward=lambda v: f"({v})"
-                )
+                method_label.bind_text_from(state, "normalization_method", backward=lambda v: f"({v})")
                 matched_label = ui.label("Default profile active").classes("text-[10px] text-amber-5 italic")
                 matched_label.bind_visibility_from(
                     state,
@@ -608,9 +597,9 @@ def _build_input_data_summary() -> None:
                 )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()
-                ).classes(_SUMMARY_VALUE_CLASSES)
+                ui.label().bind_text_from(state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()).classes(
+                    _SUMMARY_VALUE_CLASSES
+                )
 
 
 def _build_phantom_setup_summary() -> None:
@@ -622,29 +611,31 @@ def _build_phantom_setup_summary() -> None:
         with ui.column().classes("gap-1"):
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Model:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "phantom_model", backward=lambda v: f"{v}"
-                ).classes(_SUMMARY_VALUE_CLASSES)
-            with ui.column().classes("gap-0"):
-                ui.label("Patient Offsets:").classes(_SUMMARY_LABEL_CLASSES)
-                patient_offset_summary = ui.label(_format_patient_offsets()).classes(
+                ui.label().bind_text_from(state, "phantom_model", backward=lambda v: f"{v}").classes(
                     _SUMMARY_VALUE_CLASSES
                 )
+            with ui.column().classes("gap-0"):
+                ui.label("Patient Offsets:").classes(_SUMMARY_LABEL_CLASSES)
+                patient_offset_summary = ui.label(_format_patient_offsets()).classes(_SUMMARY_VALUE_CLASSES)
                 patient_offset_summary.bind_text_from(
-                    state, "per_exam_offsets_version", backward=lambda _v: _format_patient_offsets(),
+                    state,
+                    "per_exam_offsets_version",
+                    backward=lambda _v: _format_patient_offsets(),
                 )
                 patient_offset_summary.bind_text_from(
                     state, "is_multi_exam", backward=lambda _v: _format_patient_offsets()
                 )
             with ui.column().classes("gap-0"):
                 ui.label("Table Offsets:").classes(_SUMMARY_LABEL_CLASSES)
-                table_offset_summary = ui.label(_format_table_offset_line()).classes(
-                    _SUMMARY_VALUE_CLASSES
-                )
-                for attr in ("table_offset_x", "table_offset_y", "table_offset_z", "normalization_method", "is_multi_exam"):
-                    table_offset_summary.bind_text_from(
-                        state, attr, backward=lambda _v: _format_table_offset_line()
-                    )
+                table_offset_summary = ui.label(_format_table_offset_line()).classes(_SUMMARY_VALUE_CLASSES)
+                for attr in (
+                    "table_offset_x",
+                    "table_offset_y",
+                    "table_offset_z",
+                    "normalization_method",
+                    "is_multi_exam",
+                ):
+                    table_offset_summary.bind_text_from(state, attr, backward=lambda _v: _format_table_offset_line())
 
 
 def _build_physics_summary() -> None:
@@ -664,20 +655,16 @@ def _build_physics_summary() -> None:
                 # Refresh after calc (calc_run_id), when estimated/measured toggles,
                 # and when loaded frames change (input_revision).
                 k_tab_summary = ui.label().classes(_SUMMARY_VALUE_CLASSES)
-                k_tab_summary.bind_text_from(
-                    state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary()
-                )
-                k_tab_summary.bind_text_from(
-                    state, "k_tab_mode", backward=lambda _v: _format_k_tab_status_summary()
-                )
+                k_tab_summary.bind_text_from(state, "calc_run_id", backward=lambda _v: _format_k_tab_status_summary())
+                k_tab_summary.bind_text_from(state, "k_tab_mode", backward=lambda _v: _format_k_tab_status_summary())
                 k_tab_summary.bind_text_from(
                     state, "input_revision", backward=lambda _v: _format_k_tab_status_summary()
                 )
             with ui.row().classes(_SUMMARY_ROW_CLASSES):
                 ui.label("Filtration:").classes(_SUMMARY_LABEL_CLASSES)
-                ui.label().bind_text_from(
-                    state, "inherent_filtration", backward=lambda v: f"{v} mmAl"
-                ).classes(_SUMMARY_VALUE_CLASSES)
+                ui.label().bind_text_from(state, "inherent_filtration", backward=lambda v: f"{v} mmAl").classes(
+                    _SUMMARY_VALUE_CLASSES
+                )
 
 
 def _build_settings_summary_card() -> None:
@@ -686,9 +673,9 @@ def _build_settings_summary_card() -> None:
         with ui.row().classes("items-center justify-between w-full"):
             ui.label("Current settings").classes("text-xl font-bold q-mb-md")
             with ui.row().classes("items-center gap-2").bind_visibility_from(state, "is_multi_exam"):
-                ui.badge().bind_text_from(
-                    state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS"
-                ).classes("text-xs tracking-widest font-bold")
+                ui.badge().bind_text_from(state, "loaded_exams", backward=lambda v: f"{len(v)} EXAMS").classes(
+                    "text-xs tracking-widest font-bold"
+                )
                 ui.label("Per-exam patient offsets editable in Geometry and Settings tabs").classes(
                     "text-caption text-grey-5 italic"
                 )
@@ -713,9 +700,9 @@ def build(ctx: PageContext) -> None:
         _build_settings_summary_card()
 
         with ui.column().classes("w-full items-center gap-4 q-mt-xl"):
-            calc_btn = ui.button(
-                "▶  Run Calculation", on_click=controller.do_calculate, icon="bolt"
-            ).classes("modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined")
+            calc_btn = ui.button("▶  Run Calculation", on_click=controller.do_calculate, icon="bolt").classes(
+                "modern-btn modern-btn-teal text-xl px-12 py-4 icon-outlined"
+            )
             ctx.run_btn_drawer.on("click", controller.do_calculate)
 
             calc_progress = ui.linear_progress(value=0, color="indigo").classes("w-full")

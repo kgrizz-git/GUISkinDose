@@ -297,7 +297,9 @@ def test_refresh_aggregate_subset_none_selected(monkeypatch: pytest.MonkeyPatch)
 
     ctrl.refresh_aggregate_dosemap_subset()
 
-    cast(MagicMock, cast(PsdReadout, ctrl.refs.agg_psd_readout).value.set_text).assert_called_with("— mGy (no exams selected)")
+    cast(MagicMock, cast(PsdReadout, ctrl.refs.agg_psd_readout).value.set_text).assert_called_with(
+        "— mGy (no exams selected)"
+    )
 
 
 def test_show_exam_dosemap_dialog_missing_notifies(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -388,8 +390,32 @@ def test_agg_rotational_badge_sums_across_exams(monkeypatch):
     ctrl = _controller()
     res = _NS(
         exams=[
-            _NS(output=_NS(rotational_handling={"rows": [{"classification": "rotational", "effective_handling": "coverage", "requested_handling": "Auto"}]})),
-            _NS(output=_NS(rotational_handling={"rows": [{"classification": "positioner_motion", "effective_handling": "static", "requested_handling": "Auto"}]})),
+            _NS(
+                output=_NS(
+                    rotational_handling={
+                        "rows": [
+                            {
+                                "classification": "rotational",
+                                "effective_handling": "coverage",
+                                "requested_handling": "Auto",
+                            }
+                        ]
+                    }
+                )
+            ),
+            _NS(
+                output=_NS(
+                    rotational_handling={
+                        "rows": [
+                            {
+                                "classification": "positioner_motion",
+                                "effective_handling": "static",
+                                "requested_handling": "Auto",
+                            }
+                        ]
+                    }
+                )
+            ),
         ]
     )
     ctrl._refresh_agg_rotational_badge(res)
@@ -435,7 +461,19 @@ def test_agg_rotational_badge_static_run_shows_no_envelope():
     ctrl = _controller()
     res = _NS(
         exams=[
-            _NS(output=_NS(rotational_handling={"rows": [{"classification": "rotational", "effective_handling": "static", "requested_handling": "Static"}]})),
+            _NS(
+                output=_NS(
+                    rotational_handling={
+                        "rows": [
+                            {
+                                "classification": "rotational",
+                                "effective_handling": "static",
+                                "requested_handling": "Static",
+                            }
+                        ]
+                    }
+                )
+            ),
         ]
     )
     ctrl._refresh_agg_rotational_badge(res)
@@ -500,3 +538,15 @@ def test_invalidated_single_exam_results_return_totals_and_table_to_placeholders
         cast(MagicMock, metric.set_text).assert_called_with("—")
     assert ctrl.refs.corr_table.rows == []
     assert ctrl.refs.rotational_badge.visible is False
+
+
+def test_invalidated_multi_exam_results_clear_aggregate_metrics_and_badge() -> None:
+    """A vanished multi-exam run must not leave its exam count, totals, or badge on screen."""
+    ctrl = _controller()
+    ctrl.refs.agg_rotational_badge = MagicMock(visible=True)
+    ctrl.last_rendered_run_id = 1
+    ctrl._reset_multi_exam_view()
+    cast(MagicMock, ctrl.refs.agg_events_metric.set_text).assert_called_with("—")
+    cast(MagicMock, ctrl.refs.agg_totals_metric.set_text).assert_called_with("—")
+    cast(MagicMock, ctrl.refs.agg_rotational_badge.set_text).assert_called_with("")
+    assert ctrl.refs.agg_rotational_badge.visible is False
