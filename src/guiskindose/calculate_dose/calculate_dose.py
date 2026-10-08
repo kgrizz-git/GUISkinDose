@@ -76,7 +76,8 @@ def _resolve_kerma_meter_cf_detail(
             period_key = effective_period(km.calibration_periods, exam_label)
             file_table = file_table_for_exam(periods, period_key=period_key, calibration_date=km.calibration_date)
             table_meta = {"source_stem": km.file.stem}
-            _warn_unselected_period(periods, period_key, km.calibration_date)
+            if exam_label not in km.periods_acknowledged:
+                _warn_unselected_period(periods, period_key, km.calibration_date)
         except (OSError, UnicodeError, ValueError, TypeError) as exc:
             logger.warning(
                 "kerma-meter correction: failed to load table (%s); "
@@ -116,7 +117,8 @@ def _warn_unselected_period(periods: dict, period_key: str | None, calibration_d
     """Count-only warning when dated rows exist but no calibration period was chosen.
 
     Non-GUI runs have no period chooser, so the current (no ``valid_to``) or most
-    recent period is used. No dates are logged.
+    recent period is used. The caller skips exams whose default period the user
+    accepted in the GUI. No dates are logged.
     """
     if period_key or calibration_date is not None:
         return

@@ -57,6 +57,10 @@ class KermaMeterCorrectionSettings:
         Runtime-only per-exam identity overrides keyed by opaque exam label
         (``"Exam 1"``). Used for events with no serial/station so they reach the
         table. Never serialized by ``to_dict()`` (labels are site identifiers).
+    periods_acknowledged : set[str]
+        Runtime-only opaque exam labels whose default calibration period the user
+        accepted in the GUI dialog. Those exams skip the unselected-period warning.
+        Never serialized.
 
     Notes
     -----
@@ -105,6 +109,8 @@ class KermaMeterCorrectionSettings:
         self.calibration_periods: dict[str, str] = dict(data.get("calibration_periods") or {})
         self.calibration_date: date | None = self._parse_calibration_date(data.get("calibration_date"))
         self.unresolved_equipment_labels: dict[str, str] = dict(data.get("unresolved_equipment_labels") or {})
+        # Runtime-only: exams whose default (current) calibration period the user accepted in the GUI.
+        self.periods_acknowledged: set[str] = set(data.get("periods_acknowledged") or ())
 
     @staticmethod
     def _parse_calibration_date(value: object) -> date | None:

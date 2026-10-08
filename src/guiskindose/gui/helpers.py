@@ -264,6 +264,7 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
             settings.kerma_meter_correction.in_memory_table = state.kerma_meter_in_memory_table
         settings.kerma_meter_correction.unresolved_equipment_labels = dict(state.kerma_meter_unresolved_labels)
         settings.kerma_meter_correction.calibration_periods = dict(state.kerma_meter_periods)
+        settings.kerma_meter_correction.periods_acknowledged = set(state.kerma_meter_periods_acknowledged)
 
         # Don't log state.file_name — it can carry PHI (patient name/MRN).
         dprint("CALCULATION", "Starting calculation")

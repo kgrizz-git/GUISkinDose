@@ -171,6 +171,21 @@ def test_unselected_period_warns_with_count_only(tmp_path: Path) -> None:
     assert "2026" not in dated[0]
 
 
+def test_acknowledged_exam_skips_the_unselected_period_warning(tmp_path: Path) -> None:
+    settings = _settings(file=str(_write(tmp_path, _TWO_PERIODS)))
+    settings.kerma_meter_correction.periods_acknowledged = {"Exam 1"}
+    handler = _Capture()
+    logger = logging.getLogger("guiskindose.calculate_dose.calculate_dose")
+    logger.addHandler(handler)
+    try:
+        _resolve_kerma_meter_cf(_frame(), settings, "Exam 1")
+        _resolve_kerma_meter_cf(_frame(), settings, "Exam 2")
+    finally:
+        logger.removeHandler(handler)
+    dated = [m for m in handler.messages if "dated calibration rows" in m]
+    assert len(dated) == 1
+
+
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
 

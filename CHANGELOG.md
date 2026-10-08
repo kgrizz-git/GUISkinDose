@@ -37,8 +37,8 @@ That keeps SemVer and contributor history organized.
 - **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.
   Settings keeps the run configuration, phantom, per-exam offsets and coordinate fixes, and visual options.
   The new Corrections tab (tab 4; Geometry, Calculate, Results, and Export move to 5 to 8) holds dose-physics
-  settings and kerma-meter correction. An info icon next to "Use estimated patient-support transmission
-  factor" explains the flat versus measured lookup and the fallback to 1.0.
+  settings and kerma-meter correction. An info icon next to the three-mode "Patient-support transmission
+  factor" select explains each mode (measured with estimate fallback, estimate, measured only).
 - **Bundled Radimetrics examples** (2026-10-07) — the Upload tab's example drop-down now also offers two
   synthetic Radimetrics files ("older export, biplane" and "newer export, single tube") that load through the
   normal tabular import path. The example values are invented.
@@ -54,7 +54,7 @@ That keeps SemVer and contributor history organized.
 - **Example kerma-meter calibration file** (2026-10-06) — a fictional starter CSV
   (`calibration_factors_example.csv`) with a README explaining the columns, factor definition, tube values,
   and calibration periods now ships as package data. It includes one unit and tube with two dated
-  calibration periods. Settings has a "Download example calibration file" button, and
+  calibration periods. The Corrections tab has a "Download example calibration file" button, and
   `guiskindose.get_path_to_example_kerma_meter_file()` returns its path.
 - **Per-exam kerma-meter factors and calibration periods** (2026-10-06) — a dose meter recalibrated between
   exams can now have a different factor per exam: manual entries are keyed by exam, unit, and tube, and each
@@ -77,7 +77,7 @@ That keeps SemVer and contributor history organized.
   prompt and log one warning per exam with the count of pairs without a factor, never the labels. Each pair
   appears once in the dialog (listing the exams that use it), Confirm is blocked until every factor is a number
   above zero, and a result is discarded with a notice if the loaded data changed while the dialog was open.
-  Settings has a "Review correction factors…" button to reopen the dialog at any time.
+  The Corrections tab has a "Review correction factors…" button to reopen the dialog at any time.
 - **Dose by tube for biplane studies** (2026-10-06) — one partial dose map per tube (`single` / `A` / `B` /
   `unknown`) is accumulated beside the combined map and sums to it cell by cell; the peak skin dose is
   unchanged. The new `tube_summary` output (also in dict/JSON) gives each tube's reported kerma, corrected
@@ -139,7 +139,7 @@ That keeps SemVer and contributor history organized.
   now resolve as manual entry, then calibration file, then default factor, and a set file always loads. The
   exclusive `mode` setting (`file` / `prompt`) is deprecated: it still loads from settings files and the
   `--kerma-meter-correction-mode` flag still parses, with a deprecation warning, and `prompt` maps to the new
-  `ask_for_missing` setting (default on, "Ask for missing correction factors" in Settings). `ask_for_missing`
+  `ask_for_missing` setting (default on, "Ask for missing correction factors" in the Corrections tab). `ask_for_missing`
   replaces `prompt_at_calc`; a legacy `prompt_at_calc: true` maps to it, `false` was the old default and is
   ignored. `mode` and `prompt_at_calc` are no longer written. "Don't ask again until the loaded data changes"
   suppresses the dialog for the session.

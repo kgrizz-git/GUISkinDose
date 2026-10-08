@@ -236,6 +236,22 @@ def _splittable_mask(total: pd.Series, a: pd.Series, b: pd.Series) -> pd.Series:
     return valid & consistent & total.notna()
 
 
+def _plane_kerma_with_evidence(
+    data_df: pd.DataFrame, dose_cols: dict[str, str]
+) -> tuple[dict[str, pd.Series], bool]:
+    """Per-plane kerma (Gy) with blank-beside-value treated as 0, and whether the split would run.
+
+    An empty cell on one plane next to a value on the other means "no dose on that
+    plane"; a row with both empty stays missing (unsplittable). The split runs only
+    when some row has plane-B kerma above zero. Shared by the split and by the
+    ignored-column warning so both use the same unit conversion and evidence rule.
+    """
+    kerma = _per_plane_kerma_gy(data_df, dose_cols)
+    any_value = kerma["A"].notna() | kerma["B"].notna()
+    kerma = {p: values.mask(values.isna() & any_value, 0.0) for p, values in kerma.items()}
+    return kerma, bool((kerma["B"] > 0).any())
+
+
 def _has_text(series: pd.Series) -> pd.Series:
     """True where *series* holds a non-blank, non-null value."""
     return series.notna() & series.astype(str).str.strip().ne("")
@@ -321,12 +337,8 @@ def split_biplane_events(data_df: pd.DataFrame, ctx: AdapterContext) -> tuple[pd
     dose_cols = _per_plane_columns(list(data_df.columns), _PER_PLANE_DOSE_RE)
     if set(dose_cols) != {"A", "B"} or "DoseRP_Gy" not in data_df.columns:
         return data_df, False
-    kerma = _per_plane_kerma_gy(data_df, dose_cols)
-    # An empty cell on one plane next to a value on the other means "no dose on
-    # that plane"; a row with both empty stays missing (unsplittable).
-    any_value = kerma["A"].notna() | kerma["B"].notna()
-    kerma = {p: values.mask(values.isna() & any_value, 0.0) for p, values in kerma.items()}
-    if not bool((kerma["B"] > 0).any()):
+    kerma, has_plane_b = _plane_kerma_with_evidence(data_df, dose_cols)
+    if not has_plane_b:
         return data_df, False
 
     total = pd.to_numeric(data_df["DoseRP_Gy"], errors="coerce")
@@ -370,10 +382,9 @@ def consumed_split_columns(raw_headers: list[str], data_df: pd.DataFrame) -> set
     same evidence rule as :func:`split_biplane_events`).
     """
     dose_cols = _per_plane_columns(raw_headers, _PER_PLANE_DOSE_RE)
-    if set(dose_cols) != {"A", "B"}:
+    if set(dose_cols) != {"A", "B"} or not all(col in data_df for col in dose_cols.values()):
         return set()
-    plane_b = pd.to_numeric(data_df[dose_cols["B"]], errors="coerce") if dose_cols["B"] in data_df else None
-    if plane_b is None or not bool((plane_b > 0).any()):
+    if not _plane_kerma_with_evidence(data_df, dose_cols)[1]:
         return set()
     consumed: set[str] = set()
     for pattern in (_PER_PLANE_DOSE_RE, _PER_PLANE_DAP_RE):
