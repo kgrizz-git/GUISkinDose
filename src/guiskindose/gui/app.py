@@ -221,7 +221,14 @@ def sync_sidebar_psd(ctx: PageContext) -> None:
 
     ``reset_results()`` clears ``state.psd`` but cannot reach the page's widgets, so
     this runs on a short timer and resets the readout whenever no calculation is
-    current and it still shows a value.
+    current and it still shows a value. A timer is the simplest shared hook: every
+    path that resets results (Settings, Corrections, dialogs) gets the same clean-up
+    without needing the page context.
+
+    Parameters
+    ----------
+    ctx : PageContext
+        Page widgets, including the sidebar PSD readout.
     """
     if not state.calculation_done and state.psd is None and ctx.psd_readout.value.text != PSD_PENDING_TEXT:
         reset_psd_label(ctx.psd_readout)

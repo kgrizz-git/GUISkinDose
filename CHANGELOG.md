@@ -68,11 +68,12 @@ That keeps SemVer and contributor history organized.
 - **Per-exam kerma-meter factors and calibration periods** (2026-10-06) — a dose meter recalibrated between
   exams can now have a different factor per exam: manual entries are keyed by exam, unit, and tube, and each
   exam resolves manual entry, then the file row for its calibration period, then the default factor. In the
-  dialog, Exam 2 and later start from the previous exam's value and say "follows Exam N" until edited;
-  editing an earlier exam updates only the exams still following it. The calibration file may add optional
+  dialog, Exam 2 and later start from the previous exam's value and say "follows Exam N" until edited, but only
+  while both exams use the same calibration period; editing an earlier exam updates only the exams still
+  following it. The calibration file may add optional
   `valid_from` / `valid_to` ISO-date columns (overlapping periods for one unit and tube are a load error);
-  with dated rows, each exam gets a *Calibration period* selector (Exam 1 defaults to the most recent period,
-  later exams to the previous choice). Dates are never read from the exam data. The new
+  with dated rows, each exam gets a *Calibration period* selector (Exam 1 defaults to the most recent period and
+  Confirm saves the period shown, later exams follow the previous choice). Dates are never read from the exam data. The new
   `--kerma-meter-calibration-date YYYY-MM-DD` flag picks the period for every exam in non-GUI runs; without it
   the current or most recent period is used and a count-only warning is logged. Per-exam factors and period
   choices are saved with the run configuration only when identifiers are included.
@@ -236,7 +237,10 @@ That keeps SemVer and contributor history organized.
   use (the Radimetrics per-plane dose columns, the plane-code column, and the procedure DAP total) as ignored. The
   report's plane-identity rows are labelled as the coded (CID 10003) identity, and a new "Tube identity used"
   row shows the A / B / single / unknown counts the dose calculation actually used, so tabular exports no longer
-  read as if tube identity failed.
+  read as if tube identity failed. The Radimetrics per-plane columns are listed as ignored when the split does not
+  run (plane B empty everywhere), the `PlaneCode` plane column is recognised, and a non-numeric per-plane dose
+  cell (for example `n/a`) is no longer treated as zero. An exam whose default calibration period was accepted in
+  the dialog no longer logs the "unselected period" warning.
 
 - **Sidebar peak skin dose clears when results are invalidated** (2026-10-07) — changing a correction factor in
   the kerma-meter dialog, or any Settings or Corrections control that resets results (for example the

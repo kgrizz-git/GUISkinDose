@@ -138,8 +138,12 @@ def test_prepare_cli_settings_reports_a_missing_settings_path_cleanly(tmp_path):
     from guiskindose.main import prepare_cli_settings
 
     args = argparse.Namespace(settings=str(tmp_path / "missing.json"))
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as excinfo:
         prepare_cli_settings(args)
+    message = str(excinfo.value)
+    assert message
+    assert str(tmp_path) not in message
+    assert "missing.json" not in message
 
 
 def test_prepare_cli_settings_still_accepts_a_json_string_and_a_path(tmp_path):

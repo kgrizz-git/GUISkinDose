@@ -44,7 +44,9 @@ class KermaMeterCorrectionSettings:
     calibration_periods : dict[str, str]
         Runtime-only calibration-period choice per exam (opaque exam label ->
         period key ``"<valid_from>|<valid_to>"``). Selects which dated file rows
-        apply to that exam. Never serialized.
+        apply to that exam. An exam without an entry follows the nearest earlier
+        exam's choice. The GUI stores the period its dialog displayed for the first
+        exam, so the calculation uses what the user saw. Never serialized.
     calibration_date : datetime.date | None
         Runtime-only date chosen by ``--kerma-meter-calibration-date``: the period
         containing it applies to every exam without a ``calibration_periods`` entry.
@@ -52,7 +54,9 @@ class KermaMeterCorrectionSettings:
     in_memory_table : dict[tuple[str, ...], float] | None
         Session override (GUI dialog / tests); wins over file rows. Keys are
         ``(exam label, equipment, tube)`` for per-exam entries; a legacy
-        ``(equipment, tube)`` key applies to every exam.
+        ``(equipment, tube)`` key applies to every exam. An exam with no entry
+        takes the immediately preceding exam's value, but only while both exams use
+        the same calibration period (``kerma_correction.resolve_manual``).
     unresolved_equipment_labels : dict[str, str]
         Runtime-only per-exam identity overrides keyed by opaque exam label
         (``"Exam 1"``). Used for events with no serial/station so they reach the

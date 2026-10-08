@@ -45,6 +45,19 @@ missing or differs from the total by more than 1 % stay as a single total row. I
 valid code its plane is `unknown`. The warning reports how many split events replaced a plane code present in the export. Positioner angles, kVp and table positions come from the single `(RF)` columns and are shared by
 both planes of a row.
 
+**Radimetrics plane code and per-plane cells.** The plane-code column may be headed `Acquisition Plane Code`,
+`Acquisition PlaneCode`, or `Acquisition Plane`; all map to `AcquisitionPlane`. For the per-plane dose cells, a blank cell
+beside a value on the other plane means no dose on that plane and counts as 0. A non-blank cell that is not a number
+(for example `n/a`) stays missing, so the row is not split. A row with both cells blank also stays missing. The
+per-plane dose and DAP columns are reported as ignored by the import warning unless the split would run, which is the
+same evidence rule the split uses (`radimetrics.py::_plane_kerma_with_evidence`, `consumed_split_columns`).
+
+**Kerma-meter manual factors across exams.** A manual factor for an exam and pair is the exam's own entry, then a legacy
+`(equipment, tube)` entry, then the immediately preceding exam's value while both exams have the same effective
+calibration period. Otherwise the factor comes from the calibration file and then the default. One function,
+`kerma_correction.resolve_manual`, serves both the dialog and the engine. The GUI stores the period it displayed for the
+first exam on Confirm, so the engine applies what the dialog showed.
+
 **Example calibration file.** A fictional starter file ships as package data in
 `src/guiskindose/example_data/kerma_meter/` (`calibration_factors_example.csv` plus a column-by-column `README.md`);
 `guiskindose.get_path_to_example_kerma_meter_file()` returns its path, and Settings offers it as a download.

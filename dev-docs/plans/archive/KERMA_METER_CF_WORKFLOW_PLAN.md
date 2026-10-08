@@ -261,3 +261,12 @@ updates the argparse help text for `--kerma-meter-correction-mode` to say it is 
   the Settings toggle and session suppression.
 - Per-tube partial maps add memory per run. Allocate a partial map only for tubes actually present.
 - Multi-exam runs can detect many pairs. The dialog must scroll.
+
+## Post-archive fixes (2026-10-07)
+
+Review and smoke runs after archiving changed these rules. The user help and `CHANGELOG.md` describe the final behaviour.
+
+- A manual factor follows only the immediately preceding exam, and only while both exams share an effective calibration period. The dialog and the engine call one function, `kerma_correction.resolve_manual`.
+- Confirm stores the calibration period the dialog displayed for the first exam, so the calculation uses what the user saw. Confirm also acknowledges the period of every exam, and an acknowledged exam skips the unselected-period warning.
+- Radimetrics: the `PlaneCode` header maps to the plane column, a blank per-plane cell beside a value is 0 but a non-numeric cell is not, and the per-plane columns are listed as ignored when the split does not run.
+- Reports show a "Tube identity used" row, exam headings no longer read "Exam Exam 1", and clearing results also clears the sidebar PSD and the aggregate totals.

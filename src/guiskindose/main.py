@@ -154,6 +154,7 @@ def main(
         return output
     return None
 
+
 def analyze_input_file(
     file_path: str | Path,
     settings: str | dict | PyskindoseSettings | None = None,
@@ -222,11 +223,11 @@ def analyze_multiple_input_files(
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
     settings_obj = parse_settings_to_settings_class(settings=settings)
-    
+
     if settings_obj.output_format == "html":
         logger.warning("HTML output format is not supported for multi-exam runs. Forcing to dict.")
         settings_obj.output_format = "dict"
-    
+
     all_exams: list[InputAdapterResult] = []
 
     resolved_paths: list[Path] = []
@@ -285,7 +286,21 @@ def preview_input_file(
     """Print a value-safe preview unless sensitive values are explicitly requested.
 
     ``settings`` carries CLI choices that affect parsing, such as ``--plane-code-map``;
-    without it the bundled example settings are used.
+    without it the bundled example settings are used, and a tabular file whose plane
+    codes need a map fails the preview.
+
+    Parameters
+    ----------
+    file_path : str | Path
+        Input file.
+    input_schema : str | None
+        Schema name, or ``None`` for auto-detection.
+    sheet_name : str | int
+        Workbook sheet for ``.xlsx`` input.
+    include_sensitive_values : bool
+        Show raw values instead of the value-safe summary.
+    settings : PyskindoseSettings | None
+        Run settings from :func:`prepare_cli_settings`.
     """
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -470,9 +485,16 @@ def _load_inputs_for_export(resolved_paths, settings_obj, input_schema, sheet_na
                     normalized_data=data_norm,
                     raw_data=None,
                     provenance=InputProvenance(
-                        source_type=suffix.lstrip("."), schema_name="rdsr", original_filename=fp.name,
-                        header_row_index=0, detected_encoding="n/a", detected_delimiter=None,
-                        sheet_name=None, column_map={}, unit_conversions={}, warnings=[],
+                        source_type=suffix.lstrip("."),
+                        schema_name="rdsr",
+                        original_filename=fp.name,
+                        header_row_index=0,
+                        detected_encoding="n/a",
+                        detected_delimiter=None,
+                        sheet_name=None,
+                        column_map={},
+                        unit_conversions={},
+                        warnings=[],
                     ),
                     warnings=[],
                 )
@@ -595,6 +617,12 @@ def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
     -------
     PyskindoseSettings
         Settings ready for ``main()`` / the analyze helpers.
+
+    Raises
+    ------
+    SystemExit
+        If ``--settings`` names a file that does not exist. The message never
+        contains the path.
     """
     raw = args.settings
     if raw is None:
@@ -627,6 +655,7 @@ if __name__ == "__main__":
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         from guiskindose.gui.app import run_gui
+
         run_gui(
             native=getattr(args, "native", False),
             port=getattr(args, "port", None),
@@ -636,6 +665,7 @@ if __name__ == "__main__":
 
         file_paths_raw: list[str] = args.file_path or []
         from pathlib import Path
+
         file_paths: list[str] = []
         for fp in file_paths_raw:
             p = Path(fp)

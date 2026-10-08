@@ -308,7 +308,13 @@ class ResultsTabController:
             self.refresh_aggregate_dosemap_subset()
 
     def _reset_multi_exam_view(self) -> None:
-        """Clear multi-exam controls after a completed multi-exam result disappears."""
+        """Clear multi-exam controls after a completed multi-exam result disappears.
+
+        Resets the exam accordion and subset checkboxes, the aggregate PSD readout, the
+        aggregate dose map, the exam-count and totals lines, the aggregate rotational
+        badge, the warnings label, and the tube label. Nothing from the vanished run
+        stays on screen.
+        """
         if self.last_rendered_run_id is None:
             return
         self._clear_multi_exam_accordion()

@@ -155,8 +155,23 @@ def test_invalid_mode_raises() -> None:
 
 
 def test_estimate_k_tab_assignment_maps_to_a_mode_with_a_warning() -> None:
-    settings = _settings()
-    settings.estimate_k_tab = True
+    import logging
+
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("guiskindose.settings.pyskindose_settings")
+    handler = _Capture(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        settings = _settings()
+        settings.estimate_k_tab = True
+    finally:
+        logger.removeHandler(handler)
+    assert any("estimate_k_tab is deprecated" in m for m in messages)
     assert settings.k_tab_mode == "estimate"
     assert settings.estimate_k_tab is True
     settings.estimate_k_tab = False

@@ -91,6 +91,19 @@ def equipment_display_names(app_state: AppState, extra_labels: Iterable[object] 
     per-exam unit overrides, plus ``extra_labels`` (labels typed in an open dialog).
     Labels with no known original (for example from a
     calibration file) are not in the map.
+
+    Parameters
+    ----------
+    app_state : AppState
+        Session state with the loaded frames and the stored labels.
+    extra_labels : Iterable[object]
+        Labels typed in an open dialog that are not stored yet. Non-text and blank
+        values are ignored.
+
+    Returns
+    -------
+    dict[str, str]
+        ``{casefolded label: original spelling}``.
     """
     seen: dict[str, str] = {}
 

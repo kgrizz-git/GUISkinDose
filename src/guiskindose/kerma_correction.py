@@ -42,9 +42,7 @@ _CF_SUSPICIOUS_HI = 2.0
 _MAX_TABLE_ROWS = 10_000
 
 _REQUIRED_COLUMNS = frozenset({"equipment", "tube", "correction_factor"})
-_CF_MUST_BE_POSITIVE_FINITE = (
-    "Kerma-meter correction table: correction_factor must be a finite float > 0."
-)
+_CF_MUST_BE_POSITIVE_FINITE = "Kerma-meter correction table: correction_factor must be a finite float > 0."
 _TUBE_ALIASES = {
     "single": "single",
     "single plane": "single",
@@ -53,6 +51,8 @@ _TUBE_ALIASES = {
     "b": "B",
     "plane b": "B",
 }
+
+
 @dataclass(frozen=True)
 class KermaMeterCorrection:
     """Resolved per-event kerma-meter correction factors."""
@@ -351,17 +351,12 @@ def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataF
         try:
             df = pd.read_excel(path, sheet_name=sheet_arg, dtype=str)
         except ValueError as exc:
-            raise ValueError(
-                f"Kerma-meter correction XLSX sheet {sheet_arg!r} could not be read."
-            ) from exc
+            raise ValueError(f"Kerma-meter correction XLSX sheet {sheet_arg!r} could not be read.") from exc
     elif suffix in {".csv", ".tsv"}:
         sep = "\t" if suffix == ".tsv" else ","
         df = pd.read_csv(path, sep=sep, dtype=str, encoding="utf-8-sig")
     else:
-        raise ValueError(
-            f"Unsupported kerma-meter correction file type {suffix!r}; "
-            "use .csv, .tsv, .xlsx, or .json."
-        )
+        raise ValueError(f"Unsupported kerma-meter correction file type {suffix!r}; use .csv, .tsv, .xlsx, or .json.")
 
     if df.empty:
         raise ValueError("Kerma-meter correction table is empty (no data rows).")
@@ -370,9 +365,7 @@ def _load_tabular_correction_df(path: Path, sheet: str | int | None) -> pd.DataF
     df = _normalize_table_columns(df)
     missing = _REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise ValueError(
-            f"Kerma-meter correction table missing required column(s): {sorted(missing)}."
-        )
+        raise ValueError(f"Kerma-meter correction table missing required column(s): {sorted(missing)}.")
     return df
 
 
@@ -426,9 +419,22 @@ def _exam_number(label: str) -> int | None:
 def effective_period(periods: Mapping[str, str] | None, exam: str) -> str | None:
     """Calibration-period key in effect for *exam*.
 
-    Only explicitly chosen periods are stored. An exam without its own choice
-    follows the nearest earlier exam that has one; ``None`` means the default
-    (current or most recent) period.
+    Only explicit choices are stored, so a follower never goes stale when an
+    earlier exam changes. An exam without its own choice follows the nearest
+    earlier exam that has one.
+
+    Parameters
+    ----------
+    periods : Mapping[str, str] | None
+        Explicit per-exam choices, ``{"Exam N": "<from>|<to>"}``.
+    exam : str
+        Opaque exam label.
+
+    Returns
+    -------
+    str | None
+        The period key, or ``None`` for the engine default (each pair's current or
+        most recent calibration row).
     """
     if not periods:
         return None
@@ -462,6 +468,12 @@ def resolve_manual(
     precedence only while its effective calibration period equals this exam's, and
     its own manual-or-followed value is used. Otherwise ``None``, and the caller
     resolves the factor from the calibration file or the default.
+
+    Why the period check: an old-period value must not silently apply to an exam
+    that uses a newer calibration, and a different-period exam in between is not
+    skipped over (old, new, old does not carry the first value to the third exam).
+    The dialog and the engine both call this function, so what the dialog shows is
+    what the calculation applies.
 
     Parameters
     ----------
@@ -506,6 +518,7 @@ def manual_for_exam(
     applies to every exam. With ``follow`` (default) a pair with no entry for this
     exam takes the immediately preceding exam's value while both use the same
     calibration period, so "follows Exam N" survives without copying values.
+    This is the engine-side view of :func:`resolve_manual`.
 
     Parameters
     ----------
@@ -517,6 +530,11 @@ def manual_for_exam(
         Explicit per-exam calibration-period choices.
     follow : bool
         When ``False`` only the exam's own and the legacy entries are returned.
+
+    Returns
+    -------
+    dict[tuple[str, str], float]
+        ``{(equipment, tube): factor}`` for pairs with a usable (non-blank) value.
     """
     if not table:
         return {}
@@ -572,8 +590,7 @@ def _lookup_correction(
         value = float("nan")
     if not math.isfinite(value) or value <= 0:
         logger.warning(
-            "kerma-meter correction: invalid factor for event index %d; "
-            "using default_factor=%.4g.",
+            "kerma-meter correction: invalid factor for event index %d; using default_factor=%.4g.",
             index,
             default_factor,
         )
@@ -609,8 +626,7 @@ def _log_kerma_warnings(
         )
     if table is None and n:
         logger.warning(
-            "kerma-meter correction: enabled but no table supplied; "
-            "using default_factor=%.4g for all %d event(s).",
+            "kerma-meter correction: enabled but no table supplied; using default_factor=%.4g for all %d event(s).",
             default_factor,
             n,
         )

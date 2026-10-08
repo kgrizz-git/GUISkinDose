@@ -302,6 +302,12 @@ class TestImportWarningsListOnlyIgnoredColumns:
         assert "Reference Point Dose (A)" not in message
         assert "Reference Point Dose (B)" not in message
 
+    def test_split_columns_are_listed_as_ignored_when_the_split_does_not_run(self, tmp_path):
+        rows = [{"total": "30.0", _A: "30.0", _B: ""}, {"total": "20.0", _A: "20.0", _B: ""}]
+        warnings = _load(_write_csv(tmp_path, rows, extra_headers=[_A, _B])).warnings
+        message = next(w for w in warnings if "not mapped" in w)
+        assert "Reference Point Dose (B)" in message
+
     def test_newer_export_does_not_report_the_procedure_dap_total_as_ignored(self):
         warnings = _load(FIXTURES / "radimetrics_events_a_only.csv").warnings
         message = next((w for w in warnings if "not mapped" in w), "")

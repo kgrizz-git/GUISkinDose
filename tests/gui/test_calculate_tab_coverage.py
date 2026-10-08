@@ -317,3 +317,21 @@ def test_k_tab_preview_guards_non_value_error(monkeypatch: pytest.MonkeyPatch) -
         lambda _state: type("S", (), {"corrections_db_path": "corrections.db"})(),
     )
     assert calc_tab._format_k_tab_status_summary() == "k_tab preview: unavailable"
+
+
+def test_plane_identity_audit_reports_tube_identity_with_only_the_canonical_column() -> None:
+    """The Calculate line and the export gate on the same columns: either plane column is enough."""
+    import pandas as pd
+
+    state.rdsr_df = pd.DataFrame({"acquisition_plane_canonical": ["A", "B", "B"]})
+    state.input_revision += 1
+    text = calc_tab._format_plane_identity_audit()
+    assert "tube identity used: A=1, B=2" in text
+
+
+def test_plane_identity_audit_has_no_tube_part_without_a_plane_column() -> None:
+    import pandas as pd
+
+    state.rdsr_df = pd.DataFrame({"acquisition_plane_source_kind": ["none"]})
+    state.input_revision += 1
+    assert "tube identity used" not in calc_tab._format_plane_identity_audit()

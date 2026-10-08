@@ -236,9 +236,7 @@ def _splittable_mask(total: pd.Series, a: pd.Series, b: pd.Series) -> pd.Series:
     return valid & consistent & total.notna()
 
 
-def _plane_kerma_with_evidence(
-    data_df: pd.DataFrame, dose_cols: dict[str, str]
-) -> tuple[dict[str, pd.Series], bool]:
+def _plane_kerma_with_evidence(data_df: pd.DataFrame, dose_cols: dict[str, str]) -> tuple[dict[str, pd.Series], bool]:
     """Per-plane kerma (Gy) with blank-beside-value treated as 0, and whether the split would run.
 
     A genuinely blank cell on one plane next to a value on the other means "no dose
@@ -247,6 +245,19 @@ def _plane_kerma_with_evidence(
     as a one-plane event. A row with both cells blank also stays missing. The split
     runs only when some row has plane-B kerma above zero. Shared by the split and by
     the ignored-column warning so both use the same unit conversion and evidence rule.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        Raw table that still carries the source headers.
+    dose_cols : dict[str, str]
+        ``{"A": header, "B": header}`` of the per-plane dose columns.
+
+    Returns
+    -------
+    tuple[dict[str, pd.Series], bool]
+        Per-plane kerma in Gy (missing stays NaN), and whether some row has plane-B
+        kerma above zero, which is what makes the file a biplane export.
     """
     kerma = _per_plane_kerma_gy(data_df, dose_cols)
     blank = {p: ~_has_text(data_df[col]) for p, col in dose_cols.items()}
@@ -382,7 +393,20 @@ def consumed_split_columns(raw_headers: list[str], data_df: pd.DataFrame) -> set
     They are not in the column map, but they are not ignored either, so the import
     warning must not list them. They count as read only when the split would run:
     both per-plane dose columns exist and some row has plane-B dose above zero (the
-    same evidence rule as :func:`split_biplane_events`).
+    same evidence rule as :func:`split_biplane_events`). Otherwise the columns really
+    are unused, and the warning should still tell the user so.
+
+    Parameters
+    ----------
+    raw_headers : list[str]
+        Source headers of the file.
+    data_df : pd.DataFrame
+        Raw table that still carries those headers.
+
+    Returns
+    -------
+    set[str]
+        Headers to leave out of the "not mapped" warning.
     """
     dose_cols = _per_plane_columns(raw_headers, _PER_PLANE_DOSE_RE)
     if set(dose_cols) != {"A", "B"} or not all(col in data_df for col in dose_cols.values()):

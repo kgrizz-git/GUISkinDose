@@ -826,3 +826,10 @@ def test_equipment_display_names_restore_the_original_spelling() -> None:
     assert names["serial-9"] == "Serial-9"
     # Matching stays casefolded: the rows keep the lowercase key.
     assert {r.equipment for r in dlg.build_rows(state)} == {"serial-9"}
+
+
+def test_equipment_display_names_include_labels_typed_in_the_dialog() -> None:
+    state.rdsr_df = pd.DataFrame({"station_name": [None], "acquisition_plane": ["Plane A"]})
+    state.kerma_meter_explicit_label = None
+    names = dlg.equipment_display_names(state, ["Typed-Room-7", "  ", None])
+    assert names["typed-room-7"] == "Typed-Room-7"

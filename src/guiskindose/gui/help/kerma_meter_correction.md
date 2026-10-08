@@ -62,16 +62,25 @@ load. If any pair has no factor yet, a dialog opens. Each row is pre-filled in t
 3. the default factor (`default: review`). Please check these rows.
 
 Rows are grouped by exam, because a recalibrated meter can need a different factor in a later
-exam. Exam 2 and later start from the value the same unit and tube has in the previous exam and
-say **follows Exam N** until you change that row. Editing an earlier exam updates the exams that
-still follow it, and never the ones you edited. Only values you enter are stored, so a row that follows an earlier exam keeps following it after you confirm and reopen the dialog. The list scrolls. A tube shown as **unknown**
-cannot be looked up, so the default factor applies to it.
+exam. Exam 2 and later start from the value the same unit and tube has in the exam just before
+them and say **follows Exam N**. A row follows the exam just before it only while both exams use
+the same calibration period. If the period differs, the row uses the calibration file or the
+default instead. An exam with a different period in between breaks the chain: old, new, old does
+not carry the first exam's value to the third exam.
+
+Editing an earlier exam updates the exams that still follow it, and never the ones you edited.
+Only values you enter are stored, so a row that follows an earlier exam keeps following it after
+you confirm and reopen the dialog. The list scrolls. A tube shown as **unknown** cannot be looked
+up, so the default factor applies to it.
 
 **Calibration period.** When the file has dated rows for a unit and tube of an exam, that exam
 gets a *Calibration period* selector listing the file's periods, for example
 `1901-01-01 → 1901-12-31`. Exam 1 starts on the most recent period and later exams follow the
 previous exam's choice until you pick one. The chosen period selects that exam's file factor.
-The choice is saved with the run configuration only when identifiers are included.
+Confirm saves the period the dialog shows, even if you did not touch the selector, so the
+calculation uses exactly what you saw. A unit and tube with no row in that period shows the
+default factor and uses it. The choice is saved with the run configuration only when identifiers
+are included.
 
 When the file has dated rows, the dialog opens at load even if every factor is already covered, so the period is chosen on purpose instead of silently defaulting to the latest one.
 
@@ -84,10 +93,10 @@ and saved with the run configuration only when identifiers are included.
 
 **Confirm** is blocked until every factor is a number greater than zero; a blank field is an error, not a kept value. If the loaded data changes while the dialog is open, your entries are discarded with a notice.
 
-A row you confirm at the default factor without changing it is remembered as answered, so the dialog does not ask again. It is not stored as a factor, so a calibration file row added later still applies.
+A row you confirm at the default factor without changing it is remembered as answered, so the dialog does not ask again. It is not stored as a factor, so a calibration file row added later still applies. Confirm also marks the calibration period of every exam as answered.
 
-**Cancel** never blocks the run. It keeps file values and your earlier entries, and every
-unanswered pair uses the default factor. Calculate re-opens the dialog once if pairs are still
+**Cancel** never blocks the run. It discards what you typed in this dialog. It keeps file values and
+your earlier confirmed entries, and every unanswered pair uses the default factor. Calculate re-opens the dialog once if pairs are still
 unanswered.
 
 **Reviewing later.** The Corrections tab has a *Review correction factors…* button that opens the dialog at any time with every detected pair, so confirmed factors can be edited. The dialog also reopens when you select or clear the calibration file or sheet, or turn asking back on.

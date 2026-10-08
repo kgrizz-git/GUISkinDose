@@ -169,7 +169,11 @@ Resolved once per exam, in this order (`calculate_dose`):
    resolves one factor per event keyed by (equipment, tube). The table is the
    merge of the calibration file and the session in-memory table (manual entries
    from the missing-factor dialog win over file rows), then `default_factor`
-   (fail-soft with warnings; disabled → all `1.0`). An exam whose events have no
+   (fail-soft with warnings; disabled → all `1.0`). Resolution is per exam: the
+   file row is the one for the exam's calibration period, and a manual entry is
+   the exam's own, a legacy two-part key, or the immediately preceding exam's
+   while both share a calibration period (`resolve_manual()`, the same function
+   the dialog uses). An exam whose events have no
    equipment identity can carry a per-exam identity override so those events
    reach the table. No special-casing of A/B geometry: identity comes from
    equipment × tube keys only.
