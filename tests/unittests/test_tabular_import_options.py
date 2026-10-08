@@ -1,11 +1,32 @@
 """Unit tests for tabular import coordinate options (core; no GUI imports)."""
 
+from pathlib import Path
+
 import pandas as pd
 
 from guiskindose.input_adapters.import_options import (
     TabularImportOptions,
     apply_tabular_import_coordinate_options,
 )
+from guiskindose.input_adapters.registry import read_and_normalize_input
+
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "tabular_inputs"
+GENERIC_RDSR_FIXTURE = FIXTURES / "generic_rdsr_events.csv"
+NORMALIZED_FIXTURE = FIXTURES / "normalized_events.csv"
+MULTISTUDY_FIXTURE = FIXTURES / "normalized_events_multistudy.csv"
+
+
+def _default_settings():
+    from manual_tests.base_dev_settings import DEVELOPMENT_PARAMETERS
+
+    from guiskindose.settings import PyskindoseSettings
+
+    return PyskindoseSettings(DEVELOPMENT_PARAMETERS)
+
+
+def _coord_columns(df: pd.DataFrame) -> pd.DataFrame:
+    cols = [c for c in ("Tx", "Tz", "Ap1", "Ap2") if c in df.columns]
+    return df[cols]
 
 
 def _sample_df() -> pd.DataFrame:
@@ -123,3 +144,100 @@ def test_import_options_module_has_no_gui_dependency():
         ):
             gui_imports.append(node.module)
     assert gui_imports == []
+
+
+def test_read_and_normalize_generic_rdsr_swap_lat_lon():
+    settings = _default_settings()
+    base = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+    )
+    swapped = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+        import_options=TabularImportOptions(swap_lat_lon=True),
+    )
+    base_coords = _coord_columns(base.normalized_data)
+    out_coords = _coord_columns(swapped.normalized_data)
+    assert list(out_coords["Tx"]) == list(base_coords["Tz"])
+    assert list(out_coords["Tz"]) == list(base_coords["Tx"])
+    assert list(out_coords["Ap1"]) == list(base_coords["Ap1"])
+    assert list(out_coords["Ap2"]) == list(base_coords["Ap2"])
+
+
+def test_read_and_normalize_generic_rdsr_flip_angles():
+    settings = _default_settings()
+    base = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+    )
+    flipped = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+        import_options=TabularImportOptions(flip_ap1=True, flip_ap2=True),
+    )
+    base_coords = _coord_columns(base.normalized_data)
+    out_coords = _coord_columns(flipped.normalized_data)
+    assert list(out_coords["Tx"]) == list(base_coords["Tx"])
+    assert list(out_coords["Tz"]) == list(base_coords["Tz"])
+    assert list(out_coords["Ap1"]) == [-v for v in base_coords["Ap1"]]
+    assert list(out_coords["Ap2"]) == [-v for v in base_coords["Ap2"]]
+
+
+def test_read_and_normalize_normalized_swap_no_op_angles_flip():
+    base = read_and_normalize_input(NORMALIZED_FIXTURE)
+    transformed = read_and_normalize_input(
+        NORMALIZED_FIXTURE,
+        import_options=TabularImportOptions(swap_lat_lon=True, flip_ap1=True, flip_ap2=True),
+    )
+    base_coords = _coord_columns(base.normalized_data)
+    out_coords = _coord_columns(transformed.normalized_data)
+    assert list(out_coords["Tx"]) == list(base_coords["Tx"])
+    assert list(out_coords["Tz"]) == list(base_coords["Tz"])
+    assert list(out_coords["Ap1"]) == [-v for v in base_coords["Ap1"]]
+    assert list(out_coords["Ap2"]) == [-v for v in base_coords["Ap2"]]
+
+
+def test_read_and_normalize_multistudy_applies_options_to_each_exam():
+    base_list = read_and_normalize_input(MULTISTUDY_FIXTURE)
+    flipped_list = read_and_normalize_input(
+        MULTISTUDY_FIXTURE,
+        import_options=TabularImportOptions(flip_ap1=True),
+    )
+    assert isinstance(base_list, list)
+    assert isinstance(flipped_list, list)
+    assert len(base_list) == len(flipped_list) == 2
+    for base_item, flipped_item in zip(base_list, flipped_list, strict=True):
+        base_coords = _coord_columns(base_item.normalized_data)
+        out_coords = _coord_columns(flipped_item.normalized_data)
+        assert list(out_coords["Ap1"]) == [-v for v in base_coords["Ap1"]]
+
+
+def test_read_and_normalize_none_and_all_false_match_omitted():
+    settings = _default_settings()
+    omitted = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+    )
+    explicit_none = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+        import_options=None,
+    )
+    all_false = read_and_normalize_input(
+        GENERIC_RDSR_FIXTURE,
+        input_schema="generic_rdsr_like",
+        settings=settings,
+        import_options=TabularImportOptions(),
+    )
+    for result in (explicit_none, all_false):
+        pd.testing.assert_frame_equal(
+            _coord_columns(result.normalized_data),
+            _coord_columns(omitted.normalized_data),
+        )

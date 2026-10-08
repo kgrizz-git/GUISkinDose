@@ -201,10 +201,10 @@ not keep advertising an unimplemented flag.
 
 ### 1 — Registry API
 
-- [ ] `read_and_normalize_input(..., import_options=None)` on every overload
+- [x] `read_and_normalize_input(..., import_options=None)` on every overload
       and the implementation. After adapter dispatch, apply options to each
       result's `normalized_data` using that result's `provenance.schema_name`.
-- [ ] Unit tests through `read_and_normalize_input` on a small in-memory or
+- [x] Unit tests through `read_and_normalize_input` on a small in-memory or
       existing tabular fixture: same matrix as Phase 0 plus a multi-study
       list (same options on each exam). All-false / `None` leaves values
       unchanged vs today's behavior.

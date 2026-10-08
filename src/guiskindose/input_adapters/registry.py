@@ -15,6 +15,10 @@ from guiskindose.input_adapters import stubs
 from guiskindose.input_adapters.column_mapper import _normalize_str, detect_header_row
 from guiskindose.input_adapters.dosetrack import DOSETRACK_COLUMN_NAMES
 from guiskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
+from guiskindose.input_adapters.import_options import (
+    TabularImportOptions,
+    apply_tabular_import_coordinate_options,
+)
 from guiskindose.input_adapters.models import InputAdapterResult
 from guiskindose.input_adapters.normalized import NORMALIZED_HEADER_NAMES
 from guiskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
@@ -22,6 +26,7 @@ from guiskindose.input_adapters.tabular_loader import _RawLoad, load
 
 if TYPE_CHECKING:
     from guiskindose.settings import PyskindoseSettings
+
 
 class SchemaDetectionError(ValueError):
     """Auto-detection could not pick a schema (no match, or an ambiguous tie).
@@ -41,9 +46,9 @@ _SUPPORTED_SCHEMAS = (
     "generic_rdsr_like",
     "radimetrics",
     "dosetrack",
-    "qaelum",      # stub — needs real export fixture
-    "dosemonitor", # stub — needs real export fixture
-    "dosewatch",   # stub — needs real export fixture
+    "qaelum",  # stub — needs real export fixture
+    "dosemonitor",  # stub — needs real export fixture
+    "dosewatch",  # stub — needs real export fixture
     "auto",
 )
 _AUTO_MIN_MARGIN = 0.20  # required score gap between best and runner-up
@@ -93,8 +98,7 @@ def _detect_schema(loaded: _RawLoad) -> str:
 
     if not max(scores.values()):
         raise SchemaDetectionError(
-            "Schema auto-detection: no schema could be matched. "
-            f"Scores: {scores}. Pass --input-schema explicitly."
+            f"Schema auto-detection: no schema could be matched. Scores: {scores}. Pass --input-schema explicitly."
         )
 
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -107,8 +111,7 @@ def _detect_schema(loaded: _RawLoad) -> str:
         _, runner_up_score = non_zero[1]
         if best_score - runner_up_score < _AUTO_MIN_MARGIN:
             raise SchemaDetectionError(
-                f"Schema auto-detection is ambiguous (scores: {scores}). "
-                "Pass --input-schema explicitly."
+                f"Schema auto-detection is ambiguous (scores: {scores}). Pass --input-schema explicitly."
             )
 
     return best_name
@@ -132,8 +135,7 @@ def _dispatch_to_adapter(
     if schema in ("generic_rdsr_like", "radimetrics", "dosetrack"):
         if settings is None:
             raise ValueError(
-                f"settings is required for {schema} schema "
-                "(needed by rdsr_normalizer for manufacturer/model lookup)."
+                f"settings is required for {schema} schema (needed by rdsr_normalizer for manufacturer/model lookup)."
             )
         if schema == "generic_rdsr_like":
             return generic_rdsr_adapter.adapt(loaded, original_filename=path.name, settings=settings)
@@ -142,9 +144,32 @@ def _dispatch_to_adapter(
         return dosetrack_adapter.adapt(loaded, original_filename=path.name, settings=settings)
     if schema in stubs.STUB_VENDORS:
         stubs.raise_not_implemented(schema)
-    raise ValueError(
-        f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}."
+    raise ValueError(f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}.")
+
+
+def _apply_import_options_to_result(
+    result: InputAdapterResult,
+    import_options: TabularImportOptions | None,
+) -> None:
+    """Assign post-normalization coordinate overrides to one adapter result."""
+    result.normalized_data = apply_tabular_import_coordinate_options(
+        result.normalized_data,
+        result.provenance.schema_name,
+        import_options,
     )
+
+
+def _apply_import_options_to_results(
+    result: InputAdapterResult | list[InputAdapterResult],
+    import_options: TabularImportOptions | None,
+) -> InputAdapterResult | list[InputAdapterResult]:
+    """Apply import options to a single result or each element of a multi-study list."""
+    if isinstance(result, list):
+        for item in result:
+            _apply_import_options_to_result(item, import_options)
+        return result
+    _apply_import_options_to_result(result, import_options)
+    return result
 
 
 @overload
@@ -152,13 +177,19 @@ def read_and_normalize_input(
     file_path: str | Path,
     *,
     input_schema: Literal[
-        "generic_rdsr_like", "radimetrics", "dosetrack",
-        "qaelum", "dosemonitor", "dosewatch",
+        "generic_rdsr_like",
+        "radimetrics",
+        "dosetrack",
+        "qaelum",
+        "dosemonitor",
+        "dosewatch",
     ],
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
+    import_options: TabularImportOptions | None = ...,
 ) -> InputAdapterResult:
     """Load and normalize a known vendor tabular schema (overload)."""
+
 
 @overload
 def read_and_normalize_input(
@@ -167,8 +198,10 @@ def read_and_normalize_input(
     input_schema: Literal["normalized", "auto"] | None = ...,
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
+    import_options: TabularImportOptions | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a normalized/auto tabular schema (overload)."""
+
 
 @overload
 def read_and_normalize_input(
@@ -177,8 +210,10 @@ def read_and_normalize_input(
     input_schema: str | None = ...,
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
+    import_options: TabularImportOptions | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a tabular input file (overload)."""
+
 
 def read_and_normalize_input(
     file_path: str | Path,
@@ -186,6 +221,7 @@ def read_and_normalize_input(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     settings: PyskindoseSettings | None = None,
+    import_options: TabularImportOptions | None = None,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load a tabular file and return a normalized InputAdapterResult.
 
@@ -206,6 +242,11 @@ def read_and_normalize_input(
     settings:
         Required when *input_schema* is ``"generic_rdsr_like"`` or when
         ``"auto"`` resolves to that schema.
+    import_options:
+        Optional post-normalization coordinate overrides (``Tx``↔``Tz`` swap,
+        ``Ap1``/``Ap2`` negation). Applied per result using that result's
+        ``provenance.schema_name``. ``None`` and all-false options leave
+        numeric values unchanged vs omitting the argument.
 
     Raises
     ------
@@ -240,4 +281,4 @@ def read_and_normalize_input(
         else:
             result.provenance.sheet_name = sheet_name
 
-    return result
+    return _apply_import_options_to_results(result, import_options)
