@@ -185,18 +185,18 @@ not keep advertising an unimplemented flag.
 
 ### 0 — Extract core helper (no CLI, no registry argument yet)
 
-- [ ] Add `src/guiskindose/input_adapters/import_options.py` with
+- [x] Add `src/guiskindose/input_adapters/import_options.py` with
       `TabularImportOptions`, `any_set()`, `apply_tabular_import_coordinate_options`,
       and the Tx/Tz swap primitive.
-- [ ] Re-export `TabularImportOptions` from `input_adapters/__init__.py`.
-- [ ] `exam_transforms._apply_transform_flags` keeps origin/`flip_t*` locally,
+- [x] Re-export `TabularImportOptions` from `input_adapters/__init__.py`.
+- [x] `exam_transforms._apply_transform_flags` keeps origin/`flip_t*` locally,
       then delegates swap + Ap1/Ap2 to the helper. Fix the docstring (angle
       flips are not skipped for `normalized`).
-- [ ] Unit tests in `tests/unittests/` (must not import `guiskindose.gui`):
+- [x] Unit tests in `tests/unittests/` (must not import `guiskindose.gui`):
       each flag, combined, `normalized` swap no-op, angle flip on `normalized`
       if columns exist, all-false numeric identity, missing Ap columns are
       skipped, copy (input frame unchanged).
-- [ ] Existing GUI transform tests stay green (`tests/gui/test_multi_exam_gui.py`
+- [x] Existing GUI transform tests stay green (`tests/gui/test_multi_exam_gui.py`
       and related). No CLI flags yet.
 
 ### 1 — Registry API

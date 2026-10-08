@@ -1,4 +1,8 @@
 """Tabular-input adapters for CSV, TSV, and XLSX RDSR exports."""
+
+from guiskindose.input_adapters.import_options import (
+    TabularImportOptions as TabularImportOptions,
+)
 from guiskindose.input_adapters.models import (
     InputAdapterResult as InputAdapterResult,
 )
