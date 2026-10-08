@@ -702,8 +702,11 @@ convention.
   Vendor-level `swap_lateral_longitudinal` in `normalization_settings.json` (for example GE) still
   runs inside `rdsr_normalizer()` and is separate from these GUI expert overrides.
 
-**Backlog (`TabularImportOptions`, Phase 3+).** A planned dataclass would unify import-time overrides
-on the Python API and CLI (tracked in `dev-docs/TO_DO.md`):
+**Backlog (`TabularImportOptions`).** CLI/API parity with the GUI expert toggles is the
+execution plan [TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md)
+(tracked in `dev-docs/TO_DO.md`). The older dataclass sketch below is **not** the live
+contract (`skip_manufacturer_transforms` / `custom_translation_offset` stay out of that
+delivery):
 
 ```python
 @dataclass

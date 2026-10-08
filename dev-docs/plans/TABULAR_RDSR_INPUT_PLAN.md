@@ -199,6 +199,11 @@ These options are exposed via:
 - CLI: `--swap-lat-lon`, `--skip-transforms` flags
 - GUI: coordinate correction panel in the upload preview step (Phase 5)
 
+**CLI/API execution (2026-10-08):** the shipped GUI toggles are `Tx ↔ Tz` / `Ap1×−1` /
+`Ap2×−1`, not `--skip-transforms`. Implement CLI/API parity against
+[TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](TABULAR_IMPORT_OPTIONS_CLI_PLAN.md); do not
+treat the dataclass sketch above as the live contract.
+
 #### XLSX sheet picking
 
 Sheet selection is wired through the API (`sheet_name` parameter), CLI (`--sheet-name`), and GUI. The upload tab shows an XLSX sheet picker for multi-sheet workbooks and re-parses when the user changes the selected sheet.

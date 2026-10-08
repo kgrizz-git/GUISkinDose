@@ -93,6 +93,24 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **TO_DO backlog refresh** (2026-10-08) — rewrote the stale *Biplane support and
+  recognition* item to *Independent per-plane geometry* (A/B detection and combined
+  maps already ship). Moved GUI network-exposure follow-on to Deferred Until Needed
+  (loopback refusal shipped). Narrowed the docs-build notebook item to a Sphinx/RTD
+  confirm after the plot/HTML and tqdm fixes. Noted Playwright is already in `[dev]`.
+  Linked visual refinement to `gui-aesthetic-redesign.md`. Next Up now has
+  TabularImportOptions CLI/API parity and Radimetrics detection triggers.
+- **Archived finished execution plans** (2026-10-08) — moved shipped
+  `NATIVE_WINDOW_GEOMETRY_PLAN`, `DEPENDENCY_AUDIT_PLAN`,
+  `2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN`, and
+  `PR_CODE_REVIEW_FIXES_PLAN` under `plans/archive/`. Removed the leftover
+  `NO_PATIENT_INTERSECTION_WARNING_PLAN` duplicate from `plans/` (archive copy
+  kept, with `guiskindose` package names).
+- **TabularImportOptions CLI plan** (2026-10-08) — added
+  `TABULAR_IMPORT_OPTIONS_CLI_PLAN.md` for GUI-parity `swap_lat_lon` /
+  `flip_ap1` / `flip_ap2`. Review tightened copy-based apply, full API
+  threading, and non-tabular rejection before the RDSR branch.
+
 - **Append-only history is exempt from the file-size cap** (2026-09-30) —
   `scripts/check_file_sizes.py` scans `src`, `scripts` and `dev-docs`, so `CHANGELOG.md` was
   already out of scope by sitting at the repository root, while this file was capped at 800 lines

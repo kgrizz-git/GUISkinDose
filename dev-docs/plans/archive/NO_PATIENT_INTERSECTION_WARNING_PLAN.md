@@ -15,7 +15,7 @@
 
 **Round 2 (assessment at `tmp/assessment_20260624_232935.md`):**
 7. **RangeIndex assumption** — corrected: pipeline already relies on `rdsr_normalizer`'s guaranteed 0..N−1 `RangeIndex`; `.iloc` is defensive, not a non-RangeIndex fix. Updated §3 item 2, §4.2 step 2 comment, §6.
-8. **Summary truncation** — replaced manual list construction with existing `format_event_indices` helper from `mypyskindose.grid_interp`. Updated §4.2 step 3, §6.
+8. **Summary truncation** — replaced manual list construction with existing `format_event_indices` helper from `guiskindose.grid_interp`. Updated §4.2 step 3, §6.
 9. **Status label source** — replaced fragile substring-matching with direct lookup from `output["missed_event_indices"]`. Updated §4.5.4, §6.
 10. **Multi-exam downgrade log** — moved from per-exam loop to once-before-loop to avoid spam. Updated §4.4, §6.
 
@@ -54,7 +54,7 @@ The plan ships a warning for the first four cases and **does not** try to distin
 
 1. **Per-event warning emitted once** when `not any(hits)` in `calculate_irradiation_event_result`.
 2. **Warning message** identifies the event (1-based index, total, exam id when multi-exam), the kVp / filtration / field size (so the user can recognise the event in the Data Table), and points at the likely remediation (offset sliders / vendor coordinate toggle / rotation handling). Fields, sourced from the normalized DataFrame via **`.iloc[ev]` (positional) indexing**:
-    - `{kVp}` ← `float(normalized_data[c.KEY_NORMALIZATION_KVP].iloc[ev])` (kV). `c.KEY_NORMALIZATION_KVP` is the standard `from mypyskindose import constants as c` alias used in `calculate_irradiation_event_result.py` and `geom_calc.py:246, 248, 299`. Use `.iloc[ev]` for positional indexing — the pipeline's existing `[ev]` label-based accesses (e.g. `normalized_data.K_IRP[ev]` at line 117) work because `rdsr_normalizer` guarantees a clean 0..N−1 `RangeIndex`, but `.iloc` is the safer defensive choice in new warning code.
+    - `{kVp}` ← `float(normalized_data[c.KEY_NORMALIZATION_KVP].iloc[ev])` (kV). `c.KEY_NORMALIZATION_KVP` is the standard `from guiskindose import constants as c` alias used in `calculate_irradiation_event_result.py` and `geom_calc.py:246, 248, 299`. Use `.iloc[ev]` for positional indexing — the pipeline's existing `[ev]` label-based accesses (e.g. `normalized_data.K_IRP[ev]` at line 117) work because `rdsr_normalizer` guarantees a clean 0..N−1 `RangeIndex`, but `.iloc` is the safer defensive choice in new warning code.
     - `{filter}` ← `f"{normalized_data.filter_thickness_Cu.iloc[ev]:g} mm Cu + {normalized_data.filter_thickness_Al.iloc[ev]:g} mm Al"`. Same columns as `geom_calc.py:422-423` / `corrections.py:247-248`; key strings in `constants.py:106-107`.
     - `{a}` ← detector-plane field area in cm², `float(normalized_data.FS_lat.iloc[ev]) * float(normalized_data.FS_long.iloc[ev])` (matches `field_area_ref` in `geom_calc.py:216`; keys in `input_adapters/normalized.py:74-75`). This is the collimated area at the detector, not the skin-plane area — `field_area` is empty for a missed event.
     - Resulting format: `"Event {i+1}/{N} (exam {id}, {kVp:.0f} kVp, {filter_desc}, field {field_area_cm2:.1f} cm²): beam does not intersect patient — check patient offsets and vendor coordinate frame."`
@@ -72,7 +72,7 @@ The plan ships a warning for the first four cases and **does not** try to distin
     - `None`-guard: a legacy call without `settings` does not raise `AttributeError` and the all-miss sentinel still fires.
     - golden baselines (`tests/unittests/test_calculate_dose.py::TestGoldenBaselines`) continue to pass.
 9. **Docs** — one-line note in `FEATURE_INVENTORY.md` (Calculations / Diagnostics). `AGENTS.md` and `CLAUDE.md` are unchanged.
-10. **Test fixture construction** — the existing `generate_synthetic_normalized_events` helper produces events that hit the phantom by design. For no-hit tests, use a large patient offset on the existing Siemens 21-event dataset (e.g. `d_lon=500` shifts the patient far enough that the beam misses all skin cells). Pass this offset via `PyskindoseSettings` through the normal `_run_calculate_dose()` path. Capture warnings with `caplog.at_level(logging.WARNING, logger="mypyskindose")`. For the single-event test case, use `_run_calculate_dose()` and verify `caplog.records`. For the mixed case (3 hit / 2 miss), use a smaller offset or a custom 5-event dataset where geometry is perturbed to straddle the phantom boundary — the exact fixture values will be tuned during Phase 1.
+10. **Test fixture construction** — the existing `generate_synthetic_normalized_events` helper produces events that hit the phantom by design. For no-hit tests, use a large patient offset on the existing Siemens 21-event dataset (e.g. `d_lon=500` shifts the patient far enough that the beam misses all skin cells). Pass this offset via `PyskindoseSettings` through the normal `_run_calculate_dose()` path. Capture warnings with `caplog.at_level(logging.WARNING, logger="guiskindose")`. For the single-event test case, use `_run_calculate_dose()` and verify `caplog.records`. For the mixed case (3 hit / 2 miss), use a smaller offset or a custom 5-event dataset where geometry is perturbed to straddle the phantom boundary — the exact fixture values will be tuned during Phase 1.
 
 ## 4. Implementation outline
 
@@ -119,7 +119,7 @@ Two new optional kwargs: `settings: PyskindoseSettings | None = None` and `exam_
         logger.warning(msg)
     ```
     The `settings is not None` guard is **mandatory** — without it, a `None` `settings` (unit tests, legacy paths) raises `AttributeError`. The conditional `exam_str` keeps single-exam messages clean ("exam" appears only when there is an id).
-3. **Per-run summary (only in `"summary"` mode)** — after the loop, if `settings is not None and settings.beam_miss_warn == "summary" and 0 < K < total_events` where `K = len(missed_event_indices)`, emit one `logger.warning` using the existing `format_event_indices` helper from `mypyskindose.grid_interp` (which returns `"[1, 2, 3] (+5 more)"` for overflow, or just `"[1, 2, 3]"` when within limit): `f"Run {total_events} events; {K} event(s) missed the patient phantom: {format_event_indices(missed_event_indices)}."` The `0 < K < N` predicate excludes the trivial K == 0 case and the all-miss case (handled by the sentinel).
+3. **Per-run summary (only in `"summary"` mode)** — after the loop, if `settings is not None and settings.beam_miss_warn == "summary" and 0 < K < total_events` where `K = len(missed_event_indices)`, emit one `logger.warning` using the existing `format_event_indices` helper from `guiskindose.grid_interp` (which returns `"[1, 2, 3] (+5 more)"` for overflow, or just `"[1, 2, 3]"` when within limit): `f"Run {total_events} events; {K} event(s) missed the patient phantom: {format_event_indices(missed_event_indices)}."` The `0 < K < N` predicate excludes the trivial K == 0 case and the all-miss case (handled by the sentinel).
 4. **All-miss sentinel (always-on)** — if `total_events > 0 and len(missed_event_indices) == total_events`, emit `"All {total_events} events missed the patient phantom — dose map is all zeros; check patient offsets and vendor coordinate frame."` The `total_events > 0` guard prevents the sentinel from firing on a degenerate empty dataset. **Not gated on `settings`** — must fire even if the caller didn't pass settings, because an all-miss run is always a bug.
 5. **Export** — `output["missed_event_indices"] = missed_event_indices` so the GUI / export can show the count without re-parsing logs. Indices are 0-based (Python convention); consumers converting to user-facing labels should add 1.
 
@@ -270,7 +270,7 @@ All resolved. Key resolutions:
 - `.iloc` indexing: positional (defensive); pipeline already relies on `rdsr_normalizer`'s guaranteed 0..N−1 `RangeIndex` for existing `[ev]` accesses (§3 item 2 / §4.2 step 2).
 - Multi-exam settings mutation: widened deepcopy condition + `logger.info` on downgrade (§4.4).
 - Toast throttle constant: 5, defer tuning to first-cut review.
-- Summary truncation: reuse `format_event_indices` from `mypyskindose.grid_interp` (§4.2 step 3).
+- Summary truncation: reuse `format_event_indices` from `guiskindose.grid_interp` (§4.2 step 3).
 
 ## 7. Phasing
 
@@ -283,8 +283,8 @@ Phases 1 and 2 are likely to land together; Phase 3 is doc / GUI polish that can
 
 ## 8. Validation commands
 
-- `ruff check src/mypyskindose/calculate_dose tests/unittests src/mypyskindose/settings`
-- `basedpyright src/mypyskindose/calculate_dose/calculate_irradiation_event_result.py src/mypyskindose/calculate_dose/calculate_dose.py src/mypyskindose/calculate_dose/perform_calculations_for_new_geometries.py`
+- `ruff check src/guiskindose/calculate_dose tests/unittests src/guiskindose/settings`
+- `basedpyright src/guiskindose/calculate_dose/calculate_irradiation_event_result.py src/guiskindose/calculate_dose/calculate_dose.py src/guiskindose/calculate_dose/perform_calculations_for_new_geometries.py`
 - `pytest tests/unittests/test_calculate_dose.py -q`
 - `pytest tests/unittests/test_calculate_dose.py::test_calculate_dose_golden_baseline_siemens_cylinder -q`
 - `python scripts/check_doc_freshness.py` — confirms the `FEATURE_INVENTORY.md` and `TO_DO.md` link are not stale.

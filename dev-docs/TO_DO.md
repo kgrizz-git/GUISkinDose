@@ -25,6 +25,9 @@ be archived.
   roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
+- [ ] **TabularImportOptions + CLI coordinate flags** — See Product Backlog /
+  [TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md).
+- [ ] **Radimetrics detection triggers** — See Product Backlog.
 
 ## Active Work
 
@@ -96,10 +99,12 @@ be archived.
   scenarios/nominal-arc selection UI, XA-header direction ingestion, film/array validation.
   Additional vendor fixtures improve profiles but do not block.
 - [ ] **XA-header direction/trajectory ingestion (future input source)** — classic RDSR carries no rotation direction (69-concept survey), but XA image headers do: `Positioner Motion (0018,1500)`, signed angle increments `(0018,1520/1521)`, and the 3D-XA acquisition sequence (scan arc/start/increments + per-projection angles). **Goal:** parse direction/trajectory from same-case XA headers to resolve arc direction. **Constraint:** needs image-object ingestion (pipeline is RDSR + tabular only) + RDSR↔XA case matching; same privacy fixture rules. See assessment §4.
-- [ ] **Biplane support and recognition** — detect A/B plane exports or RDSR events, model independent geometry,
-  and combine PSD/dose maps.
+- [ ] **Independent per-plane geometry** — A/B detection and combined maps already ship. Remaining: split
+  tabular rows still share one `(RF)` pose; use per-plane angles/SID/kVp when the export has them.
 - [ ] **Radimetrics detection triggers** — examine when and why the GUI assumes a file is from Radimetrics; it seems too quick to classify as such and may misidentify other sources.
-- [ ] **`TabularImportOptions` + CLI coordinate override flags** — GUI post-normalization corrections (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are live, but the `TabularImportOptions` dataclass and `--swap-lat-lon` / `--skip-transforms` CLI surface are not wired (`cli_args.py`, `input_adapters/registry.py`). **Goal:** API + CLI parity with the GUI. **Acceptance:** unit tests for both paths. See [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) and [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md).
+- [ ] **`TabularImportOptions` + CLI coordinate override flags** — GUI `Tx ↔ Tz` / `Ap1×−1` /
+  `Ap2×−1` are live; CLI/API are not. Execution plan:
+  [TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md).
 - [ ] **Tabular input Phase 5+** — implement Qaelum, DoseMonitor, and DoseWatch adapters when real export fixtures
   are available; see [TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md).
 - [ ] **Column-pattern customization** — support site-specific column-name overrides after Python-only adapter
@@ -113,7 +118,6 @@ be archived.
 
 ### GUI / UX
 
-- [ ] **GUI network-exposure hardening** — non-loopback refused outright (`_resolve_bind_host()` raises; `--host`/`--allow-network` flags removed): threat model + recorded refusal decision: [  assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md). Shipped: non-loopback refusal, bundled font, per-launch token + strict Host/Origin checks (browser; Host/Origin only in native), packaged UI-copy catalog, loopback-scope help page, `--port` with OS-assigned support. Remaining: per-client state + real auth on a demonstrated clinical-LAN need **or shared/multi-user workstation requirement** (deferred, not scheduled — and then with TLS, authorization, session lifecycle, isolation, and audit, not auth alone).
 - [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
@@ -122,7 +126,7 @@ be archived.
 - [ ] **Expanded RDSR browser** — expose more irradiation-event detail after load.
 - [ ] **In-app settings/workflow help** — link to `VENDOR_COORDINATE_SYSTEMS.md` and related technical docs.
 - [ ] **Visual refinement** — reduce left-nav spacing, soften the brutalist look, tune fonts/light mode/backgrounds
-  per [DESIGN.md](../DESIGN.md).
+  per [DESIGN.md](../DESIGN.md) and [gui-aesthetic-redesign.md](plans/gui-aesthetic-redesign.md).
 - [ ] **Central Help entry point** — per-tab `HelpButton`s and the help harness already ship. Remaining: add a
   left-nav Help item and/or dedicated Help tab that indexes in-app help (`gui/help/`) and links to the online docs.
 - [ ] **Offset UX polish** — Geometry patient/table-origin sliders and Settings → Per-exam corrections already
@@ -186,18 +190,19 @@ be archived.
   once the team is comfortable with the advisory workflow (add to the hub checklist when enabled).
 - [ ] **Architecture follow-ups** — evaluate `import-linter` if layer contracts grow; revisit documented
   `phantom_class` -> `plotting` coupling.
-- [ ] **Getting-started notebook execution failure in docs builds** — nbsphinx execution of the getting-started notebook fails on a plot/HTML regression (error record + fix plan archived at
-  [NOTEBOOK_PLOT_HTML_FIX_PLAN.md](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md)).
-  Remaining: confirm the docs build is green (watch for a second latent failure
-  behind it — see archived plan for the secondary tqdm failure), then remove this item.
-- [ ] **GUI test depth** — add per-tab smoke coverage if NiceGUI user simulation remains enough; consider
-  Playwright/CDP only for browser-specific gaps.
+- [ ] **Confirm docs-build notebook** — plot/HTML raise is fixed
+  ([archived plan](plans/archive/NOTEBOOK_PLOT_HTML_FIX_PLAN.md)); tqdm fallback shipped. Remaining:
+  confirm Sphinx/RTD is green, then remove this item.
+- [ ] **GUI test depth** — add per-tab smoke coverage. Playwright is already in `[dev]` for remaining browser-specific gaps.
 - [ ] **Coordinate diagrams** — expand and validate `VENDOR_COORDINATE_SYSTEMS.md` diagrams against vendor data.
 - [ ] **Plan template** — add shared headers for objective, acceptance criteria, progress log, and decision log.
 - [ ] **Expand `dev-docs/references/` stubs** before the next major dependency review.
 
 ## Deferred Until Needed
 
+- [ ] **GUI network-exposure follow-on (parked)** — loopback refusal shipped. Remaining: per-client
+  state + auth only on a demonstrated clinical-LAN/shared-workstation need. See
+  [assessment](assessments/GUI_NETWORK_EXPOSURE_ASSESSMENT.md).
 - [ ] **Privacy hardening follow-ons (parked)** — Phases 0-9 done ([PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md)); Phase 10 needs an approved private environment. Follow-ons below are parked evaluations, not a restart. Revisit only when privacy work is next prioritized:
   - *Nested/unsupported containers* — recursive inspection vs blocking for nested archives and exotic types (7z/RAR); current gate scans first-level text + requires manual clearance.
   - *Local OCR bake-off* — benchmark Tesseract vs local-only ML OCR on synthetic burned-in fixtures (accuracy, runtime, report safety); no CI/uploads until written up. See [LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md).

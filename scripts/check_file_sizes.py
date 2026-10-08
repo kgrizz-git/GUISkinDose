@@ -9,7 +9,7 @@ MAX_LINES = 800
 # These must be relative paths from the repository root.
 # Outliers should be documented and eventually decomposed/refactored.
 WHITELIST: set[str] = {
-    "dev-docs/plans/PR_CODE_REVIEW_FIXES_PLAN.md",
+    "dev-docs/plans/archive/PR_CODE_REVIEW_FIXES_PLAN.md",
 }
 
 # Append-only chronological history: out of scope by design, not a documented outlier.

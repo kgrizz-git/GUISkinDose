@@ -1410,7 +1410,7 @@ That keeps SemVer and contributor history organized.
   fallback to `pip-audit` on the active environment. Pre-push hook and CI `static-analysis` job now
   call the wrapper; CI installs `uv` via `astral-sh/setup-uv@v8.2.0`. Tracked suppressions live in
   `[tool.uv.audit]` (`ignore-until-fixed` for dev-only `nltk` via `safety`, GHSA-p4gq-832x-fm9v).
-  Plan: `dev-docs/plans/DEPENDENCY_AUDIT_PLAN.md`.
+  Plan: `dev-docs/plans/archive/DEPENDENCY_AUDIT_PLAN.md`.
 - **One-command hook installer** (2026-06-27) — `scripts/setup-dev.sh` (macOS/Linux)
   and `scripts/setup-dev.bat` (Windows) run both `pre-commit install` and
   `pre-commit install --hook-type pre-push` in one step, ensuring all pre-push hooks
@@ -1440,7 +1440,7 @@ That keeps SemVer and contributor history organized.
 - **Native window geometry persistence** (2026-06-25) — `--native` mode restores window size,
   position, and maximized state from `~/.mypyskindose/gui.json`. First launch starts maximized
   with normal bounds at 75% of the primary screen (centered). Plan:
-  `dev-docs/plans/NATIVE_WINDOW_GEOMETRY_PLAN.md`.
+  `dev-docs/plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md`.
 - **Agent guidance playbook and advisory check** (2026-06-25): added `dev-docs/AGENT_PLAYBOOK.md`,
   thin `GEMINI.md` / `QWEN.md` pointer files, and `scripts/check_agent_guidance.py` (pre-commit advisory;
   `--strict` available) to flag duplicated or drifting agent instructions, overgrown `TO_DO.md`, and

@@ -1,5 +1,9 @@
 # PR Code Review Fixes Implementation Plan
 
+**STATUS: Complete — archived 2026-10-08.** Tasks 1–7 landed on `main` (distinctive tests
+present); execution checkboxes were never ticked. The CodeRabbit target branch
+`refactor/sonar-lizard-fixes` is historical.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Resolve all CodeRabbit pull request review comments (critical, major, and nitpicks) on branch `refactor/sonar-lizard-fixes` with safe CI timeout coverage.
