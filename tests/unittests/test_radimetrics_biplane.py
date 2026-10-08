@@ -317,3 +317,17 @@ def test_split_columns_count_as_read_only_when_the_split_would_run() -> None:
 
     assert consumed_split_columns(headers, no_b_dose) == set()
     assert consumed_split_columns(headers, with_b_dose) == {headers[0], headers[1]}
+
+
+def test_nonblank_invalid_plane_dose_is_not_treated_as_zero() -> None:
+    from guiskindose.input_adapters.radimetrics import _plane_kerma_with_evidence
+
+    cols = {"A": "Reference Point Dose (A) mGy", "B": "Reference Point Dose (B) mGy"}
+    frame = pd.DataFrame({cols["A"]: ["1.0", "2.0", ""], cols["B"]: ["", "n/a", "3.0"]})
+
+    kerma, has_plane_b = _plane_kerma_with_evidence(frame, cols)
+
+    assert has_plane_b
+    assert kerma["B"].iloc[0] == 0.0
+    assert pd.isna(kerma["B"].iloc[1])
+    assert kerma["A"].iloc[2] == 0.0

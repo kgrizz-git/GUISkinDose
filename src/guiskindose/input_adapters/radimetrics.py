@@ -241,14 +241,17 @@ def _plane_kerma_with_evidence(
 ) -> tuple[dict[str, pd.Series], bool]:
     """Per-plane kerma (Gy) with blank-beside-value treated as 0, and whether the split would run.
 
-    An empty cell on one plane next to a value on the other means "no dose on that
-    plane"; a row with both empty stays missing (unsplittable). The split runs only
-    when some row has plane-B kerma above zero. Shared by the split and by the
-    ignored-column warning so both use the same unit conversion and evidence rule.
+    A genuinely blank cell on one plane next to a value on the other means "no dose
+    on that plane" and becomes 0. A nonblank cell that is not a number (for example
+    ``n/a``) stays missing, so its row is unsplittable rather than silently treated
+    as a one-plane event. A row with both cells blank also stays missing. The split
+    runs only when some row has plane-B kerma above zero. Shared by the split and by
+    the ignored-column warning so both use the same unit conversion and evidence rule.
     """
     kerma = _per_plane_kerma_gy(data_df, dose_cols)
+    blank = {p: ~_has_text(data_df[col]) for p, col in dose_cols.items()}
     any_value = kerma["A"].notna() | kerma["B"].notna()
-    kerma = {p: values.mask(values.isna() & any_value, 0.0) for p, values in kerma.items()}
+    kerma = {p: values.mask(blank[p] & any_value, 0.0) for p, values in kerma.items()}
     return kerma, bool((kerma["B"] > 0).any())
 
 
