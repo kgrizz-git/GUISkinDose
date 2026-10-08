@@ -4,6 +4,7 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 
 | File | Status | Notes |
 |---|---|---|
+| [TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](TABULAR_IMPORT_OPTIONS_CLI_PLAN.md) | **Completed** (archived 2026-10-08) | CLI/API `TabularImportOptions` parity with GUI expert `Tx ↔ Tz` / `Ap1×−1` / `Ap2×−1`; non-tabular rejection. |
 | [NATIVE_WINDOW_GEOMETRY_PLAN.md](NATIVE_WINDOW_GEOMETRY_PLAN.md) | **Completed** (archived 2026-10-08) | Native window size/position/maximized persistence; first launch maximized. |
 | [DEPENDENCY_AUDIT_PLAN.md](DEPENDENCY_AUDIT_PLAN.md) | **Completed** (archived 2026-10-08) | Lockfile `uv audit` wrapper with `pip-audit` fallback; pre-push + CI. |
 | [2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | **Completed** (archived 2026-10-08) | Geometry composite checkbox, searchable exam/event selects, table-origin-scrub reset. |

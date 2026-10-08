@@ -190,6 +190,9 @@ Key flags (see `python -m guiskindose --help` for the full list):
 | `--input-schema` | Tabular schema: `auto`, `normalized`, `generic_rdsr_like`, `radimetrics`, `dosetrack` |
 | `--sheet-name` | Sheet name or 0-based index for Excel inputs |
 | `--input-preview-only` | Print a value-safe input summary without running dose calculation |
+| `--swap-lat-lon` | Post-normalization expert override: swap `Tx` ↔ `Tz` on tabular inputs (not GE `swap_lateral_longitudinal`) |
+| `--flip-ap1` | Post-normalization expert override: negate `Ap1` (primary angle) |
+| `--flip-ap2` | Post-normalization expert override: negate `Ap2` (secondary angle) |
 | `--aggregate` | In multi-exam mode: print only the aggregate PSD |
 | `--export-format` | Generate a rich audit report: `xlsx`, `pdf`, `html`, or `docx` |
 | `--export-path` | Required output path when `--export-format` is set |

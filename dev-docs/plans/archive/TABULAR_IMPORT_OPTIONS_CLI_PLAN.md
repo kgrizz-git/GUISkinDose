@@ -1,11 +1,10 @@
 # Tabular Import Options — CLI/API Parity Plan
 
-Status: Active execution plan
+Status: **Completed / archived 2026-10-08**
 Created: 2026-10-08
 Branch: `feat/tabular-import-options-cli`
-Parent: [TABULAR_RDSR_INPUT_PLAN.md](TABULAR_RDSR_INPUT_PLAN.md)
-Related: [VENDOR_COORDINATE_SYSTEMS.md](../VENDOR_COORDINATE_SYSTEMS.md),
-[TO_DO.md](../TO_DO.md)
+Parent: [TABULAR_RDSR_INPUT_PLAN.md](../TABULAR_RDSR_INPUT_PLAN.md)
+Related: [VENDOR_COORDINATE_SYSTEMS.md](../../VENDOR_COORDINATE_SYSTEMS.md)
 
 Reviewed 2026-10-08 (Composer vs current code): architecture kept; contracts below
 are the review edits (copy-based apply, full API threading, non-tabular rejection
@@ -230,17 +229,17 @@ not keep advertising an unimplemented flag.
 
 ### 3 — Docs
 
-- [ ] `VENDOR_COORDINATE_SYSTEMS.md`: replace the backlog sketch and
+- [x] `VENDOR_COORDINATE_SYSTEMS.md`: replace the backlog sketch and
       `--skip-transforms` with the three shipped flags / dataclass. Point at
       this plan until archived, then the archive path.
-- [ ] Parent `TABULAR_RDSR_INPUT_PLAN.md`: keep the "implemented against GUI
+- [x] Parent `TABULAR_RDSR_INPUT_PLAN.md`: keep the "implemented against GUI
       names" pointer; drop `--skip-transforms` from advertised CLI.
-- [ ] `FEATURE_INVENTORY.md`, `AGENTS.md` CLI list, `CODEBASE_OVERVIEW.md`
+- [x] `FEATURE_INVENTORY.md`, `AGENTS.md` CLI list, `CODEBASE_OVERVIEW.md`
       flag table, CLI `--help` text.
-- [ ] `CHANGELOG.md` Unreleased (user-facing CLI/API).
-- [ ] `dev-docs/feature_doc_matrix.json` / help registry only if those
+- [x] `CHANGELOG.md` Unreleased (user-facing CLI/API).
+- [x] `dev-docs/feature_doc_matrix.json` / help registry only if those
       checkers require an entry for new CLI flags.
-- [ ] Remove this item from `TO_DO.md` when Phases 0–2 are done. Archive
+- [x] Remove this item from `TO_DO.md` when Phases 0–2 are done. Archive
       this plan under `dev-docs/plans/archive/` and update `dev-docs/index.md`
       in the same change.
 

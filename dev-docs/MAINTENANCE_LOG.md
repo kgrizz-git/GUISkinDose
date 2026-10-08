@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Changed
+
+- **TabularImportOptions CLI plan archived** (2026-10-08) — Phases 0–3 complete; execution plan moved to
+  `plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md`; vendor-coordinate and tabular-input docs updated.
+
 ### Fixed
 
 - **RDSR CodeQL cleanup** (2026-10-08) — explicitly mark the normalizer's input-error
@@ -99,7 +104,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   (loopback refusal shipped). Narrowed the docs-build notebook item to a Sphinx/RTD
   confirm after the plot/HTML and tqdm fixes. Noted Playwright is already in `[dev]`.
   Linked visual refinement to `gui-aesthetic-redesign.md`. Next Up now has
-  TabularImportOptions CLI/API parity and Radimetrics detection triggers.
+  Radimetrics detection triggers (TabularImportOptions CLI/API parity shipped and plan archived).
 - **Archived finished execution plans** (2026-10-08) — moved shipped
   `NATIVE_WINDOW_GEOMETRY_PLAN`, `DEPENDENCY_AUDIT_PLAN`,
   `2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN`, and

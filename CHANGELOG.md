@@ -43,6 +43,11 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Tabular import coordinate overrides on CLI and Python API** (2026-10-08) — headless runs and
+  library callers can apply the same post-normalization expert overrides as the GUI upload preview:
+  `Tx ↔ Tz` (`--swap-lat-lon` / `swap_lat_lon`), `Ap1×−1` (`--flip-ap1` / `flip_ap1`), and
+  `Ap2×−1` (`--flip-ap2` / `flip_ap2`). Flags apply only to tabular inputs; combining any flag with
+  a DICOM RDSR or JSON event file exits with a usage error before calculation starts.
 - **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.
   Settings keeps the run configuration, phantom, per-exam offsets and coordinate fixes, and visual options.
   The new Corrections tab (tab 4; Geometry, Calculate, Results, and Export move to 5 to 8) holds dose-physics

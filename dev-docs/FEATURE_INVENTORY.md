@@ -490,6 +490,12 @@ python -m guiskindose.main [--mode headless|gui] [--file-path PATH] [--settings 
 | `--mode gui` | Launch the NiceGUI app |
 | `--file-path` | Path to RDSR `.dcm` file |
 | `--settings` | Path to settings JSON file |
+| `--input-schema` | Tabular schema: `auto`, `normalized`, `generic_rdsr_like`, `radimetrics`, `dosetrack` |
+| `--sheet-name` | Excel sheet name or 0-based index for `.xlsx` / `.xlsm` inputs |
+| `--input-preview-only` | Print a value-safe tabular input summary without running dose calculation |
+| `--swap-lat-lon` | Post-normalization expert override: swap `Tx` ↔ `Tz` (tabular only; not GE `swap_lateral_longitudinal`) |
+| `--flip-ap1` | Post-normalization expert override: negate `Ap1` (primary angle) |
+| `--flip-ap2` | Post-normalization expert override: negate `Ap2` (secondary angle) |
 | `--native` | Open GUI in a native desktop window instead of a browser tab (requires `pywebview`) |
 
 ### 10.1 Native window geometry persistence
@@ -539,6 +545,7 @@ from guiskindose import (
 | CSV/TSV/XLSX event-table input (raw RDSR-like schema + auto-detect) | Shipped — Phase 2 (2026-06-09) | `generic_rdsr_like` adapter → `rdsr_normalizer()`; `--input-schema auto`. GUI import workflow is Phase 5. |
 | CSV/TSV/XLSX event-table input (Radimetrics adapter) | Shipped — Phase 3 (2026-06-10) | `radimetrics` adapter; column map + unit conversions (mGy→Gy, cm²→m², mAs→µAs); auto-detection; unknown model warning; synthetic fixture + tests. Validated against AXIOM-Artis column names only — real vendor fixture needed for production sign-off. Biplane exports with per-plane `Reference Point Dose (A)`/`(B)` columns are split into Plane A and Plane B events (kerma conserved); a biplane export without a plane column resolves to an unknown tube. |
 | CSV/TSV/XLSX event-table input (DoseTrack adapter) | Shipped — Phase 4 (2026-06-10) | `dosetrack` adapter; Equipment Name→Manufacturer inference (`MODEL2MANUF`); ffill; Plane Code normalization; unit conversions (mGy→Gy, Gy·cm²→Gy·m², µA→mA); CFA derivation from DAP formula; Siemens/Philips filter thickness paths; Philips lat/lon swap warning; synthetic AXIOM-Artis fixture + 10 tests. Philips path untested — needs real DoseTrack XLSX. |
+| Tabular import coordinate overrides (`TabularImportOptions`) | Shipped — 2026-10-08 | CLI `--swap-lat-lon` / `--flip-ap1` / `--flip-ap2` and Python API `import_options=` on tabular load paths; same post-normalization rules as GUI expert toggles; rejects DICOM/JSON when any flag is set. See `input_adapters/import_options.py` and [plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md). |
 | CSV/TSV/XLSX event-table input (Qaelum adapter) | Stub only — Phase 5+ | Registry-wired `qaelum` schema in `input_adapters/stubs.py` raises `NotImplementedError`; excluded from auto-detection. Needs real Qaelum export fixture. |
 | CSV/TSV/XLSX event-table input (DoseMonitor adapter) | Stub only — Phase 5+ | Registry-wired `dosemonitor` schema in `input_adapters/stubs.py` raises `NotImplementedError`; excluded from auto-detection. Needs real DoseMonitor export fixture. |
 | CSV/TSV/XLSX event-table input (DoseWatch adapter) | Stub only — Phase 5+ | Registry-wired `dosewatch` schema in `input_adapters/stubs.py` raises `NotImplementedError`; excluded from auto-detection. Needs real DoseWatch export fixture. |
