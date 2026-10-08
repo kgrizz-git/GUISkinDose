@@ -35,7 +35,7 @@ from guiskindose.input_adapters.column_mapper import (
 )
 from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from guiskindose.input_adapters.tabular_loader import _RawLoad
-from guiskindose.privacy import exception_class_name
+from guiskindose.privacy import UserFacingInputError, exception_class_name
 
 if TYPE_CHECKING:
     from guiskindose.settings import PyskindoseSettings
@@ -389,7 +389,7 @@ def run_normalizer_pipeline(
         On duplicate column mappings, missing required columns, or
         rdsr_normalizer() failure.
     """
-    from guiskindose.rdsr_normalizer import rdsr_normalizer
+    from guiskindose.rdsr_normalizer import rdsr_normalizer_with_source_rows
 
     warnings: list[str] = []
     raw_df = loaded.raw_df
@@ -434,17 +434,20 @@ def run_normalizer_pipeline(
         )
 
     try:
-        normalized_df = rdsr_normalizer(data_df, settings)
+        normalized_df, source_rows = rdsr_normalizer_with_source_rows(data_df, settings)
+    except UserFacingInputError:
+        # Value-free by contract; keep its specific message for the user.
+        raise
     except Exception as exc:
         raise ValueError(
             f"RDSR normalization failed (error_type={exception_class_name(exc)})."
         ) from exc
 
     # rdsr_normalizer() rebuilds the frame from scratch, so carry the optional
-    # dosimetric columns across by position (row order is preserved).
+    # dosimetric columns across by input position (dropped zero-dose events skipped).
     for col in _PASSTHROUGH_DOSE_COLS:
-        if col in data_df.columns and len(data_df) == len(normalized_df):
-            normalized_df[col] = pd.to_numeric(data_df[col], errors="coerce").to_numpy()
+        if col in data_df.columns:
+            normalized_df[col] = pd.to_numeric(data_df[col], errors="coerce").to_numpy()[source_rows]
 
     # Sentinel _dt_* targets are adapter-internal; keep them out of the public map.
     public_column_map = {k: v for k, v in column_map.items() if not v.startswith("_dt_")}

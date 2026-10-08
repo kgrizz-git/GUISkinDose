@@ -33,7 +33,6 @@ from .constants import (
     KEY_NORMALIZATION_MODEL_NAME,
     KEY_NORMALIZATION_STATION_NAME,
     KEY_RDSR_DEVICE_SERIAL,
-    KEY_RDSR_DISTANCE_SOURCE_DETECTOR,
     KEY_RDSR_FILTER_MATERIAL,
     KEY_RDSR_FILTER_MATERIAL_ALUMINUM,
     KEY_RDSR_FILTER_MATERIAL_COPPER,
@@ -50,7 +49,24 @@ from .constants import (
     PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
 )
 from .geom_calc import calculate_field_size
+from .rdsr_input_checks import (
+    RdsrInputError as RdsrInputError,
+)
+from .rdsr_input_checks import (
+    RdsrUnitError as RdsrUnitError,
+)
+from .rdsr_input_checks import (
+    collapse_duplicate_scalars,
+    convert_scale_only_units,
+    enforce_required_concepts,
+    ensure_device_columns,
+    ensure_irradiation_events,
+    resolve_source_detector_distance,
+    verify_expected_units,
+)
 from .settings import PyskindoseSettings
+
+__all__ = ["RdsrInputError", "RdsrUnitError", "rdsr_normalizer", "rdsr_normalizer_with_source_rows"]
 
 logger = logging.getLogger("guiskindose")
 
@@ -101,60 +117,12 @@ def _dicom_source_kind(cid_backed: pd.Series, has_code: pd.Series, has_meaning: 
     )
 
 
-class RdsrUnitError(ValueError):
-    """Raised when an RDSR reports a quantity in an unexpected physical unit.
-
-    ``rdsr_parser`` encodes each measured value's DICOM unit into the column name
-    (e.g. ``DoseRP_Gy``). When a report uses a unit this pipeline does not
-    convert, the expected column is absent and a sibling ``{concept}_{other-unit}``
-    column is present; the normalizer would otherwise fail with an opaque
-    AttributeError. This surfaces a clear, unit-naming message instead. See
-    dev-docs/INPUT_SCHEMA_DETECTION.md ("Unit handling").
-    """
-
-
-# Concept prefix (as produced by rdsr_parser) → (expected DICOM unit code,
-# human-readable quantity label). These are the quantities the normalizer reads
-# by unit-suffixed column name; a differing unit is a hard, un-converted mismatch.
-_EXPECTED_UNITS: dict[str, tuple[str, str]] = {
-    "DoseRP": ("Gy", "reference point dose"),
-    "KVP": ("kV", "tube voltage (kVp)"),
-    "DistanceSourcetoDetector": ("mm", "source-to-detector distance"),
-    "DistanceSourcetoIsocenter": ("mm", "source-to-isocenter distance"),
-    "TableLongitudinalPosition": ("mm", "table longitudinal position"),
-    "TableLateralPosition": ("mm", "table lateral position"),
-    "TableHeightPosition": ("mm", "table height position"),
-    "PositionerPrimaryAngle": ("deg", "positioner primary angle"),
-    "PositionerSecondaryAngle": ("deg", "positioner secondary angle"),
-}
-
-
-def _verify_expected_units(data_parsed: pd.DataFrame) -> None:
-    """Raise :class:`RdsrUnitError` if a quantity is reported in an unexpected unit.
-
-    For each expected ``{concept}_{unit}`` column that is absent, check whether a
-    sibling ``{concept}_*`` column (same quantity, different unit) is present. If
-    so, the report used a unit this pipeline does not convert; fail early with a
-    clear message rather than a downstream AttributeError. A concept that is
-    wholly absent is left to the existing missing-column handling.
-    """
-    columns = list(data_parsed.columns)
-    for concept, (expected_unit, label) in _EXPECTED_UNITS.items():
-        if f"{concept}_{expected_unit}" in columns:
-            continue
-        prefix = f"{concept}_"
-        siblings = [c for c in columns if c.startswith(prefix)]
-        if siblings:
-            found_unit = siblings[0][len(prefix):]
-            raise RdsrUnitError(
-                f"This RDSR reports {label} in '{found_unit}', but GUISkinDose expects "
-                f"'{expected_unit}'. The report uses a unit this pipeline does not convert; "
-                "verify the acquisition device's dose-report configuration."
-            )
-
-
 def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> pd.DataFrame:
     """Normalize RDSR data for PySkinDose compliance.
+
+    The caller's ``data_parsed`` is never modified. Zero-dose events with
+    incomplete geometry may be dropped (see ``rdsr_input_checks``); use
+    :func:`rdsr_normalizer_with_source_rows` to align the result with the input.
 
     Parameters
     ----------
@@ -268,11 +236,36 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
     filter_thickness_Al : float
         Aluminum X-ray filter thickness in mm.
     """
-    data_norm = pd.DataFrame()
+    return rdsr_normalizer_with_source_rows(data_parsed, settings)[0]
 
-    _verify_expected_units(data_parsed)
+
+def rdsr_normalizer_with_source_rows(
+    data_parsed: pd.DataFrame, settings: PyskindoseSettings
+) -> tuple[pd.DataFrame, list[int]]:
+    """Normalize like :func:`rdsr_normalizer`; also return each output row's input position.
+
+    Callers that carry extra per-event columns across by position (the tabular
+    adapters) need this mapping, because dose-free incomplete events may be dropped.
+    """
+    data_norm = pd.DataFrame()
+    # Private copy with positional labels: the caller's frame is never modified,
+    # and the surviving index labels are the input positions of the kept events.
+    data_parsed = data_parsed.reset_index(drop=True)
+
+    # Input hardening (rdsr_input_checks): repair what is safely repairable,
+    # otherwise fail with one value-free RdsrInputError before any column read.
+    ensure_irradiation_events(data_parsed)
+    convert_scale_only_units(data_parsed)
+    verify_expected_units(data_parsed)
+    collapse_duplicate_scalars(data_parsed)
+    ensure_device_columns(data_parsed)
 
     settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
+
+    resolve_source_detector_distance(data_parsed)
+    data_parsed = enforce_required_concepts(data_parsed, settings.normalization_settings.field_size_mode)
+    source_rows = [int(position) for position in data_parsed.index]
+    data_parsed = data_parsed.reset_index(drop=True)
 
     for append_normalization in [
         _normalize_machine_parameters,
@@ -284,7 +277,7 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
             data_parsed=data_parsed, data_norm=data_norm, norm=settings.normalization_settings
         )
 
-    return data_norm
+    return data_norm, source_rows
 
 
 def _normalize_machine_parameters(
@@ -303,15 +296,6 @@ def _normalize_machine_parameters(
         data_norm[KEY_NORMALIZATION_DEVICE_SERIAL] = data_parsed[KEY_RDSR_DEVICE_SERIAL]
     else:
         data_norm[KEY_NORMALIZATION_DEVICE_SERIAL] = None
-
-    # Find indices of nans in DistanceSourcetoDetector
-    if "nan" in str(data_parsed[KEY_RDSR_DISTANCE_SOURCE_DETECTOR]).lower():
-        nan_indices = data_parsed.index[data_parsed[KEY_RDSR_DISTANCE_SOURCE_DETECTOR].apply(np.isnan)]
-        # Replace those nans with the corresponding value in
-        # FinalDistanceSourcetoDetector
-        data_parsed.loc[:, "DistanceSourcetoDetector_mm"] = data_parsed.DistanceSourcetoDetector_mm.fillna(
-            data_parsed.FinalDistanceSourcetoDetector_mm[nan_indices]
-        )
 
     data_norm[KEY_NORMALIZATION_DISTANCE_SOURCE_DETECTOR] = data_parsed.DistanceSourcetoDetector_mm / 10
     data_norm[KEY_NORMALIZATION_DISTANCE_SOURCE_ISOCENTER] = data_parsed.DistanceSourcetoIsocenter_mm / 10

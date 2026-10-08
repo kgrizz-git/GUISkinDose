@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 import pydicom
 
-from guiskindose.privacy import safe_error_event
+from guiskindose.privacy import UserFacingInputError, safe_error_event
 from guiskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
 from guiskindose.rdsr_parser import rdsr_parser
 
@@ -56,6 +56,15 @@ def _raw_extracted_view(result) -> pd.DataFrame | None:
         return raw
 
 
+_LOAD_GLOBALS = ("d_lon", "d_ver", "d_lat", "swap_lat_lon", "flip_ap1", "flip_ap2")
+
+
+def _restore_load_globals(state: AppState, snapshot: dict[str, Any]) -> None:
+    """Undo ``reset_global_offsets_on_new_load`` after a rejected load."""
+    for name, value in snapshot.items():
+        setattr(state, name, value)
+
+
 def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
     """Parse and normalise an RDSR file and append it to the exam list.
 
@@ -65,6 +74,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
     """
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 
+    # A rejected file must leave the previous exams' offsets as they were.
+    globals_snapshot = {name: getattr(state, name) for name in _LOAD_GLOBALS}
     try:
         # T20: seed per-exam meta from globals before reset zeros them.
         seed_d_lon = state.d_lon
@@ -77,11 +88,12 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         data_raw = pydicom.dcmread(str(file_path))
         data_parsed = rdsr_parser(data_raw, silence_pydicom_warnings=settings.silence_pydicom_warnings)
 
-        # Save raw copy (last-loaded DICOM wins for the raw preview)
-        state.rdsr_raw_df = data_parsed.copy()
-
-        # Normalize
+        # Normalize (never modifies data_parsed)
         df = rdsr_normalizer(data_parsed, settings=settings)
+
+        # Save raw copy only once the file is accepted (last-loaded DICOM wins
+        # for the raw preview), so a rejected file never replaces it.
+        state.rdsr_raw_df = data_parsed.copy()
 
         if settings.remove_invalid_rows and len(df[df.kVp == 0]):
             df = df[df.kVp != 0].reset_index(drop=True)
@@ -178,12 +190,19 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
 
         return True, f"Loaded {len(df)} irradiation events"
     except RdsrUnitError as exc:
-        # Unit mismatch is a specific, actionable condition — surface the
-        # unit-naming message (units are not PHI) instead of the generic error.
+        # Unit mismatch is a specific, actionable condition. Its message is built
+        # from fixed labels only, so it is shown instead of the generic error.
         _record_load_failure("DICOM_RDSR_UNIT_MISMATCH", exc)
-        return False, str(exc)
+        _restore_load_globals(state, globals_snapshot)
+        return False, exc.user_message()
+    except UserFacingInputError as exc:
+        # Missing geometry, conflicting duplicates, no events: value-free message.
+        _record_load_failure("DICOM_RDSR_INPUT", exc)
+        _restore_load_globals(state, globals_snapshot)
+        return False, exc.user_message()
     except Exception as exc:
         _record_load_failure("DICOM_RDSR_LOAD", exc)
+        _restore_load_globals(state, globals_snapshot)
         return False, "Could not read this DICOM RDSR file. Check the file and try again."
 
 
@@ -225,6 +244,10 @@ def load_tabular(
         _finalize_tabular_state(state, file_path, result)
     except SchemaDetectionError as exc:
         return _wrap_tabular_schema_detection(state, exc)
+    except UserFacingInputError as exc:
+        _record_load_failure("TABULAR_INPUT", exc)
+        state.import_has_errors = True
+        return False, exc.user_message()
     except Exception as exc:
         _record_load_failure("TABULAR_LOAD", exc)
         state.import_has_errors = True

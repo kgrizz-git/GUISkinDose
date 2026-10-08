@@ -273,8 +273,10 @@ no fixture vendored). Per-source results:
   stops later on unrelated missing source-geometry concepts (e.g.
   `DistanceSourcetoIsocenter_mm`) — sparse-file defaults are a separate gap,
   same class as the angle-less files below. The guards also advance the
-  TO_DO parser-hardening item (`RF-Pat-Orientation-Modifier-Missing`
-  still open).
+  TO_DO parser-hardening item. Update 2026-10-08: every RF file now parses
+  (`RF-Pat-Orientation-Modifier-Missing` included); the normalizer
+  failures were then closed by the archived
+  [RDSR input hardening plan](../plans/archive/RDSR_INPUT_HARDENING_PLAN.md).
 - **GE OEC MiniView / Canon Ultimaxi — no angle concepts at all.** 22 fluoro
   / 13 fluoro + 5 stationary; raw concept survey finds zero positioner-angle
   concepts, so no arc subdivision can ever be keyed off these files (other

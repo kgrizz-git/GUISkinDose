@@ -52,3 +52,57 @@ def test_generic_rdsr_failure_keeps_generic_message(monkeypatch: pytest.MonkeyPa
 
     assert ok is False
     assert message == "Could not read this DICOM RDSR file. Check the file and try again."
+
+
+def test_load_rdsr_surfaces_input_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.rdsr_input_checks import RdsrInputError
+
+    def _raise(*_args, **_kwargs):
+        raise RdsrInputError("This file contains no X-ray irradiation events, so there is nothing to calculate.")
+
+    monkeypatch.setattr(exam_loaders, "rdsr_normalizer", _raise)
+
+    ok, message = exam_loaders.load_rdsr(_EXAMPLE_RDSR, AppState())
+
+    assert ok is False
+    assert "no X-ray irradiation events" in message
+
+
+def test_load_tabular_surfaces_input_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.rdsr_input_checks import RdsrInputError
+
+    def _raise(*_args, **_kwargs):
+        raise RdsrInputError("This RDSR lacks data GUISkinDose needs: tube voltage (kVp) (missing in 1 of 3 events).")
+
+    monkeypatch.setattr(exam_loaders, "_parse_tabular", _raise)
+    state = AppState()
+
+    ok, message = exam_loaders.load_tabular(Path("events.csv"), state)
+
+    assert ok is False
+    assert "tube voltage (kVp)" in message
+    assert state.import_has_errors is True
+
+
+def test_rejected_rdsr_leaves_offsets_and_raw_preview_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A rejected file must not zero the previous exams' offsets or replace the raw preview."""
+    import pandas as pd
+
+    from guiskindose.rdsr_input_checks import RdsrInputError
+
+    def _raise(*_args, **_kwargs):
+        raise RdsrInputError("This RDSR lacks data GUISkinDose needs.")
+
+    monkeypatch.setattr(exam_loaders, "rdsr_normalizer", _raise)
+    state = AppState()
+    state.d_lon, state.d_ver, state.d_lat = 5.0, -2.0, 1.5
+    state.swap_lat_lon = True
+    previous_raw = pd.DataFrame({"marker": [1]})
+    state.rdsr_raw_df = previous_raw
+
+    ok, _message = exam_loaders.load_rdsr(_EXAMPLE_RDSR, state)
+
+    assert ok is False
+    assert (state.d_lon, state.d_ver, state.d_lat) == (5.0, -2.0, 1.5)
+    assert state.swap_lat_lon is True
+    assert state.rdsr_raw_df is previous_raw

@@ -227,6 +227,14 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Real-world RDSRs no longer crash normalization with raw pandas errors** (2026-10-08) — reports that leave out
+  required geometry, contain no irradiation events, or report a quantity twice with different values now end in one
+  clear message listing what is missing and in how many events, in both the GUI and the CLI. GUISkinDose still does
+  not guess missing geometry. Reference-point dose in mGy and distances in cm or m are now converted. A value
+  repeated within one event is used once when every copy agrees. Zero-dose events that lack geometry are dropped,
+  since they add no dose. Found by surveying OpenREM's upstream RF test files (none vendored): a Philips Azurion
+  report now calculates end to end, and the others name their missing data.
+
 - **Fixes from the manual smoke run** (2026-10-07) — after results are invalidated or a new file is loaded, the
   single-exam Results tab now shows `—` for Total Air Kerma, Events, DAP and fluoro time and clears the per-event
   correction table, instead of keeping the previous run's numbers. Multi-exam reports no longer print "Exam Exam
