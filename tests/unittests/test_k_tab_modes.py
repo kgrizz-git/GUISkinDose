@@ -155,8 +155,6 @@ def test_invalid_mode_raises() -> None:
 
 
 def test_estimate_k_tab_assignment_maps_to_a_mode_with_a_warning() -> None:
-    import logging
-
     messages: list[str] = []
 
     class _Capture(logging.Handler):

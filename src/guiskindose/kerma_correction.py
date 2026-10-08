@@ -42,7 +42,6 @@ _CF_SUSPICIOUS_HI = 2.0
 _MAX_TABLE_ROWS = 10_000
 
 _REQUIRED_COLUMNS = frozenset({"equipment", "tube", "correction_factor"})
-_CF_MUST_BE_POSITIVE_FINITE = "Kerma-meter correction table: correction_factor must be a finite float > 0."
 _TUBE_ALIASES = {
     "single": "single",
     "single plane": "single",

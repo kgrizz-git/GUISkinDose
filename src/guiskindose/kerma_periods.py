@@ -28,6 +28,7 @@ logger = logging.getLogger("guiskindose.kerma_correction")
 
 Pair = tuple[str, str]
 
+_CF_MUST_BE_POSITIVE_FINITE = "Kerma-meter correction table: correction_factor must be a finite float > 0."
 _BAD_DATE = "Kerma-meter correction table: valid_from / valid_to must be ISO dates (YYYY-MM-DD) or blank."
 _BAD_RANGE = "Kerma-meter correction table: valid_from must not be after valid_to."
 _OVERLAP = "Kerma-meter correction table: calibration periods for the same equipment and tube must not overlap."
@@ -102,7 +103,6 @@ def _check_overlaps(rows: list[CalibrationRow]) -> None:
 def _parse_row(row: Mapping[str, Any]) -> tuple[Pair, CalibrationRow]:
     """Validate one normalized row dict and return its pair and calibration row."""
     from guiskindose.kerma_correction import (
-        _CF_MUST_BE_POSITIVE_FINITE,
         _warn_suspicious_factor,
         normalize_equipment_label,
         normalize_tube,
