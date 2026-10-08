@@ -11,7 +11,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 ### Fixed
 
 - **RDSR CodeQL cleanup** (2026-10-08) — explicitly mark the normalizer's input-error
-  imports as public re-exports and explain the characterization helper's missingness-check
+  imports as public re-exports with an explicit `__all__` list and explain the characterization helper's missingness-check
   exception fallback, preserving existing behavior.
 
 ### Added
