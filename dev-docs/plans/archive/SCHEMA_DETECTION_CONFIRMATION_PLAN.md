@@ -1,5 +1,7 @@
 # Schema detection confirmation
 
+**Complete** (2026-10-09). Archived after the exclusion, the import-preview caption, and the preview-refresh guard landed on `radimetrics-detection-triggers`.
+
 Short follow-on to the marker and two-column auto-detect rule. Two changes. Do not compare hit counts instead of recall.
 
 ## Out of scope

@@ -162,7 +162,6 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
-| [plans/SCHEMA_DETECTION_CONFIRMATION_PLAN.md](plans/SCHEMA_DETECTION_CONFIRMATION_PLAN.md) | Stop `StationName` and `DeviceSerialNumber` from electing a raw RDSR-like table, and show a confirmation line beside the auto-detected schema badge. |
 | [plans/archive/RDSR_INPUT_HARDENING_PLAN.md](plans/archive/RDSR_INPUT_HARDENING_PLAN.md) | **Completed** — normalizer hardening for real-world RDSRs (OpenREM upstream survey): scale-only units, equal-duplicate collapse, required-concept contract, zero-dose drop, value-free `RdsrInputError`. Archived 2026-10-08. |
 | [plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) | **Completed** — prevent inherited Plane B zero transmission from silently zeroing dose; validate tube identity; fix unmatched-model GUI alerts; standardize transmission terminology. Archived 2026-09-10. |
 | [plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md) | **Packaging/runtime fix** — correction manifest and validation; package-resource provider; remove the CWD-created database default; verify wheel behavior and numerical parity. |
@@ -188,6 +187,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md](plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md) | **Complete** (2026-10-09) — `StationName` and `DeviceSerialNumber` no longer elect a raw RDSR-like table; import preview says when a schema was read from the file and asks for confirmation on a two-column match. |
 | [plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md) | **Complete** (2026-10-08) — CLI/API `TabularImportOptions` parity with GUI expert post-normalization `Tx ↔ Tz` / `Ap1×−1` / `Ap2×−1`; non-tabular rejection. |
 | [plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md) | **Complete** (archived 2026-10-08) — native window size/position/maximized persistence on `--native` launch; first run maximized. |
 | [plans/archive/DEPENDENCY_AUDIT_PLAN.md](plans/archive/DEPENDENCY_AUDIT_PLAN.md) | **Complete** (archived 2026-10-08) — lockfile `uv audit` wrapper with `pip-audit` fallback; pre-push + CI. |

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from guiskindose.gui.schema_detection_notice import schema_detection_notice_lines
 from guiskindose.gui.ui_copy import copy_text
 from guiskindose.input_adapters.models import InputProvenance
@@ -52,3 +54,8 @@ def test_dicom_returns_empty_even_when_auto_provenance():
 
 def test_none_provenance_returns_empty():
     assert schema_detection_notice_lines(None, "csv") == []
+
+
+def test_partial_provenance_without_detection_fields_returns_empty():
+    prov = SimpleNamespace(schema_name="radimetrics")
+    assert schema_detection_notice_lines(prov, "csv") == []

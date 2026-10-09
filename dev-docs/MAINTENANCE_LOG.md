@@ -42,10 +42,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   preview, GUI flags, export-plus-DICOM, `python -m guiskindose.main`, and an end-to-end
   `--swap-lat-lon` PSD change.
 
+- **Schema detection confirmation plan archived** (2026-10-09) — execution plan moved to
+  `plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md`.
+
 - **TabularImportOptions CLI plan archived** (2026-10-08) — Phases 0–3 complete; execution plan moved to
   `plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md`; vendor-coordinate and tabular-input docs updated.
 
 ### Fixed
+
+- **Import-preview caption survives a partial provenance** (2026-10-09) —
+  `schema_detection_notice_lines` reads `detection_mode` and `matched_column_count` with
+  `getattr`, so a stand-in that only has `schema_name` hides the caption instead of raising.
+  The import-preview coverage controller now stubs `schema_detection_caption`.
 
 - **RDSR CodeQL cleanup** (2026-10-08) — explicitly mark the normalizer's input-error
   imports as public re-exports with an explicit `__all__` list and explain the characterization helper's missingness-check
