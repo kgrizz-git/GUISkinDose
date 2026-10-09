@@ -122,3 +122,154 @@ def test_gui_port_flag_rejects_bad_values(argv: list[str]) -> None:
     with pytest.raises(SystemExit) as excinfo:
         get_argument_parser(argv)
     assert excinfo.value.code == 2
+
+
+def test_resolve_file_paths_expands_missing_glob(tmp_path: Path) -> None:
+    from guiskindose.__main__ import _resolve_file_paths
+
+    (tmp_path / "a.csv").write_text("x\n", encoding="utf-8")
+    (tmp_path / "b.csv").write_text("y\n", encoding="utf-8")
+    resolved = _resolve_file_paths([str(tmp_path / "*.csv")])
+    assert len(resolved) == 2
+    assert {Path(name).name for name in resolved} == {"a.csv", "b.csv"}
+
+
+def test_cli_preview_expands_globs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from guiskindose import __main__ as cli_module
+
+    seen: list[str] = []
+
+    def fake_preview(path, **_kwargs) -> None:
+        seen.append(str(path))
+
+    (tmp_path / "a.csv").write_text("x\n", encoding="utf-8")
+    (tmp_path / "b.csv").write_text("y\n", encoding="utf-8")
+    monkeypatch.setattr(cli_module, "preview_input_file", fake_preview)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["guiskindose", "--input-preview-only", "--file-path", str(tmp_path / "*.csv")],
+    )
+    cli()
+    assert {Path(p).name for p in seen} == {"a.csv", "b.csv"}
+
+
+def test_cli_preview_rejects_mixed_tabular_and_dicom(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.input_adapters.import_options import PREVIEW_NON_TABULAR_MESSAGE
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["guiskindose", "--input-preview-only", "--file-path", "events.csv", "scan.dcm"],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        cli()
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert PREVIEW_NON_TABULAR_MESSAGE in err
+    assert "scan.dcm" not in err
+    assert "events.csv" not in err
+
+
+def test_cli_gui_with_export_format_still_launches_gui(monkeypatch: pytest.MonkeyPatch) -> None:
+    gui_app = pytest.importorskip("guiskindose.gui.app")
+    called: list[tuple[bool, int | None]] = []
+
+    def fake_run_gui(*, native: bool = False, port: int | None = None) -> None:
+        called.append((native, port))
+
+    monkeypatch.setattr(gui_app, "run_gui", fake_run_gui)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["guiskindose", "--mode", "gui", "--export-format", "pdf"],
+    )
+    cli()
+    assert called == [(False, None)]
+
+
+def test_cli_preview_rejects_non_tabular(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    from guiskindose.input_adapters.import_options import PREVIEW_NON_TABULAR_MESSAGE
+
+    monkeypatch.setattr(sys, "argv", ["guiskindose", "--input-preview-only", "--file-path", "scan.dcm"])
+    with pytest.raises(SystemExit) as excinfo:
+        cli()
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert PREVIEW_NON_TABULAR_MESSAGE in err
+    assert "scan.dcm" not in err
+
+
+def test_cli_preview_rejects_aggregate(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    from guiskindose.input_adapters.import_options import PREVIEW_AGGREGATE_MESSAGE
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["guiskindose", "--input-preview-only", "--aggregate", "--file-path", "events.csv"],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        cli()
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert PREVIEW_AGGREGATE_MESSAGE in err
+    assert "events.csv" not in err
+
+
+def test_cli_rejects_coordinate_flags_with_gui(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.input_adapters.import_options import GUI_IMPORT_OPTIONS_MESSAGE
+
+    monkeypatch.setattr(sys, "argv", ["guiskindose", "--mode", "gui", "--swap-lat-lon"])
+    with pytest.raises(SystemExit) as excinfo:
+        cli()
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert GUI_IMPORT_OPTIONS_MESSAGE in err
+
+
+def test_cli_export_rejects_coordinate_flag_on_dicom(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.input_adapters.import_options import IMPORT_OPTIONS_NON_TABULAR_MESSAGE
+
+    out = tmp_path / "report.xlsx"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "guiskindose",
+            "--export-format",
+            "xlsx",
+            "--export-path",
+            str(out),
+            "--swap-lat-lon",
+            "--file-path",
+            "scan.dcm",
+        ],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        cli()
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert IMPORT_OPTIONS_NON_TABULAR_MESSAGE in err
+    assert "scan.dcm" not in err
+    assert not out.exists()
+
+
+def test_python_module_main_delegates_to_cli() -> None:
+    import subprocess
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "guiskindose.main", "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0
+    assert "--swap-lat-lon" in proc.stdout
+    assert "--flip-ap1" in proc.stdout
+    assert "--flip-ap2" in proc.stdout

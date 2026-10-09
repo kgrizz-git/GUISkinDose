@@ -1,4 +1,8 @@
-"""Entry point and CLI orchestration for GUISkinDose."""
+"""Public API for GUISkinDose: ``main()``, analysis helpers, and input preview.
+
+CLI dispatch lives in ``guiskindose.__main__`` (console script,
+``python -m guiskindose``, and ``python -m guiskindose.main``).
+"""
 
 import logging
 from collections.abc import Sequence
@@ -23,9 +27,12 @@ from guiskindose.helpers.parse_settings_to_settings_class import (
 )
 from guiskindose.helpers.read_and_normalize_rdsr_data import read_and_normalise_rdsr_data
 from guiskindose.input_adapters.import_options import (
+    PREVIEW_NON_TABULAR_MESSAGE,
+    TABULAR_SUFFIXES,
     TabularImportOptions,
     coordinate_override_preview_line,
     reject_import_options_for_non_tabular,
+    reject_non_tabular_paths,
 )
 from guiskindose.privacy import opaque_exam_label, safe_user_error, safe_warning
 from guiskindose.settings import PyskindoseSettings
@@ -34,8 +41,6 @@ if TYPE_CHECKING:
     import argparse
 
 logger = logging.getLogger(__name__)
-
-_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 
 def _settings_with_output_format(
@@ -67,7 +72,7 @@ def _read_input_for_analysis(
 ) -> Any:
     """Load either a tabular input through its adapter or a legacy RDSR/JSON input."""
     reject_import_options_for_non_tabular([file_path], import_options)
-    if Path(file_path).suffix.lower() not in _TABULAR_SUFFIXES:
+    if Path(file_path).suffix.lower() not in TABULAR_SUFFIXES:
         return read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
 
     from guiskindose.input_adapters.registry import read_and_normalize_input
@@ -198,7 +203,7 @@ def analyze_input_file(
     input_result = _read_input_for_analysis(
         file_path, settings_obj, input_schema, sheet_name, import_options=import_options
     )
-    if Path(file_path).suffix.lower() in _TABULAR_SUFFIXES:
+    if Path(file_path).suffix.lower() in TABULAR_SUFFIXES:
         _warn_for_tabular_input(input_result)
     return _analysis_output_for_input(input_result, settings_obj, output_format)
 
@@ -259,7 +264,7 @@ def analyze_multiple_input_files(
     for fp in resolved_paths:
         fp = Path(fp)
         suffix = fp.suffix.lower()
-        if suffix in _TABULAR_SUFFIXES:
+        if suffix in TABULAR_SUFFIXES:
             result = read_and_normalize_input(
                 fp,
                 input_schema=input_schema,
@@ -306,7 +311,11 @@ def preview_input_file(
     settings: PyskindoseSettings | None = None,
     import_options: TabularImportOptions | None = None,
 ) -> None:
-    """Print a value-safe preview unless sensitive values are explicitly requested.
+    """Print a value-safe preview of a tabular input (CSV/TSV/XLSX).
+
+    Non-tabular suffixes raise :class:`UserFacingInputError`. Identifiers and
+    event values are never printed, including when ``include_sensitive_values``
+    is true (that flag is a deprecated no-op retained for CLI compatibility).
 
     ``settings`` carries CLI choices that affect parsing, such as ``--plane-code-map``;
     without it the bundled example settings are used, and a tabular file whose plane
@@ -315,30 +324,26 @@ def preview_input_file(
     Parameters
     ----------
     file_path : str | Path
-        Input file.
+        Tabular input file.
     input_schema : str | None
         Schema name, or ``None`` for auto-detection.
     sheet_name : str | int
         Workbook sheet for ``.xlsx`` input.
     include_sensitive_values : bool
-        Show raw values instead of the value-safe summary.
+        Deprecated no-op; never enables identifier or event-value output.
     settings : PyskindoseSettings | None
         Run settings from :func:`prepare_cli_settings`.
     import_options : TabularImportOptions | None
-        Optional post-normalization coordinate overrides. Rejected for
-        non-tabular paths when any flag is set.
+        Optional post-normalization coordinate overrides.
     """
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
     # The radimetrics/generic/dosetrack schemas need settings (rdsr_normalizer
     # does a manufacturer/model lookup), so supply defaults — preview never runs
     # a dose calculation, so example settings are sufficient.
+    reject_non_tabular_paths([file_path], PREVIEW_NON_TABULAR_MESSAGE)
     reject_import_options_for_non_tabular([file_path], import_options)
     settings_obj = settings if settings is not None else parse_settings_to_settings_class(settings=None)
-
-    override_line = coordinate_override_preview_line(import_options)
-    if override_line is not None:
-        print(override_line)
 
     raw = read_and_normalize_input(
         file_path,
@@ -349,6 +354,9 @@ def preview_input_file(
     )
     results = raw if isinstance(raw, list) else [raw]
     for index, result in enumerate(results):
+        override_line = coordinate_override_preview_line(import_options, result.provenance.schema_name)
+        if override_line is not None:
+            print(override_line)
         _print_input_preview(result, index, include_sensitive_values)
 
 
@@ -446,7 +454,7 @@ def build_cli_export_source(
         reject_import_options_for_non_tabular(resolved, import_options)
 
         single_tabular_multi = False
-        if len(resolved) == 1 and resolved[0].suffix.lower() in _TABULAR_SUFFIXES:
+        if len(resolved) == 1 and resolved[0].suffix.lower() in TABULAR_SUFFIXES:
             probe = read_and_normalize_input(
                 resolved[0],
                 input_schema=input_schema,
@@ -475,7 +483,7 @@ def build_cli_export_source(
 
         # Single-exam path.
         single = resolved[0]
-        if single.suffix.lower() in _TABULAR_SUFFIXES:
+        if single.suffix.lower() in TABULAR_SUFFIXES:
             adapter = read_and_normalize_input(
                 single,
                 input_schema=input_schema,
@@ -525,7 +533,7 @@ def _load_inputs_for_export(
     for fp in resolved_paths:
         fp = Path(fp)
         suffix = fp.suffix.lower()
-        if suffix in _TABULAR_SUFFIXES:
+        if suffix in TABULAR_SUFFIXES:
             result = read_and_normalize_input(
                 fp,
                 input_schema=input_schema,

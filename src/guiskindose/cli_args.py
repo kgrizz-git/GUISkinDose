@@ -78,9 +78,10 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         dest="file_path",
         help=(
-            "Path(s) to input file(s). Accepts one or more .dcm, .csv, .tsv, or .xlsx "
-            "paths. Multiple paths are processed as separate exams. A single tabular "
-            "file containing multiple study identifiers is automatically split."
+            "Path(s) to input file(s). Accepts one or more .dcm, .json, .csv, .tsv, "
+            ".xlsx, or .xlsm paths, or a glob. Multiple paths are processed as separate "
+            "exams. A single tabular file containing multiple study identifiers is "
+            "automatically split."
         ),
     )
 

@@ -189,6 +189,25 @@ def test_dosetrack_ambiguous_plane_codes_need_a_map_and_the_map_reaches_the_prev
     assert "Events loaded: 5" in with_map.stdout
 
 
+def test_swap_lat_lon_flag_changes_psd_on_radimetrics(tmp_path: Path) -> None:
+    settings = _write_settings(tmp_path / "swap.json")
+    common = [
+        "-f",
+        str(_NEWER_SINGLE),
+        "-s",
+        str(settings),
+        "--input-schema",
+        "radimetrics",
+        "--output-format",
+        "json",
+    ]
+    baseline, _ = _run(*common)
+    swapped, stderr = _run(*common, "--swap-lat-lon")
+    assert swapped["psd"] != baseline["psd"]
+    assert swapped["psd"] > 0
+    assert not any(word in stderr for word in _LEAK_WORDS)
+
+
 def test_dosetrack_plane_code_map_gives_tubes_in_a_full_run(tmp_path: Path) -> None:
     settings = _write_settings(tmp_path / "dt.json")
     result, _ = _run(

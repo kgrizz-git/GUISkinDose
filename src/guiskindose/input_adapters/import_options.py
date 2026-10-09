@@ -1,17 +1,9 @@
 """Post-normalization tabular import coordinate overrides (GUI/CLI parity).
 
-Purpose: apply expert coordinate-correction flags to an internal event DataFrame
-after adapter normalization — Tx↔Tz swap, Ap1 negation, Ap2 negation.
-
-Inputs: a pandas DataFrame in GUISkinDose internal column convention, the
-adapter ``schema_name`` string, and a :class:`TabularImportOptions` instance
-(or ``None`` for identity).
-
-Outputs: a new DataFrame copy with selected transforms applied; the input frame
-is never mutated.
-
-Requirements: pandas and ``UserFacingInputError`` for suffix rejection; no
-optional GUI extra.
+Apply expert Tx↔Tz swap and Ap1/Ap2 negation to an internal event DataFrame
+after adapter normalization. ``None`` or all-false options are a numeric identity
+on a copy; the input frame is never mutated. Also owns tabular suffix checks and
+value-safe CLI rejection messages. No optional GUI extra.
 """
 
 from __future__ import annotations
@@ -24,11 +16,17 @@ import pandas as pd
 
 from guiskindose.privacy import UserFacingInputError
 
-_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
+TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 IMPORT_OPTIONS_NON_TABULAR_MESSAGE = (
     "Coordinate import flags (--swap-lat-lon, --flip-ap1, --flip-ap2) apply only to "
     "tabular inputs (.csv, .tsv, .xlsx, .xlsm)."
+)
+PREVIEW_NON_TABULAR_MESSAGE = "Input preview applies only to tabular inputs (.csv, .tsv, .xlsx, .xlsm)."
+PREVIEW_AGGREGATE_MESSAGE = "--input-preview-only cannot be combined with --aggregate."
+GUI_IMPORT_OPTIONS_MESSAGE = (
+    "Coordinate import flags (--swap-lat-lon, --flip-ap1, --flip-ap2) apply only to "
+    "headless tabular runs, not --mode gui."
 )
 
 
@@ -45,33 +43,54 @@ class TabularImportOptions:
         return self.swap_lat_lon or self.flip_ap1 or self.flip_ap2
 
 
+def reject_non_tabular_paths(paths: Sequence[str | Path], message: str) -> None:
+    """Raise ``UserFacingInputError`` when any path suffix is not tabular.
+
+    Uses suffix only (case-insensitive); does not open or stat files.
+    """
+    for path in paths:
+        if Path(path).suffix.lower() not in TABULAR_SUFFIXES:
+            raise UserFacingInputError(message)
+
+
 def reject_import_options_for_non_tabular(
     paths: Sequence[str | Path],
     options: TabularImportOptions | None,
 ) -> None:
-    """Raise when coordinate import flags are set for a non-tabular path suffix.
-
-    Uses suffix only (case-insensitive); does not open or stat files.
-    """
+    """Raise when coordinate import flags are set for a non-tabular path suffix."""
     if options is None or not options.any_set():
         return
-    for path in paths:
-        if Path(path).suffix.lower() not in _TABULAR_SUFFIXES:
-            raise UserFacingInputError(IMPORT_OPTIONS_NON_TABULAR_MESSAGE)
+    reject_non_tabular_paths(paths, IMPORT_OPTIONS_NON_TABULAR_MESSAGE)
 
 
-def coordinate_override_preview_line(options: TabularImportOptions | None) -> str | None:
-    """Return a value-safe preview line naming enabled flags, or ``None`` if none."""
+def coordinate_override_preview_line(
+    options: TabularImportOptions | None,
+    schema_name: str | None = None,
+) -> str | None:
+    """Return a value-safe preview line naming applied and skipped flags.
+
+    ``swap_lat_lon`` is listed as skipped when ``schema_name`` is ``normalized``.
+    ``None`` or all-false options yield ``None``.
+    """
     if options is None or not options.any_set():
         return None
-    names: list[str] = []
+    applied: list[str] = []
+    skipped: list[str] = []
     if options.swap_lat_lon:
-        names.append("swap_lat_lon")
+        if schema_name == "normalized":
+            skipped.append("swap_lat_lon")
+        else:
+            applied.append("swap_lat_lon")
     if options.flip_ap1:
-        names.append("flip_ap1")
+        applied.append("flip_ap1")
     if options.flip_ap2:
-        names.append("flip_ap2")
-    return f"Coordinate overrides applied: {', '.join(names)}"
+        applied.append("flip_ap2")
+    parts: list[str] = []
+    if applied:
+        parts.append(f"Coordinate overrides applied: {', '.join(applied)}")
+    if skipped:
+        parts.append(f"Coordinate overrides skipped for normalized schema: {', '.join(skipped)}")
+    return "; ".join(parts) if parts else None
 
 
 def _swap_tx_tz(df: pd.DataFrame) -> None:

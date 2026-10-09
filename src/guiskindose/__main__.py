@@ -19,8 +19,13 @@ from guiskindose.cli_args import import_options_from_args
 from guiskindose.constants import RUN_ARGUMENTS_MODE_GUI
 from guiskindose.debug import configure_logging
 from guiskindose.input_adapters.import_options import (
+    GUI_IMPORT_OPTIONS_MESSAGE,
+    PREVIEW_AGGREGATE_MESSAGE,
+    PREVIEW_NON_TABULAR_MESSAGE,
+    TABULAR_SUFFIXES,
     TabularImportOptions,
     reject_import_options_for_non_tabular,
+    reject_non_tabular_paths,
 )
 from guiskindose.main import (
     analyze_input_file,
@@ -39,8 +44,6 @@ if TYPE_CHECKING:
     import argparse
 
 logger = logging.getLogger(__name__)
-
-_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 
 def _call_or_exit(action: Callable[[], Any]) -> Any:
@@ -82,14 +85,20 @@ def _resolve_file_paths(file_paths_raw: list[str]) -> list[str]:
 
 
 def _run_preview(args: argparse.Namespace, import_opts: TabularImportOptions) -> None:
-    """Print value-safe previews for each ``--file-path``."""
+    """Print value-safe previews for each resolved tabular ``--file-path``."""
     if not args.file_path:
         print("--input-preview-only requires --file-path", file=sys.stderr)
         sys.exit(1)
+    if getattr(args, "aggregate_only", False):
+        raise UserFacingInputError(PREVIEW_AGGREGATE_MESSAGE)
+    if getattr(args, "export_format", None):
+        _validate_export_or_exit(args, has_files=True)
+    file_paths = _resolve_file_paths(list(args.file_path))
+    reject_non_tabular_paths(file_paths, PREVIEW_NON_TABULAR_MESSAGE)
     preview_settings = prepare_cli_settings(args)
 
     def _preview_all() -> None:
-        for single_path in args.file_path:
+        for single_path in file_paths:
             preview_input_file(
                 single_path,
                 input_schema=getattr(args, "input_schema", None),
@@ -137,7 +146,7 @@ def _run_single_file(
 ) -> None:
     """Analyze one tabular file or one RDSR/JSON file."""
     aggregate_only = getattr(args, "aggregate_only", False)
-    if Path(single_path).suffix.lower() in _TABULAR_SUFFIXES:
+    if Path(single_path).suffix.lower() in TABULAR_SUFFIXES:
 
         def _analyze_tabular() -> Any:
             return analyze_input_file(
@@ -203,10 +212,10 @@ def cli() -> None:
     # native mode to add a file sink; the call is idempotent.
     configure_logging()
 
-    # Reject incompatible --export-format combinations before any branch runs.
-    _validate_export_or_exit(args, has_files=bool(args.file_path))
-
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
+        if import_opts.any_set():
+            print(GUI_IMPORT_OPTIONS_MESSAGE, file=sys.stderr)
+            sys.exit(1)
         from guiskindose.gui.app import run_gui
 
         run_gui(
@@ -215,7 +224,7 @@ def cli() -> None:
         )
         return
     if getattr(args, "input_preview_only", False):
-        _run_preview(args, import_opts)
+        _call_or_exit(lambda: _run_preview(args, import_opts))
         return
     _run_headless(args, import_opts)
 

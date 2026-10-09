@@ -478,21 +478,23 @@ Helpers: `geometry_preview.py` (`rdsr_df_for_geometry_preview`, `clamp_geometry_
 
 ---
 
-## 10. CLI (`main.py`)
+## 10. CLI (`__main__.py`)
 
 ```bash
-python -m guiskindose.main [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
+python -m guiskindose [--mode headless|gui] [--file-path PATH] [--settings PATH] [--native]
 ```
+
+The `guiskindose` console script and `python -m guiskindose.main` dispatch through the same `__main__.cli()`.
 
 | Argument | Description |
 |----------|-------------|
 | `--mode headless` | Run calculation (default) |
 | `--mode gui` | Launch the NiceGUI app |
-| `--file-path` | Path to RDSR `.dcm` file |
+| `--file-path` | One or more inputs: DICOM RDSR `.dcm`, JSON event file, tabular `.csv`/`.tsv`/`.xlsx`/`.xlsm`, or a glob |
 | `--settings` | Path to settings JSON file |
 | `--input-schema` | Tabular schema: `auto`, `normalized`, `generic_rdsr_like`, `radimetrics`, `dosetrack` |
 | `--sheet-name` | Excel sheet name or 0-based index for `.xlsx` / `.xlsm` inputs |
-| `--input-preview-only` | Print a value-safe tabular input summary without running dose calculation |
+| `--input-preview-only` | Print a value-safe tabular input summary (tabular only; globs expanded; incompatible with `--aggregate`) |
 | `--swap-lat-lon` | Post-normalization expert override: swap `Tx` ↔ `Tz` (tabular only; not GE `swap_lateral_longitudinal`) |
 | `--flip-ap1` | Post-normalization expert override: negate `Ap1` (primary angle) |
 | `--flip-ap2` | Post-normalization expert override: negate `Ap2` (secondary angle) |

@@ -14,9 +14,10 @@ It is a fork of the upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose)
 
 ```
 src/guiskindose/          # Main package
-  main.py                  # Entry point: main() and CLI dispatch
-  __main__.py              # `python -m guiskindose` entry; re-uses get_argument_parser
-  cli_args.py              # argparse construction (extracted from main.py); re-exported via main.py
+  main.py                  # Public API: main(), analyze_input_file(); no CLI dispatch
+  __main__.py              # CLI entry for console script, `python -m guiskindose`, and `python -m guiskindose.main`
+  cli_args.py              # argparse construction; re-exported via main.py
+  input_adapters/          # Tabular CSV/TSV/XLSX schemas and TabularImportOptions
   analyze_data.py          # Core orchestration function
   phantom_class.py         # Phantom (patient / table / pad) model
   beam_class.py            # X-ray beam and detector model
@@ -51,12 +52,12 @@ GUISkinDose is organized in layers so settings, dose physics, and presentation s
 |-------|---------|------|
 | **L0 — Shared** | `constants.py`, `debug.py` | String keys, debug helpers; no business logic |
 | **L1 — Settings** | `settings/` | `PyskindoseSettings` and related dataclasses; may use L0, `helpers/` |
-| **L2 — Helpers & input** | `helpers/`, `rdsr_parser.py`, `rdsr_normalizer.py` | Parsing, normalization, settings loading |
+| **L2 — Helpers & input** | `helpers/`, `rdsr_parser.py`, `rdsr_normalizer.py`, `input_adapters/` | Parsing, RDSR/tabular normalization, settings loading |
 | **L3 — Domain** | `beam_class.py`, `phantom_class.py`, `geom_calc.py`, `corrections.py`, `correction_data.py`, `db_connect.py` | Geometry, phantoms, beams, correction factors |
 | **L4 — Dose pipeline** | `calculate_dose/` | Per-event dose accumulation (uses L3) |
 | **L5 — Presentation** | `plotting/`, `format_export_data.py` | Plotly plots and export formatting |
 | **L6 — Orchestration** | `analyze_data.py` | Mode dispatch: geometry plots vs dose calculation |
-| **L7 — Entry** | `main.py`, `__main__.py`, `cli_args.py` | CLI argparse and public `main()` API |
+| **L7 — Entry** | `__main__.py`, `main.py`, `cli_args.py` | CLI dispatch (`__main__.cli`), argparse, and public `main()` API |
 | **L8 — GUI (optional extra)** | `gui/` | NiceGUI app; uses orchestration and input, not dose internals |
 
 **Multi-exam Geometry (GUI):** `gui/tabs/geometry.py` binds offset sliders to `loaded_exam_meta[active_exam_index]`; `gui/geometry_preview.py` slices `rdsr_df` via `EXAM_INDEX_COLUMN`; composite preview pauses via `procedure_live_preview_paused` above 30 events in any `Full procedure` path (single-exam or multi-exam, composite or not). Calculate/Settings summaries use `gui/summary_formatters.py` and `per_exam_offsets_version` on `AppState`.
@@ -75,7 +76,7 @@ flowchart BT
   PLOT[L5 plotting / format_export]
   DOSE[L4 calculate_dose]
   DOMAIN[L3 domain models]
-  INPUT[L2 helpers / rdsr_*]
+  INPUT[L2 helpers / rdsr_* / input_adapters]
   SETTINGS[L1 settings]
   SHARED[L0 constants / debug]
 
@@ -189,7 +190,7 @@ Key flags (see `python -m guiskindose --help` for the full list):
 | `--settings` / `-s` | Path to settings JSON file |
 | `--input-schema` | Tabular schema: `auto`, `normalized`, `generic_rdsr_like`, `radimetrics`, `dosetrack` |
 | `--sheet-name` | Sheet name or 0-based index for Excel inputs |
-| `--input-preview-only` | Print a value-safe input summary without running dose calculation |
+| `--input-preview-only` | Print a value-safe tabular input summary (tabular suffixes only; globs expanded; incompatible with `--aggregate`) |
 | `--swap-lat-lon` | Post-normalization expert override: swap `Tx` ↔ `Tz` on tabular inputs (not GE `swap_lateral_longitudinal`) |
 | `--flip-ap1` | Post-normalization expert override: negate `Ap1` (primary angle) |
 | `--flip-ap2` | Post-normalization expert override: negate `Ap2` (secondary angle) |

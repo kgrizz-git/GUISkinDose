@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **CLI preview and dispatch** (2026-10-08) — `--input-preview-only` is tabular-only (DICOM/JSON
+  is a usage error, not a silent calculation), expands `--file-path` globs like other headless
+  paths, and cannot be combined with `--aggregate`. `python -m guiskindose.main` uses the same
+  CLI as `python -m guiskindose`. `--mode gui` with `--export-format` still launches the GUI.
+
 - **The correction dialog now shows exactly what the calculation applies** (2026-10-07) — Confirm stores the
   calibration period the dialog displayed for the first exam (later exams follow it), so a pair with no row in
   that period shows and applies the default rather than silently using its own latest row. A manual factor is
@@ -47,7 +52,7 @@ That keeps SemVer and contributor history organized.
   library callers can apply the same post-normalization expert overrides as the GUI upload preview:
   `Tx ↔ Tz` (`--swap-lat-lon` / `swap_lat_lon`), `Ap1×−1` (`--flip-ap1` / `flip_ap1`), and
   `Ap2×−1` (`--flip-ap2` / `flip_ap2`). Flags apply only to tabular inputs; combining any flag with
-  a DICOM RDSR or JSON event file exits with a usage error before calculation starts.
+  a DICOM RDSR or JSON event file, or with `--mode gui`, exits with a usage error before work starts.
 - **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.
   Settings keeps the run configuration, phantom, per-exam offsets and coordinate fixes, and visual options.
   The new Corrections tab (tab 4; Geometry, Calculate, Results, and Export move to 5 to 8) holds dose-physics

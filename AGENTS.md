@@ -50,8 +50,8 @@ print(output["psd"])  # peak skin dose in mGy
 
 | File | Role |
 |------|------|
-| `src/guiskindose/main.py` | Entry point: `main()`, CLI dispatch; re-exports `get_argument_parser` |
-| `src/guiskindose/__main__.py` | `python -m guiskindose` and `guiskindose` console script |
+| `src/guiskindose/main.py` | Public API: `main()`, `analyze_input_file()`; re-exports `get_argument_parser` |
+| `src/guiskindose/__main__.py` | CLI dispatch for `python -m guiskindose`, `python -m guiskindose.main`, and the `guiskindose` console script |
 | `src/guiskindose/cli_args.py` | argparse construction (extracted from `main.py`); per-flag helpers |
 | `src/guiskindose/analyze_data.py` | Core orchestration |
 | `src/guiskindose/phantom_class.py` | Patient/table/pad phantom mesh |

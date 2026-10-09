@@ -10,6 +10,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Tabular import CLI review fixes** (2026-10-08) — `TABULAR_SUFFIXES` is defined once in
+  `import_options.py`; preview rejects non-tabular and mixed lists before load and expands globs;
+  GUI plus `--export-format` still launches the GUI; preview override lines skip `swap_lat_lon` on
+  the `normalized` schema; CLI dispatch tests cover glob preview, non-tabular preview, aggregate
+  preview, GUI flags, export-plus-DICOM, `python -m guiskindose.main`, and an end-to-end
+  `--swap-lat-lon` PSD change.
+
 - **TabularImportOptions CLI plan archived** (2026-10-08) — Phases 0–3 complete; execution plan moved to
   `plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md`; vendor-coordinate and tabular-input docs updated.
 

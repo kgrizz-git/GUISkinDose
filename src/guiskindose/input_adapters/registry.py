@@ -16,6 +16,7 @@ from guiskindose.input_adapters.column_mapper import _normalize_str, detect_head
 from guiskindose.input_adapters.dosetrack import DOSETRACK_COLUMN_NAMES
 from guiskindose.input_adapters.generic_rdsr import GENERIC_RDSR_COLUMN_NAMES
 from guiskindose.input_adapters.import_options import (
+    TABULAR_SUFFIXES,
     TabularImportOptions,
     apply_tabular_import_coordinate_options,
 )
@@ -38,7 +39,6 @@ class SchemaDetectionError(ValueError):
     """
 
 
-_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 # Schemas marked (stub) are wired for explicit selection but raise NotImplementedError
 # until a real export fixture is available to build the column map.
 _SUPPORTED_SCHEMAS = (
@@ -257,7 +257,7 @@ def read_and_normalize_input(
     path = Path(file_path)
     suffix = path.suffix.lower()
 
-    if suffix not in _TABULAR_SUFFIXES:
+    if suffix not in TABULAR_SUFFIXES:
         raise ValueError(
             f"Unsupported suffix {suffix!r}. "
             "The tabular adapter handles .csv, .tsv, .xlsx, .xlsm. "

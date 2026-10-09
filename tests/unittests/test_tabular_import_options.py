@@ -7,10 +7,14 @@ import pytest
 
 from guiskindose.input_adapters.import_options import (
     IMPORT_OPTIONS_NON_TABULAR_MESSAGE,
+    PREVIEW_NON_TABULAR_MESSAGE,
     TabularImportOptions,
     apply_tabular_import_coordinate_options,
+    coordinate_override_preview_line,
     reject_import_options_for_non_tabular,
+    reject_non_tabular_paths,
 )
+from guiskindose.input_adapters.models import InputAdapterResult
 from guiskindose.input_adapters.registry import read_and_normalize_input
 from guiskindose.main import _read_input_for_analysis, analyze_input_file, preview_input_file
 from guiskindose.privacy import UserFacingInputError
@@ -199,6 +203,8 @@ def test_read_and_normalize_normalized_swap_no_op_angles_flip():
         NORMALIZED_FIXTURE,
         import_options=TabularImportOptions(swap_lat_lon=True, flip_ap1=True, flip_ap2=True),
     )
+    assert isinstance(base, InputAdapterResult)
+    assert isinstance(transformed, InputAdapterResult)
     base_coords = _coord_columns(base.normalized_data)
     out_coords = _coord_columns(transformed.normalized_data)
     assert list(out_coords["Tx"]) == list(base_coords["Tx"])
@@ -271,9 +277,7 @@ def test_reject_import_options_no_op_for_dicom_without_flags(options):
 def test_cli_parser_coordinate_flags_set_dests():
     from guiskindose.cli_args import get_argument_parser
 
-    args = get_argument_parser(
-        ["--swap-lat-lon", "--flip-ap1", "--flip-ap2", "--file-path", "events.csv"]
-    )
+    args = get_argument_parser(["--swap-lat-lon", "--flip-ap1", "--flip-ap2", "--file-path", "events.csv"])
     assert args.swap_lat_lon is True
     assert args.flip_ap1 is True
     assert args.flip_ap2 is True
@@ -320,10 +324,9 @@ def test_analyze_input_file_dcm_with_flag_raises_before_rdsr_parse(monkeypatch: 
     def fail_if_called(*_args, **_kwargs):
         raise AssertionError("RDSR parse should not run when import flags reject non-tabular input")
 
-    monkeypatch.setattr(
-        "guiskindose.main.read_and_normalise_rdsr_data",
-        fail_if_called,
-    )
+    import guiskindose.main as guiskindose_main
+
+    monkeypatch.setattr(guiskindose_main, "read_and_normalise_rdsr_data", fail_if_called)
     with pytest.raises(UserFacingInputError):
         analyze_input_file(
             "scan.dcm",
@@ -342,5 +345,36 @@ def test_preview_input_file_prints_coordinate_override_line(capsys):
         import_options=TabularImportOptions(swap_lat_lon=True, flip_ap1=True),
     )
     captured = capsys.readouterr().out
-    assert "Coordinate overrides applied: swap_lat_lon, flip_ap1" in captured
+    assert "Coordinate overrides applied: flip_ap1" in captured
+    assert "Coordinate overrides skipped for normalized schema: swap_lat_lon" in captured
     assert str(NORMALIZED_FIXTURE) not in captured
+
+
+@pytest.mark.parametrize("options", [None, TabularImportOptions()])
+def test_coordinate_override_preview_line_none_when_no_flags(options):
+    assert coordinate_override_preview_line(options) is None
+    assert coordinate_override_preview_line(options, "dosetrack") is None
+
+
+def test_coordinate_override_preview_line_skips_swap_on_normalized():
+    line = coordinate_override_preview_line(
+        TabularImportOptions(swap_lat_lon=True, flip_ap2=True),
+        "normalized",
+    )
+    assert line == (
+        "Coordinate overrides applied: flip_ap2; Coordinate overrides skipped for normalized schema: swap_lat_lon"
+    )
+
+
+def test_preview_input_file_rejects_non_tabular_without_flags():
+    with pytest.raises(UserFacingInputError) as excinfo:
+        preview_input_file("scan.dcm")
+    assert excinfo.value.user_message() == PREVIEW_NON_TABULAR_MESSAGE
+    assert "scan.dcm" not in str(excinfo.value)
+
+
+def test_reject_non_tabular_paths_uses_fixed_message():
+    with pytest.raises(UserFacingInputError) as excinfo:
+        reject_non_tabular_paths(["scan.json"], PREVIEW_NON_TABULAR_MESSAGE)
+    assert excinfo.value.user_message() == PREVIEW_NON_TABULAR_MESSAGE
+    assert "scan.json" not in str(excinfo.value)
