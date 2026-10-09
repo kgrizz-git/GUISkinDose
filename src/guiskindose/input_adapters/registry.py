@@ -92,7 +92,9 @@ _TRIGGER_EXCLUSIONS: dict[str, frozenset[str]] = {
             "deviceserialnumber",
         }
     ),
-    "generic_rdsr_like": frozenset({"manufacturer", "kvp_kv"}),
+    "generic_rdsr_like": frozenset(
+        {"manufacturer", "kvp_kv", "stationname", "deviceserialnumber"}
+    ),
     "dosetrack": frozenset(
         {
             "air kerma (mgy)",

@@ -162,6 +162,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/SCHEMA_DETECTION_CONFIRMATION_PLAN.md](plans/SCHEMA_DETECTION_CONFIRMATION_PLAN.md) | Stop `StationName` and `DeviceSerialNumber` from electing a raw RDSR-like table, and show a confirmation line beside the auto-detected schema badge. |
 | [plans/archive/RDSR_INPUT_HARDENING_PLAN.md](plans/archive/RDSR_INPUT_HARDENING_PLAN.md) | **Completed** — normalizer hardening for real-world RDSRs (OpenREM upstream survey): scale-only units, equal-duplicate collapse, required-concept contract, zero-dose drop, value-free `RdsrInputError`. Archived 2026-10-08. |
 | [plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](plans/archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) | **Completed** — prevent inherited Plane B zero transmission from silently zeroing dose; validate tube identity; fix unmatched-model GUI alerts; standardize transmission terminology. Archived 2026-09-10. |
 | [plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md) | **Packaging/runtime fix** — correction manifest and validation; package-resource provider; remove the CWD-created database default; verify wheel behavior and numerical parity. |

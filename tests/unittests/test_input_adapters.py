@@ -554,11 +554,25 @@ class TestSchemaAutoDetect:
             (["Tube Voltage Peak (kV)", "Plane Code"], "dosetrack"),
             (["Equipment Name", "Air Kerma (mGy)"], "dosetrack"),
             (["DoseRP_Gy", "ManufacturerModelName"], "generic_rdsr_like"),
+            (["StationName", "DoseRP_Gy"], "generic_rdsr_like"),
             (["K_IRP", "DSD"], "normalized"),
         ],
     )
     def test_two_known_columns_and_a_marker_elect_the_schema(self, headers, schema):
         assert _detect_headers([*headers, "Foo"]) == schema
+
+    @pytest.mark.parametrize(
+        "headers",
+        [
+            ["StationName", "Manufacturer", "kVp"],
+            ["DeviceSerialNumber", "Manufacturer", "kVp"],
+        ],
+    )
+    def test_shared_identity_columns_do_not_elect_generic_rdsr(self, headers):
+        from guiskindose.input_adapters.registry import SchemaDetectionError
+
+        with pytest.raises(SchemaDetectionError, match="distinctive marker"):
+            _detect_headers(headers)
 
     def test_rf_on_an_unknown_stem_does_not_elect_radimetrics(self):
         """`(rf)` counts only when the rest of the cell is a known Radimetrics column."""
@@ -595,6 +609,8 @@ class TestSchemaAutoDetect:
         assert _SCHEMA_TRIGGERS["dosetrack"] == frozenset({"equipment name", "plane code", "tube voltage peak (kv)"})
         assert "manufacturer" not in _SCHEMA_TRIGGERS["generic_rdsr_like"]
         assert "kvp kv" not in _SCHEMA_TRIGGERS["generic_rdsr_like"]
+        assert "stationname" not in _SCHEMA_TRIGGERS["generic_rdsr_like"]
+        assert "deviceserialnumber" not in _SCHEMA_TRIGGERS["generic_rdsr_like"]
         assert "doserp gy" in _SCHEMA_TRIGGERS["generic_rdsr_like"]
         assert "model" not in _SCHEMA_TRIGGERS["normalized"]
         assert "kvp" not in _SCHEMA_TRIGGERS["normalized"]

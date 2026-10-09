@@ -42,7 +42,7 @@ When that reader runs:
 
 ## Raw RDSR-like table
 
-This is a spreadsheet whose columns are already the names produced by the RDSR parser, such as `ManufacturerModelName`, `DoseRP_Gy`, `StationName`, or `DeviceSerialNumber`. It is not a DICOM file. Units are in those column names. Auto-detect needs at least **2** known columns, including one of those parser names. The same words written with a space do not match. `Manufacturer` or `KVP_kV` alone does not elect this format, because Radimetrics uses those words too (`kVp kV`).
+This is a spreadsheet whose columns are already the names produced by the RDSR parser, such as `ManufacturerModelName` or `DoseRP_Gy`. It is not a DICOM file. Units are in those column names. Auto-detect needs at least **2** known columns, including one of those concatenated parser names. `StationName` and `DeviceSerialNumber` support the score only and do not elect this format by themselves; the same words written with a space as one header cell do not match. `Manufacturer` or `KVP_kV` alone does not elect this format, because Radimetrics uses those words too (`kVp kV`).
 
 ## Normalized table
 

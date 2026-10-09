@@ -13,7 +13,12 @@ from pathlib import Path
 import pytest
 
 from guiskindose.input_adapters.column_mapper import _normalize_str
-from guiskindose.input_adapters.registry import _AUTO_MIN_HITS, _AUTO_MIN_MARGIN, _SCHEMA_KNOWN_NAMES
+from guiskindose.input_adapters.registry import (
+    _AUTO_MIN_HITS,
+    _AUTO_MIN_MARGIN,
+    _SCHEMA_KNOWN_NAMES,
+    _TRIGGER_EXCLUSIONS,
+)
 
 DOC = Path(__file__).parent.parent.parent / "dev-docs" / "INPUT_SCHEMA_DETECTION.md"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -101,6 +106,26 @@ def test_marker_columns_appear_in_doc(doc_text: str):
     for markers in MARKERS.values():
         for marker in markers:
             assert marker in doc_text, f"Marker {marker!r} is not mentioned in the doc"
+
+
+def test_generic_rdsr_trigger_exclusions_in_score_only_cell(doc_text: str):
+    """Every generic_rdsr_like trigger exclusion is named in that row's score-only column."""
+    marker = "### Distinctive markers"
+    start = doc_text.find(marker)
+    assert start != -1, f"Doc is missing {marker!r}"
+    section = doc_text[start:]
+    score_only = ""
+    for line in section.splitlines():
+        if line.startswith("| `generic_rdsr_like`"):
+            cells = [part.strip() for part in line.split("|")]
+            assert len(cells) >= 4, "Distinctive-markers table row for generic_rdsr_like is malformed"
+            score_only = cells[3].lower()
+            break
+    assert score_only, "Distinctive-markers table has no generic_rdsr_like row"
+    for name in _TRIGGER_EXCLUSIONS["generic_rdsr_like"]:
+        assert name in score_only, (
+            f"Score-only cell for generic_rdsr_like omits exclusion {name!r}; update INPUT_SCHEMA_DETECTION.md"
+        )
 
 
 def test_distinctive_markers_are_documented(doc_text: str):

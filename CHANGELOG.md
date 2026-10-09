@@ -57,6 +57,11 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Raw RDSR-like auto-detect no longer elects on station or serial alone** (2026-10-09) —
+  `StationName` and `DeviceSerialNumber` still count toward recall but no longer elect a raw
+  RDSR-like table by themselves; a parser column such as `DoseRP_Gy` still can. Patch-level fix;
+  `pyproject.toml` stays at `1.0.0` until the next release.
+
 - **Tabular auto-detect asks when only one known column matches** (2026-10-09) — a schema is
   elected only when a distinctive marker is present and at least two of that schema's known
   columns are in the header. One column, including `Equipment Name`, `Plane Code`, `K_IRP`, or

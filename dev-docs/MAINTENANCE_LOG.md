@@ -10,10 +10,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **generic_rdsr_like trigger exclusions** (2026-10-09) — `stationname` and `deviceserialnumber`
+  join `manufacturer` and `kvp_kv` in `_TRIGGER_EXCLUSIONS`; user and maintainer docs updated.
+
 - **Schema-detection prose matched to measured recall** (2026-10-09) — the maintainer page
   states the 24-name Radimetrics fingerprint and the 13- and 12-hit counts on the shipped
-  examples. `StationName` and `DeviceSerialNumber` are documented as raw-RDSR electors.
-  `stubs.py` no longer claims those vendors are `--input-schema` choices.
+  examples. `stubs.py` no longer claims those vendors are `--input-schema` choices.
 
 - **Auto-detect hit floor** (2026-10-09) — `_AUTO_MIN_HITS` is 2. `(rf)` matches only when the
   cell text through `(rf)` is the start of a known Radimetrics column. Tests cover a lone marker,
