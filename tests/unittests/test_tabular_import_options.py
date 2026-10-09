@@ -327,11 +327,9 @@ def test_analyze_input_file_dcm_with_flag_raises_before_rdsr_parse(monkeypatch: 
     import guiskindose.main as guiskindose_main
 
     monkeypatch.setattr(guiskindose_main, "read_and_normalise_rdsr_data", fail_if_called)
+    options = TabularImportOptions(swap_lat_lon=True)
     with pytest.raises(UserFacingInputError):
-        analyze_input_file(
-            "scan.dcm",
-            import_options=TabularImportOptions(swap_lat_lon=True),
-        )
+        analyze_input_file("scan.dcm", import_options=options)
 
 
 def test_preview_input_file_prints_coordinate_override_line(capsys):
