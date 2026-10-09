@@ -18,6 +18,7 @@ Welcome to GUISkinDose's documentation!
    user/description.md
    user/install.md
    user/user_guide.md
+   gui_help/input_formats.md
    user/correction_data.md
    gui_help/positioning_offsets.md
    gui_help/geometry_workflow.md

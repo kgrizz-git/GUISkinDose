@@ -22,7 +22,10 @@
         "dev-docs/FEATURE_INVENTORY.md",
         "AGENTS.md"
       ],
-      "help": ["docs/source/gui_help/upload_workflow.md"]
+      "help": [
+        "docs/source/gui_help/upload_workflow.md",
+        "docs/source/gui_help/input_formats.md"
+      ]
     },
     "vendor_coordinates": {
       "status": "shipped_with_open_validation",

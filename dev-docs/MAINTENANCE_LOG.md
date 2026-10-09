@@ -10,6 +10,25 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Schema-detection prose matched to measured recall** (2026-10-09) — the maintainer page
+  states the 24-name Radimetrics fingerprint and the 13- and 12-hit counts on the shipped
+  examples. `StationName` and `DeviceSerialNumber` are documented as raw-RDSR electors.
+  `stubs.py` no longer claims those vendors are `--input-schema` choices.
+
+- **Auto-detect hit floor** (2026-10-09) — `_AUTO_MIN_HITS` is 2. `(rf)` matches only when the
+  cell text through `(rf)` is the start of a known Radimetrics column. Tests cover a lone marker,
+  `Modality (RF)` beside two plain Radimetrics names, and a two-column election. The user page
+  and `INPUT_SCHEMA_DETECTION.md` state the floor.
+
+- **Input-format docs checked against detection constants** (2026-10-09) —
+  `test_input_schema_doc.py` requires the user page and `INPUT_SCHEMA_DETECTION.md` to mention
+  the Radimetrics trigger substrings, the DoseTrack electors, `MODEL2MANUF`, and the stub
+  vendor names.
+
+- **Radimetrics detection triggers removed from the backlog** (2026-10-08) — auto-detect
+  now requires a distinctive marker (`registry.py` trigger sets). The product-backlog item
+  is done; the user-facing behavior is in `CHANGELOG.md`.
+
 - **Tabular import CLI review fixes** (2026-10-08) — `TABULAR_SUFFIXES` is defined once in
   `import_options.py`; preview rejects non-tabular and mixed lists before load and expands globs;
   GUI plus `--export-format` still launches the GUI; preview override lines skip `swap_lat_lon` on

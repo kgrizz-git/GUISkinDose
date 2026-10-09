@@ -1,9 +1,10 @@
 """Placeholder adapters for vendor exports with no implementation yet.
 
-Qaelum, DoseMonitor, and DoseWatch are wired into the registry for explicit
-``--input-schema`` selection so the error message names a real schema, but each
-raises ``NotImplementedError`` with implementation instructions until a real
-export is available to build its column map. They are deliberately excluded from
+Qaelum, DoseMonitor, and DoseWatch can be passed to
+``read_and_normalize_input(input_schema=...)``. Each raises
+``NotImplementedError`` with implementation instructions until a real export is
+available to build its column map. They are not CLI ``--input-schema`` choices
+and they are not in the Upload menu. They are deliberately excluded from
 auto-detection (``registry._SCHEMA_KNOWN_NAMES``).
 
 To implement one:

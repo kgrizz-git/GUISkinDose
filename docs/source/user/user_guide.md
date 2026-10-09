@@ -23,6 +23,12 @@ Typical workflow: **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** r
 Example RDSR files ship under `src/guiskindose/example_data/RDSR/`. In-app help on each tab mirrors
 `docs/source/gui_help/` (synced into the package at build time).
 
+How a DICOM RDSR, a Radimetrics export, a DoseTrack export, a raw RDSR-like table, and a
+normalized table are recognized — and what each choice changes — is in
+[How input formats are recognized](../gui_help/input_formats.md). The same page opens from the
+info icon beside **Input schema** on the Upload tab. Qaelum, DoseMonitor, and DoseWatch are
+named there as not yet implemented.
+
 ## Headless / scripted use
 
 For automation, call the package entry point with a settings object and optional RDSR path:

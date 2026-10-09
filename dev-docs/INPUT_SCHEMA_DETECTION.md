@@ -10,7 +10,8 @@ default, that test fails until this file is updated. See [Keeping this up to dat
 Source of truth in code:
 
 - Detection & scoring — `src/guiskindose/input_adapters/registry.py`
-  (`_detect_schema`, `_score_schema`, `_SCHEMA_KNOWN_NAMES`, `_AUTO_MIN_MARGIN`).
+  (`_detect_schema`, `_score_schema`, `_SCHEMA_KNOWN_NAMES`, `_SCHEMA_TRIGGERS`,
+  `_RADIMETRICS_TRIGGER_SUBSTRINGS`, `_AUTO_MIN_MARGIN`, `_AUTO_MIN_HITS`).
 - Header-row location — `src/guiskindose/input_adapters/column_mapper.py` (`detect_header_row`).
 - Per-schema fingerprints — each adapter's `*_COLUMN_NAMES` frozenset
   (`radimetrics.py`, `dosetrack.py`, `generic_rdsr.py`, `normalized.py`).
@@ -20,8 +21,8 @@ Source of truth in code:
 Both entry points default to **auto-detection** of the tabular schema from the file's column
 headers:
 
-- **GUI** — the schema selector on the Upload tab defaults to `auto` (`gui/state.py`: `n = "auto"`).
-- **CLI** — `--input-schema` defaults to `auto` (`main.py`). Pass an explicit value to override.
+- **GUI** — the schema selector on the Upload tab defaults to `auto` (`gui/state.py`: `input_schema: str = "auto"`).
+- **CLI** — `--input-schema` defaults to `auto` (`cli_args.py`). Pass an explicit value to override.
 
 The library API `read_and_normalize_input(input_schema=None)` still defaults to `normalized` for
 backward compatibility; only the two user-facing entry points default to `auto`. RDSR/DICOM
@@ -33,15 +34,29 @@ backward compatibility; only the two user-facing entry points default to `auto`.
    cells match the most known column names (metadata/title rows above the table are skipped).
 2. **Score each schema by recall.** For every candidate schema, `_score_schema` computes
    `matched / len(fingerprint)` — the fraction of that schema's known column names present in the
-   header row. Recall (not precision) is used deliberately: a real Radimetrics export has ~87
-   columns of which ~13 are recognised (poor precision, but perfect recall), so recall gives the
-   correct schema ≈ 1.0 and the others ≈ 0.
-3. **Pick the winner with a margin.** When **two or more** schemas score above zero, the highest
-   scorer wins **only if** it beats the runner-up by at least `_AUTO_MIN_MARGIN` = **0.20**;
-   otherwise detection raises `SchemaDetectionError`. When **exactly one** schema scores above
-   zero, that schema wins regardless of its absolute score (no tie is possible). If **nothing**
-   scores above zero, detection raises `SchemaDetectionError` telling the user to pass
-   `--input-schema` explicitly rather than guessing.
+   header row. Recall (not precision) is used so extra unrelated columns do not pull the score
+   down. The Radimetrics fingerprint has 24 names. The shipped newer example matches 13 of them
+   and the older example matches 12 of them. `Manufacturer` and `kVp kV` on those files also
+   match the raw RDSR-like fingerprint, and that overlap does not elect it. A header that
+   contains every fingerprint name still scores 1.0 however many extra columns it carries.
+3. **Require a distinctive marker.** Recall ranks schemas, but it does not elect one. A schema is
+   eligible only when the header contains a marker that is specific to that source (below).
+   Ordinary shared names — `Device`, `Manufacturer`, `kVp`, `Reference Point Dose`, table
+   positions — still raise the score of a real export, and they cannot win on their own. This
+   is deliberate: the Radimetrics and DoseTrack corpora in this repo are a handful of exports,
+   and the DICOM RDSRs we have are the upstream PySkinDose examples plus the OpenREM test set.
+   Those DICOM files never enter this scorer. Guessing a vendor from a few familiar column
+   names would mis-label the next unseen table.
+4. **Require at least 2 known columns, then apply the margin.** A schema is eligible only when
+   step 3's marker is present **and** the header contains at least **2** known columns for that
+   schema. When **exactly one** schema is eligible, that schema wins even if its recall is small
+   (two columns out of a long fingerprint is enough). One known column, even a distinctive one,
+   raises `SchemaDetectionError`. The CLI tells the user to pass `--input-schema`. The GUI asks
+   them to choose Radimetrics, DoseTrack, Raw RDSR-like, or Normalized and upload again. When
+   **two or more** schemas are eligible, the highest scorer wins **only if** it beats the
+   runner-up by at least `_AUTO_MIN_MARGIN` = **0.20**; otherwise detection raises
+   `SchemaDetectionError`. If **nothing** is eligible — no overlap, or only shared names — the
+   error says the header had no distinctive marker.
 
 Header matching normalises `_`, `-`, and whitespace to a single space (`_normalize_str`), so older
 underscored exports compare equal to their spaced counterparts.
@@ -51,12 +66,14 @@ underscored exports compare equal to their spaced counterparts.
 Auto-detection scores these four schemas (stubs for Qaelum, DoseMonitor, and DoseWatch exist but
 are not yet in the scoring set — they need real export fixtures):
 
-| Schema | What it is | Distinguishing marker columns |
+| Schema | What it is | Example columns the fingerprint recognizes |
 |---|---|---|
 | `normalized` | GUISkinDose's own canonical event table | `model`, `K_IRP`, `kVp`, `DSD`, `DSI` |
 | `generic_rdsr_like` | A raw RDSR-parser-style dump (rdsr_parser column names) | `ManufacturerModelName`, `KVP_kV`, `DoseRP_Gy` |
 | `radimetrics` | Bayer **Radimetrics** CSV export | `Device`, `kVp kV`, `DAP (Total) Gy-cm2` |
 | `dosetrack` | Sectra **DoseTrack** CSV export | `Equipment Name`, `Tube Voltage Peak (kV)`, `Plane Code` |
+
+These example columns are names the fingerprint can match. They do not elect a schema by themselves. Election is the distinctive-marker rule below. In particular, `Device` and `kVp kV` appear in the Radimetrics fingerprint and cannot elect Radimetrics on their own.
 
 **DoseTrack Plane Code:** integer codes that match DICOM CID 10003 (`113620` /
 `113621` / `113622`) map automatically to Plane A / Plane B / Single Plane. Typical
@@ -76,7 +93,75 @@ The clearest human tells between the two aggregator exports:
 - **DoseTrack** uses spelled-out names with parenthesised units — `Positioner Primary Angle (deg)`,
   `Distance Source To Detector (mm)`, `Air Kerma (mGy)`.
 
-The two fingerprints share **no** columns, so they separate cleanly.
+The two fingerprints share **no** columns, so they separate cleanly once a distinctive marker
+is present. Shared *words* are a different matter: the older Radimetrics export spells several
+fields in plain English (`Reference Point Dose`, `Table Longitudinal Position`), and those
+same words appear on other dose tables.
+
+### Distinctive markers
+
+Eligibility uses the header cells after the same `_normalize_str` collapse as scoring.
+
+| Schema | May elect the schema | Supports the score only |
+|---|---|---|
+| `radimetrics` | A cell whose text through `(rf)` is the start of a known Radimetrics column (older `Primary_Angle_(RF)`, newer `Primary Angle (RF) [°]`, including a later unit the fingerprint does not list). `(rf)` on any other wording, such as `Modality (RF)`, does not count. A cell containing `dap (total)` or `reference point dose (total)` also counts. | `Device`, `Equipment`, `kVp kV`, unsuffixed angles, distances, table positions, and a bare `Reference Point Dose` |
+| `dosetrack` | Exact fingerprint names `Equipment Name`, `Plane Code`, or `Tube Voltage Peak (kV)` | `Air Kerma (mGy)`, positioner angles, distances, table positions, `Filter Material` — DICOM-style tables use those labels too |
+| `generic_rdsr_like` | A concatenated parser-dump name, including `ManufacturerModelName`, `DoseRP_Gy`, `StationName`, and `DeviceSerialNumber`. The same words with a space (`Station Name`) do not match. | `Manufacturer` and `KVP_kV`, which Radimetrics also uses (`kVp kV`) |
+| `normalized` | An internal column such as `K_IRP`, `DSD`, `DSI`, `Tx`, or `acquisition_type_code` (also `acquisition_type_coding_scheme` and `acquisition_type_meaning`) | `model`, `kVp`, `acquisition_type`, `acquisition_plane`, and the optional station/serial names (`station_name`, `stationname`, `device_serial`, `deviceserialnumber`) |
+
+DICOM RDSR (`.dcm`) is not in this table. The loader routes it by suffix to `rdsr_parser` /
+`rdsr_normalizer`. Auto-detect never sees it. A spreadsheet that happens to use DICOM concept
+names is not treated as an RDSR; if it also lacks a DoseTrack or Radimetrics marker, detection
+stops and asks for an explicit schema.
+
+### What a detected schema changes
+
+The Upload import-preview badge, the exam-card caption, and the Data tab `Schema:` line are
+`provenance.schema_name` after a successful parse. The dropdown can stay on Auto-detect while
+the badge shows the winner. That name is the adapter that ran:
+
+| Schema | Effect |
+|---|---|
+| `radimetrics` | Maps `Device` to the model and `Equipment` to the room used as the kerma-meter key. Reads units from the header; an unreadable dose is taken as mGy, area as cm², distances as mm. Splits a row into Plane A and Plane B when both per-plane reference-point dose columns are present and plane B is not empty (see [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md)). Fills a missing event type with `Fluoroscopy` and, without biplane evidence, a missing plane with `Single Plane`. Then runs `rdsr_normalizer`. Warns when the model is outside the Siemens Artis names this map was checked against. |
+| `dosetrack` | See [DoseTrack processing](#dosetrack-processing) below. |
+| `generic_rdsr_like` | Treats the table as `rdsr_parser` output. Units are already in the column names (`DoseRP_Gy`, `_mm`). `rdsr_normalizer` applies the manufacturer coordinate profile. |
+| `normalized` | The table is already in internal units and the GUISkinDose coordinate frame. No vendor unit conversion and no manufacturer coordinate correction. |
+
+Choosing the wrong schema in the dropdown applies that row of the table. Auto-detect abstains
+instead of guessing when the marker is missing or fewer than **2** known columns match.
+
+The same explanation is written for users in
+[docs/source/gui_help/input_formats.md](../docs/source/gui_help/input_formats.md). That page is
+what the Upload tab's info icon opens, and it is included in the Sphinx user guide.
+
+### DoseTrack processing
+
+`Equipment Name` is the model. Manufacturer is inferred from this fixed map (`MODEL2MANUF`):
+
+| Equipment Name | Manufacturer |
+|---|---|
+| `AXIOM-Artis` | Siemens |
+| `Azurion` | Philips |
+| `Allura Clarity` | Philips |
+
+Any other name warns and is used as the manufacturer string. The same column is copied to the
+station name, which is the kerma-meter key. DoseTrack has no separate room column. Blank cells
+are forward-filled from the row above, because the export repeats the equipment name only on
+the first row of a group.
+
+`Plane Code` uses the CID 10003 map above. A Philips filter cell is split on `;` into
+aluminium and copper (`Al;Cu`). Any other manufacturer copies that single thickness into both
+the minimum and the maximum (the Siemens pattern). Collimated field area is derived from DAP,
+reference-point dose, and the two distances when the export does not already provide it. An
+unreadable air-kerma unit is taken as mGy, and an unreadable tube current as µA. A missing
+event type becomes `Fluoroscopy`. A missing filter material becomes `Cu`.
+
+### Qaelum, DoseMonitor, and DoseWatch
+
+Qaelum, DoseMonitor, and DoseWatch are not choices of `--input-schema` and they are not in the
+Upload menu. A Python caller can pass the name to `read_and_normalize_input`, and they are not
+in the scoring set. Each raises `NotImplementedError`: the adapter is not yet implemented,
+because no real export is available to build a column map.
 
 ### Adapter provenance and validation status
 

@@ -1,15 +1,31 @@
 """Adapter for DoseTrack XLSX/CSV exports (Phase 4).
 
-Maps DoseTrack column headers to rdsr_parser()-compatible names, infers
-Manufacturer/ManufacturerModelName from the Equipment Name column, applies unit
-conversions (Air Kerma mGy→Gy, DAP Gy·cm²→Gy·m², Tube Current µA→mA), derives
-CollimatedFieldArea_m2 from the DAP formula, and passes through rdsr_normalizer()
-via the shared pipeline in ``base.py``.
+Maps DoseTrack column headers to rdsr_parser()-compatible names, then passes
+through rdsr_normalizer() via ``base.py``. Auto-detect elects this schema only
+when at least two known columns match and one of them is ``Equipment Name``,
+``Plane Code``, or ``Tube Voltage Peak (kV)``. One of those columns alone asks
+the user to choose a schema.
 
-Column map derived from dhen2714/PySkinDose DOSETRACK2PSD dict and dosetrack.py
-vendor transforms (saved in dev-docs/references/dhen2714_dosetrack.py). Validated
-against Siemens AXIOM-Artis column names. Philips path is implemented but untested
-against a real DoseTrack XLSX.
+DoseTrack-specific steps, also described in ``docs/source/gui_help/input_formats.md``:
+
+- ``Equipment Name`` is the model. ``MODEL2MANUF`` maps ``AXIOM-Artis`` to
+  Siemens and ``Azurion`` / ``Allura Clarity`` to Philips. Any other name warns
+  and is used as the manufacturer. The same column becomes the station name
+  (kerma-meter key).
+- Blank cells are forward-filled from the row above.
+- ``Plane Code`` uses DICOM CID 10003. Other integers need
+  ``dosetrack_plane_code_map`` or ``--plane-code-map``, or the load fails.
+- A Philips filter cell splits on ``;`` into aluminium and copper (``Al;Cu``).
+  Any other manufacturer copies the single thickness to both min and max.
+- Collimated field area is derived from DAP when the export omits it.
+- An unreadable air-kerma unit is taken as mGy, and an unreadable tube current
+  as µA. A missing event type becomes ``Fluoroscopy``. A missing filter material
+  becomes ``Cu``.
+
+Column map derived from dhen2714/PySkinDose DOSETRACK2PSD
+(``dev-docs/references/dhen2714_dosetrack.py``). Validated against Siemens
+AXIOM-Artis column names. The Philips path is implemented and untested against
+a real Philips DoseTrack export.
 """
 
 from __future__ import annotations
@@ -180,10 +196,7 @@ def _normalize_plane_code(series: pd.Series, ctx: AdapterContext | None = None) 
     provided = sorted(explicit_map.keys())
     gap_hint = ""
     if explicit_map:
-        gap_hint = (
-            f" Explicit plane_code_map provides {provided} but is missing "
-            f"observed code(s) {missing}."
-        )
+        gap_hint = f" Explicit plane_code_map provides {provided} but is missing observed code(s) {missing}."
 
     if len(codes) <= 2:
         raise ValueError(
@@ -280,9 +293,7 @@ def _apply_filter_thickness(data_df: pd.DataFrame, ctx: AdapterContext) -> None:
     """Normalize Philips Al;Cu or Siemens single-Cu filter thickness columns."""
     if "XRayFilterThicknessMinimum_mm" not in data_df.columns:
         return
-    manufacturer_val = (
-        str(data_df["Manufacturer"].dropna().iloc[0]) if "Manufacturer" in data_df.columns else ""
-    )
+    manufacturer_val = str(data_df["Manufacturer"].dropna().iloc[0]) if "Manufacturer" in data_df.columns else ""
     if manufacturer_val.lower() == "philips":
         pairs = data_df["XRayFilterThicknessMinimum_mm"].apply(_parse_philips_filter)
         data_df["XRayFilterThicknessMinimum_mm"] = pairs.apply(lambda x: x[0])  # Al

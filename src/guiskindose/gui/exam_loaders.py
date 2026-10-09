@@ -491,7 +491,8 @@ def _wrap_tabular_schema_detection(state: AppState, exc: BaseException) -> tuple
     _record_load_failure("TABULAR_SCHEMA_DETECTION", exc)
     state.import_has_errors = True
     return False, (
-        "Couldn't auto-detect this file's format. Open the “Input schema” "
-        "selector below and choose the matching format (e.g. Radimetrics CSV, "
-        "DoseTrack, Raw RDSR-like, or Normalized), then upload the file again."
+        "Couldn't auto-detect this file's format. Auto-detect needs at least two "
+        "columns it recognizes for one source. Open the “Input schema” selector "
+        "below and choose the matching format (e.g. Radimetrics CSV, DoseTrack, "
+        "Raw RDSR-like, or Normalized), then upload the file again."
     )

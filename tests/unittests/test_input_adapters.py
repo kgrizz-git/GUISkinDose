@@ -459,10 +459,11 @@ class TestSchemaAutoDetect:
         """A wide export (all of a schema's known names plus many unrelated
         columns) must auto-detect that schema, not read as 'ambiguous'.
 
-        Real Radimetrics CSVs carry ~87 columns of which 13 are recognised — a
-        low precision (13/87) but a full recall (13/13). Scoring on recall keeps
-        detection scale-independent; the earlier precision score made such wide
-        files tie with any schema that matched a single stray column.
+        This header contains every Radimetrics fingerprint name, so recall is 1.0
+        however many unrelated columns are added. Shipped Radimetrics examples
+        match 12 or 13 of the 24 fingerprint names, not every name. Scoring on
+        recall keeps a full fingerprint match from tying with a schema that
+        matched a single stray column.
         """
         import pandas as pd
 
@@ -479,6 +480,137 @@ class TestSchemaAutoDetect:
         raw_df = pd.DataFrame([header, data_row])
 
         assert _detect_schema(_RawLoad(raw_df=raw_df, encoding="utf-8", delimiter=",")) == "radimetrics"
+
+    def test_plain_dose_table_is_not_called_radimetrics(self):
+        """Ordinary physics column names must not elect Radimetrics.
+
+        The older Radimetrics fingerprint includes those names so a real older
+        export still scores well. They are not distinctive, and the exports we
+        have are too few to treat a shared vocabulary as a vendor identity.
+        """
+        headers = [
+            "Manufacturer",
+            "Device",
+            "Equipment",
+            "kVp",
+            "Primary Angle",
+            "Secondary Angle",
+            "Table Longitudinal Position",
+            "Table Lateral Position",
+            "Table Height Position",
+            "Source to Detector Distance",
+            "Source to Isocenter Distance",
+            "Collimated Field Area",
+            "Reference Point Dose",
+            "DAP",
+        ]
+        from guiskindose.input_adapters.registry import SchemaDetectionError
+
+        with pytest.raises(SchemaDetectionError, match="distinctive marker"):
+            _detect_headers(headers)
+
+    @pytest.mark.parametrize(
+        "header",
+        ["Device", "Equipment", "Secondary Angle", "Reference Point Dose", "model", "kVp", "Air Kerma (mGy)"],
+    )
+    def test_one_shared_column_does_not_elect_a_schema(self, header):
+        from guiskindose.input_adapters.registry import SchemaDetectionError
+
+        with pytest.raises(SchemaDetectionError, match="auto-detection"):
+            _detect_headers([header, "Foo", "Bar"])
+
+    @pytest.mark.parametrize(
+        "header",
+        [
+            "Primary Angle (RF)",
+            "DAP (Total) Gy-cm2",
+            "Reference Point Dose (Total) mGy",
+            "Tube Voltage Peak (kV)",
+            "Equipment Name",
+            "Plane Code",
+            "DoseRP_Gy",
+            "ManufacturerModelName",
+            "K_IRP",
+            "DSD",
+        ],
+    )
+    def test_one_distinctive_column_asks_for_a_schema(self, header):
+        """One marker cell must not elect a schema.
+
+        The detector stops so the GUI and CLI can ask the user to choose.
+        A second known column is required before auto-detect commits.
+        """
+        from guiskindose.input_adapters.registry import SchemaDetectionError
+
+        with pytest.raises(SchemaDetectionError, match="fewer than 2"):
+            _detect_headers([header, "Foo", "Bar"])
+
+    @pytest.mark.parametrize(
+        ("headers", "schema"),
+        [
+            (["Primary Angle (RF)", "Device"], "radimetrics"),
+            (["Primary Angle (RF) [°]", "Device"], "radimetrics"),
+            (["DAP (Total) Gy-cm2", "Reference Point Dose (Total) mGy"], "radimetrics"),
+            (["Tube Voltage Peak (kV)", "Plane Code"], "dosetrack"),
+            (["Equipment Name", "Air Kerma (mGy)"], "dosetrack"),
+            (["DoseRP_Gy", "ManufacturerModelName"], "generic_rdsr_like"),
+            (["K_IRP", "DSD"], "normalized"),
+        ],
+    )
+    def test_two_known_columns_and_a_marker_elect_the_schema(self, headers, schema):
+        assert _detect_headers([*headers, "Foo"]) == schema
+
+    def test_rf_on_an_unknown_stem_does_not_elect_radimetrics(self):
+        """`(rf)` counts only when the rest of the cell is a known Radimetrics column."""
+        from guiskindose.input_adapters.column_mapper import _normalize_str
+        from guiskindose.input_adapters.registry import SchemaDetectionError, _cell_has_radimetrics_trigger
+
+        assert _cell_has_radimetrics_trigger(_normalize_str("Primary Angle (RF)"))
+        assert _cell_has_radimetrics_trigger(_normalize_str("Primary Angle (RF) [°]"))
+        assert not _cell_has_radimetrics_trigger(_normalize_str("Modality (RF)"))
+        with pytest.raises(SchemaDetectionError, match="distinctive marker"):
+            _detect_headers(["Device", "Modality (RF)", "kVp kV"])
+
+    def test_unlisted_rf_unit_with_one_other_column_asks(self):
+        """A new unit after a known `(rf)` stem is a marker, not a second hit."""
+        from guiskindose.input_adapters.registry import SchemaDetectionError
+
+        with pytest.raises(SchemaDetectionError, match="fewer than 2"):
+            _detect_headers(["Primary Angle (RF) [degrees]", "Device", "Dose"])
+
+    def test_shipped_radimetrics_examples_still_auto_detect(self):
+        from guiskindose import get_path_to_example_tabular_files
+        from guiskindose.input_adapters.registry import _detect_schema
+        from guiskindose.input_adapters.tabular_loader import load
+
+        examples = get_path_to_example_tabular_files()
+        older = examples / "radimetrics_example_older_export_biplane.csv"
+        newer = examples / "radimetrics_example_newer_export_single_tube.csv"
+        assert _detect_schema(load(older)) == "radimetrics"
+        assert _detect_schema(load(newer)) == "radimetrics"
+
+    def test_trigger_sets_drop_shared_names(self):
+        from guiskindose.input_adapters.registry import _RADIMETRICS_TRIGGER_SUBSTRINGS, _SCHEMA_TRIGGERS
+
+        assert _SCHEMA_TRIGGERS["dosetrack"] == frozenset({"equipment name", "plane code", "tube voltage peak (kv)"})
+        assert "manufacturer" not in _SCHEMA_TRIGGERS["generic_rdsr_like"]
+        assert "kvp kv" not in _SCHEMA_TRIGGERS["generic_rdsr_like"]
+        assert "doserp gy" in _SCHEMA_TRIGGERS["generic_rdsr_like"]
+        assert "model" not in _SCHEMA_TRIGGERS["normalized"]
+        assert "kvp" not in _SCHEMA_TRIGGERS["normalized"]
+        assert "k irp" in _SCHEMA_TRIGGERS["normalized"]
+        assert "(rf)" in _RADIMETRICS_TRIGGER_SUBSTRINGS
+
+
+def _detect_headers(headers: list[str]) -> str:
+    """Run auto-detection on a one-row header plus a dummy data row."""
+    import pandas as pd
+
+    from guiskindose.input_adapters.registry import _detect_schema
+    from guiskindose.input_adapters.tabular_loader import _RawLoad
+
+    raw_df = pd.DataFrame([headers, ["x"] * len(headers)])
+    return _detect_schema(_RawLoad(raw_df=raw_df, encoding="utf-8", delimiter=","))
 
 
 # ── radimetrics adapter ────────────────────────────────────────────────────────
