@@ -420,6 +420,18 @@ class TestSchemaAutoDetect:
         result = read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="auto")
         assert isinstance(result, InputAdapterResult)
         assert result.provenance.schema_name == "normalized"
+        assert result.provenance.detection_mode == "auto"
+        assert result.provenance.matched_column_count is not None
+        assert result.provenance.matched_column_count > 2
+
+    def test_explicit_schema_provenance_detection_fields(self):
+        from guiskindose.input_adapters.models import InputAdapterResult
+        from guiskindose.input_adapters.registry import read_and_normalize_input
+
+        result = read_and_normalize_input(FIXTURES / "normalized_events.csv", input_schema="normalized")
+        assert isinstance(result, InputAdapterResult)
+        assert result.provenance.detection_mode == "explicit"
+        assert result.provenance.matched_column_count is None
 
     def test_auto_detects_generic_rdsr(self):
         from guiskindose.input_adapters.models import InputAdapterResult

@@ -21,6 +21,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Import preview schema notice** (2026-10-09) — the import preview states that an auto-detected
+  format was read from this file's column headers and that changing **Input schema** re-reads this
+  file; a two-column match also asks you to confirm the format before calculating.
+
 - **Input-format help** (2026-10-09) — an info icon beside **Input schema** opens a description of
   how a DICOM RDSR, Radimetrics, DoseTrack, a raw RDSR-like table, and a normalized table are
   recognized, and what each choice changes. The same page is in the user guide. Qaelum,

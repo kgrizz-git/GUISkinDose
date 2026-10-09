@@ -45,6 +45,14 @@
       "text": "Privacy: filenames and file contents may contain PHI. Uploads are copied to a private random-name session directory and removed on clear or shutdown.",
       "owner": "gui/tabs/upload.py"
     },
+    "upload.schema_detection.caption": {
+      "text": "Read from this file's column headers. Change Input schema above to re-read this file.",
+      "owner": "gui/schema_detection_notice.py"
+    },
+    "upload.schema_detection.thin_match": {
+      "text": "Only two recognized columns matched. Confirm the format above before calculating.",
+      "owner": "gui/schema_detection_notice.py"
+    },
     "onboarding.intended_use": {
       "text": "GUISkinDose is not FDA-cleared or otherwise certified as a medical device. It is intended for research, education, development, and institutional quality assurance, and its results are not independently validated for patient-care decisions. Qualified medical physicists and physicians are responsible for reviewing its inputs and outputs, evaluating patient skin dose, and making any clinical decisions.",
       "owner": "gui/app.py"

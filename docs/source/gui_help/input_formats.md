@@ -2,7 +2,7 @@
 
 GUISkinDose reads two kinds of files. A DICOM radiation dose structured report (RDSR) is recognized by the `.dcm` extension. A table (`.csv`, `.tsv`, `.xlsx`, `.xlsm`) is recognized by its column headers. Auto-detect commits only when the header has at least **2** known columns for one source and one of them is a marker for that source.
 
-After a table loads, the blue badge on the import preview, the name on the loaded-file card, and the Data tab line `Schema:` are the format that was used. The **Input schema** menu can stay on **Auto-detect schema** while that badge shows the result. Choosing a format in the menu forces that reader. Choosing the wrong one applies that reader's assumptions.
+After a table loads, the blue badge on the import preview, the name on the loaded-file card, and the Data tab line `Schema:` are the format that was used. The **Input schema** menu can stay on **Auto-detect schema** while that badge shows the result. The import preview also tells you that auto-detected format was read from this file's column headers and that changing **Input schema** re-reads the file; when only two columns matched, it asks you to confirm the format before calculating. Choosing a format in the menu forces that reader. Choosing the wrong one applies that reader's assumptions.
 
 If auto-detect cannot see a marker, or it sees only one known column, the load stops and asks you to pick a format and upload again. Shared names such as `Device`, `kVp`, table position, or a bare reference-point dose are not enough.
 

@@ -23,6 +23,7 @@ from guiskindose.settings.normalization_settings import normalize_manufacturer_k
 from ..concurrency import operation_guard, require_io_result
 from ..helpers import apply_exam_transforms, load_tabular
 from ..page_context import PageContext
+from ..schema_detection_notice import schema_detection_notice_lines
 from ..state import reset_results, state
 
 _GE_MANUFACTURER_VARIANTS = frozenset({
@@ -58,6 +59,7 @@ class ImportPreviewController:
     coord_card: ui.card
     coord_auto_label: ui.label
     schema_badge: ui.badge
+    schema_detection_caption: ui.label
     encoding_label: ui.label
     delimiter_label: ui.label
     header_label: ui.label
@@ -169,6 +171,9 @@ class ImportPreviewController:
 
     def _refresh_metadata(self, prov) -> None:
         self.schema_badge.set_text(prov.schema_name.upper().replace("_", " "))
+        notice_lines = schema_detection_notice_lines(prov, state.input_source_type)
+        self.schema_detection_caption.set_text("\n".join(notice_lines))
+        self.schema_detection_caption.set_visibility(bool(notice_lines))
         self.encoding_label.set_text(f"Encoding: {prov.detected_encoding or '—'}")
         delim = repr(prov.detected_delimiter) if prov.detected_delimiter else "N/A"
         self.delimiter_label.set_text(f"Delimiter: {delim}")
@@ -214,6 +219,11 @@ def _build_metadata_row(controller: ImportPreviewController) -> None:
     with ui.row().classes(_COMPACT_ROW_CLASSES):
         ui.label("Import preview").classes("text-subtitle2")
         controller.schema_badge = ui.badge("—", color="blue").classes("text-xs uppercase")
+
+    controller.schema_detection_caption = (
+        ui.label("").classes(_MUTED_CAPTION_CLASSES + " q-mb-xs").style("white-space: pre-line")
+    )
+    controller.schema_detection_caption.set_visibility(False)
 
     with ui.row().classes("w-full gap-6 q-mb-xs"):
         controller.encoding_label = ui.label("Encoding: —").classes(_MUTED_CAPTION_CLASSES)

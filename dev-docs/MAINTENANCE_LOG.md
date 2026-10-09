@@ -10,6 +10,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Schema detection provenance + notice helper** (2026-10-09) — `InputProvenance` records
+  `detection_mode` and `matched_column_count`; `schema_detection_notice_lines` drives import-preview
+  copy from `ui_copy.json`.
+
 - **generic_rdsr_like trigger exclusions** (2026-10-09) — `stationname` and `deviceserialnumber`
   join `manufacturer` and `kvp_kv` in `_TRIGGER_EXCLUSIONS`; user and maintainer docs updated.
 

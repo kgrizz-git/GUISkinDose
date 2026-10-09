@@ -266,6 +266,28 @@ def _no_schema_message(views: list[tuple[str, float, bool, int, bool]]) -> str:
     )
 
 
+def _pick_elected_schema(views: list[tuple[str, float, bool, int, bool]]) -> tuple[str, int]:
+    """Return the elected schema name and its known-column hit count from *views*."""
+    scores = {name: score for name, score, _eligible, _hits, _triggered in views}
+    eligible = [(name, score) for name, score, is_eligible, _hits, _triggered in views if is_eligible]
+    if not eligible:
+        raise SchemaDetectionError(_no_schema_message(views))
+
+    eligible.sort(key=lambda item: item[1], reverse=True)
+    best_name, best_score = eligible[0]
+    if len(eligible) > 1 and best_score - eligible[1][1] < _AUTO_MIN_MARGIN:
+        raise SchemaDetectionError(
+            f"Schema auto-detection is ambiguous (scores: {scores}). Pass --input-schema explicitly."
+        )
+    hits = next(hits for name, _score, _eligible, hits, _triggered in views if name == best_name)
+    return best_name, hits
+
+
+def _detect_schema_with_hits(loaded: _RawLoad) -> tuple[str, int]:
+    """Return the elected schema and its known-column hit count for *loaded*."""
+    return _pick_elected_schema(_schema_views(loaded.raw_df))
+
+
 def _detect_schema(loaded: _RawLoad) -> str:
     """Return the eligible schema with the best recall.
 
@@ -279,19 +301,18 @@ def _detect_schema(loaded: _RawLoad) -> str:
     Raises SchemaDetectionError when nothing is eligible or the top two
     eligible schemas are within the margin.
     """
-    views = _schema_views(loaded.raw_df)
-    scores = {name: score for name, score, _eligible, _hits, _triggered in views}
-    eligible = [(name, score) for name, score, is_eligible, _hits, _triggered in views if is_eligible]
-    if not eligible:
-        raise SchemaDetectionError(_no_schema_message(views))
+    return _detect_schema_with_hits(loaded)[0]
 
-    eligible.sort(key=lambda item: item[1], reverse=True)
-    best_name, best_score = eligible[0]
-    if len(eligible) > 1 and best_score - eligible[1][1] < _AUTO_MIN_MARGIN:
-        raise SchemaDetectionError(
-            f"Schema auto-detection is ambiguous (scores: {scores}). Pass --input-schema explicitly."
-        )
-    return best_name
+
+def _stamp_provenance(
+    result: InputAdapterResult | list[InputAdapterResult],
+    **fields: object,
+) -> None:
+    """Assign provenance attributes on one adapter result or each element of a list."""
+    items = result if isinstance(result, list) else [result]
+    for item in items:
+        for key, value in fields.items():
+            setattr(item.provenance, key, value)
 
 
 def _dispatch_to_adapter(
@@ -429,6 +450,10 @@ def read_and_normalize_input(
         ``provenance.schema_name``. ``None`` and all-false options leave
         numeric values unchanged vs omitting the argument.
 
+    Provenance records ``detection_mode`` (``"auto"`` or ``"explicit"``) and,
+    for auto loads only, ``matched_column_count`` (the winning schema's
+    known-column hit count).
+
     Raises
     ------
     ValueError
@@ -447,19 +472,21 @@ def read_and_normalize_input(
 
     loaded = load(path, sheet_name=sheet_name)
 
-    schema = input_schema or "normalized"
+    is_auto = input_schema == "auto"
+    schema = "normalized" if input_schema is None else input_schema
+    matched_column_count: int | None = None
 
-    if schema == "auto":
-        schema = _detect_schema(loaded)
+    if is_auto:
+        schema, matched_column_count = _detect_schema_with_hits(loaded)
 
     result = _dispatch_to_adapter(schema, loaded, path, settings)
 
-    # Propagate sheet_name into provenance for Excel files
+    provenance_fields: dict[str, object] = {
+        "detection_mode": "auto" if is_auto else "explicit",
+        "matched_column_count": matched_column_count,
+    }
     if suffix in (".xlsx", ".xlsm"):
-        if isinstance(result, list):
-            for r in result:
-                r.provenance.sheet_name = sheet_name
-        else:
-            result.provenance.sheet_name = sheet_name
+        provenance_fields["sheet_name"] = sheet_name
+    _stamp_provenance(result, **provenance_fields)
 
     return _apply_import_options_to_results(result, import_options)
