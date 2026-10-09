@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
+  message says it needs one source's own column and at least two recognized columns, and that it
+  stops when two sources both fit. It still asks you to choose a format and upload again.
+  Wording only; `pyproject.toml` stays at `1.0.0`.
+
 - **Import preview schema notice** (2026-10-09) — the import preview states that an auto-detected
   format was read from this file's column headers and that changing **Input schema** re-reads this
   file; a two-column match also asks you to confirm the format before calculating.

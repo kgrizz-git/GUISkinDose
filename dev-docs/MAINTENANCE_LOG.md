@@ -10,6 +10,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Upload auto-detect failure hint** (2026-10-09) — the GUI retry text names the marker, the
+  two-column floor, and the two-source stop. `tests/gui/test_rdsr_unit_error.py` pins that
+  wording and checks that the detector's header text is not shown.
+
 - **Schema detection provenance + notice helper** (2026-10-09) — `InputProvenance` records
   `detection_mode` and `matched_column_count`; `schema_detection_notice_lines` drives import-preview
   copy from `ui_copy.json`.
