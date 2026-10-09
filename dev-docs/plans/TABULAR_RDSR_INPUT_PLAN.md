@@ -196,8 +196,13 @@ Default: `swap_lateral_longitudinal=False`, `skip_manufacturer_transforms=False`
 
 These options are exposed via:
 - Python API: `read_and_normalize_input(..., import_options=TabularImportOptions(...))`
-- CLI: `--swap-lat-lon`, `--skip-transforms` flags
+- CLI: `--swap-lat-lon`, `--flip-ap1`, `--flip-ap2` (tabular only; reject DICOM/JSON with flags set)
 - GUI: coordinate correction panel in the upload preview step (Phase 5)
+
+**CLI/API (shipped 2026-10-08):** live contract matches the GUI expert toggles (`Tx ↔ Tz` /
+`Ap1×−1` / `Ap2×−1`) via `TabularImportOptions` in `input_adapters/import_options.py`. Do not
+treat the dataclass sketch above as the live contract. See
+[archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md).
 
 #### XLSX sheet picking
 

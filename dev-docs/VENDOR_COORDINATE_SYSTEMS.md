@@ -688,33 +688,34 @@ positioning. Matched GE DICOM RDSR plus tabular export comparison is deferred
 fixture confirmation to pin exact values, not an open live question about the
 convention.
 
-### User-selectable coordinate corrections (shipped) vs import API (backlog)
+### User-selectable coordinate corrections (shipped)
 
-**Shipped today (GUI only).** Expert post-normalization coordinate corrections are live without a
-`TabularImportOptions` dataclass or CLI flags:
+Expert **post-normalization** coordinate overrides (`Tx ↔ Tz`, `Ap1×−1`, `Ap2×−1`) are the same
+involutions in the GUI and in headless CLI / Python API. They are **not** manufacturer
+`swap_lateral_longitudinal` (that rule still runs inside `rdsr_normalizer()` for GE and similar).
+
+**GUI**
 
 - **Upload → import preview** (single-exam tabular uploads that are not the `normalized` schema):
   `Tx ↔ Tz` swap plus `Ap1×−1` / `Ap2×−1` axis flips (`gui/widgets/import_preview.py`,
   `AppState.swap_lat_lon` and flip flags in `gui/state.py`).
 - **Settings → Per-exam corrections** (multi-exam): the same toggles per exam
   (`gui/tabs/_per_exam.py`, applied in `gui/exam_transforms.py`).
-- **Not available** for DICOM RDSR files, `normalized`-schema uploads, or headless CLI runs today.
-  Vendor-level `swap_lateral_longitudinal` in `normalization_settings.json` (for example GE) still
-  runs inside `rdsr_normalizer()` and is separate from these GUI expert overrides.
 
-**Backlog (`TabularImportOptions`, Phase 3+).** A planned dataclass would unify import-time overrides
-on the Python API and CLI (tracked in `dev-docs/TO_DO.md`):
+**CLI and Python API (shipped 2026-10-08)**
 
-```python
-@dataclass
-class TabularImportOptions:
-    swap_lateral_longitudinal: bool = False      # swap TableLateralPosition ↔ TableLongitudinalPosition
-    skip_manufacturer_transforms: bool = False   # bypass rdsr_normalizer() coordinate step
-    custom_translation_offset: dict | None = None  # override normalization_settings.json offset
-```
+- `TabularImportOptions` in `input_adapters/import_options.py`: `swap_lat_lon`, `flip_ap1`,
+  `flip_ap2` (all default `false`).
+- `read_and_normalize_input(..., import_options=...)`, `analyze_input_file`, `analyze_multiple_input_files`,
+  `preview_input_file`, and `run_cli_export` thread the same options object through tabular load paths.
+- CLI: `--swap-lat-lon`, `--flip-ap1`, `--flip-ap2` (`store_true`; post-normalization expert overrides).
+- **Fail-loudly:** if any flag is set and any input path is not tabular (`.csv`, `.tsv`, `.xlsx`,
+  `.xlsm`), the run exits with a usage-level error before DICOM/JSON RDSR parsing (no silent no-op).
+- On the `normalized` schema, `--swap-lat-lon` is a no-op; angle flips still apply when columns exist.
 
-Planned surfaces: `read_and_normalize_input(..., import_options=TabularImportOptions(...))` and CLI
-flags `--swap-lat-lon` / `--skip-transforms`. See `TABULAR_RDSR_INPUT_PLAN.md` for the full design.
+An older `TabularImportOptions` sketch in `TABULAR_RDSR_INPUT_PLAN.md` (`swap_lateral_longitudinal`,
+`skip_manufacturer_transforms`, `custom_translation_offset`) was **not** implemented. Execution
+history: [plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md).
 
 ---
 

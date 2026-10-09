@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from nicegui import run, ui
 
+from guiskindose.input_adapters.import_options import TABULAR_SUFFIXES as _TABULAR_SUFFIXES
 from guiskindose.privacy import opaque_exam_label
 
 from ..components import HelpButton
@@ -44,7 +45,6 @@ if TYPE_CHECKING:
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 
-_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 _LOAD_FAILURE_STATUS = "Could not load — see message"
 _NO_FILE_LOADED_STATUS = "No file loaded"
 

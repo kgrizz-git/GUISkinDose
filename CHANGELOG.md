@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **CLI preview and dispatch** (2026-10-08) — `--input-preview-only` is tabular-only (DICOM/JSON
+  is a usage error, not a silent calculation), expands `--file-path` globs like other headless
+  paths, and cannot be combined with `--aggregate`. `python -m guiskindose.main` uses the same
+  CLI as `python -m guiskindose`. `--mode gui` with `--export-format` still launches the GUI.
+
 - **The correction dialog now shows exactly what the calculation applies** (2026-10-07) — Confirm stores the
   calibration period the dialog displayed for the first exam (later exams follow it), so a pair with no row in
   that period shows and applies the default rather than silently using its own latest row. A manual factor is
@@ -43,6 +48,11 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Tabular import coordinate overrides on CLI and Python API** (2026-10-08) — headless runs and
+  library callers can apply the same post-normalization expert overrides as the GUI upload preview:
+  `Tx ↔ Tz` (`--swap-lat-lon` / `swap_lat_lon`), `Ap1×−1` (`--flip-ap1` / `flip_ap1`), and
+  `Ap2×−1` (`--flip-ap2` / `flip_ap2`). Flags apply only to tabular inputs; combining any flag with
+  a DICOM RDSR or JSON event file, or with `--mode gui`, exits with a usage error before work starts.
 - **Corrections tab and clearer transmission setting** (2026-10-07) — the long Settings tab is split in two.
   Settings keeps the run configuration, phantom, per-exam offsets and coordinate fixes, and visual options.
   The new Corrections tab (tab 4; Geometry, Calculate, Results, and Export move to 5 to 8) holds dose-physics
@@ -1410,7 +1420,7 @@ That keeps SemVer and contributor history organized.
   fallback to `pip-audit` on the active environment. Pre-push hook and CI `static-analysis` job now
   call the wrapper; CI installs `uv` via `astral-sh/setup-uv@v8.2.0`. Tracked suppressions live in
   `[tool.uv.audit]` (`ignore-until-fixed` for dev-only `nltk` via `safety`, GHSA-p4gq-832x-fm9v).
-  Plan: `dev-docs/plans/DEPENDENCY_AUDIT_PLAN.md`.
+  Plan: `dev-docs/plans/archive/DEPENDENCY_AUDIT_PLAN.md`.
 - **One-command hook installer** (2026-06-27) — `scripts/setup-dev.sh` (macOS/Linux)
   and `scripts/setup-dev.bat` (Windows) run both `pre-commit install` and
   `pre-commit install --hook-type pre-push` in one step, ensuring all pre-push hooks
@@ -1440,7 +1450,7 @@ That keeps SemVer and contributor history organized.
 - **Native window geometry persistence** (2026-06-25) — `--native` mode restores window size,
   position, and maximized state from `~/.mypyskindose/gui.json`. First launch starts maximized
   with normal bounds at 75% of the primary screen (centered). Plan:
-  `dev-docs/plans/NATIVE_WINDOW_GEOMETRY_PLAN.md`.
+  `dev-docs/plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md`.
 - **Agent guidance playbook and advisory check** (2026-06-25): added `dev-docs/AGENT_PLAYBOOK.md`,
   thin `GEMINI.md` / `QWEN.md` pointer files, and `scripts/check_agent_guidance.py` (pre-commit advisory;
   `--strict` available) to flag duplicated or drifting agent instructions, overgrown `TO_DO.md`, and

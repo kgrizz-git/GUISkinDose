@@ -8,7 +8,7 @@
 
 Investigated: 2026-09-21
 
-For `TO_DO.md` item *"GUI network-exposure hardening"* (Next Up): this
+For `TO_DO.md` item *"GUI network-exposure follow-on (parked)"* (Deferred Until Needed): this
 assessment evaluated opt-in LAN serving risk and recommended mitigations.
 **Decided 2026-09-22 (see §4): non-loopback is refused outright** — there is
 no network mode, and Packages A–C are moot as specified. What stands: the
@@ -343,6 +343,6 @@ so the history reads against the right tree.)
 - `src/guiskindose/__main__.py:63`
 - `tests/gui/test_gui_security.py`
 - `README.md:87`
-- `dev-docs/TO_DO.md` ("GUI network-exposure hardening" item)
+- `dev-docs/TO_DO.md` ("GUI network-exposure follow-on (parked)" item)
 - `dev-docs/plans/PRIVACY_HARDENING_PLAN.md:324`
 - `dev-docs/ui_copy.json:49`

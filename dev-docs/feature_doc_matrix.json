@@ -5,13 +5,15 @@
       "status": "shipped",
       "code": [
         "src/guiskindose/input_adapters",
+        "src/guiskindose/input_adapters/import_options.py",
         "src/guiskindose/gui/tabs/upload.py",
         "src/guiskindose/gui/widgets/import_preview.py"
       ],
       "tests": [
         "tests/unittests/test_input_adapters.py",
         "tests/unittests/test_input_schema_doc.py",
-        "tests/unittests/test_multi_exam.py"
+        "tests/unittests/test_multi_exam.py",
+        "tests/unittests/test_tabular_import_options.py"
       ],
       "docs": [
         "dev-docs/INPUT_SCHEMA_DETECTION.md",
@@ -26,12 +28,14 @@
       "status": "shipped_with_open_validation",
       "code": [
         "src/guiskindose/input_adapters",
+        "src/guiskindose/input_adapters/import_options.py",
         "src/guiskindose/gui/helpers.py",
         "src/guiskindose/gui/exam_transforms.py"
       ],
       "tests": [
         "tests/unittests/test_coordinate_conventions.py",
-        "tests/unittests/test_rdsr_normalizer_characterization.py"
+        "tests/unittests/test_rdsr_normalizer_characterization.py",
+        "tests/unittests/test_tabular_import_options.py"
       ],
       "docs": [
         "dev-docs/VENDOR_COORDINATE_SYSTEMS.md",

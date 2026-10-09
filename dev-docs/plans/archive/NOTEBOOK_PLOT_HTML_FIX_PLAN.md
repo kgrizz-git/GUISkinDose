@@ -3,7 +3,7 @@
 Status: Complete — implemented, notebook executes clean headlessly, pending PR merge. Archived.
 Created: 2026-09-18
 Branch: `fix/notebook-plot-html`
-Related backlog: `TO_DO.md` "Getting-started notebook execution failure in docs builds"
+Related backlog: `TO_DO.md` "Confirm docs-build notebook"
 
 ## Diagnosis (verified by reproduction, not hypothesized)
 

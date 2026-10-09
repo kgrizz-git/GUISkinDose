@@ -35,11 +35,6 @@
       "cap": 18
     },
     {
-      "path": "src/guiskindose/__main__.py",
-      "function": "cli",
-      "cap": 14
-    },
-    {
       "path": "src/guiskindose/calculate_dose/rotational_event.py",
       "function": "_calculate_envelope_event",
       "cap": 14

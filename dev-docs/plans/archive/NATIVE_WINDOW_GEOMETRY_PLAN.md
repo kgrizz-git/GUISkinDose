@@ -1,6 +1,7 @@
 # Native Window Geometry Persistence Plan
 
-**STATUS: Shipped**
+**STATUS: Complete — archived 2026-10-08.** Shipped 2026-06-25 (`gui/window_prefs.py`).
+Native restore-from-maximize OS smoke remains under `TO_DO.md` Manual Smokes.
 
 ## Objective
 

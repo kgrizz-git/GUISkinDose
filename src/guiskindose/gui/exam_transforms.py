@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from guiskindose.input_adapters.import_options import (
+    TabularImportOptions,
+    apply_tabular_import_coordinate_options,
+)
+
 from .state import AppState
 from .table_origins import detected_table_origin, effective_table_origin
 
@@ -56,12 +61,6 @@ def _apply_table_origin_override(df, detected: dict, override: dict) -> None:
             df[col] = df[col] + delta
 
 
-def _apply_lat_lon_swap(df) -> None:
-    """In-place swap Tx/Tz when both columns are present."""
-    if "Tx" in df.columns and "Tz" in df.columns:
-        df["Tx"], df["Tz"] = df["Tz"].copy(), df["Tx"].copy()
-
-
 def _apply_transform_flags(
     base,
     swap_lat_lon,
@@ -78,8 +77,9 @@ def _apply_transform_flags(
 
     Always derives from the pristine ``base`` frame, so applying is idempotent and
     order-independent (each flag is an involution). The lat/lon swap and the
-    axis-direction sign flips are skipped for the already-canonical ``normalized``
-    schema.
+    axis-direction sign flips (``flip_tx`` / ``flip_ty`` / ``flip_tz``) are
+    skipped for the already-canonical ``normalized`` schema. ``Ap1`` / ``Ap2``
+    negation is not schema-gated.
 
     ``flip_tx`` / ``flip_ty`` / ``flip_tz`` (Phase 2.4): reverse the sign
     (direction) of a table-position axis, mirroring a per-manufacturer
@@ -102,13 +102,12 @@ def _apply_transform_flags(
         )
     if table_origin_override is not None:
         _apply_table_origin_override(df, detected, table_origin_override)
-    if swap_lat_lon and schema_name != "normalized":
-        _apply_lat_lon_swap(df)
-    if flip_ap1 and "Ap1" in df.columns:
-        df["Ap1"] = -df["Ap1"]
-    if flip_ap2 and "Ap2" in df.columns:
-        df["Ap2"] = -df["Ap2"]
-    return df
+    import_opts = TabularImportOptions(
+        swap_lat_lon=swap_lat_lon,
+        flip_ap1=flip_ap1,
+        flip_ap2=flip_ap2,
+    )
+    return apply_tabular_import_coordinate_options(df, schema_name, import_opts)
 
 
 def exam_supports_transforms(exam, meta: dict) -> bool:

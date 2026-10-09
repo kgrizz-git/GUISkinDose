@@ -8,6 +8,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+### Changed
+
+- **Tabular import CLI review fixes** (2026-10-08) — `TABULAR_SUFFIXES` is defined once in
+  `import_options.py`; preview rejects non-tabular and mixed lists before load and expands globs;
+  GUI plus `--export-format` still launches the GUI; preview override lines skip `swap_lat_lon` on
+  the `normalized` schema; CLI dispatch tests cover glob preview, non-tabular preview, aggregate
+  preview, GUI flags, export-plus-DICOM, `python -m guiskindose.main`, and an end-to-end
+  `--swap-lat-lon` PSD change.
+
+- **TabularImportOptions CLI plan archived** (2026-10-08) — Phases 0–3 complete; execution plan moved to
+  `plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md`; vendor-coordinate and tabular-input docs updated.
+
 ### Fixed
 
 - **RDSR CodeQL cleanup** (2026-10-08) — explicitly mark the normalizer's input-error
@@ -92,6 +104,34 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   security reviews; both gaps predated that PR.
 
 ### Changed
+
+- **TO_DO backlog refresh** (2026-10-08) — rewrote the stale *Biplane support and
+  recognition* item to *Independent per-plane geometry* (A/B detection and combined
+  maps already ship). Moved GUI network-exposure follow-on to Deferred Until Needed
+  (loopback refusal shipped). Narrowed the docs-build notebook item to a Sphinx/RTD
+  confirm after the plot/HTML and tqdm fixes. Noted Playwright is already in `[dev]`.
+  Linked visual refinement to `gui-aesthetic-redesign.md`. Next Up now has
+  Radimetrics detection triggers (TabularImportOptions CLI/API parity shipped and plan archived).
+- **Archived finished execution plans** (2026-10-08) — moved shipped
+  `NATIVE_WINDOW_GEOMETRY_PLAN`, `DEPENDENCY_AUDIT_PLAN`,
+  `2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN`, and
+  `PR_CODE_REVIEW_FIXES_PLAN` under `plans/archive/`. Removed the leftover
+  `NO_PATIENT_INTERSECTION_WARNING_PLAN` duplicate from `plans/` (archive copy
+  kept, with `guiskindose` package names).
+- **TabularImportOptions CLI plan** (2026-10-08) — added
+  `TABULAR_IMPORT_OPTIONS_CLI_PLAN.md` for GUI-parity `swap_lat_lon` /
+  `flip_ap1` / `flip_ap2`. Review tightened copy-based apply, full API
+  threading, and non-tabular rejection before the RDSR branch.
+- **Tabular import coordinate helper extracted to core** (2026-10-08) —
+  `input_adapters/import_options.py` holds `TabularImportOptions` and the
+  post-normalization Tx↔Tz / Ap1 / Ap2 apply path; GUI
+  `_apply_transform_flags` delegates those three flags after local
+  `flip_t*` and table-origin handling.
+- **CLI coordinate flags wired through analyze/preview/export** (2026-10-08) —
+  `--swap-lat-lon` / `--flip-ap1` / `--flip-ap2` reject non-tabular paths
+  before RDSR parse. `python -m guiskindose.main` now delegates to
+  `__main__.cli()`; that function dropped below the C901 cap of 14 so
+  the grandfathered entry was removed.
 
 - **Append-only history is exempt from the file-size cap** (2026-09-30) —
   `scripts/check_file_sizes.py` scans `src`, `scripts` and `dev-docs`, so `CHANGELOG.md` was

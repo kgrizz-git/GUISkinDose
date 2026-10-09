@@ -1,7 +1,10 @@
-"""Entry point and CLI orchestration for GUISkinDose."""
+"""Public API for GUISkinDose: ``main()``, analysis helpers, and input preview.
+
+CLI dispatch lives in ``guiskindose.__main__`` (console script,
+``python -m guiskindose``, and ``python -m guiskindose.main``).
+"""
 
 import logging
-import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -12,7 +15,6 @@ from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
 from guiskindose.cli_args import get_argument_parser as _cli_args_get_argument_parser
 from guiskindose.cli_kerma_meter import apply_kerma_meter_cli_flags
 from guiskindose.constants import (
-    RUN_ARGUMENTS_MODE_GUI,
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_HTML,
     RUN_ARGUMENTS_OUTPUT_JSON,
@@ -24,15 +26,21 @@ from guiskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
 )
 from guiskindose.helpers.read_and_normalize_rdsr_data import read_and_normalise_rdsr_data
-from guiskindose.privacy import install_value_safe_excepthook, opaque_exam_label, safe_user_error, safe_warning
+from guiskindose.input_adapters.import_options import (
+    PREVIEW_NON_TABULAR_MESSAGE,
+    TABULAR_SUFFIXES,
+    TabularImportOptions,
+    coordinate_override_preview_line,
+    reject_import_options_for_non_tabular,
+    reject_non_tabular_paths,
+)
+from guiskindose.privacy import opaque_exam_label, safe_user_error, safe_warning
 from guiskindose.settings import PyskindoseSettings
 
 if TYPE_CHECKING:
     import argparse
 
 logger = logging.getLogger(__name__)
-
-_TABULAR_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
 
 
 def _settings_with_output_format(
@@ -60,9 +68,11 @@ def _read_input_for_analysis(
     settings: PyskindoseSettings,
     input_schema: str | None,
     sheet_name: str | int,
+    import_options: TabularImportOptions | None = None,
 ) -> Any:
     """Load either a tabular input through its adapter or a legacy RDSR/JSON input."""
-    if Path(file_path).suffix.lower() not in _TABULAR_SUFFIXES:
+    reject_import_options_for_non_tabular([file_path], import_options)
+    if Path(file_path).suffix.lower() not in TABULAR_SUFFIXES:
         return read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
 
     from guiskindose.input_adapters.registry import read_and_normalize_input
@@ -72,6 +82,7 @@ def _read_input_for_analysis(
         input_schema=input_schema,
         sheet_name=sheet_name,
         settings=settings,
+        import_options=import_options,
     )
 
 
@@ -162,6 +173,7 @@ def analyze_input_file(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     output_format: str = RUN_ARGUMENTS_OUTPUT_DICT,
+    import_options: TabularImportOptions | None = None,
 ) -> Any:
     """Run PySkinDose from a tabular file (.csv, .tsv, .xlsx) or DICOM/JSON.
 
@@ -183,10 +195,15 @@ def analyze_input_file(
         Sheet name or 0-based index for Excel files (ignored otherwise).
     output_format:
         "dict" (default), "json", or "html".
+    import_options:
+        Optional post-normalization coordinate overrides. Rejected for
+        non-tabular paths when any flag is set.
     """
     settings_obj = _settings_with_output_format(settings, output_format)
-    input_result = _read_input_for_analysis(file_path, settings_obj, input_schema, sheet_name)
-    if Path(file_path).suffix.lower() in _TABULAR_SUFFIXES:
+    input_result = _read_input_for_analysis(
+        file_path, settings_obj, input_schema, sheet_name, import_options=import_options
+    )
+    if Path(file_path).suffix.lower() in TABULAR_SUFFIXES:
         _warn_for_tabular_input(input_result)
     return _analysis_output_for_input(input_result, settings_obj, output_format)
 
@@ -198,6 +215,7 @@ def analyze_multiple_input_files(
     input_schema: str | None = None,
     sheet_name: str | int = 0,
     per_exam_offsets: list[list[float]] | None = None,
+    import_options: TabularImportOptions | None = None,
 ) -> MultiExamResult:
     """Run PySkinDose on a list of input files, treating each as a separate exam.
 
@@ -218,6 +236,9 @@ def analyze_multiple_input_files(
         Sheet name or 0-based index for Excel files.
     per_exam_offsets:
         Optional per-exam patient offsets [[d_lon, d_ver, d_lat], ...].
+    import_options:
+        Optional post-normalization coordinate overrides applied to every
+        tabular exam. Rejected if any resolved path is not tabular.
     """
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
     from guiskindose.input_adapters.registry import read_and_normalize_input
@@ -238,12 +259,18 @@ def analyze_multiple_input_files(
         else:
             resolved_paths.append(p)
 
+    reject_import_options_for_non_tabular(resolved_paths, import_options)
+
     for fp in resolved_paths:
         fp = Path(fp)
         suffix = fp.suffix.lower()
-        if suffix in _TABULAR_SUFFIXES:
+        if suffix in TABULAR_SUFFIXES:
             result = read_and_normalize_input(
-                fp, input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+                fp,
+                input_schema=input_schema,
+                sheet_name=sheet_name,
+                settings=settings_obj,
+                import_options=import_options,
             )
             if isinstance(result, list):
                 all_exams.extend(result)
@@ -282,8 +309,13 @@ def preview_input_file(
     sheet_name: str | int = 0,
     include_sensitive_values: bool = False,
     settings: PyskindoseSettings | None = None,
+    import_options: TabularImportOptions | None = None,
 ) -> None:
-    """Print a value-safe preview unless sensitive values are explicitly requested.
+    """Print a value-safe preview of a tabular input (CSV/TSV/XLSX).
+
+    Non-tabular suffixes raise :class:`UserFacingInputError`. Identifiers and
+    event values are never printed, including when ``include_sensitive_values``
+    is true (that flag is a deprecated no-op retained for CLI compatibility).
 
     ``settings`` carries CLI choices that affect parsing, such as ``--plane-code-map``;
     without it the bundled example settings are used, and a tabular file whose plane
@@ -292,21 +324,25 @@ def preview_input_file(
     Parameters
     ----------
     file_path : str | Path
-        Input file.
+        Tabular input file.
     input_schema : str | None
         Schema name, or ``None`` for auto-detection.
     sheet_name : str | int
         Workbook sheet for ``.xlsx`` input.
     include_sensitive_values : bool
-        Show raw values instead of the value-safe summary.
+        Deprecated no-op; never enables identifier or event-value output.
     settings : PyskindoseSettings | None
         Run settings from :func:`prepare_cli_settings`.
+    import_options : TabularImportOptions | None
+        Optional post-normalization coordinate overrides.
     """
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
     # The radimetrics/generic/dosetrack schemas need settings (rdsr_normalizer
     # does a manufacturer/model lookup), so supply defaults — preview never runs
     # a dose calculation, so example settings are sufficient.
+    reject_non_tabular_paths([file_path], PREVIEW_NON_TABULAR_MESSAGE)
+    reject_import_options_for_non_tabular([file_path], import_options)
     settings_obj = settings if settings is not None else parse_settings_to_settings_class(settings=None)
 
     raw = read_and_normalize_input(
@@ -314,9 +350,13 @@ def preview_input_file(
         input_schema=input_schema,
         sheet_name=sheet_name,
         settings=settings_obj,
+        import_options=import_options,
     )
     results = raw if isinstance(raw, list) else [raw]
     for index, result in enumerate(results):
+        override_line = coordinate_override_preview_line(import_options, result.provenance.schema_name)
+        if override_line is not None:
+            print(override_line)
         _print_input_preview(result, index, include_sensitive_values)
 
 
@@ -383,6 +423,7 @@ def build_cli_export_source(
     sheet_name: str | int = 0,
     report_title: str | None = None,
     include_source_identifiers: bool = False,
+    import_options: TabularImportOptions | None = None,
 ):
     """Run a calculation for export and assemble an ``ExportSource`` (no GUI).
 
@@ -410,15 +451,23 @@ def build_cli_export_source(
             else:
                 resolved.append(p)
 
+        reject_import_options_for_non_tabular(resolved, import_options)
+
         single_tabular_multi = False
-        if len(resolved) == 1 and resolved[0].suffix.lower() in _TABULAR_SUFFIXES:
+        if len(resolved) == 1 and resolved[0].suffix.lower() in TABULAR_SUFFIXES:
             probe = read_and_normalize_input(
-                resolved[0], input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+                resolved[0],
+                input_schema=input_schema,
+                sheet_name=sheet_name,
+                settings=settings_obj,
+                import_options=import_options,
             )
             single_tabular_multi = isinstance(probe, list)
 
         if len(resolved) > 1 or single_tabular_multi:
-            inputs = _load_inputs_for_export(resolved, settings_obj, input_schema, sheet_name)
+            inputs = _load_inputs_for_export(
+                resolved, settings_obj, input_schema, sheet_name, import_options=import_options
+            )
             result = analyze_multiple_exams(inputs, settings_obj)
             source = build_export_source_from_cli(
                 settings_obj,
@@ -434,9 +483,13 @@ def build_cli_export_source(
 
         # Single-exam path.
         single = resolved[0]
-        if single.suffix.lower() in _TABULAR_SUFFIXES:
+        if single.suffix.lower() in TABULAR_SUFFIXES:
             adapter = read_and_normalize_input(
-                single, input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+                single,
+                input_schema=input_schema,
+                sheet_name=sheet_name,
+                settings=settings_obj,
+                import_options=import_options,
             )
             assert not isinstance(adapter, list)  # ruled out above
             data_norm = adapter.normalized_data
@@ -464,7 +517,14 @@ def build_cli_export_source(
         pkg_logger.removeHandler(capture)
 
 
-def _load_inputs_for_export(resolved_paths, settings_obj, input_schema, sheet_name):
+def _load_inputs_for_export(
+    resolved_paths,
+    settings_obj,
+    input_schema,
+    sheet_name,
+    *,
+    import_options: TabularImportOptions | None = None,
+):
     """Load one ``InputAdapterResult`` per exam (parallel to multi-exam output)."""
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
     from guiskindose.input_adapters.registry import read_and_normalize_input
@@ -473,9 +533,13 @@ def _load_inputs_for_export(resolved_paths, settings_obj, input_schema, sheet_na
     for fp in resolved_paths:
         fp = Path(fp)
         suffix = fp.suffix.lower()
-        if suffix in _TABULAR_SUFFIXES:
+        if suffix in TABULAR_SUFFIXES:
             result = read_and_normalize_input(
-                fp, input_schema=input_schema, sheet_name=sheet_name, settings=settings_obj
+                fp,
+                input_schema=input_schema,
+                sheet_name=sheet_name,
+                settings=settings_obj,
+                import_options=import_options,
             )
             inputs.extend(result if isinstance(result, list) else [result])
         else:
@@ -536,6 +600,7 @@ def run_cli_export(
     include_source_identifiers: bool = False,
     force: bool = False,
     allow_ignored_checkout: bool = False,
+    import_options: TabularImportOptions | None = None,
 ) -> Path:
     """Build a Rich report from a headless run and write it to disk. Returns the path."""
     from guiskindose.export import collect_export_payload
@@ -556,6 +621,7 @@ def run_cli_export(
         sheet_name=sheet_name,
         report_title=export_title,
         include_source_identifiers=include_source_identifiers,
+        import_options=import_options,
     )
     payload = collect_export_payload(source)
     write_report(payload, export_path, export_format, force=force, allow_ignored_checkout=allow_ignored_checkout)
@@ -650,85 +716,6 @@ def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
 
 
 if __name__ == "__main__":
-    install_value_safe_excepthook(logger)
-    args = get_argument_parser(sys.argv[1:])
+    from guiskindose.__main__ import cli
 
-    if args.mode == RUN_ARGUMENTS_MODE_GUI:
-        from guiskindose.gui.app import run_gui
-
-        run_gui(
-            native=getattr(args, "native", False),
-            port=getattr(args, "port", None),
-        )
-    else:
-        run_settings = prepare_cli_settings(args)
-
-        file_paths_raw: list[str] = args.file_path or []
-        from pathlib import Path
-
-        file_paths: list[str] = []
-        for fp in file_paths_raw:
-            p = Path(fp)
-            if not p.exists() and ("*" in str(p) or "?" in str(p)):
-                file_paths.extend([str(x) for x in sorted(p.parent.glob(p.name))])
-            else:
-                file_paths.append(fp)
-
-        export_format = getattr(args, "export_format", None)
-        if export_format:
-            try:
-                validate_export_flags(
-                    export_format,
-                    aggregate_only=getattr(args, "aggregate_only", False),
-                    input_preview_only=getattr(args, "input_preview_only", False),
-                    has_files=bool(file_paths),
-                )
-            except ValueError as exc:
-                raise SystemExit(safe_user_error("invalid_export_options")) from exc
-            run_cli_export(
-                file_paths,
-                run_settings,
-                export_format,
-                export_path=getattr(args, "export_path", None),
-                export_title=getattr(args, "export_title", None),
-                input_schema=getattr(args, "input_schema", None),
-                sheet_name=getattr(args, "sheet_name", 0),
-                include_source_identifiers=getattr(args, "include_source_identifiers", False),
-                force=getattr(args, "force", False),
-                allow_ignored_checkout=getattr(args, "allow_ignored_checkout_output", False),
-            )
-            print("Report written successfully.")
-        elif len(file_paths) > 1:
-            result = analyze_multiple_input_files(
-                file_paths,
-                settings=run_settings,
-                input_schema=getattr(args, "input_schema", None),
-                sheet_name=getattr(args, "sheet_name", 0),
-            )
-            print_cli_result(result, aggregate_only=getattr(args, "aggregate_only", False))
-        elif len(file_paths) == 1:
-            single_path = file_paths[0]
-            suffix = Path(single_path).suffix.lower()
-            if suffix in _TABULAR_SUFFIXES:
-                if getattr(args, "input_preview_only", False):
-                    preview_input_file(
-                        single_path,
-                        input_schema=getattr(args, "input_schema", None),
-                        sheet_name=getattr(args, "sheet_name", 0),
-                        include_sensitive_values=getattr(args, "include_sensitive_preview", False),
-                        settings=run_settings,
-                    )
-                else:
-                    print_cli_result(
-                        analyze_input_file(
-                            single_path,
-                            settings=run_settings,
-                            input_schema=getattr(args, "input_schema", None),
-                            sheet_name=getattr(args, "sheet_name", 0),
-                        ),
-                        aggregate_only=getattr(args, "aggregate_only", False),
-                    )
-            else:
-                print_cli_result(main(file_path=single_path, settings=run_settings))
-        else:
-            print_cli_result(main(file_path=None, settings=run_settings))
+    cli()

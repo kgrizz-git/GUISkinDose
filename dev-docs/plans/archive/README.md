@@ -4,6 +4,11 @@ Completed or superseded phased work lives here for traceability. Do not start ne
 
 | File | Status | Notes |
 |---|---|---|
+| [TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](TABULAR_IMPORT_OPTIONS_CLI_PLAN.md) | **Completed** (archived 2026-10-08) | CLI/API `TabularImportOptions` parity with GUI expert `Tx ↔ Tz` / `Ap1×−1` / `Ap2×−1`; non-tabular rejection. |
+| [NATIVE_WINDOW_GEOMETRY_PLAN.md](NATIVE_WINDOW_GEOMETRY_PLAN.md) | **Completed** (archived 2026-10-08) | Native window size/position/maximized persistence; first launch maximized. |
+| [DEPENDENCY_AUDIT_PLAN.md](DEPENDENCY_AUDIT_PLAN.md) | **Completed** (archived 2026-10-08) | Lockfile `uv audit` wrapper with `pip-audit` fallback; pre-push + CI. |
+| [2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md](2026-07-12-GEOMETRY_PREVIEW_CONTROLS_AND_COMPOSITE_PLAN.md) | **Completed** (archived 2026-10-08) | Geometry composite checkbox, searchable exam/event selects, table-origin-scrub reset. |
+| [PR_CODE_REVIEW_FIXES_PLAN.md](PR_CODE_REVIEW_FIXES_PLAN.md) | **Completed** (archived 2026-10-08) | CodeRabbit fixes from `refactor/sonar-lizard-fixes`; distinctive tests landed, checkboxes never ticked. |
 | [AUTOMATED_PHANTOM_LIBRARY_PLAN.md](AUTOMATED_PHANTOM_LIBRARY_PLAN.md) | **Completed** (2026-07-21) | Headless MPFB/Blender true-shape library Phases 0–4; 10 meshes in 25.2.0. Further phantoms tracked in `ADDITIONAL_PHANTOMS.md` / `TO_DO.md`. |
 | [PSD_SEVERITY_COLOR_CODING_PLAN.md](PSD_SEVERITY_COLOR_CODING_PLAN.md) | **Completed** (2026-09-30) | Shared `gui/dose_severity.py` bands (pending/low/elevated/high) + design tokens; all four PSD readouts agree on colour and wording (`PSD: —` placeholder); icon + band-name tooltip fallbacks for colour-blind readers; WCAG AA fix for `text-aurora-purple`. Gradient/meter-bar rejected in plan §5. |
 | [PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md](PHANTOM_QA_DEMO_GATE_AND_BARIATRIC_EXTREMITIES_PLAN.md) | **Completed** (2026-07-22) | Demo gate, Steamboat supine, pediatric 5y male fix, bariatric thick-extremities. |

@@ -99,7 +99,7 @@ profiles and measured inputs iteratively.
 
 ### 1.4 Already-known downstream symptom
 
-`plans/NO_PATIENT_INTERSECTION_WARNING_PLAN.md:37` lists "a rotational
+`plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md:37` lists "a rotational
 acquisition modelled as a single static `Ap1` / `Ap2`" as a cause of
 beam-miss warnings: depending on which pose the single angle pair represents
 (start, mid, end), the static beam may miss the phantom entirely or clip it,
@@ -467,5 +467,5 @@ collecting vendor evidence without making it a universal delivery gate.
 - `src/guiskindose/input_adapters/radimetrics.py`, `generic_rdsr.py`, `normalized.py`
 - `src/guiskindose/constants.py:125`
 - `dev-docs/PSD_CALCULATION_ALGORITHM.md`, `dev-docs/VENDOR_COORDINATE_SYSTEMS.md`
-- `dev-docs/plans/NO_PATIENT_INTERSECTION_WARNING_PLAN.md:37`
+- `dev-docs/plans/archive/NO_PATIENT_INTERSECTION_WARNING_PLAN.md:37`
 - `tests/fixtures/tabular_inputs/normalized_events.csv`

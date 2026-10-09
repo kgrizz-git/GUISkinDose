@@ -1,5 +1,8 @@
 # Geometry Preview Controls & Composite Layout Plan
 
+**STATUS: Complete — archived 2026-10-08.** Composite checkbox, vendor-notice extract, and
+searchable exam/event selects shipped (`geometry_layout_builders.py`, `geometry_controller.py`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Relocate the "Show all exams in preview" checkbox and its caption above the plot next to the "Full procedure" button, prevent `last_table_origin_scrub` from leaking into procedure preview mode, and replace the event number box with searchable/typable dropdowns (`ui.select(with_input=True)`).

@@ -7,7 +7,7 @@ Owner: maintainer
 Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](KERMA_METER_CORRECTION_FACTORS_PLAN.md)
 (shipped engine, file loader, identity resolution) and
 [archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
-Related: [TO_DO.md](../../TO_DO.md) — *Biplane support and recognition*;
+Related: [TO_DO.md](../../TO_DO.md) — *Independent per-plane geometry*;
 [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](../CUSTOM_EQUIPMENT_PROFILES_PLAN.md) (separate concept; do not merge).
 
 ## Progress (2026-10-06)
@@ -169,7 +169,7 @@ and reported separately whenever a biplane study is present.
 ## Out of scope
 
 - Beam-quality-dependent (kVp/filter) CF bands. These remain out of scope, as in the archived plan §11.
-- Fully independent biplane geometry modelling. That stays in the *Biplane support* backlog item.
+- Fully independent biplane geometry modelling. That stays in the *Independent per-plane geometry* backlog item.
   Step 7 reuses the existing per-event geometry.
 - Persisting manual entries back into the user's calibration file. Offer "Save as calibration file"
   as an explicit export only.
@@ -200,7 +200,7 @@ Decisions for Radimetrics:
 - **DAP and fluoro time.** Per-plane DAP columns are used when present, otherwise the total DAP is split in
   proportion to kerma. Fluoro time stays on the first event of each row, so procedure totals do not double.
 - **Known limitation.** Both split events reuse the single `(RF)` angle, kVp and table columns. Independent
-  per-plane geometry stays in the *Biplane support* backlog item.
+  per-plane geometry stays in the *Independent per-plane geometry* backlog item.
 - **What real exports look like.** Exports seen so far put each event on one plane. In the older underscored
   export exactly one of `Reference_Point_Dose_(A)_mGy` / `(B)_mGy` is filled and equals the total, and rows
   alternate irregularly between A and B. In the newer export plane B is empty and A equals the total (some

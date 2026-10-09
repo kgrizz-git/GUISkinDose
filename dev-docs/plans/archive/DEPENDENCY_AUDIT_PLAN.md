@@ -1,9 +1,9 @@
 # Dependency Auditing Update Plan
 
-This plan details how to update the pre-commit hook and CI workflow to audit dependencies based on the project's declared/locked dependencies ([pyproject.toml](../../pyproject.toml) and `uv.lock`) instead of scanning the active Python environment.
+This plan details how to update the pre-commit hook and CI workflow to audit dependencies based on the project's declared/locked dependencies ([pyproject.toml](../../../pyproject.toml) and `uv.lock`) instead of scanning the active Python environment.
 
-> **Status (2026-06-28):** Implemented. Wrapper wired into pre-push hook and CI; script uses `uv >= 0.11.19`,
-> `--frozen` locally, `--locked` in CI. Archive this plan after merge.
+> **Status: Complete — archived 2026-10-08.** Implemented 2026-06-28. Wrapper wired into
+> pre-push hook and CI; script uses `uv >= 0.11.19`, `--frozen` locally, `--locked` in CI.
 
 ---
 
@@ -70,7 +70,7 @@ This provides the best experience for modern development workflows (which use `u
 ## Implementation Details
 
 ### 1. Implement `scripts/audit_dependencies.py`
-Create a new file [scripts/audit_dependencies.py](../../scripts/audit_dependencies.py):
+Create a new file [scripts/audit_dependencies.py](../../../scripts/audit_dependencies.py):
 ```python
 #!/usr/bin/env python3
 """Cross-platform wrapper for dependency auditing.
@@ -196,7 +196,7 @@ if __name__ == "__main__":
 ```
 
 ### 2. Update `.pre-commit-config.yaml`
-Modify [.pre-commit-config.yaml](../../.pre-commit-config.yaml) to run our wrapper script:
+Modify [.pre-commit-config.yaml](../../../.pre-commit-config.yaml) to run our wrapper script:
 ```diff
        - id: pip-audit
          name: pip-audit (dependency vulnerabilities)
@@ -208,7 +208,7 @@ Modify [.pre-commit-config.yaml](../../.pre-commit-config.yaml) to run our wrapp
 ```
 
 ### 3. Update `.github/workflows/ci.yml`
-Modify [.github/workflows/ci.yml](../../.github/workflows/ci.yml) to install `uv` and use the wrapper:
+Modify [.github/workflows/ci.yml](../../../.github/workflows/ci.yml) to install `uv` and use the wrapper:
 ```diff
      - name: Basedpyright (strict — any type error fails)
        run: basedpyright
@@ -226,7 +226,7 @@ Modify [.github/workflows/ci.yml](../../.github/workflows/ci.yml) to install `uv
 ```
 
 ### 4. Add Unit Tests
-Add unit tests in [tests/unittests/test_audit_dependencies.py](../../tests/unittests/test_audit_dependencies.py) to cover all code paths:
+Add unit tests in [tests/unittests/test_audit_dependencies.py](../../../tests/unittests/test_audit_dependencies.py) to cover all code paths:
 - standard `uv audit` success path
 - fallback when `uv` is missing
 - fallback when `uv.lock` is missing
