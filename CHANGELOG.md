@@ -25,6 +25,16 @@ That keeps SemVer and contributor history organized.
   templates with authoring guidance. These describe the planned schema; equipment-profile loading,
   activation, and GUI downloads are not implemented yet.
 
+- **Equipment-profile core library (experimental, inert)** (2026-10-10) — a new internal package
+  `guiskindose.equipment_profiles` parses and validates the planned equipment-profile JSON and
+  in-memory documents: immutable canonical models, structural validation, canonical serialization
+  and content hashing, duplicate and conflict detection, match-record types, and an initial
+  capability gate. **Nothing is wired to any feature.** No dose, normalization, GUI, CLI, or store
+  path reads this package yet, so results, exports, and settings are unchanged, and there is no way
+  to load or activate a profile from the application. It is scaffolding for the planned custom
+  equipment-profile feature described in
+  `dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md`.
+
 - **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
   message says it needs one source's own column and at least two recognized columns, and that it
   stops when two sources both fit. It still asks you to choose a format and upload again.

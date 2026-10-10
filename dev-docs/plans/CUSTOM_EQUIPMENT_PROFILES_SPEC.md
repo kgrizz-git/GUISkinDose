@@ -1,7 +1,10 @@
 # Custom Equipment Profiles — Design Spec
 
 Status: **Design approved for Phase 0 contract lock; resolution rules amended 2026-10-10.**
-Missing custom coverage retains current handling. Remaining schema, limit, hash, and error-code work is tracked in
+Missing custom coverage retains current handling. The normative common/coordinate contract — envelope, field
+model, identity and alias rules, bounds, capability gate, canonical serialization and hashes, conflict rules,
+match records, and error codes — is [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md), which the
+stdlib-only core package implements. Remaining schema, limit, hash, and error-code work is tracked in
 [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md) (Phase 0).
 Execution plan: [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 Created: 2026-09-08 · renamed from `CUSTOM_EQUIPMENT_PROFILES_PLAN.md` on 2026-10-09

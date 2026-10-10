@@ -10,6 +10,85 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile JSON/core fixes and CHANGELOG entry** (2026-10-10) — fixed nine commit-blocking
+  defects in `src/guiskindose/equipment_profiles/` found on review, with no application or numerical
+  change: canonical `model_aliases` now serializes as a JSON object `{alias: target}` (resolving map
+  targets to the listed model spelling so equivalent normalized spellings hash like the shorthand)
+  instead of a list of pairs, with an active-set serialize/reload hash-equality test; missing
+  required transmission numeric fields raise `missing_required_field` with their own field path
+  instead of a `KeyError`; integers too large for a double raise `invalid_number` instead of leaking
+  `OverflowError`; an empty `model_aliases` list means "no aliases" for multi-model and wildcard
+  profiles, checked before the ambiguity rule; models with an empty normalized key are rejected and
+  wildcard variants such as `" * "` are treated as the wildcard consistently, while transmission rows
+  can no longer target the wildcard; file reads use one bounded `read(MAX_SOURCE_BYTES + 1)` instead
+  of a read-then-check, closing the size/read race; conflict detection only lets non-empty coordinate
+  profiles claim coordinate slots, expands claims across manufacturer and model aliases, rejects
+  alias keys that would collide with a different model, and compares transmission keys on the
+  normalized model key, so an alias equivalent to its own model stays allowed and coordinate-only
+  versus transmission-only profiles may share an identity; `ParsedDocument.profiles` is typed
+  `tuple[Profile, ...]`, depth errors use the caller's source kind, every document enforces the
+  aggregate logical-row ceiling itself, and early count checks plus a traversal node budget bound work
+  before a deep or broad mapping is walked. Added the missing `CHANGELOG.md` entry describing the core
+  as experimental and inert, and corrected the plan so the Phase 1 item is explicitly **not** checked
+  off complete. The doc contract (`dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`) was updated to match every
+  one of these behaviours.
+
+- **Equipment-profile JSON/core slice, no application wiring** (2026-10-10) — corrected
+  [EQUIPMENT_PROFILE_SCHEMA.md](EQUIPMENT_PROFILE_SCHEMA.md) into a normative implementation contract and
+  implemented the stdlib-only core package `src/guiskindose/equipment_profiles/` that satisfies it. The core
+  provides immutable typed frozen-dataclass canonical models; a closed privacy-safe error type and code
+  constants; bounded JSON byte/path and in-memory parsing; full-v1 structural validation; deterministic
+  canonical serialization with profile, active-set, and exact source-byte SHA-256 hashes; across-source
+  duplicate and conflict validation; immutable match-record types; and a separate initial capability gate.
+  Nothing is wired into dose, normalization, GUI, CLI, or store paths — the slice is inert scaffolding.
+
+  Contract corrections applied from review: it is an implementation contract rather than an executable
+  reference; the root envelope holds only `schema_version` (exact integer `1`, a boolean is not an integer) and
+  a non-empty bounded `profiles` array; six coordinate blocks with 15 individually optional nested leaves;
+  unknown keys rejected at every level; duplicate JSON object keys rejected through an `object_pairs_hook`;
+  `null` is not omission; strict UTF-8 with an optional BOM. Identity reuses the existing normalized
+  manufacturer/model key algorithms with no bundled alias inheritance; JSON alias shorthand is an array only
+  (`|` separators remain a tabular spelling); alias-map targets must resolve to a listed model and
+  normalize-unique aliases; empty aliases normalize to absent. Duplicate rules: `profile_id` duplicates fail
+  across logical profiles and sources even when identical; duplicate coordinate claims fail even when
+  identical; duplicate transmission keys fail within and across profiles independent of manufacturer; only a
+  tabular grouping may repeat metadata that agrees. Bounds now include `models` ≤ 32, XLSX ≤ 16 sheets, JSON
+  depth 16, and an explicit logical-row definition for JSON/memory. Canonical serialization normalizes numeric
+  leaves to float while `schema_version` stays integer, omits empty optional texts/maps/arrays/blocks and
+  `false` promotion, sorts models / alias sets / transmission rows / active profiles by exact ID, and wraps
+  profiles as `{"schema_version":1,"profile":…}` and active sets as
+  `{"schema_version":1,"profiles":[…]}`, including provenance and excluding source context; the stored
+  revision-set hash is explicitly not locked. Per-leaf provenance carries revision, profile hash, and source
+  kind (`memory` added); `inherited` covers lower-priority custom wildcards; the illustrative match record
+  uses a partially supplied profile ID because a complete example cannot claim a bundled inherited leaf. Error
+  field paths use allowlisted names only and never echo an unknown user key; raw exception causes are
+  suppressed; `store_corruption`, `existing_model_out_of_extent`, and `explicit_sqlite_collision` are reserved
+  codes, not implemented.
+
+  Store schema and migrations, run-state and rich-export version locks and backward readers, CSV/TSV/XLSX
+  adapters and fixtures, transmission eligibility/evidence/grid work, the invalid-example fixture set, and
+  `MANIFEST.in` packaging inclusion remain outstanding, so Phase 0 is not complete. No application code, test
+  fixture, or packaging file was touched beyond the new package and its tests.
+
+- **Equipment-profile common + coordinate contract lock** (2026-10-10) — added
+  [EQUIPMENT_PROFILE_SCHEMA.md](EQUIPMENT_PROFILE_SCHEMA.md) as the executable Phase 0 reference for custom
+  equipment profiles: allowlisted field model for nested JSON, the flat 19-column tabular shape plus the
+  optional `promote_coordinate_wildcard` column with implicit v1, alias-list shorthand versus explicit
+  alias-to-model maps, finite-number/boolean typing and sign/field-mode enums, ingestion bounds (8 MiB file
+  bytes, 10,000 aggregate rows, 64 profiles, bounded aliases/text/IDs), blank-cell and unknown-field
+  semantics, bounded value-free errors with a stable code catalog, canonical serialization (negative-zero
+  normalization, numeric equivalence across JSON and tabular) with SHA-256 profile/active-set/source hashes that
+  cover profile content and provenance but never source context, cross-profile conflict rules, immutable
+  per-leaf match-record shapes, and the coordinate activation capability gate (exact-only; fail closed on
+  aliases/wildcards/transmission while the canonical parser still represents full v1). Registered in
+  `dev-docs/index.md`, linked from the spec and execution plan, and the applicable Phase 0 plan items are marked
+  locked with delivery pointers. Explicitly **not** full Phase 0 sign-off: user-store schema and migrations,
+  run-state/rich-export version locks, XLSX fixtures and approved-asset inventory evidence, transmission
+  eligibility/evidence/grid fixtures, the invalid-example fixture set, and `MANIFEST.in` packaging inclusion
+  remain for later slices. No application code changed and no scientific rule was reopened; where the spec left
+  a routine engineering value unspecified, a conservative explicit value was chosen and recorded. Transmission
+  matching key remains model + plane + kVp + Cu + Al.
+
 - **Equipment-profile fallback decisions** (2026-10-10) — amended the spec and execution plan so missing
   custom coverage retains ordinary lookup, new-model rows work without an original table, and sparse
   additions cannot damage usable interpolation. Defined protected unknown evidence, alias targets,

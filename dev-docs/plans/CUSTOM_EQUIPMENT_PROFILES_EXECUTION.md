@@ -2,6 +2,7 @@
 
 Status: **Active — Phase 0 in progress; fallback and sparse-data rules agreed**
 Design authority: [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed 2026-10-10)
+Contract lock reference: [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) (common + coordinate domains)
 Created: 2026-10-09 · plan updated 2026-10-10
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
 Delivery: implement each slice on feature branches after its applicable Phase 0 locks; no direct-to-`main` work. Keep calculation,
@@ -44,11 +45,18 @@ as a distinct read-only legacy correction source (decision 17; current source re
 **Goal.** Turn the spec into signed schemas, examples, limits, and error codes before implementation.
 
 Work:
-- [ ] Sign off all 20 decisions in spec §11 without changing their meaning implicitly in code. Record amendments in
-      both documents before implementation.
+- [x] Sign off all 20 decisions in spec §11 without changing their meaning implicitly in code. Record amendments in
+      both documents before implementation. *(Resolution rules agreed 2026-10-10; amendments recorded in spec §11.)*
+- [x] **Common + coordinate contract locked** — [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) publishes
+      the allowlisted field model for nested JSON, the flat 19-column tabular shape plus the optional
+      `promote_coordinate_wildcard` column, alias-list shorthand vs explicit alias-to-model maps, types/enums/bounds,
+      blank-cell semantics, canonical serialization and SHA-256 hash rules, cross-profile conflict rules, immutable
+      per-leaf match-record shapes, the stable error-code catalog, and the coordinate activation capability gate.
+      This is the applicable lock for the Phase 1 core package and the Phase 2 coordinate slice.
 - [ ] Publish the canonical profile field table: required stable `profile_id`; manufacturer/models; separate explicit
       manufacturer alias lists and model alias-to-target maps; independently optional coordinate/transmission domains with at least one non-empty; partial coordinate
       leaves; transmission evidence/source/date; bounded notes; unknown fields rejected (decisions 3, 6, 8, 12, 16).
+      *(Common/coordinate portion delivered by EQUIPMENT_PROFILE_SCHEMA.md §§1–6; store-persistence portion still open.)*
  - [ ] Lock source schemas (decision 4): nested JSON document; ONE flat tabular model shared by CSV/TSV and XLSX
       (strict `record_type` rows, one implicit-v1 shape, one selected sheet); explicit alias-to-model maps,
       single-model shorthand, and optional `promote_coordinate_wildcard` per spec §§3–5; canonical GUI/store values.
@@ -66,20 +74,30 @@ Work:
       row, unsupported suffix) with the stable error code each must produce.
  - [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
       active-set metadata, timestamps, transactions, uniqueness, and corruption handling (decision 5).
-- [ ] Set exact maximum file bytes, XLSX expanded/member/sheet limits, aggregate 10,000-row ceiling, profile/alias
+- [x] Set exact maximum file bytes, XLSX expanded/member/sheet limits, aggregate 10,000-row ceiling, profile/alias
       counts, ID lengths, and text lengths. The row ceiling follows `src/guiskindose/kerma_correction.py:42,324-362`.
-- [ ] Lock canonical serialization and SHA-256 rules for floats, key order, omitted values, per-profile hashes,
-      exact-file-byte hashes, GUI snapshot hashes, stored selected-revision-set hashes, and active-set hashes
-      (decision 12).
-- [ ] Lock coordinate leaf resolution and provenance: default candidate order; explicit wildcard promotion; nested
+      *(Locked for common/coordinate ingestion in [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §4;
+      XLSX preflight follows `src/guiskindose/input_adapters/tabular_loader.py:29-33`.)*
+- [x] Lock canonical serialization and SHA-256 rules for floats, key order, omitted values, per-profile hashes,
+      exact-file-byte hashes, GUI snapshot hashes, and active-set hashes
+      (decision 12). *(Delivered for the common/coordinate boundary in
+      [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §7: negative-zero normalization, numeric
+      equivalence across JSON and tabular sources, and the profile hash covering content/provenance but never source
+      context. Stored selected-revision-set hashing remains unlocked; specify it before the Phase 1 store slice.)*
+- [x] Lock coordinate leaf resolution and provenance: default candidate order; explicit wildcard promotion; nested
       x/y/z and angle leaves; `complete match` versus concrete `partial match` notice (decisions 6 and 9).
+      *(Locked in [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §§2, 5, and 9, including the
+      immutable per-leaf match-record shape with `inherited` flags.)*
 - [ ] Lock the transmission key, extents, measured/estimated overlay, explicit-SQLite collision rule, one-interpolator
       composition, row fallback, and status/source dimensions (decisions 7, 8, 10, 11). The current key/interpolator is
       verified at `src/guiskindose/corrections.py:327-380`; the attenuation header has no manufacturer column
       (`src/guiskindose/table_data/correction_table_and_pad_attenuation.csv:1`).
-- [ ] Lock stable error codes, including malformed/oversized input, unsupported source/schema/capability, duplicate
+- [x] Lock stable error codes, including malformed/oversized input, unsupported source/schema/capability, duplicate
       claim, alias ambiguity, wildcard acknowledgement required, existing-model out-of-extent row, explicit-SQLite collision,
-      store conflict/corruption, and activation rollback.
+      store conflict/corruption, and activation rollback. *(Common/coordinate catalog locked in
+      [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §10. The two transmission-specific codes —
+      existing-model out-of-extent row and explicit-SQLite collision — are confirmed alongside their Phase 4
+      fixtures; store conflict/corruption codes are confirmed with the Phase 1 store slice.)*
 - [ ] Lock privacy/export fields (decision 13): manufacturer/model and canonical `matched_input_key` are default-safe;
       station/serial retain `include_identifiers` for per-event output and never enter logs; notes and profile paths are
       omitted by default. This intentionally replaces the current manufacturer/model gating at
@@ -120,6 +138,15 @@ implementation fixtures, evidence classification, grid eligibility, and fallback
 before Phase 4; they do not block independent coordinate work. Unsupported transmission capabilities still
 fail closed in the coordinate-only slice. Do not mark incomplete Phase 0 items signed off automatically.
 
+**Common + coordinate lock delivered 2026-10-10.** [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md)
+publishes the implementation field model, tabular column set, types/enums/bounds, blank-cell semantics, canonical
+serialization and hash rules, conflict rules, match-record shapes, and error codes for the common and coordinate
+boundary, so the Phase 1 core package and the Phase 2 coordinate slice can proceed. This is **not** full Phase 0
+sign-off. Still outstanding for later slices: the user-store schema and migration policy, run-state and
+rich-export schema version locks and backward readers, XLSX fixtures and their approved-asset inventory
+evidence, transmission eligibility/evidence/grid fixtures, `MANIFEST.in` packaging inclusion, and the
+invalid-example fixture set with each locked error code.
+
 Exit criteria: the applicable schema, bounds, error catalog, hashes, privacy matrix, and fixtures are locked
 for each implementation slice; no unresolved contract in that slice is hidden by fallback. All domains must
 meet their locks before full v1 release.
@@ -132,7 +159,13 @@ Work:
 - [ ] Add the canonical model, validation, hashing, conflict detection, indexes, and stable errors after
       the applicable Phase 0 common/coordinate contracts are locked. Keep transmission eligibility/resolution
       separate so its later evidence/grid verification does not hold coordinate work. No calculation or GUI
-      imports in the core; no activation of unsupported domains.
+      imports in the core; no activation of unsupported domains. **Unblocked: the common/coordinate contract is
+      [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) — implement it, do not re-derive it.**
+      **Progress: the JSON/core slice of this item is partially implemented** — immutable models, JSON and
+      in-memory parsing, structural validation, canonical serialization and hashes, duplicate/conflict
+      validation, match-record types, and the capability gate exist under
+      `src/guiskindose/equipment_profiles/` and are inert (no application wiring). **This item is not
+      complete**: adapters, the user store, indexes, and the identity contract still remain.
 - [ ] Implement JSON, CSV/TSV, and XLSX adapters. Read bounded file bytes once, hash and parse the same snapshot;
       preflight XLSX container expansion/sheets/rows/text before materialization. Match the kerma loader's accepted
       suffix family (`src/guiskindose/kerma_correction.py:348-376`) without sharing kerma-specific factor rules.
@@ -173,7 +206,9 @@ Work:
       and stored profile IDs. Settings-relative and working-directory path rules follow spec §8; paths never serialize.
 - [ ] Resolve every coordinate leaf independently through custom exact → bundled exact → custom wildcard → bundled
       wildcard → Default. In this slice only custom exact is enabled; reject alias/wildcard/transmission capabilities
-      with `unsupported_profile_capability`, never ignore them.
+      with `unsupported_profile_capability`, never ignore them. The capability gate itself is specified in
+      [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §5: the parser represents full v1, activation
+      checks capabilities separately.
 - [ ] Preserve the dose distinction: `field_size_mode` is dose-affecting; `detector_side_length` is visualization-only
       (`src/guiskindose/geom_calc.py:20-83`, `src/guiskindose/beam_class.py:275-291`).
 - [ ] Materialize per-leaf source provenance and issue the per-exam `partial match — fields inherited from
@@ -351,6 +386,60 @@ gets macOS/Linux and Windows manual evidence as applicable.
   rules. Updated spec decisions and Phase 4 proof obligations; replaced the blanket core hold with per-slice
   contract locks. Common/coordinate work can proceed after its own locks; runtime implementation remains pending.
 
+- 2026-10-10 — **Common + coordinate contract corrected and its JSON/core slice implemented** as
+  [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) (registered in `dev-docs/index.md`, linked from
+  the spec and this plan) plus the stdlib-only package `src/guiskindose/equipment_profiles/`. The contract was
+  corrected on the parent's review: it is an implementation contract; the envelope carries only
+  `schema_version` (exact integer `1`, boolean rejected) and a non-empty bounded `profiles` array; six
+  coordinate blocks with 15 individually optional nested leaves; JSON duplicate keys rejected via an
+  `object_pairs_hook`; `null` is not omission; strict UTF-8 with an optional BOM. Identity uses the existing
+  normalized manufacturer/model key algorithms with no bundled alias inheritance, JSON alias shorthand is an
+  array only (`|` separators stay a tabular spelling), alias-map targets must resolve to a listed model, and
+  empty aliases normalize to absent. Duplicate rules: `profile_id` duplicates fail across logical profiles and
+  sources even when identical; duplicate coordinate claims fail even when identical; duplicate transmission
+  keys fail within and across profiles independent of manufacturer; only a tabular grouping may repeat
+  metadata that agrees. Bounds gained `models` ≤ 32, XLSX ≤ 16 sheets, JSON depth 16, and an explicit logical-row
+  definition for JSON/memory. Canonical serialization normalizes numeric leaves to float, keeps
+  `schema_version` integer, omits empty optional texts/maps/arrays/blocks and `false` promotion, sorts models /
+  alias sets / transmission rows / active profiles, and wraps profiles as `{"schema_version":1,"profile":…}`
+  and active sets as `{"schema_version":1,"profiles":[…}` with provenance included and source context
+  excluded; the stored revision-set hash is explicitly **not** locked. Per-leaf provenance carries revision,
+  profile hash, and source kind (`memory` added), `inherited` includes lower-priority custom wildcards, and the
+  illustrative match record now uses a partially supplied profile ID. Error field paths use allowlisted names
+  only and never echo an unknown user key; raw exception causes are suppressed. `store_corruption`,
+  `existing_model_out_of_extent`, and `explicit_sqlite_collision` are reserved codes, not implemented.
+
+  The implementation slice landed: immutable typed frozen-dataclass canonical models; a closed value-free error
+  type and code constants; bounded JSON byte/path and in-memory parsing; full-v1 structural validation;
+  deterministic canonical serialization with profile/active-set/source-byte hashes; across-source
+  duplicate/conflict validation; immutable match-record types; and a separate initial capability gate that
+  rejects every alias, wildcard/promotion, and transmission domain while the parser still represents the full
+  schema. **No application wiring was added and no normalization, calculation, GUI, or CLI behaviour changed.**
+  Store schema and migrations, run-state and rich-export version locks, CSV/TSV/XLSX adapters and fixtures,
+  transmission eligibility/evidence/grid work, the invalid-example fixture set, and `MANIFEST.in` packaging
+  inclusion all remain outstanding, so Phase 0 stays incomplete.
+
+- 2026-10-10 — **Commit-blocking defects fixed in the JSON/core slice** after review. Nine corrections:
+  (1) canonical `model_aliases` now emits a real JSON object `{alias: target}` instead of a list of pairs, with
+  map targets resolved to the *listed* model spelling so an equivalent normalized spelling hashes like the
+  shorthand, plus an active-set serialize/reload hash-equality test covering aliases, provenance, partial
+  coordinate fields, and transmission rows; (2) missing required transmission numeric fields return
+  `missing_required_field` with their own field path instead of a `KeyError`; (3) integers too large for a
+  double are caught and rejected as `invalid_number` instead of leaking `OverflowError`; (4) an empty
+  `model_aliases` list means "no aliases" for multi-model and wildcard profiles, checked before the
+  ambiguity rule, matching the packaged wildcard example; (5) models with an empty normalized key are rejected
+  and wildcard variants such as `" * "` are treated as the wildcard consistently, while transmission rows may
+  no longer target the wildcard; (6) file reads use one bounded `read(MAX_SOURCE_BYTES + 1)` instead of
+  reading everything and then checking, closing the size-then-read race; (7) conflict detection now only lets
+  non-empty coordinate profiles claim coordinate slots, expands claims across manufacturer and model aliases,
+  rejects alias keys that would collide with a *different* model, and compares transmission keys on the
+  normalized model key, so an alias equivalent to its own model stays allowed and coordinate-only versus
+  transmission-only profiles may share an identity; (8) `ParsedDocument.profiles` is typed
+  `tuple[Profile, ...]`, depth errors use the caller's source kind, every document enforces the aggregate
+  logical-row ceiling itself, and early count checks plus a traversal node budget bound work before a deep or
+  broad mapping is walked; (9) a `CHANGELOG.md` entry was added for the inert experimental core and the
+  Phase 1 item is explicitly **not** checked off complete.
+
 ## Decision log
 
 - 2026-10-10 — Phase 0 implements the authoritative 20 decisions in spec §11; later changes amend the spec first.
@@ -360,6 +449,12 @@ gets macOS/Linux and Windows manual evidence as applicable.
 - 2026-10-10 — Rules agreed in spec §§3–7. Missing custom coverage retains original handling; sparse additions
   cannot corrupt usable original interpolation. Preserve valid unknown evidence and explicit-SQLite collision
   errors. Remaining Phase 0 engineering locks are tracked per slice, not waived.
+
+- 2026-10-10 — Where the spec left a routine engineering value unspecified, the common/coordinate lock chose a
+  conservative explicit value and recorded it in [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md)
+  (file-byte and row ceilings, profile/alias/text/ID limits, numeric ranges) rather than leaving the choice
+  implicit. No maintainer-approved scientific rule was changed, no fallback/grid/evidence policy was redesigned,
+  and no baseline model mapping was added. Transmission matching key remains model + plane + kVp + Cu + Al.
 
 ## Risks and mitigations
 
