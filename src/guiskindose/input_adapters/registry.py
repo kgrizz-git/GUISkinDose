@@ -1,4 +1,14 @@
-"""Route tabular input files to the correct schema adapter."""
+"""Route tabular input files to the correct schema adapter.
+
+Auto-detection scores each known schema by header recall, then elects one only
+when the header has a distinctive marker for that source and at least
+``_AUTO_MIN_HITS`` of that source's known columns. One known column asks the
+user to choose a schema. DICOM RDSR files
+(``.dcm``) never reach this module. Qaelum, DoseMonitor, and DoseWatch can be
+named explicitly and raise ``NotImplementedError``. The user-facing description
+is ``docs/source/gui_help/input_formats.md``; the maintainer description is
+``dev-docs/INPUT_SCHEMA_DETECTION.md``.
+"""
 
 from __future__ import annotations
 
@@ -30,12 +40,15 @@ if TYPE_CHECKING:
 
 
 class SchemaDetectionError(ValueError):
-    """Auto-detection could not pick a schema (no match, or an ambiguous tie).
+    """Auto-detection could not pick a schema.
 
-    Subclasses ValueError so existing ``except ValueError`` / ``pytest.raises``
-    callers keep working, while callers that want to distinguish "couldn't guess
-    the format" from a genuine parse error (e.g. the GUI, to show a friendly
-    "choose a schema" hint instead of a traceback) can catch this specifically.
+    Raised when no schema matches, when the only overlap is shared column names
+    with no distinctive marker, when a marker is present but fewer than
+    ``_AUTO_MIN_HITS`` known columns match, or when two eligible schemas are
+    within ``_AUTO_MIN_MARGIN``. Subclasses ValueError so existing
+    ``except ValueError`` / ``pytest.raises`` callers keep working. The GUI
+    catches this specifically and asks the user to choose a schema instead of
+    showing a traceback.
     """
 
 
@@ -52,6 +65,7 @@ _SUPPORTED_SCHEMAS = (
     "auto",
 )
 _AUTO_MIN_MARGIN = 0.20  # required score gap between best and runner-up
+_AUTO_MIN_HITS = 2  # known columns required before auto-detect elects a schema
 
 # Ordered list of (schema_name, known_names) used for auto-detection scoring.
 _SCHEMA_KNOWN_NAMES: list[tuple[str, frozenset[str]]] = [
@@ -61,60 +75,244 @@ _SCHEMA_KNOWN_NAMES: list[tuple[str, frozenset[str]]] = [
     ("dosetrack", DOSETRACK_COLUMN_NAMES),
 ]
 
+# Fingerprint names that must not elect a schema by themselves. They are common
+# outside that export, or shared with another fingerprint, and still count
+# toward recall. Radimetrics is omitted: its plain-English older-export names
+# are most of the fingerprint, so eligibility is a trigger substring instead.
+_TRIGGER_EXCLUSIONS: dict[str, frozenset[str]] = {
+    "normalized": frozenset(
+        {
+            "model",
+            "kvp",
+            "acquisition_type",
+            "acquisition_plane",
+            "station_name",
+            "stationname",
+            "device_serial",
+            "deviceserialnumber",
+        }
+    ),
+    "generic_rdsr_like": frozenset(
+        {"manufacturer", "kvp_kv", "stationname", "deviceserialnumber"}
+    ),
+    "dosetrack": frozenset(
+        {
+            "air kerma (mgy)",
+            "positioner primary angle (deg)",
+            "positioner secondary angle (deg)",
+            "distance source to detector (mm)",
+            "distance source to isocenter (mm)",
+            "table longitudinal position (mm)",
+            "table lateral position (mm)",
+            "table height position (mm)",
+            "collimated field area (m2)",
+            "filter material",
+        }
+    ),
+}
 
-def _score_schema(raw_df: pd.DataFrame, known_names: frozenset[str]) -> float:
-    """Return how well *known_names* match the best header row in *raw_df*.
+# Markers for a Bayer Radimetrics header in the exports we have seen (older
+# underscore form and newer bracketed units). "(rf)" is not a bare substring:
+# the cell text through "(rf)" must be the start of a known Radimetrics column,
+# so "Modality (RF)" does not count. "dap (total)" and "reference point dose
+# (total)" still match as substrings. "device" and a bare "reference point dose"
+# are not markers.
+_RADIMETRICS_TRIGGER_SUBSTRINGS: frozenset[str] = frozenset(
+    {
+        "(rf)",
+        "dap (total)",
+        "reference point dose (total)",
+    }
+)
 
-    Score is *recall*: the fraction of the schema's known column names that are
-    present in the header row (matched / len(known_names)) — not the fraction of
-    header cells that are known. Recall is robust to wide exports: a real
-    Radimetrics CSV has ~87 columns of which 13 are recognised, a poor precision
-    (13/87 ≈ 0.15) but a perfect recall (13/13 = 1.0). Precision scaled with file
-    width and made wide exports look ambiguous against any schema that matched a
-    single stray column; recall gives the correct schema ~1.0 and the rest ~0.
-    """
+
+def _normalized_name_set(names: frozenset[str]) -> frozenset[str]:
+    """Return *names* collapsed the same way header cells are compared."""
+    return frozenset(_normalize_str(name) for name in names)
+
+
+# Known Radimetrics columns that contain "(rf)". A header cell counts as an
+# (rf) marker only when its text through "(rf)" is the start of one of these.
+_RADIMETRICS_RF_COLUMNS: frozenset[str] = frozenset(
+    name for name in _normalized_name_set(RADIMETRICS_COLUMN_NAMES) if "(rf)" in name
+)
+
+
+def _trigger_names(schema: str, known_names: frozenset[str]) -> frozenset[str]:
+    """Fingerprint names that may elect *schema* after dropping shared or weak ones."""
+    excluded = _normalized_name_set(_TRIGGER_EXCLUSIONS.get(schema, frozenset()))
+    return _normalized_name_set(known_names) - excluded
+
+
+_SCHEMA_TRIGGERS: dict[str, frozenset[str]] = {
+    name: _trigger_names(name, known) for name, known in _SCHEMA_KNOWN_NAMES if name != "radimetrics"
+}
+
+
+def _header_cells(raw_df: pd.DataFrame, known_names: frozenset[str]) -> set[str]:
+    """Return normalized cells of the best header row, or an empty set."""
     try:
         idx = detect_header_row(raw_df, known_names, min_score=1)
     except ValueError:
-        return 0.0
-    if not known_names:
-        return 0.0
-    # Normalize both sides with _normalize_str (the same collapse of "_"/"-"/
-    # whitespace used by detect_header_row and map_columns) so underscored older
-    # exports compare equal to their spaced counterparts.
+        return set()
     row = raw_df.iloc[idx]
-    cells = {_normalize_str(str(c)) for c in row if pd.notna(c) and str(c).strip()}
-    known_norm = {_normalize_str(k) for k in known_names}
-    return sum(1 for k in known_norm if k in cells) / len(known_norm)
+    return {_normalize_str(str(cell)) for cell in row if pd.notna(cell) and str(cell).strip()}
+
+
+def _hit_count(cells: set[str], known_names: frozenset[str]) -> int:
+    """Return how many normalized *known_names* appear exactly in *cells*."""
+    if not cells or not known_names:
+        return 0
+    known_norm = _normalized_name_set(known_names)
+    return sum(1 for name in known_norm if name in cells)
+
+
+def _recall(cells: set[str], known_names: frozenset[str]) -> float:
+    """Return the fraction of *known_names* present in *cells*.
+
+    Recall, not precision: a wide export that carries every known name plus
+    dozens of unrelated columns still scores 1.0. Precision fell as the file
+    got wider and made a full match look tied with a single stray column.
+    """
+    known_norm = _normalized_name_set(known_names)
+    if not known_norm:
+        return 0.0
+    return _hit_count(cells, known_names) / len(known_norm)
+
+
+def _score_schema(raw_df: pd.DataFrame, known_names: frozenset[str]) -> float:
+    """Return how well *known_names* match the best header row in *raw_df*."""
+    return _recall(_header_cells(raw_df, known_names), known_names)
+
+
+def _rf_column_stem(cell: str) -> str | None:
+    """Return *cell* through ``(rf)``, or None when that marker is absent.
+
+    *cell* is already normalized. The stem is the column identity: ``primary
+    angle (rf)`` from ``primary angle (rf) [°]``.
+    """
+    marker = "(rf)"
+    end = cell.find(marker)
+    if end < 0:
+        return None
+    return cell[: end + len(marker)].strip()
+
+
+def _cell_matches_known_rf_column(cell: str) -> bool:
+    """Return True when *cell* starts with a known Radimetrics ``(rf)`` column."""
+    stem = _rf_column_stem(cell)
+    if stem is None:
+        return False
+    return any(column.startswith(stem) for column in _RADIMETRICS_RF_COLUMNS)
+
+
+def _cell_has_radimetrics_trigger(cell: str) -> bool:
+    """Return True when *cell* is a Radimetrics-specific marker.
+
+    ``(rf)`` counts only on a known Radimetrics column, so ``Modality (RF)``
+    does not. ``dap (total)`` and ``reference point dose (total)`` still match
+    as substrings, including when a unit follows them.
+    """
+    if _cell_matches_known_rf_column(cell):
+        return True
+    other_markers = _RADIMETRICS_TRIGGER_SUBSTRINGS - {"(rf)"}
+    return any(token in cell for token in other_markers)
+
+
+def _radimetrics_triggered(cells: set[str]) -> bool:
+    """Return True when any header cell carries a Radimetrics marker."""
+    return any(_cell_has_radimetrics_trigger(cell) for cell in cells)
+
+
+def _is_triggered(name: str, cells: set[str]) -> bool:
+    """Return True when *cells* are specific enough to elect *name*."""
+    if name == "radimetrics":
+        return _radimetrics_triggered(cells)
+    return bool(cells & _SCHEMA_TRIGGERS[name])
+
+
+def _schema_views(raw_df: pd.DataFrame) -> list[tuple[str, float, bool, int, bool]]:
+    """Return (schema, recall, eligible, hits, triggered) for every scored schema.
+
+    Eligible means the header has that schema's marker and at least
+    ``_AUTO_MIN_HITS`` of its known columns. A marker alone is not eligible.
+    """
+    views: list[tuple[str, float, bool, int, bool]] = []
+    for name, known in _SCHEMA_KNOWN_NAMES:
+        cells = _header_cells(raw_df, known)
+        hits = _hit_count(cells, known)
+        triggered = _is_triggered(name, cells)
+        eligible = triggered and hits >= _AUTO_MIN_HITS
+        views.append((name, _recall(cells, known), eligible, hits, triggered))
+    return views
+
+
+def _no_schema_message(views: list[tuple[str, float, bool, int, bool]]) -> str:
+    """Explain a failed auto-detection without echoing header text."""
+    scores = {name: score for name, score, _eligible, _hits, _triggered in views}
+    if not max(scores.values(), default=0):
+        return f"Schema auto-detection: no schema could be matched. Scores: {scores}. Pass --input-schema explicitly."
+    thin = [name for name, _score, _eligible, hits, triggered in views if triggered and hits < _AUTO_MIN_HITS]
+    if thin:
+        matched = ", ".join(thin)
+        return (
+            "Schema auto-detection: a distinctive marker matched "
+            f"{matched}, but fewer than {_AUTO_MIN_HITS} known columns were present. "
+            f"Scores: {scores}. Pass --input-schema explicitly."
+        )
+    return (
+        "Schema auto-detection: headers overlapped known schemas but none had a "
+        f"distinctive marker. Scores: {scores}. Pass --input-schema explicitly."
+    )
+
+
+def _pick_elected_schema(views: list[tuple[str, float, bool, int, bool]]) -> tuple[str, int]:
+    """Return the elected schema name and its known-column hit count from *views*."""
+    scores = {name: score for name, score, _eligible, _hits, _triggered in views}
+    eligible = [(name, score) for name, score, is_eligible, _hits, _triggered in views if is_eligible]
+    if not eligible:
+        raise SchemaDetectionError(_no_schema_message(views))
+
+    eligible.sort(key=lambda item: item[1], reverse=True)
+    best_name, best_score = eligible[0]
+    if len(eligible) > 1 and best_score - eligible[1][1] < _AUTO_MIN_MARGIN:
+        raise SchemaDetectionError(
+            f"Schema auto-detection is ambiguous (scores: {scores}). Pass --input-schema explicitly."
+        )
+    hits = next(hits for name, _score, _eligible, hits, _triggered in views if name == best_name)
+    return best_name, hits
+
+
+def _detect_schema_with_hits(loaded: _RawLoad) -> tuple[str, int]:
+    """Return the elected schema and its known-column hit count for *loaded*."""
+    return _pick_elected_schema(_schema_views(loaded.raw_df))
 
 
 def _detect_schema(loaded: _RawLoad) -> str:
-    """Score each schema and return the best match name.
+    """Return the eligible schema with the best recall.
 
-    Raises ValueError if no schema clears a minimum threshold or if the two
-    top schemas are within _AUTO_MIN_MARGIN of each other.
+    A schema whose header only shares ordinary names (for example ``Device`` or
+    ``kVp``) is not eligible, even if it is the only schema with a non-zero
+    recall. A distinctive marker with fewer than ``_AUTO_MIN_HITS`` known
+    columns is not eligible either; the caller asks the user to choose.
+    Among eligible schemas, the leader must beat the runner-up by
+    ``_AUTO_MIN_MARGIN``.
+
+    Raises SchemaDetectionError when nothing is eligible or the top two
+    eligible schemas are within the margin.
     """
-    scores = {name: _score_schema(loaded.raw_df, known) for name, known in _SCHEMA_KNOWN_NAMES}
+    return _detect_schema_with_hits(loaded)[0]
 
-    if not max(scores.values()):
-        raise SchemaDetectionError(
-            f"Schema auto-detection: no schema could be matched. Scores: {scores}. Pass --input-schema explicitly."
-        )
 
-    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    best_name, best_score = sorted_scores[0]
-
-    # Margin check only applies when ≥2 schemas scored above zero.
-    # If only one schema scored, it wins unambiguously regardless of the absolute score.
-    non_zero = [(n, s) for n, s in sorted_scores if s > 0.0]
-    if len(non_zero) > 1:
-        _, runner_up_score = non_zero[1]
-        if best_score - runner_up_score < _AUTO_MIN_MARGIN:
-            raise SchemaDetectionError(
-                f"Schema auto-detection is ambiguous (scores: {scores}). Pass --input-schema explicitly."
-            )
-
-    return best_name
+def _stamp_provenance(
+    result: InputAdapterResult | list[InputAdapterResult],
+    **fields: object,
+) -> None:
+    """Assign provenance attributes on one adapter result or each element of a list."""
+    items = result if isinstance(result, list) else [result]
+    for item in items:
+        for key, value in fields.items():
+            setattr(item.provenance, key, value)
 
 
 def _dispatch_to_adapter(
@@ -235,8 +433,12 @@ def read_and_normalize_input(
         Path to a .csv, .tsv, .xlsx, or .xlsm file.
     input_schema:
         Which schema adapter to use. ``None`` defaults to ``"normalized"``.
-        Use ``"auto"`` to score each known schema and pick the best match
-        (requires a clear margin; raises ValueError if ambiguous).
+        Use ``"auto"`` to score each known schema and pick the best match.
+        A schema is eligible only when the header has a distinctive marker
+        for that source and at least ``_AUTO_MIN_HITS`` of its known columns.
+        One known column raises SchemaDetectionError so the caller can ask
+        the user to choose. A clear margin is required when two are eligible.
+        Raises ValueError when nothing is eligible or the result is ambiguous.
     sheet_name:
         Sheet name or 0-based index for Excel files (ignored for CSV/TSV).
     settings:
@@ -247,6 +449,10 @@ def read_and_normalize_input(
         ``Ap1``/``Ap2`` negation). Applied per result using that result's
         ``provenance.schema_name``. ``None`` and all-false options leave
         numeric values unchanged vs omitting the argument.
+
+    Provenance records ``detection_mode`` (``"auto"`` or ``"explicit"``) and,
+    for auto loads only, ``matched_column_count`` (the winning schema's
+    known-column hit count).
 
     Raises
     ------
@@ -266,19 +472,21 @@ def read_and_normalize_input(
 
     loaded = load(path, sheet_name=sheet_name)
 
-    schema = input_schema or "normalized"
+    is_auto = input_schema == "auto"
+    schema = "normalized" if input_schema is None else input_schema
+    matched_column_count: int | None = None
 
-    if schema == "auto":
-        schema = _detect_schema(loaded)
+    if is_auto:
+        schema, matched_column_count = _detect_schema_with_hits(loaded)
 
     result = _dispatch_to_adapter(schema, loaded, path, settings)
 
-    # Propagate sheet_name into provenance for Excel files
+    provenance_fields: dict[str, object] = {
+        "detection_mode": "auto" if is_auto else "explicit",
+        "matched_column_count": matched_column_count,
+    }
     if suffix in (".xlsx", ".xlsm"):
-        if isinstance(result, list):
-            for r in result:
-                r.provenance.sheet_name = sheet_name
-        else:
-            result.provenance.sheet_name = sheet_name
+        provenance_fields["sheet_name"] = sheet_name
+    _stamp_provenance(result, **provenance_fields)
 
     return _apply_import_options_to_results(result, import_options)

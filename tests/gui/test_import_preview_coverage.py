@@ -31,6 +31,7 @@ def _minimal_ctx() -> PageContext:
 def _controller() -> ip.ImportPreviewController:
     ctrl = ip.ImportPreviewController(_minimal_ctx(), MagicMock())
     ctrl.schema_badge = MagicMock()
+    ctrl.schema_detection_caption = MagicMock(set_visibility=MagicMock())
     ctrl.encoding_label = MagicMock()
     ctrl.delimiter_label = MagicMock()
     ctrl.header_label = MagicMock()

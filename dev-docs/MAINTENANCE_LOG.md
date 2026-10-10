@@ -10,6 +10,35 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Upload auto-detect failure hint** (2026-10-09) — the GUI retry text names the marker, the
+  two-column floor, and the two-source stop. `tests/gui/test_rdsr_unit_error.py` pins that
+  wording and checks that the detector's header text is not shown.
+
+- **Schema detection provenance + notice helper** (2026-10-09) — `InputProvenance` records
+  `detection_mode` and `matched_column_count`; `schema_detection_notice_lines` drives import-preview
+  copy from `ui_copy.json`.
+
+- **generic_rdsr_like trigger exclusions** (2026-10-09) — `stationname` and `deviceserialnumber`
+  join `manufacturer` and `kvp_kv` in `_TRIGGER_EXCLUSIONS`; user and maintainer docs updated.
+
+- **Schema-detection prose matched to measured recall** (2026-10-09) — the maintainer page
+  states the 24-name Radimetrics fingerprint and the 13- and 12-hit counts on the shipped
+  examples. `stubs.py` no longer claims those vendors are `--input-schema` choices.
+
+- **Auto-detect hit floor** (2026-10-09) — `_AUTO_MIN_HITS` is 2. `(rf)` matches only when the
+  cell text through `(rf)` is the start of a known Radimetrics column. Tests cover a lone marker,
+  `Modality (RF)` beside two plain Radimetrics names, and a two-column election. The user page
+  and `INPUT_SCHEMA_DETECTION.md` state the floor.
+
+- **Input-format docs checked against detection constants** (2026-10-09) —
+  `test_input_schema_doc.py` requires the user page and `INPUT_SCHEMA_DETECTION.md` to mention
+  the Radimetrics trigger substrings, the DoseTrack electors, `MODEL2MANUF`, and the stub
+  vendor names.
+
+- **Radimetrics detection triggers removed from the backlog** (2026-10-08) — auto-detect
+  now requires a distinctive marker (`registry.py` trigger sets). The product-backlog item
+  is done; the user-facing behavior is in `CHANGELOG.md`.
+
 - **Tabular import CLI review fixes** (2026-10-08) — `TABULAR_SUFFIXES` is defined once in
   `import_options.py`; preview rejects non-tabular and mixed lists before load and expands globs;
   GUI plus `--export-format` still launches the GUI; preview override lines skip `swap_lat_lon` on
@@ -17,10 +46,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   preview, GUI flags, export-plus-DICOM, `python -m guiskindose.main`, and an end-to-end
   `--swap-lat-lon` PSD change.
 
+- **Schema detection confirmation plan archived** (2026-10-09) — execution plan moved to
+  `plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md`.
+
 - **TabularImportOptions CLI plan archived** (2026-10-08) — Phases 0–3 complete; execution plan moved to
   `plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md`; vendor-coordinate and tabular-input docs updated.
 
 ### Fixed
+
+- **Import-preview caption survives a partial provenance** (2026-10-09) —
+  `schema_detection_notice_lines` reads `detection_mode` and `matched_column_count` with
+  `getattr`, so a stand-in that only has `schema_name` hides the caption instead of raising.
+  The import-preview coverage controller now stubs `schema_detection_caption`.
 
 - **RDSR CodeQL cleanup** (2026-10-08) — explicitly mark the normalizer's input-error
   imports as public re-exports with an explicit `__all__` list and explain the characterization helper's missingness-check

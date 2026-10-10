@@ -13,6 +13,15 @@
       "required": true
     },
     {
+      "id": "input_formats",
+      "title": "How input formats are recognized",
+      "source": "input_formats.md",
+      "gui_files": [
+        "src/guiskindose/gui/tabs/upload_builders.py"
+      ],
+      "required": true
+    },
+    {
       "id": "data",
       "title": "Data table help",
       "source": "data_table_workflow.md",

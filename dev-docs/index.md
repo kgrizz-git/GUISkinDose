@@ -112,7 +112,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 |---|---|
 | [INPUT_DATA_FLOW_AND_OFFSETS.md](INPUT_DATA_FLOW_AND_OFFSETS.md) | RDSR and JSON input flow, normalization settings, patient offsets, and internal DataFrame contract. |
 | [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md) | Standalone cheat sheet: required normalized columns, optional identity fields, and where each input schema maps from. |
-| [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md) | Tabular schema auto-detection (default `auto`, recall scoring, per-schema fingerprints) and the DAP-unit / manufacturer caveat. Machine-checked by `tests/unittests/test_input_schema_doc.py`. |
+| [INPUT_SCHEMA_DETECTION.md](INPUT_SCHEMA_DETECTION.md) | Tabular schema auto-detection (default `auto`, recall scoring, distinctive markers, at least two known columns) and the DAP-unit / manufacturer caveat. User-facing page: `docs/source/gui_help/input_formats.md`. Machine-checked by `tests/unittests/test_input_schema_doc.py`. |
 | [VENDOR_COORDINATE_SYSTEMS.md](VENDOR_COORDINATE_SYSTEMS.md) | Vendor-specific coordinate conventions, normalization mapping, and Mermaid coordinate-system diagrams. |
 | [CORRECTION_DATA_REFERENCE.md](CORRECTION_DATA_REFERENCE.md) | Maintainer map: correction tables → loaders/consumers/outputs/fallbacks/tests, flow diagram, and behavior notes. User version: `docs/source/user/correction_data.md`. |
 | [references/ge_coordinate_validation.md](references/ge_coordinate_validation.md) | GE coordinate convention record: confirmed table-travel directions, normalization-level `Tx`/`Tz` correction, and deferred matched DICOM/export fixture notes. |
@@ -187,6 +187,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md](plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md) | **Complete** (2026-10-09) — `StationName` and `DeviceSerialNumber` no longer elect a raw RDSR-like table; import preview says when a schema was read from the file and asks for confirmation on a two-column match. |
 | [plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md) | **Complete** (2026-10-08) — CLI/API `TabularImportOptions` parity with GUI expert post-normalization `Tx ↔ Tz` / `Ap1×−1` / `Ap2×−1`; non-tabular rejection. |
 | [plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md) | **Complete** (archived 2026-10-08) — native window size/position/maximized persistence on `--native` launch; first run maximized. |
 | [plans/archive/DEPENDENCY_AUDIT_PLAN.md](plans/archive/DEPENDENCY_AUDIT_PLAN.md) | **Complete** (archived 2026-10-08) — lockfile `uv audit` wrapper with `pip-audit` fallback; pre-push + CI. |

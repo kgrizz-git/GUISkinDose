@@ -68,6 +68,25 @@ def test_load_rdsr_surfaces_input_error_message(monkeypatch: pytest.MonkeyPatch)
     assert "no X-ray irradiation events" in message
 
 
+def test_load_tabular_schema_detection_names_marker_and_two_columns(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.input_adapters.registry import SchemaDetectionError
+
+    def _raise(*_args, **_kwargs):
+        raise SchemaDetectionError("Schema auto-detection: headers overlapped known schemas.")
+
+    monkeypatch.setattr(exam_loaders, "_parse_tabular", _raise)
+    state = AppState()
+
+    ok, message = exam_loaders.load_tabular(Path("events.csv"), state)
+
+    assert ok is False
+    assert state.import_has_errors is True
+    assert "one source's own column" in message
+    assert "at least two columns it recognizes" in message
+    assert "two sources both fit" in message
+    assert "headers overlapped" not in message
+
+
 def test_load_tabular_surfaces_input_error_message(monkeypatch: pytest.MonkeyPatch) -> None:
     from guiskindose.rdsr_input_checks import RdsrInputError
 

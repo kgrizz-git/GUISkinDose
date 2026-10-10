@@ -229,9 +229,7 @@ class UploadTabController:
             sheets = require_io_result(await run.io_bound(get_excel_sheets, tmp_path))
             if len(sheets) > 1:
                 state.available_sheets = sheets
-                self.refs.import_preview.sheet_select.set_options(
-                    {s: s for s in sheets}, value=sheets[0]
-                )
+                self.refs.import_preview.sheet_select.set_options({s: s for s in sheets}, value=sheets[0])
                 self.refs.import_preview.sheet_row.set_visibility(True)
 
     async def load_example(self) -> None:
@@ -317,9 +315,7 @@ class UploadTabController:
                 return
             state.input_schema = self.refs.schema_select.value or "auto"
             self.refs.upload_status.set_text("RE-PARSING...")
-            ok, msg = require_io_result(
-                await run.io_bound(load_tabular, state.file_path, state, True)
-            )
+            ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
             if ok:
                 self.refs.upload_status.set_text(f"OK: {msg}")
                 ui.notify(msg, color="positive")
@@ -384,9 +380,7 @@ class UploadTabController:
             state.loaded_exam_meta.pop(index)
         refresh_normalization_warnings(state)
         adjust_active_exam_index_after_remove(state, index)
-        if file_path is not None and all(
-            m.get("file_path") != file_path for m in state.loaded_exam_meta
-        ):
+        if file_path is not None and all(m.get("file_path") != file_path for m in state.loaded_exam_meta):
             remove_temp_upload(file_path)
         rebuild_rdsr_df(state)
         n = len(state.loaded_exams)
@@ -433,45 +427,34 @@ class UploadTabController:
                     self._build_exam_card(idx, exam)
                 if state.is_multi_exam:
                     ui.label(
-                        "Edit per-exam offsets and coordinate corrections in "
-                        "Settings → Per-exam corrections."
+                        "Edit per-exam offsets and coordinate corrections in Settings → Per-exam corrections."
                     ).classes("text-caption text-grey-6 italic q-mt-xs")
         self.ctx.refresh_per_exam()
 
     def _build_exam_card(self, idx: int, exam: Any) -> None:
-        meta = (
-            state.loaded_exam_meta[idx]
-            if idx < len(state.loaded_exam_meta)
-            else {}
-        )
+        meta = state.loaded_exam_meta[idx] if idx < len(state.loaded_exam_meta) else {}
         src = (meta.get("source_type") or "?").lower()
-        schema = meta.get("schema") or getattr(
-            getattr(exam, "provenance", None), "schema_name", "—"
-        )
+        schema = meta.get("schema") or getattr(getattr(exam, "provenance", None), "schema_name", "—")
         warnings = meta.get("warnings") or []
-        with ui.card().classes(
-            "modern-card w-full bg-blue-950/20 q-pa-sm cursor-pointer"
-        ).on("click", lambda _e, i=idx: self.select_exam_for_geometry(i)):
+        with (
+            ui.card()
+            .classes("modern-card w-full bg-blue-950/20 q-pa-sm cursor-pointer")
+            .on("click", lambda _e, i=idx: self.select_exam_for_geometry(i))
+        ):
             with ui.row().classes("items-center w-full gap-3 no-wrap"):
                 ui.label(f"#{idx + 1}").classes("text-caption text-grey-5 font-bold")
                 ui.badge(
                     src.upper(),
                     color=_FORMAT_BADGE_COLORS.get(src, "blue"),
                 ).classes("text-xs")
-                ui.label(opaque_exam_label(idx)).classes(
-                    "text-caption font-mono truncate"
-                ).style("max-width: 200px")
+                ui.label(opaque_exam_label(idx)).classes("text-caption font-mono truncate").style("max-width: 200px")
                 ui.label(schema).classes("text-caption text-grey-5")
                 normalized = getattr(exam, "normalized_data", None)
                 event_count = len(normalized) if normalized is not None else 0
                 event_word = "event" if event_count == 1 else "events"
-                ui.label(f"{event_count} {event_word}").classes(
-                    "text-caption text-grey-4"
-                )
+                ui.label(f"{event_count} {event_word}").classes("text-caption text-grey-4")
                 if warnings:
-                    ui.icon("warning", color="orange").classes(
-                        "text-sm icon-outlined"
-                    ).tooltip("; ".join(warnings[:3]))
+                    ui.icon("warning", color="orange").classes("text-sm icon-outlined").tooltip("; ".join(warnings[:3]))
                 if meta.get("table_origin_override") is not None:
                     ui.badge("ORIGIN", color="amber").classes("text-xs").tooltip(
                         copy_text("upload.exam.table_origin.tooltip")
@@ -480,21 +463,23 @@ class UploadTabController:
                 ui.button(
                     icon="close",
                     on_click=lambda _e, i=idx: self.remove_exam(i),
-                ).props("flat round dense size=sm color=grey-5 @click.stop").classes(
-                    "icon-outlined"
-                ).tooltip(copy_text("upload.exam.remove.tooltip"))
+                ).props("flat round dense size=sm color=grey-5 @click.stop").classes("icon-outlined").tooltip(
+                    copy_text("upload.exam.remove.tooltip")
+                )
 
     def _build_uploader(self) -> None:
         self.refs.uploader_container.clear()
         with self.refs.uploader_container:
-            self.refs.uploader["el"] = ui.upload(
-                on_upload=self.handle_upload,
-                label="DRAG AND DROP OR CLICK TO SELECT",
-                max_file_size=MAX_UPLOAD_BYTES,
-                multiple=True,
-            ).props(
-                'accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload'
-            ).classes("w-full bg-black/40 uploader-no-list")
+            self.refs.uploader["el"] = (
+                ui.upload(
+                    on_upload=self.handle_upload,
+                    label="DRAG AND DROP OR CLICK TO SELECT",
+                    max_file_size=MAX_UPLOAD_BYTES,
+                    multiple=True,
+                )
+                .props('accept=".dcm,.csv,.tsv,.xlsx,.xlsm" flat bordered color=deep-purple auto-upload')
+                .classes("w-full bg-black/40 uploader-no-list")
+            )
 
 
 @dataclass
@@ -529,36 +514,35 @@ def _build_header() -> None:
 
 
 def _build_normalization_warning() -> None:
-    with ui.card().classes(
-        "modern-card w-full border-red-900 bg-red-950/20"
-    ).bind_visibility_from(
-        # Visibility must follow the rebuilt warning list (multi-exam Fallback
-        # exams), not the global ``normalization_method`` — after removing a
-        # Fallback exam while a Matched exam remains, method may be Matched
-        # while ``normalization_warnings`` is still non-empty (or vice versa).
-        state,
-        "normalization_warnings",
-        backward=bool,
-    ), ui.row().classes("items-center gap-3"):
+    with (
+        ui.card()
+        .classes("modern-card w-full border-red-900 bg-red-950/20")
+        .bind_visibility_from(
+            # Visibility must follow the rebuilt warning list (multi-exam Fallback
+            # exams), not the global ``normalization_method`` — after removing a
+            # Fallback exam while a Matched exam remains, method may be Matched
+            # while ``normalization_warnings`` is still non-empty (or vice versa).
+            state,
+            "normalization_warnings",
+            backward=bool,
+        ),
+        ui.row().classes("items-center gap-3"),
+    ):
         ui.icon("warning", color="negative").classes("text-xl icon-outlined")
         ui.label().bind_text_from(
             state,
             "normalization_warnings",
-            backward=lambda ws: (
-                f"NORMALIZATION ALERT: {' | '.join(str(w) for w in ws)}" if ws else ""
-            ),
+            backward=lambda ws: f"NORMALIZATION ALERT: {' | '.join(str(w) for w in ws)}" if ws else "",
         ).classes("mono-text text-xs font-bold text-red-400")
 
 
 def _build_upload_card(ctrl: UploadTabController) -> None:
     with ui.card().classes("modern-card w-full"):
         ui.label("Load file").classes("text-subtitle2 q-mb-xs")
-        ui.label(
-            "DICOM RDSR (.dcm) or tabular event table (.csv, .tsv, .xlsx, .xlsm)"
-        ).classes("text-sm text-grey-4 q-mb-sm")
-        ui.label(copy_text("upload.privacy_notice")).classes(
-            "text-xs text-orange-5 q-mb-sm"
+        ui.label("DICOM RDSR (.dcm) or tabular event table (.csv, .tsv, .xlsx, .xlsm)").classes(
+            "text-sm text-grey-4 q-mb-sm"
         )
+        ui.label(copy_text("upload.privacy_notice")).classes("text-xs text-orange-5 q-mb-sm")
         ctrl.refs.uploader_container = ui.column().classes("w-full gap-0")
         ctrl._build_uploader()
         with ui.row().classes("w-full justify-end q-mt-xs"):
@@ -569,36 +553,46 @@ def _build_upload_card(ctrl: UploadTabController) -> None:
             ).props("flat dense size=sm color=grey-5").classes("icon-outlined").tooltip(
                 "Clear all loaded exams and reset the upload area"
             )
-        ctrl.refs.exams_section_label = ui.label("Loaded files").classes(
-            "text-subtitle2 q-mt-md q-mb-xs"
-        )
+        ctrl.refs.exams_section_label = ui.label("Loaded files").classes("text-subtitle2 q-mt-md q-mb-xs")
         ctrl.refs.exams_section_label.set_visibility(False)
         ctrl.refs.exams_list = ui.column().classes("w-full gap-2")
         ctrl.refs.exams_list.set_visibility(False)
         with ui.row().classes("w-full items-center gap-3 q-mt-sm"):
             ui.label("…or try a bundled example:").classes("text-caption text-grey-5")
-            ctrl.refs.example_select = ui.select(
-                options=EXAMPLE_OPTIONS,
-                label="Bundled example",
-                value=None,
-            ).classes("grow").mark("example-select")
-        ctrl.refs.upload_status = ui.label(_NO_FILE_LOADED_STATUS).classes(
-            "text-caption text-grey-5 q-mt-xs"
-        )
+            ctrl.refs.example_select = (
+                ui.select(
+                    options=EXAMPLE_OPTIONS,
+                    label="Bundled example",
+                    value=None,
+                )
+                .classes("grow")
+                .mark("example-select")
+            )
+        ctrl.refs.upload_status = ui.label(_NO_FILE_LOADED_STATUS).classes("text-caption text-grey-5 q-mt-xs")
         ctrl.refs.example_select.on_value_change(lambda: ctrl.load_example())
         ui.separator().classes("q-my-sm bg-zinc-800")
-        with ui.row().classes("w-full items-end gap-4"):
-            ctrl.refs.schema_select = ui.select(
-                options={
-                    "auto": "Auto-detect schema",
-                    "normalized": "Normalized",
-                    "generic_rdsr_like": "Raw RDSR-like",
-                    "radimetrics": "Radimetrics CSV",
-                    "dosetrack": "DoseTrack XLSX/CSV",
-                },
-                label="Input schema (tabular files only)",
-                value=state.input_schema,
-            ).bind_value(state, "input_schema").classes("grow")
+        with ui.row().classes("w-full items-center gap-2"):
+            ctrl.refs.schema_select = (
+                ui.select(
+                    options={
+                        "auto": "Auto-detect schema",
+                        "normalized": "Normalized",
+                        "generic_rdsr_like": "Raw RDSR-like",
+                        "radimetrics": "Radimetrics CSV",
+                        "dosetrack": "DoseTrack XLSX/CSV",
+                    },
+                    label="Input schema (tabular files only)",
+                    value=state.input_schema,
+                )
+                .bind_value(state, "input_schema")
+                .classes("grow")
+            )
+            HelpButton(
+                title="How input formats are recognized",
+                content_path="input_formats.md",
+                icon="info",
+                help_id="input_formats",
+            )
         ctrl.refs.schema_select.on_value_change(lambda: ctrl.reparse_schema())
 
 

@@ -20,6 +20,8 @@ class InputProvenance:
     column_map: dict[str, str]      # source col → normalized var
     unit_conversions: dict[str, str]  # normalized var → "source_unit → target_unit"
     warnings: list[str] = field(default_factory=list)
+    detection_mode: str | None = None
+    matched_column_count: int | None = None
 
 
 @dataclass

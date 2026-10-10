@@ -21,6 +21,24 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
+  message says it needs one source's own column and at least two recognized columns, and that it
+  stops when two sources both fit. It still asks you to choose a format and upload again.
+  Wording only; `pyproject.toml` stays at `1.0.0`.
+
+- **Import preview schema notice** (2026-10-09) — the import preview states that an auto-detected
+  format was read from this file's column headers and that changing **Input schema** re-reads this
+  file; a two-column match also asks you to confirm the format before calculating.
+
+- **Input-format help** (2026-10-09) — an info icon beside **Input schema** opens a description of
+  how a DICOM RDSR, Radimetrics, DoseTrack, a raw RDSR-like table, and a normalized table are
+  recognized, and what each choice changes. The same page is in the user guide. Qaelum,
+  DoseMonitor, and DoseWatch are described as not yet implemented, and as absent from the Upload
+  menu and from `--input-schema`. The bundled Upload examples are described as DICOM RDSR files
+  plus two Radimetrics CSV exports. `--input-schema auto` help text says to pass an explicit
+  schema when detection cannot choose. The maintainer schema page no longer presents fingerprint
+  examples as the columns that elect a schema.
+
 - **CLI preview and dispatch** (2026-10-08) — `--input-preview-only` is tabular-only (DICOM/JSON
   is a usage error, not a silent calculation), expands `--file-path` globs like other headless
   paths, and cannot be combined with `--aggregate`. `python -m guiskindose.main` uses the same
@@ -45,6 +63,33 @@ That keeps SemVer and contributor history organized.
   with the flat 0.8. The legacy `estimate_k_tab` key is still read (`true` is `estimate`, `false` is
   `measured_only`) with a deprecation warning when `k_tab_mode` is absent, an explicit `k_tab_mode` wins, and
   only `k_tab_mode` is written. The Corrections tab now has a mode select, and the info icon describes all three.
+
+### Fixed
+
+- **Raw RDSR-like auto-detect no longer elects on station or serial alone** (2026-10-09) —
+  `StationName` and `DeviceSerialNumber` still count toward recall but no longer elect a raw
+  RDSR-like table by themselves; a parser column such as `DoseRP_Gy` still can. Patch-level fix;
+  `pyproject.toml` stays at `1.0.0` until the next release.
+
+- **Tabular auto-detect asks when only one known column matches** (2026-10-09) — a schema is
+  elected only when a distinctive marker is present and at least two of that schema's known
+  columns are in the header. One column, including `Equipment Name`, `Plane Code`, `K_IRP`, or
+  `Primary Angle (RF)`, stops and asks for an explicit schema (the CLI says to pass
+  `--input-schema`; the Upload tab asks you to choose a format and upload again). `(RF)` counts
+  only when the column text up to `(RF)` is a known Radimetrics column, so `Modality (RF)` is
+  not treated as Radimetrics. `DAP (Total)` and `Reference Point Dose (Total)` are unchanged.
+  Patch-level fix; `pyproject.toml` stays at `1.0.0` until the next release.
+
+- **Tabular auto-detect no longer labels a generic dose table as Radimetrics** (2026-10-08) —
+  a schema is chosen only when the header contains a marker specific to that source. For
+  Radimetrics that is an `(RF)` column, `DAP (Total)`, or `Reference Point Dose (Total)`.
+  DoseTrack needs `Equipment Name`, `Plane Code`, or `Tube Voltage Peak (kV)`. A raw RDSR-like
+  table needs a parser column such as `DoseRP_Gy`, and the normalized table needs an internal
+  column such as `K_IRP`. Shared names (`Device`, `kVp`, table position, a bare reference-point
+  dose) still help score a real export and cannot win by themselves. DICOM RDSR files are still
+  recognized by the `.dcm` suffix and are not part of this scorer. A weak or unfamiliar table
+  asks for an explicit schema instead of guessing. Patch-level fix; `pyproject.toml` stays at
+  `1.0.0` until the next release.
 
 ### Added
 

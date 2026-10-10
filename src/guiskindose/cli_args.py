@@ -139,7 +139,7 @@ def _add_input_args(parser: argparse.ArgumentParser) -> None:
         choices=("normalized", "generic_rdsr_like", "radimetrics", "dosetrack", "auto"),
         help=(
             "Schema adapter for tabular files (.csv/.tsv/.xlsx). Default: 'auto' "
-            "(detect from column headers; falls back to an explicit choice if ambiguous)."
+            "(detect from column headers; if detection cannot choose, pass an explicit schema)."
         ),
     )
 

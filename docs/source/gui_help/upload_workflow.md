@@ -17,7 +17,7 @@ Accepted inputs:
 
 After a file loads, the app normalizes events into the internal event table used by geometry preview, calculation, results, and export. Multi-exam uploads keep each exam separate and add an `Exam` label in the Data tab.
 
-For tabular files, the schema selector controls how columns are interpreted. `auto` scores the available schemas from the header row; explicit schemas are useful when an export has ambiguous or site-customized column names. XLSX workbooks can expose a sheet picker when multiple sheets are available.
+For tabular files, the schema selector controls how columns are interpreted. The info icon beside **Input schema** opens the full explanation: what elects Radimetrics, DoseTrack, a raw RDSR-like table, or a normalized table, what a DICOM `.dcm` RDSR does instead, and that Qaelum, DoseMonitor, and DoseWatch are not yet implemented. `auto` accepts a table only when a marker specific to that source is present and the header has at least **2** known columns for that source. One matching column is not enough. A table that only shares ordinary names such as `Device` or `kVp` is not labeled for you; choose the format and upload again. XLSX workbooks can expose a sheet picker when multiple sheets are available.
 
 Warnings in the loaded-exam list mean the importer made an assumption or found a condition that should be reviewed before clinical use. Examples include assumed DAP units, unsupported equipment names, missing optional fields, or manual table-origin overrides.
 

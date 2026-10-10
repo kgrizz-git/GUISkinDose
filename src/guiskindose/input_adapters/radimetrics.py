@@ -4,6 +4,20 @@ Maps Radimetrics column headers to rdsr_parser()-compatible names, applies
 required unit conversions, then passes through rdsr_normalizer() via the shared
 pipeline in ``base.py``.
 
+Auto-detect elects this schema only when at least two known columns match and
+a header cell is a known Radimetrics column containing ``(rf)`` (for example
+``Primary Angle (RF)`` or ``Primary Angle (RF) [°]``), or the cell contains
+``dap (total)`` or ``reference point dose (total)``. ``(rf)`` on an unrelated
+column such as ``Modality (RF)`` does not count. One known column asks the
+user to choose a schema. Plain names such as ``Device`` raise the score and
+cannot win alone. See ``docs/source/gui_help/input_formats.md``.
+
+``Device`` is the model and ``Equipment`` is the room used as the kerma-meter
+key. An unreadable dose is taken as mGy. A biplane export with dose on plane B
+is split into Plane A and Plane B events. A missing event type becomes
+``Fluoroscopy``; without biplane evidence a missing plane becomes
+``Single Plane``.
+
 Column map and unit conversions derived from dhen2714/PySkinDose radimetrics.py
 (saved in dev-docs/references/dhen2714_radimetrics.py). Only validated against
 Siemens AXIOM-Artis exports via Radimetrics v6/v7. Unknown models produce a
